@@ -19,8 +19,6 @@
 }
 .panel > * { min-width: 0; margin-block: 0; }
 .panel .hint { margin: 0; }
-.style-tabs { display: flex; flex-wrap: wrap; gap: .5rem; }
-.style-tabs [aria-selected="true"] { border-color: var(--accent); background: var(--accent-light); }
 #style-panels { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
 #style-panels > .panel { padding: 0; border: 0; box-shadow: none; background: transparent; }
 .review-routes { display: flex; flex-wrap: wrap; gap: var(--space-2); }
@@ -136,9 +134,9 @@ th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(-
 th {
   color: var(--muted);
   font-weight: var(--weight-semibold);
-  text-transform: uppercase;
+  text-transform: none;
   font-size: var(--text-micro);
-  letter-spacing: .06em;
+  letter-spacing: normal;
   background: var(--surface);
 }
 tbody tr:hover { background: rgba(0, 0, 0, .015); }
@@ -146,7 +144,7 @@ tbody tr:last-child td { border-bottom: 0; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* --- Badges & Dimension cards ----------------------------------------- */
-/* One badge family for every panel: uppercase micro text on a pill. Tone
+/* One badge family for every panel: compact text on a pill. Tone
    classes (.badge-success/-warning/-neutral/-warn) carry the state colours;
    .research-badge is an alias kept for existing markup. */
 .badge, .research-badge {
@@ -156,8 +154,8 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   padding: .12rem .5rem;
   border-radius: var(--radius-pill);
   border: 1px solid transparent;
-  text-transform: uppercase;
-  letter-spacing: .04em;
+  text-transform: none;
+  letter-spacing: normal;
   background: var(--neutral);
   color: var(--fg);
 }
@@ -173,13 +171,12 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .ctl-group > * { min-width: 0; }
 input[type="file"].ctl { max-width: 100%; }
 .ctl-group + .ctl-group { border-top: 1px solid var(--line); padding-top: var(--space-4); }
-/* One micro-label recipe: field groups, project labels, KPI captions and
-   table headers share the uppercase micro style. */
+/* Sentence-case labels preserve localized spelling across workspace surfaces. */
 .ctl-label, .project-label, .kpi-caption, th {
   font-size: var(--text-micro);
   font-weight: var(--weight-semibold);
-  text-transform: uppercase;
-  letter-spacing: .08em;
+  text-transform: none;
+  letter-spacing: normal;
   color: var(--muted);
 }
 /* One note/help recipe: inline notes and field help share size and colour. */
@@ -207,15 +204,15 @@ button.ctl, a.ctl, select.ctl, input.ctl, textarea.ctl {
   background: var(--surface);
   color: var(--fg);
   cursor: pointer;
-  transition: all .12s ease;
+  transition: color .12s ease, border-color .12s ease, background-color .12s ease;
 }
 input.ctl, textarea.ctl { cursor: text; }
 textarea.ctl { resize: vertical; font-family: inherit; }
 input.ctl-code { font-family: var(--font-mono); }
 button.ctl-link { background: none; border: none; color: var(--accent); text-decoration: underline; cursor: pointer; padding: 0; }
-button.ctl:hover, a.ctl:hover, select.ctl:hover { border-color: var(--accent); color: var(--accent); }
-button.ctl { transition: transform .12s var(--ease), border-color .16s var(--ease), background .16s var(--ease); }
-button.ctl:active { transform: scale(.97); }
+button.ctl:where(:enabled):hover, a.ctl:hover, select.ctl:where(:enabled):hover { border-color: var(--accent); color: var(--accent); }
+button.ctl { transition: border-color .16s var(--ease), background-color .16s var(--ease); }
+button.ctl:where(:enabled):active { border-color: var(--accent); }
 /* One selected state for toggles and tabs (aria-pressed or .active). */
 button.ctl.active,
 button.ctl[aria-pressed="true"],
@@ -254,7 +251,8 @@ button.ctl.busy::before {
 }
 @keyframes ctl-spin { to { transform: rotate(360deg); } }
 button.ctl.primary, a.ctl.primary { background: var(--action-bg); border-color: var(--action-bg); color: var(--on-action); font-weight: var(--weight-strong); }
-button.ctl.primary:hover, a.ctl.primary:hover { background: var(--action-hover); color: var(--on-action); }
+button.ctl.primary:enabled:hover, button.ctl.primary:enabled:active,
+a.ctl.primary:hover { background: var(--action-hover); color: var(--on-action); }
 button.ctl.ctl-sm, a.ctl.ctl-sm, select.ctl.ctl-sm,
 button.ctl.ctl-compact, a.ctl.ctl-compact {
   min-height: 2rem;
@@ -265,7 +263,7 @@ details.nda { border: 1px solid var(--line); border-radius: var(--radius); paddi
 details.nda summary { cursor: pointer; font-size: var(--text-control); }
 details.nda .row { margin-top: .5rem; }
 .ctl-status { color: var(--muted); font-size: var(--text-small); min-height: 1.2em; margin-top: .5rem; }
-.ctl-status.ok { color: var(--present); }
+.ctl-status.ok { color: var(--status-success-fg); }
 .ctl-status.err { color: var(--flag); }
 .ctl-status.loading {
   color: var(--muted);
@@ -325,3 +323,198 @@ details.nda .row { margin-top: .5rem; }
 .text-note { font-size: var(--text-note); }
 .text-small { font-size: var(--text-small); }
 .select-code { user-select: all; cursor: pointer; }
+
+/* Shared field groups and interaction states. */
+.settings-section { min-width: 0; margin: 0; padding: var(--space-4) 0 0; border: 0; border-top: 1px solid var(--line); }
+.settings-section > legend { padding-inline: 0 var(--space-2); font-weight: var(--weight-semibold); font-size: var(--text-control); }
+.settings-section > * + * { margin-top: var(--space-3); }
+.settings-section > .ctl-note { margin-top: 0; }
+.settings-section > .settings-advanced { margin-top: var(--space-3); }
+
+.ctl:disabled { opacity: .6; cursor: default; }
+.ctl[aria-busy="true"] { cursor: wait; }
+:where(input, textarea, select).ctl[aria-invalid="true"] { border-color: var(--flag); }
+
+/* Tabs identify a view; primary buttons identify an action. Keep all local
+   tablists on one recipe, with an inset focus ring inside the scrollport. */
+.style-tabs, .research-tabs.row, .modal-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  border-bottom: 1px solid var(--line);
+  padding: var(--space-1);
+  margin: 0;
+  scroll-padding-inline: var(--space-1);
+}
+.modal-tabs { flex: none; padding-inline: var(--space-4); }
+:is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"] {
+  flex: 0 0 auto;
+  min-height: 2.5rem;
+  padding: .45rem .8rem;
+  border: 1px solid transparent;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--text-control);
+  line-height: var(--line-control);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+  cursor: pointer;
+}
+:is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"]:hover {
+  background: var(--surface-raised);
+  color: var(--fg);
+}
+:is(.style-tabs, .research-tabs, .modal-tabs) > button[aria-selected="true"] {
+  border-bottom-color: var(--accent);
+  background: var(--accent-light);
+  color: var(--accent);
+}
+:is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"]:focus-visible {
+  outline-offset: -3px;
+}
+@media (pointer: coarse) {
+  :is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"], .modal-close {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+}
+/* --- Native Modals & Template Cards ----------------------------------- */
+dialog.lixity-modal {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  border: 1px solid var(--line);
+  padding: 0;
+  background: var(--surface);
+  color: var(--fg);
+  max-width: 38rem;
+  width: min(94vw, 38rem);
+  max-height: min(90dvh, 44rem);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+  overflow: hidden;
+}
+dialog.lixity-modal::backdrop {
+  background: rgba(15, 23, 42, 0.55);
+}
+.modal-card {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: min(90dvh, 44rem);
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  flex: none;
+  gap: var(--space-3);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.modal-header h3 {
+  margin: 0;
+  font-size: var(--text-section-title);
+  font-weight: var(--weight-semibold);
+  color: var(--fg);
+  letter-spacing: -.015em;
+}
+.modal-close {
+  background: transparent;
+  border: 1px solid transparent;
+  font-size: 1.15rem;
+  cursor: pointer;
+  color: var(--muted);
+  border-radius: var(--radius-sm);
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: color .15s ease, background-color .15s ease;
+}
+.modal-close:hover {
+  color: var(--fg);
+  background: var(--neutral);
+}
+.modal-close:focus {
+  outline: none;
+}
+.modal-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.modal-intro { margin: 0; padding: var(--space-3) var(--space-4); flex: none; }
+.wizard-hint { display: block; margin-top: .25rem; font-size: var(--text-micro); }
+.modal-tab-pane {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.modal-body {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: 0;
+  min-width: 0;
+  overscroll-behavior: contain;
+  scroll-padding-block: var(--space-3);
+  overflow-y: auto;
+  background: var(--surface);
+}
+
+.modal-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: .75rem;
+  margin-top: .4rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--line);
+}
+
+.modal-tab-pane > .modal-body { overflow: visible; }
+.modal-body > * { flex-shrink: 0; min-width: 0; }
+.modal-header h3 { overflow-wrap: anywhere; }
+
+/* Form layout is shared by project, research and revision dialogs. */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+}
+.form-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  width: 100%;
+}
+.form-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  cursor: pointer;
+  font-size: var(--text-control);
+  color: var(--fg);
+  user-select: none;
+  margin-top: .15rem;
+}
+@media (max-width: 540px) {
+  .form-row {
+    flex-direction: column;
+    gap: .75rem;
+  }
+}

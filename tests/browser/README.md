@@ -177,6 +177,10 @@ spacing and theme switching. Paragraph chips and dimension controls are measured
 with mouse/coarse pointers, including pressed paragraph targets. Screenshots stay
 under `/tmp/lixity-visual-consistency-*`.
 These targeted checks are not a full WCAG conformance audit.
+The same suite checks short-window project dialogs: focused fields remain
+visible, optional controls and footer actions remain reachable, disabled
+buttons do not acquire enabled hover feedback, and switching project tabs
+does not reset the separate research revision editor.
 
 The scenes suite renders seven locales at desktop and mobile widths. It checks
 actual per-scene observations, inert project labels, keyboard-operated

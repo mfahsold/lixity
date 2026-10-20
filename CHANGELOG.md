@@ -8,6 +8,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Changed
+- Shared local tabs, form groups and dialog frames now carry the desktop
+  workspace design through analysis, settings and research. Research catalogues
+  use separated rows; labels preserve localized casing. Dialog forms scroll
+  below their title and close control, including in short windows.
 - The interactive workspace puts manuscript and analysis first in a fixed desktop
   project sidebar, with research and settings alongside. Narrow screens retain
   horizontal navigation, with keyboard orientation matched to the layout. Plain
@@ -34,6 +38,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and numeric loadings. Additive diagnostics preserve existing scores and formats.
 
 ### Fixed
+- Project-dialog tab switches no longer reset unrelated research revision tabs.
+- Disabled actions retain their disabled appearance on hover and press.
 - Numbered map labels select their own feature with mouse, touch or keyboard;
   authored label anchors and geometry stacking keep routes and points reachable.
 - Escape in research dialogs preserves open paragraphs in the hidden Analysis view.

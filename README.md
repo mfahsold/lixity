@@ -90,6 +90,8 @@ keep name counts separate from author-declared perspective.
 **On current main:** the interactive app uses a desktop-style project sidebar
 on wide screens, with manuscript and analysis first, research alongside and
 settings separate. On smaller screens the same navigation becomes horizontal.
+Local tabs, form groups and dialogs use shared components throughout analysis
+and research; compact catalogue rows keep sources and dossiers easy to scan.
 Guided map and style-space views explain their measurements
 where you use them, with the same context available in the CLI. Maps open with
 OpenStreetMap; local vectors and the numbered sketch remain available offline.

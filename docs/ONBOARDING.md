@@ -64,6 +64,12 @@ read on a wide screen. On mobile, use the same views above the workspace.
 alongside it when you need context, and use **Research** to work on the source
 archive. Analysis guides your attention; the manuscript remains the reference.
 
+The same local tabs switch analysis views, research lists and dialog pages.
+Their underline marks the selected view. Use arrow keys within a tablist;
+research tabs open with Enter or Space. Forms group related fields under named
+headings. Dialog content scrolls below the title; Escape closes the dialog and
+returns focus to its opener.
+
 | What you want to do | Where to start |
 | --- | --- |
 | Read a difference in context | **Analysis**: open a passage, then expand **Values** if needed. |

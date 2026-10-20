@@ -46,6 +46,9 @@ Current-main interactive UI: manuscript/analysis first, research second, setting
 third; a fixed project sidebar on desktop becomes horizontal navigation on
 narrow screens. The companion dossier reader supplies context beside a passage.
 These views share the existing analysis and explicit-project research APIs.
+Local tabs, form groups, feedback and native dialog frames share the component
+layer. Research catalogues use separated rows; dialog forms support short
+viewports and keyboard navigation without changing data or API contracts.
 
 ## Choose a reference
 

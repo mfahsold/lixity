@@ -187,8 +187,58 @@ async function checkScale(page, label) {
         await app.locator('#btn-modal-new-project').click();
         const createDialog = app.locator('#modal-project-create');
         assert.ok(await createDialog.isVisible());
+        assert.equal(await app.locator('#research-revision-edit-tab').getAttribute('aria-selected'), 'true',
+          'Opening project tabs must not reset the separate research revision tabs');
+        // Short windows and mobile keyboards must not clip the end of a form.
+        await app.setViewportSize({width, height: 480});
+        await app.locator('#import-project-options > summary').click();
+        const author = app.locator('#import-proj-author');
+        await author.focus();
+        await author.scrollIntoViewIfNeeded();
+        assert.ok(await author.evaluate(element => {
+          const box = element.getBoundingClientRect();
+          const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+          return hit === element;
+        }), `${theme} ${width}px focused dialog field is not clipped`);
+        const disabledImport = app.locator('#btn-submit-import-project');
+        await disabledImport.scrollIntoViewIfNeeded();
+        const disabledStyle = () => disabledImport.evaluate(element => {
+          const css = getComputedStyle(element);
+          return [css.color, css.backgroundColor, css.borderColor];
+        });
+        await app.mouse.move(0, 0);
+        const disabledBefore = await disabledStyle();
+        await disabledImport.hover();
+        assert.deepEqual(await disabledStyle(), disabledBefore, 'Disabled actions do not advertise hover activation');
+        await app.locator('#import-proj-path').focus();
+        await app.keyboard.press('Tab');
+        assert.ok(await app.evaluate(() => {
+          const focus = document.activeElement, box = focus.getBoundingClientRect();
+          return focus.closest('dialog') && box.top >= 0 && box.bottom <= innerHeight;
+        }), 'Keyboard focus remains in the visible dialog');
+        assert.ok(await createDialog.locator('.modal-close').evaluate(element => {
+          const box = element.getBoundingClientRect();
+          return document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2) === element;
+        }), 'The dialog close action remains reachable after scrolling the form');
+        await app.screenshot({path: path.join(artifacts, `modal-short-${theme}-${width}-${hasTouch ? 'touch' : 'mouse'}.png`)});
+        await app.setViewportSize({width, height: 1000});
         await app.locator('#tab-btn-scratch').click();
         assert.ok(await app.locator('#tab-pane-scratch').isVisible());
+        await app.mouse.move(0, 0);
+        const createAction = app.locator('#btn-submit-create-project');
+        await createAction.focus();
+        await app.keyboard.down('Space');
+        try {
+          const colors = await createAction.evaluate(element => {
+            const css = getComputedStyle(element);
+            return [css.color, css.backgroundColor];
+          });
+          assert.ok(contrast(...colors) >= 4.5, `${theme} primary keyboard-pressed contrast`);
+        } finally {
+          // Do not submit the form: this checks the held activation state.
+          await app.locator('#tab-btn-scratch').focus();
+          await app.keyboard.up('Space');
+        }
         assert.equal((await textRole(app.locator('#tab-btn-scratch'))).family,
           (await textRole(app.locator('body'))).family, `${theme} ${width}px modal tab font`);
         assert.ok(await createDialog.evaluate(element => element.scrollWidth <= element.clientWidth),
@@ -196,6 +246,8 @@ async function checkScale(page, label) {
         await app.screenshot({path: path.join(artifacts, `modal-${theme}-${width}-${hasTouch ? 'touch' : 'mouse'}.png`)});
         await createDialog.locator('.modal-close').click();
         assert.ok(!(await createDialog.isVisible()));
+        assert.equal(await app.evaluate(() => document.activeElement.id), 'btn-modal-new-project',
+          'Closing a dialog restores focus to its opener');
         assert.equal(await app.locator('.chip').first().evaluate(el => getComputedStyle(el).transitionDuration), '0s');
         await app.locator('#tab-view-analysis').click();
         await app.locator('#style-tab-dimensions').click();
@@ -222,20 +274,21 @@ async function checkScale(page, label) {
         }));
         assert.ok(heatmapColors.length > 0);
         heatmapColors.forEach(([text, fill]) => assert.ok(contrast(text, fill) >= 4.5, `${theme} heatmap label contrast`));
-        await app.locator('#tab-view-project').focus();
+        await app.locator('#tab-view-analysis').focus();
         await app.keyboard.press('Enter');
-        for (const [page, selector, label] of [[app, 'button.ctl.primary', 'app'], [site, 'a.ctl.primary', 'site']]) {
+        for (const [page, selector, label] of [[app, 'a.ctl.primary', 'app'], [site, 'a.ctl.primary', 'site']]) {
           const control = page.locator(selector).filter({visible: true}).first();
           await control.focus();
           const style = await control.evaluate(el => {
             const css = getComputedStyle(el);
-            return {color: css.color, background: css.backgroundColor, outline: css.outlineStyle,
+            return {id: el.id, disabled: el.disabled, focused: document.activeElement === el,
+              color: css.color, background: css.backgroundColor, outline: css.outlineStyle,
               height: el.getBoundingClientRect().height, animation: css.animationName,
               coarse: matchMedia('(pointer: coarse)').matches};
           });
           assert.ok(contrast(style.color, style.background) >= 4.5, `${label} primary contrast`);
           assert.ok(style.height >= (style.coarse ? 44 : 40), `${label} target ${JSON.stringify(style)}`);
-          assert.notEqual(style.outline, 'none', `${label} keyboard focus`);
+          assert.notEqual(style.outline, 'none', `${label} keyboard focus: ${JSON.stringify(style)}`);
           assert.equal(style.animation, 'none');
           await page.screenshot({path: path.join(artifacts, `${label}-${theme}-${width}-${hasTouch ? 'touch' : 'mouse'}.png`)});
           await page.addStyleTag({content: '* { line-height: 1.5 !important; letter-spacing: .12em !important; word-spacing: .16em !important; } p { margin-bottom: 2em !important; }'});

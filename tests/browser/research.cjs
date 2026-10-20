@@ -377,6 +377,16 @@ server.serve_forever()
     await page.locator('#r-search-btn').click();
     await page.locator('#research-search-results [data-use-passage=claim]').click();
     await expect(page.locator('#rtab-claims')).toBeVisible();
+    const listView = page.locator('[data-claim-view="list"]');
+    const listColors = () => listView.evaluate(element => {
+      const css = getComputedStyle(element);
+      return [css.color, css.backgroundColor];
+    });
+    await page.mouse.move(0, 0);
+    const selectedColors = await listColors();
+    await listView.hover();
+    await page.waitForTimeout(200); // Allow the control's color transition to settle.
+    assert.deepEqual(await listColors(), selectedColors, 'Selected view preserves its contrast on hover');
     await expect(page.locator('#r-link-passage-id')).toHaveValue(fixture.passage);
     await expect(page.locator('#r-link-claim-select')).toHaveValue(claimId);
     await page.locator('#r-link-rationale').fill('Synthetic source supports this date.');

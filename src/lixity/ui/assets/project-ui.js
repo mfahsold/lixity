@@ -36,12 +36,15 @@ function selectManuscriptFiles(files) {
 }
 
 function switchModalTab(targetPaneId) {
-  document.querySelectorAll(".modal-tab-btn").forEach(function (btn) {
+  var targetPane = document.getElementById(targetPaneId);
+  var dialog = targetPane && targetPane.closest("dialog");
+  if (!dialog) return;
+  dialog.querySelectorAll(".modal-tab-btn[data-tab-target]").forEach(function (btn) {
     var isTarget = btn.dataset.tabTarget === targetPaneId;
     btn.classList.toggle("active", isTarget);
     btn.setAttribute("aria-selected", isTarget ? "true" : "false");
   });
-  document.querySelectorAll(".modal-tab-pane").forEach(function (pane) {
+  dialog.querySelectorAll(".modal-tab-pane").forEach(function (pane) {
     pane.style.display = pane.id === targetPaneId ? "block" : "none";
   });
 }

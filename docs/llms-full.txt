@@ -108,6 +108,8 @@ keep name counts separate from author-declared perspective.
 **On current main:** the interactive app uses a desktop-style project sidebar
 on wide screens, with manuscript and analysis first, research alongside and
 settings separate. On smaller screens the same navigation becomes horizontal.
+Local tabs, form groups and dialogs use shared components throughout analysis
+and research; compact catalogue rows keep sources and dossiers easy to scan.
 Guided map and style-space views explain their measurements
 where you use them, with the same context available in the CLI. Maps open with
 OpenStreetMap; local vectors and the numbered sketch remain available offline.
@@ -257,6 +259,9 @@ Current-main interactive UI: manuscript/analysis first, research second, setting
 third; a fixed project sidebar on desktop becomes horizontal navigation on
 narrow screens. The companion dossier reader supplies context beside a passage.
 These views share the existing analysis and explicit-project research APIs.
+Local tabs, form groups, feedback and native dialog frames share the component
+layer. Research catalogues use separated rows; dialog forms support short
+viewports and keyboard navigation without changing data or API contracts.
 
 ## Choose a reference
 
@@ -414,6 +419,12 @@ read on a wide screen. On mobile, use the same views above the workspace.
 **Manuscript & Analysis** is the starting point for your text; open a dossier
 alongside it when you need context, and use **Research** to work on the source
 archive. Analysis guides your attention; the manuscript remains the reference.
+
+The same local tabs switch analysis views, research lists and dialog pages.
+Their underline marks the selected view. Use arrow keys within a tablist;
+research tabs open with Enter or Space. Forms group related fields under named
+headings. Dialog content scrolls below the title; Escape closes the dialog and
+returns focus to its opener.
 
 | What you want to do | Where to start |
 | --- | --- |
@@ -4495,6 +4506,27 @@ status messages, badges and layout primitives. Views reuse them and the stable
 [data hooks](AGENTS.md#34-dashboard-interaction-contract-for-embedding-and-ui-automation).
 Visible strings come from the seven-language packs; mathematical identifiers stay
 language-neutral. Prefer native elements and one primary action per form.
+
+Local view tabs (style views, research and dialogs) share one component recipe:
+a selected underline and surface distinguish navigation from primary actions.
+Each tablist has an accessible name; project-dialog tabs explicitly name their
+panels. The shared keyboard controller keeps one tab stop, follows orientation
+and uses manual activation for research views that fetch data. Dialog switching
+is scoped to the containing dialog so it cannot reset another editor.
+
+Native `<dialog>` supplies modality, Escape and focus restoration. The shared
+dialog frame keeps the title and close action above a scrolling form, uses
+dynamic viewport height, and allows footer actions to wrap. Tabbed forms scroll
+in their pane; direct forms scroll in the body. Avoid introducing competing
+scroll containers or a custom focus trap. The [WAI dialog pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/)
+and [WCAG focus visibility](https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum)
+guide this behavior; targeted tests do not constitute a full accessibility audit.
+
+Field groups, form rows, labels, disabled actions and feedback use the shared
+component layer. Disabled buttons do not show enabled hover/pressed feedback.
+Labels preserve localized casing. Research catalogues use separated rows within
+their enclosing panel; nested evidence and detail surfaces retain their own
+boundaries. Keep these view-specific layouts in `dashboard.css`.
 
 Inline styles are reserved for measured/dynamic values. Layout and responsive
 stacking belong in shared CSS; `tests/test_inline_styles.py` checks forbidden

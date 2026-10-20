@@ -284,6 +284,27 @@ status messages, badges and layout primitives. Views reuse them and the stable
 Visible strings come from the seven-language packs; mathematical identifiers stay
 language-neutral. Prefer native elements and one primary action per form.
 
+Local view tabs (style views, research and dialogs) share one component recipe:
+a selected underline and surface distinguish navigation from primary actions.
+Each tablist has an accessible name; project-dialog tabs explicitly name their
+panels. The shared keyboard controller keeps one tab stop, follows orientation
+and uses manual activation for research views that fetch data. Dialog switching
+is scoped to the containing dialog so it cannot reset another editor.
+
+Native `<dialog>` supplies modality, Escape and focus restoration. The shared
+dialog frame keeps the title and close action above a scrolling form, uses
+dynamic viewport height, and allows footer actions to wrap. Tabbed forms scroll
+in their pane; direct forms scroll in the body. Avoid introducing competing
+scroll containers or a custom focus trap. The [WAI dialog pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/)
+and [WCAG focus visibility](https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum)
+guide this behavior; targeted tests do not constitute a full accessibility audit.
+
+Field groups, form rows, labels, disabled actions and feedback use the shared
+component layer. Disabled buttons do not show enabled hover/pressed feedback.
+Labels preserve localized casing. Research catalogues use separated rows within
+their enclosing panel; nested evidence and detail surfaces retain their own
+boundaries. Keep these view-specific layouts in `dashboard.css`.
+
 Inline styles are reserved for measured/dynamic values. Layout and responsive
 stacking belong in shared CSS; `tests/test_inline_styles.py` checks forbidden
 spacing/typography patterns. New panels must remain usable at 320 px.

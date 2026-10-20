@@ -103,8 +103,6 @@
 }
 .panel > * { min-width: 0; margin-block: 0; }
 .panel .hint { margin: 0; }
-.style-tabs { display: flex; flex-wrap: wrap; gap: .5rem; }
-.style-tabs [aria-selected="true"] { border-color: var(--accent); background: var(--accent-light); }
 #style-panels { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
 #style-panels > .panel { padding: 0; border: 0; box-shadow: none; background: transparent; }
 .review-routes { display: flex; flex-wrap: wrap; gap: var(--space-2); }
@@ -220,9 +218,9 @@ th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(-
 th {
   color: var(--muted);
   font-weight: var(--weight-semibold);
-  text-transform: uppercase;
+  text-transform: none;
   font-size: var(--text-micro);
-  letter-spacing: .06em;
+  letter-spacing: normal;
   background: var(--surface);
 }
 tbody tr:hover { background: rgba(0, 0, 0, .015); }
@@ -230,7 +228,7 @@ tbody tr:last-child td { border-bottom: 0; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* --- Badges & Dimension cards ----------------------------------------- */
-/* One badge family for every panel: uppercase micro text on a pill. Tone
+/* One badge family for every panel: compact text on a pill. Tone
    classes (.badge-success/-warning/-neutral/-warn) carry the state colours;
    .research-badge is an alias kept for existing markup. */
 .badge, .research-badge {
@@ -240,8 +238,8 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   padding: .12rem .5rem;
   border-radius: var(--radius-pill);
   border: 1px solid transparent;
-  text-transform: uppercase;
-  letter-spacing: .04em;
+  text-transform: none;
+  letter-spacing: normal;
   background: var(--neutral);
   color: var(--fg);
 }
@@ -257,13 +255,12 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .ctl-group > * { min-width: 0; }
 input[type="file"].ctl { max-width: 100%; }
 .ctl-group + .ctl-group { border-top: 1px solid var(--line); padding-top: var(--space-4); }
-/* One micro-label recipe: field groups, project labels, KPI captions and
-   table headers share the uppercase micro style. */
+/* Sentence-case labels preserve localized spelling across workspace surfaces. */
 .ctl-label, .project-label, .kpi-caption, th {
   font-size: var(--text-micro);
   font-weight: var(--weight-semibold);
-  text-transform: uppercase;
-  letter-spacing: .08em;
+  text-transform: none;
+  letter-spacing: normal;
   color: var(--muted);
 }
 /* One note/help recipe: inline notes and field help share size and colour. */
@@ -291,15 +288,15 @@ button.ctl, a.ctl, select.ctl, input.ctl, textarea.ctl {
   background: var(--surface);
   color: var(--fg);
   cursor: pointer;
-  transition: all .12s ease;
+  transition: color .12s ease, border-color .12s ease, background-color .12s ease;
 }
 input.ctl, textarea.ctl { cursor: text; }
 textarea.ctl { resize: vertical; font-family: inherit; }
 input.ctl-code { font-family: var(--font-mono); }
 button.ctl-link { background: none; border: none; color: var(--accent); text-decoration: underline; cursor: pointer; padding: 0; }
-button.ctl:hover, a.ctl:hover, select.ctl:hover { border-color: var(--accent); color: var(--accent); }
-button.ctl { transition: transform .12s var(--ease), border-color .16s var(--ease), background .16s var(--ease); }
-button.ctl:active { transform: scale(.97); }
+button.ctl:where(:enabled):hover, a.ctl:hover, select.ctl:where(:enabled):hover { border-color: var(--accent); color: var(--accent); }
+button.ctl { transition: border-color .16s var(--ease), background-color .16s var(--ease); }
+button.ctl:where(:enabled):active { border-color: var(--accent); }
 /* One selected state for toggles and tabs (aria-pressed or .active). */
 button.ctl.active,
 button.ctl[aria-pressed="true"],
@@ -338,7 +335,8 @@ button.ctl.busy::before {
 }
 @keyframes ctl-spin { to { transform: rotate(360deg); } }
 button.ctl.primary, a.ctl.primary { background: var(--action-bg); border-color: var(--action-bg); color: var(--on-action); font-weight: var(--weight-strong); }
-button.ctl.primary:hover, a.ctl.primary:hover { background: var(--action-hover); color: var(--on-action); }
+button.ctl.primary:enabled:hover, button.ctl.primary:enabled:active,
+a.ctl.primary:hover { background: var(--action-hover); color: var(--on-action); }
 button.ctl.ctl-sm, a.ctl.ctl-sm, select.ctl.ctl-sm,
 button.ctl.ctl-compact, a.ctl.ctl-compact {
   min-height: 2rem;
@@ -349,7 +347,7 @@ details.nda { border: 1px solid var(--line); border-radius: var(--radius); paddi
 details.nda summary { cursor: pointer; font-size: var(--text-control); }
 details.nda .row { margin-top: .5rem; }
 .ctl-status { color: var(--muted); font-size: var(--text-small); min-height: 1.2em; margin-top: .5rem; }
-.ctl-status.ok { color: var(--present); }
+.ctl-status.ok { color: var(--status-success-fg); }
 .ctl-status.err { color: var(--flag); }
 .ctl-status.loading {
   color: var(--muted);
@@ -410,6 +408,201 @@ details.nda .row { margin-top: .5rem; }
 .text-small { font-size: var(--text-small); }
 .select-code { user-select: all; cursor: pointer; }
 
+/* Shared field groups and interaction states. */
+.settings-section { min-width: 0; margin: 0; padding: var(--space-4) 0 0; border: 0; border-top: 1px solid var(--line); }
+.settings-section > legend { padding-inline: 0 var(--space-2); font-weight: var(--weight-semibold); font-size: var(--text-control); }
+.settings-section > * + * { margin-top: var(--space-3); }
+.settings-section > .ctl-note { margin-top: 0; }
+.settings-section > .settings-advanced { margin-top: var(--space-3); }
+
+.ctl:disabled { opacity: .6; cursor: default; }
+.ctl[aria-busy="true"] { cursor: wait; }
+:where(input, textarea, select).ctl[aria-invalid="true"] { border-color: var(--flag); }
+
+/* Tabs identify a view; primary buttons identify an action. Keep all local
+   tablists on one recipe, with an inset focus ring inside the scrollport. */
+.style-tabs, .research-tabs.row, .modal-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  border-bottom: 1px solid var(--line);
+  padding: var(--space-1);
+  margin: 0;
+  scroll-padding-inline: var(--space-1);
+}
+.modal-tabs { flex: none; padding-inline: var(--space-4); }
+:is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"] {
+  flex: 0 0 auto;
+  min-height: 2.5rem;
+  padding: .45rem .8rem;
+  border: 1px solid transparent;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--text-control);
+  line-height: var(--line-control);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+  cursor: pointer;
+}
+:is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"]:hover {
+  background: var(--surface-raised);
+  color: var(--fg);
+}
+:is(.style-tabs, .research-tabs, .modal-tabs) > button[aria-selected="true"] {
+  border-bottom-color: var(--accent);
+  background: var(--accent-light);
+  color: var(--accent);
+}
+:is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"]:focus-visible {
+  outline-offset: -3px;
+}
+@media (pointer: coarse) {
+  :is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"], .modal-close {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+}
+/* --- Native Modals & Template Cards ----------------------------------- */
+dialog.lixity-modal {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  border: 1px solid var(--line);
+  padding: 0;
+  background: var(--surface);
+  color: var(--fg);
+  max-width: 38rem;
+  width: min(94vw, 38rem);
+  max-height: min(90dvh, 44rem);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+  overflow: hidden;
+}
+dialog.lixity-modal::backdrop {
+  background: rgba(15, 23, 42, 0.55);
+}
+.modal-card {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: min(90dvh, 44rem);
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  flex: none;
+  gap: var(--space-3);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.modal-header h3 {
+  margin: 0;
+  font-size: var(--text-section-title);
+  font-weight: var(--weight-semibold);
+  color: var(--fg);
+  letter-spacing: -.015em;
+}
+.modal-close {
+  background: transparent;
+  border: 1px solid transparent;
+  font-size: 1.15rem;
+  cursor: pointer;
+  color: var(--muted);
+  border-radius: var(--radius-sm);
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: color .15s ease, background-color .15s ease;
+}
+.modal-close:hover {
+  color: var(--fg);
+  background: var(--neutral);
+}
+.modal-close:focus {
+  outline: none;
+}
+.modal-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.modal-intro { margin: 0; padding: var(--space-3) var(--space-4); flex: none; }
+.wizard-hint { display: block; margin-top: .25rem; font-size: var(--text-micro); }
+.modal-tab-pane {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.modal-body {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: 0;
+  min-width: 0;
+  overscroll-behavior: contain;
+  scroll-padding-block: var(--space-3);
+  overflow-y: auto;
+  background: var(--surface);
+}
+
+.modal-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: .75rem;
+  margin-top: .4rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--line);
+}
+
+.modal-tab-pane > .modal-body { overflow: visible; }
+.modal-body > * { flex-shrink: 0; min-width: 0; }
+.modal-header h3 { overflow-wrap: anywhere; }
+
+/* Form layout is shared by project, research and revision dialogs. */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+}
+.form-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  width: 100%;
+}
+.form-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  cursor: pointer;
+  font-size: var(--text-control);
+  color: var(--fg);
+  user-select: none;
+  margin-top: .15rem;
+}
+@media (max-width: 540px) {
+  .form-row {
+    flex-direction: column;
+    gap: .75rem;
+  }
+}
+
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 body {
@@ -436,11 +629,6 @@ h1 {
 .project-header { margin-bottom: 0; }
 .project-header h1 { font-family: var(--font-title); font-size: clamp(1.8rem, 4vw, 2.7rem); font-weight: 500; line-height: 1.2; letter-spacing: -.025em; margin-bottom: .5rem; }
 .settings-form { margin: 0; }
-.settings-section { min-width: 0; margin: 0; padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius); }
-.settings-section > legend { padding-inline: .35rem; font-weight: var(--weight-semibold); font-size: var(--text-control); }
-.settings-section > * + * { margin-top: var(--space-3); }
-.settings-section > .ctl-note { margin-top: 0; }
-.settings-section > .settings-advanced { margin-top: var(--space-3); }
 .settings-form h4 { font-size: var(--text-section-title); font-weight: var(--weight-strong); margin: .75rem 0 .3rem; }
 .settings-form .research-revision-readonly { font-size: var(--text-control); line-height: var(--line-compact); }
 .settings-form .research-revision-readonly dt { font-size: var(--text-small); font-weight: var(--weight-semibold); color: var(--fg); }
@@ -477,8 +665,6 @@ h1 {
 .analysis-method { font-variant-numeric: tabular-nums; color: var(--muted); }
 .fdr-marker { display: inline-block; margin-left: .25rem; font-size: .55rem; vertical-align: super; }
 .band-summary { display: block; font-size: var(--text-micro); font-variant-numeric: tabular-nums; color: var(--muted); }
-.ctl:disabled { opacity: .6; cursor: default; }
-.ctl[aria-busy="true"] { cursor: wait; }
 .product-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem .8rem; margin-bottom: .7rem; }
 .product-name { color: var(--accent); font-size: var(--text-small); font-weight: var(--weight-strong); letter-spacing: .05em; }
 .version-badge, .license-badge { border: 1px solid var(--line); border-radius: var(--radius-pill); padding: .15rem .55rem; font-size: var(--text-micro); color: var(--muted); background: var(--surface); }
@@ -640,7 +826,7 @@ body.text-search-active .chapter .strip { display: none; }
   text-decoration: none;
   background: transparent;
   border: 1px solid var(--line);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   white-space: nowrap;
 }
 .toolbar-sections a:hover { border-color: var(--accent); }
@@ -1357,27 +1543,6 @@ body:not(.has-js-tooltips) .help:focus::after {
 .marker-note.failed { border-color: var(--flag); color: var(--flag); }
 .marker-note.gone { opacity: 0; }
 .research-record-id { font-family: var(--font-mono); font-size: var(--text-micro); margin-top: .2rem; overflow-wrap: anywhere; }
-.research-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  border-bottom: 1px solid var(--line);
-  padding-bottom: .5rem;
-  margin-bottom: 1rem;
-}
-@media (max-width: 768px) {
-  .controls .research-tabs.row {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding-bottom: .75rem;
-    scrollbar-width: thin;
-    -webkit-overflow-scrolling: touch;
-  }
-  .research-tabs button.ctl {
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-}
 .research-views { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin: .6rem 0 .9rem; }
 .research-tab-pane { display: grid; gap: var(--space-3); }
 #research-manager .ctl-group { grid-template-columns: minmax(0, 1fr); }
@@ -1684,117 +1849,6 @@ mark.search-hit {
   font-size: var(--text-note);
 }
 
-/* --- Native Modals & Template Cards ----------------------------------- */
-dialog.lixity-modal {
-  position: fixed;
-  inset: 0;
-  margin: auto;
-  border: 1px solid var(--line);
-  padding: 0;
-  background: var(--surface);
-  color: var(--fg);
-  max-width: 38rem;
-  width: min(94vw, 38rem);
-  max-height: min(90vh, 44rem);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-modal);
-  overflow: hidden;
-}
-dialog.lixity-modal::backdrop {
-  background: rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-.modal-card {
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  max-height: min(90vh, 44rem);
-}
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.15rem 1.4rem;
-  border-bottom: 1px solid var(--line);
-  background: var(--surface);
-}
-.modal-header h3 {
-  margin: 0;
-  font-size: 1.15rem;
-  font-weight: var(--weight-semibold);
-  color: var(--fg);
-  letter-spacing: -.015em;
-}
-.modal-close {
-  background: transparent;
-  border: 1px solid transparent;
-  font-size: 1.15rem;
-  cursor: pointer;
-  color: var(--muted);
-  border-radius: var(--radius-sm);
-  width: 2rem;
-  height: 2rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-  transition: all .15s ease;
-}
-.modal-close:hover {
-  color: var(--fg);
-  background: var(--neutral);
-}
-.modal-close:focus {
-  outline: none;
-}
-.modal-close:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-.modal-intro { margin: 0 0 .7rem; }
-.wizard-hint { display: block; margin-top: .25rem; font-size: var(--text-micro); }
-.modal-tabs {
-  display: flex;
-  background: var(--bg);
-  border-bottom: 1px solid var(--line);
-  padding: 0 1.4rem;
-  gap: 1rem;
-}
-.modal-tab-btn {
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--muted);
-  font-size: var(--text-control);
-  font-weight: 500;
-  padding: .8rem .25rem;
-  cursor: pointer;
-  transition: color .15s ease, border-color .15s ease;
-  margin-bottom: -1px;
-}
-.modal-tab-btn:hover {
-  color: var(--fg);
-}
-.modal-tab-btn.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
-  font-weight: var(--weight-semibold);
-}
-.modal-tab-pane {
-  display: block;
-}
-.modal-body {
-  padding: 1.4rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.1rem;
-  overflow-y: auto;
-  background: var(--surface);
-}
 .project-path-row {
   display: flex;
   align-items: stretch;
@@ -1875,37 +1929,13 @@ dialog.lixity-modal::backdrop {
 .research-revision-readonly dt { font-weight: var(--weight-semibold); color: var(--muted); }
 .research-revision-readonly dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
 .research-revision-history-detail { overflow-wrap: anywhere; }
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: .35rem;
-}
-.form-row {
-  display: flex;
-  gap: 1rem;
-  align-items: flex-start;
-  width: 100%;
-}
 @media (max-width: 540px) {
   .research-revision-readonly { grid-template-columns: minmax(0, 1fr); gap: .1rem; }
   .research-revision-readonly dd { margin-bottom: .55rem; }
-  .form-row {
-    flex-direction: column;
-    gap: .75rem;
-  }
   .project-path-row { flex-direction: column; }
   .project-path-row button { align-self: flex-start; }
 }
-.form-checkbox {
-  display: inline-flex;
-  align-items: center;
-  gap: .55rem;
-  cursor: pointer;
-  font-size: var(--text-control);
-  color: var(--fg);
-  user-select: none;
-  margin-top: .15rem;
-}
+
 .form-checkbox input[type="checkbox"] {
   accent-color: var(--accent);
   width: 1rem;
@@ -2061,15 +2091,7 @@ dialog.lixity-modal::backdrop {
   color: var(--muted);
   line-height: 1.4;
 }
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: .75rem;
-  margin-top: .4rem;
-  padding-top: 1.1rem;
-  border-top: 1px solid var(--line);
-}
+
 
 .page > *, .panel > * { margin-block: 0; }
 body.only-flags:not(.text-search-active) .chapter { display: none; }
@@ -2118,14 +2140,6 @@ body.only-flags:not(.text-search-active) .chip:not(.sev-2):not(.sev-3) { display
   .badge.sev-2 { background: #451a03; color: #fde68a; }
   .badge.sev-3 { background: #450a0a; color: #fca5a5; }
 
-  dialog.lixity-modal {
-    background: var(--surface);
-    border-color: var(--line);
-    color: var(--fg);
-  }
-  dialog.lixity-modal::backdrop {
-    background: rgba(0, 0, 0, 0.7);
-  }
   .file-dropzone {
     background: #111418;
     border-color: var(--line-strong);
@@ -2138,13 +2152,7 @@ body.only-flags:not(.text-search-active) .chip:not(.sev-2):not(.sev-3) { display
     background: #111418;
     border-color: var(--line);
   }
-  .modal-tab-btn {
-    color: var(--muted);
-  }
-  .modal-tab-btn.active {
-    color: var(--fg);
-    border-bottom-color: var(--accent);
-  }
+
 }
 
 /* Safe Markdown Prose Rendering in Dossiers & History */
@@ -2263,9 +2271,7 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
 }
 
 /* Top Workspace View Navigation */
-/* One tab recipe for the workspace switch and the research sub-tabs: a
-   bottom-ruled row of controls, the active tab filled with the action colour
-   (same shape, type and states as every other control). */
+/* Primary workspace navigation stays distinct from local content tabs. */
 .view-navigation {
   display: flex;
   flex-wrap: wrap;
@@ -2506,6 +2512,25 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
 #research-revision-batch-list > li { padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid var(--line); }
 #research-revision-batch-list dd { margin: .25rem 0 .75rem; }
 #research-revision-batch-list pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 10rem; overflow: auto; }
+
+/* Research records read as a continuous catalogue within the workspace. */
+.research-record-list > .research-card {
+  margin: 0;
+  padding: var(--space-4) 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+.research-card:focus-within { border-color: var(--line-strong); }
+.research-card-header { gap: var(--space-2) var(--space-3); }
+.research-card-title { flex: 1 1 16rem; }
+.research-dossier-section-block { background: var(--surface); }
+.research-dossier-section-block > summary,
+.settings-advanced > summary, .research-details > summary {
+  min-height: 2.5rem;
+  align-content: center;
+}
 
 /*! PhotoSwipe main CSS by Dmytro Semenov | photoswipe.com */
 
@@ -3838,7 +3863,7 @@ a[data-demo-local] { opacity: .65; }
 })();</script>
 <script id="research-demo-controls">document.addEventListener("DOMContentLoaded", function () {
   "use strict";
-  var imageResources = {"/api/research/image?project_id=urn%3Auuid%3A580fa195-a8e1-42cf-bbb2-b19e6c598bc4&source_id=urn%3Auuid%3A4428d815-2df8-4a18-b540-aa4d84fcaa6f&version_id=urn%3Auuid%3A3728475e-b3a7-4197-a3a3-d9f32d56f0f3": "../assets/research/hamburg-free-port-1900.jpg", "/api/research/image?project_id=urn%3Auuid%3A580fa195-a8e1-42cf-bbb2-b19e6c598bc4&source_id=urn%3Auuid%3Adfd9eaa8-c827-4f31-aa18-10e81d91919d&version_id=urn%3Auuid%3A334f4444-cdad-458f-ab1d-4b252bf2cf7f": "../assets/research/hamburg-harbour-1890-1900.jpg"};
+  var imageResources = {"/api/research/image?project_id=urn%3Auuid%3A5379dde3-0931-4f65-bd8c-f224761a1d5b&source_id=urn%3Auuid%3Ab709246a-b5cc-4195-9cfc-3145dfcf51a7&version_id=urn%3Auuid%3A9d1f7600-7221-4d84-bc70-fec3c220ad9f": "../assets/research/hamburg-free-port-1900.jpg", "/api/research/image?project_id=urn%3Auuid%3A5379dde3-0931-4f65-bd8c-f224761a1d5b&source_id=urn%3Auuid%3A670c969b-5a5a-4817-b32b-a4111ea3123d&version_id=urn%3Auuid%3Ac0c55573-afc1-4b22-8dae-a9e6de9ee5cc": "../assets/research/hamburg-harbour-1890-1900.jpg"};
   var restoreImages = window.LixityDossierImages.restoreMarkdown;
   window.LixityDossierImages.restoreMarkdown = function (rendered, prepared) {
     var template = document.createElement("template");
@@ -4054,8 +4079,8 @@ a[data-demo-local] { opacity: .65; }
   </div>
 </section>
 <div class="view-pane" id="view-pane-research" data-view-pane="research" role="tabpanel" aria-labelledby="tab-view-research">
-<section class="panel controls" id="research-manager" data-research-token="synthetic-research-example"><h2>Research &amp; Dossiers</h2><div class="row row-between m-0"><p class="ctl-note m-0" id="research-hint">Dossiers, claims and manuscript evidence. Manage sources, reading and notes in Zotero.</p><span class="ctl-status loading fw-medium" id="r-active-root">Loading research workspace…</span></div><details class="settings-advanced" id="research-setup-guide"><summary>Set up OCR and Zotero</summary><div class="ctl-group"><p class="ctl-note">Check local prerequisites. No sources or library records are imported by this check.</p><button type="button" class="ctl" id="research-setup-check">Check setup</button><p id="setup-ocr-reading" class="ctl-note" aria-live="polite">OCR: Not checked yet</p><p id="setup-zotero-reading" class="ctl-note" aria-live="polite">Zotero: Not checked yet</p><div id="setup-zotero-steps"><h3 class="section-heading">Zotero</h3><p class="ctl-note">Open Zotero Desktop. In Settings → Advanced, allow other applications on this computer to use its local API, then check again.</p><p><a class="ctl-link" href="https://www.zotero.org/support/" target="_blank" rel="noopener">Zotero</a></p></div><div id="setup-ocr-steps"><h3 class="section-heading">OCR</h3><p class="ctl-note">For scans, install Poppler, Tesseract and the required language data on the server computer. Use the installation guides for your operating system.</p><p><a class="ctl-link" href="https://tesseract-ocr.github.io/tessdoc/Installation.html" target="_blank" rel="noopener">Tesseract</a> · <a class="ctl-link" href="https://mfahsold.github.io/lixity/INSTALLATION.md#server-environment-and-project-access" target="_blank" rel="noopener">Poppler</a></p></div><p class="ctl-note">German + English example only: choose the languages actually needed for your scans; these values are not inferred from the manuscript.</p><pre class="research-dossier-body-source">LIXITY_OCR_BACKEND=tesseract
-LIXITY_OCR_LANGUAGES=deu+eng</pre><p class="ctl-note">Set the chosen OCR environment values when starting Lixity, then restart the server manually and check again. Test only a permitted scan and review its text.</p><p class="ctl-note">The browser&#x27;s JSON request budget is 5 MiB; CLI PDF input allows 50 MiB. Use CLI or a server-local file for long scans rather than increasing the browser budget.</p><details><summary>Advanced diagnostics</summary><pre class="research-dossier-body-source" id="setup-diagnostics"></pre></details></div></details><button type="button" class="ctl" id="research-revision-batch-review" hidden>Review change set ({count})</button><div class="row research-tabs" id="research-tabs" role="tablist"><button type="button" class="ctl active" data-rtab="dossiers" role="tab" aria-selected="true">Dossiers</button><button type="button" class="ctl" data-rtab="claims" role="tab" aria-selected="false">Claims &amp; evidence</button><button type="button" class="ctl" data-rtab="decisions" role="tab" aria-selected="false">Decisions</button><button type="button" class="ctl" data-rtab="review" role="tab" aria-selected="false">Review</button><button type="button" class="ctl" data-rtab="sources" role="tab" aria-selected="false">Evidence captures</button><button type="button" class="ctl" data-rtab="search" role="tab" aria-selected="false">Search</button><button type="button" class="ctl" data-rtab="grounding" role="tab" aria-selected="false">Compare</button></div><div id="research-init-box" class="ctl-group" style="display:none;"><span class="ctl-label"><span class="help" data-help="Creates a new local research archive for this project; it does not attach an existing archive." tabindex="0">Research archive not initialized</span></span><p class="ctl-note">This project has no local research archive (research/) yet.</p><div class="row"><input class="ctl" id="r-init-title" placeholder="Project title"/><button class="ctl primary" id="r-init-btn">Create research archive</button></div></div><div class="research-tab-pane" id="rtab-sources" style="display:none;"><h3 class="section-heading">Saved sources</h3><p class="ctl-note">Retained copies for evidence and passage selection. Reading and notes stay in Zotero; captures update only on request.</p><input class="ctl full-width mb-2" type="search" id="r-filter-sources" aria-label="Filter sources…" placeholder="Filter sources…"/><p class="ctl-note" id="r-filter-sources-status" aria-live="polite" hidden></p><div id="research-sources-list"><div class="loading-state" role="status" aria-busy="true" aria-live="polite"><span class="loading-spinner" aria-hidden="true"></span><span class="loading-text">Loading research workspace…</span></div></div><details class="settings-advanced" id="zotero-box"><summary>Capture from Zotero</summary><div class="ctl-group"><p class="ctl-note">Manage sources and media in Zotero. Capture selected text, PDF or PNG/JPEG sources here. Images remain visual references without OCR.</p><div class="row"><label for="r-zotero-library">Zotero library</label><input class="ctl" id="r-zotero-library" value="users/0" placeholder="users/0"/><button type="button" class="ctl" id="r-zotero-collections">Load collections</button><select class="ctl" id="r-zotero-collection" aria-label="All collections"><option value="">All collections</option></select></div><div class="row"><input class="ctl grow" id="r-zotero-query" aria-label="Search Zotero" placeholder="Search Zotero"/><button type="button" class="ctl primary" id="r-zotero-browse">Search Zotero</button></div><label class="form-checkbox"><input type="checkbox" id="r-zotero-retention"/> I permit local storage of captured Zotero sources.</label><div id="r-zotero-results" aria-live="polite"></div></div></details><details class="settings-advanced" id="r-local-import"><summary>Alternative: import a local source</summary><div class="ctl-group"><div class="row mb-2"><input class="ctl" type="file" id="r-ingest-file" accept=".txt,.md,.text,.pdf"/></div><details class="research-details" id="r-ingest-options"><summary>Optional details</summary><div class="row"><input class="ctl field-narrow" id="r-ingest-title" placeholder="Title / source"/><input class="ctl field-narrow" id="r-ingest-tags" placeholder="Tags (e.g. archive, 1924)"/></div><label for="r-ingest-origin-url">Origin URL (optional)</label><input class="ctl full-width my-1" type="url" id="r-ingest-origin-url" maxlength="2000" aria-describedby="r-ingest-origin-help" placeholder="https://example.org/source"/><p class="ctl-note" id="r-ingest-origin-help">Records where the source came from; no download or verification.</p></details><div class="row mb-2" id="r-ocr-diagnostic-box" style="display:none;"></div><div class="row mb-2"><textarea class="ctl full-width" id="r-ingest-text" placeholder="Or enter source text here…" rows="3"></textarea></div><div class="row"><label class="form-checkbox"><input type="checkbox" id="r-ingest-retention" data-help="Saving a source retains its bytes locally and indexes its passages. Confirm you have permission to keep a copy."/> <span>I permit local storage of this source.</span></label><button class="ctl primary" id="r-ingest-btn">Save and index source</button></div></div></details></div><div class="research-tab-pane" id="rtab-search" style="display:none;"><div class="ctl-group"><span class="ctl-label"><span class="help" data-help="Search source passages and current dossiers, claims and decisions by words. Current does not mean verified or contradiction-free." tabindex="0">Search Lixity records</span></span><div class="row"><input class="ctl" id="r-search-query" placeholder="Enter a word or phrase…"/><select class="ctl" id="r-search-scope" aria-label="Search scope"><option value="all">All records</option><option value="sources">Evidence captures</option><option value="dossiers">Dossiers</option><option value="claims">Claims &amp; evidence</option><option value="decisions">Decisions</option></select><button class="ctl primary" id="r-search-btn">Search</button></div></div><p class="ctl-note">Search retained passages and current dossiers, claims and decisions. Use Zotero to search your source library.</p><div id="research-search-results"></div></div><div class="research-tab-pane" id="rtab-dossiers"><div class="ctl-group"><span class="ctl-label"><span class="help" data-help="A dossier holds your notes and optional passage references; it is not an accepted claim." tabindex="0">Create dossier</span></span><div class="row mb-2"><div class="setting-field research-form-field"><label class="form-label" for="r-dos-title">Dossier title</label><input class="ctl" id="r-dos-title" placeholder="Dossier title"/></div></div><details class="research-details" id="r-dos-options"><summary>Optional details</summary><div class="row"><div class="setting-field research-form-field"><label class="form-label" for="r-dos-tags">Tags (comma-separated)</label><input class="ctl" id="r-dos-tags" placeholder="Tags (comma-separated)"/></div><div class="setting-field research-form-field"><label class="form-label" for="r-dos-eids">Passage IDs (optional, comma-separated)</label><input class="ctl" id="r-dos-eids" data-help="Use for claim or dossier copies only the passage ID into the draft; nothing is saved until you submit it." placeholder="Passage IDs (optional, comma-separated)"/></div></div></details><div class="row mb-2"><div class="setting-field research-form-field"><label class="form-label" for="r-dos-body">Dossier notes, claims or summary…</label><textarea class="ctl" id="r-dos-body" placeholder="Dossier notes, claims or summary…" rows="4"></textarea></div></div><div id="r-dos-geography-host"></div><div class="row"><button class="ctl primary" id="r-dos-create-btn">Save dossier</button></div></div><input class="ctl full-width mb-2" type="search" id="r-filter-dossiers" aria-label="Filter dossiers…" placeholder="Filter dossiers…"/><p class="ctl-note" id="r-filter-dossiers-status" aria-live="polite" hidden></p><div id="research-dossiers-list"><div class="loading-state" role="status" aria-busy="true" aria-live="polite"><span class="loading-spinner" aria-hidden="true"></span><span class="loading-text">Loading research workspace…</span></div></div></div><div class="research-tab-pane" id="rtab-claims" style="display:none;"><p class="ctl-note" id="research-claims-intro">The same entries in two views: the list shows evidence links, the timeline sorts by recorded period.</p><div class="research-views" id="r-claim-views" role="group"><button type="button" class="ctl active" data-claim-view="list" aria-pressed="true">List</button><button type="button" class="ctl" data-claim-view="timeline" aria-pressed="false">Timeline</button><button type="button" class="ctl" id="r-claim-matrix-btn">Export claim matrix</button></div><div id="rtab-claims-list">  <div class="ctl-group">    <span class="ctl-label"><span class="help" data-help="A claim is your historical assertion or hypothesis. Lixity does not accept or verify it automatically." tabindex="0">Add historical claim</span></span>    <div class="row mb-2"><div class="setting-field research-form-field"><label class="form-label" for="r-claim-title">Short claim title</label><input class="ctl" id="r-claim-title" placeholder="Short claim title"/></div><div class="setting-field research-form-field"><label class="form-label" for="r-claim-confidence">Author review state</label><select class="ctl" id="r-claim-confidence" aria-label="Author review state" data-help="You assign this evidence status. It is not a calculated probability or a verification result."><option value="hypothetical">Author assumption</option><option value="evidenced">With evidence</option><option value="disputed">Disputed</option></select></div>    </div>    <div class="row mb-2"><div class="setting-field research-form-field"><label class="form-label" for="r-claim-statement">Full historical claim or hypothesis…</label><textarea class="ctl" id="r-claim-statement" placeholder="Full historical claim or hypothesis…" rows="3"></textarea></div>    </div><details class="research-details" id="r-claim-options"><summary>Optional details</summary><div class="row"><div class="setting-field research-form-field"><label class="form-label" for="r-claim-tags">Tags (comma-separated)</label><input class="ctl" id="r-claim-tags" placeholder="Tags (comma-separated)"/></div><div class="setting-field research-form-field"><label class="form-label" for="r-claim-dossier-select">Dossier</label><select class="ctl" id="r-claim-dossier-select"><option value="">No dossier selected</option></select></div></div>    <div class="row mb-2"><div class="setting-field research-form-field"><label class="form-label" for="r-claim-time">Period (e.g. 1923)</label><input class="ctl" id="r-claim-time" placeholder="Period (e.g. 1923)"/><span class="ctl-note">Placed formats: 1923 · 1923-03 · 1923-03-15 · 1923–1924 or 1923-1924. Free text stays unplaced.</span></div><div class="setting-field research-form-field"><label class="form-label" for="r-claim-place">Place (e.g. Zürich)</label><input class="ctl" id="r-claim-place" placeholder="Place (e.g. Zürich)"/></div><div class="setting-field research-form-field"><label class="form-label" for="r-claim-actors">Key actors (comma-separated)</label><input class="ctl" id="r-claim-actors" placeholder="Key actors (comma-separated)"/></div>    </div></details>    <div class="row">      <button class="ctl primary" id="r-claim-create-btn">Save claim</button>    </div>  </div>  <div class="ctl-group mt-3">    <span class="ctl-label"><span class="help" data-help="Link a retained passage to a claim and record how you interpret its relation. The link does not verify the claim." tabindex="0">Link passage evidence to claim</span></span><button type="button" class="ctl" id="r-find-passage">Find source passage</button>    <div class="row mb-2">      <select class="ctl field-wide" id="r-link-claim-select" aria-label="Select claim…"><option value="">Select claim…</option></select>      <input class="ctl ctl-code field-wide" id="r-link-passage-id" aria-label="Passage UUID (from search)" data-help="Use for claim or dossier copies only the passage ID into the draft; nothing is saved until you submit it." placeholder="Passage UUID (from search)"/>      <select class="ctl" id="r-link-relation" aria-label="Evidence relation" data-help="Supports, contradicts, qualifies and contextualizes are your interpretations of the passage, not automatic judgments.">        <option value="supports">Supports</option>        <option value="contradicts">Contradicts</option>        <option value="qualifies">Qualifies</option>        <option value="contextualizes">Contextualizes</option>      </select>    </div>    <div class="row mb-2">      <input class="ctl grow" id="r-link-rationale" placeholder="Reason for link (optional)"/>      <button class="ctl primary" id="r-link-evidence-btn">Link evidence</button>    </div>  </div><div class="ctl-group research-timeline-entry"><p class="ctl-note" id="r-timeline-callout" hidden></p><button type="button" class="ctl" id="r-open-timeline">Open timeline</button></div>  <div id="research-claims-list"><div class="loading-state" role="status" aria-busy="true" aria-live="polite"><span class="loading-spinner" aria-hidden="true"></span><span class="loading-text">Loading research workspace…</span></div></div><div class="ctl-group research-relation-section"><h3>Cause and effect claims</h3><p class="ctl-note">Your interpretation links two reviewed claim versions. It does not verify causality.</p><form id="r-relation-form"><div class="research-relation-fields"><div><label for="r-relation-from">Proposed cause</label><select class="ctl" id="r-relation-from" required><option value="">Select claim…</option></select></div><div><label for="r-relation-to">Proposed effect</label><select class="ctl" id="r-relation-to" required><option value="">Select claim…</option></select></div></div><label for="r-relation-rationale">Reason for link (optional)</label><textarea class="ctl" id="r-relation-rationale" rows="2"></textarea><p class="ctl-note" id="r-relation-compatibility">Saving a cause/effect link upgrades this archive to format 6 and requires Lixity 3.0 or newer readers. Back up first.</p><button type="submit" class="ctl primary" id="r-relation-save" disabled>Save cause/effect link</button><p class="ctl-note" id="r-relation-status" role="status"></p></form><label class="form-checkbox"><input type="checkbox" id="r-relation-retracted"/> Show retracted links</label><div id="research-claim-relations" aria-live="polite"></div></div></div><div id="rtab-timeline" style="display:none;"><div id="research-claims-timeline" aria-live="polite"><div class="loading-state" role="status" aria-busy="true" aria-live="polite"><span class="loading-spinner" aria-hidden="true"></span><span class="loading-text">Loading research workspace…</span></div></div></div></div><div class="research-tab-pane" id="rtab-decisions" style="display:none;"><p class="ctl-note" id="research-decisions-intro">Deliberate creative or historical choices with rationale; they are not historical claims.</p>  <div class="ctl-group">    <span class="ctl-label"><span class="help" data-help="Record a creative or historical choice and its rationale so readers can distinguish it from the source record." tabindex="0">Record creative decision or historical deviation</span></span>    <div class="row mb-2"><div class="setting-field research-form-field"><label class="form-label" for="r-decision-title">Decision title (e.g. shifted date)</label><input class="ctl" id="r-decision-title" placeholder="Decision title (e.g. shifted date)"/></div>    </div>    <div class="row mb-2"><div class="setting-field research-form-field"><label class="form-label" for="r-decision-rationale">Creative, historical or dramatic rationale…</label><textarea class="ctl" id="r-decision-rationale" placeholder="Creative, historical or dramatic rationale…" rows="3"></textarea></div>    </div><details class="research-details" id="r-decision-options"><summary>Optional details</summary><div class="row"><div class="setting-field research-form-field"><label class="form-label" for="r-decision-claim-select">Related claim:</label><select class="ctl" id="r-decision-claim-select"><option value="">No claim linked</option></select></div><div class="setting-field research-form-field"><label class="form-label" for="r-decision-dossier-select">Dossier</label><select class="ctl" id="r-decision-dossier-select"><option value="">No dossier selected</option></select></div></div>    <div class="row mb-2"><div class="setting-field research-form-field"><label class="form-label" for="r-decision-plot">Effect on plot or characters…</label><input class="ctl" id="r-decision-plot" placeholder="Effect on plot or characters…"/></div>    </div>    <div class="row row-between"><label class="form-checkbox"><input type="checkbox" id="r-decision-deviation"/> <span><span class="help" data-help="Check this when you deliberately depart from the evidence. Leaving it unchecked does not certify factual accuracy." tabindex="0">Deliberate deviation from historical evidence</span></span></label></div></details><div class="row">      <button class="ctl primary" id="r-decision-create-btn">Record decision</button>    </div>  </div>  <div id="research-decisions-list"><div class="loading-state" role="status" aria-busy="true" aria-live="polite"><span class="loading-spinner" aria-hidden="true"></span><span class="loading-text">Loading research workspace…</span></div></div></div><div class="research-tab-pane" id="rtab-review" style="display:none;"><h3 class="section-heading">Keep decisions and dossiers in step</h3><p class="ctl-note">These candidates follow recorded links, revision pins and dates. They do not establish a contradiction or prove that a dossier needs rewriting. Historical pins may be intentional.</p><button type="button" class="ctl" id="r-review-refresh">Refresh review</button><div id="research-editorial-review" aria-live="polite"></div><section id="research-manuscript-review-section" hidden><h3 class="section-heading">Saved manuscript associations</h3><p class="ctl-note">Checks saved quotes against the current manuscript and claim versions. Moved, changed or ambiguous anchors stay unresolved; adjusted paragraphs with an unchanged quote can be accepted directly; flags name review needs, not semantic contradictions.</p><div id="research-manuscript-review" class="manuscript-link-review-list" aria-live="polite"></div></section></div><div class="research-tab-pane" id="rtab-grounding" style="display:none;"><div class="ctl-group"><span class="ctl-label"><span class="help" data-help="Compares shared vocabulary, not factual agreement. Scores from different language profiles are not directly comparable." tabindex="0">Compare source with loaded manuscript</span></span><div class="row"><select class="ctl field-wide" id="r-ground-source-select" aria-label="Select source…"><option value="">Select source…</option></select><button class="ctl primary" id="r-ground-btn">Run comparison</button></div></div><div id="research-grounding-results"></div></div><div class="ctl-status" id="research-status-bar" role="status" aria-live="polite"></div></section>
+<section class="panel controls" id="research-manager" data-research-token="synthetic-research-example"><h2 id="research-panel-title">Research &amp; Dossiers</h2><div class="row row-between m-0"><p class="ctl-note m-0" id="research-hint">Dossiers, claims and manuscript evidence. Manage sources, reading and notes in Zotero.</p><span class="ctl-status loading fw-medium" id="r-active-root">Loading research workspace…</span></div><details class="settings-advanced" id="research-setup-guide"><summary>Set up OCR and Zotero</summary><div class="ctl-group"><p class="ctl-note">Check local prerequisites. No sources or library records are imported by this check.</p><button type="button" class="ctl" id="research-setup-check">Check setup</button><p id="setup-ocr-reading" class="ctl-note" aria-live="polite">OCR: Not checked yet</p><p id="setup-zotero-reading" class="ctl-note" aria-live="polite">Zotero: Not checked yet</p><div id="setup-zotero-steps"><h3 class="section-heading">Zotero</h3><p class="ctl-note">Open Zotero Desktop. In Settings → Advanced, allow other applications on this computer to use its local API, then check again.</p><p><a class="ctl-link" href="https://www.zotero.org/support/" target="_blank" rel="noopener">Zotero</a></p></div><div id="setup-ocr-steps"><h3 class="section-heading">OCR</h3><p class="ctl-note">For scans, install Poppler, Tesseract and the required language data on the server computer. Use the installation guides for your operating system.</p><p><a class="ctl-link" href="https://tesseract-ocr.github.io/tessdoc/Installation.html" target="_blank" rel="noopener">Tesseract</a> · <a class="ctl-link" href="https://mfahsold.github.io/lixity/INSTALLATION.md#server-environment-and-project-access" target="_blank" rel="noopener">Poppler</a></p></div><p class="ctl-note">German + English example only: choose the languages actually needed for your scans; these values are not inferred from the manuscript.</p><pre class="research-dossier-body-source">LIXITY_OCR_BACKEND=tesseract
+LIXITY_OCR_LANGUAGES=deu+eng</pre><p class="ctl-note">Set the chosen OCR environment values when starting Lixity, then restart the server manually and check again. Test only a permitted scan and review its text.</p><p class="ctl-note">The browser&#x27;s JSON request budget is 5 MiB; CLI PDF input allows 50 MiB. Use CLI or a server-local file for long scans rather than increasing the browser budget.</p><details><summary>Advanced diagnostics</summary><pre class="research-dossier-body-source" id="setup-diagnostics"></pre></details></div></details><button type="button" class="ctl" id="research-revision-batch-review" hidden>Review change set ({count})</button><div class="row research-tabs" id="research-tabs" role="tablist" aria-labelledby="research-panel-title"><button type="button" class="ctl active" data-rtab="dossiers" role="tab" aria-selected="true">Dossiers</button><button type="button" class="ctl" data-rtab="claims" role="tab" aria-selected="false">Claims &amp; evidence</button><button type="button" class="ctl" data-rtab="decisions" role="tab" aria-selected="false">Decisions</button><button type="button" class="ctl" data-rtab="review" role="tab" aria-selected="false">Review</button><button type="button" class="ctl" data-rtab="sources" role="tab" aria-selected="false">Evidence captures</button><button type="button" class="ctl" data-rtab="search" role="tab" aria-selected="false">Search</button><button type="button" class="ctl" data-rtab="grounding" role="tab" aria-selected="false">Compare</button></div><div id="research-init-box" class="ctl-group" style="display:none;"><span class="ctl-label"><span class="help" data-help="Creates a new local research archive for this project; it does not attach an existing archive." tabindex="0">Research archive not initialized</span></span><p class="ctl-note">This project has no local research archive (research/) yet.</p><div class="row"><input class="ctl" id="r-init-title" placeholder="Project title"/><button class="ctl primary" id="r-init-btn">Create research archive</button></div></div><div class="research-tab-pane" id="rtab-sources" style="display:none;"><h3 class="section-heading">Saved sources</h3><p class="ctl-note">Retained copies for evidence and passage selection. Reading and notes stay in Zotero; captures update only on request.</p><input class="ctl full-width mb-2" type="search" id="r-filter-sources" aria-label="Filter sources…" placeholder="Filter sources…"/><p class="ctl-note" id="r-filter-sources-status" aria-live="polite" hidden></p><div id="research-sources-list"><div class="loading-state" role="status" aria-busy="true" aria-live="polite"><span class="loading-spinner" aria-hidden="true"></span><span class="loading-text">Loading research workspace…</span></div></div><details class="settings-advanced" id="zotero-box"><summary>Capture from Zotero</summary><div class="ctl-group"><p class="ctl-note">Manage sources and media in Zotero. Capture selected text, PDF or PNG/JPEG sources here. Images remain visual references without OCR.</p><div class="row"><label for="r-zotero-library">Zotero library</label><input class="ctl" id="r-zotero-library" value="users/0" placeholder="users/0"/><button type="button" class="ctl" id="r-zotero-collections">Load collections</button><select class="ctl" id="r-zotero-collection" aria-label="All collections"><option value="">All collections</option></select></div><div class="row"><input class="ctl grow" id="r-zotero-query" aria-label="Search Zotero" placeholder="Search Zotero"/><button type="button" class="ctl primary" id="r-zotero-browse">Search Zotero</button></div><label class="form-checkbox"><input type="checkbox" id="r-zotero-retention"/> I permit local storage of captured Zotero sources.</label><div id="r-zotero-results" aria-live="polite"></div></div></details><details class="settings-advanced" id="r-local-import"><summary>Alternative: import a local source</summary><div class="ctl-group"><div class="row mb-2"><input class="ctl" type="file" id="r-ingest-file" accept=".txt,.md,.text,.pdf"/></div><details class="research-details" id="r-ingest-options"><summary>Optional details</summary><div class="row"><input class="ctl field-narrow" id="r-ingest-title" placeholder="Title / source"/><input class="ctl field-narrow" id="r-ingest-tags" placeholder="Tags (e.g. archive, 1924)"/></div><label for="r-ingest-origin-url">Origin URL (optional)</label><input class="ctl full-width my-1" type="url" id="r-ingest-origin-url" maxlength="2000" aria-describedby="r-ingest-origin-help" placeholder="https://example.org/source"/><p class="ctl-note" id="r-ingest-origin-help">Records where the source came from; no download or verification.</p></details><div class="row mb-2" id="r-ocr-diagnostic-box" style="display:none;"></div><div class="row mb-2"><textarea class="ctl full-width" id="r-ingest-text" placeholder="Or enter source text here…" rows="3"></textarea></div><div class="row"><label class="form-checkbox"><input type="checkbox" id="r-ingest-retention" data-help="Saving a source retains its bytes locally and indexes its passages. Confirm you have permission to keep a copy."/> <span>I permit local storage of this source.</span></label><button class="ctl primary" id="r-ingest-btn">Save and index source</button></div></div></details></div><div class="research-tab-pane" id="rtab-search" style="display:none;"><div class="ctl-group"><span class="ctl-label"><span class="help" data-help="Search source passages and current dossiers, claims and decisions by words. Current does not mean verified or contradiction-free." tabindex="0">Search Lixity records</span></span><div class="row"><input class="ctl" id="r-search-query" placeholder="Enter a word or phrase…"/><select class="ctl" id="r-search-scope" aria-label="Search scope"><option value="all">All records</option><option value="sources">Evidence captures</option><option value="dossiers">Dossiers</option><option value="claims">Claims &amp; evidence</option><option value="decisions">Decisions</option></select><button class="ctl primary" id="r-search-btn">Search</button></div></div><p class="ctl-note">Search retained passages and current dossiers, claims and decisions. Use Zotero to search your source library.</p><div id="research-search-results"></div></div><div class="research-tab-pane" id="rtab-dossiers"><div class="ctl-group"><span class="ctl-label"><span class="help" data-help="A dossier holds your notes and optional passage references; it is not an accepted claim." tabindex="0">Create dossier</span></span><div class="row mb-2"><div class="setting-field research-form-field"><label class="form-label" for="r-dos-title">Dossier title</label><input class="ctl" id="r-dos-title" placeholder="Dossier title"/></div></div><details class="research-details" id="r-dos-options"><summary>Optional details</summary><div class="row"><div class="setting-field research-form-field"><label class="form-label" for="r-dos-tags">Tags (comma-separated)</label><input class="ctl" id="r-dos-tags" placeholder="Tags (comma-separated)"/></div><div class="setting-field research-form-field"><label class="form-label" for="r-dos-eids">Passage IDs (optional, comma-separated)</label><input class="ctl" id="r-dos-eids" data-help="Use for claim or dossier copies only the passage ID into the draft; nothing is saved until you submit it." placeholder="Passage IDs (optional, comma-separated)"/></div></div></details><div class="row mb-2"><div class="setting-field research-form-field"><label class="form-label" for="r-dos-body">Dossier notes, claims or summary…</label><textarea class="ctl" id="r-dos-body" placeholder="Dossier notes, claims or summary…" rows="4"></textarea></div></div><div id="r-dos-geography-host"></div><div class="row"><button class="ctl primary" id="r-dos-create-btn">Save dossier</button></div></div><input class="ctl full-width mb-2" type="search" id="r-filter-dossiers" aria-label="Filter dossiers…" placeholder="Filter dossiers…"/><p class="ctl-note" id="r-filter-dossiers-status" aria-live="polite" hidden></p><div id="research-dossiers-list"><div class="loading-state" role="status" aria-busy="true" aria-live="polite"><span class="loading-spinner" aria-hidden="true"></span><span class="loading-text">Loading research workspace…</span></div></div></div><div class="research-tab-pane" id="rtab-claims" style="display:none;"><p class="ctl-note" id="research-claims-intro">The same entries in two views: the list shows evidence links, the timeline sorts by recorded period.</p><div class="research-views" id="r-claim-views" role="group"><button type="button" class="ctl active" data-claim-view="list" aria-pressed="true">List</button><button type="button" class="ctl" data-claim-view="timeline" aria-pressed="false">Timeline</button><button type="button" class="ctl" id="r-claim-matrix-btn">Export claim matrix</button></div><div id="rtab-claims-list">  <div class="ctl-group">    <span class="ctl-label"><span class="help" data-help="A claim is your historical assertion or hypothesis. Lixity does not accept or verify it automatically." tabindex="0">Add historical claim</span></span>    <div class="row mb-2"><div class="setting-field research-form-field"><label class="form-label" for="r-claim-title">Short claim title</label><input class="ctl" id="r-claim-title" placeholder="Short claim title"/></div><div class="setting-field research-form-field"><label class="form-label" for="r-claim-confidence">Author review state</label><select class="ctl" id="r-claim-confidence" aria-label="Author review state" data-help="You assign this evidence status. It is not a calculated probability or a verification result."><option value="hypothetical">Author assumption</option><option value="evidenced">With evidence</option><option value="disputed">Disputed</option></select></div>    </div>    <div class="row mb-2"><div class="setting-field research-form-field"><label class="form-label" for="r-claim-statement">Full historical claim or hypothesis…</label><textarea class="ctl" id="r-claim-statement" placeholder="Full historical claim or hypothesis…" rows="3"></textarea></div>    </div><details class="research-details" id="r-claim-options"><summary>Optional details</summary><div class="row"><div class="setting-field research-form-field"><label class="form-label" for="r-claim-tags">Tags (comma-separated)</label><input class="ctl" id="r-claim-tags" placeholder="Tags (comma-separated)"/></div><div class="setting-field research-form-field"><label class="form-label" for="r-claim-dossier-select">Dossier</label><select class="ctl" id="r-claim-dossier-select"><option value="">No dossier selected</option></select></div></div>    <div class="row mb-2"><div class="setting-field research-form-field"><label class="form-label" for="r-claim-time">Period (e.g. 1923)</label><input class="ctl" id="r-claim-time" placeholder="Period (e.g. 1923)"/><span class="ctl-note">Placed formats: 1923 · 1923-03 · 1923-03-15 · 1923–1924 or 1923-1924. Free text stays unplaced.</span></div><div class="setting-field research-form-field"><label class="form-label" for="r-claim-place">Place (e.g. Zürich)</label><input class="ctl" id="r-claim-place" placeholder="Place (e.g. Zürich)"/></div><div class="setting-field research-form-field"><label class="form-label" for="r-claim-actors">Key actors (comma-separated)</label><input class="ctl" id="r-claim-actors" placeholder="Key actors (comma-separated)"/></div>    </div></details>    <div class="row">      <button class="ctl primary" id="r-claim-create-btn">Save claim</button>    </div>  </div>  <div class="ctl-group mt-3">    <span class="ctl-label"><span class="help" data-help="Link a retained passage to a claim and record how you interpret its relation. The link does not verify the claim." tabindex="0">Link passage evidence to claim</span></span><button type="button" class="ctl" id="r-find-passage">Find source passage</button>    <div class="row mb-2">      <select class="ctl field-wide" id="r-link-claim-select" aria-label="Select claim…"><option value="">Select claim…</option></select>      <input class="ctl ctl-code field-wide" id="r-link-passage-id" aria-label="Passage UUID (from search)" data-help="Use for claim or dossier copies only the passage ID into the draft; nothing is saved until you submit it." placeholder="Passage UUID (from search)"/>      <select class="ctl" id="r-link-relation" aria-label="Evidence relation" data-help="Supports, contradicts, qualifies and contextualizes are your interpretations of the passage, not automatic judgments.">        <option value="supports">Supports</option>        <option value="contradicts">Contradicts</option>        <option value="qualifies">Qualifies</option>        <option value="contextualizes">Contextualizes</option>      </select>    </div>    <div class="row mb-2">      <input class="ctl grow" id="r-link-rationale" placeholder="Reason for link (optional)"/>      <button class="ctl primary" id="r-link-evidence-btn">Link evidence</button>    </div>  </div><div class="ctl-group research-timeline-entry"><p class="ctl-note" id="r-timeline-callout" hidden></p><button type="button" class="ctl" id="r-open-timeline">Open timeline</button></div>  <div id="research-claims-list"><div class="loading-state" role="status" aria-busy="true" aria-live="polite"><span class="loading-spinner" aria-hidden="true"></span><span class="loading-text">Loading research workspace…</span></div></div><div class="ctl-group research-relation-section"><h3>Cause and effect claims</h3><p class="ctl-note">Your interpretation links two reviewed claim versions. It does not verify causality.</p><form id="r-relation-form"><div class="research-relation-fields"><div><label for="r-relation-from">Proposed cause</label><select class="ctl" id="r-relation-from" required><option value="">Select claim…</option></select></div><div><label for="r-relation-to">Proposed effect</label><select class="ctl" id="r-relation-to" required><option value="">Select claim…</option></select></div></div><label for="r-relation-rationale">Reason for link (optional)</label><textarea class="ctl" id="r-relation-rationale" rows="2"></textarea><p class="ctl-note" id="r-relation-compatibility">Saving a cause/effect link upgrades this archive to format 6 and requires Lixity 3.0 or newer readers. Back up first.</p><button type="submit" class="ctl primary" id="r-relation-save" disabled>Save cause/effect link</button><p class="ctl-note" id="r-relation-status" role="status"></p></form><label class="form-checkbox"><input type="checkbox" id="r-relation-retracted"/> Show retracted links</label><div id="research-claim-relations" aria-live="polite"></div></div></div><div id="rtab-timeline" style="display:none;"><div id="research-claims-timeline" aria-live="polite"><div class="loading-state" role="status" aria-busy="true" aria-live="polite"><span class="loading-spinner" aria-hidden="true"></span><span class="loading-text">Loading research workspace…</span></div></div></div></div><div class="research-tab-pane" id="rtab-decisions" style="display:none;"><p class="ctl-note" id="research-decisions-intro">Deliberate creative or historical choices with rationale; they are not historical claims.</p>  <div class="ctl-group">    <span class="ctl-label"><span class="help" data-help="Record a creative or historical choice and its rationale so readers can distinguish it from the source record." tabindex="0">Record creative decision or historical deviation</span></span>    <div class="row mb-2"><div class="setting-field research-form-field"><label class="form-label" for="r-decision-title">Decision title (e.g. shifted date)</label><input class="ctl" id="r-decision-title" placeholder="Decision title (e.g. shifted date)"/></div>    </div>    <div class="row mb-2"><div class="setting-field research-form-field"><label class="form-label" for="r-decision-rationale">Creative, historical or dramatic rationale…</label><textarea class="ctl" id="r-decision-rationale" placeholder="Creative, historical or dramatic rationale…" rows="3"></textarea></div>    </div><details class="research-details" id="r-decision-options"><summary>Optional details</summary><div class="row"><div class="setting-field research-form-field"><label class="form-label" for="r-decision-claim-select">Related claim:</label><select class="ctl" id="r-decision-claim-select"><option value="">No claim linked</option></select></div><div class="setting-field research-form-field"><label class="form-label" for="r-decision-dossier-select">Dossier</label><select class="ctl" id="r-decision-dossier-select"><option value="">No dossier selected</option></select></div></div>    <div class="row mb-2"><div class="setting-field research-form-field"><label class="form-label" for="r-decision-plot">Effect on plot or characters…</label><input class="ctl" id="r-decision-plot" placeholder="Effect on plot or characters…"/></div>    </div>    <div class="row row-between"><label class="form-checkbox"><input type="checkbox" id="r-decision-deviation"/> <span><span class="help" data-help="Check this when you deliberately depart from the evidence. Leaving it unchecked does not certify factual accuracy." tabindex="0">Deliberate deviation from historical evidence</span></span></label></div></details><div class="row">      <button class="ctl primary" id="r-decision-create-btn">Record decision</button>    </div>  </div>  <div id="research-decisions-list"><div class="loading-state" role="status" aria-busy="true" aria-live="polite"><span class="loading-spinner" aria-hidden="true"></span><span class="loading-text">Loading research workspace…</span></div></div></div><div class="research-tab-pane" id="rtab-review" style="display:none;"><h3 class="section-heading">Keep decisions and dossiers in step</h3><p class="ctl-note">These candidates follow recorded links, revision pins and dates. They do not establish a contradiction or prove that a dossier needs rewriting. Historical pins may be intentional.</p><button type="button" class="ctl" id="r-review-refresh">Refresh review</button><div id="research-editorial-review" aria-live="polite"></div><section id="research-manuscript-review-section" hidden><h3 class="section-heading">Saved manuscript associations</h3><p class="ctl-note">Checks saved quotes against the current manuscript and claim versions. Moved, changed or ambiguous anchors stay unresolved; adjusted paragraphs with an unchanged quote can be accepted directly; flags name review needs, not semantic contradictions.</p><div id="research-manuscript-review" class="manuscript-link-review-list" aria-live="polite"></div></section></div><div class="research-tab-pane" id="rtab-grounding" style="display:none;"><div class="ctl-group"><span class="ctl-label"><span class="help" data-help="Compares shared vocabulary, not factual agreement. Scores from different language profiles are not directly comparable." tabindex="0">Compare source with loaded manuscript</span></span><div class="row"><select class="ctl field-wide" id="r-ground-source-select" aria-label="Select source…"><option value="">Select source…</option></select><button class="ctl primary" id="r-ground-btn">Run comparison</button></div></div><div id="research-grounding-results"></div></div><div class="ctl-status" id="research-status-bar" role="status" aria-live="polite"></div></section>
 </div>
 <div class="view-pane" id="view-pane-project" data-view-pane="project" role="tabpanel" aria-labelledby="tab-view-project">
 <section class="panel controls" id="controls">
@@ -4095,7 +4120,7 @@ LIXITY_OCR_LANGUAGES=deu+eng</pre><p class="ctl-note">Set the chosen OCR environ
 <noscript><p class="ctl-note">Enable JavaScript to preview and download the agreement.</p></noscript>
 <div id="nda-preview-wrap" hidden><h3 class="section-heading" id="nda-preview-title">Preview</h3><div id="nda-draft-preview" class="research-dossier-body-source" tabindex="0" role="region" aria-labelledby="nda-preview-title"></div></div></section>
 </div>
-<dialog class="lixity-modal" id="modal-project-create" closedby="any" aria-labelledby="modal-create-title">  <div class="modal-card">    <div class="modal-header">      <h3 id="modal-create-title">Create project</h3>      <button type="button" class="modal-close" data-close-modal aria-label="Close">✕</button>    </div>    <div class="modal-tabs" role="tablist">      <button type="button" class="modal-tab-btn active" role="tab" id="tab-btn-import" aria-selected="true" data-tab-target="tab-pane-import">Import manuscript</button>      <button type="button" class="modal-tab-btn" role="tab" id="tab-btn-scratch" aria-selected="false" data-tab-target="tab-pane-scratch">Start new manuscript</button>    </div>    <p class="ctl-note modal-intro">Create a local project from a manuscript or a new draft. Lixity writes only into the project folder; nothing is uploaded.</p>    <div class="modal-tab-pane active" id="tab-pane-import">      <form id="form-project-import" class="modal-body" method="dialog">        <input type="file" id="import-file-input" accept=".md,.markdown,.txt" hidden />        <button type="button" class="file-dropzone" id="import-dropzone" autofocus aria-label="Select or drop manuscript file">          <span class="dropzone-icon">            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="12" y2="12"></line><line x1="15" y1="15" x2="12" y2="12"></line></svg>          </span>          <span class="dropzone-text">            <strong>Drop a manuscript file (.md, .markdown, .txt) here</strong>            <span>or click to choose a file</span>          </span>        </button>        <div class="file-preview-card" id="import-preview-box" style="display:none;">          <div class="fpc-header">            <span class="fpc-badge">Manuscript recognized</span>            <span class="fpc-filename" id="import-fpc-filename">manuscript.md</span>          </div>          <div class="fpc-meta">            <div class="fpc-stat"><span class="fpc-label">Scope:</span> <strong id="import-fpc-stats"></strong></div>            <div class="fpc-stat"><span class="fpc-label">Analysis language:</span> <span id="import-fpc-lang"></span></div>          </div>        </div>        <div class="project-structure-hint">          <span><span class="help" data-help="Copies the selected manuscript bytes into a new project folder. Existing research records are not attached." tabindex="0">Lixity saves the manuscript (manuscript.md) and project settings (lixity.toml) in a local folder.</span></span>        </div>        <div class="form-group">          <label for="import-proj-title" class="form-label">Title</label>          <input class="ctl full-width" id="import-proj-title" required placeholder="Extracted from first heading"/>        </div>        <div class="form-row">          <div class="grow">            <label for="import-proj-lang" class="form-label"><span class="help" data-help="Language profile of the analysis: auto detects the language via function words." tabindex="0">Language</span></label>            <select class="ctl full-width" id="import-proj-lang">              <option value="de">Deutsch</option>              <option value="en" selected>English</option>              <option value="fr">Français</option>              <option value="es">Español</option>              <option value="it">Italiano</option>              <option value="pt">Português</option>              <option value="nl">Nederlands</option>            </select>            <span class="ctl-note wizard-hint">Used for sentences, tense and readability. You can change it later.</span>          </div>          <div class="grow-2">            <label for="import-proj-author" class="form-label">Author name (optional)</label>            <input class="ctl full-width" id="import-proj-author"/>            <span class="ctl-note wizard-hint">Used for PDF credits, the title page and the NDA. You can change it later in Project → Settings.</span>          </div>        </div><details class="research-details" id="import-project-options"><summary>Optional details</summary>          <div>            <label for="import-proj-path" class="form-label">Project folder (optional)</label>            <input class="ctl full-width" id="import-proj-path" placeholder="Default: generated from title"/>            <span class="ctl-note wizard-hint">If omitted, a new folder is created from the title.</span>          </div>        <div class="form-group"><label class="form-checkbox"><input type="checkbox" id="import-proj-research"/> <span>Initialize research archive (research/)</span></label>        </div></details>        <p class="ctl-status project-form-status" id="import-project-status" role="alert" aria-live="assertive" hidden></p>        <div class="modal-footer">          <button type="button" class="ctl" data-close-modal>Cancel</button>          <button type="submit" class="ctl primary" id="btn-submit-import-project" disabled>Import and analyze manuscript</button>        </div>      </form>    </div>    <div class="modal-tab-pane" id="tab-pane-scratch" style="display:none;">      <form id="form-project-create" class="modal-body" method="dialog">        <div class="project-structure-hint">          <span>Creates manuscript.md with the chosen chapter structure, lixity.toml and optionally research/.</span>        </div>        <div class="form-group">          <label for="new-proj-title" class="form-label">Title</label>          <input class="ctl full-width" id="new-proj-title" required placeholder="e.g. Whispers in the Mist"/>        </div>        <div class="form-row">          <div class="grow">            <label for="new-proj-lang" class="form-label"><span class="help" data-help="Language profile of the analysis: auto detects the language via function words." tabindex="0">Language</span></label>            <select class="ctl full-width" id="new-proj-lang">              <option value="de">Deutsch</option>              <option value="en" selected>English</option>              <option value="fr">Français</option>              <option value="es">Español</option>              <option value="it">Italiano</option>              <option value="pt">Português</option>              <option value="nl">Nederlands</option>            </select>            <span class="ctl-note wizard-hint">Used for sentences, tense and readability. You can change it later.</span>          </div>          <div class="grow-2">            <label for="new-proj-path" class="form-label">Target folder (optional)</label>            <input class="ctl full-width" id="new-proj-path" placeholder="Default: subfolder"/>            <span class="ctl-note wizard-hint">If omitted, a new folder is created from the title.</span>          </div>        </div>        <div class="form-group">          <label for="new-proj-author" class="form-label">Author name (optional)</label>          <input class="ctl full-width" id="new-proj-author"/>          <span class="ctl-note wizard-hint">Used for PDF credits, the title page and the NDA. You can change it later in Project → Settings.</span>        </div>        <div class="form-group">          <span class="form-label">Choose narrative structure</span>          <div class="template-grid">            <label class="template-card active">              <input type="radio" name="proj_template" value="minimal" checked/>              <div class="tc-title">Minimal</div>              <div class="tc-desc">One chapter for free writing.</div>            </label>            <label class="template-card">              <input type="radio" name="proj_template" value="three_act"/>              <div class="tc-title">Three-act structure</div>              <div class="tc-desc">Departure, confrontation and resolution.</div>            </label>            <label class="template-card">              <input type="radio" name="proj_template" value="research"/>              <div class="tc-title">Research novel</div>              <div class="tc-desc">Includes a local research and dossier archive (research/).</div>            </label>          </div>        </div>        <div class="form-group mt-2"><label class="form-checkbox"><input type="checkbox" id="new-proj-research"/> <span>Initialize research archive (research/)</span></label>          <p class="ctl-note" id="new-proj-research-required" hidden>Included in the research template.</p>        </div>        <p class="ctl-status project-form-status" id="new-project-status" role="alert" aria-live="assertive" hidden></p>        <div class="modal-footer">          <button type="button" class="ctl" data-close-modal>Cancel</button>          <button type="submit" class="ctl primary" id="btn-submit-create-project">Create project</button>        </div>      </form>    </div>  </div></dialog><dialog class="lixity-modal" id="modal-project-open" closedby="any" aria-labelledby="modal-open-title">  <div class="modal-card">    <div class="modal-header">      <h3 id="modal-open-title"><span class="help" data-help="Opens an existing local project folder or manuscript in place, including its research archive. No files are copied." tabindex="0">Open project</span></h3>      <button type="button" class="modal-close" data-close-modal aria-label="Close">✕</button>    </div>    <form id="form-project-open" class="modal-body" method="dialog">      <div class="form-group">        <label for="open-proj-path" class="form-label">Project folder or manuscript path:</label>        <div class="project-path-row">          <button type="button" class="ctl primary" id="open-proj-choose" autofocus aria-controls="open-project-chooser" aria-expanded="false">Browse files and folders</button>          <input class="ctl" id="open-proj-path" required placeholder="/path/to/project or manuscript.md"/>        </div>        <p class="ctl-note">Choose an existing project folder or manuscript file, or enter its path. Lixity opens it in place, including any research archive.</p>      </div>      <div id="open-project-recent" data-recent-projects hidden>        <span class="ctl-label recent-projects-heading">Recent projects</span>        <ul class="project-chooser-list" id="open-project-recent-list" data-recent-project-list></ul>        <button type="button" class="ctl" data-clear-recent-projects>Clear history</button>        <p class="ctl-status" data-recent-project-status role="status" hidden></p>      </div>      <div class="project-chooser" id="open-project-chooser" role="region" aria-labelledby="open-project-chooser-heading" hidden>        <div class="project-chooser-heading">          <strong id="open-project-chooser-heading">Choose a project path</strong>          <button type="button" class="ctl" id="open-project-chooser-close" aria-label="Close">✕</button>        </div>        <p class="ctl-note">Files on the computer running Lixity.</p>        <p class="ctl-note project-chooser-current">Current folder: <code id="open-project-chooser-path"></code></p>        <p class="ctl-note project-chooser-project" id="open-project-chooser-project" data-empty="No Lixity project in this folder. You can still open a manuscript or folder." role="status"></p>        <div class="project-chooser-toolbar">          <button type="button" class="ctl" id="open-project-chooser-home">Home</button>          <button type="button" class="ctl" id="open-project-chooser-parent" disabled>Parent folder</button>          <button type="button" class="ctl primary" id="open-project-chooser-select-folder" disabled>Select this folder</button>        </div>        <p class="ctl-note" id="open-project-chooser-status" role="status" aria-live="polite"></p>        <ul class="project-chooser-list" id="open-project-chooser-list" aria-label="Folders and manuscripts"></ul>      </div>      <div class="project-structure-hint mt-2">        <span>Want to import a new file instead? <button type="button" class="ctl-link" id="link-switch-to-import">Switch to import wizard</button></span>      </div>      <p class="ctl-status project-form-status" id="open-project-status" role="alert" aria-live="assertive" hidden></p>      <div class="modal-footer">        <button type="button" class="ctl" data-close-modal>Cancel</button>        <button type="submit" class="ctl primary" id="btn-submit-open-project">Open</button>      </div>    </form>  </div></dialog><dialog class="lixity-modal" id="modal-research-revision" closedby="any" aria-labelledby="research-revision-title">  <div class="modal-card">    <div class="modal-header">      <h3 id="research-revision-title">Edit research entry</h3>      <button type="button" class="modal-close" data-close-modal aria-label="Close">✕</button>    </div>    <div class="modal-tabs" role="tablist">      <button type="button" class="modal-tab-btn active" role="tab" id="research-revision-edit-tab" aria-controls="research-revision-form" aria-selected="true">Edit</button>      <button type="button" class="modal-tab-btn" role="tab" id="research-revision-history-tab" aria-controls="research-revision-history" aria-selected="false">Saved versions</button>    </div>    <p class="ctl-note research-revision-meta" id="research-revision-kind"></p>    <details class="research-details" id="research-revision-technical">      <summary>Technical details</summary>      <dl class="research-revision-readonly">        <dt>Record identifier</dt><dd id="research-revision-identifier"></dd>        <dt>Archive snapshot identifier</dt><dd id="research-revision-snapshot"></dd>      </dl>    </details>    <div class="research-revision-updates" id="research-revision-source-updates" role="status" aria-live="polite" hidden></div>    <form id="research-revision-form" class="modal-body" method="dialog" role="tabpanel" aria-labelledby="research-revision-edit-tab" novalidate>      <section id="research-revision-merge" class="form-group" aria-labelledby="research-revision-merge-title" hidden>        <h4 id="research-revision-merge-title">Review concurrent changes</h4>        <p class="ctl-note">Nothing has been saved. Changes to different fields can be combined. Choose a value for each conflict, apply the preview, then save explicitly.</p>        <div id="research-revision-merge-fields"></div>        <button type="button" class="ctl" id="research-revision-merge-apply">Use reviewed changes</button>      </section>      <div id="research-revision-fields" class="research-revision-fields"></div>      <p class="ctl-note">Links keep the saved version you chose. Leave a version blank to keep an existing link; a newly chosen entry uses its latest saved version.</p>      <fieldset class="research-revision-choice">        <legend class="form-label">What changed?</legend>        <label><input type="radio" name="research_revision_change_kind" value="correction" required/> <span><strong>Fix an error</strong><small>Use when the saved entry contains a mistake. Earlier versions remain available.</small></span></label>        <label><input type="radio" name="research_revision_change_kind" value="supersession"/> <span><strong>Update the content or decision</strong><small>Use when your content, interpretation or decision has changed. Earlier versions remain available.</small></span></label>      </fieldset>      <label for="research-revision-reason" class="form-label">Why are you changing it?</label><textarea class="ctl" id="research-revision-reason" rows="2" maxlength="2000" required></textarea>      <details class="research-details" id="research-revision-citations-wrap" hidden>        <summary>Citations</summary>        <div class="research-details-body" id="research-revision-citations"></div>      </details>      <div class="modal-footer">        <button type="button" class="ctl" id="research-revision-reload" hidden>Reload current (discard draft)</button>        <button type="button" class="ctl" data-close-modal>Cancel</button>        <button type="button" class="ctl" id="research-revision-batch-add">Add to change set</button>        <button type="submit" class="ctl primary" id="research-revision-save">Save new version</button>      </div>    </form>    <p class="ctl-status" id="research-revision-status" role="alert" aria-live="assertive" hidden></p>    <div id="research-revision-history" class="modal-body research-revision-history" role="tabpanel" aria-labelledby="research-revision-history-tab" hidden>      <ol id="research-revision-history-list" class="research-revision-history-list"></ol>      <div id="research-revision-history-detail"></div>    </div>  </div></dialog><dialog class="lixity-modal" id="modal-research-revision-batch" closedby="any" aria-labelledby="research-revision-batch-title">  <div class="modal-card">    <div class="modal-header">      <h3 id="research-revision-batch-title">Review related changes</h3>      <button type="button" class="modal-close" data-close-modal aria-label="Close">✕</button>    </div>    <div class="modal-body">      <p class="ctl-note">Drafts stay in this browser tab until you save or discard them. Reloading the page removes unsaved drafts. Review every entry before saving the whole set together; either all revisions are saved or none.</p>      <ol id="research-revision-batch-list"></ol>      <p class="ctl-status" id="research-revision-batch-status" role="status" aria-live="polite" hidden></p>      <div class="modal-footer">        <button type="button" class="ctl" id="research-revision-batch-clear">Discard all queued drafts</button>        <button type="button" class="ctl" data-close-modal>Keep drafts and close</button>        <button type="button" class="ctl" id="research-revision-batch-check">Check change set</button>        <button type="button" class="ctl primary" id="research-revision-batch-apply" disabled>Save all changes together</button>      </div>    </div>  </div></dialog>
+<dialog class="lixity-modal" id="modal-project-create" closedby="any" aria-labelledby="modal-create-title">  <div class="modal-card">    <div class="modal-header">      <h3 id="modal-create-title">Create project</h3>      <button type="button" class="modal-close" data-close-modal aria-label="Close">✕</button>    </div>    <div class="modal-tabs" role="tablist" aria-labelledby="modal-create-title">      <button type="button" class="modal-tab-btn active" role="tab" id="tab-btn-import" aria-controls="tab-pane-import" aria-selected="true" data-tab-target="tab-pane-import">Import manuscript</button>      <button type="button" class="modal-tab-btn" role="tab" id="tab-btn-scratch" aria-controls="tab-pane-scratch" aria-selected="false" data-tab-target="tab-pane-scratch">Start new manuscript</button>    </div>    <p class="ctl-note modal-intro">Create a local project from a manuscript or a new draft. Lixity writes only into the project folder; nothing is uploaded.</p>    <div class="modal-tab-pane active" id="tab-pane-import" role="tabpanel" aria-labelledby="tab-btn-import">      <form id="form-project-import" class="modal-body" method="dialog">        <input type="file" id="import-file-input" accept=".md,.markdown,.txt" hidden />        <button type="button" class="file-dropzone" id="import-dropzone" autofocus aria-label="Select or drop manuscript file">          <span class="dropzone-icon">            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="12" y2="12"></line><line x1="15" y1="15" x2="12" y2="12"></line></svg>          </span>          <span class="dropzone-text">            <strong>Drop a manuscript file (.md, .markdown, .txt) here</strong>            <span>or click to choose a file</span>          </span>        </button>        <div class="file-preview-card" id="import-preview-box" style="display:none;">          <div class="fpc-header">            <span class="fpc-badge">Manuscript recognized</span>            <span class="fpc-filename" id="import-fpc-filename">manuscript.md</span>          </div>          <div class="fpc-meta">            <div class="fpc-stat"><span class="fpc-label">Scope:</span> <strong id="import-fpc-stats"></strong></div>            <div class="fpc-stat"><span class="fpc-label">Analysis language:</span> <span id="import-fpc-lang"></span></div>          </div>        </div>        <div class="project-structure-hint">          <span><span class="help" data-help="Copies the selected manuscript bytes into a new project folder. Existing research records are not attached." tabindex="0">Lixity saves the manuscript (manuscript.md) and project settings (lixity.toml) in a local folder.</span></span>        </div>        <div class="form-group">          <label for="import-proj-title" class="form-label">Title</label>          <input class="ctl full-width" id="import-proj-title" required placeholder="Extracted from first heading"/>        </div>        <div class="form-row">          <div class="grow">            <label for="import-proj-lang" class="form-label"><span class="help" data-help="Language profile of the analysis: auto detects the language via function words." tabindex="0">Language</span></label>            <select class="ctl full-width" id="import-proj-lang">              <option value="de">Deutsch</option>              <option value="en" selected>English</option>              <option value="fr">Français</option>              <option value="es">Español</option>              <option value="it">Italiano</option>              <option value="pt">Português</option>              <option value="nl">Nederlands</option>            </select>            <span class="ctl-note wizard-hint">Used for sentences, tense and readability. You can change it later.</span>          </div>          <div class="grow-2">            <label for="import-proj-author" class="form-label">Author name (optional)</label>            <input class="ctl full-width" id="import-proj-author"/>            <span class="ctl-note wizard-hint">Used for PDF credits, the title page and the NDA. You can change it later in Project → Settings.</span>          </div>        </div><details class="research-details" id="import-project-options"><summary>Optional details</summary>          <div>            <label for="import-proj-path" class="form-label">Project folder (optional)</label>            <input class="ctl full-width" id="import-proj-path" placeholder="Default: generated from title"/>            <span class="ctl-note wizard-hint">If omitted, a new folder is created from the title.</span>          </div>        <div class="form-group"><label class="form-checkbox"><input type="checkbox" id="import-proj-research"/> <span>Initialize research archive (research/)</span></label>        </div></details>        <p class="ctl-status project-form-status" id="import-project-status" role="alert" aria-live="assertive" hidden></p>        <div class="modal-footer">          <button type="button" class="ctl" data-close-modal>Cancel</button>          <button type="submit" class="ctl primary" id="btn-submit-import-project" disabled>Import and analyze manuscript</button>        </div>      </form>    </div>    <div class="modal-tab-pane" id="tab-pane-scratch" role="tabpanel" aria-labelledby="tab-btn-scratch" style="display:none;">      <form id="form-project-create" class="modal-body" method="dialog">        <div class="project-structure-hint">          <span>Creates manuscript.md with the chosen chapter structure, lixity.toml and optionally research/.</span>        </div>        <div class="form-group">          <label for="new-proj-title" class="form-label">Title</label>          <input class="ctl full-width" id="new-proj-title" required placeholder="e.g. Whispers in the Mist"/>        </div>        <div class="form-row">          <div class="grow">            <label for="new-proj-lang" class="form-label"><span class="help" data-help="Language profile of the analysis: auto detects the language via function words." tabindex="0">Language</span></label>            <select class="ctl full-width" id="new-proj-lang">              <option value="de">Deutsch</option>              <option value="en" selected>English</option>              <option value="fr">Français</option>              <option value="es">Español</option>              <option value="it">Italiano</option>              <option value="pt">Português</option>              <option value="nl">Nederlands</option>            </select>            <span class="ctl-note wizard-hint">Used for sentences, tense and readability. You can change it later.</span>          </div>          <div class="grow-2">            <label for="new-proj-path" class="form-label">Target folder (optional)</label>            <input class="ctl full-width" id="new-proj-path" placeholder="Default: subfolder"/>            <span class="ctl-note wizard-hint">If omitted, a new folder is created from the title.</span>          </div>        </div>        <div class="form-group">          <label for="new-proj-author" class="form-label">Author name (optional)</label>          <input class="ctl full-width" id="new-proj-author"/>          <span class="ctl-note wizard-hint">Used for PDF credits, the title page and the NDA. You can change it later in Project → Settings.</span>        </div>        <div class="form-group">          <span class="form-label">Choose narrative structure</span>          <div class="template-grid">            <label class="template-card active">              <input type="radio" name="proj_template" value="minimal" checked/>              <div class="tc-title">Minimal</div>              <div class="tc-desc">One chapter for free writing.</div>            </label>            <label class="template-card">              <input type="radio" name="proj_template" value="three_act"/>              <div class="tc-title">Three-act structure</div>              <div class="tc-desc">Departure, confrontation and resolution.</div>            </label>            <label class="template-card">              <input type="radio" name="proj_template" value="research"/>              <div class="tc-title">Research novel</div>              <div class="tc-desc">Includes a local research and dossier archive (research/).</div>            </label>          </div>        </div>        <div class="form-group mt-2"><label class="form-checkbox"><input type="checkbox" id="new-proj-research"/> <span>Initialize research archive (research/)</span></label>          <p class="ctl-note" id="new-proj-research-required" hidden>Included in the research template.</p>        </div>        <p class="ctl-status project-form-status" id="new-project-status" role="alert" aria-live="assertive" hidden></p>        <div class="modal-footer">          <button type="button" class="ctl" data-close-modal>Cancel</button>          <button type="submit" class="ctl primary" id="btn-submit-create-project">Create project</button>        </div>      </form>    </div>  </div></dialog><dialog class="lixity-modal" id="modal-project-open" closedby="any" aria-labelledby="modal-open-title">  <div class="modal-card">    <div class="modal-header">      <h3 id="modal-open-title"><span class="help" data-help="Opens an existing local project folder or manuscript in place, including its research archive. No files are copied." tabindex="0">Open project</span></h3>      <button type="button" class="modal-close" data-close-modal aria-label="Close">✕</button>    </div>    <form id="form-project-open" class="modal-body" method="dialog">      <div class="form-group">        <label for="open-proj-path" class="form-label">Project folder or manuscript path:</label>        <div class="project-path-row">          <button type="button" class="ctl primary" id="open-proj-choose" autofocus aria-controls="open-project-chooser" aria-expanded="false">Browse files and folders</button>          <input class="ctl" id="open-proj-path" required placeholder="/path/to/project or manuscript.md"/>        </div>        <p class="ctl-note">Choose an existing project folder or manuscript file, or enter its path. Lixity opens it in place, including any research archive.</p>      </div>      <div id="open-project-recent" data-recent-projects hidden>        <span class="ctl-label recent-projects-heading">Recent projects</span>        <ul class="project-chooser-list" id="open-project-recent-list" data-recent-project-list></ul>        <button type="button" class="ctl" data-clear-recent-projects>Clear history</button>        <p class="ctl-status" data-recent-project-status role="status" hidden></p>      </div>      <div class="project-chooser" id="open-project-chooser" role="region" aria-labelledby="open-project-chooser-heading" hidden>        <div class="project-chooser-heading">          <strong id="open-project-chooser-heading">Choose a project path</strong>          <button type="button" class="ctl" id="open-project-chooser-close" aria-label="Close">✕</button>        </div>        <p class="ctl-note">Files on the computer running Lixity.</p>        <p class="ctl-note project-chooser-current">Current folder: <code id="open-project-chooser-path"></code></p>        <p class="ctl-note project-chooser-project" id="open-project-chooser-project" data-empty="No Lixity project in this folder. You can still open a manuscript or folder." role="status"></p>        <div class="project-chooser-toolbar">          <button type="button" class="ctl" id="open-project-chooser-home">Home</button>          <button type="button" class="ctl" id="open-project-chooser-parent" disabled>Parent folder</button>          <button type="button" class="ctl primary" id="open-project-chooser-select-folder" disabled>Select this folder</button>        </div>        <p class="ctl-note" id="open-project-chooser-status" role="status" aria-live="polite"></p>        <ul class="project-chooser-list" id="open-project-chooser-list" aria-label="Folders and manuscripts"></ul>      </div>      <div class="project-structure-hint mt-2">        <span>Want to import a new file instead? <button type="button" class="ctl-link" id="link-switch-to-import">Switch to import wizard</button></span>      </div>      <p class="ctl-status project-form-status" id="open-project-status" role="alert" aria-live="assertive" hidden></p>      <div class="modal-footer">        <button type="button" class="ctl" data-close-modal>Cancel</button>        <button type="submit" class="ctl primary" id="btn-submit-open-project">Open</button>      </div>    </form>  </div></dialog><dialog class="lixity-modal" id="modal-research-revision" closedby="any" aria-labelledby="research-revision-title">  <div class="modal-card">    <div class="modal-header">      <h3 id="research-revision-title">Edit research entry</h3>      <button type="button" class="modal-close" data-close-modal aria-label="Close">✕</button>    </div>    <div class="modal-tabs" role="tablist" aria-labelledby="research-revision-title">      <button type="button" class="modal-tab-btn active" role="tab" id="research-revision-edit-tab" aria-controls="research-revision-form" aria-selected="true">Edit</button>      <button type="button" class="modal-tab-btn" role="tab" id="research-revision-history-tab" aria-controls="research-revision-history" aria-selected="false">Saved versions</button>    </div>    <p class="ctl-note research-revision-meta" id="research-revision-kind"></p>    <details class="research-details" id="research-revision-technical">      <summary>Technical details</summary>      <dl class="research-revision-readonly">        <dt>Record identifier</dt><dd id="research-revision-identifier"></dd>        <dt>Archive snapshot identifier</dt><dd id="research-revision-snapshot"></dd>      </dl>    </details>    <div class="research-revision-updates" id="research-revision-source-updates" role="status" aria-live="polite" hidden></div>    <form id="research-revision-form" class="modal-body" method="dialog" role="tabpanel" aria-labelledby="research-revision-edit-tab" novalidate>      <section id="research-revision-merge" class="form-group" aria-labelledby="research-revision-merge-title" hidden>        <h4 id="research-revision-merge-title">Review concurrent changes</h4>        <p class="ctl-note">Nothing has been saved. Changes to different fields can be combined. Choose a value for each conflict, apply the preview, then save explicitly.</p>        <div id="research-revision-merge-fields"></div>        <button type="button" class="ctl" id="research-revision-merge-apply">Use reviewed changes</button>      </section>      <div id="research-revision-fields" class="research-revision-fields"></div>      <p class="ctl-note">Links keep the saved version you chose. Leave a version blank to keep an existing link; a newly chosen entry uses its latest saved version.</p>      <fieldset class="research-revision-choice">        <legend class="form-label">What changed?</legend>        <label><input type="radio" name="research_revision_change_kind" value="correction" required/> <span><strong>Fix an error</strong><small>Use when the saved entry contains a mistake. Earlier versions remain available.</small></span></label>        <label><input type="radio" name="research_revision_change_kind" value="supersession"/> <span><strong>Update the content or decision</strong><small>Use when your content, interpretation or decision has changed. Earlier versions remain available.</small></span></label>      </fieldset>      <label for="research-revision-reason" class="form-label">Why are you changing it?</label><textarea class="ctl" id="research-revision-reason" rows="2" maxlength="2000" required></textarea>      <details class="research-details" id="research-revision-citations-wrap" hidden>        <summary>Citations</summary>        <div class="research-details-body" id="research-revision-citations"></div>      </details>      <div class="modal-footer">        <button type="button" class="ctl" id="research-revision-reload" hidden>Reload current (discard draft)</button>        <button type="button" class="ctl" data-close-modal>Cancel</button>        <button type="button" class="ctl" id="research-revision-batch-add">Add to change set</button>        <button type="submit" class="ctl primary" id="research-revision-save">Save new version</button>      </div>    </form>    <p class="ctl-status" id="research-revision-status" role="alert" aria-live="assertive" hidden></p>    <div id="research-revision-history" class="modal-body research-revision-history" role="tabpanel" aria-labelledby="research-revision-history-tab" hidden>      <ol id="research-revision-history-list" class="research-revision-history-list"></ol>      <div id="research-revision-history-detail"></div>    </div>  </div></dialog><dialog class="lixity-modal" id="modal-research-revision-batch" closedby="any" aria-labelledby="research-revision-batch-title">  <div class="modal-card">    <div class="modal-header">      <h3 id="research-revision-batch-title">Review related changes</h3>      <button type="button" class="modal-close" data-close-modal aria-label="Close">✕</button>    </div>    <div class="modal-body">      <p class="ctl-note">Drafts stay in this browser tab until you save or discard them. Reloading the page removes unsaved drafts. Review every entry before saving the whole set together; either all revisions are saved or none.</p>      <ol id="research-revision-batch-list"></ol>      <p class="ctl-status" id="research-revision-batch-status" role="status" aria-live="polite" hidden></p>      <div class="modal-footer">        <button type="button" class="ctl" id="research-revision-batch-clear">Discard all queued drafts</button>        <button type="button" class="ctl" data-close-modal>Keep drafts and close</button>        <button type="button" class="ctl" id="research-revision-batch-check">Check change set</button>        <button type="button" class="ctl primary" id="research-revision-batch-apply" disabled>Save all changes together</button>      </div>    </div>  </div></dialog>
 <div class="view-pane active" id="view-pane-analysis" data-view-pane="analysis" role="tabpanel" aria-labelledby="tab-view-analysis">
 <section id="workspace-reader" data-project-token="synthetic-harbour-manuscript"><div class="workspace-reader-layout" id="workspace-reader-layout"><aside class="panel workspace-reader-panel" id="workspace-reader-panel" aria-labelledby="workspace-reader-title" hidden><div class="workspace-reader-head"><h2 id="workspace-reader-title">Dossier alongside</h2><button type="button" class="ctl" id="workspace-reader-close" aria-label="Close">✕</button></div><div class="row workspace-reader-controls"><div class="setting-field grow"><label for="workspace-reader-dossier">Choose a dossier</label><select class="ctl" id="workspace-reader-dossier"><option value="">Choose a dossier</option></select></div><button type="button" class="ctl" id="workspace-reader-refresh">Refresh dossier</button></div><p class="ctl-status" id="workspace-reader-status" role="status" aria-live="polite"></p><div id="workspace-reader-body"></div></aside><div id="workspace-analysis-body">
 <section class="panel" id="analysis-review"><h2>Start your review</h2>
@@ -6855,7 +6880,7 @@ document.querySelectorAll("[data-action]").forEach(function (btn) {
       return html`<div class="loading-state"><span class="loading-spinner" aria-hidden="true"></span>
         <span class="loading-text">${uiLabel("research_loading")}</span></div>`;
     }
-    return html`<div>${props.items.map(function (item) {
+    return html`<div class="research-record-list">${props.items.map(function (item) {
       return html`<${Card} key=${item.key || item.id} item=${item} />`;
     })}</div>`;
   }
@@ -10382,12 +10407,15 @@ function selectManuscriptFiles(files) {
 }
 
 function switchModalTab(targetPaneId) {
-  document.querySelectorAll(".modal-tab-btn").forEach(function (btn) {
+  var targetPane = document.getElementById(targetPaneId);
+  var dialog = targetPane && targetPane.closest("dialog");
+  if (!dialog) return;
+  dialog.querySelectorAll(".modal-tab-btn[data-tab-target]").forEach(function (btn) {
     var isTarget = btn.dataset.tabTarget === targetPaneId;
     btn.classList.toggle("active", isTarget);
     btn.setAttribute("aria-selected", isTarget ? "true" : "false");
   });
-  document.querySelectorAll(".modal-tab-pane").forEach(function (pane) {
+  dialog.querySelectorAll(".modal-tab-pane").forEach(function (pane) {
     pane.style.display = pane.id === targetPaneId ? "block" : "none";
   });
 }

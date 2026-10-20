@@ -104,7 +104,7 @@
       return html`<div class="loading-state"><span class="loading-spinner" aria-hidden="true"></span>
         <span class="loading-text">${uiLabel("research_loading")}</span></div>`;
     }
-    return html`<div>${props.items.map(function (item) {
+    return html`<div class="research-record-list">${props.items.map(function (item) {
       return html`<${Card} key=${item.key || item.id} item=${item} />`;
     })}</div>`;
   }

@@ -24,11 +24,6 @@ h1 {
 .project-header { margin-bottom: 0; }
 .project-header h1 { font-family: var(--font-title); font-size: clamp(1.8rem, 4vw, 2.7rem); font-weight: 500; line-height: 1.2; letter-spacing: -.025em; margin-bottom: .5rem; }
 .settings-form { margin: 0; }
-.settings-section { min-width: 0; margin: 0; padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius); }
-.settings-section > legend { padding-inline: .35rem; font-weight: var(--weight-semibold); font-size: var(--text-control); }
-.settings-section > * + * { margin-top: var(--space-3); }
-.settings-section > .ctl-note { margin-top: 0; }
-.settings-section > .settings-advanced { margin-top: var(--space-3); }
 .settings-form h4 { font-size: var(--text-section-title); font-weight: var(--weight-strong); margin: .75rem 0 .3rem; }
 .settings-form .research-revision-readonly { font-size: var(--text-control); line-height: var(--line-compact); }
 .settings-form .research-revision-readonly dt { font-size: var(--text-small); font-weight: var(--weight-semibold); color: var(--fg); }
@@ -65,8 +60,6 @@ h1 {
 .analysis-method { font-variant-numeric: tabular-nums; color: var(--muted); }
 .fdr-marker { display: inline-block; margin-left: .25rem; font-size: .55rem; vertical-align: super; }
 .band-summary { display: block; font-size: var(--text-micro); font-variant-numeric: tabular-nums; color: var(--muted); }
-.ctl:disabled { opacity: .6; cursor: default; }
-.ctl[aria-busy="true"] { cursor: wait; }
 .product-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem .8rem; margin-bottom: .7rem; }
 .product-name { color: var(--accent); font-size: var(--text-small); font-weight: var(--weight-strong); letter-spacing: .05em; }
 .version-badge, .license-badge { border: 1px solid var(--line); border-radius: var(--radius-pill); padding: .15rem .55rem; font-size: var(--text-micro); color: var(--muted); background: var(--surface); }
@@ -228,7 +221,7 @@ body.text-search-active .chapter .strip { display: none; }
   text-decoration: none;
   background: transparent;
   border: 1px solid var(--line);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   white-space: nowrap;
 }
 .toolbar-sections a:hover { border-color: var(--accent); }
@@ -945,27 +938,6 @@ body:not(.has-js-tooltips) .help:focus::after {
 .marker-note.failed { border-color: var(--flag); color: var(--flag); }
 .marker-note.gone { opacity: 0; }
 .research-record-id { font-family: var(--font-mono); font-size: var(--text-micro); margin-top: .2rem; overflow-wrap: anywhere; }
-.research-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  border-bottom: 1px solid var(--line);
-  padding-bottom: .5rem;
-  margin-bottom: 1rem;
-}
-@media (max-width: 768px) {
-  .controls .research-tabs.row {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding-bottom: .75rem;
-    scrollbar-width: thin;
-    -webkit-overflow-scrolling: touch;
-  }
-  .research-tabs button.ctl {
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-}
 .research-views { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin: .6rem 0 .9rem; }
 .research-tab-pane { display: grid; gap: var(--space-3); }
 #research-manager .ctl-group { grid-template-columns: minmax(0, 1fr); }
@@ -1272,117 +1244,6 @@ mark.search-hit {
   font-size: var(--text-note);
 }
 
-/* --- Native Modals & Template Cards ----------------------------------- */
-dialog.lixity-modal {
-  position: fixed;
-  inset: 0;
-  margin: auto;
-  border: 1px solid var(--line);
-  padding: 0;
-  background: var(--surface);
-  color: var(--fg);
-  max-width: 38rem;
-  width: min(94vw, 38rem);
-  max-height: min(90vh, 44rem);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-modal);
-  overflow: hidden;
-}
-dialog.lixity-modal::backdrop {
-  background: rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-.modal-card {
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  max-height: min(90vh, 44rem);
-}
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.15rem 1.4rem;
-  border-bottom: 1px solid var(--line);
-  background: var(--surface);
-}
-.modal-header h3 {
-  margin: 0;
-  font-size: 1.15rem;
-  font-weight: var(--weight-semibold);
-  color: var(--fg);
-  letter-spacing: -.015em;
-}
-.modal-close {
-  background: transparent;
-  border: 1px solid transparent;
-  font-size: 1.15rem;
-  cursor: pointer;
-  color: var(--muted);
-  border-radius: var(--radius-sm);
-  width: 2rem;
-  height: 2rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-  transition: all .15s ease;
-}
-.modal-close:hover {
-  color: var(--fg);
-  background: var(--neutral);
-}
-.modal-close:focus {
-  outline: none;
-}
-.modal-close:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-.modal-intro { margin: 0 0 .7rem; }
-.wizard-hint { display: block; margin-top: .25rem; font-size: var(--text-micro); }
-.modal-tabs {
-  display: flex;
-  background: var(--bg);
-  border-bottom: 1px solid var(--line);
-  padding: 0 1.4rem;
-  gap: 1rem;
-}
-.modal-tab-btn {
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--muted);
-  font-size: var(--text-control);
-  font-weight: 500;
-  padding: .8rem .25rem;
-  cursor: pointer;
-  transition: color .15s ease, border-color .15s ease;
-  margin-bottom: -1px;
-}
-.modal-tab-btn:hover {
-  color: var(--fg);
-}
-.modal-tab-btn.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
-  font-weight: var(--weight-semibold);
-}
-.modal-tab-pane {
-  display: block;
-}
-.modal-body {
-  padding: 1.4rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.1rem;
-  overflow-y: auto;
-  background: var(--surface);
-}
 .project-path-row {
   display: flex;
   align-items: stretch;
@@ -1463,37 +1324,13 @@ dialog.lixity-modal::backdrop {
 .research-revision-readonly dt { font-weight: var(--weight-semibold); color: var(--muted); }
 .research-revision-readonly dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
 .research-revision-history-detail { overflow-wrap: anywhere; }
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: .35rem;
-}
-.form-row {
-  display: flex;
-  gap: 1rem;
-  align-items: flex-start;
-  width: 100%;
-}
 @media (max-width: 540px) {
   .research-revision-readonly { grid-template-columns: minmax(0, 1fr); gap: .1rem; }
   .research-revision-readonly dd { margin-bottom: .55rem; }
-  .form-row {
-    flex-direction: column;
-    gap: .75rem;
-  }
   .project-path-row { flex-direction: column; }
   .project-path-row button { align-self: flex-start; }
 }
-.form-checkbox {
-  display: inline-flex;
-  align-items: center;
-  gap: .55rem;
-  cursor: pointer;
-  font-size: var(--text-control);
-  color: var(--fg);
-  user-select: none;
-  margin-top: .15rem;
-}
+
 .form-checkbox input[type="checkbox"] {
   accent-color: var(--accent);
   width: 1rem;
@@ -1649,15 +1486,7 @@ dialog.lixity-modal::backdrop {
   color: var(--muted);
   line-height: 1.4;
 }
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: .75rem;
-  margin-top: .4rem;
-  padding-top: 1.1rem;
-  border-top: 1px solid var(--line);
-}
+
 
 .page > *, .panel > * { margin-block: 0; }
 body.only-flags:not(.text-search-active) .chapter { display: none; }
@@ -1706,14 +1535,6 @@ body.only-flags:not(.text-search-active) .chip:not(.sev-2):not(.sev-3) { display
   .badge.sev-2 { background: #451a03; color: #fde68a; }
   .badge.sev-3 { background: #450a0a; color: #fca5a5; }
 
-  dialog.lixity-modal {
-    background: var(--surface);
-    border-color: var(--line);
-    color: var(--fg);
-  }
-  dialog.lixity-modal::backdrop {
-    background: rgba(0, 0, 0, 0.7);
-  }
   .file-dropzone {
     background: #111418;
     border-color: var(--line-strong);
@@ -1726,13 +1547,7 @@ body.only-flags:not(.text-search-active) .chip:not(.sev-2):not(.sev-3) { display
     background: #111418;
     border-color: var(--line);
   }
-  .modal-tab-btn {
-    color: var(--muted);
-  }
-  .modal-tab-btn.active {
-    color: var(--fg);
-    border-bottom-color: var(--accent);
-  }
+
 }
 
 /* Safe Markdown Prose Rendering in Dossiers & History */
@@ -1851,9 +1666,7 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
 }
 
 /* Top Workspace View Navigation */
-/* One tab recipe for the workspace switch and the research sub-tabs: a
-   bottom-ruled row of controls, the active tab filled with the action colour
-   (same shape, type and states as every other control). */
+/* Primary workspace navigation stays distinct from local content tabs. */
 .view-navigation {
   display: flex;
   flex-wrap: wrap;
@@ -2094,3 +1907,22 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
 #research-revision-batch-list > li { padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid var(--line); }
 #research-revision-batch-list dd { margin: .25rem 0 .75rem; }
 #research-revision-batch-list pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 10rem; overflow: auto; }
+
+/* Research records read as a continuous catalogue within the workspace. */
+.research-record-list > .research-card {
+  margin: 0;
+  padding: var(--space-4) 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+.research-card:focus-within { border-color: var(--line-strong); }
+.research-card-header { gap: var(--space-2) var(--space-3); }
+.research-card-title { flex: 1 1 16rem; }
+.research-dossier-section-block { background: var(--surface); }
+.research-dossier-section-block > summary,
+.settings-advanced > summary, .research-details > summary {
+  min-height: 2.5rem;
+  align-content: center;
+}

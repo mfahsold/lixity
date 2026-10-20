@@ -27,14 +27,14 @@ def render_project_modals(
     parts.append(f'      <h3 id="modal-create-title">{L("create_project")}</h3>')
     parts.append(f'      <button type="button" class="modal-close" data-close-modal aria-label="{L("modal_close")}">✕</button>')
     parts.append('    </div>')
-    parts.append('    <div class="modal-tabs" role="tablist">')
-    parts.append(f'      <button type="button" class="modal-tab-btn active" role="tab" id="tab-btn-import" aria-selected="true" data-tab-target="tab-pane-import">{L("wizard_import_tab")}</button>')
-    parts.append(f'      <button type="button" class="modal-tab-btn" role="tab" id="tab-btn-scratch" aria-selected="false" data-tab-target="tab-pane-scratch">{L("wizard_scratch_tab")}</button>')
+    parts.append('    <div class="modal-tabs" role="tablist" aria-labelledby="modal-create-title">')
+    parts.append(f'      <button type="button" class="modal-tab-btn active" role="tab" id="tab-btn-import" aria-controls="tab-pane-import" aria-selected="true" data-tab-target="tab-pane-import">{L("wizard_import_tab")}</button>')
+    parts.append(f'      <button type="button" class="modal-tab-btn" role="tab" id="tab-btn-scratch" aria-controls="tab-pane-scratch" aria-selected="false" data-tab-target="tab-pane-scratch">{L("wizard_scratch_tab")}</button>')
     parts.append('    </div>')
     parts.append(f'    <p class="ctl-note modal-intro">{L("wizard_intro")}</p>')
 
     # Tab Pane 1: Import existing manuscript
-    parts.append('    <div class="modal-tab-pane active" id="tab-pane-import">')
+    parts.append('    <div class="modal-tab-pane active" id="tab-pane-import" role="tabpanel" aria-labelledby="tab-btn-import">')
     parts.append('      <form id="form-project-import" class="modal-body" method="dialog">')
     parts.append('        <input type="file" id="import-file-input" accept=".md,.markdown,.txt" hidden />')
     parts.append(f'        <button type="button" class="file-dropzone" id="import-dropzone" autofocus aria-label="{L("wizard_drop_aria")}">')
@@ -99,7 +99,7 @@ def render_project_modals(
     parts.append('    </div>')
 
     # Tab Pane 2: Start new project from scratch
-    parts.append('    <div class="modal-tab-pane" id="tab-pane-scratch" style="display:none;">')
+    parts.append('    <div class="modal-tab-pane" id="tab-pane-scratch" role="tabpanel" aria-labelledby="tab-btn-scratch" style="display:none;">')
     parts.append('      <form id="form-project-create" class="modal-body" method="dialog">')
     parts.append('        <div class="project-structure-hint">')
     parts.append(f'          <span>{L("wizard_project_files")}</span>')
@@ -220,7 +220,7 @@ def render_project_modals(
     parts.append(f'      <h3 id="research-revision-title">{L("research_revision_title")}</h3>')
     parts.append(f'      <button type="button" class="modal-close" data-close-modal aria-label="{L("modal_close")}">✕</button>')
     parts.append('    </div>')
-    parts.append('    <div class="modal-tabs" role="tablist">')
+    parts.append('    <div class="modal-tabs" role="tablist" aria-labelledby="research-revision-title">')
     parts.append(f'      <button type="button" class="modal-tab-btn active" role="tab" id="research-revision-edit-tab" aria-controls="research-revision-form" aria-selected="true">{L("research_revision_edit")}</button>')
     parts.append(f'      <button type="button" class="modal-tab-btn" role="tab" id="research-revision-history-tab" aria-controls="research-revision-history" aria-selected="false">{L("research_revision_history")}</button>')
     parts.append('    </div>')

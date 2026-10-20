@@ -20,7 +20,7 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
                 + control + '</div>')
 
     parts: list[str] = [f'<section class="panel controls" id="research-manager" data-research-token="{esc(research_context_token)}">']
-    parts.append(f"<h2>{L('research_panel')}</h2>")
+    parts.append(f'<h2 id="research-panel-title">{L("research_panel")}</h2>')
     parts.append('<div class="row row-between m-0">')
     parts.append(f'<p class="ctl-note m-0" id="research-hint">{L("research_hint")}</p>')
     parts.append(f'<span class="ctl-status loading fw-medium" id="r-active-root">{L("research_loading")}</span>')
@@ -52,7 +52,7 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
     parts.append('</div></details>')
 
     parts.append(f'<button type="button" class="ctl" id="research-revision-batch-review" hidden>{L("research_revision_batch_review")}</button>')
-    parts.append('<div class="row research-tabs" id="research-tabs" role="tablist">')
+    parts.append('<div class="row research-tabs" id="research-tabs" role="tablist" aria-labelledby="research-panel-title">')
     parts.append(f'<button type="button" class="ctl active" data-rtab="dossiers" role="tab" aria-selected="true">{L("research_tab_dossiers")}</button>')
     parts.append(f'<button type="button" class="ctl" data-rtab="claims" role="tab" aria-selected="false">{L("research_tab_claims")}</button>')
     parts.append(f'<button type="button" class="ctl" data-rtab="decisions" role="tab" aria-selected="false">{L("research_tab_decisions")}</button>')
