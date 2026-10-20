@@ -31,6 +31,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
     "fast": (
         "layout.cjs",
         "workbench.cjs",
+        "workbench-transitions.cjs",
         "tooltips.cjs",
         "minimal-workflows.cjs",
         "project-controls.cjs",
@@ -63,6 +64,7 @@ AREAS: dict[str, tuple[str, ...]] = {
         "manuscript-selection.cjs",
         "manuscript-search.cjs",
         "workbench.cjs",
+        "workbench-transitions.cjs",
         "tooltips.cjs",
         "minimal-workflows.cjs",
         "paragraph-feedback.cjs",

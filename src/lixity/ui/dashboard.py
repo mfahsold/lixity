@@ -109,6 +109,7 @@ _JS_FILES = (
     "research-workspace.js",
     "research-revisions.js",
     "workspace-state.js",
+    "workspace-motion.js",
     "project-ui.js",
     "dossier-images.js",
     "dossier-geography.js",

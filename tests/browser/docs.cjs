@@ -433,7 +433,10 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   // The flash lands after the smooth scroll settles (see flashOnArrival).
   await page.waitForFunction(selector => document.querySelector(selector).classList.contains('flash'),
     '#ch-2', {timeout: 2500});
+  await expect(page.locator('#manuscript-analysis-toggle')).toHaveAttribute('aria-pressed', 'false');
+  await page.locator('#manuscript-analysis-toggle').click();
   const chip = page.locator('#ch-2 .chip').first();
+  await expect(chip).toBeVisible();
   const target = await chip.getAttribute('data-target');
   const passage = page.locator('#' + target);
   assert.equal(await chip.getAttribute('aria-expanded'), 'false');

@@ -4,7 +4,7 @@
   var active = document.querySelector(".view-pane.active");
   var value = {view: active ? active.dataset.viewPane : "analysis", analysisVisible: false,
     surface: "document", contextTool: "none", focus: false, transient: null};
-  var listeners = [], suspendedTool = "none", focusSnapshot = null;
+  var listeners = [], suspendedTool = "none", suspendedAnalysis = false, focusSnapshot = null;
   function snapshot() { return Object.freeze(Object.assign({}, value)); }
   function dispatch(command) {
     var previous = snapshot();
@@ -23,17 +23,20 @@
           value.surface = "document";
           value.contextTool = suspendedTool === "dossier" ? "dossier" : "none";
         }
-      } else if (value.contextTool === "none" && value.surface === "document") value.contextTool = "analysis";
+      }
     } else if (command.type === "surface") {
       if (command.value === "overview") {
-        if (value.surface !== "overview") suspendedTool = value.contextTool;
+        if (value.surface !== "overview") {
+          suspendedTool = value.contextTool; suspendedAnalysis = value.analysisVisible;
+        }
         value.analysisVisible = true; value.surface = "overview"; value.contextTool = "none";
       } else if (value.surface === "overview") {
-        value.surface = "document"; value.contextTool = suspendedTool;
+        value.surface = "document"; value.contextTool = suspendedTool; value.analysisVisible = suspendedAnalysis;
       }
       value.transient = null;
     } else if (command.type === "tool") {
       if (!["none", "analysis", "dossier"].includes(command.value)) return;
+      if (value.surface === "overview") value.analysisVisible = suspendedAnalysis;
       value.surface = "document"; value.contextTool = command.value;
       if (command.value === "analysis") value.analysisVisible = true;
       value.transient = null;

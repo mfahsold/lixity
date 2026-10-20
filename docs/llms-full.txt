@@ -110,11 +110,13 @@ keep name counts separate from author-declared perspective.
 **On current main:** the interactive app uses a desktop-style project sidebar
 on wide screens, with **Manuscript**, **Research** and **Project** as its stable
 destinations. On smaller screens the same navigation becomes horizontal.
-The manuscript stays continuous. **Analysis** has an explicit On/Off state;
-**Values** opens passage measurements, while **Analysis overview** gives chapter
-comparisons their own space and a **Back to passage** route. Analysis visibility
-is independent of the dossier beside the text. Reading settings group text size,
-width and spacing without changing manuscript bytes. Use an analyzed paragraph's
+The manuscript stays continuous. The **Analysis** switch shows On/Off in words
+and reveals diagnostics in place without opening a side tool, collapsing
+navigation or narrowing the prose. **Values** explicitly opens passage
+measurements and enables analysis; **Dossier alongside** opens its separate tool.
+**Analysis overview** gives chapter comparisons their own space; **Back to
+passage** restores the prior analysis choice and document context. Reading settings
+group text size, width and spacing without changing manuscript bytes. Use an analyzed paragraph's
 **…**, right-click or `Shift+F10`
 for its tools; a text selection offers relevant marker and claim actions.
 **Values** opens a closable inspector, and **Focus reading** temporarily clears
@@ -128,8 +130,10 @@ presentation, not a complete Markdown editor. [Coverage and limits](docs/USAGE.m
 Opening a companion dossier collapses the desktop navigation to a narrow rail.
 Its toggle keeps navigation reachable; closing the companion restores the prior
 choice. Drag its divider or use the arrow keys to adjust the desktop split;
-narrow screens stack the documents. Exact saved manuscript associations offer a
-direct return to the passage. Saved associations open their pinned claim revision;
+narrow screens stack the documents. Opening a tool from a passage reveals its
+heading on mobile; closing it or pressing Escape returns to that passage and its
+control. Optional brief feedback respects reduced motion. Exact saved manuscript
+associations offer a direct return to the passage. Saved associations open their pinned claim revision;
 claim and dossier views expose explicit routes to their saved manuscript quotes.
 These connections record an author's association, not factual verification.
 Local tabs, form groups and dialogs use shared components throughout analysis
@@ -1137,10 +1141,12 @@ JavaScript and a compatible native server are required.
 
 ### Start a review
 
-In the current-main interactive workspace, **Analysis** has a visible On/Off
-state while the manuscript remains continuous. An analyzed paragraph's **Values**
-opens its measurements and enables analysis. **Analysis overview** opens chapter
-comparisons and other dense views with **Back to passage** for the return.
+In the current-main interactive workspace, the **Analysis** switch has a visible
+On/Off state while the manuscript remains continuous. Showing diagnostics keeps
+the prose width and navigation choice; it does not open a context tool. An
+analyzed paragraph's **Values** explicitly opens its measurements and enables
+analysis. **Analysis overview** opens chapter comparisons and other dense views;
+**Back to passage** restores the earlier analysis choice and document context.
 
 **Start your review → Open passage** opens the first paragraph meeting the
 selected tense threshold, otherwise the opening paragraph, clearing filters and
@@ -1162,8 +1168,10 @@ navigation; its toggle remains reachable, and closing restores the earlier manua
 choice. Drag the divider to change the desktop widths, or focus it and use
 `Left`/`Right` in five-point steps; `Home` and `End` select the 35% and 75%
 manuscript-width limits. The split is a local browser preference. Narrow screens
-stack the readers and hide the divider. Close with the same toggle or the dossier's
-close button; refresh explicitly for the latest revision. The
+stack the readers and hide the divider. When opened from a paragraph's tools,
+the dossier heading scrolls into view on mobile; its close button or Escape
+returns to that paragraph and its control. Close with the same toggle or the
+dossier's close button; refresh explicitly for the latest revision. The
 [research workflow](research/USAGE.md#reading-and-cli-workflows) owns
 selection, evidence and retention semantics.
 
@@ -1193,10 +1201,14 @@ not a new historical-source navigation contract.
 
 **Current main (unreleased):** interactive workspaces start with continuous
 manuscript text and **Analysis Off**. Toggle **Analysis** to reveal diagnostic
-presentation; its accessible name stays constant and its pressed state identifies
-On/Off. Opening or closing the dossier is independent of that state. Use
+presentation in place. The switch, visible On/Off text and pressed state identify
+the choice while its accessible name stays **Analysis**. Showing the layer alone
+does not open a dock or collapse navigation. Its gutter marker sits outside text
+flow, preserving the prose width and line wrapping. Opening or closing the
+dossier is independent of that state. Use
 **Analysis overview** for chapter matrices, sentence rhythm and other comparisons,
-then **Back to passage** to restore the document context. Hiding analysis also
+then **Back to passage** to restore the document context and prior analysis
+display choice. Hiding analysis also
 leaves the overview and restores an eligible dossier instead of an analysis tool.
 
 Choose a chapter in the reader toolbar. **Reading settings** groups **A−**/**A+**
@@ -1217,11 +1229,19 @@ Use Shift+right-click to open the browser's native context menu instead.
 **Values** enables analysis and opens the selected paragraph's source lines,
 tense and style measurements in the closable context area. Switch between that
 tool and the saved dossier explicitly; closing the tool does not turn all
-analysis off. **Focus reading** temporarily hides surrounding navigation and
+analysis off. On desktop, tools occupy adjacent space. On mobile, an explicit
+paragraph-to-tool action reveals the stacked tool heading; closing it or pressing
+Escape returns to the requesting passage and its paragraph control.
+**Focus reading** temporarily hides surrounding navigation and
 tools; its visible exit or Escape restores the workspace. Opening a tool exits
 focus coherently. Text-size, layout and companion changes retain the visible
 source block's position where available. Menus close on scrolling or resizing;
 switching workspace closes temporary menus and reading settings.
+
+Optional brief feedback marks changed controls, newly visible content and passage
+returns. Visibility, selection and focus changes take effect immediately. The
+workspace respects reduced motion, including preference changes while it is open;
+running feedback is cancelled and the return gutter remains useful without motion.
 
 The source-backed reader retains supported headings, multi-paragraph quotations,
 list content, literal code, scene/page dividers and note definitions in source
@@ -4710,9 +4730,13 @@ as inline association marks, with a current project/source context check on clic
 
 **Current main (unreleased):** `ui/manuscript_reader.py` emits the shared command
 surface. The interactive manuscript stays continuous while an **Analysis** toggle
-exposes diagnostic presentation. Its constant accessible name, pressed state and
-visible On/Off text distinguish that choice from the active context tool. Dense
-comparisons use an overview with a return to the preserved passage. There is one
+exposes diagnostic presentation in place. Turning the layer on does not open a
+dock or apply the navigation-collapse override. Its absolute gutter marker does
+not consume prose width or change line wrapping. The constant accessible name,
+pressed state, switch indicator and visible On/Off text distinguish that choice
+from the active context tool; the state label reserves enough width for either
+localized value. Dense comparisons use an overview with a return to the preserved
+passage and prior overlay choice. There is one
 canonical manuscript DOM; changing tools or analysis visibility does not replace
 its source text or create a hidden duplicate reading tree. Loaded-project chrome
 uses a class emitted by the renderer; it does not use a body-level `:has` query
@@ -4753,7 +4777,11 @@ parallel write API is introduced. Values reuse the paragraph's measured markup
 in the closable analysis dock and enable analysis. Explicit analysis/dossier
 controls replace the active dock content while retaining each tool's selection.
 Closing the dock does not hide the diagnostic layer; hiding analysis closes its
-analysis tool but can retain a dossier. Menus expose
+analysis tool but can retain a dossier. On narrow screens, an explicit passage
+tool request stores its own origin and reveals the stacked dock heading; close
+or Escape restores the requesting passage and focus. That intentional destination
+scroll is not overwritten by ordinary reading-anchor restoration. Desktop tools
+keep the adjacent layout. Menus expose
 arrow/Home/End navigation and restore trigger focus on Escape.
 Association refreshes skip unchanged annotation DOM and preserve native selection
 endpoints when marks change. Automatic review uses the existing research-status
@@ -4805,13 +4833,25 @@ DOM and navigation hooks. Domain records, pending saves, revision guards and
 native disclosure fields keep their established owners. Preact mounts research
 subtrees; it does not remount the manuscript or all form drafts.
 
-Analysis visibility is independent of a selected dossier. Overview entry suspends
-the dock and retains document context; returning restores the eligible tool and
-passage. Focus temporarily suppresses surrounding chrome; requesting another tool
+Analysis visibility is independent of a selected dossier and never implicitly
+selects an analysis dock. Overview entry suspends the dock and retains document
+context and the prior analysis visibility; returning restores that choice, the
+eligible tool and passage. Focus temporarily suppresses surrounding chrome; requesting another tool
 restores that arrangement before applying the new intent. Workspace changes
 close temporary menus/settings and suspend manuscript tools, so dormant views do
 not consume the active workspace's keys or restore focus. Browser appearance
 preferences are separate from ephemeral, project-bound passage/relation context.
+
+`workspace-motion.js` consumes committed display state; it does not own visibility,
+navigation, focus or data. Optional native opacity feedback covers at most eight
+modestly sized visible elements, and a gutter marker identifies a passage return.
+The reader is never cloned or snapshotted for a transition; neither prose/root
+transforms nor grid/width animations are used. Semantic changes are immediate.
+Feedback is enabled only without a reduced-motion preference; a live preference
+change cancels running native effects and layer feedback while retaining the
+static return marker. The preference handling is informed by W3C's
+[Animation from Interactions](https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html)
+and [C39 reduced-motion technique](https://www.w3.org/WAI/WCAG22/Techniques/css/C39).
 
 Research tab buttons and panels have explicit IDs, `aria-controls` and
 `aria-labelledby`; the existing manual keyboard tab behavior remains shared.

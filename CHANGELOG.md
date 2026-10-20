@@ -9,14 +9,24 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 - The interactive manuscript stays continuous, with an explicit **Analysis**
-  On/Off toggle independent of the dossier context tool. Dense comparisons open
-  in an overview with **Back to passage**. A shared display coordinator owns
+  On/Off switch independent of the dossier context tool. Showing diagnostics
+  keeps the prose width and navigation choice; it does not implicitly open a
+  dock. **Values** explicitly opens the analysis dock and enables the layer;
+  **Dossier alongside** opens its own context tool. Dense comparisons open
+  in an overview; **Back to passage** restores the prior analysis display choice.
+  A shared display coordinator owns
   workspace, tool, overview and reversible focus transitions. Reading settings
   group text size, width and spacing and retain visible source-block position.
   Paragraph **…** buttons,
   right-click and keyboard menus reuse existing values, marker and quote-link
   actions; selection tools appear only when applicable. Desktop manuscript/dossier
   widths use one draggable, keyboard-operated divider; mobile stacks the readers.
+- Explicit passage-to-tool requests reveal the stacked tool heading on mobile;
+  closing the tool or pressing Escape restores the requesting passage and focus.
+  Desktop tools retain their adjacent layout. Optional feedback uses short opacity
+  changes on bounded visible elements and a passage gutter; semantic changes stay
+  immediate. Live reduced-motion changes cancel active feedback without moving or
+  duplicating prose or animating the workspace width.
 - Source-backed browser reading retains supported headings, quotations, literal
   code, dividers and notes in source order, including preface/empty chapters and
   the analysis-excluded appendix. Source-span joins reuse each exact profile once,

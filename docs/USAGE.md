@@ -100,10 +100,12 @@ JavaScript and a compatible native server are required.
 
 ### Start a review
 
-In the current-main interactive workspace, **Analysis** has a visible On/Off
-state while the manuscript remains continuous. An analyzed paragraph's **Values**
-opens its measurements and enables analysis. **Analysis overview** opens chapter
-comparisons and other dense views with **Back to passage** for the return.
+In the current-main interactive workspace, the **Analysis** switch has a visible
+On/Off state while the manuscript remains continuous. Showing diagnostics keeps
+the prose width and navigation choice; it does not open a context tool. An
+analyzed paragraph's **Values** explicitly opens its measurements and enables
+analysis. **Analysis overview** opens chapter comparisons and other dense views;
+**Back to passage** restores the earlier analysis choice and document context.
 
 **Start your review → Open passage** opens the first paragraph meeting the
 selected tense threshold, otherwise the opening paragraph, clearing filters and
@@ -125,8 +127,10 @@ navigation; its toggle remains reachable, and closing restores the earlier manua
 choice. Drag the divider to change the desktop widths, or focus it and use
 `Left`/`Right` in five-point steps; `Home` and `End` select the 35% and 75%
 manuscript-width limits. The split is a local browser preference. Narrow screens
-stack the readers and hide the divider. Close with the same toggle or the dossier's
-close button; refresh explicitly for the latest revision. The
+stack the readers and hide the divider. When opened from a paragraph's tools,
+the dossier heading scrolls into view on mobile; its close button or Escape
+returns to that paragraph and its control. Close with the same toggle or the
+dossier's close button; refresh explicitly for the latest revision. The
 [research workflow](research/USAGE.md#reading-and-cli-workflows) owns
 selection, evidence and retention semantics.
 
@@ -156,10 +160,14 @@ not a new historical-source navigation contract.
 
 **Current main (unreleased):** interactive workspaces start with continuous
 manuscript text and **Analysis Off**. Toggle **Analysis** to reveal diagnostic
-presentation; its accessible name stays constant and its pressed state identifies
-On/Off. Opening or closing the dossier is independent of that state. Use
+presentation in place. The switch, visible On/Off text and pressed state identify
+the choice while its accessible name stays **Analysis**. Showing the layer alone
+does not open a dock or collapse navigation. Its gutter marker sits outside text
+flow, preserving the prose width and line wrapping. Opening or closing the
+dossier is independent of that state. Use
 **Analysis overview** for chapter matrices, sentence rhythm and other comparisons,
-then **Back to passage** to restore the document context. Hiding analysis also
+then **Back to passage** to restore the document context and prior analysis
+display choice. Hiding analysis also
 leaves the overview and restores an eligible dossier instead of an analysis tool.
 
 Choose a chapter in the reader toolbar. **Reading settings** groups **A−**/**A+**
@@ -180,11 +188,19 @@ Use Shift+right-click to open the browser's native context menu instead.
 **Values** enables analysis and opens the selected paragraph's source lines,
 tense and style measurements in the closable context area. Switch between that
 tool and the saved dossier explicitly; closing the tool does not turn all
-analysis off. **Focus reading** temporarily hides surrounding navigation and
+analysis off. On desktop, tools occupy adjacent space. On mobile, an explicit
+paragraph-to-tool action reveals the stacked tool heading; closing it or pressing
+Escape returns to the requesting passage and its paragraph control.
+**Focus reading** temporarily hides surrounding navigation and
 tools; its visible exit or Escape restores the workspace. Opening a tool exits
 focus coherently. Text-size, layout and companion changes retain the visible
 source block's position where available. Menus close on scrolling or resizing;
 switching workspace closes temporary menus and reading settings.
+
+Optional brief feedback marks changed controls, newly visible content and passage
+returns. Visibility, selection and focus changes take effect immediately. The
+workspace respects reduced motion, including preference changes while it is open;
+running feedback is cancelled and the return gutter remains useful without motion.
 
 The source-backed reader retains supported headings, multi-paragraph quotations,
 list content, literal code, scene/page dividers and note definitions in source

@@ -1,0 +1,66 @@
+// Feedback follows committed state; it never owns navigation, focus or data.
+(function() {
+  "use strict";
+  var reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+  var animations = new Map(), layers = new Map(), viewRevision = 0;
+  var passage = null, passageTimer = null;
+  function cancel(node) {
+    var animation = animations.get(node);
+    if (animation) { animation.cancel(); animations.delete(node); }
+  }
+  function reveal(node) {
+    if (!node) return;
+    cancel(node);
+    if (reduced.matches || !node.animate || !node.getClientRects().length) return;
+    // Opacity preserves the rectangles used by passage/selection restoration.
+    var animation = node.animate([{opacity: .35}, {opacity: 1}], {
+      duration: 180, easing: "cubic-bezier(.2,.7,.3,1)", id: "lixity-reveal"
+    });
+    animations.set(node, animation);
+    animation.onfinish = function() { if (animations.get(node) === animation) animations.delete(node); };
+  }
+  function visible(root, selector) {
+    return Array.from(root.querySelectorAll(selector)).filter(function(node) {
+      var rect = node.getBoundingClientRect();
+      return rect.height > 0 && rect.height <= innerHeight * 2 && rect.bottom > 0 && rect.top < innerHeight;
+    }).slice(0, 8);
+  }
+  function markPassage(node) {
+    clearTimeout(passageTimer);
+    if (passage) passage.classList.remove("reader-return-target");
+    passage = node;
+    if (!node || !node.isConnected) return;
+    // A static gutter remains useful when motion is disabled.
+    node.classList.add("reader-return-target");
+    passageTimer = setTimeout(function() { node.classList.remove("reader-return-target"); passage = null; }, 1400);
+  }
+  function view(pane) {
+    var revision = ++viewRevision;
+    animations.forEach(function(_, node) { cancel(node); });
+    // Relation routes and Reader.restore finish their own scroll in this frame.
+    requestAnimationFrame(function() { requestAnimationFrame(function() {
+      if (revision !== viewRevision || !pane || !pane.getClientRects().length) return;
+      visible(pane, ".chapter-head, .reader-structural, .ptext, .panel > h2, .research-navigation, .research-tab-pane > .ctl-note").forEach(reveal);
+      if (pane.id === "view-pane-analysis" && window.LixityReader) {
+        var anchor = window.LixityReader.capture();
+        if (anchor) markPassage(anchor.panel);
+      }
+    }); });
+  }
+  function analysis(chapters) {
+    if (reduced.matches) return;
+    visible(chapters, ".ptext, .strip, .chapter-head .meta").forEach(function(node) {
+      if (!node.matches(".ptext")) { reveal(node); return; }
+      clearTimeout(layers.get(node));
+      node.classList.add("reader-layer-enter");
+      layers.set(node, setTimeout(function() { node.classList.remove("reader-layer-enter"); layers.delete(node); }, 220));
+    });
+  }
+  reduced.addEventListener("change", function() {
+    if (!reduced.matches) return;
+    animations.forEach(function(_, node) { cancel(node); });
+    layers.forEach(function(timer, node) { clearTimeout(timer); node.classList.remove("reader-layer-enter"); });
+    layers.clear();
+  });
+  window.LixityMotion = {reveal: reveal, view: view, analysis: analysis, passage: markPassage};
+})();

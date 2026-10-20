@@ -251,9 +251,13 @@ as inline association marks, with a current project/source context check on clic
 
 **Current main (unreleased):** `ui/manuscript_reader.py` emits the shared command
 surface. The interactive manuscript stays continuous while an **Analysis** toggle
-exposes diagnostic presentation. Its constant accessible name, pressed state and
-visible On/Off text distinguish that choice from the active context tool. Dense
-comparisons use an overview with a return to the preserved passage. There is one
+exposes diagnostic presentation in place. Turning the layer on does not open a
+dock or apply the navigation-collapse override. Its absolute gutter marker does
+not consume prose width or change line wrapping. The constant accessible name,
+pressed state, switch indicator and visible On/Off text distinguish that choice
+from the active context tool; the state label reserves enough width for either
+localized value. Dense comparisons use an overview with a return to the preserved
+passage and prior overlay choice. There is one
 canonical manuscript DOM; changing tools or analysis visibility does not replace
 its source text or create a hidden duplicate reading tree. Loaded-project chrome
 uses a class emitted by the renderer; it does not use a body-level `:has` query
@@ -294,7 +298,11 @@ parallel write API is introduced. Values reuse the paragraph's measured markup
 in the closable analysis dock and enable analysis. Explicit analysis/dossier
 controls replace the active dock content while retaining each tool's selection.
 Closing the dock does not hide the diagnostic layer; hiding analysis closes its
-analysis tool but can retain a dossier. Menus expose
+analysis tool but can retain a dossier. On narrow screens, an explicit passage
+tool request stores its own origin and reveals the stacked dock heading; close
+or Escape restores the requesting passage and focus. That intentional destination
+scroll is not overwritten by ordinary reading-anchor restoration. Desktop tools
+keep the adjacent layout. Menus expose
 arrow/Home/End navigation and restore trigger focus on Escape.
 Association refreshes skip unchanged annotation DOM and preserve native selection
 endpoints when marks change. Automatic review uses the existing research-status
@@ -346,13 +354,25 @@ DOM and navigation hooks. Domain records, pending saves, revision guards and
 native disclosure fields keep their established owners. Preact mounts research
 subtrees; it does not remount the manuscript or all form drafts.
 
-Analysis visibility is independent of a selected dossier. Overview entry suspends
-the dock and retains document context; returning restores the eligible tool and
-passage. Focus temporarily suppresses surrounding chrome; requesting another tool
+Analysis visibility is independent of a selected dossier and never implicitly
+selects an analysis dock. Overview entry suspends the dock and retains document
+context and the prior analysis visibility; returning restores that choice, the
+eligible tool and passage. Focus temporarily suppresses surrounding chrome; requesting another tool
 restores that arrangement before applying the new intent. Workspace changes
 close temporary menus/settings and suspend manuscript tools, so dormant views do
 not consume the active workspace's keys or restore focus. Browser appearance
 preferences are separate from ephemeral, project-bound passage/relation context.
+
+`workspace-motion.js` consumes committed display state; it does not own visibility,
+navigation, focus or data. Optional native opacity feedback covers at most eight
+modestly sized visible elements, and a gutter marker identifies a passage return.
+The reader is never cloned or snapshotted for a transition; neither prose/root
+transforms nor grid/width animations are used. Semantic changes are immediate.
+Feedback is enabled only without a reduced-motion preference; a live preference
+change cancels running native effects and layer feedback while retaining the
+static return marker. The preference handling is informed by W3C's
+[Animation from Interactions](https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html)
+and [C39 reduced-motion technique](https://www.w3.org/WAI/WCAG22/Techniques/css/C39).
 
 Research tab buttons and panels have explicit IDs, `aria-controls` and
 `aria-labelledby`; the existing manual keyboard tab behavior remains shared.

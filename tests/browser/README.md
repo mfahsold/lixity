@@ -125,8 +125,16 @@ view in seven locales at desktop and mobile widths. It verifies context-bound
 reads, a read-only dossier, safe rendering, retry, restored analysis panels and
 retained manuscript state. Screenshots stay under `/tmp/lixity-workspace-reader-*`.
 
-The manuscript-reader suite checks the shared continuous **Read** and explicit
-**Inspect** presentations in seven languages at 1440 and 320 pixels. Synthetic
+The workbench-transitions suite checks explicit passage requests for Values and
+Dossier at 1440, 390 and 320 pixels: the requested context is visible, closing
+returns to the requesting paragraph with its keyboard focus, and desktop view
+navigation retains the passage. Normal-motion cases cover immediate reversal,
+tool switching and a live reduced-motion preference change. Source identity,
+overflow, runtime errors and unintended writes remain checked throughout.
+Screenshots stay under `/tmp/lixity-workbench-transitions-*`.
+
+The manuscript-reader suite checks the continuous manuscript, explicit **Analysis**
+On/Off layer and comparison overview in seven languages at 1440 and 320 pixels. Synthetic
 paragraph text and source anchors must remain identical across modes, contextual
 tools and companion changes. It exercises ellipsis/right-click/keyboard menus,
 focus restoration, paragraph Values, reversible marker drafts, exact selection

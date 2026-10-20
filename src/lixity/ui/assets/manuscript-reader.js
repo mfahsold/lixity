@@ -10,6 +10,8 @@
   var dock = document.getElementById("workspace-context-panel");
   var layout = document.getElementById("workspace-reader-layout");
   var overviewAnchor = null, inspectorTarget = null, origin = null;
+  var retainedAnchor = null, requestedAnchor = null, dockOrigin = null, arrangementRevision = 0;
+  var narrowContext = window.matchMedia("(max-width: 900px)");
   var panels = Array.from(chapters.querySelectorAll(".ptext"));
   var menu = document.getElementById("manuscript-context-menu");
   var selectionTools = document.getElementById("manuscript-selection-tools");
@@ -40,13 +42,24 @@
     });
     return panel ? {panel: panel, top: panel.getBoundingClientRect().top} : null;
   }
-  function restore(anchor) {
+  function restore(anchor, arrival) {
     if (!anchor) return;
     requestAnimationFrame(function() {
-      if (anchor.panel.isConnected) window.scrollBy(0, anchor.panel.getBoundingClientRect().top - anchor.top);
+      if (anchor.panel.isConnected) {
+        window.scrollBy(0, anchor.panel.getBoundingClientRect().top - anchor.top);
+        if (arrival && window.LixityMotion) window.LixityMotion.passage(anchor.panel);
+      }
     });
   }
-  function retain(action) { var anchor = capture(); action(); restore(anchor); }
+  function retain(action) {
+    var anchor = capture(), previous = workbench.state(), outer = retainedAnchor;
+    retainedAnchor = anchor;
+    try { action(); } finally { retainedAnchor = outer; }
+    var next = workbench.state();
+    // A stacked tool owns its visible destination and the subsequent return.
+    if (narrowContext.matches && previous.contextTool !== next.contextTool && next.surface === "document") return;
+    restore(anchor);
+  }
   function appearance() {
     document.body.style.setProperty("--reader-font-size", (preferences.size / 16) + "rem");
     document.body.style.setProperty("--reader-measure", {narrow: "54ch", standard: "68ch", wide: "78ch"}[preferences.width]);
@@ -82,6 +95,14 @@
       if (button) button.focus({preventScroll: true});
     }
   }
+  function requestTool(value, panel) {
+    requestedAnchor = {panel: panel, top: panel.getBoundingClientRect().top};
+    if (workbench.state().contextTool === value) {
+      dockOrigin = requestedAnchor; requestedAnchor = null;
+      if (narrowContext.matches) dock.scrollIntoView({block: "start", behavior: "instant"});
+      if (window.LixityMotion) window.LixityMotion.reveal(dock);
+    } else retain(function() { workbench.dispatch({type: "tool", value: value}); });
+  }
   function setFocus(value) {
     retain(function() { workbench.dispatch({type: "focus", value: value}); });
   }
@@ -104,8 +125,14 @@
   }
   if (dock) dock.appendChild(inspector);
   workbench.subscribe(function(state, previous) {
-    var anchor = capture();
+    var anchor = requestedAnchor || retainedAnchor || capture(), revision = ++arrangementRevision;
     var open = state.contextTool !== "none" && state.surface === "document";
+    var toolChanged = state.contextTool !== previous.contextTool && state.view === "analysis" &&
+      previous.view === "analysis" && state.surface === "document" && previous.surface === "document";
+    if (toolChanged && open && (previous.contextTool === "none" || requestedAnchor)) {
+      dockOrigin = requestedAnchor || (document.activeElement.closest("#view-pane-analysis") ? anchor : null);
+    }
+    requestedAnchor = null;
     if (layout) layout.classList.toggle("is-open", open);
     if (dock) dock.hidden = !open;
     var divider = document.getElementById("workspace-reader-divider");
@@ -131,8 +158,29 @@
     if (state.view !== previous.view || state.surface !== previous.surface) {
       closeMenu(false); selectionTools.hidden = true; settings.open = false;
     }
-    if (state.surface === previous.surface && state.view === previous.view &&
-        (state.contextTool !== previous.contextTool || state.analysisVisible !== previous.analysisVisible || state.focus !== previous.focus)) restore(anchor);
+    if (toolChanged && narrowContext.matches) {
+      var destination = open ? null : dockOrigin;
+      var returnDockFocus = dock.contains(document.activeElement);
+      requestAnimationFrame(function() {
+        if (revision !== arrangementRevision) return;
+        if (open) dock.scrollIntoView({block: "start", behavior: "instant"});
+        else if (destination && destination.panel.isConnected) {
+          window.scrollBy(0, destination.panel.getBoundingClientRect().top - destination.top);
+          if (returnDockFocus) {
+            var trigger = destination.panel.querySelector(".reader-paragraph-actions") || destination.panel;
+            trigger.focus({preventScroll: true});
+          }
+          if (window.LixityMotion) window.LixityMotion.passage(destination.panel);
+        }
+      });
+      if (!open) dockOrigin = null;
+    } else if (state.surface === previous.surface && state.view === previous.view &&
+        (state.contextTool !== previous.contextTool || state.analysisVisible !== previous.analysisVisible || state.focus !== previous.focus)) restore(anchor, toolChanged && !open);
+    if (window.LixityMotion) {
+      if (toolChanged && open) window.LixityMotion.reveal(dock);
+      if (state.analysisVisible && !previous.analysisVisible && state.surface === "document") window.LixityMotion.analysis(chapters);
+      if (state.surface !== previous.surface) window.LixityMotion.view(document.getElementById("view-pane-analysis"));
+    }
     window.dispatchEvent(new Event("resize"));
   });
   function rangeFor(panel) {
@@ -189,15 +237,14 @@
     if ((action === "values" || action === "companion") && document.body.classList.contains("reader-focus")) setFocus(false);
     if (action === "values") {
       showValues(panel);
-      retain(function() { workbench.dispatch({type: "tool", value: "analysis"}); });
+      requestTool("analysis", panel);
       document.getElementById("reader-inspector-close").focus({preventScroll: true});
     } else if (action === "link") {
       if (!range) return;
       var selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
       var link = panel.querySelector("[data-manuscript-link-selection]"); if (link) link.click();
     } else if (action === "companion") {
-      var toggle = document.getElementById("workspace-reader-toggle");
-      if (toggle.getAttribute("aria-expanded") !== "true") toggle.click();
+      requestTool("dossier", panel);
       var close = document.getElementById("workspace-reader-close");
       if (close) close.focus({preventScroll: true});
     } else {
@@ -213,12 +260,10 @@
   });
   mode.addEventListener("change", function() { setMode(mode.value); });
   analysisToggle.addEventListener("click", function() {
-    var previous = workbench.state(), anchor = capture();
-    if (!previous.analysisVisible && previous.contextTool === "none" && !inspectorBody.childElementCount &&
-        anchor && anchor.panel.matches(".ptext")) showValues(anchor.panel);
+    var previous = workbench.state();
     retain(function() { workbench.dispatch({type: "analysis", value: !previous.analysisVisible}); });
     if (previous.surface === "overview") {
-      rememberPassageLocation(overviewAnchor && overviewAnchor.panel); restore(overviewAnchor);
+      rememberPassageLocation(overviewAnchor && overviewAnchor.panel); restore(overviewAnchor, true);
     }
   });
   document.querySelectorAll("[data-context-tool]").forEach(function(button) {
@@ -228,12 +273,12 @@
   });
   document.getElementById("workbench-overview-open").addEventListener("click", function() {
     overviewAnchor = capture(); workbench.dispatch({type: "surface", value: "overview"});
-    controls.scrollIntoView({block: "start"});
+    (document.getElementById("workspace-reader") || controls).scrollIntoView({block: "start", behavior: "instant"});
     document.getElementById("workbench-overview-back").focus({preventScroll: true});
   });
   document.getElementById("workbench-overview-back").addEventListener("click", function() {
     rememberPassageLocation(overviewAnchor && overviewAnchor.panel);
-    workbench.dispatch({type: "surface", value: "document"}); restore(overviewAnchor);
+    workbench.dispatch({type: "surface", value: "document"}); restore(overviewAnchor, true);
     document.getElementById("workbench-overview-open").focus({preventScroll: true});
   });
   document.getElementById("reader-text-smaller").addEventListener("click", function() { retain(function() { preferences.size = Math.max(16, preferences.size - 2); appearance(); }); });
@@ -362,7 +407,7 @@
     }
     switchActiveView("analysis"); workbench.dispatch({type: "surface", value: "document"});
     rememberPassageLocation(origin.anchor.panel);
-    revealChapter(origin.anchor.panel); restore(origin.anchor);
+    revealChapter(origin.anchor.panel); restore(origin.anchor, true);
     origin.anchor.panel.tabIndex = -1;
     origin.anchor.panel.focus({preventScroll: true});
     if (origin.offsets) {

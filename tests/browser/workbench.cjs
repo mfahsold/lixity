@@ -77,14 +77,44 @@ async function documentState(page) {
       const name = await toggle.getAttribute('aria-label');
       assert.ok(name && (await toggle.textContent()).trim(), 'State is named in the interface');
       const original = await documentState(page);
+      await page.locator('#workbench-overview-open').click();
+      await page.locator('#workbench-overview-back').click();
+      await settle(page);
+      assert.equal(await toggle.getAttribute('aria-pressed'), 'false',
+        'A temporary overview returns to the previous analysis-layer preference');
       await page.locator('#chapters .ptext').nth(25).scrollIntoViewIfNeeded();
-      const currentPassage = await page.evaluate(() => LixityReader.capture().panel.dataset.start);
+      const currentPassage = await page.evaluate(() => LixityReader.capture().panel.id);
+      const prose = page.locator('#' + currentPassage + ' .ptext-inner > p');
+      const beforeAnalysis = await prose.boundingBox();
+      const beforeToggle = await toggle.boundingBox();
+      const beforeNavigation = await page.locator('#workspace-navigation-toggle').getAttribute('aria-expanded');
       await toggle.click();
-      assert.match(await page.locator('#reader-inspector-body .anchor').textContent(),
-        new RegExp('(?:^|\\D)' + currentPassage + '(?:\\D|$)'),
-        'First analysis context follows the currently visible passage');
+      await settle(page);
+      assert.equal(await page.locator('#workspace-context-panel').isVisible(), false,
+        'The analysis layer does not implicitly open a context tool');
+      const afterAnalysis = await prose.boundingBox();
+      assert.ok(Math.abs((await toggle.boundingBox()).width - beforeToggle.width) <= 1,
+        'The On/Off switch keeps its width across state labels and selected type weight');
+      for (const key of ['x', 'y', 'width', 'height']) assert.ok(
+        Math.abs(beforeAnalysis[key] - afterAnalysis[key]) <= 2,
+        `Revealing analysis preserves prose ${key}, without rewrapping or moving its passage`);
+      assert.equal(await page.locator('#workspace-navigation-toggle').getAttribute('aria-expanded'), beforeNavigation,
+        'Revealing analysis preserves the navigation arrangement');
       assert.equal(await toggle.getAttribute('aria-pressed'), 'true');
       assert.equal(await toggle.getAttribute('aria-label'), name, 'A toggle keeps its accessible name');
+      if (width === 320) {
+        await page.locator('#' + currentPassage + ' [data-reader-paragraph]').click();
+        await page.locator('[data-reader-action=values]').click();
+        await settle(page);
+        await toggle.focus();
+        await toggle.press('Space'); await settle(page);
+        assert.equal(await toggle.evaluate(node => document.activeElement === node), true,
+          'Hiding analysis with its keyboard toggle retains that toggle focus');
+        await toggle.press('Space');
+        assert.equal(await toggle.getAttribute('aria-pressed'), 'true');
+        assert.equal(await page.locator('#manuscript-context-menu').isVisible(), false,
+          'A second Space reverses Analysis rather than opening paragraph actions');
+      }
       await page.locator('#workspace-reader-toggle').click();
       await page.locator('#workspace-reader-dossier').selectOption('garden');
       await page.locator('#workspace-reader-body h3').waitFor();
@@ -104,6 +134,9 @@ async function documentState(page) {
       const passageOrigin = await page.evaluate(() => { const anchor = LixityReader.capture(); return {id: anchor.panel.id, top: anchor.top}; });
       await page.locator('#workbench-overview-open').click();
       assert.equal(await page.locator('#manuscript-analysis-panels').isVisible(), true);
+      const overviewHeading = await page.locator('#analysis-review h2').boundingBox();
+      assert.ok(overviewHeading.y >= 0 && overviewHeading.y + overviewHeading.height <= 900,
+        'Opening the overview from a deep passage starts at its first review heading');
       assert.equal(await page.locator('#workbench-overview-back').isVisible(), true);
       await page.locator('#analysis-sections [data-section-link]').last().click();
       await page.locator('#workbench-overview-back').click();

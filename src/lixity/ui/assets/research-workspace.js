@@ -480,6 +480,7 @@ document.addEventListener("click", async function (event) {
     if (tabBtn.dataset.rtab === "claims") { refreshResearchClaims(); refreshResearchClaimProjections(); }
     if (tabBtn.dataset.rtab === "decisions") refreshResearchDecisions();
     if (tabBtn.dataset.rtab === "review") refreshResearchEditorialReview();
+    if (window.LixityMotion) window.LixityMotion.view(document.getElementById(targetId));
     return;
   }
 

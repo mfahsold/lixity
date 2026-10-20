@@ -2344,7 +2344,6 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--section-gap);
-  animation: fadeInPane 0.15s ease-in-out;
 }
 #workspace-analysis-body { display: grid; gap: var(--section-gap); min-width: 0; }
 .view-pane > *, #workspace-analysis-body > * { min-width: 0; margin-block: 0; }
@@ -2355,10 +2354,6 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
   .view-navigation { gap: var(--space-1); }
   .view-nav-tab { padding: var(--space-2); font-size: var(--text-small); }
   .view-nav-icon { display: none; }
-}
-@keyframes fadeInPane {
-  from { opacity: 0; transform: translateY(2px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 /* The interactive workspace has application chrome; exported reports keep
@@ -4017,15 +4012,26 @@ body.lixity-workspace.reader-focus { padding-left: 1.5rem; }
 }
 
 /* Workbench display state is independent of the selected context tool. */
-.analysis-toggle { display: inline-flex; align-items: center; gap: .6rem; }
-.analysis-toggle span { font-size: var(--text-note); border-radius: var(--radius-sm); padding: .1rem .4rem; background: var(--surface); color: var(--muted); }
+.analysis-toggle { display: inline-flex; align-items: center; gap: .45rem; }
+button.analysis-toggle { font-weight: var(--weight-strong); }
+.analysis-state { display: inline-grid; font-size: var(--text-note); border-radius: var(--radius-xs); padding: .1rem .35rem; background: var(--surface); color: var(--muted); }
+.analysis-state > span { grid-area: 1 / 1; }
+.analysis-state-measure { visibility: hidden; }
+.analysis-switch { position: relative; width: 1.6rem; height: .9rem; flex: none; border-radius: var(--radius-pill); background: var(--line-strong); }
+.analysis-switch::after { content: ""; position: absolute; top: .15rem; left: .15rem; width: .6rem; height: .6rem; border-radius: var(--radius-pill); background: var(--surface); }
 .analysis-toggle[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); background: var(--accent-light); box-shadow: inset 0 -2px var(--accent); }
-.analysis-toggle[aria-pressed="true"] span { color: var(--accent); }
+.analysis-toggle[aria-pressed="true"] .analysis-state { color: var(--accent); }
+.analysis-toggle[aria-pressed="true"] .analysis-switch { background: var(--accent); }
+.analysis-toggle[aria-pressed="true"] .analysis-switch::after { transform: translateX(.7rem); }
 .manuscript-reader-controls [hidden] { display: none; }
 .workbench-overview #chapters { display: none; }
 .workbench-overview #manuscript-analysis-panels { display: block; }
-.workbench-analysis:not(.workbench-overview) .ptext { border-left: 2px solid var(--line-strong); padding-left: .8rem; }
-.workbench-analysis:not(.workbench-overview) .ptext:has(.manuscript-claim-hit) { border-left-color: var(--accent); }
+.manuscript-reading .ptext, .manuscript-reading .reader-return-target { position: relative; }
+.workbench-analysis:not(.workbench-overview) .ptext::before,
+.manuscript-reading .reader-return-target::before {
+  content: ""; position: absolute; left: -.6rem; top: 0; bottom: 0;
+  width: 2px; border-radius: var(--radius-xs); background: var(--line-strong); pointer-events: none;
+}
 .reader-focus .workspace-context-panel { display: none !important; }
 #dashboard-freshness .status-item { flex-wrap: wrap; min-width: 0; }
 #dashboard-freshness .status-detail { white-space: normal; overflow: visible; max-width: none; }
@@ -4034,7 +4040,13 @@ body.lixity-workspace.reader-focus { padding-left: 1.5rem; }
 .reader-coverage { font-family: var(--font); font-size: var(--text-note); color: var(--muted); }
 @media (prefers-reduced-motion: no-preference) {
   .analysis-toggle, .context-tool-tabs .ctl { transition: background-color 120ms ease, border-color 120ms ease; }
+  .analysis-switch { transition: background-color 160ms var(--ease); }
+  .analysis-switch::after { transition: transform 160ms var(--ease); }
+  .reader-layer-enter::before { animation: reader-layer-reveal 180ms var(--ease); }
+  .reader-return-target::before { animation: reader-passage-arrival 1400ms ease-out; }
 }
+@keyframes reader-layer-reveal { from { opacity: 0; } to { opacity: 1; } }
+@keyframes reader-passage-arrival { from { opacity: .25; } 18%, 70% { opacity: 1; } to { opacity: .3; } }
 
 .manuscript-reading.workbench-analysis:not(.workbench-overview) .strip { display: flex; margin: .6rem 0 1.25rem; }
 .manuscript-reading.workbench-analysis:not(.workbench-overview) .chapter-head .meta { display: block; margin-top: .4rem; font-size: var(--text-note); }
@@ -4058,7 +4070,8 @@ body.lixity-workspace.reader-focus { padding-left: 1.5rem; }
   .manuscript-reading .chapter + .chapter { padding-top: 1.25rem; }
 }
 
-.workbench-analysis.reader-inspector-open .ptext.reader-inspector-target { border-left-color: var(--accent); box-shadow: -2px 0 var(--accent); }
+.workbench-analysis.reader-inspector-open .ptext.reader-inspector-target::before,
+.manuscript-reading .reader-return-target::before { background: var(--accent); width: 3px; }
 </style>
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob: https://tile.openstreetmap.org; connect-src 'self'; font-src data:; base-uri 'none'; form-action 'none'"/><link rel="canonical" href="https://mfahsold.github.io/lixity/demo/report.html"/>
 <meta name="description" content="Explore one fictional harbour project: compare six manuscript chapters, then follow a dossier through retained evidence to an authored claim and the same manuscript passage."/>
@@ -4126,7 +4139,7 @@ a[data-demo-local] { opacity: .65; }
 })();</script>
 <script id="research-demo-controls">document.addEventListener("DOMContentLoaded", function () {
   "use strict";
-  var imageResources = {"/api/research/image?project_id=urn%3Auuid%3Aa55ea07e-c724-4cc8-abb4-b770cfcd40c6&source_id=urn%3Auuid%3Af20c58a8-ce33-4c6a-956b-91066597aa04&version_id=urn%3Auuid%3A00c20205-9d6d-493a-982a-d9c243422f84": "../assets/research/hamburg-free-port-1900.jpg", "/api/research/image?project_id=urn%3Auuid%3Aa55ea07e-c724-4cc8-abb4-b770cfcd40c6&source_id=urn%3Auuid%3Ac9bbafc7-b246-4378-9fc6-26ac6fdefe71&version_id=urn%3Auuid%3Add3dbab0-97d9-481a-b194-81d70c5fcc0f": "../assets/research/hamburg-harbour-1890-1900.jpg"};
+  var imageResources = {"/api/research/image?project_id=urn%3Auuid%3Af2a6cf07-dc4f-4181-ad4f-e1f98882f181&source_id=urn%3Auuid%3A0cf00df7-f85c-49f9-9375-21a538d6d14a&version_id=urn%3Auuid%3A8e333499-5c5c-4fdd-9ce4-30536bd3aa8c": "../assets/research/hamburg-free-port-1900.jpg", "/api/research/image?project_id=urn%3Auuid%3Af2a6cf07-dc4f-4181-ad4f-e1f98882f181&source_id=urn%3Auuid%3A8523ffe9-a0b5-4d01-af3c-e7e325e65781&version_id=urn%3Auuid%3A6ca0d904-a5f2-46a9-abd9-be1c1154c7b9": "../assets/research/hamburg-harbour-1890-1900.jpg"};
   var restoreImages = window.LixityDossierImages.restoreMarkdown;
   window.LixityDossierImages.restoreMarkdown = function (rendered, prepared) {
     var template = document.createElement("template");
@@ -4382,7 +4395,7 @@ LIXITY_OCR_LANGUAGES=deu+eng</pre><p class="ctl-note">Set the chosen OCR environ
 <dialog class="lixity-modal" id="modal-project-create" closedby="any" aria-labelledby="modal-create-title">  <div class="modal-card">    <div class="modal-header">      <h3 id="modal-create-title">Create project</h3>      <button type="button" class="modal-close" data-close-modal aria-label="Close">✕</button>    </div>    <div class="modal-tabs" role="tablist" aria-labelledby="modal-create-title">      <button type="button" class="modal-tab-btn active" role="tab" id="tab-btn-import" aria-controls="tab-pane-import" aria-selected="true" data-tab-target="tab-pane-import">Import manuscript</button>      <button type="button" class="modal-tab-btn" role="tab" id="tab-btn-scratch" aria-controls="tab-pane-scratch" aria-selected="false" data-tab-target="tab-pane-scratch">Start new manuscript</button>    </div>    <p class="ctl-note modal-intro">Create a local project from a manuscript or a new draft. Lixity writes only into the project folder; nothing is uploaded.</p>    <div class="modal-tab-pane active" id="tab-pane-import" role="tabpanel" aria-labelledby="tab-btn-import">      <form id="form-project-import" class="modal-body" method="dialog">        <input type="file" id="import-file-input" accept=".md,.markdown,.txt" hidden />        <button type="button" class="file-dropzone" id="import-dropzone" autofocus aria-label="Select or drop manuscript file">          <span class="dropzone-icon">            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="12" y2="12"></line><line x1="15" y1="15" x2="12" y2="12"></line></svg>          </span>          <span class="dropzone-text">            <strong>Drop a manuscript file (.md, .markdown, .txt) here</strong>            <span>or click to choose a file</span>          </span>        </button>        <div class="file-preview-card" id="import-preview-box" style="display:none;">          <div class="fpc-header">            <span class="fpc-badge">Manuscript recognized</span>            <span class="fpc-filename" id="import-fpc-filename">manuscript.md</span>          </div>          <div class="fpc-meta">            <div class="fpc-stat"><span class="fpc-label">Scope:</span> <strong id="import-fpc-stats"></strong></div>            <div class="fpc-stat"><span class="fpc-label">Analysis language:</span> <span id="import-fpc-lang"></span></div>          </div>        </div>        <div class="project-structure-hint">          <span><span class="help" data-help="Copies the selected manuscript bytes into a new project folder. Existing research records are not attached." tabindex="0">Lixity saves the manuscript (manuscript.md) and project settings (lixity.toml) in a local folder.</span></span>        </div>        <div class="form-group">          <label for="import-proj-title" class="form-label">Title</label>          <input class="ctl full-width" id="import-proj-title" required placeholder="Extracted from first heading"/>        </div>        <div class="form-row">          <div class="grow">            <label for="import-proj-lang" class="form-label"><span class="help" data-help="Language profile of the analysis: auto detects the language via function words." tabindex="0">Language</span></label>            <select class="ctl full-width" id="import-proj-lang">              <option value="de">Deutsch</option>              <option value="en" selected>English</option>              <option value="fr">Français</option>              <option value="es">Español</option>              <option value="it">Italiano</option>              <option value="pt">Português</option>              <option value="nl">Nederlands</option>            </select>            <span class="ctl-note wizard-hint">Used for sentences, tense and readability. You can change it later.</span>          </div>          <div class="grow-2">            <label for="import-proj-author" class="form-label">Author name (optional)</label>            <input class="ctl full-width" id="import-proj-author"/>            <span class="ctl-note wizard-hint">Used for PDF credits, the title page and the NDA. You can change it later in Project → Settings.</span>          </div>        </div><details class="research-details" id="import-project-options"><summary>Optional details</summary>          <div>            <label for="import-proj-path" class="form-label">Project folder (optional)</label>            <input class="ctl full-width" id="import-proj-path" placeholder="Default: generated from title"/>            <span class="ctl-note wizard-hint">If omitted, a new folder is created from the title.</span>          </div>        <div class="form-group"><label class="form-checkbox"><input type="checkbox" id="import-proj-research"/> <span>Initialize research archive (research/)</span></label>        </div></details>        <p class="ctl-status project-form-status" id="import-project-status" role="alert" aria-live="assertive" hidden></p>        <div class="modal-footer">          <button type="button" class="ctl" data-close-modal>Cancel</button>          <button type="submit" class="ctl primary" id="btn-submit-import-project" disabled>Import and analyze manuscript</button>        </div>      </form>    </div>    <div class="modal-tab-pane" id="tab-pane-scratch" role="tabpanel" aria-labelledby="tab-btn-scratch" style="display:none;">      <form id="form-project-create" class="modal-body" method="dialog">        <div class="project-structure-hint">          <span>Creates manuscript.md with the chosen chapter structure, lixity.toml and optionally research/.</span>        </div>        <div class="form-group">          <label for="new-proj-title" class="form-label">Title</label>          <input class="ctl full-width" id="new-proj-title" required placeholder="e.g. Whispers in the Mist"/>        </div>        <div class="form-row">          <div class="grow">            <label for="new-proj-lang" class="form-label"><span class="help" data-help="Language profile of the analysis: auto detects the language via function words." tabindex="0">Language</span></label>            <select class="ctl full-width" id="new-proj-lang">              <option value="de">Deutsch</option>              <option value="en" selected>English</option>              <option value="fr">Français</option>              <option value="es">Español</option>              <option value="it">Italiano</option>              <option value="pt">Português</option>              <option value="nl">Nederlands</option>            </select>            <span class="ctl-note wizard-hint">Used for sentences, tense and readability. You can change it later.</span>          </div>          <div class="grow-2">            <label for="new-proj-path" class="form-label">Target folder (optional)</label>            <input class="ctl full-width" id="new-proj-path" placeholder="Default: subfolder"/>            <span class="ctl-note wizard-hint">If omitted, a new folder is created from the title.</span>          </div>        </div>        <div class="form-group">          <label for="new-proj-author" class="form-label">Author name (optional)</label>          <input class="ctl full-width" id="new-proj-author"/>          <span class="ctl-note wizard-hint">Used for PDF credits, the title page and the NDA. You can change it later in Project → Settings.</span>        </div>        <div class="form-group">          <span class="form-label">Choose narrative structure</span>          <div class="template-grid">            <label class="template-card active">              <input type="radio" name="proj_template" value="minimal" checked/>              <div class="tc-title">Minimal</div>              <div class="tc-desc">One chapter for free writing.</div>            </label>            <label class="template-card">              <input type="radio" name="proj_template" value="three_act"/>              <div class="tc-title">Three-act structure</div>              <div class="tc-desc">Departure, confrontation and resolution.</div>            </label>            <label class="template-card">              <input type="radio" name="proj_template" value="research"/>              <div class="tc-title">Research novel</div>              <div class="tc-desc">Includes a local research and dossier archive (research/).</div>            </label>          </div>        </div>        <div class="form-group mt-2"><label class="form-checkbox"><input type="checkbox" id="new-proj-research"/> <span>Initialize research archive (research/)</span></label>          <p class="ctl-note" id="new-proj-research-required" hidden>Included in the research template.</p>        </div>        <p class="ctl-status project-form-status" id="new-project-status" role="alert" aria-live="assertive" hidden></p>        <div class="modal-footer">          <button type="button" class="ctl" data-close-modal>Cancel</button>          <button type="submit" class="ctl primary" id="btn-submit-create-project">Create project</button>        </div>      </form>    </div>  </div></dialog><dialog class="lixity-modal" id="modal-project-open" closedby="any" aria-labelledby="modal-open-title">  <div class="modal-card">    <div class="modal-header">      <h3 id="modal-open-title"><span class="help" data-help="Opens an existing local project folder or manuscript in place, including its research archive. No files are copied." tabindex="0">Open project</span></h3>      <button type="button" class="modal-close" data-close-modal aria-label="Close">✕</button>    </div>    <form id="form-project-open" class="modal-body" method="dialog">      <div class="form-group">        <label for="open-proj-path" class="form-label">Project folder or manuscript path:</label>        <div class="project-path-row">          <button type="button" class="ctl primary" id="open-proj-choose" autofocus aria-controls="open-project-chooser" aria-expanded="false">Browse files and folders</button>          <input class="ctl" id="open-proj-path" required placeholder="/path/to/project or manuscript.md"/>        </div>        <p class="ctl-note">Choose an existing project folder or manuscript file, or enter its path. Lixity opens it in place, including any research archive.</p>      </div>      <div id="open-project-recent" data-recent-projects hidden>        <span class="ctl-label recent-projects-heading">Recent projects</span>        <ul class="project-chooser-list" id="open-project-recent-list" data-recent-project-list></ul>        <button type="button" class="ctl" data-clear-recent-projects>Clear history</button>        <p class="ctl-status" data-recent-project-status role="status" hidden></p>      </div>      <div class="project-chooser" id="open-project-chooser" role="region" aria-labelledby="open-project-chooser-heading" hidden>        <div class="project-chooser-heading">          <strong id="open-project-chooser-heading">Choose a project path</strong>          <button type="button" class="ctl" id="open-project-chooser-close" aria-label="Close">✕</button>        </div>        <p class="ctl-note">Files on the computer running Lixity.</p>        <p class="ctl-note project-chooser-current">Current folder: <code id="open-project-chooser-path"></code></p>        <p class="ctl-note project-chooser-project" id="open-project-chooser-project" data-empty="No Lixity project in this folder. You can still open a manuscript or folder." role="status"></p>        <div class="project-chooser-toolbar">          <button type="button" class="ctl" id="open-project-chooser-home">Home</button>          <button type="button" class="ctl" id="open-project-chooser-parent" disabled>Parent folder</button>          <button type="button" class="ctl primary" id="open-project-chooser-select-folder" disabled>Select this folder</button>        </div>        <p class="ctl-note" id="open-project-chooser-status" role="status" aria-live="polite"></p>        <ul class="project-chooser-list" id="open-project-chooser-list" aria-label="Folders and manuscripts"></ul>      </div>      <div class="project-structure-hint mt-2">        <span>Want to import a new file instead? <button type="button" class="ctl-link" id="link-switch-to-import">Switch to import wizard</button></span>      </div>      <p class="ctl-status project-form-status" id="open-project-status" role="alert" aria-live="assertive" hidden></p>      <div class="modal-footer">        <button type="button" class="ctl" data-close-modal>Cancel</button>        <button type="submit" class="ctl primary" id="btn-submit-open-project">Open</button>      </div>    </form>  </div></dialog><dialog class="lixity-modal" id="modal-research-revision" closedby="any" aria-labelledby="research-revision-title">  <div class="modal-card">    <div class="modal-header">      <h3 id="research-revision-title">Edit research entry</h3>      <button type="button" class="modal-close" data-close-modal aria-label="Close">✕</button>    </div>    <div class="modal-tabs" role="tablist" aria-labelledby="research-revision-title">      <button type="button" class="modal-tab-btn active" role="tab" id="research-revision-edit-tab" aria-controls="research-revision-form" aria-selected="true">Edit</button>      <button type="button" class="modal-tab-btn" role="tab" id="research-revision-history-tab" aria-controls="research-revision-history" aria-selected="false">Saved versions</button>    </div>    <p class="ctl-note research-revision-meta" id="research-revision-kind"></p>    <details class="research-details" id="research-revision-technical">      <summary>Technical details</summary>      <dl class="research-revision-readonly">        <dt>Record identifier</dt><dd id="research-revision-identifier"></dd>        <dt>Archive snapshot identifier</dt><dd id="research-revision-snapshot"></dd>      </dl>    </details>    <div class="research-revision-updates" id="research-revision-source-updates" role="status" aria-live="polite" hidden></div>    <form id="research-revision-form" class="modal-body" method="dialog" role="tabpanel" aria-labelledby="research-revision-edit-tab" novalidate>      <section id="research-revision-merge" class="form-group" aria-labelledby="research-revision-merge-title" hidden>        <h4 id="research-revision-merge-title">Review concurrent changes</h4>        <p class="ctl-note">Nothing has been saved. Changes to different fields can be combined. Choose a value for each conflict, apply the preview, then save explicitly.</p>        <div id="research-revision-merge-fields"></div>        <button type="button" class="ctl" id="research-revision-merge-apply">Use reviewed changes</button>      </section>      <div id="research-revision-fields" class="research-revision-fields"></div>      <p class="ctl-note">Links keep the saved version you chose. Leave a version blank to keep an existing link; a newly chosen entry uses its latest saved version.</p>      <fieldset class="research-revision-choice">        <legend class="form-label">What changed?</legend>        <label><input type="radio" name="research_revision_change_kind" value="correction" required/> <span><strong>Fix an error</strong><small>Use when the saved entry contains a mistake. Earlier versions remain available.</small></span></label>        <label><input type="radio" name="research_revision_change_kind" value="supersession"/> <span><strong>Update the content or decision</strong><small>Use when your content, interpretation or decision has changed. Earlier versions remain available.</small></span></label>      </fieldset>      <label for="research-revision-reason" class="form-label">Why are you changing it?</label><textarea class="ctl" id="research-revision-reason" rows="2" maxlength="2000" required></textarea>      <details class="research-details" id="research-revision-citations-wrap" hidden>        <summary>Citations</summary>        <div class="research-details-body" id="research-revision-citations"></div>      </details>      <div class="modal-footer">        <button type="button" class="ctl" id="research-revision-reload" hidden>Reload current (discard draft)</button>        <button type="button" class="ctl" data-close-modal>Cancel</button>        <button type="button" class="ctl" id="research-revision-batch-add">Add to change set</button>        <button type="submit" class="ctl primary" id="research-revision-save">Save new version</button>      </div>    </form>    <p class="ctl-status" id="research-revision-status" role="alert" aria-live="assertive" hidden></p>    <div id="research-revision-history" class="modal-body research-revision-history" role="tabpanel" aria-labelledby="research-revision-history-tab" hidden>      <ol id="research-revision-history-list" class="research-revision-history-list"></ol>      <div id="research-revision-history-detail"></div>    </div>  </div></dialog><dialog class="lixity-modal" id="modal-research-revision-batch" closedby="any" aria-labelledby="research-revision-batch-title">  <div class="modal-card">    <div class="modal-header">      <h3 id="research-revision-batch-title">Review related changes</h3>      <button type="button" class="modal-close" data-close-modal aria-label="Close">✕</button>    </div>    <div class="modal-body">      <p class="ctl-note">Drafts stay in this browser tab until you save or discard them. Reloading the page removes unsaved drafts. Review every entry before saving the whole set together; either all revisions are saved or none.</p>      <ol id="research-revision-batch-list"></ol>      <p class="ctl-status" id="research-revision-batch-status" role="status" aria-live="polite" hidden></p>      <div class="modal-footer">        <button type="button" class="ctl" id="research-revision-batch-clear">Discard all queued drafts</button>        <button type="button" class="ctl" data-close-modal>Keep drafts and close</button>        <button type="button" class="ctl" id="research-revision-batch-check">Check change set</button>        <button type="button" class="ctl primary" id="research-revision-batch-apply" disabled>Save all changes together</button>      </div>    </div>  </div></dialog>
 <div class="view-pane active" id="view-pane-analysis" data-view-pane="analysis" role="tabpanel" aria-labelledby="tab-view-analysis">
 <section id="workspace-reader" data-project-token="synthetic-harbour-manuscript"><div class="workspace-reader-layout" id="workspace-reader-layout"><div id="workspace-context-panel" class="workspace-context-panel" hidden><div class="context-tool-tabs" role="group"><button type="button" class="ctl" data-context-tool="analysis" aria-pressed="false">Analysis</button><button type="button" class="ctl" data-context-tool="dossier" aria-pressed="false" >Dossier alongside</button></div><aside class="panel workspace-reader-panel" id="workspace-reader-panel" aria-labelledby="workspace-reader-title" hidden><div class="workspace-reader-head"><h2 id="workspace-reader-title">Dossier alongside</h2><button type="button" class="ctl" id="workspace-reader-close" aria-label="Close">✕</button></div><div class="row workspace-reader-controls"><div class="setting-field grow"><label for="workspace-reader-dossier">Choose a dossier</label><select class="ctl" id="workspace-reader-dossier"><option value="">Choose a dossier</option></select></div><button type="button" class="ctl" id="workspace-reader-refresh">Refresh dossier</button></div><p class="ctl-status" id="workspace-reader-status" role="status" aria-live="polite"></p><div id="workspace-reader-body"></div></aside></div><div id="workspace-reader-divider" class="workspace-reader-divider" role="separator" tabindex="0" aria-orientation="vertical" aria-valuemin="35" aria-valuemax="75" aria-valuenow="62" aria-label="Manuscript and context width" aria-controls="workspace-analysis-body workspace-context-panel" hidden></div><div id="workspace-analysis-body">
-<div class="manuscript-reader-controls" id="manuscript-reader-controls" hidden><button class="ctl analysis-toggle" type="button" id="manuscript-analysis-toggle" aria-label="Analysis" aria-pressed="false">Analysis <span id="manuscript-analysis-state" aria-hidden="true">Off</span></button><select id="manuscript-mode" hidden aria-hidden="true" tabindex="-1"><option value="read">Read</option><option value="inspect">Inspect</option></select><select class="ctl reader-chapter" id="reader-chapter" aria-label="Go to chapter"><option value="">Go to chapter…</option><option value="reader-preface">Manuscript</option><option value="ch-1">1. The Eastern Gate</option><option value="ch-2">2. The Loose Board</option><option value="ch-3">3. Questions on the Quay</option><option value="ch-4">4. The Customs Note</option><option value="ch-5">5. The Blank Line</option><option value="ch-6">6. Morning Handover</option></select><details class="reader-settings" id="reader-settings"><summary class="ctl">Reading settings</summary><div class="reader-settings-body"><div class="reader-size-controls" role="group" aria-label="Text size"><button class="ctl" type="button" id="reader-text-smaller" aria-label="Smaller text">A−</button><output id="reader-size-value" aria-live="polite">18</output><button class="ctl" type="button" id="reader-text-larger" aria-label="Larger text">A+</button></div><label for="reader-width">Text width</label><select class="ctl" id="reader-width"><option value="narrow">Narrow</option><option value="standard" selected>Standard</option><option value="wide">Wide</option></select><label for="reader-spacing">Line spacing</label><select class="ctl" id="reader-spacing"><option value="compact">Compact</option><option value="standard" selected>Standard</option><option value="relaxed">Spacious</option></select></div></details><button class="ctl" type="button" id="reader-focus" aria-pressed="false">Focus reading</button><button class="ctl" type="button" id="workbench-overview-open">Analysis overview</button><strong class="workbench-surface-label" id="workbench-overview-label" hidden>Analysis overview</strong><button class="ctl" type="button" id="workbench-overview-back" hidden>Back to passage</button><button class="ctl" type="button" id="workbench-return" hidden>Back to passage</button></div><aside class="reader-inspector panel" id="reader-inspector" hidden aria-labelledby="reader-inspector-title"><div class="workspace-reader-head"><h2 id="reader-inspector-title">Values</h2><button class="ctl" type="button" id="reader-inspector-close" aria-label="Close">✕</button></div><div id="reader-inspector-body"></div></aside><div class="manuscript-context-menu" id="manuscript-context-menu" role="menu" aria-label="Passage actions" hidden></div><div class="manuscript-selection-tools" id="manuscript-selection-tools" role="toolbar" aria-label="Passage actions" hidden></div>
+<div class="manuscript-reader-controls" id="manuscript-reader-controls" hidden><button class="ctl analysis-toggle" type="button" id="manuscript-analysis-toggle" aria-label="Analysis" aria-pressed="false"><span class="analysis-switch" aria-hidden="true"></span>Analysis <span class="analysis-state" aria-hidden="true"><span class="analysis-state-measure">On</span><span class="analysis-state-measure">Off</span><span id="manuscript-analysis-state">Off</span></span></button><select id="manuscript-mode" hidden aria-hidden="true" tabindex="-1"><option value="read">Read</option><option value="inspect">Inspect</option></select><select class="ctl reader-chapter" id="reader-chapter" aria-label="Go to chapter"><option value="">Go to chapter…</option><option value="reader-preface">Manuscript</option><option value="ch-1">1. The Eastern Gate</option><option value="ch-2">2. The Loose Board</option><option value="ch-3">3. Questions on the Quay</option><option value="ch-4">4. The Customs Note</option><option value="ch-5">5. The Blank Line</option><option value="ch-6">6. Morning Handover</option></select><details class="reader-settings" id="reader-settings"><summary class="ctl">Reading settings</summary><div class="reader-settings-body"><div class="reader-size-controls" role="group" aria-label="Text size"><button class="ctl" type="button" id="reader-text-smaller" aria-label="Smaller text">A−</button><output id="reader-size-value" aria-live="polite">18</output><button class="ctl" type="button" id="reader-text-larger" aria-label="Larger text">A+</button></div><label for="reader-width">Text width</label><select class="ctl" id="reader-width"><option value="narrow">Narrow</option><option value="standard" selected>Standard</option><option value="wide">Wide</option></select><label for="reader-spacing">Line spacing</label><select class="ctl" id="reader-spacing"><option value="compact">Compact</option><option value="standard" selected>Standard</option><option value="relaxed">Spacious</option></select></div></details><button class="ctl" type="button" id="reader-focus" aria-pressed="false">Focus reading</button><button class="ctl" type="button" id="workbench-overview-open">Analysis overview</button><strong class="workbench-surface-label" id="workbench-overview-label" hidden>Analysis overview</strong><button class="ctl" type="button" id="workbench-overview-back" hidden>Back to passage</button><button class="ctl" type="button" id="workbench-return" hidden>Back to passage</button></div><aside class="reader-inspector panel" id="reader-inspector" hidden aria-labelledby="reader-inspector-title"><div class="workspace-reader-head"><h2 id="reader-inspector-title">Values</h2><button class="ctl" type="button" id="reader-inspector-close" aria-label="Close">✕</button></div><div id="reader-inspector-body"></div></aside><div class="manuscript-context-menu" id="manuscript-context-menu" role="menu" aria-label="Passage actions" hidden></div><div class="manuscript-selection-tools" id="manuscript-selection-tools" role="toolbar" aria-label="Passage actions" hidden></div>
 <section class="panel" id="analysis-review"><h2>Start your review</h2>
 <p class="panel-guide">Read the passages behind the measurements. Judge each pattern in its scene and narrative voice.</p><div class="review-routes">
 <article class="review-route"><a class="ctl primary" href="#p-0" data-help="No tense flags at the selected threshold. Read the opening alongside the other patterns." data-review-passage="1" data-line="10" data-target="p-0">Open passage</a></article>
@@ -9194,6 +9207,7 @@ document.addEventListener("click", async function (event) {
     if (tabBtn.dataset.rtab === "claims") { refreshResearchClaims(); refreshResearchClaimProjections(); }
     if (tabBtn.dataset.rtab === "decisions") refreshResearchDecisions();
     if (tabBtn.dataset.rtab === "review") refreshResearchEditorialReview();
+    if (window.LixityMotion) window.LixityMotion.view(document.getElementById(targetId));
     return;
   }
 
@@ -10707,7 +10721,7 @@ if (document.getElementById("research-manager")) { initResearchUI(); }
   var active = document.querySelector(".view-pane.active");
   var value = {view: active ? active.dataset.viewPane : "analysis", analysisVisible: false,
     surface: "document", contextTool: "none", focus: false, transient: null};
-  var listeners = [], suspendedTool = "none", focusSnapshot = null;
+  var listeners = [], suspendedTool = "none", suspendedAnalysis = false, focusSnapshot = null;
   function snapshot() { return Object.freeze(Object.assign({}, value)); }
   function dispatch(command) {
     var previous = snapshot();
@@ -10726,17 +10740,20 @@ if (document.getElementById("research-manager")) { initResearchUI(); }
           value.surface = "document";
           value.contextTool = suspendedTool === "dossier" ? "dossier" : "none";
         }
-      } else if (value.contextTool === "none" && value.surface === "document") value.contextTool = "analysis";
+      }
     } else if (command.type === "surface") {
       if (command.value === "overview") {
-        if (value.surface !== "overview") suspendedTool = value.contextTool;
+        if (value.surface !== "overview") {
+          suspendedTool = value.contextTool; suspendedAnalysis = value.analysisVisible;
+        }
         value.analysisVisible = true; value.surface = "overview"; value.contextTool = "none";
       } else if (value.surface === "overview") {
-        value.surface = "document"; value.contextTool = suspendedTool;
+        value.surface = "document"; value.contextTool = suspendedTool; value.analysisVisible = suspendedAnalysis;
       }
       value.transient = null;
     } else if (command.type === "tool") {
       if (!["none", "analysis", "dossier"].includes(command.value)) return;
+      if (value.surface === "overview") value.analysisVisible = suspendedAnalysis;
       value.surface = "document"; value.contextTool = command.value;
       if (command.value === "analysis") value.analysisVisible = true;
       value.transient = null;
@@ -10759,6 +10776,73 @@ if (document.getElementById("research-manager")) { initResearchUI(); }
   window.LixityWorkbench = {state: snapshot, dispatch: dispatch, subscribe: function(listener) {
     listeners.push(listener); return function() { listeners = listeners.filter(function(item) { return item !== listener; }); };
   }};
+})();
+
+// Feedback follows committed state; it never owns navigation, focus or data.
+(function() {
+  "use strict";
+  var reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+  var animations = new Map(), layers = new Map(), viewRevision = 0;
+  var passage = null, passageTimer = null;
+  function cancel(node) {
+    var animation = animations.get(node);
+    if (animation) { animation.cancel(); animations.delete(node); }
+  }
+  function reveal(node) {
+    if (!node) return;
+    cancel(node);
+    if (reduced.matches || !node.animate || !node.getClientRects().length) return;
+    // Opacity preserves the rectangles used by passage/selection restoration.
+    var animation = node.animate([{opacity: .35}, {opacity: 1}], {
+      duration: 180, easing: "cubic-bezier(.2,.7,.3,1)", id: "lixity-reveal"
+    });
+    animations.set(node, animation);
+    animation.onfinish = function() { if (animations.get(node) === animation) animations.delete(node); };
+  }
+  function visible(root, selector) {
+    return Array.from(root.querySelectorAll(selector)).filter(function(node) {
+      var rect = node.getBoundingClientRect();
+      return rect.height > 0 && rect.height <= innerHeight * 2 && rect.bottom > 0 && rect.top < innerHeight;
+    }).slice(0, 8);
+  }
+  function markPassage(node) {
+    clearTimeout(passageTimer);
+    if (passage) passage.classList.remove("reader-return-target");
+    passage = node;
+    if (!node || !node.isConnected) return;
+    // A static gutter remains useful when motion is disabled.
+    node.classList.add("reader-return-target");
+    passageTimer = setTimeout(function() { node.classList.remove("reader-return-target"); passage = null; }, 1400);
+  }
+  function view(pane) {
+    var revision = ++viewRevision;
+    animations.forEach(function(_, node) { cancel(node); });
+    // Relation routes and Reader.restore finish their own scroll in this frame.
+    requestAnimationFrame(function() { requestAnimationFrame(function() {
+      if (revision !== viewRevision || !pane || !pane.getClientRects().length) return;
+      visible(pane, ".chapter-head, .reader-structural, .ptext, .panel > h2, .research-navigation, .research-tab-pane > .ctl-note").forEach(reveal);
+      if (pane.id === "view-pane-analysis" && window.LixityReader) {
+        var anchor = window.LixityReader.capture();
+        if (anchor) markPassage(anchor.panel);
+      }
+    }); });
+  }
+  function analysis(chapters) {
+    if (reduced.matches) return;
+    visible(chapters, ".ptext, .strip, .chapter-head .meta").forEach(function(node) {
+      if (!node.matches(".ptext")) { reveal(node); return; }
+      clearTimeout(layers.get(node));
+      node.classList.add("reader-layer-enter");
+      layers.set(node, setTimeout(function() { node.classList.remove("reader-layer-enter"); layers.delete(node); }, 220));
+    });
+  }
+  reduced.addEventListener("change", function() {
+    if (!reduced.matches) return;
+    animations.forEach(function(_, node) { cancel(node); });
+    layers.forEach(function(timer, node) { clearTimeout(timer); node.classList.remove("reader-layer-enter"); });
+    layers.clear();
+  });
+  window.LixityMotion = {reveal: reveal, view: view, analysis: analysis, passage: markPassage};
 })();
 
 // Project surfaces: import, recent projects, view switching and the
@@ -11434,6 +11518,9 @@ function switchActiveView(viewName, restorePosition) {
   // evidence jumps keep control of their more specific destination.
   if (restorePosition && previous && previous.dataset.viewPane !== viewName) {
     window.scrollTo({top: workspaceScrollPositions[viewName] || 0, behavior: "instant"});
+  }
+  if (previous && previous.dataset.viewPane !== viewName && window.LixityMotion) {
+    window.LixityMotion.view(document.querySelector('.view-pane.active'));
   }
 }
 
@@ -13416,7 +13503,7 @@ window.LixityManuscriptLinks = {
     if (!pin) return;
     bridge.switchView("analysis");
     setEnabled(true, pin.dataset.workspaceDossier);
-    container.scrollIntoView({block: "start", behavior: "smooth"});
+    container.scrollIntoView({block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
     select.focus({preventScroll: true});
   });
 })();
@@ -13999,6 +14086,8 @@ window.LixityManuscriptLinks = {
   var dock = document.getElementById("workspace-context-panel");
   var layout = document.getElementById("workspace-reader-layout");
   var overviewAnchor = null, inspectorTarget = null, origin = null;
+  var retainedAnchor = null, requestedAnchor = null, dockOrigin = null, arrangementRevision = 0;
+  var narrowContext = window.matchMedia("(max-width: 900px)");
   var panels = Array.from(chapters.querySelectorAll(".ptext"));
   var menu = document.getElementById("manuscript-context-menu");
   var selectionTools = document.getElementById("manuscript-selection-tools");
@@ -14029,13 +14118,24 @@ window.LixityManuscriptLinks = {
     });
     return panel ? {panel: panel, top: panel.getBoundingClientRect().top} : null;
   }
-  function restore(anchor) {
+  function restore(anchor, arrival) {
     if (!anchor) return;
     requestAnimationFrame(function() {
-      if (anchor.panel.isConnected) window.scrollBy(0, anchor.panel.getBoundingClientRect().top - anchor.top);
+      if (anchor.panel.isConnected) {
+        window.scrollBy(0, anchor.panel.getBoundingClientRect().top - anchor.top);
+        if (arrival && window.LixityMotion) window.LixityMotion.passage(anchor.panel);
+      }
     });
   }
-  function retain(action) { var anchor = capture(); action(); restore(anchor); }
+  function retain(action) {
+    var anchor = capture(), previous = workbench.state(), outer = retainedAnchor;
+    retainedAnchor = anchor;
+    try { action(); } finally { retainedAnchor = outer; }
+    var next = workbench.state();
+    // A stacked tool owns its visible destination and the subsequent return.
+    if (narrowContext.matches && previous.contextTool !== next.contextTool && next.surface === "document") return;
+    restore(anchor);
+  }
   function appearance() {
     document.body.style.setProperty("--reader-font-size", (preferences.size / 16) + "rem");
     document.body.style.setProperty("--reader-measure", {narrow: "54ch", standard: "68ch", wide: "78ch"}[preferences.width]);
@@ -14071,6 +14171,14 @@ window.LixityManuscriptLinks = {
       if (button) button.focus({preventScroll: true});
     }
   }
+  function requestTool(value, panel) {
+    requestedAnchor = {panel: panel, top: panel.getBoundingClientRect().top};
+    if (workbench.state().contextTool === value) {
+      dockOrigin = requestedAnchor; requestedAnchor = null;
+      if (narrowContext.matches) dock.scrollIntoView({block: "start", behavior: "instant"});
+      if (window.LixityMotion) window.LixityMotion.reveal(dock);
+    } else retain(function() { workbench.dispatch({type: "tool", value: value}); });
+  }
   function setFocus(value) {
     retain(function() { workbench.dispatch({type: "focus", value: value}); });
   }
@@ -14093,8 +14201,14 @@ window.LixityManuscriptLinks = {
   }
   if (dock) dock.appendChild(inspector);
   workbench.subscribe(function(state, previous) {
-    var anchor = capture();
+    var anchor = requestedAnchor || retainedAnchor || capture(), revision = ++arrangementRevision;
     var open = state.contextTool !== "none" && state.surface === "document";
+    var toolChanged = state.contextTool !== previous.contextTool && state.view === "analysis" &&
+      previous.view === "analysis" && state.surface === "document" && previous.surface === "document";
+    if (toolChanged && open && (previous.contextTool === "none" || requestedAnchor)) {
+      dockOrigin = requestedAnchor || (document.activeElement.closest("#view-pane-analysis") ? anchor : null);
+    }
+    requestedAnchor = null;
     if (layout) layout.classList.toggle("is-open", open);
     if (dock) dock.hidden = !open;
     var divider = document.getElementById("workspace-reader-divider");
@@ -14120,8 +14234,29 @@ window.LixityManuscriptLinks = {
     if (state.view !== previous.view || state.surface !== previous.surface) {
       closeMenu(false); selectionTools.hidden = true; settings.open = false;
     }
-    if (state.surface === previous.surface && state.view === previous.view &&
-        (state.contextTool !== previous.contextTool || state.analysisVisible !== previous.analysisVisible || state.focus !== previous.focus)) restore(anchor);
+    if (toolChanged && narrowContext.matches) {
+      var destination = open ? null : dockOrigin;
+      var returnDockFocus = dock.contains(document.activeElement);
+      requestAnimationFrame(function() {
+        if (revision !== arrangementRevision) return;
+        if (open) dock.scrollIntoView({block: "start", behavior: "instant"});
+        else if (destination && destination.panel.isConnected) {
+          window.scrollBy(0, destination.panel.getBoundingClientRect().top - destination.top);
+          if (returnDockFocus) {
+            var trigger = destination.panel.querySelector(".reader-paragraph-actions") || destination.panel;
+            trigger.focus({preventScroll: true});
+          }
+          if (window.LixityMotion) window.LixityMotion.passage(destination.panel);
+        }
+      });
+      if (!open) dockOrigin = null;
+    } else if (state.surface === previous.surface && state.view === previous.view &&
+        (state.contextTool !== previous.contextTool || state.analysisVisible !== previous.analysisVisible || state.focus !== previous.focus)) restore(anchor, toolChanged && !open);
+    if (window.LixityMotion) {
+      if (toolChanged && open) window.LixityMotion.reveal(dock);
+      if (state.analysisVisible && !previous.analysisVisible && state.surface === "document") window.LixityMotion.analysis(chapters);
+      if (state.surface !== previous.surface) window.LixityMotion.view(document.getElementById("view-pane-analysis"));
+    }
     window.dispatchEvent(new Event("resize"));
   });
   function rangeFor(panel) {
@@ -14178,15 +14313,14 @@ window.LixityManuscriptLinks = {
     if ((action === "values" || action === "companion") && document.body.classList.contains("reader-focus")) setFocus(false);
     if (action === "values") {
       showValues(panel);
-      retain(function() { workbench.dispatch({type: "tool", value: "analysis"}); });
+      requestTool("analysis", panel);
       document.getElementById("reader-inspector-close").focus({preventScroll: true});
     } else if (action === "link") {
       if (!range) return;
       var selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
       var link = panel.querySelector("[data-manuscript-link-selection]"); if (link) link.click();
     } else if (action === "companion") {
-      var toggle = document.getElementById("workspace-reader-toggle");
-      if (toggle.getAttribute("aria-expanded") !== "true") toggle.click();
+      requestTool("dossier", panel);
       var close = document.getElementById("workspace-reader-close");
       if (close) close.focus({preventScroll: true});
     } else {
@@ -14202,12 +14336,10 @@ window.LixityManuscriptLinks = {
   });
   mode.addEventListener("change", function() { setMode(mode.value); });
   analysisToggle.addEventListener("click", function() {
-    var previous = workbench.state(), anchor = capture();
-    if (!previous.analysisVisible && previous.contextTool === "none" && !inspectorBody.childElementCount &&
-        anchor && anchor.panel.matches(".ptext")) showValues(anchor.panel);
+    var previous = workbench.state();
     retain(function() { workbench.dispatch({type: "analysis", value: !previous.analysisVisible}); });
     if (previous.surface === "overview") {
-      rememberPassageLocation(overviewAnchor && overviewAnchor.panel); restore(overviewAnchor);
+      rememberPassageLocation(overviewAnchor && overviewAnchor.panel); restore(overviewAnchor, true);
     }
   });
   document.querySelectorAll("[data-context-tool]").forEach(function(button) {
@@ -14217,12 +14349,12 @@ window.LixityManuscriptLinks = {
   });
   document.getElementById("workbench-overview-open").addEventListener("click", function() {
     overviewAnchor = capture(); workbench.dispatch({type: "surface", value: "overview"});
-    controls.scrollIntoView({block: "start"});
+    (document.getElementById("workspace-reader") || controls).scrollIntoView({block: "start", behavior: "instant"});
     document.getElementById("workbench-overview-back").focus({preventScroll: true});
   });
   document.getElementById("workbench-overview-back").addEventListener("click", function() {
     rememberPassageLocation(overviewAnchor && overviewAnchor.panel);
-    workbench.dispatch({type: "surface", value: "document"}); restore(overviewAnchor);
+    workbench.dispatch({type: "surface", value: "document"}); restore(overviewAnchor, true);
     document.getElementById("workbench-overview-open").focus({preventScroll: true});
   });
   document.getElementById("reader-text-smaller").addEventListener("click", function() { retain(function() { preferences.size = Math.max(16, preferences.size - 2); appearance(); }); });
@@ -14351,7 +14483,7 @@ window.LixityManuscriptLinks = {
     }
     switchActiveView("analysis"); workbench.dispatch({type: "surface", value: "document"});
     rememberPassageLocation(origin.anchor.panel);
-    revealChapter(origin.anchor.panel); restore(origin.anchor);
+    revealChapter(origin.anchor.panel); restore(origin.anchor, true);
     origin.anchor.panel.tabIndex = -1;
     origin.anchor.panel.focus({preventScroll: true});
     if (origin.offsets) {

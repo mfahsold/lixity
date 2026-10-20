@@ -92,11 +92,13 @@ keep name counts separate from author-declared perspective.
 **On current main:** the interactive app uses a desktop-style project sidebar
 on wide screens, with **Manuscript**, **Research** and **Project** as its stable
 destinations. On smaller screens the same navigation becomes horizontal.
-The manuscript stays continuous. **Analysis** has an explicit On/Off state;
-**Values** opens passage measurements, while **Analysis overview** gives chapter
-comparisons their own space and a **Back to passage** route. Analysis visibility
-is independent of the dossier beside the text. Reading settings group text size,
-width and spacing without changing manuscript bytes. Use an analyzed paragraph's
+The manuscript stays continuous. The **Analysis** switch shows On/Off in words
+and reveals diagnostics in place without opening a side tool, collapsing
+navigation or narrowing the prose. **Values** explicitly opens passage
+measurements and enables analysis; **Dossier alongside** opens its separate tool.
+**Analysis overview** gives chapter comparisons their own space; **Back to
+passage** restores the prior analysis choice and document context. Reading settings
+group text size, width and spacing without changing manuscript bytes. Use an analyzed paragraph's
 **…**, right-click or `Shift+F10`
 for its tools; a text selection offers relevant marker and claim actions.
 **Values** opens a closable inspector, and **Focus reading** temporarily clears
@@ -110,8 +112,10 @@ presentation, not a complete Markdown editor. [Coverage and limits](docs/USAGE.m
 Opening a companion dossier collapses the desktop navigation to a narrow rail.
 Its toggle keeps navigation reachable; closing the companion restores the prior
 choice. Drag its divider or use the arrow keys to adjust the desktop split;
-narrow screens stack the documents. Exact saved manuscript associations offer a
-direct return to the passage. Saved associations open their pinned claim revision;
+narrow screens stack the documents. Opening a tool from a passage reveals its
+heading on mobile; closing it or pressing Escape returns to that passage and its
+control. Optional brief feedback respects reduced motion. Exact saved manuscript
+associations offer a direct return to the passage. Saved associations open their pinned claim revision;
 claim and dossier views expose explicit routes to their saved manuscript quotes.
 These connections record an author's association, not factual verification.
 Local tabs, form groups and dialogs use shared components throughout analysis

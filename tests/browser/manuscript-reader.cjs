@@ -198,8 +198,8 @@ async function settleGeometry(page) {
       assert.equal(await first.evaluate(node => node === window.readerCanonicalFirst), true,
         'Returning from the overview restores the same manuscript nodes');
       assert.equal(await page.locator('#chapters').isVisible(), true);
-      assert.equal(await analysis.getAttribute('aria-pressed'), 'true');
-      await analysis.click();
+      assert.equal(await analysis.getAttribute('aria-pressed'), 'false',
+        'Returning from a temporary overview restores Analysis Off');
       await settleGeometry(page);
       await page.locator('#text-search').fill('Fenster');
       await page.locator('#chapters .ptext.text-miss').first().waitFor({state: 'attached'});

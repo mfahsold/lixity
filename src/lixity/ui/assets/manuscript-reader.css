@@ -124,15 +124,26 @@ body.lixity-workspace.reader-focus { padding-left: 1.5rem; }
 }
 
 /* Workbench display state is independent of the selected context tool. */
-.analysis-toggle { display: inline-flex; align-items: center; gap: .6rem; }
-.analysis-toggle span { font-size: var(--text-note); border-radius: var(--radius-sm); padding: .1rem .4rem; background: var(--surface); color: var(--muted); }
+.analysis-toggle { display: inline-flex; align-items: center; gap: .45rem; }
+button.analysis-toggle { font-weight: var(--weight-strong); }
+.analysis-state { display: inline-grid; font-size: var(--text-note); border-radius: var(--radius-xs); padding: .1rem .35rem; background: var(--surface); color: var(--muted); }
+.analysis-state > span { grid-area: 1 / 1; }
+.analysis-state-measure { visibility: hidden; }
+.analysis-switch { position: relative; width: 1.6rem; height: .9rem; flex: none; border-radius: var(--radius-pill); background: var(--line-strong); }
+.analysis-switch::after { content: ""; position: absolute; top: .15rem; left: .15rem; width: .6rem; height: .6rem; border-radius: var(--radius-pill); background: var(--surface); }
 .analysis-toggle[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); background: var(--accent-light); box-shadow: inset 0 -2px var(--accent); }
-.analysis-toggle[aria-pressed="true"] span { color: var(--accent); }
+.analysis-toggle[aria-pressed="true"] .analysis-state { color: var(--accent); }
+.analysis-toggle[aria-pressed="true"] .analysis-switch { background: var(--accent); }
+.analysis-toggle[aria-pressed="true"] .analysis-switch::after { transform: translateX(.7rem); }
 .manuscript-reader-controls [hidden] { display: none; }
 .workbench-overview #chapters { display: none; }
 .workbench-overview #manuscript-analysis-panels { display: block; }
-.workbench-analysis:not(.workbench-overview) .ptext { border-left: 2px solid var(--line-strong); padding-left: .8rem; }
-.workbench-analysis:not(.workbench-overview) .ptext:has(.manuscript-claim-hit) { border-left-color: var(--accent); }
+.manuscript-reading .ptext, .manuscript-reading .reader-return-target { position: relative; }
+.workbench-analysis:not(.workbench-overview) .ptext::before,
+.manuscript-reading .reader-return-target::before {
+  content: ""; position: absolute; left: -.6rem; top: 0; bottom: 0;
+  width: 2px; border-radius: var(--radius-xs); background: var(--line-strong); pointer-events: none;
+}
 .reader-focus .workspace-context-panel { display: none !important; }
 #dashboard-freshness .status-item { flex-wrap: wrap; min-width: 0; }
 #dashboard-freshness .status-detail { white-space: normal; overflow: visible; max-width: none; }
@@ -141,7 +152,13 @@ body.lixity-workspace.reader-focus { padding-left: 1.5rem; }
 .reader-coverage { font-family: var(--font); font-size: var(--text-note); color: var(--muted); }
 @media (prefers-reduced-motion: no-preference) {
   .analysis-toggle, .context-tool-tabs .ctl { transition: background-color 120ms ease, border-color 120ms ease; }
+  .analysis-switch { transition: background-color 160ms var(--ease); }
+  .analysis-switch::after { transition: transform 160ms var(--ease); }
+  .reader-layer-enter::before { animation: reader-layer-reveal 180ms var(--ease); }
+  .reader-return-target::before { animation: reader-passage-arrival 1400ms ease-out; }
 }
+@keyframes reader-layer-reveal { from { opacity: 0; } to { opacity: 1; } }
+@keyframes reader-passage-arrival { from { opacity: .25; } 18%, 70% { opacity: 1; } to { opacity: .3; } }
 
 .manuscript-reading.workbench-analysis:not(.workbench-overview) .strip { display: flex; margin: .6rem 0 1.25rem; }
 .manuscript-reading.workbench-analysis:not(.workbench-overview) .chapter-head .meta { display: block; margin-top: .4rem; font-size: var(--text-note); }
@@ -165,4 +182,5 @@ body.lixity-workspace.reader-focus { padding-left: 1.5rem; }
   .manuscript-reading .chapter + .chapter { padding-top: 1.25rem; }
 }
 
-.workbench-analysis.reader-inspector-open .ptext.reader-inspector-target { border-left-color: var(--accent); box-shadow: -2px 0 var(--accent); }
+.workbench-analysis.reader-inspector-open .ptext.reader-inspector-target::before,
+.manuscript-reading .reader-return-target::before { background: var(--accent); width: 3px; }

@@ -672,6 +672,9 @@ function switchActiveView(viewName, restorePosition) {
   if (restorePosition && previous && previous.dataset.viewPane !== viewName) {
     window.scrollTo({top: workspaceScrollPositions[viewName] || 0, behavior: "instant"});
   }
+  if (previous && previous.dataset.viewPane !== viewName && window.LixityMotion) {
+    window.LixityMotion.view(document.querySelector('.view-pane.active'));
+  }
 }
 
 function checkUrlHashView() {
