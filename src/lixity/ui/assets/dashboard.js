@@ -329,10 +329,7 @@ function jumpToChapter(cell) {
   }
   var section = document.getElementById("ch-" + cell.getAttribute("data-chapter"));
   if (!section) return;
-  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  section.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
-  section.classList.add("flash");
-  setTimeout(function () { section.classList.remove("flash"); }, 1400);
+  scrollAndFlash(section);
 }
 
 if (layer) {

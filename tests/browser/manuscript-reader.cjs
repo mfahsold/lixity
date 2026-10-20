@@ -225,6 +225,28 @@ async function settleGeometry(page) {
       assert.equal(await page.locator('#chapters').isVisible(), true);
       assert.equal(await analysis.getAttribute('aria-pressed'), 'false',
         'Returning from a temporary overview restores Analysis Off');
+      if (locale === 'en') for (const activation of ['click', 'Enter']) {
+        const cell = page.locator('#heatmap td.z[data-chapter][data-layer]:not([data-layer=""])').first();
+        const chapter = page.locator('#ch-' + await cell.getAttribute('data-chapter'));
+        const toggle = chapter.locator('[data-chapter-toggle]');
+        const selectedLayer = await cell.getAttribute('data-layer');
+        await page.locator('#workbench-overview-open').click();
+        if (activation === 'click') await cell.click();
+        else { await cell.focus(); await cell.press('Enter'); }
+        assert.equal(await page.locator('#chapters').isVisible(), true,
+          `Heatmap ${activation} reveals the manuscript instead of scrolling a hidden chapter`);
+        assert.equal(await toggle.getAttribute('aria-expanded'), 'true', 'Chapter navigation expands its destination');
+        assert.equal(await page.locator('#style-layer').inputValue(), selectedLayer, 'Chapter navigation retains the selected metric');
+        assert.equal(await analysis.getAttribute('aria-pressed'), 'false', 'Chapter navigation restores the prior Analysis setting');
+        assert.equal(await chapter.locator('.ptext').first().isVisible(), true);
+        await settleGeometry(page);
+        assert.ok(await chapter.locator('.chapter-head h2').evaluate(node => {
+          const controls = document.getElementById('manuscript-reader-controls').getBoundingClientRect();
+          const bounds = node.getBoundingClientRect();
+          return bounds.top >= controls.bottom && bounds.top < innerHeight;
+        }), 'The chapter destination is visible below the sticky reader controls');
+        assert.deepEqual(await sourceState(page), anchors, 'Heatmap navigation preserves the canonical manuscript');
+      }
       await settleGeometry(page);
       await page.locator('#text-search').fill('Fenster');
       await page.locator('#chapters .ptext.text-miss').first().waitFor({state: 'attached'});

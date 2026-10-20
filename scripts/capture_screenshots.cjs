@@ -495,7 +495,7 @@ async function main() {
       await page.goto('http://lixity-screenshots.test/' + path.basename(capture.source));
       if (flow !== 'research-timeline' && await page.locator('#workbench-overview-open').count()) {
         await page.locator('#tab-view-analysis').click();
-        await page.locator('#workbench-overview-open').click();
+        if (flow === 'editorial-loop') await page.locator('#workbench-overview-open').click();
       }
       if (flow === 'editorial-loop') {
         await page.waitForTimeout(1200);
@@ -512,31 +512,34 @@ async function main() {
         const paragraph = page.locator('#ch-1 .ptext').nth(2);
         await paragraph.locator('[data-reader-paragraph]').click();
         await page.locator('[data-reader-action=values]').click();
+        assert.equal(await page.locator('#reader-inspector').isVisible(), true);
+        assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'false',
+          'Local paragraph Values leave global Analysis Off');
         await page.waitForTimeout(1500);
         await say('Read the values, source lines and tense flags');
         await paragraph.locator('[data-reader-paragraph]').click();
         await page.locator('[data-reader-action=todo]').click();
         await paragraph.locator('.marker-note').pressSequentially('Check the closing cadence here', {delay: 60});
         await page.waitForTimeout(1300);
-        await say('Markers stay in the manuscript as Markdown comments');
+        await say('Draft a note, then review existing manuscript markers');
         await page.locator('#workbench-overview-open').click();
         await page.locator('#markers').scrollIntoViewIfNeeded();
         await page.waitForTimeout(2000);
       } else if (flow === 'analysis-review') {
         await page.waitForTimeout(1300);
-        await say('A chapter cell opens its paragraphs');
-        const cell = page.locator('#heatmap td.z[data-chapter]').first();
-        await cell.scrollIntoViewIfNeeded();
-        await page.waitForTimeout(750);
-        await cell.hover();
-        await page.waitForTimeout(1100);
-        await cell.click();
-        await page.waitForTimeout(1500);
-        await say('Read the values and source lines before you judge');
+        await say('Read the continuous manuscript with Analysis off');
         const paragraph = page.locator('#chapters .ptext').first();
+        await paragraph.scrollIntoViewIfNeeded();
+        assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'false');
+        await page.waitForTimeout(1500);
+        await say('Open local Values for a passage and its source lines');
         await paragraph.locator('[data-reader-paragraph]').click();
         await page.locator('[data-reader-action=values]').click();
+        assert.equal(await page.locator('#reader-inspector').isVisible(), true);
+        assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'false',
+          'Local paragraph Values leave global Analysis Off');
         await page.waitForTimeout(1300);
+        await say('Open the overview to compare measured style dimensions');
         await page.locator('#workbench-overview-open').click();
         const dimensions = page.locator('#style-tab-dimensions');
         if (await dimensions.count()) {
