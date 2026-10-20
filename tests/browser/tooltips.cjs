@@ -27,14 +27,32 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
           #composer summary {width:max-content;max-width:100%}
           dialog {width:min(30rem, 90vw);padding:1rem}
         </style><body>
-        <button id="navigation" type="button">Sources</button>
+        <button id="navigation" type="button" title="Show sources">Sources</button>
         <details id="composer"><summary id="help" data-help="${explanation}" aria-describedby="hint">Create dossier</summary></details>
         <span id="hint" hidden>Preserved description</span>
+        <div id="scroll-panel" style="position:fixed;top:350px;left:20px;height:80px;overflow:auto">
+          <button id="scroll-help" data-help="Nested scrolling help">Help</button><div style="height:400px"></div>
+        </div>
         <dialog id="modal"><span class="help" id="modal-help" tabindex="0" data-help="Synthetic native dialog help.">Help</span></dialog>
         <script>window.navigationClicks=0;document.querySelector('#navigation').addEventListener('click',()=>window.navigationClicks++);</script>
         <script>${script}</script></body></html>`);
       const help = page.locator('#help');
       const tip = page.locator('#lixity-tooltip');
+
+      await page.locator('#scroll-help').focus();
+      await expect(tip).toHaveText('Nested scrolling help');
+      await page.locator('#scroll-panel').evaluate(el => { el.scrollTop = 100; });
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
+
+      await page.locator('#navigation').focus();
+      await expect(tip).toHaveText('Show sources');
+      await page.locator('#navigation').evaluate(el => { el.title = 'Hide sources'; });
+      await expect(tip).toHaveText('Hide sources');
+      await page.mouse.move(0, 0);
+      await page.locator('#navigation').hover();
+      await expect(tip).toHaveText('Hide sources');
+      await page.locator('#navigation').evaluate(el => { el.removeAttribute('title'); el.removeAttribute('data-tip'); });
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
 
       // The composer appears below navigation after research initialization.
       // Its help must not trap a native click on the preceding tab.

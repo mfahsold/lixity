@@ -70,11 +70,13 @@
   var touchUntil = 0;
   var touchHelp = null;
   var hideTimer = null;
+  var textObserver = new MutationObserver(function() { if (activeEl) show(activeEl); });
 
   function show(el) {
     clearTimeout(hideTimer);
-    var text = el.getAttribute("data-help") || el.getAttribute("data-tip") || el.getAttribute("title");
-    if (!text || !text.trim()) return;
+    var text = el.getAttribute("data-help") || el.getAttribute("title") || el.getAttribute("data-tip");
+    if (!text || !text.trim()) { if (activeEl === el) hide(); return; }
+    textObserver.disconnect();
     if (el.hasAttribute("title")) {
       el.setAttribute("data-tip", text);
       el.removeAttribute("title");
@@ -91,10 +93,12 @@
     tip.setAttribute("aria-hidden", "false");
     tip.classList.add("visible");
     updatePos(el);
+    if (activeEl) textObserver.observe(el, {attributes: true, attributeFilter: ["title", "data-tip", "data-help"]});
   }
 
   function hide() {
     clearTimeout(hideTimer);
+    textObserver.disconnect();
     if (activeEl) {
       var descriptions = (activeEl.getAttribute("aria-describedby") || "").split(/\s+/).filter(function(id) { return id && id !== tip.id; });
       if (descriptions.length) activeEl.setAttribute("aria-describedby", descriptions.join(" "));
@@ -114,6 +118,18 @@
         rect.right <= 0 || rect.left >= window.innerWidth) {
       hide();
       return;
+    }
+    // A trigger can still be inside the viewport after its nested scrollport
+    // clips it. Keep help attached only while some of the trigger is visible.
+    for (var parent = el.parentElement; parent && parent !== document.body; parent = parent.parentElement) {
+      var style = getComputedStyle(parent), box = parent.getBoundingClientRect();
+      var clipX = /auto|scroll|hidden|clip/.test(style.overflowX);
+      var clipY = /auto|scroll|hidden|clip/.test(style.overflowY);
+      var left = box.left + parent.clientLeft, top = box.top + parent.clientTop;
+      if ((clipX && (rect.right <= left || rect.left >= left + parent.clientWidth)) ||
+          (clipY && (rect.bottom <= top || rect.top >= top + parent.clientHeight))) {
+        hide(); return;
+      }
     }
     // Measure without a previous placement narrowing the fixed box. Prefer the
     // space below help so it does not cover the navigation preceding a form.
@@ -199,7 +215,9 @@
     }
   }
 
-  window.addEventListener("scroll", scheduleUpdatePos, { passive: true });
+  document.addEventListener("scroll", function(event) {
+    if (event.target !== tip && !tip.contains(event.target)) scheduleUpdatePos();
+  }, { passive: true, capture: true });
   window.addEventListener("resize", scheduleUpdatePos, { passive: true });
 
   document.addEventListener("keydown", function (e) {
