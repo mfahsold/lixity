@@ -52,6 +52,12 @@ a file into a separate project after preview; it does not reconnect the original
 folder's archive. A research project may open without a manuscript. All tabs on
 one server share its active project, so check the displayed path before saving.
 
+If configuration or Research setup fails while creating/importing a project,
+the app reports incomplete setup and keeps the previous project selected. Created
+files remain at the destination named in the message. Correct or save
+`lixity.toml`, repair the Research setup if needed, then use **Open Project** to
+continue and initialize Research if it is still absent.
+
 ### Read and explore
 
 Start in **Manuscript** and read a passage. Turn **Analysis**

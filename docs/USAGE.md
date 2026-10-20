@@ -325,6 +325,10 @@ emits the same capability metadata, not a JSON Schema for every result.
 [Automation contracts](AGENTS.md) describe versioned output envelopes and exit
 codes; a running server advertises registered operations at `GET /api`.
 
+`dialogue`, `pacing`, `motifs` and `showing` use the same guarded manuscript
+reader as `analyze`: invalid UTF-8 or a special file node returns processing
+failure (exit 1), without waiting for a pipe writer or publishing a result.
+
 ### `lixity analyze`
 
 Use the terminal report for corpus size, sentence rhythm, vocabulary,
@@ -615,6 +619,9 @@ repeat an explicit backend on restart. `LIXITY_*` environment values, including
 OCR settings, are inherited on launch and are not saved as startup settings.
 Use `lixity service --help` for lifecycle arguments, or
 [installation and service setup](INSTALLATION.md#running-the-server).
+For foreground `lixity serve PATH`, an invalid explicit path fails before startup.
+A valid directory without a unique manuscript can open an empty workspace;
+`lixity serve --no-project` intentionally starts without selecting a project.
 
 For automation, `lixity service status --json` returns
 `lixity-service-local/1`: `schema_version`, `ok`, `state`, `message`, plus
@@ -849,7 +856,8 @@ operations; `api.about()` returns runtime capability metadata.
 
 Use `CorpusAnalyzer`, `CorpusConfig`, `ParagraphProfiler` and renderers for direct
 object-model control; the [architecture reference](ARCHITECTURE.md) explains
-these boundaries. Automatic language detection needs a text sample:
+these boundaries. Low-level structure reports also default to English when no
+configuration is supplied. Automatic language detection is explicit and needs a text sample:
 `resolve_language(CorpusConfig(language="auto"), sample_text=text)`.
 Without a sample, `auto` resolves to `generic`; the CLI supplies its manuscript
 automatically. `FileUtils.atomic_write_if_changed(path, text)` provides atomic,
@@ -899,8 +907,10 @@ not infer authorship or edit the manuscript. A display byline does not
 identify a publisher or printer.
 
 An existing unreadable/malformed config emits a warning naming the file and
-falls back to defaults; an absent file is silent. Check `meta.language` and
-active thresholds after a warning, or supply explicit options. Invalid stored
+ignores those settings. This includes non-table `tool`/`tool.lixity` sections in
+`pyproject.toml` and failed permission/I/O checks while locating a config. Missing
+files and paths that cannot exist beneath a file are silent. Check `meta.language`
+and active thresholds after a warning, or supply explicit options. Invalid stored
 publication fields remain visible for correction while analysis stays available.
 
 **Since v0.6.0:** discover configuration keys, defaults and

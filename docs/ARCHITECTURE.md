@@ -11,6 +11,11 @@ authored records and a rebuildable SQLite/FTS5 index. It does not import into
 `lixity.pipeline`. Source analysis may use the shared engine and UI, but research
 sources never join manuscript baselines automatically.
 
+The [local data model](research/DATA_MODEL.md) diagrams the current reference
+chain and publication process, and separates authoritative archive data from
+the disposable search database. Historical interchange proposals do not define
+the accepted local schema.
+
 ## Layers
 
 | Layer | Responsibility | Must not own |
@@ -38,11 +43,33 @@ route tables drive dispatch and discovery. Handlers validate and shape requests,
 then delegate to the shared pipeline or `research.api`; they do not implement a
 second renderer, analysis algorithm or archive writer.
 
+```mermaid
+flowchart TD
+    T[CLI and Python API] --> P[Shared analysis pipeline]
+    S[Native server routes] --> P
+    P --> A[Analysis core and language resources]
+    P --> R[Shared report and dashboard renderers]
+    S --> Q[Explicit-project research API]
+    T --> Q
+    Q --> J[Authoritative revision and blob repository]
+    J --> C[Rebuildable SQLite search projection]
+    Q --> R
+```
+
+Arrows show delegation or derivation, not a second analysis or storage path.
+Research measurements use the same core only when explicitly requested; retained
+source passages do not enter manuscript baselines. The browser owns transient
+selection/display state, while guarded routes delegate durable writes to the
+research API and repository.
+
 One process has one selected workspace. Opening selects an existing project;
 importing browser bytes creates one at an explicit destination. A browser filename
 does not identify its original parent directory. An archive may open without a
 manuscript. `workspace.resolve_project_target` resolves explicit selectors; API
-research calls stay explicitly scoped. An occupied port fails startup.
+research calls stay explicitly scoped. An occupied port fails startup. Since
+v0.7.2, an invalid explicit `serve` selector fails before binding or selecting a
+workspace. Valid directories without a unique manuscript can still open as empty
+workspaces; `--no-project` explicitly starts without project selection.
 
 `DocumentAnalysis` reuses corpus/chapter measurements for the fingerprint and
 renderers. Narrower profile/fingerprint requests use the same pipeline. Dashboard
@@ -192,6 +219,17 @@ without discovery. The facade's `profile`, `fingerprint`/`passport` and `dashboa
 accept that mapping; `None` retains threshold discovery for compatibility.
 Use `analyze_document(text, config, thresholds)` when several outputs need the same
 measurements. Project adapters own their characters, motifs, paths and artifacts.
+
+Shared owners preserve failure signals across interfaces: configuration discovery
+reports metadata/read failures and malformed TOML sections through its existing
+warning channel; the guarded `FileUtils` source reader also serves dialogue,
+pacing, motifs and showing CLI commands. Low-level structure reports reuse the
+English `CorpusConfig` default, while explicit `auto` retains detection.
+`StyleFingerprint.from_metrics` rejects non-finite feature values and invalid
+standard errors before scoring; documented unavailable-value conventions remain
+separate. Research claim-confidence and evidence-relation normalization belongs
+to `research.api`; supplied invalid HTTP values fail rather than receiving an
+omission default.
 
 The shared Markdown parser defines measurement prose and chapter numbering.
 Inline counting retains visible link labels and excludes link targets,
@@ -585,6 +623,10 @@ transition, a fresh render opens manuscript analysis when chapters exist, otherw
 research. Recent projects live only in browser storage. Standalone read-only
 reports expose no project actions or welcome journey. Shared language packs own
 the copy; the optional public-example link does not affect offline operation.
+Project creation selects the new workspace only after configuration and requested
+Research setup succeed. A setup failure retains created files and the previous
+selection, reports the incomplete destination, and explains recovery through
+**Open Project** after correcting its configuration or archive.
 
 ## Repository tooling
 

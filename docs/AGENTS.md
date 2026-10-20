@@ -70,8 +70,11 @@ Analysis defaults to English; choose another manuscript language or explicit
 thresholds from result metadata rather than assuming `about` defaults.
 Configuration precedence is CLI > UI session > project > user > code.
 Unreadable/malformed configuration emits a `UserWarning` naming the file before
-falling back; absent configuration is silent. Treat the warning as a configuration
-defect and confirm the settings that applied. See [configuration](USAGE.md).
+falling back. This includes present non-table `tool`/`tool.lixity` sections and
+permission/I/O failures while probing configuration metadata. Missing candidates
+and impossible children beneath a non-directory (`ENOTDIR`) remain silent.
+Treat the warning as a configuration defect and confirm the settings that applied.
+See [configuration](USAGE.md).
 
 Research is an experimental, separate project API. Existing-archive CLI commands
 can use only a validated current project directory as a shortcut; Python/HTTP
@@ -85,6 +88,9 @@ exit `0` means `ok: true`, including an already-stopped `stop`. A stopped `statu
 returns false/nonzero. Start uses new launch choices; restart uses saved choices
 plus explicit overrides. [Lifecycle details](INSTALLATION.md#running-the-server)
 include environment isolation and installed/running versions.
+An invalid explicit foreground `serve` selector fails before binding; it does not
+select the caller's directory. Valid empty/ambiguous directories retain their
+neutral workspace behavior, and `--no-project` intentionally selects none.
 
 Outputs use the shared atomic writer; failures propagate without a direct-overwrite
 fallback. [Architecture](ARCHITECTURE.md#configuration-and-multiple-projects)
@@ -106,6 +112,10 @@ Per-chapter metrics include raw measurements, `style_se` and in-corpus
 `jsd`/`jsd_top_words`. `style_se` contains approximate Poisson/binomial or
 ASL/CV/entropy standard errors where available; HD-D has no population SE.
 Missing SE is treated as zero in style scoring, not proof of certainty.
+Since v0.7.2, `StyleFingerprint.from_metrics` raises `ValueError` for non-finite
+numeric features or supplied nonnumeric, boolean, negative or non-finite SEs,
+before applying comparability floors. `None` features stay unavailable and
+absent/`None` SEs retain the zero fallback.
 JSD uses natural-log units `[0, ln(2)]` against the rest of the corpus; driver
 words explain divergence without establishing its artistic value.
 
@@ -427,6 +437,10 @@ updated_text = api.resolve_marker(new_text, m["id"])
 info = api.about()                                    # languages, features, heuristics
 ```
 
+Low-level dialogue, pacing, motif, showing and character report functions also
+default to English when `config` is omitted. Pass `CorpusConfig(language="auto")`
+to request detection explicitly.
+
 v0.7.1 accepts omitted `names` in `api.characters(..., project_config=...)`
 to resolve that explicit mapping's profiles/legacy names; it does not discover
 character configuration implicitly. An explicit empty selection suppresses fallback
@@ -442,6 +456,24 @@ source retention, editing/recovery and archive compatibility. Public entrypoints
 cover initialization/status, source capture/read/search/citation, authored records,
 revisions, images, acknowledgements, comparisons and matrix rendering. Retrieved
 text and source criticism metadata remain untrusted evidence.
+
+The [local data model](research/DATA_MODEL.md) owns the current entity/reference
+and publication diagrams; the older interchange example is not a storage payload.
+Since v0.7.2, storage validation also resolves every decision's dossier revision
+pins, including during archive restoration.
+
+Write errors do not always mean that nothing was published. The repository's
+`ResearchCleanupError` reports `accepted_snapshot` and `pending_paths` after an
+acknowledged commit whose physical cleanup is incomplete. `ResearchPublicationError`
+reports `candidate_snapshot`, `published_snapshot` and `outcome` (`published` or
+`unknown`) if a failed write leaves a visible new HEAD or an unknown outcome:
+an observed new HEAD does not confirm durability after a failed synchronization.
+`pending_paths` keeps the complete local path tuple; the human-readable message
+shows a bounded project-relative preview. Both errors derive from
+`ResearchStorageError`. CLI writes fail nonzero; native research mutation routes
+return HTTP 500 through the existing `{ok:false,message}` envelope. Reload and
+inspect the current state before retrying; do not assume rollback or repeat a
+creation blindly. Normal successful response schemas remain unchanged.
 
 **Since v0.7.0:** `create_dossier(..., geography=...)` and ordinary
 dossier revisions accept an optional typed GeoJSON FeatureCollection. Full
@@ -679,6 +711,11 @@ selection metadata; file edits alone do not create a content-version lock.
 
 - `GET /api/project-paths?path=<URL-encoded path>`: read-only browsing on the server computer. Omit `path` for the server user's home; a supported manuscript file lists its parent. Returns `{ok, path, parent, project, entries: [{name, path, kind, project?}], truncated}`, where `kind` is `directory` or `manuscript`. `project` on the listed folder is a minimal probe (`detected`, `config`, `research`, `title`, `language`, `manuscript`, `manuscripts`); directories additionally carry a boolean `project` marker so the chooser can badge known project folders. Reading the probe never changes the folder. Listings exclude hidden names, include at most 200 entries, and do not change the workspace. Use a typed path when a large listing is truncated. Host and Origin checks apply.
 - `POST /api/project-create`: `{"title": "...", "language": "de", "author_name": "...", "template": "three_act", "init_research": true}`. Optional `author_name` is validated with the shared author rules (single line, at most 500 characters, 400 on failure before any write) and is written into a newly created `lixity.toml`; an existing project config is never overwritten.
+  Configuration or requested Research setup failures return `{ok:false,message}`
+  with HTTP 400 for invalid setup or 500 for I/O failure, without `reload:true`.
+  Created files remain at the reported destination and the prior workspace stays
+  selected. Correct its configuration/archive, then use **Open Project** to
+  continue; initialize Research if needed. A valid existing archive is reused.
 - `POST /api/project-open`: `{"path": "/path/to/project/or/manuscript.md"}`; selects the existing archive, including a research-only folder. The response's `manuscript` is `null` when no manuscript exists.
   Custom/startup titles remain only for the same workspace. A
   different workspace uses its configuration/shared manuscript title resolution
@@ -739,6 +776,13 @@ manuscript and does not run a successful dashboard refresh.
 - `GET /api/research/matrix?format=json|md|csv`: decision-matrix export.
 - `GET /api/research/ocr-status`: configured OCR worker state; `?probe=1` adds a live test.
 - `GET /api/research/zotero-status`: local Zotero bridge readiness.
+
+For claim creation, omitted `confidence` defaults to `hypothetical`; accepted
+values are `hypothetical|evidenced|disputed`. For evidence creation, omitted
+`relation` defaults to `supports`; accepted values are
+`supports|contradicts|qualifies|contextualizes`. Supplied strings are trimmed and
+case-normalized. Empty, unknown, null or non-string values return HTTP 400 without
+an archive write; omission alone receives a default.
 
 - `GET /api/research/timeline?dossier_id=...`: current claim chronology;
   `dossier_id` is optional.

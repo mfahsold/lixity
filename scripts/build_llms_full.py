@@ -26,6 +26,7 @@ SOURCES: tuple[Path, ...] = (
     Path("docs/INSTALLATION.md"),
     Path("docs/USAGE.md"),
     Path("docs/research/USAGE.md"),
+    Path("docs/research/DATA_MODEL.md"),
     Path("docs/METHODS.md"),
     Path("docs/STABILITY.md"),
     Path("docs/LOCALIZATION.md"),

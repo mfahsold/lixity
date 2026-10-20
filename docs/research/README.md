@@ -11,6 +11,8 @@ available operations; historical designs do not define current commands or schem
 - [Automation contracts](../AGENTS.md#51-research-api-lixityresearchapi): Python
   entrypoints, response envelopes and guarded HTTP requests.
 - [Architecture](../ARCHITECTURE.md): shared components and integration boundaries.
+- [Local data model](DATA_MODEL.md): stored entities, pinned references, write
+  process, schema evolution and the disposable search database.
 - `lixity research --help` and `lixity research schema`: installed commands and
   entity definitions. `lixity about --json` reports installed capabilities.
 
@@ -31,8 +33,9 @@ maintaining a second architecture or task list here.
 
 Related design material:
 
-- [Proposed interchange model](DATA_MODEL.md) and [platform evidence](EVIDENCE.md)
-  are design references, not the local storage schema or a current dependency list.
+- The [original interchange proposal](https://github.com/mfahsold/lixity/blob/427e2a3491bacd0b504ce4e3387a019340bd2e67/docs/research/DATA_MODEL.md)
+  and [platform evidence](EVIDENCE.md) are design history, not accepted local
+  payloads or a current dependency list.
 - [September scientific review](SCIENTIFIC_REVIEW_2026-09.md) records historical
   findings; [Methods](../METHODS.md) and [Stability](../STABILITY.md) own current
   estimator conventions and evidence limits.

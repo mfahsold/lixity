@@ -429,6 +429,12 @@ The running server exposes registered routes at `GET /api`; research responses
 are JSON. Manuscript PDF and confidentiality-agreement downloads are separate
 binary/text attachment workflows.
 
+Claim creation accepts `hypothetical`, `evidenced` or `disputed` confidence;
+evidence links accept `supports`, `contradicts`, `qualifies` or `contextualizes`.
+Supplied strings are trimmed and case-normalized. Native HTTP creation defaults
+only omitted fields (`hypothetical` and `supports` respectively); an explicit
+empty, unknown, null or non-string value returns HTTP 400 without writing.
+
 ### Update one reviewed record
 
 `dossier`, `claim` and `decision` accept `list`, `show ID`, `inspect ID` or a
@@ -1022,6 +1028,11 @@ entire archive at an earlier date.
   links remain for their audit trail, but their purged citations are marked
   `availability: "purged"` and expose no deleted quotation text.
 
+Original files and extracted text can share exact bytes across sources. Since
+v0.7.2, the purge plan considers both kinds of blob reference, preserves shared
+bytes and removes unshared extraction text as well as originals. A dry run's
+`deleted_blobs` lists planned deletions, not a completed erase operation.
+
 **Since v0.7.1:** `withdraw` also retires a dossier through the same
 tombstone mechanism. Inspect its revision and snapshot, preview, then repeat the
 command without `--dry-run` to accept the retirement:
@@ -1109,6 +1120,17 @@ directory: preserve it for inspection; `init` refuses to overwrite it.
 Writer diagnostics distinguish a busy writer from read-only, permission and
 other I/O failures at the canonical project lock. A lock file's existence does
 not prove contention; no alternate `/tmp` lock or unlocked fallback is used.
+
+Since v0.7.2, a failed post-commit cleanup reports the accepted snapshot and the
+local files still pending removal; it does not return ordinary purge success or
+claim those bytes were erased. A failure while acknowledging HEAD publication
+separately reports whether the new HEAD was observed or the outcome is unknown;
+failed directory synchronization does not establish durability. Preserve the
+archive, reload and inspect its state before another write. Do not blindly repeat
+a create/purge operation or restore an old HEAD. Correct the reported filesystem
+problem and inspect only the named unreferenced cleanup artifacts. A successful
+logical purge is not a secure-erasure guarantee for filesystem snapshots, other
+backups or independently retained copies.
 
 Files are flushed before publication; directory syncing is used on POSIX.
 If an interrupted authored edit leaves a valid next-revision file outside the

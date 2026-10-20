@@ -60,6 +60,7 @@ keep their inspection layout; the bounded reader is not a Markdown editor.
 - [Usage and configuration](https://mfahsold.github.io/lixity/USAGE.md): analysis workflows, settings, registers and PDF export; since v0.7.0, A4 editorial copies include line numbers and comment margins.
 - [Automation contracts](https://mfahsold.github.io/lixity/AGENTS.md): JSON versions, Python entrypoints, HTTP requests and context guards.
 - [Implemented research](https://mfahsold.github.io/lixity/research/USAGE.md): retention, citations, claims, revisions, manuscript associations and recovery.
+- [Local data model](https://mfahsold.github.io/lixity/research/DATA_MODEL.md): authoritative records, reference and publication diagrams, schemas and the disposable SQLite index.
 - [Research and PDF guide](https://mfahsold.github.io/lixity/guides/research-pdf.html): source capture, OCR, Zotero and PDF workflows.
 - [Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) and [scientific limits](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md): formulas, estimator conventions and heuristic caveats.
 - [Architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md) and [localization](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md): integration boundaries and language coverage.

@@ -10,6 +10,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.7.2] - 2026-10-20
 
 ### Changed
+- The research data-model reference now documents the implemented entities,
+  revision pins, publication process, schema evolution and disposable SQLite
+  index, with current architecture/process diagrams. The broader interchange
+  proposal remains available as an explicitly historical design.
 - The public showcase focuses on one real reader view, the demo and installation.
   README explains purpose, first commands and where to find documentation and
   source. The demo uses a compact return link instead of duplicate site navigation.
@@ -98,6 +102,25 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and numeric loadings. Additive diagnostics preserve existing scores and formats.
 
 ### Fixed
+- Purge accounts for original and extracted-text blob references together,
+  preserving shared retained evidence and removing unshared extraction bytes.
+  Decision-to-dossier pins are validated at the storage/restore boundary.
+  Publication acknowledgement and post-commit cleanup errors identify the
+  observed outcome instead of suggesting rollback or successful erasure.
+- Configuration discovery warns about permission/I/O failures and present
+  non-table `tool`/`tool.lixity` sections instead of silently applying other
+  settings. Missing paths and impossible children beneath a file remain quiet.
+- Imported style measurements reject non-finite features and invalid standard
+  errors before scoring. Low-level structure reports share the English default;
+  automatic detection remains explicit. Dialogue, pacing, motifs and showing CLI
+  commands share guarded UTF-8/regular-file reads, including nonblocking rejection
+  of special file nodes.
+- Invalid explicit foreground startup selectors fail before binding or selecting
+  a different workspace. Failed project configuration or requested Research setup
+  reports incomplete setup, retains created files and keeps the prior selection,
+  with a recovery path through **Open Project**.
+- Supplied invalid HTTP claim-confidence and evidence-relation values return 400
+  without an archive write; only omission receives the existing defaults.
 - Research backup import and export validate the complete manifest ancestry before
   accepting or packaging it. Invalid selectors, damaged or incomplete history and
   project/generation mismatches fail explicitly; archive paths reject parent

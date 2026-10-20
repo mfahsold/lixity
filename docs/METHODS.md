@@ -134,6 +134,13 @@ These plug-ins do not establish independence of words/sentences or calibrated
 null probabilities for chapter features. Zero observed events can give zero
 plug-in error without establishing population certainty.
 
+Since v0.7.2, the library's `StyleFingerprint.from_metrics` boundary rejects
+non-finite numeric feature values and supplied standard errors that are
+nonnumeric, boolean, negative or non-finite, naming the chapter and feature in a
+`ValueError`. Validation precedes comparability floors. A `None` feature remains
+unavailable; an absent or `None` standard error keeps the documented zero
+fallback. Invalid measurements do not become measured zero deviations.
+
 ### Comparability floors
 
 Local minimum sizes keep tiny samples out of comparisons. They are policies,

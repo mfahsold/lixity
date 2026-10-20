@@ -100,7 +100,7 @@ explain coverage, short-sample limits and unavailable measurements.
 | Looking for | Start here |
 | :--- | :--- |
 | Everyday workflows | [Usage and CLI reference](https://mfahsold.github.io/lixity/USAGE.md) · [Practical guides](https://mfahsold.github.io/lixity/#guides) |
-| Research and Zotero | [Research workflows and compatibility](https://mfahsold.github.io/lixity/research/USAGE.md) |
+| Research and Zotero | [Research workflows and compatibility](https://mfahsold.github.io/lixity/research/USAGE.md) · [Data model](https://mfahsold.github.io/lixity/research/DATA_MODEL.md) |
 | Measurements and limits | [Methods](https://mfahsold.github.io/lixity/METHODS.md) · [Validation](https://mfahsold.github.io/lixity/STABILITY.md) |
 | Integrations | [Python, CLI and HTTP contracts](https://mfahsold.github.io/lixity/AGENTS.md) · [Architecture](https://mfahsold.github.io/lixity/ARCHITECTURE.md) · [Agent index](https://mfahsold.github.io/lixity/llms.txt) |
 | Contributing | [Contributor setup and checks](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md) · [Security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md) |
@@ -200,6 +200,7 @@ keep their inspection layout; the bounded reader is not a Markdown editor.
 - [Usage and configuration](https://mfahsold.github.io/lixity/USAGE.md): analysis workflows, settings, registers and PDF export; since v0.7.0, A4 editorial copies include line numbers and comment margins.
 - [Automation contracts](https://mfahsold.github.io/lixity/AGENTS.md): JSON versions, Python entrypoints, HTTP requests and context guards.
 - [Implemented research](https://mfahsold.github.io/lixity/research/USAGE.md): retention, citations, claims, revisions, manuscript associations and recovery.
+- [Local data model](https://mfahsold.github.io/lixity/research/DATA_MODEL.md): authoritative records, reference and publication diagrams, schemas and the disposable SQLite index.
 - [Research and PDF guide](https://mfahsold.github.io/lixity/guides/research-pdf.html): source capture, OCR, Zotero and PDF workflows.
 - [Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) and [scientific limits](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md): formulas, estimator conventions and heuristic caveats.
 - [Architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md) and [localization](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md): integration boundaries and language coverage.
@@ -337,6 +338,12 @@ Browsing or cancelling does not switch projects. **Analyze a manuscript** copies
 a file into a separate project after preview; it does not reconnect the original
 folder's archive. A research project may open without a manuscript. All tabs on
 one server share its active project, so check the displayed path before saving.
+
+If configuration or Research setup fails while creating/importing a project,
+the app reports incomplete setup and keeps the previous project selected. Created
+files remain at the destination named in the message. Correct or save
+`lixity.toml`, repair the Research setup if needed, then use **Open Project** to
+continue and initialize Research if it is still absent.
 
 ### Read and explore
 
@@ -1285,6 +1292,10 @@ emits the same capability metadata, not a JSON Schema for every result.
 [Automation contracts](AGENTS.md) describe versioned output envelopes and exit
 codes; a running server advertises registered operations at `GET /api`.
 
+`dialogue`, `pacing`, `motifs` and `showing` use the same guarded manuscript
+reader as `analyze`: invalid UTF-8 or a special file node returns processing
+failure (exit 1), without waiting for a pipe writer or publishing a result.
+
 ### `lixity analyze`
 
 Use the terminal report for corpus size, sentence rhythm, vocabulary,
@@ -1575,6 +1586,9 @@ repeat an explicit backend on restart. `LIXITY_*` environment values, including
 OCR settings, are inherited on launch and are not saved as startup settings.
 Use `lixity service --help` for lifecycle arguments, or
 [installation and service setup](INSTALLATION.md#running-the-server).
+For foreground `lixity serve PATH`, an invalid explicit path fails before startup.
+A valid directory without a unique manuscript can open an empty workspace;
+`lixity serve --no-project` intentionally starts without selecting a project.
 
 For automation, `lixity service status --json` returns
 `lixity-service-local/1`: `schema_version`, `ok`, `state`, `message`, plus
@@ -1809,7 +1823,8 @@ operations; `api.about()` returns runtime capability metadata.
 
 Use `CorpusAnalyzer`, `CorpusConfig`, `ParagraphProfiler` and renderers for direct
 object-model control; the [architecture reference](ARCHITECTURE.md) explains
-these boundaries. Automatic language detection needs a text sample:
+these boundaries. Low-level structure reports also default to English when no
+configuration is supplied. Automatic language detection is explicit and needs a text sample:
 `resolve_language(CorpusConfig(language="auto"), sample_text=text)`.
 Without a sample, `auto` resolves to `generic`; the CLI supplies its manuscript
 automatically. `FileUtils.atomic_write_if_changed(path, text)` provides atomic,
@@ -1859,8 +1874,10 @@ not infer authorship or edit the manuscript. A display byline does not
 identify a publisher or printer.
 
 An existing unreadable/malformed config emits a warning naming the file and
-falls back to defaults; an absent file is silent. Check `meta.language` and
-active thresholds after a warning, or supply explicit options. Invalid stored
+ignores those settings. This includes non-table `tool`/`tool.lixity` sections in
+`pyproject.toml` and failed permission/I/O checks while locating a config. Missing
+files and paths that cannot exist beneath a file are silent. Check `meta.language`
+and active thresholds after a warning, or supply explicit options. Invalid stored
 publication fields remain visible for correction while analysis stays available.
 
 **Since v0.6.0:** discover configuration keys, defaults and
@@ -2555,6 +2572,12 @@ The running server exposes registered routes at `GET /api`; research responses
 are JSON. Manuscript PDF and confidentiality-agreement downloads are separate
 binary/text attachment workflows.
 
+Claim creation accepts `hypothetical`, `evidenced` or `disputed` confidence;
+evidence links accept `supports`, `contradicts`, `qualifies` or `contextualizes`.
+Supplied strings are trimmed and case-normalized. Native HTTP creation defaults
+only omitted fields (`hypothetical` and `supports` respectively); an explicit
+empty, unknown, null or non-string value returns HTTP 400 without writing.
+
 ### Update one reviewed record
 
 `dossier`, `claim` and `decision` accept `list`, `show ID`, `inspect ID` or a
@@ -3148,6 +3171,11 @@ entire archive at an earlier date.
   links remain for their audit trail, but their purged citations are marked
   `availability: "purged"` and expose no deleted quotation text.
 
+Original files and extracted text can share exact bytes across sources. Since
+v0.7.2, the purge plan considers both kinds of blob reference, preserves shared
+bytes and removes unshared extraction text as well as originals. A dry run's
+`deleted_blobs` lists planned deletions, not a completed erase operation.
+
 **Since v0.7.1:** `withdraw` also retires a dossier through the same
 tombstone mechanism. Inspect its revision and snapshot, preview, then repeat the
 command without `--dry-run` to accept the retirement:
@@ -3235,6 +3263,17 @@ directory: preserve it for inspection; `init` refuses to overwrite it.
 Writer diagnostics distinguish a busy writer from read-only, permission and
 other I/O failures at the canonical project lock. A lock file's existence does
 not prove contention; no alternate `/tmp` lock or unlocked fallback is used.
+
+Since v0.7.2, a failed post-commit cleanup reports the accepted snapshot and the
+local files still pending removal; it does not return ordinary purge success or
+claim those bytes were erased. A failure while acknowledging HEAD publication
+separately reports whether the new HEAD was observed or the outcome is unknown;
+failed directory synchronization does not establish durability. Preserve the
+archive, reload and inspect its state before another write. Do not blindly repeat
+a create/purge operation or restore an old HEAD. Correct the reported filesystem
+problem and inspect only the named unreferenced cleanup artifacts. A successful
+logical purge is not a secure-erasure guarantee for filesystem snapshots, other
+backups or independently retained copies.
 
 Files are flushed before publication; directory syncing is used on POSIX.
 If an interrupted authored edit leaves a valid next-revision file outside the
@@ -3494,6 +3533,193 @@ The [licensing rules](../LICENSING.md) still apply; imported sources keep
 their own rights.
 
 ===============================================================================
+## docs/research/DATA_MODEL.md
+
+Source: https://github.com/mfahsold/lixity/blob/main/docs/research/DATA_MODEL.md
+
+# Local research data model and storage contracts
+
+[Research usage](USAGE.md) owns workflows; [architecture](../ARCHITECTURE.md)
+owns component boundaries. This document describes the implemented local model,
+not the broader interchange proposal. Inspect installed entity definitions with
+`lixity research schema` and supported contracts with `lixity about --json`.
+Product, entity, manifest and response versions are separate.
+
+## Authority and identity
+
+| Stored data | Responsibility | Recovery rule |
+| --- | --- | --- |
+| `research/revisions/<kind>/<id>/<revision>.json` | Immutable, strictly validated entity revisions | Never replace an accepted revision |
+| `research/blobs/<sha256>` | Retained originals and extracted text, addressed by exact bytes | Preserve every blob still referenced by an accepted record |
+| `research/manifests/<sha256>.json` | Accepted revision references and byte hashes, project, generation and parent | Validate complete accepted ancestry on backup/restore |
+| `research/HEAD.json` | Selects one accepted manifest | Atomic publication point; never select objects by modification time |
+| `research/project.json` | Immutable initial project configuration, checked against its accepted record | Restore with the archive |
+| `.lixity/research/catalogue.sqlite3` | Disposable lexical search projection | Rebuild from the accepted snapshot; SQLite alone is not a backup |
+
+Each entity has a UUID URI, kind, project ID, revision, UTC creation timestamp,
+creator and schema version. A `Reference` pins both ID and revision. SHA-256
+identifies serialized bytes; it does not replace entity identity or establish
+factual accuracy. Titles, filenames, URLs and equal quotations do not merge
+entities. Successive source captures are separate `SourceVersion` entities with
+increasing sequence numbers; authored edits append revisions of one entity.
+
+## Relationships
+
+Arrows point from a record to its stored reference. The manuscript remains an
+external project file: its association retains only the explicitly permitted
+quotation and anchor, not a manuscript archive blob.
+
+```mermaid
+flowchart TD
+    M[ManuscriptClaimLink and anchor] --> C[Claim revision]
+    E[EvidenceLink revision] --> C
+    E --> P[Passage]
+    P --> X[Extraction]
+    X --> V[SourceVersion]
+    V --> S[Source]
+    C --> D[Dossier revision]
+    D --> P
+    A[Decision revision] --> C
+    A --> D
+```
+
+This is the main reading/research chain, not every field or cardinality. Optional
+references and the remaining record types are specified below.
+
+| Record | Implemented meaning and references |
+| --- | --- |
+| `Project` | Explicit project identity, title and language |
+| `Source` | Retained source identity, title and language |
+| `SourceVersion` | Source capture: `source_ref`, sequence, original blob, confirmed retention and source context |
+| `Activity` | Extraction operation, implementation and status, pinned to its source version |
+| `Extraction` | Source version, activity and exact UTF-8 text blob; normalization `none`, Unicode codepoint offsets |
+| `Passage` | Extraction reference, exclusive `[start,end)` span and exact verbatim text |
+| `Dossier` | Authored Markdown, tags, passage `evidence_refs` and optional bounded GeoJSON |
+| `Claim` | Statement, optional dossier reference, scope and confidence: hypothetical, evidenced or disputed |
+| `EvidenceLink` | Exact claim and passage revisions; supports, contradicts, qualifies or contextualizes |
+| `Decision` | Author rationale, optional claim, dossier references and explicit deviation flag |
+| `ClaimRelation` | Author-assigned causal relation between distinct claim revisions; active or retracted |
+| `ManuscriptClaimLink` | Exact claim revision, retained quote/anchor, active or retracted state and optional note |
+| `DecisionAcknowledgement` | Append-only applied/review-needed statement about exact decision/dossier revisions; may supersede an earlier acknowledgement |
+| `Tombstone` | Withdrawal or purge, target and reason; source-version purge can retain its owning source identity |
+
+Confidence and causal relations are author assertions, not certification. A
+dossier's current claim list is derived from claim associations; it is not a
+stored `claim_refs` field. Historical views resolve explicit pins; current reverse
+links do not reconstruct the whole archive at an earlier date.
+
+## Validation and publication
+
+`research.models` owns strict discriminated entity schemas, field constraints
+and record-version rules. `research.repository` owns cross-record/project checks,
+contiguous authored history, immutable publication and the writer lock. JSON
+Schema alone cannot establish referential integrity or retained-byte availability.
+Citation resolution additionally verifies bytes and exact substrings. Filtered
+list reads validate their loaded kinds; they are not a complete archive audit.
+Full writes validate the prospective snapshot before publication.
+
+```mermaid
+flowchart TD
+    I[Validate request and reviewed context] --> L[Writer lock and expected HEAD check]
+    L --> V[Validate prospective snapshot]
+    V --> B[Publish immutable blobs, revisions and manifest]
+    B --> A[Replace HEAD and synchronize publication]
+    A --> C[Finish requested cleanup]
+```
+
+The diagram shows a changed write's acknowledged path. Its early exits and error
+outcomes are distinct:
+
+| Outcome | Observed state and caller action |
+| --- | --- |
+| Expected HEAD differs | Conflict; retain the draft, no accepted write |
+| Validated authored update is unchanged | Return its current revision after the locked check, without a write |
+| Write fails with uncertain publication | An observed new HEAD or unknown outcome is reported explicitly; review before retrying, with recovery artifacts retained. A confirmed previous HEAD retains the ordinary failure |
+| Cleanup fails after acknowledgement | Report the accepted snapshot and pending artifacts; do not repeat the write or claim completed erasure |
+
+Ordinary authored updates request no artifact deletion. Ingestion, purge and
+append-only acknowledgements have their own inputs and lifecycle effects.
+Previews do not reserve a snapshot. A later save must still pass the locked comparison. Failed
+drafts are never automatically retried or repinned to newer evidence. Since
+v0.7.2, unchanged authored updates return their accepted revision after validation
+and the locked check; acknowledgements remain append-only events.
+
+Files are flushed before publication, with directory syncing on POSIX. Local
+filesystem/OS guarantees still apply; this is not a distributed transaction.
+An interruption before HEAD publication leaves the prior snapshot selected.
+Unaccepted files may remain for recovery; they do not prove a save succeeded.
+A cleanup failure after acknowledged publication cannot roll back the accepted
+HEAD. If replacement was visible but its synchronization failed, publication
+durability is uncertain; an unreadable HEAD leaves the outcome unknown. These
+states must not be described as a write that definitely never happened. Preserve
+valid interrupted authored revision bytes rather than overwriting them.
+See [recovery](USAGE.md#export-and-restoration).
+
+## Search database and deletion
+
+`research.catalogue` builds a new SQLite database from one accepted snapshot under
+the project writer lock, then closes, flushes and atomically replaces the cache.
+A `metadata` table records the snapshot digest. Two FTS5 projections serve source
+passages and current searchable passages/dossiers/claims/decisions; they are not
+relational storage for domain entities or citation authority.
+
+Search opens the cache read-only with `trusted_schema=OFF`, uses bound query
+parameters and checks its recorded digest against the accepted snapshot. Missing,
+stale indexes can be rebuilt when the caller requests refresh; otherwise they
+fail explicitly. Structurally unusable caches may require explicit reindexing.
+Returned references resolve against that snapshot, with lifecycle/current-source
+checks. Lexical rank is not a truth probability. Current search excludes
+withdrawn/purged sources and withdrawn dossiers; historical citations retain
+their distinct availability rules.
+
+Original-source and extracted-text descriptors both participate in blob
+reachability. Equal bytes can be shared across either role and across sources;
+purging one source must retain every blob owned by another accepted record.
+Physical deletion and rebuilding a cache are separate from accepting a new HEAD.
+Backups include authoritative records, manifests and blobs, not SQLite or locks.
+
+## Schema evolution and compatibility
+
+The local reader supports entity/manifest versions 1–8. These are capability
+levels, not migrations of every existing file. Writes opt into the format their
+new records require; reads do not upgrade archives. Existing encodings and
+historical pins remain intact. Unknown fields and unsupported versions fail
+rather than being silently discarded.
+
+| Capability | Local format requirement |
+| --- | --- |
+| Initial records and source/extraction chain | v1 |
+| Authored replacement revisions; capture origin URL; owned source-version purge tombstone | Relevant v2 record contract |
+| Structured local Zotero capture identity | v3 source version and manifest |
+| Local Poppler/Tesseract extraction activity | v4 activity and manifest |
+| Decision acknowledgement | v5 record and manifest |
+| Claim causal relation | v6 record and manifest |
+| Manual manuscript quote–claim association | v7 record and manifest |
+| Structured dossier geography | v8 dossier and manifest; subsequent revisions retain v8 |
+
+Versions are scoped to each entity model: a v2 source capture is not a v2 authored
+revision. The manifest retains the highest capability already accepted. HEAD
+remains `research-head-local/1`; backup, search, preview and HTTP envelopes have
+independent identifiers. Keep a complete verified backup before the first
+higher-format write; an older application can reject that archive even if its
+product number is larger. [Compatibility](USAGE.md#limits) records those boundaries.
+
+## Proposed work is separate
+
+The [original interchange model](https://github.com/mfahsold/lixity/blob/427e2a3491bacd0b504ce4e3387a019340bd2e67/docs/research/DATA_MODEL.md#1-common-envelope-and-identity)
+preserves the broader schema, selectors, interoperability mappings and synthetic
+example. Its `research-search/1`, claim review/status fields, PROV/RO-Crate,
+Qdrant and general manuscript targets are proposals, not accepted local payloads.
+The [synthetic interchange example](examples/evidence-chain.json) illustrates that
+proposal; it is not a local database export.
+
+The [knowledge-horizon RFC](KNOWLEDGE_HORIZON_RFC.md) remains unimplemented.
+Semantic retrieval, automatic factual certification, background synchronization
+and an explicit planned/unwritten scene state are not current capabilities.
+Future extensions must define their authoritative owner, references, failure
+states and compatible read/write boundary before adding a projection or UI.
+
+===============================================================================
 ## docs/METHODS.md
 
 Source: https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md
@@ -3633,6 +3859,13 @@ measurement SE for this feature, **not** certainty about a larger population.
 These plug-ins do not establish independence of words/sentences or calibrated
 null probabilities for chapter features. Zero observed events can give zero
 plug-in error without establishing population certainty.
+
+Since v0.7.2, the library's `StyleFingerprint.from_metrics` boundary rejects
+non-finite numeric feature values and supplied standard errors that are
+nonnumeric, boolean, negative or non-finite, naming the chapter and feature in a
+`ValueError`. Validation precedes comparability floors. A `None` feature remains
+unavailable; an absent or `None` standard error keeps the documented zero
+fallback. Invalid measurements do not become measured zero deviations.
 
 ### Comparability floors
 
@@ -4454,6 +4687,11 @@ authored records and a rebuildable SQLite/FTS5 index. It does not import into
 `lixity.pipeline`. Source analysis may use the shared engine and UI, but research
 sources never join manuscript baselines automatically.
 
+The [local data model](research/DATA_MODEL.md) diagrams the current reference
+chain and publication process, and separates authoritative archive data from
+the disposable search database. Historical interchange proposals do not define
+the accepted local schema.
+
 ## Layers
 
 | Layer | Responsibility | Must not own |
@@ -4481,11 +4719,33 @@ route tables drive dispatch and discovery. Handlers validate and shape requests,
 then delegate to the shared pipeline or `research.api`; they do not implement a
 second renderer, analysis algorithm or archive writer.
 
+```mermaid
+flowchart TD
+    T[CLI and Python API] --> P[Shared analysis pipeline]
+    S[Native server routes] --> P
+    P --> A[Analysis core and language resources]
+    P --> R[Shared report and dashboard renderers]
+    S --> Q[Explicit-project research API]
+    T --> Q
+    Q --> J[Authoritative revision and blob repository]
+    J --> C[Rebuildable SQLite search projection]
+    Q --> R
+```
+
+Arrows show delegation or derivation, not a second analysis or storage path.
+Research measurements use the same core only when explicitly requested; retained
+source passages do not enter manuscript baselines. The browser owns transient
+selection/display state, while guarded routes delegate durable writes to the
+research API and repository.
+
 One process has one selected workspace. Opening selects an existing project;
 importing browser bytes creates one at an explicit destination. A browser filename
 does not identify its original parent directory. An archive may open without a
 manuscript. `workspace.resolve_project_target` resolves explicit selectors; API
-research calls stay explicitly scoped. An occupied port fails startup.
+research calls stay explicitly scoped. An occupied port fails startup. Since
+v0.7.2, an invalid explicit `serve` selector fails before binding or selecting a
+workspace. Valid directories without a unique manuscript can still open as empty
+workspaces; `--no-project` explicitly starts without project selection.
 
 `DocumentAnalysis` reuses corpus/chapter measurements for the fingerprint and
 renderers. Narrower profile/fingerprint requests use the same pipeline. Dashboard
@@ -4635,6 +4895,17 @@ without discovery. The facade's `profile`, `fingerprint`/`passport` and `dashboa
 accept that mapping; `None` retains threshold discovery for compatibility.
 Use `analyze_document(text, config, thresholds)` when several outputs need the same
 measurements. Project adapters own their characters, motifs, paths and artifacts.
+
+Shared owners preserve failure signals across interfaces: configuration discovery
+reports metadata/read failures and malformed TOML sections through its existing
+warning channel; the guarded `FileUtils` source reader also serves dialogue,
+pacing, motifs and showing CLI commands. Low-level structure reports reuse the
+English `CorpusConfig` default, while explicit `auto` retains detection.
+`StyleFingerprint.from_metrics` rejects non-finite feature values and invalid
+standard errors before scoring; documented unavailable-value conventions remain
+separate. Research claim-confidence and evidence-relation normalization belongs
+to `research.api`; supplied invalid HTTP values fail rather than receiving an
+omission default.
 
 The shared Markdown parser defines measurement prose and chapter numbering.
 Inline counting retains visible link labels and excludes link targets,
@@ -5028,6 +5299,10 @@ transition, a fresh render opens manuscript analysis when chapters exist, otherw
 research. Recent projects live only in browser storage. Standalone read-only
 reports expose no project actions or welcome journey. Shared language packs own
 the copy; the optional public-example link does not affect offline operation.
+Project creation selects the new workspace only after configuration and requested
+Research setup succeed. A setup failure retains created files and the previous
+selection, reports the incomplete destination, and explains recovery through
+**Open Project** after correcting its configuration or archive.
 
 ## Repository tooling
 
@@ -5160,8 +5435,11 @@ Analysis defaults to English; choose another manuscript language or explicit
 thresholds from result metadata rather than assuming `about` defaults.
 Configuration precedence is CLI > UI session > project > user > code.
 Unreadable/malformed configuration emits a `UserWarning` naming the file before
-falling back; absent configuration is silent. Treat the warning as a configuration
-defect and confirm the settings that applied. See [configuration](USAGE.md).
+falling back. This includes present non-table `tool`/`tool.lixity` sections and
+permission/I/O failures while probing configuration metadata. Missing candidates
+and impossible children beneath a non-directory (`ENOTDIR`) remain silent.
+Treat the warning as a configuration defect and confirm the settings that applied.
+See [configuration](USAGE.md).
 
 Research is an experimental, separate project API. Existing-archive CLI commands
 can use only a validated current project directory as a shortcut; Python/HTTP
@@ -5175,6 +5453,9 @@ exit `0` means `ok: true`, including an already-stopped `stop`. A stopped `statu
 returns false/nonzero. Start uses new launch choices; restart uses saved choices
 plus explicit overrides. [Lifecycle details](INSTALLATION.md#running-the-server)
 include environment isolation and installed/running versions.
+An invalid explicit foreground `serve` selector fails before binding; it does not
+select the caller's directory. Valid empty/ambiguous directories retain their
+neutral workspace behavior, and `--no-project` intentionally selects none.
 
 Outputs use the shared atomic writer; failures propagate without a direct-overwrite
 fallback. [Architecture](ARCHITECTURE.md#configuration-and-multiple-projects)
@@ -5196,6 +5477,10 @@ Per-chapter metrics include raw measurements, `style_se` and in-corpus
 `jsd`/`jsd_top_words`. `style_se` contains approximate Poisson/binomial or
 ASL/CV/entropy standard errors where available; HD-D has no population SE.
 Missing SE is treated as zero in style scoring, not proof of certainty.
+Since v0.7.2, `StyleFingerprint.from_metrics` raises `ValueError` for non-finite
+numeric features or supplied nonnumeric, boolean, negative or non-finite SEs,
+before applying comparability floors. `None` features stay unavailable and
+absent/`None` SEs retain the zero fallback.
 JSD uses natural-log units `[0, ln(2)]` against the rest of the corpus; driver
 words explain divergence without establishing its artistic value.
 
@@ -5517,6 +5802,10 @@ updated_text = api.resolve_marker(new_text, m["id"])
 info = api.about()                                    # languages, features, heuristics
 ```
 
+Low-level dialogue, pacing, motif, showing and character report functions also
+default to English when `config` is omitted. Pass `CorpusConfig(language="auto")`
+to request detection explicitly.
+
 v0.7.1 accepts omitted `names` in `api.characters(..., project_config=...)`
 to resolve that explicit mapping's profiles/legacy names; it does not discover
 character configuration implicitly. An explicit empty selection suppresses fallback
@@ -5532,6 +5821,24 @@ source retention, editing/recovery and archive compatibility. Public entrypoints
 cover initialization/status, source capture/read/search/citation, authored records,
 revisions, images, acknowledgements, comparisons and matrix rendering. Retrieved
 text and source criticism metadata remain untrusted evidence.
+
+The [local data model](research/DATA_MODEL.md) owns the current entity/reference
+and publication diagrams; the older interchange example is not a storage payload.
+Since v0.7.2, storage validation also resolves every decision's dossier revision
+pins, including during archive restoration.
+
+Write errors do not always mean that nothing was published. The repository's
+`ResearchCleanupError` reports `accepted_snapshot` and `pending_paths` after an
+acknowledged commit whose physical cleanup is incomplete. `ResearchPublicationError`
+reports `candidate_snapshot`, `published_snapshot` and `outcome` (`published` or
+`unknown`) if a failed write leaves a visible new HEAD or an unknown outcome:
+an observed new HEAD does not confirm durability after a failed synchronization.
+`pending_paths` keeps the complete local path tuple; the human-readable message
+shows a bounded project-relative preview. Both errors derive from
+`ResearchStorageError`. CLI writes fail nonzero; native research mutation routes
+return HTTP 500 through the existing `{ok:false,message}` envelope. Reload and
+inspect the current state before retrying; do not assume rollback or repeat a
+creation blindly. Normal successful response schemas remain unchanged.
 
 **Since v0.7.0:** `create_dossier(..., geography=...)` and ordinary
 dossier revisions accept an optional typed GeoJSON FeatureCollection. Full
@@ -5769,6 +6076,11 @@ selection metadata; file edits alone do not create a content-version lock.
 
 - `GET /api/project-paths?path=<URL-encoded path>`: read-only browsing on the server computer. Omit `path` for the server user's home; a supported manuscript file lists its parent. Returns `{ok, path, parent, project, entries: [{name, path, kind, project?}], truncated}`, where `kind` is `directory` or `manuscript`. `project` on the listed folder is a minimal probe (`detected`, `config`, `research`, `title`, `language`, `manuscript`, `manuscripts`); directories additionally carry a boolean `project` marker so the chooser can badge known project folders. Reading the probe never changes the folder. Listings exclude hidden names, include at most 200 entries, and do not change the workspace. Use a typed path when a large listing is truncated. Host and Origin checks apply.
 - `POST /api/project-create`: `{"title": "...", "language": "de", "author_name": "...", "template": "three_act", "init_research": true}`. Optional `author_name` is validated with the shared author rules (single line, at most 500 characters, 400 on failure before any write) and is written into a newly created `lixity.toml`; an existing project config is never overwritten.
+  Configuration or requested Research setup failures return `{ok:false,message}`
+  with HTTP 400 for invalid setup or 500 for I/O failure, without `reload:true`.
+  Created files remain at the reported destination and the prior workspace stays
+  selected. Correct its configuration/archive, then use **Open Project** to
+  continue; initialize Research if needed. A valid existing archive is reused.
 - `POST /api/project-open`: `{"path": "/path/to/project/or/manuscript.md"}`; selects the existing archive, including a research-only folder. The response's `manuscript` is `null` when no manuscript exists.
   Custom/startup titles remain only for the same workspace. A
   different workspace uses its configuration/shared manuscript title resolution
@@ -5829,6 +6141,13 @@ manuscript and does not run a successful dashboard refresh.
 - `GET /api/research/matrix?format=json|md|csv`: decision-matrix export.
 - `GET /api/research/ocr-status`: configured OCR worker state; `?probe=1` adds a live test.
 - `GET /api/research/zotero-status`: local Zotero bridge readiness.
+
+For claim creation, omitted `confidence` defaults to `hypothetical`; accepted
+values are `hypothetical|evidenced|disputed`. For evidence creation, omitted
+`relation` defaults to `supports`; accepted values are
+`supports|contradicts|qualifies|contextualizes`. Supplied strings are trimmed and
+case-normalized. Empty, unknown, null or non-string values return HTTP 400 without
+an archive write; omission alone receives a default.
 
 - `GET /api/research/timeline?dossier_id=...`: current claim chronology;
   `dossier_id` is optional.

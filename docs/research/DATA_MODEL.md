@@ -1,226 +1,181 @@
-# Proposed research data model and contracts
+# Local research data model and storage contracts
 
-[RFC](README.md) · [Evidence](EVIDENCE.md)
+[Research usage](USAGE.md) owns workflows; [architecture](../ARCHITECTURE.md)
+owns component boundaries. This document describes the implemented local model,
+not the broader interchange proposal. Inspect installed entity definitions with
+`lixity research schema` and supported contracts with `lixity about --json`.
+Product, entity, manifest and response versions are separate.
 
-Status: target design specification for the complete RFC. The implemented local
-workspace supports immutable source captures/passages, authored revision history,
-origin URLs, Zotero references, decision acknowledgements, causal links, manual
-manuscript quote–claim associations and optional dossier geography. Released
-v0.7.0 reads local record/manifest schemas v1–v8; geographic dossier saves require
-v8. Product releases, local storage versions and the illustrative RFC schema below
-are separate. See [USAGE.md](USAGE.md) and [IMPLEMENTATION.md](IMPLEMENTATION.md)
-for implemented contracts and older-reader compatibility.
-The broader interchange model below remains a proposal.
-[The synthetic interchange example](examples/evidence-chain.json) illustrates a
-complete source-to-decision chain; it is not a production database.
+## Authority and identity
 
-## Implemented origin-URL extension (since v1.18.0)
-
-The local implementation adds optional validated `SourceContext.origin_url`.
-It belongs to a source capture, not to the immutable source identity. A capture
-with this field and no structured external reference uses
-`SourceVersion.schema_version = "research-local/2"` and requires a v2-or-later
-manifest. A structured external reference requires v3, as described below. URL-free v1 context serializes without the new key;
-existing files are never rewritten. This is distinct from authored v2 revisions.
-An older reader rejects URL-bearing records rather than dropping provenance.
-See [the executable contract and refresh semantics](USAGE.md#origin-url-and-capture-provenance).
-The illustrative RFC fields below are still not the local storage schema.
-
-## Implemented external identity (since v1.19.0)
-
-`SourceContext.external_reference` stores a structured local Zotero binding:
-`provider` (`zotero`), `server_id`, explicit `library`, parent `item_key`,
-`attachment_key`, `item_version` and `attachment_version`. Keys and library
-syntax are validated; versions are nonnegative integers. This identity is
-independent of the human-readable, bounded `provenance_note` summary.
-
-A source capture carrying this field uses `research-local/3` and requires
-`research-manifest-local/3`. Readers retain support for v1/v2; absent optional
-fields are omitted from their serialized context and existing files are not
-rewritten. Older readers reject v3 rather than silently losing the binding.
-Back up before the first v3 write and use compatible readers/writers afterward.
-
-Deduplication matches provider, local server identity, library and attachment
-key within the explicit project. Changed capture metadata/bytes require an
-explicit refresh of the matching source ID. Legacy-source migration additionally
-requires the exported source tag and exact retained attachment bytes. A
-snapshot guard prevents publishing a capture against a changed research state.
-These rules do not establish bibliographic equivalence across machines, Zotero
-instances or duplicate items, and are not a background synchronization protocol.
-
-The additive RIS migration bundle has `research-zotero-export-local/1` metadata;
-paired research/Zotero backups use `research-zotero-backup-local/1`. These are
-separate transfer contracts, not replacements for immutable research manifests.
-See [migration and restore scope](USAGE.md#additive-migration-to-zotero).
-
-## Implemented manual manuscript association
-
-`ManuscriptClaimLink` is an authored `research-local/7` record with exact
-`claim_ref`, immutable `ManuscriptAnchor`, active/retracted state and optional
-note. The anchor contains a project-relative source path, raw-source and displayed
-paragraph SHA-256 hashes, line range, exclusive Unicode-codepoint offsets and an
-explicitly retained quote. It does not import a manuscript blob or create source
-evidence. The first save promotes the manifest to v7; reads leave older archives
-unchanged. Generic revisions/history and export/restore preserve these records.
-Moved or ambiguous review candidates are unresolved; review flags do not infer
-semantic support. The RFC `ManuscriptAnchor` row below proposes broader targets
-and relations and must not be used as this record's payload. Read the
-[implemented contract](USAGE.md#associate-a-manuscript-quote-with-a-claim).
-
-## 1. Common envelope and identity
-
-Each record has `id` (UUID URI), `kind`, `revision` (positive integer), `project_id`,
-`created_at`, `created_by`, and `schema_version`. Timestamps use RFC 3339 UTC;
-actors may be local pseudonymous IDs. `schema_version` describes the interchange
-contract, not the application release. Revisions never identify confidence.
-
-Cross-record references contain both `id` and `revision`. A manifest pins all
-accepted revisions and their exact UTF-8 byte hashes. Mutable head pointers are
-resolved only when creating a new revision, not when replaying an old decision.
-SHA-256 identifies bytes, while UUID identifies an entity across revisions.
-Never deduplicate claims or sources solely because their text, title or URL matches.
-
-`Project` defines allowed languages, optional independent narrative strands,
-entity alias tables, relative paths and provider policy. The current manifest
-pointer lives in a separate `HEAD.json`, outside the domain entity hash graph.
-An object has one project scope in the first implementation. Cross-project reuse
-is an explicit import with provenance and permissions, not global implicit search.
-
-Common optional metadata: `tags`, `supersedes` (revision reference),
-`external_identifiers`, `visibility` and `review` with actor/time/rationale.
-Secrets, absolute local paths, access tokens and signed object-store URLs are
-excluded from interchange.
-
-## 2. Entity contracts
-
-| Entity | Required domain fields | Invariants |
+| Stored data | Responsibility | Recovery rule |
 | --- | --- | --- |
-| `Source` | `source_type`, `title`, `identifiers`, `bibliography`, `access` | Identifies an item/work. Zotero mapping includes API origin, server identity where available, library type/ID, item key and observed version. Bibliographic edition identity must not be collapsed into a URL. |
-| `SourceVersion` | `source_ref`, `captured_at`, `availability`, `acquisition`, `rights` | An immutable manifestation/capture. Available bytes require a blob descriptor; metadata-only records cannot claim text was extracted. Corrected metadata creates another record revision. |
-| `Extraction` | `source_version_ref`, `activity_ref`, `text_blob`, `representation`, `warnings` | Refers to original input and exact derived bytes. Stores parser/model/schema/configuration versions and normalization rules via the activity. Failed runs do not create successful extractions. |
-| `Passage` | `extraction_ref`, `selector`, `verbatim`, `language`, `verification` | Locator applies to one retained representation. Quote must match that representation. A corrected passage gets a new revision and never silently retargets old citations. |
-| `Claim` | `statement`, `claim_type`, `scope`, `status` | `claim_type`: source_report, interpretation, hypothesis. `status`: unreviewed, reviewed, disputed, superseded, withdrawn. Reviewed means reviewed by a person, not proven true. Its review pins the EvidenceLink revisions examined. |
-| `EvidenceLink` | `claim_ref`, `passage_ref`, `relation`, `rationale`, `review` | Relation: supports, contradicts, qualifies, contextualizes. Unreviewed links remain suggestions. Reject a link to a missing or incompatible project record. |
-| `Dossier` | `title`, `language`, `claim_refs`, `evidence_refs`, `decision_refs`, Markdown body | Authored prose lives only in the Markdown revision. Referenced records carry structured facts. Generated sections have explicit boundaries and activity references. |
-| `Decision` | `statement`, `status`, `scope`, `considered_claim_refs`, `considered_evidence_refs` | Status: proposed, accepted, superseded, rejected. Accepted requires an explicit author actor and time. May deliberately depart from evidence with a reason. |
-| `ManuscriptAnchor` | manuscript-relative path, manuscript checksum, selector, `target_refs`, relation | Targets explicit Claim/Decision revisions. Can be resolved, ambiguous or orphaned; line number alone is insufficient. |
-| `Activity` | `operation`, `inputs`, `agent`, `parameters`, start/end/status | Represents capture, extraction, translation, synthesis, review or export; record versions and hashes, not secrets or hidden reasoning. |
-| `Tombstone` | target revision/ID, operation, actor, time, reason | Distinguishes withdrawn, provider-removed and purged. Preserves non-sensitive identity needed to diagnose broken references. |
+| `research/revisions/<kind>/<id>/<revision>.json` | Immutable, strictly validated entity revisions | Never replace an accepted revision |
+| `research/blobs/<sha256>` | Retained originals and extracted text, addressed by exact bytes | Preserve every blob still referenced by an accepted record |
+| `research/manifests/<sha256>.json` | Accepted revision references and byte hashes, project, generation and parent | Validate complete accepted ancestry on backup/restore |
+| `research/HEAD.json` | Selects one accepted manifest | Atomic publication point; never select objects by modification time |
+| `research/project.json` | Immutable initial project configuration, checked against its accepted record | Restore with the archive |
+| `.lixity/research/catalogue.sqlite3` | Disposable lexical search projection | Rebuild from the accepted snapshot; SQLite alone is not a backup |
 
-A blob descriptor contains `sha256`, `byte_length`, `media_type` and an opaque
-`storage_key`, normally `sha256/<hex>`. The project backend resolves that key.
-An S3 ETag is not a substitute for the digest. `rights` distinguishes local
-retention, use of excerpts and redistribution; `unknown` is a valid explicit
-value, not permission. `availability` includes available, metadata_only,
-restricted and missing.
+Each entity has a UUID URI, kind, project ID, revision, UTC creation timestamp,
+creator and schema version. A `Reference` pins both ID and revision. SHA-256
+identifies serialized bytes; it does not replace entity identity or establish
+factual accuracy. Titles, filenames, URLs and equal quotations do not merge
+entities. Successive source captures are separate `SourceVersion` entities with
+increasing sequence numbers; authored edits append revisions of one entity.
 
-Historical evidence traversal uses those explicit EvidenceLink revision lists,
-then each link's pinned Passage/Claim revisions. It never expands an old decision
-against all currently existing reverse links. New or revised links enter a review
-queue and require a new claim review, dossier or decision revision to change its
-recorded evidence context. A reviewed assertion without evidence uses an explicit
-empty list and a rationale explaining the gap; reviewed is not synonymous with
-supported. Cross-record cycles between a Claim and its reviewed EvidenceLink are
-allowed; supersession cycles are not.
+## Relationships
 
-Structured `scope` contains referenced places/entities, narrative strand IDs and
-`valid_time`. Valid time has optional start/end, precision and an uncertainty
-description. Omitted dates mean unknown. Historical dates use a documented ISO
-date profile where representable and preserve the original label for ambiguous
-or non-Gregorian dates; do not coerce them into an exact modern timestamp.
-Publication and access dates remain separate bibliographic/acquisition fields.
+Arrows point from a record to its stored reference. The manuscript remains an
+external project file: its association retains only the explicitly permitted
+quotation and anchor, not a manuscript archive blob.
 
-## 3. Selectors and citation resolution
-
-Use a W3C Web Annotation-compatible selection over an explicitly identified
-representation. Text selectors contain exact/prefix/suffix plus zero-based
-Unicode code-point offsets `[start, end)` into the stored UTF-8 decoded text.
-Specify Unicode normalization and line-ending handling in `Extraction`; avoid
-normalizing a second time during resolution.
-
-For PDFs, also store the physical page number (one-based), printed page label
-when available, bounding box with units/origin/page dimensions, and native Docling
-item reference when available. A passage may have multiple page regions. Map and
-validate native item-local `charspan` values into the retained text representation;
-they are not automatically global Markdown-export offsets. A PDF page number,
-printed label and OCR text offset are different
-coordinates. For web captures, record WARC record ID/target URI and the extracted
-representation. Selectors referencing decoded text are not offsets into raw HTML.
-
-Resolution order:
-
-1. Resolve the pinned passage, extraction and original source version.
-2. Check retained blob lengths and hashes.
-3. Validate the positional substring against the exact quote.
-4. If a newer extraction is requested, try a quote match with surrounding context
-   and offer a migration proposal. Ambiguous/no matches require review.
-5. Return title, version, original location, exact excerpt and availability state.
-
-An old citation continues to use its original extraction. Missing original bytes
-must be visible even if a retained quote still resolves. A successful checksum
-check establishes integrity, not factual accuracy or permission to distribute.
-
-## 4. Interchange and adapter mappings
-
-| Boundary | Mapping |
-| --- | --- |
-| Zotero → Source | Preserve native item JSON, library/key/version; attach CSL-JSON as a citation projection. A DOI match suggests a duplicate but does not auto-merge editions or captures. |
-| CSL-JSON file → Source | Import bibliography and allocate internal IDs. Record importer activity; no Zotero sync capability is inferred from a citation export. |
-| SourceVersion → archive | Direct PDF/image/audio bytes or WARC/WACZ references; capture method, date, completeness and rights accompany the hash. |
-| Unlimited-OCR → Extraction/Passage | Preserve raw output, model/configuration revision and the PDF-to-image page map. Check emitted regions against source pages before mapping retained text selectors. OCR structure/confidence, when present, remains a tool-specific diagnostic. |
-| Records → PROV | Source/extraction/dossier revisions are Entities; transformation runs are Activities; people/tools are Agents. Export `wasDerivedFrom`, `wasGeneratedBy` and association links where supported by records. |
-| Passage → Web Annotation | Target the immutable representation with quote/position selectors; Lixity-specific coordinates use a declared extension context. |
-| Project/dossier snapshot → RO-Crate | Root Dataset plus permitted File/contextual entities, author/tool provenance, identifiers and relationships. Validate the declared export profile; JSON-LD syntax alone is not conformance. |
-| Records → Qdrant | Derive points from indexing chunks; payload includes project, index generation, source version and passage revision references. Provider point IDs are disposable. |
-| Records → Obsidian | Markdown dossiers and optional properties/Bases views. File renames do not change entity IDs. Regular Markdown remains usable outside Obsidian. |
-
-## 5. Search result and research audit contracts
-
-A proposed `ResearchSearchResult` envelope contains:
-
-```json
-{
-  "schema_version": "research-search/1",
-  "project_id": "urn:uuid:00000000-0000-4000-8000-000000000001",
-  "mode": "evidence",
-  "manifest_generation": 7,
-  "index_generation": "hybrid-profile-a-7",
-  "completeness": "complete",
-  "hits": [],
-  "warnings": [],
-  "unsupported_questions": []
-}
+```mermaid
+flowchart TD
+    M[ManuscriptClaimLink and anchor] --> C[Claim revision]
+    E[EvidenceLink revision] --> C
+    E --> P[Passage]
+    P --> X[Extraction]
+    X --> V[SourceVersion]
+    V --> S[Source]
+    C --> D[Dossier revision]
+    D --> P
+    A[Decision revision] --> C
+    A --> D
 ```
 
-`complete` means the requested operation finished against the declared scope,
-not that all relevant knowledge in the world was found. Each hit contains
-passage/source revision references, a verbatim excerpt, locator, evidence type,
-review status, score type and retrieval route. Similarity scores are not calibrated
-probabilities of truth. Indexing prefixes and generated translations are labeled
-separately. Stale/partial states include a reason and affected scope.
+This is the main reading/research chain, not every field or cardinality. Optional
+references and the remaining record types are specified below.
 
-`ResearchAuditReport` must report separately: invalid references, unavailable
-objects, citation mismatches, ambiguous anchors, pending source changes,
-disputed claims, unreviewed links and index lag. It does not reuse `all_synced`
-as a claim of truth. Optional projection into existing `DossierStatus` describes
-only synchronization, retaining the old contract.
+| Record | Implemented meaning and references |
+| --- | --- |
+| `Project` | Explicit project identity, title and language |
+| `Source` | Retained source identity, title and language |
+| `SourceVersion` | Source capture: `source_ref`, sequence, original blob, confirmed retention and source context |
+| `Activity` | Extraction operation, implementation and status, pinned to its source version |
+| `Extraction` | Source version, activity and exact UTF-8 text blob; normalization `none`, Unicode codepoint offsets |
+| `Passage` | Extraction reference, exclusive `[start,end)` span and exact verbatim text |
+| `Dossier` | Authored Markdown, tags, passage `evidence_refs` and optional bounded GeoJSON |
+| `Claim` | Statement, optional dossier reference, scope and confidence: hypothetical, evidenced or disputed |
+| `EvidenceLink` | Exact claim and passage revisions; supports, contradicts, qualifies or contextualizes |
+| `Decision` | Author rationale, optional claim, dossier references and explicit deviation flag |
+| `ClaimRelation` | Author-assigned causal relation between distinct claim revisions; active or retracted |
+| `ManuscriptClaimLink` | Exact claim revision, retained quote/anchor, active or retracted state and optional note |
+| `DecisionAcknowledgement` | Append-only applied/review-needed statement about exact decision/dossier revisions; may supersede an earlier acknowledgement |
+| `Tombstone` | Withdrawal or purge, target and reason; source-version purge can retain its owning source identity |
 
-## 6. Example and validation obligations
+Confidence and causal relations are author assertions, not certification. A
+dossier's current claim list is derived from claim associations; it is not a
+stored `claim_refs` field. Historical views resolve explicit pins; current reverse
+links do not reconstruct the whole archive at an earlier date.
 
-The [example JSON](examples/evidence-chain.json) accompanies
-[a synthetic source](examples/synthetic-source.txt) and
-[an authored dossier](examples/dossier.md). It uses fictional places and explicitly
-states that its content is fabricated for validation. Byte hashes, sizes, selector
-positions and record references can be checked locally without network access.
-The bundle embeds records for readability; production storage uses immutable
-per-entity revisions and manifests. It omits service deployment and real credentials.
+## Validation and publication
 
-Future schema validation must reject unknown core fields except within a named
-`extensions` object; validate enum values and field types. Application validation
-must additionally enforce referential integrity, acyclic supersession, monotonically
-increasing revisions, project scope, decision authorization, blob fixity and selector
-resolution. JSON Schema alone cannot establish those cross-record properties.
+`research.models` owns strict discriminated entity schemas, field constraints
+and record-version rules. `research.repository` owns cross-record/project checks,
+contiguous authored history, immutable publication and the writer lock. JSON
+Schema alone cannot establish referential integrity or retained-byte availability.
+Citation resolution additionally verifies bytes and exact substrings. Filtered
+list reads validate their loaded kinds; they are not a complete archive audit.
+Full writes validate the prospective snapshot before publication.
 
-Migration is explicit: retain the prior schema, produce a preview and new snapshot,
-validate references, and switch the manifest only after success. An unsupported
-future version produces an actionable error, never a silent best-effort import.
+```mermaid
+flowchart TD
+    I[Validate request and reviewed context] --> L[Writer lock and expected HEAD check]
+    L --> V[Validate prospective snapshot]
+    V --> B[Publish immutable blobs, revisions and manifest]
+    B --> A[Replace HEAD and synchronize publication]
+    A --> C[Finish requested cleanup]
+```
+
+The diagram shows a changed write's acknowledged path. Its early exits and error
+outcomes are distinct:
+
+| Outcome | Observed state and caller action |
+| --- | --- |
+| Expected HEAD differs | Conflict; retain the draft, no accepted write |
+| Validated authored update is unchanged | Return its current revision after the locked check, without a write |
+| Write fails with uncertain publication | An observed new HEAD or unknown outcome is reported explicitly; review before retrying, with recovery artifacts retained. A confirmed previous HEAD retains the ordinary failure |
+| Cleanup fails after acknowledgement | Report the accepted snapshot and pending artifacts; do not repeat the write or claim completed erasure |
+
+Ordinary authored updates request no artifact deletion. Ingestion, purge and
+append-only acknowledgements have their own inputs and lifecycle effects.
+Previews do not reserve a snapshot. A later save must still pass the locked comparison. Failed
+drafts are never automatically retried or repinned to newer evidence. Since
+v0.7.2, unchanged authored updates return their accepted revision after validation
+and the locked check; acknowledgements remain append-only events.
+
+Files are flushed before publication, with directory syncing on POSIX. Local
+filesystem/OS guarantees still apply; this is not a distributed transaction.
+An interruption before HEAD publication leaves the prior snapshot selected.
+Unaccepted files may remain for recovery; they do not prove a save succeeded.
+A cleanup failure after acknowledged publication cannot roll back the accepted
+HEAD. If replacement was visible but its synchronization failed, publication
+durability is uncertain; an unreadable HEAD leaves the outcome unknown. These
+states must not be described as a write that definitely never happened. Preserve
+valid interrupted authored revision bytes rather than overwriting them.
+See [recovery](USAGE.md#export-and-restoration).
+
+## Search database and deletion
+
+`research.catalogue` builds a new SQLite database from one accepted snapshot under
+the project writer lock, then closes, flushes and atomically replaces the cache.
+A `metadata` table records the snapshot digest. Two FTS5 projections serve source
+passages and current searchable passages/dossiers/claims/decisions; they are not
+relational storage for domain entities or citation authority.
+
+Search opens the cache read-only with `trusted_schema=OFF`, uses bound query
+parameters and checks its recorded digest against the accepted snapshot. Missing,
+stale indexes can be rebuilt when the caller requests refresh; otherwise they
+fail explicitly. Structurally unusable caches may require explicit reindexing.
+Returned references resolve against that snapshot, with lifecycle/current-source
+checks. Lexical rank is not a truth probability. Current search excludes
+withdrawn/purged sources and withdrawn dossiers; historical citations retain
+their distinct availability rules.
+
+Original-source and extracted-text descriptors both participate in blob
+reachability. Equal bytes can be shared across either role and across sources;
+purging one source must retain every blob owned by another accepted record.
+Physical deletion and rebuilding a cache are separate from accepting a new HEAD.
+Backups include authoritative records, manifests and blobs, not SQLite or locks.
+
+## Schema evolution and compatibility
+
+The local reader supports entity/manifest versions 1–8. These are capability
+levels, not migrations of every existing file. Writes opt into the format their
+new records require; reads do not upgrade archives. Existing encodings and
+historical pins remain intact. Unknown fields and unsupported versions fail
+rather than being silently discarded.
+
+| Capability | Local format requirement |
+| --- | --- |
+| Initial records and source/extraction chain | v1 |
+| Authored replacement revisions; capture origin URL; owned source-version purge tombstone | Relevant v2 record contract |
+| Structured local Zotero capture identity | v3 source version and manifest |
+| Local Poppler/Tesseract extraction activity | v4 activity and manifest |
+| Decision acknowledgement | v5 record and manifest |
+| Claim causal relation | v6 record and manifest |
+| Manual manuscript quote–claim association | v7 record and manifest |
+| Structured dossier geography | v8 dossier and manifest; subsequent revisions retain v8 |
+
+Versions are scoped to each entity model: a v2 source capture is not a v2 authored
+revision. The manifest retains the highest capability already accepted. HEAD
+remains `research-head-local/1`; backup, search, preview and HTTP envelopes have
+independent identifiers. Keep a complete verified backup before the first
+higher-format write; an older application can reject that archive even if its
+product number is larger. [Compatibility](USAGE.md#limits) records those boundaries.
+
+## Proposed work is separate
+
+The [original interchange model](https://github.com/mfahsold/lixity/blob/427e2a3491bacd0b504ce4e3387a019340bd2e67/docs/research/DATA_MODEL.md#1-common-envelope-and-identity)
+preserves the broader schema, selectors, interoperability mappings and synthetic
+example. Its `research-search/1`, claim review/status fields, PROV/RO-Crate,
+Qdrant and general manuscript targets are proposals, not accepted local payloads.
+The [synthetic interchange example](examples/evidence-chain.json) illustrates that
+proposal; it is not a local database export.
+
+The [knowledge-horizon RFC](KNOWLEDGE_HORIZON_RFC.md) remains unimplemented.
+Semantic retrieval, automatic factual certification, background synchronization
+and an explicit planned/unwritten scene state are not current capabilities.
+Future extensions must define their authoritative owner, references, failure
+states and compatible read/write boundary before adding a projection or UI.
