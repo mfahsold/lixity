@@ -71,7 +71,7 @@ class ManuscriptResearchRoutesMixin(ResearchRoutesMixin):
             except ResearchConflictError as exc:
                 self._json({"ok": False, "code": "stale-archive", "message": str(exc)}, 409)
             except (ResearchError, OSError, ValueError, TypeError, UserWarning) as exc:
-                self._json({"ok": False, "message": str(exc)}, 400)
+                self._research_error(exc)
 
     def _handle_manuscript_claim_review(self) -> None:
         query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
@@ -125,7 +125,7 @@ class ManuscriptResearchRoutesMixin(ResearchRoutesMixin):
             except ResearchConflictError as exc:
                 self._json({"ok": False, "code": "stale-archive", "message": str(exc)}, 409)
             except (ResearchError, OSError, ValueError, TypeError, UserWarning) as exc:
-                self._json({"ok": False, "message": str(exc)}, 400)
+                self._research_error(exc)
 
     def _handle_manuscript_claim_links(self) -> None:
         query = parse_qs(urlparse(self.path).query, keep_blank_values=True)

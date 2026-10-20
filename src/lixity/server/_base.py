@@ -13,6 +13,7 @@ from html import escape
 from typing import Any
 
 from ..log import get_logger
+from ..research.repository import ResearchCleanupError, ResearchPublicationError
 from ..ui.components import status_strip
 from ..workspace_labels import WORKSPACE_LABELS
 from ._state import RefreshOutcome, WorkspaceState
@@ -129,6 +130,12 @@ class ResponseMixin(WorkspaceState):
             json.dumps(payload, ensure_ascii=False).encode("utf-8"),
             "application/json; charset=utf-8",
         )
+
+    def _research_error(self, error: Exception, code: int = 400, *, message: str | None = None) -> None:
+        """Preserve publication/cleanup recovery messages as server failures."""
+        if isinstance(error, (ResearchPublicationError, ResearchCleanupError)):
+            code = 500
+        self._json({"ok": False, "message": str(error) if message is None else message}, code)
 
     def _same_origin(self) -> bool:
         """True when the request carries no Origin, or one matching its own Host.

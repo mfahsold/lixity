@@ -105,7 +105,7 @@ class ResearchRoutesMixin(ResponseMixin):
         except ResearchConflictError as exc:
             self._json({"ok": False, "message": str(exc)}, 409)
         except (ResearchError, OSError, ValueError, TypeError) as exc:
-            self._json({"ok": False, "message": str(exc)}, 400)
+            self._research_error(exc)
 
     def _handle_research_image(self) -> None:
         if not self._same_origin() or self.headers.get("Sec-Fetch-Site") not in (None, "same-origin", "none"):
@@ -179,7 +179,7 @@ class ResearchRoutesMixin(ResponseMixin):
         except ResearchConflictError as exc:
             self._json({"ok": False, "message": str(exc)}, 409)
         except (ResearchError, OSError, ValueError, TypeError) as exc:
-            self._json({"ok": False, "message": str(exc)}, 400)
+            self._research_error(exc)
 
     def _handle_zotero_status(self) -> None:
         from ..research.zotero import connection_status
@@ -350,7 +350,7 @@ class ResearchRoutesMixin(ResponseMixin):
         except ResearchConflictError as error:
             self._json({"ok": False, "message": str(error)}, 409)
         except (ResearchError, OSError, ValueError) as error:
-            self._json({"ok": False, "message": str(error)}, 400)
+            self._research_error(error)
 
     def _handle_research_editorial_read(self, *, decision: bool) -> None:
         root = self.get_research_root()
@@ -456,7 +456,7 @@ class ResearchRoutesMixin(ResponseMixin):
         except ResearchConflictError as exc:
             self._json({"ok": False, "message": str(exc)}, 409)
         except (ResearchError, OSError, ValueError) as exc:
-            self._json({"ok": False, "message": str(exc)}, 400)
+            self._research_error(exc)
 
     def _handle_research_record_revise(self, payload: dict[str, Any]) -> None:
         root = self.get_research_root()
@@ -506,7 +506,7 @@ class ResearchRoutesMixin(ResponseMixin):
         except ResearchConflictError as exc:
             self._json({"ok": False, "message": str(exc)}, 409)
         except (ResearchError, OSError, ValueError) as exc:
-            self._json({"ok": False, "message": str(exc)}, 400)
+            self._research_error(exc)
 
     def _handle_research_init(self, payload: dict[str, Any]) -> None:
         target_root = Path(self.research_dir or self.workspace_root or ".").resolve()
@@ -517,7 +517,7 @@ class ResearchRoutesMixin(ResponseMixin):
             self.__class__.research_dir = str(target_root)
             self._json({"ok": True, "message": f"Research initialized for '{title}'", **res})
         except (ResearchError, OSError, ValueError) as exc:
-            self._json({"ok": False, "message": str(exc)}, 400)
+            self._research_error(exc)
 
     def _handle_research_ingest(self, payload: dict[str, Any]) -> None:
         root = self.get_research_root()
@@ -595,7 +595,7 @@ class ResearchRoutesMixin(ResponseMixin):
 
             self._json({"ok": True, "message": f"Source '{title}' ingested successfully", **res})
         except (ResearchError, OSError, ValueError) as exc:
-            self._json({"ok": False, "message": str(exc)}, 400)
+            self._research_error(exc)
 
     def _handle_research_zotero(self, payload: dict[str, Any], *, capture: bool) -> None:
         from ..research import zotero
@@ -654,7 +654,7 @@ class ResearchRoutesMixin(ResponseMixin):
                 ]
             self._json({"ok": True, **result})
         except (ResearchError, OSError, ValueError) as exc:
-            self._json({"ok": False, "message": str(exc)}, 400)
+            self._research_error(exc)
 
     def _handle_research_search(self, payload: dict[str, Any]) -> None:
         root = self.get_research_root()
@@ -702,7 +702,7 @@ class ResearchRoutesMixin(ResponseMixin):
             )
             self._json({"ok": True, "message": f"Dossier '{title}' created", **res})
         except (ResearchError, OSError, ValueError) as exc:
-            self._json({"ok": False, "message": str(exc)}, 400)
+            self._research_error(exc)
 
     def _handle_research_compare(self, payload: dict[str, Any]) -> None:
         root = self.get_research_root()
@@ -765,7 +765,7 @@ class ResearchRoutesMixin(ResponseMixin):
             )
             self._json({"ok": True, "message": f"Claim '{title}' created", **res})
         except (ResearchError, OSError, ValueError) as exc:
-            self._json({"ok": False, "message": str(exc)}, 400)
+            self._research_error(exc)
 
     def _handle_research_evidence_link(self, payload: dict[str, Any]) -> None:
         root = self.get_research_root()
@@ -796,7 +796,7 @@ class ResearchRoutesMixin(ResponseMixin):
         except ResearchConflictError as exc:
             self._json({"ok": False, "message": str(exc)}, 409)
         except (ResearchError, OSError, ValueError) as exc:
-            self._json({"ok": False, "message": str(exc)}, 400)
+            self._research_error(exc)
 
     def _handle_research_decision_add(self, payload: dict[str, Any]) -> None:
         root = self.get_research_root()
@@ -828,4 +828,4 @@ class ResearchRoutesMixin(ResponseMixin):
             )
             self._json({"ok": True, "message": f"Decision '{title}' recorded", **res})
         except (ResearchError, OSError, ValueError) as exc:
-            self._json({"ok": False, "message": str(exc)}, 400)
+            self._research_error(exc)

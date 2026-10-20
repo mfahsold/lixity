@@ -317,11 +317,11 @@ class ProjectRoutesMixin(ResponseMixin):
                 else:
                     research_api.init(target_path, title=title, language=lang)
             except (ResearchError, OSError, ValueError) as exc:
-                self._json({"ok": False, "message": (
+                self._research_error(exc, 500 if isinstance(exc, OSError) else 400, message=(
                     f"Project setup incomplete: could not initialize or open Research: {exc}. "
                     f"Files in {target_path} were retained. Correct the Research setup, "
                     "then use Open Project and initialize Research if needed."
-                )}, 500 if isinstance(exc, OSError) else 400)
+                ))
                 return
 
         self.__class__.workspace_root = str(target_path)
