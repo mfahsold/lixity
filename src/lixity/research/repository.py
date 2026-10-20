@@ -579,6 +579,9 @@ class Repository:
             current = self.snapshot() if self.safe(self.data / "HEAD.json").exists() else None
             if (current.digest if current else None) != (expected.digest if expected else None):
                 raise ResearchConflictError("Research snapshot changed; retry from the current HEAD")
+            # An unchanged operation still checks HEAD under the writer lock.
+            if current is not None and not (additions or blobs or removals or delete_blobs):
+                return current
             candidate, manifest_bytes = self.prepare_commit(additions, current, removals)
             entries = candidate.manifest.entries
             project = candidate.project

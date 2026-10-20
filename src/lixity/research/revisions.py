@@ -275,7 +275,7 @@ def revise_record(
     expected_snapshot: str | None = None, actor: str = "local-author", section: str | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
-    """Append one explicit authored revision; a stale draft never overwrites work.
+    """Append an authored change, or return the current record for an unchanged edit.
 
     Without ``expected_snapshot`` the current revision is checked and its
     snapshot forwarded, matching the CLI update flow; changed associations then
@@ -298,8 +298,10 @@ def revise_record(
                                   change_kind=change_kind, reason=reason, actor=actor)
     if expected_snapshot is None:
         require_association_pins(previous.model_dump(mode="json"), changes)
+    additions = [] if revised is previous else [revised]
     if dry_run:
-        repository.prepare_commit([revised], snapshot)
+        if additions:
+            repository.prepare_commit(list(additions), snapshot)
         return {"schema_version": "research-revision-write-preview-local/1", "project_id": snapshot.project.id,
                 "snapshot": snapshot.digest, "kind": kind, "record_id": record_id,
                 "from_revision": previous.revision, "to_revision": None,
@@ -307,7 +309,7 @@ def revise_record(
                 "candidate": revised.model_dump(mode="json"), "fields": _comparison_fields(previous, revised),
                 "ready": True, "dry_run": True,
                 **({"warnings": period_warnings(revised.scope.time_period)} if isinstance(revised, Claim) else {})}
-    accepted = repository.commit([revised], {}, snapshot)
+    accepted = repository.commit(list(additions), {}, snapshot)
     view = _view(repository, accepted, revised)
     if isinstance(revised, Claim):
         view["warnings"] = period_warnings(revised.scope.time_period)
@@ -316,7 +318,7 @@ def revise_record(
 
 def _revision_candidate(snapshot: Snapshot, previous: Authored, *, changes: Mapping[str, Any],
                         expected_revision: int, change_kind: str, reason: str, actor: str) -> Authored:
-    """Validate one authored operation for ordinary writes and revision batches."""
+    """Validate an operation, retaining its prior record when content is unchanged."""
     if type(expected_revision) is not int or expected_revision < 1:
         raise ResearchError("Expected revision must be a positive integer")
     if previous.revision != expected_revision:
@@ -331,6 +333,11 @@ def _revision_candidate(snapshot: Snapshot, previous: Authored, *, changes: Mapp
         raise ResearchError("A revision actor is required")
     revised = _apply_changes(snapshot, previous, changes, change_kind=change_kind, reason=reason, actor=actor)
     _validate_revision_links(snapshot, previous, revised)
+    # Validate the complete candidate first, then ignore only its encoding and
+    # revision metadata. Reapplying a value must not create obsolete pin warnings.
+    metadata = {"schema_version", "revision", "created_at", "created_by", "change"}
+    if previous.model_dump(exclude=metadata) == revised.model_dump(exclude=metadata):
+        return previous
     return revised
 
 
@@ -667,7 +674,9 @@ def prepare_record_revisions(
     repository = Repository(project)
     snapshot = repository.snapshot()
     records, prepared = _revision_batch(snapshot, _batch_operations(snapshot, operations), actor)
-    repository.prepare_commit(list(records), snapshot)
+    additions = [record for record in records if record.revision != snapshot.records[record.id].revision]
+    if additions:
+        repository.prepare_commit(list(additions), snapshot)
     return {"schema_version": "research-revision-batch-local/1", "project_id": snapshot.project.id,
             "snapshot": snapshot.digest, "operations": prepared, "ready": True}
 
@@ -676,7 +685,7 @@ def apply_record_revisions(
     project: str | Path, operations: list[Mapping[str, Any]] | Mapping[str, Any], *, expected_snapshot: str,
     actor: str = "local-author",
 ) -> dict[str, Any]:
-    """Append all reviewed revisions with one atomic HEAD publication, or none."""
+    """Append changed reviewed records atomically; unchanged records keep their revision."""
     if not isinstance(expected_snapshot, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_snapshot):
         raise ResearchError("Expected snapshot must be a SHA-256 digest")
     repository = Repository(project)
@@ -684,7 +693,8 @@ def apply_record_revisions(
     if snapshot.digest != expected_snapshot:
         raise ResearchConflictError("Research snapshot changed; prepare the batch again before applying")
     records, _prepared = _revision_batch(snapshot, _batch_operations(snapshot, operations), actor)
-    accepted = repository.commit(list(records), {}, snapshot)
+    additions = [record for record in records if record.revision != snapshot.records[record.id].revision]
+    accepted = repository.commit(list(additions), {}, snapshot)
     return {"schema_version": "research-revision-batch-local/1", "project_id": accepted.project.id,
             "snapshot": accepted.digest, "records": [
                 {"kind": record.kind, "id": record.id, "revision": record.revision}
