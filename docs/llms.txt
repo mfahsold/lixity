@@ -45,6 +45,10 @@ Use active result metadata when interpreting thresholds and unavailable values.
 Current-main interactive UI: manuscript/analysis first, research second, settings
 third; a fixed project sidebar on desktop becomes horizontal navigation on
 narrow screens. The companion dossier reader supplies context beside a passage.
+Current-main research forms start collapsed; headings and Collapse controls
+retain in-memory drafts. Escape closes the innermost disclosure. Contextual
+actions reveal the relevant form. Catalogue previews omit Markdown formatting
+and fenced code without altering saved text or API contracts.
 These views share the existing analysis and explicit-project research APIs.
 Local tabs, form groups, feedback and native dialog frames share the component
 layer. Research catalogues use separated rows; dialog forms support short

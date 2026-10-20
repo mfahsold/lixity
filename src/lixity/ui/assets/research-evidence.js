@@ -154,6 +154,7 @@ function prepareResearchEvidenceDraft(passageId, quote, context) {
   discard.addEventListener("click", discardResearchEvidenceDraft); host.appendChild(discard);
   switchActiveView("research");
   document.querySelector('[data-rtab="claims"]').click();
+  revealDisclosures(document.getElementById("r-link-claim-select"));
   document.getElementById("r-link-claim-select").focus();
 }
 

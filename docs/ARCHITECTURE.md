@@ -228,6 +228,15 @@ navigation groups paired actions at responsive widths. Pages uses the shared
 tokens and stylesheet, with direct demo and installation entry points and
 screenshots of the same native components rather than a parallel product UI.
 
+Native `details` elements own research composer visibility. Their field DOM stays
+mounted across collapse and tab switches, preserving in-memory drafts without
+introducing another state store. Shared disclosure helpers reveal ancestors for
+contextual navigation and collapse the innermost level with focus restoration.
+The companion delegates nested disclosure Escape handling before closing itself.
+The shared component stylesheet also supplies disclosure affordances to Pages;
+reduced-motion preferences disable arrow transitions. Catalogue previews derive
+plain text using the existing safe renderer, without changing API contracts.
+
 Publication and execution are separate boundaries. The Pages demo follows the
 reviewed source checkout; the release badge names the published package. A local
 installation replaces package files, while the managed service must restart to

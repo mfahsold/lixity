@@ -94,6 +94,7 @@ server.serve_forever()
       assert.equal(new Set(evidenceLabels).size, evidenceLabels.length, 'Keyword evidence choices distinguish duplicate claim titles, periods and versions');
       const reviewedClaimLabel = await page.locator(`#r-link-claim-select option[value="${fixture.claims[0]}"]`).textContent();
       assert.ok(reviewedClaimLabel.includes('1900'), 'The reviewed period is visible when choosing a claim');
+      if (!await page.locator('#r-link-composer').evaluate(node => node.open)) await page.locator('#r-link-composer > summary').click();
       await page.locator('#r-link-claim-select').selectOption({label: reviewedClaimLabel});
       await page.locator('#r-find-passage').click();
       assert.equal(await page.locator('#r-search-scope').inputValue(), 'sources');
@@ -112,6 +113,7 @@ server.serve_forever()
         assert.equal(evidence.evidence_links[0].citation.source_version_id, fixture.version);
         assert.equal(evidence.evidence_links[0].citation.verbatim, 'The synthetic reading room opened in 1880. A second sentence supplies full context.');
         assert.ok(writes[0].expected_snapshot && writes[0].research_token && writes[0].expected_claim_revision === 1);
+        if (!await page.locator('#r-relation-composer').evaluate(node => node.open)) await page.locator('#r-relation-composer > summary').click();
         await page.locator('#r-relation-from').selectOption(fixture.claims[1]);
         await page.locator('#r-relation-to').selectOption(fixture.claims[0]);
         assert.equal(await page.locator('#r-relation-compatibility').isVisible(), true);

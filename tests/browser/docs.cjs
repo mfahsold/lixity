@@ -551,6 +551,11 @@ async function checkDemoCapabilities(page, width) {
   await page.locator('#tab-view-research').click();
   await page.locator('[data-rtab=dossiers]').click();
   await checkDemoLocalControl(page.locator('#r-dos-create-btn'));
+  const collapse = page.locator('[data-close-disclosure=r-dos-composer]');
+  await expect(collapse).toBeEnabled();
+  await collapse.click();
+  await expect(page.locator('#r-dos-create-btn')).toBeHidden();
+  await expect(page.locator('#r-dos-composer > summary')).toBeFocused();
   const dossier = page.locator('#research-dossiers-list .research-card').filter({hasText: 'Warehouse 4 case notes'});
   await checkDemoLocalControl(dossier.locator('[data-research-revise=dossier]'));
   await dossier.locator('[data-workspace-dossier]').click();

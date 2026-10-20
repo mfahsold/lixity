@@ -266,7 +266,9 @@ document.addEventListener("click", async function (event) {
     contextSelect.value = forContextClaim ? contextualClaim.dataset.dossierClaim : contextualDecision.dataset.dossierDecision;
     document.querySelector('[data-rtab="' + (forContextClaim ? "claims" : "decisions") + '"]').click();
     document.getElementById(forContextClaim ? "r-claim-options" : "r-decision-options").open = true;
-    document.getElementById(forContextClaim ? "r-claim-title" : "r-decision-title").focus();
+    var contextTitle = document.getElementById(forContextClaim ? "r-claim-title" : "r-decision-title");
+    revealDisclosures(contextTitle);
+    contextTitle.focus();
     return;
   }
   var passageBtn = event.target.closest("[data-use-passage]");
@@ -288,6 +290,7 @@ document.addEventListener("click", async function (event) {
     }
     switchActiveView("research");
     document.querySelector('[data-rtab="' + (forClaim ? 'claims' : 'dossiers') + '"]').click();
+    revealDisclosures(passageField);
     passageField.focus();
     return;
   }

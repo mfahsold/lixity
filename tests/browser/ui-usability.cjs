@@ -76,6 +76,21 @@ server.serve_forever()
     }
     await page.locator('#characters').screenshot({path:path.join(artifacts,`characters-${width}.png`)});
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+    const preview = await page.evaluate(() => {
+      const host = document.createElement('div');
+      LixityResearchCards.render(host, {items:[{id:'synthetic-preview', title:'Preview',
+        excerpt:'# Heading\n\nA **readable** [source](https://example.org).\n\n```mermaid\nflowchart LR\nA-->B'}]});
+      return {text:host.querySelector('.research-excerpt').textContent, markup:host.querySelector('.research-excerpt').innerHTML};
+    });
+    assert.equal(preview.text, 'Heading A readable source.');
+    assert.ok(!preview.markup.includes('<'), 'Catalogue previews contain inert text only');
+    const multiline = await page.evaluate(() => {
+      const host = document.createElement('div');
+      LixityResearchCards.render(host, {items:[{id:'multiline-preview', title:'Preview',
+        excerpt:'First line\nSecond line\n\n| Year | Event |\n| --- | --- |\n| 1900 | Arrival |'}]});
+      return host.querySelector('.research-excerpt').textContent;
+    });
+    assert.equal(multiline, 'First line Second line Year Event 1900 Arrival');
     await page.locator('[data-view=research]').click();
     await expect(page.locator('[data-rtab=dossiers]')).toHaveAttribute('aria-selected','true');
     await expect(page.locator('#rtab-dossiers')).toBeVisible();
@@ -117,6 +132,34 @@ server.serve_forever()
       ['decisions','research-decision-add','r-decision-create-btn','r-decision-title','r-decision-rationale'],
     ]) {
       await page.locator(`[data-rtab=${tab}]`).click();
+      const composer = page.locator('#'+title).locator('xpath=ancestor::details[contains(@class,"research-composer")]');
+      await expect(composer).toHaveCount(1);
+      await expect(composer).not.toHaveAttribute('open', '');
+      const summary = composer.locator(':scope > summary');
+      await summary.click();
+      await page.locator('#'+title).fill('Retained draft');
+      await summary.click();
+      await expect(page.locator('#'+title)).toBeHidden();
+      await summary.focus(); await page.keyboard.press('Enter');
+      await expect(page.locator('#'+title)).toHaveValue('Retained draft');
+      await page.locator('#'+title).focus(); await page.keyboard.press('Escape');
+      await expect(summary).toBeFocused();
+      await expect(page.locator('#'+title)).toBeHidden();
+      await summary.click();
+      const options = composer.locator('details').first();
+      await options.locator(':scope > summary').click();
+      await options.locator('input, select').first().focus();
+      // Native selects own Escape; exercise the nested disclosure on its summary.
+      await options.locator(':scope > summary').focus(); await page.keyboard.press('Escape');
+      await expect(options).not.toHaveAttribute('open', '');
+      await expect(composer).toHaveAttribute('open', '');
+      await composer.locator('[data-close-disclosure]').click();
+      await expect(summary).toBeFocused();
+      await summary.click();
+      await expect(page.locator('#'+title)).toHaveValue('Retained draft');
+      await page.emulateMedia({reducedMotion:'reduce'});
+      assert.equal(await summary.evaluate(node => getComputedStyle(node, '::before').transitionDuration), '0s');
+      await page.emulateMedia({reducedMotion:'no-preference'});
       await page.locator('#'+title).fill('First synthetic '+tab);
       await page.locator('#'+body).fill('First permitted synthetic text.');
       let release,requested,reads=0,cleaning=false;

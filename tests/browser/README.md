@@ -77,7 +77,9 @@ It uses a disposable archive and retains only temporary synthetic screenshots.
 
 The ui-usability suite holds real synthetic HTTP create responses to check
 single pending saves, preservation of newer drafts, nearby feedback, guarded
-matrix downloads and shared keyboard tabs. The publication-settings suite uses
+matrix downloads and shared keyboard tabs. It also checks reversible creation
+disclosures, retained drafts, innermost Escape/focus, reduced-motion arrows and
+plain dossier excerpts with line/table boundaries. The publication-settings suite uses
 the existing Settings endpoint to check explicit metadata, fresh save tokens,
 stale-token refusal, pending drafts and seven localized desktop/mobile forms.
 

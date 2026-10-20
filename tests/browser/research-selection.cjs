@@ -104,6 +104,7 @@ server.serve_forever()
       assert.deepEqual(await page.locator('#r-claim-confidence option').evaluateAll(options => options.map(option => option.value)),
         ['hypothetical', 'evidenced', 'disputed'], 'Author-readable states preserve the wire values');
       if (locale === 'de') await page.locator('#research-evidence-draft').locator('..').screenshot({path: path.join(artifacts, `selected-draft-${width}.png`)});
+      if (!await page.locator('#r-link-composer').evaluate(node => node.open)) await page.locator('#r-link-composer > summary').click();
       await page.locator('#r-link-claim-select').selectOption(fixture.claim);
       await page.locator('#r-link-relation').selectOption('qualifies');
       await page.locator('#r-link-rationale').fill('Synthetic author review.');

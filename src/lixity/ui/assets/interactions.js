@@ -1,3 +1,33 @@
+// Native disclosures retain their DOM (including unsaved form values).
+function revealDisclosures(target) {
+  for (var parent = target && target.parentElement; parent; parent = parent.parentElement) {
+    if (parent.tagName === "DETAILS") parent.open = true;
+  }
+}
+
+function collapseDisclosure(disclosure) {
+  if (!disclosure || disclosure.tagName !== "DETAILS") return;
+  disclosure.open = false;
+  var summary = disclosure.querySelector(":scope > summary");
+  if (summary) summary.focus({preventScroll: true});
+  if (summary && summary.getBoundingClientRect().top < 0) summary.scrollIntoView({block: "nearest"});
+}
+
+document.addEventListener("click", function(event) {
+  var close = event.target.closest("[data-close-disclosure]");
+  if (close) collapseDisclosure(document.getElementById(close.dataset.closeDisclosure));
+});
+
+document.addEventListener("keydown", function(event) {
+  if (event.key !== "Escape" || event.defaultPrevented || event.isComposing) return;
+  // Let selects and temporary overlays manage their own Escape behavior.
+  if (event.target.closest("select, [role=dialog], dialog, [role=listbox]")) return;
+  var disclosure = event.target.closest("details[open]");
+  if (!disclosure) return;
+  event.preventDefault();
+  collapseDisclosure(disclosure);
+});
+
 // Analysis interactions: paragraph open/close, jump-and-flash,
 // style tabs and keyboard handling (extracted from dashboard.js).
 function highlightCell(cell, on) {

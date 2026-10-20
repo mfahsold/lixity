@@ -218,19 +218,16 @@ _PUBLIC_DEMO_CONTROLS = r"""document.addEventListener("DOMContentLoaded", functi
     ["#r-local-import", "Importing files and OCR require the local app."],
     ["#research-init-box", "Creating a research archive requires a local project."],
     ["#modal-project-create, #modal-project-open", "Creating or opening your project requires the local app."],
-    ["#rtab-dossiers > .ctl-group", "Creating and saving dossiers requires a local project.", true],
-    ["#rtab-claims-list > .ctl-group:not(.research-timeline-entry):not(.research-relation-section)", "Creating claims and linking evidence requires a local project.", true],
-    ["#r-relation-form", "Saving relationships between claims requires a local project.", true],
-    ["#rtab-decisions > .ctl-group", "Recording author decisions requires a local project.", true]
+    ["#r-dos-composer", "Creating and saving dossiers requires a local project."],
+    ["#r-claim-composer, #r-link-composer", "Creating claims and linking evidence requires a local project."],
+    ["#r-relation-composer", "Saving relationships between claims requires a local project."],
+    ["#r-decision-composer", "Recording author decisions requires a local project."]
   ].forEach(function (spec) {
     document.querySelectorAll(spec[0]).forEach(function (host) {
       host.dataset.demoLocalScope = "true";
-      if (spec[2]) {
-        var details = document.createElement("details"); details.className = "demo-local-feature";
-        var summary = document.createElement("summary");
-        var heading = host.querySelector(".ctl-label, legend, h3");
-        summary.textContent = (heading ? heading.textContent.trim() : "Authoring") + " · Local app";
-        host.before(details); details.append(summary, host);
+      if (host.classList.contains("research-composer")) {
+        var badge = document.createElement("small"); badge.className = "demo-local-badge";
+        badge.textContent = "Local app"; host.querySelector(":scope > summary").appendChild(badge);
       }
       localNote(host, spec[1]);
     });
@@ -249,7 +246,7 @@ _PUBLIC_DEMO_CONTROLS = r"""document.addEventListener("DOMContentLoaded", functi
   function markLocalActions() {
     document.querySelectorAll("[data-demo-local-scope]").forEach(function (host) {
       var note = host.querySelector(":scope > .demo-local-note");
-      host.querySelectorAll("button, input, select, textarea").forEach(function (control) { unavailable(control, note); });
+      host.querySelectorAll("button:not([data-close-disclosure]), input, select, textarea").forEach(function (control) { unavailable(control, note); });
     });
     document.querySelectorAll(localActions).forEach(function (control) {
       var scope = control.closest("[data-demo-local-scope]");
@@ -333,8 +330,6 @@ def build_research_demo(root: Path, research_fixture: dict) -> Path:
 .demo-local-note {{ display: flex; flex-wrap: wrap; gap: .25em; align-items: baseline; margin-block: .5rem; }}
 .demo-local-note strong {{ color: var(--muted); font-size: var(--text-note); }}
 .demo-local-badge {{ color: inherit; font-size: var(--text-note); margin-inline-start: .4em; }}
-.demo-local-feature {{ margin-block: .75rem; padding: .65rem; border: 1px solid var(--line); border-radius: var(--radius-sm); }}
-.demo-local-feature > summary {{ cursor: pointer; }}
 [data-demo-local] {{ cursor: default; }}
 a[data-demo-local] {{ opacity: .65; }}
 </style>

@@ -8,6 +8,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Changed
+- Research creation and association forms start collapsed with reversible labelled
+  controls, retained in-memory drafts, nested Escape handling and contextual reveal.
+  Shared disclosure arrows provide brief reduced-motion-aware feedback in the app
+  and Pages. Dossier catalogue previews omit formatting and fenced code while the
+  saved body and API data remain unchanged.
 - Shared local tabs, form groups and dialog frames now carry the desktop
   workspace design through analysis, settings and research. Research catalogues
   use separated rows; labels preserve localized casing. Dialog forms scroll

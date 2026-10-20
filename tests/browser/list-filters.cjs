@@ -280,6 +280,7 @@ api.create_dossier(p, title='Gamma dossier', body='A newly retained dossier.')
 `, fixture.project], {cwd: root, env: pythonEnv});
     for (const [kind, selectId, selectedId] of [['sources', 'r-ground-source-select', fixture.sourceIds[0]], ['dossiers', 'r-claim-dossier-select', fixture.dossierIds[0]]]) {
       await page.locator(`[data-rtab=${kind === 'sources' ? 'grounding' : 'claims'}]`).click();
+      if (kind === 'dossiers') await page.locator('#r-claim-composer > summary').click();
       await page.locator('#' + selectId).evaluate(element => {const details = element.closest('details'); if (details) details.open = true;});
       await page.locator('#' + selectId).selectOption(selectedId);
       let release, started;
@@ -419,6 +420,7 @@ api.create_dossier(p, title='Gamma dossier', body='A newly retained dossier.')
           await page.locator('#r-ingest-btn').click();
           await expect(page.locator('#r-ingest-text')).toHaveValue('');
         } else if (action === 'create') {
+          if (!await page.locator('#r-dos-composer').evaluate(node => node.open)) await page.locator('#r-dos-composer > summary').click();
           await page.locator('#r-dos-title').fill(title);
           await page.locator('#r-dos-body').fill('A synthetic dossier created while an older list read is pending.');
           await page.locator('#r-dos-create-btn').click();

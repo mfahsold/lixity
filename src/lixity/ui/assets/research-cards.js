@@ -15,6 +15,21 @@
   "use strict";
   var html = LixityComponents.html;
 
+  function excerptText(value) {
+    // API excerpts may end inside a fenced block. Keep the saved text untouched
+    // and derive only a plain reading preview; never mount diagram markup here.
+    var prose = value.replace(/```[\s\S]*?(?:```|$)/g, "");
+    var preview = document.createElement("div");
+    preview.innerHTML = renderSafeMarkdown(prose);
+    preview.querySelectorAll("br, hr").forEach(function(breakNode) {
+      breakNode.replaceWith(document.createTextNode(" "));
+    });
+    preview.querySelectorAll("p, h1, h2, h3, h4, h5, h6, li, blockquote, th, td").forEach(function(block) {
+      block.appendChild(document.createTextNode(" "));
+    });
+    return preview.textContent.replace(/\s+/g, " ").trim();
+  }
+
   function CatalogueLink(props) {
     var key = props.itemKey || "";
     var library = props.library || "";
@@ -52,7 +67,7 @@
         })}
       </div>
       ${item.zotero ? html`<${CatalogueLink} library=${item.zotero.library} itemKey=${item.zotero.key} />` : null}
-      ${item.excerpt ? html`<p class="ctl-note research-excerpt">${item.excerpt}</p>` : null}
+      ${item.excerpt ? html`<p class="ctl-note research-excerpt">${excerptText(item.excerpt)}</p>` : null}
       ${item.statementHtml
         ? html`<div class="research-claim-statement research-prose markdown-body my-2"
             dangerouslySetInnerHTML=${{__html: item.statementHtml}} />` : null}

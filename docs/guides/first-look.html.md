@@ -36,6 +36,10 @@ Select a paragraph block in the action chapter to open its text and source lines
 
 **Current development:** the wide-screen demo keeps the project and workspace views in a fixed sidebar. On mobile, the views sit above the text. Manuscript and analysis come first; a dossier can accompany the passage when you need research context.
 
+Research creation forms start collapsed so you can read existing records first. Select a form heading to open it and select it again to collapse it. Long creation forms also offer **Collapse** beside Save. Your unsaved fields remain while switching tabs or collapsing a form; reloads are not draft storage. Escape closes the innermost open disclosure and returns focus to its heading. Contextual source and dossier actions open the appropriate form for you.
+
+Dossier previews show readable text; open the full dossier for formatting, diagrams and source context. Disclosure arrows indicate open and closed states, with brief movement disabled when reduced motion is requested.
+
 The passage appears first; expand **Values** when you need its measurements. Select a chapter in the style dimensions to inspect its scores and return to its passage; nearby help explains how to read the view. Keep the scene's purpose in mind before treating a difference as something to change.
 
 Ask what changed: the kind of scene, what the character is doing, or how the sentences are arranged. Measurements cannot answer that question without the passage.

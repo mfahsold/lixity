@@ -92,6 +92,10 @@ on wide screens, with manuscript and analysis first, research alongside and
 settings separate. On smaller screens the same navigation becomes horizontal.
 Local tabs, form groups and dialogs use shared components throughout analysis
 and research; compact catalogue rows keep sources and dossiers easy to scan.
+Creation and association forms start collapsed. Open their labelled heading, then
+use it again or press Escape inside the form to collapse it without clearing the
+draft. Long creation forms also have a Collapse button. Dossier previews show
+readable text; full formatting and diagrams remain in the dossier reader.
 Guided map and style-space views explain their measurements
 where you use them, with the same context available in the CLI. Maps open with
 OpenStreetMap; local vectors and the numbered sketch remain available offline.

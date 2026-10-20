@@ -436,6 +436,8 @@ _ROWS = {
     "research_ground_heading": ("Compare source with loaded manuscript", "Quelle mit geladenem Manuskript abgleichen", "Comparer la source au manuscrit chargé", "Comparar fuente con el manuscrito cargado", "Confronta la fonte con il manoscritto caricato", "Comparar fonte com o manuscrito carregado", "Bron vergelijken met geladen manuscript"),
     "research_select_source": ("Select source…", "Quelle auswählen…", "Sélectionner une source…", "Seleccionar fuente…", "Seleziona una fonte…", "Selecionar fonte…", "Bron kiezen…"),
     "research_ground_action": ("Run comparison", "Abgleich ausführen", "Lancer la comparaison", "Ejecutar comparación", "Avvia confronto", "Executar comparação", "Vergelijking uitvoeren"),
+    "research_relation_create": ("Add cause/effect link", "Ursache/Wirkung verknüpfen", "Ajouter un lien de cause à effet", "Añadir vínculo de causa y efecto", "Aggiungi legame causa/effetto", "Adicionar relação de causa e efeito", "Oorzaak/gevolg koppelen"),
+    "disclosure_collapse": ("Collapse", "Einklappen", "Replier", "Contraer", "Comprimi", "Recolher", "Inklappen"),
     "modal_close": ("Close", "Schließen", "Fermer", "Cerrar", "Chiudi", "Fechar", "Sluiten"),
     "modal_cancel": ("Cancel", "Abbrechen", "Annuler", "Cancelar", "Annulla", "Cancelar", "Annuleren"),
     "wizard_import_tab": ("Import manuscript", "Manuskript importieren", "Importer un manuscrit", "Importar manuscrito", "Importa manoscritto", "Importar manuscrito", "Manuscript importeren"),

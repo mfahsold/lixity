@@ -334,6 +334,7 @@ server.serve_forever()
     await page.locator('[data-rtab=claims]').click();
     await expect(page.locator('#research-claims-list')).toContainText('No claims yet');
     const claimTitle = 'Archive <img src=x onerror=alert(1)> "opening"';
+    if (!await page.locator('#r-claim-composer').evaluate(node => node.open)) await page.locator('#r-claim-composer > summary').click();
     await page.locator('#r-claim-title').fill(claimTitle);
     await page.locator('#r-claim-statement').fill('The synthetic archive opened in 1924.');
     await page.locator('#r-claim-options > summary').click();
@@ -354,6 +355,7 @@ server.serve_forever()
     assert.deepEqual(claims.claims[0].scope.actors, ['Archivist', 'Reader']);
     assert.equal(claims.claims[0].dossier_id, dossiers.dossiers[0].id);
     await expect(page.locator('#r-active-root')).toContainText('1 claims');
+    if (!await page.locator('#r-link-composer').evaluate(node => node.open)) await page.locator('#r-link-composer > summary').click();
     await page.locator('#r-link-claim-select').selectOption(claimId);
     await page.locator('[data-rtab=search]').click();
     await page.locator('#r-search-scope').selectOption('dossiers');
@@ -403,6 +405,7 @@ server.serve_forever()
     await page.locator('[data-rtab=search]').click();
     await page.locator('#research-search-results [data-use-passage=dossier]').click();
     await expect(page.locator('#r-dos-eids')).toHaveValue(fixture.passage);
+    if (!await page.locator('#r-dos-composer').evaluate(node => node.open)) await page.locator('#r-dos-composer > summary').click();
     await page.locator('#r-dos-title').fill('Linked search note');
     await page.locator('#r-dos-body').fill('A dossier assembled from a selected passage.');
     await page.locator('#r-dos-create-btn').click();
@@ -411,6 +414,7 @@ server.serve_forever()
 
     await page.locator('[data-rtab=decisions]').click();
     await expect(page.locator('#research-decisions-list')).toContainText('No decisions yet');
+    if (!await page.locator('#r-decision-composer').evaluate(node => node.open)) await page.locator('#r-decision-composer > summary').click();
     await page.locator('#r-decision-title').fill('Move the date');
     await page.locator('#r-decision-rationale').fill('Bring the opening into the first chapter.');
     await page.locator('#r-decision-options > summary').click();
@@ -439,6 +443,7 @@ server.serve_forever()
     assert.equal(decisions.decisions[0].deviation_from_fact, true);
     await expect(page.locator('#r-active-root')).toContainText('1 decisions');
     await page.locator('#research-manager').screenshot({path: path.join(artifacts, 'decisions-desktop.png')});
+    if (!await page.locator('#r-decision-composer').evaluate(node => node.open)) await page.locator('#r-decision-composer > summary').click();
     await page.locator('#r-decision-title').fill('General artistic choice');
     await page.locator('#r-decision-rationale').fill('Use a quieter opening.');
     await page.locator('#r-decision-claim-select').selectOption('');

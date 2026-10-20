@@ -95,6 +95,7 @@
   refresh.addEventListener("click", function() { openDossiers(select.value); });
   panel.addEventListener("keydown", function(event) {
     if (event.key !== "Escape" || event.defaultPrevented) return;
+    if (event.target.closest("details[open]")) return;
     event.preventDefault();
     setEnabled(false);
     toggle.focus();

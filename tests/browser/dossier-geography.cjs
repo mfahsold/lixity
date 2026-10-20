@@ -266,6 +266,7 @@ server.serve_forever()
     assert.equal(writes.length, beforePointerWrites, 'Map pointer and keyboard selection never writes research records');
     await page.locator('#geo-pointer-regression').evaluate(node => node.remove());
     await page.setViewportSize({width: 1440, height: 1000});
+    if (!await page.locator('#r-dos-composer').evaluate(node => node.open)) await page.locator('#r-dos-composer > summary').click();
     await page.locator('#r-dos-title').fill('Synthetic harbour journey');
     await page.locator('#r-dos-body').fill('# Context\n\nSynthetic route notes.');
     const create = page.locator('#r-dos-geography-editor');
@@ -329,6 +330,7 @@ server.serve_forever()
     assert.equal(saved.record.geography.features[0].properties.label, 'Harbour <img src=x onerror=window.geoInjected=true>');
     await create.locator('[data-geo-remove]').first().click();
     await expect(create.locator('[data-geo-feature]')).toHaveCount(0);
+    if (!await page.locator('#r-dos-composer').evaluate(node => node.open)) await page.locator('#r-dos-composer > summary').click();
     await page.locator('#r-dos-title').fill('');
     await page.locator('#r-dos-body').fill('');
     async function openDetails() {

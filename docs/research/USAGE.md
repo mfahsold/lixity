@@ -46,6 +46,28 @@ Zotero is optional: retained evidence and authorized local imports work without 
 <a id="reading-and-cli-workflows-since-v240"></a>
 ### Reading and CLI workflows
 
+**Current main, after v0.7.1:** dossier, claim and decision creation starts behind
+labelled disclosures, so existing records remain visible first. Evidence
+association and cause/effect entry use the same pattern. Click the heading again
+to collapse a form; the long creation forms also offer **Collapse** beside Save.
+Collapsing and changing research tabs keep the current unsaved fields in memory.
+This is not persistent draft storage: reloads and project changes can discard them.
+Saving remains a separate explicit action.
+
+Escape inside a disclosure closes its innermost open level and returns keyboard
+focus to that heading. Native select menus and dialogs retain their own keyboard
+handling. In the manuscript companion, Escape closes an open disclosure before
+closing the companion itself. Contextual actions such as **Add historical claim**
+or using a retained passage open the corresponding form and focus its next field.
+Independent forms stay independent; opening a dossier in the companion replaces
+the currently displayed dossier without creating another pane.
+
+Dossier catalogue excerpts are plain-text reading previews. Markdown styling and
+fenced code are omitted from the preview only, including code blocks cut short by
+the excerpt limit; the saved body and API excerpt remain unchanged. Open the
+record for full text, diagrams and provenance. Disclosure arrows use a brief
+state transition, disabled when the operating system requests reduced motion.
+
 Existing-archive commands may omit `--project` only when the current directory
 itself is a validated initialized research project. No parent directory,
 environment, global configuration or last-opened browser project is consulted.

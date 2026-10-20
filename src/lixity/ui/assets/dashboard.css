@@ -1926,3 +1926,17 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
   min-height: 2.5rem;
   align-content: center;
 }
+
+/* Creation is available beside the catalogue without occupying its reading area.
+   Native details keeps drafts intact and works without animation or scripting. */
+.research-composer {
+  margin-bottom: var(--space-4);
+  border-block: 1px solid var(--line);
+}
+.research-composer .research-composer-body {
+  margin: 0;
+  padding: var(--space-3) .25rem var(--space-4);
+  border: 0;
+  background: transparent;
+}
+.research-excerpt { max-width: 78ch; line-height: var(--line-body); }
