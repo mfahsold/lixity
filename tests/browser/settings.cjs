@@ -135,7 +135,6 @@ server.serve_forever()
   const browser = await launchChromium();
   try {
     const page = await browser.newPage({viewport: {width: 1280, height: 900}});
-    await page.addInitScript(() => localStorage.setItem('lixity.manuscript.mode', 'inspect'));
     const submissions = [];
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
@@ -184,6 +183,8 @@ server.serve_forever()
     assert.equal(submissions[2].z_mild, 2.1);
     assert.equal(submissions[2].fdr_q, 0.05);
     await page.locator('#tab-view-analysis').click();
+    await page.locator('#workbench-overview-open').click();
+    await page.locator('#style-tab-heatmap').click();
     await page.locator('#heatmap-fdr-only').check();
     assert.equal(await page.locator('#heatmap tbody tr:visible').count(), 1);
     await page.locator('#heatmap-fdr-only').uncheck();

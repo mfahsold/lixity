@@ -93,12 +93,13 @@ The citation still identifies the whole paragraph, not a sentence-level selector
 Ambiguous or cross-paragraph selections fail; whole-passage actions remain
 available for touch use. Preparing a draft writes nothing.
 
-In **Manuscript & Analysis**, **Dossier alongside** opens a chosen dossier in a
-read-only companion. It starts closed with no automatic selection. While open,
-other analysis panels are hidden; closing restores the selected manuscript
-presentation and preserves search and paragraph state. **Current main
-(unreleased):** **Read** presents continuous prose and **Inspect** exposes the
-existing analysis panels. Refresh explicitly for the latest dossier.
+In **Manuscript**, **Dossier alongside** opens a chosen dossier in a
+read-only companion. It starts closed with no automatic selection. **Current main
+(unreleased):** the manuscript stays continuous and the **Analysis** button has an
+explicit On/Off state. A dossier and analysis are alternative context tools;
+hiding analysis leaves an active dossier. **Analysis overview** opens dense
+comparisons with **Back to passage**, restoring the prior context tool. Refresh
+explicitly for the latest dossier.
 On desktop, opening the companion temporarily collapses project navigation into
 a narrow rail. Use **Show navigation** to access its controls; closing the companion
 restores the earlier manual choice. Switching away from manuscript analysis also
@@ -113,16 +114,15 @@ the same control restores the workspace. A paragraph's **Values** inspector and
 the companion replace one another rather than competing for horizontal space.
 
 To connect the manuscript to research, select a nonempty text range within one
-paragraph and choose **Link selection to claim** (or Alt+L). In **Read**, the
+paragraph and choose **Link selection to claim** (or Alt+L). The
 selection toolbar offers the same action; the paragraph's **…**, right-click or
-keyboard context menu also reaches it when the selection is valid. In **Inspect**,
-open the paragraph first. Choose an existing claim,
+keyboard context menu also reaches it when the selection is valid. Choose an existing claim,
 review the quotation and explicitly allow retention before saving. This creates
 an association; it does not turn a manuscript statement into source evidence.
 The claim's dossier and retained evidence remain separate authored records.
 
 For the reverse route, open **Review** in Research and use the saved manuscript
-associations. **Open claim** shows the claim's recorded versions; **Go to manuscript
+associations. **Open claim** opens the association's pinned claim revision, with the latest revision separately available; **Go to manuscript
 passage** switches to analysis, reveals the paragraph, clears incompatible passage
 filters and focuses the linked text. The return action is offered only when the
 current paragraph hash, line range and exact quotation match the resolved anchor.
@@ -138,8 +138,7 @@ evidence link or verify a source.
 
 ### Associate a manuscript quote with a claim
 
-In the continuous manuscript reader, select text within one paragraph; in
-**Inspect**, open that paragraph first. Choose **Link selection to claim** from
+In the continuous manuscript reader, select text within one profiled paragraph. Choose **Link selection to claim** from
 the selection/context tools or paragraph action (or press `Alt+L`). Review the exact quote, choose a
 current claim, explicitly permit local retention of the quote, then **Save association**.
 Selection, choosing a claim and previewing the form write nothing. Saving creates
@@ -167,8 +166,7 @@ selections fail. Paths escaping the project, including through
 symlinks, are rejected. Source bytes are checked again before publication; this
 optimistic guard does not lock an external editor.
 
-Saved quotes mark only exact resolved anchors in the shared reader, including
-inspection paragraphs rendered later on opening. Switching Read/Inspect preserves
+Saved quotes mark only exact resolved anchors in the shared reader, in the same canonical manuscript DOM. Displaying analysis or an overview preserves
 the same text and anchor model. Manuscript search still checks complete text. Review reports
 changed source bytes, newer/withdrawn claims, unique moved paragraphs, adjusted
 paragraphs whose quote is unchanged, and ambiguous matches. Moved or adjusted

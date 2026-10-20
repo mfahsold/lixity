@@ -259,8 +259,8 @@ server.serve_forever()
     assert.equal(await page.evaluate(() => Boolean(window.imageProvenanceInjected)), false);
     await expect(page.locator('#r-filter-dossiers')).toBeFocused();
     await page.unroute(dossierDetailURL);
-    // A deliberate move through another control to nonfocusable content must
-    // remain respected when an accepted-save reconciliation completes later.
+    // Clicking dossier content gives its labelled tabpanel focus. An accepted
+    // save must respect that move when its delayed reconciliation completes.
     let finishMovedDetail, startedMovedDetail;
     const movedDetailGate = new Promise(resolve => { finishMovedDetail = resolve; });
     releaseHeldResponses.push(finishMovedDetail);
@@ -277,12 +277,14 @@ server.serve_forever()
     await page.locator('#r-filter-dossiers').fill('Synthetic');
     await page.locator('#r-filter-dossiers').focus();
     await page.locator('#research-dossiers-list .research-card-title').first().click();
-    assert.equal(await page.evaluate(() => document.activeElement === document.body), true, 'Clicking nonfocusable dossier content moves focus to body');
+    const dossierPane = page.locator('#rtab-dossiers');
+    await expect(dossierPane).toBeVisible();
+    await expect(dossierPane).toBeFocused();
     finishMovedDetail();
     await expect(page.locator('#research-status-bar')).toContainText('Image and dossier saved.');
     await expect(page.locator('.research-dossier-body-rendered .dossier-image img')).toBeVisible();
     await expect(page.locator('[data-dossier-add-image]')).not.toBeFocused();
-    assert.equal(await page.evaluate(() => document.activeElement === document.body), true, 'Reconciliation respects the deliberate focus move to body');
+    await expect(dossierPane).toBeFocused();
     await expect(page.locator('#r-filter-dossiers')).toHaveValue('Synthetic');
     await page.unroute(dossierDetailURL);
     // An unrelated dossier control selected while a list read is pending must

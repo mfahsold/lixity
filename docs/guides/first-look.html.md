@@ -16,7 +16,7 @@ Matthias Fahsold developed Lixity as an architect and developer at ROST Services
 
 The demo uses all three native workspace views. Explore manuscript analysis and retained research, keep a **Dossier alongside** the manuscript, download the claim-evidence matrix or choose a prepared PDF layout. Actions marked **Local app**, including Search and Compare, are disabled previews with an [installation link](installation.html). The demo cannot import, edit or save; no installation, upload or account is needed.
 
-Enable JavaScript for the Read/Inspect controls, context tools, view switching, research and charts. Paragraph text, chapter tables, source credits and PDF links remain readable without it. The demo follows current development; an installed release may have an earlier interface.
+Enable JavaScript for the Analysis display and overview controls, context tools, view switching, research and charts. Paragraph text, chapter tables, source credits and PDF links remain readable without it. The demo follows current development; an installed release may have an earlier interface.
 
 [Video walkthrough](../videos/analysis-review.mp4)
 
@@ -24,7 +24,7 @@ Enable JavaScript for the Read/Inspect controls, context tools, view switching, 
 
 ## 1. Read a chapter
 
-In **Manuscript & Analysis**, **Read** initially presents the chapters as continuous prose. Scroll normally, or choose a chapter in the reader toolbar. Read chapter 1's setting and [chapter 2's action](../demo/report.html#ch-2) before looking at their numbers.
+In **Manuscript**, the manuscript initially presents the chapters as continuous prose. Scroll normally, or choose a chapter in the reader toolbar. Read chapter 1's setting and [chapter 2's action](../demo/report.html#ch-2) before looking at their numbers.
 
 Use **A−**/**A+** to adjust text size. **Reading settings** offers text width and line spacing; the same heading closes it. These display choices stay in this browser and do not change the manuscript. **Focus reading** temporarily clears navigation and side tools; choose **Leave focus** or press Escape to return.
 
@@ -34,13 +34,13 @@ Reading uses ordinary text selection. Maps, images and style-space keep their ow
 
 Open a paragraph's **…** button for its tools. Right-clicking the prose opens the same menu; with the paragraph button focused, Shift+F10 works too. Arrow keys move between actions and Escape closes the menu. **Values** opens a paragraph inspector with source lines and measurements; its close button or Escape returns you to the passage. Local marker and claim actions appear when their capabilities are available; selecting text within one paragraph also offers a small toolbar.
 
-Choose **Inspect** for chapter comparisons and expandable paragraph blocks. The **Start your review** panel offers **Open passage**, **Explore chapters** and, when measurable, **Open sentence rhythm**. A passage link starts with the first tense flag in source order at the selected threshold, or the opening when none does. This is a starting point for reading, not a quality ranking.
+Choose **Analysis overview** for chapter comparisons and expandable paragraph blocks. The **Start your review** panel offers **Open passage**, **Explore chapters** and, when measurable, **Open sentence rhythm**. A passage link starts with the first tense flag in source order at the selected threshold, or the opening when none does. This is a starting point for reading, not a quality ranking.
 
-Compare the opening and action chapter's sentence length and variation. In Inspect, focus a paragraph block with Tab and open it with Enter or Space; expand **Values** for details. Return to **Read** for continuous prose. Both modes use the same text and source anchors. Choose one contrast that makes you curious; you do not need to inspect every measurement.
+Compare the opening and action chapter's sentence length and variation. Use **Analysis overview** for comparisons and **Back to passage** to resume reading. On a paragraph, open **… → Values** for its measurements. **Analysis** shows a visible On/Off state and leaves the manuscript text and anchors unchanged. Choose one contrast that makes you curious; you do not need to inspect every measurement.
 
 **Current development:** the wide-screen demo keeps the project and workspace views in a fixed sidebar. On mobile, the views sit above the text. Manuscript and analysis come first; a dossier can accompany the passage when you need research context. Opening it collapses the desktop sidebar to make room; use Show navigation to reopen it. Closing the dossier restores your previous choice. Mobile navigation stays visible.
 
-With a dossier alongside on desktop, drag the divider to give either document more room. You can also focus it with Tab and use Left/Right; Home/End reach the split limits. Narrow screens stack the documents. Paragraph Values and the dossier replace one another as the active side tool. Display changes keep the visible paragraph in place where possible.
+With a dossier alongside on desktop, drag the divider to give either document more room. You can also focus it with Tab and use Left/Right; Home/End reach the split limits. Narrow screens stack the documents. Analysis and Dossier are alternative context tools. Switching the Analysis display off closes its measurements but keeps an active dossier. The overview offers a direct return and restores the context tool. Display changes keep the visible paragraph in place where possible.
 
 Ask what changed: the kind of scene, what the character is doing, or how the sentences are arranged. Measurements cannot answer that question without the passage.
 

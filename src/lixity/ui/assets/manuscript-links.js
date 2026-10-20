@@ -9,6 +9,7 @@
   if (!bridge || (!canWrite && document.body.dataset.manuscriptLinks !== "read") ||
       !projectToken() || !bridge.contextToken() || !document.body.dataset.manuscriptSourceSha256) return;
   var draft = null, serial = 0, reviewSerial = 0, review = null, reviewContext = null, remembered = null, reviewProjectId = null, reviewPending = null;
+  var reviewFilter = null, openingRelated = false, relatedDestination = null;
   var pending = new Set(), dialog, picker, quotation, statement, consent, save, status, filterInput;
   var chapters = document.getElementById("chapters");
   if (!chapters) return;
@@ -104,7 +105,11 @@
       statement.textContent = claim ? claim.statement || "" : ""; updateSave();
     });
     consent.addEventListener("change", updateSave);
-    dialog.addEventListener("close", function() { ++serial; draft = null; remembered = null; });
+    dialog.addEventListener("close", function() {
+      // Native close is queued: a newer open already owns its draft and reads.
+      if (dialog.open) return;
+      ++serial; draft = null; remembered = null;
+    });
   }
   function reloadButton() {
     var button = element("button", label("manuscript_link_reload"), "ctl manuscript-link-reload");
@@ -225,10 +230,22 @@
   function linkedPanel(row) {
     return Array.from(chapters.querySelectorAll(".ptext")).find(function(panel) { return matchesPanel(row, panel); });
   }
-  function renderReviewItems(report) {
+  function renderReviewItems(report, filtered) {
+    var rows = report.links || [];
+    if (filtered && reviewFilter) rows = rows.filter(function(row) {
+      return (!reviewFilter.claimId || row.claim_id === reviewFilter.claimId) &&
+        (!reviewFilter.dossierId || row.dossier_id === reviewFilter.dossierId) &&
+        (!reviewFilter.revision || row.claim_revision === reviewFilter.revision) &&
+        (!reviewFilter.paragraphId || (document.getElementById(reviewFilter.paragraphId) &&
+          matchesPanel(row, document.getElementById(reviewFilter.paragraphId))));
+    });
     var fragment = document.createDocumentFragment();
-    fragment.appendChild(element("p", label("manuscript_link_review_count").replace("{count}", String((report.links || []).length)), "ctl-note"));
-    (report.links || []).forEach(function(row) {
+    fragment.appendChild(element("p", label("manuscript_link_review_count").replace("{count}", String(rows.length)), "ctl-note"));
+    if (filtered && reviewFilter) {
+      var all = element("button", label("manuscript_link_review"), "ctl");
+      all.type = "button"; all.dataset.manuscriptLinksAll = ""; fragment.appendChild(all);
+    }
+    rows.forEach(function(row) {
       var item = element("div", "", "manuscript-link-review-item");
       item.appendChild(element("p", (row.claim_title || row.claim_id) + " · " +
         label("research_revision_number").replace("{revision}", row.claim_revision)));
@@ -244,7 +261,8 @@
         jump.dataset.manuscriptLinkJump = row.link_id; item.appendChild(jump);
       }
       var history = element("button", label("research_claim_open"), "ctl"); history.type = "button";
-      history.dataset.researchHistory = "claim"; history.dataset.recordId = row.claim_id; item.appendChild(history);
+      history.dataset.researchHistory = "claim"; history.dataset.recordId = row.claim_id;
+      history.dataset.recordRevision = String(row.claim_revision); item.appendChild(history);
       if (canWrite && (row.anchor_state === "moved" || row.anchor_state === "adjusted")) {
         var acceptLabel = row.anchor_state === "adjusted" ? "manuscript_link_accept_adjusted" : "manuscript_link_accept_moved";
         var accept = element("button", label(acceptLabel), "ctl");
@@ -257,8 +275,20 @@
       }
       fragment.appendChild(item);
     });
-    if (!(report.links || []).length) fragment.appendChild(element("p", label("manuscript_link_review_empty"), "ctl-note"));
+    if (!rows.length) fragment.appendChild(element("p", label("manuscript_link_review_empty"), "ctl-note"));
     return fragment;
+  }
+  function paragraphLinksControl(panel) {
+    var inner = panel.querySelector(".ptext-inner");
+    if (!inner) return;
+    var button = inner.querySelector("[data-manuscript-links-paragraph]");
+    var count = review && reviewContext && live(reviewContext) ? review.links.filter(function(row) { return matchesPanel(row, panel); }).length : 0;
+    if (!count) { if (button) button.remove(); return; }
+    if (!button) {
+      button = element("button", "", "ctl manuscript-link-related"); button.type = "button";
+      button.dataset.manuscriptLinksParagraph = panel.id; inner.appendChild(button);
+    }
+    button.textContent = bridge.countFormat("manuscript_link_review_count", count);
   }
   function applyReview(report, value) {
     if (!live(value)) return;
@@ -272,10 +302,10 @@
       }).map(function(row) { return {start: points.slice(0, row.anchor.start).join("").length,
         end: points.slice(0, row.anchor.end).join("").length}; });
       bridge.marks(panel, spans);
+      paragraphLinksControl(panel);
     });
-    var items = renderReviewItems(report);
-    reviewBody.replaceChildren(items.cloneNode(true));
-    if (reviewTabHost) reviewTabHost.replaceChildren(items);
+    reviewBody.replaceChildren(renderReviewItems(report));
+    if (reviewTabHost) reviewTabHost.replaceChildren(renderReviewItems(report, true));
   }
   function reviewNote(message, stale) {
     var note = element("p", message || label("manuscript_link_unavailable"), "ctl-status err");
@@ -284,7 +314,7 @@
   }
   function clearReview(message, stale) {
     review = null;
-    document.querySelectorAll("#chapters .ptext").forEach(function(panel) { bridge.marks(panel, []); });
+    document.querySelectorAll("#chapters .ptext").forEach(function(panel) { bridge.marks(panel, []); paragraphLinksControl(panel); });
     reviewBody.replaceChildren(reviewNote(message, stale));
     if (reviewTabHost) reviewTabHost.replaceChildren(reviewNote(message, stale));
   }
@@ -317,6 +347,7 @@
     }
   }
   function enhance(panel) {
+    paragraphLinksControl(panel);
     if (!canWrite) {
       if (review) applyReview(review, context());
       else if (reviewSerial === 0) loadReview(true);
@@ -343,7 +374,8 @@
   var observedContext = context();
   var contextObserver = new MutationObserver(function() {
     var next = context(); if (same(next, observedContext)) return;
-    observedContext = next; ++reviewSerial; reviewProjectId = null; remembered = null; reviewPending = null;
+    stopRelatedDestination();
+    observedContext = next; ++reviewSerial; reviewProjectId = null; remembered = null; reviewPending = null; reviewFilter = null;
     clearReview(); if (draft) draft.claims = null;
     if (dialog && dialog.open) { unavailable(); updateSave(); }
   });
@@ -352,6 +384,77 @@
   });
   document.addEventListener("click", function(event) {
     if (event.target.closest("[data-manuscript-link-reload]")) { event.preventDefault(); window.location.reload(); }
+  });
+  function openRelated(filter) {
+    var tab = document.querySelector('[data-rtab="review"]');
+    if (!reviewTabHost || !tab) return;
+    reviewFilter = filter;
+    switchActiveView("research");
+    openingRelated = true;
+    try { tab.click(); } finally { openingRelated = false; }
+    reviewSection.tabIndex = -1;
+    reviewSection.focus({preventScroll: true});
+    reviewSection.scrollIntoView({block: "start", behavior: "auto"});
+    followRelatedDestination();
+  }
+  function stopRelatedDestination() {
+    if (!relatedDestination) return;
+    relatedDestination.observer.disconnect();
+    cancelAnimationFrame(relatedDestination.frame);
+    relatedDestination = null;
+  }
+  function followRelatedDestination() {
+    stopRelatedDestination();
+    var destination = {context: context(), frame: 0};
+    function align() {
+      if (relatedDestination !== destination) return;
+      if (!live(destination.context) || document.activeElement !== reviewSection ||
+          !reviewSection.getClientRects().length || !document.querySelector('[data-rtab="review"].active')) {
+        stopRelatedDestination(); return;
+      }
+      reviewSection.scrollIntoView({block: "start", behavior: "auto"});
+    }
+    function resized() {
+      cancelAnimationFrame(destination.frame);
+      destination.frame = requestAnimationFrame(align);
+    }
+    // Review also loads editorial decisions before this destination. Keep its
+    // requested position as those reads render, until the user takes control.
+    var observesSize = typeof ResizeObserver === "function";
+    destination.observer = observesSize ? new ResizeObserver(resized) : new MutationObserver(resized);
+    relatedDestination = destination;
+    [document.getElementById("research-editorial-review"), reviewTabHost].forEach(function(host) {
+      if (host) destination.observer.observe(host, observesSize ? undefined : {childList: true, subtree: true});
+    });
+  }
+  ["pointerdown", "touchstart", "wheel", "keydown"].forEach(function(name) {
+    document.addEventListener(name, stopRelatedDestination, {capture: true, passive: true});
+  });
+  document.addEventListener("focusin", function(event) {
+    if (event.target !== reviewSection) stopRelatedDestination();
+  });
+  document.addEventListener("lixity:viewchange", stopRelatedDestination);
+  document.addEventListener("lixity:workbench-change", stopRelatedDestination);
+  bridge.review = openRelated;
+  document.addEventListener("click", function(event) {
+    var action = event.target.closest("[data-manuscript-links-claim], [data-manuscript-links-dossier], [data-manuscript-links-paragraph], [data-manuscript-links-all]");
+    var inline = event.target.closest("mark.manuscript-claim-hit");
+    if (!action && !inline) return;
+    if (inline && !action) {
+      var selected = window.getSelection();
+      if (selected && !selected.isCollapsed) return;
+      var panel = inline.closest("#chapters .ptext");
+      if (!panel || !review || !reviewContext || !live(reviewContext) || !review.links.some(function(row) { return matchesPanel(row, panel); })) return;
+      openRelated({paragraphId: panel.id});
+      return;
+    }
+    var modal = action.closest("dialog");
+    if (modal) modal.close();
+    var pin = Number(action.dataset.recordRevision);
+    openRelated(action.hasAttribute("data-manuscript-links-all") ? null : {
+      claimId: action.dataset.manuscriptLinksClaim, dossierId: action.dataset.manuscriptLinksDossier,
+      paragraphId: action.dataset.manuscriptLinksParagraph,
+      revision: Number.isInteger(pin) && pin > 0 ? pin : null});
   });
   document.addEventListener("click", async function(event) {
     var jump = event.target.closest("[data-manuscript-link-jump]");
@@ -398,7 +501,11 @@
     }
   });
   document.addEventListener("click", function(event) {
-    if (event.target.closest('[data-rtab="review"]') || event.target.closest("#r-review-refresh")) loadReview();
+    if (!openingRelated && event.target.closest("[data-rtab]")) stopRelatedDestination();
+    if (event.target.closest('[data-rtab="review"]')) {
+      if (!openingRelated) reviewFilter = null;
+      loadReview();
+    } else if (event.target.closest("#r-review-refresh")) loadReview();
   }, true);
   document.addEventListener("lixity:paragraph-rendered", function(event) { enhance(event.detail); });
   document.addEventListener("lixity:reader-ready", function() { if (reviewSerial === 0) loadReview(true); });

@@ -101,7 +101,6 @@ server.serve_forever()
     browser = await launchChromium();
     for (const [index, width] of [1440, 320].entries()) {
       const page = await browser.newPage({viewport: {width, height: 1000}});
-      await page.addInitScript(() => localStorage.setItem('lixity.manuscript.mode', 'inspect'));
       page.setDefaultTimeout(10000);
       const errors = [], writes = [], reads = [];
       page.on('pageerror', error => errors.push(error.message));
@@ -121,13 +120,12 @@ server.serve_forever()
       const selection = fixture.selections[index];
       const panel = page.locator(`#chapters .ptext[data-start="${selection.start_line}"]`);
       const panelId = await panel.getAttribute('id');
-      const chip = page.locator(`#chapters .chip[data-target="${panelId}"]`);
-      await chip.click();
       const paragraph = panel.locator('.ptext-inner > p');
       await expect(paragraph).toContainText(selection.quote);
       // Search produces a real safe mark: Range then crosses its text nodes.
       await page.locator('#text-search').fill('selected sentence');
-      await expect(page.locator('#text-search-status')).toContainText('2 matches');
+      await expect(page.locator('#text-search-status')).toContainText(/^2\b/);
+      await expect(page.locator('#chapters .ptext:not(.text-miss)')).toHaveCount(2);
       if (index === 1) await page.locator('#text-search').press('Enter');
       await expect(paragraph.locator('mark.text-hit')).toHaveText('selected sentence');
       await expect(page.locator('#text-search')).toHaveValue('selected sentence');
@@ -136,7 +134,7 @@ server.serve_forever()
       await page.locator('#text-search').scrollIntoViewIfNeeded();
       await page.screenshot({path: path.join(artifacts, `search-${width}.png`)});
       await selectQuote(paragraph, selection.quote);
-      await panel.locator('[data-manuscript-link-selection]').click();
+      await page.locator('#manuscript-selection-tools [data-reader-action=link]').click();
       const dialog = page.locator('#manuscript-link-dialog');
       await expect(dialog).toBeVisible();
       await expect(page.locator('#manuscript-link-claim')).toBeEnabled();
@@ -203,10 +201,8 @@ server.serve_forever()
       assert.ok(reads.every(url => url.searchParams.get('research_token') && url.searchParams.get('project_token')),
         'Native review calls send both real selected-context tokens');
       await page.locator('#text-search').press('Escape');
-      await chip.click();
-      await expect(panel).not.toHaveClass(/\bopen\b/);
-      await chip.click();
-      await expect(panel).toHaveClass(/\bopen\b/);
+      await page.locator('#manuscript-analysis-toggle').click();
+      await page.locator('#manuscript-analysis-toggle').click();
       await expect(paragraph.locator('mark.manuscript-claim-hit')).toHaveText(selection.quote);
       assert.equal(await page.locator('#chapters img').count(), 0);
       assert.equal(await page.evaluate(() => Boolean(window.nativeLinkInjected)), false);

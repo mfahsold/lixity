@@ -98,10 +98,20 @@ function flashOnArrival(target) {
   })();
 }
 
+function rememberPassageLocation(target) {
+  // Replace an obsolete overview hash without scheduling another hash journey.
+  try {
+    history.replaceState(null, "", location.pathname + location.search + (target && target.id ? "#" + encodeURIComponent(target.id) : ""));
+  } catch (_) { /* Navigation still works when history changes are restricted. */ }
+}
+
 function scrollAndFlash(target) {
   var view = target.closest(".view-pane");
   if (view) switchActiveView(view.dataset.viewPane);
   if (target.closest("#manuscript-analysis-panels") && window.LixityReader) window.LixityReader.inspect();
+  if (target.closest("#chapters") && window.LixityWorkbench && window.LixityWorkbench.state().surface !== "document") {
+    window.LixityWorkbench.dispatch({type: "surface", value: "document"});
+  }
   revealStyleTarget(target);
   revealChapter(target);
   setPassageScrollMargin(target);

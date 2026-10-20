@@ -28,6 +28,7 @@ from .scenes import scene_report_for_display
 from .site import docs_url
 from .style_fingerprint import FingerprintThresholds
 from .ui import render_analysis
+from .ui.manuscript_document import reader_blocks
 from .workspace import discover
 
 EXIT_OK = 0
@@ -956,6 +957,7 @@ def _cmd_build(args: argparse.Namespace) -> int:
         f"{workspace.slug}_dashboard.html": render_analysis(
             analysis,
             resolved,
+            reader_document=reader_blocks(text, config, analysis.paragraphs),
             title=title,
             flag_min_severity=fp_thresholds.flag_min_severity,
             scenes=scene_report_for_display(
@@ -1460,6 +1462,7 @@ def main(argv: list[str] | None = None) -> int:
     html = render_analysis(
         analysis,
         resolved,
+        reader_document=reader_blocks(text, config, analysis.paragraphs),
         title=title,
         flag_min_severity=fp_thresholds.flag_min_severity,
         scenes=scene_report_for_display(

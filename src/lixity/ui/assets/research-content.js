@@ -3,6 +3,7 @@
 // the original order, so load-time behaviour is unchanged.
 function renderMermaidSvg(escapedCode) {
   return '<figure class="research-diagram-wrap" data-research-diagram>' +
+    '<p class="ctl-status loading research-diagram-loading" role="status">' + escapeHtml(uiLabel("research_details_loading")) + '</p>' +
     '<div class="research-diagram-canvas" aria-busy="true" tabindex="0" role="region" aria-label="' + escapeHtml(uiLabel("diagram_viewport")) + '"></div>' +
     '<p class="ctl-note research-diagram-note" hidden>' + escapeHtml(uiLabel("diagram_viewport")) + '</p>' +
     '<button type="button" class="ctl" data-diagram-enlarge hidden>' + escapeHtml(uiLabel("diagram_enlarge")) + '</button>' +
@@ -38,6 +39,7 @@ function renderMermaidSvg(escapedCode) {
   async function render(host) {
     if (host.dataset.diagramState || !host.isConnected) return;
     host.dataset.diagramState = "pending";
+    host.querySelector(".research-diagram-loading").hidden = false;
     var canvas = host.querySelector(".research-diagram-canvas");
     var code = host.querySelector("code").textContent;
     var header = code.split("\n").find(function(line) { return line.trim() && !/^\s*%%/.test(line); }) || "";
@@ -81,7 +83,10 @@ function renderMermaidSvg(escapedCode) {
       canvas.textContent = uiLabel(restricted ? "diagram_restricted" : "diagram_failed");
       host.querySelector("details").open = true;
       host.dataset.diagramState = "failed";
-    } finally { canvas.setAttribute("aria-busy", "false"); }
+    } finally {
+      canvas.setAttribute("aria-busy", "false");
+      host.querySelector(".research-diagram-loading").hidden = true;
+    }
   }
   var visible = "IntersectionObserver" in window ? new IntersectionObserver(function(entries) {
     entries.forEach(function(entry) { if (entry.isIntersecting) { visible.unobserve(entry.target); render(entry.target); } });
@@ -393,16 +398,25 @@ async function enhanceResearchDossierClaims(host, detail, stillCurrent) {
   var claims = data.claims.filter(function(claim) { return claim.dossier_id === detail.id; });
   var linksAvailable = manuscriptLinks.ok && manuscriptLinks.project_id === detail.project_id &&
     manuscriptLinks.snapshot === data.snapshot && Array.isArray(manuscriptLinks.links);
+  var canOpenLinks = window.LixityManuscriptLinks && typeof window.LixityManuscriptLinks.review === "function";
+  var dossierLinks = linksAvailable ? manuscriptLinks.links.filter(function(link) {
+    return link.state === "active" && link.dossier_id === detail.id;
+  }) : [];
+  var dossierRoute = canOpenLinks && dossierLinks.length ? '<p><button type="button" class="ctl" data-manuscript-links-dossier="' +
+    escapeHtml(detail.id) + '">' + escapeHtml(uiCountFormat("research_manuscript_quote_count", dossierLinks.length)) + '</button></p>' : '';
   slot.innerHTML = heading + '<p class="ctl-note">' + escapeHtml(uiLabel("research_dossier_claims_hint")) + '</p>' +
+    dossierRoute +
     (claims.length ? '<ul class="research-dossier-claims-list">' + claims.map(function(claim) {
       var confidence = ["evidenced", "disputed"].includes(claim.confidence) ? claim.confidence : "hypothetical";
       var badge = confidence === "evidenced" ? "badge-success" : confidence === "disputed" ? "badge-warning" : "badge-neutral";
       var linked = linksAvailable ? manuscriptLinks.links.filter(function(link) {
         return link.state === "active" && link.claim_id === claim.id && link.dossier_id === detail.id;
       }) : [];
-      var usage = linksAvailable ? '<p class="ctl-note" data-manuscript-link-count="' + linked.length + '">' +
-        escapeHtml(linked.length ? uiCountFormat("research_manuscript_quote_count", linked.length) :
-          uiLabel("research_manuscript_quote_none")) + '</p>' :
+      var usageText = escapeHtml(linked.length ? uiCountFormat("research_manuscript_quote_count", linked.length) : uiLabel("research_manuscript_quote_none"));
+      var usage = linksAvailable ? '<p class="ctl-note">' +
+        (canOpenLinks && linked.length ? '<button type="button" class="ctl ctl-sm" data-manuscript-link-count="' + linked.length +
+          '" data-manuscript-links-claim="' + escapeHtml(claim.id) + '" data-manuscript-links-dossier="' + escapeHtml(detail.id) + '">' + usageText + '</button>' :
+          '<span data-manuscript-link-count="' + linked.length + '">' + usageText + '</span>') + '</p>' :
         '<p class="ctl-note">' + escapeHtml(uiLabel("research_manuscript_quote_unavailable")) + '</p>';
       if (linked.some(function(link) { return link.claim_changed || link.claim_withdrawn; }))
         usage += '<p class="ctl-note">' + escapeHtml(uiLabel("research_manuscript_quote_review")) + '</p>';

@@ -47,8 +47,9 @@ manuscripts, archives, credentials or running user projects.
 Desktop/mobile overviews show a viewport; element captures are clamped to a
 realistic screen height (1100 px desktop, 1250 px mobile) and the heatmap shows
 its upper section.
-The reader captures use current-main **Read**; comparison, scene and marker
-captures explicitly choose **Inspect**. Released packages may have an earlier UI.
+The reader captures use current-main **Analysis Off**; chapter comparisons and
+scenes open **Analysis overview**. Passage captures use the same native paragraph
+actions and optional **Analysis On** layer. Released packages may have an earlier UI.
 Scene images show the first three scenes, with the first expanded. Their sample
 register is an illustrative assignment; its values come from the analysis.
 Dialog images include the complete form: the capture tool expands their scroll

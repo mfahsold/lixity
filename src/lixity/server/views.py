@@ -31,6 +31,7 @@ from ..scenes import scene_report_for_display
 from ..showing import showing_report
 from ..style_fingerprint import FingerprintThresholds
 from ..ui import render_analysis
+from ..ui.manuscript_document import reader_blocks
 from .constants import NATIVE_UI_ACTIONS
 from .pdf_context import manuscript_pdf_token, project_settings_token, research_context_token
 
@@ -197,7 +198,7 @@ def build_server_dashboard(
     status_items += [
         {
             "key": "exports",
-            "state": "ok" if artifacts else "warn",
+            "state": "ok",
             "detail": _status_text("status_exports_counts", count=len(artifacts)),
         },
         {
@@ -210,6 +211,7 @@ def build_server_dashboard(
     html_doc = render_analysis(
         analysis,
         resolved,
+        reader_document=reader_blocks(text, config, analysis.paragraphs),
         title=doc_title,
         flag_min_severity=resolved_thresholds.flag_min_severity,
         status=status_items,

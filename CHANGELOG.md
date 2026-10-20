@@ -8,13 +8,28 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Changed
-- The interactive manuscript workspace starts with continuous **Read** prose and
-  keeps the existing chapter and paragraph analysis in **Inspect**. Shared reader
-  controls adjust text size, width and spacing, preserve the visible paragraph
-  across layout changes and offer a reversible focus view. Paragraph **…**,
+- The interactive manuscript stays continuous, with an explicit **Analysis**
+  On/Off toggle independent of the dossier context tool. Dense comparisons open
+  in an overview with **Back to passage**. A shared display coordinator owns
+  workspace, tool, overview and reversible focus transitions. Reading settings
+  group text size, width and spacing and retain visible source-block position.
+  Paragraph **…** buttons,
   right-click and keyboard menus reuse existing values, marker and quote-link
   actions; selection tools appear only when applicable. Desktop manuscript/dossier
   widths use one draggable, keyboard-operated divider; mobile stacks the readers.
+- Source-backed browser reading retains supported headings, quotations, literal
+  code, dividers and notes in source order, including preface/empty chapters and
+  the analysis-excluded appendix. Source-span joins reuse each exact profile once,
+  including profiles spanning several list items. Unprofiled content has no
+  invented measurements or claim saves; analysis/JSON/quote and PDF contracts stay
+  unchanged. Unsupported inline syntax remains literal; no editor or automatic
+  manuscript image fetching is added.
+- Saved manuscript associations open their pinned claim revision; claim/dossier
+  views expose scoped saved-quotation routes and exact reviewed passage returns.
+  Dossier revision references remain explicit; ordinary source readers are not
+  promoted to historical citation-version readers.
+- Research tabs have named tab/panel relationships and explicit narrow-screen
+  overflow controls. Lazy Mermaid rendering shows a localized pending state.
 - Companion dossiers temporarily collapse desktop project navigation, with an
   accessible manual toggle and restoration of the prior choice when closed.
   Mobile navigation remains visible. Saved exact manuscript associations now
@@ -54,6 +69,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and numeric loadings. Additive diagnostics preserve existing scores and formats.
 
 ### Fixed
+- Missing/unreadable manuscript files and failed configuration/render rebuilds
+  label the last successful dashboard with an **Analysis freshness** notice and
+  retry link, preserving its source identity. Explicit analyze/rebuild failures
+  return an error; recovery removes the notice only after validation succeeds.
 - Asynchronous manuscript association marks preserve native text selections,
   including backward selections and astral characters. Automatic review first
   checks archive readiness and revalidates project context after changes.

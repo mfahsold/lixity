@@ -119,25 +119,40 @@ if (filter) {
   var restored = null;
   var query = "";
 
-  function unmark(paragraph) { renderParagraphText(paragraph, ""); }
-  function mark(paragraph, query) { renderParagraphText(paragraph, query); }
+  var structuralText = new WeakMap();
+  function unmark(paragraph) {
+    if (paragraph.matches(".reader-structural")) {
+      if (!structuralText.has(paragraph)) structuralText.set(paragraph, paragraph.textContent);
+      paragraph.textContent = structuralText.get(paragraph);
+    } else renderParagraphText(paragraph, "");
+  }
+  function mark(paragraph, query) {
+    if (!paragraph.matches(".reader-structural")) { renderParagraphText(paragraph, query); return; }
+    var text = structuralText.get(paragraph);
+    var pattern = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"), match = pattern.exec(text);
+    if (!match) return;
+    var index = match.index;
+    var hit = document.createElement("mark"); hit.className = "text-hit"; hit.textContent = match[0];
+    paragraph.replaceChildren(document.createTextNode(text.slice(0, index)), hit, document.createTextNode(text.slice(index + match[0].length)));
+  }
 
   function apply(direction) {
     query = input.value.trim();
     hits = [];
     cursor = -1;
     var blocks = Array.prototype.slice.call(
-      document.querySelectorAll("#chapters .ptext")
+      document.querySelectorAll("#chapters .ptext, #chapters .reader-structural")
     );
     if (query && restored === null) {
       restored = blocks.filter(function(block) { return block.classList.contains("open"); });
     }
     blocks.forEach(function (block) {
-      var paragraph = block.querySelector("p");
+      var structural = block.matches(".reader-structural");
+      var paragraph = structural ? block : block.querySelector("p");
       if (paragraph) unmark(paragraph);
-      var content = paragraphContent[block.id];
+      var content = structural ? [structuralText.get(block)] : paragraphContent[block.id];
       var match = Boolean(content) && Boolean(query)
-        && content[0].toLowerCase().indexOf(query.toLowerCase()) >= 0;
+        && new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(content[0]);
       block.classList.toggle("text-miss", Boolean(query) && !match);
       var chip = paragraphChips[block.id];
       if (restored !== null && chip) {
@@ -147,7 +162,7 @@ if (filter) {
     });
     if (!query) restored = null;
     document.querySelectorAll("#chapters .chapter").forEach(function (chapter) {
-      var any = chapter.querySelectorAll(".ptext:not(.text-miss)").length > 0;
+      var any = chapter.querySelectorAll(".ptext:not(.text-miss), .reader-structural:not(.text-miss)").length > 0;
       chapter.classList.toggle("text-miss", Boolean(query) && !any);
     });
     document.body.classList.toggle("text-search-active", Boolean(query));
@@ -170,11 +185,15 @@ if (filter) {
 
   function step(direction) {
     if (!hits.length) return;
+    if (window.LixityWorkbench && window.LixityWorkbench.state().surface === "overview") {
+      window.LixityWorkbench.dispatch({type: "surface", value: "document"});
+    }
     cursor = (cursor + direction + hits.length) % hits.length;
     var block = hits[cursor];
+    rememberPassageLocation(block);
     var chip = paragraphChips[block.id];
     if (chip) toggleParagraph(chip, true, true);
-    var paragraph = block.querySelector("p");
+    var paragraph = block.matches(".reader-structural") ? block : block.querySelector("p");
     if (paragraph) { unmark(paragraph); mark(paragraph, query); }
     block.scrollIntoView({block: "center", behavior: reduceMotion ? "auto" : "smooth"});
     block.classList.remove("flash");

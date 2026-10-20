@@ -4,9 +4,9 @@ By [Matthias Fahsold](https://github.com/mfahsold) · Published 20 October 2026 
 
 A manuscript analysis tool can show you so much about a paragraph that the paragraph becomes awkward to read. Sentence patterns, source lines, markers and research links all have a purpose. They also compete with the next sentence.
 
-The latest Lixity development work gives the manuscript more room. The interactive workspace initially opens in **Read**, with chapters presented as continuous prose. **Inspect** keeps the chapter comparisons and paragraph tools available when you have a question to investigate. These are current-main changes; the latest packaged release remains **v0.7.1**.
+The latest Lixity development work gives the manuscript more room. The interactive workspace opens as continuous prose with **Analysis Off**. The explicit **Analysis** switch displays its state in words; **Analysis overview** opens chapter comparisons with a direct **Back to passage** action. These are current-main changes; the latest packaged release remains **v0.7.1**.
 
-![Lixity's synthetic Warehouse 4 manuscript in Read, with continuous prose, chapter navigation, text-size controls and reading settings](../screenshots/dashboard-dark.png)
+![Lixity's synthetic Warehouse 4 manuscript with Analysis Off, with continuous prose, analysis display, chapter navigation and reading settings](../screenshots/dashboard-dark.png)
 
 *The current development reader uses one continuous prose surface. This synthetic capture shows the reader controls; paragraph tools and the companion open separately.*
 
@@ -24,7 +24,7 @@ Suppose an action passage feels slower than you expected. Open its **…** menu 
 
 The same contextual menu opens with a right-click. With the paragraph or its button focused, **Shift+F10** opens it from the keyboard; arrow keys move between actions and Escape closes it. Shift+right-click still reaches the browser's native menu. Selecting text within one paragraph offers a small toolbar when an applicable action is available.
 
-Choose **Inspect** when the question calls for chapter comparisons, sentence rhythm or expandable paragraph blocks. Both presentations use the same paragraph text and source anchors. A different sentence length can belong to a scene's purpose or a character's voice. The number locates a difference; reading supplies the judgment about what to do with it.
+Choose **Analysis overview** when the question calls for chapter comparisons or sentence rhythm. The manuscript remains mounted with the same paragraph text and source anchors. Analysis and a dossier have separate display states, so hiding analysis leaves an active dossier beside the text. A different sentence length can belong to a scene's purpose or a character's voice. The number locates a difference; reading supplies the judgment about what to do with it.
 
 ## Give research its own space
 
@@ -48,7 +48,7 @@ An exact return requires the current paragraph, line range and quotation to matc
 
 ## Know which document you are reading
 
-There is an important coverage limit. The browser reader currently uses the analysis paragraph projection: chapter titles, prose and list items. Subheadings, block quotations, code, footnote definitions and dividers are omitted; pipe tables remain literal paragraph text. Configured appendix exclusions still apply. It is not a manuscript editor or a complete Markdown reading copy. Structured [book PDFs](https://mfahsold.github.io/lixity/guides/research-pdf.html#manuscript-export) use a separate document projection.
+The browser reader now retains source structure around the same measured paragraphs: preface, subheadings, quotations, code, notes, dividers and excluded appendix material. Unmeasured text is labeled as reading-only. Paragraph quotation anchors still use the established exact analysis text; inline link/code syntax and pipe tables remain literal where present in that text. This is a reading surface, not a Markdown editor or a complete typesetting engine. Structured [book PDFs](https://mfahsold.github.io/lixity/guides/research-pdf.html#manuscript-export) keep their existing output behavior.
 
 Built-in manuscript analysis runs locally without uploading the manuscript. Optional external workers have separate data boundaries, and retaining research sources requires permission. Measurements remain heuristic aids to human review.
 

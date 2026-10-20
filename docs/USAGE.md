@@ -100,9 +100,10 @@ JavaScript and a compatible native server are required.
 
 ### Start a review
 
-In the current-main interactive workspace, choose **Inspect** to display the
-analysis panels and paragraph strips. **Read** keeps the manuscript continuous;
-its paragraph menu also opens measurements without first changing mode.
+In the current-main interactive workspace, **Analysis** has a visible On/Off
+state while the manuscript remains continuous. An analyzed paragraph's **Values**
+opens its measurements and enables analysis. **Analysis overview** opens chapter
+comparisons and other dense views with **Back to passage** for the return.
 
 **Start your review → Open passage** opens the first paragraph meeting the
 selected tense threshold, otherwise the opening paragraph, clearing filters and
@@ -116,7 +117,10 @@ or instructions to revise.
 ### Read a dossier beside the manuscript
 
 Choose **Dossier alongside** to read a saved dossier while retaining manuscript
-search and the current reading presentation. Opening it collapses desktop project
+search and the current reading presentation. Analysis visibility remains a
+separate choice: opening a dossier does not turn it off. Use the context area's
+**Analysis** and **Dossier alongside** controls to switch the active tool; only
+one tool occupies that area at a time. Opening it collapses desktop project
 navigation; its toggle remains reachable, and closing restores the earlier manual
 choice. Drag the divider to change the desktop widths, or focus it and use
 `Left`/`Right` in five-point steps; `Home` and `End` select the 35% and 75%
@@ -130,24 +134,40 @@ selection, evidence and retention semantics.
 
 ### Link a manuscript quote to a claim
 
-Use **Link selection to claim** (`Alt+L`) on text in one paragraph. In **Read**,
-the selection toolbar and paragraph context menu reach the same action. Review
+Use **Link selection to claim** (`Alt+L`) on text in one analyzed paragraph.
+The selection toolbar and paragraph context menu reach the same action. Review
 the claim and quote, then permit retention before saving. Preview writes nothing;
 saved links pin exact claim/paragraph versions and need review after changes.
 See [retention, anchoring and compatibility](research/USAGE.md#associate-a-manuscript-quote-with-a-claim).
+
+A saved association's **Open claim** shows the recorded claim revision. Its
+dossier reference opens the recorded dossier version; choose newer history
+explicitly when needed. Claim and dossier views can open their saved manuscript
+associations in Review. Only an exactly resolved current passage offers a direct
+jump; moved, changed, ambiguous and unavailable anchors retain their review state.
+When following a connection from the manuscript, **Back to passage** returns to
+the preserved origin while the project/source context still matches. Cited source
+quotations remain pinned retained passages; opening an ordinary source reader is
+not a new historical-source navigation contract.
 
 <a id="reading-paragraphs-since-v230"></a>
 
 ### Reading paragraphs
 
-**Current main (unreleased):** interactive workspaces initially select **Read**.
-Chapters appear as continuous prose with ordinary scrolling and text selection.
-Choose a chapter in the reader toolbar, use **A−**/**A+** for text size
-(16–28 nominal pixels), or open **Reading settings** for narrow, standard or wide
-text and compact, standard or relaxed line spacing. The mode, size, width and
-spacing are local browser preferences; display changes do not edit the source.
+**Current main (unreleased):** interactive workspaces start with continuous
+manuscript text and **Analysis Off**. Toggle **Analysis** to reveal diagnostic
+presentation; its accessible name stays constant and its pressed state identifies
+On/Off. Opening or closing the dossier is independent of that state. Use
+**Analysis overview** for chapter matrices, sentence rhythm and other comparisons,
+then **Back to passage** to restore the document context. Hiding analysis also
+leaves the overview and restores an eligible dossier instead of an analysis tool.
 
-Each paragraph has an **…** button. It opens the same contextual tools as a
+Choose a chapter in the reader toolbar. **Reading settings** groups **A−**/**A+**
+for text size (16–28 nominal pixels), narrow/standard/wide text and
+compact/standard/relaxed line spacing. Appearance and the desktop split are local
+browser preferences; display changes do not edit the source.
+
+Each analyzed paragraph has an **…** button. It opens the same contextual tools as a
 right-click on the prose or `Shift+F10`/the context-menu key while the paragraph
 or its button has focus. Arrow keys move through the menu; `Home`/`End` reach its
 first/last action. Escape closes it and restores focus. Actions depend on the
@@ -157,28 +177,34 @@ also offers a compact toolbar. Marker notes and claim associations still require
 their existing explicit save and retention steps.
 Use Shift+right-click to open the browser's native context menu instead.
 
-**Values** opens a closable paragraph inspector with source lines, tense and
-style measurements. It replaces the dossier companion as the active side tool;
-narrow screens place it over the lower part of the reader. Close its button or
-press Escape to return to the paragraph. **Focus reading** temporarily hides
-project navigation and side tools; the same button or Escape restores the
-workspace. Text-size, layout and companion changes retain the visible paragraph's
-position where available. Menus close on scrolling or resizing.
+**Values** enables analysis and opens the selected paragraph's source lines,
+tense and style measurements in the closable context area. Switch between that
+tool and the saved dossier explicitly; closing the tool does not turn all
+analysis off. **Focus reading** temporarily hides surrounding navigation and
+tools; its visible exit or Escape restores the workspace. Opening a tool exits
+focus coherently. Text-size, layout and companion changes retain the visible
+source block's position where available. Menus close on scrolling or resizing;
+switching workspace closes temporary menus and reading settings.
 
-Choose **Inspect** to return to chapter comparisons, paragraph strips and
-expandable text/Values. This is the established analysis presentation, using the
-same manuscript paragraphs and exact source anchors as Read. Closed inspection
-paragraphs are rendered on demand and release their inner layout on close unless
-a marker draft remains. Read renders the continuous paragraph tree. All profiled
-paragraph text and measurements remain embedded in either case, so lazy rendering does not reduce
-the self-contained file's size. Plain exported reports retain their inspection
-layout. With JavaScript disabled, a static fallback keeps manuscript text readable.
+The source-backed reader retains supported headings, multi-paragraph quotations,
+list content, literal code, scene/page dividers and note definitions in source
+order. Preface, empty chapters and the configured analysis-excluded appendix
+remain readable. Unprofiled blocks show a coverage note, without paragraph
+measurements or claim-save actions. Documents without measurable prose can still
+be read. The statistical analysis continues to use its existing coverage.
 
-Both views use the analysis paragraph projection: prose and list items, with
-chapter titles. Subheadings, block quotations, code, footnote definitions and
-dividers are omitted; pipe tables remain literal paragraph text. A configured
-appendix exclusion still applies. For a structured reading copy, use the
-[book PDF](#lixity-pdf), which uses the separate manuscript-document projection.
+Analyzed paragraph text, line spans, hashes and quotation offsets remain exact.
+One analysis paragraph can own several presentation list items, so those items
+remain one text owner rather than duplicated passages. Links, inline code and
+footnote markers inside those paragraphs are not normalized into a new rich-text
+quote contract. Pipe tables remain literal text; embedded HTML and unsupported
+TeX stay inert, and manuscript image URLs are not fetched automatically. This
+bounded reader is not a general Markdown editor or full CommonMark/GFM renderer.
+The [book PDF](#lixity-pdf) keeps its established presentation and stricter TeX
+rules. Profile-only embedding callers retain their analysis-projection fallback.
+Plain reports retain their report presentation, and the no-JavaScript fallback
+keeps source text readable. Complete paragraph data remains embedded; deferred
+interaction does not make the self-contained file smaller.
 
 The manuscript is a document reader: dragging selects text and resizing text
 changes its layout. Images use the shared zoom viewer, maps use Leaflet pan/zoom,
@@ -186,16 +212,30 @@ and style-space retains its own rotation and zoom controls.
 
 ### Searching the manuscript
 
-Type a phrase in the analysis toolbar to show matching paragraphs and mark
+Type a phrase in the manuscript search control to show matching text blocks and mark
 hits. Arrows or `Enter`/`Shift+Enter` move between matches; `Escape` or
-**Clear search** restores the manuscript. The count is matching paragraphs out
-of paragraphs searched. Search takes priority over **Flagged only**; clearing
+**Clear search** restores the manuscript. Search includes readable structural
+blocks as well as analyzed paragraphs; the count is matching blocks out of
+blocks searched. Search takes priority over **Flagged only**; clearing
 it restores that filter.
 
 Matching is a case-insensitive substring test: it does not stem, ignore
 diacritics or cross paragraph boundaries. Text resembling markup remains text.
 Research list filters only match loaded record metadata; use
 **Research → Search** for retained source text.
+
+### Source availability and saved analysis
+
+**Current main (unreleased):** reloading the local dashboard validates the selected
+manuscript before serving cached measurements. Changed readable bytes trigger a
+rebuild. If the file is missing, unreadable or a rebuild fails, a last successful
+view remains usable with an **Analysis freshness** notice and **Retry refresh**.
+That label identifies saved analysis; it does not claim the unavailable source
+is current. Restore access or correct the source/settings, then retry. Recovery
+clears the notice only after the required read or rebuild succeeds. An initial
+missing source without a successful snapshot keeps the existing missing-file
+presentation. This is request-time validation, not an automatic file/configuration
+watcher; an unavailable source is not presented as a newly validated analysis.
 
 <a id="style-area-since-v230"></a>
 
@@ -208,7 +248,7 @@ select the relevant tab. All available panels remain readable without JavaScript
 
 ### Settings and interpretation
 
-In **Project & Settings → Analysis**, expand **Adjust highlights** to inspect controls
+In **Project → Analysis**, expand **Adjust highlights** to inspect controls
 and explanations. **Apply** submits changes; restoring defaults only changes
 the form. Invalid numbers and a strong cutoff below the noticeable cutoff fail
 validation. [Configuration](#configuration-corpusconfig) explains persistent
@@ -1022,7 +1062,7 @@ supplied values remain literal data. Generation and downloads are described
 
 ## NDA agreements
 
-Under **Project & Settings**, enter the recipient's name, optional **Address**, **Project
+Under **Project**, enter the recipient's name, optional **Address**, **Project
 name**, **Date** and **Place**. A real loaded project name can be prefilled;
 an empty workspace leaves it blank. The date defaults to the browser's local
 calendar day. Choose **Preview** to read the full friendly agreement, then

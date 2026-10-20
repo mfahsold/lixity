@@ -1,0 +1,73 @@
+// Long documents exercise style invalidation that small UI fixtures cannot expose.
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const {launchChromium} = require('../../scripts/browser_tools.cjs');
+const {pythonFixture} = require('./support/python-fixture.cjs');
+const root = path.resolve(__dirname, '../..');
+const html = pythonFixture(`
+import json
+from lixity.config import resolve_thresholds
+from lixity.pipeline import analyze_document, resolve_document_config
+from lixity.ui.dashboard import render_analysis
+from lixity.ui.manuscript_document import reader_blocks
+paragraphs = [('Clara walked through the quiet garden and watched the birds beside the fountain. '
+               'The morning light crossed the stone path while rain gathered beyond the gate. '
+               'She carried a notebook and paused beside the old window. '
+               'The courtyard remained still as the distant street slowly filled with people and voices.')
+              for _ in range(2000)]
+paragraphs[-1] = paragraphs[-1].replace('Clara', 'Clara1999', 1)
+source = '\\n\\n'.join('## Chapter %d\\n\\n' % (index // 100 + 1) + '\\n\\n'.join(paragraphs[index:index + 100])
+                       for index in range(0, 2000, 100))
+config, resolved = resolve_document_config(source, 'en', project_config={})
+thresholds = resolve_thresholds(project_config={})
+analysis = analyze_document(source, config, thresholds)
+print(json.dumps(render_analysis(analysis, resolved, title='Synthetic long manuscript',
+    flag_min_severity=thresholds.flag_min_severity, controls=True, enabled_actions=['analyze'],
+    reader_document=reader_blocks(source, config, analysis.paragraphs))))
+`, {root});
+
+(async () => {
+  const browser = await launchChromium();
+  try {
+    for (const width of [1440, 320]) {
+      const page = await browser.newPage({viewport: {width, height: 900}, reducedMotion: 'reduce'});
+      const errors = [], writes = [];
+      page.on('pageerror', error => errors.push(error.message));
+      await page.route('http://lixity.test/**', route => {
+        const request = route.request();
+        if (request.method() !== 'GET') writes.push(request.method());
+        return route.fulfill(new URL(request.url()).pathname.startsWith('/api/')
+          ? {json: {ok: false, message: 'Synthetic offline project'}}
+          : {contentType: 'text/html', body: html});
+      });
+      // Ordinary navigation timeout catches an unusable long-document startup;
+      // this is a functional readiness check, not a millisecond benchmark gate.
+      await page.goto('http://lixity.test/');
+      const paragraphs = page.locator('#chapters .ptext');
+      assert.equal(await paragraphs.count(), 2000);
+      assert.equal(await page.locator('[data-reader-paragraph]').count(), 2000);
+      const last = paragraphs.last();
+      const identity = await last.evaluate(node => ({id: node.id, hash: node.dataset.paragraphSha256,
+        start: node.dataset.start, end: node.dataset.end, text: node.querySelector('.ptext-inner > p').textContent}));
+      assert.match(identity.text, /^Clara1999 walked/);
+      const search = page.locator('#text-search');
+      await search.fill('Clara1999 walked'); await search.press('Enter');
+      assert.equal(await page.locator('#chapters .ptext:visible').count(), 1);
+      assert.equal(await last.isVisible(), true);
+      await search.press('Escape');
+      await last.locator('.ptext-inner > p').evaluate(node => {
+        const range = document.createRange(); range.selectNodeContents(node);
+        const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range);
+      });
+      assert.equal(await page.evaluate(() => getSelection().toString()), identity.text);
+      const toggle = page.locator('#manuscript-analysis-toggle');
+      await toggle.click(); await toggle.click();
+      assert.deepEqual(await last.evaluate(node => ({id: node.id, hash: node.dataset.paragraphSha256,
+        start: node.dataset.start, end: node.dataset.end, text: node.querySelector('.ptext-inner > p').textContent})), identity);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      assert.deepEqual(errors, []); assert.deepEqual(writes, []);
+      await page.close();
+    }
+    console.log('Long manuscript:100k synthetic words/2000 paragraphs ready, searchable, selectable and reversible at1440/320.');
+  } finally {await browser.close();}
+})().catch(error => {console.error(error); process.exitCode = 1;});

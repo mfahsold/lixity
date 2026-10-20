@@ -17,6 +17,7 @@ from ..models import SCHEMA_VERSION, CorpusConfig
 from ..pipeline import analyze_document
 from ..style_fingerprint import FEATURES, FingerprintThresholds, dunning_g2
 from ..ui import render_analysis
+from ..ui.manuscript_document import reader_blocks
 from .models import Extraction, Passage, Reference, Source, SourceVersion, Tombstone
 from .repository import Repository, ResearchError
 
@@ -198,6 +199,7 @@ def analyze(
     dashboard_html = render_analysis(
         analysis,
         resolved,
+        reader_document=reader_blocks(text, config, analysis.paragraphs),
         title=source.title,
         flag_min_severity=resolved_thresholds.flag_min_severity,
         document_context=context_for_dashboard,

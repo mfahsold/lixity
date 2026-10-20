@@ -9,10 +9,13 @@ from __future__ import annotations
 import json
 import secrets
 from collections.abc import Mapping
+from html import escape
 from typing import Any
 
 from ..log import get_logger
-from ._state import WorkspaceState
+from ..ui.components import status_strip
+from ..workspace_labels import WORKSPACE_LABELS
+from ._state import RefreshOutcome, WorkspaceState
 from .constants import DEFAULT_PORT
 
 
@@ -58,7 +61,9 @@ class ResponseMixin(WorkspaceState):
             self.close_connection = True
             self._debug_log(f"Client disconnected while sending HTTP {code} response")
 
-    def _send_dashboard_shell(self, html: str) -> None:
+    def _send_dashboard_shell(
+        self, html: str, *, freshness: RefreshOutcome = RefreshOutcome.UNKNOWN, language: str = "en",
+    ) -> None:
         """Serve the dashboard with a per-response script nonce and strict CSP.
 
         The shell is self-contained: scripts come only from the bundled inline
@@ -66,6 +71,25 @@ class ResponseMixin(WorkspaceState):
         A request nonce blocks injected scripts from manuscript or project text,
         so escaping tests and CSP protect the same boundary.
         """
+        notice_keys = {
+            RefreshOutcome.MISSING: "status_source_missing",
+            RefreshOutcome.UNREADABLE: "status_source_unreadable",
+            RefreshOutcome.REFRESH_FAILED: "status_refresh_failed",
+        }
+        if freshness in notice_keys:
+            labels = WORKSPACE_LABELS.get(language, WORKSPACE_LABELS["en"])
+            notice = status_strip(labels, [{
+                "key": "freshness", "state": "warn", "detail": labels[notice_keys[freshness]],
+            }])
+            notice = notice.replace(
+                '<div class="status-strip">',
+                f'<div class="status-strip" id="dashboard-freshness" '
+                f'data-dashboard-freshness="{freshness.value}" role="status" aria-live="polite">',
+                1,
+            )
+            retry = f'<a class="ctl" href="/">{escape(labels["status_retry_refresh"])}</a>'
+            notice = notice.removesuffix("</div>") + retry + "</div>"
+            html = html.replace("<!--dashboard-freshness-->", notice, 1)
         nonce = secrets.token_urlsafe(16)
         body = html.replace("<script>", f'<script nonce="{nonce}">')
         policy = "; ".join(

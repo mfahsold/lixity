@@ -32,7 +32,6 @@ assert.equal(fixture.status,0,fixture.stderr);
   const browser = await launchChromium();
   try {
   const page = await browser.newPage({viewport: {width: 1280, height: 900}, hasTouch: true});
-  await page.addInitScript(() => localStorage.setItem('lixity.manuscript.mode', 'inspect'));
   const errors = [];
   const results = [];
   page.on('pageerror', error => errors.push(error.message));

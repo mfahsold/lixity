@@ -42,19 +42,21 @@ English is the default analysis language; detection requires `--language auto`.
 Language-neutral JSON identifiers and units differ from translated display keys.
 Use active result metadata when interpreting thresholds and unavailable values.
 
-Current-main interactive UI: manuscript/analysis first, research second, settings
-third; a fixed project sidebar on desktop becomes horizontal navigation on
-narrow screens. Read initially presents continuous manuscript prose; Inspect
-retains chapter comparisons and paragraph drill-down. One paragraph tree keeps
-the same source text, hashes, search and exact anchors. Local reading preferences
-adjust text size, width and spacing; focus mode is reversible. Paragraph ellipsis,
-right-click and keyboard context menus share the existing values, marker and
-claim-link actions. Selection tools preserve explicit save/retention boundaries.
-Plain exported reports retain their inspection layout; these are current-main
-enhancements rather than a new manuscript editor or API.
-Reader coverage follows analysis prose/list paragraphs and appendix exclusions;
-it omits subheadings, blockquotes, code, footnotes and dividers and retains tables
-as literal text. Structured manuscript PDFs use a separate document projection.
+Current-main interactive UI: Manuscript, Research and Project share a desktop
+sidebar and compact narrow-screen navigation. Continuous manuscript prose opens
+with Analysis Off. Its native toggle has an explicit On/Off state; Analysis and
+Dossier are alternative context tools. Hiding analysis leaves an active dossier.
+Analysis overview provides dense comparisons and Back to passage restores context.
+One paragraph tree keeps source text, hashes, search and exact anchors. Browser-local
+reading preferences adjust size, width and spacing; focus is reversible. Paragraph
+ellipsis, right-click and keyboard context menus share values, marker and claim
+association actions. Saving and retention remain explicit. Plain exported reports
+retain their inspection layout; these are current-main enhancements, not a release.
+Source-span reading blocks also retain preface, subheadings, quotations, code,
+notes, dividers and excluded appendix material. Only profiled paragraphs have
+measurements and claim anchors. Tables and inline link/code syntax remain literal
+where present in the established exact paragraph projection. No manuscript URLs
+are fetched. Structured manuscript PDFs keep their existing behavior.
 The companion dossier reader supplies context beside a passage.
 Companion reading temporarily collapses desktop navigation; a shared toggle
 keeps it reachable and closing restores the prior manual choice. Its desktop
@@ -82,7 +84,7 @@ viewports and keyboard navigation without changing data or API contracts.
 - [Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) and [scientific limits](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md): formulas, estimator conventions and heuristic caveats.
 - [Architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md) and [localization](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md): integration boundaries and language coverage.
 - [Articles](https://mfahsold.github.io/lixity/blog/): interpretation examples, separate from API contracts.
-- [Manuscript reading workbench](https://mfahsold.github.io/lixity/blog/manuscript-reading-workbench.html): a current-main Read/Inspect and manuscript–research workflow with explicit coverage limits.
+- [Manuscript reading workbench](https://mfahsold.github.io/lixity/blog/manuscript-reading-workbench.html): a current-main Analysis On/Off, overview and manuscript–research workflow with explicit coverage limits.
 - [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.1.md) and [release history](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md).
 
 HTML guides and articles have Markdown alternatives: append `.md` to their HTML

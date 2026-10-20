@@ -30,6 +30,8 @@ SUITE_DIR = ROOT / "tests" / "browser"
 GROUPS: dict[str, tuple[str, ...]] = {
     "fast": (
         "layout.cjs",
+        "workbench.cjs",
+        "tooltips.cjs",
         "minimal-workflows.cjs",
         "project-controls.cjs",
         "research.cjs",
@@ -56,8 +58,12 @@ AREAS: dict[str, tuple[str, ...]] = {
         "layout.cjs",
         "manuscript-pdf.cjs",
         "manuscript-reader.cjs",
+        "reader-document.cjs",
+        "reader-large.cjs",
         "manuscript-selection.cjs",
         "manuscript-search.cjs",
+        "workbench.cjs",
+        "tooltips.cjs",
         "minimal-workflows.cjs",
         "paragraph-feedback.cjs",
         "scenes.cjs",
@@ -79,6 +85,7 @@ AREAS: dict[str, tuple[str, ...]] = {
         "visual-consistency.cjs",
     ),
     "research": (
+        "research-navigation.cjs",
         "decision-acknowledgement.cjs",
         "dossier-claims.cjs",
         "dossier-geography.cjs",

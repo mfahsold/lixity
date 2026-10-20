@@ -41,7 +41,6 @@ const data = JSON.parse(fixture.stdout);
   try {
     for (const language of ['en','de','fr','es','it','pt','nl']) {
       const page = await browser.newPage({viewport:{width:1440,height:1000}});
-      await page.addInitScript(() => localStorage.setItem('lixity.manuscript.mode', 'inspect'));
       page.setDefaultTimeout(5000);
       page.on('pageerror',error=>errors.push(error.message));
       await page.route('http://lixity.test/**',async route => {
@@ -74,14 +73,13 @@ const data = JSON.parse(fixture.stdout);
       await page.locator('#tab-view-analysis').click();
       for(const width of [1440,320]) {
         await page.setViewportSize({width,height:1000});
-        const chip=page.locator('#chapters .chip').first();
-        const paragraph=page.locator('#'+await chip.getAttribute('data-target'));
-        if (!await paragraph.evaluate(element=>element.classList.contains('open'))) {
-          const id=await paragraph.getAttribute('id');
-          await page.locator(`.chip[data-target="${id}"]`).click();
-        }
+        const paragraph=page.locator('#chapters .ptext').first();
+        const openMarker = async () => {
+          await paragraph.locator('.reader-paragraph-actions').click();
+          await page.locator('#manuscript-context-menu [data-reader-action=todo]').click();
+        };
+        await openMarker();
         const add=paragraph.locator('[data-marker-kind=todo]');
-        await add.click();
         const slot=add.locator('..').locator('.marker-note-slot');
         const input=slot.locator('.marker-note');
         await input.fill('Synthetic nonempty note <b>');
@@ -95,7 +93,7 @@ const data = JSON.parse(fixture.stdout);
         await save.click();
         await page.waitForFunction(() => document.querySelector('[data-marker-save]').disabled);
         assert.equal(await input.isDisabled(),true,'Pending requests preserve an immutable draft');
-        await add.click({force:true});
+        await openMarker();
         assert.equal(await slot.locator('.marker-note').count(),1,'Repeated activation cannot replace a pending draft');
         assert.equal(posts.length,beforePosts+1);
         release();markerWait=null;
@@ -113,6 +111,9 @@ const data = JSON.parse(fixture.stdout);
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
         await cancel.click();
         assert.equal(await page.locator('.marker-note').count(),0);
+        if (await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed') !== 'true') {
+          await page.locator('#manuscript-analysis-toggle').click();
+        }
         await page.locator('#filter-flags').check();
         await page.locator('#style-layer').selectOption('asl');
         await page.locator('#layer-only').check();

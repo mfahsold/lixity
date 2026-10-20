@@ -41,6 +41,20 @@ async function withoutRequests(page, description, exercise) {
   }
 }
 
+async function showOverview(page) {
+  const open = page.locator('#workbench-overview-open');
+  if (await open.isVisible()) await open.click();
+  await expect(page.locator('#workbench-overview-back')).toBeVisible();
+  await expect(page.locator('#manuscript-analysis-panels')).toBeVisible();
+}
+
+async function openValues(page, passage) {
+  await passage.locator('.reader-paragraph-actions').click();
+  await page.locator('#manuscript-context-menu [data-reader-action=values]').click();
+  await expect(page.locator('#reader-inspector')).toBeVisible();
+  await expect(page.locator('#manuscript-analysis-toggle')).toHaveAttribute('aria-pressed', 'true');
+}
+
 async function returnToTop(page, route) {
   const backTop = page.locator('a.site-back-top[href="#top"]');
   await backTop.focus();
@@ -391,12 +405,14 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   assert.equal(await page.locator('.page').count(), 1, 'The example uses the generated report layout');
   assert.ok((await page.locator('.page').innerText()).length > 1000);
   await assertDemoReadOnly(page);
-  assert.equal(await page.locator('.chapter').count(), 6);
+  assert.equal(await page.locator('.chapter[data-start]').count(), 6,
+    'The report retains six profiled chapters alongside readable front matter');
   assert.ok(await page.locator('.chip').count() > 6, 'The report exposes actual paragraph blocks');
   if (javaScriptEnabled) {
-    await expect(page.locator('#manuscript-mode')).toHaveValue('read');
+    await expect(page.locator('#manuscript-analysis-toggle')).toHaveAttribute('aria-pressed', 'false');
     await expect(page.locator('#chapters .ptext-inner > p').first()).toBeVisible();
-    await page.locator('#manuscript-mode').selectOption('inspect');
+    await expect(page.locator('#reader-preface')).toBeVisible();
+    await showOverview(page);
   }
   await checkStyleInsights(page, javaScriptEnabled, width, colorScheme);
   if (javaScriptEnabled && (colorScheme !== 'light' || width === 390)) return;
@@ -427,10 +443,12 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   await expect(passage).toBeVisible();
   await expect(passage).toHaveCSS('opacity', '1');
   assert.ok((await passage.locator('.ptext-inner > p').innerText()).length > 50, 'Opening a block exposes the synthetic source paragraph');
-  await passage.locator('.paragraph-values > summary').click();
-  assert.ok((await passage.locator('.anchor').innerText()).length > 5, 'The passage includes source lines');
+  await openValues(page, passage);
+  assert.ok((await page.locator('#reader-inspector .anchor').innerText()).length > 5,
+    'Passage values include the selected source lines');
   await passage.locator('.ptext-inner > p').click();
   await page.screenshot({path: path.join(artifacts, `report-passage-${width}-${colorScheme}.png`)});
+  await page.locator('#reader-inspector-close').click();
   await chip.focus();
   await page.keyboard.press('Space');
   assert.equal(await chip.getAttribute('aria-expanded'), 'false');
@@ -451,6 +469,7 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   assert.equal(await page.locator('#style-layer').inputValue(), '');
   assert.equal(await page.locator('#layer-legend').isVisible(), false);
   const canvas = page.locator('#dim-3d-canvas');
+  await showOverview(page);
   await page.locator('#style-tab-dimensions').click();
   await canvas.scrollIntoViewIfNeeded();
   await page.mouse.move(0, 0);
@@ -514,6 +533,7 @@ async function checkDemoCapabilities(page, width) {
   await expect(page.locator('#manuscript-pdf-layout')).toHaveValue('book');
   await page.locator('#manuscript-pdf-title').click();
 
+  await showOverview(page);
   for (const id of ['heatmap', 'bands', 'dimensions', 'structural']) {
     const tab = page.locator(`[data-style-view="${id}"]`);
     await tab.click();
@@ -521,12 +541,14 @@ async function checkDemoCapabilities(page, width) {
     await expect(page.locator('#' + id)).toBeVisible();
     await expect(page.locator('#style-panels > .panel:visible')).toHaveCount(1);
   }
-  for (const link of await page.locator('#analysis-sections [data-section-link]').all()) {
+  const reviewLinks = page.locator('#analysis-review [data-jump]');
+  await expect(reviewLinks).toHaveCount(2);
+  for (const link of await reviewLinks.all()) {
     await link.click();
-    const target = await link.getAttribute('data-section-link');
-    await expect(page).toHaveURL(new RegExp('#' + target + '$'));
-    await expect(page.locator('#' + target)).toBeVisible();
-    await expect(page.locator('#' + target)).toBeInViewport();
+    const target = await link.getAttribute('data-jump');
+    await expect(page).toHaveURL(new RegExp(target + '$'));
+    await expect(page.locator(target)).toBeVisible();
+    await expect(page.locator(target)).toBeInViewport();
   }
 
   await page.locator('[data-review-passage]').click();
@@ -534,7 +556,13 @@ async function checkDemoCapabilities(page, width) {
   const passageId = await passage.getAttribute('id');
   const originalText = await passage.locator('p').first().innerText();
   await expect(passage.locator('[data-marker-kind]')).toHaveCount(4);
-  await checkDemoLocalControl(passage.locator('[data-marker-kind]').first());
+  for (const marker of await passage.locator('[data-marker-kind]').all()) {
+    await expect(marker).toBeDisabled();
+    await expect(marker).toHaveAttribute('data-demo-local', 'true');
+  }
+  await passage.locator('.reader-paragraph-actions').click();
+  await expect(page.locator('#manuscript-context-menu [data-reader-action=todo]')).toHaveCount(0);
+  await page.keyboard.press('Escape');
 
   const toggle = page.locator('#workspace-reader-toggle');
   await expect(toggle).toBeVisible();
@@ -550,7 +578,9 @@ async function checkDemoCapabilities(page, width) {
   await page.locator('#workspace-reader-close').click();
   await expect(page.locator('#workspace-reader-panel')).not.toBeVisible();
   await expect(toggle).toBeFocused();
-  await expect(page.locator('#analysis-review')).toBeVisible();
+  await expect(page.locator('#chapters')).toBeVisible();
+  await expect(page.locator('#workbench-overview-open')).toBeVisible();
+  await expect(page.locator('#manuscript-analysis-toggle')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#' + passageId + ' p').first()).toHaveText(originalText);
 
   await page.locator('#tab-view-research').click();
@@ -578,7 +608,7 @@ async function checkDemoCapabilities(page, width) {
     `The native companion reader stays within ${width}px`);
   await page.locator('#workspace-reader').scrollIntoViewIfNeeded();
   await page.screenshot({path: path.join(artifacts, `demo-companion-${width}.png`)});
-  await select.press('Escape');
+  await page.locator('#workspace-reader-close').click();
   await expect(page.locator('#workspace-reader-panel')).not.toBeVisible();
   await expect(toggle).toBeFocused();
   await expect(page.locator('#' + passageId + ' p').first()).toHaveText(originalText);
@@ -653,7 +683,8 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   await page.locator('#text-search').fill(demoQuote);
   const passage = page.locator('#chapters .ptext.open').filter({hasText: demoQuote}).first();
   await expect(passage.locator('p').first()).toContainText(demoQuote);
-  await passage.locator('.paragraph-values > summary').click();
+  await openValues(page, passage);
+  const inspectedValues = await page.locator('#reader-inspector-body').textContent();
   await page.locator('#style-layer').selectOption('asl');
   const passageId = await passage.getAttribute('id');
   const paragraphText = await passage.locator('p').first().innerText();
@@ -676,7 +707,10 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   await page.locator('#tab-view-analysis').click();
   await expect(page.locator('#text-search')).toHaveValue(demoQuote);
   await expect(page.locator('#style-layer')).toHaveValue('asl');
-  await expect(page.locator('#' + passageId + ' .paragraph-values')).toHaveAttribute('open', '');
+  await expect(page.locator('#reader-inspector')).toBeVisible();
+  await expect(page.locator('#reader-inspector .paragraph-values')).toHaveAttribute('open', '');
+  assert.equal(await page.locator('#reader-inspector-body').textContent(), inspectedValues,
+    'Returning from research preserves the selected passage values');
   await expect(page.locator('#' + passageId + ' p').first()).toHaveText(paragraphText);
   await expect(page.locator('#' + passageId + ' mark.manuscript-claim-hit')).toHaveText(demoQuote);
   await page.locator('#tab-view-research').click();
@@ -686,7 +720,7 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   await expect(page.locator('#tab-view-analysis')).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#' + passageId)).toBeFocused();
   await expect.poll(() => page.locator('#' + passageId).evaluate(panel => {
-    const toolbar = document.querySelector('#view-pane-analysis .toolbar');
+    const toolbar = document.querySelector('#manuscript-reader-controls');
     const top = panel.getBoundingClientRect().top;
     const boundary = getComputedStyle(toolbar).position === 'sticky'
       ? toolbar.getBoundingClientRect().bottom : 0;
@@ -723,7 +757,6 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
     for (const [javaScriptEnabled, colorScheme, hasTouch = false] of [[true, 'light'], [false, 'light'], [true, 'dark'], [false, 'dark'], [true, 'light', true]]) {
       const context = await browser.newContext({javaScriptEnabled, colorScheme, hasTouch});
       const page = await context.newPage();
-      if (javaScriptEnabled) await page.addInitScript(() => localStorage.removeItem('lixity.manuscript.mode'));
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
       page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
@@ -763,8 +796,8 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
             .filter(node => !(Number(node.getAttribute('width')) > 0 && Number(node.getAttribute('height')) > 0))
             .map(node => node.getAttribute('src'))), [], `${route} has images without dimensions`);
           assert.ok((await page.title()).length > 10);
-          // Dashboards keep their paragraph text in lazy payloads, so their
-          // substance is checked structurally; content pages need an article.
+          // Plain reports retain lazy paragraph payloads; the interactive demo
+          // mounts continuous prose. Content pages need a readable article.
           const dashboard = route === 'demo/report.html' || route.startsWith('examples/');
           if (dashboard) {
             assert.ok(await page.locator('.chapter').count() > 0, `${route} renders chapters`);
@@ -884,6 +917,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
       assert.deepEqual(errors, []);
       await context.close();
     }
+    fs.rmSync(root, {recursive: true, force: true});
     console.log(`Public docs: ${routes.length} selected HTML pages at desktop/390/320, representative surfaces in light/dark and JS on/off, static GET-only navigation, one six-chapter demo Analysis/Research state roundtrip with evidence/quote and PDF links, legacy research redirect, case-study rendering, keyboard/focus/console passed. Screenshots: ${artifacts}`);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

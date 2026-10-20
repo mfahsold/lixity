@@ -13,6 +13,8 @@ from typing import Any, ClassVar
 from urllib.parse import parse_qs, urlparse
 
 from ..research import api as research_api
+from ..workspace_labels import WORKSPACE_LABELS
+from ._state import RefreshOutcome
 from .constants import (
     MAX_ARTIFACT_BYTES,
     MAX_IMAGE_PAYLOAD_BYTES,
@@ -115,8 +117,13 @@ class LixityServerHandler(
 
         path = self.path.split("?", 1)[0]
         if path in ("/", "/index.html"):
-            self.refresh_when_source_changed()
-            self._send_dashboard_shell(self.dashboard_html)
+            with self._workspace_lock:
+                outcome = self.refresh_when_source_changed()
+                html = self.dashboard_html
+                language = self.dashboard_info.get("language_key", self.language)
+                if not self.dashboard_info.get("manuscript_source_sha256"):
+                    outcome = RefreshOutcome.UNKNOWN  # no last-good manuscript to label
+            self._send_dashboard_shell(html, freshness=outcome, language=language)
             return
 
         if path.startswith("/artifact/"):
@@ -162,9 +169,11 @@ class LixityServerHandler(
 
     def _handle_refresh(self, _payload: dict[str, Any]) -> None:
         try:
-            self.refresh()
-        except (OSError, ValueError, RuntimeError) as exc:
-            self._json({"ok": False, "message": str(exc)}, 500)
+            self.refresh(strict_source=True)
+        except (OSError, ValueError, RuntimeError, UserWarning):
+            language = self.dashboard_info.get("language_key", self.language)
+            labels = WORKSPACE_LABELS.get(language, WORKSPACE_LABELS["en"])
+            self._json({"ok": False, "message": labels["status_refresh_error"]}, 500)
             return
         action = self.path.split("?", 1)[0].rstrip("/").rsplit("/", 1)[-1]
         done = "Dashboard analyzed" if action == "analyze" else "Dashboard rebuilt"

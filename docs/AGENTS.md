@@ -193,13 +193,22 @@ with the shared data hooks below. Optional actions must match host capabilities.
 Stable anchors and hooks are the automation surface; do not depend on incidental
 layout or localized text. All user text remains inert.
 
-Research, analysis and settings are separate views; project actions remain
+Manuscript, Research and Project are separate views; project actions remain
 reachable from each. Import preview writes nothing until confirmation.
 [Dashboard usage](USAGE.md#dashboard-workflow) owns navigation workflows.
 
-Paragraph IDs and offsets remain addressable while closed. Lazy DOM creation
-retains complete embedded text/search and a readable no-JavaScript fallback;
-an empty closed panel does not mean absent text or a smaller HTML payload.
+**Current main (unreleased):** the interactive manuscript remains continuous.
+Analysis visibility, document/overview and the active analysis/dossier tool are
+separate display choices. Use the visible toggle/return controls below; the
+internal `LixityWorkbench` coordinator is not a replacement domain API. Changing
+views or display settings does not authorize source edits or retention.
+
+Paragraph IDs and offsets remain stable. Source-backed renderers interleave
+unprofiled structure around the same exact profile nodes; those extra blocks do
+not acquire statistical values or claim-save capability. Profile-only callers
+keep their fallback. Deferred interaction retains complete embedded text/search
+and a readable no-JavaScript fallback; an empty closed report panel does not mean
+absent text or a smaller HTML payload.
 Style jumps reveal their owning tabs; chapter/paragraph jumps expand folded
 chapters. Section navigation lists only rendered panels.
 
@@ -208,6 +217,13 @@ capability/context guards below. Selection drafts save nothing by themselves.
 
 | Hook | Meaning |
 |---|---|
+| `#manuscript-analysis-toggle` | constant-name **Analysis** toggle; `aria-pressed` and visible On/Off text identify diagnostic visibility independently of the dossier |
+| `#workbench-overview-open` / `#workbench-overview-back` | open dense analysis / return to preserved manuscript context |
+| `[data-context-tool="analysis"]` / `[data-context-tool="dossier"]` | explicitly select one active context tool; closing the tool does not itself hide all analysis |
+| `#workbench-return` | context-checked return to the manuscript origin after following a saved relation |
+| `.reader-structural[data-start][data-end]` | readable source structure without a paragraph profile; inclusive source lines are presentation anchors, not a new research-anchor format |
+| `#research-tab-<key>` / `#rtab-<key>` | named research tab and labelled tabpanel; `data-rtab` and selected-state hooks remain unchanged |
+| `#research-navigation-previous` / `#research-navigation-next` | scroll overflowing research destinations without activating one |
 | `data-jump="<anchor>"` | scroll to a panel/row/column and flash it (`#feat-<field>` = heatmap column) |
 | `data-layer="<key>"` | activate a style layer (paragraph colouring) |
 | `data-feature="<field>"` | passport row: fingerprint field of the heatmap column target |
@@ -618,6 +634,18 @@ When running `lixity serve --port 8765`, local agents can trigger deterministic 
 
 Browser API diagnostics report request metadata without copying response bodies
 to the console.
+
+**Current main (unreleased):** `GET /` and `/index.html` validate the active
+manuscript before reusing the dashboard. Missing/unreadable input or failed
+config/render rebuilds retain the last successful HTML/info/source digest and add
+`#dashboard-freshness[data-dashboard-freshness]` with localized status and a plain
+GET retry link. These responses do not establish current-source availability or
+change the cached source identity. An initial unavailable file with no successful
+snapshot retains the missing-file presentation. Explicit `POST /api/analyze` and
+`POST /api/rebuild` failures return HTTP 500 with `{ok:false,message:...}`, without
+exception/path detail or a new success snapshot. Recovery clears the status only
+after the required validation/build succeeds. Existing JSON versions are unchanged;
+this is not a configuration watcher or browser preference/session API.
 
 CLI analysis, research and build commands do not select a project in an existing
 server. Use `POST /api/project-open`, or **Open Project** in the app, to switch

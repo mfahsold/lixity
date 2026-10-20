@@ -639,11 +639,14 @@ if (formOpen) {
 
 // Workspace Navigation (3 Main Views)
 var workspaceScrollPositions = Object.create(null);
+var workspaceNavigationRevision = 0;
+document.addEventListener("lixity:workbench-change", function() { ++workspaceNavigationRevision; });
 function switchActiveView(viewName, restorePosition) {
   if (!viewName) return;
   var tabs = document.querySelectorAll(".view-nav-tab");
   var panes = document.querySelectorAll(".view-pane");
   if (!panes.length || !Array.from(panes).some(function(pane) { return pane.dataset.viewPane === viewName; })) return;
+  if (window.LixityWorkbench) window.LixityWorkbench.dispatch({type: "view", value: viewName});
   var previous = document.querySelector(".view-pane.active");
   if (previous && previous.dataset.viewPane !== viewName) {
     workspaceScrollPositions[previous.dataset.viewPane] = window.scrollY;
@@ -691,7 +694,10 @@ function checkUrlHashView() {
   var parentPane = target.closest(".view-pane");
   if (parentPane && parentPane.dataset.viewPane) {
     switchActiveView(parentPane.dataset.viewPane);
-    requestAnimationFrame(function () { scrollAndFlash(target); });
+    var revision = workspaceNavigationRevision;
+    requestAnimationFrame(function () {
+      if (window.location.hash === hash && workspaceNavigationRevision === revision) scrollAndFlash(target);
+    });
   }
 }
 
@@ -839,6 +845,8 @@ window.LixityManuscriptLinks = {
   var toggle = document.getElementById("workspace-navigation-toggle");
   var content = document.getElementById("workspace-navigation-content");
   if (!toggle || !content) return;
+  var destinations = content.querySelector(".view-navigation");
+  if (destinations) content.parentElement.appendChild(destinations);
   var desktop = window.matchMedia("(min-width: 1100px)");
   var manualCollapsed = false, companionOpen = false, companionOverride = null;
   document.body.classList.add("has-workspace-navigation");

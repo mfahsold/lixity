@@ -27,6 +27,7 @@ from .pipeline import (
 from .status import SCHEMA_VERSION_STYLE
 from .style_fingerprint import FingerprintThresholds as FingerprintThresholds
 from .ui import render_analysis
+from .ui.manuscript_document import reader_blocks
 
 PROFILE_KEYS = tuple(LANGUAGE_PROFILES)
 
@@ -317,6 +318,7 @@ def dashboard(
     return render_analysis(
         analysis,
         resolved,
+        reader_document=reader_blocks(text, config, analysis.paragraphs),
         title=title,
         flag_min_severity=thresholds.flag_min_severity,
         scenes=scene_report_for_display(text, config, (project_config or {}).get("scene_analysis"),

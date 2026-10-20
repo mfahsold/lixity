@@ -51,6 +51,22 @@ class ManuscriptBlock:
     level: int = 3
 
 
+@dataclass(frozen=True)
+class SourceManuscriptBlock:
+    """Source-ordered presentation with absolute, inclusive manuscript lines.
+
+    Text is untrusted data, not HTML. Unlike the PDF projection, this form does
+    not interpret or validate embedded TeX, suppress titles or relocate notes.
+    """
+
+    kind: BlockKind
+    text: str
+    level: int
+    start_line: int
+    end_line: int
+    is_chapter: bool = False
+
+
 ManuscriptSections = list[tuple[str, list[ManuscriptBlock]]]
 
 _LIST = re.compile(r"^ {0,3}([-+*]|\d+[.)])\s+")
@@ -311,7 +327,9 @@ def _joined_lines(lines: list[str]) -> str:
                    for line in lines[:-1]) + (lines[-1].strip() if lines else "")
 
 
-def _blocks(text: str, *, start_line: int, front_matter: bool) -> list[ManuscriptBlock]:
+def _source_blocks(
+    text: str, *, start_line: int, front_matter: bool, validate_inline: bool,
+) -> list[SourceManuscriptBlock]:
     protected, sentinel, literal_lines = _protected_source(text)
     clean = _without_comments(protected)
     lines = clean.splitlines()
@@ -338,12 +356,21 @@ def _blocks(text: str, *, start_line: int, front_matter: bool) -> list[Manuscrip
         if index >= metadata_end and not literal_lines[index] and _PAGE_BREAK.fullmatch(line.strip()):
             shadow.append("")
             line_map.append(index)
-    result: list[ManuscriptBlock] = []
+    result: list[SourceManuscriptBlock] = []
     for block in parse_markdown_blocks("\n".join(shadow), _front_matter=front_matter):
         first = line_map[block["start_line"] - 1]
         last = line_map[block["end_line"] - 1]
         kind = block["type"]
         value = str(block.get("text", "")).replace(sentinel, "<")
+
+        def presentation(
+            kind: BlockKind, value: str = "", level: int = 3, *,
+            first_line: int = first, last_line: int = last,
+        ) -> SourceManuscriptBlock:
+            return SourceManuscriptBlock(
+                kind, value, level, start_line + first_line, start_line + last_line,
+            )
+
         if kind == "code":
             code_lines = lines[first:last + 1]
             closing = _fence_closer(code_lines[0])
@@ -354,42 +381,87 @@ def _blocks(text: str, *, start_line: int, front_matter: bool) -> list[Manuscrip
             else:
                 code_lines = [line[1:] if line.startswith("\t") else line[4:]
                               for line in code_lines]
-            result.append(ManuscriptBlock("code", "\n".join(code_lines).replace(sentinel, "<")))
+            result.append(presentation("code", "\n".join(code_lines).replace(sentinel, "<")))
             continue
         raw = "\n".join(lines[first:last + 1]).replace(sentinel, "<")
-        _inline_runs(raw, start_line=start_line + first, page_breaks=True)
+        if validate_inline:
+            _inline_runs(raw, start_line=start_line + first, page_breaks=True)
         if kind in ("h1", "h2", "h3"):
             match = _HEADING.match(lines[first])
-            result.append(ManuscriptBlock("heading", value, len(match[1]) if match else 3))
+            result.append(presentation("heading", value, len(match[1]) if match else 3))
         elif kind == "divider":
-            result.append(ManuscriptBlock("scene_break", "* * *"))
+            result.append(presentation("scene_break", "* * *"))
         elif kind == "quote_block":
-            paragraphs: list[str] = []
             current: list[str] = []
-            for quote_line in lines[first:last + 1]:
+            paragraph_start = first
+            for index in range(first, last + 1):
+                quote_line = lines[index]
                 quote = re.sub(r"^\s*> ?", "", quote_line).replace(sentinel, "<")
                 if quote.strip():
+                    if not current:
+                        paragraph_start = index
                     current.append(quote)
                 elif current:
-                    paragraphs.append(_joined_lines(current))
+                    result.append(presentation(
+                        "quote", _joined_lines(current),
+                        first_line=paragraph_start, last_line=index - 1,
+                    ))
                     current = []
             if current:
-                paragraphs.append(_joined_lines(current))
-            result.extend(ManuscriptBlock("quote", paragraph) for paragraph in paragraphs)
+                result.append(presentation(
+                    "quote", _joined_lines(current), first_line=paragraph_start,
+                ))
         elif kind == "footnote_def":
             note_lines = [line.replace(sentinel, "<") for line in lines[first:last + 1]]
             note_lines[0] = re.sub(r"^\s*\[\^[^\]]+\]:[ \t]*", "", note_lines[0])
-            result.append(ManuscriptBlock("note", f"[{block['id']}] {_joined_lines(note_lines)}"))
+            result.append(presentation("note", f"[{block['id']}] {_joined_lines(note_lines)}"))
         elif _PAGE_BREAK.fullmatch(value.strip()):
-            result.append(ManuscriptBlock("page_break"))
+            result.append(presentation("page_break"))
         elif kind == "list_item":
-            result.append(ManuscriptBlock("list_item", _joined_lines(
+            result.append(presentation("list_item", _joined_lines(
                 [line.replace(sentinel, "<") for line in lines[first:last + 1]],
             )))
         else:
-            result.append(ManuscriptBlock("list_item" if _LIST.match(value) else "paragraph", value))
+            result.append(presentation("list_item" if _LIST.match(value) else "paragraph", value))
+    return result
+
+
+def _blocks(text: str, *, start_line: int, front_matter: bool) -> list[ManuscriptBlock]:
+    """Keep the established strict PDF policy over the shared source projection."""
+    result = [ManuscriptBlock(block.kind, block.text, block.level) for block in _source_blocks(
+        text, start_line=start_line, front_matter=front_matter, validate_inline=True,
+    )]
     return ([block for block in result if block.kind != "note"]
             + [block for block in result if block.kind == "note"])
+
+
+def manuscript_blocks(text: str, config: CorpusConfig) -> list[SourceManuscriptBlock]:
+    """Retain supported document content in source order, without analysis filters.
+
+    Configured chapter headings, including empty chapters, are explicit blocks.
+    Preface titles, note positions and the analysis-excluded appendix remain.
+    Consumers must escape text; unsupported inline syntax stays literal and no
+    image, URL or embedded TeX instruction is executed or fetched.
+    """
+    protected, sentinel, _literal_lines = _protected_source(text)
+    headings = chapter_heading_spans(protected, config)
+    source_lines = text.splitlines()
+    first_end = headings[0][0] if headings else len(text)
+    blocks = _source_blocks(
+        text[:first_end], start_line=1, front_matter=True, validate_inline=False,
+    )
+    for index, (_start, end, line, raw_title) in enumerate(headings):
+        heading_line = source_lines[line - 1]
+        match = _HEADING.match(heading_line)
+        blocks.append(SourceManuscriptBlock(
+            "heading", raw_title.replace(sentinel, "<"), len(match[1]) if match else 2,
+            line, line, is_chapter=True,
+        ))
+        next_start = headings[index + 1][0] if index + 1 < len(headings) else len(text)
+        blocks.extend(_source_blocks(
+            text[end:next_start], start_line=line + 1, front_matter=False, validate_inline=False,
+        ))
+    return blocks
 
 
 def manuscript_sections(text: str, config: CorpusConfig) -> ManuscriptSections:

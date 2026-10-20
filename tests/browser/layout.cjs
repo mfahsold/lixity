@@ -16,7 +16,6 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
   const browser = await launchChromium();
   try {
     const page = await browser.newPage({hasTouch: true});
-    await page.addInitScript(() => localStorage.setItem('lixity.manuscript.mode', 'inspect'));
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.route('http://lixity.test/**', route => route.fulfill(route.request().url().includes('/api/')
@@ -53,6 +52,9 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
       assert.equal(await page.locator('#nda-manager, #nda-table, #nda-passphrase').count(), 0);
       assert.equal(await page.locator('#nda-draft-form').count(), 0, 'No implicit NDA capability in an embedding fixture');
       await page.locator('#tab-view-analysis').click();
+      await page.locator('#workbench-overview-open').click();
+      assert.equal(await page.locator('#workbench-overview-back').isVisible(), true,
+        'Dense analytical panels have a visible manuscript return');
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `page overflow at ${width}`);
       assert.equal(await page.locator('.panel > table').count(), 0);
       const panelGaps = await page.locator('.panel').evaluateAll(panels => panels.flatMap(panel => {
@@ -102,13 +104,25 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
       await page.locator('#tab-view-project').click();
       await page.locator('#settings-thresholds > summary').click();
       await page.locator('#tab-view-analysis').click();
+      await page.locator('#workbench-overview-back').click();
+      if (await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed') !== 'true') {
+        await page.locator('#manuscript-analysis-toggle').click();
+      }
       await page.locator('#ch-1 .chip').first().click();
       assert.equal(await page.locator('#ch-1 .ptext.open').count(), 1);
-      await sentenceHelp.focus();
+      const paragraphHelp = page.locator('.toolbar .help:visible').first();
+      await paragraphHelp.focus();
+      await page.waitForFunction(() => document.querySelector('#lixity-tooltip').classList.contains('visible'));
       await page.keyboard.press('Escape');
       assert.equal(await page.locator('#ch-1 .ptext.open').count(), 1, 'Dismissing help must not close an unrelated paragraph');
       for (const selector of ['#flags', '#dist', '#dialogue', '#characters', '#pacing', '#motifs', '#showing', '#heatmap', '#bands', '#dimensions', '#markers', '#matrix', '#controls', '#ch-1']) {
         await page.locator(selector === '#controls' ? '#tab-view-project' : '#tab-view-analysis').click();
+        if (selector !== '#controls' && selector !== '#ch-1' && await page.locator('#workbench-overview-open').isVisible()) {
+          await page.locator('#workbench-overview-open').click();
+        }
+        if (selector === '#ch-1' && await page.locator('#workbench-overview-back').isVisible()) {
+          await page.locator('#workbench-overview-back').click();
+        }
         if (['#heatmap', '#bands', '#dimensions'].includes(selector)) {
           await page.locator('#style-tab-' + selector.slice(1)).click();
         }
@@ -118,6 +132,6 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
       }
     }
     assert.deepEqual(errors, []);
-    console.log('Layout: desktop/tablet/mobile spacing, readable charts and tables, matrix tooltips, settings and chapter expansion passed');
+    console.log('Layout: desktop/tablet/mobile spacing, readable overview charts and tables, tooltips, settings and paragraph diagnostics passed');
   } finally { await browser.close(); }
 })().catch(error => {console.error(error); process.exitCode = 1;});

@@ -56,6 +56,7 @@ from .components import (
 from .dimensions import style_dimensions
 from .dossier_images import image_limits_attribute
 from .heatmap import render_heatmap_panel, render_register_targets, render_style_passport_panel
+from .manuscript_document import ReaderBlock
 from .manuscript_reader import reading_controls
 from .markers_panel import render_markers_panel
 from .modals import render_project_modals
@@ -79,6 +80,7 @@ _CSS_FILES = (
     "dashboard.css",
     "vendor/photoswipe-5.4.4.css",
     "research-media.css",
+    "research-navigation.css",
     "dossier-images.css",
     "vendor/leaflet-1.9.4.css",
     "dossier-geography.css",
@@ -106,6 +108,7 @@ _JS_FILES = (
     "research-review.js",
     "research-workspace.js",
     "research-revisions.js",
+    "workspace-state.js",
     "project-ui.js",
     "dossier-images.js",
     "dossier-geography.js",
@@ -196,6 +199,7 @@ def render_dashboard(
     project_token: str = "",
     manuscript_source_sha256: str = "",
     register_settings: Mapping[str, Any] | None = None,
+    reader_document: Sequence[ReaderBlock] | None = None,
 ) -> str:
     """Renders the complete, deterministic single-file dashboard.
 
@@ -345,6 +349,13 @@ def render_dashboard(
         meta_bits.append(manuscript_name)
     project_meta = " · ".join(meta_bits)
 
+    has_chapters = bool(chapters) and total_words > 0
+    has_reading = has_chapters or bool(reader_document)
+    default_view = "analysis" if has_reading else "research"
+    body_class = "lixity-workspace" if controls else "lixity-report"
+    if controls and has_reading:
+        body_class += " has-reading"
+
     parts = [
         "<!DOCTYPE html>",
         f'<html lang="{html_lang}">',
@@ -356,7 +367,7 @@ def render_dashboard(
         f"<title>{esc(title)} – {L('app_suffix')}</title>",
         f"<style>{_bundle(_CSS_FILES)}</style>",
         "</head>",
-        f'<body id="top" class="{"lixity-workspace" if controls else "lixity-report"}" data-api="{esc(api_base)}" data-ui-labels="{workspace_labels_json}" '
+        f'<body id="top" class="{body_class}" data-api="{esc(api_base)}" data-ui-labels="{workspace_labels_json}" '
         f'data-manuscript-source-sha256="{esc(manuscript_source_sha256)}" '
         f'data-manuscript-project-token="{esc(manuscript_pdf_token)}" '
         f'data-manuscript-links="{manuscript_links_mode}" '
@@ -371,9 +382,6 @@ def render_dashboard(
             title, labels, language_name, engine_name, compact=controls, meta=project_meta
         ),
     ]
-
-    has_chapters = bool(chapters) and total_words > 0
-    default_view = "analysis" if has_chapters else "research"
 
     if controls:
         parts.append(
@@ -418,6 +426,7 @@ def render_dashboard(
 
     if status:
         parts.append(status_strip(labels, status))
+    parts.append("<!--dashboard-freshness-->")
 
     if document_context:
         parts.append(panel_start("document-context", labels, "source_context"))
@@ -729,18 +738,22 @@ def render_dashboard(
         )
 
     reader_controls = ""
-    if reader_enabled and has_chapters:
+    if controls and has_reading:
         reader_controls = (
             '<div class="reader-controls">'
             '<button type="button" class="ctl" id="workspace-reader-toggle" '
             'aria-expanded="false" aria-controls="workspace-reader-panel" disabled>'
             f'{L("reader_toggle")}</button><p class="ctl-note">'
             f"{L('reader_hint') if manuscript_pdf_token else L('reader_unavailable')}</p></div>"
-        )
+        ) if reader_enabled else ""
         parts.append(
             '<section id="workspace-reader" '
             f'data-project-token="{esc(manuscript_pdf_token)}">'
             '<div class="workspace-reader-layout" id="workspace-reader-layout">'
+            '<div id="workspace-context-panel" class="workspace-context-panel" hidden>'
+            '<div class="context-tool-tabs" role="group">'
+            f'<button type="button" class="ctl" data-context-tool="analysis" aria-pressed="false">{L("reading_analysis")}</button>'
+            f'<button type="button" class="ctl" data-context-tool="dossier" aria-pressed="false" {"" if reader_enabled else "hidden"}>{L("reader_title")}</button></div>'
             '<aside class="panel workspace-reader-panel" id="workspace-reader-panel" '
             'aria-labelledby="workspace-reader-title" hidden>'
             '<div class="workspace-reader-head">'
@@ -753,15 +766,15 @@ def render_dashboard(
             f'<select class="ctl" id="workspace-reader-dossier"><option value="">{L("reader_choose")}</option></select></div>'
             f'<button type="button" class="ctl" id="workspace-reader-refresh">{L("reader_refresh")}</button></div>'
             '<p class="ctl-status" id="workspace-reader-status" role="status" aria-live="polite"></p>'
-            '<div id="workspace-reader-body"></div></aside>'
+            '<div id="workspace-reader-body"></div></aside></div>'
             '<div id="workspace-reader-divider" class="workspace-reader-divider" role="separator" '
             'tabindex="0" aria-orientation="vertical" aria-valuemin="35" aria-valuemax="75" '
             f'aria-valuenow="62" aria-label="{L("reading_split")}" '
-            'aria-controls="workspace-analysis-body workspace-reader-panel" hidden></div>'
+            'aria-controls="workspace-analysis-body workspace-context-panel" hidden></div>'
             '<div id="workspace-analysis-body">'
         )
 
-    if not has_chapters:
+    if not has_reading:
         parts.append(
             '<div class="panel empty-analysis-state">'
             '<div class="empty-state-icon" aria-hidden="true">📖</div>'
@@ -776,8 +789,8 @@ def render_dashboard(
         )
         parts.append("<div hidden>")
 
-    if has_chapters and paragraphs and controls:
-        parts.append(reading_controls(chapters, labels))
+    if has_reading and controls:
+        parts.append(reading_controls(chapters, labels, reader_document))
 
     if has_chapters:
         parts.append(f'<section class="panel" id="analysis-review"><h2>{L("review_title")}</h2>')
@@ -932,8 +945,12 @@ def render_dashboard(
     for idx, p in enumerate(paragraphs):
         by_chapter.setdefault(p.chapter_num, []).append((idx, p))
 
+    main_start = len(parts)
+    profile_markup: dict[int, str] = {}
+    chapter_markup: dict[int, str] = {}
     parts.append('<main id="chapters" role="main" tabindex="-1">')
     for chapter in chapters:
+        chapter_start = len(parts)
         chapter_paras = by_chapter.get(chapter.num, [])
         has_flags = any(p.is_flagged for _, p in chapter_paras)
         classes = "chapter has-flags" if has_flags else "chapter"
@@ -993,7 +1010,9 @@ def render_dashboard(
                 )
             parts.append("</div>")
 
+            chapter_markup[chapter.start_line] = "".join(parts[chapter_start:])
             for idx, p in chapter_paras:
+                paragraph_start = len(parts)
                 dom_label = tense_label(labels, p.dominant)
                 sev_label = label(labels, f"severity_{p.severity}")
                 parts.append(
@@ -1031,7 +1050,40 @@ def render_dashboard(
                         f"</div>"
                     )
                 parts.append("</div></noscript></div>")
+                profile_markup[idx] = "".join(parts[paragraph_start:])
         parts.append("</section>")
+    if reader_document is not None:
+        parts[main_start:] = ['<main id="chapters" role="main" tabindex="-1">']
+        section_open = False
+        for block in reader_document:
+            if block.is_chapter:
+                if section_open:
+                    parts.append("</section>")
+                header = chapter_markup.get(block.start_line)
+                if header:
+                    parts.append(header)
+                else:
+                    parts.append(f'<section class="chapter" id="source-{block.start_line}" data-start="{block.start_line}" data-end="{block.end_line}">'
+                                 f'<div class="chapter-head"><h2>{esc(block.text)}</h2></div>')
+                section_open = True
+                continue
+            if not section_open:
+                implicit = chapters[0] if chapters and not any(item.is_chapter for item in reader_document) else None
+                if implicit:
+                    parts.append(f'<section class="chapter reader-preface" id="ch-{implicit.num}" data-start="{implicit.start_line}" data-end="{implicit.end_line}">'
+                                 '<span id="reader-preface"></span>')
+                else:
+                    parts.append('<section class="chapter reader-preface" id="reader-preface">')
+                section_open = True
+            if block.profile_index is not None:
+                parts.append(profile_markup[block.profile_index])
+            else:
+                tag = "h3" if block.kind == "heading" else "blockquote" if block.kind == "quote" else "pre" if block.kind == "code" else "div"
+                parts.append(f'<{tag} class="reader-structural reader-{esc(block.kind)}" data-start="{block.start_line}" data-end="{block.end_line}">{esc(block.text)}</{tag}>')
+                if block.kind in {"paragraph", "quote", "code", "note", "list_item"}:
+                    parts.append(f'<p class="reader-coverage">{L("reading_coverage")}</p>')
+        if section_open:
+            parts.append("</section>")
     parts.append("</main>")
     content_json = _script_json(paragraph_content)
     parts.append(f'<script type="application/json" id="paragraph-content">{content_json}</script>')
@@ -1380,11 +1432,11 @@ def render_dashboard(
         parts.append("</tbody></table></div></section>")
 
     parts.append("</div>")
-    if not has_chapters:
+    if not has_reading:
         parts.append("</div>")
 
     if controls:
-        if reader_enabled and has_chapters:
+        if controls and has_reading:
             parts.append("</div></div></section>")
         parts.append("</div>")
 

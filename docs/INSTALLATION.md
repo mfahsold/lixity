@@ -221,6 +221,15 @@ changes, restart the appropriate managed instance; a browser reload alone does
 not load new code. Supply OCR variables in the new start/restart environment;
 their values are not saved as launch settings.
 
+**Current main (unreleased):** reloading the dashboard validates the selected
+manuscript before serving saved analysis. If it is missing/unreadable or a rebuild
+fails, the app retains its last successful view with an **Analysis freshness**
+notice and **Retry refresh**. Restore the file/access or correct the input/settings,
+then retry; the notice clears after successful validation. That saved view is not
+evidence that the source is current. With no prior successful snapshot, the usual
+missing-file view remains. This request-time check does not watch external
+configuration changes or replace a service restart after installing new code.
+
 Since v3.0.1, foreground `serve` and managed start/restart accept
 `--min-chapters N` (an integer of at least 2, default 2). Restart retains the
 saved threshold unless overridden; see the [service command reference](USAGE.md#lixity-service).
@@ -438,6 +447,7 @@ package rather than copying engine code into every book project.
 | Wrong version or old controls after update | Check `uv tool list` and `command -v lixity` (PowerShell: `Get-Command lixity`), then stop the old server and restart on the same port. Check that the browser uses that address. |
 | Dependency build error | Try a supported CPython version with binary wheels, e.g. 3.12; retain the full installer error. |
 | HTML lacks project or research actions | A standalone export is read-only. Use `lixity service start --open` for the local workspace and PDF/NDA download actions. |
+| Analysis freshness notice remains | Read the missing/unreadable/rebuild message, restore source access or correct invalid input/settings, then use **Retry refresh**. Saved measurements retain their earlier source identity until validation succeeds. |
 
 ## Optional shell completion
 

@@ -612,15 +612,25 @@ server.serve_forever()
     await page.locator('#diagram-pending-remount').scrollIntoViewIfNeeded();
     await expect.poll(() => page.evaluate(() => typeof resolveResearchDiagram)).toBe('function');
     await expect(page.locator('#diagram-pending-remount [data-research-diagram]')).toHaveAttribute('data-diagram-state', 'pending');
+    await expect(page.locator('#diagram-pending-remount .research-diagram-loading')).toBeVisible();
+    await expect(page.locator('#diagram-pending-remount .research-diagram-loading')).toHaveText('Loading details…');
+    await expect(page.locator('#diagram-pending-remount .research-diagram-canvas')).toHaveAttribute('aria-busy', 'true');
     await page.evaluate(() => {
       pendingResearchDiagram.remove();
-      restoreResearchDiagramRenderer();
       resolveResearchDiagram();
     });
     await expect.poll(() => page.evaluate(() => pendingResearchDiagram.firstElementChild.dataset.diagramState)).not.toBe('pending');
-    await page.evaluate(() => document.getElementById('research-revision-history-detail').appendChild(pendingResearchDiagram));
+    await page.evaluate(() => {
+      delete window.resolveResearchDiagram;
+      document.getElementById('research-revision-history-detail').appendChild(pendingResearchDiagram);
+    });
     await page.locator('#diagram-pending-remount').scrollIntoViewIfNeeded();
+    await expect.poll(() => page.evaluate(() => typeof resolveResearchDiagram)).toBe('function');
+    await expect(page.locator('#diagram-pending-remount .research-diagram-loading')).toBeVisible();
+    await page.evaluate(() => { restoreResearchDiagramRenderer(); resolveResearchDiagram(); });
     await expect(page.locator('#diagram-pending-remount [data-research-diagram]')).toHaveAttribute('data-diagram-state', 'ready');
+    await expect(page.locator('#diagram-pending-remount .research-diagram-loading')).toBeHidden();
+    await expect(page.locator('#diagram-pending-remount .research-diagram-canvas')).toHaveAttribute('aria-busy', 'false');
     await page.evaluate(() => {
       pendingResearchDiagram.remove();
       delete window.pendingResearchDiagram;

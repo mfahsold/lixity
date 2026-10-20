@@ -1,0 +1,131 @@
+const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const assert = require('node:assert/strict');
+const {expect} = require(path.join(playwrightModule, 'test'));
+
+const root = path.resolve(__dirname, '../..');
+const assets = path.join(root, 'src/lixity/ui/assets');
+const css = ['design-tokens.css', 'dashboard.css'].map(file => fs.readFileSync(path.join(assets, file), 'utf8')).join('\n');
+const script = fs.readFileSync(path.join(assets, 'tooltips.js'), 'utf8');
+const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-tooltips-'));
+const explanation = 'A dossier holds synthetic notes and optional passage references; it is not an accepted claim.';
+
+(async () => {
+  const browser = await launchChromium();
+  try {
+    const page = await browser.newPage({hasTouch: true});
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    for (const width of [1440, 320]) {
+      await page.setViewportSize({width, height: 900});
+      await page.setContent(`<!doctype html><html lang="en"><style>${css}</style>
+        <style>
+          #navigation {position:fixed;top:150px;left:20px}
+          #composer {position:fixed;top:205px;left:20px;right:20px}
+          #composer summary {width:max-content;max-width:100%}
+          dialog {width:min(30rem, 90vw);padding:1rem}
+        </style><body>
+        <button id="navigation" type="button">Sources</button>
+        <details id="composer"><summary id="help" data-help="${explanation}" aria-describedby="hint">Create dossier</summary></details>
+        <span id="hint" hidden>Preserved description</span>
+        <dialog id="modal"><span class="help" id="modal-help" tabindex="0" data-help="Synthetic native dialog help.">Help</span></dialog>
+        <script>window.navigationClicks=0;document.querySelector('#navigation').addEventListener('click',()=>window.navigationClicks++);</script>
+        <script>${script}</script></body></html>`);
+      const help = page.locator('#help');
+      const tip = page.locator('#lixity-tooltip');
+
+      // The composer appears below navigation after research initialization.
+      // Its help must not trap a native click on the preceding tab.
+      await help.hover();
+      await expect(tip).toBeVisible();
+      await page.locator('#navigation').click({timeout: 1500});
+      assert.equal(await page.evaluate(() => window.navigationClicks), 1);
+
+      await help.focus();
+      await expect(tip).toHaveText(explanation);
+      assert.equal(await help.getAttribute('aria-describedby'), 'hint lixity-tooltip');
+      await page.keyboard.press('Escape');
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
+      assert.equal(await help.getAttribute('aria-describedby'), 'hint');
+      assert.equal(await page.evaluate(() => document.activeElement.id), 'help');
+      assert.equal(await page.locator('#composer').getAttribute('open'), null,
+        'Showing or dismissing help must preserve the native disclosure');
+
+      for (const event of ['lixity:viewchange', 'lixity:workbench-change']) {
+        await help.evaluate(el => el.blur());
+        await help.focus();
+        await expect(tip).toBeVisible();
+        await page.evaluate(name => document.dispatchEvent(new Event(name)), event);
+        await expect(tip).toHaveAttribute('aria-hidden', 'true');
+        assert.equal(await help.getAttribute('aria-describedby'), 'hint');
+      }
+      await help.evaluate(el => el.blur());
+      await help.focus();
+      await page.locator('#composer').evaluate(el => { el.hidden = true; window.dispatchEvent(new Event('resize')); });
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
+      await page.locator('#composer').evaluate(el => { el.hidden = false; });
+
+      await help.hover();
+      await tip.hover();
+      await page.waitForTimeout(200);
+      await expect(tip).toHaveAttribute('aria-hidden', 'false');
+      await page.mouse.move(0, 0);
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
+
+      await help.evaluate(el => { el.dataset.help = 'A longer synthetic localized explanation. '.repeat(600); el.blur(); });
+      await help.focus();
+      await expect(tip).toBeVisible();
+      assert.ok(await tip.evaluate((el, trigger) => {
+        const box = el.getBoundingClientRect();
+        const anchor = document.querySelector(trigger).getBoundingClientRect();
+        return box.left >= 0 && box.right <= innerWidth && box.top >= 0 && box.bottom <= innerHeight
+          && (box.top >= anchor.bottom || box.bottom <= anchor.top);
+      }, '#help'), 'Long help stays in the viewport without covering its trigger');
+      assert.ok(await tip.evaluate(el => el.scrollHeight > el.clientHeight), 'Long help remains scrollable');
+      await page.screenshot({path: path.join(artifacts, `long-help-context-${width}.png`)});
+      await tip.hover();
+      await page.mouse.wheel(0, 300);
+      await expect.poll(() => tip.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+      await tip.screenshot({path: path.join(artifacts, `long-help-${width}.png`)});
+      await page.locator('#navigation').click({timeout: 1500});
+      assert.equal(await page.evaluate(() => window.navigationClicks), 2);
+
+      // A trigger near the viewport bottom uses the available space above it.
+      await help.evaluate(el => { el.closest('details').style.top = '850px'; el.blur(); });
+      await help.focus();
+      assert.ok(await tip.evaluate(el => {
+        const box = el.getBoundingClientRect();
+        return box.top >= 0 && box.bottom <= document.querySelector('#help').getBoundingClientRect().top;
+      }));
+      await page.keyboard.press('Escape');
+
+      // Touch toggles standalone help, without toggling a native disclosure.
+      await help.evaluate(el => {
+        el.closest('details').style.top = '205px';
+        el.dataset.help = 'Synthetic touch help.';
+        el.classList.add('help');
+      });
+      await help.tap();
+      await expect(tip).toHaveAttribute('aria-hidden', 'false');
+      await help.tap();
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
+      assert.equal(await page.locator('#composer').getAttribute('open'), null);
+
+      await page.evaluate(() => document.querySelector('#modal').showModal());
+      await page.locator('#modal-help').focus();
+      await expect(page.locator('#modal #lixity-tooltip')).toBeVisible();
+      await page.keyboard.press('Enter');
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
+      await page.keyboard.press('Space');
+      await expect(tip).toHaveAttribute('aria-hidden', 'false');
+      await page.keyboard.press('Escape');
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
+      assert.equal(await page.locator('#modal').getAttribute('open'), '', 'Escape dismisses help before its modal');
+      await page.evaluate(() => document.querySelector('#modal').close());
+    }
+    assert.deepEqual(errors, []);
+    console.log('Tooltips: native navigation, hover persistence, long scrolling help, keyboard/Escape, touch and dialog top layer passed; ' + artifacts);
+  } finally { await browser.close(); }
+})().catch(error => { console.error(error); process.exitCode = 1; });

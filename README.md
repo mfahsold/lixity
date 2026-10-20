@@ -24,9 +24,9 @@ text and ask whether a change serves the scene before deciding what to revise.
 ## Try it in 30 seconds
 
 Open [*The Crate at Warehouse 4*](https://mfahsold.github.io/lixity/demo/report.html):
-one read-only project with six invented English chapters. Start in **Read** with
-the opening setting and chapter 2's action; choose **Inspect** for their chapter
-comparisons and paragraph measurements. Switch to **Research**
+one read-only project with six invented English chapters. Read the opening setting
+and chapter 2's action, open **Values** for passage measurements or **Analysis
+overview** for chapter comparisons, then return to the passage. Switch to **Research**
 to follow the same story through a dossier, retained sources, a claim and its
 saved manuscript quote. Keep a dossier alongside the manuscript, download the
 claim-evidence matrix or choose one of four prepared PDF layouts. The three
@@ -90,22 +90,30 @@ and diagrams share a zoom viewer. [Literal character aliases and declared viewpo
 keep name counts separate from author-declared perspective.
 
 **On current main:** the interactive app uses a desktop-style project sidebar
-on wide screens, with manuscript and analysis first, research alongside and
-settings separate. On smaller screens the same navigation becomes horizontal.
-**Read** presents continuous prose; **Inspect** retains chapter comparisons and
-paragraph drill-down. Text size and reading settings adapt the document without
-changing manuscript bytes. Use a paragraph's **…**, right-click or `Shift+F10`
+on wide screens, with **Manuscript**, **Research** and **Project** as its stable
+destinations. On smaller screens the same navigation becomes horizontal.
+The manuscript stays continuous. **Analysis** has an explicit On/Off state;
+**Values** opens passage measurements, while **Analysis overview** gives chapter
+comparisons their own space and a **Back to passage** route. Analysis visibility
+is independent of the dossier beside the text. Reading settings group text size,
+width and spacing without changing manuscript bytes. Use an analyzed paragraph's
+**…**, right-click or `Shift+F10`
 for its tools; a text selection offers relevant marker and claim actions.
 **Values** opens a closable inspector, and **Focus reading** temporarily clears
 the surrounding workspace. Reading uses ordinary scrolling and text selection;
 maps, images and style-space keep their own pan and zoom controls.
-The reader follows [analysis paragraph coverage](docs/USAGE.md#reading-paragraphs);
-structured manuscript PDFs use a separate document projection.
+Source-backed reading includes supported headings, quotations, literal code,
+dividers and notes, plus preface and appendix content. Unprofiled material is
+readable without invented measurements or claim-save actions. Existing exact
+paragraph text and quotation anchors stay unchanged; this is a bounded document
+presentation, not a complete Markdown editor. [Coverage and limits](docs/USAGE.md#reading-paragraphs).
 Opening a companion dossier collapses the desktop navigation to a narrow rail.
 Its toggle keeps navigation reachable; closing the companion restores the prior
 choice. Drag its divider or use the arrow keys to adjust the desktop split;
 narrow screens stack the documents. Exact saved manuscript associations offer a
-direct return to the passage.
+direct return to the passage. Saved associations open their pinned claim revision;
+claim and dossier views expose explicit routes to their saved manuscript quotes.
+These connections record an author's association, not factual verification.
 Local tabs, form groups and dialogs use shared components throughout analysis
 and research; compact catalogue rows keep sources and dossiers easy to scan.
 Creation and association forms start collapsed. Open their labelled heading, then
@@ -117,8 +125,9 @@ where you use them, with the same context available in the CLI. Maps open with
 OpenStreetMap; local vectors and the numbered sketch remain available offline.
 Select a map number to inspect a place or route. Style-space chapter details stay
 beside the plot; wide Mermaid diagrams scroll at a readable scale and can be
-enlarged. The public demo follows `main`; the PyPI release may not include these
-changes yet.
+enlarged. If the source becomes unavailable or a rebuild fails, the local app
+labels its last successful analysis and offers **Retry refresh**. The public demo
+follows `main`; the PyPI release may not include these changes yet.
 
 ## How to read the results
 

@@ -5,6 +5,11 @@
   var chapters = document.getElementById("chapters");
   if (!controls || !chapters) return;
   var mode = document.getElementById("manuscript-mode");
+  var workbench = window.LixityWorkbench;
+  var analysisToggle = document.getElementById("manuscript-analysis-toggle");
+  var dock = document.getElementById("workspace-context-panel");
+  var layout = document.getElementById("workspace-reader-layout");
+  var overviewAnchor = null, inspectorTarget = null, origin = null;
   var panels = Array.from(chapters.querySelectorAll(".ptext"));
   var menu = document.getElementById("manuscript-context-menu");
   var selectionTools = document.getElementById("manuscript-selection-tools");
@@ -27,9 +32,9 @@
     }
   } catch (_) { /* A malformed preference never changes manuscript data. */ }
   function capture() {
-    if (!document.body.classList.contains("manuscript-reading")) return null;
+    if (workbench.state().view !== "analysis" || workbench.state().surface !== "document") return null;
     var boundary = controls.getBoundingClientRect().bottom;
-    var panel = panels.find(function(candidate) {
+    var panel = Array.from(chapters.querySelectorAll(".ptext, .reader-structural")).find(function(candidate) {
       var rect = candidate.getBoundingClientRect();
       return rect.height > 0 && rect.bottom > boundary && rect.top < innerHeight;
     });
@@ -71,46 +76,65 @@
     if (restoreFocus && returnTarget && returnTarget.isConnected) returnTarget.focus({preventScroll: true});
   }
   function closeInspector(restoreFocus) {
-    inspector.hidden = true;
-    document.body.classList.remove("reader-inspector-open");
-    if (restoreFocus && current) {
-      var button = current.querySelector(".reader-paragraph-actions");
+    workbench.dispatch({type: "tool", value: "none"});
+    if (restoreFocus && inspectorTarget && inspectorTarget.isConnected) {
+      var button = inspectorTarget.querySelector(".reader-paragraph-actions");
       if (button) button.focus({preventScroll: true});
     }
   }
   function setFocus(value) {
-    retain(function() {
-      document.body.classList.toggle("reader-focus", value);
-      focus.setAttribute("aria-pressed", String(value));
-      focus.textContent = uiLabel(value ? "reading_focus_exit" : "reading_focus");
-      window.dispatchEvent(new Event("resize"));
+    retain(function() { workbench.dispatch({type: "focus", value: value}); });
+  }
+  // Compatibility callers request an analysis overview, without replacing prose.
+  function setMode(value) {
+    if (value === "inspect") {
+      if (workbench.state().surface !== "overview") overviewAnchor = capture();
+      workbench.dispatch({type: "surface", value: "overview"});
+    } else workbench.dispatch({type: "surface", value: "document"});
+  }
+  function showValues(panel) {
+    if (!panel) return;
+    renderParagraph(panel);
+    var values = panel.querySelector(".paragraph-values");
+    if (!values) return;
+    var copy = values.cloneNode(true); copy.open = true;
+    if (inspectorTarget) inspectorTarget.classList.remove("reader-inspector-target");
+    inspectorBody.replaceChildren(copy); inspectorTarget = panel;
+    panel.classList.add("reader-inspector-target");
+  }
+  if (dock) dock.appendChild(inspector);
+  workbench.subscribe(function(state, previous) {
+    var anchor = capture();
+    var open = state.contextTool !== "none" && state.surface === "document";
+    if (layout) layout.classList.toggle("is-open", open);
+    if (dock) dock.hidden = !open;
+    var divider = document.getElementById("workspace-reader-divider");
+    if (divider) divider.hidden = !open;
+    inspector.hidden = state.contextTool !== "analysis" || state.surface !== "document";
+    document.body.classList.toggle("reader-inspector-open", !inspector.hidden);
+    if (!inspector.hidden && !inspectorBody.childElementCount) {
+      if (anchor && anchor.panel.matches(".ptext")) showValues(anchor.panel);
+      else inspectorBody.textContent = uiLabel(panels.length ? "reading_values_hint" : "reading_coverage");
+    }
+    document.querySelectorAll("[data-context-tool]").forEach(function(button) {
+      button.setAttribute("aria-pressed", String(state.contextTool === button.dataset.contextTool));
     });
-  }
-  function setMode(value, initial) {
-    var anchor = initial ? null : capture();
-    closeMenu(false); selectionTools.hidden = true; closeInspector(false);
-    mode.value = value === "inspect" ? "inspect" : "read";
-    if (mode.value === "inspect" && document.body.classList.contains("reader-focus")) setFocus(false);
-    document.body.classList.toggle("manuscript-reading", mode.value === "read");
-    if (mode.value === "read") {
-      panels.forEach(enhanceText);
-      document.dispatchEvent(new Event("lixity:reader-ready"));
+    analysisToggle.setAttribute("aria-pressed", String(state.analysisVisible));
+    document.getElementById("manuscript-analysis-state").textContent = uiLabel(state.analysisVisible ? "reading_on" : "reading_off");
+    mode.value = state.surface === "overview" ? "inspect" : "read";
+    document.getElementById("workbench-overview-open").hidden = state.surface === "overview";
+    document.getElementById("workbench-overview-back").hidden = state.surface !== "overview";
+    document.getElementById("workbench-overview-label").hidden = state.surface !== "overview";
+    focus.setAttribute("aria-pressed", String(state.focus));
+    focus.textContent = uiLabel(state.focus ? "reading_focus_exit" : "reading_focus");
+    if (window.LixityWorkspaceNavigation) window.LixityWorkspaceNavigation.companion(open);
+    if (state.view !== previous.view || state.surface !== previous.surface) {
+      closeMenu(false); selectionTools.hidden = true; settings.open = false;
     }
-    else if (anchor) {
-      var chip = paragraphChips[anchor.panel.id];
-      if (chip) toggleParagraph(chip, true, true);
-    } else {
-      // Inspection keeps the established lazy paragraph rendering contract.
-      panels.forEach(function(panel) {
-        if (!panel.classList.contains("open") && !panel.querySelector(".marker-note")) {
-          var inner = panel.querySelector(".ptext-inner"); if (inner) inner.remove();
-        }
-      });
-    }
-    save("lixity.manuscript.mode", mode.value);
+    if (state.surface === previous.surface && state.view === previous.view &&
+        (state.contextTool !== previous.contextTool || state.analysisVisible !== previous.analysisVisible || state.focus !== previous.focus)) restore(anchor);
     window.dispatchEvent(new Event("resize"));
-    restore(anchor);
-  }
+  });
   function rangeFor(panel) {
     var selection = window.getSelection();
     if (!selection || selection.rangeCount !== 1 || selection.isCollapsed) return null;
@@ -164,11 +188,8 @@
     renderParagraph(panel);
     if ((action === "values" || action === "companion") && document.body.classList.contains("reader-focus")) setFocus(false);
     if (action === "values") {
-      var companion = document.getElementById("workspace-reader-toggle");
-      if (companion && companion.getAttribute("aria-expanded") === "true") companion.click();
-      var values = panel.querySelector(".paragraph-values").cloneNode(true);
-      values.open = true; inspectorBody.replaceChildren(values);
-      retain(function() { inspector.hidden = false; document.body.classList.add("reader-inspector-open"); });
+      showValues(panel);
+      retain(function() { workbench.dispatch({type: "tool", value: "analysis"}); });
       document.getElementById("reader-inspector-close").focus({preventScroll: true});
     } else if (action === "link") {
       if (!range) return;
@@ -190,7 +211,31 @@
     var summary = settings.querySelector("summary").getBoundingClientRect();
     place(settings.querySelector(".reader-settings-body"), summary.left, summary.bottom + 6);
   });
-  mode.addEventListener("change", function() { setMode(mode.value, false); });
+  mode.addEventListener("change", function() { setMode(mode.value); });
+  analysisToggle.addEventListener("click", function() {
+    var previous = workbench.state(), anchor = capture();
+    if (!previous.analysisVisible && previous.contextTool === "none" && !inspectorBody.childElementCount &&
+        anchor && anchor.panel.matches(".ptext")) showValues(anchor.panel);
+    retain(function() { workbench.dispatch({type: "analysis", value: !previous.analysisVisible}); });
+    if (previous.surface === "overview") {
+      rememberPassageLocation(overviewAnchor && overviewAnchor.panel); restore(overviewAnchor);
+    }
+  });
+  document.querySelectorAll("[data-context-tool]").forEach(function(button) {
+    button.addEventListener("click", function() { retain(function() {
+      workbench.dispatch({type: "tool", value: button.dataset.contextTool});
+    }); });
+  });
+  document.getElementById("workbench-overview-open").addEventListener("click", function() {
+    overviewAnchor = capture(); workbench.dispatch({type: "surface", value: "overview"});
+    controls.scrollIntoView({block: "start"});
+    document.getElementById("workbench-overview-back").focus({preventScroll: true});
+  });
+  document.getElementById("workbench-overview-back").addEventListener("click", function() {
+    rememberPassageLocation(overviewAnchor && overviewAnchor.panel);
+    workbench.dispatch({type: "surface", value: "document"}); restore(overviewAnchor);
+    document.getElementById("workbench-overview-open").focus({preventScroll: true});
+  });
   document.getElementById("reader-text-smaller").addEventListener("click", function() { retain(function() { preferences.size = Math.max(16, preferences.size - 2); appearance(); }); });
   document.getElementById("reader-text-larger").addEventListener("click", function() { retain(function() { preferences.size = Math.min(28, preferences.size + 2); appearance(); }); });
   [width, spacing].forEach(function(select) { select.addEventListener("change", function() { retain(function() { preferences[select === width ? "width" : "spacing"] = select.value; appearance(); }); }); });
@@ -227,7 +272,7 @@
     if (!selectionTools.contains(event.target)) selectionTools.hidden = true;
   });
   function showSelection() {
-    if (!document.body.classList.contains("manuscript-reading") || !menu.hidden) return;
+    if (workbench.state().view !== "analysis" || workbench.state().surface !== "document" || !menu.hidden) return;
     var selection = window.getSelection();
     var node = selection && selection.anchorNode;
     var element = node && (node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement);
@@ -243,11 +288,13 @@
   document.addEventListener("keyup", function(event) { if (event.shiftKey || event.key === "Shift") showSelection(); });
   document.addEventListener("selectionchange", function() { if (!selecting) requestAnimationFrame(showSelection); });
   document.addEventListener("keydown", function(event) {
+    if (workbench.state().view !== "analysis") return;
     if (!menu.hidden) {
       var items = Array.from(menu.querySelectorAll("button")), index = items.indexOf(document.activeElement);
-      if (event.key === "Escape" || event.key === "Tab") {
+      if (event.key === "Escape") {
         event.preventDefault(); event.stopImmediatePropagation(); closeMenu(true); return;
       }
+      if (event.key === "Tab") { closeMenu(true); return; }
       if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
         event.preventDefault(); event.stopImmediatePropagation();
         index = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : (index + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
@@ -261,8 +308,8 @@
     }
     if (event.key !== "Escape" || event.defaultPrevented || event.isComposing || event.target.closest("dialog, [role=dialog], select, input, textarea")) return;
     if (!selectionTools.hidden) { selectionTools.hidden = true; event.preventDefault(); event.stopImmediatePropagation(); }
-    else if (!inspector.hidden && !document.body.classList.contains("reader-focus")) { event.preventDefault(); event.stopImmediatePropagation(); retain(function() { closeInspector(true); }); }
     else if (settings.open) { event.preventDefault(); event.stopImmediatePropagation(); settings.open = false; settings.querySelector("summary").focus({preventScroll: true}); }
+    else if (!inspector.hidden && !document.body.classList.contains("reader-focus")) { event.preventDefault(); event.stopImmediatePropagation(); retain(function() { closeInspector(true); }); }
     else if (document.body.classList.contains("reader-focus") && !event.target.closest("details[open]")) { event.preventDefault(); event.stopImmediatePropagation(); setFocus(false); focus.focus({preventScroll: true}); }
     else if (document.body.classList.contains("manuscript-reading") && event.target.closest("#chapters")) {
       // Escape never removes continuous prose. Existing note/disclosure handlers run.
@@ -274,7 +321,7 @@
     var pane = document.getElementById("view-pane-analysis");
     if (pane && !pane.classList.contains("active") && document.body.classList.contains("reader-focus")) setFocus(false);
   });
-  document.addEventListener("lixity:companion-change", function(event) { if (event.detail) closeInspector(false); });
+
   window.addEventListener("scroll", function() {
     [menu, selectionTools].forEach(function(overlay) {
       var opened = overlay._readerScroll;
@@ -284,9 +331,67 @@
     });
   }, {passive: true});
   window.addEventListener("resize", function() { closeMenu(false); selectionTools.hidden = true; });
+  var returnButton = document.getElementById("workbench-return");
+  var shell = document.querySelector(".workspace-shell");
+  if (shell) shell.appendChild(returnButton);
+  function sourceContext() {
+    var workspace = document.getElementById("manuscript-pdf-form") || document.getElementById("workspace-reader");
+    return [workspace ? workspace.dataset.projectToken : document.body.dataset.manuscriptProjectToken,
+      document.body.dataset.manuscriptSourceSha256, window.LixityWorkspaceReader && window.LixityWorkspaceReader.contextToken()].join(":");
+  }
+  document.addEventListener("click", function(event) {
+    var relation = event.target.closest("[data-research-history], [data-workspace-dossier], [data-manuscript-link-jump], [data-manuscript-links-claim], [data-manuscript-links-dossier], [data-manuscript-links-paragraph], .manuscript-claim-hit");
+    if (!relation || workbench.state().view !== "analysis" || workbench.state().surface !== "document") return;
+    var panel = event.target.closest(".ptext");
+    var anchor = panel ? {panel: panel, top: panel.getBoundingClientRect().top} : capture();
+    if (!anchor) return;
+    var range = rangeFor(anchor.panel), offsets = null;
+    if (range) {
+      var paragraph = anchor.panel.querySelector(".ptext-inner > p"), selection = getSelection();
+      var prefix = document.createRange(); prefix.selectNodeContents(paragraph);
+      prefix.setEnd(selection.anchorNode, selection.anchorOffset); var from = prefix.toString().length;
+      prefix.setEnd(selection.focusNode, selection.focusOffset);
+      offsets = {anchor: from, focus: prefix.toString().length};
+    }
+    origin = {anchor: anchor, offsets: offsets, hash: anchor.panel.dataset.paragraphSha256, context: sourceContext()};
+    returnButton.hidden = false;
+  }, true);
+  returnButton.addEventListener("click", function() {
+    if (!origin || origin.context !== sourceContext() || !origin.anchor.panel.isConnected || origin.hash !== origin.anchor.panel.dataset.paragraphSha256) {
+      origin = null; returnButton.hidden = true; return;
+    }
+    switchActiveView("analysis"); workbench.dispatch({type: "surface", value: "document"});
+    rememberPassageLocation(origin.anchor.panel);
+    revealChapter(origin.anchor.panel); restore(origin.anchor);
+    origin.anchor.panel.tabIndex = -1;
+    origin.anchor.panel.focus({preventScroll: true});
+    if (origin.offsets) {
+      var paragraph = origin.anchor.panel.querySelector(".ptext-inner > p");
+      var content = paragraphContent[origin.anchor.panel.id];
+      if (paragraph && content && paragraph.textContent === content[0]) {
+        function point(offset) {
+          var walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT);
+          while (walker.nextNode()) {
+            if (offset <= walker.currentNode.length) return {node: walker.currentNode, offset: offset};
+            offset -= walker.currentNode.length;
+          }
+          return null;
+        }
+        var from = point(origin.offsets.anchor), to = point(origin.offsets.focus), selection = getSelection();
+        if (from && to) {
+          if (selection.setBaseAndExtent) selection.setBaseAndExtent(from.node, from.offset, to.node, to.offset);
+          else { selection.collapse(from.node, from.offset); selection.extend(to.node, to.offset); }
+        }
+      }
+    }
+    origin = null; returnButton.hidden = true;
+  });
   window.LixityReader = {capture: capture, restore: restore, retain: retain,
     inspect: function() { setMode("inspect", true); }};
-  setMode(read("lixity.manuscript.mode") === "inspect" ? "inspect" : "read", true);
+  document.body.classList.add("manuscript-reading");
+  panels.forEach(enhanceText);
+  document.dispatchEvent(new Event("lixity:reader-ready"));
+  workbench.dispatch({type: "analysis", value: false});
   var hash = document.getElementById(window.location.hash.slice(1));
   if (hash && hash.closest("#manuscript-analysis-panels")) setMode("inspect", true);
   if (hash && hash.closest("#chapters, #manuscript-analysis-panels")) requestAnimationFrame(function() { scrollAndFlash(hash); });

@@ -249,9 +249,10 @@ async function main() {
     for (const capture of captures.filter(item => !item.video)) {
       const name = path.basename(capture.target);
       await open(capture.source, capture.width, capture.height, name.includes('dark') ? 'dark' : 'light');
-      if (await page.locator('#manuscript-mode').count()) {
-        const inspection = /^dashboard-(dimensions|reference|markers|flags|editorial|heatmap|layer|scenes)/.test(name);
-        await page.locator('#manuscript-mode').selectOption(inspection ? 'inspect' : 'read');
+      if (await page.locator('#manuscript-analysis-toggle').count()) {
+        await selectView('analysis');
+        if (/^dashboard-(dimensions|reference|markers|flags|heatmap|scenes)/.test(name)) await page.locator('#workbench-overview-open').click();
+        else if (/^dashboard-(editorial|layer)/.test(name)) await page.locator('#manuscript-analysis-toggle').click();
       }
       if (name.startsWith('dashboard-dimensions') || ['dashboard-light.png', 'dashboard-dark.png', 'dashboard-mobile.png', 'dashboard-reference.png', 'dashboard-heatmap.png', 'dashboard-layer.png'].includes(name)) await selectView('analysis');
       if (name.startsWith('dashboard-dimensions')) {
@@ -278,14 +279,13 @@ async function main() {
         await save(capture.target, '#flags');
       } else if (name === 'dashboard-editorial.png') {
         await selectView('analysis');
-        const chip = page.locator('#ch-1 .chip').nth(2);
-        await chip.click();
-        const paragraph = page.locator('#chapters .ptext.open').first();
-        await paragraph.locator('.paragraph-values > summary').click();
-        const trigger = paragraph.locator('.marker-row [data-marker-kind="todo"]');
-        await trigger.click();
+        const paragraph = page.locator('#ch-1 .ptext').nth(2);
+        await paragraph.locator('[data-reader-paragraph]').click();
+        await page.locator('[data-reader-action=values]').click();
+        await paragraph.locator('[data-reader-paragraph]').click();
+        await page.locator('[data-reader-action=todo]').click();
         await paragraph.locator('.marker-note').fill('Check the closing cadence here');
-        await save(capture.target, '#chapters .ptext.open');
+        await save(capture.target, '#workspace-reader-layout');
       } else if (name === 'dashboard-heatmap.png') {
         await page.addStyleTag({content: '.page { max-width: 1720px; }'});
         await page.evaluate(() => {
@@ -493,9 +493,9 @@ async function main() {
         await page.waitForTimeout(1500);
       };
       await page.goto('http://lixity-screenshots.test/' + path.basename(capture.source));
-      if (flow !== 'research-timeline' && await page.locator('#manuscript-mode').count()) {
+      if (flow !== 'research-timeline' && await page.locator('#workbench-overview-open').count()) {
         await page.locator('#tab-view-analysis').click();
-        await page.locator('#manuscript-mode').selectOption('inspect');
+        await page.locator('#workbench-overview-open').click();
       }
       if (flow === 'editorial-loop') {
         await page.waitForTimeout(1200);
@@ -508,21 +508,18 @@ async function main() {
           await page.waitForTimeout(1200);
         }
         await say('Open a paragraph to read its values and source lines');
-        const chip = page.locator('#ch-1 .chip').nth(2);
-        await chip.scrollIntoViewIfNeeded();
-        await chip.hover();
-        await page.waitForTimeout(750);
-        await chip.click();
+        await page.locator('#workbench-overview-back').click();
+        const paragraph = page.locator('#ch-1 .ptext').nth(2);
+        await paragraph.locator('[data-reader-paragraph]').click();
+        await page.locator('[data-reader-action=values]').click();
         await page.waitForTimeout(1500);
         await say('Read the values, source lines and tense flags');
-        const paragraph = page.locator('#chapters .ptext.open').first();
-        await paragraph.locator('.paragraph-values > summary').click();
-        await page.waitForTimeout(1500);
-        await say('Write the note where you read it');
-        await paragraph.locator('.marker-row [data-marker-kind="todo"]').click();
+        await paragraph.locator('[data-reader-paragraph]').click();
+        await page.locator('[data-reader-action=todo]').click();
         await paragraph.locator('.marker-note').pressSequentially('Check the closing cadence here', {delay: 60});
         await page.waitForTimeout(1300);
         await say('Markers stay in the manuscript as Markdown comments');
+        await page.locator('#workbench-overview-open').click();
         await page.locator('#markers').scrollIntoViewIfNeeded();
         await page.waitForTimeout(2000);
       } else if (flow === 'analysis-review') {
@@ -536,13 +533,11 @@ async function main() {
         await cell.click();
         await page.waitForTimeout(1500);
         await say('Read the values and source lines before you judge');
-        const values = page.locator('#chapters .paragraph-values > summary').first();
-        if (await values.count()) {
-          await values.scrollIntoViewIfNeeded();
-          await page.waitForTimeout(600);
-          await values.click();
-          await page.waitForTimeout(1300);
-        }
+        const paragraph = page.locator('#chapters .ptext').first();
+        await paragraph.locator('[data-reader-paragraph]').click();
+        await page.locator('[data-reader-action=values]').click();
+        await page.waitForTimeout(1300);
+        await page.locator('#workbench-overview-open').click();
         const dimensions = page.locator('#style-tab-dimensions');
         if (await dimensions.count()) {
           await say('Switch to the style dimensions for the same data');

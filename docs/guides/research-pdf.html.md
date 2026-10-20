@@ -161,7 +161,7 @@ Replace the claim placeholders with complete IDs from the claim list. `results_i
 
 The saved citation still identifies the whole paragraph and its source version. It creates no sentence-level citation. Cross-paragraph or ambiguous selections are unavailable; use the whole-passage actions in the Passages view instead. Selecting text or opening the draft writes no record. Evidence status labels express your own assessment, not historical certainty or a computed probability.
 
-For reading notes against the manuscript, open **Dossier alongside** in Manuscript & Analysis and choose a dossier, or use the action on that dossier's card. The optional companion reader is read-only. Closing it preserves manuscript search and open paragraphs; refresh explicitly for the latest saved dossier version. Narrow screens place the dossier above the manuscript.
+For reading notes against the manuscript, open **Dossier alongside** in Manuscript and choose a dossier, or use the action on that dossier's card. The optional companion reader is read-only. Closing it preserves manuscript search and open paragraphs; refresh explicitly for the latest saved dossier version. Narrow screens place the dossier above the manuscript.
 
 ## Use the intended research project in the terminal
 

@@ -254,7 +254,7 @@ body.text-search-active .chapter .strip { display: none; }
 }
 .chapter-head h2 { min-width: 0; overflow-wrap: anywhere; }
 .chapter-head .meta { color: var(--muted); font-size: var(--text-small); font-variant-numeric: tabular-nums; }
-.chapter-toggle { background: none; border: 0; padding: 0 .35rem 0 0; margin: 0; color: var(--muted); cursor: pointer; font: inherit; }
+.chapter-toggle { font-family: var(--font); background: none; border: 0; padding: 0 .35rem 0 0; margin: 0; color: var(--muted); cursor: pointer; font-size: inherit; font-weight: inherit; }
 .chapter-toggle::before { content: "\25BE"; display: inline-block; transition: transform .15s var(--ease); }
 .chapter-toggle:hover, .chapter-toggle:focus-visible { color: var(--fg); }
 .chapter.collapsed .chapter-toggle::before { transform: rotate(-90deg); }
@@ -1768,9 +1768,9 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
     display: inline-flex; order: -1;
     justify-content: center; white-space: normal;
   }
-  body.lixity-workspace.navigation-collapsed { padding-left: 5rem; }
+  body.lixity-workspace.navigation-collapsed { padding-left: 8rem; }
   .lixity-workspace.navigation-collapsed .workspace-shell {
-    width: 3.75rem; padding: 1.25rem .5rem;
+    width: 7rem; padding: 1.25rem .5rem;
   }
   .navigation-collapsed .workspace-navigation-toggle { width: 2.75rem; padding: .5rem; }
 }
@@ -1952,3 +1952,19 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
   background: transparent;
 }
 .research-excerpt { max-width: 78ch; line-height: var(--line-body); }
+
+/* Primary destinations remain reachable when project chrome is collapsed.
+   Loaded-state chrome uses the rendered class: a body :has query over mutable
+   prose invalidates the whole book during paragraph enhancement on mobile. */
+.navigation-collapsed .view-nav-tab { white-space: normal; overflow-wrap: anywhere; font-size: var(--text-note); padding: .6rem .3rem; }
+@media screen and (max-width: 1099px) {
+  .lixity-workspace.has-reading .workspace-shell { gap: .6rem; }
+  .lixity-workspace.has-reading .project-header { gap: .35rem; margin-bottom: 0; }
+  .lixity-workspace.has-reading .project-header .sub { display: none; }
+  .lixity-workspace.has-reading .workspace-bar { padding: .4rem 0; }
+  .lixity-workspace.has-reading .workspace-bar > .row { gap: .35rem; }
+  .lixity-workspace.has-reading .workspace-bar .ctl { padding: .35rem .5rem; font-size: var(--text-note); }
+}
+
+/* Ordinary counts are available in their views; warnings stay visible at every width. */
+.lixity-workspace .status-strip:not(:has(.warn, .error, .unknown)):not(#dashboard-freshness) { display: none; }

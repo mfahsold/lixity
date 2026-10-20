@@ -261,7 +261,9 @@ class SceneContracts(unittest.TestCase):
         self.assertEqual(report["items"][0]["features"]["passive_density"], 0)
         self.assertGreater(report["items"][1]["features"]["passive_density"], 0)
         html = api.dashboard(text, project_config=settings)
-        self.assertNotIn("Ignore this appendix", html)
+        # Reading includes excluded material without extending scene analysis.
+        self.assertIn("Ignore this appendix", html)
+        self.assertIn("reader-coverage", html)
         self.assertTrue('id="ch-2"' in html, "The dashboard must use the configured chapter boundaries")
 
     def test_unit_engine_matches_full_analysis_without_corpus_recalculation(self):

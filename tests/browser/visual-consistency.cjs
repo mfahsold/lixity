@@ -135,7 +135,6 @@ async function checkScale(page, label) {
   try {
     for (const theme of ['light', 'dark']) for (const hasTouch of [false, true]) {
       const context = await browser.newContext({colorScheme: theme, reducedMotion: 'reduce', hasTouch});
-      await context.addInitScript(() => localStorage.setItem('lixity.manuscript.mode', 'inspect'));
       const errors = [];
       await context.route('http://lixity.test/**', route => {
         const url = new URL(route.request().url());
@@ -251,15 +250,15 @@ async function checkScale(page, label) {
           'Closing a dialog restores focus to its opener');
         assert.equal(await app.locator('.chip').first().evaluate(el => getComputedStyle(el).transitionDuration), '0s');
         await app.locator('#tab-view-analysis').click();
-        await app.locator('#style-tab-dimensions').click();
+        await app.locator('#manuscript-analysis-toggle').click();
         const minimum = hasTouch ? 44 : 24;
-        const denseTargets = await app.locator('.chip, .dim-ctl').evaluateAll(elements => elements.map(element => {
+        const paragraph = app.locator('.chip').first();
+        const paragraphTargets = await app.locator('#chapters .chip').evaluateAll(elements => elements.map(element => {
           const box = element.getBoundingClientRect();
           return {width: box.width, height: box.height};
         }));
-        assert.ok(denseTargets.length > 0 && denseTargets.every(box => box.width >= minimum && box.height >= minimum),
-          `${theme} paragraph and dimension targets: ${JSON.stringify(denseTargets)}`);
-        const paragraph = app.locator('.chip').first();
+        assert.ok(paragraphTargets.length > 0 && paragraphTargets.every(box => box.width >= minimum && box.height >= minimum),
+          `${theme} paragraph targets: ${JSON.stringify(paragraphTargets)}`);
         await paragraph.focus();
         await app.keyboard.down('Space');
         try {
@@ -267,6 +266,14 @@ async function checkScale(page, label) {
           assert.ok(pressed.width >= minimum && pressed.height >= minimum,
             `${theme} pressed paragraph target: ${JSON.stringify(pressed)}`);
         } finally { await app.keyboard.up('Space'); }
+        await app.locator('#workbench-overview-open').click();
+        await app.locator('#style-tab-dimensions').click();
+        const denseTargets = await app.locator('.dim-ctl:visible').evaluateAll(elements => elements.map(element => {
+          const box = element.getBoundingClientRect();
+          return {width: box.width, height: box.height};
+        }));
+        assert.ok(denseTargets.length > 0 && denseTargets.every(box => box.width >= minimum && box.height >= minimum),
+          `${theme} paragraph and dimension targets: ${JSON.stringify(denseTargets)}`);
         assert.equal(await site.locator('html').evaluate(el => getComputedStyle(el).scrollBehavior), 'auto');
         assert.equal(await site.locator('.ctl').first().evaluate(el => getComputedStyle(el).transitionDuration), '0s');
         const heatmapColors = await app.locator('td.z[style]').evaluateAll(nodes => nodes.map(node => {
@@ -303,6 +310,7 @@ async function checkScale(page, label) {
       assert.deepEqual(errors, []);
       await context.close();
     }
+    fs.rmSync(siteRoot, {recursive: true, force: true});
     console.log(`Shared typography, identity labels, palette, action contrast, touch targets, focus, text-spacing, reduced motion and theme interaction passed. Screenshots: ${artifacts}`);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

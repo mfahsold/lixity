@@ -31,7 +31,6 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
   try {
     for (const [locale, html] of Object.entries(fixtures)) for (const width of [1440, 320]) {
       const page = await browser.newPage({viewport: {width, height: 900}});
-      await page.addInitScript(() => localStorage.setItem('lixity.manuscript.mode', 'inspect'));
       const errors = [], readerRequests = [], writes = [];
       let conflict = false;
       page.on('pageerror', error => errors.push(error.message));
@@ -59,10 +58,7 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
       assert.equal(await toggle.isVisible(), true);
       assert.equal(await panel.isVisible(), false);
       assert.equal(readerRequests.length, 0, 'The optional reader makes no requests before opening');
-      const firstChip = page.locator('#chapters .chip').first();
-      const paragraphId = await firstChip.getAttribute('data-target');
-      await firstChip.click();
-      const paragraph = page.locator('#' + paragraphId);
+      const paragraph = page.locator('#chapters .ptext').first();
       const originalText = await paragraph.locator('p').textContent();
       const navigationToggle = page.locator('#workspace-navigation-toggle');
       const navigation = page.locator('#workspace-navigation-content');
@@ -112,7 +108,10 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
       await toggle.click();
       assert.equal(await panel.isVisible(), false);
       assert.equal(await navigation.isVisible(), true, 'Closing restores the previous navigation state');
-      assert.equal(await page.locator('#analysis-review').isVisible(), true, 'Closing restores analysis panels');
+      assert.equal(await page.locator('#analysis-review').isVisible(), false, 'Closing a dossier retains the document reading surface');
+      await page.locator('#workbench-overview-open').click();
+      assert.equal(await page.locator('#analysis-review').isVisible(), true, 'The explicit overview reveals broad analysis');
+      await page.locator('#workbench-overview-back').click();
       assert.equal(await paragraph.locator('p').textContent(), originalText);
       await page.locator('#tab-view-research').click();
       await page.locator('[data-rtab=dossiers]').click();
@@ -152,7 +151,6 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
       await page.close();
     }
     const gated = await browser.newPage();
-    await gated.addInitScript(() => localStorage.setItem('lixity.manuscript.mode', 'inspect'));
     let guardedReads = 0;
     await gated.route('http://lixity.test/**', route => {
       if (route.request().url().includes('project_token')) guardedReads++;
@@ -167,7 +165,6 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
     await gated.close();
 
     const delayed = await browser.newPage();
-    await delayed.addInitScript(() => localStorage.setItem('lixity.manuscript.mode', 'inspect'));
     let reads = 0;
     await delayed.route('http://lixity.test/**', route => {
       const url = new URL(route.request().url());

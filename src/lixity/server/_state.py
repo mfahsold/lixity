@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import email.message
 import os
+import warnings
+from enum import Enum
 from pathlib import Path
 from threading import RLock
 from typing import TYPE_CHECKING, Any, ClassVar
@@ -19,6 +21,17 @@ from .views import build_server_dashboard
 
 if TYPE_CHECKING:
     pass
+
+
+class RefreshOutcome(str, Enum):
+    """Current source availability, separate from the cached analysis identity."""
+
+    UNKNOWN = "unknown"
+    CURRENT = "current"
+    REBUILT = "rebuilt"
+    MISSING = "missing"
+    UNREADABLE = "unreadable"
+    REFRESH_FAILED = "refresh-failed"
 
 
 class WorkspaceState:
@@ -59,6 +72,8 @@ class WorkspaceState:
     project_open_overrides: ClassVar[dict[str, Any]] = {}
     dashboard_html: ClassVar[str] = ""
     dashboard_info: ClassVar[dict[str, Any]] = {}
+    refresh_outcome: ClassVar[RefreshOutcome] = RefreshOutcome.UNKNOWN
+    _refresh_needs_validation: ClassVar[bool] = False
     debug: ClassVar[bool] = False
 
     @classmethod
@@ -80,47 +95,78 @@ class WorkspaceState:
     def publish_dashboard(cls, html: str, info: dict[str, Any]) -> None:
         """Publish an already prepared view under the caller's workspace lock."""
         cls.dashboard_html, cls.dashboard_info = html, info
+        cls.refresh_outcome = RefreshOutcome.REBUILT
+        cls._refresh_needs_validation = False
 
     @classmethod
-    def refresh(cls) -> None:
-        """Re-analyzes the active manuscript and updates cached dashboard HTML."""
-        html, info = build_server_dashboard(
-            cls.source_input,
-            language=cls.language,
-            title=cls.title,
-            thresholds=cls.thresholds,
-            controls=True,
-            api_base="/api",
-            exports_dir=cls.exports_dir,
-            debug=cls.debug,
-            project_root=cls.get_author_project_root(),
-            research_root=cls.get_research_root(),
-        )
-        cls.publish_dashboard(html, info)
+    def refresh(cls, *, strict_source: bool = False) -> None:
+        """Prepare and publish one complete dashboard under the workspace lock.
 
-    @classmethod
-    def refresh_when_source_changed(cls) -> bool:
-        """Rebuilds the cached dashboard when the manuscript changed on disk.
-
-        The digest read is cheap and only a changed file triggers one full
-        rebuild, so a served dashboard never presents numbers that no longer
-        match the manuscript. Returns whether a rebuild was performed.
+        Startup may render an initially missing source. Refreshing last-good
+        content requires a readable source so an empty fallback cannot replace it.
         """
-        source = cls.source_input
-        rendered = cls.dashboard_info.get("manuscript_source_sha256")
-        if not source or not rendered or not os.path.isfile(source):
-            return False
-        try:
-            _, current = FileUtils.read_source_snapshot(source)
-        except OSError:
-            return False
-        if current == rendered:
-            return False
         with cls._workspace_lock:
-            if cls.dashboard_info.get("manuscript_source_sha256") != rendered:
-                return False  # another request already rebuilt this digest
+            if strict_source and cls.source_input:
+                try:
+                    FileUtils.read_source_snapshot(cls.source_input)
+                except FileNotFoundError:
+                    cls.refresh_outcome = RefreshOutcome.MISSING
+                    raise
+                except OSError:
+                    cls.refresh_outcome = RefreshOutcome.UNREADABLE
+                    raise
             try:
-                cls.refresh()
-            except (OSError, ValueError, RuntimeError):
-                return False
-        return True
+                with warnings.catch_warnings():
+                    if strict_source:
+                        warnings.filterwarnings("error", category=UserWarning, module=r"lixity\.config")
+                    html, info = build_server_dashboard(
+                        cls.source_input,
+                        language=cls.language,
+                        title=cls.title,
+                        thresholds=cls.thresholds,
+                        controls=True,
+                        api_base="/api",
+                        exports_dir=cls.exports_dir,
+                        debug=cls.debug,
+                        project_root=cls.get_author_project_root(),
+                        research_root=cls.get_research_root(),
+                        strict_source=strict_source,
+                    )
+            except (OSError, ValueError, RuntimeError, UserWarning):
+                cls.refresh_outcome = RefreshOutcome.REFRESH_FAILED
+                cls._refresh_needs_validation = True
+                raise
+            cls.publish_dashboard(html, info)
+
+    @classmethod
+    def refresh_when_source_changed(cls) -> RefreshOutcome:
+        """Validate source availability and rebuild only changed manuscript bytes.
+
+        Failures keep the last successful HTML and source digest intact. The
+        separate outcome lets responses label that retained content truthfully.
+        The lock binds validation and publication to one selected workspace.
+        """
+        with cls._workspace_lock:
+            source = cls.source_input
+            rendered = cls.dashboard_info.get("manuscript_source_sha256")
+            if not source:
+                cls.refresh_outcome = RefreshOutcome.CURRENT
+                return cls.refresh_outcome
+            try:
+                _, current = FileUtils.read_source_snapshot(source)
+            except FileNotFoundError:
+                cls.refresh_outcome = RefreshOutcome.MISSING
+                return cls.refresh_outcome
+            except OSError:
+                cls.refresh_outcome = RefreshOutcome.UNREADABLE
+                return cls.refresh_outcome
+            # A failed rebuild may concern settings or rendering, so matching
+            # manuscript bytes alone cannot validate that failed operation.
+            if current == rendered and not cls._refresh_needs_validation:
+                cls.refresh_outcome = RefreshOutcome.CURRENT
+                return cls.refresh_outcome
+            try:
+                cls.refresh(strict_source=True)
+            except (OSError, ValueError, RuntimeError, UserWarning):
+                return cls.refresh_outcome
+            return cls.refresh_outcome

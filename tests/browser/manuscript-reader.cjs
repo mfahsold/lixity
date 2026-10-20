@@ -99,9 +99,13 @@ async function settleGeometry(page) {
   try {
     for (const [locale, fixture] of Object.entries(fixtures)) for (const width of [1440, 320]) {
       const {page, errors, writes} = await createPage(browser, fixture, width);
-      const mode = page.locator('#manuscript-mode');
-      assert.equal(await mode.count(), 1, 'A shared manuscript presentation control is available');
-      assert.equal(await mode.inputValue(), 'read', 'The workspace opens a continuous manuscript reader');
+      const analysis = page.locator('#manuscript-analysis-toggle');
+      assert.equal(await analysis.isVisible(), true, 'Analysis has one explicit visible display control');
+      assert.equal(await analysis.getAttribute('aria-pressed'), 'false', 'The workspace opens with analysis hidden');
+      const analysisName = await analysis.getAttribute('aria-label');
+      assert.ok(analysisName, 'The Analysis toggle has a localized, constant accessible name');
+      assert.equal(await page.locator('select#manuscript-mode:visible').count(), 0,
+        'Reading and analysis do not require switching manuscript presentations');
       assert.equal(await page.locator('body').evaluate(body => body.classList.contains('manuscript-reading')), true);
       assert.deepEqual(await page.locator('#chapters .ptext .ptext-inner > p').allTextContents(), fixture.text,
         'Every source paragraph appears exactly once, in manuscript order');
@@ -130,6 +134,7 @@ async function settleGeometry(page) {
       assert.ok(anchors.every(item => item.id && Number(item.start) <= Number(item.end) && /^[a-f0-9]{64}$/.test(item.hash)));
 
       const first = page.locator('#chapters .ptext').first();
+      await first.evaluate(node => {window.readerCanonicalFirst = node;});
       const id = await first.getAttribute('id');
       const actions = first.locator(`.reader-paragraph-actions[data-reader-paragraph="${id}"]`);
       assert.equal(await actions.count(), 1, 'Paragraph tools have a discoverable native button');
@@ -143,43 +148,65 @@ async function settleGeometry(page) {
       assert.equal(await inspector.isVisible(), true, 'Values open on request in the paragraph inspector');
       assert.ok((await page.locator('#reader-inspector-body').textContent()).trim());
       if (width === 1440) {
-        const insetWidth = await page.locator('#chapters').evaluate(node => node.getBoundingClientRect().width);
+        const insetWidth = await page.locator('#workspace-analysis-body').evaluate(node => node.getBoundingClientRect().width);
         await page.locator('#reader-focus').click(); await settleGeometry(page);
         assert.equal(await inspector.isVisible(), false);
-        assert.ok(await page.locator('#chapters').evaluate(node => node.getBoundingClientRect().width) > insetWidth,
-          'Focus reading releases space reserved for the temporarily hidden inspector');
+        assert.ok(await page.locator('#workspace-analysis-body').evaluate(node => node.getBoundingClientRect().width) > insetWidth,
+          'Focus reading releases the document column space reserved for the hidden inspector');
         await page.keyboard.press('Escape'); await settleGeometry(page);
         assert.equal(await page.locator('#reader-focus').getAttribute('aria-pressed'), 'false',
           'Escape exits focus before touching the temporarily hidden inspector');
         assert.equal(await inspector.isVisible(), true, 'Leaving focus restores the open inspector');
       }
+      if (locale === 'en') {
+        const firstValues = await page.locator('#reader-inspector-body').textContent();
+        const nextActions = page.locator('#chapters .ptext').nth(1).locator('.reader-paragraph-actions');
+        await nextActions.click();
+        await page.keyboard.press('Escape');
+        assert.equal(await inspector.isVisible(), true, 'Closing a later paragraph menu leaves the existing inspector open');
+        assert.equal(await page.locator('#reader-inspector-body').textContent(), firstValues,
+          'A later context menu does not silently change the inspected passage');
+      }
       await page.locator('#reader-inspector-close').click();
       assert.equal(await inspector.isVisible(), false, 'The inspector has an equally direct close action');
+      assert.equal(await actions.evaluate(button => document.activeElement === button), true,
+        'Closing the first passage inspector returns to its own trigger after a later menu');
       assert.deepEqual(await sourceState(page), anchors, 'Context tools preserve exact manuscript text and anchors');
 
-      await mode.selectOption('inspect');
+      assert.equal(await analysis.getAttribute('aria-pressed'), 'true', 'Opening values enables analysis');
+      assert.equal(await analysis.getAttribute('aria-label'), analysisName, 'Analysis keeps its accessible name when active');
       assert.equal(await page.locator('#chapters .strip').first().isVisible(), true,
-        'The existing paragraph analysis remains available explicitly');
+        'Analysis exposes restrained paragraph diagnostics alongside the same prose');
       await page.locator('#filter-flags').check();
-      await mode.selectOption('read');
+      await analysis.click();
       await settleGeometry(page);
       assert.equal(await page.locator('#chapters .chapter').evaluateAll(chapters => chapters.every(chapter => {
         const style = getComputedStyle(chapter); return style.display !== 'none' && style.visibility !== 'hidden';
-      })), true, 'Reading shows every chapter even when inspection was filtered to flagged passages');
-      assert.deepEqual(await sourceState(page), anchors, 'Switching presentations restores the full source tree');
-      await mode.selectOption('inspect');
+      })), true, 'Hiding analysis shows every chapter after filtering flagged passages');
+      assert.deepEqual(await sourceState(page), anchors, 'Hiding analysis preserves the full source tree');
+      await analysis.click();
       assert.equal(await page.locator('#filter-flags').isChecked(), true,
-        'Returning to inspection retains the explicitly chosen analysis filter');
+        'Showing analysis retains the explicitly chosen diagnostic filter');
       await page.locator('#filter-flags').uncheck();
-      await page.locator('#ch-2 [data-chapter-toggle]').click();
-      await mode.selectOption('read');
+      await analysis.click();
+      await page.locator('#workbench-overview-open').click();
+      assert.equal(await page.locator('#manuscript-analysis-panels').isVisible(), true,
+        'Dense comparisons have an explicit overview surface');
+      assert.equal(await page.locator('#workbench-overview-back').isVisible(), true);
+      assert.deepEqual(await sourceState(page), anchors, 'The overview keeps the canonical manuscript mounted');
+      await page.locator('#workbench-overview-back').click();
+      assert.equal(await first.evaluate(node => node === window.readerCanonicalFirst), true,
+        'Returning from the overview restores the same manuscript nodes');
+      assert.equal(await page.locator('#chapters').isVisible(), true);
+      assert.equal(await analysis.getAttribute('aria-pressed'), 'true');
+      await analysis.click();
       await settleGeometry(page);
       await page.locator('#text-search').fill('Fenster');
       await page.locator('#chapters .ptext.text-miss').first().waitFor({state: 'attached'});
       assert.ok(await page.locator('#chapters .ptext.text-miss').count() > 0);
       assert.equal(await page.locator('#chapters .ptext.text-miss').evaluateAll(panels =>
         panels.every(panel => getComputedStyle(panel).display === 'none')), true,
-        'Search excludes nonmatches even in a chapter folded during inspection');
+        'Search excludes nonmatches in the continuous manuscript');
       await page.locator('#text-search-clear').click();
       if (locale === 'de') {
         await page.locator('#chapters').scrollIntoViewIfNeeded();
@@ -202,6 +229,12 @@ async function settleGeometry(page) {
         assert.equal(await menu.isVisible(), false);
         assert.equal(await actions.evaluate(button => document.activeElement === button), true,
           'Closing context tools returns keyboard focus to their trigger');
+        await page.keyboard.press('Shift+F10');
+        await page.keyboard.press('Tab');
+        assert.equal(await menu.isVisible(), false, 'Tab dismisses the temporary context menu');
+        assert.equal(await page.locator('#chapters .ptext').nth(1).locator('.reader-paragraph-actions')
+          .evaluate(button => document.activeElement === button), true,
+        'Tab proceeds to the next paragraph action instead of returning to the cancelled menu trigger');
 
         await actions.click();
         await menu.locator('[data-reader-action=todo]').click();
@@ -214,6 +247,7 @@ async function settleGeometry(page) {
 
         const paragraph = first.locator('.ptext-inner > p');
         const originalSize = await paragraph.evaluate(p => parseFloat(getComputedStyle(p).fontSize));
+        await page.locator('#reader-settings > summary').click();
         await page.locator('#reader-text-larger').click();
         await settleGeometry(page);
         assert.ok(await paragraph.evaluate(p => parseFloat(getComputedStyle(p).fontSize)) > originalSize,
@@ -221,7 +255,6 @@ async function settleGeometry(page) {
         await page.locator('#reader-text-smaller').click();
         await settleGeometry(page);
         assert.equal(await paragraph.evaluate(p => parseFloat(getComputedStyle(p).fontSize)), originalSize);
-        await page.locator('#reader-settings > summary').click();
         await page.locator('#reader-width').selectOption('narrow');
         await page.locator('#reader-spacing').selectOption('relaxed');
         const relaxed = await paragraph.evaluate(p => parseFloat(getComputedStyle(p).lineHeight));
@@ -235,6 +268,7 @@ async function settleGeometry(page) {
           const readingAnchor = page.locator('#chapters .ptext').nth(20);
           await readingAnchor.evaluate(panel => panel.scrollIntoView({block: 'start'}));
           const before = await readingAnchor.evaluate(panel => panel.getBoundingClientRect().top);
+          await page.locator('#reader-settings > summary').click();
           await page.locator('#reader-text-larger').click();
           await settleGeometry(page);
           const after = await readingAnchor.evaluate(panel => panel.getBoundingClientRect().top);
@@ -242,6 +276,7 @@ async function settleGeometry(page) {
             'Changing text size keeps the current manuscript passage in view');
           await page.locator('#reader-text-smaller').click();
           await settleGeometry(page);
+          await page.locator('#reader-settings > summary').click();
         }
 
         const focus = page.locator('#reader-focus');

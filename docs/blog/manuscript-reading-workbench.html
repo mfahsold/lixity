@@ -75,12 +75,12 @@
 paragraph becomes awkward to read. Sentence patterns, source lines, markers and
 research links all have a purpose. They also compete with the next sentence.</p>
 <p>The latest Lixity development work gives the manuscript more room. The
-interactive workspace initially opens in <strong>Read</strong>, with chapters presented as
-continuous prose. <strong>Inspect</strong> keeps the chapter comparisons and paragraph tools
-available when you have a question to investigate. These are current-main changes;
+interactive workspace opens as continuous prose with <strong>Analysis Off</strong>. The
+explicit <strong>Analysis</strong> switch displays its state in words; <strong>Analysis overview</strong>
+opens chapter comparisons with a direct <strong>Back to passage</strong> action. These are current-main changes;
 the latest packaged release remains <strong>v0.7.1</strong>.</p>
 <figure class="walkthrough">
-<a href="../screenshots/dashboard-dark.png"><img src="../screenshots/dashboard-dark.png" width="2960" height="1890" alt="Lixity's synthetic Warehouse 4 manuscript in Read, with continuous prose, chapter navigation, text-size controls and reading settings" loading="eager" decoding="async"/></a>
+<a href="../screenshots/dashboard-dark.png"><img src="../screenshots/dashboard-dark.png" width="2960" height="1890" alt="Lixity's synthetic Warehouse 4 manuscript with Analysis Off, with continuous prose, analysis display, chapter navigation and reading settings" loading="eager" decoding="async"/></a>
 <figcaption>The current development reader uses one continuous prose surface. This synthetic capture shows the reader controls; paragraph tools and the companion open separately.</figcaption>
 </figure>
 
@@ -107,9 +107,10 @@ button focused, <strong>Shift+F10</strong> opens it from the keyboard; arrow key
 actions and Escape closes it. Shift+right-click still reaches the browser's
 native menu. Selecting text within one paragraph offers a small toolbar when an
 applicable action is available.</p>
-<p>Choose <strong>Inspect</strong> when the question calls for chapter comparisons, sentence
-rhythm or expandable paragraph blocks. Both presentations use the same paragraph
-text and source anchors. A different sentence length can belong to a scene's
+<p>Choose <strong>Analysis overview</strong> when the question calls for chapter comparisons
+or sentence rhythm. The manuscript remains mounted with the same paragraph text
+and source anchors. Analysis and a dossier have separate display states, so hiding
+analysis leaves an active dossier beside the text. A different sentence length can belong to a scene's
 purpose or a character's voice. The number locates a difference; reading supplies
 the judgment about what to do with it.</p>
 <h2 id="give-research-its-own-space">Give research its own space</h2>
@@ -147,13 +148,14 @@ Lixity does not silently infer a new connection. The public demo is read-only;
 saving associations requires a compatible local server and an explicitly
 configured research project. The research API remains experimental.</p>
 <h2 id="know-which-document-you-are-reading">Know which document you are reading</h2>
-<p>There is an important coverage limit. The browser reader currently uses the
-analysis paragraph projection: chapter titles, prose and list items. Subheadings,
-block quotations, code, footnote definitions and dividers are omitted; pipe
-tables remain literal paragraph text. Configured appendix exclusions still apply.
-It is not a manuscript editor or a complete Markdown reading copy. Structured
+<p>The browser reader now retains source structure around the same measured
+paragraphs: preface, subheadings, quotations, code, notes, dividers and excluded
+appendix material. Unmeasured text is labeled as reading-only. Paragraph quotation
+anchors still use the established exact analysis text; inline link/code syntax
+and pipe tables remain literal where present in that text. This is a reading
+surface, not a Markdown editor or a complete typesetting engine. Structured
 <a href="https://mfahsold.github.io/lixity/guides/research-pdf.html#manuscript-export">book PDFs</a>
-use a separate document projection.</p>
+keep their existing output behavior.</p>
 <p>Built-in manuscript analysis runs locally without uploading the manuscript.
 Optional external workers have separate data boundaries, and retaining research
 sources requires permission. Measurements remain heuristic aids to human review.</p>

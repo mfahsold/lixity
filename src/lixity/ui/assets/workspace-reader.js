@@ -11,6 +11,7 @@
   var close = document.getElementById("workspace-reader-close");
   var status = document.getElementById("workspace-reader-status");
   var body = document.getElementById("workspace-reader-body");
+  if (!toggle) return;
   var enabled = false, requestSerial = 0, projectId = null;
   function current(serial, projectToken, researchToken) {
     return enabled && serial === requestSerial && projectToken === container.dataset.projectToken &&
@@ -79,28 +80,27 @@
     await loadDossier(select.value);
   }
   function setEnabled(value, selectedId) {
-    var anchor = window.LixityReader && window.LixityReader.capture();
-    enabled = value;
-    if (window.LixityWorkspaceNavigation) window.LixityWorkspaceNavigation.companion(value);
-    ++requestSerial;
-    panel.hidden = !value;
-    layout.classList.toggle("is-open", value);
-    var divider = document.getElementById("workspace-reader-divider");
-    if (divider) divider.hidden = !value;
-    toggle.setAttribute("aria-expanded", String(value));
-    window.dispatchEvent(new Event("resize"));
-    if (value) openDossiers(selectedId || select.value);
-    else { pending(false); body.replaceChildren(); }
-    document.dispatchEvent(new CustomEvent("lixity:companion-change", {detail: value}));
-    if (window.LixityReader) window.LixityReader.restore(anchor);
+    if (value && selectedId) select.value = selectedId;
+    window.LixityWorkbench.dispatch({type: "tool", value: value ? "dossier" : "none"});
+    if (value && selectedId) openDossiers(selectedId);
   }
+  window.LixityWorkbench.subscribe(function(state, previous) {
+    var active = state.contextTool === "dossier" && state.surface === "document";
+    panel.hidden = !active;
+    toggle.setAttribute("aria-expanded", String(active));
+    if (active === enabled) return;
+    enabled = active; ++requestSerial;
+    if (active) openDossiers(select.value);
+    else pending(false);
+    document.dispatchEvent(new CustomEvent("lixity:companion-change", {detail: active}));
+  });
   toggle.disabled = false;
   toggle.addEventListener("click", function() { setEnabled(!enabled); });
   if (close) close.addEventListener("click", function() { setEnabled(false); toggle.focus(); });
   select.addEventListener("change", function() { loadDossier(select.value); });
   refresh.addEventListener("click", function() { openDossiers(select.value); });
   panel.addEventListener("keydown", function(event) {
-    if (event.key !== "Escape" || event.defaultPrevented) return;
+    if (window.LixityWorkbench.state().view !== "analysis" || event.key !== "Escape" || event.defaultPrevented) return;
     if (event.target.closest("details[open]")) return;
     event.preventDefault();
     setEnabled(false);

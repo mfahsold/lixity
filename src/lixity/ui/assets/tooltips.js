@@ -108,15 +108,30 @@
   function updatePos(el) {
     if (!el || !tip.classList.contains("visible")) return;
     var rect = el.getBoundingClientRect();
+    if (!el.isConnected || !el.getClientRects().length ||
+        getComputedStyle(el).visibility !== "visible" ||
+        rect.bottom <= 0 || rect.top >= window.innerHeight ||
+        rect.right <= 0 || rect.left >= window.innerWidth) {
+      hide();
+      return;
+    }
+    // Measure without a previous placement narrowing the fixed box. Prefer the
+    // space below help so it does not cover the navigation preceding a form.
+    tip.style.left = "10px";
+    tip.style.maxHeight = "";
     var tipW = tip.offsetWidth;
     var tipH = tip.offsetHeight;
+    var below = Math.max(0, window.innerHeight - rect.bottom - 18);
+    var above = Math.max(0, rect.top - 18);
+    var useBelow = below >= Math.min(tipH, 160) || below >= above;
+    var available = useBelow ? below : above;
+    // Long explanations scroll on their chosen side rather than being clamped
+    // across the trigger (which also made touch dismissal unreachable).
+    tip.style.maxHeight = available + "px";
+    tipH = tip.offsetHeight;
     var left = rect.left + (rect.width - tipW) / 2;
     left = Math.max(10, Math.min(window.innerWidth - tipW - 10, left));
-    var top = rect.top - tipH - 8;
-    if (top < 10) {
-      top = rect.bottom + 8;
-    }
-    top = Math.max(10, Math.min(window.innerHeight - tipH - 10, top));
+    var top = useBelow ? rect.bottom + 8 : rect.top - tipH - 8;
     tip.style.left = left + "px";
     tip.style.top = top + "px";
   }
@@ -170,6 +185,8 @@
   document.addEventListener("close", function(e) {
     if (activeEl && e.target.contains(activeEl)) hide();
   }, true);
+  document.addEventListener("lixity:viewchange", hide);
+  document.addEventListener("lixity:workbench-change", hide);
 
   var posTicking = false;
   function scheduleUpdatePos() {

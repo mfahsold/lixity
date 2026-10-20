@@ -43,6 +43,7 @@ from lixity.server.constants import NATIVE_UI_ACTIONS  # noqa: E402
 from lixity.showing import showing_report  # noqa: E402
 from lixity.ui import render_dashboard  # noqa: E402
 from lixity.ui.dashboard import render_analysis  # noqa: E402
+from lixity.ui.manuscript_document import reader_blocks  # noqa: E402
 
 CAPTURES: list[dict[str, str | int]] = []
 WORK_DIR = BASE_DIR / ".artifacts" / "screenshots"
@@ -231,10 +232,6 @@ _PUBLIC_DEMO_CONTROLS = r"""document.addEventListener("DOMContentLoaded", functi
       }
       localNote(host, spec[1]);
     });
-  });
-  ["#tab-view-project", "[data-rtab=search]", "[data-rtab=grounding]"].forEach(function (selector) {
-    var tab = document.querySelector(selector), badge = document.createElement("small");
-    badge.className = "demo-local-badge"; badge.textContent = "Local app"; tab.appendChild(badge);
   });
   var localActions = ["#btn-modal-new-project", "#btn-modal-open-project", "#hero-btn-new-project", "#hero-btn-open-project", "#hero-btn-browse-project",
     "[data-action]", "[data-marker-kind]", "[data-marker-resolve]", "[data-research-revise]", "[data-decision-ack-status]",
@@ -433,6 +430,7 @@ def render_research_workspace(research_fixture: dict, **options) -> str:
         raise ValueError("The public demo analysis and research manuscript differ")
     return render_analysis(
         analysis, resolved, title=options.pop("title", manuscript_title(text)),
+        reader_document=reader_blocks(text, config, analysis.paragraphs),
         flag_min_severity=thresholds.flag_min_severity,
         scenes=scene_report_for_display(text, config, None, premeasured_chapters=analysis.metrics.chapters),
         dialogue=dialogue_report(text, config).to_dict(),
@@ -932,7 +930,7 @@ def main() -> int:
 
     # 3. Dashboard (light, top area) --------------------------------------
     status = [
-        {"key": "exports", "state": "warn", "detail": "none generated" if is_en else "keine erzeugt"},
+        {"key": "exports", "state": "ok", "detail": "none generated" if is_en else "keine erzeugt"},
         {"key": "markers", "state": "ok", "detail": "no open markers" if is_en else "keine offenen"},
     ]
     char_names = ["Mara", "Ivo", "Hansen"] if manuscript == DEMO_MANUSCRIPT else []
@@ -947,6 +945,7 @@ def main() -> int:
         chapters,
         paragraphs,
         metrics=metrics,
+        reader_document=reader_blocks(text, config, paragraphs),
         fingerprint=fingerprint,
         status=status,
         dialogue=dialogue_report(text, config).to_dict(),
@@ -1052,6 +1051,7 @@ def main() -> int:
         marked_chapters,
         marked_paragraphs,
         metrics=marked_metrics,
+        reader_document=reader_blocks(marked, config, marked_paragraphs),
         fingerprint=marked_analysis.fingerprint,
         title=title,
         labels=resolved.labels,
@@ -1072,6 +1072,7 @@ def main() -> int:
         marked_chapters,
         marked_paragraphs,
         metrics=marked_metrics,
+        reader_document=reader_blocks(marked, config, marked_paragraphs),
         fingerprint=marked_analysis.fingerprint,
         title=title,
         labels=resolved.labels,

@@ -318,3 +318,51 @@ def test_real_document_title_after_literal_code_is_not_repeated_in_body():
         ("paragraph", "Later text."),
     ]
     assert sections[1][0] == "Chapter one"
+
+
+def test_source_projection_retains_order_absolute_spans_and_empty_custom_chapters():
+    projection = importlib.import_module("lixity.manuscript_document")
+    source = "\r\n".join([
+        "---", "title: Synthetic title", "---", "# Synthetic title", "", "Preface.", "",
+        "<!-- A comment", "CHAPTER GHOST", "-->", "", "CHAPTER I", "", "### Subheading", "",
+        "Body with *emphasis* and note.[^n]", "", "[^n]: The note.", "", "Following prose.", "",
+        "> First  ", "> Second.", ">", "> Separate.", "", "~~~text", "## Not a chapter",
+        "<!-- literal -->", r"\input{never}", "~~~", "", "1. First watch", "2. Second watch",
+        "+ Lamp", "", "***", "", "CHAPTER II", "", "CHAPTER APPENDIX", "", "Appendix.",
+    ])
+    blocks = projection.manuscript_blocks(
+        source, CorpusConfig(chapter_regex=r"^CHAPTER\s+", appendix_marker="CHAPTER APPENDIX"),
+    )
+    assert [(b.kind, b.text, b.start_line, b.end_line, b.is_chapter) for b in blocks] == [
+        ("heading", "Synthetic title", 4, 4, False),
+        ("paragraph", "Preface.", 6, 6, False),
+        ("heading", "I", 12, 12, True),
+        ("heading", "Subheading", 14, 14, False),
+        ("paragraph", "Body with *emphasis* and note.[^n]", 16, 16, False),
+        ("note", "[n] The note.", 18, 18, False),
+        ("paragraph", "Following prose.", 20, 20, False),
+        ("quote", "First\nSecond.", 22, 23, False),
+        ("quote", "Separate.", 25, 25, False),
+        ("code", "## Not a chapter\n<!-- literal -->\n\\input{never}", 27, 31, False),
+        ("list_item", "1. First watch", 33, 33, False),
+        ("list_item", "2. Second watch", 34, 34, False),
+        ("list_item", "+ Lamp", 35, 35, False),
+        ("scene_break", "* * *", 37, 37, False),
+        ("heading", "II", 39, 39, True),
+        ("heading", "APPENDIX", 41, 41, True),
+        ("paragraph", "Appendix.", 43, 43, False),
+    ]
+    assert [b.level for b in blocks if b.kind == "heading"] == [1, 2, 3, 2, 2]
+
+
+def test_browser_source_projection_keeps_unsupported_tex_and_html_literal():
+    projection = importlib.import_module("lixity.manuscript_document")
+    source = '# Title\n\n## One\n\n\\input{never} <img src="https://example.test/never">\n'
+    blocks = projection.manuscript_blocks(source, CorpusConfig())
+    assert [(b.kind, b.text, b.start_line, b.end_line) for b in blocks] == [
+        ("heading", "Title", 1, 1), ("heading", "One", 3, 3),
+        ("paragraph", '\\input{never} <img src="https://example.test/never">', 5, 5),
+    ]
+    # The strict PDF adapter remains deliberately different from literal browser display.
+    with pytest.raises(ValueError, match=r"Unsupported TeX.*line 5"):
+        projection.manuscript_sections(source, CorpusConfig())

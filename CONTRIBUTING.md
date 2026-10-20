@@ -116,6 +116,25 @@ layout vary. Run language-independent interaction and failure scenarios once
 per relevant viewport unless localization affects their behavior. Preserve
 native HTTP workflows separately from intercepted browser scenarios.
 
+For workbench changes, test composed transitions with the existing browser
+runner rather than proving each isolated control independently:
+
+| Journey | Required invariant |
+| --- | --- |
+| Manuscript → analysis toggle → values → dossier → overview → return | The document/profile nodes and passage remain the same; analysis visibility and dossier choice are distinct |
+| Quotation → pinned claim/dossier → saved associations → passage | Version and source context remain explicit; unresolved anchors are reviewed rather than guessed |
+| Menu/form → workspace switch → Escape | Only the active visible surface dismisses or receives return focus; permitted unsaved drafts survive ordinary view changes |
+| Changed/unavailable source → retry → recovery | Saved analysis is labelled, cached source identity stays truthful, and successful validation removes the notice |
+
+Use synthetic mixed-structure documents to cover source-order joins, repeated
+text, custom chapters, code/notes and one profile spanning multiple list items.
+Keep analytical scope, exact profile hashes/offsets, PDF adapter behavior and
+versioned JSON contracts unchanged when changing presentation. For large-book
+work, record generated size, reader-ready/reflow timing and native selection/find
+behavior before considering virtualization; a short fixture or one unthrottled
+sample is not a performance guarantee. See [browser coverage](tests/browser/README.md)
+for the maintained suites and temporary artifacts.
+
 Consolidate repeated setup and parameterize equivalent cases before removing
 coverage. Remove a test only when retained assertions cover its failure mode
 more precisely. For subtle regressions, verify that the assertion detects a

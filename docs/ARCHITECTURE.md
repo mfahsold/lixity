@@ -46,12 +46,18 @@ research calls stay explicitly scoped. An occupied port fails startup.
 
 `DocumentAnalysis` reuses corpus/chapter measurements for the fingerprint and
 renderers. Narrower profile/fingerprint requests use the same pipeline. Dashboard
-refresh checks manuscript bytes before serving cached measurements and rebuilds
-when a readable changed source can be rendered. Currently, missing/unreadable
-sources and rebuild failures retain the last successful dashboard without a
-freshness indication. Retaining that view is distinct from establishing that its
-measurements remain current. Research overviews reuse one validated archive
-snapshot without a persistent cache.
+refresh validates manuscript bytes before serving cached measurements and rebuilds
+when a readable changed source can be rendered. **Current main (unreleased):**
+`RefreshOutcome` distinguishes unchanged/rebuilt, missing, unreadable and failed
+refreshes. Missing/unreadable sources and config/render failures retain the last
+successful HTML, metadata and source digest, with a per-response localized
+freshness notice and a plain GET retry route. They do not relabel old measurements
+with an unvalidated source identity. Recovery after a failed rebuild requires a
+successful rebuild; recovery from a read outage can validate identical bytes
+without recomputing. Explicit analyze/rebuild requests fail when the selected
+source is unavailable. No versioned JSON fields or automatic configuration
+watcher are added. Research overviews reuse one validated archive snapshot without
+a persistent cache.
 
 ## Manual manuscript associations
 
@@ -73,6 +79,18 @@ Manuscript routes validate both selected manuscript and archive contexts before
 calling the API. Saved-quote counts join explicit associations from one coherent
 snapshot, disclose differing revision pins and do not establish manuscript use or
 nonuse. Rendering preserves exact resolved quote spans and complete text search.
+
+**Current main (unreleased):** relation navigation opens an association's pinned
+claim revision, then its explicit pinned dossier reference. Scoped Review routes
+join saved manuscript associations by those references, independently of the
+dossier's derived current-claim list. Only existing exact anchor matches offer
+passage jumps. The document origin/return context is ephemeral and guarded by the
+current project/source/research context; no archive/backend schema is introduced.
+Native selection uses ephemeral paragraph-local UTF-16 offsets and direction,
+rebuilt against exact paragraph text on return so annotation repaint cannot
+mutate a saved live Range. Saved archive offsets remain Unicode codepoints. Existing citation
+envelopes retain source version, passage identity, hashes and offsets. Ordinary
+source reading is not relabelled as the historical cited version.
 
 Ordinary authored CLI updates require a reviewed revision, change kind and reason;
 when the archive snapshot is omitted, the backend's current read guards the same
@@ -231,27 +249,41 @@ as inline association marks, with a current project/source context check on clic
 
 ### Shared manuscript reader
 
-**Current main (unreleased):** `ui/manuscript_reader.py` emits one shared control
-surface for interactive dashboards. Bundled `manuscript-reader.js` and
-`manuscript-reader.css` enhance the existing paragraph tree: **Read** renders
-continuous text; **Inspect** retains the established chapter strips, comparisons
-and lazy paragraph interaction. There is no second manuscript projection or text
-copy. Source text, paragraph hashes, line anchors, search and association matching
-keep their existing owners. Plain exports retain the inspection layout, and the
-no-JavaScript fallback remains a static document.
+**Current main (unreleased):** `ui/manuscript_reader.py` emits the shared command
+surface. The interactive manuscript stays continuous while an **Analysis** toggle
+exposes diagnostic presentation. Its constant accessible name, pressed state and
+visible On/Off text distinguish that choice from the active context tool. Dense
+comparisons use an overview with a return to the preserved passage. There is one
+canonical manuscript DOM; changing tools or analysis visibility does not replace
+its source text or create a hidden duplicate reading tree. Loaded-project chrome
+uses a class emitted by the renderer; it does not use a body-level `:has` query
+over the mutable prose tree, which would broaden annotation/style invalidation.
 
-The canonical tree comes from `ParagraphProfiler`'s analysis projection: prose
-and list-item paragraphs with chapter titles. It excludes subheadings, block
-quotations, dividers, code and footnote definitions; pipe tables retain literal
-text rather than a table layout. Upstream appendix exclusion remains in force.
-This is distinct from `manuscript_document`, used for structured manuscript PDFs;
-reading controls do not change analytical coverage or source-anchor semantics.
+`manuscript_document.manuscript_blocks` supplies source-ordered semantic blocks
+with absolute inclusive line spans, before PDF-specific title suppression and
+endnote movement. Its existing `manuscript_sections` adapter retains the strict
+PDF inline/TeX contract. `ui.manuscript_document.reader_blocks` joins source blocks
+to existing `ParagraphProfile` owners by interval, preserving each original
+`p-N`, exact text, hash and source span. One profile can cover several presentation
+list items; that profile remains a single owner. Partial overlaps retain uncovered
+source lines literally, while overlapping profile owners fail explicitly.
+
+Source-holding API, CLI, native and retained-source render paths pass the optional
+presentation to the same dashboard renderer. Profile-only callers retain their
+existing fallback. Preface, empty chapters, supported headings/quotes/code/dividers/
+notes and the analysis-excluded appendix remain readable without acquiring
+statistical coverage. Unprofiled blocks have no invented values or claim-writing
+actions. Pipe tables and unsupported inline syntax stay literal; HTML/TeX-looking
+text is escaped, and manuscript images are not fetched automatically. In
+particular, rich link/footnote normalization cannot change the existing exact
+paragraph-text quotation contract. This is a bounded source presentation, not
+a new editor, general Markdown engine or analysis JSON schema.
 
 The reader uses native buttons, selects and disclosures with shared `ctl` styles
-and the seven-language label pack. Size, width, spacing and mode preferences live
+and the seven-language label pack. Size, width, spacing and split preferences live
 in browser storage; denied or malformed storage falls back to usable defaults.
 Focus mode is reversible and temporary. Layout changes capture the first visible
-paragraph and restore its viewport position after reflow where possible, rather
+source block and restore its viewport position after reflow where possible, rather
 than persisting a second text offset or editing manuscript content.
 
 Paragraph ellipsis buttons, pointer context menus and keyboard context-menu
@@ -259,8 +291,10 @@ shortcuts share the same action builder. A valid single-paragraph selection
 offers a small toolbar. Marker and claim actions delegate to the established
 handlers, including their explicit save, capability and retention checks; no
 parallel write API is introduced. Values reuse the paragraph's measured markup
-in a closable inspector. Opening the inspector closes the companion and opening
-the companion closes the inspector, keeping one side tool active. Menus expose
+in the closable analysis dock and enable analysis. Explicit analysis/dossier
+controls replace the active dock content while retaining each tool's selection.
+Closing the dock does not hide the diagnostic layer; hiding analysis closes its
+analysis tool but can retain a dossier. Menus expose
 arrow/Home/End navigation and restore trigger focus on Escape.
 Association refreshes skip unchanged annotation DOM and preserve native selection
 endpoints when marks change. Automatic review uses the existing research-status
@@ -304,19 +338,27 @@ or replace testing with readers and assistive technologies.
 
 ### Interaction ownership and evidence
 
-The shared CSS vocabulary does not itself coordinate application state. Currently
-`project-ui.js` owns workspace navigation, `manuscript-reader.js` owns Read/Inspect
-and its tools, `workspace-reader.js` owns the companion, and native disclosures
-retain their own field DOM. The Preact component layer owns mounted research
-subtrees, not the entire manuscript or these independent controllers.
+`workspace-state.js` owns the small display transition state exposed internally
+as `LixityWorkbench`: workspace, document/overview, analysis visibility, active
+context tool, focus arrangement and transient ownership. `project-ui.js`,
+`manuscript-reader.js` and `workspace-reader.js` adapt those transitions to existing
+DOM and navigation hooks. Domain records, pending saves, revision guards and
+native disclosure fields keep their established owners. Preact mounts research
+subtrees; it does not remount the manuscript or all form drafts.
 
-Visibility is currently derived from both controller state and layout CSS. In
-particular, the companion layout suppresses broad analysis panels even in Inspect;
-the mode select alone does not determine their visibility. The reader's retained
-inspector/settings state also has its own dismissal handler rather than a shared
-active-view dismissal owner. These boundaries matter when testing navigation,
-selection, disclosure and return as one journey. Shared styles and separately
-working controls do not establish that their transitions compose correctly.
+Analysis visibility is independent of a selected dossier. Overview entry suspends
+the dock and retains document context; returning restores the eligible tool and
+passage. Focus temporarily suppresses surrounding chrome; requesting another tool
+restores that arrangement before applying the new intent. Workspace changes
+close temporary menus/settings and suspend manuscript tools, so dormant views do
+not consume the active workspace's keys or restore focus. Browser appearance
+preferences are separate from ephemeral, project-bound passage/relation context.
+
+Research tab buttons and panels have explicit IDs, `aria-controls` and
+`aria-labelledby`; the existing manual keyboard tab behavior remains shared.
+Overflow controls reveal narrow-screen destinations without activating a view.
+Mermaid retains its lazy visible-context renderer, with a visible localized
+pending status as well as `aria-busy`; success/failure removes that pending state.
 
 The following evidence informs interaction design; it does not establish an
 optimal Lixity layout:
@@ -350,8 +392,8 @@ reviewed revisions provide separate checks. An exposed tool cannot bypass those
 checks, and closing a view does not undo an already committed domain operation.
 
 The canonical paragraph text and Unicode offsets remain authoritative for saved
-research anchors. The PDF presentation and analysis profiles have different block
-boundaries; a future richer reader cannot safely join them by text equality or
+research anchors. The richer source presentation joins different PDF/analysis
+block boundaries explicitly by source intervals, never by text equality or list
 position. UI work alone does not authorize an anchor migration, a new analytical
 scope, automatic retention, or manuscript edits. Designs and local audit evidence
 under review remain outside maintained product documentation.

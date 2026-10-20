@@ -19,6 +19,7 @@ from typing import Any
 
 from lixity.language import get_language_profile
 from lixity.server import LixityServerHandler
+from lixity.server._state import RefreshOutcome
 from lixity.server.runtime import _LoopbackHTTPServer
 from lixity.style_fingerprint import FingerprintThresholds
 from lixity.workspace_labels import WORKSPACE_LABELS
@@ -39,6 +40,8 @@ HANDLER_STATE = (
     "project_open_overrides",
     "dashboard_html",
     "dashboard_info",
+    "refresh_outcome",
+    "_refresh_needs_validation",
     "debug",
 )
 
@@ -131,6 +134,8 @@ def make_handler(
         "project_open_overrides": {},
         "dashboard_html": "",
         "dashboard_info": {},
+        "refresh_outcome": RefreshOutcome.UNKNOWN,
+        "_refresh_needs_validation": False,
         "debug": False,
     }
     defaults.update(attributes)

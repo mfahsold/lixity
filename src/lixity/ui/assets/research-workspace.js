@@ -169,6 +169,34 @@ async function initResearchUI(freshRead) {
   if (activeTab && activeTab.dataset.rtab === "review") refreshResearchEditorialReview();
 }
 
+// Retain the shared manual keyboard tabs while making hidden destinations
+// discoverable on narrow screens. Moving the scrollport never selects a view.
+(function initResearchNavigation() {
+  var tabs = document.getElementById("research-tabs");
+  var previous = document.getElementById("research-navigation-previous");
+  var next = document.getElementById("research-navigation-next");
+  if (!tabs || !previous || !next) return;
+  function update() {
+    var overflow = tabs.getClientRects().length && tabs.scrollWidth > tabs.clientWidth + 1;
+    previous.hidden = next.hidden = !overflow;
+    previous.disabled = tabs.scrollLeft <= 1;
+    next.disabled = tabs.scrollLeft + tabs.clientWidth >= tabs.scrollWidth - 1;
+  }
+  previous.addEventListener("click", function() { tabs.scrollBy({left: -tabs.clientWidth * .75}); update(); });
+  next.addEventListener("click", function() { tabs.scrollBy({left: tabs.clientWidth * .75}); update(); });
+  tabs.addEventListener("scroll", update, {passive: true});
+  function reveal(event) {
+    var tab = event.target.closest("[data-rtab]");
+    if (tab) tab.scrollIntoView({block: "nearest", inline: "nearest"});
+    update();
+  }
+  tabs.addEventListener("focusin", reveal);
+  tabs.addEventListener("click", reveal);
+  window.addEventListener("resize", update);
+  if (typeof ResizeObserver === "function") new ResizeObserver(update).observe(tabs);
+  update();
+})();
+
 document.addEventListener("click", async function (event) {
   var ackButton = event.target.closest("[data-decision-ack-status]");
   if (ackButton) {
@@ -438,9 +466,11 @@ document.addEventListener("click", async function (event) {
     document.querySelectorAll(".research-tabs button").forEach(function(b) {
       b.classList.remove("active");
       b.setAttribute("aria-selected", "false");
+      b.tabIndex = -1;
     });
     tabBtn.classList.add("active");
     tabBtn.setAttribute("aria-selected", "true");
+    tabBtn.tabIndex = 0;
     var targetId = "rtab-" + tabBtn.dataset.rtab;
     document.querySelectorAll(".research-tab-pane").forEach(function(pane) {
       pane.style.display = pane.id === targetId ? "block" : "none";

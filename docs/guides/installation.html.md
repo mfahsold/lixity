@@ -112,7 +112,7 @@ Replace the example path with your project folder. Open `http://127.0.0.1:8765/`
 
 For a research-only workspace, an initialized archive can be opened without a manuscript. Source records remain available; comparing sources with manuscript text needs a loaded manuscript.
 
-Switch between Research & Dossiers, Manuscript & Analysis, and Project & Settings. New Project, Open Project and optional guidance are available in every view. Selecting or dropping a manuscript opens its preview directly; confirm to create a separate project. Source and dossier filters narrow their lists; Research → Search looks through retained text.
+Switch between Research, Manuscript, and Project. New Project, Open Project and optional guidance are available in every view. Selecting or dropping a manuscript opens its preview directly; confirm to create a separate project. Source and dossier filters narrow their lists; Research → Search looks through retained text.
 
 The [first-session guide](../ONBOARDING.md) explains these controls. The NDA generator downloads agreement text with name, optional address, project, date and place; it does not keep a recipient register.
 

@@ -40,10 +40,10 @@ server.serve_forever()
     browser=await launchChromium();
     for(const width of [1440,320]) {
     const page=await browser.newPage({viewport:{width,height:1000}});
-    await page.addInitScript(() => localStorage.setItem('lixity.manuscript.mode', 'inspect'));
     page.setDefaultTimeout(10000);
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
     await page.goto(fixture.url);
+    await page.locator('#workbench-overview-open').click();
     await expect(page.locator('#characters')).toContainText('Character name mentions');
     await expect(page.locator('#characters')).toContainText('Declared POV chapters');
     const figure=page.locator('#characters tbody tr').first();
