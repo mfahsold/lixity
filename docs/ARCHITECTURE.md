@@ -225,6 +225,50 @@ choice. Responsive changes keep the mobile switcher available. Exact manuscript
 return actions reuse the existing paragraph navigation and the same anchor matcher
 as inline association marks, with a current project/source context check on click.
 
+### Shared manuscript reader
+
+**Current main (unreleased):** `ui/manuscript_reader.py` emits one shared control
+surface for interactive dashboards. Bundled `manuscript-reader.js` and
+`manuscript-reader.css` enhance the existing paragraph tree: **Read** renders
+continuous text; **Inspect** retains the established chapter strips, comparisons
+and lazy paragraph interaction. There is no second manuscript projection or text
+copy. Source text, paragraph hashes, line anchors, search and association matching
+keep their existing owners. Plain exports retain the inspection layout, and the
+no-JavaScript fallback remains a static document.
+
+The canonical tree comes from `ParagraphProfiler`'s analysis projection: prose
+and list-item paragraphs with chapter titles. It excludes subheadings, block
+quotations, dividers, code and footnote definitions; pipe tables retain literal
+text rather than a table layout. Upstream appendix exclusion remains in force.
+This is distinct from `manuscript_document`, used for structured manuscript PDFs;
+reading controls do not change analytical coverage or source-anchor semantics.
+
+The reader uses native buttons, selects and disclosures with shared `ctl` styles
+and the seven-language label pack. Size, width, spacing and mode preferences live
+in browser storage; denied or malformed storage falls back to usable defaults.
+Focus mode is reversible and temporary. Layout changes capture the first visible
+paragraph and restore its viewport position after reflow where possible, rather
+than persisting a second text offset or editing manuscript content.
+
+Paragraph ellipsis buttons, pointer context menus and keyboard context-menu
+shortcuts share the same action builder. A valid single-paragraph selection
+offers a small toolbar. Marker and claim actions delegate to the established
+handlers, including their explicit save, capability and retention checks; no
+parallel write API is introduced. Values reuse the paragraph's measured markup
+in a closable inspector. Opening the inspector closes the companion and opening
+the companion closes the inspector, keeping one side tool active. Menus expose
+arrow/Home/End navigation and restore trigger focus on Escape.
+Association refreshes skip unchanged annotation DOM and preserve native selection
+endpoints when marks change. Automatic review uses the existing research-status
+read before requesting archive records; context-bound pending reads are coalesced
+and invalidated on project changes.
+
+The companion's desktop `separator` supports pointer dragging and keyboard
+adjustment over a bounded manuscript-width share. The split is a local display
+preference, hidden when readers stack on narrow screens. Images, geographic maps
+and style-space retain their existing PhotoSwipe, Leaflet and canvas interactions;
+manuscript dragging continues to select text. The reader does not create a
+free-panning manuscript canvas or a manuscript editor.
 
 The interface follows a reading-first hierarchy: a passage or visual comes
 before its detailed measurements; advanced explanations stay near the control

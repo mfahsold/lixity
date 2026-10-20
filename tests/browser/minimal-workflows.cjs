@@ -41,6 +41,7 @@ const data = JSON.parse(fixture.stdout);
   try {
     for (const language of ['en','de','fr','es','it','pt','nl']) {
       const page = await browser.newPage({viewport:{width:1440,height:1000}});
+      await page.addInitScript(() => localStorage.setItem('lixity.manuscript.mode', 'inspect'));
       page.setDefaultTimeout(5000);
       page.on('pageerror',error=>errors.push(error.message));
       await page.route('http://lixity.test/**',async route => {

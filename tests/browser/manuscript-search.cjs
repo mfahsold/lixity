@@ -51,6 +51,7 @@ print(json.dumps(fixtures))
     }
     for (const [locale, fixture] of Object.entries(fixtures)) for (const width of [1440, 320]) {
       const page = await browser.newPage({viewport: {width, height: 900}, hasTouch: true});
+      await page.addInitScript(() => localStorage.setItem('lixity.manuscript.mode', 'inspect'));
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
       page.on('console', message => { if (['error', 'warning'].includes(message.type())) errors.push(message.text()); });

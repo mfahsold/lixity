@@ -6,10 +6,14 @@
 .workspace-reader-panel .workspace-reader-controls .setting-field { margin: 0; }
 .reader-controls { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; flex-basis: 100%; }
 .reader-controls .ctl-note { flex: 1 1 20rem; min-width: 0; }
-.workspace-reader-layout.is-open { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(18rem, .8fr); gap: 1rem; align-items: start; }
+.workspace-reader-layout.is-open { display: grid; grid-template-columns: minmax(0, var(--manuscript-share, 62%)) .75rem minmax(0, 1fr); gap: .35rem; align-items: start; }
 #workspace-analysis-body { min-width: 0; grid-column: 1; grid-row: 1; }
-.workspace-reader-layout.is-open #workspace-analysis-body > :not(#chapters):not(.toolbar) { display: none; }
-.workspace-reader-panel { min-width: 0; grid-column: 2; grid-row: 1; position: sticky; top: 1rem; max-height: calc(100dvh - 2rem); overflow: auto; overflow-wrap: anywhere; }
+.workspace-reader-layout.is-open #workspace-analysis-body > :not(#chapters):not(.toolbar):not(.manuscript-reader-controls):not(.reader-inspector):not(.manuscript-context-menu):not(.manuscript-selection-tools) { display: none; }
+.workspace-reader-panel { min-width: 0; grid-column: 3; grid-row: 1; position: sticky; top: 1rem; max-height: calc(100dvh - 2rem); overflow: auto; overflow-wrap: anywhere; }
+.workspace-reader-divider { grid-column: 2; grid-row: 1; position: sticky; top: 1rem; height: calc(100dvh - 2rem); cursor: col-resize; touch-action: none; border-radius: var(--radius-sm); background: linear-gradient(to right, transparent 40%, var(--line-strong) 40%, var(--line-strong) 60%, transparent 60%); }
+.workspace-reader-divider[hidden] { display: none; }
+.workspace-reader-divider:hover { background-color: var(--accent-light); }
+.workspace-reader-divider:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
 .workspace-reader-panel .setting-field { margin-bottom: .7rem; }
 .workspace-reader-panel h3 { font-size: var(--text-body); }
 .workspace-reader-panel .research-dossier-body-source { white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -18,6 +22,7 @@
   .workspace-reader-layout.is-open { grid-template-columns: minmax(0, 1fr); }
   .workspace-reader-layout.is-open #workspace-analysis-body { grid-column: 1; grid-row: 2; }
   .workspace-reader-panel { grid-column: 1; grid-row: 1; position: static; max-height: 65dvh; }
+  .workspace-reader-divider { display: none; }
 }
 @media print {
   .reader-controls, .toolbar-note, .workspace-reader-panel { display: none !important; }

@@ -40,6 +40,7 @@ server.serve_forever()
     browser=await launchChromium();
     for(const width of [1440,320]) {
     const page=await browser.newPage({viewport:{width,height:1000}});
+    await page.addInitScript(() => localStorage.setItem('lixity.manuscript.mode', 'inspect'));
     page.setDefaultTimeout(10000);
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
     await page.goto(fixture.url);

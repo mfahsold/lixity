@@ -72,6 +72,10 @@ server.serve_forever()
         await expect(page.locator('h1')).toHaveText('StartupAlphaOverride');
         await expect(page.locator('#nda-project-name')).toHaveValue('StartupAlphaOverride');
       }
+      // This reset bypasses browser navigation. Finish the initial reader
+      // context read before changing the server underneath its current page;
+      // otherwise rejecting that former project's request is correct.
+      await expect(page.locator('.manuscript-link-review .ctl-note').first()).toBeAttached();
       // On the second viewport this resets Beta back to Alpha through the real
       // endpoint; on the first it verifies that reopening the same project keeps
       // its explicit title override. Neither operation writes project files.

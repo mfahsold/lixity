@@ -169,31 +169,43 @@ class CorpusAnalyzer:
         Only the chapter's own vocabulary is iterated. Types the chapter does
         not contain contribute exactly ``q * ln(2) / 2`` each, so their total
         is ``ln(2)/2 * (1 - covered_rest_mass)`` in closed form – an O(chapter
-        types) computation instead of O(corpus types).
+        types) computation instead of O(corpus types). The absent mass comes
+        from integer counts, avoiding a floating-point remainder at equality.
+        Driver words must have a strictly positive contribution.
         """
         rest = n_corpus - n_chapter
         if rest < 1 or n_chapter < 1:
             return 0.0, []
-        jsd = 0.0
         contribs: dict[str, float] = {}
-        covered_rest_mass = 0.0
+        uncovered_rest_tokens = rest
         for w in sorted(chapter_counter):  # deterministic order: bit-identical across runs
-            p = chapter_counter[w] / n_chapter
-            q = (corpus_counter[w] - chapter_counter[w]) / rest
-            covered_rest_mass += q
+            frequency = chapter_counter[w]
+            rest_frequency = corpus_counter[w] - frequency
+            uncovered_rest_tokens -= rest_frequency
+            p = frequency / n_chapter
+            q = rest_frequency / rest
             m = 0.5 * (p + q)
-            term = p * math.log(p / m)
-            if q > 0.0:
-                term += q * math.log(q / m)
-            contrib = 0.5 * term
+            # Compute d = (p-q)/(p+q) before rounding the probabilities.
+            # Near equality, the equivalent symmetric expression combines
+            # O(d²) terms instead of cancelling O(d) logarithmic terms.
+            left = frequency * rest
+            right = rest_frequency * n_chapter
+            d = (left - right) / (left + right)
+            if abs(d) <= 0.5:
+                contrib = m * (d * math.atanh(d) + 0.5 * math.log1p(-d * d))
+            else:
+                term = p * math.log(p / m)
+                if q > 0.0:
+                    term += q * math.log(q / m)
+                contrib = 0.5 * term
             contribs[w] = contrib
-            jsd += contrib
         # Types absent from the chapter: p = 0, m = q/2 -> contribution q*ln(2)/2.
-        jsd += 0.5 * math.log(2.0) * max(0.0, 1.0 - covered_rest_mass)
+        absent = 0.5 * math.log(2.0) * (uncovered_rest_tokens / rest)
+        jsd = math.fsum([*contribs.values(), absent])
         top = [
             w
-            for w, _ in sorted(contribs.items(), key=lambda kv: kv[1], reverse=True)
-            if len(w) > 1 and w not in self._content_blacklist
+            for w, contribution in sorted(contribs.items(), key=lambda kv: kv[1], reverse=True)
+            if contribution > 0.0 and len(w) > 1 and w not in self._content_blacklist
         ][:top_n]
         return jsd, top
 

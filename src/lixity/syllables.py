@@ -78,6 +78,15 @@ FR_VOWEL_GROUP = re.compile(r"[aeiouyàâäéèêëîïôöùûüÿœæ]+")
 ES_CLEAN = re.compile(r"[^a-záéíóúüñ]")
 ES_STRONG = "aeoáéó"
 ES_WEAK = "iuü"
+ES_SILENT_U = re.compile(r"(?<=[gq])u(?=[eiéí])")
+ES_INTERVOCALIC_H = re.compile(r"(?<=[aeiouáéíóúü])h(?=[aeiouáéíóúü])")
+# Longest nuclei first: triphthongs, open/unstressed-closed diphthongs,
+# distinct closed-vowel pairs (also accented), then single vowels.
+ES_NUCLEUS = re.compile(
+    rf"[{ES_WEAK}][{ES_STRONG}][{ES_WEAK}]"
+    rf"|[{ES_STRONG}][{ES_WEAK}]|[{ES_WEAK}][{ES_STRONG}]"
+    r"|[ií][uúü]|[uúü][ií]|[aeiouáéíóúü]"
+)
 
 IT_CLEAN = re.compile(r"[^a-zàèéìíòóùú]")
 IT_VOWELS = "aeiouàèéìíòóùú"
@@ -142,26 +151,22 @@ def count_fr(word: str) -> int:
 
 
 def count_es(word: str) -> int:
-    """Spanish: strong/weak vowel diphthong detection (accented vowels break diphthongs)."""
+    """Spanish orthographic nuclei, including closed vowels and marked hiatus.
+
+    Uses RAE-style diphthong/triphthong spelling conventions, not a phonetic
+    transcription. Accented i/u separate from open vowels but can still join a
+    different closed vowel. Regional hiatus, loans and poetic synaeresis remain
+    outside this deterministic heuristic. See https://www.rae.es/dpd/diptongo,
+    https://www.rae.es/dpd/hiato and https://www.rae.es/dpd/u.
+    """
     w = ES_CLEAN.sub("", word.lower())
     if not w:
         return 0
-    marked = w.replace("í", "I").replace("ú", "U")
-    count = 0
-    i = 0
-    while i < len(marked):
-        c = marked[i]
-        if c in ES_STRONG or c in "IU":
-            count += 1
-            j = i + 1
-            while j < len(marked) and marked[j] in ES_WEAK:
-                j += 1
-                if j < len(marked) and marked[j] in ES_STRONG:
-                    j += 1
-            i = j
-        else:
-            i += 1
-    return max(1, count)
+    # Silent u is omitted in que/qui/gue/gui; ü remains a pronounced vowel.
+    w = ES_SILENT_U.sub("", w)
+    # Interposed silent h does not prevent a diphthong or marked hiatus.
+    w = ES_INTERVOCALIC_H.sub("", w)
+    return max(1, len(ES_NUCLEUS.findall(w)))
 
 
 def count_it(word: str) -> int:

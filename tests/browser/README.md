@@ -125,6 +125,26 @@ view in seven locales at desktop and mobile widths. It verifies context-bound
 reads, a read-only dossier, safe rendering, retry, restored analysis panels and
 retained manuscript state. Screenshots stay under `/tmp/lixity-workspace-reader-*`.
 
+The manuscript-reader suite checks the shared continuous **Read** and explicit
+**Inspect** presentations in seven languages at 1440 and 320 pixels. Synthetic
+paragraph text and source anchors must remain identical across modes, contextual
+tools and companion changes. It exercises ellipsis/right-click/keyboard menus,
+focus restoration, paragraph Values, reversible marker drafts, exact selection
+transfer into the existing claim dialog, text size, width/spacing preferences,
+focus mode and desktop pointer/keyboard divider adjustment. The reader must not
+introduce horizontal page overflow or implicit writes; text resembling HTML stays
+inert. Screenshots remain under `/tmp/lixity-manuscript-reader-*`. These cases
+verify the browser behavior they exercise, not prose-editing capability or full
+accessibility conformance.
+
+The manuscript-selection suite covers delayed first-review responses and
+annotation changes while native text remains selected, including backward
+selections, UTF-16 offsets around emoji, cross-paragraph ranges and transfer
+into the existing claim dialog. Its disposable native projects verify that
+continuous reading does not request manuscript review before research setup,
+that same-page initialization enables review, and that switching projects does
+not reuse the previous archive's initialization state.
+
 The dossier-claims suite uses a disposable native research archive to read the
 current claim associations from dossier detail and the companion reader. It
 checks titled rows, author-assigned review states, saved versions, inert titles,

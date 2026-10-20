@@ -101,6 +101,7 @@ server.serve_forever()
     browser = await launchChromium();
     for (const [index, width] of [1440, 320].entries()) {
       const page = await browser.newPage({viewport: {width, height: 1000}});
+      await page.addInitScript(() => localStorage.setItem('lixity.manuscript.mode', 'inspect'));
       page.setDefaultTimeout(10000);
       const errors = [], writes = [], reads = [];
       page.on('pageerror', error => errors.push(error.message));

@@ -393,6 +393,11 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   await assertDemoReadOnly(page);
   assert.equal(await page.locator('.chapter').count(), 6);
   assert.ok(await page.locator('.chip').count() > 6, 'The report exposes actual paragraph blocks');
+  if (javaScriptEnabled) {
+    await expect(page.locator('#manuscript-mode')).toHaveValue('read');
+    await expect(page.locator('#chapters .ptext-inner > p').first()).toBeVisible();
+    await page.locator('#manuscript-mode').selectOption('inspect');
+  }
   await checkStyleInsights(page, javaScriptEnabled, width, colorScheme);
   if (javaScriptEnabled && (colorScheme !== 'light' || width === 390)) return;
   if (javaScriptEnabled) await page.locator('#style-tab-dimensions').click();
@@ -718,6 +723,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
     for (const [javaScriptEnabled, colorScheme, hasTouch = false] of [[true, 'light'], [false, 'light'], [true, 'dark'], [false, 'dark'], [true, 'light', true]]) {
       const context = await browser.newContext({javaScriptEnabled, colorScheme, hasTouch});
       const page = await context.newPage();
+      if (javaScriptEnabled) await page.addInitScript(() => localStorage.removeItem('lixity.manuscript.mode'));
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
       page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });

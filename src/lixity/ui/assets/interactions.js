@@ -101,10 +101,21 @@ function flashOnArrival(target) {
 function scrollAndFlash(target) {
   var view = target.closest(".view-pane");
   if (view) switchActiveView(view.dataset.viewPane);
+  if (target.closest("#manuscript-analysis-panels") && window.LixityReader) window.LixityReader.inspect();
   revealStyleTarget(target);
   revealChapter(target);
+  setPassageScrollMargin(target);
   target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
   flashOnArrival(target);
+}
+
+function setPassageScrollMargin(target) {
+  var bars = document.querySelectorAll("#manuscript-reader-controls, #view-pane-analysis .toolbar");
+  var height = 0;
+  bars.forEach(function(bar) {
+    if (bar.getClientRects().length && getComputedStyle(bar).position === "sticky") height = Math.max(height, bar.getBoundingClientRect().height);
+  });
+  target.style.scrollMarginTop = (height + 12) + "px";
 }
 
 var paragraphContentNode = document.getElementById("paragraph-content");
@@ -125,6 +136,20 @@ var manuscriptParagraphMarks = Object.create(null);
 function renderParagraphText(paragraph, query) {
   var panel = paragraph.closest(".ptext"), content = panel && paragraphContent[panel.id];
   if (!content) return;
+  var selection = window.getSelection(), selected = null;
+  if (selection && selection.rangeCount === 1 &&
+      (paragraph.contains(selection.anchorNode) || paragraph.contains(selection.focusNode))) {
+    function rememberPoint(node, offset) {
+      if (!paragraph.contains(node)) return {node: node, offset: offset};
+      var prefix = document.createRange();
+      prefix.selectNodeContents(paragraph); prefix.setEnd(node, offset);
+      return {offset: prefix.toString().length};
+    }
+    // DOM offsets are UTF-16 positions, including astral characters and text
+    // split across search/claim marks. Keep anchor/focus direction as well.
+    selected = {anchor: rememberPoint(selection.anchorNode, selection.anchorOffset),
+      focus: rememberPoint(selection.focusNode, selection.focusOffset)};
+  }
   var text = content[0], spans = [];
   paragraph.dataset.searchQuery = query || "";
   if (query) {
@@ -151,22 +176,39 @@ function renderParagraphText(paragraph, query) {
     fragment.appendChild(mark);
   }
   paragraph.replaceChildren(fragment);
+  if (selected) {
+    function restorePoint(point) {
+      if (point.node) return point;
+      var walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT), remaining = point.offset;
+      while (walker.nextNode()) {
+        if (remaining <= walker.currentNode.length) return {node: walker.currentNode, offset: remaining};
+        remaining -= walker.currentNode.length;
+      }
+      return {node: paragraph, offset: paragraph.childNodes.length};
+    }
+    var anchor = restorePoint(selected.anchor), focus = restorePoint(selected.focus);
+    if (selection.setBaseAndExtent) selection.setBaseAndExtent(anchor.node, anchor.offset, focus.node, focus.offset);
+    else { selection.collapse(anchor.node, anchor.offset); selection.extend(focus.node, focus.offset); }
+  }
 }
 
-function renderParagraph(panel) {
+function renderParagraph(panel, textOnly) {
   var inner = panel.querySelector(".ptext-inner");
-  if (inner && inner.querySelector("p")) return;
+  if (inner && inner.querySelector(textOnly ? "p" : ".paragraph-values")) return;
   var content = paragraphContent[panel.id];
   if (!content) return;
   if (!inner) {
     inner = document.createElement("div");
     inner.className = "ptext-inner";
     panel.appendChild(inner);
-  } else inner.replaceChildren();
-  var text = document.createElement("p");
-  text.textContent = content[0];
-  inner.appendChild(text);
-  renderParagraphText(text, "");
+  }
+  if (!inner.querySelector("p")) {
+    var text = document.createElement("p");
+    text.textContent = content[0];
+    inner.appendChild(text);
+    renderParagraphText(text, "");
+  }
+  if (textOnly) return;
   var values = document.createElement("details");
   values.className = "paragraph-values";
   var summary = document.createElement("summary");
@@ -230,7 +272,7 @@ function toggleParagraph(chip, forceOpen, instant) {
     if (instantExpand) requestAnimationFrame(function () {
       requestAnimationFrame(function () { panel.classList.remove("no-anim"); });
     });
-  } else if (!panel.querySelector(".marker-note")) {
+  } else if (!panel.querySelector(".marker-note") && !document.body.classList.contains("manuscript-reading")) {
     var inner = panel.querySelector(".ptext-inner");
     if (inner) inner.remove();
   }

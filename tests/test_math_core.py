@@ -15,6 +15,7 @@ import os
 import sys
 import unittest
 from collections import Counter
+from decimal import Decimal, localcontext
 from typing import ClassVar
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -150,6 +151,63 @@ class TestLixThreshold(unittest.TestCase):
 
 
 class TestChapterJensenShannon(unittest.TestCase):
+    def test_identical_many_type_distributions_have_no_lexical_drivers(self):
+        analyzer = CorpusAnalyzer(CorpusConfig(language="en"))
+        chapter = Counter({f"word{i}": 1 for i in range(10)})
+        corpus = Counter(dict.fromkeys(chapter, 8))
+        value, drivers = analyzer._jsd_chapter(chapter, corpus, 10, 80)
+        self.assertEqual(value, 0.0)
+        self.assertEqual(drivers, [])
+
+    def test_unchanged_word_rates_do_not_become_lexical_drivers(self):
+        analyzer = CorpusAnalyzer(CorpusConfig(language="en"))
+        chapter = Counter(amber=40, birch=40, copper=20)
+        rest = Counter(amber=60, birch=20, copper=20)
+        _value, drivers = analyzer._jsd_chapter(chapter, chapter + rest, 100, 200)
+        self.assertEqual(set(drivers), {"amber", "birch"})
+
+    def test_near_equal_distributions_retain_small_genuine_divergence(self):
+        analyzer = CorpusAnalyzer(CorpusConfig(language="en"))
+        for count in (100, 10_000, 1_000_000, 10_000_000, 1_000_000_000):
+            chapter = Counter(amber=count, birch=count - 1)
+            rest = Counter(amber=count - 1, birch=count)
+            n = 2 * count - 1
+            with self.subTest(count=count), localcontext() as context:
+                context.prec = 60
+                p = Decimal(count) / Decimal(n)
+                q = Decimal(count - 1) / Decimal(n)
+                # Direct high-precision definition, independent of the stable
+                # production expression and its absent-type shortcut.
+                expected = float(p * (2 * p).ln() + q * (2 * q).ln())
+                value, drivers = analyzer._jsd_chapter(chapter, chapter + rest, n, 2 * n)
+                self.assertTrue(math.isclose(value, expected, rel_tol=5e-14),
+                                (value, expected))
+                self.assertEqual(set(drivers), {"amber", "birch"})
+
+    def test_unequal_lengths_and_missing_types_match_full_vocabulary_definition(self):
+        analyzer = CorpusAnalyzer(CorpusConfig(language="en"))
+        chapter = Counter(amber=3, birch=2, copper=1)
+        rest = Counter(amber=1, birch=9, dahlia=4)
+        for left, right in ((chapter, rest), (rest, chapter)):
+            n_left, n_right = sum(left.values()), sum(right.values())
+            with self.subTest(left=left), localcontext() as context:
+                context.prec = 60
+                terms = []
+                for word in left.keys() | right.keys():
+                    p = Decimal(left[word]) / Decimal(n_left)
+                    q = Decimal(right[word]) / Decimal(n_right)
+                    m = (p + q) / 2
+                    terms.append(((p * (p / m).ln() if p else 0)
+                                  + (q * (q / m).ln() if q else 0)) / 2)
+                expected = float(sum(terms))
+                value, _drivers = analyzer._jsd_chapter(
+                    left, left + right, n_left, n_left + n_right
+                )
+                self.assertTrue(math.isclose(value, expected, rel_tol=5e-14),
+                                (value, expected))
+                self.assertGreaterEqual(value, 0.0)
+                self.assertLessEqual(value, math.log(2.0))
+
     def test_identical_distributions_have_zero_divergence_with_unequal_lengths(self):
         analyzer = CorpusAnalyzer(CorpusConfig(language="en"))
         value, _ = analyzer._jsd_chapter(

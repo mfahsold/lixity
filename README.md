@@ -10,11 +10,11 @@
 **See where your manuscript changes. Read before you revise.**
 
 Lixity is a local manuscript analysis tool for authors, editors and researchers.
-Compare sentence rhythm, vocabulary, dialogue and tense across chapters, then
-open paragraphs to read the text and local measurements. Ask whether a change
-serves the scene before deciding what to keep or revise.
+Read chapters as a continuous document, then inspect sentence rhythm, vocabulary,
+dialogue and tense where a passage makes you curious. Keep research beside the
+text and ask whether a change serves the scene before deciding what to revise.
 
-![Lixity dashboard — chapter comparison, sentence rhythm and passage drill-down](docs/screenshots/dashboard-dark.png)
+![Lixity continuous manuscript reader with chapter navigation and contextual tools](docs/screenshots/dashboard-dark.png)
 
 [Explore the demo project](https://mfahsold.github.io/lixity/demo/report.html) ·
 [Three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html) ·
@@ -24,8 +24,9 @@ serves the scene before deciding what to keep or revise.
 ## Try it in 30 seconds
 
 Open [*The Crate at Warehouse 4*](https://mfahsold.github.io/lixity/demo/report.html):
-one read-only project with six invented English chapters. Compare the opening
-setting with chapter 2's action, then open a paragraph. Switch to **Research**
+one read-only project with six invented English chapters. Start in **Read** with
+the opening setting and chapter 2's action; choose **Inspect** for their chapter
+comparisons and paragraph measurements. Switch to **Research**
 to follow the same story through a dossier, retained sources, a claim and its
 saved manuscript quote. Keep a dossier alongside the manuscript, download the
 claim-evidence matrix or choose one of four prepared PDF layouts. The three
@@ -58,8 +59,9 @@ does not update an already running service.
 
 | Workflow | Result and next step |
 | :--- | :--- |
+| Read a manuscript | Continuous chapters, adjustable text size, width and spacing, plus a reversible focus view. [Reader controls](docs/USAGE.md#reading-paragraphs). |
 | Compare chapters | Sentence rhythm, vocabulary, dialogue and tense against the manuscript's own reference. [Read the signals](https://mfahsold.github.io/lixity/guides/interpretation.html). |
-| Review passages | Open measured paragraphs and save work markers beside their source lines. [Review workflow](docs/USAGE.md#start-a-review). |
+| Review passages | Open a paragraph's context tools for measurements, work markers and exact quote associations. [Review workflow](docs/USAGE.md#start-a-review). |
 | Compare intentional registers | Group scenes by purpose and set optional author targets. [Scene registers](docs/USAGE.md#scene-registers-and-project-targets). |
 | Export a manuscript | A4 editorial copy with line numbers and comment margins, A5 reading copy, submission sheet or analysis report. [PDF layouts and limits](docs/USAGE.md#lixity-pdf). |
 | Connect research | Retained sources, authored claims and decisions, dossiers, places, journeys and exact manuscript quotations. [Research guide](https://mfahsold.github.io/lixity/guides/research-pdf.html). |
@@ -90,9 +92,20 @@ keep name counts separate from author-declared perspective.
 **On current main:** the interactive app uses a desktop-style project sidebar
 on wide screens, with manuscript and analysis first, research alongside and
 settings separate. On smaller screens the same navigation becomes horizontal.
+**Read** presents continuous prose; **Inspect** retains chapter comparisons and
+paragraph drill-down. Text size and reading settings adapt the document without
+changing manuscript bytes. Use a paragraph's **…**, right-click or `Shift+F10`
+for its tools; a text selection offers relevant marker and claim actions.
+**Values** opens a closable inspector, and **Focus reading** temporarily clears
+the surrounding workspace. Reading uses ordinary scrolling and text selection;
+maps, images and style-space keep their own pan and zoom controls.
+The reader follows [analysis paragraph coverage](docs/USAGE.md#reading-paragraphs);
+structured manuscript PDFs use a separate document projection.
 Opening a companion dossier collapses the desktop navigation to a narrow rail.
 Its toggle keeps navigation reachable; closing the companion restores the prior
-choice. Exact saved manuscript associations offer a direct return to the passage.
+choice. Drag its divider or use the arrow keys to adjust the desktop split;
+narrow screens stack the documents. Exact saved manuscript associations offer a
+direct return to the passage.
 Local tabs, form groups and dialogs use shared components throughout analysis
 and research; compact catalogue rows keep sources and dossiers easy to scan.
 Creation and association forms start collapsed. Open their labelled heading, then

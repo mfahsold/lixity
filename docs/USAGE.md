@@ -100,6 +100,10 @@ JavaScript and a compatible native server are required.
 
 ### Start a review
 
+In the current-main interactive workspace, choose **Inspect** to display the
+analysis panels and paragraph strips. **Read** keeps the manuscript continuous;
+its paragraph menu also opens measurements without first changing mode.
+
 **Start your review → Open passage** opens the first paragraph meeting the
 selected tense threshold, otherwise the opening paragraph, clearing filters and
 focusing the passage. **Explore chapters** opens available chapter comparisons;
@@ -112,8 +116,13 @@ or instructions to revise.
 ### Read a dossier beside the manuscript
 
 Choose **Dossier alongside** to read a saved dossier while retaining manuscript
-search and open paragraphs. Closing restores the other analysis panels; refresh
-explicitly for the latest revision. Narrow screens stack the readers. The
+search and the current reading presentation. Opening it collapses desktop project
+navigation; its toggle remains reachable, and closing restores the earlier manual
+choice. Drag the divider to change the desktop widths, or focus it and use
+`Left`/`Right` in five-point steps; `Home` and `End` select the 35% and 75%
+manuscript-width limits. The split is a local browser preference. Narrow screens
+stack the readers and hide the divider. Close with the same toggle or the dossier's
+close button; refresh explicitly for the latest revision. The
 [research workflow](research/USAGE.md#reading-and-cli-workflows) owns
 selection, evidence and retention semantics.
 
@@ -121,7 +130,8 @@ selection, evidence and retention semantics.
 
 ### Link a manuscript quote to a claim
 
-Use **Link selection to claim** (`Alt+L`) on text in one open paragraph. Review
+Use **Link selection to claim** (`Alt+L`) on text in one paragraph. In **Read**,
+the selection toolbar and paragraph context menu reach the same action. Review
 the claim and quote, then permit retention before saving. Preview writes nothing;
 saved links pin exact claim/paragraph versions and need review after changes.
 See [retention, anchoring and compatibility](research/USAGE.md#associate-a-manuscript-quote-with-a-claim).
@@ -130,13 +140,49 @@ See [retention, anchoring and compatibility](research/USAGE.md#associate-a-manus
 
 ### Reading paragraphs
 
-Open a paragraph to read its text, then expand **Values** for source lines,
-tense and style measurements. Marker actions follow in a compatible server.
-Closed paragraphs are rendered on demand, with their inner layout released on
-close unless a marker draft remains. Complete text and measurements stay
-embedded, including text never opened; this reduces initial browser work but
-not the self-contained file's size. With JavaScript disabled, a static fallback
-keeps manuscript text readable.
+**Current main (unreleased):** interactive workspaces initially select **Read**.
+Chapters appear as continuous prose with ordinary scrolling and text selection.
+Choose a chapter in the reader toolbar, use **A−**/**A+** for text size
+(16–28 nominal pixels), or open **Reading settings** for narrow, standard or wide
+text and compact, standard or relaxed line spacing. The mode, size, width and
+spacing are local browser preferences; display changes do not edit the source.
+
+Each paragraph has an **…** button. It opens the same contextual tools as a
+right-click on the prose or `Shift+F10`/the context-menu key while the paragraph
+or its button has focus. Arrow keys move through the menu; `Home`/`End` reach its
+first/last action. Escape closes it and restores focus. Actions depend on the
+available capabilities: **Values**, work markers, **Link selection to claim**
+for a valid selection, and the companion dossier. A selection within one paragraph
+also offers a compact toolbar. Marker notes and claim associations still require
+their existing explicit save and retention steps.
+Use Shift+right-click to open the browser's native context menu instead.
+
+**Values** opens a closable paragraph inspector with source lines, tense and
+style measurements. It replaces the dossier companion as the active side tool;
+narrow screens place it over the lower part of the reader. Close its button or
+press Escape to return to the paragraph. **Focus reading** temporarily hides
+project navigation and side tools; the same button or Escape restores the
+workspace. Text-size, layout and companion changes retain the visible paragraph's
+position where available. Menus close on scrolling or resizing.
+
+Choose **Inspect** to return to chapter comparisons, paragraph strips and
+expandable text/Values. This is the established analysis presentation, using the
+same manuscript paragraphs and exact source anchors as Read. Closed inspection
+paragraphs are rendered on demand and release their inner layout on close unless
+a marker draft remains. Read renders the continuous paragraph tree. All profiled
+paragraph text and measurements remain embedded in either case, so lazy rendering does not reduce
+the self-contained file's size. Plain exported reports retain their inspection
+layout. With JavaScript disabled, a static fallback keeps manuscript text readable.
+
+Both views use the analysis paragraph projection: prose and list items, with
+chapter titles. Subheadings, block quotations, code, footnote definitions and
+dividers are omitted; pipe tables remain literal paragraph text. A configured
+appendix exclusion still applies. For a structured reading copy, use the
+[book PDF](#lixity-pdf), which uses the separate manuscript-document projection.
+
+The manuscript is a document reader: dragging selects text and resizing text
+changes its layout. Images use the shared zoom viewer, maps use Leaflet pan/zoom,
+and style-space retains its own rotation and zoom controls.
 
 ### Searching the manuscript
 

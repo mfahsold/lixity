@@ -135,6 +135,7 @@ server.serve_forever()
   const browser = await launchChromium();
   try {
     const page = await browser.newPage({viewport: {width: 1280, height: 900}});
+    await page.addInitScript(() => localStorage.setItem('lixity.manuscript.mode', 'inspect'));
     const submissions = [];
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));

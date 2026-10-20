@@ -10,7 +10,7 @@ the same six-chapter manuscript, research records and project metadata.
 
 | Feature | Views |
 | --- | --- |
-| Manuscript overview | [Light](dashboard-light.png), [dark](dashboard-dark.png), [mobile](dashboard-mobile.png), [empty workspace](dashboard-welcome.png) |
+| Continuous manuscript reader | [Light](dashboard-light.png), [dark](dashboard-dark.png), [mobile](dashboard-mobile.png), [empty workspace](dashboard-welcome.png) |
 | Chapter comparisons | [Heatmap excerpt](dashboard-heatmap.png), [reference bands](dashboard-reference.png), [settings](dashboard-settings.png) |
 | Scene registers | [Scene excerpt](dashboard-scenes.png), [mobile](dashboard-scenes-mobile.png) |
 | Style and annotations | [Dimensions](dashboard-dimensions.png), [dark](dashboard-dimensions-dark.png), [mobile](dashboard-dimensions-mobile.png), [paragraph layers](dashboard-layer.png), [work markers](dashboard-markers.png) |
@@ -47,6 +47,8 @@ manuscripts, archives, credentials or running user projects.
 Desktop/mobile overviews show a viewport; element captures are clamped to a
 realistic screen height (1100 px desktop, 1250 px mobile) and the heatmap shows
 its upper section.
+The reader captures use current-main **Read**; comparison, scene and marker
+captures explicitly choose **Inspect**. Released packages may have an earlier UI.
 Scene images show the first three scenes, with the first expanded. Their sample
 register is an illustrative assignment; its values come from the analysis.
 Dialog images include the complete form: the capture tool expands their scroll

@@ -38,6 +38,7 @@ server.serve_forever()
     try {
       for (const width of [1280, 360]) {
         const page = await browser.newPage({viewport: {width, height: 800}});
+        await page.addInitScript(() => localStorage.setItem('lixity.manuscript.mode', 'inspect'));
         const errors = [];
         page.on('pageerror', error => errors.push(error.message));
         page.on('request', request => assert.equal(new URL(request.url()).origin, new URL(fixture.url).origin,

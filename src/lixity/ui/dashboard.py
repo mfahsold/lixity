@@ -56,6 +56,7 @@ from .components import (
 from .dimensions import style_dimensions
 from .dossier_images import image_limits_attribute
 from .heatmap import render_heatmap_panel, render_register_targets, render_style_passport_panel
+from .manuscript_reader import reading_controls
 from .markers_panel import render_markers_panel
 from .modals import render_project_modals
 from .narration import (
@@ -83,6 +84,7 @@ _CSS_FILES = (
     "dossier-geography.css",
     "workspace-reader.css",
     "manuscript-links.css",
+    "manuscript-reader.css",
 )
 _JS_FILES = (
     "vendor/preact-10.29.8.min.js",
@@ -110,6 +112,7 @@ _JS_FILES = (
     "style-space.js",
     "workspace-reader.js",
     "manuscript-links.js",
+    "manuscript-reader.js",
 )
 
 
@@ -751,6 +754,10 @@ def render_dashboard(
             f'<button type="button" class="ctl" id="workspace-reader-refresh">{L("reader_refresh")}</button></div>'
             '<p class="ctl-status" id="workspace-reader-status" role="status" aria-live="polite"></p>'
             '<div id="workspace-reader-body"></div></aside>'
+            '<div id="workspace-reader-divider" class="workspace-reader-divider" role="separator" '
+            'tabindex="0" aria-orientation="vertical" aria-valuemin="35" aria-valuemax="75" '
+            f'aria-valuenow="62" aria-label="{L("reading_split")}" '
+            'aria-controls="workspace-analysis-body workspace-reader-panel" hidden></div>'
             '<div id="workspace-analysis-body">'
         )
 
@@ -768,6 +775,9 @@ def render_dashboard(
             "</div>"
         )
         parts.append("<div hidden>")
+
+    if has_chapters and paragraphs and controls:
+        parts.append(reading_controls(chapters, labels))
 
     if has_chapters:
         parts.append(f'<section class="panel" id="analysis-review"><h2>{L("review_title")}</h2>')
@@ -1025,6 +1035,7 @@ def render_dashboard(
     parts.append("</main>")
     content_json = _script_json(paragraph_content)
     parts.append(f'<script type="application/json" id="paragraph-content">{content_json}</script>')
+    parts.append('<div id="manuscript-analysis-panels">')
 
     # --- Key metrics (grouped for scanability) ----------------------------
     scope_tiles = [
@@ -1368,6 +1379,7 @@ def render_dashboard(
             parts.append("</tr>")
         parts.append("</tbody></table></div></section>")
 
+    parts.append("</div>")
     if not has_chapters:
         parts.append("</div>")
 

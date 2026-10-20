@@ -55,6 +55,8 @@ AREAS: dict[str, tuple[str, ...]] = {
     "analysis": (
         "layout.cjs",
         "manuscript-pdf.cjs",
+        "manuscript-reader.cjs",
+        "manuscript-selection.cjs",
         "manuscript-search.cjs",
         "minimal-workflows.cjs",
         "paragraph-feedback.cjs",

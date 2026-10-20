@@ -57,6 +57,7 @@ async function selectText(page, text) {
   try {
     for (const width of [1440, 320]) {
       const page = await browser.newPage({viewport: {width, height: 900}});
+      await page.addInitScript(() => localStorage.setItem('lixity.manuscript.mode', 'inspect'));
       const errors = [], writes = []; let anchorState = 'moved';
       page.on('pageerror', error => errors.push(error.message));
       await page.route('http://lixity.test/**', async route => {
@@ -105,6 +106,7 @@ async function selectText(page, text) {
     }
     for (const [locale, html] of Object.entries(fixtures).filter(([locale]) => locale !== 'read-only')) for (const width of [1440, 320]) {
       const page = await browser.newPage({viewport: {width, height: 900}, hasTouch: true});
+      await page.addInitScript(() => localStorage.setItem('lixity.manuscript.mode', 'inspect'));
       const errors = [], writes = []; let links = [], anchor, mode = "normal", heldSave, releaseSave, heldClaims, releaseClaims;
       page.on('pageerror', error => errors.push(error.message));
       await page.route('http://lixity.test/**', async route => {

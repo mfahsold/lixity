@@ -28,11 +28,11 @@ Source: https://github.com/mfahsold/lixity/blob/main/README.md
 **See where your manuscript changes. Read before you revise.**
 
 Lixity is a local manuscript analysis tool for authors, editors and researchers.
-Compare sentence rhythm, vocabulary, dialogue and tense across chapters, then
-open paragraphs to read the text and local measurements. Ask whether a change
-serves the scene before deciding what to keep or revise.
+Read chapters as a continuous document, then inspect sentence rhythm, vocabulary,
+dialogue and tense where a passage makes you curious. Keep research beside the
+text and ask whether a change serves the scene before deciding what to revise.
 
-![Lixity dashboard — chapter comparison, sentence rhythm and passage drill-down](docs/screenshots/dashboard-dark.png)
+![Lixity continuous manuscript reader with chapter navigation and contextual tools](docs/screenshots/dashboard-dark.png)
 
 [Explore the demo project](https://mfahsold.github.io/lixity/demo/report.html) ·
 [Three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html) ·
@@ -42,8 +42,9 @@ serves the scene before deciding what to keep or revise.
 ## Try it in 30 seconds
 
 Open [*The Crate at Warehouse 4*](https://mfahsold.github.io/lixity/demo/report.html):
-one read-only project with six invented English chapters. Compare the opening
-setting with chapter 2's action, then open a paragraph. Switch to **Research**
+one read-only project with six invented English chapters. Start in **Read** with
+the opening setting and chapter 2's action; choose **Inspect** for their chapter
+comparisons and paragraph measurements. Switch to **Research**
 to follow the same story through a dossier, retained sources, a claim and its
 saved manuscript quote. Keep a dossier alongside the manuscript, download the
 claim-evidence matrix or choose one of four prepared PDF layouts. The three
@@ -76,8 +77,9 @@ does not update an already running service.
 
 | Workflow | Result and next step |
 | :--- | :--- |
+| Read a manuscript | Continuous chapters, adjustable text size, width and spacing, plus a reversible focus view. [Reader controls](docs/USAGE.md#reading-paragraphs). |
 | Compare chapters | Sentence rhythm, vocabulary, dialogue and tense against the manuscript's own reference. [Read the signals](https://mfahsold.github.io/lixity/guides/interpretation.html). |
-| Review passages | Open measured paragraphs and save work markers beside their source lines. [Review workflow](docs/USAGE.md#start-a-review). |
+| Review passages | Open a paragraph's context tools for measurements, work markers and exact quote associations. [Review workflow](docs/USAGE.md#start-a-review). |
 | Compare intentional registers | Group scenes by purpose and set optional author targets. [Scene registers](docs/USAGE.md#scene-registers-and-project-targets). |
 | Export a manuscript | A4 editorial copy with line numbers and comment margins, A5 reading copy, submission sheet or analysis report. [PDF layouts and limits](docs/USAGE.md#lixity-pdf). |
 | Connect research | Retained sources, authored claims and decisions, dossiers, places, journeys and exact manuscript quotations. [Research guide](https://mfahsold.github.io/lixity/guides/research-pdf.html). |
@@ -108,9 +110,20 @@ keep name counts separate from author-declared perspective.
 **On current main:** the interactive app uses a desktop-style project sidebar
 on wide screens, with manuscript and analysis first, research alongside and
 settings separate. On smaller screens the same navigation becomes horizontal.
+**Read** presents continuous prose; **Inspect** retains chapter comparisons and
+paragraph drill-down. Text size and reading settings adapt the document without
+changing manuscript bytes. Use a paragraph's **…**, right-click or `Shift+F10`
+for its tools; a text selection offers relevant marker and claim actions.
+**Values** opens a closable inspector, and **Focus reading** temporarily clears
+the surrounding workspace. Reading uses ordinary scrolling and text selection;
+maps, images and style-space keep their own pan and zoom controls.
+The reader follows [analysis paragraph coverage](docs/USAGE.md#reading-paragraphs);
+structured manuscript PDFs use a separate document projection.
 Opening a companion dossier collapses the desktop navigation to a narrow rail.
 Its toggle keeps navigation reachable; closing the companion restores the prior
-choice. Exact saved manuscript associations offer a direct return to the passage.
+choice. Drag its divider or use the arrow keys to adjust the desktop split;
+narrow screens stack the documents. Exact saved manuscript associations offer a
+direct return to the passage.
 Local tabs, form groups and dialogs use shared components throughout analysis
 and research; compact catalogue rows keep sources and dossiers easy to scan.
 Creation and association forms start collapsed. Open their labelled heading, then
@@ -264,9 +277,22 @@ Use active result metadata when interpreting thresholds and unavailable values.
 
 Current-main interactive UI: manuscript/analysis first, research second, settings
 third; a fixed project sidebar on desktop becomes horizontal navigation on
-narrow screens. The companion dossier reader supplies context beside a passage.
+narrow screens. Read initially presents continuous manuscript prose; Inspect
+retains chapter comparisons and paragraph drill-down. One paragraph tree keeps
+the same source text, hashes, search and exact anchors. Local reading preferences
+adjust text size, width and spacing; focus mode is reversible. Paragraph ellipsis,
+right-click and keyboard context menus share the existing values, marker and
+claim-link actions. Selection tools preserve explicit save/retention boundaries.
+Plain exported reports retain their inspection layout; these are current-main
+enhancements rather than a new manuscript editor or API.
+Reader coverage follows analysis prose/list paragraphs and appendix exclusions;
+it omits subheadings, blockquotes, code, footnotes and dividers and retains tables
+as literal text. Structured manuscript PDFs use a separate document projection.
+The companion dossier reader supplies context beside a passage.
 Companion reading temporarily collapses desktop navigation; a shared toggle
-keeps it reachable and closing restores the prior manual choice. Saved exact
+keeps it reachable and closing restores the prior manual choice. Its desktop
+divider supports pointer and keyboard width adjustment; narrow screens stack
+the readers. The paragraph inspector and companion replace one another. Saved exact
 manuscript associations provide a context-checked return to the passage.
 Current-main research forms start collapsed; headings and Collapse controls
 retain in-memory drafts. Escape closes the innermost disclosure. Contextual
@@ -1089,6 +1115,10 @@ JavaScript and a compatible native server are required.
 
 ### Start a review
 
+In the current-main interactive workspace, choose **Inspect** to display the
+analysis panels and paragraph strips. **Read** keeps the manuscript continuous;
+its paragraph menu also opens measurements without first changing mode.
+
 **Start your review → Open passage** opens the first paragraph meeting the
 selected tense threshold, otherwise the opening paragraph, clearing filters and
 focusing the passage. **Explore chapters** opens available chapter comparisons;
@@ -1101,8 +1131,13 @@ or instructions to revise.
 ### Read a dossier beside the manuscript
 
 Choose **Dossier alongside** to read a saved dossier while retaining manuscript
-search and open paragraphs. Closing restores the other analysis panels; refresh
-explicitly for the latest revision. Narrow screens stack the readers. The
+search and the current reading presentation. Opening it collapses desktop project
+navigation; its toggle remains reachable, and closing restores the earlier manual
+choice. Drag the divider to change the desktop widths, or focus it and use
+`Left`/`Right` in five-point steps; `Home` and `End` select the 35% and 75%
+manuscript-width limits. The split is a local browser preference. Narrow screens
+stack the readers and hide the divider. Close with the same toggle or the dossier's
+close button; refresh explicitly for the latest revision. The
 [research workflow](research/USAGE.md#reading-and-cli-workflows) owns
 selection, evidence and retention semantics.
 
@@ -1110,7 +1145,8 @@ selection, evidence and retention semantics.
 
 ### Link a manuscript quote to a claim
 
-Use **Link selection to claim** (`Alt+L`) on text in one open paragraph. Review
+Use **Link selection to claim** (`Alt+L`) on text in one paragraph. In **Read**,
+the selection toolbar and paragraph context menu reach the same action. Review
 the claim and quote, then permit retention before saving. Preview writes nothing;
 saved links pin exact claim/paragraph versions and need review after changes.
 See [retention, anchoring and compatibility](research/USAGE.md#associate-a-manuscript-quote-with-a-claim).
@@ -1119,13 +1155,49 @@ See [retention, anchoring and compatibility](research/USAGE.md#associate-a-manus
 
 ### Reading paragraphs
 
-Open a paragraph to read its text, then expand **Values** for source lines,
-tense and style measurements. Marker actions follow in a compatible server.
-Closed paragraphs are rendered on demand, with their inner layout released on
-close unless a marker draft remains. Complete text and measurements stay
-embedded, including text never opened; this reduces initial browser work but
-not the self-contained file's size. With JavaScript disabled, a static fallback
-keeps manuscript text readable.
+**Current main (unreleased):** interactive workspaces initially select **Read**.
+Chapters appear as continuous prose with ordinary scrolling and text selection.
+Choose a chapter in the reader toolbar, use **A−**/**A+** for text size
+(16–28 nominal pixels), or open **Reading settings** for narrow, standard or wide
+text and compact, standard or relaxed line spacing. The mode, size, width and
+spacing are local browser preferences; display changes do not edit the source.
+
+Each paragraph has an **…** button. It opens the same contextual tools as a
+right-click on the prose or `Shift+F10`/the context-menu key while the paragraph
+or its button has focus. Arrow keys move through the menu; `Home`/`End` reach its
+first/last action. Escape closes it and restores focus. Actions depend on the
+available capabilities: **Values**, work markers, **Link selection to claim**
+for a valid selection, and the companion dossier. A selection within one paragraph
+also offers a compact toolbar. Marker notes and claim associations still require
+their existing explicit save and retention steps.
+Use Shift+right-click to open the browser's native context menu instead.
+
+**Values** opens a closable paragraph inspector with source lines, tense and
+style measurements. It replaces the dossier companion as the active side tool;
+narrow screens place it over the lower part of the reader. Close its button or
+press Escape to return to the paragraph. **Focus reading** temporarily hides
+project navigation and side tools; the same button or Escape restores the
+workspace. Text-size, layout and companion changes retain the visible paragraph's
+position where available. Menus close on scrolling or resizing.
+
+Choose **Inspect** to return to chapter comparisons, paragraph strips and
+expandable text/Values. This is the established analysis presentation, using the
+same manuscript paragraphs and exact source anchors as Read. Closed inspection
+paragraphs are rendered on demand and release their inner layout on close unless
+a marker draft remains. Read renders the continuous paragraph tree. All profiled
+paragraph text and measurements remain embedded in either case, so lazy rendering does not reduce
+the self-contained file's size. Plain exported reports retain their inspection
+layout. With JavaScript disabled, a static fallback keeps manuscript text readable.
+
+Both views use the analysis paragraph projection: prose and list items, with
+chapter titles. Subheadings, block quotations, code, footnote definitions and
+dividers are omitted; pipe tables remain literal paragraph text. A configured
+appendix exclusion still applies. For a structured reading copy, use the
+[book PDF](#lixity-pdf), which uses the separate manuscript-document projection.
+
+The manuscript is a document reader: dragging selects text and resizing text
+changes its layout. Images use the shared zoom viewer, maps use Leaflet pan/zoom,
+and style-space retains its own rotation and zoom controls.
 
 ### Searching the manuscript
 
@@ -2139,18 +2211,28 @@ available for touch use. Preparing a draft writes nothing.
 
 In **Manuscript & Analysis**, **Dossier alongside** opens a chosen dossier in a
 read-only companion. It starts closed with no automatic selection. While open,
-other analysis panels are hidden; closing restores them and preserves manuscript
-search and paragraph expansion. Refresh explicitly for the latest dossier.
+other analysis panels are hidden; closing restores the selected manuscript
+presentation and preserves search and paragraph state. **Current main
+(unreleased):** **Read** presents continuous prose and **Inspect** exposes the
+existing analysis panels. Refresh explicitly for the latest dossier.
 On desktop, opening the companion temporarily collapses project navigation into
 a narrow rail. Use **Show navigation** to access its controls; closing the companion
 restores the earlier manual choice. Switching away from manuscript analysis also
 restores normal navigation. The navigation toggle is desktop-only; narrow screens
 keep their horizontal workspace switcher. These choices last for the current page.
-Desktop areas scroll separately; narrow screens stack them. Reading changes
-neither document, evidence links nor the statistical baseline.
+Desktop areas scroll separately. Drag the divider or focus it and use Left/Right
+to adjust the manuscript share; Home/End select its 35%/75% limits. The chosen
+split is a browser-local preference. Narrow screens stack the documents and hide
+the divider. Reading changes neither document, evidence links nor the statistical
+baseline. **Focus reading** temporarily hides the companion and navigation;
+the same control restores the workspace. A paragraph's **Values** inspector and
+the companion replace one another rather than competing for horizontal space.
 
-To connect the manuscript to research, expand a paragraph, select a nonempty text
-range and choose **Link selection to claim** (or Alt+L). Choose an existing claim,
+To connect the manuscript to research, select a nonempty text range within one
+paragraph and choose **Link selection to claim** (or Alt+L). In **Read**, the
+selection toolbar offers the same action; the paragraph's **…**, right-click or
+keyboard context menu also reaches it when the selection is valid. In **Inspect**,
+open the paragraph first. Choose an existing claim,
 review the quotation and explicitly allow retention before saving. This creates
 an association; it does not turn a manuscript statement into source evidence.
 The claim's dossier and retained evidence remain separate authored records.
@@ -2172,8 +2254,9 @@ evidence link or verify a source.
 
 ### Associate a manuscript quote with a claim
 
-In an opened manuscript paragraph, select text within that
-one paragraph and choose **Link selection to claim** (or press `Alt+L`). Review the exact quote, choose a
+In the continuous manuscript reader, select text within one paragraph; in
+**Inspect**, open that paragraph first. Choose **Link selection to claim** from
+the selection/context tools or paragraph action (or press `Alt+L`). Review the exact quote, choose a
 current claim, explicitly permit local retention of the quote, then **Save association**.
 Selection, choosing a claim and previewing the form write nothing. Saving creates
 a distinct `manuscript_claim_link`, with an exact claim-revision pin and paragraph
@@ -2200,8 +2283,9 @@ selections fail. Paths escaping the project, including through
 symlinks, are rejected. Source bytes are checked again before publication; this
 optimistic guard does not lock an external editor.
 
-Saved quotes mark only exact resolved anchors, including paragraphs rendered
-later on opening. Manuscript search still checks complete text. Review reports
+Saved quotes mark only exact resolved anchors in the shared reader, including
+inspection paragraphs rendered later on opening. Switching Read/Inspect preserves
+the same text and anchor model. Manuscript search still checks complete text. Review reports
 changed source bytes, newer/withdrawn claims, unique moved paragraphs, adjusted
 paragraphs whose quote is unchanged, and ambiguous matches. Moved or adjusted
 candidates have resolved coordinates but remain pending review until an explicit
@@ -3819,21 +3903,56 @@ correct formula dispatch is not empirical validation on every manuscript. **LIX*
 standard Björnsson cut: words with **more than six characters**, for every
 language: $\mathrm{LIX} = \mathrm{ASL} + 100 \cdot \frac{\text{long words}}{\text{tokens}}$.
 
+The Spanish syllable estimate counts orthographic vowel nuclei: standalone
+closed vowels (`i`, `u`) count, open/unstressed-closed combinations and distinct
+closed-vowel pairs can share a nucleus, and marked hiatus remains separate.
+Triphthongs use the closed/open/closed pattern. Standard silent `u` in
+`que`/`qui`/`gue`/`gui` is omitted; pronounced `ü` is retained, and interposed
+`h` does not itself block grouping. These bounded spelling rules follow the
+RAE/ASALE explanations of [diphthongs](https://www.rae.es/dpd/diptongo),
+[hiatus](https://www.rae.es/dpd/hiato) and [the letter u](https://www.rae.es/dpd/u).
+They are an orthographic proxy, not phonetic transcription: regional hiatus,
+foreign names and loans, and poetic synaeresis remain outside the estimate.
+Regression examples do not establish language-wide accuracy or reader comprehension.
+
+**Current main (unreleased):** corrects skipped closed-vowel nuclei in Spanish, for example
+`vivir` from one estimated syllable to two and `dibujo` from one to three.
+This changes Spanish ASW and its derived readability score without changing
+the formula coefficients or JSON fields. Regenerate Spanish reports before
+comparing results across this correction.
+
 ## 8. Jensen–Shannon divergence (chapter ↔ rest)
 
 $JSD(P \| Q) = \tfrac12 D_{\mathrm{KL}}(P \| M) + \tfrac12 D_{\mathrm{KL}}(Q \| M)$
 with $M = \tfrac12(P+Q)$. The implementation uses natural logarithms, so the
 divergence is in $[0,\ln 2]$ nats. It is zero for identical distributions,
-regardless of their token counts. Driver words present in the chapter are ranked
-by their additive contribution to this expression, excluding function words.
+regardless of their token counts. This is the equal-weight form of
+[Lin's Jensen–Shannon divergence (1991, §IV)](https://www.cise.ufl.edu/~anand/sp06/jensen-shannon.pdf).
+Driver words present in the chapter are ranked by their positive additive
+contribution, excluding function words and single-character tokens.
 Types absent from the chapter contribute half their rest-corpus probability
 times $\ln 2$; their total probability is calculated from the observed rest
 distribution. No square root or base-2 rescaling is applied.
 
+**Current main (unreleased):** absent-type mass is computed from remaining
+integer token counts, and contributions are accumulated with `math.fsum`.
+Near equal probabilities, the same per-type contribution is evaluated as
+$m[d\mathrm{atanh}(d)+\tfrac12\ln(1-d^2)]$, where
+$m=(p+q)/2$ and $d=(p-q)/(p+q)$; the contrast is derived from count cross-products
+before probabilities are rounded. This avoids cancellation of first-order
+logarithmic terms. No fixed epsilon suppresses small genuine divergence.
+Unchanged-rate words are omitted from the driver list; identical distributions
+return zero and an empty list. The definition, natural-log units and JSON fields
+are unchanged.
+
 Version 1.16.0 corrects the absent-type probability calculation, which could
 previously produce negative divergence. Recompute older metrics before comparing
-chapter profiles across this release. JSD describes lexical difference, not
-quality, attribution, or historical accuracy.
+chapter profiles across this release. With no chapter tokens or no remaining
+corpus tokens, `0.0` and an empty driver list mean unavailable, rather than
+measured agreement. JSD uses empirical token frequencies and ignores word order
+and narrative context. Its values and driver rankings are descriptive; they
+provide no calibrated probability, significance test, quality assessment,
+attribution or historical-accuracy judgment.
 
 ## 9. Paragraph layers (within-chapter colouring)
 
@@ -4505,6 +4624,50 @@ choice. Responsive changes keep the mobile switcher available. Exact manuscript
 return actions reuse the existing paragraph navigation and the same anchor matcher
 as inline association marks, with a current project/source context check on click.
 
+### Shared manuscript reader
+
+**Current main (unreleased):** `ui/manuscript_reader.py` emits one shared control
+surface for interactive dashboards. Bundled `manuscript-reader.js` and
+`manuscript-reader.css` enhance the existing paragraph tree: **Read** renders
+continuous text; **Inspect** retains the established chapter strips, comparisons
+and lazy paragraph interaction. There is no second manuscript projection or text
+copy. Source text, paragraph hashes, line anchors, search and association matching
+keep their existing owners. Plain exports retain the inspection layout, and the
+no-JavaScript fallback remains a static document.
+
+The canonical tree comes from `ParagraphProfiler`'s analysis projection: prose
+and list-item paragraphs with chapter titles. It excludes subheadings, block
+quotations, dividers, code and footnote definitions; pipe tables retain literal
+text rather than a table layout. Upstream appendix exclusion remains in force.
+This is distinct from `manuscript_document`, used for structured manuscript PDFs;
+reading controls do not change analytical coverage or source-anchor semantics.
+
+The reader uses native buttons, selects and disclosures with shared `ctl` styles
+and the seven-language label pack. Size, width, spacing and mode preferences live
+in browser storage; denied or malformed storage falls back to usable defaults.
+Focus mode is reversible and temporary. Layout changes capture the first visible
+paragraph and restore its viewport position after reflow where possible, rather
+than persisting a second text offset or editing manuscript content.
+
+Paragraph ellipsis buttons, pointer context menus and keyboard context-menu
+shortcuts share the same action builder. A valid single-paragraph selection
+offers a small toolbar. Marker and claim actions delegate to the established
+handlers, including their explicit save, capability and retention checks; no
+parallel write API is introduced. Values reuse the paragraph's measured markup
+in a closable inspector. Opening the inspector closes the companion and opening
+the companion closes the inspector, keeping one side tool active. Menus expose
+arrow/Home/End navigation and restore trigger focus on Escape.
+Association refreshes skip unchanged annotation DOM and preserve native selection
+endpoints when marks change. Automatic review uses the existing research-status
+read before requesting archive records; context-bound pending reads are coalesced
+and invalidated on project changes.
+
+The companion's desktop `separator` supports pointer dragging and keyboard
+adjustment over a bounded manuscript-width share. The split is a local display
+preference, hidden when readers stack on narrow screens. Images, geographic maps
+and style-space retain their existing PhotoSwipe, Leaflet and canvas interactions;
+manuscript dragging continues to select text. The reader does not create a
+free-panning manuscript canvas or a manuscript editor.
 
 The interface follows a reading-first hierarchy: a passage or visual comes
 before its detailed measurements; advanced explanations stay near the control

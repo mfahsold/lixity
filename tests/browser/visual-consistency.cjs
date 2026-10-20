@@ -135,6 +135,7 @@ async function checkScale(page, label) {
   try {
     for (const theme of ['light', 'dark']) for (const hasTouch of [false, true]) {
       const context = await browser.newContext({colorScheme: theme, reducedMotion: 'reduce', hasTouch});
+      await context.addInitScript(() => localStorage.setItem('lixity.manuscript.mode', 'inspect'));
       const errors = [];
       await context.route('http://lixity.test/**', route => {
         const url = new URL(route.request().url());

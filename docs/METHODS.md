@@ -433,21 +433,56 @@ correct formula dispatch is not empirical validation on every manuscript. **LIX*
 standard Björnsson cut: words with **more than six characters**, for every
 language: $\mathrm{LIX} = \mathrm{ASL} + 100 \cdot \frac{\text{long words}}{\text{tokens}}$.
 
+The Spanish syllable estimate counts orthographic vowel nuclei: standalone
+closed vowels (`i`, `u`) count, open/unstressed-closed combinations and distinct
+closed-vowel pairs can share a nucleus, and marked hiatus remains separate.
+Triphthongs use the closed/open/closed pattern. Standard silent `u` in
+`que`/`qui`/`gue`/`gui` is omitted; pronounced `ü` is retained, and interposed
+`h` does not itself block grouping. These bounded spelling rules follow the
+RAE/ASALE explanations of [diphthongs](https://www.rae.es/dpd/diptongo),
+[hiatus](https://www.rae.es/dpd/hiato) and [the letter u](https://www.rae.es/dpd/u).
+They are an orthographic proxy, not phonetic transcription: regional hiatus,
+foreign names and loans, and poetic synaeresis remain outside the estimate.
+Regression examples do not establish language-wide accuracy or reader comprehension.
+
+**Current main (unreleased):** corrects skipped closed-vowel nuclei in Spanish, for example
+`vivir` from one estimated syllable to two and `dibujo` from one to three.
+This changes Spanish ASW and its derived readability score without changing
+the formula coefficients or JSON fields. Regenerate Spanish reports before
+comparing results across this correction.
+
 ## 8. Jensen–Shannon divergence (chapter ↔ rest)
 
 $JSD(P \| Q) = \tfrac12 D_{\mathrm{KL}}(P \| M) + \tfrac12 D_{\mathrm{KL}}(Q \| M)$
 with $M = \tfrac12(P+Q)$. The implementation uses natural logarithms, so the
 divergence is in $[0,\ln 2]$ nats. It is zero for identical distributions,
-regardless of their token counts. Driver words present in the chapter are ranked
-by their additive contribution to this expression, excluding function words.
+regardless of their token counts. This is the equal-weight form of
+[Lin's Jensen–Shannon divergence (1991, §IV)](https://www.cise.ufl.edu/~anand/sp06/jensen-shannon.pdf).
+Driver words present in the chapter are ranked by their positive additive
+contribution, excluding function words and single-character tokens.
 Types absent from the chapter contribute half their rest-corpus probability
 times $\ln 2$; their total probability is calculated from the observed rest
 distribution. No square root or base-2 rescaling is applied.
 
+**Current main (unreleased):** absent-type mass is computed from remaining
+integer token counts, and contributions are accumulated with `math.fsum`.
+Near equal probabilities, the same per-type contribution is evaluated as
+$m[d\mathrm{atanh}(d)+\tfrac12\ln(1-d^2)]$, where
+$m=(p+q)/2$ and $d=(p-q)/(p+q)$; the contrast is derived from count cross-products
+before probabilities are rounded. This avoids cancellation of first-order
+logarithmic terms. No fixed epsilon suppresses small genuine divergence.
+Unchanged-rate words are omitted from the driver list; identical distributions
+return zero and an empty list. The definition, natural-log units and JSON fields
+are unchanged.
+
 Version 1.16.0 corrects the absent-type probability calculation, which could
 previously produce negative divergence. Recompute older metrics before comparing
-chapter profiles across this release. JSD describes lexical difference, not
-quality, attribution, or historical accuracy.
+chapter profiles across this release. With no chapter tokens or no remaining
+corpus tokens, `0.0` and an empty driver list mean unavailable, rather than
+measured agreement. JSD uses empirical token frequencies and ignores word order
+and narrative context. Its values and driver rankings are descriptive; they
+provide no calibrated probability, significance test, quality assessment,
+attribution or historical-accuracy judgment.
 
 ## 9. Paragraph layers (within-chapter colouring)
 

@@ -1,8 +1,8 @@
 # A three-minute first look
 
-Follow one project from chapter comparison to a passage, its research and a PDF copy. The same manuscript and records appear throughout this short walkthrough.
+Read one manuscript, inspect a passage, follow its research and choose a PDF copy. The same manuscript and records appear throughout this short walkthrough.
 
-Maintained by the Lixity project · Updated 19 October 2026
+Maintained by the Lixity project · Updated 20 October 2026
 
 ## Used while writing a debut novel
 
@@ -16,33 +16,31 @@ Matthias Fahsold developed Lixity as an architect and developer at ROST Services
 
 The demo uses all three native workspace views. Explore manuscript analysis and retained research, keep a **Dossier alongside** the manuscript, download the claim-evidence matrix or choose a prepared PDF layout. Actions marked **Local app**, including Search and Compare, are disabled previews with an [installation link](installation.html). The demo cannot import, edit or save; no installation, upload or account is needed.
 
-Enable JavaScript for paragraph expansion, view switching, research and charts. Paragraph text, chapter tables, source credits and PDF links remain readable without it.
+Enable JavaScript for the Read/Inspect controls, context tools, view switching, research and charts. Paragraph text, chapter tables, source credits and PDF links remain readable without it. The demo follows current development; an installed release may have an earlier interface.
 
 [Video walkthrough](../videos/analysis-review.mp4)
 
-*Watch the Warehouse 4 chapter contrast, paragraph **Values** and style dimensions.*
+*Inspection walkthrough: Warehouse 4 chapter contrast, paragraph **Values** and style dimensions.*
 
-## 1. Notice a chapter contrast
+## 1. Read a chapter
 
-The **Start your review** panel offers **Open passage**, **Explore chapters** and, when measurements are available, **Open sentence rhythm**. The passage link starts with the first tense flag in source order at the selected threshold, or the opening when none does. It reveals and focuses the source text; the choice is a starting point for reading, not a quality ranking.
+In **Manuscript & Analysis**, **Read** initially presents the chapters as continuous prose. Scroll normally, or choose a chapter in the reader toolbar. Read chapter 1's setting and [chapter 2's action](../demo/report.html#ch-2) before looking at their numbers.
 
-In **Manuscript & Analysis**, open the [chapter map](../demo/report.html#chapters) and compare chapter 1's setting with [chapter 2's action](../demo/report.html#ch-2). Look at sentence length and variation. The values describe the supplied text; a colour points to a pattern rather than rating the writing.
+Use **A−**/**A+** to adjust text size. **Reading settings** offers text width and line spacing; the same heading closes it. These display choices stay in this browser and do not change the manuscript. **Focus reading** temporarily clears navigation and side tools; choose **Leave focus** or press Escape to return.
 
-Choose one contrast that makes you curious. You do not need to inspect every measurement.
+Reading uses ordinary text selection. Maps, images and style-space keep their own pan and zoom controls; the manuscript remains a scrollable document.
 
-## 2. Open a paragraph and read
+## 2. Inspect a passage when needed
 
-Select a paragraph block in the action chapter to open its text and source lines. You can also use Tab to focus a block, then press Enter or Space. Read the paragraph alongside the opening description.
+Open a paragraph's **…** button for its tools. Right-clicking the prose opens the same menu; with the paragraph button focused, Shift+F10 works too. Arrow keys move between actions and Escape closes the menu. **Values** opens a paragraph inspector with source lines and measurements; its close button or Escape returns you to the passage. Local marker and claim actions appear when their capabilities are available; selecting text within one paragraph also offers a small toolbar.
+
+Choose **Inspect** for chapter comparisons and expandable paragraph blocks. The **Start your review** panel offers **Open passage**, **Explore chapters** and, when measurable, **Open sentence rhythm**. A passage link starts with the first tense flag in source order at the selected threshold, or the opening when none does. This is a starting point for reading, not a quality ranking.
+
+Compare the opening and action chapter's sentence length and variation. In Inspect, focus a paragraph block with Tab and open it with Enter or Space; expand **Values** for details. Return to **Read** for continuous prose. Both modes use the same text and source anchors. Choose one contrast that makes you curious; you do not need to inspect every measurement.
 
 **Current development:** the wide-screen demo keeps the project and workspace views in a fixed sidebar. On mobile, the views sit above the text. Manuscript and analysis come first; a dossier can accompany the passage when you need research context. Opening it collapses the desktop sidebar to make room; use Show navigation to reopen it. Closing the dossier restores your previous choice. Mobile navigation stays visible.
 
-Connect a selected manuscript quotation to an existing claim after reviewing retention. In Research → Review, saved exact associations offer **Go to manuscript passage** and **Open claim**. The passage action returns to the matching text without rewriting it. Changed or ambiguous quotations require review before an exact return is offered.
-
-Research creation forms start collapsed so you can read existing records first. Select a form heading to open it and select it again to collapse it. Long creation forms also offer **Collapse** beside Save. Your unsaved fields remain while switching tabs or collapsing a form; reloads are not draft storage. Escape closes the innermost open disclosure and returns focus to its heading. Contextual source and dossier actions open the appropriate form for you.
-
-Dossier previews show readable text; open the full dossier for formatting, diagrams and source context. Disclosure arrows indicate open and closed states, with brief movement disabled when reduced motion is requested.
-
-The passage appears first; expand **Values** when you need its measurements. Select a chapter in the style dimensions to inspect its scores and return to its passage; nearby help explains how to read the view. Keep the scene's purpose in mind before treating a difference as something to change.
+With a dossier alongside on desktop, drag the divider to give either document more room. You can also focus it with Tab and use Left/Right; Home/End reach the split limits. Narrow screens stack the documents. Paragraph Values and the dossier replace one another as the active side tool. Display changes keep the visible paragraph in place where possible.
 
 Ask what changed: the kind of scene, what the character is doing, or how the sentences are arranged. Measurements cannot answer that question without the passage.
 
@@ -53,6 +51,10 @@ Switch to [**Research**](../demo/report.html#research-manager) and open **Wareho
 In its geography view, select a place or route to read its context and frame it on the map. The view explains its coordinates, distances and limits.
 
 Open **Review** to find the saved quote: “Someone had tried the eastern gate of Warehouse 4.” The source passage, authored claim and manuscript quotation are separate records connected by an explicit author association. The log, people and incident are invented; the credited historical images do not verify them.
+
+Saved exact associations offer **Go to manuscript passage** and **Open claim**. The passage action returns to matching text without rewriting it. Changed or ambiguous quotations require review before an exact return is offered. In the local workspace, select a quotation to connect it to an existing claim, then review retention and save explicitly.
+
+Research creation forms start collapsed. Select a heading to open it and select it again to collapse it; long forms also offer **Collapse** beside Save. Unsaved fields remain across tab switches and collapse, but reloads are not draft storage. Escape closes the innermost disclosure and returns focus to its heading. Dossier previews show readable text; open the full dossier for formatting, diagrams and provenance. Brief disclosure motion respects reduced-motion preferences.
 
 A brisk action passage and an incident note can serve different purposes. There is no quality score to maximize, and a retained source does not establish factual truth. Read the [interpretation guide](interpretation.html) before acting on a signal.
 

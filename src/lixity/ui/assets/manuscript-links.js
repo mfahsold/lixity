@@ -8,7 +8,7 @@
   }
   if (!bridge || (!canWrite && document.body.dataset.manuscriptLinks !== "read") ||
       !projectToken() || !bridge.contextToken() || !document.body.dataset.manuscriptSourceSha256) return;
-  var draft = null, serial = 0, reviewSerial = 0, review = null, reviewContext = null, remembered = null, reviewProjectId = null;
+  var draft = null, serial = 0, reviewSerial = 0, review = null, reviewContext = null, remembered = null, reviewProjectId = null, reviewPending = null;
   var pending = new Set(), dialog, picker, quotation, statement, consent, save, status, filterInput;
   var chapters = document.getElementById("chapters");
   if (!chapters) return;
@@ -139,6 +139,12 @@
     if (filterInput) { filterInput.value = ""; filterInput.hidden = true; }
     picker.disabled = true; status.className = "ctl-status loading"; status.textContent = label("research_loading"); updateSave();
     if (!dialog.open) dialog.showModal();
+    var archive = await bridge.read("research/status");
+    if (request !== serial || draft !== value || !dialog.open || !live(value.context)) return;
+    if (!archive.ok || archive.initialized !== true) {
+      unavailable(archive.ok && archive.initialized === false ? label("research_not_initialized") : bridge.errorText(archive));
+      return;
+    }
     var responses = await Promise.all([bridge.read("research/claims"),
       bridge.read("research/manuscript-review?project_token=" + encodeURIComponent(value.context.project))]);
     if (request !== serial || draft !== value || !dialog.open) return;
@@ -282,22 +288,38 @@
     reviewBody.replaceChildren(reviewNote(message, stale));
     if (reviewTabHost) reviewTabHost.replaceChildren(reviewNote(message, stale));
   }
-  async function loadReview() {
-    var request = ++reviewSerial, value = context();
-    var report = await bridge.read("research/manuscript-review?project_token=" + encodeURIComponent(value.project));
-    if (request !== reviewSerial || !live(value)) return;
-    if (!report.ok || report.schema_version !== "research-manuscript-review-local/1" || !validRows(report.links) ||
-        !report.project_id || !report.snapshot || (reviewProjectId && report.project_id !== reviewProjectId) ||
-        report.current_source_sha256 !== value.source || report.source_state !== "available") {
-      var stale = staleReport(report, value.source) || report.code === "stale-context";
-      clearReview(stale ? label("manuscript_link_stale") : bridge.errorText(report), stale); return;
+  async function loadReview(automatic) {
+    var value = context();
+    if (automatic && reviewPending && reviewPending.request === reviewSerial && same(reviewPending.context, value)) return;
+    var request = ++reviewSerial, reading = {context: value, request: request};
+    reviewPending = reading;
+    try {
+      // Archive absence is a normal project state. The status endpoint can
+      // represent it without calling a review endpoint that requires setup.
+      var archive = await bridge.read("research/status");
+      if (request !== reviewSerial || !live(value)) return;
+      if (!archive.ok || archive.initialized !== true) {
+        clearReview(archive.ok && archive.initialized === false ? label("research_not_initialized") : bridge.errorText(archive));
+        return;
+      }
+      var report = await bridge.read("research/manuscript-review?project_token=" + encodeURIComponent(value.project));
+      if (request !== reviewSerial || !live(value)) return;
+      if (!report.ok || report.schema_version !== "research-manuscript-review-local/1" || !validRows(report.links) ||
+          !report.project_id || !report.snapshot || (reviewProjectId && report.project_id !== reviewProjectId) ||
+          (archive.project_id && report.project_id !== archive.project_id) ||
+          report.current_source_sha256 !== value.source || report.source_state !== "available") {
+        var stale = staleReport(report, value.source) || report.code === "stale-context";
+        clearReview(stale ? label("manuscript_link_stale") : bridge.errorText(report), stale); return;
+      }
+      applyReview(report, value);
+    } finally {
+      if (reviewPending === reading) reviewPending = null;
     }
-    applyReview(report, value);
   }
   function enhance(panel) {
     if (!canWrite) {
       if (review) applyReview(review, context());
-      else if (reviewSerial === 0) loadReview();
+      else if (reviewSerial === 0) loadReview(true);
       return;
     }
     var inner = panel.querySelector(".ptext-inner");
@@ -316,12 +338,12 @@
       if (!value || value.panel !== panel || !live(value.context)) { feedback.textContent = label("manuscript_link_invalid"); return; }
       open(value);
     });
-    if (!review && reviewSerial === 0) loadReview();
+    if (!review && reviewSerial === 0) loadReview(true);
   }
   var observedContext = context();
   var contextObserver = new MutationObserver(function() {
     var next = context(); if (same(next, observedContext)) return;
-    observedContext = next; ++reviewSerial; reviewProjectId = null; remembered = null;
+    observedContext = next; ++reviewSerial; reviewProjectId = null; remembered = null; reviewPending = null;
     clearReview(); if (draft) draft.claims = null;
     if (dialog && dialog.open) { unavailable(); updateSave(); }
   });
@@ -379,5 +401,10 @@
     if (event.target.closest('[data-rtab="review"]') || event.target.closest("#r-review-refresh")) loadReview();
   }, true);
   document.addEventListener("lixity:paragraph-rendered", function(event) { enhance(event.detail); });
+  document.addEventListener("lixity:reader-ready", function() { if (reviewSerial === 0) loadReview(true); });
+  document.addEventListener("lixity:viewchange", function() {
+    var pane = document.getElementById("view-pane-analysis");
+    if (pane && pane.classList.contains("active") && !review) loadReview(true);
+  });
   document.querySelectorAll("#chapters .ptext.open").forEach(enhance);
 })();

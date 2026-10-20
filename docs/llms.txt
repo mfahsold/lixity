@@ -44,9 +44,22 @@ Use active result metadata when interpreting thresholds and unavailable values.
 
 Current-main interactive UI: manuscript/analysis first, research second, settings
 third; a fixed project sidebar on desktop becomes horizontal navigation on
-narrow screens. The companion dossier reader supplies context beside a passage.
+narrow screens. Read initially presents continuous manuscript prose; Inspect
+retains chapter comparisons and paragraph drill-down. One paragraph tree keeps
+the same source text, hashes, search and exact anchors. Local reading preferences
+adjust text size, width and spacing; focus mode is reversible. Paragraph ellipsis,
+right-click and keyboard context menus share the existing values, marker and
+claim-link actions. Selection tools preserve explicit save/retention boundaries.
+Plain exported reports retain their inspection layout; these are current-main
+enhancements rather than a new manuscript editor or API.
+Reader coverage follows analysis prose/list paragraphs and appendix exclusions;
+it omits subheadings, blockquotes, code, footnotes and dividers and retains tables
+as literal text. Structured manuscript PDFs use a separate document projection.
+The companion dossier reader supplies context beside a passage.
 Companion reading temporarily collapses desktop navigation; a shared toggle
-keeps it reachable and closing restores the prior manual choice. Saved exact
+keeps it reachable and closing restores the prior manual choice. Its desktop
+divider supports pointer and keyboard width adjustment; narrow screens stack
+the readers. The paragraph inspector and companion replace one another. Saved exact
 manuscript associations provide a context-checked return to the passage.
 Current-main research forms start collapsed; headings and Collapse controls
 retain in-memory drafts. Escape closes the innermost disclosure. Contextual

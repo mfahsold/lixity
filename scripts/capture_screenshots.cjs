@@ -249,6 +249,10 @@ async function main() {
     for (const capture of captures.filter(item => !item.video)) {
       const name = path.basename(capture.target);
       await open(capture.source, capture.width, capture.height, name.includes('dark') ? 'dark' : 'light');
+      if (await page.locator('#manuscript-mode').count()) {
+        const inspection = /^dashboard-(dimensions|reference|markers|flags|editorial|heatmap|layer|scenes)/.test(name);
+        await page.locator('#manuscript-mode').selectOption(inspection ? 'inspect' : 'read');
+      }
       if (name.startsWith('dashboard-dimensions') || ['dashboard-light.png', 'dashboard-dark.png', 'dashboard-mobile.png', 'dashboard-reference.png', 'dashboard-heatmap.png', 'dashboard-layer.png'].includes(name)) await selectView('analysis');
       if (name.startsWith('dashboard-dimensions')) {
         await page.locator('#style-tab-dimensions').click();
@@ -489,6 +493,10 @@ async function main() {
         await page.waitForTimeout(1500);
       };
       await page.goto('http://lixity-screenshots.test/' + path.basename(capture.source));
+      if (flow !== 'research-timeline' && await page.locator('#manuscript-mode').count()) {
+        await page.locator('#tab-view-analysis').click();
+        await page.locator('#manuscript-mode').selectOption('inspect');
+      }
       if (flow === 'editorial-loop') {
         await page.waitForTimeout(1200);
         await say('Flagged passages become your review queue');

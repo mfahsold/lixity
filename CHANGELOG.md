@@ -8,6 +8,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Changed
+- The interactive manuscript workspace starts with continuous **Read** prose and
+  keeps the existing chapter and paragraph analysis in **Inspect**. Shared reader
+  controls adjust text size, width and spacing, preserve the visible paragraph
+  across layout changes and offer a reversible focus view. Paragraph **…**,
+  right-click and keyboard menus reuse existing values, marker and quote-link
+  actions; selection tools appear only when applicable. Desktop manuscript/dossier
+  widths use one draggable, keyboard-operated divider; mobile stacks the readers.
 - Companion dossiers temporarily collapse desktop project navigation, with an
   accessible manual toggle and restoration of the prior choice when closed.
   Mobile navigation remains visible. Saved exact manuscript associations now
@@ -47,6 +54,17 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and numeric loadings. Additive diagnostics preserve existing scores and formats.
 
 ### Fixed
+- Asynchronous manuscript association marks preserve native text selections,
+  including backward selections and astral characters. Automatic review first
+  checks archive readiness and revalidates project context after changes.
+- Spanish syllable estimates now count standalone closed-vowel nuclei and apply
+  bounded orthographic diphthong, hiatus and silent-vowel rules. Spanish ASW and
+  derived readability can change; formula coefficients and JSON fields are
+  unchanged. [Rules and limits](docs/METHODS.md#7-language-specific-readability).
+- Chapter/rest Jensen–Shannon calculations retain small genuine divergence near
+  equality and return zero with no lexical drivers for identical distributions.
+  Integer absent-token mass and stable summation preserve the existing definition
+  and units. [Numerical details](docs/METHODS.md#8-jensenshannon-divergence-chapter--rest).
 - Project-dialog tab switches no longer reset unrelated research revision tabs.
 - Disabled actions retain their disabled appearance on hover and press.
 - Numbered map labels select their own feature with mouse, touch or keyboard;

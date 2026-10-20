@@ -1,0 +1,132 @@
+/* One manuscript surface: restrained document reading with optional tools. */
+.manuscript-reader-controls {
+  position: relative; top: 0; z-index: 12; display: flex; flex-wrap: wrap;
+  align-items: center; gap: .5rem; padding: .65rem 0;
+  background: var(--bg); border-bottom: 1px solid var(--line);
+}
+.manuscript-reader-controls[hidden] { display: none; }
+.reader-mode-label { color: var(--muted); font-size: var(--text-small); }
+.reader-chapter { max-width: 18rem; min-width: 0; flex: 1 1 10rem; }
+.reader-size-controls { display: inline-flex; align-items: center; gap: .35rem; }
+.reader-size-controls output { min-width: 2ch; text-align: center; font-size: var(--text-small); }
+.reader-settings { position: relative; }
+.reader-settings > summary { cursor: pointer; list-style: none; }
+.reader-settings > summary::-webkit-details-marker { display: none; }
+.reader-settings-body {
+  position: fixed; z-index: 15;
+  display: grid; gap: .55rem; width: 16rem; max-width: calc(100vw - 2rem);
+  padding: 1rem; border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+  background: var(--surface); box-shadow: var(--shadow-modal); font-size: var(--text-small);
+}
+.reader-settings-body select { width: 100%; }
+.reader-settings:not([open]) > .reader-settings-body { display: none; }
+.reader-paragraph-actions { display: none; }
+.manuscript-reading .manuscript-reader-controls { position: sticky; }
+body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: block; }
+.manuscript-reading #analysis-review,
+.manuscript-reading #microhint,
+.manuscript-reading #manuscript-analysis-panels,
+.manuscript-reading .toolbar-sections,
+.manuscript-reading .layer-legend,
+.manuscript-reading .toolbar > label,
+.manuscript-reading .toolbar > .legend,
+.manuscript-reading .toolbar > #paragraph-filter-reset,
+.manuscript-reading .toolbar > .toolbar-note,
+.manuscript-reading .reader-controls .ctl-note { display: none !important; }
+.manuscript-reading .toolbar {
+  position: static; padding: .75rem 0; gap: .5rem 1rem;
+  background: transparent; border: 0; backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+.manuscript-reading .reader-controls { flex-basis: auto; }
+.manuscript-reading #chapters {
+  max-width: min(100%, calc(var(--reader-measure, 68ch) + 4rem));
+  margin: 1.5rem auto 4rem;
+}
+.manuscript-reading .chapter {
+  background: transparent; box-shadow: none; border: 0; border-radius: 0;
+  padding: 1rem 1.5rem 2.25rem; margin: 0;
+}
+.manuscript-reading .chapter + .chapter { border-top: 1px solid var(--line); padding-top: 2.5rem; }
+.manuscript-reading .chapter-head { display: block; margin-bottom: 1.5rem; }
+.manuscript-reading .chapter-head h2 {
+  font-family: var(--font-title); font-size: 1.5rem; font-weight: 500;
+  line-height: 1.4; color: var(--fg);
+}
+.manuscript-reading .chapter-head .meta,
+.manuscript-reading .chapter-toggle,
+.manuscript-reading .strip { display: none; }
+.manuscript-reading .chapter.collapsed .ptext:not(.text-miss) { display: grid; }
+.manuscript-reading .ptext,
+.manuscript-reading .ptext.open {
+  grid-template-rows: 1fr; opacity: 1; margin: 0 0 1em;
+  border: 0; border-radius: 0; background: transparent; transition: none;
+}
+.manuscript-reading .ptext.text-miss { display: none; }
+.manuscript-reading .ptext-inner,
+.manuscript-reading .ptext.open .ptext-inner { min-width: 0; overflow: visible; padding: 0; background: transparent; position: relative; transition: none; }
+.manuscript-reading .ptext-inner > p {
+  max-width: none; margin: 0; font-family: var(--font-title);
+  font-size: var(--reader-font-size, 1.125rem); line-height: var(--reader-leading, 1.8);
+  color: var(--fg); overflow-wrap: anywhere; white-space: pre-line;
+}
+.manuscript-reading .ptext-inner > .paragraph-values,
+.manuscript-reading .ptext-inner > .manuscript-link-feedback,
+.manuscript-reading .ptext-inner > .manuscript-link-controls,
+.manuscript-reading .ptext-inner > .marker-row { display: none; }
+.manuscript-reading .ptext-inner > .marker-row:has([data-marker-editor]) { display: flex; margin: .6rem 0 1rem; }
+.manuscript-reading .ptext-inner > .manuscript-link-feedback:not(:empty) { display: block; }
+.manuscript-reading .marker-row > button { display: none; }
+.manuscript-reading .reader-paragraph-actions {
+  display: inline-flex; position: absolute; top: .1rem; right: -2.6rem;
+  min-width: 2.25rem; min-height: 2.25rem; padding: .2rem .45rem;
+  color: var(--muted); background: var(--bg); border-color: transparent; opacity: .2;
+}
+.manuscript-reading .ptext:hover .reader-paragraph-actions,
+.manuscript-reading .ptext:focus-within .reader-paragraph-actions { opacity: 1; }
+.manuscript-context-menu,
+.manuscript-selection-tools {
+  position: fixed; z-index: 80; background: var(--surface); color: var(--fg);
+  border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-modal); padding: .3rem; max-width: calc(100vw - 1rem);
+  max-height: calc(100dvh - 1rem); overflow: auto;
+}
+.manuscript-context-menu { display: grid; min-width: 13rem; }
+.manuscript-context-menu .ctl { width: 100%; text-align: left; border-color: transparent; white-space: normal; justify-content: flex-start; }
+.manuscript-context-menu .ctl:hover { background: var(--accent-light); }
+.manuscript-selection-tools { display: flex; flex-wrap: wrap; gap: .35rem; }
+.manuscript-context-menu[hidden], .manuscript-selection-tools[hidden] { display: none; }
+.reader-inspector {
+  position: fixed; z-index: 25; top: 5rem; right: 1.5rem; width: 20rem;
+  max-width: calc(100vw - 2rem); max-height: calc(100dvh - 6rem); overflow: auto;
+  border-color: var(--line-strong); box-shadow: var(--shadow-modal);
+}
+.reader-inspector[hidden] { display: none; }
+.reader-inspector .paragraph-values { margin-top: .7rem; }
+.reader-inspector .stats { line-height: 1.8; color: var(--fg-secondary); font-size: var(--text-small); }
+.reader-inspector .anchor { margin: .6rem 0; font-size: var(--text-note); color: var(--muted); }
+body.lixity-workspace.reader-focus { padding-left: 1.5rem; }
+.reader-focus .workspace-shell, .reader-focus .workspace-reader-panel,
+.reader-focus .workspace-reader-divider, .reader-focus .reader-inspector { display: none !important; }
+.reader-focus .workspace-reader-layout.is-open { display: block; }
+.reader-focus .reader-controls { display: none; }
+@media (min-width: 1100px) {
+  .manuscript-reading.reader-inspector-open:not(.reader-focus) #chapters { margin-right: 21rem; max-width: min(var(--reader-measure, 68ch), calc(100% - 22rem)); }
+}
+@media (max-width: 600px) {
+  .manuscript-reader-controls { gap: .35rem; }
+  .reader-mode-label { display: none; }
+  .reader-chapter { flex-basis: calc(100% - 8rem); max-width: none; }
+  .reader-size-controls { margin-left: auto; }
+  .manuscript-reading .chapter { padding: 1rem 1.7rem 2rem .15rem; }
+  .manuscript-reading #chapters { margin-top: .75rem; }
+  .manuscript-reading .reader-paragraph-actions { right: -1.9rem; min-width: 1.75rem; padding: .1rem; opacity: .65; }
+  .reader-inspector { top: auto; right: .5rem; bottom: .5rem; max-width: calc(100vw - 1rem); max-height: 55dvh; width: 100%; }
+  body.lixity-workspace.reader-focus { padding-left: 1rem; }
+}
+@media (hover: none) { .manuscript-reading .reader-paragraph-actions { opacity: .7; } }
+@media print {
+  .manuscript-reader-controls, .reader-paragraph-actions, .manuscript-context-menu,
+  .manuscript-selection-tools, .reader-inspector { display: none !important; }
+  .manuscript-reading #manuscript-analysis-panels { display: block !important; }
+  .manuscript-reading #chapters { max-width: 100%; margin: 0; }
+}

@@ -33,7 +33,7 @@ from lixity.pdf_export import compose_pdf
 
 ROOT = Path(__file__).resolve().parents[1]
 SITE = "https://mfahsold.github.io/lixity"
-OG_IMAGE_ALT = "Lixity manuscript overview with sentence rhythm, vocabulary and dialogue measures"
+OG_IMAGE_ALT = "Lixity continuous manuscript reader with chapter navigation and contextual tools"
 LICENSE_URL = "https://github.com/mfahsold/lixity/blob/main/LICENSE"
 
 #: A published example stays a quick page load; past this size the excerpt is

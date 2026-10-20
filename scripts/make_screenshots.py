@@ -354,7 +354,8 @@ a[data-demo-local] {{ opacity: .65; }}
         "The customs log, weather notes, manuscript, people, Warehouse 4 incident and journeys are fictional demonstration records. "
         "The dated public-domain visuals provide setting references and do not verify events or conditions in 1923. "
         "Select a dossier image or diagram to enlarge and zoom it. Coordinates are approximate author-entered examples. "
-        "Interactive maps start with offline vectors; OpenStreetMap tiles load only when explicitly enabled and reveal the visible area to that provider. "
+        "Interactive maps use an OpenStreetMap background and reveal the visible area to that provider. "
+        "Switch the background off for offline vectors; the coordinate sketch remains available. "
         "No route or line of sight is calculated.",
         "These short synthetic chapters and language-dependent heuristics support human review; "
         "they are not a benchmark, calibration corpus or writing-quality verdict.",

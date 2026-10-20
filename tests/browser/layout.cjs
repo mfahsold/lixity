@@ -16,6 +16,7 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
   const browser = await launchChromium();
   try {
     const page = await browser.newPage({hasTouch: true});
+    await page.addInitScript(() => localStorage.setItem('lixity.manuscript.mode', 'inspect'));
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.route('http://lixity.test/**', route => route.fulfill(route.request().url().includes('/api/')

@@ -752,9 +752,7 @@ window.LixityManuscriptLinks = {
   text: function(panel) { return paragraphContent[panel.id] && paragraphContent[panel.id][0]; },
   navigate: function(panel) {
     switchActiveView("analysis");
-    var toolbar = document.querySelector("#view-pane-analysis .toolbar");
-    panel.style.scrollMarginTop = toolbar && getComputedStyle(toolbar).position === "sticky"
-      ? (toolbar.getBoundingClientRect().height + 12) + "px" : "";
+    setPassageScrollMargin(panel);
     var action = document.createElement("button");
     action.dataset.reviewPassage = "";
     action.dataset.line = panel.dataset.start;
@@ -762,7 +760,12 @@ window.LixityManuscriptLinks = {
     activate(action);
   },
   marks: function(panel, spans) {
+    var previous = manuscriptParagraphMarks[panel.id] || [];
+    var unchanged = previous.length === spans.length && previous.every(function(span, index) {
+      return span.start === spans[index].start && span.end === spans[index].end;
+    });
     manuscriptParagraphMarks[panel.id] = spans;
+    if (unchanged) return;
     var paragraph = panel.querySelector(".ptext-inner > p");
     if (paragraph) renderParagraphText(paragraph, paragraph.dataset.searchQuery || "");
   }

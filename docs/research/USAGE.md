@@ -95,18 +95,28 @@ available for touch use. Preparing a draft writes nothing.
 
 In **Manuscript & Analysis**, **Dossier alongside** opens a chosen dossier in a
 read-only companion. It starts closed with no automatic selection. While open,
-other analysis panels are hidden; closing restores them and preserves manuscript
-search and paragraph expansion. Refresh explicitly for the latest dossier.
+other analysis panels are hidden; closing restores the selected manuscript
+presentation and preserves search and paragraph state. **Current main
+(unreleased):** **Read** presents continuous prose and **Inspect** exposes the
+existing analysis panels. Refresh explicitly for the latest dossier.
 On desktop, opening the companion temporarily collapses project navigation into
 a narrow rail. Use **Show navigation** to access its controls; closing the companion
 restores the earlier manual choice. Switching away from manuscript analysis also
 restores normal navigation. The navigation toggle is desktop-only; narrow screens
 keep their horizontal workspace switcher. These choices last for the current page.
-Desktop areas scroll separately; narrow screens stack them. Reading changes
-neither document, evidence links nor the statistical baseline.
+Desktop areas scroll separately. Drag the divider or focus it and use Left/Right
+to adjust the manuscript share; Home/End select its 35%/75% limits. The chosen
+split is a browser-local preference. Narrow screens stack the documents and hide
+the divider. Reading changes neither document, evidence links nor the statistical
+baseline. **Focus reading** temporarily hides the companion and navigation;
+the same control restores the workspace. A paragraph's **Values** inspector and
+the companion replace one another rather than competing for horizontal space.
 
-To connect the manuscript to research, expand a paragraph, select a nonempty text
-range and choose **Link selection to claim** (or Alt+L). Choose an existing claim,
+To connect the manuscript to research, select a nonempty text range within one
+paragraph and choose **Link selection to claim** (or Alt+L). In **Read**, the
+selection toolbar offers the same action; the paragraph's **…**, right-click or
+keyboard context menu also reaches it when the selection is valid. In **Inspect**,
+open the paragraph first. Choose an existing claim,
 review the quotation and explicitly allow retention before saving. This creates
 an association; it does not turn a manuscript statement into source evidence.
 The claim's dossier and retained evidence remain separate authored records.
@@ -128,8 +138,9 @@ evidence link or verify a source.
 
 ### Associate a manuscript quote with a claim
 
-In an opened manuscript paragraph, select text within that
-one paragraph and choose **Link selection to claim** (or press `Alt+L`). Review the exact quote, choose a
+In the continuous manuscript reader, select text within one paragraph; in
+**Inspect**, open that paragraph first. Choose **Link selection to claim** from
+the selection/context tools or paragraph action (or press `Alt+L`). Review the exact quote, choose a
 current claim, explicitly permit local retention of the quote, then **Save association**.
 Selection, choosing a claim and previewing the form write nothing. Saving creates
 a distinct `manuscript_claim_link`, with an exact claim-revision pin and paragraph
@@ -156,8 +167,9 @@ selections fail. Paths escaping the project, including through
 symlinks, are rejected. Source bytes are checked again before publication; this
 optimistic guard does not lock an external editor.
 
-Saved quotes mark only exact resolved anchors, including paragraphs rendered
-later on opening. Manuscript search still checks complete text. Review reports
+Saved quotes mark only exact resolved anchors in the shared reader, including
+inspection paragraphs rendered later on opening. Switching Read/Inspect preserves
+the same text and anchor model. Manuscript search still checks complete text. Review reports
 changed source bytes, newer/withdrawn claims, unique moved paragraphs, adjusted
 paragraphs whose quote is unchanged, and ambiguous matches. Moved or adjusted
 candidates have resolved coordinates but remain pending review until an explicit

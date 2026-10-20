@@ -31,6 +31,7 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
   try {
     for (const [locale, html] of Object.entries(fixtures)) for (const width of [1440, 320]) {
       const page = await browser.newPage({viewport: {width, height: 900}});
+      await page.addInitScript(() => localStorage.setItem('lixity.manuscript.mode', 'inspect'));
       const errors = [], readerRequests = [], writes = [];
       let conflict = false;
       page.on('pageerror', error => errors.push(error.message));
@@ -151,6 +152,7 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
       await page.close();
     }
     const gated = await browser.newPage();
+    await gated.addInitScript(() => localStorage.setItem('lixity.manuscript.mode', 'inspect'));
     let guardedReads = 0;
     await gated.route('http://lixity.test/**', route => {
       if (route.request().url().includes('project_token')) guardedReads++;
@@ -165,6 +167,7 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
     await gated.close();
 
     const delayed = await browser.newPage();
+    await delayed.addInitScript(() => localStorage.setItem('lixity.manuscript.mode', 'inspect'));
     let reads = 0;
     await delayed.route('http://lixity.test/**', route => {
       const url = new URL(route.request().url());
