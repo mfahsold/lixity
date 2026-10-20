@@ -22,6 +22,8 @@ One honest sentence: these readings come from verb forms and markers, not from a
 
 Start with the [read-only synthetic demo](../demo/report.html) if you want to see the controls before installing. For your own manuscript, use the local project workflow:
 
+**Current development:** the interactive workspace initially opens in **Read**. Choose **Inspect** to follow the analysis-panel workflow below. Read keeps the prose continuous and offers paragraph tools through its **…** menu. The [reading-workbench walkthrough](manuscript-reading-workbench.html) explains both views; an installed release may have an earlier interface.
+
 1. **Install and open.** `uv tool install --python 3.12 --managed-python lixity`, then `lixity service start --open` and choose **Open Project** for your manuscript folder. (Windows, macOS and Linux are covered in the [installation guide](../guides/installation.html).) If you just want to see the loop first: the [demo report](../demo/report.html) opens in your browser, no install.
 
 2. **Start with the review panel.** **Start your review** offers **Open passage** (the first paragraph above your threshold, in reading order), **Explore chapters** and **Open sentence rhythm**.
