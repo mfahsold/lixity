@@ -882,7 +882,8 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
         assert.ok(page.url().endsWith('/guides/first-look.html'));
         await page.locator('.ctl[href="../demo/report.html"]').click();
         assert.ok(page.url().endsWith('/demo/report.html'));
-        await page.locator('a[href="../guides/first-look.html"]').first().click();
+        await page.locator('#example-context > summary').click();
+        await page.locator('#example-context a[href="../guides/first-look.html"]').click();
         assert.ok(page.url().endsWith('/guides/first-look.html'), 'The report returns to the walkthrough');
         await page.locator('.site-breadcrumbs a[href="../#guides"]').click();
         await expect(page).toHaveURL('http://lixity.test/lixity/#guides');
@@ -894,7 +895,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
         assert.ok(page.url().endsWith('/demo/report.html'), 'The primary CTA opens the one demo directly');
         await page.locator('.site-return a').filter({hasText: /^Demo$/}).click();
         await expect(page).toHaveURL('http://lixity.test/lixity/demo/report.html');
-        await page.locator('.site-breadcrumbs a[href="../"]').click();
+        await page.locator('.site-return a[href="../"]').click();
         await expect(page).toHaveURL('http://lixity.test/lixity/');
         if (javaScriptEnabled) {
           await page.locator('#themeToggle').click();
