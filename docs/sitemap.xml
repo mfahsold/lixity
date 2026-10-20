@@ -80,7 +80,15 @@
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/blog/index.html</loc>
-    <lastmod>2026-10-19</lastmod>
+    <lastmod>2026-10-20</lastmod>
+  </url>
+  <url>
+    <loc>https://mfahsold.github.io/lixity/blog/manuscript-reading-workbench.html</loc>
+    <lastmod>2026-10-20</lastmod>
+    <image:image>
+      <image:loc>https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png</image:loc>
+      <image:title>Lixity continuous manuscript reader with chapter navigation and contextual tools</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/blog/intentional-registers.html</loc>

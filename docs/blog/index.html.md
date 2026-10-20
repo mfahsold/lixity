@@ -1,6 +1,12 @@
 # Notes on measurable manuscript revision
 
-Practical articles for the moment a draft gives you a question: is this change of voice deliberate, is this phrase repeating too close by, or did the chapter's tense drift? Each article connects a measurable signal to a reading decision. All examples use public-domain or synthetic texts.
+Practical articles for reading a draft, checking its research and investigating a question: is this change of voice deliberate, is a phrase repeating too close by, or did the chapter's tense drift? Each article connects a tool to a reading decision. All examples use public-domain or synthetic texts.
+
+## [Give the manuscript room to read](manuscript-reading-workbench.html)
+
+Published 20 October 2026 · 5 minutes
+
+Read a scene, inspect one passage and keep a dossier beside the text. Follow a synthetic Warehouse 4 quotation into research and back, with the current development controls and their coverage limits explained.
 
 ## [When a chapter is meant to sound different](intentional-registers.html)
 

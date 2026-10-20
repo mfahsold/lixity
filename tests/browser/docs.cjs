@@ -22,7 +22,7 @@ function htmlRoutes(directory, prefix = '') {
 const routes = htmlRoutes(root).filter(route => route !== 'demo/research.html').sort();
 // Every content page gets all widths. Shared surface types cover theme/JS variants.
 const fullMatrixRoutes = new Set(['', 'guides/first-look.html', 'guides/research-pdf.html', 'demo/report.html',
-  'examples/effi-briest.html', 'blog/index.html', 'blog/whats-new-lixity.html']);
+  'examples/effi-briest.html', 'blog/index.html', 'blog/whats-new-lixity.html', 'blog/manuscript-reading-workbench.html']);
 const returnJourneyRoutes = new Set(['', 'guides/first-look.html', 'blog/index.html',
   'blog/whats-new-lixity.html', 'demo/report.html', 'examples/effi-briest.html']);
 const demoTitle = 'The Crate at Warehouse 4';

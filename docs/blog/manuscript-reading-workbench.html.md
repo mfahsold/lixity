@@ -1,0 +1,57 @@
+# Give the manuscript room to read
+
+By [Matthias Fahsold](https://github.com/mfahsold) · Published 20 October 2026 · 5 minutes
+
+A manuscript analysis tool can show you so much about a paragraph that the paragraph becomes awkward to read. Sentence patterns, source lines, markers and research links all have a purpose. They also compete with the next sentence.
+
+The latest Lixity development work gives the manuscript more room. The interactive workspace initially opens in **Read**, with chapters presented as continuous prose. **Inspect** keeps the chapter comparisons and paragraph tools available when you have a question to investigate. These are current-main changes; the latest packaged release remains **v0.7.1**.
+
+![Lixity's synthetic Warehouse 4 manuscript in Read, with continuous prose, chapter navigation, text-size controls and reading settings](../screenshots/dashboard-dark.png)
+
+*The current development reader uses one continuous prose surface. This synthetic capture shows the reader controls; paragraph tools and the companion open separately.*
+
+## Start with a scene
+
+Open the [Warehouse 4 demo](https://mfahsold.github.io/lixity/demo/report.html). Its six short English chapters follow Mara through an invented harbour incident. Read the opening setting, then use the chapter control to move to chapter 2's action. You can compare their pace before opening a single measurement.
+
+The reader uses ordinary scrolling and text selection. **A−** and **A+** change text size; **Reading settings** adjusts width and line spacing. Those preferences stay in your browser and leave the manuscript unchanged. **Focus reading** hides the surrounding navigation and side tools temporarily. Its return control, or Escape, brings the workspace back.
+
+The aim is a usable reading surface with tools nearby. Manuscript text reflows when its size changes. Images, maps and the style-space view retain their own zoom or movement controls.
+
+## Ask one question of a paragraph
+
+Suppose an action passage feels slower than you expected. Open its **…** menu and choose **Values**. A closable inspector shows that paragraph's source lines and available tense and style measurements. Read the surrounding sentences while deciding whether those measurements explain anything useful.
+
+The same contextual menu opens with a right-click. With the paragraph or its button focused, **Shift+F10** opens it from the keyboard; arrow keys move between actions and Escape closes it. Shift+right-click still reaches the browser's native menu. Selecting text within one paragraph offers a small toolbar when an applicable action is available.
+
+Choose **Inspect** when the question calls for chapter comparisons, sentence rhythm or expandable paragraph blocks. Both presentations use the same paragraph text and source anchors. A different sentence length can belong to a scene's purpose or a character's voice. The number locates a difference; reading supplies the judgment about what to do with it.
+
+## Give research its own space
+
+The Warehouse 4 story includes this sentence:
+
+Someone had tried the eastern gate of Warehouse 4.
+
+Open **Research**, then **Warehouse 4 case notes**. The dossier brings together a claim about attempted warehouse entry, a retained customs-log passage and visual references. The incident, people and log are invented. The credited historical images provide visual context and do not verify the fictional incident.
+
+Use **Dossier alongside** to consult a saved dossier while reading the manuscript. On desktop, the project navigation folds down to make room; you can reopen it, and closing the dossier restores the previous choice. Drag the divider to adjust the two reading areas. You can also focus the divider with Tab and use Left/Right; Home/End reach its limits. Narrow screens stack the documents.
+
+Paragraph Values and the dossier replace one another as the active side tool. Each has a direct closing route. Display and companion changes try to retain the visible paragraph's position, so consulting context need not mean finding the sentence again.
+
+## Make the return route explicit
+
+In Research's **Review** view, find the saved eastern-gate quotation. **Open claim** opens the authored claim; **Go to manuscript passage** returns to the exact matching text. The manuscript quotation, authored claim and retained source passage remain separate records.
+
+In a configured local project, you can select text within one manuscript paragraph and choose **Link selection to claim**. Review the quotation, choose an existing claim, explicitly permit local retention and save the association. Selecting text or previewing that form writes nothing. The saved connection records what you associated; it does not establish factual support or turn the manuscript into source evidence.
+
+An exact return requires the current paragraph, line range and quotation to match its saved anchor. Changed or ambiguous anchors remain review tasks. Lixity does not silently infer a new connection. The public demo is read-only; saving associations requires a compatible local server and an explicitly configured research project. The research API remains experimental.
+
+## Know which document you are reading
+
+There is an important coverage limit. The browser reader currently uses the analysis paragraph projection: chapter titles, prose and list items. Subheadings, block quotations, code, footnote definitions and dividers are omitted; pipe tables remain literal paragraph text. Configured appendix exclusions still apply. It is not a manuscript editor or a complete Markdown reading copy. Structured [book PDFs](https://mfahsold.github.io/lixity/guides/research-pdf.html#manuscript-export) use a separate document projection.
+
+Built-in manuscript analysis runs locally without uploading the manuscript. Optional external workers have separate data boundaries, and retaining research sources requires permission. Measurements remain heuristic aids to human review.
+
+Try one small loop in the demo: read the opening, inspect one paragraph, then follow the saved warehouse quotation into research and back. The [first-look guide](https://mfahsold.github.io/lixity/guides/first-look.html) walks through the same project. When you return from a research note, which context do you need to resume reading the sentence?
+
+[Lixity home](../) · [All articles](index.html) · [Report a reproducible issue](https://github.com/mfahsold/lixity/issues) · [Legal notice](../#impressum)

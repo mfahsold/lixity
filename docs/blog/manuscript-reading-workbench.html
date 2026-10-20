@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Give the manuscript room to read — Lixity blog</title>
+<meta name="description" content="Read a manuscript, inspect one passage and keep research beside the text: a concrete tour of Lixity’s current development workbench and its coverage limits."/>
+<link rel="canonical" href="https://mfahsold.github.io/lixity/blog/manuscript-reading-workbench.html"/>
+<link rel="icon" href="../assets/mark.svg" type="image/svg+xml"/>
+<link rel="stylesheet" href="../assets/site.css"/>
+<script src="../assets/site.js" defer></script>
+<meta property="og:type" content="article"/>
+<meta property="og:title" content="Give the manuscript room to read"/>
+<meta property="og:description" content="Read a manuscript, inspect one passage and keep research beside the text: a concrete tour of Lixity’s current development workbench and its coverage limits."/>
+<meta property="og:url" content="https://mfahsold.github.io/lixity/blog/manuscript-reading-workbench.html"/>
+<meta property="og:site_name" content="Lixity"/>
+<meta property="article:author" content="https://github.com/mfahsold"/>
+<meta property="article:published_time" content="2026-10-20"/>
+<meta property="article:modified_time" content="2026-10-20"/>
+<meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png"/>
+<meta property="og:image:width" content="2960"/>
+<meta property="og:image:height" content="1890"/>
+<meta property="og:image:alt" content="Lixity continuous manuscript reader with chapter navigation and contextual tools"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Give the manuscript room to read"/>
+<meta name="twitter:description" content="Read a manuscript, inspect one passage and keep research beside the text: a concrete tour of Lixity’s current development workbench and its coverage limits."/>
+<meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png"/>
+<meta name="twitter:image:alt" content="Lixity continuous manuscript reader with chapter navigation and contextual tools"/>
+<link rel="alternate" type="text/markdown" href="manuscript-reading-workbench.html.md" title="Markdown version of this page"/>
+<link rel="alternate" type="text/plain" href="../llms.txt" title="Automation summary"/>
+<link rel="help" href="../AGENTS.md" title="CLI, Python and HTTP interface contracts"/>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": [
+    "BlogPosting",
+    "TechArticle"
+  ],
+  "headline": "Give the manuscript room to read",
+  "description": "Read a manuscript, inspect one passage and keep research beside the text: a concrete tour of Lixity’s current development workbench and its coverage limits.",
+  "url": "https://mfahsold.github.io/lixity/blog/manuscript-reading-workbench.html",
+  "mainEntityOfPage": "https://mfahsold.github.io/lixity/blog/manuscript-reading-workbench.html",
+  "inLanguage": "en",
+  "datePublished": "2026-10-20",
+  "dateModified": "2026-10-20",
+  "author": {
+    "@type": "Person",
+    "name": "Matthias Fahsold",
+    "url": "https://github.com/mfahsold"
+  },
+  "isPartOf": {
+    "@type": "Blog",
+    "name": "Lixity blog",
+    "url": "https://mfahsold.github.io/lixity/blog/index.html"
+  },
+  "image": {
+    "@type": "ImageObject",
+    "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png",
+    "width": 2960,
+    "height": 1890,
+    "caption": "Lixity continuous manuscript reader with chapter navigation and contextual tools"
+  }
+}
+</script>
+</head>
+<body id="top" tabindex="-1" class="site-page">
+<a class="skip-link" href="#content">Skip to article</a>
+<nav class="site-return" aria-label="Lixity navigation"><a href="../">Home</a><a href="../#guides">Guides</a><a href="index.html" aria-current="location">Articles</a><a href="../demo/report.html">Demo</a></nav>
+<main class="guide" id="content">
+<nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="index.html">Articles</a></li><li><span aria-current="page">Manuscript workbench</span></li></ol></nav>
+<h1>Give the manuscript room to read</h1>
+<p class="updated">By <a href="https://github.com/mfahsold">Matthias Fahsold</a> · Published <time datetime="2026-10-20">20 October 2026</time> · 5 minutes</p>
+
+<p>A manuscript analysis tool can show you so much about a paragraph that the
+paragraph becomes awkward to read. Sentence patterns, source lines, markers and
+research links all have a purpose. They also compete with the next sentence.</p>
+<p>The latest Lixity development work gives the manuscript more room. The
+interactive workspace initially opens in <strong>Read</strong>, with chapters presented as
+continuous prose. <strong>Inspect</strong> keeps the chapter comparisons and paragraph tools
+available when you have a question to investigate. These are current-main changes;
+the latest packaged release remains <strong>v0.7.1</strong>.</p>
+<figure class="walkthrough">
+<a href="../screenshots/dashboard-dark.png"><img src="../screenshots/dashboard-dark.png" width="2960" height="1890" alt="Lixity's synthetic Warehouse 4 manuscript in Read, with continuous prose, chapter navigation, text-size controls and reading settings" loading="eager" decoding="async"/></a>
+<figcaption>The current development reader uses one continuous prose surface. This synthetic capture shows the reader controls; paragraph tools and the companion open separately.</figcaption>
+</figure>
+
+<h2 id="start-with-a-scene">Start with a scene</h2>
+<p>Open the <a href="https://mfahsold.github.io/lixity/demo/report.html">Warehouse 4 demo</a>.
+Its six short English chapters follow Mara through an invented harbour incident.
+Read the opening setting, then use the chapter control to move to chapter 2's
+action. You can compare their pace before opening a single measurement.</p>
+<p>The reader uses ordinary scrolling and text selection. <strong>A−</strong> and <strong>A+</strong> change
+text size; <strong>Reading settings</strong> adjusts width and line spacing. Those preferences
+stay in your browser and leave the manuscript unchanged. <strong>Focus reading</strong> hides
+the surrounding navigation and side tools temporarily. Its return control, or
+Escape, brings the workspace back.</p>
+<p>The aim is a usable reading surface with tools nearby. Manuscript text reflows
+when its size changes. Images, maps and the style-space view retain their own
+zoom or movement controls.</p>
+<h2 id="ask-one-question-of-a-paragraph">Ask one question of a paragraph</h2>
+<p>Suppose an action passage feels slower than you expected. Open its <strong>…</strong> menu
+and choose <strong>Values</strong>. A closable inspector shows that paragraph's source lines
+and available tense and style measurements. Read the surrounding sentences while
+deciding whether those measurements explain anything useful.</p>
+<p>The same contextual menu opens with a right-click. With the paragraph or its
+button focused, <strong>Shift+F10</strong> opens it from the keyboard; arrow keys move between
+actions and Escape closes it. Shift+right-click still reaches the browser's
+native menu. Selecting text within one paragraph offers a small toolbar when an
+applicable action is available.</p>
+<p>Choose <strong>Inspect</strong> when the question calls for chapter comparisons, sentence
+rhythm or expandable paragraph blocks. Both presentations use the same paragraph
+text and source anchors. A different sentence length can belong to a scene's
+purpose or a character's voice. The number locates a difference; reading supplies
+the judgment about what to do with it.</p>
+<h2 id="give-research-its-own-space">Give research its own space</h2>
+<p>The Warehouse 4 story includes this sentence:</p>
+<blockquote>
+<p>Someone had tried the eastern gate of Warehouse 4.</p>
+</blockquote>
+<p>Open <strong>Research</strong>, then <strong>Warehouse 4 case notes</strong>. The dossier brings together a
+claim about attempted warehouse entry, a retained customs-log passage and visual
+references. The incident, people and log are invented. The credited historical
+images provide visual context and do not verify the fictional incident.</p>
+<p>Use <strong>Dossier alongside</strong> to consult a saved dossier while reading the manuscript.
+On desktop, the project navigation folds down to make room; you can reopen it,
+and closing the dossier restores the previous choice. Drag the divider to adjust
+the two reading areas. You can also focus the divider with Tab and use Left/Right;
+Home/End reach its limits. Narrow screens stack the documents.</p>
+<p>Paragraph Values and the dossier replace one another as the active side tool.
+Each has a direct closing route. Display and companion changes try to retain the
+visible paragraph's position, so consulting context need not mean finding the
+sentence again.</p>
+<h2 id="make-the-return-route-explicit">Make the return route explicit</h2>
+<p>In Research's <strong>Review</strong> view, find the saved eastern-gate quotation. <strong>Open
+claim</strong> opens the authored claim; <strong>Go to manuscript passage</strong> returns to the
+exact matching text. The manuscript quotation, authored claim and retained
+source passage remain separate records.</p>
+<p>In a configured local project, you can select text within one manuscript paragraph
+and choose <strong>Link selection to claim</strong>. Review the quotation, choose an existing
+claim, explicitly permit local retention and save the association. Selecting text
+or previewing that form writes nothing. The saved connection records what you
+associated; it does not establish factual support or turn the manuscript into
+source evidence.</p>
+<p>An exact return requires the current paragraph, line range and quotation to
+match its saved anchor. Changed or ambiguous anchors remain review tasks.
+Lixity does not silently infer a new connection. The public demo is read-only;
+saving associations requires a compatible local server and an explicitly
+configured research project. The research API remains experimental.</p>
+<h2 id="know-which-document-you-are-reading">Know which document you are reading</h2>
+<p>There is an important coverage limit. The browser reader currently uses the
+analysis paragraph projection: chapter titles, prose and list items. Subheadings,
+block quotations, code, footnote definitions and dividers are omitted; pipe
+tables remain literal paragraph text. Configured appendix exclusions still apply.
+It is not a manuscript editor or a complete Markdown reading copy. Structured
+<a href="https://mfahsold.github.io/lixity/guides/research-pdf.html#manuscript-export">book PDFs</a>
+use a separate document projection.</p>
+<p>Built-in manuscript analysis runs locally without uploading the manuscript.
+Optional external workers have separate data boundaries, and retaining research
+sources requires permission. Measurements remain heuristic aids to human review.</p>
+<p>Try one small loop in the demo: read the opening, inspect one paragraph, then
+follow the saved warehouse quotation into research and back. The
+<a href="https://mfahsold.github.io/lixity/guides/first-look.html">first-look guide</a> walks
+through the same project. When you return from a research note, which context do
+you need to resume reading the sentence?</p>
+
+<footer><a href="../">Lixity home</a> · <a href="index.html">All articles</a> · <a href="https://github.com/mfahsold/lixity/issues">Report a reproducible issue</a> · <a href="../#impressum">Legal notice</a></footer>
+</main>
+<a class="site-back-top" href="#top">Back to top ↑</a>
+</body>
+</html>
