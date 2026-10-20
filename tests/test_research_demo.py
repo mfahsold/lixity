@@ -25,6 +25,26 @@ def research_fixture(tmp_path):
     return make_screenshots.build_research_fixture(tmp_path)
 
 
+@pytest.fixture
+def public_demo(tmp_path, research_fixture, monkeypatch):
+    """Exercise demo publication without requiring native PDF fonts.
+
+    PDF composition is covered by the font-guarded pipeline/export suites. These
+    synthetic attachments expose the exact inputs passed through the generator.
+    """
+    from lixity import pdf_export, pdf_layouts
+
+    monkeypatch.setattr(pdf_layouts, "_installed_fonts", dict)
+    for role in ("TEXT", "HEADING", "MONO", "SANS", "SANS_BOLD", "ITALIC", "BOLD_ITALIC"):
+        monkeypatch.delenv("LIXITY_PDF_FONT_" + role, raising=False)
+
+    def synthetic_pdf(text, **options):
+        return b"%PDF-synthetic-demo\n" + json.dumps({"text": text, **options}).encode("utf-8")
+
+    monkeypatch.setattr(pdf_export, "compose_pdf", synthetic_pdf)
+    return make_screenshots.build_research_demo(tmp_path, research_fixture)
+
+
 def test_visual_fixture_refuses_missing_or_changed_reviewed_assets(tmp_path):
     assets = tmp_path / "assets"
     shutil.copytree(ROOT / "docs/assets/research", assets)
@@ -93,8 +113,8 @@ def test_research_fixture_connects_retained_evidence_to_an_authored_claim_and_ma
     assert api.audit(project)["ok"]
 
 
-def test_public_demo_externalizes_image_bytes_and_preserves_source_records(tmp_path, research_fixture):
-    target = make_screenshots.build_research_demo(tmp_path, research_fixture)
+def test_public_demo_externalizes_image_bytes_and_preserves_source_records(tmp_path, public_demo):
+    target = public_demo
     assert target == tmp_path / "docs/demo/report.html"
     document = target.read_text()
     fixture_path = target.with_name("research-data.json")
@@ -125,7 +145,13 @@ def test_public_demo_externalizes_image_bytes_and_preserves_source_records(tmp_p
     for layout in ("editor", "book", "sheet", "report"):
         filename = f"warehouse-4-{layout}.pdf"
         assert f'href="{filename}"' in document
-        assert target.with_name(filename).read_bytes().startswith(b"%PDF-")
+        attachment = target.with_name(filename).read_bytes()
+        assert attachment.startswith(b"%PDF-synthetic-demo\n")
+        assert json.loads(attachment.split(b"\n", 1)[1]) == {
+            "text": source.decode("utf-8"), "manuscript": "harbour-manuscript.md",
+            "layout": layout, "language": "en", "title": "The Crate at Warehouse 4",
+            "author": "Example Author", "project_config": {},
+        }
     legacy = target.with_name("research.html").read_text()
     assert 'http-equiv="refresh" content="0; url=report.html#research-manager"' in legacy
     assert 'href="report.html#research-manager"' in legacy
@@ -159,8 +185,8 @@ def test_demo_read_fixtures_match_native_companion_and_matrix(tmp_path, research
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is needed to exercise the public read adapter")
-def test_public_read_adapter_rejects_writes_external_urls_and_unknown_local_reads(tmp_path, research_fixture):
-    target = make_screenshots.build_research_demo(tmp_path, research_fixture)
+def test_public_read_adapter_rejects_writes_external_urls_and_unknown_local_reads(public_demo):
+    target = public_demo
     adapter = re.search(r'<script id="research-demo-adapter">(.*?)</script>', target.read_text(), re.DOTALL)
     assert adapter is not None
     payload = {"adapter": adapter[1], "fixture": json.loads(target.with_name("research-data.json").read_text())}
