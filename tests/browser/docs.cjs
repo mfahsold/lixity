@@ -680,6 +680,13 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   await page.locator('#research-manuscript-review [data-manuscript-link-jump]').click();
   await expect(page.locator('#tab-view-analysis')).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#' + passageId)).toBeFocused();
+  await expect.poll(() => page.locator('#' + passageId).evaluate(panel => {
+    const toolbar = document.querySelector('#view-pane-analysis .toolbar');
+    const top = panel.getBoundingClientRect().top;
+    const boundary = getComputedStyle(toolbar).position === 'sticky'
+      ? toolbar.getBoundingClientRect().bottom : 0;
+    return top >= boundary && top < innerHeight;
+  })).toBe(true);
   await page.locator('#view-pane-analysis, .view-nav-tab').evaluateAll(async nodes => {
     await Promise.all(nodes.flatMap(node => node.getAnimations().map(animation => animation.finished.catch(() => {}))));
   });

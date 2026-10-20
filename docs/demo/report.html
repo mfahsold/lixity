@@ -3916,7 +3916,7 @@ a[data-demo-local] { opacity: .65; }
 })();</script>
 <script id="research-demo-controls">document.addEventListener("DOMContentLoaded", function () {
   "use strict";
-  var imageResources = {"/api/research/image?project_id=urn%3Auuid%3Ac40818f3-8c53-451a-a71e-0a452565dc59&source_id=urn%3Auuid%3A2c057704-f2ba-4f61-9276-9d82527efeb2&version_id=urn%3Auuid%3A33deb55d-ef90-47f5-bb67-7f1a19dfdf4a": "../assets/research/hamburg-free-port-1900.jpg", "/api/research/image?project_id=urn%3Auuid%3Ac40818f3-8c53-451a-a71e-0a452565dc59&source_id=urn%3Auuid%3A618652b9-52ea-4df0-8ebf-6ec85b63107a&version_id=urn%3Auuid%3A8303545b-3df7-4605-8336-663c990def08": "../assets/research/hamburg-harbour-1890-1900.jpg"};
+  var imageResources = {"/api/research/image?project_id=urn%3Auuid%3Ad0762020-0077-42c3-b42d-452e9bcc58af&source_id=urn%3Auuid%3A7078b9e2-20a5-4908-9add-5c2c10f6f9dd&version_id=urn%3Auuid%3A9062c294-98cc-4073-9593-3572a620bb01": "../assets/research/hamburg-free-port-1900.jpg", "/api/research/image?project_id=urn%3Auuid%3Ad0762020-0077-42c3-b42d-452e9bcc58af&source_id=urn%3Auuid%3Ae99e5b5e-d1e4-4977-8f6b-c43d53c5ceab&version_id=urn%3Auuid%3A38034876-28d1-41f0-b5f2-45705eeda20f": "../assets/research/hamburg-harbour-1890-1900.jpg"};
   var restoreImages = window.LixityDossierImages.restoreMarkdown;
   window.LixityDossierImages.restoreMarkdown = function (rendered, prepared) {
     var template = document.createElement("template");
@@ -11223,6 +11223,10 @@ window.LixityManuscriptLinks = {
   errorText: researchErrorMessage,
   text: function(panel) { return paragraphContent[panel.id] && paragraphContent[panel.id][0]; },
   navigate: function(panel) {
+    switchActiveView("analysis");
+    var toolbar = document.querySelector("#view-pane-analysis .toolbar");
+    panel.style.scrollMarginTop = toolbar && getComputedStyle(toolbar).position === "sticky"
+      ? (toolbar.getBoundingClientRect().height + 12) + "px" : "";
     var action = document.createElement("button");
     action.dataset.reviewPassage = "";
     action.dataset.line = panel.dataset.start;

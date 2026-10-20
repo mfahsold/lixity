@@ -10501,6 +10501,10 @@ window.LixityManuscriptLinks = {
   errorText: researchErrorMessage,
   text: function(panel) { return paragraphContent[panel.id] && paragraphContent[panel.id][0]; },
   navigate: function(panel) {
+    switchActiveView("analysis");
+    var toolbar = document.querySelector("#view-pane-analysis .toolbar");
+    panel.style.scrollMarginTop = toolbar && getComputedStyle(toolbar).position === "sticky"
+      ? (toolbar.getBoundingClientRect().height + 12) + "px" : "";
     var action = document.createElement("button");
     action.dataset.reviewPassage = "";
     action.dataset.line = panel.dataset.start;
