@@ -2,7 +2,7 @@
 
 > Generated file for AI agents and offline reading. Do not edit it by hand:
 > run `python scripts/build_llms_full.py` after changing a bundled document.
-> The individually published files remain authoritative. Product version 0.7.1.
+> The individually published files remain authoritative. Product version 0.7.2.
 
 Lixity is open source under AGPL-3.0-or-later; writing for any purpose is
 covered. A separate written commercial license exists only for closed-source
@@ -25,39 +25,28 @@ Source: https://github.com/mfahsold/lixity/blob/main/README.md
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
-**See where your manuscript changes. Read before you revise.**
+**Read before you revise.**
 
 Lixity is a local manuscript analysis tool for authors, editors and researchers.
-Read chapters as a continuous document, then inspect sentence rhythm, vocabulary,
-dialogue and tense where a passage makes you curious. Keep research beside the
-text and ask whether a change serves the scene before deciding what to revise.
+Read continuous chapters, inspect changes in sentence rhythm, vocabulary,
+dialogue and tense, and keep research beside the text. Measurements help you
+choose passages to review; they do not grade literary quality or rewrite prose.
+The browser app, CLI and Python API share one analysis pipeline.
 
-![Lixity continuous manuscript reader with chapter navigation and contextual tools](docs/screenshots/dashboard-dark.png)
+[Explore the demo](https://mfahsold.github.io/lixity/demo/report.html) ·
+[Website and guides](https://mfahsold.github.io/lixity/) ·
+[v0.7.2 release notes](https://mfahsold.github.io/lixity/releases/v0.7.2.md)
 
-[Explore the demo project](https://mfahsold.github.io/lixity/demo/report.html) ·
-[Three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html) ·
-[Install](#install-and-start) · [What you can do](#what-you-can-do) ·
-[v0.7.1 release notes](docs/releases/v0.7.1.md)
+[![Lixity manuscript reader with chapter navigation and contextual tools](https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png)](https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png)
 
-## Try it in 30 seconds
-
-Open [*The Crate at Warehouse 4*](https://mfahsold.github.io/lixity/demo/report.html):
-one read-only project with six invented English chapters. Read the opening setting
-and chapter 2's action, open **Values** for passage measurements or **Analysis
-overview** for chapter comparisons, then return to the passage. Switch to **Research**
-to follow the same story through a dossier, retained sources, a claim and its
-saved manuscript quote. Keep a dossier alongside the manuscript, download the
-claim-evidence matrix or choose one of four prepared PDF layouts. The three
-native workspace views stay visible; actions marked **Local app** are disabled
-previews with an [installation link](https://mfahsold.github.io/lixity/guides/installation.html).
-The demo cannot import, edit or save. No install, account or upload is needed.
-It shows **current main (unreleased)**. The packaged **v0.7.1** has earlier
-reading controls; [development installation](docs/INSTALLATION.md#development-builds-instead)
-explains how to follow main locally.
+The demo opens *The Crate at Warehouse 4*: six invented English chapters and a
+research archive with credited historical images. Explore the three native
+workspace views without an account or upload. It is read-only: local actions
+cannot import, edit or save. Follow the
+[three-minute walkthrough](https://mfahsold.github.io/lixity/guides/first-look.html)
+or browse [more views and image credits](https://mfahsold.github.io/lixity/screenshots/README.md).
 
 <a id="start-here"></a>
-Built-in analysis runs on your computer. Optional external OCR workers have
-separate [data boundaries](docs/research/OCR_INTEGRATION.md).
 
 ## Install and start
 
@@ -68,179 +57,81 @@ uv tool install --python 3.12 --managed-python lixity
 uv tool update-shell
 ```
 
-Open a new terminal, verify `lixity --version`, then run
-`lixity service start --open`. Choose **Open Project** or **Analyze a manuscript**.
-The [first-project guide](docs/ONBOARDING.md) explains the workflow;
-[installation and updates](docs/INSTALLATION.md) covers launchers, pinned wheels,
-service management and removal. After upgrading, use `lixity service restart --open`
-to reuse recorded launch settings, then reload the browser. Installing a package
+Open a new terminal:
+
+```bash
+lixity --version
+lixity service start --open
+```
+
+Choose **Open Project** or **Analyze a manuscript**, then confirm the language.
+English is the default; automatic detection is explicit. Built-in analysis runs
+on your computer. Optional integrations have separate
+[data boundaries](https://mfahsold.github.io/lixity/research/USAGE.md).
+
+[Your first project](https://mfahsold.github.io/lixity/ONBOARDING.md) explains the
+workflow. [Installation and updates](https://mfahsold.github.io/lixity/INSTALLATION.md)
+covers launchers, pinned wheels, service management and removal. After upgrading,
+run `lixity service restart --open` and reload the browser; installing a package
 does not update an already running service.
 
 ## What you can do
 
-| Workflow | Result and next step |
-| :--- | :--- |
-| Read a manuscript | Continuous chapters, adjustable text size, width and spacing, plus a reversible focus view. [Reader controls](docs/USAGE.md#reading-paragraphs). |
-| Compare chapters | Sentence rhythm, vocabulary, dialogue and tense against the manuscript's own reference. [Read the signals](https://mfahsold.github.io/lixity/guides/interpretation.html). |
-| Review passages | Open a paragraph's context tools for measurements, work markers and exact quote associations. [Review workflow](docs/USAGE.md#start-a-review). |
-| Compare intentional registers | Group scenes by purpose and set optional author targets. [Scene registers](docs/USAGE.md#scene-registers-and-project-targets). |
-| Export a manuscript | A4 editorial copy with line numbers and comment margins, A5 reading copy, submission sheet or analysis report. [PDF layouts and limits](docs/USAGE.md#lixity-pdf). |
-| Connect research | Retained sources, authored claims and decisions, dossiers, places, journeys and exact manuscript quotations. [Research guide](https://mfahsold.github.io/lixity/guides/research-pdf.html). |
-| Work in a terminal or agent | Readable reports, versioned JSON and installed capability discovery. [CLI workflows](docs/USAGE.md) · [Automation contracts](docs/AGENTS.md). |
-
-[More screenshots and short walkthroughs](docs/screenshots/README.md) show desktop
-and mobile views, paragraph notes, settings and the research timeline.
-
-### Research with Zotero
-
-Use Zotero for collecting sources, reading and general research notes. Lixity's
-experimental workspace retains selected evidence and connects it to authored
-claims, decisions and manuscript quotes. A dossier gathers a topic or scene;
-images and structured geography can accompany it. Changing a Zotero attachment
-does not change an already retained quotation. An integrity check is not a fact check.
-
-<a href="docs/screenshots/dashboard-dossier-image.png"><img src="docs/screenshots/dashboard-dossier-image.png" alt="Historical Hamburg map in a fictional scene dossier, with source provenance" width="900" /></a>
-
-[Open Research in the demo project](https://mfahsold.github.io/lixity/demo/report.html#research-manager) ·
-[Workflows and compatibility](docs/research/USAGE.md) ·
-[Places and journeys](docs/screenshots/dashboard-dossier-geography.png)
-
-**Since v0.7.1:** edit an exported dossier in Markdown, review its
-changes against the archive and apply the prepared revision explicitly. Images
-and diagrams share a zoom viewer. [Literal character aliases and declared viewpoint chapters](docs/USAGE.md#character-profiles)
-keep name counts separate from author-declared perspective.
-
-**On current main:** the interactive app uses a desktop-style project sidebar
-on wide screens, with **Manuscript**, **Research** and **Project** as its stable
-destinations. On smaller screens the same navigation becomes horizontal.
-The manuscript stays continuous. The **Analysis** switch shows On/Off in words
-and reveals diagnostics in place without opening a side tool, collapsing
-navigation or narrowing the prose. **Values** explicitly opens passage
-measurements and enables analysis; **Dossier alongside** opens its separate tool.
-**Analysis overview** gives chapter comparisons their own space; **Back to
-passage** restores the prior analysis choice and document context. Reading settings
-group text size, width and spacing without changing manuscript bytes. Use an analyzed paragraph's
-**…**, right-click or `Shift+F10`
-for its tools; a text selection offers relevant marker and claim actions.
-**Values** opens a closable inspector, and **Focus reading** temporarily clears
-the surrounding workspace. Reading uses ordinary scrolling and text selection;
-maps, images and style-space keep their own pan and zoom controls.
-Source-backed reading includes supported headings, quotations, literal code,
-dividers and notes, plus preface and appendix content. Unprofiled material is
-readable without invented measurements or claim-save actions. Existing exact
-paragraph text and quotation anchors stay unchanged; this is a bounded document
-presentation, not a complete Markdown editor. [Coverage and limits](docs/USAGE.md#reading-paragraphs).
-Opening a companion dossier collapses the desktop navigation to a narrow rail.
-Its toggle keeps navigation reachable; closing the companion restores the prior
-choice. Drag its divider or use the arrow keys to adjust the desktop split;
-narrow screens stack the documents. Opening a tool from a passage reveals its
-heading on mobile; closing it or pressing Escape returns to that passage and its
-control. Optional brief feedback respects reduced motion. Exact saved manuscript
-associations offer a direct return to the passage. Saved associations open their pinned claim revision;
-claim and dossier views expose explicit routes to their saved manuscript quotes.
-These connections record an author's association, not factual verification.
-Local tabs, form groups and dialogs use shared components throughout analysis
-and research; compact catalogue rows keep sources and dossiers easy to scan.
-Creation and association forms start collapsed. Open their labelled heading, then
-use it again or press Escape inside the form to collapse it without clearing the
-draft. Long creation forms also have a Collapse button. Dossier previews show
-readable text; full formatting and diagrams remain in the dossier reader.
-Guided map and style-space views explain their measurements
-where you use them, with the same context available in the CLI. Maps open with
-OpenStreetMap; local vectors and the numbered sketch remain available offline.
-Select a map number to inspect a place or route. Style-space chapter details stay
-beside the plot; wide Mermaid diagrams scroll at a readable scale and can be
-enlarged. If the source becomes unavailable or a rebuild fails, the local app
-labels its last successful analysis and offers **Retry refresh**. The public demo
-follows `main`; the PyPI release may not include these changes yet.
-
-## How to read the results
-
-Measurements describe patterns, not literary quality. A deliberate change of
-voice may differ from the book's baseline. Read the passage before revising;
-short samples and missing measurements can leave comparisons unavailable.
-[Interpretation](https://mfahsold.github.io/lixity/guides/interpretation.html),
-[methods](docs/METHODS.md) and [validation limits](docs/STABILITY.md) explain the
-models and what their results can support.
-
-Read the workflows: [Intentional registers](https://mfahsold.github.io/lixity/blog/intentional-registers.html) ·
-[Local word echoes](https://mfahsold.github.io/lixity/blog/local-word-echoes.html).
-
-## Supported languages
+- **Read and review.** Adjust the reading view, turn Analysis on or off, and open
+  passage Values or work markers when needed. Compare chapters against your
+  manuscript’s own patterns, then return to the text.
+- **Connect research.** Keep a dossier alongside a passage. The experimental
+  research workspace connects retained sources, authored claims and decisions
+  to exact manuscript quotations. Zotero remains your collection tool;
+  retaining evidence is an explicit action. An integrity check is not a fact check.
+- **Export and automate.** Create editorial, reading, submission or analysis
+  PDFs; use terminal reports and versioned JSON in your own workflows.
+  `lixity --help` and `lixity about --json` describe the installed commands
+  and capabilities.
 
 English and German have the broadest analysis resources. French, Spanish,
-Italian, Portuguese and Dutch also have localized interfaces and narrower
-heuristic coverage. Choose the manuscript language explicitly; documentation
-and terminal presentation are separate. [Language settings and limits](docs/LOCALIZATION.md).
+Italian, Portuguese and Dutch offer localized interfaces with narrower heuristic
+coverage. [Language support](https://mfahsold.github.io/lixity/LOCALIZATION.md) and
+[interpretation](https://mfahsold.github.io/lixity/guides/interpretation.html)
+explain coverage, short-sample limits and unavailable measurements.
 
 ## Documentation map
 
-- [Practical guides](https://mfahsold.github.io/lixity/#guides) — installation,
-  interpretation, research and comparisons with other tools.
-- [First project](docs/ONBOARDING.md) · [Installation and updates](docs/INSTALLATION.md).
-- [CLI workflows](docs/USAGE.md) — use `lixity --help` and
-  `lixity COMMAND --help` for the installed commands and options.
-- [Automation contracts](docs/AGENTS.md) · [Research workflows](docs/research/USAGE.md).
-- [Methods](docs/METHODS.md) · [Stability](docs/STABILITY.md) ·
-  [Architecture](docs/ARCHITECTURE.md) · [Localization](docs/LOCALIZATION.md).
-- [Agent index](docs/llms.txt) · [Full documentation bundle](docs/llms-full.txt).
+| Looking for | Start here |
+| :--- | :--- |
+| Everyday workflows | [Usage and CLI reference](https://mfahsold.github.io/lixity/USAGE.md) · [Practical guides](https://mfahsold.github.io/lixity/#guides) |
+| Research and Zotero | [Research workflows and compatibility](https://mfahsold.github.io/lixity/research/USAGE.md) |
+| Measurements and limits | [Methods](https://mfahsold.github.io/lixity/METHODS.md) · [Validation](https://mfahsold.github.io/lixity/STABILITY.md) |
+| Integrations | [Python, CLI and HTTP contracts](https://mfahsold.github.io/lixity/AGENTS.md) · [Architecture](https://mfahsold.github.io/lixity/ARCHITECTURE.md) · [Agent index](https://mfahsold.github.io/lixity/llms.txt) |
+| Contributing | [Contributor setup and checks](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md) · [Security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md) |
 
-## Current release
+In the repository, [`src/lixity/`](https://github.com/mfahsold/lixity/tree/main/src/lixity)
+contains the shared engine, CLI and UI;
+[`tests/`](https://github.com/mfahsold/lixity/tree/main/tests) verifies behavior;
+[`docs/`](https://github.com/mfahsold/lixity/tree/main/docs) holds maintained product
+documentation; and [`samples/`](https://github.com/mfahsold/lixity/tree/main/samples)
+contains synthetic or public-domain examples. Book-specific adapters belong in
+their own projects.
 
-The current release is **v0.7.1**, continuing the pre-1.0 development line;
-historical v3.0.1 and earlier tags remain available. Product and schema versions
-are independent. This release reads research archives through v8; geographic
-saves opt into v8, which older readers cannot open. See [Release notes](docs/releases/v0.7.1.md)
-for compatibility and upgrading from historical numbering, and the
-[changelog](CHANGELOG.md) for subsequent work on `main`.
+## Release, citation and license
 
-## Python API and automation
+The current release is **v0.7.2**, in the pre-1.0 development line. Historical
+v3.0.1 and earlier tags remain available. Product and schema versions are
+independent; [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.2.md)
+cover archive compatibility and upgrades. See the
+[changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md) for subsequent work.
 
-```python
-from lixity import api
+Cite [Lixity on Zenodo](https://doi.org/10.5281/zenodo.23390297), with metadata in
+[`CITATION.cff`](https://github.com/mfahsold/lixity/blob/main/CITATION.cff).
+The [software paper draft](https://github.com/mfahsold/lixity/blob/main/paper/paper.md)
+describes its research context.
 
-html = api.dashboard(text, language="de", project_config={})
-```
-
-CLI, Python and dashboard analysis share one pipeline. Pass explicit project
-settings for multi-project integrations and inspect `lixity about --json` for
-installed capabilities. [Interface contracts](docs/AGENTS.md) define result schemas;
-[architecture](docs/ARCHITECTURE.md#configuration-and-multiple-projects) explains
-reusing one analysis result for several outputs.
-
-## Research
-
-Matthias Fahsold developed Lixity as an architect and developer at ROST Services
-GmbH and used it while writing his own debut novel. The methods and the tool's
-placement among stylometry and corpus tools are
-described in the software paper draft under [`paper/`](paper/paper.md),
-prepared for the [Journal of Open Source Software](https://joss.theoj.org/).
-Released versions are archived on Zenodo: cite the concept DOI
-[`10.5281/zenodo.23390297`](https://doi.org/10.5281/zenodo.23390297) (see [`CITATION.cff`](CITATION.cff));
-every release also receives its own version DOI.
-
-## License
-
-Lixity is **open source under the AGPL-3.0-or-later**. Use it freely for
-private and commercial writing, research and teaching — including
-self-publishing your book; no extra permission is needed. If you distribute
-Lixity or a modified version, the AGPL requires that recipients receive the
-corresponding source under the same license.
-
-A separate written **commercial license** is available for integrations that
-cannot meet the AGPL, for example embedding Lixity in a closed-source product
-or running a modified version as a network service without releasing its
-source.
-
-[Licensing guide](docs/LICENSING.md) · [Full AGPL text](LICENSE) ·
-[Former LNCL-1.0 text](LICENSE-LNCL-1.0) ·
-[Commercial enquiries](mailto:mfahsold@googlemail.com?subject=Lixity%20Commercial%20Inquiry)
-
-Maintainer: Matthias Fahsold, Hamburg, Germany. Project operator:
-ROST Services GmbH, Rümpel, Germany. [Legal notice](https://mfahsold.github.io/lixity/#impressum).
-
-[Contributing](CONTRIBUTING.md) · [Report a security concern](SECURITY.md) ·
-[Sample-text provenance](samples/README.md)
+**AGPL-3.0-or-later.** Use Lixity for private or commercial writing, research and
+teaching, including self-publishing your book. A separate written commercial
+license is available for integrations that cannot meet the AGPL.
+[Licensing guide](https://mfahsold.github.io/lixity/LICENSING.md) ·
+[Full terms](https://github.com/mfahsold/lixity/blob/main/LICENSE) ·
+[Legal notice and contact](https://mfahsold.github.io/lixity/#impressum).
 
 ===============================================================================
 ## docs/llms.txt
@@ -254,7 +145,7 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/llms.txt
 > instructions to rewrite. Analysis is deterministic for fixed text and settings;
 > research records also contain generated IDs and timestamps.
 
-Current release: 0.7.1; release tag: v0.7.1.
+Current release: 0.7.2; release tag: v0.7.2.
 
 This discovery index links maintained references. Published guides may describe
 newer behavior than an installed tool. The [complete documentation bundle](https://mfahsold.github.io/lixity/llms-full.txt)
@@ -291,41 +182,15 @@ English is the default analysis language; detection requires `--language auto`.
 Language-neutral JSON identifiers and units differ from translated display keys.
 Use active result metadata when interpreting thresholds and unavailable values.
 
-Current-main interactive UI: Manuscript, Research and Project share a desktop
-sidebar and compact narrow-screen navigation. Continuous manuscript prose opens
-with Analysis Off. Its native toggle has an explicit On/Off state and reveals
-diagnostics without opening a dock or collapsing navigation. Paragraph Values
-explicitly opens the analysis inspector and enables diagnostics. Values and
-Dossier alongside are alternative dock tools; hiding diagnostics leaves an active
-dossier. Analysis overview provides dense comparisons; Back to passage restores
-the prior analysis choice, eligible tool and passage.
-One paragraph tree keeps source text, hashes, search and exact anchors. Browser-local
-reading preferences adjust size, width and spacing; focus is reversible. Paragraph
-ellipsis, right-click and keyboard context menus share values, marker and claim
-association actions. Saving and retention remain explicit. Plain exported reports
-retain their inspection layout; these are current-main enhancements, not a release.
-Source-span reading blocks also retain preface, subheadings, quotations, code,
-notes, dividers and excluded appendix material. Only profiled paragraphs have
-measurements and claim anchors. Tables and inline link/code syntax remain literal
-where present in the established exact paragraph projection. No manuscript URLs
-are fetched. Structured manuscript PDFs keep their existing behavior.
-The companion dossier reader supplies context beside a passage.
-Companion reading temporarily collapses desktop navigation; a shared toggle
-keeps it reachable and closing restores the prior manual choice. Its desktop
-divider supports pointer and keyboard width adjustment; narrow screens stack
-the readers. The paragraph inspector and companion replace one another. Saved exact
-manuscript associations provide a context-checked return to the passage.
-On narrow screens, an explicit passage tool request reveals the stacked tool
-heading; close or Escape returns to its requesting passage and control. Optional
-brief feedback respects live reduced-motion changes.
-Current-main research forms start collapsed; headings and Collapse controls
-retain in-memory drafts. Escape closes the innermost disclosure. Contextual
-actions reveal the relevant form. Catalogue previews omit Markdown formatting
-and fenced code without altering saved text or API contracts.
-These views share the existing analysis and explicit-project research APIs.
-Local tabs, form groups, feedback and native dialog frames share the component
-layer. Research catalogues use separated rows; dialog forms support short
-viewports and keyboard navigation without changing data or API contracts.
+The interactive workspace opens in Manuscript with Analysis Off. Values opens
+Passage values independently of that display choice. Use Analysis overview for
+chapter comparisons and Dossier alongside
+for retained research. Back to passage restores the requesting text. Reading
+preferences are browser-local; saves and retention are explicit. See
+[reader controls and coverage](https://mfahsold.github.io/lixity/USAGE.md#reading-paragraphs)
+and [research workflows](https://mfahsold.github.io/lixity/research/USAGE.md).
+Only profiled paragraphs have measurements and claim anchors. Plain reports
+keep their inspection layout; the bounded reader is not a Markdown editor.
 
 ## Choose a reference
 
@@ -339,8 +204,8 @@ viewports and keyboard navigation without changing data or API contracts.
 - [Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) and [scientific limits](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md): formulas, estimator conventions and heuristic caveats.
 - [Architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md) and [localization](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md): integration boundaries and language coverage.
 - [Articles](https://mfahsold.github.io/lixity/blog/): interpretation examples, separate from API contracts.
-- [Manuscript reading workbench](https://mfahsold.github.io/lixity/blog/manuscript-reading-workbench.html): a current-main Analysis On/Off, overview and manuscript–research workflow with explicit coverage limits.
-- [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.1.md) and [release history](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md).
+- [Manuscript reading workbench](https://mfahsold.github.io/lixity/blog/manuscript-reading-workbench.html): the Analysis On/Off, overview and manuscript–research workflow with explicit coverage limits.
+- [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.2.md) and [release history](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md).
 
 HTML guides and articles have Markdown alternatives: append `.md` to their HTML
 URL. The [research entrypoint](https://mfahsold.github.io/lixity/research/README.md)
@@ -357,7 +222,7 @@ literal text uses `--body`. See [research revisions](https://mfahsold.github.io/
 and [character profiles](https://mfahsold.github.io/lixity/USAGE.md#character-profiles)
 for the supported v0.7.1 workflows and compatibility limits.
 
-**Current main, after v0.7.1:** UI and CLI explain map/style-space measurements
+**Since v0.7.2:** UI and CLI explain map/style-space measurements
 in place; additive `geography_summary` and `dimension_diagnostics` expose their
 support without changing stored records or existing scores.
 
@@ -373,7 +238,7 @@ baseline. No automatic web import, factual verification or cloud sync is provide
 Zotero handles source-library editing and ordinary reading; Lixity retains
 selected evidence versions and their claim/manuscript relations. The bridge is
 read-only. Local imports and captured evidence remain usable without Zotero.
-Map vectors and media viewers work offline. On current main, visible maps use
+Map vectors and media viewers work offline. Visible maps use
 OpenStreetMap by default, with a switch to local vectors or the numbered sketch.
 Tile requests reveal the viewed area and client IP to the provider and stop
 outside the visible map/project context.
@@ -424,11 +289,9 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md
 Explore [*The Crate at Warehouse 4*](https://mfahsold.github.io/lixity/demo/report.html),
 the shared demo project for manuscript analysis, research and PDF layouts.
 The [illustrated first look](guides/first-look.html) follows that same project;
-then use your own manuscript below. The read-only demo shows **current main
-(unreleased)**; the published **v0.7.1** has earlier reading controls. Use the
-[release installation](INSTALLATION.md#cli-current-release) for v0.7.1 or the
-[development installation](INSTALLATION.md#development-builds-instead) to follow main.
-[Installation](INSTALLATION.md) owns setup, upgrades and service management;
+then use your own manuscript below. The read-only demo demonstrates the v0.7.2
+reading workflow. [Installation](INSTALLATION.md) covers setup, upgrades and
+service management;
 [interpretation](guides/interpretation.html) explains the measurements.
 
 <a id="the-journey-at-a-glance"></a>
@@ -463,7 +326,9 @@ lixity service start --open
 ```
 
 The default address is `http://127.0.0.1:8765/`. The app's welcome guidance and
-field explanations describe the next action; **Show guidance** reopens it.
+field explanations describe the next action. **Project actions** groups New/Open,
+**Show guidance** and PDF export. It starts expanded in an empty workspace and
+collapsed when a manuscript is loaded; the three workspace destinations stay visible.
 
 ### Open or import?
 
@@ -475,12 +340,12 @@ one server share its active project, so check the displayed path before saving.
 
 ### Read and explore
 
-On **current main**, start in **Manuscript** and read a passage. Turn **Analysis**
+Start in **Manuscript** and read a passage. Turn **Analysis**
 On to show diagnostics in place; this does not open a tool or narrow the prose.
-Choose a paragraph's **… → Values** for its measurements. **Analysis overview**
+Choose a paragraph's **… → Values** for its **Passage values** inspector, which
+works with Analysis On or Off. **Analysis overview**
 opens chapter comparisons; **Back to passage** restores your place and prior
-Analysis On/Off choice. On **v0.7.1**, start with **Open passage** or
-**Explore chapters** and expand the paragraph's **Values**.
+Analysis On/Off choice.
 The opening candidate is not a quality ranking; read the text before
 deciding whether a difference matters. Settings explain saved versus session-only
 choices. Standalone HTML is read-only; project writes and manuscript PDF downloads
@@ -488,30 +353,28 @@ require the native server. See [PDF layouts](USAGE.md#lixity-pdf).
 
 ### Choose a view
 
-**Current main, after v0.7.1:** the project sidebar stays available while you
+The project sidebar stays available while you
 read on a wide screen. On mobile, use the same views above the workspace.
 **Manuscript** is the starting point for your text; open a dossier
 alongside it when you need context, and use **Research** to work on the source
 archive. Analysis guides your attention; the manuscript remains the reference.
 
-The same local tabs switch analysis views, research lists and dialog pages.
-Their underline marks the selected view. Use arrow keys within a tablist;
-research tabs open with Enter or Space. Forms group related fields under named
-headings. Dialog content scrolls below the title; Escape closes the dialog and
-returns focus to its opener.
+The [reader reference](USAGE.md#reading-paragraphs) explains display preferences,
+keyboard controls, companion sizing and coverage. Changing a view writes nothing.
 
 | What you want to do | Where to start |
 | --- | --- |
-| Read a difference in context | **Manuscript**: turn **Analysis** On, then choose **… → Values** on a paragraph if needed. |
+| Read a difference in context | **Manuscript**: choose **… → Values** for one paragraph; use **Analysis** independently for diagnostics. |
 | Compare chapter positions | **Analysis overview → Style dimensions**: select a chapter or use a flat axis view to inspect overlaps. |
 | Follow a source into an argument | **Research**: open a dossier, inspect its evidence and follow a saved manuscript quotation. |
 | Change the manuscript or analysis setup | **Project**: check the active project and whether a setting is saved or session-only. |
 
-**Current main, after v0.7.1:** maps open with OpenStreetMap. Select a numbered
+Maps open with OpenStreetMap. Select a numbered
 place or route to read its details; switch off the background for local vectors
 or choose the sketch. The map background uses the network. Mermaid diagrams
 render locally: scroll a wide diagram or enlarge it to inspect the whole view.
-The public demo shows current-main behavior; an installed release may differ.
+Tile requests send the viewed area and client IP to the provider and stop when
+the map context is hidden.
 
 ## Work through review notes
 
@@ -527,10 +390,12 @@ records, manuscript associations and recovery. Retain only permitted source byte
 Claims and author decisions remain interpretations; saving or finding a passage
 does not verify it. Review changed anchors and linked revisions explicitly.
 
-On current main, a paragraph's saved associations lead through **Open claim**
+A paragraph's saved associations lead through **Open claim**
 to the linked claim version, its linked dossier versions and cited source passages.
 Close the record viewer, then use **Back to passage** to return to the requesting
-manuscript text. To create an
+manuscript text. The work thread keeps its originating lines and the viewed
+record's title/version visible; pinned and current versions remain distinct.
+To create an
 association locally, select text in one paragraph, choose **Link selection to
 claim**, review the claim and quote, and explicitly permit quote retention before
 **Save association**. This saves the quote, not a full manuscript capture or source
@@ -607,29 +472,65 @@ lixity --version
 lixity service start --open
 ```
 
-The current release is **v0.7.1**. Read the [release notes](releases/v0.7.1.md)
-for changes and compatibility information. The [public demo](demo/report.html)
-shows **current main (unreleased)**, including its continuous manuscript reader;
-installing v0.7.1 does not provide those newer controls. To follow that development
-line, use [Development builds instead](#development-builds-instead).
-For a reproducible, checksum-verified
-setup, install the pinned release wheel instead (the release page also carries
-`SHA256SUMS`):
+The current release is **v0.7.2**. See the [release notes](releases/v0.7.2.md)
+for changes and compatibility. `uv tool update-shell` configures new terminals;
+it does not change the terminal already open.
+
+## First useful result
+
+The app opens `http://127.0.0.1:8765/` with an empty workspace; it does not
+search your terminal's current folder. Choose **Open Project** for an existing
+folder or **Analyze a manuscript** to preview a copy into a new project.
+Confirm the manuscript language, then read a passage in **Manuscript**.
+Use **Analysis** for diagnostics or **… → Values** for one paragraph.
+[Onboarding](ONBOARDING.md) explains the next steps.
+
+Check, stop and return to the managed workspace with:
 
 ```sh
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.7.1/lixity-0.7.1-py3-none-any.whl"
+lixity service status
+lixity service stop
+lixity service start --open
 ```
 
-`uv tool update-shell` configures shell integration once; it does not change an
-already open terminal. **Open Project** reconnects an existing
-manuscript folder; **Analyze a manuscript** opens the import preview. The default
-service starts without a project and does not search the terminal's directory.
-`uv tool list` shows the installed source. A tool installation does not make
-`import lixity` available to a different Python environment.
+Open your project again, or supply its path while the service is stopped:
+`lixity service start --open ./my-novel`. For the full saved launch settings,
+use `lixity service restart --open`; it restores the startup project, not a later
+browser selection. [Service lifecycle](#running-the-server) covers custom ports,
+logs and startup at login.
 
-This uses uv's [isolated tool environment](https://docs.astral.sh/uv/concepts/tools/)
-and [managed Python support](https://docs.astral.sh/uv/concepts/python-versions/#requiring-or-disabling-managed-python-versions).
-uv accepts [HTTPS wheel sources](https://docs.astral.sh/uv/concepts/projects/dependencies/#url).
+For a terminal result instead:
+
+```sh
+lixity analyze manuscript.md --language en
+```
+
+English is the default; `--language auto` explicitly requests detection.
+Short text may leave measurements unavailable. [Usage](USAGE.md) owns exports,
+configuration and PDF behavior. Built-in analysis runs locally. Optional
+[map backgrounds](research/USAGE.md#keep-places-and-journeys-in-a-dossier) and
+[OCR workers](research/OCR_INTEGRATION.md) have separate network/data boundaries.
+
+### Pinned release and installation scope
+
+<details>
+<summary>Reproducible wheel installation and Python environments</summary>
+
+For a checksum-verified setup, install the pinned release wheel instead and
+verify it against `SHA256SUMS` on the release page:
+
+```sh
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.7.2/lixity-0.7.2-py3-none-any.whl"
+```
+
+`uv tool list` shows the installed source. This uses uv's
+[isolated tool environment](https://docs.astral.sh/uv/concepts/tools/) and
+[managed Python](https://docs.astral.sh/uv/concepts/python-versions/#requiring-or-disabling-managed-python-versions).
+uv accepts [HTTPS wheels](https://docs.astral.sh/uv/concepts/projects/dependencies/#url).
+A tool installation does not make `import lixity` available in another Python
+environment; use the [Python project route](#python-api-project-environment).
+
+</details>
 
 ### Optional research prerequisites
 
@@ -656,7 +557,7 @@ for all readers and writers. Installing Lixity does not download an OCR model.
 <details>
 <summary>Follow unreleased source changes</summary>
 
-To follow unreleased changes shown in the public demo, install
+To test unreleased source changes, install
 [Git](https://git-scm.com/downloads), then use this **instead**:
 
 ```sh
@@ -739,20 +640,6 @@ remove its installation rather than overwriting its executable with uv.
 
 </details>
 
-## First useful result
-
-The app starts with an empty workspace. Follow [Onboarding](ONBOARDING.md) to
-open an existing project, import a manuscript or start with research. For a
-terminal report from your own UTF-8 Markdown file:
-
-```sh
-lixity analyze manuscript.md --language en
-```
-
-Select the manuscript language explicitly; English is the default and `auto`
-requests detection. Short text may leave measurements unavailable. The
-[usage reference](USAGE.md) owns exports, configuration, PDF and NDA behavior.
-
 ## Running the server
 
 Use the packaged service controller from any terminal; no source checkout is
@@ -793,7 +680,7 @@ changes, restart the appropriate managed instance; a browser reload alone does
 not load new code. Supply OCR variables in the new start/restart environment;
 their values are not saved as launch settings.
 
-**Current main (unreleased):** reloading the dashboard validates the selected
+Reloading the dashboard validates the selected
 manuscript before serving saved analysis. If it is missing/unreadable or a rebuild
 fails, the app retains its last successful view with an **Analysis freshness**
 notice and **Retry refresh**. Restore the file/access or correct the input/settings,
@@ -972,7 +859,7 @@ Linux/macOS:
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@v0.7.1"
+.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@v0.7.2"
 .venv/bin/python -m pip check
 .venv/bin/python -c "import lixity; print(lixity.__version__)"
 ```
@@ -981,7 +868,7 @@ Windows PowerShell (no activation or execution-policy change needed):
 
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@v0.7.1"
+.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@v0.7.2"
 .\.venv\Scripts\python.exe -m pip check
 .\.venv\Scripts\python.exe -c "import lixity; print(lixity.__version__)"
 ```
@@ -1160,7 +1047,7 @@ defines that boundary and the optional local-import workflow.
 
 ### Download a manuscript PDF
 
-Open **PDF export** above the workspace views, choose a layout, then
+Open **Project actions → PDF export**, choose a layout, then
 **Download PDF**. Since v0.7.0, **A4 editorial copy** is the initial choice;
 **A5 reading copy**, **A4 manuscript sheets** and **A4 analysis report** are also available.
 Changing the layout alone does not generate a file. The download uses the same
@@ -1173,11 +1060,11 @@ JavaScript and a compatible native server are required.
 
 ### Start a review
 
-In the current-main interactive workspace, the **Analysis** switch has a visible
+In the interactive workspace, the **Analysis** switch has a visible
 On/Off state while the manuscript remains continuous. Showing diagnostics keeps
 the prose width and navigation choice; it does not open a context tool. An
-analyzed paragraph's **Values** explicitly opens its measurements and enables
-analysis. **Analysis overview** opens chapter comparisons and other dense views;
+analyzed paragraph's **Values** opens the **Passage values** inspector independently
+of the Analysis On/Off choice. **Analysis overview** opens chapter comparisons and other dense views;
 **Back to passage** restores the earlier analysis choice and document context.
 
 **Start your review → Open passage** opens the first paragraph meeting the
@@ -1194,7 +1081,7 @@ or instructions to revise.
 Choose **Dossier alongside** to read a saved dossier while retaining manuscript
 search and the current reading presentation. Analysis visibility remains a
 separate choice: opening a dossier does not turn it off. Use the context area's
-**Analysis** and **Dossier alongside** controls to switch the active tool; only
+**Passage values** and **Dossier alongside** controls to switch the active tool; only
 one tool occupies that area at a time. Opening it collapses desktop project
 navigation; its toggle remains reachable, and closing restores the earlier manual
 choice. Drag the divider to change the desktop widths, or focus it and use
@@ -1223,7 +1110,12 @@ explicitly when needed. Claim and dossier views can open their saved manuscript
 associations in Review. Only an exactly resolved current passage offers a direct
 jump; moved, changed, ambiguous and unavailable anchors retain their review state.
 When following a connection from the manuscript, **Back to passage** returns to
-the preserved origin while the project/source context still matches. Cited source
+the preserved origin while the project/source context still matches. The work
+thread groups this action with the originating chapter and lines. **Viewed version:**
+introduces the title and version of the claim or dossier you opened. Labels distinguish a pinned
+version from a current or viewed version; browsing history does not repin a
+record. Returning, or changing the project/source context, clears the thread.
+Cited source
 quotations remain pinned retained passages; opening an ordinary source reader is
 not a new historical-source navigation contract.
 
@@ -1231,7 +1123,7 @@ not a new historical-source navigation contract.
 
 ### Reading paragraphs
 
-**Current main (unreleased):** interactive workspaces start with continuous
+Interactive workspaces start with continuous
 manuscript text and **Analysis Off**. Toggle **Analysis** to reveal diagnostic
 presentation in place. The switch, visible On/Off text and pressed state identify
 the choice while its accessible name stays **Analysis**. Showing the layer alone
@@ -1240,8 +1132,8 @@ flow, preserving the prose width and line wrapping. Opening or closing the
 dossier is independent of that state. Use
 **Analysis overview** for chapter matrices, sentence rhythm and other comparisons,
 then **Back to passage** to restore the document context and prior analysis
-display choice. Hiding analysis also
-leaves the overview and restores an eligible dossier instead of an analysis tool.
+display choice. Hiding analysis leaves the overview and restores the prior
+passage tool. The inspector and dossier work with Analysis On or Off.
 
 Choose a chapter in the reader toolbar. **Reading settings** groups **A−**/**A+**
 for text size (16–28 nominal pixels), narrow/standard/wide text and
@@ -1258,8 +1150,12 @@ also offers a compact toolbar. Marker notes and claim associations still require
 their existing explicit save and retention steps.
 Use Shift+right-click to open the browser's native context menu instead.
 
-**Values** enables analysis and opens the selected paragraph's source lines,
-tense and style measurements in the closable context area. Switch between that
+**Values** opens **Passage values** with the selected paragraph's chapter, source
+lines, tense and style measurements in the closable context area. Opening or
+closing it leaves the global Analysis choice unchanged; turning Analysis Off
+keeps the inspector available. **Saved
+manuscript associations** opens the existing quote review for that paragraph.
+Switch between that
 tool and the saved dossier explicitly; closing the tool does not turn all
 analysis off. On desktop, tools occupy adjacent space. On mobile, an explicit
 paragraph-to-tool action reveals the stacked tool heading; closing it or pressing
@@ -1315,7 +1211,7 @@ Research list filters only match loaded record metadata; use
 
 ### Source availability and saved analysis
 
-**Current main (unreleased):** reloading the local dashboard validates the selected
+Reloading the local dashboard validates the selected
 manuscript before serving cached measurements. Changed readable bytes trigger a
 rebuild. If the file is missing, unreadable or a rebuild fails, a last successful
 view remains usable with an **Analysis freshness** notice and **Retry refresh**.
@@ -1359,7 +1255,7 @@ chapter. Toggle the trajectory or cutoff box and reset the camera as needed.
 Rotation is opt-in and pauses in a hidden tab. Cards show positive/negative
 loadings; the table gives the same measured chapter scores and flags.
 
-**Current main, after v0.7.1:** the chapter selector keeps the chosen chapter's
+The chapter selector keeps the chosen chapter's
 scores beside the plot. Choose a flat axis pair in **View** when points overlap;
 return to 3D to rotate the same data. The line follows chapter order, including
 gaps where a chapter has no measured position. **Reset** restores the view,
@@ -1570,7 +1466,7 @@ and exploratory dimensions answer different questions; none establishes literary
 quality or a guaranteed false-discovery rate. [Methods](METHODS.md) owns the
 mathematical definitions; [Stability](STABILITY.md) describes inference limits.
 
-**Current main, after v0.7.1:** select a chapter in the style space, inspect its
+Select a chapter in the style space, inspect its
 values and open its passage. The view and CLI explain their coverage, axes,
 cutoffs and unavailable values in place; JSON exposes `dimension_diagnostics`.
 
@@ -2276,7 +2172,7 @@ Zotero is optional: retained evidence and authorized local imports work without 
 <a id="reading-and-cli-workflows-since-v240"></a>
 ### Reading and CLI workflows
 
-**Current main, after v0.7.1:** dossier, claim and decision creation starts behind
+Dossier, claim and decision creation starts behind
 labelled disclosures, so existing records remain visible first. Evidence
 association and cause/effect entry use the same pattern. Click the heading again
 to collapse a form; the long creation forms also offer **Collapse** beside Save.
@@ -2323,31 +2219,13 @@ The citation still identifies the whole paragraph, not a sentence-level selector
 Ambiguous or cross-paragraph selections fail; whole-passage actions remain
 available for touch use. Preparing a draft writes nothing.
 
-In **Manuscript**, **Dossier alongside** opens a chosen dossier in a
-read-only companion. It starts closed with no automatic selection. **Current main
-(unreleased):** the manuscript stays continuous and the **Analysis** button has an
-explicit On/Off state for diagnostics in place. Toggling it does not open the dock
-or collapse navigation. A paragraph's **… → Values** explicitly opens the analysis
-inspector and enables the layer; **Dossier alongside** opens a dossier independently.
-The inspector and dossier are alternative dock tools; hiding diagnostics leaves
-an active dossier. **Analysis overview** opens dense comparisons with **Back to
-passage**, restoring the prior context tool and Analysis On/Off choice. Refresh
-explicitly for the latest dossier.
-On desktop, opening the companion temporarily collapses project navigation into
-a narrow rail. Use **Show navigation** to access its controls; closing the companion
-restores the earlier manual choice. Switching away from manuscript analysis also
-restores normal navigation. The navigation toggle is desktop-only; narrow screens
-keep their horizontal workspace switcher. These choices last for the current page.
-Desktop areas scroll separately. Drag the divider or focus it and use Left/Right
-to adjust the manuscript share; Home/End select its 35%/75% limits. The chosen
-split is a browser-local preference. Narrow screens stack the documents and hide
-the divider. Reading changes neither document, evidence links nor the statistical
-baseline. **Focus reading** temporarily hides the companion and navigation;
-the same control restores the workspace. A paragraph's **Values** inspector and
-the companion replace one another rather than competing for horizontal space.
-On narrow screens, explicitly opening a tool from a passage scrolls its heading
-into view; closing it or pressing Escape returns to the requesting passage and
-restores focus. On desktop the tool remains adjacent to the manuscript.
+In **Manuscript**, **Dossier alongside** opens a chosen dossier in a read-only
+companion. It starts closed with no automatic selection. Refresh explicitly for
+the latest dossier. The companion and paragraph **Values** inspector are
+alternative tools; the **Analysis** display is a separate choice. Reading changes
+neither document, evidence links nor the statistical baseline. See
+[reader controls](../USAGE.md#reading-paragraphs) for display preferences,
+keyboard access, navigation and the desktop split.
 
 To connect the manuscript to research, select a nonempty text range within one
 paragraph and choose **Link selection to claim** (or Alt+L). The
@@ -2366,7 +2244,7 @@ Moved, adjusted, ambiguous or unavailable anchors remain review tasks, with no
 silently inferred jump or re-pin. The manuscript's saved-associations disclosure
 provides the same actions while reading.
 
-For a first read-only journey on **current main**, open a paragraph's saved
+For a first read-only journey in the interactive workspace, open a paragraph's saved
 associations and choose **Open claim**. Read the linked claim version, follow a
 linked dossier version, then inspect its cited source passage. The pinned version
 is the record the association actually used; opening a newer version does not
@@ -2488,6 +2366,11 @@ private manuscript material; there is no full manuscript blob. Restored links
 remain unavailable until the manuscript exists at its saved project-relative path.
 
 ### Claims linked to a dossier
+
+The dossier detail groups **Dossier notes**, **Linked claims** and
+**Citations** in one place. **All project records → Claims** or **Decisions**
+opens the corresponding project-wide list. Local creation actions prepare the
+existing claim/decision forms; choosing a view does not save or retain anything.
 
 Both the research dossier reader and **Dossier alongside** show the current
 claims explicitly linked to the dossier. **Open claim** uses the existing record
@@ -2686,6 +2569,14 @@ When omitted, the backend checks the reviewed target revision and uses that
 read's snapshot for the strict commit. Earlier unrelated writes are allowed;
 changed targets and later races fail without retry or rebase. An explicit
 snapshot guards the entire archive, including unrelated changes.
+
+Since v0.7.2, a validated authored update whose normalized content is unchanged
+returns the existing record and revision. It does not advance the archive HEAD
+or rebuild the index. Revision/snapshot guards, metadata and association checks
+still apply; a stale request can fail even when its fields appear unchanged.
+This also applies to unchanged members of an atomic revision batch. Changed
+members receive revisions normally; an entirely unchanged batch leaves HEAD
+unchanged. Decision acknowledgements remain explicit append-only events.
 
 ```sh
 lixity research claim --project ./novel --claim-id CLAIM_ID --update \
@@ -2915,8 +2806,7 @@ fictional positions and journeys. Field help, `research dossier --help` and
 retain them with the dossier.
 
 Coordinates are finite WGS84 longitude/latitude pairs. **Since v0.7.1:** the
-numbered sketch and interactive Leaflet vectors work offline. **Current main:**
-maps open with OpenStreetMap. Turn off the background or choose the sketch for
+numbered sketch and interactive Leaflet vectors work offline. Maps open with OpenStreetMap. Turn off the background or choose the sketch for
 offline use; tile requests disclose the viewed area and client IP to the provider
 and stop outside the visible map/project context. There is no geocoding, road
 routing, travel time calculation or historical verification. Attached map images
@@ -2928,7 +2818,7 @@ even after removing geography; reading ordinary dossiers preserves their older
 encoding. Older readers cannot open v8 archives. Section edits affect prose only,
 not the dossier's geographic data.
 
-**Current main, after v0.7.1:** select an object in the map or its list to read
+Select an object in the map or its list to read
 its context and frame it. UI help and CLI `--format text` explain the measurements.
 Response-only `geography_summary` (`research-geography-summary-local/1`) is
 derived from the selected revision, separate from retained v8 records.
@@ -3210,7 +3100,8 @@ metadata; use archive search for retained text.
 In the dashboard, choose **Edit** on a dossier, claim, evidence link or decision.
 Change the fields, select **Correction** for a transcription/wording correction
 or **Supersession** for a changed interpretation or authorial choice, and give
-a reason. Save keeps the record's ID and adds one immutable revision. **History**
+a reason. A changed save keeps the record's ID and adds one immutable revision;
+an unchanged validated save returns the existing revision. **History**
 opens earlier accepted versions; it does not restore or overwrite them.
 
 Existing associations retain their saved pins; new associations use the target's
@@ -3540,7 +3431,7 @@ or invalid diagrams keep their inspectable source. Rendered SVGs share the local
 PhotoSwipe 5.4.4 zoom viewer with images. Neither renderer loads a CDN or uploads
 the diagram; map tiles have the separate network boundary above.
 
-**Current main, after v0.7.1:** a small diagram uses a compact frame. Wide diagrams
+A small diagram uses a compact frame. Wide diagrams
 keep their label size and scroll horizontally within the reader; focus the
 viewport and use the arrow keys, or choose **Enlarge diagram**. The source remains
 available below it. The renderer preserves the direction and relationships in
@@ -4046,7 +3937,7 @@ They are an orthographic proxy, not phonetic transcription: regional hiatus,
 foreign names and loans, and poetic synaeresis remain outside the estimate.
 Regression examples do not establish language-wide accuracy or reader comprehension.
 
-**Current main (unreleased):** corrects skipped closed-vowel nuclei in Spanish, for example
+**Since v0.7.2:** the estimator corrects skipped closed-vowel nuclei in Spanish, for example
 `vivir` from one estimated syllable to two and `dibujo` from one to three.
 This changes Spanish ASW and its derived readability score without changing
 the formula coefficients or JSON fields. Regenerate Spanish reports before
@@ -4065,7 +3956,7 @@ Types absent from the chapter contribute half their rest-corpus probability
 times $\ln 2$; their total probability is calculated from the observed rest
 distribution. No square root or base-2 rescaling is applied.
 
-**Current main (unreleased):** absent-type mass is computed from remaining
+**Since v0.7.2:** absent-type mass is computed from remaining
 integer token counts, and contributions are accumulated with `math.fsum`.
 Near equal probabilities, the same per-type contribution is evaluated as
 $m[d\mathrm{atanh}(d)+\tfrac12\ln(1-d^2)]$, where
@@ -4577,7 +4468,7 @@ research calls stay explicitly scoped. An occupied port fails startup.
 `DocumentAnalysis` reuses corpus/chapter measurements for the fingerprint and
 renderers. Narrower profile/fingerprint requests use the same pipeline. Dashboard
 refresh validates manuscript bytes before serving cached measurements and rebuilds
-when a readable changed source can be rendered. **Current main (unreleased):**
+when a readable changed source can be rendered. **Since v0.7.2:**
 `RefreshOutcome` distinguishes unchanged/rebuilt, missing, unreadable and failed
 refreshes. Missing/unreadable sources and config/render failures retain the last
 successful HTML, metadata and source digest, with a per-response localized
@@ -4610,17 +4501,24 @@ calling the API. Saved-quote counts join explicit associations from one coherent
 snapshot, disclose differing revision pins and do not establish manuscript use or
 nonuse. Rendering preserves exact resolved quote spans and complete text search.
 
-**Current main (unreleased):** relation navigation opens an association's pinned
+**Since v0.7.2:** relation navigation opens an association's pinned
 claim revision, then its explicit pinned dossier reference. Scoped Review routes
 join saved manuscript associations by those references, independently of the
 dossier's derived current-claim list. Only existing exact anchor matches offer
 passage jumps. The document origin/return context is ephemeral and guarded by the
-current project/source/research context; no archive/backend schema is introduced.
+current project/source/research context. Its compact work thread displays the
+original chapter/line span and the last accepted viewed record identity and saved
+revision, distinguishing an explicitly pinned version from a current or viewed
+version. Return or a changed project/source/research context clears the thread;
+no archive/backend schema is introduced.
 Native selection uses ephemeral paragraph-local UTF-16 offsets and direction,
 rebuilt against exact paragraph text on return so annotation repaint cannot
 mutate a saved live Range. Saved archive offsets remain Unicode codepoints. Existing citation
 envelopes retain source version, passage identity, hashes and offsets. Ordinary
-source reading is not relabelled as the historical cited version.
+source reading is not relabelled as the historical cited version. Retained quote
+cards do not provide a full historical-source reader. Dossier readers group
+authored notes, derived current-linked claims and citations, while global claims
+and decisions remain available through their existing routes.
 
 Ordinary authored CLI updates require a reviewed revision, change kind and reason;
 when the archive snapshot is omitted, the backend's current read guards the same
@@ -4631,6 +4529,17 @@ values; historical comparison resolves saved revisions without repinning. Sectio
 reconciliation changes only the selected body subtree while ordinary field changes
 use the same candidate. HTTP, images, acknowledgements and batches retain their
 explicit guards. No preview establishes that a future write will succeed.
+
+Since v0.7.2, normalized authored content equality is decided in
+`research.revisions` after complete metadata, field and association validation.
+An unchanged candidate returns the exact prior record, preserving its revision,
+encoding and historical pins. Mixed batches publish changed members only; invalid
+operations reject the entire batch. `research.repository` retains the writer
+lock and concurrent HEAD check even for an empty commit, then returns without
+rewriting retained bytes, HEAD or the disposable SQLite index. Immutable JSON
+records, blobs, manifests and HEAD remain authoritative; no archive migration or
+second store is introduced. Decision acknowledgements remain append-only events,
+not authored-content no-ops.
 
 `research.dossier_edit` encodes an explicit leading JSON comment and
 the exact body as a Markdown draft. It validates identity/base and delegates to
@@ -4722,7 +4631,7 @@ Research media reuse bundled PhotoSwipe 5.4.4 for retained images and
 generated diagrams. Mermaid tiny 12.2.0 owns diagram syntax/layout and initializes
 only when a diagram first becomes visible; restrictions disable resource loading,
 click actions and configuration directives, with source retained on failure.
-Leaflet 1.9.4 provides geographic vectors. **Current main, after v0.7.1:** visible
+Leaflet 1.9.4 provides geographic vectors. **Since v0.7.2:** visible
 maps load OpenStreetMap tiles by default; users can turn off the background or
 choose the offline sketch. Tile requests stop outside the visible map/project
 context. Tiles reveal the client IP and viewed area;
@@ -4765,7 +4674,7 @@ The manuscript is the primary workspace. Analysis supports passage selection
 and interpretation; retained evidence and authored dossiers provide context.
 These are connected views over the same project, not independent products.
 
-**Current main, after v0.7.1:** interactive dashboards use a fixed project sidebar
+**Since v0.7.2:** interactive dashboards use a fixed project sidebar
 on wide screens, with manuscript/analysis first, research second and settings
 third. Narrow screens keep a horizontal switcher. Tab orientation and keyboard
 navigation change together; the sidebar scrolls independently if its controls
@@ -4779,7 +4688,7 @@ as inline association marks, with a current project/source context check on clic
 
 ### Shared manuscript reader
 
-**Current main (unreleased):** `ui/manuscript_reader.py` emits the shared command
+**Since v0.7.2:** `ui/manuscript_reader.py` emits the shared command
 surface. The interactive manuscript stays continuous while an **Analysis** toggle
 exposes diagnostic presentation in place. Turning the layer on does not open a
 dock or apply the navigation-collapse override. Its absolute gutter marker does
@@ -4825,10 +4734,13 @@ shortcuts share the same action builder. A valid single-paragraph selection
 offers a small toolbar. Marker and claim actions delegate to the established
 handlers, including their explicit save, capability and retention checks; no
 parallel write API is introduced. Values reuse the paragraph's measured markup
-in the closable analysis dock and enable analysis. Explicit analysis/dossier
+in the closable Passage values inspector, alongside chapter/source-line context
+and the existing saved-research route when supported. Opening Values does not
+force the global Analysis layer on. Explicit Values/dossier
 controls replace the active dock content while retaining each tool's selection.
-Closing the dock does not hide the diagnostic layer; hiding analysis closes its
-analysis tool but can retain a dossier. On narrow screens, an explicit passage
+Closing the dock does not hide the diagnostic layer; turning Analysis Off
+preserves an explicitly open Values inspector or dossier. Overview return
+restores the previous layer visibility and context tool. On narrow screens, an explicit passage
 tool request stores its own origin and reveals the stacked dock heading; close
 or Escape restores the requesting passage and focus. That intentional destination
 scroll is not overwritten by ordinary reading-anchor restoration. Desktop tools
@@ -4848,11 +4760,34 @@ free-panning manuscript canvas or a manuscript editor.
 
 The interface follows a reading-first hierarchy: a passage or visual comes
 before its detailed measurements; advanced explanations stay near the control
-that needs them. Diagram frames follow content width within the reader, and
+that needs them. Shared design tokens own the paper-toned light surfaces, ink,
+muted text, dividers and action accent across the native UI and Pages; the site
+does not introduce a separate palette. Existing serif manuscript/chapter type
+and system interface type distinguish prose from controls. Spacing and selective
+dividers separate supporting content; warnings, editable fields, selection and
+dialog boundaries retain their distinct roles. Reader composition and companion
+spacing remain in their existing stylesheet owners, without a second display
+state or altered reading preferences.
+
+Diagram frames follow content width within the reader, and
 wide diagrams retain their label scale in a scrollable viewport. Style-space
 navigation groups paired actions at responsive widths. Pages uses the shared
 tokens and stylesheet, with direct demo and installation entry points and
 screenshots of the same native components rather than a parallel product UI.
+
+The public landing page demonstrates the product and routes to the demo or
+installation. README owns purpose, first commands and the documentation/repository
+map; guides own complete workflows and references own detailed contracts. The
+demo retains the native workspace with a compact return link, rather than a
+second site navigation inside the application. Screenshot framing follows real
+viewports or complete task boundaries; camera helpers do not override native
+dialog scrolling or hide content to make an image fit.
+
+The shell groups New/Open, guidance and PDF export in one native **Project
+actions** disclosure. It starts closed with a loaded manuscript and open in an
+empty workspace, while the three destinations remain directly available.
+Disclosure visibility stays in the DOM; backend project state and capabilities
+remain separate. Modal openers stay visible behind their dialog for focus return.
 
 Native `details` elements own research composer visibility. Their field DOM stays
 mounted across collapse and tab switches, preserving in-memory drafts without
@@ -5281,7 +5216,7 @@ The response carries `meta`, `features`, `deviations`, `fdr_flagged`,
 diagnostics. Use `features[].feature` to join the feature rows to chapter-keyed
 deviation/FDR maps; localized `feat_*` strings are display keys.
 
-**Current main, after v0.7.1:** additive `dimension_diagnostics` explains support
+**Since v0.7.2:** additive `dimension_diagnostics` explains support
 and availability without changing schema v4 scores. Use `dimensions[].flagged`,
 not rounded scores, for cutoff status; unavailable positions are not zero.
 
@@ -5315,8 +5250,8 @@ Manuscript, Research and Project are separate views; project actions remain
 reachable from each. Import preview writes nothing until confirmation.
 [Dashboard usage](USAGE.md#dashboard-workflow) owns navigation workflows.
 
-**Current main (unreleased):** the interactive manuscript remains continuous.
-Analysis visibility, document/overview and the active analysis/dossier tool are
+**Since v0.7.2:** the interactive manuscript remains continuous.
+Analysis visibility, document/overview and the active Values/dossier tool are
 separate display choices. Use the visible toggle/return controls below; the
 internal `LixityWorkbench` coordinator is not a replacement domain API. Changing
 views or display settings does not authorize source edits or retention.
@@ -5328,9 +5263,11 @@ keep their fallback. Deferred interaction retains complete embedded text/search
 and a readable no-JavaScript fallback; an empty closed report panel does not mean
 absent text or a smaller HTML payload.
 Style jumps reveal their owning tabs. In standalone reports, chapter/paragraph
-jumps expand folded chapters; the current-main interactive reader keeps chapters
+jumps expand folded chapters; the interactive reader keeps chapters
 and prose continuous and hides chapter-fold controls. Its paragraph menu opens
-Values in the contextual inspector instead of an inline disclosure. Section
+Values in the contextual inspector instead of an inline disclosure. Opening
+Values preserves the global Analysis choice; Analysis Off preserves an explicitly
+open Values inspector. Overview return restores the previous layer and tool. Section
 navigation lists only rendered panels.
 
 PDF export, the read-only dossier companion and research saves use the explicit
@@ -5341,7 +5278,8 @@ capability/context guards below. Selection drafts save nothing by themselves.
 | `#manuscript-analysis-toggle` | constant-name **Analysis** toggle; `aria-pressed` and visible On/Off text identify diagnostic visibility independently of the dossier |
 | `#workbench-overview-open` / `#workbench-overview-back` | open dense analysis / return to preserved manuscript context |
 | `[data-context-tool="analysis"]` / `[data-context-tool="dossier"]` | explicitly select one active context tool; closing the tool does not itself hide all analysis |
-| `#workbench-return` | context-checked return to the manuscript origin after following a saved relation |
+| `#workbench-thread` / `#workbench-return` | original passage context and viewed saved-record identity/revision, with context-checked return; cleared on return or changed project/source/research context |
+| `#project-actions > summary` | open or close Project actions before using its existing New/Open, guidance and PDF controls; loaded workspaces start collapsed, empty workspaces expanded |
 | `.reader-structural[data-start][data-end]` | readable source structure without a paragraph profile; inclusive source lines are presentation anchors, not a new research-anchor format |
 | `#research-tab-<key>` / `#rtab-<key>` | named research tab and labelled tabpanel; `data-rtab` and selected-state hooks remain unchanged |
 | `#research-navigation-previous` / `#research-navigation-next` | scroll overflowing research destinations without activating one |
@@ -5352,12 +5290,12 @@ capability/context guards below. Selection drafts save nothing by themselves.
 | `data-flags="1"` | additionally preselect "flagged only" |
 | `data-line="<n>"` | jump to the paragraph containing that source line (opens it); falls back to the chapter |
 | `data-target="p-<idx>"` | exact paragraph panel to open on jump (flagged-list rows) |
-| `[data-chapter-toggle]` | standalone report: fold or unfold a chapter body (strip and paragraphs); jumps and search steps expand a collapsed chapter; hidden in the current-main continuous interactive reader |
+| `[data-chapter-toggle]` | standalone report: fold or unfold a chapter body (strip and paragraphs); jumps and search steps expand a collapsed chapter; hidden in the continuous interactive reader |
 | `data-chapter="<n>"` | heatmap cell: open that chapter (with its layer) |
 | `#style-tab-<panel-id>` / `data-style-view="<panel-id>"` | native style tab for `heatmap`, `bands`, `dimensions` or `structural`; its `aria-controls` points to that existing panel |
-| `.paragraph-values > summary` | standalone report and no-JavaScript fallback: native disclosure for source lines and measurements; inline Values is hidden in the current-main interactive reader |
-| `.reader-paragraph-actions[data-reader-paragraph]` / `#manuscript-context-menu [data-reader-action="values"]` | current-main interactive reader: open the paragraph action menu, then explicitly open Values and enable analysis |
-| `#reader-inspector` / `#reader-inspector-body` / `#reader-inspector-close` | current-main contextual Values inspector, its source lines/measurements and close action; the manuscript text remains in its original DOM |
+| `.paragraph-values > summary` | standalone report and no-JavaScript fallback: native disclosure for source lines and measurements; inline Values is hidden in the interactive reader |
+| `.reader-paragraph-actions[data-reader-paragraph]` / `#manuscript-context-menu [data-reader-action="values"]` | interactive reader: open the paragraph action menu, then explicitly open Passage values without changing global Analysis visibility |
+| `#reader-inspector` / `#reader-inspector-body` / `#reader-inspector-close` | contextual Passage values inspector, its passage context, source lines/measurements, saved-research route when supported and close action; the manuscript text remains in its original DOM |
 | `#hero-btn-new-project` / `#analysis-empty-import` | native **Analyze a manuscript** action; opens the existing import dialog without submitting it |
 | `#analysis-review [data-review-passage]` | native passage link; clears search/paragraph filters, opens its `data-target` and focuses the paragraph panel |
 | `#analysis-sections a[data-section-link]` | section navigation; highlights the panel in view (scrollspy); only rendered panels are offered |
@@ -5758,7 +5696,7 @@ When running `lixity serve --port 8765`, local agents can trigger deterministic 
 Browser API diagnostics report request metadata without copying response bodies
 to the console.
 
-**Current main (unreleased):** `GET /` and `/index.html` validate the active
+**Since v0.7.2:** `GET /` and `/index.html` validate the active
 manuscript before reusing the dashboard. Missing/unreadable input or failed
 config/render rebuilds retain the last successful HTML/info/source digest and add
 `#dashboard-freshness[data-dashboard-freshness]` with localized status and a plain
@@ -5998,7 +5936,9 @@ Python `prepare_record_revisions(project, operations)` returns a read-only
 `research-revision-batch-local/1` preview. Each operation supplies
 `kind/id/expected_revision/changes/change_kind/reason`.
 `apply_record_revisions(project, operations, expected_snapshot=...)` validates
-all operations before one commit; errors and races accept none. It returns
+all operations before one commit; errors and races accept none. Since v0.7.2,
+normalized unchanged members retain their prior revision; only changed members
+are published. It returns
 record references, without duplicating full dossier bodies/citation graphs.
 Duplicate IDs and references to future revisions inside the same batch are
 rejected. See [research workflows](research/USAGE.md#research-workflows).
@@ -6013,6 +5953,14 @@ HTTP equivalents are `POST /api/research-revision-batch-prepare` with
 - `GET /api/research/record?kind=dossier&id=...&revision=1`: inspect a pinned revision; omit `revision` for the current record. Other kinds are `claim`, `evidence_link`, `decision`, `claim_relation` and `manuscript_claim_link`.
 - `GET /api/research/history?kind=dossier&id=...`: revision metadata, newest first.
 - `POST /api/research-record-revise`: `{kind, id, changes, expected_snapshot, expected_revision, change_kind, reason}`. `change_kind` is `correction` or `supersession`; reason is required. HTTP 409 means the draft's snapshot/revision is stale; reload explicitly before deciding what to save. HTTP 400 means invalid fields; immutable/unknown fields are rejected.
+
+Since v0.7.2, an authored save whose fully validated, normalized content equals
+the current record returns that exact prior revision and snapshot. Required
+revision metadata, editable-field and association validation still apply; stale
+revision/snapshot guards and the writer-locked concurrent HEAD check still run.
+A successful no-op leaves archive bytes, HEAD and the rebuildable SQLite index
+unchanged. This also applies to section saves and batch members; decision
+acknowledgements remain append-only events. No response or archive schema changes.
 
 Python equivalents are `research_api.get_record`, `record_history` and
 `revise_record`. Read/revise returns `research-record-local/1` with `project_id`,
@@ -6048,7 +5996,7 @@ implement. `None` preserves the historical full control set for existing hosts;
 adapters should supply their actual capabilities. Project, settings and research
 controls are independent of that list.
 
-**Current main (unreleased):** `research-manuscript-review` enables saved quote
+**Since v0.7.2:** `research-manuscript-review` enables saved quote
 review and highlights without association editing. Supply the selected
 `manuscript_pdf_token`, `research_context_token` and `manuscript_source_sha256`.
 The existing `research-manuscript-link` capability continues to enable both

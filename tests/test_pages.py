@@ -65,28 +65,42 @@ class TestPagesStaging(unittest.TestCase):
         )
         compact = _site_navigation(document, "Fictional manuscript", demo=True, breadcrumbs=False)
         self.assertNotIn('<nav class="site-breadcrumbs"', compact)
-        self.assertIn('href="../demo/report.html" aria-current="location">Demo</a>', compact)
+        self.assertIn('<a href="../">About Lixity</a>', compact)
+        self.assertIn('Read-only demo · Fictional manuscript', compact)
+        self.assertNotIn('href="../demo/report.html"', compact)
         self.assertIn('<h1>Fictional manuscript</h1>', compact)
         ordinary = _site_navigation(document, "Fictional manuscript", demo=True)
-        self.assertIn('<nav class="site-breadcrumbs"', ordinary)
+        self.assertNotIn('<nav class="site-breadcrumbs"', ordinary)
 
     def test_public_navigation_preserves_workspace_and_report_classes(self):
         from scripts.build_examples import _insert_notice, _site_navigation
 
         for mode in ("lixity-workspace", "lixity-report"):
             with self.subTest(mode=mode):
+                content = (
+                    '<div class="workspace-shell"><header>Example</header>'
+                    '<div id="workspace-navigation-content">'
+                    '<nav class="view-navigation"></nav>'
+                    '<details id="project-actions"><summary>Project actions</summary>'
+                    '<nav id="project-controls"><div><button>Open</button></div></nav>'
+                    '</details></div></div><!--dashboard-freshness-->'
+                ) if mode == "lixity-workspace" else '<header>Example</header>'
                 page = _site_navigation(
                     f'<html><head></head><body id="top" class="{mode}">'
-                    '<div class="page"><div class="workspace-shell"><header>Example</header>'
-                    '<nav class="view-navigation"></nav></div></div></body></html>', "Example",
+                    '<div class="page">' + content + '<main>Manuscript</main></div></body></html>',
+                    "Example",
                 )
                 body = page.split("<body", 1)[1].split(">", 1)[0]
                 self.assertEqual(body.count('class="'), 1)
                 self.assertIn(f'class="{mode} site-page"', body)
                 self.assertIn('tabindex="-1"', body)
-                self.assertLess(page.index('class="site-return"'), page.index('class="workspace-shell"'))
                 page = _insert_notice(page, '<section id="demo-notice">About</section>')
-                self.assertIn('</nav></div><section id="demo-notice">', page)
+                if mode == "lixity-workspace":
+                    self.assertLess(page.index('class="site-return"'), page.index('class="workspace-shell"'))
+                    self.assertIn('</details></div></div><section id="demo-notice">', page)
+                    self.assertIn('</section><!--dashboard-freshness--><main>', page)
+                else:
+                    self.assertIn('</header><section id="demo-notice">About</section><main>', page)
 
     def test_report_title_replacement_ignores_embedded_svg_script_literals(self):
         from scripts.build_examples import _replace_title

@@ -6,7 +6,7 @@ Practical articles for reading a draft, checking its research and investigating 
 
 Published 20 October 2026 · 5 minutes
 
-Read a scene, inspect one passage and keep a dossier beside the text. Follow a synthetic Warehouse 4 quotation into research and back, with the current development controls and their coverage limits explained.
+Read a scene, inspect one passage and keep a dossier beside the text. Follow a synthetic Warehouse 4 quotation into research and back, with the reading controls and their coverage limits explained.
 
 ## [When a chapter is meant to sound different](intentional-registers.html)
 

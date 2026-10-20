@@ -1,3 +1,4 @@
+const {openProjectActions} = require('./support/project-actions.cjs');
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
 // Shared visual roles and interaction states; synthetic data only.
 const fs = require('node:fs');
@@ -184,6 +185,7 @@ async function checkScale(page, label) {
           `${theme} ${width}px identity overflow`);
         await identity.locator('#settings-identity summary').click();
         await identity.locator('#project-identity-check').screenshot({path: path.join(artifacts, `identity-${theme}-${width}-${hasTouch ? 'touch' : 'mouse'}.png`)});
+        await openProjectActions(app);
         await app.locator('#btn-modal-new-project').click();
         const createDialog = app.locator('#modal-project-create');
         assert.ok(await createDialog.isVisible());

@@ -4,72 +4,40 @@ Read one manuscript, inspect a passage, follow its research and choose a PDF cop
 
 Maintained by the Lixity project · Updated 20 October 2026
 
-## Used while writing a debut novel
-
-Matthias Fahsold developed Lixity as an architect and developer at ROST Services GmbH. He used it while writing his own debut novel. The example below shows a review workflow with entirely invented text; it contains no passages from that manuscript.
-
-## Open the example
-
-*The Crate at Warehouse 4* follows Mara through a fictional harbour incident. Its six short English chapters include setting, action, dialogue and an incident note. Analysis and Research are two views of this same project.
+## 1. Open the example and read a chapter
 
 [Open the demo project](../demo/report.html)
 
-The demo uses all three native workspace views. Explore manuscript analysis and retained research, keep a **Dossier alongside** the manuscript, download the claim-evidence matrix or choose a prepared PDF layout. Actions marked **Local app**, including Search and Compare, are disabled previews with an [installation link](installation.html). The demo cannot import, edit or save; no installation, upload or account is needed.
-
-Enable JavaScript for the Analysis display and overview controls, context tools, view switching, research and charts. Paragraph text, chapter tables, source credits and PDF links remain readable without it. The demo follows current development; an installed release may have an earlier interface.
+*The Crate at Warehouse 4* has six invented English chapters, one research archive and four prepared PDF layouts. Read chapter 1's setting and [chapter 2's action](../demo/report.html#ch-2). No installation, account or upload is needed. The read-only demo cannot import, edit or save; actions marked **Local app** require [installation](installation.html).
 
 [Video walkthrough](../videos/analysis-review.mp4)
 
-*Inspection walkthrough: Warehouse 4 chapter contrast, paragraph **Values** and style dimensions.*
+*Warehouse 4: a passage, its **Values** and chapter comparisons.*
 
-## 1. Read a chapter
+## 2. Inspect one difference
 
-In **Manuscript**, the manuscript initially presents the chapters as continuous prose. Scroll normally, or choose a chapter in the reader toolbar. Read chapter 1's setting and [chapter 2's action](../demo/report.html#ch-2) before looking at their numbers.
+Choose a paragraph's **… → Values** to open its **Passage values** inspector. The separate **Analysis** switch shows diagnostics across the manuscript; Passage values remains usable with Analysis On or Off. Use **Analysis overview** to compare sentence rhythm in the setting and action chapters, then **Back to passage** to resume reading.
 
-Use **A−**/**A+** to adjust text size. **Reading settings** offers text width and line spacing; the same heading closes it. These display choices stay in this browser and do not change the manuscript. **Focus reading** temporarily clears navigation and side tools; choose **Leave focus** or press Escape to return.
+Ask what changed: the kind of scene, what the character is doing, or how the sentences are arranged. These short chapters demonstrate a workflow; their numbers are not a quality verdict. [Interpretation](interpretation.html) explains the signals. [Reader controls and coverage](../USAGE.md#reading-paragraphs) covers text size, focus, keyboard access and supported formatting.
 
-Reading uses ordinary text selection. Maps, images and style-space keep their own pan and zoom controls; the manuscript remains a scrollable document.
+## 3. Follow a quotation into research
 
-## 2. Inspect a passage when needed
+Open [**Research → Dossiers**](../demo/report.html#research-manager) and **View details** on **Warehouse 4 case notes**. Inspect its historical images or choose **Dossier alongside** to keep it beside the manuscript.
 
-The **Analysis** switch shows On/Off in words and reveals diagnostics in place. Turning it on does not open a side tool, collapse navigation or narrow the prose. The switch keeps the same name in either state; its gutter marker leaves the text's line wrapping unchanged.
+In **Review**, follow the saved quotation, “Someone had tried the eastern gate of Warehouse 4.” **Go to manuscript passage** returns to exactly matched text; **Open claim** shows its pinned claim and cited sources. When you follow a connection from a manuscript paragraph, close the record viewer and use **Back to passage** to return there.
 
-Open a paragraph's **…** button for its tools. Right-clicking the prose opens the same menu; with the paragraph button focused, Shift+F10 works too. Arrow keys move between actions and Escape closes the menu. **Values** explicitly opens a paragraph inspector with source lines and measurements and enables analysis. On mobile, the tool heading comes into view; its close button or Escape returns to the requesting passage and its paragraph control. Desktop tools stay beside the manuscript. Local marker and claim actions appear when their capabilities are available; selecting text within one paragraph also offers a small toolbar.
+The retained passage, authored claim and manuscript quote are separate records. People, events and journeys are fictional; historical images do not verify them. Maps use OpenStreetMap and send the viewed area and client IP to its tile provider. Turn off the background or choose the sketch for offline use. [Research workflows](research-pdf.html) explains explicit retention and saving in the local app.
 
-Choose **Analysis overview** for chapter comparisons. The **Start your review** panel offers **Open passage**, **Explore chapters** and, when measurable, **Open sentence rhythm**. A passage link starts with the first tense flag in source order at the selected threshold, or the opening when none does. This is a starting point for reading, not a quality ranking.
+## 4. Choose a PDF copy
 
-Compare the opening and action chapter's sentence length and variation. Use **Analysis overview** for comparisons and **Back to passage** to resume reading with the previous analysis choice restored. On a paragraph, open **… → Values** for its measurements. Choose one contrast that makes you curious; you do not need to inspect every measurement.
+Compare the same manuscript as an [editorial copy](../demo/warehouse-4-editor.pdf), [reading copy](../demo/warehouse-4-book.pdf), [submission sheets](../demo/warehouse-4-sheet.pdf) or [analysis report](../demo/warehouse-4-report.pdf). The [PDF guide](research-pdf.html#manuscript-export) explains their purposes and limits.
 
-**Current development:** the wide-screen demo keeps the project and workspace views in a fixed sidebar. On mobile, the views sit above the text. Manuscript and analysis come first; a dossier can accompany the passage when you need research context. Opening it collapses the desktop sidebar to make room; use Show navigation to reopen it. Closing the dossier restores your previous choice. Mobile navigation stays visible.
+## Use your own project
 
-With a dossier alongside on desktop, drag the divider to give either document more room. You can also focus it with Tab and use Left/Right; Home/End reach the split limits. Narrow screens stack the documents. Values and Dossier are explicit alternative context tools; the Analysis switch remains a separate display choice. Switching the Analysis display off closes its measurements but keeps an active dossier. The overview offers a direct return and restores the prior context tool and analysis display. Display changes keep the visible paragraph in place where possible. Brief optional feedback marks newly visible content and passage returns; reduced-motion preferences also take effect when changed while the workspace is open.
+[Install the local app](installation.html), then open your project or preview a manuscript import. Analysis runs on your computer. JavaScript enables the demo's interactive controls; manuscript text, tables, credits and PDF links remain readable without it.
 
-Ask what changed: the kind of scene, what the character is doing, or how the sentences are arranged. Measurements cannot answer that question without the passage.
+Lixity is open source under AGPL-3.0-or-later. Writing and self-publishing need no extra permission; a separate written commercial license exists for closed-source integrations. See [licensing](../LICENSING.md).
 
-## 3. Follow the passage to its research
-
-Switch to [**Research**](../demo/report.html#research-manager), choose **Dossiers** and expand **View details** on **Warehouse 4 case notes**. Inspect its historical map and harbour view. **Dossier alongside** opens this dossier beside the manuscript; its close control returns you to the document.
-
-In its geography view, select a place or route to read its context and frame it on the map. The view explains its coordinates, distances and limits.
-
-Open **Review** to find the saved quote: “Someone had tried the eastern gate of Warehouse 4.” The source passage, authored claim and manuscript quotation are separate records connected by an explicit author association. The log, people and incident are invented; the credited historical images do not verify them.
-
-Saved exact associations offer **Go to manuscript passage** and **Open claim**. The passage action returns to matching text without rewriting it. Changed or ambiguous quotations require review before an exact return is offered. In the local workspace, select a quotation to connect it to an existing claim, then review retention and save explicitly.
-
-For the reverse route, first go to the manuscript quotation, open its paragraph's saved association and choose **Open claim**. It shows the linked claim revision, its linked dossier revisions and cited source passages. Those pinned revisions describe the saved association; opening a newer record does not replace them. Close the record viewer, then choose **Back to passage** to resume the requesting manuscript text. Reading a record, retaining a quotation and accepting a claim are separate actions.
-
-Research creation forms start collapsed. Select a heading to open it and select it again to collapse it; long forms also offer **Collapse** beside Save. Unsaved fields remain across tab switches and collapse, but reloads are not draft storage. Escape closes the innermost disclosure and returns focus to its heading. Dossier previews show readable text; open the full dossier for formatting, diagrams and provenance. Brief disclosure motion respects reduced-motion preferences.
-
-A brisk action passage and an incident note can serve different purposes. There is no quality score to maximize, and a retained source does not establish factual truth. Read the [interpretation guide](interpretation.html) before acting on a signal.
-
-## 4. Compare copies of the same manuscript
-
-Open the prepared [editorial copy](../demo/warehouse-4-editor.pdf), [reading copy](../demo/warehouse-4-book.pdf), [submission sheets](../demo/warehouse-4-sheet.pdf) or [analysis report](../demo/warehouse-4-report.pdf). All four use these same six chapters. The [PDF guide](research-pdf.html#manuscript-export) explains their purposes and limits.
-
-## Use Lixity with your own project
-
-To analyze your own manuscript or keep research notes and decisions, [install Lixity on your computer](installation.html) and open the local workspace. The public demo is read-only; the local workspace supplies the editing and capture actions.
-
-Lixity is open source under AGPL-3.0-or-later: any writing purpose — private, research or commercial, including a book intended for sale or self-publishing — needs no extra permission. A separate written commercial license exists only for closed-source integrations. [Read the licensing guide](../LICENSING.md) before starting.
+Matthias Fahsold developed Lixity at ROST Services GmbH and used it while writing his debut novel. This walkthrough uses entirely invented manuscript text.
 
 [All guides](../#guides) · [Lixity home](../) · [Warehouse 4 demo](../demo/report.html) · [Legal notice](../#impressum)

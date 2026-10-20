@@ -1,3 +1,4 @@
+const {openProjectActions} = require('./support/project-actions.cjs');
 const fs = require('node:fs');
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
 const path = require('node:path');
@@ -33,6 +34,7 @@ const readStateOnly = process.argv.includes('--read-state-only');
 // Synthetic drag data exercises the real DOM listeners; all HTTP stays intercepted.
 async function openImportDialog(page) {
   if (!(await page.locator('#import-dropzone').isVisible())) {
+    await openProjectActions(page);
     await page.locator('#btn-modal-new-project').click();
     await page.locator('#import-dropzone').waitFor({state: 'visible'});
   }
@@ -121,6 +123,38 @@ async function restoreFileReads(page) {
         await route.fulfill({json: {ok: false, locked: true, records: [], message: 'Synthetic locked store'}});
       } else await route.fulfill({contentType: 'text/html', body: isStandalone ? standalone : fixtures[language].html});
     });
+
+    // Project tasks use one reversible native disclosure; navigation stays visible.
+    if (!readStateOnly) for (const locale of Object.keys(fixtures)) {
+      language = locale;
+      for (const width of [1440, 320]) {
+        await page.setViewportSize({width, height: 900});
+        await page.goto('http://lixity.test/');
+        const disclosure = page.locator('#project-actions');
+        assert.equal(await disclosure.count(), 1, 'Project tasks have one disclosure');
+        assert.equal(await disclosure.evaluate(el => el.open), false);
+        const summary = disclosure.locator(':scope > summary');
+        assert.equal((await summary.textContent()).trim(), fixtures[locale].labels.project_actions);
+        assert.equal(await page.locator('#btn-modal-new-project').isVisible(), false);
+        assert.equal(await page.locator('.view-nav-tab:visible').count(), 3);
+        const nav = await page.locator('.view-navigation').boundingBox();
+        const box = await summary.boundingBox();
+        assert.ok(nav.y + nav.height <= box.y + 1, 'Destinations precede project actions');
+        assert.ok(box.height >= 44, 'Project tasks retain a touch target');
+        await summary.focus(); await page.keyboard.press('Enter');
+        assert.equal(await page.locator('#btn-modal-new-project').isVisible(), true);
+        await page.locator('#btn-modal-new-project').focus(); await page.keyboard.press('Escape');
+        assert.equal(await disclosure.evaluate(el => el.open), false);
+        assert.equal(await summary.evaluate(el => document.activeElement === el), true);
+        await page.keyboard.press('Space');
+        assert.equal(await disclosure.evaluate(el => el.open), true);
+        await page.keyboard.press('Space');
+        assert.equal(await disclosure.evaluate(el => el.open), false);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+        await page.screenshot({path: path.join(screenshotDir, `project-actions-${locale}-${width}.png`)});
+      }
+    }
+    language = 'en';
 
     for (const width of readStateOnly ? [] : [1440, 320]) {
       await page.setViewportSize({width, height: 900});
@@ -344,6 +378,7 @@ async function restoreFileReads(page) {
     assert.equal(projectSubmissions.length, 1);
     await page.locator('#form-project-import [data-close-modal]').click();
     // The reused dialog keeps its own file chooser reachable by pointer and keyboard.
+    await openProjectActions(page);
     await page.locator('#btn-modal-new-project').click();
     const importDropzone = page.locator('#import-dropzone');
     for (const method of ['click', 'Space', 'Enter']) {

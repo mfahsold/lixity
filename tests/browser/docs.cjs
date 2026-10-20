@@ -1,4 +1,5 @@
 const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
+const {openProjectActions} = require('./support/project-actions.cjs');
 // Validate the public static site without contacting production or loading private data.
 const fs = require('node:fs');
 const path = require('node:path');
@@ -74,24 +75,26 @@ async function checkReturnNavigation(page, route, exercise) {
   await expect(top).toHaveAttribute('tabindex', '-1');
   const navigation = page.locator('nav.site-return[aria-label="Lixity navigation"]');
   await expect(navigation).toBeVisible();
-  const home = navigation.locator(`a[href="${route ? '../' : './'}"]`);
-  await expect(home).toBeVisible();
-  const demo = navigation.getByRole('link', {name: 'Demo', exact: true});
-  await expect(demo).toHaveAttribute('href', route ? '../demo/report.html' : 'demo/report.html');
-  if (route.startsWith('examples/')) await expect(demo).not.toHaveAttribute('aria-current', /.+/);
   const breadcrumbs = page.locator('.site-breadcrumbs');
   if (!route) {
-    await expect(home).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('.brand[href="./"]')).toHaveAttribute('aria-current', 'page');
+    await expect(navigation.getByRole('link', {name: 'Home', exact: true})).toHaveCount(0);
+    await expect(navigation.getByRole('link', {name: 'Demo', exact: true})).toHaveCount(0);
   } else if (route === 'demo/report.html') {
-    await expect(demo).toHaveAttribute('aria-current', 'location');
+    await expect(navigation.getByRole('link', {name: 'About Lixity', exact: true})).toHaveAttribute('href', '../');
+    await expect(navigation.locator('a')).toHaveCount(1);
+    await expect(navigation).toContainText('Read-only demo');
     await expect(breadcrumbs).toHaveCount(0);
   } else {
+    await expect(navigation.locator('a[href="../"]')).toBeVisible();
+    const demo = navigation.getByRole('link', {name: 'Demo', exact: true});
+    await expect(demo).toHaveAttribute('href', '../demo/report.html');
+    if (route.startsWith('examples/')) await expect(demo).not.toHaveAttribute('aria-current', /.+/);
     await expect(breadcrumbs).toBeVisible();
     await expect(breadcrumbs.locator('[aria-current=page]')).toHaveCount(1);
     const parent = route.startsWith('guides/') ? '../#guides'
       : route === 'blog/index.html' ? '../'
-        : route.startsWith('blog/') ? 'index.html'
-          : route === 'demo/report.html' ? '../#examples' : '../';
+        : route.startsWith('blog/') ? 'index.html' : '../';
     await expect(breadcrumbs.locator('a').last()).toHaveAttribute('href', parent);
   }
   const backTop = page.locator('a.site-back-top[href="#top"]');
@@ -527,6 +530,7 @@ async function checkDemoCapabilities(page, width) {
   await page.locator('#tab-view-analysis').click();
 
   // The native form downloads a reviewed copy without running PDF generation.
+  await openProjectActions(page);
   await page.locator('#manuscript-pdf-title').click();
   await expect(page.locator('#manuscript-pdf')).toContainText(/prepared copies/i);
   await page.locator('#manuscript-pdf-layout').selectOption('book');
@@ -848,27 +852,24 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
             await page.locator('h1').scrollIntoViewIfNeeded();
           }
           if (!route) {
-            const reducedMotion = await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
-            for (const feature of await page.locator('.feature').all()) {
-              const video = feature.locator('.frame video');
-              if (await video.count()) {
-                assert.ok(await video.evaluate(element => ['autoplay', 'muted', 'loop', 'playsinline'].every(name => element.hasAttribute(name))), 'Feature walkthroughs loop muted and inline');
-                assert.ok(await video.getAttribute('poster'), 'Feature walkthroughs carry a poster');
-                assert.equal(await video.locator('source[type="video/mp4"]').count(), 1, 'Feature walkthroughs carry one MP4 source');
-                if (!reducedMotion) await video.scrollIntoViewIfNeeded();
-              }
-              for (const image of await feature.locator('.frame img').all()) {
-                await image.evaluate(element => { element.loading = 'eager'; return element.decode().catch(() => {}); });
-                if (await image.isVisible()) await image.scrollIntoViewIfNeeded();
-                assert.equal(await image.evaluate(element => element.parentElement.getAttribute('href')), await image.getAttribute('src'), 'Feature images open their original PNG without JavaScript');
-                assert.ok(await image.evaluate(element => {
-                  const feature = element.closest('article');
-                  return feature.querySelector('h2') && feature.querySelector('p').textContent.length > 50;
-                }), 'Each image belongs to an explained feature');
-                assert.deepEqual(await image.evaluate(element => [element.naturalWidth, element.naturalHeight]),
-                  [Number(await image.getAttribute('width')), Number(await image.getAttribute('height'))]);
-              }
-            }
+            await expect(page.locator('main a[href="demo/report.html"]')).toHaveCount(1);
+            await expect(page.locator('main a[href="guides/installation.html"]')).toHaveCount(1);
+            const image = page.locator('.hero .frame img');
+            await expect(image).toHaveCount(1);
+            await image.evaluate(element => element.decode());
+            assert.equal(await image.evaluate(element => element.parentElement.getAttribute('href')),
+              await image.getAttribute('src'), 'The product image opens at full size without JavaScript');
+            assert.deepEqual(await image.evaluate(element => [element.naturalWidth, element.naturalHeight]),
+              [Number(await image.getAttribute('width')), Number(await image.getAttribute('height'))]);
+            assert.ok(await image.evaluate(element => {
+              const box = element.getBoundingClientRect();
+              return Math.abs(box.width / box.height - element.naturalWidth / element.naturalHeight) < .01;
+            }), 'The homepage preserves the complete screenshot aspect ratio');
+            await expect(page.locator('#impressum > summary')).toBeVisible();
+            await page.locator('#impressum > summary').click();
+            await expect(page.locator('#impressum address')).toBeVisible();
+            await expect(page.locator('#impressum address')).toContainText('ROST Services GmbH');
+            await page.locator('#impressum > summary').click();
             await page.locator('h1').scrollIntoViewIfNeeded();
           }
           await page.screenshot({path: path.join(artifacts, `${route ? path.basename(route, '.html') : 'home'}-${width}-${colorScheme}${javaScriptEnabled ? '' : '-js-off'}.png`), fullPage: route === '' || route === 'guides/first-look.html'});
@@ -889,12 +890,10 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
         await expect(page).toHaveURL('http://lixity.test/lixity/#guides');
         await expect(page.locator('#guides h2')).toBeInViewport();
         await returnToTop(page, 'Guides parent');
-        await page.locator('.site-return a[href="./"]').click();
+        await page.locator('.brand[href="./"]').click();
         await expect(page).toHaveURL('http://lixity.test/lixity/');
         await page.locator('.hero-cta a.primary[href="demo/report.html"]').click();
         assert.ok(page.url().endsWith('/demo/report.html'), 'The primary CTA opens the one demo directly');
-        await page.locator('.site-return a').filter({hasText: /^Demo$/}).click();
-        await expect(page).toHaveURL('http://lixity.test/lixity/demo/report.html');
         await page.locator('.site-return a[href="../"]').click();
         await expect(page).toHaveURL('http://lixity.test/lixity/');
         if (javaScriptEnabled) {

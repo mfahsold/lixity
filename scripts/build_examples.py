@@ -172,16 +172,14 @@ def _insert_notice(report: str, notice: str) -> str:
     # Public explanation belongs to the document, outside the native project rail.
     shell = '<div class="workspace-shell">'
     if shell in report:
-        navigation = report.index('<nav class="view-navigation"', report.index(shell))
-        navigation_end = report.index("</nav>", navigation) + len("</nav>")
-        shell_end = report.index("</div>", navigation_end) + len("</div>")
-        closing = "</div>"
-        if '<div id="workspace-navigation-content">' in report[report.index(shell):navigation]:
-            shell_end = report.index("</div>", shell_end) + len("</div>")
-            closing += "</div>"
-        _require(re.sub(r"\s+", "", report[navigation_end:shell_end]) == closing,
-                 "the workspace navigation must close the shell")
-        return report[:shell_end] + notice + report[shell_end:]
+        # The renderer emits this boundary after the complete shell and status
+        # strip. Its position does not depend on nested action disclosures.
+        boundary = "<!--dashboard-freshness-->"
+        _require(report.count(shell) == report.count(boundary) == 1,
+                 "the workspace must carry one shell and one content boundary")
+        content_start = report.index(boundary)
+        _require(content_start > report.index(shell), "workspace content must follow the shell")
+        return report[:content_start] + notice + report[content_start:]
     return report.replace("</header>", "</header>" + notice, 1)
 
 
@@ -206,19 +204,22 @@ def _site_navigation(
     _require(stylesheet.count(start) == stylesheet.count(end) == 1,
              "the shared public navigation stylesheet must have one bounded block")
     styles = stylesheet.partition(start)[2].partition(end)[0]
-    current = ' aria-current="location"' if demo else ""
-    parent = '<li><a href="../#examples">Demo</a></li>' if demo else ""
     navigation = (
+        '<nav class="site-return" aria-label="Lixity navigation">'
+        '<a href="../">About Lixity</a>'
+        '<span class="demo-context">Read-only demo · Fictional manuscript</span>'
+        '</nav>'
+    ) if demo else (
         '<nav class="site-return" aria-label="Lixity navigation">'
         '<a href="../">Home</a><a href="../#guides">Guides</a>'
         '<a href="../blog/index.html">Articles</a>'
-        f'<a href="../demo/report.html"{current}>Demo</a>'
+        '<a href="../demo/report.html">Demo</a>'
         '</nav>'
     )
-    if breadcrumbs:
+    if breadcrumbs and not demo:
         navigation += (
             '<nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol>'
-            '<li><a href="../">Home</a></li>' + parent +
+            '<li><a href="../">Home</a></li>' +
             f'<li><span aria-current="page">{html.escape(title)}</span></li></ol></nav>'
         )
     _require(report.count('<body id="top"') == 1, "the report must have one top target")

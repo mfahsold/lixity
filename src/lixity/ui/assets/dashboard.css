@@ -1735,17 +1735,22 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
 #workspace-navigation-content { display: contents; }
 #workspace-navigation-content[hidden] { display: none; }
 .workspace-shell-header { min-width: 0; }
+.workspace-actions { min-width: 0; }
+.workspace-actions > summary { color: var(--fg-secondary); font-weight: 400; }
+.workspace-actions:not([open]) > .workspace-bar { display: none; }
 .workspace-navigation-toggle { display: none; }
 /* Window and reading commands keep their targets while yielding emphasis to
    selected destinations, display state and explicit primary save actions. */
 .workspace-shell .workspace-bar button.ctl:not(.primary),
 .manuscript-reader-controls > button.ctl:not(.analysis-toggle):not([aria-pressed="true"]),
+.manuscript-reader-controls .reader-controls > button.ctl,
 .manuscript-reader-controls .reader-settings > summary {
   background: transparent; border-color: transparent; color: var(--fg-secondary);
 }
 .workspace-shell .workspace-bar button.ctl:not(.primary) { text-align: start; }
 .workspace-shell .workspace-bar button.ctl:not(.primary):enabled:hover,
 .manuscript-reader-controls > button.ctl:not(.analysis-toggle):not([aria-pressed="true"]):enabled:hover,
+.manuscript-reader-controls .reader-controls > button.ctl:enabled:hover,
 .manuscript-reader-controls .reader-settings > summary:hover {
   background: var(--neutral); border-color: var(--line); color: var(--fg);
 }
@@ -1773,9 +1778,10 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
   }
   .lixity-workspace .view-nav-tab { justify-content: flex-start; text-align: start; }
   .lixity-workspace .view-nav-tab:not(.active) { border-color: transparent; background: transparent; }
+  .lixity-workspace .workspace-actions { order: 2; border-top: 1px solid var(--line); padding-top: .5rem; }
   .lixity-workspace .workspace-bar {
-    order: 2; display: grid; grid-template-columns: minmax(0, 1fr);
-    padding: 1rem 0 0; border: 0; border-top: 1px solid var(--line);
+    display: grid; grid-template-columns: minmax(0, 1fr);
+    padding: .5rem 0 0; border: 0;
     border-radius: 0; gap: 1rem;
   }
   .lixity-workspace .workspace-bar > .row { display: grid; grid-template-columns: minmax(0, 1fr); gap: .4rem; }
@@ -1986,11 +1992,17 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
 @media screen and (max-width: 1099px) {
   .lixity-workspace.has-reading .workspace-shell { gap: .6rem; }
   .lixity-workspace.has-reading .project-header { gap: .35rem; margin-bottom: 0; }
+  .lixity-workspace.has-reading .project-header h1 { margin-bottom: .25rem; }
+  .lixity-workspace.has-reading .product-meta { margin-bottom: .5rem; }
   .lixity-workspace.has-reading .project-header .sub { display: none; }
   .lixity-workspace.has-reading .workspace-bar { padding: .4rem 0; }
   .lixity-workspace.has-reading .workspace-bar > .row { gap: .35rem; }
   .lixity-workspace.has-reading .workspace-bar .ctl { padding: .35rem .5rem; font-size: var(--text-note); }
 }
+
+/* Reading controls are adjacent tools; repeated section spacing should not
+   turn the short mobile entry into several screens of application chrome. */
+.manuscript-reading:not(.workbench-overview) #workspace-analysis-body { gap: var(--space-3); }
 
 /* Ordinary counts are available in their views; warnings stay visible at every width. */
 .lixity-workspace .status-strip:not(:has(.warn, .error, .unknown)):not(#dashboard-freshness) { display: none; }

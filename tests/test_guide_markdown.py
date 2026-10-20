@@ -43,3 +43,37 @@ def test_article_markdown_preserves_table_sections_and_figure_images(tmp_path) -
     assert "| Tool | Evidence |\n| --- | --- |\n| Local analysis | Chapter comparison |" in rendered
     assert "![Synthetic chapter map](preview.png)" in rendered
     assert "Review the source passage." in rendered
+
+
+def test_details_markdown_preserves_paragraphs_and_code_blocks(tmp_path) -> None:
+    page = tmp_path / "details.html"
+    page.write_text('''<main><details>
+<summary>Verify <em>release</em> files</summary>
+<p>Check <code>SHA256SUMS</code>, then read the <a href="checks.html">guide</a>
+and <strong>verify</strong> the download.</p>
+<pre><code>echo "verify"
+  sha256sum --check SHA256SUMS</code></pre>
+<div><p>Grouped <code>instructions</code> stay together.</p>
+<details><summary>More checks</summary><p>Run the <strong>extra</strong> check.</p>
+<pre><code>echo "extra"</code></pre></details></div>
+</details></main>''', encoding="utf-8")
+
+    assert guide_markdown(page) == '''**Verify *release* files**
+
+Check `SHA256SUMS`, then read the [guide](checks.html) and **verify** the download.
+
+```
+echo "verify"
+  sha256sum --check SHA256SUMS
+```
+
+Grouped `instructions` stay together.
+
+**More checks**
+
+Run the **extra** check.
+
+```
+echo "extra"
+```
+'''

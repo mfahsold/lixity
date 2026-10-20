@@ -116,52 +116,55 @@ def configure(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "project", nargs="?", help="Explicit project or manuscript for start/restart"
     )
-    parser.add_argument(
+    workspace = parser.add_argument_group("Workspace", "Start/restart settings")
+    instance = parser.add_argument_group("Instance", "Local process and output")
+    thresholds = parser.add_argument_group("Analysis thresholds", "Optional start/restart overrides")
+    instance.add_argument(
         "--port", type=int, default=None, help=f"Port (default: LIXITY_PORT or {DEFAULT_PORT})"
     )
-    parser.add_argument(
+    instance.add_argument(
         "--host", default=None, help=f"Loopback host (default: LIXITY_HOST or {DEFAULT_HOST})"
     )
-    parser.add_argument(
+    workspace.add_argument(
         "--no-project", action="store_true", default=None, help="Start an empty workspace"
     )
-    parser.add_argument(
+    workspace.add_argument(
         "--open", dest="open_browser", action="store_true", default=None,
         help="Open the ready workspace in your browser (start/restart)",
     )
-    parser.add_argument(
+    workspace.add_argument(
         "--language", choices=LANGUAGE_CHOICES,
         help="Analysis language override; default: project setting or en; auto requests detection",
     )
-    parser.add_argument("--title", help="Workspace title override (default: project/manuscript title)")
-    parser.add_argument("--research-project", help="Explicit research archive root for the workspace")
-    parser.add_argument(
+    workspace.add_argument("--title", help="Workspace title override (default: project/manuscript title)")
+    workspace.add_argument("--research-project", help="Explicit research archive root for the workspace")
+    instance.add_argument(
         "--debug", action="store_true", default=None,
         help="Enable verbose server and browser diagnostics",
     )
-    parser.add_argument(
+    instance.add_argument(
         "--backend",
         choices=("auto", "process", "systemd"),
         default="auto",
         help="auto prefers an available Linux systemd user manager",
     )
-    parser.add_argument("--json", action="store_true", help="Machine-readable lifecycle result")
+    instance.add_argument("--json", action="store_true", help="Machine-readable lifecycle result")
     for flag, help_text in (
         ("z-mild", "Notable |z*| threshold override"),
         ("z-strong", "Strong |z*| threshold override"),
         ("fdr-q", "Nominal FDR q override"),
         ("dim-threshold", "Per-axis cutoff in standardized midrank PCA space"),
     ):
-        parser.add_argument("--" + flag, type=float, help=help_text)
-    parser.add_argument(
+        thresholds.add_argument("--" + flag, type=float, help=help_text)
+    thresholds.add_argument(
         "--fdr-method", choices=("bh", "by"),
         help="FDR method: Benjamini-Hochberg (bh) or Benjamini-Yekutieli (by)",
     )
-    parser.add_argument(
+    thresholds.add_argument(
         "--min-chapters", type=int,
         help="Minimum chapters for a style baseline (at least 2; built-in default: 2)",
     )
-    parser.add_argument(
+    thresholds.add_argument(
         "--flag-min-severity", type=int, choices=(1, 2, 3),
         help="Minimum paragraph severity for the flagged list",
     )

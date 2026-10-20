@@ -15,11 +15,13 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
 (async () => {
   const browser = await launchChromium();
   try {
-    const page = await browser.newPage({hasTouch: true});
     const errors = [];
-    page.on('pageerror', error => errors.push(error.message));
     for (const width of [1440, 320]) {
-      await page.setViewportSize({width, height: 900});
+      // Keep each fixture's pointer, focus and touch state independent. Replacing
+      // DOM under the previous fixture's stationary pointer can queue a genuine
+      // mouseover after the first keyboard-focus assertion has started.
+      const page = await browser.newPage({hasTouch: true, viewport: {width, height: 900}});
+      page.on('pageerror', error => errors.push(error.message));
       await page.setContent(`<!doctype html><html lang="en"><style>${css}</style>
         <style>
           #navigation {position:fixed;top:150px;left:20px}
@@ -142,6 +144,7 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
       await expect(tip).toHaveAttribute('aria-hidden', 'true');
       assert.equal(await page.locator('#modal').getAttribute('open'), '', 'Escape dismisses help before its modal');
       await page.evaluate(() => document.querySelector('#modal').close());
+      await page.close();
     }
     assert.deepEqual(errors, []);
     console.log('Tooltips: native navigation, hover persistence, long scrolling help, keyboard/Escape, touch and dialog top layer passed; ' + artifacts);

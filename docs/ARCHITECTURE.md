@@ -47,7 +47,7 @@ research calls stay explicitly scoped. An occupied port fails startup.
 `DocumentAnalysis` reuses corpus/chapter measurements for the fingerprint and
 renderers. Narrower profile/fingerprint requests use the same pipeline. Dashboard
 refresh validates manuscript bytes before serving cached measurements and rebuilds
-when a readable changed source can be rendered. **Current main (unreleased):**
+when a readable changed source can be rendered. **Since v0.7.2:**
 `RefreshOutcome` distinguishes unchanged/rebuilt, missing, unreadable and failed
 refreshes. Missing/unreadable sources and config/render failures retain the last
 successful HTML, metadata and source digest, with a per-response localized
@@ -80,17 +80,24 @@ calling the API. Saved-quote counts join explicit associations from one coherent
 snapshot, disclose differing revision pins and do not establish manuscript use or
 nonuse. Rendering preserves exact resolved quote spans and complete text search.
 
-**Current main (unreleased):** relation navigation opens an association's pinned
+**Since v0.7.2:** relation navigation opens an association's pinned
 claim revision, then its explicit pinned dossier reference. Scoped Review routes
 join saved manuscript associations by those references, independently of the
 dossier's derived current-claim list. Only existing exact anchor matches offer
 passage jumps. The document origin/return context is ephemeral and guarded by the
-current project/source/research context; no archive/backend schema is introduced.
+current project/source/research context. Its compact work thread displays the
+original chapter/line span and the last accepted viewed record identity and saved
+revision, distinguishing an explicitly pinned version from a current or viewed
+version. Return or a changed project/source/research context clears the thread;
+no archive/backend schema is introduced.
 Native selection uses ephemeral paragraph-local UTF-16 offsets and direction,
 rebuilt against exact paragraph text on return so annotation repaint cannot
 mutate a saved live Range. Saved archive offsets remain Unicode codepoints. Existing citation
 envelopes retain source version, passage identity, hashes and offsets. Ordinary
-source reading is not relabelled as the historical cited version.
+source reading is not relabelled as the historical cited version. Retained quote
+cards do not provide a full historical-source reader. Dossier readers group
+authored notes, derived current-linked claims and citations, while global claims
+and decisions remain available through their existing routes.
 
 Ordinary authored CLI updates require a reviewed revision, change kind and reason;
 when the archive snapshot is omitted, the backend's current read guards the same
@@ -101,6 +108,17 @@ values; historical comparison resolves saved revisions without repinning. Sectio
 reconciliation changes only the selected body subtree while ordinary field changes
 use the same candidate. HTTP, images, acknowledgements and batches retain their
 explicit guards. No preview establishes that a future write will succeed.
+
+Since v0.7.2, normalized authored content equality is decided in
+`research.revisions` after complete metadata, field and association validation.
+An unchanged candidate returns the exact prior record, preserving its revision,
+encoding and historical pins. Mixed batches publish changed members only; invalid
+operations reject the entire batch. `research.repository` retains the writer
+lock and concurrent HEAD check even for an empty commit, then returns without
+rewriting retained bytes, HEAD or the disposable SQLite index. Immutable JSON
+records, blobs, manifests and HEAD remain authoritative; no archive migration or
+second store is introduced. Decision acknowledgements remain append-only events,
+not authored-content no-ops.
 
 `research.dossier_edit` encodes an explicit leading JSON comment and
 the exact body as a Markdown draft. It validates identity/base and delegates to
@@ -192,7 +210,7 @@ Research media reuse bundled PhotoSwipe 5.4.4 for retained images and
 generated diagrams. Mermaid tiny 12.2.0 owns diagram syntax/layout and initializes
 only when a diagram first becomes visible; restrictions disable resource loading,
 click actions and configuration directives, with source retained on failure.
-Leaflet 1.9.4 provides geographic vectors. **Current main, after v0.7.1:** visible
+Leaflet 1.9.4 provides geographic vectors. **Since v0.7.2:** visible
 maps load OpenStreetMap tiles by default; users can turn off the background or
 choose the offline sketch. Tile requests stop outside the visible map/project
 context. Tiles reveal the client IP and viewed area;
@@ -235,7 +253,7 @@ The manuscript is the primary workspace. Analysis supports passage selection
 and interpretation; retained evidence and authored dossiers provide context.
 These are connected views over the same project, not independent products.
 
-**Current main, after v0.7.1:** interactive dashboards use a fixed project sidebar
+**Since v0.7.2:** interactive dashboards use a fixed project sidebar
 on wide screens, with manuscript/analysis first, research second and settings
 third. Narrow screens keep a horizontal switcher. Tab orientation and keyboard
 navigation change together; the sidebar scrolls independently if its controls
@@ -249,7 +267,7 @@ as inline association marks, with a current project/source context check on clic
 
 ### Shared manuscript reader
 
-**Current main (unreleased):** `ui/manuscript_reader.py` emits the shared command
+**Since v0.7.2:** `ui/manuscript_reader.py` emits the shared command
 surface. The interactive manuscript stays continuous while an **Analysis** toggle
 exposes diagnostic presentation in place. Turning the layer on does not open a
 dock or apply the navigation-collapse override. Its absolute gutter marker does
@@ -295,10 +313,13 @@ shortcuts share the same action builder. A valid single-paragraph selection
 offers a small toolbar. Marker and claim actions delegate to the established
 handlers, including their explicit save, capability and retention checks; no
 parallel write API is introduced. Values reuse the paragraph's measured markup
-in the closable analysis dock and enable analysis. Explicit analysis/dossier
+in the closable Passage values inspector, alongside chapter/source-line context
+and the existing saved-research route when supported. Opening Values does not
+force the global Analysis layer on. Explicit Values/dossier
 controls replace the active dock content while retaining each tool's selection.
-Closing the dock does not hide the diagnostic layer; hiding analysis closes its
-analysis tool but can retain a dossier. On narrow screens, an explicit passage
+Closing the dock does not hide the diagnostic layer; turning Analysis Off
+preserves an explicitly open Values inspector or dossier. Overview return
+restores the previous layer visibility and context tool. On narrow screens, an explicit passage
 tool request stores its own origin and reveals the stacked dock heading; close
 or Escape restores the requesting passage and focus. That intentional destination
 scroll is not overwritten by ordinary reading-anchor restoration. Desktop tools
@@ -318,11 +339,34 @@ free-panning manuscript canvas or a manuscript editor.
 
 The interface follows a reading-first hierarchy: a passage or visual comes
 before its detailed measurements; advanced explanations stay near the control
-that needs them. Diagram frames follow content width within the reader, and
+that needs them. Shared design tokens own the paper-toned light surfaces, ink,
+muted text, dividers and action accent across the native UI and Pages; the site
+does not introduce a separate palette. Existing serif manuscript/chapter type
+and system interface type distinguish prose from controls. Spacing and selective
+dividers separate supporting content; warnings, editable fields, selection and
+dialog boundaries retain their distinct roles. Reader composition and companion
+spacing remain in their existing stylesheet owners, without a second display
+state or altered reading preferences.
+
+Diagram frames follow content width within the reader, and
 wide diagrams retain their label scale in a scrollable viewport. Style-space
 navigation groups paired actions at responsive widths. Pages uses the shared
 tokens and stylesheet, with direct demo and installation entry points and
 screenshots of the same native components rather than a parallel product UI.
+
+The public landing page demonstrates the product and routes to the demo or
+installation. README owns purpose, first commands and the documentation/repository
+map; guides own complete workflows and references own detailed contracts. The
+demo retains the native workspace with a compact return link, rather than a
+second site navigation inside the application. Screenshot framing follows real
+viewports or complete task boundaries; camera helpers do not override native
+dialog scrolling or hide content to make an image fit.
+
+The shell groups New/Open, guidance and PDF export in one native **Project
+actions** disclosure. It starts closed with a loaded manuscript and open in an
+empty workspace, while the three destinations remain directly available.
+Disclosure visibility stays in the DOM; backend project state and capabilities
+remain separate. Modal openers stay visible behind their dialog for focus return.
 
 Native `details` elements own research composer visibility. Their field DOM stays
 mounted across collapse and tab switches, preserving in-memory drafts without

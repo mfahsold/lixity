@@ -209,14 +209,18 @@ titles, links and reviewed public screenshots; set their actual image dimensions
 Preview the published tree with
 `python3 scripts/stage_pages.py --output /tmp/lixity-pages-preview`, using a new
 directory. Only selected paths inside `docs/` are published. New public paths
-must be added deliberately to the staging rules. The shared design-token
-stylesheet is the one explicitly copied packaged asset. Root documents such as README
+must be added deliberately to the staging rules. The shared design-token and
+component stylesheets are explicitly copied packaged assets. Root documents such as README
 and CONTRIBUTING must be linked by their absolute GitHub URL: `../README.md`
 works in a checkout but breaks on Pages. The documentation tests validate links
 against the staged tree.
 
 Review staged paths and content for private data, local reports and planning.
 After an authorized push, verify CI and the public deployment.
+
+The Pages push-path filter does not currently watch `src/lixity/ui/assets/components.css`.
+After an authorized `main` push that changes only that shared stylesheet, deploy
+it manually with `gh workflow run pages.yml --ref main`, then verify the deployment.
 
 The visual-consistency browser check covers palette, contrast, focus and enlarged
 text spacing; it is not a full accessibility audit. Ground design claims in

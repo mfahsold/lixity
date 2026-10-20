@@ -87,7 +87,7 @@ defines that boundary and the optional local-import workflow.
 
 ### Download a manuscript PDF
 
-Open **PDF export** above the workspace views, choose a layout, then
+Open **Project actions → PDF export**, choose a layout, then
 **Download PDF**. Since v0.7.0, **A4 editorial copy** is the initial choice;
 **A5 reading copy**, **A4 manuscript sheets** and **A4 analysis report** are also available.
 Changing the layout alone does not generate a file. The download uses the same

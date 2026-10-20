@@ -171,12 +171,8 @@ def _render_blocks(node: Node, out: list[str]) -> None:
                          "| " + " | ".join(["---"] * width) + " |"]
                 lines.extend("| " + " | ".join(row + [""] * (width - len(row))) + " |" for row in rows[1:])
                 out.append("\n".join(lines))
-        elif child.tag == "details":
-            for part in child.children:
-                if isinstance(part, Node) and part.tag == "summary":
-                    out.append("**" + _clean(_inline(part)) + "**")
-                elif isinstance(part, Node):
-                    _render_blocks(part, out)
+        elif child.tag == "summary":
+            out.append("**" + _clean(_inline(child)) + "**")
         elif child.tag == "figure":
             out.extend(_inline(part) for part in _walk(child) if part.tag == "img")
             sources = [
@@ -191,7 +187,7 @@ def _render_blocks(node: Node, out: list[str]) -> None:
                        if isinstance(part, Node) and part.tag == "figcaption")
         elif child.tag == "footer":
             out.append(_clean(_inline(child)))
-        elif child.tag in {"div", "section", "article", "main", "body", "root"}:
+        elif child.tag in {"div", "section", "article", "main", "body", "root", "details"}:
             _render_blocks(child, out)
         else:
             text = _clean(_inline(child))

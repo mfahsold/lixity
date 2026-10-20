@@ -17,6 +17,11 @@ to the affected areas (falling back to the full set when a shared foundation
 changed), `--jobs N` runs independent suites in parallel, `--only NAME`
 selects suites and `--start NAME` resumes after a failure.
 
+Completed runs end with a summary of completed/selected suites, passed, failed,
+not run and elapsed time. Failures include a sorted list of suite names and exit
+codes. Sequential runs stop at the first failure; parallel runs finish all
+selected suites before summarizing. A failed run retains a nonzero exit code.
+
 Before starting suites, the runner executes the support directory's Node tests.
 These check disposable-server startup, malformed readiness data, early exits,
 timeouts and cleanup. `--list` only lists suites. Native-server helpers keep

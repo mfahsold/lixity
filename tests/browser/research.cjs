@@ -1,3 +1,4 @@
+const {openProjectActions} = require('./support/project-actions.cjs');
 const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
 // Exercise project selection and research controls against a disposable local server.
 const fs = require('node:fs');
@@ -95,6 +96,7 @@ server.serve_forever()
       await page.locator('.workspace-bar').screenshot({path: path.join(artifacts, `workspace-actions-${width}.png`)});
     }
     await page.setViewportSize({width: 1440, height: 1000});
+    await openProjectActions(page);
     await page.locator('#welcome-show').click();
     await expect(page.locator('#welcome-hero')).toBeVisible();
     assert.equal(await page.locator('#ms-file, [data-action=export], [data-action=sync], [data-action=gdrive]').count(), 0, 'Native UI must expose supported workflows only');
@@ -109,6 +111,7 @@ server.serve_forever()
     await noStoragePage.goto(fixture.url);
     await noStoragePage.locator('#welcome-dismiss').click();
     await expect(noStoragePage.locator('#welcome-hero')).not.toBeVisible();
+    await openProjectActions(noStoragePage);
     await noStoragePage.locator('#welcome-show').click();
     await expect(noStoragePage.locator('#welcome-hero')).toBeVisible();
     await noStoragePage.close();
@@ -119,6 +122,7 @@ server.serve_forever()
       const endpoint = new URL(request.url()).pathname;
       if (request.method() === 'POST' && /\/api\/(project-|research-)/.test(endpoint)) mutations.push(endpoint);
     });
+    await openProjectActions(page);
     await page.locator('#btn-modal-open-project').click();
     await expect(page.locator('#modal-project-open')).toBeVisible();
     const openHelp = page.locator('#modal-project-open .help').first();
@@ -183,6 +187,7 @@ server.serve_forever()
     await page.keyboard.press('Escape');
 
     // Opening an empty manuscript must attach its existing sibling research archive.
+    await openProjectActions(page);
     await page.locator('#btn-modal-open-project').click();
     const missing = path.join(artifacts, 'missing-project');
     await page.locator('#open-proj-path').fill(missing);
@@ -309,6 +314,7 @@ server.serve_forever()
     await page.locator('[data-rtab=sources]').click();
     await expect(page.locator('#r-ground-source-select')).toHaveValue(sourceBeforeReopen.sources[0].id);
     // The folder route selects the same archive as the empty manuscript route.
+    await openProjectActions(page);
     await page.locator('#btn-modal-open-project').click();
     await page.locator('#open-proj-path').fill(fixture.project);
     await page.locator('#open-proj-choose').click();
@@ -1045,6 +1051,7 @@ server.serve_forever()
         await revisionDialog.screenshot({path: path.join(artifacts, 'revision-decision-reason-320.png')});
         await page.keyboard.press('Escape');
       }
+      await openProjectActions(page);
       await page.locator('#btn-modal-open-project').click();
       await expect(page.locator('#open-proj-path')).toBeVisible();
       await page.locator('#open-proj-path').fill(fixture.project);
@@ -1074,6 +1081,7 @@ server.serve_forever()
       }
     }
     // Folder selection also supports an archive with no manuscript at all.
+    await openProjectActions(page);
     await page.locator('#btn-modal-open-project').click();
     await page.locator('#open-proj-path').fill(fixture.researchOnly);
     await page.locator('#open-proj-choose').click();
@@ -1088,6 +1096,7 @@ server.serve_forever()
     // Scratch creation, optional research initialization and explicit byte import
     // have distinct results and leave previously opened archives unchanged.
     await page.setViewportSize({width: 1440, height: 1000});
+    await openProjectActions(page);
     await page.locator('#btn-modal-new-project').click();
     await page.locator('#tab-btn-scratch').click();
     const scratchProject = path.join(artifacts, 'scratch-project');
@@ -1096,6 +1105,7 @@ server.serve_forever()
     await page.locator('#new-proj-lang').selectOption('en');
     await Promise.all([page.waitForNavigation(), page.locator('#btn-submit-create-project').click()]);
     await expect(page.locator('#welcome-hero')).not.toBeVisible();
+    await openProjectActions(page);
     await expect(page.locator('#welcome-show')).toBeVisible();
     await page.locator('#welcome-show').click();
     await expect(page.locator('#welcome-hero')).toBeVisible();
@@ -1178,6 +1188,7 @@ api.ingest(project, text, source_id=source['id'], allow_retention=True, context=
     await page.unroute('**/api/research-zotero');
     const importedProject = path.join(artifacts, 'imported-project');
     const importedText = '## Imported chapter\n\nA synthetic imported manuscript.';
+    await openProjectActions(page);
     await page.locator('#btn-modal-new-project').click();
     await page.locator('#tab-btn-import').click();
     await page.locator('#import-file-input').setInputFiles({name: 'synthetic.md', mimeType: 'text/markdown', buffer: Buffer.from(importedText)});

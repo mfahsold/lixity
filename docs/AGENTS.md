@@ -163,7 +163,7 @@ The response carries `meta`, `features`, `deviations`, `fdr_flagged`,
 diagnostics. Use `features[].feature` to join the feature rows to chapter-keyed
 deviation/FDR maps; localized `feat_*` strings are display keys.
 
-**Current main, after v0.7.1:** additive `dimension_diagnostics` explains support
+**Since v0.7.2:** additive `dimension_diagnostics` explains support
 and availability without changing schema v4 scores. Use `dimensions[].flagged`,
 not rounded scores, for cutoff status; unavailable positions are not zero.
 
@@ -197,8 +197,8 @@ Manuscript, Research and Project are separate views; project actions remain
 reachable from each. Import preview writes nothing until confirmation.
 [Dashboard usage](USAGE.md#dashboard-workflow) owns navigation workflows.
 
-**Current main (unreleased):** the interactive manuscript remains continuous.
-Analysis visibility, document/overview and the active analysis/dossier tool are
+**Since v0.7.2:** the interactive manuscript remains continuous.
+Analysis visibility, document/overview and the active Values/dossier tool are
 separate display choices. Use the visible toggle/return controls below; the
 internal `LixityWorkbench` coordinator is not a replacement domain API. Changing
 views or display settings does not authorize source edits or retention.
@@ -210,9 +210,11 @@ keep their fallback. Deferred interaction retains complete embedded text/search
 and a readable no-JavaScript fallback; an empty closed report panel does not mean
 absent text or a smaller HTML payload.
 Style jumps reveal their owning tabs. In standalone reports, chapter/paragraph
-jumps expand folded chapters; the current-main interactive reader keeps chapters
+jumps expand folded chapters; the interactive reader keeps chapters
 and prose continuous and hides chapter-fold controls. Its paragraph menu opens
-Values in the contextual inspector instead of an inline disclosure. Section
+Values in the contextual inspector instead of an inline disclosure. Opening
+Values preserves the global Analysis choice; Analysis Off preserves an explicitly
+open Values inspector. Overview return restores the previous layer and tool. Section
 navigation lists only rendered panels.
 
 PDF export, the read-only dossier companion and research saves use the explicit
@@ -223,7 +225,8 @@ capability/context guards below. Selection drafts save nothing by themselves.
 | `#manuscript-analysis-toggle` | constant-name **Analysis** toggle; `aria-pressed` and visible On/Off text identify diagnostic visibility independently of the dossier |
 | `#workbench-overview-open` / `#workbench-overview-back` | open dense analysis / return to preserved manuscript context |
 | `[data-context-tool="analysis"]` / `[data-context-tool="dossier"]` | explicitly select one active context tool; closing the tool does not itself hide all analysis |
-| `#workbench-return` | context-checked return to the manuscript origin after following a saved relation |
+| `#workbench-thread` / `#workbench-return` | original passage context and viewed saved-record identity/revision, with context-checked return; cleared on return or changed project/source/research context |
+| `#project-actions > summary` | open or close Project actions before using its existing New/Open, guidance and PDF controls; loaded workspaces start collapsed, empty workspaces expanded |
 | `.reader-structural[data-start][data-end]` | readable source structure without a paragraph profile; inclusive source lines are presentation anchors, not a new research-anchor format |
 | `#research-tab-<key>` / `#rtab-<key>` | named research tab and labelled tabpanel; `data-rtab` and selected-state hooks remain unchanged |
 | `#research-navigation-previous` / `#research-navigation-next` | scroll overflowing research destinations without activating one |
@@ -234,12 +237,12 @@ capability/context guards below. Selection drafts save nothing by themselves.
 | `data-flags="1"` | additionally preselect "flagged only" |
 | `data-line="<n>"` | jump to the paragraph containing that source line (opens it); falls back to the chapter |
 | `data-target="p-<idx>"` | exact paragraph panel to open on jump (flagged-list rows) |
-| `[data-chapter-toggle]` | standalone report: fold or unfold a chapter body (strip and paragraphs); jumps and search steps expand a collapsed chapter; hidden in the current-main continuous interactive reader |
+| `[data-chapter-toggle]` | standalone report: fold or unfold a chapter body (strip and paragraphs); jumps and search steps expand a collapsed chapter; hidden in the continuous interactive reader |
 | `data-chapter="<n>"` | heatmap cell: open that chapter (with its layer) |
 | `#style-tab-<panel-id>` / `data-style-view="<panel-id>"` | native style tab for `heatmap`, `bands`, `dimensions` or `structural`; its `aria-controls` points to that existing panel |
-| `.paragraph-values > summary` | standalone report and no-JavaScript fallback: native disclosure for source lines and measurements; inline Values is hidden in the current-main interactive reader |
-| `.reader-paragraph-actions[data-reader-paragraph]` / `#manuscript-context-menu [data-reader-action="values"]` | current-main interactive reader: open the paragraph action menu, then explicitly open Values and enable analysis |
-| `#reader-inspector` / `#reader-inspector-body` / `#reader-inspector-close` | current-main contextual Values inspector, its source lines/measurements and close action; the manuscript text remains in its original DOM |
+| `.paragraph-values > summary` | standalone report and no-JavaScript fallback: native disclosure for source lines and measurements; inline Values is hidden in the interactive reader |
+| `.reader-paragraph-actions[data-reader-paragraph]` / `#manuscript-context-menu [data-reader-action="values"]` | interactive reader: open the paragraph action menu, then explicitly open Passage values without changing global Analysis visibility |
+| `#reader-inspector` / `#reader-inspector-body` / `#reader-inspector-close` | contextual Passage values inspector, its passage context, source lines/measurements, saved-research route when supported and close action; the manuscript text remains in its original DOM |
 | `#hero-btn-new-project` / `#analysis-empty-import` | native **Analyze a manuscript** action; opens the existing import dialog without submitting it |
 | `#analysis-review [data-review-passage]` | native passage link; clears search/paragraph filters, opens its `data-target` and focuses the paragraph panel |
 | `#analysis-sections a[data-section-link]` | section navigation; highlights the panel in view (scrollspy); only rendered panels are offered |
@@ -640,7 +643,7 @@ When running `lixity serve --port 8765`, local agents can trigger deterministic 
 Browser API diagnostics report request metadata without copying response bodies
 to the console.
 
-**Current main (unreleased):** `GET /` and `/index.html` validate the active
+**Since v0.7.2:** `GET /` and `/index.html` validate the active
 manuscript before reusing the dashboard. Missing/unreadable input or failed
 config/render rebuilds retain the last successful HTML/info/source digest and add
 `#dashboard-freshness[data-dashboard-freshness]` with localized status and a plain
@@ -880,7 +883,9 @@ Python `prepare_record_revisions(project, operations)` returns a read-only
 `research-revision-batch-local/1` preview. Each operation supplies
 `kind/id/expected_revision/changes/change_kind/reason`.
 `apply_record_revisions(project, operations, expected_snapshot=...)` validates
-all operations before one commit; errors and races accept none. It returns
+all operations before one commit; errors and races accept none. Since v0.7.2,
+normalized unchanged members retain their prior revision; only changed members
+are published. It returns
 record references, without duplicating full dossier bodies/citation graphs.
 Duplicate IDs and references to future revisions inside the same batch are
 rejected. See [research workflows](research/USAGE.md#research-workflows).
@@ -895,6 +900,14 @@ HTTP equivalents are `POST /api/research-revision-batch-prepare` with
 - `GET /api/research/record?kind=dossier&id=...&revision=1`: inspect a pinned revision; omit `revision` for the current record. Other kinds are `claim`, `evidence_link`, `decision`, `claim_relation` and `manuscript_claim_link`.
 - `GET /api/research/history?kind=dossier&id=...`: revision metadata, newest first.
 - `POST /api/research-record-revise`: `{kind, id, changes, expected_snapshot, expected_revision, change_kind, reason}`. `change_kind` is `correction` or `supersession`; reason is required. HTTP 409 means the draft's snapshot/revision is stale; reload explicitly before deciding what to save. HTTP 400 means invalid fields; immutable/unknown fields are rejected.
+
+Since v0.7.2, an authored save whose fully validated, normalized content equals
+the current record returns that exact prior revision and snapshot. Required
+revision metadata, editable-field and association validation still apply; stale
+revision/snapshot guards and the writer-locked concurrent HEAD check still run.
+A successful no-op leaves archive bytes, HEAD and the rebuildable SQLite index
+unchanged. This also applies to section saves and batch members; decision
+acknowledgements remain append-only events. No response or archive schema changes.
 
 Python equivalents are `research_api.get_record`, `record_history` and
 `revise_record`. Read/revise returns `research-record-local/1` with `project_id`,
@@ -930,7 +943,7 @@ implement. `None` preserves the historical full control set for existing hosts;
 adapters should supply their actual capabilities. Project, settings and research
 controls are independent of that list.
 
-**Current main (unreleased):** `research-manuscript-review` enables saved quote
+**Since v0.7.2:** `research-manuscript-review` enables saved quote
 review and highlights without association editing. Supply the selected
 `manuscript_pdf_token`, `research_context_token` and `manuscript_source_sha256`.
 The existing `research-manuscript-link` capability continues to enable both

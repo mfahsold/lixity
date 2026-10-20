@@ -2,8 +2,6 @@
 
 Collect sources, read and annotate in Zotero. Use Lixity's experimental research workspace to connect selected evidence with claims, authorial decisions and exact manuscript quotations. A capture preserves the source version you used; it does not establish that a claim is true.
 
-**Since v0.7.1:** research opens with dossiers and compact source-capture options. Existing archives remain readable. Dossier `--file` now requires an existing UTF-8 file; use `--body` for literal text. Installed help describes available commands.
-
 Maintained by the Lixity project · Updated 19 October 2026
 
 **Before importing:**
@@ -99,7 +97,7 @@ In the [Warehouse 4 demo project's Research view](../demo/report.html#research-m
 
 *Historical visual references stay attached to exact source versions. [Mobile map view](../screenshots/dashboard-dossier-image-mobile.png) · [Harbour photochrom](../screenshots/dashboard-dossier-photo.png) · [Places and journeys](../screenshots/dashboard-dossier-geography.png) · [Credits and file hashes](../assets/research/sources.json).*
 
-Use **Places and routes** in the dossier editor for named points, paths and areas. **Current main, after v0.7.1:** maps open with OpenStreetMap; turn off the background or choose the numbered sketch for offline use. Tile requests disclose the viewed area and client IP to the provider. The view explains its measurements and limits; historical map images remain separate evidence. See [geography and v8 compatibility](../research/USAGE.md#keep-places-and-journeys-in-a-dossier).
+Use **Places and routes** in the dossier editor for named points, paths and areas. Maps open with OpenStreetMap; turn off the background or choose the numbered sketch for offline use. Tile requests disclose the viewed area and client IP to the provider and stop outside the visible map/project context. The view explains its measurements and limits; historical map images remain separate evidence. See [geography and v8 compatibility](../research/USAGE.md#keep-places-and-journeys-in-a-dossier).
 
 Images and rendered diagrams share a [local zoom viewer](../screenshots/dashboard-dossier-image-zoom.png). [Mermaid diagrams](../screenshots/dashboard-dossier-diagram.png) retain their source; restricted or unsupported syntax stays readable as source. No CDN or diagram upload is required.
 
@@ -244,21 +242,45 @@ This optional example uses authorized local source files. Replace paths and UUID
 
 **Show the complete command-line example**
 
-`# 1. Initialize a dedicated research workspace lixity research init --project ./novel-research --title "1920s Archive" --language en # 2. Ingest primary source with cultural source criticism and explicit retention lixity research ingest --project ./novel-research --file ./sources/police_log_1923.txt \ --context '{"genre": "Police Log", "created_period": "1923", "place": "Hamburg", "provenance_note": "State Archives"}' \ --allow-retention # 3. Rebuild search explicitly (ordinary search refreshes it automatically) lixity research reindex --project ./novel-research # 4. Search source passages; add --scope all for current authored records lixity research search --project ./novel-research --query "dockyard customs" --limit 5 # 5. Resolve a passage citation (paragraph, exact offset, source metadata) lixity research cite --project ./novel-research --passage urn:uuid:PASSAGE-UUID-HERE # 6. Run linguistic source analysis and generate standalone source dashboard lixity research analyze --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE lixity research dashboard --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE > source_report.html # 7. Compare source and manuscript vocabulary; create a dossier lixity research compare --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE --manuscript ./manuscript.md lixity research dossier --project ./novel-research --title "Harbor Evidence" --file ./sources/harbor-dossier.md --tags "harbor" # 8. Record a claim, passage relation, and authorial decision lixity research claim --project ./novel-research --title "Harbor opening" --statement "The harbor opened in 1923." --confidence hypothetical lixity research link-evidence --project ./novel-research --claim-id urn:uuid:CLAIM-UUID-HERE --passage-id urn:uuid:PASSAGE-UUID-HERE --relation supports lixity research decision --project ./novel-research --title "Shift opening date" --rationale "Narrative chronology" --claim-id urn:uuid:CLAIM-UUID-HERE --deviation-from-fact # 9. Open a foreground research dashboard (stop with Ctrl+C) lixity serve --research-project ./novel-research --no-project # 10. Audit repository integrity and snapshot checksums lixity research audit --project ./novel-research`
+```
+# 1. Initialize a dedicated research workspace
+lixity research init --project ./novel-research --title "1920s Archive" --language en
 
-For the managed app instead, use
+# 2. Ingest primary source with cultural source criticism and explicit retention
+lixity research ingest --project ./novel-research --file ./sources/police_log_1923.txt \
+  --context '{"genre": "Police Log", "created_period": "1923", "place": "Hamburg", "provenance_note": "State Archives"}' \
+  --allow-retention
 
-`lixity service start --open`
+# 3. Rebuild search explicitly (ordinary search refreshes it automatically)
+lixity research reindex --project ./novel-research
 
-and
+# 4. Search source passages; add --scope all for current authored records
+lixity research search --project ./novel-research --query "dockyard customs" --limit 5
 
-**Open Project**
+# 5. Resolve a passage citation (paragraph, exact offset, source metadata)
+lixity research cite --project ./novel-research --passage urn:uuid:PASSAGE-UUID-HERE
 
-to select the archive. See the
+# 6. Run linguistic source analysis and generate standalone source dashboard
+lixity research analyze --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE
+lixity research dashboard --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE > source_report.html
 
-[lifecycle guide](installation.html#restart)
+# 7. Compare source and manuscript vocabulary; create a dossier
+lixity research compare --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE --manuscript ./manuscript.md
+lixity research dossier --project ./novel-research --title "Harbor Evidence" --file ./sources/harbor-dossier.md --tags "harbor"
 
-.
+# 8. Record a claim, passage relation, and authorial decision
+lixity research claim --project ./novel-research --title "Harbor opening" --statement "The harbor opened in 1923." --confidence hypothetical
+lixity research link-evidence --project ./novel-research --claim-id urn:uuid:CLAIM-UUID-HERE --passage-id urn:uuid:PASSAGE-UUID-HERE --relation supports
+lixity research decision --project ./novel-research --title "Shift opening date" --rationale "Narrative chronology" --claim-id urn:uuid:CLAIM-UUID-HERE --deviation-from-fact
+
+# 9. Open a foreground research dashboard (stop with Ctrl+C)
+lixity serve --research-project ./novel-research --no-project
+
+# 10. Audit repository integrity and snapshot checksums
+lixity research audit --project ./novel-research
+```
+
+For the managed app instead, use `lixity service start --open` and **Open Project** to select the archive. See the [lifecycle guide](installation.html#restart).
 
 ## Input and research limits
 

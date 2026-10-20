@@ -7,11 +7,26 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-10-20
+
 ### Changed
+- The public showcase focuses on one real reader view, the demo and installation.
+  README explains purpose, first commands and where to find documentation and
+  source. The demo uses a compact return link instead of duplicate site navigation.
+- Native Project actions groups New/Open, guidance and PDF export; destinations
+  remain directly visible. Service help groups existing workspace, instance and
+  analysis options without changing their defaults or behavior.
+- Screenshots frame actual viewports or complete tasks. Capture tooling preserves
+  native dialog scrolling, readable image ratios and the intended light/dark views.
+- Shared light-theme tokens use paper-toned surfaces across the native UI and
+  Pages. Clearer chapter typography, compact reader control spacing and quieter
+  supporting sections give prose more room while retaining the existing reading
+  preferences, initial text size, dark palette and independent passage tools.
 - The interactive manuscript stays continuous, with an explicit **Analysis**
   On/Off switch independent of the dossier context tool. Showing diagnostics
   keeps the prose width and navigation choice; it does not implicitly open a
-  dock. **Values** explicitly opens the analysis dock and enables the layer;
+  dock. **Values** explicitly opens the Passage values inspector independently of
+  the diagnostic layer;
   **Dossier alongside** opens its own context tool. Dense comparisons open
   in an overview; **Back to passage** restores the prior analysis display choice.
   A shared display coordinator owns
@@ -36,8 +51,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   manuscript image fetching is added.
 - Saved manuscript associations open their pinned claim revision; claim/dossier
   views expose scoped saved-quotation routes and exact reviewed passage returns.
-  Dossier revision references remain explicit; ordinary source readers are not
-  promoted to historical citation-version readers.
+  A compact work thread retains the original passage and the viewed saved-record
+  identity and revision, with an explicit return. Dossiers group authored notes,
+  current-linked claims and retained citations, with routes to global claims and
+  decisions. Values includes passage context and the existing saved-research route.
+  Dossier revision references remain explicit; retained quote cards are not full
+  historical-source readers. No new record, store or implicit repinning is added.
 - Research tabs have named tab/panel relationships and explicit narrow-screen
   overflow controls. Lazy Mermaid rendering shows a localized pending state.
 - Companion dossiers temporarily collapse desktop project navigation, with an
@@ -79,6 +98,21 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and numeric loadings. Additive diagnostics preserve existing scores and formats.
 
 ### Fixed
+- Downloadable Markdown guides preserve paragraphs and fenced commands inside
+  expandable sections. Example generation uses the active checkout's source.
+- Heatmap chapter cells reveal their manuscript destination through the shared
+  navigation coordinator instead of scrolling a hidden chapter from the overview.
+- Validated authored edits whose normalized content is unchanged return the exact
+  previous revision without changing archive HEAD, retained bytes or the SQLite
+  index. Revision metadata, association validation and concurrent HEAD guards still
+  run. Mixed batches revise only changed members; invalid batches remain atomic.
+  Decision acknowledgements remain append-only events.
+- Sidebar collapse uses a stable glyph beside project identity. Tooltip titles
+  update with live state and nested scrolling; responsive settings and wrapped
+  URLs stay readable. Paragraph actions and the reader divider have separate
+  targets, and revision Close stays reachable in short or enlarged dialogs.
+- Analysis Off preserves explicitly opened Passage values; opening Values does
+  not force Analysis On. Overview return restores the prior layer and tool.
 - Missing/unreadable manuscript files and failed configuration/render rebuilds
   label the last successful dashboard with an **Analysis freshness** notice and
   retry link, preserving its source identity. Explicit analyze/rebuild failures
@@ -2402,7 +2436,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.7.2...HEAD
+[0.7.2]: https://github.com/mfahsold/lixity/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/mfahsold/lixity/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/mfahsold/lixity/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/mfahsold/lixity/compare/v0.5.0...v0.6.0

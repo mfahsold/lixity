@@ -83,10 +83,8 @@ WINDOW_CHROME = """<!DOCTYPE html>
 
 def _queue_capture(source: Path, target: Path, width: int, height: int,
                    max_height: int | None = None) -> None:
-    #: Element captures taller than a real screen are clamped so published
-    #: images stay lifelike; dialogs bypass the clamp to show complete content.
-    if max_height is None:
-        max_height = 1100 if width >= 800 else 1250
+    # Full native widgets are the default. Explicit excerpts are bounded by
+    # complete component selectors in the browser capture definitions.
     CAPTURES.append({
         "source": str(source), "target": str(target), "width": width, "height": height,
         "maxHeight": max_height,
@@ -1006,7 +1004,6 @@ def main() -> int:
         ("dashboard-mobile-dark.png", 390, 1028),
         ("dashboard-heatmap-dark.png", 1750, 1000),
         ("dashboard-dimensions-dark.png", 1600, 1050),
-        ("dashboard-flags-dark.png", 1152, 501),
         ("dashboard-research-timeline-dark.png", 1110, 1036),
         ("dashboard-research-claims-dark.png", 1152, 1101),
         ("dashboard-research-dossiers-dark.png", 1152, 1101),
@@ -1089,6 +1086,7 @@ def main() -> int:
     )
     editorial_path = _write_html("dashboard-editorial.html", editorial_dashboard)
     _queue_capture(editorial_path, OUT_DIR / "dashboard-flags.png", 1480, 560)
+    _queue_capture(editorial_path, OUT_DIR / "dashboard-flags-dark.png", 1152, 501)
     _queue_capture(editorial_path, OUT_DIR / "dashboard-editorial.png", 1480, 760)
 
     # 7. Style layer (draft chapter with the dialogue layer active) --------

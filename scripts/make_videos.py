@@ -74,7 +74,7 @@ def convert(name: str, poster_at: str, max_mp4: int, max_gif: int) -> None:
             str(source),
             "-an",
             "-vf",
-            "fps=10,scale=800:-1:flags=lanczos,split[s0][s1];"
+            "fps=8,scale=800:-1:flags=lanczos,split[s0][s1];"
             "[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=bayer",
             "-loop",
             "0",

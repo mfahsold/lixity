@@ -51,7 +51,6 @@ from .components import (
     status_strip,
     tense_class,
     tense_label,
-    toggle_button,
 )
 from .dimensions import style_dimensions
 from .dossier_images import image_limits_attribute
@@ -391,6 +390,24 @@ def render_dashboard(
     if controls:
         parts.append('</div><div id="workspace-navigation-content">')
         parts.append(
+            '<nav class="view-navigation" role="tablist" aria-label="' + L("workspace") + '">'
+            f'<button type="button" class="view-nav-tab{" active" if default_view == "analysis" else ""}" data-view="analysis" role="tab" id="tab-view-analysis" aria-controls="view-pane-analysis" aria-selected="{"true" if default_view == "analysis" else "false"}">'
+            f"<span>{L('workspace_analysis')}</span>"
+            "</button>"
+            f'<button type="button" class="view-nav-tab{" active" if default_view == "research" else ""}" data-view="research" role="tab" id="tab-view-research" aria-controls="view-pane-research" aria-selected="{"true" if default_view == "research" else "false"}">'
+            f"<span>{L('workspace_research')}</span>"
+            "</button>"
+            f'<button type="button" class="view-nav-tab" data-view="project" role="tab" id="tab-view-project" aria-controls="view-pane-project" aria-selected="false">'
+            f"<span>{L('workspace_project')}</span>"
+            "</button>"
+            "</nav>"
+        )
+        parts.append(
+            '<details class="workspace-actions" id="project-actions"'
+            + ("" if has_reading else " open") + ">"
+        )
+        parts.append(f'<summary>{L("project_actions")}</summary>')
+        parts.append(
             f'<nav class="workspace-bar" id="project-controls" aria-label="{L("controls")}">'
         )
         parts.append('<div class="row">')
@@ -414,20 +431,7 @@ def render_dashboard(
                     available=has_chapters and bool(paragraphs) and bool(manuscript_pdf_token),
                 )
             )
-        parts.append("</nav>")
-        parts.append(
-            '<nav class="view-navigation" role="tablist" aria-label="' + L("workspace") + '">'
-            f'<button type="button" class="view-nav-tab{" active" if default_view == "analysis" else ""}" data-view="analysis" role="tab" id="tab-view-analysis" aria-controls="view-pane-analysis" aria-selected="{"true" if default_view == "analysis" else "false"}">'
-            f"<span>{L('workspace_analysis')}</span>"
-            "</button>"
-            f'<button type="button" class="view-nav-tab{" active" if default_view == "research" else ""}" data-view="research" role="tab" id="tab-view-research" aria-controls="view-pane-research" aria-selected="{"true" if default_view == "research" else "false"}">'
-            f"<span>{L('workspace_research')}</span>"
-            "</button>"
-            f'<button type="button" class="view-nav-tab" data-view="project" role="tab" id="tab-view-project" aria-controls="view-pane-project" aria-selected="false">'
-            f"<span>{L('workspace_project')}</span>"
-            "</button>"
-            "</nav>"
-        )
+        parts.append("</nav></details>")
         parts.append("</div></div>")
 
     if status:
@@ -796,7 +800,7 @@ def render_dashboard(
         parts.append("<div hidden>")
 
     if has_reading and controls:
-        parts.append(reading_controls(chapters, labels, reader_document))
+        parts.append(reading_controls(chapters, labels, reader_document, companion_controls=reader_controls))
 
     if has_chapters:
         parts.append(f'<section class="panel" id="analysis-review"><h2>{L("review_title")}</h2>')
@@ -896,8 +900,6 @@ def render_dashboard(
     )
     parts.append("</span>")
     parts.append(f'<a class="totop" href="#top">↑ {L("top")}</a>')
-    if reader_controls:
-        parts.append(reader_controls)
     parts.append(
         f'<p class="ctl-note toolbar-note" id="paragraph-metrics-note">{L("paragraph_metrics_note")}</p>'
     )

@@ -8,11 +8,12 @@
 .reader-controls .ctl-note { flex: 1 1 20rem; min-width: 0; }
 .workspace-reader-layout.is-open { display: grid; grid-template-columns: minmax(0, var(--manuscript-share, 62%)) .75rem minmax(0, 1fr); gap: .35rem; align-items: start; }
 #workspace-analysis-body { min-width: 0; grid-column: 1; grid-row: 1; }
-.workspace-context-panel { min-width: 0; grid-column: 3; grid-row: 1; position: sticky; top: 1rem; max-height: calc(100dvh - 2rem); overflow: auto; overflow-wrap: anywhere; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.workspace-context-panel { min-width: 0; grid-column: 3; grid-row: 1; position: sticky; top: 1rem; max-height: calc(100dvh - 2rem); overflow: auto; overflow-wrap: anywhere; background: transparent; }
 .workspace-context-panel[hidden], .workspace-reader-panel[hidden] { display: none; }
 .context-tool-tabs { display: flex; gap: .35rem; padding: .6rem; border-bottom: 1px solid var(--line); }
 .context-tool-tabs .ctl { flex: 1; white-space: normal; }
-.context-tool-tabs [aria-pressed="true"] { color: var(--accent); background: var(--accent-light); border-color: var(--accent); box-shadow: inset 0 -2px var(--accent); }
+.context-tool-tabs .ctl:not([aria-pressed="true"]) { background: transparent; border-color: transparent; color: var(--fg-secondary); }
+.context-tool-tabs .ctl[aria-pressed="true"] { color: var(--accent); background: var(--accent-light); border-color: transparent; box-shadow: inset 0 -2px var(--accent); }
 .workspace-context-panel .panel { margin: 0; border: 0; box-shadow: none; background: transparent; }
 .workspace-reader-panel { min-width: 0; overflow-wrap: anywhere; }
 .workspace-reader-divider { grid-column: 2; grid-row: 1; position: sticky; top: 1rem; height: calc(100dvh - 2rem); cursor: col-resize; touch-action: none; border-radius: var(--radius-sm); background: linear-gradient(to right, transparent 40%, var(--line-strong) 40%, var(--line-strong) 60%, transparent 60%); }
@@ -26,7 +27,7 @@
 @media (max-width: 900px) {
   .workspace-reader-layout.is-open { grid-template-columns: minmax(0, 1fr); }
   .workspace-reader-layout.is-open #workspace-analysis-body { grid-column: 1; grid-row: 2; }
-  .workspace-context-panel { grid-column: 1; grid-row: 1; position: static; max-height: 55dvh; }
+  .workspace-context-panel { grid-column: 1; grid-row: 1; position: static; max-height: 55dvh; border-block: 1px solid var(--line); }
   .workspace-reader-divider { display: none; }
 }
 @media print {

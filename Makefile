@@ -61,7 +61,7 @@ videos: ## Record and publish the walkthrough videos (needs Chromium and ffmpeg)
 	$(VPY) scripts/make_videos.py
 
 examples: ## Regenerate the published example reports and their PDFs
-	$(VPY) scripts/build_examples.py
+	PYTHONPATH=src $(VPY) scripts/build_examples.py
 
 docs-check: ## Check documentation version consistency and link integrity
 	$(PYTHON) scripts/sync_docs.py --check

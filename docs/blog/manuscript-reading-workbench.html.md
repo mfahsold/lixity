@@ -4,11 +4,11 @@ By [Matthias Fahsold](https://github.com/mfahsold) · Published 20 October 2026 
 
 A manuscript analysis tool can show you so much about a paragraph that the paragraph becomes awkward to read. Sentence patterns, source lines, markers and research links all have a purpose. They also compete with the next sentence.
 
-The latest Lixity development work gives the manuscript more room. The interactive workspace opens as continuous prose with **Analysis Off**. The explicit **Analysis** switch displays its state in words; **Analysis overview** opens chapter comparisons with a direct **Back to passage** action. These are current-main changes; the latest packaged release remains **v0.7.1**.
+Lixity v0.7.2 gives the manuscript more room. The interactive workspace opens as continuous prose with **Analysis Off**. The explicit **Analysis** switch displays its state in words; **Analysis overview** opens chapter comparisons with a direct **Back to passage** action. These reading controls are included in **v0.7.2**.
 
 ![Lixity's synthetic Warehouse 4 manuscript with Analysis Off, with continuous prose, analysis display, chapter navigation and reading settings](../screenshots/dashboard-dark.png)
 
-*The current development reader uses one continuous prose surface. This synthetic capture shows the reader controls; paragraph tools and the companion open separately.*
+*The reader uses one continuous prose surface. This synthetic capture shows the reader controls; paragraph tools and the companion open separately.*
 
 ## Start with a scene
 
@@ -20,11 +20,11 @@ The aim is a usable reading surface with tools nearby. Manuscript text reflows w
 
 ## Ask one question of a paragraph
 
-Suppose an action passage feels slower than you expected. Open its **…** menu and choose **Values**. A closable inspector shows that paragraph's source lines and available tense and style measurements, and enables the analysis layer. The **Analysis** switch alone reveals diagnostics without opening a side tool or narrowing the prose. Read the surrounding sentences while deciding whether those measurements explain anything useful.
+Suppose an action passage feels slower than you expected. Open its **…** menu and choose **Values**. The closable **Passage values** inspector shows that paragraph's source lines and available tense and style measurements, independently of the Analysis On/Off choice. The **Analysis** switch alone reveals diagnostics without opening a side tool or narrowing the prose. Read the surrounding sentences while deciding whether those measurements explain anything useful.
 
 The same contextual menu opens with a right-click. With the paragraph or its button focused, **Shift+F10** opens it from the keyboard; arrow keys move between actions and Escape closes it. Shift+right-click still reaches the browser's native menu. Selecting text within one paragraph offers a small toolbar when an applicable action is available.
 
-Choose **Analysis overview** when the question calls for chapter comparisons or sentence rhythm. The manuscript remains mounted with the same paragraph text and source anchors. Analysis and a dossier have separate display states, so hiding analysis leaves an active dossier beside the text. A different sentence length can belong to a scene's purpose or a character's voice. The number locates a difference; reading supplies the judgment about what to do with it.
+Choose **Analysis overview** when the question calls for chapter comparisons or sentence rhythm. The manuscript remains mounted with the same paragraph text and source anchors. Hiding analysis keeps the active passage inspector or dossier available beside the text. A different sentence length can belong to a scene's purpose or a character's voice. The number locates a difference; reading supplies the judgment about what to do with it.
 
 ## Give research its own space
 

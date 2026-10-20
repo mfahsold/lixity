@@ -11,6 +11,8 @@ from .manuscript_document import ReaderBlock
 def reading_controls(
     chapters: Sequence[ChapterProfile], labels: Mapping[str, str] | None,
     reader_document: Sequence[ReaderBlock] | None = None,
+    *,
+    companion_controls: str = "",
 ) -> str:
     """Render progressive-enhancement controls; no second manuscript copy."""
     def text(key: str) -> str:
@@ -60,6 +62,7 @@ def reading_controls(
         f'<option value="relaxed">{text("reading_relaxed")}</option></select></div></details>'
         f'<button class="ctl" type="button" id="reader-focus" aria-pressed="false">{text("reading_focus")}</button>'
         f'<button class="ctl" type="button" id="workbench-overview-open">{text("reading_overview")}</button>'
+        f'{companion_controls}'
         f'<strong class="workbench-surface-label" id="workbench-overview-label" hidden>{text("reading_overview")}</strong>'
         f'<button class="ctl" type="button" id="workbench-overview-back" hidden>{text("reading_back")}</button>'
         f'<button class="ctl" type="button" id="workbench-return" hidden>{text("reading_back")}</button>'

@@ -98,6 +98,28 @@ async function assertPassageReturn(page, origin, width, label, focusTarget) {
     `${width}: ${label} returns keyboard focus to its origin control`);
 }
 
+async function assertToolbarDossierReturn(page, paragraph, width) {
+  // The sticky reading toolbar can open a tool while prose is still visible.
+  // Its passage position is retained, but the toolbar remains the focus origin.
+  const dossierToggle = page.locator('#workspace-reader-toggle');
+  for (const dismissal of ['Close', 'Escape']) {
+    const origin = {paragraph, top: await paragraph.evaluate(node => node.getBoundingClientRect().top)};
+    await dossierToggle.click();
+    await settle(page);
+    assert.equal(await page.locator('#workspace-reader-panel').isVisible(), true);
+    if (dismissal === 'Escape') {
+      // Companion tabs change content without replacing the original opener.
+      await page.locator('[data-context-tool="analysis"]').press('Enter');
+      await page.locator('[data-context-tool="dossier"]').press('Enter');
+    }
+    const close = page.locator('#workspace-reader-close');
+    if (dismissal === 'Close') await close.click();
+    else await close.press('Escape');
+    await assertPassageReturn(page, origin, width,
+      `Reading-toolbar Dossier ${dismissal}`, dossierToggle);
+  }
+}
+
 (async () => {
   const browser = await launchChromium();
   try {
@@ -138,6 +160,8 @@ async function assertPassageReturn(page, origin, width, label, focusTarget) {
         `${width}: The dossier close control closes its context tool`);
       await assertPassageReturn(page, dossierOrigin, width, 'Dossier close',
         width > 900 ? page.locator('#workspace-reader-toggle') : null);
+
+      await assertToolbarDossierReturn(page, dossierOrigin.paragraph, width);
 
       if (width <= 900) {
         await openFromPassage(page, 'companion');
@@ -183,6 +207,7 @@ async function assertPassageReturn(page, origin, width, label, focusTarget) {
         `${width}: Immediate Escape reverses an opening Dossier tool`);
       await assertPassageReturn(page, dossierOrigin, width, 'Immediate Dossier reversal',
         width > 900 ? page.locator('#workspace-reader-toggle') : null);
+      await assertToolbarDossierReturn(page, dossierOrigin.paragraph, width);
 
       const motionOrigin = await openFromPassage(page, 'values', false);
       // Enter activates the focused tab without waiting for an earlier entrance to finish.

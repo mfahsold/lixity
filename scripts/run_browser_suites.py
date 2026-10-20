@@ -226,6 +226,24 @@ def run_suite(node: str, name: str, capture: bool) -> tuple[str, float, int, str
     return name, time.monotonic() - started, result.returncode, output
 
 
+def report_summary(
+    names: list[str], completed: int, failures: list[tuple[str, int]], seconds: float
+) -> None:
+    """Leave counts and every failed suite visible after the individual logs."""
+    stream = sys.stderr if failures else sys.stdout
+    print(
+        f"Browser suite summary: {completed}/{len(names)} completed, "
+        f"{completed - len(failures)} passed, {len(failures)} failed, "
+        f"{len(names) - completed} not run in {seconds:.1f}s.",
+        file=stream,
+        flush=True,
+    )
+    if failures:
+        print("Failed suites:", file=stream, flush=True)
+        for name, code in sorted(failures):
+            print(f"  {name} (exit {code})", file=stream, flush=True)
+
+
 def run_parallel(node: str, names: list[str], jobs: int) -> int:
     """Run independent suites in parallel and report atomically per suite."""
     print(f"Running {len(names)} suites with {jobs} parallel workers.", flush=True)
@@ -241,11 +259,11 @@ def run_parallel(node: str, names: list[str], jobs: int) -> int:
             if code:
                 failures.append((name, code))
                 print(f"Failed: {name} (exit {code})", file=sys.stderr, flush=True)
+    report_summary(names, len(names), failures, time.monotonic() - started)
     if failures:
         name, code = failures[0]
         print(f"Resume after the fix with: --start {name}", file=sys.stderr, flush=True)
         return code
-    print(f"All {len(names)} browser suites passed in {time.monotonic() - started:.1f}s.")
     return 0
 
 
@@ -348,10 +366,11 @@ def main() -> int:
         _name, seconds, code, _output = run_suite(node, name, False)
         if code:
             print(f"Failed: {name} (exit {code}, {seconds:.1f}s)", file=sys.stderr)
+            report_summary(names, index, [(name, code)], time.monotonic() - started)
             print(f"Resume after the fix with: --start {name}", file=sys.stderr)
             return code
         print(f"Passed: {name} ({seconds:.1f}s)", flush=True)
-    print(f"All {len(names)} browser suites passed in {time.monotonic() - started:.1f}s.")
+    report_summary(names, len(names), [], time.monotonic() - started)
     return 0
 
 

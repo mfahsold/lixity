@@ -40,7 +40,9 @@ lixity service start --open
 ```
 
 The default address is `http://127.0.0.1:8765/`. The app's welcome guidance and
-field explanations describe the next action; **Show guidance** reopens it.
+field explanations describe the next action. **Project actions** groups New/Open,
+**Show guidance** and PDF export. It starts expanded in an empty workspace and
+collapsed when a manuscript is loaded; the three workspace destinations stay visible.
 
 ### Open or import?
 

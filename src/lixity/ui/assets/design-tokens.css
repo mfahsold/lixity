@@ -1,12 +1,12 @@
 /* Canonical foundation shared by bundled dashboards and staged Pages. */
 :root {
   color-scheme: light dark;
-  --bg: light-dark(#f8fafc, #0b0d12);
+  --bg: light-dark(#fafaf7, #0b0d12);
   --surface: light-dark(#ffffff, #181d29);
-  --fg: light-dark(#1e293b, #eef2f8);
-  --fg-secondary: light-dark(#475569, #b6c2d2);
-  --muted: light-dark(#526176, #9aa5b8);
-  --line: light-dark(#e2e8f0, #283144);
+  --fg: light-dark(#242925, #eef2f8);
+  --fg-secondary: light-dark(#4b554f, #b6c2d2);
+  --muted: light-dark(#5e665f, #9aa5b8);
+  --line: light-dark(#e2e5df, #283144);
   --line-strong: light-dark(#94a3b8, #64748b);
   --accent: light-dark(#245b85, #93c5fd);
   --accent-hover: light-dark(#1b4566, #bfdbfe);
@@ -61,9 +61,9 @@
   --panel-padding: 1.25rem;
   --section-gap: 1.5rem;
 
-  --bg-subtle: light-dark(#f1f5f9, #121620);
-  --surface-raised: light-dark(#f8fafc, #202738);
-  --fg-heading: light-dark(#0f172a, #ffffff);
+  --bg-subtle: light-dark(#f1f3ee, #121620);
+  --surface-raised: light-dark(#fafaf7, #202738);
+  --fg-heading: light-dark(#242925, #ffffff);
   --status-success-fg: light-dark(#166534, #86efac);
   --status-success-bg: light-dark(#e6f4ea, #14532d);
   --status-success-border: light-dark(#b7ddc1, #24734b);

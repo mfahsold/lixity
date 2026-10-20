@@ -1,3 +1,4 @@
+const {openProjectActions} = require('./support/project-actions.cjs');
 // A native project switch must not carry a former project's startup title into an NDA.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -93,6 +94,7 @@ server.serve_forever()
         assert.equal(url.origin, fixture.url, 'The regression uses only its disposable loopback server');
         if (request.method() === 'POST') writes.push(url.pathname);
       });
+      await openProjectActions(page);
       await page.locator('#btn-modal-open-project').click();
       await expect(page.locator('#modal-project-open')).toBeVisible();
       await page.locator('#open-proj-path').fill(beta.root);

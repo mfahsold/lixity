@@ -30,77 +30,59 @@ lixity --version
 lixity service start --open
 ```
 
-This installs the current release from PyPI in uv's [isolated tool environment](https://docs.astral.sh/uv/concepts/tools/). For a pinned, checksum-verified setup, install the release wheel instead — `uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.7.1/lixity-0.7.1-py3-none-any.whl"` — and verify it against the SHA256SUMS file on the release page. Shell integration configures new terminals; it does not change an already open one. See the [release notes](../releases/v0.7.1.md) for changes and compatibility.
-
-The published release is **v0.7.1**. The [public demo](../demo/report.html) shows **current main (unreleased)**, including its continuous manuscript reader. Installing the release does not provide those newer controls. Use the development route below if you want to follow main.
-
-**Development builds instead**
-
-To follow unreleased changes shown in the demo, install Git, stop the managed service and replace the installation with:
-
-`uv tool install --python 3.12 --managed-python --reinstall-package lixity "git+https://github.com/mfahsold/lixity.git@main"`
-
-`main`
-
-changes over time; the demo represents one build, not a pinned release or a guarantee that the latest checkout is identical. Unreleased commits can share the release version. After installation, run
-
-`lixity service restart --open`
-
-and reload your browser. This reuses recorded launch settings; a project opened later in the browser is a separate choice. See the
-
-[update instructions](../INSTALLATION.md#updates-and-removal)
-
-.
+This installs the current release, **v0.7.2**, from PyPI in uv's [isolated tool environment](https://docs.astral.sh/uv/concepts/tools/). Shell integration applies to new terminals. See the [release notes](../releases/v0.7.2.md) for changes and compatibility.
 
 ## Start the workspace
 
 The managed app opens `http://127.0.0.1:8765/`. Its default is an empty workspace; it does not search your terminal's current folder. Choose **Open Project** for an existing folder or **Analyze a manuscript** for an import preview. Confirm the language and read a passage before interpreting its measurements.
 
-In **v0.7.1**:
+1. Open your existing project or confirm an import preview, including the manuscript language.
 
-1. Choose **Analyze a manuscript** (or **New Project**) and confirm the preview: title, analysis language and optional author name.
+2. Read in **Manuscript**. Choose a paragraph's **… → Values** for its inspector. The separate **Analysis** switch shows diagnostics across the manuscript.
 
-2. Read the **Start your review** panel first: **Open passage**, **Explore chapters** or **Open sentence rhythm**.
+3. Use **Analysis overview** for chapter comparisons, then **Back to passage** to return. **PDF export** offers editorial, reading, submission and report copies.
 
-3. Work from a flagged passage or open any paragraph, expand **Values** and write a marker note if something needs another look.
+English is the default analysis language; automatic detection is an explicit choice. The [first-session guide](../ONBOARDING.md) explains project selection. For a short example before importing, try the [Warehouse 4 walkthrough](first-look.html). Its public demo cannot import, edit or save.
 
-4. Export the result with **PDF export**: A4 editorial copy, A5 reading copy, A4 manuscript sheets or the A4 analysis report.
+Check the app, stop it and return later:
 
-On **current main**, begin in **Manuscript**. Turn **Analysis** On for diagnostics in place; choose a paragraph's **… → Values** to open its inspector. The toggle alone does not open the dock or collapse navigation. **Analysis overview** opens chapter comparisons; **Back to passage** restores your place and previous Analysis On/Off choice. A dossier can be opened independently with **Dossier alongside**.
+```
+lixity service status
+lixity service stop
+lixity service start --open
+```
 
-The [first-session guide](../ONBOARDING.md) describes every stage. Explore [*The Crate at Warehouse 4*](../demo/report.html) to see the same six-chapter project across Manuscript, Research and prepared PDF layouts without installation. The public demo is read-only; saving markers, associations or research records requires the native app.
+Open the project again, or provide its path when starting. `restart --open` restores recorded launch settings, including the startup project; a later project choice in the browser is separate. [Service lifecycle](#restart) explains the difference.
+
+**Pinned release wheel**
+
+For a reproducible setup, verify the release wheel against its `SHA256SUMS`, then install it instead:
+
+```
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.7.2/lixity-0.7.2-py3-none-any.whl"
+```
+
+A pinned wheel keeps its fixed source URL; replace it explicitly when updating. See the [installation reference](../INSTALLATION.md#updates-and-removal).
+
+**Development builds instead**
+
+To test unreleased changes, install Git, stop the managed service and replace the installation with:
+
+```
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "git+https://github.com/mfahsold/lixity.git@main"
+```
+
+`main` changes over time and unreleased commits can share a version number. Verify the installation, run `lixity service restart --open` to restore recorded launch settings and reload your browser.
 
 **Generate an offline HTML report instead**
 
-Download the demo's
+Download the demo's [Warehouse 4 manuscript](../research/examples/harbour-manuscript.md) and save it as `warehouse-4.md`, then run:
 
-[Warehouse 4 manuscript](../research/examples/harbour-manuscript.md)
+```
+lixity dashboard warehouse-4.md --language en -o warehouse-4.html
+```
 
-and save it as
-
-`warehouse-4.md`
-
-, then run:
-
-`lixity dashboard warehouse-4.md --language en -o warehouse-4.html`
-
-Open
-
-`warehouse-4.html`
-
-in your browser. This generates an analysis report from the same six chapters; the public demo also includes prepared research records. The short synthetic manuscript exercises the workflow, not a reliable literary baseline. Read
-
-[how to interpret the results](interpretation.html)
-
-. English is the default; use
-
-`--language de`
-
-for German or explicit
-
-`--language auto`
-
-for detection.
+Open `warehouse-4.html` in your browser. This generates an analysis report from the same six chapters; the public demo also includes prepared research records. The short synthetic manuscript exercises the workflow, not a reliable literary baseline. Read [how to interpret the results](interpretation.html). English is the default; use `--language de` for German or explicit `--language auto` for detection.
 
 ## Optional Zotero Desktop
 
@@ -120,7 +102,7 @@ For a research-only workspace, an initialized archive can be opened without a ma
 
 Switch between Research, Manuscript, and Project. New Project, Open Project and optional guidance are available in every view. Selecting or dropping a manuscript opens its preview directly; confirm to create a separate project. Source and dossier filters narrow their lists; Research → Search looks through retained text.
 
-The [first-session guide](../ONBOARDING.md) explains these controls. The NDA generator downloads agreement text with name, optional address, project, date and place; it does not keep a recipient register.
+The [first-session guide](../ONBOARDING.md) explains these controls.
 
 ## Running the server day to day
 
@@ -142,7 +124,7 @@ PyPI installations use `uv tool upgrade lixity`; wheel-pinned installations requ
 
 ## Update or remove Lixity
 
-Stop each managed instance before replacing the package. Use the published wheel for the desired release:
+For a PyPI installation, stop each managed instance before upgrading:
 
 ```
 lixity service stop

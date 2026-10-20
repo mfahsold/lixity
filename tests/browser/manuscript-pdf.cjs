@@ -1,3 +1,4 @@
+const {openProjectActions} = require('./support/project-actions.cjs');
 // Native PDF export stays explicit, project-bound, read-only and recoverable.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -92,6 +93,7 @@ server.serve_forever()
         if (new URL(request.url()).pathname === '/api/manuscript-pdf') requests.push(request.postDataJSON());
       });
       await page.goto(server.fixture.url);
+      await openProjectActions(page);
       await page.locator('#manuscript-pdf-title').click();
       assert.equal(await page.locator('#manuscript-pdf-layout').inputValue(), 'editor');
       const downloading = page.waitForEvent('download');
@@ -196,6 +198,7 @@ server.serve_forever()
       assert.equal(await page.locator('#view-pane-analysis #manuscript-pdf-form').count(), 0);
       assert.equal(await page.locator('#manuscript-pdf-form').count(), 1, 'There is one canonical export form');
       assert.equal(await form.isVisible(), false, 'Project export starts compact');
+      await openProjectActions(page);
       await page.locator('#manuscript-pdf-title').click();
       assert.equal(await form.isVisible(), true, 'A loaded native manuscript offers PDF export');
       assert.equal(await form.getAttribute('data-project-token'), 'synthetic-token');
@@ -271,6 +274,7 @@ server.serve_forever()
     const noScript = await browser.newPage({javaScriptEnabled: false, viewport: {width: 320, height: 900}});
     await noScript.route('http://lixity.test/**', route => route.fulfill({contentType: 'text/html', body: fixtures.en}));
     await noScript.goto('http://lixity.test/');
+    await openProjectActions(noScript);
     await noScript.locator('#manuscript-pdf-title').click();
     assert.equal(await noScript.locator('#manuscript-pdf-form').isVisible(), true);
     assert.equal(await noScript.locator('#manuscript-pdf-download').isDisabled(), true,
@@ -291,6 +295,7 @@ server.serve_forever()
       if (['offline', 'embedding', 'implicit'].includes(name)) assert.equal(await form.count(), 0, `${name} has no native export action`);
       else {
         await page.locator('#tab-view-analysis').click();
+        await openProjectActions(page);
         await page.locator('#manuscript-pdf-title').click();
         assert.equal(await form.isVisible(), true, `${name} keeps native export discoverable`);
         assert.equal(await page.locator('#manuscript-pdf-download').isDisabled(), true,

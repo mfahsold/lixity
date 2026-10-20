@@ -130,6 +130,21 @@ async function settleGeometry(page) {
       const readingWidth = await page.evaluate(() => ({viewport: innerWidth, document: document.documentElement.scrollWidth}));
       assert.ok(readingWidth.document <= readingWidth.viewport,
         `The reader does not force horizontal scrolling (${locale} ${width}): ${JSON.stringify(readingWidth)}`);
+      if (locale === 'en' && width <= 390) {
+        const entry = await page.locator('#chapters .ptext-inner > p').first().evaluate(node => ({
+          top: node.getBoundingClientRect().top + scrollY,
+          line: parseFloat(getComputedStyle(node).lineHeight),
+          height: innerHeight,
+        }));
+        assert.ok(entry.top + entry.line <= entry.height * 3 / 4,
+          `Mobile entry leaves room to begin reading below the controls: ${JSON.stringify(entry)}`);
+        for (const selector of ['#manuscript-analysis-toggle', '#reader-chapter', '#reader-settings > summary',
+          '#reader-focus', '#workbench-overview-open', '#text-search', '#workspace-reader-toggle']) {
+          assert.equal(await page.locator(selector).isVisible(), true,
+            `Compact entry keeps ${selector} available`);
+        }
+        await page.screenshot({path: path.join(artifacts, `reading-entry-${width}.png`)});
+      }
       const anchors = await sourceState(page);
       assert.ok(anchors.every(item => item.id && Number(item.start) <= Number(item.end) && /^[a-f0-9]{64}$/.test(item.hash)));
 

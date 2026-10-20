@@ -445,7 +445,7 @@ They are an orthographic proxy, not phonetic transcription: regional hiatus,
 foreign names and loans, and poetic synaeresis remain outside the estimate.
 Regression examples do not establish language-wide accuracy or reader comprehension.
 
-**Current main (unreleased):** corrects skipped closed-vowel nuclei in Spanish, for example
+**Since v0.7.2:** the estimator corrects skipped closed-vowel nuclei in Spanish, for example
 `vivir` from one estimated syllable to two and `dibujo` from one to three.
 This changes Spanish ASW and its derived readability score without changing
 the formula coefficients or JSON fields. Regenerate Spanish reports before
@@ -464,7 +464,7 @@ Types absent from the chapter contribute half their rest-corpus probability
 times $\ln 2$; their total probability is calculated from the observed rest
 distribution. No square root or base-2 rescaling is applied.
 
-**Current main (unreleased):** absent-type mass is computed from remaining
+**Since v0.7.2:** absent-type mass is computed from remaining
 integer token counts, and contributions are accumulated with `math.fsum`.
 Near equal probabilities, the same per-type contribution is evaluated as
 $m[d\mathrm{atanh}(d)+\tfrac12\ln(1-d^2)]$, where

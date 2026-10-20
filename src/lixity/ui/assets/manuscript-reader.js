@@ -144,6 +144,8 @@
       previous.view === "analysis" && state.surface === "document" && previous.surface === "document";
     if (toolChanged && open && (previous.contextTool === "none" || requestedAnchor)) {
       dockOrigin = requestedAnchor || (document.activeElement.closest("#view-pane-analysis") ? anchor : null);
+      // A toolbar request retains the passage position, but its own focus origin.
+      if (dockOrigin && !requestedAnchor) dockOrigin.trigger = document.activeElement;
     }
     requestedAnchor = null;
     if (layout) layout.classList.toggle("is-open", open);
@@ -180,7 +182,10 @@
         else if (destination && destination.panel.isConnected) {
           window.scrollBy(0, destination.panel.getBoundingClientRect().top - destination.top);
           if (returnDockFocus) {
-            var trigger = destination.panel.querySelector(".reader-paragraph-actions") || destination.panel;
+            var trigger = destination.trigger;
+            if (!trigger || !trigger.isConnected || !trigger.getClientRects().length || trigger.disabled) {
+              trigger = destination.panel.querySelector(".reader-paragraph-actions") || destination.panel;
+            }
             trigger.focus({preventScroll: true});
           }
           if (window.LixityMotion) window.LixityMotion.passage(destination.panel);

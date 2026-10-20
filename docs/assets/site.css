@@ -15,6 +15,7 @@
   font: 400 .95rem/1.5 var(--font);
 }
 .site-return { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; }
+.site-return .demo-context { align-self: center; font-size: .85rem; }
 .site-return a { display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--accent); text-underline-offset: .18em; }
 .site-return a[aria-current] { color: var(--fg); font-weight: 700; text-decoration-thickness: 2px; }
 .site-breadcrumbs ol { display: flex; flex-wrap: wrap; gap: .25rem .6rem; list-style: none; margin: 0; padding: 0; }
@@ -96,8 +97,6 @@ section[id], article[id] { scroll-margin-top: 4rem; }
 /* --- Layout ----------------------------------------------------------- */
 main { max-width: 76rem; margin: auto; padding: 0 1.5rem 3rem; }
 .section { padding: 3rem 0; border-top: 1px solid var(--line); }
-.section-head { max-width: 52rem; }
-.section-head p { max-width: 72ch; }
 .section-note { color: var(--muted); font-size: var(--text-small); }
 
 /* --- Hero ------------------------------------------------------------- */
@@ -113,8 +112,7 @@ main { max-width: 76rem; margin: auto; padding: 0 1.5rem 3rem; }
 .hero-sub { font-size: clamp(1.1rem, 1.8vw, 1.35rem); line-height: 1.5; color: var(--fg); }
 .hero-copy > p { max-width: 62ch; }
 .hero-cta { display: flex; flex-wrap: wrap; gap: .8rem; margin: 1.7rem 0 1.1rem; }
-.hero-note, .release-note, .license-note, .capture-note { color: var(--muted); font-size: var(--text-control); }
-.license-note { border-left: 2px solid var(--line-strong); padding-left: 1rem; }
+.release-note { color: var(--muted); font-size: var(--text-control); }
 .release-note { margin-top: 1.2rem; }
 
 /* --- App window frame ------------------------------------------------- */
@@ -126,11 +124,27 @@ main { max-width: 76rem; margin: auto; padding: 0 1.5rem 3rem; }
   box-shadow: var(--shadow-lift);
   overflow: hidden;
 }
-.frame-bar { display: flex; gap: .4rem; padding: .6rem .85rem; border-bottom: 1px solid var(--line); background: var(--bg-subtle); }
-.frame-bar i { display: block; width: .55rem; height: .55rem; border-radius: 50%; background: var(--line-strong); opacity: .7; }
 .frame img, .frame video { display: block; width: 100%; height: auto; max-height: 34rem; object-fit: contain; object-position: top center; background: var(--surface); }
 .frame figcaption { padding: .7rem .2rem 0; color: var(--muted); font-size: var(--text-small); }
-.feature-media a.still-only { display: none; }
+
+/* The entrance gives the real reader one full-width, uncropped view. */
+.showcase .hero { grid-template-columns: 1fr; gap: 1.6rem; }
+.showcase .hero-copy { max-width: 46rem; }
+.showcase .hero-title { font-size: clamp(2.4rem, 5vw, 4rem); }
+.showcase .frame img { max-height: none; }
+.showcase .section { padding: 2.5rem 0; }
+.workflow-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2rem; }
+.workflow-list h3 { margin: .5rem 0; }
+.workflow-list p { max-width: 45ch; }
+.resource-list > p { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: 1rem; }
+.showcase footer details { padding: .75rem 0; }
+.showcase footer summary { min-height: 2.75rem; align-content: center; }
+.showcase footer address { margin-top: .75rem; }
+.showcase footer nav { margin-top: 1.25rem; }
+@media (max-width: 700px) {
+  .workflow-list { grid-template-columns: 1fr; gap: .5rem; }
+  .resource-list > p { grid-template-columns: 1fr; gap: .2rem; }
+}
 
 /* --- Pillars, steps, cards -------------------------------------------- */
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 1rem; margin: 1.6rem 0 0; }
@@ -159,7 +173,6 @@ main { max-width: 76rem; margin: auto; padding: 0 1.5rem 3rem; }
 .steps strong { display: block; color: var(--fg-heading); }
 .steps p { margin: .2rem 0 0; color: var(--muted); font-size: var(--text-small); line-height: 1.5; }
 
-.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: 1rem; margin-top: 1.5rem; }
 .card {
   display: flex;
   flex-direction: column;
@@ -175,21 +188,8 @@ main { max-width: 76rem; margin: auto; padding: 0 1.5rem 3rem; }
 #examples .card { max-width: 72ch; }
 #examples .card p { font-size: var(--text-body); line-height: var(--line-reading); }
 
-.whats-new {
-  margin: 1.6rem 0 0;
-  padding: .9rem 1.1rem;
-  border-left: 3px solid var(--accent);
-  border-radius: 0 var(--radius) var(--radius) 0;
-  background: var(--accent-light);
-  font-size: var(--text-control);
-}
-.whats-new p { margin: 0; }
-
 /* --- Feature blocks --------------------------------------------------- */
 .feature { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 3rem; align-items: center; padding: 3rem 0; border-top: 1px solid var(--line); }
-.feature-copy { max-width: 42ch; }
-.feature-copy > a { display: inline-block; padding: .25rem 0; }
-.feature-copy code { overflow-wrap: anywhere; }
 
 /* --- Editorial content (guides, blog, legal) -------------------------- */
 code { font-family: var(--font-mono); font-size: .88em; background: var(--bg-subtle); padding: .1rem .25rem; border-radius: var(--radius-xs); }
@@ -242,7 +242,6 @@ figure.walkthrough figcaption { margin-top: .5rem; color: var(--muted, #555); fo
   .hero { grid-template-columns: 1fr; gap: 1.8rem; padding-top: 2.6rem; }
   .hero-copy { max-width: 65ch; }
   .feature { grid-template-columns: 1fr; gap: 1.5rem; padding: 2.2rem 0; }
-  .feature-copy { max-width: 65ch; }
 }
 @media (max-width: 480px) {
   main { padding-inline: 1rem; }
@@ -256,6 +255,4 @@ figure.walkthrough figcaption { margin-top: .5rem; color: var(--muted, #555); fo
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition: none !important; animation: none !important; }
-  .feature-media video { display: none; }
-  .feature-media a.still-only { display: block; }
 }

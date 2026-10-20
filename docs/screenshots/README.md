@@ -1,8 +1,8 @@
 # Product screenshots
 
 Browser captures of the maintained dashboard. The
-[project page](https://mfahsold.github.io/lixity/) introduces each feature with
-a selected image. Use the links below for related views and full-size images.
+[project page](https://mfahsold.github.io/lixity/) introduces the reader and
+links to the demo. Use the links below for related views and full-size images.
 All product captures follow [*The Crate at Warehouse 4*](../demo/report.html):
 the same six-chapter manuscript, research records and project metadata.
 
@@ -14,12 +14,12 @@ the same six-chapter manuscript, research records and project metadata.
 | Chapter comparisons | [Heatmap excerpt](dashboard-heatmap.png), [reference bands](dashboard-reference.png), [settings](dashboard-settings.png) |
 | Scene registers | [Scene excerpt](dashboard-scenes.png), [mobile](dashboard-scenes-mobile.png) |
 | Style and annotations | [Dimensions](dashboard-dimensions.png), [dark](dashboard-dimensions-dark.png), [mobile](dashboard-dimensions-mobile.png), [paragraph layers](dashboard-layer.png), [work markers](dashboard-markers.png) |
-| Editorial loop | [Flagged passages](dashboard-flags.png), [note written on a passage](dashboard-editorial.png) |
+| Editorial loop | [Flag queue (empty in this sample)](dashboard-flags.png), [note written on a passage](dashboard-editorial.png) |
 | Project setup | [New project](dashboard-project-modal.png), [open project](dashboard-project-open.png), [mobile](dashboard-project-open-mobile.png) |
 | Manuscript import | [Preview and confirmation](dashboard-project-import.png), [mobile](dashboard-project-import-mobile.png) |
-| Project settings | [Settings and file picker](dashboard-project-settings.png), [mobile](dashboard-project-settings-mobile.png), [expanded NDA panel](dashboard-nda.png), [mobile](dashboard-nda-mobile.png) |
+| Project settings | [Project settings](dashboard-project-settings.png), [mobile](dashboard-project-settings-mobile.png), [expanded NDA panel](dashboard-nda.png), [mobile](dashboard-nda-mobile.png) |
 | Retained evidence | [Source report](dashboard-research.png), [capture list](dashboard-research-sources.png), [mobile](dashboard-research-sources-mobile.png) |
-| Research dossiers | [Filtered notes with an exact-version image](dashboard-research-dossiers.png), [mobile](dashboard-research-dossiers-mobile.png) |
+| Research dossiers | [Filtered dossier overview](dashboard-research-dossiers.png), [mobile](dashboard-research-dossiers-mobile.png) |
 | Visual references | [Historical map](dashboard-dossier-image.png), [mobile map](dashboard-dossier-image-mobile.png), [photochrom](dashboard-dossier-photo.png), [mobile photochrom](dashboard-dossier-photo-mobile.png) |
 | Places and journeys | [Coordinate sketch](dashboard-dossier-geography.png), [mobile](dashboard-dossier-geography-mobile.png) |
 | Research search | [Passage results](dashboard-research-search.png), [mobile](dashboard-research-search-mobile.png) |
@@ -44,18 +44,24 @@ are authored demonstration data, not positions derived from those images or
 verified historical routes. These examples contain no private
 manuscripts, archives, credentials or running user projects.
 
-Desktop/mobile overviews show a viewport; element captures are clamped to a
-realistic screen height (1100 px desktop, 1250 px mobile) and the heatmap shows
-its upper section.
+Desktop reader entrances end after the complete opening chapter. Mobile reader
+overviews and the standalone source report show honest viewports, so reading
+continues below the image. Other captures frame complete widgets or end at an
+explicit task boundary: research lists show a complete matching dossier, claim or decision; source lists
+end after the complete source context and document controls,
+and the editorial view ends after the selected paragraph and its note controls.
+Follow the full-size image links above to inspect the actual framing.
 The reader captures use **Analysis Off**; chapter comparisons and
 scenes open **Analysis overview**. Passage captures use the same native paragraph
 actions and optional **Analysis On** layer. Released packages may have an earlier UI.
 Scene images show the first three scenes, with the first expanded. Their sample
 register is an illustrative assignment; its values come from the analysis.
-Dialog images include the complete form: the capture tool expands their scroll
-containers temporarily, while the application retains normal scrolling. Other
-panels show their full content. Terminal images are report excerpts except for
-the complete synthetic research search/citation response.
+Dialog images show the native scrollable confirmation state, including the header,
+Close control and confirmation actions. Content above the current scroll position
+remains available in the application; the camera does not expand native dialogs.
+Dossier list descriptions are bounded reading previews, not the full saved note;
+**View details** opens the complete content. Terminal images are report excerpts
+except for the complete synthetic research search/citation response.
 
 Local source/dossier filters search loaded metadata. Research Search searches
 retained text separately. Selecting a manuscript does not submit it; confirming
@@ -82,7 +88,7 @@ ignored `.artifacts/screenshots/`; browser actions use those fixtures. It create
 projects or stored agreements. Captures use fixed widths and reduced motion and fail
 on runtime errors, missing panels or mobile page overflow.
 
-Review the images before publishing. `.artifacts/screenshots/captures.json` records
+Review the images before publishing. `.artifacts/screenshots/capture-results.json` records
 PNG dimensions; update the corresponding HTML image attributes if they change.
 Fonts and browser versions can affect pixel output. Use only reviewed synthetic
 or public-domain data for repository screenshots.

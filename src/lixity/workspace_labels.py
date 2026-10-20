@@ -8,6 +8,7 @@ translated. The dashboard escapes text for its HTML context when rendering.
 _LANGUAGES = ("en", "de", "fr", "es", "it", "pt", "nl")
 
 _ROWS = {
+    "project_actions": ("Project actions", "Projektaktionen", "Actions du projet", "Acciones del proyecto", "Azioni del progetto", "Ações do projeto", "Projectacties"),
     "reading_passage_values": ("Passage values", "Werte zur Textstelle", "Valeurs du passage", "Valores del pasaje", "Valori del passaggio", "Valores do trecho", "Passagewaarden"),
     "reading_thread": ("Passage and research", "Textstelle und Recherche", "Passage et recherche", "Pasaje e investigación", "Passaggio e ricerca", "Trecho e pesquisa", "Passage en onderzoek"),
     "reading_passage_lines": ("Manuscript · lines {start}–{end}", "Manuskript · Zeilen {start}–{end}", "Manuscrit · lignes {start}–{end}", "Manuscrito · líneas {start}–{end}", "Manoscritto · righe {start}–{end}", "Manuscrito · linhas {start}–{end}", "Manuscript · regels {start}–{end}"),

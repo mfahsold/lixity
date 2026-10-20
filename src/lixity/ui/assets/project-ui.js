@@ -849,7 +849,7 @@ window.LixityManuscriptLinks = {
   var content = document.getElementById("workspace-navigation-content");
   if (!toggle || !content) return;
   var destinations = content.querySelector(".view-navigation");
-  if (destinations) content.parentElement.appendChild(destinations);
+  if (destinations) content.parentElement.insertBefore(destinations, content);
   var desktop = window.matchMedia("(min-width: 1100px)");
   var manualCollapsed = false, companionOpen = false, companionOverride = null;
   var toggleFocused = false;

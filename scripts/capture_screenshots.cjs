@@ -140,7 +140,14 @@ async function main() {
       const tab = page.locator(`[data-view="${view}"]`);
       if (await tab.count()) await tab.click();
     }
+    async function openProjectActions() {
+      const disclosure = page.locator('#project-actions');
+      if (await disclosure.count() && !await disclosure.evaluate(node => node.open)) {
+        await disclosure.locator(':scope > summary').click();
+      }
+    }
     async function selectManuscript() {
+      await openProjectActions();
       await page.locator('#btn-modal-new-project').click();
       await page.locator('#modal-project-create').waitFor({state: 'visible'});
       await page.locator('#import-file-input').setInputFiles({
@@ -151,100 +158,74 @@ async function main() {
       assert.equal(await page.locator('#btn-submit-import-project').isEnabled(), true);
     }
     async function captureThrough(capture, selector, lastSelector) {
-      capture.maxHeight = Math.ceil(await page.locator(lastSelector).evaluate((last, selector) => {
+      const last = typeof lastSelector === 'string' ? page.locator(lastSelector) : lastSelector;
+      await last.waitFor({state: 'visible'});
+      await settle();
+      capture.maxHeight = Math.ceil(await last.evaluate((last, selector) => {
         const target = document.querySelector(selector);
         return last.getBoundingClientRect().bottom - target.getBoundingClientRect().top
           + parseFloat(getComputedStyle(target).paddingBottom);
       }, selector));
     }
-    async function save(target, selector, {allowCrop = true} = {}) {
+    async function save(target, selector, {visibleMap = false} = {}) {
       await settle();
       await page.mouse.move(0, 0);
       if (await page.locator('#lixity-tooltip.visible').count()) await page.keyboard.press('Escape');
       if (await page.locator('#lixity-tooltip').count()) await page.locator('#lixity-tooltip').waitFor({state: 'hidden'});
+      // Start component framing from the document origin so a toolbar made
+      // sticky by an earlier interaction cannot float over the clipped task.
+      if (visibleMap) {
+        await page.locator(selector).evaluate(node => {
+          const toolbar = document.querySelector('.toolbar');
+          const inset = toolbar ? toolbar.getBoundingClientRect().height : 0;
+          window.scrollTo({top: scrollY + node.getBoundingClientRect().top - inset - 16, behavior: 'instant'});
+        });
+      } else await page.evaluate(() => window.scrollTo({top: 0, behavior: 'instant'}));
+      await settle();
       const job = captures.find(item => item.target === target) || {};
-      let clamp = null;
-      if (selector && allowCrop && job.maxHeight) {
-        const naturalHeight = await page.locator(selector).evaluate(element => element.scrollHeight);
-        if (naturalHeight > job.maxHeight) {
-          // Crop the panel without compressing its scrollable navigation.
-          clamp = await page.addStyleTag({content: `${selector} { max-height: ${job.maxHeight}px !important; overflow: hidden !important; }
-            ${selector} > * { flex-shrink: 0 !important; }`});
-        }
-      }
       const options = {path: target, animations: 'disabled'};
-      // Scrolling an element into view can pin an unrelated toolbar over its
-      // heading. Keep those external elements in normal flow for this capture.
-      const externalSticky = selector ? await page.evaluateHandle(selector => {
-        const target = document.querySelector(selector);
-        return Array.from(document.querySelectorAll('body *'))
-          .filter(node => !target.contains(node) && getComputedStyle(node).position === 'sticky')
-          .map(node => {
-            const saved = {node, style: node.getAttribute('style')};
-            node.style.setProperty('position', 'static', 'important');
-            return saved;
-          });
-      }, selector) : null;
-      try {
-        if (selector === '#research-manager') {
-          assert.ok(await page.locator('#research-tabs').evaluate(row => {
-            const selected = row.querySelector('[aria-selected="true"]');
-            if (!selected) return false;
-            const bounds = row.getBoundingClientRect(), tab = selected.getBoundingClientRect();
-            return tab.top >= bounds.top && tab.bottom <= bounds.bottom;
-          }), 'Cropped research navigation must preserve the selected tab height');
-        }
-        if (selector) {
-          const element = page.locator(selector);
-          const bounds = () => element.evaluate(node => {
+      if (selector) {
+        const element = page.locator(selector);
+        const clip = await element.evaluate(node => {
+          const rect = node.getBoundingClientRect();
+          return {x: rect.x + scrollX, y: rect.y + scrollY, width: rect.width, height: rect.height};
+        });
+        // Explicit excerpts end at a complete task boundary supplied by the
+        // capture definition. Do not reshape native widgets to fit a camera.
+        if (job.maxHeight) clip.height = Math.min(clip.height, job.maxHeight);
+        assert.ok(clip.width > 0 && clip.height > 0, `Capture target ${selector} must have a visible task boundary`);
+        if (visibleMap) {
+          const map = element.locator('.geography-map.leaflet-container');
+          assert.ok(await map.evaluate(node => {
             const rect = node.getBoundingClientRect();
-            return {x: rect.x + scrollX, y: rect.y + scrollY, width: rect.width, height: rect.height};
-          });
-          const before = await bounds();
-          await element.screenshot(options);
-          const after = await bounds();
-          assert.ok(await element.evaluate(node => {
-            const heading = node.querySelector(':scope > h2');
-            if (!heading) return true;
-            const rect = heading.getBoundingClientRect();
-            const x = rect.x + rect.width / 2, y = rect.y + rect.height / 2;
-            // A tall element capture may extend beyond the restored viewport.
-            if (x < 0 || x >= innerWidth || y < 0 || y >= innerHeight) return true;
-            return heading.contains(document.elementFromPoint(x, y));
-          }), `Capture heading ${selector} must not be covered by another element`);
-          for (const key of Object.keys(before)) {
-            assert.ok(Math.abs(after[key] - before[key]) <= 1,
-              `Capture target ${selector} changed ${key} during rendering: ${before[key]} → ${after[key]}`);
-          }
-        } else await page.screenshot(options);
-      } finally {
-        if (externalSticky) {
-          await externalSticky.evaluate(entries => entries.forEach(({node, style}) => {
-            if (style === null) node.removeAttribute('style');
-            else node.setAttribute('style', style);
-          }));
-          await externalSticky.dispose();
+            return rect.top < innerHeight && rect.bottom > 0;
+          }), 'The native map must remain in the visible viewport during capture');
+          await map.locator('.leaflet-tile-loaded').first().waitFor();
+          await map.locator('.leaflet-tile-container img').evaluateAll(images => Promise.all(images.map(image => image.decode())));
+          assert.match(await map.locator('.leaflet-control-attribution').innerText(), /OpenStreetMap/,
+            'The final map frame must preserve native basemap attribution');
         }
-        if (clamp) await clamp.evaluate(node => node.remove());
-      }
+        await page.screenshot({...options, fullPage: true, clip});
+      } else await page.screenshot(options);
       assert.deepEqual(errors, [], 'Screenshots must be free of runtime and console errors');
       const bytes = fs.readFileSync(target);
       results.push({file: path.basename(target), width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20)});
     }
     async function saveDialog(target, selector) {
-      // Expand scroll containers only for complete documentation captures.
-      await page.addStyleTag({content: 'dialog.lixity-modal[open], dialog.lixity-modal[open] .modal-card { max-height: none; overflow: visible; } dialog.lixity-modal[open] .modal-body { overflow: visible; flex-shrink: 0; }'});
-      const dialog = page.locator('dialog[open]');
-      const height = await dialog.evaluate(element => element.scrollHeight);
-      const viewport = page.viewportSize();
-      await page.setViewportSize({width: viewport.width, height: Math.max(viewport.height, height + 80)});
-      assert.ok(await dialog.evaluate(element => element.scrollHeight <= element.clientHeight + 1), 'Complete dialog content must fit the capture');
-      const buttons = dialog.locator('button:visible');
-      assert.ok(await buttons.count() > 0);
-      for (const button of await buttons.all()) {
-        assert.ok(await button.evaluate(element => element.getBoundingClientRect().bottom <= element.closest('dialog').getBoundingClientRect().bottom), 'Dialog actions must not be clipped');
+      const dialog = page.locator(selector);
+      // Keep the real modal's bounded scrolling and show its confirmation
+      // state, with the native header and Close control still reachable.
+      const footer = dialog.locator('.modal-footer:visible').last();
+      if (await footer.count()) await footer.scrollIntoViewIfNeeded();
+      const close = dialog.locator('.modal-close');
+      assert.ok(await close.isVisible(), 'Native dialog Close control must remain visible');
+      const bounds = await dialog.boundingBox();
+      for (const control of [close, ...(await footer.count() ? await footer.locator('button:visible').all() : [])]) {
+        const button = await control.boundingBox();
+        assert.ok(button && button.y >= bounds.y && button.y + button.height <= bounds.y + bounds.height + 1,
+          'Native dialog header and confirmation actions must fit the capture');
       }
-      await save(target, selector, {allowCrop: false});
+      await save(target, selector);
     }
     for (const capture of captures.filter(item => !item.video)) {
       const name = path.basename(capture.target);
@@ -255,7 +236,14 @@ async function main() {
         else if (/^dashboard-(editorial|layer)/.test(name)) await page.locator('#manuscript-analysis-toggle').click();
       }
       if (name.startsWith('dashboard-dimensions') || ['dashboard-light.png', 'dashboard-dark.png', 'dashboard-mobile.png', 'dashboard-reference.png', 'dashboard-heatmap.png', 'dashboard-layer.png'].includes(name)) await selectView('analysis');
-      if (name.startsWith('dashboard-dimensions')) {
+      if (name === 'dashboard-light.png' || name === 'dashboard-dark.png') {
+        // A complete opening chapter makes the entrance image a coherent
+        // reading task. Use a real viewport; preserve the native shell.
+        const bottom = await page.locator('#ch-1 .ptext').last().evaluate(node => node.getBoundingClientRect().bottom + scrollY);
+        assert.ok(bottom < 1400, 'Reader entrance must remain a compact opening chapter');
+        await page.setViewportSize({width: capture.width, height: Math.ceil(bottom + 32)});
+        await save(capture.target);
+      } else if (name.startsWith('dashboard-dimensions')) {
         await page.locator('#style-tab-dimensions').click();
         const before = await page.evaluate(() => captureRequests.length);
         await page.locator('#dim-chapter-select').selectOption('2');
@@ -274,20 +262,20 @@ async function main() {
         await save(capture.target, '#settings-form');
       } else if (name === 'dashboard-markers.png') {
         await save(capture.target, '#markers');
-      } else if (name === 'dashboard-flags.png') {
+      } else if (name.startsWith('dashboard-flags')) {
         await selectView('analysis');
         await save(capture.target, '#flags');
       } else if (name === 'dashboard-editorial.png') {
         await selectView('analysis');
-        const paragraph = page.locator('#ch-1 .ptext').nth(2);
+        const paragraph = page.locator('#ch-1 .ptext').first();
         await paragraph.locator('[data-reader-paragraph]').click();
         await page.locator('[data-reader-action=values]').click();
         await paragraph.locator('[data-reader-paragraph]').click();
         await page.locator('[data-reader-action=todo]').click();
-        await paragraph.locator('.marker-note').fill('Check the closing cadence here');
+        await paragraph.locator('.marker-note').fill('Check the gate observation');
+        await captureThrough(capture, '#workspace-reader-layout', paragraph);
         await save(capture.target, '#workspace-reader-layout');
-      } else if (name === 'dashboard-heatmap.png') {
-        await page.addStyleTag({content: '.page { max-width: 1720px; }'});
+      } else if (name.startsWith('dashboard-heatmap')) {
         await page.evaluate(() => {
           const rows = document.querySelectorAll('table.heatmap tbody tr');
           for (let i = 20; i < rows.length; i++) rows[i].remove();
@@ -302,6 +290,7 @@ async function main() {
         await selectView('research');
         await save(capture.target);
       } else if (name === 'dashboard-project-modal.png') {
+        await openProjectActions();
         await page.locator('#btn-modal-new-project').click();
         await page.locator('#tab-btn-scratch').click();
         await page.locator('#new-proj-title').fill('Harbour story');
@@ -314,7 +303,7 @@ async function main() {
         await page.locator('#modal-project-create').waitFor({state: 'hidden'});
         assert.equal(await page.locator('#set-author-name').isVisible(), true);
         assert.equal(await page.locator('#nda-draft-form input, #nda-draft-form textarea').count(), 5);
-        await save(capture.target, '#view-pane-project');
+        await save(capture.target, '#controls');
       } else if (name.startsWith('dashboard-project-import')) {
         await selectView('project');
         await selectManuscript();
@@ -332,6 +321,7 @@ async function main() {
         assert.equal(await page.locator('#nda-draft-preview').textContent(), researchFixture['/api/nda-draft'].text);
         await save(capture.target, '#nda-draft');
       } else if (name.startsWith('dashboard-project-open')) {
+        await openProjectActions();
         await page.locator('#btn-modal-open-project').click();
         await page.locator('#open-proj-choose').click();
         await page.locator('#open-project-chooser-list button').first().waitFor();
@@ -391,6 +381,7 @@ async function main() {
         if (name.includes('mobile')) {
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
         }
+        await captureThrough(capture, '#research-manager', '#research-claims-list .research-card:first-child');
         await save(capture.target, '#research-manager');
       } else if (name.startsWith('dashboard-research-decisions')) {
         await selectView('research');
@@ -399,6 +390,7 @@ async function main() {
         if (name.includes('mobile')) {
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
         }
+        await captureThrough(capture, '#research-manager', '#research-decisions-list .research-card:first-child');
         await save(capture.target, '#research-manager');
       } else if (name.startsWith('dashboard-research-sources') || name.startsWith('dashboard-research-dossiers') || name.startsWith('dashboard-dossier-')) {
         await selectView('research');
@@ -440,7 +432,7 @@ async function main() {
           assert.equal(await page.evaluate(() => captureRequests.length), before,
             'Authored route selection and map framing require no further requests');
           await captureThrough(capture, '.research-details-body .dossier-geography', '.research-details-body .geography-method');
-          await save(capture.target, '.research-details-body .dossier-geography');
+          await save(capture.target, '.research-details-body .dossier-geography', {visibleMap: true});
         } else if (name.startsWith('dashboard-dossier-diagram')) {
           const diagram = card.locator('[data-research-diagram]').first();
           await diagram.scrollIntoViewIfNeeded();
@@ -456,6 +448,8 @@ async function main() {
           await section.scrollIntoViewIfNeeded();
           await save(capture.target, '.research-dossier-section-block:has(.dossier-image img[alt*="' + alt + '"])');
         } else {
+          if (!sources) await card.locator('[data-research-detail]').click();
+          await captureThrough(capture, '#research-manager', sources ? card.locator('.research-source-view-bar') : card);
           await save(capture.target, '#research-manager');
         }
       } else if (name.startsWith('dashboard-research-search')) {
@@ -467,7 +461,7 @@ async function main() {
         await page.locator('#research-search-results .research-passage-card').first().waitFor();
         await save(capture.target, '#research-manager');
       } else if (name === 'cli-research.png' || name === 'cli-style.png') {
-        await save(capture.target, '.win', {allowCrop: name !== 'cli-style.png'});
+        await save(capture.target, '.win');
       } else {
         await save(capture.target);
       }
@@ -491,6 +485,21 @@ async function main() {
           if (window.setWalkthroughCaption) window.setWalkthroughCaption(value);
         }, text);
         await page.waitForTimeout(1500);
+        await page.evaluate(() => window.setWalkthroughCaption(''));
+      };
+      const assertCaptionClear = async selector => {
+        assert.ok(await page.locator(selector).evaluateAll(controls => {
+          controls = controls.filter(control => { const rect = control.getBoundingClientRect(); return rect.width && rect.height; });
+          if (!controls.length) return false;
+          const caption = document.querySelector('#walkthrough-caption');
+          if (!caption || getComputedStyle(caption).opacity === '0') return true;
+          const overlay = caption.getBoundingClientRect();
+          return controls.every(control => {
+            const rect = control.getBoundingClientRect();
+            return !rect.width || !rect.height || rect.right <= overlay.left || rect.left >= overlay.right ||
+              rect.bottom <= overlay.top || rect.top >= overlay.bottom;
+          });
+        }), 'Walkthrough captions must not obscure task actions during interaction');
       };
       await page.goto('http://lixity-screenshots.test/' + path.basename(capture.source));
       if (flow !== 'research-timeline' && await page.locator('#workbench-overview-open').count()) {
@@ -520,6 +529,7 @@ async function main() {
         await paragraph.locator('[data-reader-paragraph]').click();
         await page.locator('[data-reader-action=todo]').click();
         await paragraph.locator('.marker-note').pressSequentially('Check the closing cadence here', {delay: 60});
+        await assertCaptionClear('.marker-note, [data-marker-save], [data-marker-cancel], #reader-inspector button');
         await page.waitForTimeout(1300);
         await say('Draft a note, then review existing manuscript markers');
         await page.locator('#workbench-overview-open').click();
@@ -585,6 +595,7 @@ async function main() {
         }
         await say('Open a claim to read its card and evidence');
         await rows.first().click();
+        await assertCaptionClear('#research-claims-list button, #research-claims-timeline button');
         await page.waitForTimeout(1600);
         await page.mouse.wheel(0, 300);
         await page.waitForTimeout(1700);

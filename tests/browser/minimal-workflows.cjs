@@ -1,3 +1,4 @@
+const {openProjectActions} = require('./support/project-actions.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -61,6 +62,7 @@ const data = JSON.parse(fixture.stdout);
       assert.deepEqual(gets.slice(beforeGets),['/api/research/status'],'Initial overview lists do not trigger four redundant GETs');
       assert.equal(await page.locator('[data-action=analyze]').count(),1,'Native refresh exposes a single analyze action');
       assert.equal(await page.locator('[data-action=rebuild]').count(),0,'The supported alias is not another native button');
+      await openProjectActions(page);
       await page.locator('#btn-modal-new-project').click();
       await page.locator('#tab-btn-scratch').click();
       await page.locator('.template-card:has(input[value=research])').click();
