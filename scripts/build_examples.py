@@ -197,7 +197,9 @@ def _notice(heading: str, paragraphs: list[str], links: list[tuple[str, str]]) -
 """
 
 
-def _site_navigation(report: str, title: str, *, demo: bool = False) -> str:
+def _site_navigation(
+    report: str, title: str, *, demo: bool = False, breadcrumbs: bool = True,
+) -> str:
     """Keep public examples connected without adding external report assets."""
     stylesheet = (ROOT / "docs/assets/site.css").read_text(encoding="utf-8")
     start, end = "/* Public navigation start */", "/* Public navigation end */"
@@ -211,10 +213,14 @@ def _site_navigation(report: str, title: str, *, demo: bool = False) -> str:
         '<a href="../">Home</a><a href="../#guides">Guides</a>'
         '<a href="../blog/index.html">Articles</a>'
         f'<a href="../demo/report.html"{current}>Demo</a>'
-        '</nav><nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol>'
-        '<li><a href="../">Home</a></li>' + parent +
-        f'<li><span aria-current="page">{html.escape(title)}</span></li></ol></nav>'
+        '</nav>'
     )
+    if breadcrumbs:
+        navigation += (
+            '<nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol>'
+            '<li><a href="../">Home</a></li>' + parent +
+            f'<li><span aria-current="page">{html.escape(title)}</span></li></ol></nav>'
+        )
     _require(report.count('<body id="top"') == 1, "the report must have one top target")
     report = report.replace('<body id="top"', '<body id="top" tabindex="-1"', 1)
     report, class_count = re.subn(

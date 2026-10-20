@@ -40,29 +40,65 @@ lixity --version
 lixity service start --open
 ```
 
-The current release is **v0.7.1**. Read the [release notes](releases/v0.7.1.md)
-for changes and compatibility information. The [public demo](demo/report.html)
-shows **current main (unreleased)**, including its continuous manuscript reader;
-installing v0.7.1 does not provide those newer controls. To follow that development
-line, use [Development builds instead](#development-builds-instead).
-For a reproducible, checksum-verified
-setup, install the pinned release wheel instead (the release page also carries
-`SHA256SUMS`):
+The current release is **v0.7.2**. See the [release notes](releases/v0.7.2.md)
+for changes and compatibility. `uv tool update-shell` configures new terminals;
+it does not change the terminal already open.
+
+## First useful result
+
+The app opens `http://127.0.0.1:8765/` with an empty workspace; it does not
+search your terminal's current folder. Choose **Open Project** for an existing
+folder or **Analyze a manuscript** to preview a copy into a new project.
+Confirm the manuscript language, then read a passage in **Manuscript**.
+Use **Analysis** for diagnostics or **… → Values** for one paragraph.
+[Onboarding](ONBOARDING.md) explains the next steps.
+
+Check, stop and return to the managed workspace with:
 
 ```sh
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.7.1/lixity-0.7.1-py3-none-any.whl"
+lixity service status
+lixity service stop
+lixity service start --open
 ```
 
-`uv tool update-shell` configures shell integration once; it does not change an
-already open terminal. **Open Project** reconnects an existing
-manuscript folder; **Analyze a manuscript** opens the import preview. The default
-service starts without a project and does not search the terminal's directory.
-`uv tool list` shows the installed source. A tool installation does not make
-`import lixity` available to a different Python environment.
+Open your project again, or supply its path while the service is stopped:
+`lixity service start --open ./my-novel`. For the full saved launch settings,
+use `lixity service restart --open`; it restores the startup project, not a later
+browser selection. [Service lifecycle](#running-the-server) covers custom ports,
+logs and startup at login.
 
-This uses uv's [isolated tool environment](https://docs.astral.sh/uv/concepts/tools/)
-and [managed Python support](https://docs.astral.sh/uv/concepts/python-versions/#requiring-or-disabling-managed-python-versions).
-uv accepts [HTTPS wheel sources](https://docs.astral.sh/uv/concepts/projects/dependencies/#url).
+For a terminal result instead:
+
+```sh
+lixity analyze manuscript.md --language en
+```
+
+English is the default; `--language auto` explicitly requests detection.
+Short text may leave measurements unavailable. [Usage](USAGE.md) owns exports,
+configuration and PDF behavior. Built-in analysis runs locally. Optional
+[map backgrounds](research/USAGE.md#keep-places-and-journeys-in-a-dossier) and
+[OCR workers](research/OCR_INTEGRATION.md) have separate network/data boundaries.
+
+### Pinned release and installation scope
+
+<details>
+<summary>Reproducible wheel installation and Python environments</summary>
+
+For a checksum-verified setup, install the pinned release wheel instead and
+verify it against `SHA256SUMS` on the release page:
+
+```sh
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.7.2/lixity-0.7.2-py3-none-any.whl"
+```
+
+`uv tool list` shows the installed source. This uses uv's
+[isolated tool environment](https://docs.astral.sh/uv/concepts/tools/) and
+[managed Python](https://docs.astral.sh/uv/concepts/python-versions/#requiring-or-disabling-managed-python-versions).
+uv accepts [HTTPS wheels](https://docs.astral.sh/uv/concepts/projects/dependencies/#url).
+A tool installation does not make `import lixity` available in another Python
+environment; use the [Python project route](#python-api-project-environment).
+
+</details>
 
 ### Optional research prerequisites
 
@@ -89,7 +125,7 @@ for all readers and writers. Installing Lixity does not download an OCR model.
 <details>
 <summary>Follow unreleased source changes</summary>
 
-To follow unreleased changes shown in the public demo, install
+To test unreleased source changes, install
 [Git](https://git-scm.com/downloads), then use this **instead**:
 
 ```sh
@@ -172,20 +208,6 @@ remove its installation rather than overwriting its executable with uv.
 
 </details>
 
-## First useful result
-
-The app starts with an empty workspace. Follow [Onboarding](ONBOARDING.md) to
-open an existing project, import a manuscript or start with research. For a
-terminal report from your own UTF-8 Markdown file:
-
-```sh
-lixity analyze manuscript.md --language en
-```
-
-Select the manuscript language explicitly; English is the default and `auto`
-requests detection. Short text may leave measurements unavailable. The
-[usage reference](USAGE.md) owns exports, configuration, PDF and NDA behavior.
-
 ## Running the server
 
 Use the packaged service controller from any terminal; no source checkout is
@@ -226,7 +248,7 @@ changes, restart the appropriate managed instance; a browser reload alone does
 not load new code. Supply OCR variables in the new start/restart environment;
 their values are not saved as launch settings.
 
-**Current main (unreleased):** reloading the dashboard validates the selected
+Reloading the dashboard validates the selected
 manuscript before serving saved analysis. If it is missing/unreadable or a rebuild
 fails, the app retains its last successful view with an **Analysis freshness**
 notice and **Retry refresh**. Restore the file/access or correct the input/settings,
@@ -405,7 +427,7 @@ Linux/macOS:
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@v0.7.1"
+.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@v0.7.2"
 .venv/bin/python -m pip check
 .venv/bin/python -c "import lixity; print(lixity.__version__)"
 ```
@@ -414,7 +436,7 @@ Windows PowerShell (no activation or execution-policy change needed):
 
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@v0.7.1"
+.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@v0.7.2"
 .\.venv\Scripts\python.exe -m pip check
 .\.venv\Scripts\python.exe -c "import lixity; print(lixity.__version__)"
 ```

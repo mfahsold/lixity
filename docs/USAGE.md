@@ -100,11 +100,11 @@ JavaScript and a compatible native server are required.
 
 ### Start a review
 
-In the current-main interactive workspace, the **Analysis** switch has a visible
+In the interactive workspace, the **Analysis** switch has a visible
 On/Off state while the manuscript remains continuous. Showing diagnostics keeps
 the prose width and navigation choice; it does not open a context tool. An
-analyzed paragraph's **Values** explicitly opens its measurements and enables
-analysis. **Analysis overview** opens chapter comparisons and other dense views;
+analyzed paragraph's **Values** opens the **Passage values** inspector independently
+of the Analysis On/Off choice. **Analysis overview** opens chapter comparisons and other dense views;
 **Back to passage** restores the earlier analysis choice and document context.
 
 **Start your review → Open passage** opens the first paragraph meeting the
@@ -121,7 +121,7 @@ or instructions to revise.
 Choose **Dossier alongside** to read a saved dossier while retaining manuscript
 search and the current reading presentation. Analysis visibility remains a
 separate choice: opening a dossier does not turn it off. Use the context area's
-**Analysis** and **Dossier alongside** controls to switch the active tool; only
+**Passage values** and **Dossier alongside** controls to switch the active tool; only
 one tool occupies that area at a time. Opening it collapses desktop project
 navigation; its toggle remains reachable, and closing restores the earlier manual
 choice. Drag the divider to change the desktop widths, or focus it and use
@@ -150,7 +150,12 @@ explicitly when needed. Claim and dossier views can open their saved manuscript
 associations in Review. Only an exactly resolved current passage offers a direct
 jump; moved, changed, ambiguous and unavailable anchors retain their review state.
 When following a connection from the manuscript, **Back to passage** returns to
-the preserved origin while the project/source context still matches. Cited source
+the preserved origin while the project/source context still matches. The work
+thread groups this action with the originating chapter and lines. **Viewed version:**
+introduces the title and version of the claim or dossier you opened. Labels distinguish a pinned
+version from a current or viewed version; browsing history does not repin a
+record. Returning, or changing the project/source context, clears the thread.
+Cited source
 quotations remain pinned retained passages; opening an ordinary source reader is
 not a new historical-source navigation contract.
 
@@ -158,7 +163,7 @@ not a new historical-source navigation contract.
 
 ### Reading paragraphs
 
-**Current main (unreleased):** interactive workspaces start with continuous
+Interactive workspaces start with continuous
 manuscript text and **Analysis Off**. Toggle **Analysis** to reveal diagnostic
 presentation in place. The switch, visible On/Off text and pressed state identify
 the choice while its accessible name stays **Analysis**. Showing the layer alone
@@ -167,8 +172,8 @@ flow, preserving the prose width and line wrapping. Opening or closing the
 dossier is independent of that state. Use
 **Analysis overview** for chapter matrices, sentence rhythm and other comparisons,
 then **Back to passage** to restore the document context and prior analysis
-display choice. Hiding analysis also
-leaves the overview and restores an eligible dossier instead of an analysis tool.
+display choice. Hiding analysis leaves the overview and restores the prior
+passage tool. The inspector and dossier work with Analysis On or Off.
 
 Choose a chapter in the reader toolbar. **Reading settings** groups **A−**/**A+**
 for text size (16–28 nominal pixels), narrow/standard/wide text and
@@ -185,8 +190,12 @@ also offers a compact toolbar. Marker notes and claim associations still require
 their existing explicit save and retention steps.
 Use Shift+right-click to open the browser's native context menu instead.
 
-**Values** enables analysis and opens the selected paragraph's source lines,
-tense and style measurements in the closable context area. Switch between that
+**Values** opens **Passage values** with the selected paragraph's chapter, source
+lines, tense and style measurements in the closable context area. Opening or
+closing it leaves the global Analysis choice unchanged; turning Analysis Off
+keeps the inspector available. **Saved
+manuscript associations** opens the existing quote review for that paragraph.
+Switch between that
 tool and the saved dossier explicitly; closing the tool does not turn all
 analysis off. On desktop, tools occupy adjacent space. On mobile, an explicit
 paragraph-to-tool action reveals the stacked tool heading; closing it or pressing
@@ -242,7 +251,7 @@ Research list filters only match loaded record metadata; use
 
 ### Source availability and saved analysis
 
-**Current main (unreleased):** reloading the local dashboard validates the selected
+Reloading the local dashboard validates the selected
 manuscript before serving cached measurements. Changed readable bytes trigger a
 rebuild. If the file is missing, unreadable or a rebuild fails, a last successful
 view remains usable with an **Analysis freshness** notice and **Retry refresh**.
@@ -286,7 +295,7 @@ chapter. Toggle the trajectory or cutoff box and reset the camera as needed.
 Rotation is opt-in and pauses in a hidden tab. Cards show positive/negative
 loadings; the table gives the same measured chapter scores and flags.
 
-**Current main, after v0.7.1:** the chapter selector keeps the chosen chapter's
+The chapter selector keeps the chosen chapter's
 scores beside the plot. Choose a flat axis pair in **View** when points overlap;
 return to 3D to rotate the same data. The line follows chapter order, including
 gaps where a chapter has no measured position. **Reset** restores the view,
@@ -497,7 +506,7 @@ and exploratory dimensions answer different questions; none establishes literary
 quality or a guaranteed false-discovery rate. [Methods](METHODS.md) owns the
 mathematical definitions; [Stability](STABILITY.md) describes inference limits.
 
-**Current main, after v0.7.1:** select a chapter in the style space, inspect its
+Select a chapter in the style space, inspect its
 values and open its passage. The view and CLI explain their coverage, axes,
 cutoffs and unavailable values in place; JSON exposes `dimension_diagnostics`.
 

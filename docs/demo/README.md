@@ -12,8 +12,7 @@ opens its reading companion. In **Review**, follow the saved eastern-gate quote
 through **Open claim** to its pinned claim, dossier and source references, or use
 **Go to manuscript passage** to read the quote. Starting from a manuscript
 paragraph's saved association preserves an origin: close the record viewer and
-choose **Back to passage** to return there. This demo follows
-current main (unreleased), rather than the packaged v0.7.1 reader.
+choose **Back to passage** to return there. This demo demonstrates the v0.7.2 reading workflow.
 Historical map/photo sources have
 [reviewed credits and file hashes](../assets/research/sources.json). People,
 customs records, incidents and journeys are invented; the visuals do not verify

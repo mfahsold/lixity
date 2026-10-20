@@ -47,7 +47,7 @@ manuscripts, archives, credentials or running user projects.
 Desktop/mobile overviews show a viewport; element captures are clamped to a
 realistic screen height (1100 px desktop, 1250 px mobile) and the heatmap shows
 its upper section.
-The reader captures use current-main **Analysis Off**; chapter comparisons and
+The reader captures use **Analysis Off**; chapter comparisons and
 scenes open **Analysis overview**. Passage captures use the same native paragraph
 actions and optional **Analysis On** layer. Released packages may have an earlier UI.
 Scene images show the first three scenes, with the first expanded. Their sample

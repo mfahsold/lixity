@@ -3,11 +3,9 @@
 Explore [*The Crate at Warehouse 4*](https://mfahsold.github.io/lixity/demo/report.html),
 the shared demo project for manuscript analysis, research and PDF layouts.
 The [illustrated first look](guides/first-look.html) follows that same project;
-then use your own manuscript below. The read-only demo shows **current main
-(unreleased)**; the published **v0.7.1** has earlier reading controls. Use the
-[release installation](INSTALLATION.md#cli-current-release) for v0.7.1 or the
-[development installation](INSTALLATION.md#development-builds-instead) to follow main.
-[Installation](INSTALLATION.md) owns setup, upgrades and service management;
+then use your own manuscript below. The read-only demo demonstrates the v0.7.2
+reading workflow. [Installation](INSTALLATION.md) covers setup, upgrades and
+service management;
 [interpretation](guides/interpretation.html) explains the measurements.
 
 <a id="the-journey-at-a-glance"></a>
@@ -54,12 +52,12 @@ one server share its active project, so check the displayed path before saving.
 
 ### Read and explore
 
-On **current main**, start in **Manuscript** and read a passage. Turn **Analysis**
+Start in **Manuscript** and read a passage. Turn **Analysis**
 On to show diagnostics in place; this does not open a tool or narrow the prose.
-Choose a paragraph's **… → Values** for its measurements. **Analysis overview**
+Choose a paragraph's **… → Values** for its **Passage values** inspector, which
+works with Analysis On or Off. **Analysis overview**
 opens chapter comparisons; **Back to passage** restores your place and prior
-Analysis On/Off choice. On **v0.7.1**, start with **Open passage** or
-**Explore chapters** and expand the paragraph's **Values**.
+Analysis On/Off choice.
 The opening candidate is not a quality ranking; read the text before
 deciding whether a difference matters. Settings explain saved versus session-only
 choices. Standalone HTML is read-only; project writes and manuscript PDF downloads
@@ -67,30 +65,28 @@ require the native server. See [PDF layouts](USAGE.md#lixity-pdf).
 
 ### Choose a view
 
-**Current main, after v0.7.1:** the project sidebar stays available while you
+The project sidebar stays available while you
 read on a wide screen. On mobile, use the same views above the workspace.
 **Manuscript** is the starting point for your text; open a dossier
 alongside it when you need context, and use **Research** to work on the source
 archive. Analysis guides your attention; the manuscript remains the reference.
 
-The same local tabs switch analysis views, research lists and dialog pages.
-Their underline marks the selected view. Use arrow keys within a tablist;
-research tabs open with Enter or Space. Forms group related fields under named
-headings. Dialog content scrolls below the title; Escape closes the dialog and
-returns focus to its opener.
+The [reader reference](USAGE.md#reading-paragraphs) explains display preferences,
+keyboard controls, companion sizing and coverage. Changing a view writes nothing.
 
 | What you want to do | Where to start |
 | --- | --- |
-| Read a difference in context | **Manuscript**: turn **Analysis** On, then choose **… → Values** on a paragraph if needed. |
+| Read a difference in context | **Manuscript**: choose **… → Values** for one paragraph; use **Analysis** independently for diagnostics. |
 | Compare chapter positions | **Analysis overview → Style dimensions**: select a chapter or use a flat axis view to inspect overlaps. |
 | Follow a source into an argument | **Research**: open a dossier, inspect its evidence and follow a saved manuscript quotation. |
 | Change the manuscript or analysis setup | **Project**: check the active project and whether a setting is saved or session-only. |
 
-**Current main, after v0.7.1:** maps open with OpenStreetMap. Select a numbered
+Maps open with OpenStreetMap. Select a numbered
 place or route to read its details; switch off the background for local vectors
 or choose the sketch. The map background uses the network. Mermaid diagrams
 render locally: scroll a wide diagram or enlarge it to inspect the whole view.
-The public demo shows current-main behavior; an installed release may differ.
+Tile requests send the viewed area and client IP to the provider and stop when
+the map context is hidden.
 
 ## Work through review notes
 
@@ -106,10 +102,12 @@ records, manuscript associations and recovery. Retain only permitted source byte
 Claims and author decisions remain interpretations; saving or finding a passage
 does not verify it. Review changed anchors and linked revisions explicitly.
 
-On current main, a paragraph's saved associations lead through **Open claim**
+A paragraph's saved associations lead through **Open claim**
 to the linked claim version, its linked dossier versions and cited source passages.
 Close the record viewer, then use **Back to passage** to return to the requesting
-manuscript text. To create an
+manuscript text. The work thread keeps its originating lines and the viewed
+record's title/version visible; pinned and current versions remain distinct.
+To create an
 association locally, select text in one paragraph, choose **Link selection to
 claim**, review the claim and quote, and explicitly permit quote retention before
 **Save association**. This saves the quote, not a full manuscript capture or source

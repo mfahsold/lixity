@@ -18,8 +18,9 @@ an explicitly configured worker, not a bundled inference runtime.
 **Since v0.7.1:** exact update dry runs, saved-revision comparisons
 and explicit Markdown dossier export/reconciliation reuse the same revision path.
 Guarded dossier retirement reuses source withdrawal's tombstone storage.
-Interactive geography works offline; optional map tiles require separate network
-permission. [Research workflows](USAGE.md#research-workflows) document these additions
+Local geographic vectors and the numbered sketch work offline. Visible maps use
+OpenStreetMap by default and send the viewed area and client IP to the provider;
+turn off the background for offline use. [Research workflows](USAGE.md#research-workflows) document these additions
 and their installed-version boundary.
 
 [Architecture](../ARCHITECTURE.md) owns component responsibilities and project

@@ -56,6 +56,20 @@ class PageHead(HTMLParser):
 
 
 class TestPagesStaging(unittest.TestCase):
+    def test_compact_demo_navigation_keeps_orientation_without_repeating_the_title(self):
+        from scripts.build_examples import _site_navigation
+
+        document = (
+            '<html><head></head><body id="top" class="lixity-workspace">'
+            '<div class="page"><h1>Fictional manuscript</h1></div></body></html>'
+        )
+        compact = _site_navigation(document, "Fictional manuscript", demo=True, breadcrumbs=False)
+        self.assertNotIn('<nav class="site-breadcrumbs"', compact)
+        self.assertIn('href="../demo/report.html" aria-current="location">Demo</a>', compact)
+        self.assertIn('<h1>Fictional manuscript</h1>', compact)
+        ordinary = _site_navigation(document, "Fictional manuscript", demo=True)
+        self.assertIn('<nav class="site-breadcrumbs"', ordinary)
+
     def test_public_navigation_preserves_workspace_and_report_classes(self):
         from scripts.build_examples import _insert_notice, _site_navigation
 

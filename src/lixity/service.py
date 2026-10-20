@@ -95,7 +95,24 @@ def _validate_settings(settings: Mapping[str, Any]) -> None:
 
 def configure(parser: argparse.ArgumentParser) -> None:
     """Register the four managed lifecycle actions and explicit startup options."""
-    parser.add_argument("action", choices=("start", "stop", "restart", "status"))
+    parser.description = "Start, inspect or stop the installed local app without a source checkout."
+    parser.formatter_class = argparse.RawDescriptionHelpFormatter
+    parser.epilog = (
+        "First session:  lixity service start --open\n"
+        "Return later:   lixity service start --open ./my-novel\n"
+        "After upgrade:  lixity service restart --open\n"
+        "Check or stop:  lixity service status  |  lixity service stop\n\n"
+        "Start uses fresh launch settings: an empty workspace unless a project or\n"
+        "LIXITY_DIR is supplied. Restart reuses recorded launch settings, even\n"
+        "after stop, plus explicit overrides. A later browser project selection\n"
+        "does not change the recorded startup project. Use the same --port for\n"
+        "each action on a custom-port instance. This controller manages only its\n"
+        "own instances; login startup is separate."
+    )
+    parser.add_argument(
+        "action", choices=("start", "stop", "restart", "status"),
+        help="start with fresh settings; restart with saved settings; inspect or stop an owned instance",
+    )
     parser.add_argument(
         "project", nargs="?", help="Explicit project or manuscript for start/restart"
     )
@@ -108,11 +125,20 @@ def configure(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--no-project", action="store_true", default=None, help="Start an empty workspace"
     )
-    parser.add_argument("--open", dest="open_browser", action="store_true", default=None)
-    parser.add_argument("--language", choices=LANGUAGE_CHOICES)
-    parser.add_argument("--title")
-    parser.add_argument("--research-project")
-    parser.add_argument("--debug", action="store_true", default=None)
+    parser.add_argument(
+        "--open", dest="open_browser", action="store_true", default=None,
+        help="Open the ready workspace in your browser (start/restart)",
+    )
+    parser.add_argument(
+        "--language", choices=LANGUAGE_CHOICES,
+        help="Analysis language override; default: project setting or en; auto requests detection",
+    )
+    parser.add_argument("--title", help="Workspace title override (default: project/manuscript title)")
+    parser.add_argument("--research-project", help="Explicit research archive root for the workspace")
+    parser.add_argument(
+        "--debug", action="store_true", default=None,
+        help="Enable verbose server and browser diagnostics",
+    )
     parser.add_argument(
         "--backend",
         choices=("auto", "process", "systemd"),
@@ -120,11 +146,25 @@ def configure(parser: argparse.ArgumentParser) -> None:
         help="auto prefers an available Linux systemd user manager",
     )
     parser.add_argument("--json", action="store_true", help="Machine-readable lifecycle result")
-    for flag in ("z-mild", "z-strong", "fdr-q", "dim-threshold"):
-        parser.add_argument("--" + flag, type=float)
-    parser.add_argument("--fdr-method", choices=("bh", "by"))
-    parser.add_argument("--min-chapters", type=int)
-    parser.add_argument("--flag-min-severity", type=int, choices=(1, 2, 3))
+    for flag, help_text in (
+        ("z-mild", "Notable |z*| threshold override"),
+        ("z-strong", "Strong |z*| threshold override"),
+        ("fdr-q", "Nominal FDR q override"),
+        ("dim-threshold", "Per-axis cutoff in standardized midrank PCA space"),
+    ):
+        parser.add_argument("--" + flag, type=float, help=help_text)
+    parser.add_argument(
+        "--fdr-method", choices=("bh", "by"),
+        help="FDR method: Benjamini-Hochberg (bh) or Benjamini-Yekutieli (by)",
+    )
+    parser.add_argument(
+        "--min-chapters", type=int,
+        help="Minimum chapters for a style baseline (at least 2; built-in default: 2)",
+    )
+    parser.add_argument(
+        "--flag-min-severity", type=int, choices=(1, 2, 3),
+        help="Minimum paragraph severity for the flagged list",
+    )
 
 
 def _workspace_scope(selector: str | None) -> Path | None:

@@ -16,6 +16,57 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 
 class TestDocumentation(unittest.TestCase):
+    def test_packaged_readme_links_and_images_work_outside_the_repository(self):
+        """PyPI renders the same README without a checkout-relative URL base."""
+        import tempfile
+        from urllib.parse import urlsplit
+
+        from stage_pages import stage
+
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        targets = re.findall(r"\]\(([^)]+)\)", readme)
+        targets += re.findall(r'''\b(?:href|src)=["']([^"']+)["']''', readme)
+        relative = [target for target in targets if not target.startswith("#") and not urlsplit(target).scheme]
+        self.assertEqual(relative, [], "README targets must work on PyPI as well as GitHub")
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "site"
+            stage(ROOT / "docs", output)
+            for target in targets:
+                url = urlsplit(target)
+                if url.netloc == "mfahsold.github.io" and url.path.startswith("/lixity/"):
+                    path = output / url.path.removeprefix("/lixity/")
+                    self.assertTrue(path.exists(), f"README target is not published: {target}")
+                elif target.startswith("https://github.com/mfahsold/lixity/blob/main/"):
+                    path = ROOT / url.path.removeprefix("/mfahsold/lixity/blob/main/")
+                    self.assertTrue(path.exists(), f"README repository target is missing: {target}")
+
+    def test_absolute_readme_release_links_sync_and_report_target_drift(self):
+        import tempfile
+        from unittest.mock import patch
+
+        from sync_docs import check_or_sync_files, find_version_drift
+
+        prefix = "https://mfahsold.github.io/lixity/releases/"
+        text = (
+            f"[v0.7.1 release notes]({prefix}v0.7.1.md)\n"
+            f"[Release notes]({prefix}v0.7.1.md)\n"
+            f"Since v0.6.0: [historical note]({prefix}v0.6.0.md)\n"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "README.md"
+            path.write_text(text, encoding="utf-8")
+            with patch("sync_docs.ROOT", root):
+                self.assertEqual(check_or_sync_files("0.7.2", check_only=True), ["README.md"])
+                check_or_sync_files("0.7.2")
+                actual = path.read_text(encoding="utf-8")
+                self.assertEqual(actual, text.replace("v0.7.1", "v0.7.2"))
+                self.assertEqual(find_version_drift("0.7.2"), [])
+                path.write_text(actual.replace(f"{prefix}v0.7.2.md", f"{prefix}v0.7.1.md", 1))
+                findings = find_version_drift("0.7.2")
+                self.assertEqual(len(findings), 1)
+                self.assertIn("current release-note target", findings[0])
+
     def test_first_look_journey_and_relative_assets_exist_in_published_output(self):
         """The guide/report journey must survive Pages' explicit staging boundary."""
         import tempfile
@@ -141,6 +192,31 @@ class TestDocumentation(unittest.TestCase):
             self.assertRegex(finding, r"\S+:\d+: .*v0\.0\.1-not-a-version")
         # Against the real version the same scan is clean.
         self.assertEqual(find_version_drift(current), [])
+
+    def test_html_current_install_statement_is_checked_and_synced(self):
+        import tempfile
+        from unittest.mock import patch
+
+        from sync_docs import check_or_sync_files, find_version_drift
+
+        statement = '<p>This installs the current release, <strong>v1.2.3</strong>, from PyPI.</p>'
+        history = '<p>Since v1.2.3: historical behavior.</p>'
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            guide = root / "docs/guides/installation.html"
+            guide.parent.mkdir(parents=True)
+            guide.write_text(statement + history, encoding="utf-8")
+            with patch("sync_docs.ROOT", root):
+                findings = find_version_drift("2.3.4")
+                self.assertEqual(len(findings), 1)
+                self.assertIn("current HTML install statement", findings[0])
+                self.assertEqual(check_or_sync_files("2.3.4", check_only=True),
+                                 ["docs/guides/installation.html"])
+                self.assertEqual(guide.read_text(encoding="utf-8"), statement + history)
+                check_or_sync_files("2.3.4")
+                self.assertEqual(guide.read_text(encoding="utf-8"),
+                                 statement.replace("v1.2.3", "v2.3.4") + history)
+                self.assertEqual(find_version_drift("2.3.4"), [])
 
     def test_next_release_syncs_current_note_links_and_preserves_history(self):
         import tempfile

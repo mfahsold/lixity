@@ -45,10 +45,10 @@ def check_or_sync_files(version: str, *, check_only: bool = False) -> list[str]:
                  f"This installs **v{version}**"),
                 (r"The current release is \*\*v\d+\.\d+\.\d+\*\*",
                  f"The current release is **v{version}**"),
-                (r"\[v\d+\.\d+\.\d+ release notes\]\(docs/releases/v\d+\.\d+\.\d+\.md\)",
-                 f"[v{version} release notes](docs/releases/v{version}.md)"),
-                (r"\[Release notes\]\(docs/releases/v\d+\.\d+\.\d+\.md\)",
-                 f"[Release notes](docs/releases/v{version}.md)"),
+                (r"\[v\d+\.\d+\.\d+ release notes\]\((docs/releases/|https://mfahsold\.github\.io/lixity/releases/)v\d+\.\d+\.\d+\.md\)",
+                 rf"[v{version} release notes](\g<1>v{version}.md)"),
+                (r"\[Release notes\]\((docs/releases/|https://mfahsold\.github\.io/lixity/releases/)v\d+\.\d+\.\d+\.md\)",
+                 rf"[Release notes](\g<1>v{version}.md)"),
             ],
         ),
         (
@@ -113,6 +113,8 @@ def check_or_sync_files(version: str, *, check_only: bool = False) -> list[str]:
     for guide in sorted((ROOT / "docs" / "guides").glob("*.html")):
         pins = [install_pin]
         if guide.name == "installation.html":
+            pins.append((r'This installs the current release, <strong>v\d+\.\d+\.\d+</strong>',
+                         f'This installs the current release, <strong>v{version}</strong>'))
             pins.append((r'<a href="\.\./releases/v\d+\.\d+\.\d+\.md">release notes</a>',
                          f'<a href="../releases/v{version}.md">release notes</a>'))
         rules.append((guide, pins))
@@ -153,6 +155,8 @@ def current_doc_files() -> list[Path]:
 CURRENT_CLAIMS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("current release statement",
      re.compile(r"current release(?:\s+is)?[\s:*>]*\**v?(\d+\.\d+\.\d+)", re.I)),
+    ("current HTML install statement",
+     re.compile(r"This installs the current release, <strong>v(\d+\.\d+\.\d+)</strong>")),
     ("release tag pin",
      re.compile(r"release tag:\s*v(\d+\.\d+\.\d+)", re.I)),
     ("release history pin",
@@ -187,9 +191,9 @@ CURRENT_NOTE_CLAIMS: dict[Path, tuple[tuple[str, re.Pattern[str]], ...]] = {
     ),
     Path("README.md"): (
         ("current release-note label",
-         re.compile(r"\[v(\d+\.\d+\.\d+) release notes\]\(docs/releases/v\d+\.\d+\.\d+\.md\)")),
+         re.compile(r"\[v(\d+\.\d+\.\d+) release notes\]\((?:docs/releases/|https://mfahsold\.github\.io/lixity/releases/)v\d+\.\d+\.\d+\.md\)")),
         ("current release-note target",
-         re.compile(r"\[(?:v\d+\.\d+\.\d+ release notes|Release notes)\]\(docs/releases/v(\d+\.\d+\.\d+)\.md\)")),
+         re.compile(r"\[(?:v\d+\.\d+\.\d+ release notes|Release notes)\]\((?:docs/releases/|https://mfahsold\.github\.io/lixity/releases/)v(\d+\.\d+\.\d+)\.md\)")),
     ),
     Path("docs/index.html"): (
         ("current release-note label",

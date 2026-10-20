@@ -191,7 +191,8 @@ _PUBLIC_DEMO_CONTROLS = r"""document.addEventListener("DOMContentLoaded", functi
     var badge = document.createElement("strong"); badge.textContent = "Local app";
     var link = document.createElement("a"); link.href = "../guides/installation.html";
     link.textContent = "Install Lixity";
-    note.append(badge, document.createTextNode(" · " + reason + " "), link);
+    note.append(badge, document.createTextNode(" · "), link);
+    if (reason) note.append(document.createTextNode(" — " + reason));
     var summary = host.tagName === "DETAILS" && host.querySelector(":scope > summary");
     if (summary) summary.after(note); else host.prepend(note);
     return note;
@@ -248,7 +249,7 @@ _PUBLIC_DEMO_CONTROLS = r"""document.addEventListener("DOMContentLoaded", functi
     document.querySelectorAll(localActions).forEach(function (control) {
       var scope = control.closest("[data-demo-local-scope]");
       var host = scope || control.closest(".marker-row, .research-record-actions, .research-passage-actions, .selection-toolbar, .dossier-image-actions, .research-decision-acknowledgement") || control.parentElement;
-      var note = scope ? scope.querySelector(":scope > .demo-local-note") : localNote(host, "This operation needs your local project or files.");
+      var note = scope ? scope.querySelector(":scope > .demo-local-note") : localNote(host, "");
       unavailable(control, note);
     });
     document.querySelectorAll(".manuscript-link-review, #research-manuscript-review-section").forEach(function (host) {
@@ -282,7 +283,6 @@ def build_research_demo(root: Path, research_fixture: dict) -> Path:
         _finalize,
         _head_metadata,
         _insert_notice,
-        _notice,
         _replace_title,
         _site_navigation,
     )
@@ -313,7 +313,9 @@ def build_research_demo(root: Path, research_fixture: dict) -> Path:
     document = render_research_workspace(research_fixture, enabled_actions=[
         action for action in NATIVE_UI_ACTIONS
         if action not in ("research-manuscript-link", "research-manuscript-reanchor")
-    ] + ["research-manuscript-review"], project_author="Example Author",
+    ] + ["research-manuscript-review"], engine_name="Lixity · read-only",
+        manuscript_name="Fictional demo",
+        project_author="Example Author",
         author_setting_enabled=True, project_token="a" * 64, nda_project_name=title,
         identity_check=manuscript_identity_check(text, title, "Example Author"))
     page_title = "Lixity project demo — " + title
@@ -351,28 +353,31 @@ a[data-demo-local] {{ opacity: .65; }}
         "The customs log, weather notes, manuscript, people, Warehouse 4 incident and journeys are fictional demonstration records. "
         "The dated public-domain visuals provide setting references and do not verify events or conditions in 1923. "
         "Select a dossier image or diagram to enlarge and zoom it. Coordinates are approximate author-entered examples. "
-        "Interactive maps use an OpenStreetMap background and reveal the visible area to that provider. "
+        "Visible maps use OpenStreetMap by default; tile requests reveal the viewed area and client IP to the provider "
+        "and stop outside the visible map/project context. "
         "Switch the background off for offline vectors; the coordinate sketch remains available. "
         "No route or line of sight is calculated.",
         "These short synthetic chapters and language-dependent heuristics support human review; "
         "they are not a benchmark, calibration corpus or writing-quality verdict.",
         f"Generated with Lixity {__version__}. This page cannot import, edit or save records.",
     ]
-    notice = _notice(f"Lixity {__version__} · read-only project demo", [
-        "Explore six fictional chapters in Analysis, then switch to Research for the same project's dossiers, "
-        "retained sources, claims and saved manuscript quote. This read-only demo cannot import, edit or save; "
-        "the people and incident are invented.",
-    ], [("../guides/first-look.html", "Follow the walkthrough"), ("#demo-downloads", "Download PDFs"),
-        ("../guides/installation.html", "Install the full local app")])
-    about = ('<details><summary>About this demo</summary>' +
-             "".join("<p>" + paragraph + "</p>" for paragraph in about_paragraphs) + '</details>')
-    notice = notice.replace('<div class="license-links">', about + '<div class="license-links">', 1)
+    notice = (
+        '<details class="panel" id="example-context" aria-labelledby="example-heading">'
+        '<summary id="example-heading">About this read-only demo</summary>'
+        '<p>Read in Manuscript, then explore the same project in Research. '
+        'This demo cannot import, edit or save; actions marked Local app require installation.</p>'
+        '<div class="license-links"><a href="../guides/first-look.html">Follow the walkthrough</a>'
+        '<a href="#demo-downloads">Download PDFs</a>'
+        '<a href="../guides/installation.html">Install the local app</a></div>'
+        + "".join("<p>" + paragraph + "</p>" for paragraph in about_paragraphs)
+        + '</details>'
+    )
     fallback = ('<noscript><style>.view-navigation,#project-controls,#view-pane-research,#view-pane-project,.reader-controls,.marker-row {display:none !important;}'
                 '#view-pane-analysis {display:block !important;}</style>'
                 '<section class="panel"><p>Interactive research requires JavaScript. '
                 'The complete manuscript analysis, PDF downloads and source credits remain available below. '
                 '<a href="../guides/installation.html">Install the full local app</a>.</p></section></noscript>')
-    document = _insert_notice(document, notice + fallback)
+    document = _insert_notice(document, fallback)
     credits = ['<section class="panel" id="research-source-credits"><h2>Image source credits</h2>']
     for item, _content in reviewed_visual_sources():
         credits.append(f'<h3>{html.escape(item["title"])}</h3><p>{html.escape(item["created_period"])}. '
@@ -393,8 +398,8 @@ a[data-demo-local] {{ opacity: .65; }}
                 'The complete unchanged repository LICENSE follows; it is not part of the analyzed manuscript.</p>'
                 '<details><summary>Read the complete LICENSE</summary><pre id="demo-license-text" '
                 'style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:var(--text-note)">' + license_text + '</pre></details></section>')
-    document = document.replace("<footer>", downloads + "".join(credits) + appendix + "<footer>", 1)
-    document = _site_navigation(document, title, demo=True)
+    document = document.replace("<footer>", notice + downloads + "".join(credits) + appendix + "<footer>", 1)
+    document = _site_navigation(document, title, demo=True, breadcrumbs=False)
     destination = root / "docs/demo/report.html"
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(_finalize(document), encoding="utf-8")
@@ -438,7 +443,7 @@ def render_research_workspace(research_fixture: dict, **options) -> str:
         pacing=pacing_report(text, config).to_dict(),
         motifs=motif_report(text, None, config).to_dict(),
         showing=showing_report(text, config, metrics=analysis.metrics).to_dict(),
-        manuscript_name="harbour-manuscript.md", current_language="en",
+        manuscript_name=options.pop("manuscript_name", "harbour-manuscript.md"), current_language="en",
         controls=True, research_context_token=RESEARCH_DEMO_CONTEXT,
         manuscript_pdf_token=RESEARCH_DEMO_MANUSCRIPT_CONTEXT,
         manuscript_source_sha256=review["current_source_sha256"], **options,

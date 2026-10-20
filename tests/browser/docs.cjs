@@ -49,10 +49,12 @@ async function showOverview(page) {
 }
 
 async function openValues(page, passage) {
+  const analysis = page.locator('#manuscript-analysis-toggle');
+  const priorAnalysis = await analysis.getAttribute('aria-pressed');
   await passage.locator('.reader-paragraph-actions').click();
   await page.locator('#manuscript-context-menu [data-reader-action=values]').click();
   await expect(page.locator('#reader-inspector')).toBeVisible();
-  await expect(page.locator('#manuscript-analysis-toggle')).toHaveAttribute('aria-pressed', 'true');
+  await expect(analysis).toHaveAttribute('aria-pressed', priorAnalysis);
 }
 
 async function returnToTop(page, route) {
@@ -80,6 +82,9 @@ async function checkReturnNavigation(page, route, exercise) {
   const breadcrumbs = page.locator('.site-breadcrumbs');
   if (!route) {
     await expect(home).toHaveAttribute('aria-current', 'page');
+  } else if (route === 'demo/report.html') {
+    await expect(demo).toHaveAttribute('aria-current', 'location');
+    await expect(breadcrumbs).toHaveCount(0);
   } else {
     await expect(breadcrumbs).toBeVisible();
     await expect(breadcrumbs.locator('[aria-current=page]')).toHaveCount(1);
@@ -652,6 +657,18 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
     assert.ok(sidebar.x + sidebar.width <= work.x, 'The public demo retains the native desktop sidebar');
   }
   await expect(page.locator('h1')).toHaveText(demoTitle);
+  const context = page.locator('details#example-context');
+  await expect(context).not.toHaveAttribute('open', '');
+  await context.locator(':scope > summary').click();
+  await expect(context).toContainText('cannot import, edit or save');
+  await expect(context.locator('a[href="../guides/installation.html"]')).toBeVisible();
+  await context.locator(':scope > summary').click();
+  if (javaScriptEnabled && (width === 320 || width === 390)) {
+    const firstProseY = await page.locator('#chapters .ptext-inner > p').first().evaluate(
+      paragraph => paragraph.getBoundingClientRect().top + scrollY,
+    );
+    assert.ok(firstProseY < 1200, `The compact demo reaches prose within 1200px, got ${firstProseY}`);
+  }
   if (javaScriptEnabled) {
     await expect(page.locator('#tab-view-project'), 'The public demo keeps the native Project & Settings workspace discoverable').toBeVisible();
   }

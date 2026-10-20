@@ -1055,9 +1055,9 @@ def main(argv: list[str] | None = None) -> int:
             "style references and single-file dashboards for literary manuscripts."
         ),
         epilog=(
-            "Examples:  lixity analyze manuscript.md   |   "
-            "lixity style manuscript.md --json   |   "
-            "lixity completion bash\n"
+            "Open the local app:  lixity service start --open\n"
+            "Read a report:      lixity analyze manuscript.md --language en\n"
+            "Inspect commands:   lixity COMMAND --help  |  lixity about --json\n"
             f"Docs: {docs_url()}  ·  "
             "Report language: LIXITY_LANG=de"
         ),
@@ -1119,6 +1119,13 @@ def main(argv: list[str] | None = None) -> int:
         if name not in ("motifs", "characters"):
             _add_threshold_arguments(p)
         if name == "build":
+            p.epilog = (
+                "Writes metrics, paragraph profile and style JSON, a style passport, "
+                "a Markdown report and an HTML dashboard under the project's exports/ "
+                "folder. Changed artifacts are archived; identical content is not "
+                "rewritten. Use --dry-run to inspect planned paths without writing. "
+                "This does not switch a running app's project."
+            )
             p.add_argument("file", nargs="?", help="Markdown manuscript (default: auto-discovery)")
             p.add_argument(
                 "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)"
@@ -1155,20 +1162,31 @@ def main(argv: list[str] | None = None) -> int:
             continue
         if name == "dashboard":
             p.description = "Generate a self-contained offline HTML report containing manuscript text, measurements and work-marker notes."
+            p.epilog = (
+                "Open the written HTML file in your browser. It embeds manuscript "
+                "text and notes: review it before sharing. Project changes and "
+                "research writes require the local app: lixity service start --open."
+            )
             p.add_argument("file", help="Markdown manuscript")
             p.add_argument(
                 "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)"
             )
             p.add_argument("--names", help="Comma-separated figure names (character panel)")
-            p.add_argument("-o", "--output", help="Target file (dashboard, pdf)")
+            p.add_argument("-o", "--output", help="HTML target file (default: lixity-dashboard.html)")
             continue
         if name == "serve":
+            p.epilog = (
+                "Keeps the server in this terminal; Ctrl+C stops it. Use "
+                "--no-project to start an empty workspace. For the managed app, "
+                "use lixity service start --open; service stop only manages "
+                "instances created by that controller."
+            )
             p.add_argument("--_service-token", help=argparse.SUPPRESS)
             p.add_argument(
                 "path",
                 nargs="?",
                 default=None,
-                help="Manuscript file or workspace folder (default: ambient)",
+                help="Manuscript file or workspace folder (default: LIXITY_DIR or current folder)",
             )
             p.add_argument(
                 "--host", default=DEFAULT_HOST, help=f"Bind address (default: {DEFAULT_HOST})"

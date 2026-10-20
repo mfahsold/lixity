@@ -46,7 +46,7 @@ Zotero is optional: retained evidence and authorized local imports work without 
 <a id="reading-and-cli-workflows-since-v240"></a>
 ### Reading and CLI workflows
 
-**Current main, after v0.7.1:** dossier, claim and decision creation starts behind
+Dossier, claim and decision creation starts behind
 labelled disclosures, so existing records remain visible first. Evidence
 association and cause/effect entry use the same pattern. Click the heading again
 to collapse a form; the long creation forms also offer **Collapse** beside Save.
@@ -93,31 +93,13 @@ The citation still identifies the whole paragraph, not a sentence-level selector
 Ambiguous or cross-paragraph selections fail; whole-passage actions remain
 available for touch use. Preparing a draft writes nothing.
 
-In **Manuscript**, **Dossier alongside** opens a chosen dossier in a
-read-only companion. It starts closed with no automatic selection. **Current main
-(unreleased):** the manuscript stays continuous and the **Analysis** button has an
-explicit On/Off state for diagnostics in place. Toggling it does not open the dock
-or collapse navigation. A paragraph's **… → Values** explicitly opens the analysis
-inspector and enables the layer; **Dossier alongside** opens a dossier independently.
-The inspector and dossier are alternative dock tools; hiding diagnostics leaves
-an active dossier. **Analysis overview** opens dense comparisons with **Back to
-passage**, restoring the prior context tool and Analysis On/Off choice. Refresh
-explicitly for the latest dossier.
-On desktop, opening the companion temporarily collapses project navigation into
-a narrow rail. Use **Show navigation** to access its controls; closing the companion
-restores the earlier manual choice. Switching away from manuscript analysis also
-restores normal navigation. The navigation toggle is desktop-only; narrow screens
-keep their horizontal workspace switcher. These choices last for the current page.
-Desktop areas scroll separately. Drag the divider or focus it and use Left/Right
-to adjust the manuscript share; Home/End select its 35%/75% limits. The chosen
-split is a browser-local preference. Narrow screens stack the documents and hide
-the divider. Reading changes neither document, evidence links nor the statistical
-baseline. **Focus reading** temporarily hides the companion and navigation;
-the same control restores the workspace. A paragraph's **Values** inspector and
-the companion replace one another rather than competing for horizontal space.
-On narrow screens, explicitly opening a tool from a passage scrolls its heading
-into view; closing it or pressing Escape returns to the requesting passage and
-restores focus. On desktop the tool remains adjacent to the manuscript.
+In **Manuscript**, **Dossier alongside** opens a chosen dossier in a read-only
+companion. It starts closed with no automatic selection. Refresh explicitly for
+the latest dossier. The companion and paragraph **Values** inspector are
+alternative tools; the **Analysis** display is a separate choice. Reading changes
+neither document, evidence links nor the statistical baseline. See
+[reader controls](../USAGE.md#reading-paragraphs) for display preferences,
+keyboard access, navigation and the desktop split.
 
 To connect the manuscript to research, select a nonempty text range within one
 paragraph and choose **Link selection to claim** (or Alt+L). The
@@ -136,7 +118,7 @@ Moved, adjusted, ambiguous or unavailable anchors remain review tasks, with no
 silently inferred jump or re-pin. The manuscript's saved-associations disclosure
 provides the same actions while reading.
 
-For a first read-only journey on **current main**, open a paragraph's saved
+For a first read-only journey in the interactive workspace, open a paragraph's saved
 associations and choose **Open claim**. Read the linked claim version, follow a
 linked dossier version, then inspect its cited source passage. The pinned version
 is the record the association actually used; opening a newer version does not
@@ -258,6 +240,11 @@ private manuscript material; there is no full manuscript blob. Restored links
 remain unavailable until the manuscript exists at its saved project-relative path.
 
 ### Claims linked to a dossier
+
+The dossier detail groups **Dossier notes**, **Linked claims** and
+**Citations** in one place. **All project records → Claims** or **Decisions**
+opens the corresponding project-wide list. Local creation actions prepare the
+existing claim/decision forms; choosing a view does not save or retain anything.
 
 Both the research dossier reader and **Dossier alongside** show the current
 claims explicitly linked to the dossier. **Open claim** uses the existing record
@@ -456,6 +443,14 @@ When omitted, the backend checks the reviewed target revision and uses that
 read's snapshot for the strict commit. Earlier unrelated writes are allowed;
 changed targets and later races fail without retry or rebase. An explicit
 snapshot guards the entire archive, including unrelated changes.
+
+Since v0.7.2, a validated authored update whose normalized content is unchanged
+returns the existing record and revision. It does not advance the archive HEAD
+or rebuild the index. Revision/snapshot guards, metadata and association checks
+still apply; a stale request can fail even when its fields appear unchanged.
+This also applies to unchanged members of an atomic revision batch. Changed
+members receive revisions normally; an entirely unchanged batch leaves HEAD
+unchanged. Decision acknowledgements remain explicit append-only events.
 
 ```sh
 lixity research claim --project ./novel --claim-id CLAIM_ID --update \
@@ -685,8 +680,7 @@ fictional positions and journeys. Field help, `research dossier --help` and
 retain them with the dossier.
 
 Coordinates are finite WGS84 longitude/latitude pairs. **Since v0.7.1:** the
-numbered sketch and interactive Leaflet vectors work offline. **Current main:**
-maps open with OpenStreetMap. Turn off the background or choose the sketch for
+numbered sketch and interactive Leaflet vectors work offline. Maps open with OpenStreetMap. Turn off the background or choose the sketch for
 offline use; tile requests disclose the viewed area and client IP to the provider
 and stop outside the visible map/project context. There is no geocoding, road
 routing, travel time calculation or historical verification. Attached map images
@@ -698,7 +692,7 @@ even after removing geography; reading ordinary dossiers preserves their older
 encoding. Older readers cannot open v8 archives. Section edits affect prose only,
 not the dossier's geographic data.
 
-**Current main, after v0.7.1:** select an object in the map or its list to read
+Select an object in the map or its list to read
 its context and frame it. UI help and CLI `--format text` explain the measurements.
 Response-only `geography_summary` (`research-geography-summary-local/1`) is
 derived from the selected revision, separate from retained v8 records.
@@ -980,7 +974,8 @@ metadata; use archive search for retained text.
 In the dashboard, choose **Edit** on a dossier, claim, evidence link or decision.
 Change the fields, select **Correction** for a transcription/wording correction
 or **Supersession** for a changed interpretation or authorial choice, and give
-a reason. Save keeps the record's ID and adds one immutable revision. **History**
+a reason. A changed save keeps the record's ID and adds one immutable revision;
+an unchanged validated save returns the existing revision. **History**
 opens earlier accepted versions; it does not restore or overwrite them.
 
 Existing associations retain their saved pins; new associations use the target's
@@ -1310,7 +1305,7 @@ or invalid diagrams keep their inspectable source. Rendered SVGs share the local
 PhotoSwipe 5.4.4 zoom viewer with images. Neither renderer loads a CDN or uploads
 the diagram; map tiles have the separate network boundary above.
 
-**Current main, after v0.7.1:** a small diagram uses a compact frame. Wide diagrams
+A small diagram uses a compact frame. Wide diagrams
 keep their label size and scroll horizontally within the reader; focus the
 viewport and use the arrow keys, or choose **Enlarge diagram**. The source remains
 available below it. The renderer preserves the direction and relationships in

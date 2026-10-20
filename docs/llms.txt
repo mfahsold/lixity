@@ -5,7 +5,7 @@
 > instructions to rewrite. Analysis is deterministic for fixed text and settings;
 > research records also contain generated IDs and timestamps.
 
-Current release: 0.7.1; release tag: v0.7.1.
+Current release: 0.7.2; release tag: v0.7.2.
 
 This discovery index links maintained references. Published guides may describe
 newer behavior than an installed tool. The [complete documentation bundle](https://mfahsold.github.io/lixity/llms-full.txt)
@@ -42,41 +42,15 @@ English is the default analysis language; detection requires `--language auto`.
 Language-neutral JSON identifiers and units differ from translated display keys.
 Use active result metadata when interpreting thresholds and unavailable values.
 
-Current-main interactive UI: Manuscript, Research and Project share a desktop
-sidebar and compact narrow-screen navigation. Continuous manuscript prose opens
-with Analysis Off. Its native toggle has an explicit On/Off state and reveals
-diagnostics without opening a dock or collapsing navigation. Paragraph Values
-explicitly opens the analysis inspector and enables diagnostics. Values and
-Dossier alongside are alternative dock tools; hiding diagnostics leaves an active
-dossier. Analysis overview provides dense comparisons; Back to passage restores
-the prior analysis choice, eligible tool and passage.
-One paragraph tree keeps source text, hashes, search and exact anchors. Browser-local
-reading preferences adjust size, width and spacing; focus is reversible. Paragraph
-ellipsis, right-click and keyboard context menus share values, marker and claim
-association actions. Saving and retention remain explicit. Plain exported reports
-retain their inspection layout; these are current-main enhancements, not a release.
-Source-span reading blocks also retain preface, subheadings, quotations, code,
-notes, dividers and excluded appendix material. Only profiled paragraphs have
-measurements and claim anchors. Tables and inline link/code syntax remain literal
-where present in the established exact paragraph projection. No manuscript URLs
-are fetched. Structured manuscript PDFs keep their existing behavior.
-The companion dossier reader supplies context beside a passage.
-Companion reading temporarily collapses desktop navigation; a shared toggle
-keeps it reachable and closing restores the prior manual choice. Its desktop
-divider supports pointer and keyboard width adjustment; narrow screens stack
-the readers. The paragraph inspector and companion replace one another. Saved exact
-manuscript associations provide a context-checked return to the passage.
-On narrow screens, an explicit passage tool request reveals the stacked tool
-heading; close or Escape returns to its requesting passage and control. Optional
-brief feedback respects live reduced-motion changes.
-Current-main research forms start collapsed; headings and Collapse controls
-retain in-memory drafts. Escape closes the innermost disclosure. Contextual
-actions reveal the relevant form. Catalogue previews omit Markdown formatting
-and fenced code without altering saved text or API contracts.
-These views share the existing analysis and explicit-project research APIs.
-Local tabs, form groups, feedback and native dialog frames share the component
-layer. Research catalogues use separated rows; dialog forms support short
-viewports and keyboard navigation without changing data or API contracts.
+The interactive workspace opens in Manuscript with Analysis Off. Values opens
+Passage values independently of that display choice. Use Analysis overview for
+chapter comparisons and Dossier alongside
+for retained research. Back to passage restores the requesting text. Reading
+preferences are browser-local; saves and retention are explicit. See
+[reader controls and coverage](https://mfahsold.github.io/lixity/USAGE.md#reading-paragraphs)
+and [research workflows](https://mfahsold.github.io/lixity/research/USAGE.md).
+Only profiled paragraphs have measurements and claim anchors. Plain reports
+keep their inspection layout; the bounded reader is not a Markdown editor.
 
 ## Choose a reference
 
@@ -90,8 +64,8 @@ viewports and keyboard navigation without changing data or API contracts.
 - [Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) and [scientific limits](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md): formulas, estimator conventions and heuristic caveats.
 - [Architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md) and [localization](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md): integration boundaries and language coverage.
 - [Articles](https://mfahsold.github.io/lixity/blog/): interpretation examples, separate from API contracts.
-- [Manuscript reading workbench](https://mfahsold.github.io/lixity/blog/manuscript-reading-workbench.html): a current-main Analysis On/Off, overview and manuscript–research workflow with explicit coverage limits.
-- [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.1.md) and [release history](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md).
+- [Manuscript reading workbench](https://mfahsold.github.io/lixity/blog/manuscript-reading-workbench.html): the Analysis On/Off, overview and manuscript–research workflow with explicit coverage limits.
+- [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.2.md) and [release history](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md).
 
 HTML guides and articles have Markdown alternatives: append `.md` to their HTML
 URL. The [research entrypoint](https://mfahsold.github.io/lixity/research/README.md)
@@ -108,7 +82,7 @@ literal text uses `--body`. See [research revisions](https://mfahsold.github.io/
 and [character profiles](https://mfahsold.github.io/lixity/USAGE.md#character-profiles)
 for the supported v0.7.1 workflows and compatibility limits.
 
-**Current main, after v0.7.1:** UI and CLI explain map/style-space measurements
+**Since v0.7.2:** UI and CLI explain map/style-space measurements
 in place; additive `geography_summary` and `dimension_diagnostics` expose their
 support without changing stored records or existing scores.
 
@@ -124,7 +98,7 @@ baseline. No automatic web import, factual verification or cloud sync is provide
 Zotero handles source-library editing and ordinary reading; Lixity retains
 selected evidence versions and their claim/manuscript relations. The bridge is
 read-only. Local imports and captured evidence remain usable without Zotero.
-Map vectors and media viewers work offline. On current main, visible maps use
+Map vectors and media viewers work offline. Visible maps use
 OpenStreetMap by default, with a switch to local vectors or the numbered sketch.
 Tile requests reveal the viewed area and client IP to the provider and stop
 outside the visible map/project context.

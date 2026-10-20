@@ -145,6 +145,11 @@ inert. Screenshots remain under `/tmp/lixity-manuscript-reader-*`. These cases
 verify the browser behavior they exercise, not prose-editing capability or full
 accessibility conformance.
 
+The passage inspector names the source lines and routes saved-association review
+to that paragraph. Local **Passage values** remains independent of global
+Analysis, including overview return; the English 390-pixel touch case also
+returns from research with the local tool intact.
+
 The manuscript-selection suite covers delayed first-review responses and
 annotation changes while native text remains selected, including backward
 selections, UTF-16 offsets around emoji, cross-paragraph ranges and transfer
@@ -159,6 +164,8 @@ checks titled rows, author-assigned review states, saved versions, inert titles,
 shared claim history, empty lists, retry and delayed/wrong-root responses in
 seven locales at 1440 and 320 pixels. It makes no research writes through the UI;
 synthetic screenshots stay under `/tmp/lixity-dossier-claims-*`.
+It also checks dossier notes/citations sections and project-wide record routes;
+opening the full Claims list preserves an unsubmitted claim draft.
 
 The research-selection suite uses a disposable synthetic archive to select
 source text and prepare an evidence draft. It checks selection boundaries,
@@ -232,6 +239,14 @@ long chapter strips, consistent panel spacing, readable scrolling tables,
 expanded settings/paragraphs and keyboard-accessible chapter matrix tooltips.
 Synthetic screenshots are written to `/tmp/lixity-layout-*.png`.
 
+The overlay-layout suite checks seven locales with synthetic documents. It covers
+the sidebar control beside product identity, stable disclosure state and focus
+after resize; reading settings at 390/320 by 480 pixels with enlarged text;
+paragraph-action clearance at 901/1024 pixels and split limits; reachable revision
+Close; and long provenance text wrapping. It records no manuscript writes and
+keeps screenshots under `/tmp/lixity-overlay-layout-*`. The tooltip suite separately
+checks updated action text and dismissal on nested scroll/resize.
+
 The NDA draft suite checks the five-field form in seven languages at desktop
 and mobile widths: local-calendar defaults, validation, inert preview, pending
 and failed requests, private logging, reload behavior and exact PDF/TXT download
@@ -279,10 +294,15 @@ body-only preparation, unrelated concurrent-section preservation, explicit
 overlapping conflict choices and desktop/mobile rendering in seven languages.
 
 The manuscript-links test uses synthetic intercepted responses in seven locales
-at 1440 and 320 pixels. It verifies explicit quotation retention, current claim
-version pins, Unicode codepoint selection offsets, inert source text, overlapping
+at 1440 and 320 pixels, with its origin-return checks also at 390 pixels. It
+verifies explicit quotation retention, current claim version pins, Unicode codepoint selection offsets, inert source text, overlapping
 search/link highlights and lazy reopening. Additional cases reject metrics and
 cross-paragraph selections, conflicting snapshots, changed sources, copied
 projects and unavailable/read-failed sources; moved and ambiguous anchors stay
 review hints. Held reads/writes verify context guards, pending deduplication and
 preservation of a newer draft. Screenshots remain under `/tmp`.
+
+The work thread shows originating manuscript lines and the accepted viewed
+record's pinned/current version. History/edit transitions update that identity;
+returning or changing source context clears it. These cases also inspect the
+thread in both themes and with desktop navigation collapsed.
