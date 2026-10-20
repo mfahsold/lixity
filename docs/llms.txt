@@ -45,6 +45,9 @@ Use active result metadata when interpreting thresholds and unavailable values.
 Current-main interactive UI: manuscript/analysis first, research second, settings
 third; a fixed project sidebar on desktop becomes horizontal navigation on
 narrow screens. The companion dossier reader supplies context beside a passage.
+Companion reading temporarily collapses desktop navigation; a shared toggle
+keeps it reachable and closing restores the prior manual choice. Saved exact
+manuscript associations provide a context-checked return to the passage.
 Current-main research forms start collapsed; headings and Collapse controls
 retain in-memory drafts. Escape closes the innermost disclosure. Contextual
 actions reveal the relevant form. Catalogue previews omit Markdown formatting

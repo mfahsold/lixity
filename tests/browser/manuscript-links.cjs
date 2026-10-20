@@ -94,7 +94,8 @@ async function selectText(page, text) {
         'A moved anchor stays inspectable without offering a write action');
       anchorState = 'resolved'; await page.locator('#r-review-refresh').click();
       await page.locator('mark.manuscript-claim-hit').waitFor({state: 'attached'});
-      await page.locator('#tab-view-analysis').click();
+      await page.locator('#research-manuscript-review [data-manuscript-link-jump]').click();
+      assert.equal(await page.locator('#tab-view-analysis').getAttribute('aria-selected'), 'true', 'Read-only associations also navigate without a write capability');
       assert.equal(await page.locator('mark.manuscript-claim-hit').first().textContent(), 'safe selected');
       await page.locator('body').evaluate(body => { body.dataset.manuscriptProjectToken = 'changed-project'; });
       await page.waitForFunction(() => !document.querySelector('mark.manuscript-claim-hit'));
@@ -195,7 +196,11 @@ async function selectText(page, text) {
         assert.match(reviewText, /Synthetic claim/, 'The pinned claim title stays visible');
         assert.equal(await page.locator('#research-manuscript-review blockquote').textContent(), 'safe selected');
         assert.equal(await page.locator('#research-manuscript-review [data-research-history="claim"]').count(), 1);
-        await page.locator('#tab-view-analysis').click();
+        const returnToPassage = page.locator('#research-manuscript-review [data-manuscript-link-jump]');
+        assert.equal(await returnToPassage.count(), 1, 'An exact association offers a direct manuscript return');
+        await returnToPassage.click();
+        assert.equal(await page.locator('#tab-view-analysis').getAttribute('aria-selected'), 'true');
+        assert.equal(await page.evaluate(() => document.activeElement.id), id, 'Return focuses the linked passage');
         // A selection must stay inside manuscript text, never metrics/headings.
         await page.locator('#' + id + ' .paragraph-values > summary').click();
         await page.locator('#' + id + ' .stats').evaluate(el => {
@@ -280,6 +285,7 @@ async function selectText(page, text) {
               ambiguous: 'Multiple possible passages: review required',
               changed: 'Passage changed: review required', unavailable: 'Source unavailable: review required'}[anchorState]);
           assert.match(await page.locator('#research-manuscript-review').textContent(), /Source bytes changed · Claim has a newer version/);
+          assert.equal(await page.locator('#research-manuscript-review [data-manuscript-link-jump]').count(), 0, 'Unresolved anchors never offer an exact return');
           if (anchorState === 'moved' || anchorState === 'adjusted') {
             const accept = page.locator('#research-manuscript-review [data-manuscript-link-accept]').first();
             await accept.waitFor();

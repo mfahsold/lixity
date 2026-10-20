@@ -8,7 +8,7 @@
   }
   if (!bridge || (!canWrite && document.body.dataset.manuscriptLinks !== "read") ||
       !projectToken() || !bridge.contextToken() || !document.body.dataset.manuscriptSourceSha256) return;
-  var draft = null, serial = 0, reviewSerial = 0, review = null, remembered = null, reviewProjectId = null;
+  var draft = null, serial = 0, reviewSerial = 0, review = null, reviewContext = null, remembered = null, reviewProjectId = null;
   var pending = new Set(), dialog, picker, quotation, statement, consent, save, status, filterInput;
   var chapters = document.getElementById("chapters");
   if (!chapters) return;
@@ -208,6 +208,17 @@
   var reviewBox = element("details", "", "manuscript-link-review");
   reviewBox.appendChild(element("summary", label("manuscript_link_review")));
   var reviewBody = element("div"); reviewBox.appendChild(reviewBody); chapters.prepend(reviewBox);
+  function matchesPanel(row, panel) {
+    var a = row.anchor;
+    if (row.anchor_state !== "resolved" || !a || row.resolved_start_line !== Number(panel.dataset.start) ||
+        row.resolved_end_line !== Number(panel.dataset.end) || a.paragraph_sha256 !== panel.dataset.paragraphSha256) return false;
+    var points = Array.from(bridge.text(panel) || "");
+    return Number.isInteger(a.start) && Number.isInteger(a.end) && a.start >= 0 && a.end > a.start && a.end <= points.length &&
+      points.slice(a.start, a.end).join("") === a.quote;
+  }
+  function linkedPanel(row) {
+    return Array.from(chapters.querySelectorAll(".ptext")).find(function(panel) { return matchesPanel(row, panel); });
+  }
   function renderReviewItems(report) {
     var fragment = document.createDocumentFragment();
     fragment.appendChild(element("p", label("manuscript_link_review_count").replace("{count}", String((report.links || []).length)), "ctl-note"));
@@ -222,7 +233,11 @@
       });
       item.appendChild(element("p", flags.join(" · "), "ctl-note"));
       if (row.anchor) item.appendChild(element("blockquote", row.anchor.quote));
-      var history = element("button", label("research_revision_history"), "ctl"); history.type = "button";
+      if (linkedPanel(row)) {
+        var jump = element("button", label("manuscript_link_open_passage"), "ctl"); jump.type = "button";
+        jump.dataset.manuscriptLinkJump = row.link_id; item.appendChild(jump);
+      }
+      var history = element("button", label("research_claim_open"), "ctl"); history.type = "button";
       history.dataset.researchHistory = "claim"; history.dataset.recordId = row.claim_id; item.appendChild(history);
       if (canWrite && (row.anchor_state === "moved" || row.anchor_state === "adjusted")) {
         var acceptLabel = row.anchor_state === "adjusted" ? "manuscript_link_accept_adjusted" : "manuscript_link_accept_moved";
@@ -241,17 +256,13 @@
   }
   function applyReview(report, value) {
     if (!live(value)) return;
-    review = report; reviewProjectId = report.project_id;
+    review = report; reviewContext = value; reviewProjectId = report.project_id;
     document.querySelectorAll("#chapters .ptext").forEach(function(panel) {
       var text = bridge.text(panel), points = Array.from(text || "");
       // Only exact resolved anchors are marked inline; moved and adjusted
       // candidates stay visible in the review list until an explicit re-pin.
       var spans = (report.links || []).filter(function(row) {
-        var a = row.anchor;
-        return row.anchor_state === "resolved" && a && row.resolved_start_line === Number(panel.dataset.start) &&
-          row.resolved_end_line === Number(panel.dataset.end) && a.paragraph_sha256 === panel.dataset.paragraphSha256 &&
-          Number.isInteger(a.start) && Number.isInteger(a.end) && a.start >= 0 && a.end > a.start && a.end <= points.length &&
-          points.slice(a.start, a.end).join("") === a.quote;
+        return matchesPanel(row, panel);
       }).map(function(row) { return {start: points.slice(0, row.anchor.start).join("").length,
         end: points.slice(0, row.anchor.end).join("").length}; });
       bridge.marks(panel, spans);
@@ -320,7 +331,16 @@
   document.addEventListener("click", function(event) {
     if (event.target.closest("[data-manuscript-link-reload]")) { event.preventDefault(); window.location.reload(); }
   });
-  if (canWrite) document.addEventListener("click", async function(event) {
+  document.addEventListener("click", async function(event) {
+    var jump = event.target.closest("[data-manuscript-link-jump]");
+    if (jump) {
+      if (!review || !reviewContext || !live(reviewContext)) return;
+      var row = review.links.find(function(link) { return link.link_id === jump.dataset.manuscriptLinkJump; });
+      var panel = row && linkedPanel(row);
+      if (panel) bridge.navigate(panel);
+      return;
+    }
+    if (!canWrite) return;
     var accept = event.target.closest("[data-manuscript-link-accept]");
     if (!accept || accept.disabled) return;
     var value = context();

@@ -90,6 +90,9 @@ keep name counts separate from author-declared perspective.
 **On current main:** the interactive app uses a desktop-style project sidebar
 on wide screens, with manuscript and analysis first, research alongside and
 settings separate. On smaller screens the same navigation becomes horizontal.
+Opening a companion dossier collapses the desktop navigation to a narrow rail.
+Its toggle keeps navigation reachable; closing the companion restores the prior
+choice. Exact saved manuscript associations offer a direct return to the passage.
 Local tabs, form groups and dialogs use shared components throughout analysis
 and research; compact catalogue rows keep sources and dossiers easy to scan.
 Creation and association forms start collapsed. Open their labelled heading, then

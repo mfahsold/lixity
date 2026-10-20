@@ -175,7 +175,12 @@ def _insert_notice(report: str, notice: str) -> str:
         navigation = report.index('<nav class="view-navigation"', report.index(shell))
         navigation_end = report.index("</nav>", navigation) + len("</nav>")
         shell_end = report.index("</div>", navigation_end) + len("</div>")
-        _require(report[navigation_end:shell_end].strip() == "</div>", "the workspace navigation must close the shell")
+        closing = "</div>"
+        if '<div id="workspace-navigation-content">' in report[report.index(shell):navigation]:
+            shell_end = report.index("</div>", shell_end) + len("</div>")
+            closing += "</div>"
+        _require(re.sub(r"\s+", "", report[navigation_end:shell_end]) == closing,
+                 "the workspace navigation must close the shell")
         return report[:shell_end] + notice + report[shell_end:]
     return report.replace("</header>", "</header>" + notice, 1)
 

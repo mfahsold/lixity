@@ -677,7 +677,9 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   await page.locator('#tab-view-research').click();
   await expect(page.locator('[data-rtab=review]')).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#research-manuscript-review blockquote')).toHaveText(demoQuote);
-  await page.locator('#tab-view-analysis').click();
+  await page.locator('#research-manuscript-review [data-manuscript-link-jump]').click();
+  await expect(page.locator('#tab-view-analysis')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#' + passageId)).toBeFocused();
   await page.locator('#view-pane-analysis, .view-nav-tab').evaluateAll(async nodes => {
     await Promise.all(nodes.flatMap(node => node.getAnimations().map(animation => animation.finished.catch(() => {}))));
   });

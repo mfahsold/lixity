@@ -1733,6 +1733,9 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
 .lixity-workspace .workspace-shell .sub { font-size: var(--text-small); }
 .lixity-workspace .kpi:hover { transform: none; box-shadow: none; }
 .lixity-workspace .toolbar { gap: .65rem 1rem; background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; }
+#workspace-navigation-content { display: contents; }
+#workspace-navigation-content[hidden] { display: none; }
+.workspace-navigation-toggle { display: none; }
 @media screen and (min-width: 1100px) {
   body.lixity-workspace { padding: 1.5rem 1.5rem 3rem 17rem; }
   .lixity-workspace > .page { max-width: 96rem; }
@@ -1761,6 +1764,15 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
   .lixity-workspace .workspace-bar .manuscript-pdf { min-width: 0; width: 100%; }
   .lixity-workspace .workspace-bar select { min-width: 0; width: 100%; }
   .lixity-workspace .panel { border-radius: var(--radius-sm); box-shadow: none; }
+  .has-workspace-navigation .workspace-navigation-toggle {
+    display: inline-flex; order: -1;
+    justify-content: center; white-space: normal;
+  }
+  body.lixity-workspace.navigation-collapsed { padding-left: 5rem; }
+  .lixity-workspace.navigation-collapsed .workspace-shell {
+    width: 3.75rem; padding: 1.25rem .5rem;
+  }
+  .navigation-collapsed .workspace-navigation-toggle { width: 2.75rem; padding: .5rem; }
 }
 
 /* Empty Analysis State */

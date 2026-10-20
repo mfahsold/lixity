@@ -51,6 +51,7 @@ from .components import (
     status_strip,
     tense_class,
     tense_label,
+    toggle_button,
 )
 from .dimensions import style_dimensions
 from .dossier_images import image_limits_attribute
@@ -360,7 +361,9 @@ def render_dashboard(
         f'data-dossier-image-capable="{str(controls and allowed_actions is not None and action_enabled("research-dossier-image")).lower()}">',
         f'<a class="skip-link" href="#chapters">{L("skip_main")}</a>',
         '<div class="page">',
-        *(('<div class="workspace-shell">',) if controls else ()),
+        *(('<div class="workspace-shell">',
+           toggle_button(L('navigation_collapse'), 'workspace-navigation-toggle', False, 'ctl workspace-navigation-toggle'),
+           '<div id="workspace-navigation-content">') if controls else ()),
         project_header(
             title, labels, language_name, engine_name, compact=controls, meta=project_meta
         ),
@@ -408,7 +411,7 @@ def render_dashboard(
             "</button>"
             "</nav>"
         )
-        parts.append("</div>")
+        parts.append("</div></div>")
 
     if status:
         parts.append(status_strip(labels, status))

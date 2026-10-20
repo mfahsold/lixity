@@ -63,7 +63,21 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
       await firstChip.click();
       const paragraph = page.locator('#' + paragraphId);
       const originalText = await paragraph.locator('p').textContent();
+      const navigationToggle = page.locator('#workspace-navigation-toggle');
+      const navigation = page.locator('#workspace-navigation-content');
+      const originalWidth = await page.locator('.workspace-shell').evaluate(node => node.getBoundingClientRect().width);
       await toggle.click();
+      if (width >= 1100) {
+        assert.equal(await navigation.isVisible(), false, 'Companion automatically frees desktop navigation space');
+        assert.equal(await navigationToggle.getAttribute('aria-expanded'), 'false');
+        assert.ok(await page.locator('.workspace-shell').evaluate(node => node.getBoundingClientRect().width) < originalWidth / 2);
+        await navigationToggle.click();
+        assert.equal(await navigation.isVisible(), true, 'Navigation remains manually accessible beside the dossier');
+        await navigationToggle.click();
+      } else {
+        assert.equal(await navigation.isVisible(), true, 'Mobile navigation stays available');
+        assert.equal(await navigationToggle.isVisible(), false);
+      }
       await page.waitForFunction(() => !document.querySelector('#workspace-reader-dossier').disabled);
       assert.equal(await panel.isVisible(), true);
       assert.equal(await toggle.getAttribute('aria-expanded'), 'true');
@@ -96,6 +110,7 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
       }
       await toggle.click();
       assert.equal(await panel.isVisible(), false);
+      assert.equal(await navigation.isVisible(), true, 'Closing restores the previous navigation state');
       assert.equal(await page.locator('#analysis-review').isVisible(), true, 'Closing restores analysis panels');
       assert.equal(await paragraph.locator('p').textContent(), originalText);
       await page.locator('#tab-view-research').click();
@@ -117,6 +132,20 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
       await select.press('Escape');
       assert.equal(await panel.isVisible(), false);
       assert.equal(await page.evaluate(() => document.activeElement.id), 'workspace-reader-toggle');
+      if (width >= 1100) {
+        await navigationToggle.click();
+        assert.equal(await navigation.isVisible(), false);
+        await toggle.click(); await page.locator('#workspace-reader-close').click();
+        assert.equal(await navigation.isVisible(), false, 'A prior manual collapse survives companion use');
+        await navigationToggle.click();
+        await toggle.click();
+        await page.setViewportSize({width:320,height:900});
+        await page.waitForFunction(() => !document.getElementById('workspace-navigation-content').hidden);
+        assert.equal(await navigation.isVisible(), true, 'Resizing restores the mobile switcher');
+        await page.setViewportSize({width,height:900});
+        await page.locator('#workspace-reader-close').click();
+        assert.equal(await navigation.isVisible(), true);
+      }
       assert.deepEqual(writes, [], 'Reading beside the manuscript never writes or edits anything');
       assert.deepEqual(errors, []);
       await page.close();

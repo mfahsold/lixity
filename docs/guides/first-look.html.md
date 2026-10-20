@@ -34,7 +34,9 @@ Choose one contrast that makes you curious. You do not need to inspect every mea
 
 Select a paragraph block in the action chapter to open its text and source lines. You can also use Tab to focus a block, then press Enter or Space. Read the paragraph alongside the opening description.
 
-**Current development:** the wide-screen demo keeps the project and workspace views in a fixed sidebar. On mobile, the views sit above the text. Manuscript and analysis come first; a dossier can accompany the passage when you need research context.
+**Current development:** the wide-screen demo keeps the project and workspace views in a fixed sidebar. On mobile, the views sit above the text. Manuscript and analysis come first; a dossier can accompany the passage when you need research context. Opening it collapses the desktop sidebar to make room; use Show navigation to reopen it. Closing the dossier restores your previous choice. Mobile navigation stays visible.
+
+Connect a selected manuscript quotation to an existing claim after reviewing retention. In Research → Review, saved exact associations offer **Go to manuscript passage** and **Open claim**. The passage action returns to the matching text without rewriting it. Changed or ambiguous quotations require review before an exact return is offered.
 
 Research creation forms start collapsed so you can read existing records first. Select a form heading to open it and select it again to collapse it. Long creation forms also offer **Collapse** beside Save. Your unsaved fields remain while switching tabs or collapsing a form; reloads are not draft storage. Escape closes the innermost open disclosure and returns focus to its heading. Contextual source and dossier actions open the appropriate form for you.
 

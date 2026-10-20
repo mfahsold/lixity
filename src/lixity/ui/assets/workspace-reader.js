@@ -80,6 +80,7 @@
   }
   function setEnabled(value, selectedId) {
     enabled = value;
+    if (window.LixityWorkspaceNavigation) window.LixityWorkspaceNavigation.companion(value);
     ++requestSerial;
     panel.hidden = !value;
     layout.classList.toggle("is-open", value);

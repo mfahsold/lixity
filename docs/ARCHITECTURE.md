@@ -219,6 +219,12 @@ third. Narrow screens keep a horizontal switcher. Tab orientation and keyboard
 navigation change together; the sidebar scrolls independently if its controls
 exceed the viewport. Plain exported reports retain their document layout.
 Both presentations use the same renderer, labels, data and action handlers.
+The desktop navigation uses the shared `ctl` toggle. Companion reading applies a
+temporary collapse override only in the analysis view; closing restores the manual
+choice. Responsive changes keep the mobile switcher available. Exact manuscript
+return actions reuse the existing paragraph navigation and the same anchor matcher
+as inline association marks, with a current project/source context check on click.
+
 
 The interface follows a reading-first hierarchy: a passage or visual comes
 before its detailed measurements; advanced explanations stay near the control

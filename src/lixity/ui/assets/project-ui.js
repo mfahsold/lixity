@@ -663,6 +663,7 @@ function switchActiveView(viewName, restorePosition) {
   if (viewName === "analysis") {
     window.dispatchEvent(new Event("resize"));
   }
+  document.dispatchEvent(new Event("lixity:viewchange"));
   // Explicit workspace navigation resumes its own reading position. Hash and
   // evidence jumps keep control of their more specific destination.
   if (restorePosition && previous && previous.dataset.viewPane !== viewName) {
@@ -749,6 +750,13 @@ window.LixityManuscriptLinks = {
   contextToken: researchContextToken,
   errorText: researchErrorMessage,
   text: function(panel) { return paragraphContent[panel.id] && paragraphContent[panel.id][0]; },
+  navigate: function(panel) {
+    var action = document.createElement("button");
+    action.dataset.reviewPassage = "";
+    action.dataset.line = panel.dataset.start;
+    action.dataset.target = panel.id;
+    activate(action);
+  },
   marks: function(panel, spans) {
     manuscriptParagraphMarks[panel.id] = spans;
     var paragraph = panel.querySelector(".ptext-inner > p");
@@ -815,5 +823,54 @@ window.LixityManuscriptLinks = {
     // in this navigation so another arrow press can select the next section.
     entries[next].link.focus({preventScroll: true});
   });
+  update();
+})();
+
+// Share the desktop navigation toggle with companion reading. A temporary
+// companion override never overwrites the user's standalone navigation choice.
+(function () {
+  var toggle = document.getElementById("workspace-navigation-toggle");
+  var content = document.getElementById("workspace-navigation-content");
+  if (!toggle || !content) return;
+  var desktop = window.matchMedia("(min-width: 1100px)");
+  var manualCollapsed = false, companionOpen = false, companionOverride = null;
+  document.body.classList.add("has-workspace-navigation");
+  toggle.setAttribute("aria-controls", content.id);
+  function companionActive() {
+    var analysis = document.getElementById("view-pane-analysis");
+    return companionOpen && analysis && analysis.classList.contains("active");
+  }
+  function update() {
+    var collapsed = desktop.matches && (companionActive()
+      ? (companionOverride === null ? true : companionOverride) : manualCollapsed);
+    if (collapsed && content.contains(document.activeElement)) toggle.focus({preventScroll: true});
+    content.hidden = collapsed;
+    document.body.classList.toggle("navigation-collapsed", collapsed);
+    toggle.setAttribute("aria-expanded", String(!collapsed));
+    toggle.setAttribute("aria-pressed", String(collapsed));
+    var text = uiLabel(collapsed ? "navigation_expand" : "navigation_collapse");
+    toggle.setAttribute("aria-label", text); toggle.title = text;
+    toggle.textContent = collapsed ? "☰" : "‹ " + text;
+    if (!desktop.matches && document.activeElement === toggle) {
+      var selected = content.querySelector('[data-view][aria-selected="true"]');
+      if (selected) selected.focus({preventScroll: true});
+    }
+    window.dispatchEvent(new Event("resize"));
+  }
+  toggle.addEventListener("click", function() {
+    var next = !document.body.classList.contains("navigation-collapsed");
+    if (companionActive()) companionOverride = next;
+    else manualCollapsed = next;
+    update();
+  });
+  desktop.addEventListener("change", update);
+  document.addEventListener("lixity:viewchange", update);
+  window.LixityWorkspaceNavigation = {
+    companion: function(open) {
+      if (companionOpen !== open) companionOverride = null;
+      companionOpen = open;
+      update();
+    }
+  };
   update();
 })();

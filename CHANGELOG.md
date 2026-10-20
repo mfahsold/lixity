@@ -8,6 +8,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Changed
+- Companion dossiers temporarily collapse desktop project navigation, with an
+  accessible manual toggle and restoration of the prior choice when closed.
+  Mobile navigation remains visible. Saved exact manuscript associations now
+  offer a direct, focused return to their passage alongside the claim action.
 - Research creation and association forms start collapsed with reversible labelled
   controls, retained in-memory drafts, nested Escape handling and contextual reveal.
   Shared disclosure arrows provide brief reduced-motion-aware feedback in the app

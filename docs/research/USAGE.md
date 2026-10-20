@@ -97,8 +97,29 @@ In **Manuscript & Analysis**, **Dossier alongside** opens a chosen dossier in a
 read-only companion. It starts closed with no automatic selection. While open,
 other analysis panels are hidden; closing restores them and preserves manuscript
 search and paragraph expansion. Refresh explicitly for the latest dossier.
+On desktop, opening the companion temporarily collapses project navigation into
+a narrow rail. Use **Show navigation** to access its controls; closing the companion
+restores the earlier manual choice. Switching away from manuscript analysis also
+restores normal navigation. The navigation toggle is desktop-only; narrow screens
+keep their horizontal workspace switcher. These choices last for the current page.
 Desktop areas scroll separately; narrow screens stack them. Reading changes
 neither document, evidence links nor the statistical baseline.
+
+To connect the manuscript to research, expand a paragraph, select a nonempty text
+range and choose **Link selection to claim** (or Alt+L). Choose an existing claim,
+review the quotation and explicitly allow retention before saving. This creates
+an association; it does not turn a manuscript statement into source evidence.
+The claim's dossier and retained evidence remain separate authored records.
+
+For the reverse route, open **Review** in Research and use the saved manuscript
+associations. **Open claim** shows the claim's recorded versions; **Go to manuscript
+passage** switches to analysis, reveals the paragraph, clears incompatible passage
+filters and focuses the linked text. The return action is offered only when the
+current paragraph hash, line range and exact quotation match the resolved anchor.
+Moved, adjusted, ambiguous or unavailable anchors remain review tasks, with no
+silently inferred jump or re-pin. The manuscript's saved-associations disclosure
+provides the same actions while reading.
+
 
 Claims' **Author review state** labels map to stored `hypothetical` (**Author
 assumption**), `evidenced` (**With evidence**) and `disputed` (**Disputed**).
