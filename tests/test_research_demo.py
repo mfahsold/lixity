@@ -59,7 +59,7 @@ def test_visual_fixture_refuses_missing_or_changed_reviewed_assets(tmp_path):
 
 def test_research_fixture_retains_reviewed_visuals_with_credit_and_fiction_boundaries(tmp_path, research_fixture):
     project = tmp_path / "research-demo"
-    manifest = json.loads((ROOT / "docs/assets/research/sources.json").read_text())
+    manifest = json.loads((ROOT / "docs/assets/research/sources.json").read_text(encoding="utf-8"))
     sources = api.list_sources(project)["sources"]
     images = [source for source in sources if source["media_type"] == "image/jpeg"]
     assert len(images) == 2
@@ -116,9 +116,9 @@ def test_research_fixture_connects_retained_evidence_to_an_authored_claim_and_ma
 def test_public_demo_externalizes_image_bytes_and_preserves_source_records(tmp_path, public_demo):
     target = public_demo
     assert target == tmp_path / "docs/demo/report.html"
-    document = target.read_text()
+    document = target.read_text(encoding="utf-8")
     fixture_path = target.with_name("research-data.json")
-    fixture = json.loads(fixture_path.read_text())
+    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
     assert '<span class="product-name">Lixity · read-only</span>' in document
     assert re.search(r'<p class="project-meta">[^<]*Fictional demo</p>', document)
     provenance = re.search(
@@ -141,7 +141,7 @@ def test_public_demo_externalizes_image_bytes_and_preserves_source_records(tmp_p
     source = (ROOT / "samples/first-look.md").read_bytes()
     assert f'data-manuscript-source-sha256="{hashlib.sha256(source).hexdigest()}"' in document
     assert (tmp_path / "docs/research/examples/harbour-manuscript.md").read_bytes() == source
-    assert (ROOT / "LICENSE").read_text().strip() in html.unescape(document)
+    assert (ROOT / "LICENSE").read_text(encoding="utf-8").strip() in html.unescape(document)
     for layout in ("editor", "book", "sheet", "report"):
         filename = f"warehouse-4-{layout}.pdf"
         assert f'href="{filename}"' in document
@@ -152,13 +152,13 @@ def test_public_demo_externalizes_image_bytes_and_preserves_source_records(tmp_p
             "layout": layout, "language": "en", "title": "The Crate at Warehouse 4",
             "author": "Example Author", "project_config": {},
         }
-    legacy = target.with_name("research.html").read_text()
+    legacy = target.with_name("research.html").read_text(encoding="utf-8")
     assert 'http-equiv="refresh" content="0; url=report.html#research-manager"' in legacy
     assert 'href="report.html#research-manager"' in legacy
     assert 'rel="canonical" href="https://mfahsold.github.io/lixity/demo/report.html"' in legacy
     assert "research-demo-adapter" not in legacy
-    assert "content_base64" not in fixture_path.read_text()
-    assert "Mara stopped beneath the quay lamp" not in fixture_path.read_text()
+    assert "content_base64" not in fixture_path.read_text(encoding="utf-8")
+    assert "Mara stopped beneath the quay lamp" not in fixture_path.read_text(encoding="utf-8")
     assert all(url.startswith("/api/research/") for url in fixture)
     assert not any(url.startswith("/api/research/image") for url in fixture)
     dossiers = fixture["/api/research/dossiers"]["dossiers"]
@@ -166,7 +166,7 @@ def test_public_demo_externalizes_image_bytes_and_preserves_source_records(tmp_p
     details = fixture["/api/research/dossiers?id=" + dossier_id.replace(":", "%3A")]
     assert {image["url"] for image in details["images"]} == {
         "../assets/research/hamburg-free-port-1900.jpg", "../assets/research/hamburg-harbour-1890-1900.jpg"}
-    for item in json.loads((ROOT / "docs/assets/research/sources.json").read_text())["sources"]:
+    for item in json.loads((ROOT / "docs/assets/research/sources.json").read_text(encoding="utf-8"))["sources"]:
         source_bytes = (ROOT / "docs/assets/research" / item["filename"]).read_bytes()
         assert base64.b64encode(source_bytes).decode("ascii") not in document
         assert hashlib.sha256(source_bytes).hexdigest() == item["sha256"]
@@ -187,9 +187,9 @@ def test_demo_read_fixtures_match_native_companion_and_matrix(tmp_path, research
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is needed to exercise the public read adapter")
 def test_public_read_adapter_rejects_writes_external_urls_and_unknown_local_reads(public_demo):
     target = public_demo
-    adapter = re.search(r'<script id="research-demo-adapter">(.*?)</script>', target.read_text(), re.DOTALL)
+    adapter = re.search(r'<script id="research-demo-adapter">(.*?)</script>', target.read_text(encoding="utf-8"), re.DOTALL)
     assert adapter is not None
-    payload = {"adapter": adapter[1], "fixture": json.loads(target.with_name("research-data.json").read_text())}
+    payload = {"adapter": adapter[1], "fixture": json.loads(target.with_name("research-data.json").read_text(encoding="utf-8"))}
     script = """
 const assert = require('node:assert/strict'), vm = require('node:vm'), fs = require('node:fs');
 const {adapter, fixture} = JSON.parse(fs.readFileSync(0, 'utf8'));
@@ -241,5 +241,5 @@ vm.runInNewContext(adapter, {window, document: {baseURI: 'https://demo.invalid/d
 })().catch(error => {console.error(error); process.exitCode = 1;});
 """
     completed = subprocess.run([shutil.which("node"), "-e", script], input=json.dumps(payload),  # noqa: S603
-                               text=True, capture_output=True, check=False)
+                               text=True, encoding="utf-8", capture_output=True, check=False)
     assert completed.returncode == 0, completed.stderr

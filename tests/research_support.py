@@ -31,8 +31,8 @@ def capture_research(*arguments: str) -> tuple[int, str, str]:
 
 
 def retained_files(project: Path) -> dict[str, bytes]:
-    """Compare authoritative archive bytes around previews and rejected writes."""
-    return {str(path.relative_to(project)): path.read_bytes()
+    """Snapshot archive bytes with portable POSIX relative-path keys."""
+    return {path.relative_to(project).as_posix(): path.read_bytes()
             for path in (project / "research").rglob("*") if path.is_file()}
 
 
