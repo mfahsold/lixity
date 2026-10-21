@@ -124,18 +124,36 @@ def _protect(text: str, language_key: str) -> str:
     return _ABBR_RE.sub(_abbr, text)
 
 
+def _sentence_spans(protected: str) -> list[tuple[int, int]]:
+    spans: list[tuple[int, int]] = []
+    start = 0
+    for boundary in _SPLIT_RE.finditer(protected):
+        end = boundary.start() + len(boundary.group(1))
+        while start < end and protected[start].isspace():
+            start += 1
+        if start < end:
+            spans.append((start, end))
+        start = boundary.end()
+    end = len(protected)
+    while start < end and protected[start].isspace():
+        start += 1
+    while end > start and protected[end - 1].isspace():
+        end -= 1
+    if start < end:
+        spans.append((start, end))
+    return spans
+
+
+def split_sentence_spans(text: str, language_key: str = "generic") -> list[tuple[int, int]]:
+    """Exact codepoint ranges from the shared abbreviation-aware splitter."""
+    return _sentence_spans(_protect(text, language_key))
+
+
 def split_sentences(text: str, language_key: str = "generic") -> list[str]:
     """Splits prose into sentences (deterministic, abbreviation-aware)."""
     protected = _protect(text, language_key)
-    pieces = _SPLIT_RE.split(protected)
-    sentences: list[str] = []
-    for index in range(0, len(pieces), 2):
-        sentence = pieces[index].strip()
-        closers = pieces[index + 1] if index + 1 < len(pieces) else ""
-        sentence += closers
-        if sentence:
-            sentences.append(sentence.replace(_MASK, "."))
-    return sentences
+    return [protected[start:end].replace(_MASK, ".")
+            for start, end in _sentence_spans(protected)]
 
 
 def split_prose_sentences(text: str, language_key: str = "generic") -> list[str]:

@@ -24,6 +24,7 @@ from .config import (
 from .formatters import ReportFormatter
 from .io import FileUtils
 from .models import SCHEMA_VERSION
+from .paragraph_evidence import ParagraphEvidence
 from .pipeline import (
     analyze_document,
     fingerprint_document,
@@ -403,7 +404,7 @@ _lixity_complete() {
         return 0
     fi
     if [[ ${COMP_WORDS[1]} == profile ]]; then
-        COMPREPLY=( $(compgen -W "$opts $style_opts --layer --only-notable" -- "$cur") )
+        COMPREPLY=( $(compgen -W "$opts $style_opts --layer --only-notable --evidence" -- "$cur") )
         COMPREPLY+=( $(compgen -f -- "$cur") )
         return 0
     fi
@@ -487,6 +488,7 @@ __LIXITY_ZSH_COMMANDS__
             '--json[JSON output]' \
             '--layer[Paragraph metric]:layer:(__LIXITY_PARAGRAPH_LAYERS__)' \
             '--only-notable[With a layer, select notable paragraphs after comparison]' \
+            '--evidence[With a layer, show exact counted passage evidence]' \
             '-o[output file]:file:_files' \
             '--output[output file]:file:_files' \
             "${_lixity_style_flags[@]}"
@@ -580,9 +582,10 @@ def _meta_payload(language_key: str, **body: Any) -> dict[str, Any]:
 
 
 def _print_paragraph_layer(
-    report: dict[str, Any], source: str, language_key: str, labels: Mapping[str, str]
+    report: dict[str, Any], source: str, language_key: str, labels: Mapping[str, str],
+    *, paragraphs: list[Any] | None = None,
 ) -> None:
-    """Print source anchors and measurements without including paragraph prose."""
+    """Print measurements and anchors, with literal snippets only when requested."""
     from .format import num, safe_text
     from .style_fingerprint import FEATURE_UNITS, FEATURES
 
@@ -614,6 +617,21 @@ def _print_paragraph_layer(
             f"{anchor} · {row['chapter_num']}: {title} · "
             f"{value} {unit} · {comparison}{notable}"
         )
+        if paragraphs is not None and "evidence" in row:
+            evidence = row["evidence"]["layers"][report["layer"]]
+            reason = f" · {evidence['reason']}" if evidence.get("reason") else ""
+            evidence_unit = {"sentence": "sentences", "word": "word cues",
+                             "pattern": "pattern matches", "dialogue": "quoted words"}[evidence["kind"]]
+            print(f"  Evidence: {evidence['status']} · "
+                  f"{evidence['mapped_count']}/{evidence['count']} {evidence_unit} mapped{reason}")
+            for span in evidence["spans"][:8]:
+                snippet = paragraphs[row["index"]].text[span["start"]:span["end"]]
+                snippet = snippet[:120] + ("…" if len(snippet) > 120 else "")
+                sentence_words = f" · {span['words']} words" if "words" in span else ""
+                print(f"    [{span['start']}:{span['end']}] x{span['count']}{sentence_words} "
+                      f"{safe_text(snippet)}")
+            if len(evidence["spans"]) > 8:
+                print(f"    … {len(evidence['spans']) - 8} further spans; use --json for all offsets")
 
 
 def _print_about_json(section: str | None = None) -> None:
@@ -1373,6 +1391,10 @@ def main(argv: list[str] | None = None) -> int:
                 "--only-notable", action="store_true",
                 help="With --layer, show only notable paragraphs; retain the full chapter reference",
             )
+            p.add_argument(
+                "--evidence", action="store_true",
+                help="With --layer, include literal counted spans (JSON: paragraph-layer-evidence/1)",
+            )
         p.add_argument("-o", "--output", help="Target file (dashboard, pdf)")
         if name == "pdf":
             from .pdf_export import PDF_LAYOUTS
@@ -1441,6 +1463,8 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--min-chapters must be at least 2")
     if args.command == "profile" and args.only_notable and args.layer is None:
         parser.error("--only-notable requires --layer")
+    if args.command == "profile" and args.evidence and args.layer is None:
+        parser.error("--evidence requires --layer")
     if args.command == "pdf" and args.json:
         parser.error("--json is not supported for PDF output; use analyze or style --json for measurements")
     if args.command == "serve":
@@ -1617,17 +1641,23 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "profile":
         fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
-        paragraphs, chapters = profile_document(text, config, fp_thresholds)
+        evidence: dict[int, ParagraphEvidence] | None = {} if args.evidence else None
+        paragraphs, chapters = profile_document(text, config, fp_thresholds, evidence=evidence)
         if args.layer is not None:
             payload = _meta_payload(
                 resolved.key,
                 **paragraph_layer_projection(paragraphs, args.layer, only_notable=args.only_notable),
             )
             payload["meta"]["schema_version"] = "paragraph-layer/1"
+            if evidence is not None:
+                payload["meta"]["schema_version"] = "paragraph-layer-evidence/1"
+                for row in payload["paragraphs"]:
+                    row["evidence"] = evidence[row["index"]]
             if args.json:
                 print(_json(payload, indent=True))
             else:
-                _print_paragraph_layer(payload, args.file, resolved.key, resolved.labels)
+                _print_paragraph_layer(payload, args.file, resolved.key, resolved.labels,
+                                       paragraphs=paragraphs if evidence is not None else None)
             return EXIT_OK
         payload = _meta_payload(
             resolved.key,

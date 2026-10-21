@@ -82,14 +82,17 @@ async function checkTypography(page, label) {
 // roles stay on the published ladder.
 async function checkScale(page, label) {
   const ladder = await page.evaluate(() => {
-    const root = getComputedStyle(document.documentElement);
     return Object.fromEntries(['--text-micro', '--text-note', '--text-small', '--text-control',
       '--text-section-title', '--text-body'].map(name => {
-      const rem = parseFloat(root.getPropertyValue(name));
-      return [name, `${Number((rem * 16).toFixed(3))}px`];
+      const probe = document.createElement('span');
+      probe.style.fontSize = `var(${name})`;
+      document.body.appendChild(probe);
+      const value = getComputedStyle(probe).fontSize;
+      probe.remove();
+      return [name, value];
     }));
   });
-  assert.equal(ladder['--text-micro'], '11.2px', `${label} micro step`);
+  assert.equal(ladder['--text-micro'], '13px', `${label} micro step`);
   assert.deepEqual(Object.keys(ladder).length, 6, `${label} ladder`);
   const radii = await page.locator('button.ctl:not(.ctl-link):visible, a.ctl:visible, select.ctl:visible, input.ctl:visible, textarea.ctl:visible, .view-nav-tab:visible, .theme-btn:visible')
     .evaluateAll(elements => Array.from(new Set(elements.map(element => getComputedStyle(element).borderRadius))));

@@ -9,6 +9,7 @@ from .analyzer import CorpusAnalyzer
 from .language import ResolvedLanguage, resolve_language
 from .markdown_parser import parse_markdown_blocks
 from .models import CorpusConfig, CorpusMetrics
+from .paragraph_evidence import ParagraphEvidence
 from .style_fingerprint import (
     FingerprintThresholds,
     StyleFingerprint,
@@ -23,6 +24,7 @@ class DocumentAnalysis:
     paragraphs: list[ParagraphProfile]
     chapters: list[ChapterProfile]
     fingerprint: StyleFingerprint
+    evidence: dict[int, ParagraphEvidence] | None = None
 
 
 def paragraph_identity(paragraph: ParagraphProfile) -> dict[str, Any]:
@@ -44,11 +46,12 @@ def resolve_document_config(
 
 
 def profile_document(
-    text: str, config: CorpusConfig, thresholds: FingerprintThresholds
+    text: str, config: CorpusConfig, thresholds: FingerprintThresholds, *,
+    evidence: dict[int, ParagraphEvidence] | None = None,
 ) -> tuple[list[ParagraphProfile], list[ChapterProfile]]:
     profile_thresholds = ProfileThresholds(flag_min_severity=thresholds.flag_min_severity)
     return ParagraphProfiler(config, thresholds=profile_thresholds, sample_text=text).profile_blocks(
-        parse_markdown_blocks(text, config)
+        parse_markdown_blocks(text, config), evidence=evidence,
     )
 
 
@@ -66,9 +69,11 @@ def fingerprint_document(
 
 
 def analyze_document(
-    text: str, config: CorpusConfig, thresholds: FingerprintThresholds
+    text: str, config: CorpusConfig, thresholds: FingerprintThresholds, *,
+    include_evidence: bool = False,
 ) -> DocumentAnalysis:
     metrics = CorpusAnalyzer(config, sample_text=text).analyze_text(text)
-    paragraphs, chapters = profile_document(text, config, thresholds)
+    evidence: dict[int, ParagraphEvidence] | None = {} if include_evidence else None
+    paragraphs, chapters = profile_document(text, config, thresholds, evidence=evidence)
     fingerprint = fingerprint_document(text, config, thresholds, metrics)
-    return DocumentAnalysis(metrics, paragraphs, chapters, fingerprint)
+    return DocumentAnalysis(metrics, paragraphs, chapters, fingerprint, evidence)

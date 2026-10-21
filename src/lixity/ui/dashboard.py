@@ -24,6 +24,7 @@ from ..style_fingerprint import (
     FEATURE_UNITS,
     FEATURES,
     LAYER_FEATURES,
+    LAYER_PARAGRAPH_ATTR,
     MIN_COMPARABLE_WORDS,
     PARAGRAPH_LAYER_Z_CUTOFF,
     Z_COLOR_LIMIT,
@@ -92,6 +93,7 @@ _CSS_FILES = (
     "decision-review.css",
     "analysis-scope.css",
     "section-navigation.css",
+    "analysis-evidence.css",
 )
 _JS_FILES = (
     "vendor/preact-10.29.8.min.js",
@@ -124,6 +126,7 @@ _JS_FILES = (
     "workspace-reader.js",
     "manuscript-links.js",
     "manuscript-reader.js",
+    "analysis-evidence.js",
 )
 
 
@@ -158,6 +161,7 @@ def render_analysis(
         analysis.paragraphs,
         metrics=analysis.metrics,
         fingerprint=analysis.fingerprint,
+        paragraph_evidence=analysis.evidence,
         title=title,
         labels=resolved.labels,
         language_name=resolved.name,
@@ -208,6 +212,7 @@ def render_dashboard(
     manuscript_source_sha256: str = "",
     register_settings: Mapping[str, Any] | None = None,
     reader_document: Sequence[ReaderBlock] | None = None,
+    paragraph_evidence: Mapping[int, Mapping[str, Any]] | None = None,
 ) -> str:
     """Renders the complete, deterministic single-file dashboard.
 
@@ -351,6 +356,9 @@ def render_dashboard(
     body_class = "lixity-workspace" if controls else "lixity-report"
     if controls and has_reading:
         body_class += " has-reading"
+    if (controls and reader_document and reader_document[0].kind == "heading"
+            and reader_document[0].level == 1 and reader_document[0].text == title):
+        body_class += " has-source-title"
 
     parts = [
         "<!DOCTYPE html>",
@@ -360,7 +368,7 @@ def render_dashboard(
         '<link rel="icon" href="data:,"/>',
         '<meta name="viewport" content="width=device-width, initial-scale=1"/>',
         *(('<meta name="lixity-debug" content="true"/>',) if debug else ()),
-        f"<title>{esc(title)} – {L('app_suffix')}</title>",
+        f"<title>{esc(title)} – {esc(engine_name)}</title>",
         f"<style>{_bundle(_CSS_FILES)}</style>",
         "</head>",
         f'<body id="top" class="{body_class}" data-api="{esc(api_base)}" data-ui-labels="{workspace_labels_json}" '
@@ -905,9 +913,6 @@ def render_dashboard(
     )
     parts.append("</div>")
 
-    if controls:
-        parts.append(f'<p class="microhint" id="microhint">{L("hint")}</p>')
-
     parts.append(
         f'<div class="layer-legend" id="layer-legend" hidden="hidden" '
         f'data-cutoff="{PARAGRAPH_LAYER_Z_CUTOFF}" '
@@ -926,6 +931,12 @@ def render_dashboard(
         f'<label class="layer-only"><input type="checkbox" id="layer-only"/> '
         f"{esc(label(labels, 'layer_only'))}</label>"
     )
+    if controls:
+        parts.append(
+            f'<label class="layer-only"><input type="checkbox" id="analysis-evidence-enabled" checked/> '
+            f'{L("evidence_show")}</label>'
+            '<span class="ctl-note" id="analysis-evidence-status" role="status" aria-live="polite"></span>'
+        )
     parts.append(f'<button class="ctl" id="layer-next">{esc(label(labels, "layer_next"))}</button>')
     parts.append(f'<button class="ctl" id="layer-clear" type="button">{L("layer_clear")}</button>')
     parts.append(f'<details class="layer-comparison-note"><summary>{L("layer_guide")}</summary>'
@@ -954,7 +965,7 @@ def render_dashboard(
 
     # --- Chapter map ------------------------------------------------------
     by_chapter: dict[int, list[tuple[int, Any]]] = {}
-    paragraph_content: dict[str, list[str]] = {}
+    paragraph_content: dict[str, list[Any]] = {}
     for idx, p in enumerate(paragraphs):
         by_chapter.setdefault(p.chapter_num, []).append((idx, p))
 
@@ -1040,6 +1051,12 @@ def render_dashboard(
                     f"{p.words} {label(labels, 'words')}"
                 )
                 paragraph_content[f"p-{idx}"] = [p.text, anchor, stats]
+                if paragraph_evidence is not None and idx in paragraph_evidence:
+                    paragraph_content[f"p-{idx}"].append(paragraph_evidence[idx])
+                    paragraph_content[f"p-{idx}"].append({
+                        key: _layer_text(key, getattr(p, attribute)) if p.words > 0 else None
+                        for key, attribute in LAYER_PARAGRAPH_ATTR.items()
+                    })
                 # The fallback preserves the full offline report without JavaScript.
                 # JavaScript removes the inert fallback before lazy rendering.
                 parts.append(
@@ -1491,7 +1508,8 @@ def render_dashboard(
     parts.extend(
         [
             "</div>",
-            f"<footer><span>{esc(engine_name)} · {L('app_suffix')}</span> · <span>{esc(title)}</span></footer>",
+            ("<footer></footer>" if controls else
+             f"<footer><span>{esc(engine_name)}</span> · <span>{esc(title)}</span></footer>"),
             ('<script type="application/json" id="research-diagram-library">'
              + _script_json(_bundle(("vendor/mermaid-tiny-12.2.0.min.js",))) + "</script>" if controls else ""),
             f"<script>{_bundle(_JS_FILES)}</script>",

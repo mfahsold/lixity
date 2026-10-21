@@ -53,7 +53,27 @@
     var resize = typeof ResizeObserver === "function" ? new ResizeObserver(schedule) : null;
     function schedule() { if (!disposed && !frame) frame = requestAnimationFrame(update); }
     function visible(node) { return node.isConnected && node.getClientRects().length > 0; }
-    function paint(entry) {
+    function fitOutline(root) {
+      var contents = nav.closest("[data-section-contents]");
+      if (!contents || getComputedStyle(contents).position !== "sticky") return false;
+      var reading = contents.parentElement.getBoundingClientRect();
+      var bounds = root === document.scrollingElement ? {top: 0, bottom: innerHeight} : root.getBoundingClientRect();
+      var top = Math.max(0, reading.top, bounds.top + (parseFloat(getComputedStyle(contents).top) || 0));
+      var height = Math.max(88, Math.floor(Math.min(innerHeight, bounds.bottom, reading.bottom) - top)) + "px";
+      if (contents.style.getPropertyValue("--outline-available-height") === height) return false;
+      contents.style.setProperty("--outline-available-height", height);
+      return true;
+    }
+    function revealOutlineEntry(entry) {
+      var contents = nav.closest("[data-section-contents]");
+      if (!entry || !contents || getComputedStyle(contents).position !== "sticky") return;
+      var bounds = nav.getBoundingClientRect(), link = entry.link.getBoundingClientRect();
+      // Only reveal within the bounded outline. scrollIntoView would also move
+      // the reading document and compete with its existing navigation owner.
+      if (link.top < bounds.top) nav.scrollTop += Math.floor(link.top - bounds.top);
+      else if (link.bottom > bounds.bottom) nav.scrollTop += Math.ceil(link.bottom - bounds.bottom);
+    }
+    function paint(entry, changedCurrent) {
       if (!visible(nav)) {
         dot.style.transition = progress.style.transition = "none";
         svg.style.display = "none"; geometry = ""; return;
@@ -67,6 +87,7 @@
       });
       var path = points.map(function(point, index) { return (index ? "L" : "M") + point.join(","); }).join(" ");
       var changedGeometry = path !== geometry; geometry = path;
+      if (changedCurrent || changedGeometry) revealOutlineEntry(entry);
       // Repeated scroll frames must not cancel an in-flight indicator transition.
       var animate = !changedGeometry && !motion.matches;
       dot.style.transition = animate ? "transform 200ms ease-out" : "none";
@@ -88,6 +109,7 @@
       if (!nav.isConnected || !host.isConnected) { dispose(); return; }
       var shown = visible(host) && (visible(nav) || options.location && visible(options.location));
       var root = horizontal ? document.scrollingElement : scrollRoot(host);
+      var fittedOutline = shown && fitOutline(root);
       if (resize && (shown !== observing || shown && root !== observedRoot)) {
         resize.disconnect(); observing = shown; observedRoot = root;
         if (shown) {
@@ -124,11 +146,12 @@
         if (entry === selected) entry.link.setAttribute("aria-current", "true");
         else entry.link.removeAttribute("aria-current");
       });
-      if (current !== selected) {
+      var changedCurrent = current !== selected;
+      if (changedCurrent) {
         current = selected;
         if (options.onCurrent) options.onCurrent(selected && selected.link);
       }
-      paint(selected);
+      paint(selected, changedCurrent || fittedOutline);
     }
     function keyboard(event) {
       if (!horizontal || !["ArrowRight", "ArrowLeft"].includes(event.key)) return;
@@ -145,6 +168,8 @@
       disposed = true; cancelAnimationFrame(frame); if (resize) resize.disconnect();
       nav.removeEventListener("keydown", keyboard); nav.removeEventListener("click", schedule);
       if (options.onCurrent) options.onCurrent(null);
+      var contents = nav.closest("[data-section-contents]");
+      if (contents) contents.style.removeProperty("--outline-available-height");
       svg.remove(); delete nav._sectionNavigation; instances.delete(instance); unlisten();
     }
     var instance = {refresh: schedule, dispose: dispose};

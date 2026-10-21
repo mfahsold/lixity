@@ -71,6 +71,10 @@ the whole-manuscript reference must remain unchanged.
 The metric-overlays suite checks all seven paragraph metrics, transparent
 emphasis with opaque readable text, direction/value help, unavailable and valid
 zero results, Analysis Off, and preserved native selection/source identities.
+The analysis-evidence suite additionally checks exact verified text ranges,
+hover, touch and keyboard inspection, Unicode offsets, asynchronous cancellation,
+search/research mark coexistence and explicit unavailable mappings. Its geometry
+check counts repeated rectangle reads rather than setting a wall-clock threshold.
 The decision-review suite reads exact decision/dossier versions side by side,
 stacks them on mobile, and checks read failures, late root-bound responses and
 the existing guarded acknowledgement/reopen writes.
@@ -78,7 +82,10 @@ the existing guarded acknowledgement/reopen writes.
 The claim-evidence-actions suite exercises empty evidence, the existing claim-bound
 composer and source-search handoff without saving. It checks preserved drafts,
 read failures/retry, stale responses and read-only capability boundaries at desktop
-and mobile widths. The list-filters suite also covers genuinely empty collections,
+and mobile widths. Research-presentation checks all five authored record types
+in seven locales: readable saved versions, one change reason, localized fields,
+optional values, exact reference pins and keyboard tab changes with retained drafts.
+The list-filters suite also covers genuinely empty collections,
 arrival of the first records and filters with no matches; failed reads remain
 distinct from accepted empty results.
 

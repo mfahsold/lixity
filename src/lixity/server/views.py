@@ -172,7 +172,7 @@ def build_server_dashboard(
     )
     resolved_thresholds = thresholds or resolve_thresholds(project_config=settings)
 
-    analysis = analyze_document(text, config, resolved_thresholds)
+    analysis = analyze_document(text, config, resolved_thresholds, include_evidence=True)
     paragraphs, chapters = analysis.paragraphs, analysis.chapters
     metrics = analysis.metrics
     markers = list_markers(text) if text else []

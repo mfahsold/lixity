@@ -434,7 +434,7 @@ def render_research_workspace(research_fixture: dict, **options) -> str:
     text = DEMO_MANUSCRIPT.read_bytes().decode("utf-8")
     config, resolved = resolve_document_config(text, "en", project_config={})
     thresholds = resolve_thresholds(project_config={})
-    analysis = analyze_document(text, config, thresholds)
+    analysis = analyze_document(text, config, thresholds, include_evidence=True)
     review = research_fixture["/api/research/manuscript-review?project_token=" + RESEARCH_DEMO_MANUSCRIPT_CONTEXT]
     if review["current_source_sha256"] != sha256(text.encode("utf-8")).hexdigest():
         raise ValueError("The public demo analysis and research manuscript differ")
@@ -906,7 +906,7 @@ def main() -> int:
     title = manuscript_title(text, manuscript.stem)
 
     thresholds = resolve_thresholds(project_config={})
-    analysis = analyze_document(text, config, thresholds)
+    analysis = analyze_document(text, config, thresholds, include_evidence=True)
     metrics, fingerprint = analysis.metrics, analysis.fingerprint
     paragraphs, chapters = analysis.paragraphs, analysis.chapters
 
@@ -962,6 +962,7 @@ def main() -> int:
         metrics=metrics,
         reader_document=reader_blocks(text, config, paragraphs),
         fingerprint=fingerprint,
+        paragraph_evidence=analysis.evidence,
         status=status,
         dialogue=dialogue_report(text, config).to_dict(),
         characters=presence_report(text, char_names, config) if char_names else None,
@@ -1056,7 +1057,7 @@ def main() -> int:
     ) if paragraphs else ()
     for line, kind, note in markers_spec:
         marked, _ = add_marker(marked, kind=kind, note=note, target_line=line)
-    marked_analysis = analyze_document(marked, config, thresholds)
+    marked_analysis = analyze_document(marked, config, thresholds, include_evidence=True)
     marked_metrics = marked_analysis.metrics
     marked_paragraphs, marked_chapters = marked_analysis.paragraphs, marked_analysis.chapters
     from lixity.markers import list_markers
@@ -1067,6 +1068,7 @@ def main() -> int:
         metrics=marked_metrics,
         reader_document=reader_blocks(marked, config, marked_paragraphs),
         fingerprint=marked_analysis.fingerprint,
+        paragraph_evidence=marked_analysis.evidence,
         title=title,
         labels=resolved.labels,
         language_name=resolved.name,
@@ -1088,6 +1090,7 @@ def main() -> int:
         metrics=marked_metrics,
         reader_document=reader_blocks(marked, config, marked_paragraphs),
         fingerprint=marked_analysis.fingerprint,
+        paragraph_evidence=marked_analysis.evidence,
         title=title,
         labels=resolved.labels,
         language_name=resolved.name,

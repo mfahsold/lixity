@@ -125,6 +125,7 @@ body.lixity-workspace.reader-focus { padding-left: 1.5rem; }
   .reader-size-controls { margin-left: auto; }
   .manuscript-reading .chapter { padding: .5rem calc(var(--reader-action-gutter) + .5rem) 2rem .15rem; }
   .manuscript-reading #chapters { margin-top: .5rem; }
+  .manuscript-reading .chapter-head { margin-bottom: var(--space-4); }
   .manuscript-reading .reader-paragraph-actions { padding: .1rem; opacity: .65; }
   body.lixity-workspace.reader-focus { padding-left: 1rem; }
 }

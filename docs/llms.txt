@@ -192,3 +192,10 @@ comparison, adds actual dossier-heading orientation, composes exact decision and
 dossier versions for guarded review, and offers display-only register/declared-POV
 heatmap filters with explicit whole-manuscript reference. See USAGE.md,
 research/USAGE.md, ARCHITECTURE.md and AGENTS.md for contracts and limits.
+
+Current-main exact reader evidence uses the same configured counters as profiles:
+Analysis On → select metric → Mark counted passages; hover or Inspect text evidence
+explains the exact span separately from its paragraph measurement. CLI opt-in
+`profile --layer KEY --evidence [--json]` uses `paragraph-layer-evidence/1` with
+paragraph hashes, Unicode-codepoint spans and explicit mapping availability.
+Existing profile schema2 and paragraph-layer/1 remain unchanged.

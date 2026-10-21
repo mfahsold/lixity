@@ -216,6 +216,21 @@ then **Back to passage** to restore the document context and prior analysis
 display choice. Hiding analysis leaves the overview and restores the prior
 passage tool. The inspector and dossier work with Analysis On or Off.
 
+**On current main (Unreleased):** turn **Analysis** on, choose a metric and leave
+**Mark counted passages** checked to highlight the actual counted words, patterns,
+quoted speech or sentences. Hover a mark for its explanation; the paragraph menu's
+**Inspect text evidence** offers the same view by keyboard or right-click. A short
+stationary tap opens it on touch screens. Escape closes it. Turning analysis off,
+clearing the metric or unchecking the marking control removes the marks.
+
+The explanation separates the counted passage from its paragraph measurement and
+chapter comparison. A sentence's word count does not make it an editorial fault;
+a perception-word match does not establish narrative distance. Some Markdown
+counting/display projections cannot yet be mapped exactly: the value remains,
+but Lixity states that exact evidence is unavailable instead of guessing. Browsers
+without native text highlighting retain the explicit inspection route. Text,
+selection, saved quotations and search marks keep their existing identities.
+
 Choose a chapter in the reader toolbar. **Reading settings** groups **A−**/**A+**
 for text size (16–28 nominal pixels), narrow/standard/wide text and
 compact/standard/relaxed line spacing. Appearance and the desktop split are local
@@ -474,6 +489,20 @@ With `--layer --json`, the opt-in envelope is `paragraph-layer/1`; unavailable
 comparisons have `z: null` and `notable: null`, while measured zero remains zero.
 Densities remain word-pattern counts per 1,000 words, not exact token spans or a
 grammatical interpretation. See [the contract](AGENTS.md#311-opt-in-paragraph-layers).
+
+On current main, add `--evidence` to a selected layer for literal counted spans:
+
+```sh
+lixity profile --layer filter --evidence
+lixity profile --layer asl --evidence --json
+```
+
+Human output includes bounded quoted examples and source lines. JSON uses the
+separate opt-in `paragraph-layer-evidence/1` envelope with exact Unicode-codepoint
+offsets and paragraph hashes; default profile and `paragraph-layer/1` outputs are
+unchanged. `--only-notable` still filters after full chapter references. Mapping
+status distinguishes available, partial and unavailable evidence; measured zero
+remains zero. See [the evidence contract](AGENTS.md#311-opt-in-paragraph-layers).
 
 ### `lixity dialogue`
 

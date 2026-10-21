@@ -66,6 +66,7 @@ AREAS: dict[str, tuple[str, ...]] = {
         "visual-consistency.cjs",
     ),
     "analysis": (
+        "analysis-evidence.cjs",
         "anchor-navigation.cjs",
         "analysis-narration.cjs",
         "analysis-navigation.cjs",
@@ -112,6 +113,7 @@ AREAS: dict[str, tuple[str, ...]] = {
         "visual-consistency.cjs",
     ),
     "research": (
+        "research-presentation.cjs",
         "section-navigation.cjs",
         "anchor-navigation.cjs",
         "claim-evidence-actions.cjs",
@@ -155,7 +157,7 @@ PATH_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("src/lixity/server/routes_research.py", ("research",)),
     ("src/lixity/server/routes_manuscript_research.py", ("research",)),
     ("src/lixity/ui/assets/project-ui.js", ("project",)),
-    ("src/lixity/ui/modals.py", ("project",)),
+    ("src/lixity/ui/modals.py", ("project", "research")),
     ("src/lixity/ui/settings.py", ("project",)),
     ("src/lixity/ui/assets/register-settings.js", ("project",)),
     ("src/lixity/server/routes_project.py", ("project",)),
@@ -163,6 +165,7 @@ PATH_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("src/lixity/ui/assets/interactions.js", ("full",)),
     ("src/lixity/ui/assets/style-space.js", ("analysis",)),
     ("src/lixity/ui/assets/analysis-scope.*", ("analysis",)),
+    ("src/lixity/ui/assets/analysis-evidence.*", ("analysis",)),
     ("src/lixity/ui/assets/section-navigation.*", ("analysis", "research")),
     ("src/lixity/ui/assets/decision-review.css", ("research",)),
     ("src/lixity/ui/assets/tooltips.js", ("full",)),

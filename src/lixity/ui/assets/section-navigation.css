@@ -1,4 +1,4 @@
-/* Shared document links; the indicator is paint, never a layout or scroll owner. */
+/* Shared document links; outline presentation keeps the existing document owner. */
 .section-navigation { position: relative; isolation: isolate; }
 .section-navigation [data-section-track] { position: absolute; inset: 0 auto auto 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
 .section-navigation .section-track { fill: none; stroke: var(--line-strong); stroke-width: 1; }
@@ -28,3 +28,34 @@
 .research-dossier-location > :first-child { flex: 0 0 auto; white-space: pre; }
 .research-dossier-location [data-section-current] { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .research-dossier-location:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* A document's available width decides whether its full outline fits beside it.
+   Accepted source and native disclosure nodes keep their owners in both modes. */
+.research-dossier-folder { container: dossier-reading / inline-size; min-width: 0; }
+.research-dossier-layout, .research-dossier-document { min-width: 0; }
+.research-dossier-document { display: grid; gap: var(--space-4); align-content: start; }
+@container dossier-reading (min-width: 52rem) {
+  .research-dossier-layout { display: grid; grid-template-columns: minmax(0, 1fr) 15rem; gap: var(--space-5); align-items: start; }
+  .research-dossier-document { grid-column: 1; grid-row: 1; }
+  .research-dossier-contents {
+    grid-column: 2; grid-row: 1; position: sticky;
+    top: calc(1rem + var(--workbench-return-height, 0px)); align-self: start;
+    min-width: 0; --outline-available-height: calc(100dvh - 2rem - var(--workbench-return-height, 0px));
+    margin: 0; padding-inline-start: var(--space-2); border-inline-start: 1px solid var(--line);
+    font-size: var(--text-control);
+  }
+  .research-dossier-contents > .section-navigation {
+    max-height: max(2.75rem, calc(var(--outline-available-height) - 2.75rem));
+    overflow: auto; overscroll-behavior: contain; scrollbar-width: thin;
+  }
+  .research-dossier-location { display: none; }
+}
+/* The side tool and two-document review keep their existing compact scrollport. */
+:is(.workspace-context-panel, .research-decision-review) .research-dossier-folder { container-type: normal; }
+:is(.workspace-context-panel, .research-decision-review) .research-dossier-layout { display: block; }
+:is(.workspace-context-panel, .research-decision-review) .research-dossier-contents {
+  position: static; max-height: none; margin-block: var(--space-3); padding-inline-start: 0;
+  border-inline-start: 0; overflow: visible;
+}
+:is(.workspace-context-panel, .research-decision-review) .research-dossier-contents > .section-navigation { max-height: none; overflow: visible; }
+:is(.workspace-context-panel, .research-decision-review) .research-dossier-location { display: flex; }

@@ -35,7 +35,7 @@ Appendix unique.
 '''
 original = full_dashboard.__globals__['render_dashboard']
 def render(*args, **kwargs):
-    return original(*args, **{**kwargs, 'reader_document': reader_blocks(full_dashboard.__globals__['SAMPLE'], CorpusConfig(), args[1])})
+    return original(*args, **{**kwargs, 'title': 'A voyage', 'reader_document': reader_blocks(full_dashboard.__globals__['SAMPLE'], CorpusConfig(), args[1])})
 full_dashboard.__globals__['render_dashboard'] = render
 print(json.dumps(full_dashboard()))
 `, {root});
@@ -51,6 +51,27 @@ print(json.dumps(full_dashboard()))
       await page.goto('http://lixity.test/');
       await page.locator('#tab-view-analysis').click();
       const main = page.locator('#chapters');
+      const sourceTitle = main.locator('.reader-heading').filter({hasText:'A voyage'}).first();
+      const generatedTitle = page.locator('.workspace-shell .project-header h1');
+      assert.equal(await sourceTitle.isVisible(), true, 'Authored manuscript title remains in the original reading tree');
+      assert.equal(await page.getByRole('heading', {level:1, name:'A voyage', exact:true}).count(), 1,
+        'The visual cleanup preserves the accessible document heading');
+      const chromeBox = await generatedTitle.boundingBox();
+      assert.ok(chromeBox && chromeBox.width <= 1 && chromeBox.height <= 1,
+        'Reading visually suppresses only the generated duplicate title');
+      await sourceTitle.evaluate(node => window.retainedSourceTitle = node);
+      await page.locator('#tab-view-project').click();
+      assert.equal(await generatedTitle.isVisible(), true, 'Project identity remains available outside the manuscript');
+      await page.locator('#tab-view-research').click();
+      assert.equal(await generatedTitle.isVisible(), true);
+      await page.locator('#tab-view-analysis').click();
+      await page.locator('#workbench-overview-open').click();
+      assert.equal(await generatedTitle.isVisible(), true, 'Overview retains project context');
+      await page.locator('#workbench-overview-back').click();
+      const returnedBox = await generatedTitle.boundingBox();
+      assert.ok(returnedBox && returnedBox.width <= 1 && returnedBox.height <= 1);
+      assert.equal(await sourceTitle.evaluate(node => node === window.retainedSourceTitle), true);
+
       assert.match(await main.innerText(), /Preface unique/);
       assert.match(await main.innerText(), /quotation unique/);
       assert.match(await main.innerText(), /note unique/);

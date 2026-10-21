@@ -829,7 +829,8 @@ class TestShowDontTellComponents(unittest.TestCase):
         self.assertIn('class="loadings"', html)  # dimension loading bars
         self.assertIn('class="kpi-bar"', html)  # KPI proportion bars
         self.assertIn('class="num bar-cell"', html)  # matrix micro-bars
-        self.assertIn('class="microhint"', html)  # self-dismissing hint
+        self.assertNotIn('<p class="microhint"', html)  # Continuous prose needs no click-to-read hint
+        self.assertNotIn('<p class="sub">Stil- &amp; Tempusanalyse', html)
 
     def test_passport_numbers_live_in_tooltips(self):
         html = _full_dashboard()

@@ -2,7 +2,7 @@
 
 Explore sentence rhythm, vocabulary and style patterns in your Markdown manuscript. Lixity runs its analysis on your computer and saves a dashboard you can open in a browser. No account or manuscript upload is required.
 
-Maintained by the Lixity project · Updated 20 October 2026
+Updated 20 October 2026
 
 ## What do I need?
 

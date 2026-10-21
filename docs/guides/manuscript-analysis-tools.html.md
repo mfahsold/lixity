@@ -2,7 +2,7 @@
 
 Four families of tools answer different questions about a manuscript. This page compares them by workflow: what each is good at, what it does not do, and where Lixity fits. None of them replaces an editor, and none of the descriptions below rank the tools against each other.
 
-Maintained by the Lixity project · Updated 19 October 2026
+Updated 19 October 2026
 
 ## The families at a glance
 

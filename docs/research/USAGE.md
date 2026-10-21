@@ -279,10 +279,26 @@ and export/restore preserve accepted link records. Exported quotes remain
 private manuscript material; there is no full manuscript blob. Restored links
 remain unavailable until the manuscript exists at its saved project-relative path.
 
+### Read saved versions without losing context
+
+On current main (Unreleased), the shared research viewer separates **Edit** and
+**Saved versions**. Its context names the selected record kind, saved version and
+whether it is current or earlier. Version buttons navigate retained states; the
+selected detail shows its change reason and provenance once. Technical IDs and
+the archive snapshot remain in the reversible **Technical details** disclosure.
+
+Read-only fields use the same localized choices as editing. Absent optional
+fields are omitted; an explicit false value or measured zero remains visible.
+A linked record and its pinned version appear together. **Source quotations**
+are retained evidence excerpts; **Saved manuscript associations** refer to the
+separate links back to your manuscript. Neither establishes factual truth.
+Arrow keys, Home and End move between the editor's tabs; returning to Edit keeps
+an unsaved draft. Reading earlier versions does not revise or retarget a record.
+
 ### Claims linked to a dossier
 
 The dossier detail groups **Dossier notes**, **Linked claims** and
-**Citations** in one place. **All project records → Claims** or **Decisions**
+**Source quotations** in one place. **All project records → Claims** or **Decisions**
 opens the corresponding project-wide list. Local creation actions prepare the
 existing claim/decision forms; choosing a view does not save or retain anything.
 

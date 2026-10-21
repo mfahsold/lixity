@@ -112,7 +112,14 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
       assert.equal(await page.locator('#ch-1 .ptext.open').count(), 1);
       const paragraphHelp = page.locator('.toolbar .help:visible').first();
       await paragraphHelp.focus();
+      // Enter by native Tab: programmatic focus after touch is continuity,
+      // rather than a request for a keyboard explanation.
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('Tab');
+      assert.equal(await paragraphHelp.evaluate(element => element === document.activeElement && element.matches(':focus-visible')), true,
+        'Keyboard traversal returns to the same help term with visible focus');
       await page.waitForFunction(() => document.querySelector('#lixity-tooltip').classList.contains('visible'));
+      assert.equal(await page.locator('#lixity-tooltip').textContent(), await paragraphHelp.getAttribute('data-help'));
       await page.keyboard.press('Escape');
       assert.equal(await page.locator('#ch-1 .ptext.open').count(), 1, 'Dismissing help must not close an unrelated paragraph');
       for (const selector of ['#flags', '#dist', '#dialogue', '#characters', '#pacing', '#motifs', '#showing', '#heatmap', '#bands', '#dimensions', '#markers', '#matrix', '#controls', '#ch-1']) {

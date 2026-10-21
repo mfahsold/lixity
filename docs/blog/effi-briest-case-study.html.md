@@ -1,6 +1,6 @@
 # A reference corridor from *Effi Briest*: measuring a draft against its own model
 
-Posted 15 October 2026 · 7 minutes · [All articles](index.html)
+Posted 15 October 2026 · 7 minutes
 
 ## The problem with external style rules
 

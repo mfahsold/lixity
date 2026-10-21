@@ -399,7 +399,13 @@ function researchDossierContentsHtml(markup) {
   var current = document.createElement("span"); current.dataset.sectionCurrent = "";
   location.append(label, current);
   location.title = location.textContent;
-  folder.prepend(contents, location); return template.innerHTML;
+  // Establish reading/outline regions before this rendering is accepted. CSS
+  // changes their placement without reparenting live source or disclosure DOM.
+  var layout = document.createElement("div"); layout.className = "research-dossier-layout";
+  var documentBody = document.createElement("div"); documentBody.className = "research-dossier-document";
+  documentBody.append.apply(documentBody, Array.from(folder.childNodes));
+  layout.append(contents, location, documentBody); folder.appendChild(layout);
+  return template.innerHTML;
 }
 
 // This reverse list projects current Claim.dossier_ref associations and

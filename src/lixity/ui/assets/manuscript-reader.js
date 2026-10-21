@@ -409,6 +409,7 @@
     var fragment = document.createDocumentFragment();
     if (!compact) {
       fragment.appendChild(actionButton("values", "paragraph_values", true));
+      if (window.LixityAnalysisEvidence && window.LixityAnalysisEvidence.available()) fragment.appendChild(actionButton("evidence", "evidence_inspect", true));
       if (window.LixityManuscriptLinks && window.LixityManuscriptLinks.passage) fragment.appendChild(actionButton("research", "passage_research", true));
     }
     if (panel.querySelector("[data-manuscript-link-selection]") && savedRange && Array.from(savedRange.toString()).length <= 10000) {
@@ -442,6 +443,8 @@
       showValues(panel);
       requestTool("analysis", panel);
       document.getElementById("reader-inspector-close").focus({preventScroll: true});
+    } else if (action === "evidence") {
+      window.LixityAnalysisEvidence.inspect(panel, panel.querySelector(".reader-paragraph-actions"));
     } else if (action === "research") {
       rememberReadingPassage(panel, range);
       window.LixityManuscriptLinks.passage(panel);

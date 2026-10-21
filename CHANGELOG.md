@@ -8,6 +8,24 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Changed
+- Research version history consolidates selected-version context and provenance,
+  localizes read-only choices, omits absent optional fields and preserves pinned
+  references, explicit false values, drafts and guarded version navigation.
+- Restored button focus after touch no longer opens an incidental help popup;
+  immediate keyboard focus and explicitly opened touch help remain available.
+- Native project chrome removes the generic analysis slogan and repeated footer.
+  A matching authored manuscript title remains in the document while its generated
+  sidebar duplicate is suppressed only in reading mode.
+- Current-main manuscript analysis can mark exact counted sentences, words,
+  patterns and quoted speech, with a hover/touch explanation and keyboard/context
+  menu inspection. Evidence shares configured core counters, preserves prose and
+  selection, and reports unmappable/unsupported states explicitly.
+- `profile --layer KEY --evidence` adds literal source evidence; its opt-in JSON
+  schema is `paragraph-layer-evidence/1`. Existing default contracts are unchanged.
+- Wide dossier views keep a bounded heading tree to the right of the reading
+  document; narrow and companion views retain the compact native disclosure.
+- Interface typography uses three shared roles for metadata, controls and body;
+  manuscript prose and technical code retain their distinct reading faces.
 - Analysis uses one selected metric for quiet transparent paragraph emphasis,
   with value/unit/local-reference hints, comparable coverage, clear controls and
   distinct unavailable/zero results. Colour now matches the chapter-relative z

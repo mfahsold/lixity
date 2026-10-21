@@ -78,8 +78,8 @@ def project_header(
     language_name: str = "", engine_name: str = "Lixity",
     *, compact: bool = False, meta: str = "",
 ) -> str:
-    subtitle = label(labels, "app_suffix")
-    if language_name:
+    subtitle = language_name if compact else label(labels, "app_suffix")
+    if language_name and not compact:
         subtitle += " · " + language_name
     return (
         '<header class="project-header">'
@@ -88,7 +88,8 @@ def project_header(
         + product_details(labels) + '</div>')
         + ("" if compact else f'<span class="project-label">{esc(label(labels, "project_name"))}</span>')
         +
-        f'<h1>{esc(title)}</h1><p class="sub">{esc(subtitle)}</p>'
+        f'<h1>{esc(title)}</h1>'
+        + (f'<p class="sub">{esc(subtitle)}</p>' if subtitle else "")
         + (f'<p class="project-meta">{esc(meta)}</p>' if meta else "")
         + ("" if compact else f'<p class="microhint" id="microhint">{esc(label(labels, "hint"))}</p>'
            + license_terms(labels))

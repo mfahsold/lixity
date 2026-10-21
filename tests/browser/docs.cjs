@@ -143,15 +143,6 @@ async function checkReturnNavigation(page, route, exercise) {
     message: `${route || 'home'} leaves the document top before returning`,
   }).toBeGreaterThan(50);
   await returnToTop(page, route);
-  const headingView = await page.locator('h1').evaluate(heading => {
-    const box = heading.getBoundingClientRect();
-    const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
-    const shell = heading.closest('.workspace-shell');
-    return {visible: box.top >= 0 && box.bottom <= innerHeight && heading.contains(hit),
-      top: box.top, bottom: box.bottom, width: innerWidth, height: innerHeight,
-      shellScroll: shell && shell.scrollTop, hit: hit && hit.outerHTML.slice(0, 150)};
-  });
-  assert.equal(headingView.visible, true, `${route} returns to an unobscured heading: ${JSON.stringify(headingView)}`);
   const menuAfter = await navigation.boundingBox();
   for (const dimension of ['x', 'y', 'width', 'height']) {
     assert.ok(Math.abs(menuBefore[dimension] - menuAfter[dimension]) < 1, `${route} keeps its navigation geometry after returning`);
@@ -162,6 +153,22 @@ async function checkReturnNavigation(page, route, exercise) {
     await disclosure.locator('summary').first().click();
     await returnToTop(page, route);
   }
+  // Expanded native controls can move the authored heading below the fold.
+  // Check the normal document after restoring the original disclosure state.
+  const headingView = await page.locator('h1').evaluate(generated => {
+    let heading = generated;
+    if (document.body.matches('.has-source-title.manuscript-reading[data-workspace-view="analysis"]:not(.workbench-overview)')) {
+      heading = document.querySelector('.reader-preface > .reader-heading');
+      if (!heading) throw new Error('The matching authored reader heading is missing');
+    }
+    const box = heading.getBoundingClientRect();
+    const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+    const shell = heading.closest('.workspace-shell');
+    return {visible: box.top >= 0 && box.bottom <= innerHeight && heading.contains(hit),
+      top: box.top, bottom: box.bottom, width: innerWidth, height: innerHeight,
+      shellScroll: shell && shell.scrollTop, hit: hit && hit.outerHTML.slice(0, 150)};
+  });
+  assert.equal(headingView.visible, true, `${route} returns to an unobscured heading: ${JSON.stringify(headingView)}`);
 }
 
 async function assertDemoReadOnly(page) {
@@ -789,7 +796,11 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   // The saved research quotation belongs to the very manuscript being analysed.
   await page.locator('#text-search').fill(demoQuote);
   const passage = page.locator('#chapters .ptext.open').filter({hasText: demoQuote}).first();
-  await expect(passage.locator('p').first()).toContainText(demoQuote);
+  await expect(passage.locator('mark.text-hit')).toHaveText(demoQuote);
+  await expect(page.locator('#text-search-status')).toContainText('1 matching blocks');
+  await expect.poll(() => passage.evaluate(node => node.classList.contains('flash')), {
+    message: 'The manuscript search reaches its marked passage before opening Values',
+  }).toBe(true);
   await openValues(page, passage);
   const inspectedValues = await page.locator('#reader-inspector-body').textContent();
   await page.locator('#style-layer').selectOption('asl');

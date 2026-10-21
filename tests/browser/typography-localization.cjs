@@ -118,6 +118,16 @@ async function textRole(locator) {
           assert.ok(manuscript.size >= body.size, 'Continuous manuscript remains a reading surface');
           assert.notEqual(code.family, body.family, 'Technical values keep their monospace face');
         });
+        await check(`${name} consistent interface type roles`, async () => {
+          const primary = await textRole(page.locator('#tab-view-analysis'));
+          const settings = await textRole(page.locator('.reader-settings > summary'));
+          const adjacent = await textRole(page.locator('#manuscript-analysis-toggle'));
+          const help = await textRole(page.locator('.reader-shortcuts dd').first());
+          assert.equal(primary.size, 14, 'Primary destinations retain control size on narrow screens');
+          assert.equal(settings.size, adjacent.size, 'Adjacent reader commands share a type role');
+          assert.equal(settings.size, 14);
+          assert.equal(help.size, 13, 'Supporting help remains readable and uses one metadata role');
+        });
         await page.locator('#tab-view-research').click();
         await page.locator('#research-tabs').waitFor({state: 'visible'});
         await page.locator('[data-rtab=sources]').click();

@@ -319,6 +319,7 @@ function applyLayer() {
       if (comparable === 0) setFilter(layerOnly, "layer-only", false);
     }
   }
+  document.dispatchEvent(new CustomEvent("lixity:analysis-layer-change"));
 }
 
 if (layerOnly) {

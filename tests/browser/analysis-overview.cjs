@@ -83,7 +83,9 @@ async function pinnedIdentity(page, panel, cellIndex) {
           ? {json: {ok: true, locked: true, records: []}} : {contentType: 'text/html', body: html});
       });
       await page.goto('http://lixity.test/');
-      assert.equal(await page.title(), 'Synthetic analysis overview – ' + await page.locator('.project-header .sub').textContent());
+      assert.equal(await page.title(), 'Synthetic analysis overview – ' +
+        (await page.locator('.workspace-shell .product-name').textContent()).trim(),
+        'Browser history identifies the manuscript and product without repeating an analysis slogan');
       await page.locator('#workbench-overview-open').click();
       const measurements = page.locator('#analysis-measurements');
       assert.equal(await measurements.getAttribute('open'), null, 'Dense measurements initially stay folded');

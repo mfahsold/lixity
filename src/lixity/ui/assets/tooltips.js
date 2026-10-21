@@ -207,7 +207,8 @@
 
   document.addEventListener("focusin", function(e) {
     var el = e.target.closest("[data-help], [data-tip], [title]");
-    if (el) show(el);
+    // Touch can restore button focus without requesting another explanation.
+    if (el && (Date.now() >= touchUntil || e.target.matches(":focus-visible"))) show(el);
   });
   document.addEventListener("focusout", function(e) {
     if (activatedEl && activatedEl.contains(e.target)) activatedEl = null;

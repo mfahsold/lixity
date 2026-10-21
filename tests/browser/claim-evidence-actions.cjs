@@ -134,6 +134,7 @@ server.serve_forever()
       await claims.locator('[data-research-history=claim]').click();
       await expect(page.locator('#research-revision-history-detail')).toContainText('The gate opened.');
       await page.keyboard.press('Escape');
+      await expect(page.locator('#modal-research-revision')).not.toBeVisible();
       const noClaim = page.locator('[data-research-detail=dossier][data-record-id="' + server.fixture.empty_dossier + '"]');
       await noClaim.click();
       await expect(noClaim.locator('..').locator('.research-dossier-claims')).toContainText(labels.research_dossier_claims_empty);

@@ -4,6 +4,7 @@
   var active = document.querySelector(".view-pane.active");
   var value = {view: active ? active.dataset.viewPane : "analysis", analysisVisible: false,
     surface: "document", contextTool: "none", focus: false, transient: null};
+  document.body.dataset.workspaceView = value.view;
   var listeners = [], suspendedTool = "none", suspendedAnalysis = false, focusSnapshot = null;
   function snapshot() { return Object.freeze(Object.assign({}, value)); }
   function dispatch(command) {
@@ -48,6 +49,7 @@
     else return;
     var next = snapshot();
     if (Object.keys(next).every(function(key) { return next[key] === previous[key]; })) return;
+    document.body.dataset.workspaceView = next.view;
     document.body.classList.toggle("workbench-analysis", next.analysisVisible);
     document.body.classList.toggle("workbench-overview", next.surface === "overview");
     document.body.classList.toggle("reader-focus", next.focus && next.view === "analysis");

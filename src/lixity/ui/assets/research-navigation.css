@@ -9,6 +9,9 @@
 .research-navigation-control { flex: 0 0 auto; min-width: 2.5rem; min-height: 2.5rem; }
 .research-navigation-control[hidden] { display: none; }
 .research-tab-pane:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+#research-revision-history-list { margin-bottom: var(--space-3); }
+#research-revision-history-list .ctl { padding: .35rem .6rem; }
+.research-revision-provenance { margin-top: 0; overflow-wrap: anywhere; }
 @media (pointer: coarse) {
   .research-navigation-control { min-width: 2.75rem; min-height: 2.75rem; }
 }

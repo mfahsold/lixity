@@ -187,6 +187,28 @@ selects rows after full references/counts are computed, without renumbering.
 Without `--json`, the selected-layer CLI prints a source-anchored human report.
 Chapter/FDR thresholds are different policies and are not changed by this view.
 
+`profile --layer KEY --evidence --json` adds a separate opt-in
+`meta.schema_version: "paragraph-layer-evidence/1"`. Its selected rows add
+`evidence` with `schema_version: "paragraph-evidence/1"`,
+`paragraph_sha256`, `offset_unit: "unicode_codepoint"` and `layers`.
+Offsets refer to the exact displayed `ParagraphProfile.text`, with an exclusive
+end; they are not byte offsets or JavaScript UTF-16 positions. Each layer has
+`status`, `kind`, `count`, `mapped_count` and `spans`, whose entries contain
+`start`, `end`, `count`. ASL entries additionally report `words` from the same
+configured tokenizer. Units differ: ASL counts sentences, dialogue counts quoted
+words, lexical layers count configured tokens or pattern matches. A span is
+counted evidence, not a statistical judgment about that individual word.
+
+`available` means all counted contributions map; `partial` preserves the mapped
+subset; `unavailable` supplies no invented range. Optional stable `reason` codes
+explain unmapped contributions. When source profiles cannot be verified,
+`source_mismatch` uses `count: null` for an unknown count, never a measured zero.
+The current inline-count/display
+projection may report `inline_mapping_unavailable`. Zero-width matches remain in
+the metric count but cannot form highlights. No prose is added to JSON.
+`--evidence` requires `--layer`; default schema 2 and the existing
+`paragraph-layer/1` projection remain unchanged.
+
 ### 3.2 `style --json` (style reference, schema_version 4)
 
 Integer `measured_cells` reports the number of chapter–feature cells

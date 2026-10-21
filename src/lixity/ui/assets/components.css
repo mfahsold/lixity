@@ -553,3 +553,6 @@ dialog.lixity-modal::backdrop {
 @media (prefers-reduced-motion: reduce) {
   :where(.research-composer, .settings-advanced, .research-details, .workspace-actions, .site-page details) > summary::before { transition: none; }
 }
+
+/* Native summaries used as commands follow the same type role as buttons. */
+summary.ctl { font-family: var(--font); font-size: var(--text-control); line-height: var(--line-control); }

@@ -7,11 +7,11 @@ and switches between consecutive paragraphs, and tracks paragraph-level style de
 from dataclasses import dataclass
 from typing import Any
 
-from .language import compile_pattern, compile_word_pattern, count_nominal_matches, resolve_language
+from .language import compile_pattern, resolve_language
 from .markdown_parser import counting_inline_text, strip_inline_markup
 from .math_core import per_mille
 from .models import CorpusConfig
-from .sentences import split_sentences
+from .paragraph_evidence import ParagraphEvidence, ParagraphMatcher
 from .status import (
     FLAG_MIN_SEVERITY,
     TENSE_MIXED,
@@ -198,23 +198,14 @@ class ParagraphProfiler:
         self.lang = resolve_language(self.config, sample_text=sample_text)
         self._praes = compile_pattern(self.lang.praesens_regex)
         self._praet = compile_pattern(self.lang.praeteritum_regex)
-        self._dialogue = compile_pattern(self.lang.dialogue_regex)
-        self._word = compile_word_pattern(self.lang.word_regex)
+        self._matcher = ParagraphMatcher(self.config, self.lang)
         self._appendix_title = self.config.appendix_marker.replace("##", "").strip()
-        # Style densities per paragraph (house-style overlay, per 1,000 words)
-        self._filter = compile_pattern(self.lang.filter_verbs_regex)
-        self._passive = compile_pattern(self.lang.passive_regex)
-        self._nominal = compile_pattern(self.lang.nominal_regex)
-        self._nominal_exclusions = (
-            self.lang.function_words if self.config.nominal_regex is None else frozenset()
-        )
-        self._modals = frozenset(w.lower() for w in self.lang.lexicon.get("modals", ()))
 
     def _dominant(self, present: int, past: int) -> str:
         return dominance_from_hits(present, past, self.thresholds.neutral_max_hits)
 
     def profile_blocks(
-        self, blocks: list[dict[str, Any]]
+        self, blocks: list[dict[str, Any]], *, evidence: dict[int, ParagraphEvidence] | None = None,
     ) -> tuple[list[ParagraphProfile], list[ChapterProfile]]:
         """Builds paragraph and chapter profiles from semantic blocks (with line anchors)."""
         paragraphs: list[ParagraphProfile] = []
@@ -293,11 +284,12 @@ class ParagraphProfiler:
 
             clean = counting_inline_text(raw_text)
 
-            words = len(self._word.findall(clean))
+            counts = self._matcher.count(clean)
+            words = counts.words
             # Mirror the chapter metric: a fragment without word tokens is
             # not a sentence, and a resolved auto language picks its own
             # abbreviation table.
-            sentences = [s for s in split_sentences(clean, self.lang.key) if self._word.findall(s)]
+            sentences = counts.sentences
             present = len(self._praes.findall(clean))
             past = len(self._praet.findall(clean))
             dominant = self._dominant(present, past)
@@ -313,21 +305,18 @@ class ParagraphProfiler:
 
             severity = classify_severity(switch, mixed, min(present, past), self.thresholds)
 
-            dialogue_words = sum(len(self._word.findall(m)) for m in self._dialogue.findall(clean))
+            dialogue_words = counts.dialogue
             dialogue_pct = (dialogue_words / words * 100.0) if words else 0.0
-            tokens = [t.lower() for t in self._word.findall(clean)]
             function_word_pct = (
-                sum(1 for t in tokens if t in self.lang.function_words) / len(tokens) * 100.0
-                if tokens
+                counts.function / words * 100.0
+                if words
                 else 0.0
             )
 
-            filter_density = per_mille(len(self._filter.findall(clean)), words)
-            modal_density = per_mille(sum(1 for t in tokens if t in self._modals), words)
-            nominal_density = per_mille(
-                count_nominal_matches(clean, self._nominal, self._nominal_exclusions), words
-            )
-            passive_density = per_mille(len(self._passive.findall(clean)), words)
+            filter_density = per_mille(counts.filter, words)
+            modal_density = per_mille(counts.modal, words)
+            nominal_density = per_mille(counts.nominal, words)
+            passive_density = per_mille(counts.passive, words)
 
             profile = ParagraphProfile(
                 chapter_num=chapter_num,
@@ -353,6 +342,8 @@ class ParagraphProfiler:
                 text=display_text,
                 flag_min=self.thresholds.flag_min_severity,
             )
+            if evidence is not None:
+                evidence[len(paragraphs)] = self._matcher.evidence(clean, display_text, counts)
             paragraphs.append(profile)
             chapter_paragraphs.append(profile)
             chapter_end = block.get("end_line", chapter_end)

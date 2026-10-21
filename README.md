@@ -65,12 +65,12 @@ does not update an already running service.
   recording consent or signatures; dossier Markdown edits require explicit preview
   and apply. See [export and project limits](https://mfahsold.github.io/lixity/USAGE.md).
 
-The workspace keeps the short **Manuscript**, **Research** and **Project** view
-names. The browser app, CLI and Python API share one analysis pipeline;
+The browser app, CLI and Python API share one analysis pipeline;
 `lixity --help` and `lixity about --json` describe installed capabilities.
 
-On current main, selected paragraph metrics have transparent emphasis and
-source-anchored CLI output (`lixity profile --layer asl`). Dossier headings and
+On current main, selected paragraph metrics mark counted text directly, with
+hover/context-menu explanations and source-anchored CLI evidence
+(`lixity profile --layer asl --evidence`). Dossier headings and
 exact decision/dossier review stay within the existing navigation; declared
 register/POV filters change the style table’s display while retaining its book
 reference. These additions are Unreleased; see the [usage guide](https://mfahsold.github.io/lixity/USAGE.md).

@@ -1,6 +1,6 @@
 # Finding tense switches in a novel — and deciding which ones matter
 
-Posted 15 October 2026 · 6 minutes · [All articles](index.html)
+Posted 15 October 2026 · 6 minutes
 
 ## A tense break is rarely a typo
 

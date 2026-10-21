@@ -2,6 +2,9 @@ const {launchChromium} = require('./browser_tools.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
+// Loopback is a trustworthy context for Web Crypto, just like the native app.
+// Every request to this synthetic origin is intercepted; no server is contacted.
+const CAPTURE_ORIGIN = 'http://localhost:41737';
 
 async function main() {
   const captures = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
@@ -22,7 +25,7 @@ async function main() {
       assert.equal(url.search, '');
       await route.continue();
     });
-    await target.route('http://lixity-screenshots.test/**', async route => {
+    await target.route(CAPTURE_ORIGIN + '/**', async route => {
       const url = new URL(route.request().url());
       const resource = researchFixture[url.pathname + url.search];
       if (url.pathname === '/api/research/image' && resource && resource.asset_path) {
@@ -131,7 +134,9 @@ async function main() {
     async function open(source, width, height, colorScheme = 'light') {
       await page.setViewportSize({width, height});
       await page.emulateMedia({colorScheme});
-      await page.goto('http://lixity-screenshots.test/' + path.basename(source));
+      await page.goto(CAPTURE_ORIGIN + '/' + path.basename(source));
+      assert.ok(await page.evaluate(() => isSecureContext && !!globalThis.crypto?.subtle),
+        'Screenshot origin must support native text-identity verification');
       await settle();
       assert.ok((await page.title()).length || await page.locator('body').innerText(), 'Capture document is not blank');
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Capture page must not overflow horizontally');
@@ -182,6 +187,11 @@ async function main() {
         });
       } else await page.evaluate(() => window.scrollTo({top: 0, behavior: 'instant'}));
       await settle();
+      if (path.basename(target) === 'dashboard-layer.png') {
+        await page.waitForFunction(() =>
+          CSS.highlights?.get('lixity-analysis-evidence')?.size > 0 &&
+          document.getElementById('analysis-evidence-status')?.textContent === '');
+      }
       const job = captures.find(item => item.target === target) || {};
       const options = {path: target, animations: 'disabled'};
       if (selector) {
@@ -285,7 +295,11 @@ async function main() {
         await page.locator('#style-layer').selectOption('asl');
         assert.equal(await page.locator('#layer-legend').isVisible(), true);
         assert.ok(await page.locator('#ch-1 .ptext.metric-notable').count() > 0);
-        await captureThrough(capture, '#workspace-reader-layout', '#ch-1');
+        // Frame a complete passage excerpt, not offscreen prose whose lazy
+        // evidence correctly waits until it enters the reading viewport.
+        const passages = page.locator('#ch-1 .ptext');
+        await captureThrough(capture, '#workspace-reader-layout',
+          passages.nth(Math.min(2, await passages.count() - 1)));
         await save(capture.target, '#workspace-reader-layout');
       } else if (name === 'dashboard-welcome.png') {
         await selectView('research');
@@ -502,7 +516,7 @@ async function main() {
           });
         }), 'Walkthrough captions must not obscure task actions during interaction');
       };
-      await page.goto('http://lixity-screenshots.test/' + path.basename(capture.source));
+      await page.goto(CAPTURE_ORIGIN + '/' + path.basename(capture.source));
       if (flow !== 'research-timeline' && await page.locator('#workbench-overview-open').count()) {
         await page.locator('#tab-view-analysis').click();
         if (flow === 'editorial-loop') await page.locator('#workbench-overview-open').click();

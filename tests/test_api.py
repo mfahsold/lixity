@@ -126,6 +126,11 @@ class TestApiFacade(unittest.TestCase):
         markup = re.sub(r"<(script|style)\b.*?</\1>", "", html, flags=re.S)
         self.assertNotIn("http://", markup)
 
+    def test_static_dashboard_does_not_advertise_native_evidence_controls(self):
+        document = api.dashboard("## Example\n\nI think I can wait.", project_config={})
+        self.assertNotIn('id="analysis-evidence-enabled"', document)
+        self.assertNotIn('"schema_version":"paragraph-evidence/1"', document)
+
     def test_dashboard_flag_min_severity_selectable(self):
         from lixity.analyzer import CorpusAnalyzer
         from lixity.markdown_parser import parse_markdown_blocks
@@ -179,6 +184,10 @@ class TestApiFacade(unittest.TestCase):
         self.assertEqual(projection["choices"], list(LAYER_FEATURES))
         self.assertEqual(projection["schema_version"], "paragraph-layer/1")
         self.assertEqual(projection["only_notable_requires"], "--layer")
+        self.assertEqual(projection["evidence_requires"], "--layer")
+        self.assertEqual(projection["evidence_schema_version"], "paragraph-layer-evidence/1")
+        self.assertEqual(projection["span_schema_version"], "paragraph-evidence/1")
+        self.assertEqual(projection["offset_unit"], "unicode_codepoint")
 
     def test_exact_hd_d_matches_chapter_and_corpus_without_invented_se(self):
         text = "## Chapter\n\n" + "echo " * 100

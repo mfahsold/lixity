@@ -23,6 +23,16 @@ for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
           'manuscript_pdf_token': 'synthetic-manuscript', 'research_context_token': 'synthetic-root'})
     render.__globals__['render_dashboard'] = localized
     fixtures[locale] = render()
+original_sample = render.__globals__['SAMPLE']
+render.__globals__['SAMPLE'] += '\\n\\n## Reading continuity\\n\\n' + '\\n\\n'.join(
+    'Synthetic paragraph %d. ' % number + 'A quiet garden gives this scene a place to continue. ' * 6
+    for number in range(40))
+continuity_labels = {**get_language_profile('en').labels, **WORKSPACE_LABELS['en']}
+render.__globals__['render_dashboard'] = lambda *args, **kwargs: original(*args, **{**kwargs,
+    'labels': continuity_labels, 'language_key': 'en', 'enabled_actions': ['analyze', 'research-reader'],
+    'manuscript_pdf_token': 'synthetic-manuscript', 'research_context_token': 'synthetic-root'})
+fixtures['continuity'] = render()
+render.__globals__['SAMPLE'] = original_sample
 render.__globals__['render_dashboard'] = lambda *args, **kwargs: original(*args, **{**kwargs, 'controls': False})
 fixtures['report'] = render()
 print(json.dumps(fixtures))
@@ -40,6 +50,37 @@ async function indicatorAtCurrent(nav, horizontal=false) {
   return Math.max(Math.abs(b.x+b.width/2-(horizontal?a.x+a.width/2:a.x-9)),
     Math.abs(b.y+b.height/2-(horizontal?a.bottom-2:a.y+a.height/2)));
  },horizontal)).toBeLessThan(1);
+}
+async function wideOutline(page, host) {
+ const contents=host.locator('[data-section-contents]'), notes=host.locator('.research-folder-notes');
+ await notes.evaluate(node=>node.scrollIntoView());
+ await settle(page);
+ const before=await host.evaluate(node=>({
+  contents:node.querySelector('[data-section-contents]').getBoundingClientRect().toJSON(),
+  document:node.querySelector('.research-folder-notes').getBoundingClientRect().toJSON(),
+  scroll:scrollY,viewport:innerHeight
+ }));
+ assert.ok(before.contents.x>=before.document.right+8,
+  `The full heading tree must sit to the RIGHT of the reading document: ${JSON.stringify(before)}`);
+ assert.ok(before.document.width>=384,'The outline leaves readable center-column width');
+ assert.ok(before.contents.y>=0 && before.contents.bottom<=before.viewport,
+  'The complete navigation viewport fits vertically beside the document');
+ await page.evaluate(()=>scrollBy(0,300));
+ await settle(page);
+ const after=await host.evaluate(node=>({
+  contents:node.querySelector('[data-section-contents]').getBoundingClientRect().toJSON(),
+  document:node.querySelector('.research-folder-notes').getBoundingClientRect().toJSON(),scroll:scrollY
+ }));
+ assert.ok(after.scroll-before.scroll>=299,'The middle document actually scrolls');
+ assert.ok(Math.abs(after.contents.y-before.contents.y)<2,'The right tree stays sticky while the middle document scrolls');
+ assert.ok(before.document.y-after.document.y>=299,'The document moves independently of its right tree');
+ await page.screenshot({path:path.join(artifacts,`right-outline-${await page.locator('html').getAttribute('lang')}-${await page.evaluate(()=>innerWidth)}.png`)});
+ await expect(host.locator('[data-section-location]')).not.toBeVisible();
+ await contents.locator('summary').click();
+ await expect(contents).not.toHaveAttribute('open','');
+ await contents.locator('summary').click();
+ await expect(contents).toHaveAttribute('open','');
+ await indicatorAtCurrent(contents.locator('[data-section-nav]'));
 }
 async function mappedLifecycle(page, detail) {
  await page.locator('#tab-view-research').click();
@@ -76,6 +117,7 @@ async function mappedLifecycle(page, detail) {
  await nav.locator(`[data-section-link="${summaryId}"]`).click();
  await expect(block).toHaveAttribute('open','');
  await indicatorAtCurrent(nav);
+ await expect(block.locator('summary')).toHaveClass(/\bflash\b/);
  await page.emulateMedia({reducedMotion:'no-preference'});
  // Manual root scrolling exercises current-state changes without a second navigation owner.
  await host.locator('.research-folder-citations').evaluate(node=>node.scrollIntoView());
@@ -103,12 +145,146 @@ async function mappedLifecycle(page, detail) {
  await nav.locator(`[data-section-link="${notesId}"]`).click();
  await expect(notes).toBeInViewport();
 }
+async function longOutline(page, detail) {
+ await page.setViewportSize({width:1440,height:950});
+ await page.locator('#tab-view-research').click();
+ await page.evaluate(detail=>{
+  const body=Array.from({length:90},(_,n)=>`## ${n}. Wrapped heading <img src=x> with a deliberate repeated name\n\n`+
+   `Synthetic paragraph ${n}. `+'Independent reading notes. '.repeat(24)).join('\n\n');
+  const host=document.getElementById('synthetic-full-dossier');
+  const long={...detail,body};host.innerHTML=researchDossierDetailHtml(long);enhanceResearchDossierClaims(host,long);
+ },detail);
+ const host=page.locator('#synthetic-full-dossier'), contents=host.locator('[data-section-contents]'), nav=contents.locator('nav');
+ await expect(nav.locator('[data-section-link]')).toHaveCount(93);
+ await expect(host.locator('.research-dossier-claims')).not.toHaveAttribute('aria-busy','true');
+ const requestedScroll=await host.locator('.research-folder-citations').evaluate(node=>{node.scrollIntoView();return scrollY;});
+ await expect(nav.locator('[aria-current=true]')).toHaveAttribute('data-section-link',await host.locator('.research-folder-citations').getAttribute('id'));
+ const activeBounds=()=>contents.evaluate(node=>{
+  const viewport=node.querySelector('nav').getBoundingClientRect(), active=node.querySelector('[aria-current=true]').getBoundingClientRect();
+  return {visible:active.top>=viewport.top && active.bottom<=viewport.bottom,
+   viewport:viewport.toJSON(),active:active.toJSON(),scroll:node.querySelector('nav').scrollTop,
+   height:node.querySelector('nav').scrollHeight,available:node.style.getPropertyValue('--outline-available-height'),
+   position:getComputedStyle(node).position};
+ });
+ await expect.poll(activeBounds,{message:'Passive document scrolling keeps the current heading visible inside the bounded right tree'})
+  .toMatchObject({visible:true}).catch(async error=>{console.error('Long outline bounds: '+JSON.stringify(await activeBounds()));throw error;});
+ assert.equal(await page.evaluate(()=>scrollY),requestedScroll,'Revealing the active outline row never scrolls the reading document');
+ await indicatorAtCurrent(nav);
+ const orientation=await contents.evaluate(node=>({outline:node.getBoundingClientRect().toJSON(),
+  summary:node.querySelector('summary').getBoundingClientRect().toJSON(),scroll:node.scrollTop,
+  position:getComputedStyle(node.querySelector('summary')).position,viewport:innerHeight}));
+ assert.ok(orientation.summary.y>=0&&orientation.summary.bottom<=orientation.viewport&&
+  orientation.summary.y>=orientation.outline.y&&orientation.summary.bottom<=orientation.outline.bottom,
+  `Native Sections close/reopen stays reachable above the bounded tree: ${JSON.stringify(orientation)}`);
+ await expect.poll(()=>nav.evaluate(node=>node.scrollHeight>node.clientHeight&&node.clientHeight<=innerHeight)).toBe(true);
+ await contents.locator('summary').click();
+ await expect(contents).not.toHaveAttribute('open','');
+ await contents.locator('summary').click();
+ await expect(contents).toHaveAttribute('open','');
+ const last=nav.locator('[data-section-link]').last();
+ await last.focus();await page.keyboard.press('Enter');
+ await expect(nav.locator('[aria-current=true]')).toHaveAttribute('data-section-link',await host.locator('.research-folder-citations').getAttribute('id'));
+ await page.screenshot({path:path.join(artifacts,'right-outline-long-1440.png')});
+ assert.equal(await host.locator('img').count(),0,'Authored heading markup stays inert');
+ await host.locator('.research-dossier-body-rendered p').first().evaluate(node=>{
+  window.retainedDossierProse=node;window.retainedDossierText=node.textContent;
+  const text=node.firstChild;getSelection().setBaseAndExtent(text,12,text,2);
+  window.retainedDossierSelection={anchor:text,anchorOffset:12,focus:text,focusOffset:2,quote:getSelection().toString()};
+ });
+ for(const width of [1024,390,320,1440]) {
+  await page.setViewportSize({width,height:900});
+  for(const phase of ['immediate','settled']) {
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`${phase} long contents fit at ${width}`);
+   await settle(page);
+  }
+  assert.equal(await host.evaluate(node=>node.querySelector('.research-dossier-body-rendered p')===window.retainedDossierProse&&
+   window.retainedDossierProse.textContent===window.retainedDossierText),true,'Responsive placement preserves the accepted prose node');
+  assert.equal(await page.evaluate(()=>{const s=getSelection(), saved=window.retainedDossierSelection;
+   return s.anchorNode===saved.anchor&&s.anchorOffset===saved.anchorOffset&&s.focusNode===saved.focus&&
+    s.focusOffset===saved.focusOffset&&s.toString()===saved.quote;}),true,'Responsive placement preserves backward native selection');
+  if(width<1024) {
+   await expect(host.locator('[data-section-location]')).toBeVisible();
+   assert.equal(await contents.evaluate(node=>getComputedStyle(node).position),'static','Narrow outlines keep native compact flow');
+  }
+ }
+ await page.evaluate(()=>document.documentElement.style.fontSize='200%');
+ await settle(page);
+ await expect(host.locator('[data-section-location]')).toBeVisible();
+ assert.equal(await contents.evaluate(node=>getComputedStyle(node).position),'static','200% text zoom falls back before the document becomes cramped');
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'200% text zoom retains page bounds');
+ await page.screenshot({path:path.join(artifacts,'right-outline-text-zoom-200.png')});
+ await page.evaluate(()=>document.documentElement.style.removeProperty('font-size'));
+}
+async function companionOverviewReturn(browser, motion) {
+ const page=await browser.newPage({viewport:{width:320,height:900},reducedMotion:motion});
+ const detail={...dossier,body:'## Garden\n\nA saved synthetic note.',sections:['Garden']};
+ const errors=[], writes=[];
+ let hold=false, notifyHeld, release;
+ page.on('pageerror',error=>errors.push(error.message));
+ await page.route('http://lixity.test/**',route=>{
+  const url=new URL(route.request().url());
+  if(route.request().method()!=='GET') writes.push(url.pathname);
+  if(url.pathname==='/api/research/dossiers') {
+   const json=url.searchParams.has('id')?{ok:true,...detail}:{ok:true,project_id:detail.project_id,dossiers:[detail]};
+   if(hold&&url.searchParams.has('id')) {
+    hold=false;
+    return new Promise(resolve=>{release=()=>route.fulfill({json}).then(resolve);notifyHeld();});
+   }
+   return route.fulfill({json});
+  }
+  if(url.pathname.startsWith('/api/')) return route.fulfill({json:{ok:true,initialized:true,
+   project_id:detail.project_id,snapshot:detail.snapshot,records:[],sources:[],dossiers:[detail],
+   claims:[],decisions:[],candidates:[],links:[]}});
+  return route.fulfill({contentType:'text/html',body:fixtures.continuity});
+ });
+ await page.goto('http://lixity.test/');
+ await page.locator('#tab-view-analysis').click();
+ await page.locator('#manuscript-analysis-toggle').click();
+ await page.locator('#workspace-reader-toggle').click();
+ await expect(page.locator('#workspace-reader-dossier')).toBeEnabled();
+ await page.locator('#workspace-reader-dossier').selectOption(detail.id);
+ await page.locator('#workspace-reader-body h3').waitFor();
+ for(const action of ['back','off']) {
+  await page.locator('#chapters .ptext').nth(25).scrollIntoViewIfNeeded();
+  await settle(page);
+  const origin=await page.evaluate(()=>{
+   const anchor=LixityReader.capture();window.returnedSectionPanel=anchor.panel;
+   return {id:anchor.panel.id,top:anchor.top,text:anchor.panel.textContent};
+  });
+  await page.locator('#workbench-overview-open').click();
+  await page.locator('#analysis-sections [data-section-link]').last().click();
+  const held=new Promise(resolve=>{notifyHeld=resolve;hold=true;});
+  await page.locator(action==='back'?'#workbench-overview-back':'#manuscript-analysis-toggle').click();
+  await held;
+  await settle(page);
+  const top=()=>page.locator('#'+origin.id).evaluate(node=>node.getBoundingClientRect().top);
+  assert.ok(Math.abs(await top()-origin.top)<=2,'Overview return restores the passage while the resumed dossier response is held');
+  const pendingHeight=await page.locator('#workspace-context-panel').evaluate(node=>node.getBoundingClientRect().height);
+  await release();
+  await page.locator('#workspace-reader-body h3').waitFor();
+  await expect(page.locator('#workspace-reader-panel')).toHaveAttribute('aria-busy','false');
+  await settle(page);
+  assert.ok(await page.locator('#workspace-context-panel').evaluate(node=>node.getBoundingClientRect().height)>pendingHeight,
+   'The released dossier actually grows the compact dock above the manuscript');
+  const returnedTop=await top();
+  assert.ok(Math.abs(returnedTop-origin.top)<=2,
+   `${motion}/${action}: the resumed compact dossier must preserve the original passage after its asynchronous height change (${origin.top} → ${returnedTop})`);
+  assert.equal(await page.locator('#'+origin.id).evaluate((node,text)=>node===window.returnedSectionPanel&&node.textContent===text,origin.text),true,
+   'Companion outline presentation retains the exact manuscript node and content');
+  assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'),String(action==='back'));
+  await expect(page.locator('#workspace-reader-panel')).toBeVisible();
+ }
+ assert.deepEqual(errors,[]);assert.deepEqual(writes,[]);
+ await page.close();
+ console.log(`Compact dossier resumed-response returns passed with ${motion} motion`);
+}
 (async () => {
  const browser = await launchChromium();
  try {
+  for(const motion of ['reduce','no-preference']) await companionOverviewReturn(browser,motion);
   const cases = process.env.SECTION_NAV_SMOKE==='touch' ? [['en',320,480,'no-preference',true]] :
     process.env.SECTION_NAV_SMOKE ? [[ 'en', process.env.SECTION_NAV_SMOKE==='mobile'?320:1440, process.env.SECTION_NAV_SMOKE==='mobile'?480:950, 'reduce']] :
-    Object.keys(fixtures).filter(locale=>locale!=='report').flatMap(locale => [[1440,950],[1024,900],[390,900],[320,480]].map(([w,h]) => [locale,w,h,'reduce']))
+    Object.keys(fixtures).filter(locale=>!['report','continuity'].includes(locale)).flatMap(locale => [[1440,950],[1024,900],[390,900],[320,480]].map(([w,h]) => [locale,w,h,'reduce']))
       .concat([['en',1440,950,'no-preference'],['en',320,480,'no-preference',true]]);
   for (const [locale,width,height,motion,touch=false] of cases) {
    const page = await browser.newPage({viewport:{width,height},reducedMotion:motion,hasTouch:touch});
@@ -207,7 +383,8 @@ async function mappedLifecycle(page, detail) {
     await location.click();
    }
    const ids=targets.map(target=>target.id);
-   const accepted = await folder.evaluate(node=>{window.syntheticAcceptedFolder=node; return Array.from(node.querySelectorAll(":scope > section")).map(section=>section.textContent);});
+   const accepted = await folder.evaluate(node=>{window.syntheticAcceptedFolder=node; return Array.from(node.querySelectorAll(".research-dossier-document > section")).map(section=>section.textContent);});
+   assert.ok(accepted.length>=3,'The accepted source snapshot includes Notes, Claims and Citations');
    // Another accepted rendering of the same record cannot steal these anchors.
    await page.evaluate(detail=>{
     const host=document.createElement('div');host.id='synthetic-full-dossier';
@@ -220,12 +397,16 @@ async function mappedLifecycle(page, detail) {
    const full=page.locator('#synthetic-full-dossier');
    const fullDisclosure=full.locator('[data-section-contents]');
    if(width<=900) await fullDisclosure.locator('summary').click();
+   if(width>=1024) await wideOutline(page,full);
    await full.locator('[data-section-link]').last().click();
    await expect(full.locator('[aria-current=true]')).toHaveAttribute('data-section-link',await full.locator('.research-folder-citations').getAttribute('id'));
-   await expect(full.locator('[data-section-location]')).toBeInViewport();
-   const fullArrival=await full.evaluate(host=>({bar:host.querySelector('[data-section-location]').getBoundingClientRect().toJSON(),
-     target:host.querySelector('.research-folder-citations').getBoundingClientRect().toJSON()}));
-   assert.ok(fullArrival.bar.y>=0 && fullArrival.target.y>=fullArrival.bar.bottom-1,'Window-root arrival clears exactly one compact bar');
+   await indicatorAtCurrent(full.locator('[data-section-nav]'));
+   if(width<1024) {
+    await expect(full.locator('[data-section-location]')).toBeInViewport();
+    const fullArrival=await full.evaluate(host=>({bar:host.querySelector('[data-section-location]').getBoundingClientRect().toJSON(),
+      target:host.querySelector('.research-folder-citations').getBoundingClientRect().toJSON()}));
+    assert.ok(fullArrival.bar.y>=0 && fullArrival.target.y>=fullArrival.bar.bottom-1,'Window-root arrival clears exactly one compact bar');
+   }
 
    if(locale==='en' && width===1440 && motion==='reduce') {
     await fullDisclosure.locator('summary').click();
@@ -240,8 +421,11 @@ async function mappedLifecycle(page, detail) {
    await page.locator('#tab-view-analysis').click();
    assert.deepEqual(await nav.locator('[data-section-link]').evaluateAll(nodes=>nodes.map(n=>n.dataset.sectionLink)),ids,'View return preserves accepted targets');
    assert.equal(await folder.evaluate(node=>node===window.syntheticAcceptedFolder),true);
-   assert.deepEqual(await folder.locator(":scope > section").allTextContents(),accepted);
-   if(locale==='en' && width===1440 && motion==='reduce') await mappedLifecycle(page, dossier);
+   assert.deepEqual(await folder.locator(".research-dossier-document > section").allTextContents(),accepted);
+   if(locale==='en' && width===1440 && motion==='reduce') {
+    if(process.env.SECTION_NAV_SMOKE!=='outline') await mappedLifecycle(page, dossier);
+    await longOutline(page,dossier);
+   }
    await settle(page);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
    assert.deepEqual(errors,[]);assert.deepEqual(writes,[]);

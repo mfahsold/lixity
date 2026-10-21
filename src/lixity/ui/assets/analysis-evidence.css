@@ -1,0 +1,44 @@
+/* Native highlights leave prose, source anchors, selection and existing marks intact. */
+::highlight(lixity-analysis-evidence) {
+  background-color: color-mix(in srgb, var(--accent) 23%, transparent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 1px;
+}
+::highlight(lixity-analysis-current) {
+  background-color: color-mix(in srgb, var(--accent) 36%, transparent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+}
+.analysis-evidence-card {
+  position: fixed;
+  z-index: 220;
+  box-sizing: border-box;
+  width: min(25rem, calc(100vw - 16px));
+  max-height: min(32rem, calc(100dvh - 16px));
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--fg);
+  box-shadow: var(--shadow-lift);
+  font: var(--text-control)/var(--line-compact) var(--font);
+  overflow-wrap: anywhere;
+}
+.analysis-evidence-card[hidden] { display: none; }
+.analysis-evidence-heading, .analysis-evidence-actions { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.analysis-evidence-heading { align-items: start; }
+.analysis-evidence-card p { margin: var(--space-2) 0; font: inherit; }
+.analysis-evidence-card blockquote { margin: var(--space-3) 0; padding: 0 0 0 var(--space-3); border-left: 2px solid var(--accent); color: var(--fg); }
+.analysis-evidence-card .ctl { min-height: 44px; white-space: normal; flex-shrink: 0; max-width: 65%; }
+.analysis-evidence-actions { flex-wrap: wrap; }
+.analysis-evidence-guide { margin-block: var(--space-2); }
+.analysis-evidence-guide summary { cursor: pointer; min-height: 44px; display: list-item; padding-block: var(--space-3); box-sizing: border-box; }
+.analysis-evidence-value { font-weight: var(--weight-semibold); }
+@media (forced-colors: active) {
+  ::highlight(lixity-analysis-evidence), ::highlight(lixity-analysis-current) { background-color: Highlight; color: HighlightText; text-decoration-color: HighlightText; }
+  .analysis-evidence-card { border: 2px solid CanvasText; box-shadow: none; }
+}

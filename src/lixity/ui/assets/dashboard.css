@@ -54,9 +54,9 @@ h1 {
 .research-dossier-claims-list > li { display: grid; gap: var(--space-2); padding-block: var(--space-3); border-top: 1px solid var(--line); overflow-wrap: anywhere; }
 .research-dossier-claims-list strong, .research-dossier-claims-list code { min-width: 0; overflow-wrap: anywhere; white-space: normal; }
 .research-dossier-folder { display: grid; gap: var(--space-4); min-width: 0; }
-.research-dossier-folder > section { min-width: 0; padding-block-start: var(--space-3); border-top: 1px solid var(--line); }
-.research-dossier-folder > section > h4 { margin-block: 0 var(--space-3); }
-.research-dossier-folder > nav { align-items: center; }
+.research-dossier-document > section { min-width: 0; padding-block-start: var(--space-3); border-top: 1px solid var(--line); }
+.research-dossier-document > section > h4 { margin-block: 0 var(--space-3); }
+.research-dossier-document > nav { align-items: center; }
 .settings-form .settings-actions { margin-top: 0; }
 .panel-guide { max-width: 78ch; font-size: var(--text-small); color: var(--muted); line-height: 1.65; margin: .6rem 0 1rem; }
 .matrix-tools { justify-content: space-between; margin-bottom: .9rem; font-size: var(--text-small); }
@@ -1775,7 +1775,7 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
 }
 @media (max-width: 480px) {
   .view-navigation { gap: var(--space-1); }
-  .view-nav-tab { padding: var(--space-2); font-size: var(--text-small); }
+  .view-nav-tab { padding: var(--space-2); font-size: var(--text-control); }
   .view-nav-icon { display: none; }
 }
 
@@ -2043,7 +2043,7 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
 /* Primary destinations remain reachable when project chrome is collapsed.
    Loaded-state chrome uses the rendered class: a body :has query over mutable
    prose invalidates the whole book during paragraph enhancement on mobile. */
-.navigation-collapsed .view-nav-tab { white-space: normal; overflow-wrap: anywhere; font-size: var(--text-note); padding: .6rem .3rem; }
+.navigation-collapsed .view-nav-tab { white-space: normal; overflow-wrap: anywhere; font-size: var(--text-control); padding: .6rem .3rem; }
 @media screen and (max-width: 1099px) {
   .lixity-workspace.has-reading .workspace-shell { gap: .6rem; }
   .lixity-workspace.has-reading .project-header { gap: .35rem; margin-bottom: 0; }
@@ -2052,7 +2052,7 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
   .lixity-workspace.has-reading .project-header .sub { display: none; }
   .lixity-workspace.has-reading .workspace-bar { padding: .4rem 0; }
   .lixity-workspace.has-reading .workspace-bar > .row { gap: .35rem; }
-  .lixity-workspace.has-reading .workspace-bar .ctl { padding: .35rem .5rem; font-size: var(--text-note); }
+  .lixity-workspace.has-reading .workspace-bar .ctl { padding: .35rem .5rem; font-size: var(--text-control); }
 }
 
 /* Reading controls are adjacent tools; repeated section spacing should not
@@ -2061,3 +2061,12 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
 
 /* Ordinary counts are available in their views; warnings stay visible at every width. */
 .lixity-workspace .status-strip:not(:has(.warn, .error, .unknown)):not(#dashboard-freshness) { display: none; }
+
+/* Public demo builders insert reviewed credits at this retained footer hook. */
+footer:empty { display: none; }
+
+/* Authored document headings stay intact; suppress only matching generated chrome. */
+.manuscript-reading.has-source-title[data-workspace-view="analysis"]:not(.workbench-overview) .workspace-shell .project-header h1 {
+  position: absolute; width: 1px; height: 1px; margin: 0; padding: 0; border: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}

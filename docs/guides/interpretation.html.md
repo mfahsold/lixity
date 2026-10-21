@@ -2,7 +2,7 @@
 
 Lixity describes patterns in the manuscript you provide. Its style reference compares chapters with that manuscript's own baseline. A signal is a reason to inspect a passage in context; it is not an objective quality score or an instruction to rewrite it.
 
-Maintained by the Lixity project · Updated 19 October 2026
+Updated 19 October 2026
 
 ## What does consistency measure?
 

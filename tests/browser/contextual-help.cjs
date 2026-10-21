@@ -240,7 +240,7 @@ async function shortcutReference(page, labels, locale, width, height = 900) {
   assert.equal(await page.locator('#reader-settings').evaluate(node => node.open), false);
 }
 
-async function nativeControls(page, width) {
+async function nativeControls(page, width, labels) {
   const activate = locator => width === 320 ? locator.tap() : locator.click();
   const analysis = page.locator('#manuscript-analysis-toggle');
   await activate(analysis); await settle(page);
@@ -258,10 +258,38 @@ async function nativeControls(page, width) {
   await page.keyboard.press('Escape'); await settle(page);
   assert.equal(await focus.getAttribute('aria-pressed'), 'false',
     'One Escape exits focus after activating its button, without an obsolete action hint taking priority');
-  await activate(page.locator('#workspace-reader-toggle')); await settle(page);
-  await expect(page.locator('#workspace-reader-panel')).toBeVisible();
-  await activate(page.locator('#workspace-reader-close')); await settle(page);
-  await expect(page.locator('#workspace-reader-panel')).toBeHidden();
+  if (width === 320) await page.evaluate(() => {
+    // Keep the existing touch window open even on a busy host. Native input,
+    // frames and timers remain real; restore the original clock in finally.
+    window.contextualHelpDateNow = Date.now;
+    const now = Date.now(); Date.now = () => now;
+  });
+  try {
+    await activate(page.locator('#workspace-reader-toggle')); await settle(page);
+    await expect(page.locator('#workspace-reader-panel')).toBeVisible();
+    await activate(page.locator('#workspace-reader-close')); await settle(page);
+    await expect(page.locator('#workspace-reader-panel')).toBeHidden();
+    await expect(page.locator('#workspace-reader-toggle')).toBeFocused();
+    if (width === 320) {
+      const tip = page.locator('#lixity-tooltip');
+      assert.equal(await page.locator('#workspace-reader-toggle').evaluate(node => node.matches(':focus-visible')), false);
+      await expect(tip, 'Touch Close retains focus without reopening incidental action help').toHaveAttribute('aria-hidden', 'true');
+      await page.keyboard.press('Shift+Tab');
+      const overview = page.locator('#workbench-overview-open');
+      await expect(overview).toBeFocused();
+      assert.equal(await overview.evaluate(node => node.matches(':focus-visible')), true);
+      await expect(tip).toHaveAttribute('aria-hidden', 'false');
+      await expect(tip).toHaveText(labels.reading_help_overview);
+      await expect(overview).toHaveAccessibleDescription(labels.reading_help_overview);
+      await page.keyboard.press('Escape');
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
+    }
+  } finally {
+    if (width === 320) await page.evaluate(() => {
+      Date.now = window.contextualHelpDateNow;
+      delete window.contextualHelpDateNow;
+    });
+  }
   const paragraph = page.locator('#chapters [data-reader-paragraph]').first();
   await activate(paragraph);
   await expect(page.locator('#manuscript-context-menu')).toBeVisible();
@@ -283,7 +311,7 @@ async function nativeControls(page, width) {
         await check(`${locale} ${width} adjacent toolbar actions`, () => adjacentToolbarActions(page, locale, width));
         await check(`${locale} ${width} keyboard actions`, () => keyboardActions(page));
         await check(`${locale} ${width} keyboard reference`, () => shortcutReference(page, fixture.labels, locale, width));
-        await check(`${locale} ${width} native controls`, () => nativeControls(page, width));
+        await check(`${locale} ${width} native controls`, () => nativeControls(page, width, fixture.labels));
         if (width === 320) {
           await page.setViewportSize({width, height: 480}); await settle(page);
           await check(`${locale} ${width} short keyboard reference`, () => shortcutReference(page, fixture.labels, locale, width, 480));

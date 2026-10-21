@@ -47,16 +47,24 @@ server.serve_forever()
 `;
 }
 
-async function positions(control) {
-  return control.evaluate(element => {
-    const result = [];
-    for (let node = element.parentElement; node; node = node.parentElement) {
-      if (node.scrollHeight > node.clientHeight || node.scrollWidth > node.clientWidth) {
-        result.push({id: node.id, top: node.scrollTop, left: node.scrollLeft});
+async function positions(control, capture = false) {
+  return control.evaluate((element, capture) => {
+    function snapshot() {
+      const result = [];
+      for (let node = element.parentElement; node; node = node.parentElement) {
+        if (node.scrollHeight > node.clientHeight || node.scrollWidth > node.clientWidth) {
+          result.push({id: node.id, top: node.scrollTop, left: node.scrollLeft});
+        }
       }
+      return {scrolls: result, top: element.getBoundingClientRect().top, left: element.getBoundingClientRect().left};
     }
-    return {scrolls: result, top: element.getBoundingClientRect().top, left: element.getBoundingClientRect().left};
-  });
+    if (!capture) return snapshot();
+    element._dossierDeparture = {count: 0, positions: null};
+    element.addEventListener('pointerdown', () => {
+      element._dossierDeparture.count++;
+      element._dossierDeparture.positions = snapshot();
+    }, {once: true, capture: true});
+  }, capture);
 }
 async function assertReturned(page, control, before, message) {
   await expect(control, message).toBeFocused();
@@ -80,11 +88,19 @@ async function assertReturnAvailable(page) {
 async function depart(page, control, tab) {
   await control.scrollIntoViewIfNeeded();
   await control.focus();
-  // Capture the actionable position after sticky controls are cleared; the
-  // real click can otherwise scroll an obscured button after this snapshot.
+  // Hover can change click actionability even after a trial. Capture the real
+  // native departure event, before navigation, rather than its earlier layout.
   await control.click({trial: true});
-  const before = await positions(control);
+  await positions(control, true);
   await control.click();
+  const captured = await control.evaluate(element => {
+    const value = element._dossierDeparture;
+    delete element._dossierDeparture;
+    return value;
+  });
+  assert.ok(captured && captured.count === 1 && captured.positions,
+    'One native pointerdown captures a non-null departure origin');
+  const before = captured.positions;
   await expect(page.locator(`[data-rtab=${tab}]`)).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#workbench-return')).toBeVisible();
   await expect(page.locator('#workbench-return')).toHaveText('Back to dossier');
@@ -165,7 +181,7 @@ async function depart(page, control, tab) {
             await expect(page.locator('#workbench-return')).toBeHidden();
             await page.locator('#research-revision-history-detail [data-research-history=dossier]').click();
             await expect(page.locator('#research-revision-history-detail')).toContainText('An original synthetic note.');
-            await expect(page.locator('#research-revision-kind')).toHaveText('Dossier · Saved version 1');
+            await expect(page.locator('#research-revision-kind')).toHaveText('Dossier · Saved version 1 · Earlier version');
             await page.keyboard.press('Escape');
             await expect(detail.locator('[data-research-history=claim]')).toBeFocused();
             // A cancelled pending viewer never becomes a dossier departure,

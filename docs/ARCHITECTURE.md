@@ -399,6 +399,23 @@ canonical manuscript DOM; changing tools or analysis visibility does not replace
 its source text or create a hidden duplicate reading tree. Loaded-project chrome
 uses a class emitted by the renderer; it does not use a body-level `:has` query
 over the mutable prose tree, which would broaden annotation/style invalidation.
+When the leading authored level-one heading exactly matches the project title,
+the reading surface suppresses only the generated sidebar title. The original
+source heading stays intact, and Project, Research and the analysis overview keep
+the generated project context. The existing workbench owner publishes the view
+attribute; no prose observer or second navigation state is introduced.
+
+Current-main exact analysis evidence is a separate optional projection, collected
+inside the existing paragraph-profile pass. `ParagraphMatcher` owns the same
+resolved counters used for profiles and literal evidence; the UI does not run a
+parallel linguistic detector. `DocumentAnalysis.evidence` is not part of default
+analysis/profile JSON. The renderer appends its paragraph-identity envelope to
+existing lazy paragraph data. Native CSS Highlight ranges preserve the prose DOM;
+a single Preact leaf owns the explanation card. Only visible paragraph generations
+are prepared, with explicit codepoint-to-UTF-16 conversion and hash validation.
+Search/research mark changes invalidate derived ranges, not source identities.
+Analysis visibility, metric changes and workspace changes cancel stale cards and
+marks. Unsupported or unprovable mappings remain explicit unavailable states.
 
 `manuscript_document.manuscript_blocks` supplies source-ordered semantic blocks
 with absolute inclusive line spans, before PDF-specific title suppression and
@@ -843,8 +860,13 @@ the actual scroll root, coalesces reads/paint by animation frame and disposes
 observers when replaced. It delegates activation, disclosure reveal, sticky
 clearance and arrival to the existing interaction owner. Dossier heading IDs
 combine render-instance identity and local ordinals; they never replace domain
-record IDs or revision pins. A compact location link shares that current entry;
-it adds no scrollport, route or canonical data. The context dock preserves an
+record IDs or revision pins. Wide dossier containers place the native heading
+tree in a persistent right rail; narrow and companion containers keep a compact
+disclosure and current-entry link. The tree bounds its own navigation scrolling
+without replacing the document scroll owner, route or canonical data. Compact
+companion/review folders disable inline-size containment: asynchronous dossier
+growth must preserve browser scroll anchoring above the manuscript. The context
+dock preserves an
 already reached end when its measured available height changes, and preserves
 other reading offsets.
 
