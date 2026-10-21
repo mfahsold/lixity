@@ -99,6 +99,18 @@ filters stay out of the way while active queries remain editable. Evidence views
 survive unchanged archive refreshes; changed archives or contexts invalidate them.
 These UI changes do not alter research storage or public API contracts.
 
+On current main (Unreleased), Analysis overview folds secondary values under
+Manuscript measurements while keeping review routes, navigation and flags visible.
+Scene rows reveal grouped, reversible measurement details. Long flags/scene lists
+support keyboard scrolling; wide comparisons retain row identity. Dialogue charts
+include every measured chapter in manuscript order, including zero turns; pacing
+labels explain ASL units, relative bars and the existing Hook heuristic. The chapter
+matrix distinguishes measured zero cutoff crossings from unavailable comparisons.
+Chapter values still cover profiled paragraphs/lists; corpus/style also includes
+blockquotes. Scores and public API formats are unchanged. Overview To-do drafts,
+focused keyboard drills and Back to passage reuse existing save and context-return
+behavior.
+
 Public-site measurement is separate from the product: production Pages and its
 reviewed examples use GoatCounter for page paths and named links. Browser privacy
 signals disable it; query/hash, forms, selections and local project data are

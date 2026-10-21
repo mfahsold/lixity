@@ -75,7 +75,7 @@
 }
 
 /* --- Focus & anchors (keyboard accessibility) -------------------------- */
-:where(a, button, select, input, textarea, summary, .chip, .help, [role="button"]):focus-visible {
+:where(a, button, select, input, textarea, summary, .chip, .help, .table-wrap, [role="button"]):focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 3px;
   border-radius: var(--radius-xs);
@@ -122,13 +122,13 @@
 }
 
 /* --- Tables ----------------------------------------------------------- */
-.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: var(--muted) transparent; }
 .table-wrap table { width: 100%; }
 .flags-wrap table { min-width: 36rem; }
 #matrix table { min-width: 52rem; }
 #matrix td.num { white-space: nowrap; }
 .table-wrap::-webkit-scrollbar { height: .45rem; }
-.table-wrap::-webkit-scrollbar-thumb { background: var(--line); border-radius: var(--radius-pill); }
+.table-wrap::-webkit-scrollbar-thumb { background: var(--muted); border-radius: var(--radius-pill); }
 table { width: 100%; border-collapse: collapse; font-size: var(--text-small); }
 th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
 th {

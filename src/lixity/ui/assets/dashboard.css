@@ -147,6 +147,15 @@ h2, .section-heading, .settings-form h3 {
 .kpi-link:hover b { color: var(--accent); }
 .kpi-link:active { transform: translateY(0); }
 
+/* Secondary measurements share one native, reversible disclosure recipe. */
+#analysis-measurements { border-block: 1px solid var(--line); padding-block: .25rem; }
+#analysis-measurements > summary, .scene-measurements > summary {
+  cursor: pointer; min-height: 2.75rem; padding: .6rem .25rem;
+  font-size: var(--text-control); font-weight: var(--weight-semibold);
+}
+#analysis-measurements[open] > summary, .scene-measurements[open] > summary { margin-bottom: var(--space-3); }
+#analysis-measurements > .kpis { padding-bottom: var(--space-4); }
+
 /* --- Sentence-length architecture ------------------------------------- */
 .dist { display: grid; gap: .5rem; }
 .dist .row {
@@ -549,11 +558,47 @@ table.heatmap th.ch { z-index: 3; }
   z-index: 2;
   border-bottom: 1px solid var(--line);
 }
+.flags-wrap td:first-child, .flags-wrap td:nth-child(3), .flags-wrap .badge { white-space: nowrap; }
+.flags-wrap td:nth-child(2) { min-width: 9rem; }
 td.flag-excerpt {
+  min-width: 16rem;
   max-width: 24rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Keep the record identity beside wide chapter/figure comparisons. */
+#matrix :is(th, td):nth-child(2), #characters :is(th, td):first-child, .scene-overview th:first-child {
+  position: sticky; left: 0; z-index: 1; background: var(--surface);
+  min-width: 8.5rem; max-width: 14rem; box-shadow: 1px 0 0 var(--line);
+}
+#matrix thead th:nth-child(2), #characters thead th:first-child, .scene-overview thead th:first-child { z-index: 3; }
+.scene-overview th:first-child { width: 14rem; }
+
+@media (max-width: 600px) {
+  #matrix :is(th, td):nth-child(2), #characters :is(th, td):first-child, .scene-overview th:first-child {
+    width: 8.5rem; min-width: 8.5rem; max-width: 8.5rem;
+  }
+  /* Passage previews read as compact records rather than squeezed columns. */
+  .flags-wrap table { display: block; min-width: 0; }
+  .flags-wrap thead {
+    position: absolute; width: 1px; height: 1px; margin: -1px;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+  .flags-wrap tbody { display: grid; }
+  .flags-wrap .flag-row {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .4rem .6rem;
+    padding: .75rem; border-bottom: 1px solid var(--line);
+  }
+  .flags-wrap td { display: block; min-width: 0; max-width: none; padding: 0; border: 0; }
+  .flags-wrap td:first-child { grid-area: 1 / 1; }
+  .flags-wrap td:nth-child(3) { grid-area: 1 / 2; font-size: var(--text-note); align-self: center; }
+  .flags-wrap td:nth-child(2) {
+    grid-area: 2 / 1 / auto / -1; min-width: 0; color: var(--muted); font-size: var(--text-note);
+  }
+  .flags-wrap td.flag-excerpt { grid-area: 3 / 1 / auto / -1; min-width: 0; white-space: normal; }
+  .flags-wrap td:last-child:not(.flag-excerpt) { grid-area: 4 / 1 / auto / -1; }
 }
 /* --- Style dimensions (3D trajectory & layout) ------------------------- */
 .dim-guide { max-width: 85ch; margin: .5rem 0; }
@@ -1922,9 +1967,13 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
   .view-navigation { display: none !important; }
   .view-pane { display: block !important; }
 }
-.scene-overview { margin: .4rem 0 .9rem; }
-.scene-overview table { min-width: 36rem; }
+.scene-overview { margin: .4rem 0 .9rem; max-height: 26rem; overflow: auto; }
+.scene-overview table { min-width: 36rem; table-layout: fixed; }
 .scene-overview thead th, .scene-overview td { white-space: nowrap; }
+.scene-overview thead th { position: sticky; top: 0; background: var(--surface); z-index: 2; }
+.scene-overview th:first-child { white-space: normal; }
+.scene-overview a { color: var(--accent); text-underline-offset: .15em; }
+.scene-overview tbody th small { display: block; color: var(--muted); font-weight: normal; }
 /* Scene details are the one genuinely heavy list (16-row tables each); defer
    their off-screen rendering once they are open. A closed <details> must keep
    its natural summary height: the intrinsic placeholder would otherwise

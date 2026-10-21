@@ -2,7 +2,7 @@
 
 Read one manuscript, inspect a passage, follow its research and choose a PDF copy. The same manuscript and records appear throughout this short walkthrough.
 
-Maintained by the Lixity project · Updated 20 October 2026
+Maintained by the Lixity project · Updated 21 October 2026
 
 ## 1. Open the example and read a chapter
 
@@ -17,6 +17,8 @@ Maintained by the Lixity project · Updated 20 October 2026
 ## 2. Inspect one difference
 
 Choose a paragraph's **… → Values** to open its **Passage values** inspector. The separate **Analysis** switch shows diagnostics across the manuscript; Passage values remains usable with Analysis On or Off. Use **Analysis overview** to compare sentence rhythm in the setting and action chapters, then **Back to passage** to resume reading.
+
+**On current main (Unreleased):** expand **Manuscript measurements** for the secondary numbers, then collapse the same summary to return to the compact overview. A linked scene title reveals its detailed **Scene measurements**; both disclosure levels can be closed again. The passage return keeps your earlier reading context.
 
 Ask what changed: the kind of scene, what the character is doing, or how the sentences are arranged. These short chapters demonstrate a workflow; their numbers are not a quality verdict. [Interpretation](interpretation.html) explains the signals. [Reader controls and coverage](../USAGE.md#reading-paragraphs) covers text size, focus, keyboard access and supported formatting.
 

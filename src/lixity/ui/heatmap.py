@@ -122,11 +122,12 @@ def render_heatmap_panel(
         f' · |z*| ≥ {N(z_mild, 1)}</span></div>'
     )
     parts.append(f'<p id="heatmap-empty" class="panel-guide" role="status" hidden>{L("matrix_empty")}</p>')
-    parts.append('<div class="heatmap-wrap"><table class="heatmap"><thead><tr>')
-    parts.append('<th class="ch" id="feat-chapter">' + L("chapter") + "</th>")
+    parts.append('<div class="heatmap-wrap" tabindex="0" role="region" '
+                 f'aria-label="{L("style_fingerprint")}"><table class="heatmap"><thead><tr>')
+    parts.append('<th scope="col" class="ch" id="feat-chapter">' + L("chapter") + "</th>")
     for _field, label_key, _unit in FEATURES:
         parts.append(
-            f'<th id="feat-{_field}">'
+            f'<th scope="col" id="feat-{_field}">'
             f"{help_term(labels, FEATURE_HELP_KEYS.get(_field, _field), esc(label(labels, label_key)))}"
             "</th>"
         )

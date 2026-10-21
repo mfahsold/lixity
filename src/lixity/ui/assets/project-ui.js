@@ -801,9 +801,15 @@ window.LixityManuscriptLinks = {
     });
   }
   function closestSection() {
+    var visible = entries.filter(function(entry) { return entry.target.getClientRects().length > 0; });
+    if (!visible.length) return null;
+    var last = visible[visible.length - 1];
+    // The final section cannot always reach the marker before scrolling clamps.
+    if (Math.ceil(window.scrollY + window.innerHeight) >= document.documentElement.scrollHeight - 1 &&
+        last.target.getBoundingClientRect().top < window.innerHeight) return last;
     var marker = window.scrollY + window.innerHeight * 0.3;
-    var best = entries[0];
-    entries.forEach(function(entry) {
+    var best = visible[0];
+    visible.forEach(function(entry) {
       if (entry.target.getBoundingClientRect().top + window.scrollY <= marker) best = entry;
     });
     return best;
@@ -820,6 +826,8 @@ window.LixityManuscriptLinks = {
   }
   window.addEventListener("scroll", schedule, {passive: true});
   window.addEventListener("resize", schedule, {passive: true});
+  document.addEventListener("toggle", schedule, true);
+  document.addEventListener("lixity:viewchange", schedule);
   nav.addEventListener("click", function(event) {
     var link = event.target && event.target.closest ? event.target.closest("[data-section-link]") : null;
     if (!link) return;
@@ -838,6 +846,10 @@ window.LixityManuscriptLinks = {
     // Native fragment activation focuses the destination. Keep keyboard focus
     // in this navigation so another arrow press can select the next section.
     entries[next].link.focus({preventScroll: true});
+    var bounds = nav.getBoundingClientRect(), focusedBounds = entries[next].link.getBoundingClientRect();
+    // Reveal an overflowing link without undoing the vertical content jump.
+    if (focusedBounds.left < bounds.left) nav.scrollLeft += focusedBounds.left - bounds.left;
+    else if (focusedBounds.right > bounds.right) nav.scrollLeft += focusedBounds.right - bounds.right;
   });
   update();
 })();

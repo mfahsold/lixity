@@ -114,6 +114,21 @@ focusing the passage. **Explore chapters** opens available chapter comparisons;
 navigate to the corresponding prose. These are review locations, not rankings
 or instructions to revise.
 
+**On current main (Unreleased):** the overview keeps these review routes,
+section navigation and flagged passages visible. Expand **Manuscript
+measurements** for the grouped scope, rhythm, language, vocabulary and style
+values; use the same summary to collapse them. Its open state survives switching
+between the overview and manuscript. Standalone reports start with these values
+expanded, including without JavaScript.
+
+The flagged-passages heading shows the list count. **+ To-do** opens the existing
+marker draft; saving remains explicit. Long flag and scene lists use bounded
+scrolling regions: focus the region and use arrow or page-scrolling keys, or use
+wheel/touch. Wide chapter, character and scene comparisons retain the row identity
+while scrolling sideways. Section-navigation arrow keys keep offscreen labels
+reachable; keyboard passage/chapter drills focus the revealed text. **Back to
+passage** retains its earlier passage position, analysis choice and context tool.
+
 <a id="read-a-dossier-beside-the-manuscript-since-v240"></a>
 
 ### Read a dossier beside the manuscript
@@ -274,6 +289,13 @@ Tabs group the heatmap, style reference, dimensions and structural diagnostics.
 Links to `#heatmap`, `#bands`, `#dimensions`, `#structural` and `#feat-<field>`
 select the relevant tab. All available panels remain readable without JavaScript.
 
+**On current main (Unreleased):** the chapter matrix shows `0` when a style
+comparison is available and no feature crosses its cutoff; `–` means that the
+comparison is unavailable. **What is counted** explains the existing coverage:
+chapter values use profiled body paragraphs and lists, while corpus/style
+comparisons also include blockquotes. Their values can therefore differ;
+the underlying coverage and scores have not changed.
+
 ### Settings and interpretation
 
 In **Project → Analysis**, expand **Adjust highlights** to inspect controls
@@ -383,6 +405,11 @@ A turn is a quotation segment, without speaker attribution. A dialogue paragraph
 has at least half its words inside detected quotations. `--json` returns these
 summary and per-chapter measurements for automation.
 
+**On current main (Unreleased):** the browser dialogue chart retains every
+measured chapter in manuscript order, including chapters with zero detected
+turns. Long charts scroll within their bounded area rather than showing only
+the chapters with the most dialogue.
+
 ### `lixity characters`
 
 Count supplied names or alias patterns across chapters:
@@ -415,6 +442,11 @@ length, staccato share, dialogue share and scene length. The hook score (0–3)
 adds one for each closing cue: at most eight words, terminal `?`/`!`/`…`, and
 closing dialogue. It measures these cues, not suspense or reader response.
 
+**On current main (Unreleased):** the pacing panel labels average sentence length
+as **ASL**, gives its words-per-sentence unit and explains that bars are scaled
+to the largest chapter average. The **Hook** help describes the same 0–3
+heuristic; it adds no new suspense or quality score.
+
 In the browser's **Pacing & scenes** and **Showing/telling** panels, long chapter
 charts scroll within their bounded area. Use the mouse wheel or touch, or focus
 a chapter row and use the keyboard's scrolling keys. All rows remain readable
@@ -429,6 +461,13 @@ Use `lixity scenes manuscript.md --language de` to inspect each scene separately
 add `--json` for the scene envelope (schema version 1). The dashboard
 shows the same observations in **Scenes & style registers**. Chapters serve as
 scenes when there are no explicit dividers.
+
+**On current main (Unreleased):** the scene comparison table stays visible in a
+bounded scrolling region. Choose a scene's linked title to reveal its detailed
+measurements inside **Scene measurements**. The catalogue and each scene use
+native, reversible disclosures; close either summary when finished. These are
+the same observations and project-defined comparisons, without a new analysis
+or API format.
 
 For everyday checks in a selected project:
 

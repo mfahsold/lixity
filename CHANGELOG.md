@@ -7,7 +7,25 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+- Analysis overview groups secondary manuscript measurements in a reversible
+  disclosure while keeping review routes, navigation and flagged passages visible.
+  Scene measurements share a collapsed catalogue with direct routes from the
+  comparison rows. Long flags and scene comparisons remain bounded and keyboard
+  scrollable; wide chapter, character and scene tables retain visible row identity.
+- Dialogue charts show every measured chapter in manuscript order, including
+  zero-turn chapters. Pacing labels identify ASL, its units and relative bar scale;
+  Hook help explains the existing heuristic without changing its calculation.
+
 ### Fixed
+- Overview section links retain spacing and keyboard reachability on narrow
+  screens. The final chapter matrix stays selected at the page bottom, and
+  keyboard drills focus the revealed manuscript destination while preserving
+  the existing passage/context return.
+- Flagged passages expose their existing To-do draft action in the overview.
+  Chapter-matrix deviation counts distinguish a measured `0` from unavailable
+  `–`; coverage guidance explains the existing paragraph/corpus difference.
+  Analysis scores and public API formats are unchanged.
 - Chapter charts no longer fade their final rows when all entries already fit,
   or at the end of an overflowing list. Native scrollbars remain visible for
   long Pacing and Showing/Telling chapter lists.

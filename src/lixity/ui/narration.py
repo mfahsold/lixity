@@ -8,6 +8,7 @@ from typing import Any
 from ..diversity import MIN_TOKENS_LD
 from ..format import num as format_num
 from ..format import pct as format_pct
+from ..pacing import HOOK_SHORT_SENTENCE
 from ..showing import MIN_COMPARISON_CHAPTERS
 from ..style_fingerprint import FEATURE_UNITS, FEATURES, MIN_COMPARABLE_WORDS
 from ..style_profile import ChapterProfile
@@ -36,8 +37,8 @@ def render_scenes_panel(
     parts = [panel_start("scenes", labels, "panel_scenes"),
              f'<p class="hint">{L("scene_guidance")}</p>',
              f'<p class="hint">{L("scene_support")}</p>']
-    # A visible overview avoids scene blocks that read as a title with nothing
-    # under it: the per-scene feature tables stay collapsed below.
+    # Keep comparisons visible, with one reversible catalogue for the detailed
+    # tables rather than a second full list of scene summaries in the overview.
     asl_key = next(label_key for field, label_key, _unit in FEATURES if field == "asl")
     dialog_key = next(label_key for field, label_key, _unit in FEATURES if field == "dialog_pct")
     if scenes["items"]:
@@ -49,14 +50,18 @@ def render_scenes_panel(
         group = esc(item["group"]) if item["group"] else L("scene_unassigned")
         dialog = item["features"].get("dialog_pct")
         dialog_text = "—" if dialog is None else f"{format_num(dialog, language_key, 1)} %"
+        target = f'scene-metrics-{item["chapter"]}-{item["scene"]}'
         parts.append(
-            f'<tr><th>{esc(item["chapter_title"])} · {L("scene_unit")} {item["scene"]} '
-            f'<small>{group}</small></th>'
+            f'<tr><th><a href="#{esc(target)}" data-jump="#{esc(target)}">'
+            f'{esc(item["chapter_title"])} · {L("scene_unit")} {item["scene"]}'
+            f'</a> <small>{group}</small></th>'
             f'<td>{item["words"]}</td><td>{item["sentences"]}</td>'
             f'<td>{N(item["features"].get("asl"))}</td><td>{dialog_text}</td></tr>'
         )
     if scenes["items"]:
         parts.append('</tbody></table></div>')
+        parts.append(f'<details class="scene-measurements"><summary>{L("scene_measurements")} '
+                     f'({len(scenes["items"])})</summary>')
     # Comparison columns only appear when the project actually defines targets
     # or register medians; otherwise every cell would repeat a dash.
     has_targets = any(
@@ -79,7 +84,9 @@ def render_scenes_panel(
             header += f'<th>{L("scene_range")}</th>'
         if has_baseline:
             header += f'<th>{L("scene_baseline")}</th>'
-        parts.append(f'<div class="table-wrap" tabindex="0" role="region" aria-label="{L("panel_scenes")}">'
+        target = f'scene-metrics-{item["chapter"]}-{item["scene"]}'
+        parts.append(f'<div class="table-wrap" id="{esc(target)}" tabindex="0" role="region" '
+                     f'aria-label="{L("scene_measurements")} · {esc(item["id"])}">'
                      f'<table><thead><tr>{header}</tr></thead><tbody>')
         baseline = scenes["baselines"].get(item["group"], {})
         for field, label_key, unit in FEATURES:
@@ -100,6 +107,8 @@ def render_scenes_panel(
                 row += f'<td>{N(reference.get("median"))} (n={reference.get("n", 0)})</td>'
             parts.append(row + "</tr>")
         parts.append('</tbody></table></div></details>')
+    if scenes["items"]:
+        parts.append('</details>')
     if scenes.get("planned_items"):
         parts.append(f'<details class="scene-planned"><summary>{L("scene_planned")} '
                      f'({len(scenes["planned_items"])})</summary><p>{L("scene_planned_note")}</p><ul>')
@@ -169,11 +178,10 @@ def render_dialogue_panel(
     parts.append(kpi(N(dialogue.get("turns_per_1000", 0.0), 1), L("dlg_turns_per_1000"), jump="#chapters"))
     parts.append("</div>")
 
-    dialogue_chapters = [c for c in dialogue.get("chapters", []) if c.get("turns")]
+    dialogue_chapters = dialogue.get("chapters", [])
     if dialogue_chapters:
-        top = sorted(dialogue_chapters, key=lambda c: c.get("turns", 0), reverse=True)[:8]
-        parts.append('<div class="dist">')
-        for chapter in top:
+        parts.append('<div class="dist scrollable">')
+        for chapter in dialogue_chapters:
             num = int(chapter.get("chapter_num", 0))
             share = float(chapter.get("dialogue_pct", 0.0))
             title_attr = esc(chapter.get("title", ""))
@@ -273,8 +281,13 @@ def render_pacing_panel(
     parts.append('<div class="kpi-row">')
     parts.append(kpi(N(pacing.get("scenes", 0), 0), L("pac_scenes")))
     parts.append(kpi(N(pacing.get("avg_scene_words", 0.0), 0), L("pac_avg_scene")))
-    parts.append(kpi(N(pacing.get("hook_score_mean", 0.0), 2), L("pac_hook_mean")))
+    parts.append(kpi(N(pacing.get("hook_score_mean", 0.0), 2),
+                     help_term(labels, "pacing_hook", L("pac_hook_mean"),
+                               fields={"max_words": str(HOOK_SHORT_SENTENCE)})))
     parts.append("</div>")
+    units = FEATURE_UNITS.get(language_key, {}).get("asl", "words per sentence")
+    parts.append(f'<p class="panel-guide">{help_term(labels, "asl", L("feat_asl"))} '
+                 f'· {esc(units)}. {L("pacing_scale")}</p>')
 
     chapters_pacing = pacing["chapter_list"]
     max_asl = max((float(c.get("asl", 0.0)) for c in chapters_pacing), default=0.0) or 1.0
@@ -289,7 +302,7 @@ def render_pacing_panel(
             f'title="{title_attr}">'
             f'<span class="label">{L("chapter")} {num} · {esc(chapter.get("title", ""))}</span>'
             f'<span class="bar"><i style="width:{min(100.0, asl / max_asl * 100.0):.1f}%"></i></span>'
-            f'<span class="val">{N(asl, 1)} · {esc(label(labels, "pac_hook"))} {hook}</span>'
+            f'<span class="val">{L("feat_asl")} {N(asl, 1)} · {L("pac_hook")} {hook}</span>'
             f"</div>"
         )
     parts.append("</div></section>")

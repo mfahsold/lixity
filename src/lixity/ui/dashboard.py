@@ -1250,6 +1250,9 @@ def render_dashboard(
         )
     )
 
+    measurements_open = "" if controls else " open"
+    parts.append(f'<details id="analysis-measurements"{measurements_open}>')
+    parts.append(f'<summary>{L("analysis_measurements")}</summary>')
     parts.append('<section class="kpis">')
     if has_chapters and metrics is not None and metrics.tokens < MIN_TOKENS_LD:
         support = esc(label(labels, "scene_support").replace("{min_tokens}", str(MIN_TOKENS_LD)))
@@ -1268,24 +1271,26 @@ def render_dashboard(
         parts.append('<div class="kpi-row">')
         parts.extend(tiles)
         parts.append("</div></div>")
-    parts.append("</section>")
+    parts.append("</section></details>")
 
     # --- Flagged passages (list → paragraph → marker) ----------------------
     flagged = flagged_paragraphs(list(paragraphs), min_severity=flag_min_severity)
     parts.append('<section class="panel" id="flags">')
-    parts.append(f"<h2>{help_term(labels, 'flagged', label(labels, 'panel_flags'))}</h2>")
+    parts.append(f"<h2>{help_term(labels, 'flagged', label(labels, 'panel_flags'))} "
+                 f'<span class="badge">{N(len(flagged), 0)}</span></h2>')
     if flagged:
         para_index = {id(p): i for i, p in enumerate(paragraphs)}
-        parts.append('<div class="table-wrap flags-wrap">')
+        parts.append('<div class="table-wrap flags-wrap" tabindex="0" role="region" '
+                     f'aria-label="{L("panel_flags")}">')
         parts.append("<table><thead><tr>")
         parts.append(
-            f"<th>{label(labels, 'flags_stage')}</th>"
-            f"<th>{L('chapter')}</th>"
-            f'<th class="num">{L("line")}</th>'
-            f"<th>{label(labels, 'flags_excerpt')}</th>"
+            f'<th scope="col">{label(labels, "flags_stage")}</th>'
+            f'<th scope="col">{L("chapter")}</th>'
+            f'<th scope="col" class="num">{L("line")}</th>'
+            f'<th scope="col">{label(labels, "flags_excerpt")}</th>'
         )
         if controls:
-            parts.append("<th></th>")
+            parts.append('<th scope="col"></th>')
         parts.append("</tr></thead><tbody>")
         for p in flagged:
             idx = para_index[id(p)]
@@ -1391,7 +1396,11 @@ def render_dashboard(
     # --- Chapter matrix ---------------------------------------------------
     if chapters:
         parts.append(panel_start("matrix", labels, "chapter_table"))
-        parts.append('<div class="table-wrap">')
+        parts.append('<details class="analysis-coverage">'
+                     f'<summary>{L("analysis_coverage")}</summary>'
+                     f'<p>{L("analysis_chapter_coverage")}</p></details>')
+        parts.append('<div class="table-wrap" tabindex="0" role="region" '
+                     f'aria-label="{L("chapter_table")}">')
         parts.append("<table><thead><tr>")
         parts.append(
             f'<th scope="col">{help_term(labels, "chapter_row", "#")}</th>'
@@ -1434,6 +1443,8 @@ def render_dashboard(
                     parts.append(
                         f'<td class="num" title="{esc(named, quote=True)}">{len(dev)}</td>'
                     )
+                elif any(z is not None for z in fingerprint.z_scores.get(c.num, {}).values()):
+                    parts.append('<td class="num">0</td>')
                 else:
                     parts.append('<td class="num">–</td>')
             parts.append("</tr>")

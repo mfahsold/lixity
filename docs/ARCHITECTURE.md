@@ -412,6 +412,28 @@ dialog boundaries retain their distinct roles. Reader composition and companion
 spacing remain in their existing stylesheet owners, without a second display
 state or altered reading preferences.
 
+**On current main (Unreleased):** the overview wraps secondary KPIs in the native
+`analysis-measurements` disclosure, initially collapsed for interactive workspaces
+and expanded for standalone reports. Review routes, section navigation and flags
+remain outside it. Scene detail disclosures share a second reversible catalogue;
+comparison-row links target a scene's existing measurement table. The shared
+`scrollAndFlash` helper reveals disclosure ancestors before measuring the target.
+Native disclosure state survives view changes without a new preference store.
+Bounded flags/scene regions support keyboard scrolling, and wide comparisons
+retain chapter, character or scene identity while scrolling horizontally.
+
+These presentation changes keep dialogue chapters in manuscript order,
+including measured zeros, and label pacing ASL units, bar scaling and the existing
+Hook heuristic. The chapter matrix renders `0` for an available comparison with
+no cutoff crossings and `–` for unavailable comparisons. Its `ChapterProfile`
+values still cover profiled body paragraphs/lists; fingerprint measurements use
+`CorpusMetrics`, which also includes blockquotes. The new coverage note explains
+that existing difference without changing analysis coverage, scores or public JSON contracts.
+Section tracking ignores hidden targets and handles the final section at the
+page boundary. A scene-table drill focuses its revealed measurement region.
+Overview-to-manuscript drills transfer focus when their overview source becomes
+hidden; preserved passage/context returns retain their established owner.
+
 Diagram frames follow content width within the reader, and
 wide diagrams retain their label scale in a scrollable viewport. Style-space
 navigation groups paired actions at responsive widths. Pages uses the shared

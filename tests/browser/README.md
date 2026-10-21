@@ -248,10 +248,31 @@ visible, optional controls and footer actions remain reachable, disabled
 buttons do not acquire enabled hover feedback, and switching project tabs
 does not reset the separate research revision editor.
 
+The analysis-overview suite checks the reversible manuscript-measurements
+disclosure, retained values and open state, complete bounded flag lists, explicit
+To-do draft/cancel, keyboard scrolling and pinned chapter/character identity. It
+distinguishes measured zero from unavailable chapter comparisons in seven locales
+at 1440 and 320 pixels, and checks expanded standalone values without JavaScript.
+Screenshots stay under `/tmp/lixity-analysis-overview-*`.
+
+The analysis-navigation suite checks section selection at the page bottom,
+hidden targets, keyboard paragraph/chapter focus, nested disclosure reveal and
+hidden Style-tab routes. Normal/reduced-motion journeys preserve exact passage
+position, suspended Values and unrelated toolbar focus. Seven desktop/mobile
+locales check link spacing and horizontal arrow-key reachability without undoing
+the vertical content jump. Synthetic screenshots stay under
+`/tmp/lixity-analysis-navigation-*`; browsing performs no writes.
+
+The analysis-narration suite retains all 17 synthetic dialogue chapters in
+manuscript order, including measured zero, and exercises bounded keyboard
+scrolling and the final chapter route. It checks localized pacing ASL units,
+relative bar-scale guidance and reversible Hook heuristic help in seven locales
+at 1440 and 320 pixels. Screenshots stay under `/tmp/lixity-analysis-narration-*`.
+
 The scenes suite renders seven locales at desktop and mobile widths. It checks
-actual per-scene observations, inert project labels, keyboard-operated
-disclosures, readable scrolling tables and unavailable values. Screenshots stay
-under `/tmp/lixity-scenes-ui-*`.
+actual per-scene observations, inert project labels, direct comparison-row routes,
+grouped keyboard-operated disclosures, readable bounded scrolling tables and
+unavailable values. Screenshots stay under `/tmp/lixity-scenes-ui-*`.
 
 The settings test intercepts all requests to a synthetic host. It verifies
 locale-safe values, validation before submission, reset without saving, FDR

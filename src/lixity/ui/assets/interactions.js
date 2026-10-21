@@ -106,6 +106,13 @@ function rememberPassageLocation(target) {
 }
 
 function scrollAndFlash(target) {
+  var focused = document.activeElement;
+  var leavingOverview = target.closest("#chapters") && window.LixityWorkbench &&
+    window.LixityWorkbench.state().surface === "overview";
+  var returnFocus = leavingOverview && focused &&
+    focused.closest("#manuscript-analysis-panels, #analysis-review, #analysis-sections");
+  var sceneDrill = focused && focused.matches(".scene-overview a[data-jump]") &&
+    focused.getAttribute("data-jump") === "#" + target.id;
   var view = target.closest(".view-pane");
   if (view) switchActiveView(view.dataset.viewPane);
   if (target.closest("#manuscript-analysis-panels") && window.LixityReader) window.LixityReader.inspect();
@@ -113,7 +120,15 @@ function scrollAndFlash(target) {
     window.LixityWorkbench.dispatch({type: "surface", value: "document"});
   }
   revealStyleTarget(target);
+  revealDisclosures(target);
   revealChapter(target);
+  // Scene drills continue inside their disclosures; manuscript drills leave
+  // their hidden overview source. Other callers retain their focus owner.
+  if ((sceneDrill || (returnFocus && !focused.getClientRects().length)) &&
+      (document.activeElement === focused || document.activeElement === document.body)) {
+    if (target.tabIndex < 0) target.tabIndex = -1;
+    target.focus({preventScroll: true});
+  }
   setPassageScrollMargin(target);
   target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
   flashOnArrival(target);
