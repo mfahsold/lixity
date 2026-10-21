@@ -104,7 +104,7 @@
     <a href="releases/v0.7.2.md" id="current-release" title="Current release notes"><span class="brand-badge">v0.7.2</span></a>
     <nav class="site-return" aria-label="Lixity navigation">
       <a href="#guides">Guides</a>
-      <a href="https://github.com/mfahsold/lixity">GitHub</a>
+      <a href="#installation">Install</a>
     </nav>
     <button class="ctl theme-btn" id="themeToggle" type="button">Theme: system</button>
   </div>
@@ -113,50 +113,62 @@
   <section class="hero" aria-labelledby="intro-title">
     <div class="hero-copy">
       <span id="origin"></span>
-      <h1 class="hero-title" id="intro-title">A local workbench for your manuscript.</h1>
-      <p class="hero-sub">Read, compare language patterns and keep research beside the text.</p>
+      <h1 class="hero-title" id="intro-title">What changes from chapter to chapter?</h1>
+      <p class="hero-sub">Lixity helps you explore rhythm, repeated words and dialogue in your manuscript, then return to the passages behind the numbers.</p>
       <div class="hero-cta">
-        <a class="ctl primary" href="demo/report.html" id="examples">Explore the demo</a>
-        <a class="ctl" href="guides/installation.html" id="installation">Install Lixity</a>
+        <a class="ctl primary" href="demo/report.html" id="examples">Open the example manuscript</a>
+        <a class="ctl" href="guides/first-look.html">Take the short tour</a>
       </div>
     </div>
     <figure class="frame">
       <div class="frame-window">
         <a href="screenshots/dashboard-dark.png"><img src="screenshots/dashboard-dark.png" width="2960" height="1934" alt="Lixity manuscript reader with continuous prose, chapter navigation and Analysis On/Off" fetchpriority="high"/></a>
       </div>
-      <figcaption>Read-only development demo with invented text; no account or upload. <a href="guides/first-look.html">Walkthrough</a> · <a href="screenshots/dashboard-dark.png">Full-size view</a> · <a href="screenshots/README.md">More views and credits</a>.</figcaption>
+      <figcaption>Read-only development example with invented text; no account or upload. <a href="screenshots/dashboard-dark.png">Full-size view</a> · <a href="screenshots/README.md">More views and credits</a>.</figcaption>
     </figure>
   </section>
 
   <section class="section" id="features" aria-labelledby="workflow-title">
     <span id="core-pillars"></span><span id="steps"></span>
-    <h2 id="workflow-title">From passage to context</h2>
+    <h2 id="workflow-title">Three questions for your draft</h2>
     <div class="workflow-list">
       <article id="writing">
         <span id="editorial-matrix"></span>
-        <h3>Read and review</h3>
-        <p>Continuous chapters, passage measurements and work markers. Turn analysis on or off; keep your manuscript in view.</p>
+        <h3>Where does the rhythm change?</h3>
+        <p>Compare sentence lengths and dialogue across chapters, then read the passages in context.</p>
       </article>
       <article id="chapters">
-        <h3>Compare chapters</h3>
-        <p>Explore rhythm, vocabulary, dialogue and tense against your book’s own patterns. Measurements support review; they do not grade literary quality.</p>
+        <h3>Which words keep coming back?</h3>
+        <p>Review frequent words and repeated phrases in the manuscript, and decide which repetitions are intentional.</p>
       </article>
       <article id="research-workspace">
-        <h3>Keep research alongside</h3>
-        <p>Connect retained sources, claims and exact manuscript quotations in an experimental research workspace. Open a dossier beside the passage.</p>
+        <h3>Where did I put that source?</h3>
+        <p>Keep saved notes and excerpts beside the text in a research dossier. You add passage links yourself; these optional research tools are experimental.</p>
       </article>
     </div>
-    <p class="section-note" id="faq">Built-in analysis runs on your computer. Optional integrations have their own <a href="research/USAGE.md">data boundaries</a>. Analysis does not rewrite your prose.</p>
+  </section>
+
+  <section class="section" id="installation" aria-labelledby="installation-title">
+    <h2 id="installation-title">Try it with your own manuscript</h2>
+    <p class="section-note" id="faq">Built-in analysis works offline on your computer. Lixity does not grade or rewrite your prose. Optional integrations have their own <a href="research/USAGE.md">data boundaries</a>.</p>
+    <a class="ctl" href="guides/installation.html">Install Lixity</a>
   </section>
 
   <section class="section" id="guides">
-    <h2>Documentation</h2>
+    <h2>Keep exploring</h2>
     <div class="resource-list">
-      <p id="projects"><strong>Get started</strong><span><a href="guides/first-look.html">First look</a> · <a href="guides/installation.html">Installation</a> · <a href="ONBOARDING.md">Your first project</a></span></p>
-      <p><strong>Everyday use</strong><span><a href="USAGE.md">Usage and CLI</a> · <a href="guides/interpretation.html">Interpret results</a> · <a href="guides/research-pdf.html">Research and PDF</a></span></p>
-      <p id="methods"><strong>Methods and limits</strong><span><a href="METHODS.md">Methods</a> · <a href="LOCALIZATION.md">Languages</a> · <a href="STABILITY.md">Validation</a> · <a href="blog/index.html">Articles</a> · <a href="guides/manuscript-analysis-tools.html">Compare tools</a></span></p>
-      <p id="cli-api"><strong>Integrations</strong><span><a href="AGENTS.md">API contracts</a> · <a href="ARCHITECTURE.md">Architecture</a> · <a href="llms.txt">Agent index</a></span></p>
+      <p id="projects"><strong>Try the example</strong><span><a href="demo/report.html">Open the manuscript</a> · <a href="guides/first-look.html">Take the tour</a></span></p>
+      <p><strong>Use your own manuscript</strong><span><a href="guides/installation.html">Install Lixity</a> · <a href="ONBOARDING.md">Open your first project</a></span></p>
+      <p><strong>Understand the results</strong><span><a href="guides/interpretation.html">Read the measurements</a> · <a href="guides/research-pdf.html">Research notes and PDF copies</a></span></p>
     </div>
+    <details>
+      <summary>Methods and technical reference</summary>
+      <div class="resource-list">
+        <p><strong>Commands</strong><span><a href="USAGE.md">Usage and CLI</a></span></p>
+        <p id="methods"><strong>Methods and limits</strong><span><a href="METHODS.md">Methods</a> · <a href="LOCALIZATION.md">Languages</a> · <a href="STABILITY.md">Validation</a> · <a href="blog/index.html">Articles</a> · <a href="guides/manuscript-analysis-tools.html">Compare tools</a></span></p>
+        <p id="cli-api"><strong>Integrations</strong><span><a href="AGENTS.md">API contracts</a> · <a href="ARCHITECTURE.md">Architecture</a> · <a href="llms.txt">Agent index</a></span></p>
+      </div>
+    </details>
   </section>
 
   <footer>
@@ -178,7 +190,7 @@
       <p>Managing directors: René Fromhagen, Timo Helmsing.<br/>Commercial register: Local Court of Lübeck, HRB 23529 HL.<br/>VAT identification number: DE360042691.</p>
       <p>We are neither required nor willing to participate in dispute resolution proceedings before a consumer arbitration board.</p>
     </details>
-    <nav aria-label="Project resources"><a href="https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md">Contributing</a><a href="https://github.com/mfahsold/lixity/blob/main/SECURITY.md">Security</a><a href="llms-full.txt">Full documentation</a><a href="https://doi.org/10.5281/zenodo.23390297">Cite Lixity</a><a rel="me" href="https://mastodon.social/@lixity">Mastodon</a><a rel="me" href="https://bsky.app/profile/lixity.bsky.social">Bluesky</a></nav>
+    <nav aria-label="Project resources"><a href="https://github.com/mfahsold/lixity">Source code</a><a href="https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md">Contributing</a><a href="https://github.com/mfahsold/lixity/blob/main/SECURITY.md">Security</a><a href="llms-full.txt">Full documentation</a><a href="https://doi.org/10.5281/zenodo.23390297">Cite Lixity</a><a rel="me" href="https://mastodon.social/@lixity">Mastodon</a><a rel="me" href="https://bsky.app/profile/lixity.bsky.social">Bluesky</a></nav>
   </footer>
 </main>
 <a class="site-back-top" href="#top">Back to top ↑</a>

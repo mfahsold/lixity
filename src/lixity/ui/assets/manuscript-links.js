@@ -394,7 +394,7 @@
     try { tab.click(); } finally { openingRelated = false; }
     reviewSection.tabIndex = -1;
     reviewSection.focus({preventScroll: true});
-    reviewSection.scrollIntoView({block: "start", behavior: "auto"});
+    scrollAndFlash(reviewSection, {behavior: "instant"});
     followRelatedDestination();
   }
   function stopRelatedDestination() {
@@ -412,7 +412,7 @@
           !reviewSection.getClientRects().length || !document.querySelector('[data-rtab="review"].active')) {
         stopRelatedDestination(); return;
       }
-      reviewSection.scrollIntoView({block: "start", behavior: "auto"});
+      scrollAndFlash(reviewSection, {behavior: "instant"});
     }
     function resized() {
       cancelAnimationFrame(destination.frame);

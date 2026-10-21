@@ -7,14 +7,13 @@
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
-Lixity is a local workbench for reading manuscripts, comparing language patterns
-and connecting research to passages. It runs on your computer and offers a
-browser app, CLI and Python API. Measurements support your review; Lixity does
-not grade or rewrite prose.
+Lixity helps you explore rhythm, repeated words and dialogue in your manuscript,
+then return to the passages behind the numbers. Try the example in your browser
+before installing it for your own writing.
 
-[Explore the demo](https://mfahsold.github.io/lixity/demo/report.html) ·
-[Install Lixity](https://mfahsold.github.io/lixity/guides/installation.html) ·
-[Documentation](https://mfahsold.github.io/lixity/#guides)
+[Open the example manuscript](https://mfahsold.github.io/lixity/demo/report.html) ·
+[Take the short tour](https://mfahsold.github.io/lixity/guides/first-look.html) ·
+[Install Lixity](https://mfahsold.github.io/lixity/guides/installation.html)
 
 <a href="https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png"><img src="https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png" width="640" alt="Lixity manuscript reader with continuous prose, chapter navigation and contextual tools"/></a>
 
@@ -42,8 +41,9 @@ lixity service start --open
 ```
 
 Choose **Open Project** or **Analyze a manuscript**, then confirm the language.
-English is the default; automatic detection is explicit. Built-in analysis runs
-on your computer. Optional integrations have separate
+English is the default; automatic detection is explicit. Built-in analysis works
+offline on your computer and does not grade or rewrite prose. Optional
+integrations have separate
 [data boundaries](https://mfahsold.github.io/lixity/research/USAGE.md).
 
 [Your first project](https://mfahsold.github.io/lixity/ONBOARDING.md) explains the
@@ -61,8 +61,9 @@ does not update an already running service.
   alongside a passage; Zotero remains your collection tool. Retention is explicit,
   and archive integrity does not establish factual truth.
 - **Export and automate.** Create editorial, reading, submission or analysis PDFs,
-  terminal reports and versioned JSON. `lixity --help` and `lixity about --json`
-  describe the installed commands and capabilities.
+  terminal reports and versioned JSON. The browser app, CLI and Python API share
+  one analysis pipeline. `lixity --help` and `lixity about --json` describe the
+  installed commands and capabilities.
 
 English and German have the broadest analysis resources. French, Spanish,
 Italian, Portuguese and Dutch offer localized interfaces with narrower heuristic

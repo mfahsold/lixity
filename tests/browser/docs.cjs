@@ -924,10 +924,29 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
               });
               assert.ok(columns.copyRight < columns.imageLeft, 'Desktop introduction and preview share one row');
             }
-            await expect(page.locator('main a[href="demo/report.html"]')).toHaveCount(1);
-            await expect(page.locator('.hero-cta a[href="guides/installation.html"]')).toHaveCount(1);
+            await expect(page.locator('.hero-cta a.primary[href="demo/report.html"]')).toHaveAccessibleName('Open the example manuscript');
+            await expect(page.locator('.hero-cta a[href="guides/first-look.html"]')).toHaveAccessibleName('Take the short tour');
+            await expect(page.locator('.site-header a[href="#installation"]')).toBeVisible();
+            await expect(page.locator('#installation')).toHaveCount(1);
+            assert.equal(await page.locator('#installation').evaluate(node => node.tagName), 'SECTION',
+              'The installation fragment opens its own author-facing section');
+            await expect(page.locator('#installation a[href="guides/installation.html"]')).toBeVisible();
+            await expect(page.locator('#guides a[href="demo/report.html"]')).toBeVisible();
             await expect(page.locator('#guides a[href="guides/installation.html"]')).toHaveCount(1);
             await expect(page.locator('#guides a[href="guides/first-look.html"]')).toHaveCount(1);
+            const reference = page.locator('#guides details');
+            await expect(reference).toHaveCount(1);
+            assert.equal(await reference.evaluate(node => node.open), false,
+              'Technical references start behind one reversible disclosure');
+            await expect(reference.locator('a[href="AGENTS.md"]')).toBeHidden();
+            await reference.locator(':scope > summary').focus();
+            await page.keyboard.press('Enter');
+            await expect(reference.locator('a[href="AGENTS.md"]')).toBeVisible();
+            await expect(reference.locator('#methods')).toHaveCount(1);
+            await expect(reference.locator('#cli-api')).toHaveCount(1);
+            await reference.locator(':scope > summary').press('Enter');
+            await expect(reference.locator('a[href="AGENTS.md"]')).toBeHidden();
+            await expect(reference.locator(':scope > summary')).toBeFocused();
             const image = page.locator('.hero .frame img');
             await expect(image).toHaveCount(1);
             await image.evaluate(element => element.decode());
@@ -950,11 +969,15 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
           if (route === 'demo/report.html') await checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme);
         }
         await page.goto('http://lixity.test/lixity/');
-        await page.locator('.hero-cta a[href="guides/installation.html"]').click();
-        assert.ok(page.url().endsWith('/guides/installation.html'), 'The secondary CTA opens local installation');
+        await page.locator('.site-header a[href="#installation"]').focus();
+        await page.keyboard.press('Enter');
+        await expect(page).toHaveURL('http://lixity.test/lixity/#installation');
+        await expect(page.locator('#installation h2')).toBeInViewport();
+        await page.locator('#installation a[href="guides/installation.html"]').click();
+        assert.ok(page.url().endsWith('/guides/installation.html'), 'An eager visitor can reach installation through the header and its dedicated section');
         await page.goto('http://lixity.test/lixity/');
-        await page.locator('#guides a[href="guides/first-look.html"]').click();
-        assert.ok(page.url().endsWith('/guides/first-look.html'));
+        await page.locator('.hero-cta a[href="guides/first-look.html"]').click();
+        assert.ok(page.url().endsWith('/guides/first-look.html'), 'The secondary CTA offers a tour before installation');
         await page.locator('.ctl[href="../demo/report.html"]').click();
         assert.ok(page.url().endsWith('/demo/report.html'));
         await page.locator('#example-context > summary').click();

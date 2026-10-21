@@ -313,6 +313,17 @@ inform the checks; defaults are product choices, not universal typographic optim
 Exact tokens and dimensions belong to CSS and executable checks rather than a
 second prose specification.
 
+**On current main (Unreleased):** prose heading roles cover all six Markdown
+levels; subordinate headings do not fall through to small browser defaults.
+Fenced code inherits its block's size instead of compounding inline-code scaling.
+Shared controls inherit the interface font; canvas labels resolve the same UI and
+technical font tokens through the existing style probe. Serif manuscript text,
+system interface text and monospace technical notation remain distinct roles.
+[Fluent typography guidance](https://fluent2.microsoft.design/typography) informs
+this role-based hierarchy. [Wallace et al. (2022)](https://research.adobe.com/publication/towards-individuated-reading-experiences-different-fonts-increase-reading-speed-for-different-individuals/)
+found individual differences in font-related reading performance; that does not
+establish one best font or a reading-speed benefit for Lixity.
+
 The manuscript is the primary workspace. Analysis supports passage selection
 and interpretation; retained evidence and authored dossiers provide context.
 These are connected views over the same project, not independent products.
@@ -393,6 +404,42 @@ Association refreshes skip unchanged annotation DOM and preserve native selectio
 endpoints when marks change. Automatic review uses the existing research-status
 read before requesting archive records; context-bound pending reads are coalesced
 and invalidated on project changes.
+
+**On current main (Unreleased):** the existing reading thread owns one nearest
+dossier departure above an optional manuscript origin. An accepted dossier render
+provides its project/research context, saved revision and a current-render guard;
+departure captures the requesting control, tab and scroll ancestors. Return
+restores that existing DOM and exact offsets after display work settles. It does
+not repin records or reload a dossier. Replaced roots and changed contexts
+invalidate the return. The same control moves from the desktop sidebar into the
+mobile page flow; its observed height offsets other sticky controls.
+
+Reader layout restoration has one revision-guarded owner for tool changes. Until
+the opening frame commits, later arrangements reuse the stable reading anchor;
+once it commits, deliberate scrolling becomes the next origin. Reading settings
+observe their native disclosure state before rendering so initial placement does
+not depend on the later native `toggle` event.
+
+The shared jump helper reveals a real destination, accounts for sticky controls
+in its own scroll area and accepts start, center or nearest alignment. Arrival
+feedback observes the destination and its scrolling ancestors until stable;
+new jumps cancel pending and visible obsolete cues. Exact context restoration
+uses the observer without realigning the restored position. Reduced motion is
+read at navigation time. [W3C C43](https://www.w3.org/WAI/WCAG22/Techniques/css/C43)
+and [focus-obscuration guidance](https://www.w3.org/WAI/WCAG22/Techniques/failures/F110.html)
+inform clearance checks, including short viewports and wrapped controls.
+
+Action explanations reuse `tooltips.js`, localized label packs and native
+controls. Hover and keyboard focus expose supplemental text; the tooltip does
+not contain actions or take focus. Actual shortcut bindings also have a visible
+reference under Reading settings. Important workflow information stays in labels,
+state and empty-state actions. Placement clears the complete owning toolbar,
+including wrapped adjacent controls. Action activation dismisses help until fresh
+pointer/focus intent; vendor-owned PhotoSwipe controls retain their own titles
+and keyboard behavior. The [WAI-ARIA tooltip pattern](https://www.w3.org/WAI/ARIA/apg/patterns/tooltip/)
+and [WCAG hover/focus guidance](https://www.w3.org/WAI/WCAG22/Understanding/content-on-hover-or-focus)
+inform dismissibility, hover persistence and accessible descriptions. These are
+targeted checks, not a claim of application-wide accessibility conformance.
 
 The companion's desktop `separator` supports pointer dragging and keyboard
 adjustment over a bounded manuscript-width share. The split is a local display

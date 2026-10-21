@@ -25,14 +25,13 @@ Source: https://github.com/mfahsold/lixity/blob/main/README.md
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
-Lixity is a local workbench for reading manuscripts, comparing language patterns
-and connecting research to passages. It runs on your computer and offers a
-browser app, CLI and Python API. Measurements support your review; Lixity does
-not grade or rewrite prose.
+Lixity helps you explore rhythm, repeated words and dialogue in your manuscript,
+then return to the passages behind the numbers. Try the example in your browser
+before installing it for your own writing.
 
-[Explore the demo](https://mfahsold.github.io/lixity/demo/report.html) ·
-[Install Lixity](https://mfahsold.github.io/lixity/guides/installation.html) ·
-[Documentation](https://mfahsold.github.io/lixity/#guides)
+[Open the example manuscript](https://mfahsold.github.io/lixity/demo/report.html) ·
+[Take the short tour](https://mfahsold.github.io/lixity/guides/first-look.html) ·
+[Install Lixity](https://mfahsold.github.io/lixity/guides/installation.html)
 
 <a href="https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png"><img src="https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png" width="640" alt="Lixity manuscript reader with continuous prose, chapter navigation and contextual tools"/></a>
 
@@ -60,8 +59,9 @@ lixity service start --open
 ```
 
 Choose **Open Project** or **Analyze a manuscript**, then confirm the language.
-English is the default; automatic detection is explicit. Built-in analysis runs
-on your computer. Optional integrations have separate
+English is the default; automatic detection is explicit. Built-in analysis works
+offline on your computer and does not grade or rewrite prose. Optional
+integrations have separate
 [data boundaries](https://mfahsold.github.io/lixity/research/USAGE.md).
 
 [Your first project](https://mfahsold.github.io/lixity/ONBOARDING.md) explains the
@@ -79,8 +79,9 @@ does not update an already running service.
   alongside a passage; Zotero remains your collection tool. Retention is explicit,
   and archive integrity does not establish factual truth.
 - **Export and automate.** Create editorial, reading, submission or analysis PDFs,
-  terminal reports and versioned JSON. `lixity --help` and `lixity about --json`
-  describe the installed commands and capabilities.
+  terminal reports and versioned JSON. The browser app, CLI and Python API share
+  one analysis pipeline. `lixity --help` and `lixity about --json` describe the
+  installed commands and capabilities.
 
 English and German have the broadest analysis resources. French, Spanish,
 Italian, Portuguese and Dutch offer localized interfaces with narrower heuristic
@@ -186,6 +187,10 @@ preferences are browser-local; saves and retention are explicit. See
 and [research workflows](https://mfahsold.github.io/lixity/research/USAGE.md).
 Only profiled paragraphs have measurements and claim anchors. Plain reports
 keep their inspection layout; the bounded reader is not a Markdown editor.
+On current main, dossier departures also retain a guarded Back to dossier route;
+mobile return controls stay visible. Reading settings includes actual keyboard
+shortcuts, and action help works on focus as well as hover. Nested scroll areas
+share settled destination feedback and live reduced-motion handling.
 
 Root-only `manuscript` selects a contained relative default for workspace folders,
 `scenes` and read-only Research manuscript review. Explicit paths win; invalid
@@ -1160,10 +1165,19 @@ the preserved origin while the project/source context still matches. The work
 thread groups this action with the originating chapter and lines. **Viewed version:**
 introduces the title and version of the claim or dossier you opened. Labels distinguish a pinned
 version from a current or viewed version; browsing history does not repin a
-record. Returning, or changing the project/source context, clears the thread.
+record. Returning to the manuscript, or changing the project/source context,
+clears the thread.
 Cited source
 quotations remain pinned retained passages; opening an ordinary source reader is
 not a new historical-source navigation contract.
+
+**On current main (Unreleased):** leaving an open dossier for its saved
+associations or a global research collection offers **Back to dossier**. It
+restores that saved version, tab, scroll position and requesting control without
+reloading the dossier or discarding drafts. An earlier manuscript return remains
+available after returning to the dossier. On narrow screens the return stays
+above the current content. Closing or replacing the originating dossier, or
+changing project context, removes an invalid return rather than guessing.
 
 <a id="reading-paragraphs-since-v230"></a>
 
@@ -1185,6 +1199,15 @@ Choose a chapter in the reader toolbar. **Reading settings** groups **A−**/**A
 for text size (16–28 nominal pixels), narrow/standard/wide text and
 compact/standard/relaxed line spacing. Appearance and the desktop split are local
 browser preferences; display changes do not edit the source.
+
+**On current main (Unreleased):** **Reading settings → Keyboard shortcuts**
+lists the passage menu, search and close keys. Hovering or focusing key controls
+also gives a short explanation; Escape dismisses a tooltip. Essential actions
+remain labeled and work without hovering. In manuscript search, `Enter` selects
+the next match, `Shift+Enter` selects the previous match and Escape clears the
+query. These keys apply in the search field, not throughout the application.
+Passage jumps wait for their scrolling area to settle before a brief destination
+cue; reduced-motion preferences keep navigation immediate.
 
 Each analyzed paragraph has an **…** button. It opens the same contextual tools as a
 right-click on the prose or `Shift+F10`/the context-menu key while the paragraph
@@ -4870,6 +4893,14 @@ coefficient selection and number formatting. Linguistic and mathematical suites
 add specific examples. Together, they do not establish a language-wide accuracy
 percentage.
 
+**On current main (Unreleased):** contextual action help, the visible keyboard
+reference and internal-reference descriptions use the same seven UI label packs.
+Browser checks cover pack/placeholder parity, document language, real source
+toolbars and reading controls at desktop and narrow widths. Full translated
+sentences are kept intact; technical key names and identifiers stay stable.
+These checks establish coverage and layout, not a professional translation review
+or equal linguistic-analysis accuracy across the seven languages.
+
 ===============================================================================
 ## docs/ARCHITECTURE.md
 
@@ -5190,6 +5221,17 @@ inform the checks; defaults are product choices, not universal typographic optim
 Exact tokens and dimensions belong to CSS and executable checks rather than a
 second prose specification.
 
+**On current main (Unreleased):** prose heading roles cover all six Markdown
+levels; subordinate headings do not fall through to small browser defaults.
+Fenced code inherits its block's size instead of compounding inline-code scaling.
+Shared controls inherit the interface font; canvas labels resolve the same UI and
+technical font tokens through the existing style probe. Serif manuscript text,
+system interface text and monospace technical notation remain distinct roles.
+[Fluent typography guidance](https://fluent2.microsoft.design/typography) informs
+this role-based hierarchy. [Wallace et al. (2022)](https://research.adobe.com/publication/towards-individuated-reading-experiences-different-fonts-increase-reading-speed-for-different-individuals/)
+found individual differences in font-related reading performance; that does not
+establish one best font or a reading-speed benefit for Lixity.
+
 The manuscript is the primary workspace. Analysis supports passage selection
 and interpretation; retained evidence and authored dossiers provide context.
 These are connected views over the same project, not independent products.
@@ -5270,6 +5312,42 @@ Association refreshes skip unchanged annotation DOM and preserve native selectio
 endpoints when marks change. Automatic review uses the existing research-status
 read before requesting archive records; context-bound pending reads are coalesced
 and invalidated on project changes.
+
+**On current main (Unreleased):** the existing reading thread owns one nearest
+dossier departure above an optional manuscript origin. An accepted dossier render
+provides its project/research context, saved revision and a current-render guard;
+departure captures the requesting control, tab and scroll ancestors. Return
+restores that existing DOM and exact offsets after display work settles. It does
+not repin records or reload a dossier. Replaced roots and changed contexts
+invalidate the return. The same control moves from the desktop sidebar into the
+mobile page flow; its observed height offsets other sticky controls.
+
+Reader layout restoration has one revision-guarded owner for tool changes. Until
+the opening frame commits, later arrangements reuse the stable reading anchor;
+once it commits, deliberate scrolling becomes the next origin. Reading settings
+observe their native disclosure state before rendering so initial placement does
+not depend on the later native `toggle` event.
+
+The shared jump helper reveals a real destination, accounts for sticky controls
+in its own scroll area and accepts start, center or nearest alignment. Arrival
+feedback observes the destination and its scrolling ancestors until stable;
+new jumps cancel pending and visible obsolete cues. Exact context restoration
+uses the observer without realigning the restored position. Reduced motion is
+read at navigation time. [W3C C43](https://www.w3.org/WAI/WCAG22/Techniques/css/C43)
+and [focus-obscuration guidance](https://www.w3.org/WAI/WCAG22/Techniques/failures/F110.html)
+inform clearance checks, including short viewports and wrapped controls.
+
+Action explanations reuse `tooltips.js`, localized label packs and native
+controls. Hover and keyboard focus expose supplemental text; the tooltip does
+not contain actions or take focus. Actual shortcut bindings also have a visible
+reference under Reading settings. Important workflow information stays in labels,
+state and empty-state actions. Placement clears the complete owning toolbar,
+including wrapped adjacent controls. Action activation dismisses help until fresh
+pointer/focus intent; vendor-owned PhotoSwipe controls retain their own titles
+and keyboard behavior. The [WAI-ARIA tooltip pattern](https://www.w3.org/WAI/ARIA/apg/patterns/tooltip/)
+and [WCAG hover/focus guidance](https://www.w3.org/WAI/WCAG22/Understanding/content-on-hover-or-focus)
+inform dismissibility, hover persistence and accessible descriptions. These are
+targeted checks, not a claim of application-wide accessibility conformance.
 
 The companion's desktop `separator` supports pointer dragging and keyboard
 adjustment over a bounded manuscript-width share. The split is a local display
@@ -5843,7 +5921,9 @@ capability/context guards below. Selection drafts save nothing by themselves.
 | `#manuscript-analysis-toggle` | constant-name **Analysis** toggle; `aria-pressed` and visible On/Off text identify diagnostic visibility independently of the dossier |
 | `#workbench-overview-open` / `#workbench-overview-back` | open dense analysis / return to preserved manuscript context |
 | `[data-context-tool="analysis"]` / `[data-context-tool="dossier"]` | explicitly select one active context tool; closing the tool does not itself hide all analysis |
-| `#workbench-thread` / `#workbench-return` | original passage context and viewed saved-record identity/revision, with context-checked return; cleared on return or changed project/source/research context |
+| `#workbench-thread` / `#workbench-return` | context-checked return to the original passage; on current main, a nearest dossier departure retains its saved version/position and an earlier passage return. The same control remains visible on narrow screens; replaced roots or changed project/source/research context invalidate it |
+| `#reader-settings .reader-shortcuts` | current main: visible localized reference to implemented passage-menu, search and close keys |
+| `[data-help]` / `#lixity-tooltip` | supplemental action/measurement explanation on hover or focus; inspect visible control names/states for operation, not tooltip visibility. Help does not authorize a write or retention |
 | `#project-actions > summary` | open or close Project actions before using its existing New/Open, guidance and PDF controls; loaded workspaces start collapsed, empty workspaces expanded |
 | `.reader-structural[data-start][data-end]` | readable source structure without a paragraph profile; inclusive source lines are presentation anchors, not a new research-anchor format |
 | `#research-tab-<key>` / `#rtab-<key>` | named research tab and labelled tabpanel; `data-rtab` and selected-state hooks remain unchanged |

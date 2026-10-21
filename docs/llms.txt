@@ -52,6 +52,10 @@ preferences are browser-local; saves and retention are explicit. See
 and [research workflows](https://mfahsold.github.io/lixity/research/USAGE.md).
 Only profiled paragraphs have measurements and claim anchors. Plain reports
 keep their inspection layout; the bounded reader is not a Markdown editor.
+On current main, dossier departures also retain a guarded Back to dossier route;
+mobile return controls stay visible. Reading settings includes actual keyboard
+shortcuts, and action help works on focus as well as hover. Nested scroll areas
+share settled destination feedback and live reduced-motion handling.
 
 Root-only `manuscript` selects a contained relative default for workspace folders,
 `scenes` and read-only Research manuscript review. Explicit paths win; invalid

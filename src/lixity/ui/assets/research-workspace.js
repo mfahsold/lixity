@@ -197,6 +197,22 @@ async function initResearchUI(freshRead) {
   update();
 })();
 
+// Display an existing tab without reading or replacing its draft/detail DOM.
+// Ordinary tab actions below still refresh their records explicitly.
+function showResearchTab(tabBtn) {
+  if (!tabBtn) return;
+  document.querySelectorAll(".research-tabs button").forEach(function(button) {
+    var active = button === tabBtn;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+    button.tabIndex = active ? 0 : -1;
+  });
+  var targetId = "rtab-" + tabBtn.dataset.rtab;
+  document.querySelectorAll(".research-tab-pane").forEach(function(pane) {
+    pane.style.display = pane.id === targetId ? "block" : "none";
+  });
+}
+
 document.addEventListener("click", async function (event) {
   var ackButton = event.target.closest("[data-decision-ack-status]");
   if (ackButton) {
@@ -427,7 +443,7 @@ document.addEventListener("click", async function (event) {
         var isSource = !source.hidden;
         source.hidden = isSource;
         rendered.hidden = !isSource;
-        sourceToggleBtn.textContent = escapeHtml(uiLabel(isSource ? "research_show_source" : "research_show_preview"));
+        sourceToggleBtn.textContent = uiLabel(isSource ? "research_show_source" : "research_show_preview");
       }
     }
     return;
@@ -472,18 +488,8 @@ document.addEventListener("click", async function (event) {
   var tabBtn = event.target.closest("[data-rtab]");
   if (tabBtn) {
     clearResearchSourceSelections();
-    document.querySelectorAll(".research-tabs button").forEach(function(b) {
-      b.classList.remove("active");
-      b.setAttribute("aria-selected", "false");
-      b.tabIndex = -1;
-    });
-    tabBtn.classList.add("active");
-    tabBtn.setAttribute("aria-selected", "true");
-    tabBtn.tabIndex = 0;
+    showResearchTab(tabBtn);
     var targetId = "rtab-" + tabBtn.dataset.rtab;
-    document.querySelectorAll(".research-tab-pane").forEach(function(pane) {
-      pane.style.display = pane.id === targetId ? "block" : "none";
-    });
     if (tabBtn.dataset.rtab === "sources") refreshResearchSources();
     if (tabBtn.dataset.rtab === "dossiers") refreshResearchDossiers();
     if (tabBtn.dataset.rtab === "claims") { refreshResearchClaims(); refreshResearchClaimProjections(); }

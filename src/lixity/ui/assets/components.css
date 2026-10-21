@@ -92,7 +92,7 @@
   background: var(--accent);
   color: var(--bg);
   border-radius: var(--radius-sm);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-strong);
 }
 .skip-link:focus {
   left: 1rem;
@@ -195,6 +195,7 @@ input[type="file"].ctl { max-width: 100%; }
   text-transform: none;
 }
 button.ctl, a.ctl, select.ctl, input.ctl, textarea.ctl {
+  font-family: inherit;
   font-size: var(--text-control);
   line-height: var(--line-control);
   min-height: 2.5rem;

@@ -28,6 +28,8 @@ Open [**Research → Dossiers**](../demo/report.html#research-manager) and **Vie
 
 In **Review**, follow the saved quotation, “Someone had tried the eastern gate of Warehouse 4.” **Go to manuscript passage** returns to exactly matched text; **Open claim** shows its pinned claim and cited sources. When you follow a connection from a manuscript paragraph, close the record viewer and use **Back to passage** to return there.
 
+On current main, opening saved associations from an open dossier offers **Back to dossier**. It restores that dossier’s saved version and reading position. The return stays available on narrow screens. In the manuscript, **Reading settings → Keyboard shortcuts** explains the passage-menu, search and close keys; key actions also explain their purpose when focused or hovered.
+
 The retained passage, authored claim and manuscript quote are separate records. People, events and journeys are fictional; historical images do not verify them. Maps use OpenStreetMap and send the viewed area and client IP to its tile provider. Turn off the background or choose the sketch for offline use. [Research workflows](research-pdf.html) explains explicit retention and saving in the local app.
 
 ## 4. Choose a PDF copy

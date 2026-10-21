@@ -55,8 +55,11 @@ document.addEventListener("mouseout", function (event) {
   if (cell) highlightCell(cell, false);
 }, { passive: true });
 
-var reduceMotion = window.matchMedia
-  && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+var passageMotionPreference = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
+var reduceMotion = Boolean(passageMotionPreference && passageMotionPreference.matches);
+if (passageMotionPreference) passageMotionPreference.addEventListener("change", function(event) {
+  reduceMotion = event.matches;
+});
 
 function revealChapter(node) {
   var chapter = node && node.closest ? node.closest(".chapter.collapsed") : null;
@@ -73,29 +76,66 @@ function toggleChapter(toggle, expand) {
   toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
 }
 
-function flashOnArrival(target) {
-  // Flash after the smooth scroll settles; a flash that fades mid-scroll
-  // leaves the destination unmarked ("the anchor does not sit precisely").
-  var start = window.scrollY, frames = 0;
-  function show() {
-    target.classList.add("flash");
-    setTimeout(function () { target.classList.remove("flash"); }, 1600);
+function passageScrollContainers(target) {
+  var containers = [];
+  for (var parent = target.parentElement; parent; parent = parent.parentElement) {
+    var style = getComputedStyle(parent);
+    if (/(auto|scroll|hidden)/.test(style.overflowY + style.overflowX) &&
+        (parent.scrollHeight > parent.clientHeight || parent.scrollWidth > parent.clientWidth)) containers.push(parent);
   }
-  function waitForEnd() {
-    if ("onscrollend" in window) {
-      var handler = function () { window.removeEventListener("scrollend", handler); show(); };
-      window.addEventListener("scrollend", handler);
-      setTimeout(function () { window.removeEventListener("scrollend", handler); show(); }, 2000);
+  return containers;
+}
+
+var passageArrival = null;
+function flashOnArrival(target) {
+  // A window scrollend can precede its nested scrollports. Observe the actual
+  // destination and all scrolling ancestors, including layout changes.
+  if (passageArrival) {
+    cancelAnimationFrame(passageArrival.frame);
+    clearTimeout(passageArrival.timer);
+    passageArrival.target.classList.remove("flash");
+  }
+  passageArrival = null;
+  // Cancel the incidental view-return cue before a destination starts settling.
+  if (window.LixityMotion) window.LixityMotion.passage(null);
+  if (!target || !target.isConnected) return;
+  target.classList.remove("flash");
+  var arrival = {target: target, frame: 0, timer: 0, prose: false};
+  passageArrival = arrival;
+  var containers = passageScrollContainers(target), previous = null;
+  var started = performance.now(), stableSince = started;
+  function watch(now) {
+    if (passageArrival !== arrival) return;
+    if (!target.isConnected || !target.getClientRects().length) { passageArrival = null; return; }
+    var rect = target.getBoundingClientRect();
+    var position = [rect.top, rect.left, rect.width, rect.height, window.scrollX, window.scrollY];
+    var top = 0, bottom = innerHeight, left = 0, right = innerWidth;
+    containers.forEach(function(container) {
+      position.push(container.scrollTop, container.scrollLeft);
+      var bounds = container.getBoundingClientRect();
+      top = Math.max(top, bounds.top + container.clientTop);
+      bottom = Math.min(bottom, bounds.top + container.clientTop + container.clientHeight);
+      left = Math.max(left, bounds.left + container.clientLeft);
+      right = Math.min(right, bounds.left + container.clientLeft + container.clientWidth);
+    });
+    if (!previous || position.some(function(value, index) { return Math.abs(value - previous[index]) > .5; })) stableSince = now;
+    previous = position;
+    var visible = rect.bottom > top && rect.top < bottom && rect.right > left && rect.left < right;
+    if (visible && now - stableSince >= 100) {
+      target.classList.add("flash");
+      arrival.prose = target.matches("#chapters .ptext") && document.body.classList.contains("manuscript-reading");
+      if (arrival.prose && window.LixityMotion) window.LixityMotion.passage(target);
+      arrival.timer = setTimeout(function() {
+        target.classList.remove("flash");
+        if (passageArrival === arrival) passageArrival = null;
+      }, 1600);
       return;
     }
-    setTimeout(show, 450);
+    // Hidden or interrupted destinations must not announce a stale arrival.
+    if (now - started >= 5000) { passageArrival = null; return; }
+    arrival.frame = requestAnimationFrame(watch);
   }
-  (function watch() {
-    frames += 1;
-    if (window.scrollY !== start) { waitForEnd(); return; }
-    if (frames < 3) { requestAnimationFrame(watch); return; }
-    show();
-  })();
+  arrival.frame = requestAnimationFrame(watch);
 }
 
 function rememberPassageLocation(target) {
@@ -105,7 +145,9 @@ function rememberPassageLocation(target) {
   } catch (_) { /* Navigation still works when history changes are restricted. */ }
 }
 
-function scrollAndFlash(target) {
+function scrollAndFlash(target, options) {
+  if (!target) return;
+  options = options || {};
   var focused = document.activeElement;
   var leavingOverview = target.closest("#chapters") && window.LixityWorkbench &&
     window.LixityWorkbench.state().surface === "overview";
@@ -114,7 +156,7 @@ function scrollAndFlash(target) {
   var sceneDrill = focused && focused.matches(".scene-overview a[data-jump]") &&
     focused.getAttribute("data-jump") === "#" + target.id;
   var view = target.closest(".view-pane");
-  if (view) switchActiveView(view.dataset.viewPane);
+  if (view && !view.classList.contains("active")) switchActiveView(view.dataset.viewPane);
   if (target.closest("#manuscript-analysis-panels") && window.LixityReader) window.LixityReader.inspect();
   if (target.closest("#chapters") && window.LixityWorkbench && window.LixityWorkbench.state().surface !== "document") {
     window.LixityWorkbench.dispatch({type: "surface", value: "document"});
@@ -130,15 +172,22 @@ function scrollAndFlash(target) {
     target.focus({preventScroll: true});
   }
   setPassageScrollMargin(target);
-  target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  reduceMotion = Boolean(passageMotionPreference && passageMotionPreference.matches);
+  var behavior = options.behavior || "smooth";
+  target.scrollIntoView({ behavior: reduceMotion && behavior === "smooth" ? "auto" : behavior, block: options.block || "start" });
   flashOnArrival(target);
 }
 
 function setPassageScrollMargin(target) {
-  var bars = document.querySelectorAll("#manuscript-reader-controls, #view-pane-analysis .toolbar");
-  var height = 0;
+  var bars = document.querySelectorAll("#workbench-thread, #manuscript-reader-controls, #view-pane-analysis .toolbar");
+  var height = 0, rect = target.getBoundingClientRect();
+  var container = passageScrollContainers(target)[0];
   bars.forEach(function(bar) {
-    if (bar.getClientRects().length && getComputedStyle(bar).position === "sticky") height = Math.max(height, bar.getBoundingClientRect().height);
+    if (!bar.getClientRects().length || target.contains(bar) || passageScrollContainers(bar)[0] !== container) return;
+    var style = getComputedStyle(bar), bounds = bar.getBoundingClientRect();
+    if (style.position === "sticky" && bounds.right > rect.left && bounds.left < rect.right) {
+      height = Math.max(height, (parseFloat(style.top) || 0) + bounds.height);
+    }
   });
   target.style.scrollMarginTop = (height + 12) + "px";
 }
@@ -291,8 +340,7 @@ function toggleParagraph(chip, forceOpen, instant) {
     panel.style.borderLeftColor = chip.style.getPropertyValue("--layer-color") || "";
     if (instantExpand) void panel.offsetHeight;
     if (fromClick) {
-      panel.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "nearest" });
-      flashOnArrival(panel);
+      scrollAndFlash(panel, {block: "nearest"});
     }
     if (instantExpand) requestAnimationFrame(function () {
       requestAnimationFrame(function () { panel.classList.remove("no-anim"); });

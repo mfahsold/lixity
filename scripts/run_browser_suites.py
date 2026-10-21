@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the local browser regression suites in one Chromium at a time.
+"""Run the local browser regression suites with bounded parallel workers.
 
 Every ``tests/browser/*.cjs`` file is an independent suite. ``--group fast``
 runs the everyday core surfaces; ``--group full`` (the default) runs every
@@ -29,6 +29,7 @@ SUITE_DIR = ROOT / "tests" / "browser"
 # Everyday coverage for UI work; run every suite before a release.
 GROUPS: dict[str, tuple[str, ...]] = {
     "fast": (
+        "anchor-navigation.cjs",
         "analysis-navigation.cjs",
         "analysis-overview.cjs",
         "layout.cjs",
@@ -53,6 +54,7 @@ AREAS: dict[str, tuple[str, ...]] = {
     "docs": (
         "docs.cjs",
         "pages-analytics.cjs",
+        "typography-localization.cjs",
         "visual-consistency.cjs",
     ),
     "tokens": (
@@ -60,12 +62,16 @@ AREAS: dict[str, tuple[str, ...]] = {
         "layout.cjs",
         "overlay-layout.cjs",
         "scroll-regions.cjs",
+        "typography-localization.cjs",
         "visual-consistency.cjs",
     ),
     "analysis": (
+        "anchor-navigation.cjs",
         "analysis-narration.cjs",
         "analysis-navigation.cjs",
         "analysis-overview.cjs",
+        "contextual-help.cjs",
+        "dossier-return.cjs",
         "layout.cjs",
         "overlay-layout.cjs",
         "manuscript-pdf.cjs",
@@ -82,6 +88,7 @@ AREAS: dict[str, tuple[str, ...]] = {
         "scenes.cjs",
         "scroll-regions.cjs",
         "style-space.cjs",
+        "typography-localization.cjs",
         "ui-usability.cjs",
         "visual-consistency.cjs",
     ),
@@ -100,13 +107,16 @@ AREAS: dict[str, tuple[str, ...]] = {
         "visual-consistency.cjs",
     ),
     "research": (
+        "anchor-navigation.cjs",
         "claim-evidence-actions.cjs",
+        "contextual-help.cjs",
         "overlay-layout.cjs",
         "research-navigation.cjs",
         "decision-acknowledgement.cjs",
         "dossier-claims.cjs",
         "dossier-geography.cjs",
         "dossier-images.cjs",
+        "dossier-return.cjs",
         "dossier-workflows.cjs",
         "list-filters.cjs",
         "manuscript-links-native.cjs",
@@ -114,6 +124,7 @@ AREAS: dict[str, tuple[str, ...]] = {
         "research-chronology.cjs",
         "research-selection.cjs",
         "research.cjs",
+        "typography-localization.cjs",
         "workspace-reader.cjs",
     ),
 }
@@ -141,9 +152,9 @@ PATH_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("src/lixity/ui/assets/register-settings.js", ("project",)),
     ("src/lixity/server/routes_project.py", ("project",)),
     ("src/lixity/server/routes_nda.py", ("project",)),
-    ("src/lixity/ui/assets/interactions.js", ("analysis",)),
+    ("src/lixity/ui/assets/interactions.js", ("full",)),
     ("src/lixity/ui/assets/style-space.js", ("analysis",)),
-    ("src/lixity/ui/assets/tooltips.js", ("analysis",)),
+    ("src/lixity/ui/assets/tooltips.js", ("full",)),
     ("src/lixity/ui/dimensions.py", ("analysis",)),
     ("src/lixity/ui/heatmap.py", ("analysis",)),
     ("src/lixity/ui/narration.py", ("analysis",)),

@@ -80,6 +80,11 @@
       colorProbe.style.color = "var(--" + role + ")";
       palette[role] = getComputedStyle(colorProbe).color;
     });
+    // Canvas text follows the same UI/technical roles as the surrounding DOM.
+    colorProbe.style.font = "var(--text-note) var(--font)";
+    palette.axisFont = getComputedStyle(colorProbe).font;
+    colorProbe.style.font = "var(--weight-strong) var(--text-note) var(--font-mono)";
+    palette.chapterFont = getComputedStyle(colorProbe).font;
     var scheme = getComputedStyle(document.documentElement).colorScheme;
     palette.dark = scheme === "dark" || (scheme !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
     return palette;
@@ -327,7 +332,7 @@
 
     ctx.save();
     ctx.lineWidth = 1;
-    ctx.font = "12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = canvasPalette().axisFont;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
@@ -457,7 +462,7 @@
       ctx.restore();
     }
     ctx.save();
-    ctx.font = "bold 12px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.font = canvasPalette().chapterFont;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     // Keep the selected chapter's numeral when nearby points compete for space.

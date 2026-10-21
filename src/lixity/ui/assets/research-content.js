@@ -159,7 +159,8 @@ function renderSafeMarkdown(rawText, dossierContext) {
       if (noLinks) return m;
       var cleanUrl = url.trim();
       if (/^lixity:/i.test(cleanUrl)) {
-        return protect('<code class="lixity-ref" title="Internal reference: ' + cleanUrl.replace(/"/g, "&quot;") + '">' + label + ' (' + cleanUrl.replace(/^lixity:/i, "") + ')</code>');
+        var referenceTitle = uiFormat("research_internal_reference", {reference: cleanUrl});
+        return protect('<code class="lixity-ref" title="' + referenceTitle.replace(/"/g, "&quot;") + '">' + label + ' (' + cleanUrl.replace(/^lixity:/i, "") + ')</code>');
       }
       var visibleLabel = parseInline(label, true);
       if (/^(javascript|data|vbscript):/i.test(cleanUrl)) {
@@ -373,9 +374,20 @@ function researchDossierDetailHtml(detail, readOnly) {
 // counts explicitly retained links against their pinned dossier association.
 // It never infers unwritten prose use or reconstructs historical dossier claims.
 async function enhanceResearchDossierClaims(host, detail, stillCurrent) {
+  // A return reuses this accepted rendering, never a newer dossier selected
+  // by title or an element left behind by a failed or superseded read.
+  var context = researchReadContext();
+  var reading = {id: detail.id, revision: detail.revision, title: detail.title,
+    projectId: detail.project_id, snapshot: detail.snapshot, root: host};
+  host._dossierReading = reading;
+  host.dataset.dossierReading = detail.id;
+  reading.current = function() {
+    return host.isConnected && host._dossierReading === reading &&
+      context.projectId === researchSelectionProjectId && context.token === researchContextToken() &&
+      detail.project_id === researchSelectionProjectId && (!stillCurrent || stillCurrent());
+  };
   var slot = host.querySelector(".research-dossier-claims");
   if (!slot || !researchContextToken() || !detail.id || !detail.project_id) return;
-  var context = researchReadContext();
   var serial = slot._claimsRead = (slot._claimsRead || 0) + 1;
   function current() {
     return slot.isConnected && host.contains(slot) && serial === slot._claimsRead &&

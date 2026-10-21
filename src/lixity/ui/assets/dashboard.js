@@ -195,10 +195,7 @@ if (filter) {
     if (chip) toggleParagraph(chip, true, true);
     var paragraph = block.matches(".reader-structural") ? block : block.querySelector("p");
     if (paragraph) { unmark(paragraph); mark(paragraph, query); }
-    block.scrollIntoView({block: "center", behavior: reduceMotion ? "auto" : "smooth"});
-    block.classList.remove("flash");
-    void block.offsetWidth;
-    block.classList.add("flash");
+    scrollAndFlash(block, {block: "center"});
   }
 
   var pending = null;

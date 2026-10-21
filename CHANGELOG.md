@@ -8,6 +8,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Changed
+- Public entry routes start with concrete manuscript questions, an example and a
+  short tour; installation and technical references remain directly reachable.
+- Key reader actions explain their purpose on hover and focus. Reading settings
+  includes a localized reference to implemented passage-menu, search and close
+  keys. Shared controls and canvas labels use central typography roles; fenced
+  code and all six prose heading levels retain readable sizes.
 - Public entry pages use a shorter product introduction, bounded linked screenshot
   previews and direct documentation routes for first use, installation and reference.
 - Analysis overview groups secondary manuscript measurements in a reversible
@@ -20,6 +26,17 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Hook help explains the existing heuristic without changing its calculation.
 
 ### Fixed
+- Reading settings fit short viewports from their first visible frame. Rapid
+  tool reversals and analysis changes preserve the stable reading position
+  without rewinding deliberate scrolling after the tool has opened.
+- Dossier departures retain a guarded return to their exact saved view, tab,
+  scroll position and control without dropping an earlier manuscript return.
+  The same return control stays reachable on narrow screens and offsets other
+  sticky controls. Project changes and replaced dossier views invalidate it.
+- Shared jumps account for nested scrolling and their own sticky controls;
+  arrival feedback waits for scrolling to settle, cancels obsolete cues and
+  honors live reduced-motion changes. Search no longer leaves permanent arrival
+  styling. Navigation does not change source bytes or saved research records.
 - Overview section links retain spacing and keyboard reachability on narrow
   screens. The final chapter matrix stays selected at the page bottom, and
   keyboard drills focus the revealed manuscript destination while preserving

@@ -1,3 +1,129 @@
+// One reading thread retains a nearest dossier departure above an optional
+// manuscript journey. Research-only projects use the same return control.
+(function() {
+  "use strict";
+  var shell = document.querySelector(".workspace-shell"), workbench = window.LixityWorkbench;
+  if (!shell || !workbench) return;
+  var button = document.getElementById("workbench-return");
+  if (!button) {
+    button = document.createElement("button"); button.id = "workbench-return";
+    button.type = "button"; button.className = "ctl";
+    button.dataset.help = uiLabel("reading_help_return");
+  }
+  var thread = document.createElement("aside"), originText = document.createElement("p"), recordText = document.createElement("p");
+  thread.id = "workbench-thread"; thread.className = "workbench-thread";
+  thread.setAttribute("aria-label", uiLabel("reading_thread"));
+  originText.className = recordText.className = "ctl-note";
+  recordText.setAttribute("aria-live", "polite");
+  thread.append(originText, recordText, button); shell.appendChild(thread);
+  var sidebar = window.matchMedia("(min-width: 1100px)");
+  function threadHeight() {
+    var height = !sidebar.matches && !thread.hidden ? thread.getBoundingClientRect().height : 0;
+    var value = height + "px";
+    if (document.body.style.getPropertyValue("--workbench-return-height") !== value) {
+      document.body.style.setProperty("--workbench-return-height", value);
+    }
+  }
+  function placeThread() {
+    var focused = thread.contains(document.activeElement) ? document.activeElement : null;
+    thread.classList.toggle("workbench-thread-mobile", !sidebar.matches);
+    // The mobile parent spans every view, so its sticky return is not bounded
+    // by the short project/navigation shell that precedes the destination.
+    if (sidebar.matches) shell.appendChild(thread);
+    else shell.after(thread);
+    if (focused && document.activeElement !== focused) focused.focus({preventScroll: true});
+    threadHeight();
+  }
+  sidebar.addEventListener("change", placeThread);
+  if (typeof ResizeObserver === "function") new ResizeObserver(threadHeight).observe(thread);
+  placeThread();
+  var passage = null, dossier = null, pendingDossier = null, viewed = null, returnSerial = 0;
+  function context() {
+    var host = document.getElementById("manuscript-pdf-form") || document.getElementById("workspace-reader") || document.body;
+    return [researchContextToken(), researchSelectionProjectId, host.dataset.projectToken,
+      document.body.dataset.manuscriptProjectToken, document.body.dataset.manuscriptSourceSha256].join(":");
+  }
+  function current(value) {
+    return value && value.context === context() && value.reading.current() &&
+      value.control.isConnected && value.reading.root.contains(value.control);
+  }
+  function text(node, value) { if (node.textContent !== value) node.textContent = value; }
+  function update() {
+    if (dossier && !current(dossier)) dossier = null;
+    if (pendingDossier && !current(pendingDossier)) pendingDossier = null;
+    if (passage && !passage.valid()) passage = null;
+    thread.hidden = button.hidden = !dossier && !passage;
+    text(button, uiLabel(dossier ? "reading_back_dossier" : "reading_back"));
+    text(originText, dossier ? uiFormat("reading_dossier_origin", {title: dossier.reading.title, revision: dossier.reading.revision}) : passage ? passage.description : "");
+    text(recordText, viewed && (dossier || passage) ? uiLabel("reading_reviewed") + ": " +
+      uiLabel("research_revision_kind_" + viewed.kind) + " · " + viewed.title + " · " +
+      uiFormat("research_revision_number", {revision: viewed.revision}) +
+      (viewed.pinned || viewed.current ? " · " + uiLabel(viewed.pinned ? "reading_pinned" : "research_revision_current") : "") : "");
+    threadHeight();
+  }
+  function capture(reading, control) {
+    var scrolls = [];
+    for (var node = control.parentElement; node; node = node.parentElement) {
+      scrolls.push({node: node, top: node.scrollTop, left: node.scrollLeft});
+    }
+    return {reading: reading, control: control, context: context(), state: workbench.state(),
+      tab: document.querySelector(".research-tabs button.active"), scrolls: scrolls,
+      top: window.scrollY, left: window.scrollX};
+  }
+  document.addEventListener("click", function(event) {
+    var action = event.target.closest("[data-manuscript-links-claim], [data-manuscript-links-dossier], [data-research-global], [data-dossier-claim], [data-dossier-decision], [data-use-passage], [data-research-history=claim]");
+    if (!action) return;
+    var root = action.closest("[data-dossier-reading]"), reading = root && root._dossierReading;
+    if (reading && reading.current()) {
+      var value = capture(reading, action);
+      // Native Close already returns from a record viewer. Keep its dossier
+      // only as a candidate if that viewer subsequently leaves for Review.
+      if (action.matches("[data-research-history=claim]")) { pendingDossier = value; return; }
+      dossier = value; viewed = null; ++returnSerial; update();
+    } else if (action.closest("#modal-research-revision") &&
+        action.matches("[data-manuscript-links-claim]") && current(pendingDossier)) {
+      dossier = pendingDossier; viewed = null; ++returnSerial; update();
+    }
+  }, true);
+  var dialog = document.getElementById("modal-research-revision");
+  if (dialog) dialog.addEventListener("close", function() { if (!dialog.open) pendingDossier = null; });
+  document.addEventListener("lixity:research-record-view", function(event) { viewed = event.detail; update(); });
+  document.addEventListener("lixity:workbench-change", update);
+  new MutationObserver(update).observe(document.body, {subtree: true, childList: true, attributes: true,
+    attributeFilter: ["data-project-token", "data-manuscript-project-token", "data-research-token", "data-manuscript-source-sha256", "data-dossier-reading", "open"]});
+  button.addEventListener("click", function() {
+    update();
+    if (!dossier) {
+      if (!passage) return;
+      var previous = passage; passage = null; viewed = null; ++returnSerial; update(); previous.restore(); return;
+    }
+    var value = dossier, serial = ++returnSerial;
+    dossier = pendingDossier = null; viewed = null; update();
+    switchActiveView(value.state.view);
+    if (value.tab) showResearchTab(value.tab);
+    var state = workbench.state();
+    if (state.analysisVisible !== value.state.analysisVisible) workbench.dispatch({type: "analysis", value: value.state.analysisVisible});
+    if (state.contextTool !== value.state.contextTool) workbench.dispatch({type: "tool", value: value.state.contextTool});
+    if (workbench.state().surface !== value.state.surface) workbench.dispatch({type: "surface", value: value.state.surface});
+    if (workbench.state().focus !== value.state.focus) workbench.dispatch({type: "focus", value: value.state.focus});
+    // View/tool changes can schedule layout work. Restore only after it has
+    // run, and never act on a replaced context or a newer departure.
+    requestAnimationFrame(function() { requestAnimationFrame(function() {
+      if (serial !== returnSerial || !current(value)) return;
+      value.control.focus({preventScroll: true});
+      value.scrolls.forEach(function(scroll) { scroll.node.scrollTo({top: scroll.top, left: scroll.left, behavior: "instant"}); });
+      window.scrollTo({top: value.top, left: value.left, behavior: "instant"});
+      flashOnArrival(value.control);
+    }); });
+  });
+  window.LixityReadingThread = {
+    hasDossier: function() { return current(dossier) || current(pendingDossier); },
+    hasPassage: function() { return Boolean(passage && passage.valid()); },
+    rememberPassage: function(value) { passage = value; dossier = null; viewed = null; ++returnSerial; update(); }
+  };
+  update();
+})();
+
 // Reading and inspection share source text, anchors and existing action handlers.
 (function () {
   "use strict";
@@ -11,6 +137,7 @@
   var layout = document.getElementById("workspace-reader-layout");
   var overviewAnchor = null, inspectorTarget = null, origin = null;
   var retainedAnchor = null, requestedAnchor = null, dockOrigin = null, arrangementRevision = 0;
+  var pendingDockAnchor = null;
   var narrowContext = window.matchMedia("(max-width: 900px)");
   var panels = Array.from(chapters.querySelectorAll(".ptext"));
   var menu = document.getElementById("manuscript-context-menu");
@@ -35,6 +162,7 @@
   } catch (_) { /* A malformed preference never changes manuscript data. */ }
   function capture() {
     if (workbench.state().view !== "analysis" || workbench.state().surface !== "document") return null;
+    if (pendingDockAnchor && pendingDockAnchor.revision === arrangementRevision) return pendingDockAnchor.anchor;
     var boundary = controls.getBoundingClientRect().bottom;
     var panel = Array.from(chapters.querySelectorAll(".ptext, .reader-structural")).find(function(candidate) {
       var rect = candidate.getBoundingClientRect();
@@ -44,11 +172,14 @@
   }
   function restore(anchor, arrival) {
     if (!anchor) return;
+    var revision = arrangementRevision;
     requestAnimationFrame(function() {
+      if (revision !== arrangementRevision) return;
       if (anchor.panel.isConnected) {
         window.scrollBy(0, anchor.panel.getBoundingClientRect().top - anchor.top);
         if (arrival && window.LixityMotion) window.LixityMotion.passage(anchor.panel);
       }
+      if (pendingDockAnchor && pendingDockAnchor.revision === revision) pendingDockAnchor = null;
     });
   }
   function retain(action) {
@@ -56,8 +187,9 @@
     retainedAnchor = anchor;
     try { action(); } finally { retainedAnchor = outer; }
     var next = workbench.state();
-    // A stacked tool owns its visible destination and the subsequent return.
-    if (narrowContext.matches && previous.contextTool !== next.contextTool && next.surface === "document") return;
+    // The tool subscriber owns one layout restore, including an immediate
+    // reversal before its opening frame. Do not queue a second transient anchor.
+    if (previous.contextTool !== next.contextTool && next.surface === "document") return;
     restore(anchor);
   }
   function appearance() {
@@ -78,6 +210,8 @@
     button.type = "button"; button.className = "ctl reader-paragraph-actions";
     button.dataset.readerParagraph = panel.id; button.textContent = "…";
     button.setAttribute("aria-label", uiLabel("reading_actions"));
+    button.dataset.help = uiLabel("reading_help_actions");
+    button.setAttribute("aria-keyshortcuts", "Shift+F10");
     button.setAttribute("aria-haspopup", "menu"); button.setAttribute("aria-controls", menu.id);
     button.setAttribute("aria-expanded", "false");
     inner.appendChild(button);
@@ -138,10 +272,16 @@
   }
   if (dock) dock.appendChild(inspector);
   workbench.subscribe(function(state, previous) {
-    var anchor = requestedAnchor || retainedAnchor || capture(), revision = ++arrangementRevision;
-    var open = state.contextTool !== "none" && state.surface === "document";
-    var toolChanged = state.contextTool !== previous.contextTool && state.view === "analysis" &&
+    var sameDocument = state.view === "analysis" &&
       previous.view === "analysis" && state.surface === "document" && previous.surface === "document";
+    var toolChanged = state.contextTool !== previous.contextTool && sameDocument;
+    // Until the opening restore commits, current rectangles describe temporary
+    // layout. A reversal must retain the prior reading position instead.
+    var pending = sameDocument && pendingDockAnchor && pendingDockAnchor.revision === arrangementRevision;
+    var anchor = requestedAnchor || (pending && pendingDockAnchor.anchor) || retainedAnchor || capture();
+    var revision = ++arrangementRevision;
+    var open = state.contextTool !== "none" && state.surface === "document";
+    pendingDockAnchor = sameDocument && open && !narrowContext.matches && (toolChanged || pending) ? {anchor: anchor, revision: revision} : null;
     if (toolChanged && open && (previous.contextTool === "none" || requestedAnchor)) {
       dockOrigin = requestedAnchor || (document.activeElement.closest("#view-pane-analysis") ? anchor : null);
       // A toolbar request retains the passage position, but its own focus origin.
@@ -276,7 +416,7 @@
     var summary = settings.querySelector("summary").getBoundingClientRect();
     place(settings.querySelector(".reader-settings-body"), summary.left, summary.bottom + 6);
   }
-  settings.addEventListener("toggle", placeSettings);
+  new MutationObserver(placeSettings).observe(settings, {attributes: true, attributeFilter: ["open"]});
   mode.addEventListener("change", function() { setMode(mode.value); });
   analysisToggle.addEventListener("click", function() {
     var previous = workbench.state();
@@ -309,8 +449,7 @@
     if (chapter) {
       var search = document.getElementById("text-search");
       if (search && search.value) document.getElementById("text-search-clear").click();
-      revealChapter(chapter); setPassageScrollMargin(chapter);
-      chapter.scrollIntoView({block: "start", behavior: reduceMotion ? "auto" : "smooth"});
+      scrollAndFlash(chapter);
       event.target.value = "";
     }
   });
@@ -402,20 +541,7 @@
     if (!summary.getClientRects().length || box.bottom <= 0 || box.top >= innerHeight) settings.open = false;
     else placeSettings();
   }, {passive: true, capture: true});
-  var returnButton = document.getElementById("workbench-return");
-  var shell = document.querySelector(".workspace-shell");
-  var thread = document.createElement("aside"); thread.id = "workbench-thread";
-  thread.className = "workbench-thread"; thread.hidden = true;
-  thread.setAttribute("aria-label", uiLabel("reading_thread"));
-  var threadOrigin = document.createElement("p"), threadRecord = document.createElement("p");
-  threadOrigin.className = threadRecord.className = "ctl-note";
-  threadRecord.setAttribute("aria-live", "polite");
-  thread.append(threadOrigin, threadRecord, returnButton);
-  if (shell) shell.appendChild(thread);
-  function clearOrigin() {
-    origin = null; returnButton.hidden = true; thread.hidden = true;
-    threadOrigin.textContent = threadRecord.textContent = "";
-  }
+  var readingThread = window.LixityReadingThread;
   function validOrigin() {
     return origin && origin.context === sourceContext() && origin.anchor.panel.isConnected &&
       origin.hash === origin.anchor.panel.dataset.paragraphSha256;
@@ -426,43 +552,7 @@
       document.body.dataset.manuscriptSourceSha256, window.LixityWorkspaceReader && window.LixityWorkspaceReader.contextToken(),
       typeof researchContextToken === "function" ? researchContextToken() : ""].join(":");
   }
-  document.addEventListener("click", function(event) {
-    var relation = event.target.closest("[data-research-history], [data-workspace-dossier], [data-manuscript-link-jump], [data-manuscript-links-claim], [data-manuscript-links-dossier], [data-manuscript-links-paragraph], .manuscript-claim-hit");
-    if (!relation || workbench.state().view !== "analysis" || workbench.state().surface !== "document") return;
-    var panel = event.target.closest(".ptext") || document.getElementById(relation.dataset.manuscriptLinksParagraph || "");
-    // Following records in a dialog or companion belongs to the same passage journey.
-    if (!panel && validOrigin()) return;
-    var anchor = panel ? {panel: panel, top: panel.getBoundingClientRect().top} : capture();
-    if (!anchor) return;
-    var range = rangeFor(anchor.panel), offsets = null;
-    if (range) {
-      var paragraph = anchor.panel.querySelector(".ptext-inner > p"), selection = getSelection();
-      var prefix = document.createRange(); prefix.selectNodeContents(paragraph);
-      prefix.setEnd(selection.anchorNode, selection.anchorOffset); var from = prefix.toString().length;
-      prefix.setEnd(selection.focusNode, selection.focusOffset);
-      offsets = {anchor: from, focus: prefix.toString().length};
-    }
-    origin = {anchor: anchor, offsets: offsets, hash: anchor.panel.dataset.paragraphSha256, context: sourceContext()};
-    threadOrigin.textContent = passageContext(anchor.panel); threadRecord.textContent = "";
-    thread.hidden = false; returnButton.hidden = false;
-  }, true);
-  document.addEventListener("lixity:research-record-view", function(event) {
-    if (!validOrigin()) { clearOrigin(); return; }
-    var record = event.detail;
-    threadRecord.textContent = record ? uiLabel("reading_reviewed") + ": " + uiLabel("research_revision_kind_" + record.kind) + " · " +
-      record.title + " · " + uiFormat("research_revision_number", {revision: record.revision}) +
-      (record.pinned || record.current ? " · " + uiLabel(record.pinned ? "reading_pinned" : "research_revision_current") : "") : "";
-  });
-  var originObserver = new MutationObserver(function() { if (origin && !validOrigin()) clearOrigin(); });
-  [document.body, document.getElementById("manuscript-pdf-form"), document.getElementById("workspace-reader"),
-    document.getElementById("research-manager")].forEach(function(host) {
-    if (host) originObserver.observe(host, {attributes: true, attributeFilter: ["data-project-token",
-      "data-manuscript-project-token", "data-manuscript-source-sha256", "data-research-token"]});
-  });
-  returnButton.addEventListener("click", function() {
-    if (!validOrigin()) {
-      clearOrigin(); return;
-    }
+  function returnToPassage() {
     switchActiveView("analysis"); workbench.dispatch({type: "surface", value: "document"});
     rememberPassageLocation(origin.anchor.panel);
     revealChapter(origin.anchor.panel); restore(origin.anchor, true);
@@ -487,8 +577,27 @@
         }
       }
     }
-    clearOrigin();
-  });
+    origin = null;
+  }
+  document.addEventListener("click", function(event) {
+    var relation = event.target.closest("[data-research-history], [data-workspace-dossier], [data-manuscript-link-jump], [data-manuscript-links-claim], [data-manuscript-links-dossier], [data-manuscript-links-paragraph], .manuscript-claim-hit");
+    if (!relation || workbench.state().view !== "analysis" || workbench.state().surface !== "document" || readingThread.hasDossier()) return;
+    var panel = event.target.closest(".ptext") || document.getElementById(relation.dataset.manuscriptLinksParagraph || "");
+    // Following records in a dialog or companion belongs to the same passage journey.
+    if (!panel && readingThread.hasPassage()) return;
+    var anchor = panel ? {panel: panel, top: panel.getBoundingClientRect().top} : capture();
+    if (!anchor) return;
+    var range = rangeFor(anchor.panel), offsets = null;
+    if (range) {
+      var paragraph = anchor.panel.querySelector(".ptext-inner > p"), selection = getSelection();
+      var prefix = document.createRange(); prefix.selectNodeContents(paragraph);
+      prefix.setEnd(selection.anchorNode, selection.anchorOffset); var from = prefix.toString().length;
+      prefix.setEnd(selection.focusNode, selection.focusOffset);
+      offsets = {anchor: from, focus: prefix.toString().length};
+    }
+    origin = {anchor: anchor, offsets: offsets, hash: anchor.panel.dataset.paragraphSha256, context: sourceContext()};
+    readingThread.rememberPassage({description: passageContext(anchor.panel), valid: validOrigin, restore: returnToPassage});
+  }, true);
   window.LixityReader = {capture: capture, restore: restore, retain: retain,
     inspect: function() { setMode("inspect", true); }};
   document.body.classList.add("manuscript-reading");

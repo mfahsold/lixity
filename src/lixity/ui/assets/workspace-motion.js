@@ -3,7 +3,7 @@
   "use strict";
   var reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
   var animations = new Map(), layers = new Map(), viewRevision = 0;
-  var passage = null, passageTimer = null;
+  var passage = null, passageTimer = null, passageRevision = 0;
   function cancel(node) {
     var animation = animations.get(node);
     if (animation) { animation.cancel(); animations.delete(node); }
@@ -26,6 +26,7 @@
     }).slice(0, 8);
   }
   function markPassage(node) {
+    ++passageRevision;
     clearTimeout(passageTimer);
     if (passage) passage.classList.remove("reader-return-target");
     passage = node;
@@ -36,12 +37,14 @@
   }
   function view(pane) {
     var revision = ++viewRevision;
+    var initialPassageRevision = passageRevision;
     animations.forEach(function(_, node) { cancel(node); });
     // Relation routes and Reader.restore finish their own scroll in this frame.
     requestAnimationFrame(function() { requestAnimationFrame(function() {
       if (revision !== viewRevision || !pane || !pane.getClientRects().length) return;
       visible(pane, ".chapter-head, .reader-structural, .ptext, .panel > h2, .research-navigation, .research-tab-pane > .ctl-note").forEach(reveal);
-      if (pane.id === "view-pane-analysis" && window.LixityReader) {
+      // An explicit destination owns its settled cue, including while scrolling.
+      if (passageRevision === initialPassageRevision && pane.id === "view-pane-analysis" && window.LixityReader) {
         var anchor = window.LixityReader.capture();
         if (anchor) markPassage(anchor.panel);
       }

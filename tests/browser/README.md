@@ -17,6 +17,9 @@ to the affected areas (falling back to the full set when a shared foundation
 changed), `--jobs N` runs independent suites in parallel, `--only NAME`
 selects suites and `--start NAME` resumes after a failure.
 
+Shared jump and tooltip changes select the full set: they affect research,
+dialogs and the generated demo as well as the manuscript surface.
+
 Completed runs end with a summary of completed/selected suites, passed, failed,
 not run and elapsed time. Failures include a sorted list of suite names and exit
 codes. Sequential runs stop at the first failure; parallel runs finish all
@@ -42,6 +45,16 @@ Localized suites retain all seven languages at desktop and mobile widths for
 rendering, labels and submitted machine values. Language-independent interaction
 and conflict scenarios run once per relevant viewport. Native server saves and
 intercepted responses cover different boundaries and remain separate.
+
+The anchor-navigation suite checks real nested scroll areas, short mobile
+viewports, single arrival feedback, superseded jumps and live reduced motion.
+Dossier-return uses a disposable native archive to check exact returns, saved
+revisions, drafts, stale contexts and the same visible return control through
+responsive changes. Contextual-help exercises localized hover/focus help, actual
+keyboard bindings and the scrollable reading-settings reference, including its
+first visible frame after resizing a closed menu to a short viewport. Typography-
+localization checks complete prose heading roles, noncompounding code sizes,
+intentional font roles and real source toolbars in all seven languages.
 
 The scroll-regions suite checks six-row and long chapter charts in seven locales,
 desktop/mobile and both themes. It samples the rendered final bar to detect faded
@@ -162,8 +175,9 @@ retained manuscript state. Screenshots stay under `/tmp/lixity-workspace-reader-
 The workbench-transitions suite checks explicit passage requests for Values and
 Dossier at 1440, 390 and 320 pixels: the requested context is visible, closing
 returns to the requesting paragraph with its keyboard focus, and desktop view
-navigation retains the passage. Normal-motion cases cover immediate reversal,
-tool switching and a live reduced-motion preference change. Source identity,
+navigation retains the passage. Normal-motion cases deterministically hold the
+opening layout frame while reversing or changing Analysis, and check deliberate
+scrolling after a tool settles. Other cases cover tool switching and a live reduced-motion preference change. Source identity,
 overflow, runtime errors and unintended writes remain checked throughout.
 Screenshots stay under `/tmp/lixity-workbench-transitions-*`.
 

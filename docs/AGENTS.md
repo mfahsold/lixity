@@ -235,7 +235,9 @@ capability/context guards below. Selection drafts save nothing by themselves.
 | `#manuscript-analysis-toggle` | constant-name **Analysis** toggle; `aria-pressed` and visible On/Off text identify diagnostic visibility independently of the dossier |
 | `#workbench-overview-open` / `#workbench-overview-back` | open dense analysis / return to preserved manuscript context |
 | `[data-context-tool="analysis"]` / `[data-context-tool="dossier"]` | explicitly select one active context tool; closing the tool does not itself hide all analysis |
-| `#workbench-thread` / `#workbench-return` | original passage context and viewed saved-record identity/revision, with context-checked return; cleared on return or changed project/source/research context |
+| `#workbench-thread` / `#workbench-return` | context-checked return to the original passage; on current main, a nearest dossier departure retains its saved version/position and an earlier passage return. The same control remains visible on narrow screens; replaced roots or changed project/source/research context invalidate it |
+| `#reader-settings .reader-shortcuts` | current main: visible localized reference to implemented passage-menu, search and close keys |
+| `[data-help]` / `#lixity-tooltip` | supplemental action/measurement explanation on hover or focus; inspect visible control names/states for operation, not tooltip visibility. Help does not authorize a write or retention |
 | `#project-actions > summary` | open or close Project actions before using its existing New/Open, guidance and PDF controls; loaded workspaces start collapsed, empty workspaces expanded |
 | `.reader-structural[data-start][data-end]` | readable source structure without a paragraph profile; inclusive source lines are presentation anchors, not a new research-anchor format |
 | `#research-tab-<key>` / `#rtab-<key>` | named research tab and labelled tabpanel; `data-rtab` and selected-state hooks remain unchanged |

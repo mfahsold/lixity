@@ -169,10 +169,19 @@ the preserved origin while the project/source context still matches. The work
 thread groups this action with the originating chapter and lines. **Viewed version:**
 introduces the title and version of the claim or dossier you opened. Labels distinguish a pinned
 version from a current or viewed version; browsing history does not repin a
-record. Returning, or changing the project/source context, clears the thread.
+record. Returning to the manuscript, or changing the project/source context,
+clears the thread.
 Cited source
 quotations remain pinned retained passages; opening an ordinary source reader is
 not a new historical-source navigation contract.
+
+**On current main (Unreleased):** leaving an open dossier for its saved
+associations or a global research collection offers **Back to dossier**. It
+restores that saved version, tab, scroll position and requesting control without
+reloading the dossier or discarding drafts. An earlier manuscript return remains
+available after returning to the dossier. On narrow screens the return stays
+above the current content. Closing or replacing the originating dossier, or
+changing project context, removes an invalid return rather than guessing.
 
 <a id="reading-paragraphs-since-v230"></a>
 
@@ -194,6 +203,15 @@ Choose a chapter in the reader toolbar. **Reading settings** groups **A−**/**A
 for text size (16–28 nominal pixels), narrow/standard/wide text and
 compact/standard/relaxed line spacing. Appearance and the desktop split are local
 browser preferences; display changes do not edit the source.
+
+**On current main (Unreleased):** **Reading settings → Keyboard shortcuts**
+lists the passage menu, search and close keys. Hovering or focusing key controls
+also gives a short explanation; Escape dismisses a tooltip. Essential actions
+remain labeled and work without hovering. In manuscript search, `Enter` selects
+the next match, `Shift+Enter` selects the previous match and Escape clears the
+query. These keys apply in the search field, not throughout the application.
+Passage jumps wait for their scrolling area to settle before a brief destination
+cue; reduced-motion preferences keep navigation immediate.
 
 Each analyzed paragraph has an **…** button. It opens the same contextual tools as a
 right-click on the prose or `Shift+F10`/the context-menu key while the paragraph

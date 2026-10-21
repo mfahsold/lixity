@@ -99,3 +99,11 @@ does not change the default analysis language or imply equal validation.
 coefficient selection and number formatting. Linguistic and mathematical suites
 add specific examples. Together, they do not establish a language-wide accuracy
 percentage.
+
+**On current main (Unreleased):** contextual action help, the visible keyboard
+reference and internal-reference descriptions use the same seven UI label packs.
+Browser checks cover pack/placeholder parity, document language, real source
+toolbars and reading controls at desktop and narrow widths. Full translated
+sentences are kept intact; technical key names and identifiers stay stable.
+These checks establish coverage and layout, not a professional translation review
+or equal linguistic-analysis accuracy across the seven languages.

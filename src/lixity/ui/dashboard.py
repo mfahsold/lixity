@@ -752,6 +752,7 @@ def render_dashboard(
         reader_controls = (
             '<div class="reader-controls">'
             '<button type="button" class="ctl" id="workspace-reader-toggle" '
+            f'data-help="{L("reader_hint")}" '
             'aria-expanded="false" aria-controls="workspace-reader-panel" disabled>'
             f'{L("reader_toggle")}</button><p class="ctl-note">'
             f"{L('reader_hint') if manuscript_pdf_token else L('reader_unavailable')}</p></div>"
@@ -848,7 +849,8 @@ def render_dashboard(
     parts.append(
         f'<input class="ctl" type="search" id="text-search" autocomplete="off" '
         f'placeholder="{L("text_search")}" aria-label="{L("text_search")}" '
-        f'aria-controls="chapters"/>'
+        f'aria-controls="chapters" data-help="{L("reading_help_search")}" '
+        'aria-keyshortcuts="Enter Shift+Enter Escape"/>'
     )
     parts.append(
         f'<button type="button" class="ctl" id="text-search-prev" hidden '

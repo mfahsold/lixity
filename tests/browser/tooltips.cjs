@@ -30,13 +30,25 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
           dialog {width:min(30rem, 90vw);padding:1rem}
         </style><body>
         <button id="navigation" type="button" title="Show sources">Sources</button>
+        <button id="second-action" type="button" data-help="Second action explanation." style="position:fixed;top:150px;left:120px">Other</button>
         <details id="composer"><summary id="help" data-help="${explanation}" aria-describedby="hint">Create dossier</summary></details>
         <span id="hint" hidden>Preserved description</span>
         <div id="scroll-panel" style="position:fixed;top:350px;left:20px;height:80px;overflow:auto">
           <button id="scroll-help" data-help="Nested scrolling help">Help</button><div style="height:400px"></div>
         </div>
-        <dialog id="modal"><span class="help" id="modal-help" tabindex="0" data-help="Synthetic native dialog help.">Help</span></dialog>
-        <script>window.navigationClicks=0;document.querySelector('#navigation').addEventListener('click',()=>window.navigationClicks++);</script>
+        <dialog id="modal"><span class="help" id="modal-help" tabindex="0" data-help="Synthetic native dialog help.">Help</span>
+          <input id="modal-input" aria-label="Synthetic field" data-help="Synthetic field guidance."></dialog>
+        <div class="pswp" id="vendor-viewer" hidden><button id="vendor-close" title="Close synthetic viewer">Close</button></div>
+        <div role="button" style="position:fixed;top:460px;left:20px"><span class="help" id="nested-help" tabindex="0" data-help="Nested term explanation.">Term</span></div>
+        <script>
+          window.navigationClicks=0;document.querySelector('#navigation').addEventListener('click',()=>window.navigationClicks++);
+          document.querySelector('#modal').addEventListener('keydown',event=>{
+            if(event.key==='Escape'&&event.target.id==='modal-input')event.currentTarget.close();
+          });
+          document.querySelector('#vendor-viewer').addEventListener('keydown',event=>{
+            if(event.key==='Escape')event.currentTarget.hidden=true;
+          });
+        </script>
         <script>${script}</script></body></html>`);
       const help = page.locator('#help');
       const tip = page.locator('#lixity-tooltip');
@@ -112,6 +124,39 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
       await page.locator('#navigation').click({timeout: 1500});
       assert.equal(await page.evaluate(() => window.navigationClicks), 2);
 
+      await page.locator('#navigation').evaluate(el => { el.dataset.help = 'Native action explanation.'; el.blur(); });
+      await page.locator('#navigation').focus();
+      await expect(tip).toHaveText('Native action explanation.');
+      await page.locator('#navigation').click();
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
+      await page.locator('#navigation').focus();
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
+      await page.locator('#second-action').hover();
+      await expect(tip).toHaveAttribute('aria-hidden', 'false');
+      await expect(tip).toHaveText('Second action explanation.');
+      await page.locator('#second-action').evaluate(el => { el.removeAttribute('data-help'); });
+      await help.focus();
+      await page.locator('#navigation').focus();
+      await expect(tip).toHaveText('Native action explanation.');
+      await page.keyboard.press('Escape');
+      assert.equal(await page.locator('#navigation').evaluate(el => el.matches(':hover')), false);
+      await page.locator('#navigation').press('Enter');
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
+      await page.locator('#navigation').hover();
+      await expect(tip).toHaveAttribute('aria-hidden', 'false');
+      await expect(tip).toHaveText('Native action explanation.');
+      await page.keyboard.press('Escape');
+      await page.locator('#navigation').evaluate(el => { el.removeAttribute('data-help'); });
+
+      await page.locator('#vendor-viewer').evaluate(el => { el.hidden = false; });
+      await page.locator('#vendor-close').focus();
+      assert.equal(await page.locator('#vendor-close').getAttribute('title'), 'Close synthetic viewer',
+        'PhotoSwipe controls retain their native title instead of shared tooltip ownership');
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
+      await page.keyboard.press('Escape');
+      assert.equal(await page.locator('#vendor-viewer').evaluate(el => el.hidden), true,
+        'PhotoSwipe keeps its own one-Escape close behavior');
+
       // A trigger near the viewport bottom uses the available space above it.
       await help.evaluate(el => { el.closest('details').style.top = '850px'; el.blur(); });
       await help.focus();
@@ -133,6 +178,15 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
       await expect(tip).toHaveAttribute('aria-hidden', 'true');
       assert.equal(await page.locator('#composer').getAttribute('open'), null);
 
+      const nested = page.locator('#nested-help');
+      await nested.focus();
+      await expect(tip).toHaveText('Nested term explanation.');
+      await nested.press('Enter');
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
+      await nested.press('Space');
+      await expect(tip).toHaveAttribute('aria-hidden', 'false');
+      await page.keyboard.press('Escape');
+
       await page.evaluate(() => document.querySelector('#modal').showModal());
       await page.locator('#modal-help').focus();
       await expect(page.locator('#modal #lixity-tooltip')).toBeVisible();
@@ -143,7 +197,15 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
       await page.keyboard.press('Escape');
       await expect(tip).toHaveAttribute('aria-hidden', 'true');
       assert.equal(await page.locator('#modal').getAttribute('open'), '', 'Escape dismisses help before its modal');
-      await page.evaluate(() => document.querySelector('#modal').close());
+      await page.locator('#modal-input').focus();
+      await expect(tip).toHaveText('Synthetic field guidance.');
+      await page.keyboard.press('Escape');
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
+      assert.equal(await page.locator('#modal').getAttribute('open'), '',
+        'Input help consumes Escape before a surrounding dialog Escape handler');
+      await page.keyboard.press('Escape');
+      assert.equal(await page.locator('#modal').getAttribute('open'), null,
+        'After help closes, a subsequent Escape reaches the dialog');
       await page.close();
     }
     assert.deepEqual(errors, []);

@@ -327,7 +327,8 @@ body.layer-on .chip.has-layer.tense-present { border-top: 2px solid var(--presen
 body.layer-on .chip.has-layer.tense-past { border-top: 2px solid var(--past); }
 body.layer-on .chip.has-layer.tense-mixed { border-top: 2px solid var(--mixed); }
 body.layer-on .chip.has-layer.tense-neutral { border-top: 2px solid var(--neutral); }
-.chapter.flash, .ptext.flash, .panel.flash, section.flash { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+.chapter.flash, .ptext.flash, .panel.flash, section.flash,
+.ctl.flash, .research-timeline li.flash > .research-card { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
 .ptext.flash { background: color-mix(in srgb, var(--accent-light) 55%, transparent); }
 .ptext.no-anim { transition: none; }
 .row-link { cursor: pointer; }
@@ -1682,17 +1683,19 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
   border-radius: var(--radius);
   padding: 0.6rem 0.8rem;
   overflow-x: auto;
-  font-size: var(--text-small);
+  font-family: var(--font-mono);
+  font-size: var(--text-control);
+  line-height: var(--line-compact);
 }
 .research-prose code {
   font-family: var(--font-mono);
-  font-size: 0.85em;
+  font-size: .875em;
   background: var(--bg);
   padding: 0.15rem 0.3rem;
   border-radius: var(--radius-xs);
   border: 1px solid var(--line);
 }
-.research-prose pre code { border: none; padding: 0; background: none; }
+.research-prose pre code { font-size: inherit; border: none; padding: 0; background: none; }
 .research-prose hr { border: none; border-top: 1px solid var(--line); margin: 1rem 0; }
 .research-prose .table-wrap { width: 100%; overflow-x: auto; margin: 0.8rem 0; }
 /* Dossier markdown tables use the shared table recipe (see Tables). */
@@ -1892,8 +1895,10 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
   font-weight: var(--weight-semibold);
   margin: 0.9rem 0 0.4rem;
 }
-.markdown-body h4, .research-prose h4 {
-  font-size: var(--text-section-title);
+.markdown-body h4, .research-prose h4,
+.markdown-body h5, .research-prose h5,
+.markdown-body h6, .research-prose h6 {
+  font-size: var(--text-body);
   font-weight: var(--weight-semibold);
   margin: 0.8rem 0 0.3rem;
 }

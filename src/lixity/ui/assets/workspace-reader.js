@@ -111,7 +111,7 @@
     if (!pin) return;
     bridge.switchView("analysis");
     setEnabled(true, pin.dataset.workspaceDossier);
-    container.scrollIntoView({block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
+    scrollAndFlash(panel);
     select.focus({preventScroll: true});
   });
 })();

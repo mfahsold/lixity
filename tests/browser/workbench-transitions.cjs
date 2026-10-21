@@ -33,6 +33,27 @@ async function settle(page) {
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 }
 
+async function deferToolFrame(page, action) {
+  await page.evaluate(actionName => {
+    const nativeFrame = window.requestAnimationFrame;
+    const pending = [];
+    function begin(event) {
+      if (!event.target.closest(`[data-reader-action="${actionName}"]`)) return;
+      document.removeEventListener('click', begin, true);
+      // A key event can precede the next rendered frame on a busy main thread.
+      // Hold that frame explicitly rather than relying on machine load.
+      window.requestAnimationFrame = callback => { pending.push(callback); return -pending.length; };
+    }
+    document.addEventListener('click', begin, true);
+    window.releaseToolFrame = () => {
+      document.removeEventListener('click', begin, true);
+      window.requestAnimationFrame = nativeFrame;
+      pending.forEach(callback => nativeFrame.call(window, callback));
+      delete window.releaseToolFrame;
+    };
+  }, action);
+}
+
 async function documentState(page) {
   return page.locator('#chapters .ptext').evaluateAll(nodes => nodes.map(node => ({
     id: node.id, hash: node.dataset.paragraphSha256, start: node.dataset.start, end: node.dataset.end,
@@ -196,18 +217,43 @@ async function assertToolbarDossierReturn(page, paragraph, width) {
       const {page, errors, writes} = await createPage(browser, width, 'no-preference');
       const original = await documentState(page);
       // Keyboard reversal can arrive before the tool's entrance animation finishes.
+      if (width > 900) await deferToolFrame(page, 'values');
       const valuesOrigin = await openFromPassage(page, 'values', false);
       await page.keyboard.press('Escape');
+      if (width > 900) await page.evaluate(() => window.releaseToolFrame());
       assert.equal(await page.locator('#workspace-context-panel').isVisible(), false,
         `${width}: Immediate Escape reverses an opening Values tool`);
       await assertPassageReturn(page, valuesOrigin, width, 'Immediate Values reversal');
+      if (width > 900) await deferToolFrame(page, 'companion');
       const dossierOrigin = await openFromPassage(page, 'companion', false);
       await page.keyboard.press('Escape');
+      if (width > 900) await page.evaluate(() => window.releaseToolFrame());
       assert.equal(await page.locator('#workspace-context-panel').isVisible(), false,
         `${width}: Immediate Escape reverses an opening Dossier tool`);
       await assertPassageReturn(page, dossierOrigin, width, 'Immediate Dossier reversal',
         width > 900 ? page.locator('#workspace-reader-toggle') : null);
       await assertToolbarDossierReturn(page, dossierOrigin.paragraph, width);
+
+      if (width > 900) {
+        await deferToolFrame(page, 'companion');
+        const layerOrigin = await openFromPassage(page, 'companion', false);
+        const analysisToggle = page.locator('#manuscript-analysis-toggle');
+        await analysisToggle.click();
+        await analysisToggle.click();
+        await page.evaluate(() => window.releaseToolFrame());
+        await assertPassageReturn(page, layerOrigin, width, 'Opening Dossier and rapid Analysis display changes', analysisToggle);
+        await page.locator('#workspace-reader-close').click();
+        await settle(page);
+
+        await openFromPassage(page, 'companion');
+        const later = page.locator('#chapters .ptext').nth(33);
+        await later.scrollIntoViewIfNeeded();
+        await settle(page);
+        const currentReading = {paragraph: later, top: await later.evaluate(node => node.getBoundingClientRect().top)};
+        await page.locator('#workspace-reader-close').click();
+        await assertPassageReturn(page, currentReading, width, 'Settled Dossier keeps later reading position',
+          page.locator('#workspace-reader-toggle'));
+      }
 
       const motionOrigin = await openFromPassage(page, 'values', false);
       // Enter activates the focused tab without waiting for an earlier entrance to finish.
