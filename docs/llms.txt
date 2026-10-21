@@ -1,6 +1,6 @@
 # Lixity
 
-> Local manuscript analysis and an experimental research archive. Statistical
+> Local manuscript analysis and a project-scoped research archive. Statistical
 > signals support human review; they are not literary-quality scores or
 > instructions to rewrite. Analysis is deterministic for fixed text and settings;
 > research records also contain generated IDs and timestamps.
@@ -62,6 +62,12 @@ Root-only `manuscript` selects a contained relative default for workspace folder
 settings fail without choosing another file. Scene chapter/scene/latest output
 filters retain full references and declare their selection. Explicit planned IDs
 have no measurements and remain outside comparisons. See Usage for exact rules.
+On current main, all twelve analysis/export commands accept `--project` and
+configured manuscript omission, with strict selected-root settings. Research
+manuscript commands share the root-local default while preserving write guards.
+Service status is read-only and nonlocking. Exports serialize snapshot copying
+against commits/purge and report post-replacement durability uncertainty; restore
+validates envelope shape. Existing JSON/archive versions remain unchanged.
 
 ## Choose a reference
 

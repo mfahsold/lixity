@@ -264,4 +264,4 @@ def test_bash_completes_supported_scene_selectors(tmp_path):
         capture_output=True, text=True, check=True,
     )
     assert not completed.stderr
-    assert {"--chapter", "--scene", "--latest", "--language", "--json", "--help"} == set(completed.stdout.split())
+    assert {"--chapter", "--scene", "--latest", "--language", "--json", "--help", "--project"} == set(completed.stdout.split())

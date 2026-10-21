@@ -101,6 +101,16 @@ restored-store publication. Inventory paths use the repository's existing
 containment/symlink boundary, which also rejects parent components. This is
 validation of the existing format, with no schema migration or alternate store.
 
+**On current main (Unreleased):** export owns the repository writer lock from
+accepted-snapshot selection until its compressed candidate is self-contained.
+This serializes commits and purge against the copied records/blobs. Root pointers
+come from that snapshot; stored object content addresses and the bytes actually
+copied must agree. The candidate is flushed before output replacement. A failure
+before replacement preserves the previous backup; a later directory-sync failure
+reports published output with uncertain durability. Restore validates envelope
+shape, identifiers, digests and optional sizes before inventory reads, rejecting
+duplicate members. Export format and canonical records remain unchanged.
+
 ## Manual manuscript associations
 
 `research.manuscript` owns `ManuscriptClaimLink`, separate from imported source
@@ -183,6 +193,14 @@ reading source bytes. `discover` applies explicit → configured → conventiona
 selection and validates configured regular files. The read-only Research CLI
 uses the same path owner after validating its archive, then preserves its domain
 review of missing/unreadable source bytes. Python text-analysis APIs stay explicit.
+
+**On current main (Unreleased):** `workspace.resolve_manuscript_target` selects
+one root/source pair before analysis configuration is loaded. Command-level
+`--project` and root-configured omission use strict root-local settings; legacy
+explicit files and conventional scenes/build discovery without `--project`
+retain their existing merge. The Research CLI normalizes omitted manuscript
+input after validating its archive. These selectors do not change a running server's project or any JSON
+result encoding.
 Output scene filters run after complete measurement; explicitly planned IDs remain
 separate from measured rows and never influence descriptive baselines.
 

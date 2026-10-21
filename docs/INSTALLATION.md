@@ -105,7 +105,7 @@ environment; use the [Python project route](#python-api-project-environment).
 <details>
 <summary>PDF/OCR and Zotero setup for research</summary>
 
-The experimental research workspace is included. Text and Markdown sources need
+The research workspace is included. Text and Markdown sources need
 no OCR setup. Search needs SQLite with FTS5 support. Text PDFs need Poppler;
 image-only scans need locally installed Tesseract or a configured OCR worker. See
 [PDF and OCR setup](#server-environment-and-project-access).
@@ -272,6 +272,9 @@ each invocation and is not saved: repeat `--backend process` on restart to keep
 that choice; otherwise restart uses `auto`. `lixity service status --json`
 reports readiness, installed/running versions, backend and log path; see the
 [command contract](USAGE.md#lixity-service) for states and exit codes.
+On current main (Unreleased), status reads existing storage without creating
+folders, repairing permissions or waiting for a lifecycle write. Unreadable or
+changing state remains uncertain; it does not trigger an alternate runtime path.
 
 Saved launch settings and `service-PORT.log` live separately from the package:
 

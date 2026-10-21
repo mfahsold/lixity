@@ -68,24 +68,37 @@ including failed audit/probe behavior, in [research usage](research/USAGE.md).
 Analysis defaults to English; choose another manuscript language or explicit
 `auto`. `LIXITY_LANG` selects terminal messages independently. Read active
 thresholds from result metadata rather than assuming `about` defaults.
-Configuration precedence is CLI > UI session > project > user > code.
-Unreadable/malformed configuration emits a `UserWarning` naming the file before
-falling back. This includes present non-table `tool`/`tool.lixity` sections and
+Legacy configuration precedence is CLI > UI session > project > user > code.
+On current main, analysis/export commands accept `--project PATH` and a root-local
+configured manuscript when input is omitted. These new selection modes exclude
+user/ancestor settings and keep root language/title/register scope. Legacy
+explicit files and conventional scenes/build discovery without `--project`
+retain their settings merge. Research manuscript commands share the configured
+default after archive validation. Python/HTTP input remains explicit; see
+[default manuscript](USAGE.md#default-manuscript).
+In legacy settings merges, unreadable/malformed configuration emits a
+`UserWarning` naming the file before falling back. This includes present
+non-table `tool`/`tool.lixity` sections and
 permission/I/O failures while probing configuration metadata. Missing candidates
 and impossible children beneath a non-directory (`ENOTDIR`) remain silent.
 Treat the warning as a configuration defect and confirm the settings that applied.
 See [configuration](USAGE.md).
 
-Research is an experimental, separate project API. Existing-archive CLI commands
+Research is a separate project API. Existing-archive CLI commands
 can use only a validated current project directory as a shortcut; Python/HTTP
 require explicit selection. Retention is explicit. See [research workflows](research/USAGE.md),
 not the RFC's unimplemented proposals, for behavior and compatibility.
+On current main (Unreleased), capability metadata classifies Research as
+`status: "supported"`. This product classification changes no response or archive
+schema version, retention or revision guard, and does not certify factual accuracy.
 
 `service` manages only its owned local process and starts an empty workspace by
 default. `serve` runs in the foreground. CLI analysis/research/build calls do not
 switch an existing server's project. Service JSON uses `lixity-service-local/1`;
 exit `0` means `ok: true`, including an already-stopped `stop`. A stopped `status`
-returns false/nonzero. Start uses new launch choices; restart uses saved choices
+returns false/nonzero. On current main, status is non-mutating and does not take
+the lifecycle writer lock; unreadable/changing state remains unknown. Start uses
+new launch choices; restart uses saved choices
 plus explicit overrides. [Lifecycle details](INSTALLATION.md#running-the-server)
 include environment isolation and installed/running versions.
 An invalid explicit foreground `serve` selector fails before binding; it does not

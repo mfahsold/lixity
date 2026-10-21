@@ -1,6 +1,6 @@
 # Local research archive
 
-**Experimental local research archive system.**
+**Local research and dossiers in an explicit project.**
 Keep selected text, PDF and PNG/JPEG sources in an explicit local project. Dossiers
 bring notes and evidence together; claims record assertions; decisions explain
 the author's choices. The workspace preserves saved versions and exact quotations.
@@ -213,8 +213,12 @@ or as `--manuscript PATH`; pass exactly one of the two forms. Since v0.7.2,
 read-only `review-manuscript` alone also permits omission when the selected
 project's root config explicitly sets `manuscript = "drafts/manuscript.md"`.
 The root `lixity.toml` takes precedence over root `[tool.lixity]`; user and
-ancestor settings are excluded. Explicit input wins. No other manuscript command
-becomes optional, and the Python API still requires its manuscript argument.
+ancestor settings are excluded. Explicit input wins. The published v0.7.2 release
+keeps other manuscript paths required. On current main (Unreleased),
+`find-anchor`, `link-manuscript`, `unlink-manuscript`,
+`reconcile-manuscript` and `compare` also reuse this root-local default. Existing
+argument forms and write/retention/revision guards remain; Python input stays
+explicit.
 
 The default is resolved inside the already validated explicit/working-directory
 project, never inferred from a filename or another project. Invalid config or
@@ -1135,13 +1139,33 @@ containment checks as repository objects. An invalid backup is rejected before
 publishing the restored store; rejected history leaves an existing export untouched.
 Valid archives keep their existing format and immutable bytes.
 
+**On current main (Unreleased):** export holds the project writer lock while
+selecting a snapshot and copying its records/blobs into a complete compressed
+candidate. Concurrent writers receive the existing busy diagnostic and can retry
+after export finishes. Compression time and source size affect that interval.
+Copied content addresses are verified. Before output replacement, failures leave
+an existing backup untouched. Choose an output outside `research/` and
+`.lixity/research/`: export rejects these protected store/cache destinations,
+including symlink aliases. A backup elsewhere in the project is permitted.
+Export also checks restore's existing 10 GiB
+uncompressed-payload ceiling, including the export manifest, before creating a
+candidate. If directory synchronization fails after replacement,
+the error identifies published output with unconfirmed durability: inspect and
+restore-test it before retrying. Restore rejects malformed metadata and duplicate
+archive members with bounded format errors, including valid JSON of the wrong
+shape. Optional lengths in older valid inventories remain supported.
+
 Writes use an OS lock, immutable publication and atomic HEAD replacement.
 Uncommitted objects left after interruption are ignored, not selected by date.
 Locks release when the process exits. A stale expected HEAD fails rather than
 overwriting another ingestion. Interrupted initialization may leave an incomplete
 directory: preserve it for inspection; `init` refuses to overwrite it.
 Writer diagnostics distinguish a busy writer from read-only, permission and
-other I/O failures at the canonical project lock. A lock file's existence does
+other I/O failures at the canonical project lock.
+A write's expected snapshot must come from the content actually inspected or
+previewed. After a conflict, review the changed content before submitting its
+new snapshot; replacing only the hash with a fresh status result does not review
+the change. A lock file's existence does
 not prove contention; no alternate `/tmp` lock or unlocked fallback is used.
 
 Since v0.7.2, a failed post-commit cleanup reports the accepted snapshot and the

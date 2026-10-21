@@ -1,6 +1,6 @@
 # Research workspace: current scope and design history
 
-The experimental local research archive retains selected sources, exact quotations
+The local research archive retains selected sources, exact quotations
 and authored dossiers, claims and decisions. Use the installed interface for
 available operations; historical designs do not define current commands or schemas.
 

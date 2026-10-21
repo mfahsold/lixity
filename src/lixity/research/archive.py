@@ -10,6 +10,7 @@ directory and verifies all checksums before placing the archive.
 
 import contextlib
 import hashlib
+import io
 import json
 import os
 import shutil
@@ -17,16 +18,24 @@ import tarfile
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, BinaryIO
 
 from pydantic import TypeAdapter, ValidationError
 
-from .models import Digest, Extraction, Manifest, SourceVersion
-from .repository import Repository, ResearchError, Snapshot, sync_directory
+from .models import Digest, Extraction, Head, Identifier, Manifest, SourceVersion
+from .repository import (
+    Repository,
+    ResearchError,
+    ResearchStorageError,
+    Snapshot,
+    encode,
+    sync_directory,
+)
 
 EXPORT_SCHEMA_VERSION = "research-export-local/1"
 MAX_UNCOMPRESSED_BYTES = 10 * 1024 * 1024 * 1024  # 10 GiB ceiling
 _MANIFEST_DIGEST = TypeAdapter(Digest)
+_PROJECT_IDENTIFIER = TypeAdapter(Identifier)
 
 
 def _file_digest_and_size(path: Path) -> tuple[str, int]:
@@ -70,98 +79,146 @@ def _manifest_history(repository: Repository, snapshot: Snapshot) -> list[tuple[
     return history
 
 
-def export_archive(project: str | Path, output: str | Path) -> dict[str, Any]:
-    """Export the authoritative research store to an integrity-verified tar.gz archive.
+class _HashingReader(io.RawIOBase):
+    """Hash the exact bytes consumed by the tar writer without buffering blobs."""
 
-    The archive packages accepted history, manifests, and source blobs.
-    Disposable caches and locks are excluded.
+    def __init__(self, stream: BinaryIO):
+        self.stream = stream
+        self.hasher = hashlib.sha256()
+
+    def read(self, size: int = -1) -> bytes:
+        content = self.stream.read(size)
+        self.hasher.update(content)
+        return content
+
+
+def _add_bytes(tar: tarfile.TarFile, name: str, content: bytes) -> None:
+    member = tarfile.TarInfo(name=name)
+    member.size = len(content)
+    member.mtime = int(datetime.now(timezone.utc).timestamp())
+    member.mode = 0o644
+    tar.addfile(member, io.BytesIO(content))
+
+
+def export_archive(project: str | Path, output: str | Path) -> dict[str, Any]:
+    """Export accepted history and source bytes under the repository writer lock.
+
+    Writers receive the usual busy error until the self-contained compressed
+    candidate is complete. Disposable caches and locks are excluded.
     """
     repository = Repository(project)
     if not repository.safe(repository.data / "HEAD.json").exists():
         raise ResearchError("Research store does not exist; cannot export")
 
-    snapshot = repository.snapshot()
-
-    # Collect all authoritative files making up the research store
-    files_to_pack: dict[str, Path] = {}
-
-    # 1. Root pointers and manifests
-    head_path = repository.safe(repository.data / "HEAD.json")
-    project_path = repository.safe(repository.data / "project.json")
-    files_to_pack["research/HEAD.json"] = head_path
-    files_to_pack["research/project.json"] = project_path
-
-    # Active manifest and any ancestor manifests in the chain
-    for manifest_digest, m_path in _manifest_history(repository, snapshot):
-        files_to_pack[f"research/manifests/{manifest_digest}.json"] = m_path
-
-    # 2. Record revision files
-    for entry in snapshot.manifest.entries:
-        rec_path = repository.record_path(entry)
-        if not rec_path.is_file():
-            raise ResearchError(f"Missing record file for entry {entry.ref}: {rec_path}")
-        rel_path = f"research/revisions/{entry.kind}/{entry.ref.id[9:]}/{entry.ref.revision}.json"
-        files_to_pack[rel_path] = rec_path
-
-    # 3. Blobs referenced by SourceVersions and Extractions
-    blob_shas: set[str] = set()
-    for rec in snapshot.revisions.values():
-        if isinstance(rec, SourceVersion):
-            blob_shas.add(rec.blob.sha256)
-        elif isinstance(rec, Extraction):
-            blob_shas.add(rec.text_blob.sha256)
-
-    for sha in sorted(blob_shas):
-        b_path = repository.safe(repository.data / "blobs" / sha)
-        if not b_path.is_file():
-            raise ResearchError(f"Missing blob file: {b_path}")
-        files_to_pack[f"research/blobs/{sha}"] = b_path
-
-    # Build file checksums
-    file_manifest: dict[str, dict[str, Any]] = {}
-    for rel_path, abs_path in files_to_pack.items():
-        sha256, size = _file_digest_and_size(abs_path)
-        file_manifest[rel_path] = {"sha256": sha256, "byte_length": size}
-
-    export_manifest = {
-        "schema_version": EXPORT_SCHEMA_VERSION,
-        "project_id": snapshot.project.id,
-        "project_title": snapshot.project.title,
-        "snapshot": snapshot.digest,
-        "manifest_schema_version": snapshot.manifest.schema_version,
-        "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-        "record_count": len(snapshot.revisions),
-        "blob_count": len(blob_shas),
-        "file_count": len(files_to_pack),
-        "files": file_manifest,
-    }
-
     out_path = Path(output).expanduser().resolve()
+    if any(out_path.is_relative_to(protected.resolve())
+           for protected in (repository.data, repository.cache)):
+        raise ResearchError("Export output must be outside the research store and cache")
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    temp_tar = out_path.with_name(f".tmp-export-{os.getpid()}-{out_path.name}")
-
+    temp_tar: Path | None = None
     try:
-        manifest_bytes = (
-            json.dumps(export_manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
-        ).encode("utf-8")
+        with repository.locked():
+            snapshot = repository.snapshot()
 
-        with tarfile.open(temp_tar, mode="w:gz") as tar:
-            # Add EXPORT_MANIFEST.json
-            ti = tarfile.TarInfo(name="EXPORT_MANIFEST.json")
-            ti.size = len(manifest_bytes)
-            ti.mtime = int(datetime.now(timezone.utc).timestamp())
-            ti.mode = 0o644
-            import io
-            tar.addfile(ti, io.BytesIO(manifest_bytes))
+            # Collect all authoritative files making up the research store
+            files_to_pack: dict[str, tuple[Path, str]] = {}
 
-            # Add each research file
-            for rel_path, abs_path in files_to_pack.items():
-                tar.add(abs_path, arcname=rel_path)
+            # 1. Root pointers and manifests
+            root_bytes = {
+                "research/HEAD.json": encode(Head(sha256=snapshot.digest)),
+                "research/project.json": encode(snapshot.project),
+            }
 
+            # Active manifest and any ancestor manifests in the chain
+            for manifest_digest, m_path in _manifest_history(repository, snapshot):
+                files_to_pack[f"research/manifests/{manifest_digest}.json"] = (m_path, manifest_digest)
+
+            # 2. Record revision files
+            for entry in snapshot.manifest.entries:
+                rec_path = repository.record_path(entry)
+                if not rec_path.is_file():
+                    raise ResearchError(f"Missing record file for entry {entry.ref}: {rec_path}")
+                rel_path = f"research/revisions/{entry.kind}/{entry.ref.id[9:]}/{entry.ref.revision}.json"
+                files_to_pack[rel_path] = (rec_path, entry.sha256)
+
+            # 3. Blobs referenced by SourceVersions and Extractions
+            blob_shas: set[str] = set()
+            for rec in snapshot.revisions.values():
+                if isinstance(rec, SourceVersion):
+                    blob_shas.add(rec.blob.sha256)
+                elif isinstance(rec, Extraction):
+                    blob_shas.add(rec.text_blob.sha256)
+
+            for sha in sorted(blob_shas):
+                b_path = repository.safe(repository.data / "blobs" / sha)
+                if not b_path.is_file():
+                    raise ResearchError(f"Missing blob file: {b_path}")
+                files_to_pack[f"research/blobs/{sha}"] = (b_path, sha)
+
+            # Build file checksums
+            file_manifest: dict[str, dict[str, Any]] = {
+                name: {"sha256": hashlib.sha256(content).hexdigest(), "byte_length": len(content)}
+                for name, content in root_bytes.items()
+            }
+            for rel_path, (abs_path, expected_digest) in files_to_pack.items():
+                sha256, size = _file_digest_and_size(abs_path)
+                if sha256 != expected_digest:
+                    raise ResearchStorageError("Research object checksum mismatch during export")
+                file_manifest[rel_path] = {"sha256": sha256, "byte_length": size}
+
+            export_manifest = {
+                "schema_version": EXPORT_SCHEMA_VERSION,
+                "project_id": snapshot.project.id,
+                "project_title": snapshot.project.title,
+                "snapshot": snapshot.digest,
+                "manifest_schema_version": snapshot.manifest.schema_version,
+                "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                "record_count": len(snapshot.revisions),
+                "blob_count": len(blob_shas),
+                "file_count": len(file_manifest),
+                "files": file_manifest,
+            }
+
+            manifest_bytes = (
+                json.dumps(export_manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+            ).encode("utf-8")
+            # Match restore's ceiling for all regular member payloads, including metadata.
+            total_uncompressed = len(manifest_bytes) + sum(
+                entry["byte_length"] for entry in file_manifest.values()
+            )
+            if total_uncompressed > MAX_UNCOMPRESSED_BYTES:
+                raise ResearchError("Archive exceeds uncompressed size safety ceiling")
+
+            descriptor, temporary = tempfile.mkstemp(dir=out_path.parent, prefix=".tmp-export-")
+            temp_tar = Path(temporary)
+            os.close(descriptor)
+            with tarfile.open(temp_tar, mode="w:gz") as tar:
+                _add_bytes(tar, "EXPORT_MANIFEST.json", manifest_bytes)
+                for name, content in root_bytes.items():
+                    _add_bytes(tar, name, content)
+                for name, (path, _) in files_to_pack.items():
+                    with repository.safe(path).open("rb") as stream:
+                        member = tar.gettarinfo(fileobj=stream, arcname=name)
+                        if member.size != file_manifest[name]["byte_length"]:
+                            raise ResearchStorageError("Research file changed during export")
+                        reader = _HashingReader(stream)
+                        tar.addfile(member, reader)
+                        if reader.hasher.hexdigest() != file_manifest[name]["sha256"]:
+                            raise ResearchStorageError("Research file checksum changed during export")
+
+        # The candidate no longer depends on repository files; release writers.
+        with temp_tar.open("rb") as stream:
+            os.fsync(stream.fileno())
         os.replace(temp_tar, out_path)
-        sync_directory(out_path.parent)
+        try:
+            sync_directory(out_path.parent)
+        except OSError as exc:
+            raise ResearchStorageError(
+                "Research export was published, but durability could not be confirmed. "
+                "Inspect the output archive before retrying."
+            ) from exc
     finally:
-        if temp_tar.exists():
+        if temp_tar is not None:
             with contextlib.suppress(OSError):
                 temp_tar.unlink(missing_ok=True)
 
@@ -170,7 +227,7 @@ def export_archive(project: str | Path, output: str | Path) -> dict[str, Any]:
         "project_id": snapshot.project.id,
         "snapshot": snapshot.digest,
         "output_path": str(out_path),
-        "file_count": len(files_to_pack),
+        "file_count": len(file_manifest),
         "record_count": len(snapshot.revisions),
         "blob_count": len(blob_shas),
     }
@@ -206,12 +263,19 @@ def restore_archive(archive_path: str | Path, target_dir: str | Path) -> dict[st
         total_uncompressed = 0
         try:
             with tarfile.open(archive, mode="r:*") as tar:
+                seen_names: set[str] = set()
                 for member in tar.getmembers():
                     name = member.name
                     if os.path.isabs(name) or name.startswith("/") or ".." in Path(name).parts:
                         raise ResearchError(f"Dangerous archive entry detected: {name}")
-                    if member.issym() or member.islnk() or member.isdev() or member.ischr() or member.isblk() or member.isfifo():
+                    normalized_name = Path(name).as_posix()
+                    if normalized_name in seen_names:
+                        raise ResearchError("Duplicate archive entry")
+                    seen_names.add(normalized_name)
+                    if not (member.isfile() or member.isdir()):
                         raise ResearchError(f"Unsupported archive member type: {name}")
+                    if normalized_name == "EXPORT_MANIFEST.json" and not member.isfile():
+                        raise ResearchError("Export manifest must be a regular file")
                     if member.isfile():
                         total_uncompressed += member.size
                         if total_uncompressed > MAX_UNCOMPRESSED_BYTES:
@@ -231,21 +295,42 @@ def restore_archive(archive_path: str | Path, target_dir: str | Path) -> dict[st
 
         try:
             manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as exc:
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
             raise ResearchError("Invalid or unreadable EXPORT_MANIFEST.json") from exc
 
+        if not isinstance(manifest_data, dict):
+            raise ResearchError("Export manifest must be a JSON object")
         if manifest_data.get("schema_version") != EXPORT_SCHEMA_VERSION:
-            raise ResearchError(f"Unsupported export schema version: {manifest_data.get('schema_version')}")
+            raise ResearchError("Unsupported export schema version")
+        try:
+            _MANIFEST_DIGEST.validate_python(manifest_data.get("snapshot"))
+        except ValidationError as exc:
+            raise ResearchError("Invalid export snapshot digest") from exc
+        try:
+            _PROJECT_IDENTIFIER.validate_python(manifest_data.get("project_id"))
+        except ValidationError as exc:
+            raise ResearchError("Invalid export project identifier") from exc
 
         files_manifest = manifest_data.get("files")
         if not isinstance(files_manifest, dict) or not files_manifest:
             raise ResearchError("EXPORT_MANIFEST.json contains no file entries")
 
+        # Validate the whole inventory before reading any inventory-selected path.
+        for expected in files_manifest.values():
+            if not isinstance(expected, dict):
+                raise ResearchError("Invalid export manifest metadata")
+            try:
+                _MANIFEST_DIGEST.validate_python(expected.get("sha256"))
+            except ValidationError as exc:
+                raise ResearchError("Invalid export file digest") from exc
+            if "byte_length" in expected and (
+                type(expected["byte_length"]) is not int or expected["byte_length"] < 0
+            ):
+                raise ResearchError("Invalid export file byte_length")
+
         # 3. Verify all file checksums
         staged_repo = Repository(temp_stage)
         for rel_path, expected in files_manifest.items():
-            if not isinstance(expected, dict) or "sha256" not in expected:
-                raise ResearchError(f"Invalid manifest metadata for {rel_path}")
             extracted_file = staged_repo.safe(temp_stage / rel_path)
             if not extracted_file.is_file():
                 raise ResearchError(f"Archive missing expected file: {rel_path}")

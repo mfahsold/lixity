@@ -749,6 +749,12 @@ means false. Status succeeds only for a ready owned instance; stopped status
 exits 1, while stopping an already stopped instance succeeds. Stop preserves
 saved launch settings and logs.
 
+**On current main (Unreleased):** status does not create or repair storage or
+acquire the lifecycle writer lock. Missing private folders are a normal stopped
+state. Unsafe, unreadable or changing records report uncertainty; status does not
+change runtime locations to work around a permission error. Lifecycle commands
+prepare their private storage when explicitly requested.
+
 ### `lixity build`
 
 Create the reproducible artifact set for a project:
@@ -789,7 +795,7 @@ for scope and older-release alternatives. For Bash/Zsh setup, follow
 
 ### `lixity research`
 
-Research is a separate experimental, explicit-project workspace. Its
+Research is a separate, explicit-project workspace. Its
 [usage guide](research/USAGE.md) owns retained source capture, authored records,
 lexical search, chronology, citations, Zotero, OCR, backups and archive versions.
 Use `lixity research COMMAND --help` for installed arguments/formats and `GET /api`
@@ -983,8 +989,10 @@ idempotent output writes.
 
 ## Configuration (`CorpusConfig`)
 
-CLI commands with an explicit manuscript path load settings relative to that
-manuscript; otherwise workspace discovery starts in the current directory.
+Legacy CLI commands with an explicit manuscript path load settings relative to
+that manuscript; otherwise workspace discovery starts in the current directory.
+Current-main `--project` and configured-omission modes instead use strict settings
+from the selected root; see [default manuscript](#default-manuscript).
 Project settings live in `lixity.toml` or `[tool.lixity]` in `pyproject.toml`.
 An explicit CLI option overrides its project value. Configured title affects
 dashboard/build presentation; artifact names still follow the manuscript name.
@@ -1069,19 +1077,38 @@ wins. When selecting a configured default, an invalid/unreadable configuration
 or missing/nonregular configured file fails selection instead of choosing another
 manuscript. Explicit-file analysis retains its existing configuration warnings.
 
-This setting participates in existing folder selection (Open Project, service
-startup and `build`) and omitted input for `scenes`. Commands that still require
-an explicit file keep that requirement; text-taking Python APIs do not discover
-files. In a validated Research project it also supports:
+The published v0.7.2 release uses this setting for folder selection (Open
+Project, service startup and `build`), omitted `scenes` input and read-only
+Research manuscript review. Text-taking Python APIs do not discover files.
+
+**On current main (Unreleased):** all manuscript analysis/export commands accept
+`--project PATH`: `analyze`, `profile`, `dialogue`, `pacing`, `showing`, `style`,
+`motifs`, `characters`, `dashboard`, `pdf`, `scenes` and `build`. With no file,
+these commands use the selected root's configured manuscript. Only `scenes` and
+`build` retain their existing conventional-file discovery when no default is set.
 
 ```bash
+lixity analyze --project ./novel
+lixity scenes --project ./novel --latest
 lixity research review-manuscript --project ./novel
 ```
 
-Research review uses only that project's configured path; it never guesses from
-other Markdown files or changes the archive. Its existing `missing`/`unreadable`
-source states remain informative review results. Other manuscript-link commands
-still require an explicit path. See the [research reference](research/USAGE.md).
+New explicit-project/configured-omission analysis reads settings only from that
+root, excluding user and ancestor defaults. Language, title and registers belong
+to the same root even when its manuscript is nested. Explicit CLI options win.
+With `--project`, relative files belong to that root and absolute files must
+also remain inside it. Without this option, an explicit file retains legacy
+path/configuration behavior. Conventional discovery by `scenes`/`build` without
+`--project` also retains its existing settings merge. Commands do not select
+another running server's project. Project build exports and default PDF output belong to the
+selected workspace root.
+
+Research `review-manuscript`, `find-anchor`, `link-manuscript`,
+`unlink-manuscript`, `reconcile-manuscript` and `compare` can reuse the validated
+Research project's root-local default. They do not guess from other Markdown
+files. Existing positional/option forms, acceptance, retention and snapshot
+requirements remain. Read-only review retains informative `missing`/`unreadable`
+source states. See the [research reference](research/USAGE.md).
 
 ### Character profiles
 

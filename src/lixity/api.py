@@ -468,10 +468,10 @@ def about() -> dict[str, Any]:
             },
             {
                 "name": "research",
-                "purpose": "experimental explicit-project archive: retained evidence, authored dossiers/claims/decisions and guarded revision workflows",
+                "purpose": "explicit-project archive: retained evidence, authored dossiers/claims/decisions and guarded revision workflows",
                 "output": "command-dependent",
                 "subcommands": command_metadata(),
-                "status": "experimental",
+                "status": "supported",
                 "schema_version": "research-local/1",
                 "record_schema_versions": sorted(record_versions),
                 "manifest_schema_versions": Manifest.model_json_schema()["properties"]["schema_version"]["enum"],

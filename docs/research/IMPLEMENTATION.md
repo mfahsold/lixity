@@ -1,6 +1,6 @@
 # Implemented research scope
 
-The local research workspace is experimental. [Research usage](USAGE.md) owns
+The local research workspace is project-scoped. [Research usage](USAGE.md) owns
 workflows and compatibility; [automation contracts](../AGENTS.md#51-research-api-lixityresearchapi)
 own request/result contracts. Use `lixity research --help`, `research schema` and
 `about --json` to inspect the installed version rather than treating a status

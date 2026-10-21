@@ -54,16 +54,25 @@ does not update an already running service.
 
 ## What you can do
 
-- **Review passages.** Open paragraph values and work markers, or compare chapters
-  against the manuscript's own patterns. Analysis can be turned on and off.
-- **Connect research.** The experimental workspace links retained sources,
-  authored claims and decisions to exact manuscript quotations. Keep a dossier
+- **Manuscript & Analysis.** Open paragraph values and work markers, or compare
+  chapters against the manuscript's own patterns. Analysis can be turned on and off.
+- **Research & Dossiers.** Link retained sources, authored claims and decisions
+  to exact manuscript quotations. Keep a dossier
   alongside a passage; Zotero remains your collection tool. Retention is explicit,
   and archive integrity does not establish factual truth.
-- **Export and automate.** Create editorial, reading, submission or analysis PDFs,
-  terminal reports and versioned JSON. The browser app, CLI and Python API share
-  one analysis pipeline. `lixity --help` and `lixity about --json` describe the
-  installed commands and capabilities.
+- **Project & exports.** Manage project metadata and create editorial, reading,
+  submission or analysis PDFs, terminal reports and versioned JSON.
+  NDA generation creates a draft without
+  recording consent or signatures; dossier Markdown edits require explicit preview
+  and apply. See [export and project limits](https://mfahsold.github.io/lixity/USAGE.md).
+
+The workspace keeps the short **Manuscript**, **Research** and **Project** view
+names. The browser app, CLI and Python API share one analysis pipeline;
+`lixity --help` and `lixity about --json` describe installed capabilities.
+
+On current main, CLI workflows can reuse the project's configured manuscript;
+[default manuscript guidance](https://mfahsold.github.io/lixity/USAGE.md#default-manuscript)
+explains explicit project selection and settings scope.
 
 English and German have the broadest analysis resources. French, Spanish,
 Italian, Portuguese and Dutch offer localized interfaces with narrower heuristic

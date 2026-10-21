@@ -14,7 +14,13 @@ from rich.table import Table
 
 from . import __version__
 from .analyzer import CorpusAnalyzer
-from .config import DEFAULT_HOST, DEFAULT_PORT, load_project_config, resolve_thresholds
+from .config import (
+    DEFAULT_HOST,
+    DEFAULT_PORT,
+    load_project_config,
+    read_explicit_project_config,
+    resolve_thresholds,
+)
 from .formatters import ReportFormatter
 from .io import FileUtils
 from .models import SCHEMA_VERSION
@@ -30,7 +36,7 @@ from .site import docs_url
 from .style_fingerprint import FingerprintThresholds
 from .ui import render_analysis
 from .ui.manuscript_document import reader_blocks
-from .workspace import discover
+from .workspace import resolve_manuscript_target
 
 EXIT_OK = 0
 EXIT_ERROR = 1
@@ -284,7 +290,7 @@ def _completion_scripts() -> tuple[str, str]:
 #: Top-level commands: name and help text drive the parser and both emitted
 #: completion scripts, so adding a command lists it everywhere at once.
 _COMMANDS: tuple[tuple[str, str], ...] = (
-    ("research", "Experimental local sources, citations and lexical search (JSON)"),
+    ("research", "Local sources, dossiers, citations and lexical search (JSON)"),
     ("service", "Manage an owned local dashboard process"),
     ("analyze", "Corpus metrics (text/JSON, self-describing meta block)"),
     ("profile", "Paragraph tense/style estimates for supported body/list blocks (JSON)"),
@@ -315,7 +321,7 @@ _lixity_complete() {
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
     local cmds="__LIXITY_COMMANDS__"
-    local opts="--help --version --language --json --output -o --dry-run --names --motif --phrases --name"
+    local opts="--help --version --project --language --json --output -o --dry-run --names --motif --phrases --name"
     local style_opts="--z-mild --z-strong --fdr-q --fdr-method --dim-threshold --flag-min-severity --min-chapters"
     if [[ $COMP_CWORD -eq 1 ]]; then
         COMPREPLY=( $(compgen -W "$cmds --help --version" -- "$cur") )
@@ -378,7 +384,7 @@ _lixity_complete() {
         return 0
     fi
     if [[ ${COMP_WORDS[1]} == scenes ]]; then
-        COMPREPLY=( $(compgen -W "--help --language --json --chapter --scene --latest" -- "$cur") )
+        COMPREPLY=( $(compgen -W "--help --project --language --json --chapter --scene --latest" -- "$cur") )
         COMPREPLY+=( $(compgen -f -- "$cur") )
         return 0
     fi
@@ -445,6 +451,7 @@ __LIXITY_ZSH_COMMANDS__
         scenes)
           _arguments \
             '1:manuscript:_files' \
+            '--project[Explicit project root]:directory:_files -/' \
             '--help[Help]' \
             '--language[Language profile]:profile:(auto de en fr es it pt nl generic)' \
             '--json[Scene JSON with selection scope]' \
@@ -483,6 +490,7 @@ __LIXITY_ZSH_COMMANDS__
         build)
           _arguments \
             '1:file:_files' \
+            '--project[Explicit project root]:directory:_files -/' \
             '--language[language profile]:profile:(auto de en fr es it pt nl generic)' \
             '--dry-run[Show planned artifacts only]' \
             "${_lixity_style_flags[@]}"
@@ -490,6 +498,7 @@ __LIXITY_ZSH_COMMANDS__
         motifs)
           _arguments \
             '1:file:_files' \
+            '--project[Explicit project root]:directory:_files -/' \
             '--motif[NAME=REGEX]' \
             '--phrases[Phrase size]:n:' \
             '--language[language profile]:profile:(auto de en fr es it pt nl generic)' \
@@ -498,6 +507,7 @@ __LIXITY_ZSH_COMMANDS__
         characters)
           _arguments \
             '1:file:_files' \
+            '--project[Explicit project root]:directory:_files -/' \
             '--name[Figure name or alias]' \
             '--names[Comma-separated names]:names:' \
             '--language[language profile]:profile:(auto de en fr es it pt nl generic)' \
@@ -506,6 +516,7 @@ __LIXITY_ZSH_COMMANDS__
         dashboard)
           _arguments \
             '1:file:_files' \
+            '--project[Explicit project root]:directory:_files -/' \
             '--language[language profile]:profile:(auto de en fr es it pt nl generic)' \
             '--names[Character names]:names:' \
             '-o[output file]:file:_files' \
@@ -515,6 +526,7 @@ __LIXITY_ZSH_COMMANDS__
         *)
           _arguments \
             '1:file:_files' \
+            '--project[Explicit project root]:directory:_files -/' \
             '--language[language profile]:profile:(auto de en fr es it pt nl generic)' \
             '--json[JSON output]' \
             '-o[output file]:file:_files' \
@@ -868,11 +880,7 @@ def _cmd_pdf(args: argparse.Namespace) -> int:
     from .pdf_export import compose_pdf
     from .pdf_layouts import FontChoice
 
-    try:
-        workspace = discover(explicit=args.file)
-    except (FileNotFoundError, ValueError) as exc:
-        print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
-        return EXIT_ERROR
+    workspace = args._workspace
 
     choice = FontChoice(
         serif=args.serif_font,
@@ -905,8 +913,7 @@ def _cmd_pdf(args: argparse.Namespace) -> int:
     except (OSError, PdfError, ValueError, RuntimeError) as exc:
         print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
         return EXIT_ERROR
-    # The composed document belongs beside the manuscript, not in whatever
-    # directory the command happened to be started from.
+    # Default output belongs to the selected workspace root.
     output = args.output or os.path.join(workspace.root, f"{workspace.slug}-{args.layout}.pdf")
     try:
         changed = FileUtils.atomic_write_bytes_if_changed(output, payload)
@@ -919,11 +926,7 @@ def _cmd_pdf(args: argparse.Namespace) -> int:
 
 def _cmd_build(args: argparse.Namespace) -> int:
     """Idempotent workspace build: analyzes the manuscript and publishes artifacts."""
-    try:
-        workspace = discover(explicit=args.file)
-    except (FileNotFoundError, ValueError) as exc:
-        print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
-        return EXIT_ERROR
+    workspace = args._workspace
 
     try:
         text = workspace.read_manuscript()
@@ -1132,6 +1135,9 @@ def main(argv: list[str] | None = None) -> int:
             configure_service(sub.add_parser(name, help=help_text))
             continue
         p = sub.add_parser(name, help=help_text, description=help_text)
+        if name not in ("serve", "completion", "about", "schema"):
+            p.add_argument("--project", metavar="PATH",
+                           help="Select an explicit project root; relative manuscript files resolve inside it; settings are root-local (no user or ancestor configuration)")
         if name == "style":
             p.epilog = (
                 "Dimensions compare complete chapters using standardized midranks. "
@@ -1159,7 +1165,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             continue
         if name == "scenes":
-            p.add_argument("file", nargs="?", help="Markdown manuscript (default: current workspace manuscript)")
+            p.add_argument("file", nargs="?", help="Markdown manuscript (default: selected workspace manuscript)")
             p.add_argument(
                 "--language", default=None, help="Language profile (default: project setting or en)"
             )
@@ -1189,14 +1195,14 @@ def main(argv: list[str] | None = None) -> int:
                 "rewritten. Use --dry-run to inspect planned paths without writing. "
                 "This does not switch a running app's project."
             )
-            p.add_argument("file", nargs="?", help="Markdown manuscript (default: auto-discovery)")
+            p.add_argument("file", nargs="?", help="Markdown manuscript (default: configured manuscript or folder discovery)")
             p.add_argument(
                 "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)"
             )
             p.add_argument("--dry-run", action="store_true", help="Show planned artifacts only")
             continue
         if name == "motifs":
-            p.add_argument("file", help="Markdown manuscript")
+            p.add_argument("file", nargs="?", help="Markdown manuscript (default: manuscript in root-local project config)")
             p.add_argument(
                 "--motif",
                 action="append",
@@ -1210,7 +1216,7 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--json", action="store_true", help="JSON output")
             continue
         if name == "characters":
-            p.add_argument("file", help="Markdown manuscript")
+            p.add_argument("file", nargs="?", help="Markdown manuscript (default: manuscript in root-local project config)")
             p.add_argument(
                 "--name",
                 action="append",
@@ -1230,7 +1236,7 @@ def main(argv: list[str] | None = None) -> int:
                 "text and notes: review it before sharing. Project changes and "
                 "research writes require the local app: lixity service start --open."
             )
-            p.add_argument("file", help="Markdown manuscript")
+            p.add_argument("file", nargs="?", help="Markdown manuscript (default: manuscript in root-local project config)")
             p.add_argument(
                 "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)"
             )
@@ -1282,7 +1288,7 @@ def main(argv: list[str] | None = None) -> int:
                 help="Enable verbose request logging, stack traces, and browser devtools debugging",
             )
             continue
-        p.add_argument("file", help="Markdown manuscript")
+        p.add_argument("file", nargs="?", help="Markdown manuscript (default: manuscript in root-local project config)")
         p.add_argument(
             "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)"
         )
@@ -1357,19 +1363,30 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--min-chapters must be at least 2")
     if args.command == "pdf" and args.json:
         parser.error("--json is not supported for PDF output; use analyze or style --json for measurements")
-    scenes_root = None
-    if args.command == "scenes" and args.file is None:
-        try:
-            workspace = discover(root=os.getcwd())
-            args.file = workspace.manuscript
-            scenes_root = workspace.root
-        except (OSError, ValueError) as exc:
-            print(f"Error: {exc}", file=sys.stderr)
-            return EXIT_ERROR
     if args.command == "serve":
         project_config = {} if args.no_project else load_project_config(args.path)
     else:
-        project_config = load_project_config(scenes_root or getattr(args, "file", None))
+        explicit_file = args.file
+        try:
+            workspace = resolve_manuscript_target(
+                explicit_file, project=args.project,
+                allow_discovery=args.command in ("scenes", "build"),
+            )
+            args._workspace = workspace
+            # Keep the legacy spelling for explicit files without --project.
+            if explicit_file is None or args.project is not None:
+                args.file = workspace.manuscript
+                project_config = read_explicit_project_config(workspace.root)
+                if (args.project is None and args.command in ("scenes", "build")
+                        and "manuscript" not in project_config):
+                    # Preserve conventional folder users' defaults, rooted at
+                    # the selected workspace rather than an implicit cwd.
+                    project_config = load_project_config(workspace.root)
+            else:
+                project_config = load_project_config(explicit_file)
+        except (OSError, ValueError) as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return EXIT_ERROR
     args._project_config = project_config
     explicit_language = getattr(args, "language", None)
     if hasattr(args, "language") and args.language is None:

@@ -139,6 +139,26 @@ purging one source must retain every blob owned by another accepted record.
 Physical deletion and rebuilding a cache are separate from accepting a new HEAD.
 Backups include authoritative records, manifests and blobs, not SQLite or locks.
 
+**On current main (Unreleased):** backup creation holds the existing project
+writer lock until accepted records and blobs have been copied into a closed
+compressed candidate. This includes protection from concurrent purge. The
+candidate carries the selected HEAD and initial project bytes, with verified
+content addresses and an exact copied-byte inventory. Writers are released before
+external output publication:
+
+```mermaid
+flowchart LR
+    S[Select snapshot under writer lock] --> C[Copy verified objects into candidate]
+    C --> U[Close candidate and release writers]
+    U --> F[Flush and replace output]
+    F --> D[Synchronize output directory]
+```
+
+Failure before replacement preserves the old output. Failure after replacement
+reports published output with uncertain durability; it does not claim rollback.
+Restore validates the metadata object and inventory before selected-path reads.
+No entity/manifest migration or archive-format change is involved.
+
 ## Schema evolution and compatibility
 
 The local reader supports entity/manifest versions 1–8. These are capability

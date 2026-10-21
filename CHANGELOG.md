@@ -8,6 +8,14 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Changed
+- Current product guidance describes Manuscript & Analysis, Research & Dossiers
+  and Project & exports without a blanket experimental label for Research.
+  Capability metadata classifies Research as `supported`; response/archive schema
+  versions, retention/revision guards and individual integration/export limits
+  remain unchanged. The classification does not certify factual accuracy.
+- Analysis/export CLI commands can reuse a root-configured manuscript and select
+  an explicit project with `--project`. Research manuscript commands share the
+  configured-path resolver while preserving retention and revision guards.
 - Public entry routes start with concrete manuscript questions, an example and a
   short tour; installation and technical references remain directly reachable.
 - Key reader actions explain their purpose on hover and focus. Reading settings
@@ -26,6 +34,15 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Hook help explains the existing heuristic without changing its calculation.
 
 ### Fixed
+- Research exports retain one accepted snapshot while copying records and blobs,
+  verify copied content addresses and preserve an existing backup on failure
+  before replacement. Errors after replacement identify uncertain durability.
+- Export rejects destinations inside its research store/cache and checks
+  restore's existing size ceiling before creating a candidate archive.
+- Restore rejects malformed export envelopes and duplicate archive members with
+  bounded errors; valid archives keep their format and immutable bytes.
+- Service status inspects existing state without creating or repairing folders
+  or acquiring the lifecycle writer lock; changing records retain uncertainty.
 - Reading settings fit short viewports from their first visible frame. Rapid
   tool reversals and analysis changes preserve the stable reading position
   without rewinding deliberate scrolling after the tool has opened.

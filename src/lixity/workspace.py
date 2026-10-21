@@ -155,6 +155,48 @@ def configured_manuscript(root: str | Path) -> str | None:
     return str(path)
 
 
+def resolve_manuscript_target(
+    explicit: str | None = None, *, project: str | Path | None = None,
+    allow_discovery: bool = False,
+) -> Workspace:
+    """Select one CLI manuscript and root without searching for another project.
+
+    Legacy explicit files retain their own directory as the workspace. An
+    explicit project contains every selected file; omission uses its root-local
+    setting, with conventional discovery available only to folder commands.
+    """
+    if explicit is not None and project is None:
+        selected = os.path.abspath(explicit)
+        base = Path(selected).parent
+    else:
+        base = Path(project if project is not None else os.getcwd()).expanduser().resolve()
+        if not base.is_dir():
+            raise ValueError("Project path must be a folder")
+        if explicit is not None:
+            path = Path(explicit).expanduser()
+            if not path.is_absolute():
+                path = base / path
+            try:
+                path.resolve().relative_to(base)
+            except (OSError, RuntimeError, ValueError) as exc:
+                raise ValueError("Manuscript must remain inside the selected project") from exc
+            selected = str(path)
+        elif allow_discovery:
+            return discover(root=str(base))
+        else:
+            configured = configured_manuscript(base)
+            if configured is None:
+                raise ValueError("Supply a manuscript file or set manuscript in the selected project's root-local config (use --project PATH to select a root)")
+            selected = configured
+    try:
+        info = os.stat(selected)
+    except FileNotFoundError as exc:
+        raise ValueError(f"Manuscript not found: {selected}") from exc
+    if not stat.S_ISREG(info.st_mode):
+        raise ValueError(f"Manuscript must be a regular file: {selected}")
+    return Workspace(root=str(base), manuscript=selected)
+
+
 def discover(root: str | None = None, explicit: str | None = None) -> Workspace:
     """Resolves the manuscript of a workspace.
 

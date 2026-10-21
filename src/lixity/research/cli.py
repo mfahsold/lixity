@@ -49,13 +49,14 @@ def _non_negative(value: str) -> int:
     return number
 
 
-def _add_manuscript_argument(command: argparse.ArgumentParser, *, required: bool = True) -> None:
+def _add_manuscript_argument(command: argparse.ArgumentParser) -> None:
     """Accept the manuscript path positionally (like analyze/scenes) or via --manuscript."""
-    selector = command.add_mutually_exclusive_group(required=required)
+    command.epilog = "Omit the manuscript path only when the selected project's config sets manuscript."
+    selector = command.add_mutually_exclusive_group()
     selector.add_argument("manuscript", nargs="?", default=argparse.SUPPRESS,
-                          help="Manuscript path inside the explicit project")
+                          help="Manuscript path inside the explicit project (default: root-local config manuscript)")
     selector.add_argument("--manuscript", dest="manuscript",
-                          help="Manuscript path inside the explicit project (same as the positional argument)")
+                          help="Manuscript path inside the explicit project (same as positional; default: root-local config manuscript)")
 
 
 COMMAND_DEFINITIONS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
@@ -99,7 +100,7 @@ COMMAND_DEFINITIONS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
     ('zotero-restore', 'Verify and restore a paired backup into a new directory', 'Archive and maintenance', ()),
     ('zotero-export', 'Export active captures and provenance for additive Zotero import', 'Archive and maintenance', ()),
     ('ocr-status', 'Inspect runtime diagnostic status for OCR and PDF extraction', 'Archive and maintenance', ()),
-    ('schema', 'Export the experimental entity JSON schema', 'Archive and maintenance', ()),
+    ('schema', 'Export the research entity JSON schema', 'Archive and maintenance', ()),
 )
 
 
@@ -207,9 +208,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--reason", help="Why this authored record is being revised")
             command.add_argument("--actor", default="local-author")
         if name in ("link-manuscript", "review-manuscript"):
-            _add_manuscript_argument(command, required=name != "review-manuscript")
-            if name == "review-manuscript":
-                command.epilog = "Omit the manuscript path only when the selected project's config sets manuscript."
+            _add_manuscript_argument(command)
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
         if name == "link-manuscript":
             command.add_argument("--claim-id", required=True)
@@ -314,7 +313,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--thresholds", help="Path to JSON file or JSON string of analysis thresholds")
         elif name == "compare":
             command.add_argument("--source-id", required=True, help="Source UUID")
-            command.add_argument("--manuscript", required=True, help="Path to manuscript file")
+            command.add_argument("--manuscript", help="Path to manuscript file (default: selected project config manuscript)")
             command.add_argument("--version-id", help="Explicit source version UUID")
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"), help="Manuscript language override")
             command.add_argument("--top-n", type=int, default=20, help="Number of top terms to return (default: 20)")
@@ -854,6 +853,23 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
     return api.get_record(args.project, kind, record_id, revision=args.revision)
 
 
+def _resolve_manuscript_input(args: argparse.Namespace) -> None:
+    """Default manuscript input only after validating the selected archive."""
+    if args.research_command not in (
+        "review-manuscript", "find-anchor", "link-manuscript", "unlink-manuscript",
+        "reconcile-manuscript", "compare",
+    ) or getattr(args, "manuscript", None) is not None:
+        return
+    from ..workspace import configured_manuscript
+    from .repository import Repository, ResearchError
+
+    repository = Repository(args.project)
+    repository.snapshot()
+    args.manuscript = configured_manuscript(repository.root)
+    if args.manuscript is None:
+        raise ResearchError("Supply a manuscript path or --manuscript PATH, or set manuscript in the selected project's root-local config")
+
+
 def _current_project() -> str:
     """Use only a verified initialized archive rooted in the current directory."""
     from .repository import Repository, ResearchError
@@ -956,6 +972,7 @@ def run(args: argparse.Namespace) -> int:
         if (command not in ("schema", "init", "restore", "zotero-restore", "ocr-status")
                 and args.project is None):
             args.project = _current_project()
+        _resolve_manuscript_input(args)
         # Normalize positional selectors without overriding an explicit revision mode.
         if command in ("dossier", "claim", "decision", "sources"):
             action = getattr(args, "action", None)
@@ -1164,15 +1181,6 @@ def run(args: argparse.Namespace) -> int:
             result = api.list_manuscript_links(args.project, claim_id=args.claim_id,
                                                include_retracted=args.include_retracted)
         elif command == "review-manuscript":
-            if getattr(args, "manuscript", None) is None:
-                from ..workspace import configured_manuscript
-                from .repository import Repository
-
-                repository = Repository(args.project)
-                repository.snapshot()
-                args.manuscript = configured_manuscript(repository.root)
-                if args.manuscript is None:
-                    raise ResearchError("Supply a manuscript path or --manuscript PATH, or set manuscript in the selected project's config")
             result = api.review_manuscript_links(args.project, args.manuscript, language=args.language)
         elif command == "unlink-manuscript":
             from .repository import ResearchConflictError

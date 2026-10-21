@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from lixity import __version__
 
 
@@ -71,7 +73,9 @@ def test_corrupt_runtime_records_and_unknown_files_are_not_overwritten(tmp_path)
 
     manager = ServiceManager(59980, state_dir=tmp_path / "state", runtime_dir=tmp_path / "runtime",
                              backend="process", startup_timeout=0.2)
+    manager.runtime_dir.mkdir(mode=0o700)
     manager.runtime_file.write_text('{"not":"a service record"}', encoding="utf-8")
+    manager.runtime_file.chmod(0o600)
     unknown = manager.runtime_file.parent / "unrelated.txt"
     unknown.write_text("Synthetic unrelated data", encoding="utf-8")
     before = manager.runtime_file.read_bytes()
@@ -327,3 +331,550 @@ def test_systemd_unit_template_matches_the_managed_cli():
     assert "ExecStart=%h/.local/bin/lixity serve --no-project --host 127.0.0.1 --port ${LIXITY_PORT}" in unit
     assert "WantedBy=default.target" in unit
     assert "NoNewPrivileges=true" in unit
+
+
+def _storage_snapshot(root):
+    """Capture observable storage changes without counting read access times."""
+    paths = [root, *sorted(root.rglob("*"))]
+    return {
+        str(path.relative_to(root)): (
+            path.lstat().st_mode,
+            path.lstat().st_mtime_ns,
+            path.read_bytes() if path.is_file() else None,
+        )
+        for path in paths
+    }
+
+
+@pytest.mark.parametrize("missing", ("both", "state", "runtime"))
+def test_status_does_not_create_missing_storage(tmp_path, monkeypatch, missing):
+    import lixity.service as service
+
+    monkeypatch.setattr(service, "_port_open", lambda *_: False)
+    state, runtime = tmp_path / "state", tmp_path / "runtime"
+    if missing == "state":
+        runtime.mkdir(mode=0o700)
+    elif missing == "runtime":
+        state.mkdir(mode=0o700)
+    before = _storage_snapshot(tmp_path)
+    manager = service.ServiceManager(59979, state_dir=state, runtime_dir=runtime)
+    result = manager.control("status", {})
+    assert result["state"] == "stopped", result
+    assert _storage_snapshot(tmp_path) == before
+
+
+def test_status_does_not_open_or_wait_for_lifecycle_lock(tmp_path, monkeypatch):
+    import time
+
+    import pytest
+
+    import lixity.service as service
+
+    if sys.platform == "win32":
+        pytest.skip("POSIX writer-lock contention fixture")
+    state, runtime = tmp_path / "state", tmp_path / "runtime"
+    state.mkdir(mode=0o700)
+    runtime.mkdir(mode=0o700)
+    lock = runtime / "service-59979.lock"
+    lock.write_bytes(b"synthetic lock\n")
+    lock.chmod(0o600)
+    child = subprocess.Popen(  # noqa: S603 - disposable fixed Python lock holder
+        [sys.executable, "-c", "import fcntl,sys,time; "
+         "f=open(sys.argv[1], 'rb'); fcntl.flock(f, fcntl.LOCK_EX); "
+         "print('locked', flush=True); time.sleep(30)", str(lock)],
+        stdout=subprocess.PIPE, text=True,
+    )
+    try:
+        assert child.stdout.readline().strip() == "locked"
+        monkeypatch.setattr(service, "_port_open", lambda *_: False)
+        opened = []
+        original_open = service.os.open
+
+        def observe_open(path, *args, **kwargs):
+            if Path(path) == lock:
+                opened.append(path)
+            return original_open(path, *args, **kwargs)
+
+        monkeypatch.setattr(service.os, "open", observe_open)
+        before = _storage_snapshot(tmp_path)
+        started = time.monotonic()
+        result = service.ServiceManager(
+            59979, state_dir=state, runtime_dir=runtime, lock_timeout=2,
+        ).control("status", {})
+        elapsed = time.monotonic() - started
+        assert result["state"] == "stopped", result
+        assert opened == []
+        assert elapsed < 1, f"Status waited {elapsed:.3f}s for a lifecycle writer"
+        assert _storage_snapshot(tmp_path) == before
+    finally:
+        child.terminate()
+        child.wait(timeout=5)
+        child.stdout.close()
+
+
+def test_status_accepts_read_only_private_directories_without_writes(tmp_path, monkeypatch):
+    import lixity.service as service
+
+    state, runtime = tmp_path / "state", tmp_path / "runtime"
+    state.mkdir(mode=0o500)
+    runtime.mkdir(mode=0o500)
+    monkeypatch.setattr(service, "_port_open", lambda *_: False)
+    before = _storage_snapshot(tmp_path)
+    manager = service.ServiceManager(59979, state_dir=state, runtime_dir=runtime)
+    result = manager.control("status", {})
+    assert result["state"] == "stopped", result
+    assert _storage_snapshot(tmp_path) == before
+
+
+def test_status_rejects_unsafe_directory_modes_without_repair(tmp_path, monkeypatch):
+    import pytest
+
+    import lixity.service as service
+
+    if os.name == "nt":
+        pytest.skip("POSIX private-directory modes")
+    for name in ("state", "runtime"):
+        root = tmp_path / name
+        root.mkdir()
+        state, runtime = root / "state", root / "runtime"
+        state.mkdir(mode=0o700)
+        runtime.mkdir(mode=0o700)
+        (root / name).chmod(0o755)
+        monkeypatch.setattr(service, "_port_open", lambda *_: False)
+        before = _storage_snapshot(root)
+        result = service.ServiceManager(59979, state_dir=state, runtime_dir=runtime).control("status", {})
+        assert result["state"] == "unknown" and not result["ok"], result
+        assert "private" in result["message"]
+        assert _storage_snapshot(root) == before
+
+
+def test_status_rejects_changed_directory_policy_without_repair(tmp_path, monkeypatch):
+    import stat
+
+    import pytest
+
+    import lixity.service as service
+
+    if os.name == "nt":
+        pytest.skip("POSIX directory ownership and symlink policy")
+    for policy in ("owner", "symlink", "file", "unreadable"):
+        root = tmp_path / policy
+        root.mkdir()
+        state, runtime = root / "state", root / "runtime"
+        state.mkdir(mode=0o700)
+        runtime.mkdir(mode=0o700)
+        manager = service.ServiceManager(59979, state_dir=state, runtime_dir=runtime)
+        if policy == "symlink":
+            runtime.rmdir()
+            target = root / "target"
+            target.mkdir(mode=0o700)
+            runtime.symlink_to(target, target_is_directory=True)
+        elif policy == "file":
+            runtime.rmdir()
+            runtime.write_bytes(b"synthetic non-directory")
+        original_lstat = Path.lstat
+
+        def inspect(path, *args, runtime=runtime, policy=policy, original_lstat=original_lstat, **kwargs):
+            if path == runtime:
+                if policy == "unreadable":
+                    raise PermissionError(errno.EACCES, "synthetic directory denial")
+                metadata = original_lstat(path, *args, **kwargs)
+                if policy == "owner":
+                    fields = list(metadata)
+                    fields[4] = os.getuid() + 1
+                    return os.stat_result(fields)
+                return metadata
+            return original_lstat(path, *args, **kwargs)
+
+        monkeypatch.setattr(service, "_port_open", lambda *_: False)
+        before = {path: original_lstat(path) for path in (state, runtime)}
+        with monkeypatch.context() as scoped:
+            scoped.setattr(Path, "lstat", inspect)
+            result = manager.control("status", {})
+        assert result["state"] == "unknown" and not result["ok"], (policy, result)
+        assert result["message"]
+        assert {path: original_lstat(path) for path in (state, runtime)} == before
+        if policy == "symlink":
+            assert stat.S_ISLNK(original_lstat(runtime).st_mode)
+
+
+def _status_owned_fixture(tmp_path, monkeypatch):
+    import lixity.service as service
+
+    manager = service.ServiceManager(59979, state_dir=tmp_path / "state", runtime_dir=tmp_path / "runtime")
+    manager.state_dir.mkdir(mode=0o700, exist_ok=True)
+    record = {"schema_version": "lixity-service-runtime/1", "port": manager.port,
+        "token": "a" * 64, "pid": 12345, "birth": "original", "backend": "process",
+        "unit": None, "ready": True, "version": __version__}
+    service._write_json(manager.runtime_file, record)
+    service._write_json(manager.ready_file, {"schema_version": "lixity-service-ready/1",
+        "token": record["token"], "pid": record["pid"], "birth": record["birth"], "version": __version__})
+    monkeypatch.setattr(service, "process_birth", lambda pid: "original" if pid == 12345 else "replacement")
+    monkeypatch.setattr(service, "_has_marker", lambda *_: True)
+    monkeypatch.setattr(service, "_port_open", lambda *_: True)
+    return manager, record
+
+
+def test_status_retries_a_demonstrable_record_replacement(tmp_path, monkeypatch):
+    import lixity.service as service
+
+    manager, record = _status_owned_fixture(tmp_path, monkeypatch)
+    replacement = {**record, "token": "b" * 64, "pid": 12346, "birth": "replacement"}
+    replaced = False
+
+    def probe(*_):
+        nonlocal replaced
+        if not replaced:
+            replaced = True
+            service._write_json(manager.runtime_file, replacement)
+        return True
+
+    monkeypatch.setattr(service, "_port_open", probe)
+    result = manager.control("status", {})
+    assert result["state"] == "starting" and not result["ok"], result
+    assert result["pid"] == 12346
+    assert json.loads(manager.runtime_file.read_text()) == replacement
+
+
+def test_status_does_not_accept_settings_replaced_during_probe(tmp_path, monkeypatch):
+    import lixity.service as service
+
+    manager, _ = _status_owned_fixture(tmp_path, monkeypatch)
+    replacement = {"schema_version": "lixity-service-settings/1",
+        "settings": {"port": manager.port, "host": "localhost", "project": None}}
+    replaced = False
+
+    def probe(*_):
+        nonlocal replaced
+        if not replaced:
+            replaced = True
+            service._write_json(manager.settings_file, replacement)
+        return True
+
+    monkeypatch.setattr(service, "_port_open", probe)
+    result = manager.control("status", {})
+    assert result["state"] == "running" and result["ok"], result
+    assert result["url"] == "http://localhost:59979/"
+
+
+def test_status_reports_disappearing_record_as_unknown(tmp_path, monkeypatch):
+    import lixity.service as service
+
+    manager, _ = _status_owned_fixture(tmp_path, monkeypatch)
+
+    def probe(*_):
+        manager.runtime_file.unlink()
+        return True
+
+    monkeypatch.setattr(service, "_port_open", probe)
+    result = manager.control("status", {})
+    assert result["state"] == "unknown" and not result["ok"], result
+    assert "disappeared" in result["message"]
+
+
+def test_status_reports_in_place_record_change_as_unknown(tmp_path, monkeypatch):
+    import lixity.service as service
+
+    manager, record = _status_owned_fixture(tmp_path, monkeypatch)
+
+    def probe(*_):
+        manager.runtime_file.write_text(json.dumps({**record, "pid": None}), encoding="utf-8")
+        return True
+
+    monkeypatch.setattr(service, "_port_open", probe)
+    result = manager.control("status", {})
+    assert result["state"] == "unknown" and not result["ok"], result
+    assert "changed" in result["message"]
+
+
+def test_status_bounds_record_replacement_retries(tmp_path, monkeypatch):
+    import lixity.service as service
+
+    manager, record = _status_owned_fixture(tmp_path, monkeypatch)
+    probes = []
+
+    def probe(*_):
+        probes.append(True)
+        service._write_json(manager.runtime_file, record)
+        return True
+
+    monkeypatch.setattr(service, "_port_open", probe)
+    result = manager.control("status", {})
+    assert result["state"] == "unknown" and not result["ok"], result
+    assert "changed" in result["message"]
+    assert 1 < len(probes) <= 3
+
+
+def test_status_preserves_process_identity_measurement_errors(tmp_path, monkeypatch):
+    import lixity.service as service
+
+    manager, _ = _status_owned_fixture(tmp_path, monkeypatch)
+    before = _storage_snapshot(tmp_path)
+
+    def unavailable(*_):
+        raise service.ServiceError("Synthetic process birth measurement unavailable")
+
+    monkeypatch.setattr(service, "process_birth", unavailable)
+    result = manager.control("status", {})
+    assert result["state"] == "unknown" and not result["ok"], result
+    assert "birth measurement unavailable" in result["message"]
+    assert _storage_snapshot(tmp_path) == before
+
+
+@pytest.mark.parametrize("kind", ("settings", "runtime"))
+@pytest.mark.parametrize("fault", ("malformed", "unreadable"))
+def test_status_keeps_record_read_failures_unknown(tmp_path, monkeypatch, kind, fault):
+    import lixity.service as service
+
+    manager, _ = _status_owned_fixture(tmp_path, monkeypatch)
+    service._write_json(manager.settings_file, {"schema_version": "lixity-service-settings/1",
+        "settings": {"port": manager.port, "host": "127.0.0.1", "project": None}})
+    target = manager.settings_file if kind == "settings" else manager.runtime_file
+    if fault == "malformed":
+        target.write_bytes(b'{"synthetic incomplete record":')
+    else:
+        original_open = service.os.open
+
+        def denied(path, *args, **kwargs):
+            if Path(path) == target:
+                raise PermissionError(errno.EACCES, "Synthetic managed record denial")
+            return original_open(path, *args, **kwargs)
+
+        monkeypatch.setattr(service.os, "open", denied)
+    before = _storage_snapshot(tmp_path)
+    result = manager.control("status", {})
+    assert result["state"] == "unknown" and not result["ok"], result
+    assert "unreadable" in result["message"] if fault == "malformed" else "denial" in result["message"]
+    assert _storage_snapshot(tmp_path) == before
+
+
+def test_status_rechecks_record_identity_when_open_races_replacement(tmp_path, monkeypatch):
+    import lixity.service as service
+
+    manager, record = _status_owned_fixture(tmp_path, monkeypatch)
+    replacement = {**record, "token": "b" * 64, "pid": 12346, "birth": "replacement"}
+    temporary = manager.runtime_dir / "replacement.json"
+    service._write_json(temporary, replacement)
+    original_open = service.os.open
+    replaced = False
+
+    def open_after_replacement(path, *args, **kwargs):
+        nonlocal replaced
+        if Path(path) == manager.runtime_file and not replaced:
+            replaced = True
+            os.replace(temporary, manager.runtime_file)
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(service.os, "open", open_after_replacement)
+    result = manager.control("status", {})
+    assert result["state"] == "starting" and not result["ok"], result
+    assert result["pid"] == 12346
+
+
+def test_status_rejects_a_record_replaced_with_a_symlink_before_open(tmp_path, monkeypatch):
+    import lixity.service as service
+
+    manager, _ = _status_owned_fixture(tmp_path, monkeypatch)
+    target = tmp_path / "synthetic-untrusted-record.json"
+    target.write_text("{}", encoding="utf-8")
+    link = tmp_path / "replacement-link"
+    try:
+        link.symlink_to(target)
+    except OSError:
+        pytest.skip("Creating symbolic links is unavailable on this host")
+    original_open = service.os.open
+    replaced = False
+
+    def open_after_replacement(path, *args, **kwargs):
+        nonlocal replaced
+        if Path(path) == manager.runtime_file and not replaced:
+            replaced = True
+            os.replace(link, manager.runtime_file)
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(service.os, "open", open_after_replacement)
+    result = manager.control("status", {})
+    assert result["state"] == "unknown" and not result["ok"], result
+    assert manager.runtime_file.is_symlink()
+    assert target.read_bytes() == b"{}"
+
+
+def test_status_preserves_pending_systemd_ownership_without_writes(tmp_path, monkeypatch):
+    import lixity.service as service
+
+    manager = service.ServiceManager(59979, state_dir=tmp_path / "state", runtime_dir=tmp_path / "runtime")
+    token = "c" * 64
+    service._write_json(manager.runtime_file, {"schema_version": "lixity-service-runtime/1",
+        "port": manager.port, "token": token, "pid": None, "birth": None,
+        "backend": "systemd", "unit": service._unit_name(manager.port, token), "version": __version__})
+    monkeypatch.setattr(service.shutil, "which", lambda _: "/synthetic/systemctl")
+    monkeypatch.setattr(service, "_port_open", lambda *_: False)
+    monkeypatch.setattr(service, "_run", lambda argv, **_: subprocess.CompletedProcess(
+        argv, 0, "MainPID=0\nLoadState=loaded\nActiveState=activating\n", ""))
+    before = _storage_snapshot(tmp_path)
+    result = manager.control("status", {})
+    assert result["state"] == "starting" and not result["ok"], result
+    assert "ownership registration" in result["message"]
+    assert _storage_snapshot(tmp_path) == before
+
+
+def test_status_reports_unmanaged_listener_without_creating_storage(tmp_path, monkeypatch):
+    import lixity.service as service
+
+    monkeypatch.setattr(service, "_port_open", lambda *_: True)
+    before = _storage_snapshot(tmp_path)
+    result = service.ServiceManager(59979, state_dir=tmp_path / "state", runtime_dir=tmp_path / "runtime").control("status", {})
+    assert result["state"] == "busy" and not result["ok"], result
+    assert "unmanaged process" in result["message"]
+    assert _storage_snapshot(tmp_path) == before
+
+
+def test_worker_registration_tolerates_atomic_same_token_record_replacement(tmp_path, monkeypatch):
+    import lixity.service as service
+
+    manager, record = _status_owned_fixture(tmp_path, monkeypatch)
+    replacement = {**record, "pid": None, "birth": None}
+    temporary = manager.runtime_dir / "replacement.json"
+    service._write_json(temporary, replacement)
+    original_open = service.os.open
+    replaced = False
+
+    def open_after_replacement(path, *args, **kwargs):
+        nonlocal replaced
+        if Path(path) == manager.runtime_file and not replaced:
+            replaced = True
+            os.replace(temporary, manager.runtime_file)
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(service.os, "open", open_after_replacement)
+    monkeypatch.setenv("LIXITY_SERVICE_RECORD", str(manager.runtime_file))
+    monkeypatch.setattr(service.signal, "signal", lambda *_: None)
+    worker = service.ManagedServe(record["token"], manager.port)
+    stored = json.loads(manager.runtime_file.read_text())
+    assert stored["token"] == record["token"]
+    assert stored["pid"] == worker.pid == os.getpid()
+    assert stored["birth"] == worker.birth == "replacement"
+
+
+def test_status_reports_directory_replacement_during_probe_as_unknown(tmp_path, monkeypatch):
+    import lixity.service as service
+
+    manager, _ = _status_owned_fixture(tmp_path, monkeypatch)
+
+    def probe(*_):
+        manager.runtime_dir.rename(tmp_path / "preserved-runtime")
+        manager.runtime_dir.mkdir(mode=0o700)
+        return True
+
+    monkeypatch.setattr(service, "_port_open", probe)
+    result = manager.control("status", {})
+    assert result["state"] == "unknown" and not result["ok"], result
+    assert "directories changed" in result["message"]
+    assert list(manager.runtime_dir.iterdir()) == []
+    assert (tmp_path / "preserved-runtime" / manager.runtime_file.name).is_file()
+
+
+@pytest.mark.parametrize("replacement_check", (1, 2))
+def test_status_retries_record_replacement_that_changes_open_inode_ctime(
+    tmp_path, monkeypatch, replacement_check
+):
+    import lixity.service as service
+
+    manager, record = _status_owned_fixture(tmp_path, monkeypatch)
+    replacement = {**record, "token": "b" * 64, "pid": 12346, "birth": "replacement"}
+    temporary = manager.runtime_dir / "replacement.json"
+    service._write_json(temporary, replacement)
+    initial = manager.runtime_file.stat()
+    original_fstat = service.os.fstat
+    reads = 0
+
+    def replace_after_read(descriptor):
+        nonlocal reads
+        metadata = original_fstat(descriptor)
+        if (metadata.st_dev, metadata.st_ino) == (initial.st_dev, initial.st_ino):
+            reads += 1
+            if reads == replacement_check:
+                os.replace(temporary, manager.runtime_file)
+                return original_fstat(descriptor)
+        return metadata
+
+    monkeypatch.setattr(service.os, "fstat", replace_after_read)
+    result = manager.control("status", {})
+    assert result["state"] == "starting" and not result["ok"], result
+    assert result["pid"] == 12346
+
+
+def test_record_read_does_not_turn_disappearance_after_replacement_into_absence(tmp_path, monkeypatch):
+    import lixity.service as service
+
+    manager, record = _status_owned_fixture(tmp_path, monkeypatch)
+    temporary = manager.runtime_dir / "replacement.json"
+    service._write_json(temporary, record)
+    original_lstat = Path.lstat
+    reads = 0
+
+    def replace_then_remove(path, *args, **kwargs):
+        nonlocal reads
+        if path == manager.runtime_file:
+            reads += 1
+            if reads == 2:
+                os.replace(temporary, path)
+            elif reads == 3:
+                path.unlink()
+        return original_lstat(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "lstat", replace_then_remove)
+    with pytest.raises(service.ServiceError, match="disappeared"):
+        service._read_json(manager.runtime_file)
+
+
+@pytest.mark.parametrize("disappearing", ("runtime_and_ready", "ready", "settings", "directory"))
+def test_status_preserves_disappearance_uncertainty_across_outer_retries(
+    tmp_path, monkeypatch, disappearing
+):
+    import lixity.service as service
+
+    manager, record = _status_owned_fixture(tmp_path, monkeypatch)
+    service._write_json(manager.settings_file, {"schema_version": "lixity-service-settings/1",
+        "settings": {"port": manager.port, "host": "127.0.0.1", "project": None}})
+    original_metadata = service._metadata
+    original_inspect_dir = service._inspect_dir
+    replaced = False
+    removed = False
+    replacement_observations = 0
+
+    def probe(*_):
+        nonlocal replaced
+        if not replaced:
+            service._write_json(manager.runtime_file, record)
+            replaced = True
+            return True
+        return False
+
+    def observe_record(path):
+        nonlocal replacement_observations
+        if path == manager.runtime_file and replaced:
+            replacement_observations += 1
+        return original_metadata(path)
+
+    def observe_directory(path):
+        nonlocal removed
+        if path == manager.runtime_dir and replacement_observations and not removed:
+            removed = True
+            if disappearing == "directory":
+                manager.runtime_dir.rename(tmp_path / "preserved-runtime")
+            elif disappearing == "runtime_and_ready":
+                manager.runtime_file.unlink()
+                manager.ready_file.unlink()
+            elif disappearing == "ready":
+                manager.ready_file.unlink()
+            else:
+                manager.settings_file.unlink()
+        return original_inspect_dir(path)
+
+    monkeypatch.setattr(service, "_port_open", probe)
+    monkeypatch.setattr(service, "_metadata", observe_record)
+    monkeypatch.setattr(service, "_inspect_dir", observe_directory)
+    result = manager.control("status", {})
+    assert result["state"] == "unknown" and not result["ok"], result
+    assert "changed" in result["message"] if disappearing == "directory" else "disappeared" in result["message"]

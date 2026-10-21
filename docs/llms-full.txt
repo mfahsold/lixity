@@ -72,16 +72,25 @@ does not update an already running service.
 
 ## What you can do
 
-- **Review passages.** Open paragraph values and work markers, or compare chapters
-  against the manuscript's own patterns. Analysis can be turned on and off.
-- **Connect research.** The experimental workspace links retained sources,
-  authored claims and decisions to exact manuscript quotations. Keep a dossier
+- **Manuscript & Analysis.** Open paragraph values and work markers, or compare
+  chapters against the manuscript's own patterns. Analysis can be turned on and off.
+- **Research & Dossiers.** Link retained sources, authored claims and decisions
+  to exact manuscript quotations. Keep a dossier
   alongside a passage; Zotero remains your collection tool. Retention is explicit,
   and archive integrity does not establish factual truth.
-- **Export and automate.** Create editorial, reading, submission or analysis PDFs,
-  terminal reports and versioned JSON. The browser app, CLI and Python API share
-  one analysis pipeline. `lixity --help` and `lixity about --json` describe the
-  installed commands and capabilities.
+- **Project & exports.** Manage project metadata and create editorial, reading,
+  submission or analysis PDFs, terminal reports and versioned JSON.
+  NDA generation creates a draft without
+  recording consent or signatures; dossier Markdown edits require explicit preview
+  and apply. See [export and project limits](https://mfahsold.github.io/lixity/USAGE.md).
+
+The workspace keeps the short **Manuscript**, **Research** and **Project** view
+names. The browser app, CLI and Python API share one analysis pipeline;
+`lixity --help` and `lixity about --json` describe installed capabilities.
+
+On current main, CLI workflows can reuse the project's configured manuscript;
+[default manuscript guidance](https://mfahsold.github.io/lixity/USAGE.md#default-manuscript)
+explains explicit project selection and settings scope.
 
 English and German have the broadest analysis resources. French, Spanish,
 Italian, Portuguese and Dutch offer localized interfaces with narrower heuristic
@@ -135,7 +144,7 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/llms.txt
 
 # Lixity
 
-> Local manuscript analysis and an experimental research archive. Statistical
+> Local manuscript analysis and a project-scoped research archive. Statistical
 > signals support human review; they are not literary-quality scores or
 > instructions to rewrite. Analysis is deterministic for fixed text and settings;
 > research records also contain generated IDs and timestamps.
@@ -197,6 +206,12 @@ Root-only `manuscript` selects a contained relative default for workspace folder
 settings fail without choosing another file. Scene chapter/scene/latest output
 filters retain full references and declare their selection. Explicit planned IDs
 have no measurements and remain outside comparisons. See Usage for exact rules.
+On current main, all twelve analysis/export commands accept `--project` and
+configured manuscript omission, with strict selected-root settings. Research
+manuscript commands share the root-local default while preserving write guards.
+Service status is read-only and nonlocking. Exports serialize snapshot copying
+against commits/purge and report post-replacement durability uncertainty; restore
+validates envelope shape. Existing JSON/archive versions remain unchanged.
 
 ## Choose a reference
 
@@ -573,7 +588,7 @@ environment; use the [Python project route](#python-api-project-environment).
 <details>
 <summary>PDF/OCR and Zotero setup for research</summary>
 
-The experimental research workspace is included. Text and Markdown sources need
+The research workspace is included. Text and Markdown sources need
 no OCR setup. Search needs SQLite with FTS5 support. Text PDFs need Poppler;
 image-only scans need locally installed Tesseract or a configured OCR worker. See
 [PDF and OCR setup](#server-environment-and-project-access).
@@ -740,6 +755,9 @@ each invocation and is not saved: repeat `--backend process` on restart to keep
 that choice; otherwise restart uses `auto`. `lixity service status --json`
 reports readiness, installed/running versions, backend and log path; see the
 [command contract](USAGE.md#lixity-service) for states and exit codes.
+On current main (Unreleased), status reads existing storage without creating
+folders, repairing permissions or waiting for a lifecycle write. Unreadable or
+changing state remains uncertain; it does not trigger an alternate runtime path.
 
 Saved launch settings and `service-PORT.log` live separately from the package:
 
@@ -1745,6 +1763,12 @@ means false. Status succeeds only for a ready owned instance; stopped status
 exits 1, while stopping an already stopped instance succeeds. Stop preserves
 saved launch settings and logs.
 
+**On current main (Unreleased):** status does not create or repair storage or
+acquire the lifecycle writer lock. Missing private folders are a normal stopped
+state. Unsafe, unreadable or changing records report uncertainty; status does not
+change runtime locations to work around a permission error. Lifecycle commands
+prepare their private storage when explicitly requested.
+
 ### `lixity build`
 
 Create the reproducible artifact set for a project:
@@ -1785,7 +1809,7 @@ for scope and older-release alternatives. For Bash/Zsh setup, follow
 
 ### `lixity research`
 
-Research is a separate experimental, explicit-project workspace. Its
+Research is a separate, explicit-project workspace. Its
 [usage guide](research/USAGE.md) owns retained source capture, authored records,
 lexical search, chronology, citations, Zotero, OCR, backups and archive versions.
 Use `lixity research COMMAND --help` for installed arguments/formats and `GET /api`
@@ -1979,8 +2003,10 @@ idempotent output writes.
 
 ## Configuration (`CorpusConfig`)
 
-CLI commands with an explicit manuscript path load settings relative to that
-manuscript; otherwise workspace discovery starts in the current directory.
+Legacy CLI commands with an explicit manuscript path load settings relative to
+that manuscript; otherwise workspace discovery starts in the current directory.
+Current-main `--project` and configured-omission modes instead use strict settings
+from the selected root; see [default manuscript](#default-manuscript).
 Project settings live in `lixity.toml` or `[tool.lixity]` in `pyproject.toml`.
 An explicit CLI option overrides its project value. Configured title affects
 dashboard/build presentation; artifact names still follow the manuscript name.
@@ -2065,19 +2091,38 @@ wins. When selecting a configured default, an invalid/unreadable configuration
 or missing/nonregular configured file fails selection instead of choosing another
 manuscript. Explicit-file analysis retains its existing configuration warnings.
 
-This setting participates in existing folder selection (Open Project, service
-startup and `build`) and omitted input for `scenes`. Commands that still require
-an explicit file keep that requirement; text-taking Python APIs do not discover
-files. In a validated Research project it also supports:
+The published v0.7.2 release uses this setting for folder selection (Open
+Project, service startup and `build`), omitted `scenes` input and read-only
+Research manuscript review. Text-taking Python APIs do not discover files.
+
+**On current main (Unreleased):** all manuscript analysis/export commands accept
+`--project PATH`: `analyze`, `profile`, `dialogue`, `pacing`, `showing`, `style`,
+`motifs`, `characters`, `dashboard`, `pdf`, `scenes` and `build`. With no file,
+these commands use the selected root's configured manuscript. Only `scenes` and
+`build` retain their existing conventional-file discovery when no default is set.
 
 ```bash
+lixity analyze --project ./novel
+lixity scenes --project ./novel --latest
 lixity research review-manuscript --project ./novel
 ```
 
-Research review uses only that project's configured path; it never guesses from
-other Markdown files or changes the archive. Its existing `missing`/`unreadable`
-source states remain informative review results. Other manuscript-link commands
-still require an explicit path. See the [research reference](research/USAGE.md).
+New explicit-project/configured-omission analysis reads settings only from that
+root, excluding user and ancestor defaults. Language, title and registers belong
+to the same root even when its manuscript is nested. Explicit CLI options win.
+With `--project`, relative files belong to that root and absolute files must
+also remain inside it. Without this option, an explicit file retains legacy
+path/configuration behavior. Conventional discovery by `scenes`/`build` without
+`--project` also retains its existing settings merge. Commands do not select
+another running server's project. Project build exports and default PDF output belong to the
+selected workspace root.
+
+Research `review-manuscript`, `find-anchor`, `link-manuscript`,
+`unlink-manuscript`, `reconcile-manuscript` and `compare` can reuse the validated
+Research project's root-local default. They do not guess from other Markdown
+files. Existing positional/option forms, acceptance, retention and snapshot
+requirements remain. Read-only review retains informative `missing`/`unreadable`
+source states. See the [research reference](research/USAGE.md).
 
 ### Character profiles
 
@@ -2321,7 +2366,7 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md
 
 # Local research archive
 
-**Experimental local research archive system.**
+**Local research and dossiers in an explicit project.**
 Keep selected text, PDF and PNG/JPEG sources in an explicit local project. Dossiers
 bring notes and evidence together; claims record assertions; decisions explain
 the author's choices. The workspace preserves saved versions and exact quotations.
@@ -2534,8 +2579,12 @@ or as `--manuscript PATH`; pass exactly one of the two forms. Since v0.7.2,
 read-only `review-manuscript` alone also permits omission when the selected
 project's root config explicitly sets `manuscript = "drafts/manuscript.md"`.
 The root `lixity.toml` takes precedence over root `[tool.lixity]`; user and
-ancestor settings are excluded. Explicit input wins. No other manuscript command
-becomes optional, and the Python API still requires its manuscript argument.
+ancestor settings are excluded. Explicit input wins. The published v0.7.2 release
+keeps other manuscript paths required. On current main (Unreleased),
+`find-anchor`, `link-manuscript`, `unlink-manuscript`,
+`reconcile-manuscript` and `compare` also reuse this root-local default. Existing
+argument forms and write/retention/revision guards remain; Python input stays
+explicit.
 
 The default is resolved inside the already validated explicit/working-directory
 project, never inferred from a filename or another project. Invalid config or
@@ -3456,13 +3505,33 @@ containment checks as repository objects. An invalid backup is rejected before
 publishing the restored store; rejected history leaves an existing export untouched.
 Valid archives keep their existing format and immutable bytes.
 
+**On current main (Unreleased):** export holds the project writer lock while
+selecting a snapshot and copying its records/blobs into a complete compressed
+candidate. Concurrent writers receive the existing busy diagnostic and can retry
+after export finishes. Compression time and source size affect that interval.
+Copied content addresses are verified. Before output replacement, failures leave
+an existing backup untouched. Choose an output outside `research/` and
+`.lixity/research/`: export rejects these protected store/cache destinations,
+including symlink aliases. A backup elsewhere in the project is permitted.
+Export also checks restore's existing 10 GiB
+uncompressed-payload ceiling, including the export manifest, before creating a
+candidate. If directory synchronization fails after replacement,
+the error identifies published output with unconfirmed durability: inspect and
+restore-test it before retrying. Restore rejects malformed metadata and duplicate
+archive members with bounded format errors, including valid JSON of the wrong
+shape. Optional lengths in older valid inventories remain supported.
+
 Writes use an OS lock, immutable publication and atomic HEAD replacement.
 Uncommitted objects left after interruption are ignored, not selected by date.
 Locks release when the process exits. A stale expected HEAD fails rather than
 overwriting another ingestion. Interrupted initialization may leave an incomplete
 directory: preserve it for inspection; `init` refuses to overwrite it.
 Writer diagnostics distinguish a busy writer from read-only, permission and
-other I/O failures at the canonical project lock. A lock file's existence does
+other I/O failures at the canonical project lock.
+A write's expected snapshot must come from the content actually inspected or
+previewed. After a conflict, review the changed content before submitting its
+new snapshot; replacing only the hash with a fresh status result does not review
+the change. A lock file's existence does
 not prove contention; no alternate `/tmp` lock or unlocked fallback is used.
 
 Since v0.7.2, a failed post-commit cleanup reports the accepted snapshot and the
@@ -3878,6 +3947,26 @@ reachability. Equal bytes can be shared across either role and across sources;
 purging one source must retain every blob owned by another accepted record.
 Physical deletion and rebuilding a cache are separate from accepting a new HEAD.
 Backups include authoritative records, manifests and blobs, not SQLite or locks.
+
+**On current main (Unreleased):** backup creation holds the existing project
+writer lock until accepted records and blobs have been copied into a closed
+compressed candidate. This includes protection from concurrent purge. The
+candidate carries the selected HEAD and initial project bytes, with verified
+content addresses and an exact copied-byte inventory. Writers are released before
+external output publication:
+
+```mermaid
+flowchart LR
+    S[Select snapshot under writer lock] --> C[Copy verified objects into candidate]
+    C --> U[Close candidate and release writers]
+    U --> F[Flush and replace output]
+    F --> D[Synchronize output directory]
+```
+
+Failure before replacement preserves the old output. Failure after replacement
+reports published output with uncertain durability; it does not claim rollback.
+Restore validates the metadata object and inventory before selected-path reads.
+No entity/manifest migration or archive-format change is involved.
 
 ## Schema evolution and compatibility
 
@@ -5009,6 +5098,16 @@ restored-store publication. Inventory paths use the repository's existing
 containment/symlink boundary, which also rejects parent components. This is
 validation of the existing format, with no schema migration or alternate store.
 
+**On current main (Unreleased):** export owns the repository writer lock from
+accepted-snapshot selection until its compressed candidate is self-contained.
+This serializes commits and purge against the copied records/blobs. Root pointers
+come from that snapshot; stored object content addresses and the bytes actually
+copied must agree. The candidate is flushed before output replacement. A failure
+before replacement preserves the previous backup; a later directory-sync failure
+reports published output with uncertain durability. Restore validates envelope
+shape, identifiers, digests and optional sizes before inventory reads, rejecting
+duplicate members. Export format and canonical records remain unchanged.
+
 ## Manual manuscript associations
 
 `research.manuscript` owns `ManuscriptClaimLink`, separate from imported source
@@ -5091,6 +5190,14 @@ reading source bytes. `discover` applies explicit → configured → conventiona
 selection and validates configured regular files. The read-only Research CLI
 uses the same path owner after validating its archive, then preserves its domain
 review of missing/unreadable source bytes. Python text-analysis APIs stay explicit.
+
+**On current main (Unreleased):** `workspace.resolve_manuscript_target` selects
+one root/source pair before analysis configuration is loaded. Command-level
+`--project` and root-configured omission use strict root-local settings; legacy
+explicit files and conventional scenes/build discovery without `--project`
+retain their existing merge. The Research CLI normalizes omitted manuscript
+input after validating its archive. These selectors do not change a running server's project or any JSON
+result encoding.
 Output scene filters run after complete measurement; explicitly planned IDs remain
 separate from measured rows and never influence descriptive baselines.
 
@@ -5754,24 +5861,37 @@ including failed audit/probe behavior, in [research usage](research/USAGE.md).
 Analysis defaults to English; choose another manuscript language or explicit
 `auto`. `LIXITY_LANG` selects terminal messages independently. Read active
 thresholds from result metadata rather than assuming `about` defaults.
-Configuration precedence is CLI > UI session > project > user > code.
-Unreadable/malformed configuration emits a `UserWarning` naming the file before
-falling back. This includes present non-table `tool`/`tool.lixity` sections and
+Legacy configuration precedence is CLI > UI session > project > user > code.
+On current main, analysis/export commands accept `--project PATH` and a root-local
+configured manuscript when input is omitted. These new selection modes exclude
+user/ancestor settings and keep root language/title/register scope. Legacy
+explicit files and conventional scenes/build discovery without `--project`
+retain their settings merge. Research manuscript commands share the configured
+default after archive validation. Python/HTTP input remains explicit; see
+[default manuscript](USAGE.md#default-manuscript).
+In legacy settings merges, unreadable/malformed configuration emits a
+`UserWarning` naming the file before falling back. This includes present
+non-table `tool`/`tool.lixity` sections and
 permission/I/O failures while probing configuration metadata. Missing candidates
 and impossible children beneath a non-directory (`ENOTDIR`) remain silent.
 Treat the warning as a configuration defect and confirm the settings that applied.
 See [configuration](USAGE.md).
 
-Research is an experimental, separate project API. Existing-archive CLI commands
+Research is a separate project API. Existing-archive CLI commands
 can use only a validated current project directory as a shortcut; Python/HTTP
 require explicit selection. Retention is explicit. See [research workflows](research/USAGE.md),
 not the RFC's unimplemented proposals, for behavior and compatibility.
+On current main (Unreleased), capability metadata classifies Research as
+`status: "supported"`. This product classification changes no response or archive
+schema version, retention or revision guard, and does not certify factual accuracy.
 
 `service` manages only its owned local process and starts an empty workspace by
 default. `serve` runs in the foreground. CLI analysis/research/build calls do not
 switch an existing server's project. Service JSON uses `lixity-service-local/1`;
 exit `0` means `ok: true`, including an already-stopped `stop`. A stopped `status`
-returns false/nonzero. Start uses new launch choices; restart uses saved choices
+returns false/nonzero. On current main, status is non-mutating and does not take
+the lifecycle writer lock; unreadable/changing state remains unknown. Start uses
+new launch choices; restart uses saved choices
 plus explicit overrides. [Lifecycle details](INSTALLATION.md#running-the-server)
 include environment isolation and installed/running versions.
 An invalid explicit foreground `serve` selector fails before binding; it does not

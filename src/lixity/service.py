@@ -260,16 +260,90 @@ def _private_dir(path: Path) -> None:
         path.chmod(0o700)
 
 
-def _read_json(path: Path) -> dict[str, Any] | None:
-    if not path.exists() and not path.is_symlink():
+class _RecordReplaced(ServiceError):
+    """An atomic record replacement permits a bounded inspection retry."""
+
+
+def _metadata(path: Path) -> os.stat_result | None:
+    try:
+        return path.lstat()
+    except FileNotFoundError:
         return None
-    metadata = path.lstat()
-    if not stat.S_ISREG(metadata.st_mode) or path.is_symlink():
+
+
+def _inspect_dir(path: Path) -> tuple[int, int, int, int] | None:
+    """Validate existing storage without creating or repairing it."""
+    metadata = _metadata(path)
+    if metadata is None:
+        return None
+    if not stat.S_ISDIR(metadata.st_mode):
+        raise ServiceError("Managed state directory must be a directory, not a symbolic link or file")
+    if os.name != "nt":
+        if metadata.st_uid != os.getuid():
+            raise ServiceError("Managed state directory belongs to another user")
+        if metadata.st_mode & 0o077:
+            raise ServiceError("Managed state directory must be private to the current user")
+    return metadata.st_dev, metadata.st_ino, metadata.st_mode, metadata.st_uid
+
+
+def _check_record_change(before: os.stat_result | None, after: os.stat_result | None) -> None:
+    if before is not None and after is None:
+        raise ServiceError("Managed record disappeared during inspection; retry status")
+    if before is None and after is None:
+        return
+    if before is None or (
+        after is not None and (before.st_dev, before.st_ino) != (after.st_dev, after.st_ino)
+    ):
+        raise _RecordReplaced("Managed records changed during inspection; retry status")
+    if after is not None and (
+        before.st_mode, before.st_uid, before.st_size, before.st_mtime_ns, before.st_ctime_ns
+    ) != (
+        after.st_mode, after.st_uid, after.st_size, after.st_mtime_ns, after.st_ctime_ns
+    ):
+        raise ServiceError("Managed record changed in place during inspection; preserve it for inspection")
+
+
+def _check_record_changes(
+    before: Sequence[os.stat_result | None], after: Sequence[os.stat_result | None]
+) -> bool:
+    """Check every record so a replacement cannot mask another read's uncertainty."""
+    replaced = False
+    for previous, current in zip(before, after, strict=True):
+        try:
+            _check_record_change(previous, current)
+        except _RecordReplaced:  # noqa: PERF203 - inspect all records before retrying
+            replaced = True
+    return replaced
+
+
+def _validate_record_file(metadata: os.stat_result) -> None:
+    if not stat.S_ISREG(metadata.st_mode):
         raise ServiceError("Managed record is not a regular file")
     if os.name != "nt" and (metadata.st_uid != os.getuid() or metadata.st_mode & 0o077):
         raise ServiceError("Managed record must be private to the current user")
-    with path.open("rb") as handle:
+
+
+def _read_json_once(path: Path) -> dict[str, Any] | None:
+    metadata = _metadata(path)
+    if metadata is None:
+        return None
+    _validate_record_file(metadata)
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    try:
+        descriptor = os.open(path, flags)
+    except FileNotFoundError as exc:
+        raise ServiceError("Managed record disappeared during inspection; retry status") from exc
+    with os.fdopen(descriptor, "rb") as handle:
+        opened = os.fstat(handle.fileno())
+        _validate_record_file(opened)
+        _check_record_change(metadata, _metadata(path))
+        _check_record_change(metadata, opened)
         raw = handle.read(65537)
+        after_read = os.fstat(handle.fileno())
+        # Replacing the path also changes the unlinked open inode's ctime.
+        # Establish replacement before classifying metadata changes in place.
+        _check_record_change(opened, _metadata(path))
+        _check_record_change(opened, after_read)
     if len(raw) > 65536:
         raise ServiceError("Managed record exceeds its size limit")
     try:
@@ -279,6 +353,20 @@ def _read_json(path: Path) -> dict[str, Any] | None:
     if not isinstance(value, dict):
         raise ServiceError("Managed record must be a JSON object")
     return value
+
+
+def _read_json(path: Path) -> dict[str, Any] | None:
+    # Parent and child both publish ownership atomically during startup.
+    for attempt in range(3):
+        try:
+            value = _read_json_once(path)
+            if attempt and value is None:
+                raise ServiceError("Managed record disappeared during inspection; retry status")
+            return value
+        except _RecordReplaced:  # noqa: PERF203 - retry only a proven replacement race
+            if attempt == 2:
+                raise
+    raise AssertionError("Unreachable record retry")
 
 
 def _write_json(path: Path, value: Mapping[str, Any]) -> None:
@@ -641,21 +729,56 @@ class ServiceManager:
             (state_dir or state).expanduser(),
             (runtime_dir or runtime).expanduser(),
         )
-        if state_path.is_symlink() or runtime_path.is_symlink():
-            raise ServiceError("Managed state directories must not be symbolic links")
-        self.state_dir, self.runtime_dir = state_path.resolve(), runtime_path.resolve()
+        # Keep the directory itself visible to lstat; resolving it would hide a
+        # configured symlink. Absolute paths remain stable across child cwd changes.
+        self.state_dir, self.runtime_dir = state_path.absolute(), runtime_path.absolute()
         self.startup_timeout, self.stop_timeout, self.lock_timeout = (
             startup_timeout,
             stop_timeout,
             lock_timeout,
         )
-        _private_dir(self.state_dir)
-        _private_dir(self.runtime_dir)
         self.runtime_file = self.runtime_dir / f"service-{port}.json"
         self.ready_file = self.runtime_dir / f"service-{port}.ready.json"
         self.settings_file = self.state_dir / f"service-{port}.json"
         self.log_file = self.state_dir / f"service-{port}.log"
         self.work_dir = self.state_dir / f"workspace-{port}"
+
+    def _prepare_storage(self) -> None:
+        """Prepare private storage only for an explicit lifecycle write."""
+        _private_dir(self.state_dir)
+        _private_dir(self.runtime_dir)
+
+    def _inspect_status(self, overrides: Mapping[str, Any]) -> dict[str, Any]:
+        """Read a stable observation without acquiring the lifecycle writer lock."""
+        directories = (self.state_dir, self.runtime_dir)
+        records = (self.settings_file, self.runtime_file, self.ready_file)
+        storage = tuple(_inspect_dir(path) for path in directories)
+        observed: tuple[os.stat_result | None, ...] | None = None
+        for attempt in range(3):
+            try:
+                if storage != tuple(_inspect_dir(path) for path in directories):
+                    raise ServiceError("Managed state directories changed during inspection; retry status")
+                before = tuple(_metadata(path) for path in records)
+                if observed is not None:
+                    # A fresh atomic revision is acceptable on a retry. Lost or
+                    # edited evidence from an earlier observation remains unknown.
+                    _check_record_changes(observed, before)
+                observed = before
+                saved = self._settings()
+                settings = resolve_settings(self.port, overrides, saved)
+                result = self._status(saved or settings)
+                if storage != tuple(_inspect_dir(path) for path in directories):
+                    raise ServiceError("Managed state directories changed during inspection; retry status")
+                after = tuple(_metadata(path) for path in records)
+                replaced = _check_record_changes(before, after)
+                observed = after
+                if replaced:
+                    raise _RecordReplaced("Managed records changed during inspection; retry status")
+                return result
+            except _RecordReplaced:  # noqa: PERF203 - bounded snapshot retry
+                if attempt == 2:
+                    raise
+        raise AssertionError("Unreachable inspection retry")
 
     @contextlib.contextmanager
     def _locked(self) -> Iterator[None]:
@@ -1055,13 +1178,14 @@ class ServiceManager:
         try:
             if action not in ("start", "stop", "restart", "status"):
                 raise ServiceError("Unknown lifecycle action")
+            if action == "status":
+                return self._inspect_status(overrides)
+            self._prepare_storage()
             with self._locked():
                 saved = self._settings()
                 settings = resolve_settings(
                     self.port, overrides, saved if action != "start" else None
                 )
-                if action == "status":
-                    return self._status(saved or settings)
                 if action == "stop":
                     return self._stop(saved or settings)
                 if action == "restart":
