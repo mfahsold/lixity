@@ -46,6 +46,7 @@ from .components import (
     line_label,
     manuscript_pdf_controls,
     panel_start,
+    product_details,
     project_header,
     section_nav,
     status_strip,
@@ -381,14 +382,14 @@ def render_dashboard(
            f'title="{L("navigation_collapse")}">'
            '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" '
            'stroke-width="1.5" aria-hidden="true" focusable="false">'
-           '<rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M7.5 3.5v13"/></svg></button>') if controls else ()),
-        project_header(
-            title, labels, language_name, engine_name, compact=controls, meta=project_meta
-        ),
+           '<rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M7.5 3.5v13"/></svg></button>',
+           f'<span class="product-name">{esc(engine_name)}</span></div>') if controls else ()),
     ]
 
+    if not controls:
+        parts.append(project_header(title, labels, language_name, engine_name, meta=project_meta))
+
     if controls:
-        parts.append('</div><div id="workspace-navigation-content">')
         parts.append(
             '<nav class="view-navigation" role="tablist" aria-label="' + L("workspace") + '">'
             f'<button type="button" class="view-nav-tab{" active" if default_view == "analysis" else ""}" data-view="analysis" role="tab" id="tab-view-analysis" aria-controls="view-pane-analysis" aria-selected="{"true" if default_view == "analysis" else "false"}">'
@@ -402,6 +403,8 @@ def render_dashboard(
             "</button>"
             "</nav>"
         )
+        parts.append('<div id="workspace-navigation-content">')
+        parts.append(project_header(title, labels, language_name, engine_name, compact=True, meta=project_meta))
         parts.append(
             '<details class="workspace-actions" id="project-actions"'
             + ("" if has_reading else " open") + ">"
@@ -432,6 +435,7 @@ def render_dashboard(
                 )
             )
         parts.append("</nav></details>")
+        parts.append('<p class="workspace-product-details">' + product_details(labels) + '</p>')
         parts.append("</div></div>")
 
     if status:

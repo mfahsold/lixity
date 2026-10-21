@@ -174,6 +174,13 @@ server.serve_forever()
       await expect(paragraph.locator('mark.manuscript-claim-hit.text-hit')).toHaveText('selected sentence');
       assert.equal((await paragraph.locator('mark.manuscript-claim-hit').allTextContents()).join(''), selection.quote,
         'Source and search marks compose without changing the selected text');
+      await panel.locator('[data-manuscript-links-paragraph]').click();
+      const context = page.locator('[data-passage-research]');
+      await expect(context).toHaveAttribute('data-state', 'ready');
+      await expect(page.locator('#tab-view-analysis')).toHaveAttribute('aria-selected', 'true');
+      await expect(context.locator('[data-research-history=claim]')).toHaveAttribute('data-record-revision', '2');
+      await expect(context.locator('blockquote')).toHaveText(selection.quote);
+      await context.locator('[data-passage-research-close]').click();
       await page.locator('#tab-view-research').click();
       await page.locator('[data-rtab="review"]').click();
       const reviewRows = page.locator('#research-manuscript-review .manuscript-link-review-item');

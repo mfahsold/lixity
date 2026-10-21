@@ -186,6 +186,19 @@ candidates have resolved coordinates but remain pending review until an explicit
 re-pin. Ambiguous quotes are not re-pinned; an edited quote requires an explicitly
 reviewed, uniquely resolvable replacement through `--new-quote`. These flags
 request a human review, not a semantic contradiction check or factual verdict.
+
+**On current main (Unreleased):** the paragraph menu's **Saved research**, its
+saved-association count and exact saved quotation marks open the existing right
+context tool. It shows up to five exact associations and their total, with pinned
+claim/dossier titles and versions, author-assigned confidence and separately
+labelled current dossier decisions. At most five decisions per displayed dossier
+are shown with their total. Titles use the existing exact-version viewers;
+**Review** remains available for unresolved anchors and the full review flow.
+No saved association means no stored link for that passage, not an absence of
+facts or relevant research. Opening, closing or retrying this summary performs
+reads only, without retention, indexing, version upgrades or repinning. Research
+setup remains explicit. This presentation adds no API or archive schema version.
+
 Retraction and note/claim revisions use the existing record history and strict
 revision API. A uniquely resolvable anchor is re-pinned explicitly: `lixity
 research reconcile-manuscript --accept-moved` (or `POST /api/research-manuscript-reanchor`)

@@ -220,6 +220,8 @@ async function depart(page, control, tab) {
             await page.locator('#tab-view-analysis').click();
             const paragraph = page.locator('#chapters .ptext').filter({hasText: 'A bird crosses'});
             await paragraph.locator('[data-manuscript-links-paragraph]').click();
+            await expect(page.locator('[data-passage-research]')).toHaveAttribute('data-state', 'ready');
+            await expect(page.locator('#tab-view-analysis')).toHaveAttribute('aria-selected', 'true');
             await expect(page.locator('#workbench-return')).toHaveText('Back to passage');
             await page.locator('#workbench-return').click();
             // Create another passage journey, then detour through a companion dossier.

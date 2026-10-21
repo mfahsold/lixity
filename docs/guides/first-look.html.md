@@ -26,6 +26,8 @@ Ask what changed: the kind of scene, what the character is doing, or how the sen
 
 Open [**Research → Dossiers**](../demo/report.html#research-manager) and **View details** on **Warehouse 4 case notes**. Inspect its historical images or choose **Dossier alongside** to keep it beside the manuscript.
 
+**In the development demo:** return to the opening manuscript passage and choose **… → Saved research**, or its saved-association count. The right context shows the saved claim and dossier versions while the text stays visible. Open a title to read that version and its sources; close the viewer and use **Back to passage** to resume reading. On narrow screens the context sits above the text and can be closed with its close button or Escape.
+
 In **Review**, follow the saved quotation, “Someone had tried the eastern gate of Warehouse 4.” **Go to manuscript passage** returns to exactly matched text; **Open claim** shows its pinned claim and cited sources. When you follow a connection from a manuscript paragraph, close the record viewer and use **Back to passage** to return there.
 
 On current main, opening saved associations from an open dossier offers **Back to dossier**. It restores that dossier’s saved version and reading position. The return stays available on narrow screens. In the manuscript, **Reading settings → Keyboard shortcuts** explains the passage-menu, search and close keys; key actions also explain their purpose when focused or hovered.

@@ -213,7 +213,7 @@ server.serve_forever()
       });
       await page.goto('http://lixity.test/');
       await page.locator('#tab-view-project').click();
-      assert.equal(page.url(),'http://lixity.test/');
+      assert.equal(page.url(),'http://lixity.test/#view-project');
       assert.ok((await page.title()).includes('Synthetic project'));
       assert.equal(await page.locator('#settings-form h3').isVisible(),true);
       assert.equal(await page.locator('#settings-scope-help').isVisible(),true);

@@ -181,6 +181,25 @@ sync. Exports use exclusive publication outside the archive/internal directory.
 The canonical project writer lock remains the only mutex; diagnostic error types
 distinguish contention, read-only/permission failures and other I/O errors.
 
+### Passage research presentation
+
+**On current main (Unreleased):** `manuscript-links.js` selects exact saved
+associations with the same resolved lines, paragraph hash, codepoint span and
+quotation matcher used for manuscript marks. Explicit paragraph activation
+composes existing GETs for pinned claim/dossier records and current dossier
+decision reviews; it adds no endpoint or archive schema. The first five
+associations and first five decisions per displayed dossier have explicit totals.
+Current dossier context is distinct from the historical claim/dossier pins.
+
+This composition stays in the existing link closure, with its root, project,
+source and review-generation guards. Duplicate exact reads coalesce within an
+activation; inconsistent snapshot envelopes fail instead of mixing versions.
+`LixityWorkbench` owns the `research` context tool alongside values and dossier,
+and `LixityReadingThread` owns the exact passage return. Opening a context neither
+replaces the prose node nor saves records. Unlinked text, an uninitialized archive,
+unavailable data and failed/stale reads have distinct states. The public demo
+prepares exact read aliases and retains its read-only fixture boundary.
+
 ## Configuration and multiple projects
 
 Explicit root settings own author identity, publication, chapter registers and
@@ -358,6 +377,13 @@ choice. Responsive changes keep the mobile switcher available. Exact manuscript
 return actions reuse the existing paragraph navigation and the same anchor matcher
 as inline association marks, with a current project/source context check on click.
 
+**On current main (Unreleased):** the native shell renders the product row,
+primary destinations, project identity, project actions and secondary version/
+license information in that DOM order. Navigation no longer depends on runtime
+reparenting. App chrome uses interface typography; exported document headers keep
+their existing presentation. The shared collapse owner hides project context and
+actions while retaining product identity and all three destinations.
+
 ### Shared manuscript reader
 
 **Since v0.7.2:** `ui/manuscript_reader.py` emits the shared command
@@ -438,6 +464,20 @@ once it commits, deliberate scrolling becomes the next origin. Reading settings
 observe their native disclosure state before rendering so initial placement does
 not depend on the later native `toggle` event.
 
+**On current main (Unreleased):** the existing dock measures its available
+desktop scrollport against the viewport, sticky return thread and containing
+grid's lower boundary. Dossier return settles this geometry at the restored
+document position before restoring inner scroll offsets, avoiding premature
+clamping. Temporary overview/focus suspension preserves accepted or stale/retry
+presentation; expired asynchronous reads cannot revive it.
+
+Reading feedback does not own layout or navigation. Persistent Analysis/local
+Values gutters use separate paint from the temporary arrival cue; its expiry
+does not reset the persistent marker's opacity. Prose avoids a second arrival
+outline. Interrupted context reveals continue from rendered opacity. The Analysis
+toggle's local selected-state recipe preserves text contrast during transitions;
+reduced motion retains static state and cancels active reveals.
+
 The shared jump helper reveals a real destination, accounts for sticky controls
 in its own scroll area and accepts start, center or nearest alignment. Arrival
 feedback observes the destination and its scrolling ancestors until stable;
@@ -446,6 +486,12 @@ uses the observer without realigning the restored position. Reduced motion is
 read at navigation time. [W3C C43](https://www.w3.org/WAI/WCAG22/Techniques/css/C43)
 and [focus-obscuration guidance](https://www.w3.org/WAI/WCAG22/Techniques/failures/F110.html)
 inform clearance checks, including short viewports and wrapped controls.
+
+Workspace changes remember their existing `#view-…` fragment through
+`replaceState`, without adding history entries. Fragment-driven navigation keeps
+its more precise destination. The hash handler ignores events
+whose destination no longer matches the current URL, so an older queued passage
+jump cannot reverse a newer view choice. A later genuine fragment still navigates.
 
 Action explanations reuse `tooltips.js`, localized label packs and native
 controls. Hover and keyboard focus expose supplemental text; the tooltip does

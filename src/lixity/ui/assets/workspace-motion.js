@@ -10,10 +10,12 @@
   }
   function reveal(node) {
     if (!node) return;
+    var previous = animations.get(node);
+    var opacity = previous ? Number(getComputedStyle(node).opacity) : .85;
     cancel(node);
     if (reduced.matches || !node.animate || !node.getClientRects().length) return;
     // Opacity preserves the rectangles used by passage/selection restoration.
-    var animation = node.animate([{opacity: .35}, {opacity: 1}], {
+    var animation = node.animate([{opacity: opacity}, {opacity: 1}], {
       duration: 180, easing: "cubic-bezier(.2,.7,.3,1)", id: "lixity-reveal"
     });
     animations.set(node, animation);

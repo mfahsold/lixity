@@ -177,6 +177,8 @@ async function settleGeometry(page) {
       await page.emulateMedia({colorScheme: 'light'});
       if (locale === 'en' && width === 390) {
         await inspector.locator('[data-manuscript-links-paragraph]').tap();
+        assert.equal(await page.locator('#tab-view-analysis').getAttribute('aria-selected'), 'true');
+        await page.locator('[data-passage-research] [data-manuscript-links-paragraph]').tap();
         assert.equal(await page.locator('#tab-view-research').getAttribute('aria-selected'), 'true');
         await page.locator('#workbench-return').tap();
         assert.equal(await page.locator('#tab-view-analysis').getAttribute('aria-selected'), 'true');

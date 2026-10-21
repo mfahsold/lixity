@@ -73,6 +73,8 @@ names. The browser app, CLI and Python API share one analysis pipeline;
 On current main, CLI workflows can reuse the project's configured manuscript;
 [default manuscript guidance](https://mfahsold.github.io/lixity/USAGE.md#default-manuscript)
 explains explicit project selection and settings scope.
+Current development also opens a passage's **Saved research** beside the text:
+follow its saved claim and dossier versions, then return to the passage.
 
 English and German have the broadest analysis resources. French, Spanish,
 Italian, Portuguese and Dutch offer localized interfaces with narrower heuristic

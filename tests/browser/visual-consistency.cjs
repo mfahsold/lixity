@@ -12,6 +12,7 @@ const fixtures = pythonFixture(`import json
 from lixity.ui import render_dashboard
 from dashboard_fixtures import full_dashboard
 print(json.dumps({"analysis": full_dashboard(),
+    "report": render_dashboard([], [], title="Synthetic exported report"),
     "identity": render_dashboard([], [], controls=True, title="Synthetic project",
         project_author="Synthetic Writer", author_setting_enabled=True,
         identity_check={"title":{"status":"matched","value":"Synthetic project","source":"metadata:title"},
@@ -73,8 +74,8 @@ async function checkTypography(page, label) {
   const passageId = await textRole(page.locator('#r-link-passage-id'));
   assert.equal(passageId.family, code.family, `${label} technical input and code font`);
   assert.notEqual(code.family, body.family, `${label} code keeps its reading role`);
-  assert.notEqual((await textRole(page.locator('.project-header h1'))).family, body.family,
-    `${label} project title keeps its literary font`);
+  assert.equal((await textRole(page.locator('.project-header h1'))).family, body.family,
+    `${label} project identity uses the interface font`);
 }
 // The design tokens are the single source for radius and type sizes: every
 // control shares one radius, badges and tags are pills, and the sampled text
@@ -140,15 +141,18 @@ async function checkScale(page, label) {
       const errors = [];
       await context.route('http://lixity.test/**', route => {
         const url = new URL(route.request().url());
-        if (url.pathname === '/app' || url.pathname === '/identity') return route.fulfill({contentType: 'text/html', body: fixtures[url.pathname === '/app' ? 'analysis' : 'identity']});
+        if (['/app', '/identity', '/report'].includes(url.pathname)) return route.fulfill({contentType: 'text/html', body: fixtures[url.pathname === '/app' ? 'analysis' : url.pathname.slice(1)]});
         if (url.pathname.startsWith('/api/')) return route.fulfill({json: {ok: true, locked: true, records: []}});
         const relative = url.pathname.replace(/^\/site\//, '') || 'index.html';
         const file = path.resolve(siteRoot, relative);
         assert.ok(file.startsWith(siteRoot + path.sep));
         return route.fulfill({contentType: file.endsWith('.css') ? 'text/css' : file.endsWith('.js') ? 'text/javascript' : file.endsWith('.svg') ? 'image/svg+xml' : file.endsWith('.png') ? 'image/png' : 'text/html', body: fs.readFileSync(file)});
       });
-      const app = await context.newPage(), site = await context.newPage(), identity = await context.newPage();
-      for (const page of [app, site, identity]) page.on('pageerror', e => errors.push(e.message));
+      const app = await context.newPage(), site = await context.newPage(), identity = await context.newPage(), report = await context.newPage();
+      for (const page of [app, site, identity, report]) page.on('pageerror', e => errors.push(e.message));
+      await report.goto('http://lixity.test/report');
+      assert.notEqual((await textRole(report.locator('.project-header h1'))).family,
+        (await textRole(report.locator('body'))).family, 'Exported report titles retain their literary font');
       for (const width of [1440, 320]) {
         for (const [page, route] of [[app, 'app'], [site, 'site/']]) {
           await page.setViewportSize({width, height: 1000});

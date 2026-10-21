@@ -8,6 +8,18 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Changed
+- Workspace destinations precede project identity and actions, including long
+  titles. Version/license information is secondary; collapse, project dialogs
+  and the existing PDF export remain available through the same controls.
+- Reader feedback uses distinct persistent and temporary gutters, a legible
+  Analysis toggle throughout its transition, and quieter interrupted reveals.
+  Context scrollports fit their containing layout without moving the manuscript.
+- Explicit workspace choices supersede queued fragment navigation; later passage
+  links and direct `#view-…` routes remain available.
+- A paragraph's Saved research, association count or marked quotation opens
+  exact saved claim/dossier versions in the shared context dock. Current dossier
+  decisions are labelled separately; unresolved anchors retain explicit Review.
+  Reads are lazy and coalesced, with bounded lists, retry and context guards.
 - Current product guidance describes Manuscript & Analysis, Research & Dossiers
   and Project & exports without a blanket experimental label for Research.
   Capability metadata classifies Research as `supported`; response/archive schema

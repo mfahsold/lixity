@@ -187,6 +187,8 @@ async function selectText(page, text) {
       assert.equal(await page.locator('#tab-view-analysis').getAttribute('aria-selected'), 'true', 'Read-only associations also navigate without a write capability');
       assert.equal(await page.locator('mark.manuscript-claim-hit').first().textContent(), 'safe selected');
       await page.locator('mark.manuscript-claim-hit').first().click();
+      assert.equal(await page.locator('#tab-view-analysis').getAttribute('aria-selected'), 'true', 'Inline association keeps the manuscript visible');
+      await page.locator('[data-passage-research] [data-manuscript-links-paragraph]').click();
       assert.equal(await page.locator('#tab-view-research').getAttribute('aria-selected'), 'true',
         'A supported inline association opens its reviewed saved quotation');
       assert.equal(await page.locator('#research-manuscript-review .manuscript-link-review-item').count(), 1);
@@ -210,6 +212,7 @@ async function selectText(page, text) {
       assert.equal((await nativeSelection()).quote, originQuote, 'Focusing the relation control keeps the selected quote');
       holdEditorial = true;
       await page.keyboard.press('Enter');
+      await page.locator('[data-passage-research] [data-manuscript-links-paragraph]').click();
       await waitUntil(() => editorialHeld === 1);
       assert.equal(await page.locator('#tab-view-research').getAttribute('aria-selected'), 'true',
         'The native paragraph association control offers the same keyboard-accessible route');
@@ -293,6 +296,7 @@ async function selectText(page, text) {
         'Returning after Research repaints marks restores the exact native quote and selection direction');
       holdEditorial = true;
       await page.locator('#chapters [data-manuscript-links-paragraph]').click();
+      await page.locator('[data-passage-research] [data-manuscript-links-paragraph]').click();
       await waitUntil(() => editorialHeld === 2);
       await page.mouse.wheel(0, -500);
       await page.evaluate(() => { document.documentElement.style.overflowAnchor = 'none'; scrollTo(0, 0); });
@@ -304,6 +308,7 @@ async function selectText(page, text) {
       await originReturn.click();
       holdEditorial = true;
       await page.locator('#chapters [data-manuscript-links-paragraph]').click();
+      await page.locator('[data-passage-research] [data-manuscript-links-paragraph]').click();
       await waitUntil(() => editorialHeld === 3);
       await page.locator('body').evaluate(body => { body.dataset.manuscriptSourceSha256 = 'b'.repeat(64); });
       await page.evaluate(() => scrollTo(0, 0));

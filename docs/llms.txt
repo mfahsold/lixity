@@ -50,6 +50,11 @@ for retained research. Back to passage restores the requesting text. Reading
 preferences are browser-local; saves and retention are explicit. See
 [reader controls and coverage](https://mfahsold.github.io/lixity/USAGE.md#reading-paragraphs)
 and [research workflows](https://mfahsold.github.io/lixity/research/USAGE.md).
+On current main, Saved research opens exact saved passage associations in the
+same right context area: pinned claim/dossier versions and separately labelled
+current dossier decisions. Lists are bounded with totals; Review and exact-version
+viewers remain explicit. An empty summary means no saved links, not no facts.
+The presentation reads existing contracts and does not save, repin or infer links.
 Only profiled paragraphs have measurements and claim anchors. Plain reports
 keep their inspection layout; the bounded reader is not a Markdown editor.
 On current main, dossier departures also retain a guarded Back to dossier route;

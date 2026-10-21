@@ -9,6 +9,7 @@
   if (!bridge || (!canWrite && document.body.dataset.manuscriptLinks !== "read") ||
       !projectToken() || !bridge.contextToken() || !document.body.dataset.manuscriptSourceSha256) return;
   var draft = null, serial = 0, reviewSerial = 0, review = null, reviewContext = null, remembered = null, reviewProjectId = null, reviewPending = null;
+  var passageOwner = null, passageReads = new Map(), reviewFailure = null;
   var reviewFilter = null, openingRelated = false, relatedDestination = null;
   var pending = new Set(), dialog, picker, quotation, statement, consent, save, status, filterInput;
   var chapters = document.getElementById("chapters");
@@ -227,6 +228,9 @@
     return Number.isInteger(a.start) && Number.isInteger(a.end) && a.start >= 0 && a.end > a.start && a.end <= points.length &&
       points.slice(a.start, a.end).join("") === a.quote;
   }
+  function passageResearchRows(report, panel) {
+    return (report.links || []).filter(function(row) { return matchesPanel(row, panel); });
+  }
   function linkedPanel(row) {
     return Array.from(chapters.querySelectorAll(".ptext")).find(function(panel) { return matchesPanel(row, panel); });
   }
@@ -292,6 +296,8 @@
   }
   function applyReview(report, value) {
     if (!live(value)) return;
+    if (passageOwner && passageOwner.reviewSerial && review && report.snapshot !== review.snapshot) invalidatePassage();
+    reviewFailure = null;
     review = report; reviewContext = value; reviewProjectId = report.project_id;
     document.querySelectorAll("#chapters .ptext").forEach(function(panel) {
       var text = bridge.text(panel), points = Array.from(text || "");
@@ -313,6 +319,8 @@
     return note;
   }
   function clearReview(message, stale) {
+    if (passageOwner && passageOwner.reviewSerial) invalidatePassage();
+    reviewFailure = {message: message, state: stale ? "stale" : "unavailable"};
     review = null;
     document.querySelectorAll("#chapters .ptext").forEach(function(panel) { bridge.marks(panel, []); paragraphLinksControl(panel); });
     reviewBody.replaceChildren(reviewNote(message, stale));
@@ -320,31 +328,35 @@
   }
   async function loadReview(automatic) {
     var value = context();
-    if (automatic && reviewPending && reviewPending.request === reviewSerial && same(reviewPending.context, value)) return;
+    if (automatic && reviewPending && reviewPending.request === reviewSerial && same(reviewPending.context, value)) return reviewPending.promise;
     var request = ++reviewSerial, reading = {context: value, request: request};
     reviewPending = reading;
-    try {
-      // Archive absence is a normal project state. The status endpoint can
-      // represent it without calling a review endpoint that requires setup.
-      var archive = await bridge.read("research/status");
-      if (request !== reviewSerial || !live(value)) return;
-      if (!archive.ok || archive.initialized !== true) {
-        clearReview(archive.ok && archive.initialized === false ? label("research_not_initialized") : bridge.errorText(archive));
-        return;
+    reading.promise = (async function() {
+      try {
+        // Archive absence is a normal project state. The status endpoint can
+        // represent it without calling a review endpoint that requires setup.
+        var archive = await bridge.read("research/status");
+        if (request !== reviewSerial || !live(value)) return;
+        if (!archive.ok || archive.initialized !== true) {
+          clearReview(archive.ok && archive.initialized === false ? label("research_not_initialized") : bridge.errorText(archive));
+          reviewFailure.state = archive.ok && archive.initialized === false ? "uninitialized" : "read-error";
+          return;
+        }
+        var report = await bridge.read("research/manuscript-review?project_token=" + encodeURIComponent(value.project));
+        if (request !== reviewSerial || !live(value)) return;
+        if (!report.ok || report.schema_version !== "research-manuscript-review-local/1" || !validRows(report.links) ||
+            !report.project_id || !report.snapshot || (reviewProjectId && report.project_id !== reviewProjectId) ||
+            (archive.project_id && report.project_id !== archive.project_id) ||
+            report.current_source_sha256 !== value.source || report.source_state !== "available") {
+          var stale = staleReport(report, value.source) || report.code === "stale-context";
+          clearReview(stale ? label("manuscript_link_stale") : bridge.errorText(report), stale); return;
+        }
+        applyReview(report, value);
+      } finally {
+        if (reviewPending === reading) reviewPending = null;
       }
-      var report = await bridge.read("research/manuscript-review?project_token=" + encodeURIComponent(value.project));
-      if (request !== reviewSerial || !live(value)) return;
-      if (!report.ok || report.schema_version !== "research-manuscript-review-local/1" || !validRows(report.links) ||
-          !report.project_id || !report.snapshot || (reviewProjectId && report.project_id !== reviewProjectId) ||
-          (archive.project_id && report.project_id !== archive.project_id) ||
-          report.current_source_sha256 !== value.source || report.source_state !== "available") {
-        var stale = staleReport(report, value.source) || report.code === "stale-context";
-        clearReview(stale ? label("manuscript_link_stale") : bridge.errorText(report), stale); return;
-      }
-      applyReview(report, value);
-    } finally {
-      if (reviewPending === reading) reviewPending = null;
-    }
+    })();
+    return reading.promise;
   }
   function enhance(panel) {
     paragraphLinksControl(panel);
@@ -373,8 +385,10 @@
   }
   var observedContext = context();
   var contextObserver = new MutationObserver(function() {
+    if (passageOwner && (!passageOwner.panel.isConnected || passageOwner.hash !== passageOwner.panel.dataset.paragraphSha256)) invalidatePassage();
     var next = context(); if (same(next, observedContext)) return;
     stopRelatedDestination();
+    invalidatePassage();
     observedContext = next; ++reviewSerial; reviewProjectId = null; remembered = null; reviewPending = null; reviewFilter = null;
     clearReview(); if (draft) draft.claims = null;
     if (dialog && dialog.open) { unavailable(); updateSave(); }
@@ -382,6 +396,7 @@
   [document.body, tokenHost, document.getElementById("research-manager")].forEach(function(host) {
     if (host) contextObserver.observe(host, {attributes: true, attributeFilter: ["data-project-token", "data-manuscript-project-token", "data-research-token", "data-manuscript-source-sha256"]});
   });
+  contextObserver.observe(chapters, {childList: true, subtree: true, attributes: true, attributeFilter: ["data-paragraph-sha256"]});
   document.addEventListener("click", function(event) {
     if (event.target.closest("[data-manuscript-link-reload]")) { event.preventDefault(); window.location.reload(); }
   });
@@ -435,6 +450,197 @@
   });
   document.addEventListener("lixity:viewchange", stopRelatedDestination);
   document.addEventListener("lixity:workbench-change", stopRelatedDestination);
+  var passageHost = element("aside", "", "panel passage-research");
+  passageHost.dataset.passageResearch = ""; passageHost.hidden = true;
+  passageHost.setAttribute("aria-labelledby", "passage-research-title");
+  var passageHead = element("div", "", "workspace-reader-head");
+  var passageTitle = element("h2", label("passage_research")); passageTitle.id = "passage-research-title";
+  var passageClose = element("button", "✕", "ctl"); passageClose.type = "button";
+  passageClose.dataset.passageResearchClose = ""; passageClose.setAttribute("aria-label", label("modal_close"));
+  passageHead.append(passageTitle, passageClose);
+  var passageBody = element("div"); passageBody.setAttribute("aria-live", "polite");
+  var passageReview = element("button", label("manuscript_link_review"), "ctl"); passageReview.type = "button"; passageReview.hidden = true;
+  passageHost.append(passageHead, passageBody, passageReview);
+  var contextHost = document.getElementById("workspace-context-panel");
+  var passageTab = element("button", label("passage_research"), "ctl");
+  passageTab.type = "button"; passageTab.dataset.contextTool = "research"; passageTab.hidden = true;
+  passageTab.setAttribute("aria-pressed", "false");
+  if (contextHost) {
+    contextHost.appendChild(passageHost);
+    contextHost.querySelector(".context-tool-tabs").appendChild(passageTab);
+  }
+  function resetPassage() {
+    passageOwner = null; passageReads.clear(); passageBody.replaceChildren();
+    passageHost.dataset.state = "closed"; passageTab.hidden = true; passageReview.hidden = true;
+  }
+  function invalidatePassage() {
+    var panel = passageOwner && passageOwner.panel;
+    // A second context change while suspended must retain the stale notice
+    // and its explicit retry, rather than erase the now-expired owner again.
+    if (!panel && window.LixityWorkbench.state().contextTool !== "research") return;
+    resetPassage();
+    passageHost.dataset.state = "stale"; passageTab.hidden = false;
+    passageBody.appendChild(element("p", label("manuscript_link_stale"), "ctl-status"));
+    if (panel && panel.isConnected) {
+      var retry = element("button", label("reader_refresh"), "ctl"); retry.type = "button";
+      retry.dataset.passageResearchRetry = "";
+      retry.addEventListener("click", function() { openPassage(panel, true); });
+      passageBody.appendChild(retry);
+    }
+  }
+  function closePassage() {
+    var panel = passageOwner && passageOwner.panel;
+    window.LixityWorkbench.dispatch({type: "tool", value: "none"});
+    if (panel && panel.isConnected) {
+      var trigger = panel.querySelector("[data-reader-paragraph]");
+      if (trigger) trigger.focus({preventScroll: true});
+    }
+  }
+  passageClose.addEventListener("click", closePassage);
+  passageHost.addEventListener("keydown", function(event) {
+    if (event.key === "Escape" && !event.defaultPrevented && !event.target.closest("dialog")) {
+      event.preventDefault(); closePassage();
+    }
+  });
+  window.LixityWorkbench.subscribe(function(state, previous) {
+    passageHost.hidden = state.contextTool !== "research" || state.surface !== "document";
+    if (contextHost) contextHost.classList.toggle("passage-research-open", !passageHost.hidden);
+    var suspended = state.focus || state.surface === "overview";
+    if (state.contextTool !== "research" && previous.contextTool === "research") {
+      if (suspended) {
+        // The disclosure also owns stale/retry presentation after its async
+        // owner expires. Suspending that presentation must not erase it.
+        if (passageOwner) {
+          passageOwner.suspended = true;
+          // A hidden request expires permanently, even if its response arrives
+          // after the shared display owner restores this tool.
+          if (passageHost.dataset.state === "pending") passageOwner.departed = true;
+        }
+      } else resetPassage();
+    }
+    if (passageOwner && passageOwner.suspended && !suspended) {
+      passageOwner.suspended = false;
+      if (state.contextTool !== "research") resetPassage();
+      else if (passageOwner.departed) invalidatePassage();
+    }
+    if (!suspended && (previous.focus || previous.surface === "overview") && state.contextTool !== "research") resetPassage();
+    // Leaving the document invalidates in-flight reads. Accepted content can be
+    // revisited, but a late response cannot change a different surface.
+    if (state.view !== previous.view && passageOwner) {
+      if (state.view !== "analysis") passageOwner.departed = true;
+      else if (passageOwner.departed) {
+        invalidatePassage();
+      }
+    }
+  });
+  function passageCurrent(owner) {
+    var state = window.LixityWorkbench.state();
+    return passageOwner === owner && !owner.departed && owner.panel.isConnected && live(owner.context) &&
+      owner.hash === owner.panel.dataset.paragraphSha256 && state.contextTool === "research" &&
+      state.view === "analysis" && state.surface === "document";
+  }
+  function passageStatus(owner, state, message) {
+    if (!passageCurrent(owner)) return;
+    passageHost.dataset.state = state;
+    var note = element("p", message, "ctl-status"); note.setAttribute("role", "status");
+    passageBody.replaceChildren(note);
+    if (state === "pending") return;
+    var retry = element("button", label("reader_refresh"), "ctl"); retry.type = "button";
+    retry.dataset.passageResearchRetry = "";
+    retry.addEventListener("click", function() { openPassage(owner.panel, true); });
+    passageBody.appendChild(retry);
+    if (state === "uninitialized") {
+      var setup = element("button", label("passage_research_setup"), "ctl"); setup.type = "button";
+      setup.addEventListener("click", function() { switchActiveView("research"); });
+      passageBody.appendChild(setup);
+    }
+  }
+  function recordButton(kind, record) {
+    var button = element("button", record.title + " · " + label("research_revision_number").replace("{revision}", record.revision), "ctl");
+    button.type = "button"; button.dataset.researchHistory = kind;
+    button.dataset.recordId = record.id; button.dataset.recordRevision = String(record.revision);
+    return button;
+  }
+  function pinnedRecord(item, kind, result) {
+    item.appendChild(recordButton(kind, result.record));
+    if (!result.is_latest) item.appendChild(element("p", label("research_revision_reference_update")
+      .replace("{kind}", label("research_revision_kind_" + kind)).replace("{pinned}", result.record.revision)
+      .replace("{latest}", result.latest_revision), "ctl-note"));
+  }
+  async function passageRead(owner, report, kind, id, revision) {
+    var key = JSON.stringify([owner.context, report.snapshot, kind, id, revision]);
+    if (!passageReads.has(key)) {
+      var params = new URLSearchParams({project_token: owner.context.project, id: id});
+      if (kind !== "context") { params.set("kind", kind); params.set("revision", revision); }
+      passageReads.set(key, bridge.read((kind === "context" ? "research/dossiers?" : "research/record?") + params.toString()));
+    }
+    var result = await passageReads.get(key);
+    if (!passageCurrent(owner)) throw {state: "cancelled"};
+    if (owner.reviewSerial !== reviewSerial) throw {state: "stale", message: label("manuscript_link_archive_changed")};
+    if (!result.ok) throw {state: result.code === "stale-context" ? "stale" : "read-error", message: bridge.errorText(result, label("reader_error"))};
+    if (result.project_id !== report.project_id || result.snapshot !== report.snapshot) throw {state: "stale", message: label("manuscript_link_archive_changed")};
+    if (kind === "context") {
+      if (result.id !== id || !Array.isArray(result.decision_reviews)) throw {state: "unavailable"};
+    } else if (result.schema_version !== "research-record-local/1" || result.kind !== kind || result.record_id !== id ||
+        !result.record || result.record.id !== id || result.record.revision !== revision || typeof result.record.title !== "string") throw {state: "unavailable"};
+    return result;
+  }
+  async function openPassage(panel, retry) {
+    if (!panel || !panel.isConnected || !contextHost || !window.LixityReader) return;
+    var owner = {panel: panel, hash: panel.dataset.paragraphSha256, context: context()};
+    passageOwner = owner; passageReads.clear(); passageTab.hidden = false;
+    passageReview.dataset.manuscriptLinksParagraph = panel.id; passageReview.hidden = false;
+    window.LixityReader.requestTool("research", panel);
+    passageClose.focus({preventScroll: true});
+    passageStatus(owner, "pending", label("research_loading"));
+    try {
+      if (retry || reviewPending || !review || !reviewContext || !live(reviewContext)) await loadReview(!retry);
+      if (!passageCurrent(owner)) return;
+      if (!review || !reviewContext || !live(reviewContext)) {
+        passageStatus(owner, (reviewFailure || {}).state || "unavailable", (reviewFailure || {}).message || label("manuscript_link_unavailable")); return;
+      }
+      var report = review; owner.reviewSerial = reviewSerial;
+      var rows = passageResearchRows(report, panel);
+      var composed = await Promise.all(rows.slice(0, 5).map(async function(row) {
+        var claim = await passageRead(owner, report, "claim", row.claim_id, row.claim_revision);
+        var ref = claim.record.dossier_ref, dossier = null, detail = null;
+        if (ref) {
+          var values = await Promise.all([passageRead(owner, report, "dossier", ref.id, ref.revision), passageRead(owner, report, "context", ref.id, null)]);
+          dossier = values[0]; detail = values[1];
+        }
+        return {row: row, claim: claim, dossier: dossier, detail: detail};
+      }));
+      if (!passageCurrent(owner) || owner.reviewSerial !== reviewSerial) return;
+      var fragment = document.createDocumentFragment();
+      fragment.appendChild(element("p", label("passage_research_count").replace("{shown}", composed.length).replace("{total}", rows.length), "ctl-note"));
+      if (!rows.length) fragment.appendChild(element("p", label("passage_research_empty"), "ctl-note"));
+      composed.forEach(function(value) {
+        var item = element("section", "", "passage-research-item");
+        item.appendChild(element("blockquote", value.row.anchor.quote));
+        item.appendChild(element("p", ["resolved"].concat(value.row.flags.filter(function(flag) {
+          return ["source_changed", "claim_changed", "claim_withdrawn"].includes(flag);
+        })).map(function(flag) { return label("manuscript_link_" + flag); }).join(" · "), "ctl-note"));
+        pinnedRecord(item, "claim", value.claim);
+        item.appendChild(element("p", label("passage_research_confidence") + ": " + label("research_confidence_" + value.claim.record.confidence), "ctl-note"));
+        if (value.dossier) {
+          pinnedRecord(item, "dossier", value.dossier);
+          if (value.detail.decision_reviews.length) {
+            item.appendChild(element("p", label("passage_research_decisions"), "ctl-note"));
+            value.detail.decision_reviews.slice(0, 5).forEach(function(decision) {
+              if (typeof decision.title !== "string" || !decision.decision_id || !Number.isInteger(decision.revision)) throw {state: "unavailable"};
+              item.appendChild(recordButton("decision", {id: decision.decision_id, title: decision.title, revision: decision.revision}));
+            });
+            if (value.detail.decision_reviews.length > 5) item.appendChild(element("p", label("passage_research_count").replace("{shown}", 5).replace("{total}", value.detail.decision_reviews.length), "ctl-note"));
+          }
+        }
+        fragment.appendChild(item);
+      });
+      passageBody.replaceChildren(fragment); passageHost.dataset.state = rows.length ? "ready" : "empty";
+    } catch (error) {
+      if (error.state !== "cancelled") passageStatus(owner, error.state || "read-error", error.message || label("manuscript_link_unavailable"));
+    }
+  }
+  bridge.passage = openPassage;
   bridge.review = openRelated;
   document.addEventListener("click", function(event) {
     var action = event.target.closest("[data-manuscript-links-claim], [data-manuscript-links-dossier], [data-manuscript-links-paragraph], [data-manuscript-links-all]");
@@ -445,8 +651,11 @@
       if (selected && !selected.isCollapsed) return;
       var panel = inline.closest("#chapters .ptext");
       if (!panel || !review || !reviewContext || !live(reviewContext) || !review.links.some(function(row) { return matchesPanel(row, panel); })) return;
-      openRelated({paragraphId: panel.id});
+      openPassage(panel);
       return;
+    }
+    if (action.hasAttribute("data-manuscript-links-paragraph") && !action.closest("[data-passage-research]")) {
+      openPassage(document.getElementById(action.dataset.manuscriptLinksParagraph)); return;
     }
     var modal = action.closest("dialog");
     if (modal) modal.close();

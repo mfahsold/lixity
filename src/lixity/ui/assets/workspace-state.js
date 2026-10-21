@@ -34,7 +34,7 @@
       }
       value.transient = null;
     } else if (command.type === "tool") {
-      if (!["none", "analysis", "dossier"].includes(command.value)) return;
+      if (!["none", "analysis", "dossier", "research"].includes(command.value)) return;
       if (value.surface === "overview") value.analysisVisible = suspendedAnalysis;
       value.surface = "document"; value.contextTool = command.value;
       value.transient = null;

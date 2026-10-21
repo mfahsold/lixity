@@ -74,6 +74,7 @@ body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: 
   border: 0; border-radius: 0; background: transparent; transition: none;
 }
 .manuscript-reading .ptext.text-miss { display: none; }
+.manuscript-reading .ptext.flash { background: transparent; box-shadow: none; }
 .manuscript-reading .ptext-inner,
 .manuscript-reading .ptext.open .ptext-inner { min-width: 0; overflow: visible; padding: 0; background: transparent; position: relative; transition: none; }
 .manuscript-reading .ptext-inner > p {
@@ -99,7 +100,7 @@ body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: 
 .manuscript-selection-tools {
   position: fixed; z-index: 80; background: var(--surface); color: var(--fg);
   border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-modal); padding: .3rem; max-width: calc(100vw - 1rem);
+  box-shadow: var(--shadow-modal); padding: var(--space-2); max-width: calc(100vw - 1rem);
   max-height: calc(100dvh - 1rem); overflow: auto;
 }
 .manuscript-context-menu { display: grid; min-width: 13rem; }
@@ -146,7 +147,7 @@ button.analysis-toggle { font-weight: var(--weight-strong); }
 .analysis-state-measure { visibility: hidden; }
 .analysis-switch { position: relative; width: 1.6rem; height: .9rem; flex: none; border-radius: var(--radius-pill); background: var(--line-strong); }
 .analysis-switch::after { content: ""; position: absolute; top: .15rem; left: .15rem; width: .6rem; height: .6rem; border-radius: var(--radius-pill); background: var(--surface); }
-.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); background: var(--accent-light); box-shadow: inset 0 -2px var(--accent); }
+button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); background: var(--accent-light); box-shadow: inset 0 -2px var(--accent); }
 .analysis-toggle[aria-pressed="true"] .analysis-state { color: var(--accent); }
 .analysis-toggle[aria-pressed="true"] .analysis-switch { background: var(--accent); }
 .analysis-toggle[aria-pressed="true"] .analysis-switch::after { transform: translateX(.7rem); }
@@ -155,7 +156,8 @@ button.analysis-toggle { font-weight: var(--weight-strong); }
 .workbench-overview #manuscript-analysis-panels { display: block; }
 .manuscript-reading .ptext, .manuscript-reading .reader-return-target { position: relative; }
 .workbench-analysis:not(.workbench-overview) .ptext::before,
-.manuscript-reading .reader-return-target::before {
+.manuscript-reading.reader-inspector-open .ptext.reader-inspector-target::before,
+.manuscript-reading .reader-return-target::after {
   content: ""; position: absolute; left: -.6rem; top: 0; bottom: 0;
   width: 2px; border-radius: var(--radius-xs); background: var(--line-strong); pointer-events: none;
 }
@@ -170,10 +172,10 @@ button.analysis-toggle { font-weight: var(--weight-strong); }
   .analysis-switch { transition: background-color 160ms var(--ease); }
   .analysis-switch::after { transition: transform 160ms var(--ease); }
   .reader-layer-enter::before { animation: reader-layer-reveal 180ms var(--ease); }
-  .reader-return-target::before { animation: reader-passage-arrival 1400ms ease-out; }
+  .manuscript-reading .reader-return-target::after { animation: reader-passage-arrival 1400ms ease-out; }
 }
 @keyframes reader-layer-reveal { from { opacity: 0; } to { opacity: 1; } }
-@keyframes reader-passage-arrival { from { opacity: .25; } 18%, 70% { opacity: 1; } to { opacity: .3; } }
+@keyframes reader-passage-arrival { from { opacity: .25; } 18%, 70% { opacity: 1; } to { opacity: 0; } }
 
 .manuscript-reading.workbench-analysis:not(.workbench-overview) .strip { display: flex; margin: .6rem 0 1.25rem; }
 .manuscript-reading.workbench-analysis:not(.workbench-overview) .chapter-head .meta { display: block; margin-top: .4rem; font-size: var(--text-note); }
@@ -215,5 +217,5 @@ button.analysis-toggle { font-weight: var(--weight-strong); }
   .manuscript-reading .chapter + .chapter { padding-top: 1.25rem; }
 }
 
-.workbench-analysis.reader-inspector-open .ptext.reader-inspector-target::before,
-.manuscript-reading .reader-return-target::before { background: var(--accent); width: 3px; }
+.manuscript-reading.reader-inspector-open .ptext.reader-inspector-target::before,
+.manuscript-reading .reader-return-target::after { background: var(--accent); width: 3px; }

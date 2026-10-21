@@ -65,6 +65,14 @@ def contrast_text(background: str) -> str:
     return "#000000" if black_ratio >= white_ratio else "#ffffff"
 
 
+def product_details(labels: Mapping[str, str] | None = None) -> str:
+    """Keep version and licensing links separate from workspace navigation."""
+    return (
+        f'<span class="version-badge">{esc(label(labels, "version"))} {esc(__version__)}</span>'
+        f'<a class="license-badge" href="#license-terms">{esc(label(labels, "license_notice"))}</a>'
+    )
+
+
 def project_header(
     title: str, labels: Mapping[str, str] | None = None,
     language_name: str = "", engine_name: str = "Lixity",
@@ -74,11 +82,10 @@ def project_header(
     if language_name:
         subtitle += " · " + language_name
     return (
-        '<header class="project-header"><div class="product-meta">'
+        '<header class="project-header">'
+        + ("" if compact else '<div class="product-meta">'
         f'<span class="product-name">{esc(engine_name)}</span>'
-        f'<span class="version-badge">{esc(label(labels, "version"))} {esc(__version__)}</span>'
-        f'<a class="license-badge" href="#license-terms">{esc(label(labels, "license_notice"))}</a>'
-        '</div>'
+        + product_details(labels) + '</div>')
         + ("" if compact else f'<span class="project-label">{esc(label(labels, "project_name"))}</span>')
         +
         f'<h1>{esc(title)}</h1><p class="sub">{esc(subtitle)}</p>'

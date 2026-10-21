@@ -149,6 +149,11 @@ dossier's close button; refresh explicitly for the latest revision. The
 [research workflow](research/USAGE.md#reading-and-cli-workflows) owns
 selection, evidence and retention semantics.
 
+**On current main (Unreleased):** the workspace switcher comes before project
+details, so a long title does not push Manuscript, Research and Project out of
+reach. **Project actions** keeps New, Open, guidance and available PDF exports
+together; version and license information follow those controls.
+
 <a id="link-a-manuscript-quote-to-a-claim-v030"></a>
 
 ### Link a manuscript quote to a claim
@@ -164,6 +169,18 @@ dossier reference opens the recorded dossier version; choose newer history
 explicitly when needed. Claim and dossier views can open their saved manuscript
 associations in Review. Only an exactly resolved current passage offers a direct
 jump; moved, changed, ambiguous and unavailable anchors retain their review state.
+
+**On current main (Unreleased):** choose a paragraph's **… → Saved research**,
+its saved-association count or a marked saved quotation to read its context
+beside the manuscript. The context shows up to five exact saved associations,
+with their total, pinned claim and dossier versions and author-assigned confidence.
+Associated decisions are labelled **current dossier context**; they do not
+reconstruct the historical state of the saved quotation. Each title opens its
+displayed version in the existing record viewer. **Review** remains a separate
+action for changed or unresolved anchors. An empty summary means no saved
+associations for this passage, not that no relevant facts exist. Opening or
+refreshing the summary reads existing records without saving or repinning them.
+
 When following a connection from the manuscript, **Back to passage** returns to
 the preserved origin while the project/source context still matches. The work
 thread groups this action with the originating chapter and lines. **Viewed version:**
@@ -226,10 +243,11 @@ Use Shift+right-click to open the browser's native context menu instead.
 **Values** opens **Passage values** with the selected paragraph's chapter, source
 lines, tense and style measurements in the closable context area. Opening or
 closing it leaves the global Analysis choice unchanged; turning Analysis Off
-keeps the inspector available. **Saved
-manuscript associations** opens the existing quote review for that paragraph.
-Switch between that
-tool and the saved dossier explicitly; closing the tool does not turn all
+keeps the inspector available. In v0.7.2, **Saved manuscript associations** opens
+the quote review for that paragraph. On current main, this entry and **Saved
+research** open the passage's saved context alongside; its **Review** action opens
+the dedicated quote review. Switch between passage values, saved research and
+the saved dossier explicitly; closing the tool does not turn all
 analysis off. On desktop, tools occupy adjacent space. On mobile, an explicit
 paragraph-to-tool action reveals the stacked tool heading; closing it or pressing
 Escape returns to the requesting passage and its paragraph control.

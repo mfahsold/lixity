@@ -111,6 +111,11 @@
     requestAnimationFrame(function() { requestAnimationFrame(function() {
       if (serial !== returnSerial || !current(value)) return;
       value.control.focus({preventScroll: true});
+      // The dock's available height depends on the document position. Settle
+      // that geometry before restoring its internal scroll offset, otherwise
+      // a temporarily taller scrollport clamps a valid saved offset.
+      window.scrollTo({top: value.top, left: value.left, behavior: "instant"});
+      if (window.LixityReader) window.LixityReader.fitContext();
       value.scrolls.forEach(function(scroll) { scroll.node.scrollTo({top: scroll.top, left: scroll.left, behavior: "instant"}); });
       window.scrollTo({top: value.top, left: value.left, behavior: "instant"});
       flashOnArrival(value.control);
@@ -139,6 +144,36 @@
   var retainedAnchor = null, requestedAnchor = null, dockOrigin = null, arrangementRevision = 0;
   var pendingDockAnchor = null;
   var narrowContext = window.matchMedia("(max-width: 900px)");
+  var dockFitFrame = 0;
+  function fitContextDock() {
+    dockFitFrame = 0;
+    if (!dock || !layout) return;
+    if (narrowContext.matches) { dock.style.removeProperty("--context-available-height"); return; }
+    if (dock.hidden || !dock.getClientRects().length) return;
+    // Sticky positioning is bounded by the grid, not just by the viewport.
+    // Fit its existing scrollport without moving the prose or extending it
+    // over the footer when the document is short or near its lower boundary.
+    var bounds = layout.getBoundingClientRect();
+    var top = Math.max(parseFloat(getComputedStyle(dock).top), bounds.top);
+    var gutter = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    var bottom = Math.min(innerHeight - gutter, bounds.bottom);
+    var height = Math.max(0, Math.floor(bottom - top)) + "px";
+    if (dock.style.getPropertyValue("--context-available-height") !== height) {
+      dock.style.setProperty("--context-available-height", height);
+    }
+  }
+  function scheduleDockFit() {
+    if (!dockFitFrame) dockFitFrame = requestAnimationFrame(fitContextDock);
+  }
+  window.addEventListener("resize", scheduleDockFit);
+  document.addEventListener("scroll", scheduleDockFit, {capture: true, passive: true});
+  if (typeof ResizeObserver === "function") {
+    var dockSizeObserver = new ResizeObserver(scheduleDockFit);
+    [layout, document.getElementById("workbench-thread")].forEach(function(node) {
+      if (node) dockSizeObserver.observe(node);
+    });
+  }
+
   var panels = Array.from(chapters.querySelectorAll(".ptext"));
   var menu = document.getElementById("manuscript-context-menu");
   var selectionTools = document.getElementById("manuscript-selection-tools");
@@ -230,7 +265,10 @@
     }
   }
   function requestTool(value, panel) {
-    requestedAnchor = {panel: panel, top: panel.getBoundingClientRect().top};
+    // Passage capture precedes the responsive return thread entering layout.
+    // Its original position remains authoritative when opening research.
+    requestedAnchor = value === "research" && validOrigin() && origin.anchor.panel === panel ?
+      origin.anchor : {panel: panel, top: panel.getBoundingClientRect().top};
     if (workbench.state().contextTool === value) {
       dockOrigin = requestedAnchor; requestedAnchor = null;
       if (narrowContext.matches) dock.scrollIntoView({block: "start", behavior: "instant"});
@@ -365,7 +403,10 @@
   function actions(panel, compact) {
     renderParagraph(panel);
     var fragment = document.createDocumentFragment();
-    if (!compact) fragment.appendChild(actionButton("values", "paragraph_values", true));
+    if (!compact) {
+      fragment.appendChild(actionButton("values", "paragraph_values", true));
+      if (window.LixityManuscriptLinks && window.LixityManuscriptLinks.passage) fragment.appendChild(actionButton("research", "passage_research", true));
+    }
     if (panel.querySelector("[data-manuscript-link-selection]") && savedRange && Array.from(savedRange.toString()).length <= 10000) {
       fragment.appendChild(actionButton("link", "manuscript_link_action", !compact));
     }
@@ -397,6 +438,9 @@
       showValues(panel);
       requestTool("analysis", panel);
       document.getElementById("reader-inspector-close").focus({preventScroll: true});
+    } else if (action === "research") {
+      rememberReadingPassage(panel, range);
+      window.LixityManuscriptLinks.passage(panel);
     } else if (action === "link") {
       if (!range) return;
       var selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
@@ -554,6 +598,10 @@
   }
   function returnToPassage() {
     switchActiveView("analysis"); workbench.dispatch({type: "surface", value: "document"});
+    if (workbench.state().contextTool === "research") {
+      workbench.dispatch({type: "tool", value: origin.state.contextTool === "research" ? "none" : origin.state.contextTool});
+      workbench.dispatch({type: "analysis", value: origin.state.analysisVisible});
+    }
     rememberPassageLocation(origin.anchor.panel);
     revealChapter(origin.anchor.panel); restore(origin.anchor, true);
     origin.anchor.panel.tabIndex = -1;
@@ -584,21 +632,25 @@
     if (!relation || workbench.state().view !== "analysis" || workbench.state().surface !== "document" || readingThread.hasDossier()) return;
     var panel = event.target.closest(".ptext") || document.getElementById(relation.dataset.manuscriptLinksParagraph || "");
     // Following records in a dialog or companion belongs to the same passage journey.
-    if (!panel && readingThread.hasPassage()) return;
+    if ((!panel || relation.closest("[data-passage-research]")) && readingThread.hasPassage()) return;
+    rememberReadingPassage(panel);
+  }, true);
+  function rememberReadingPassage(panel, selectedRange) {
     var anchor = panel ? {panel: panel, top: panel.getBoundingClientRect().top} : capture();
     if (!anchor) return;
-    var range = rangeFor(anchor.panel), offsets = null;
+    var range = selectedRange || rangeFor(anchor.panel), offsets = null;
     if (range) {
+      if (selectedRange && getSelection().isCollapsed) { getSelection().removeAllRanges(); getSelection().addRange(selectedRange); }
       var paragraph = anchor.panel.querySelector(".ptext-inner > p"), selection = getSelection();
       var prefix = document.createRange(); prefix.selectNodeContents(paragraph);
       prefix.setEnd(selection.anchorNode, selection.anchorOffset); var from = prefix.toString().length;
       prefix.setEnd(selection.focusNode, selection.focusOffset);
       offsets = {anchor: from, focus: prefix.toString().length};
     }
-    origin = {anchor: anchor, offsets: offsets, hash: anchor.panel.dataset.paragraphSha256, context: sourceContext()};
+    origin = {anchor: anchor, offsets: offsets, state: workbench.state(), hash: anchor.panel.dataset.paragraphSha256, context: sourceContext()};
     readingThread.rememberPassage({description: passageContext(anchor.panel), valid: validOrigin, restore: returnToPassage});
-  }, true);
-  window.LixityReader = {capture: capture, restore: restore, retain: retain,
+  }
+  window.LixityReader = {fitContext: fitContextDock, requestTool: requestTool, capture: capture, restore: restore, retain: retain,
     inspect: function() { setMode("inspect", true); }};
   document.body.classList.add("manuscript-reading");
   panels.forEach(enhanceText);

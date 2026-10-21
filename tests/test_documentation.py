@@ -16,6 +16,38 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 
 class TestDocumentation(unittest.TestCase):
+    def test_public_demo_can_read_exact_passage_research_versions(self):
+        """The read-only adapter must serve native context-bound pinned reads."""
+        import json
+        from urllib.parse import urlencode
+
+        from make_screenshots import RESEARCH_DEMO_CONTEXT, RESEARCH_DEMO_MANUSCRIPT_CONTEXT
+
+        fixture = json.loads((ROOT / "docs/demo/research-data.json").read_text(encoding="utf-8"))
+        reports = [value for value in fixture.values()
+                   if value.get("schema_version") == "research-manuscript-review-local/1"]
+        self.assertTrue(reports)
+
+        def record(kind, identifier, revision, snapshot):
+            query = urlencode({"project_token": RESEARCH_DEMO_MANUSCRIPT_CONTEXT,
+                               "id": identifier, "kind": kind, "revision": revision,
+                               "research_token": RESEARCH_DEMO_CONTEXT})
+            key = "/api/research/record?" + query
+            self.assertTrue(key in fixture, f"Native passage-context request has no prepared response: {key}")
+            result = fixture[key]
+            self.assertEqual(result["snapshot"], snapshot)
+            self.assertEqual((result["record"]["id"], result["record"]["revision"]),
+                             (identifier, revision))
+            return result["record"]
+
+        for report in reports:
+            self.assertTrue(report["links"])
+            for link in report["links"]:
+                claim = record("claim", link["claim_id"], link["claim_revision"], report["snapshot"])
+                if claim.get("dossier_ref"):
+                    ref = claim["dossier_ref"]
+                    record("dossier", ref["id"], ref["revision"], report["snapshot"])
+
     def test_packaged_readme_links_and_images_work_outside_the_repository(self):
         """PyPI renders the same README without a checkout-relative URL base."""
         import tempfile

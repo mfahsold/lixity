@@ -23,7 +23,7 @@ import subprocess
 import sys
 from hashlib import sha256
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE_DIR / "src"))
@@ -725,8 +725,13 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
             history = research_api.record_history(research_proj, kind, item["id"])
             research_fixture["/api/research/history" + endpoint] = {"ok": True, **history}
             for version in history["revisions"]:
-                research_fixture["/api/research/record" + endpoint + "&revision=" + str(version["revision"])] = {
+                retained = {
                     "ok": True, **research_api.get_record(research_proj, kind, item["id"], revision=version["revision"])}
+                research_fixture["/api/research/record" + endpoint + "&revision=" + str(version["revision"])] = retained
+                if kind in ("claim", "dossier"):
+                    query = urlencode({"project_token": RESEARCH_DEMO_MANUSCRIPT_CONTEXT,
+                                       "id": item["id"], "kind": kind, "revision": version["revision"]})
+                    research_fixture["/api/research/record?" + query] = retained
             if kind == "claim":
                 research_fixture["/api/research/claims?claim_id=" + identifier] = {
                     "ok": True, **research_api.list_evidence_links(research_proj, claim_id=item["id"])}

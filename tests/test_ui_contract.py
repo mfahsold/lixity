@@ -379,6 +379,7 @@ class TestJsDomContract(unittest.TestCase):
         ids.discard("lixity-tooltip")  # created by the script itself
         ids.discard("research-evidence-draft")  # created beside the existing evidence form
         ids.discard("r-dos-geography")  # mounted by the shared optional geography editor
+        ids.discard("workbench-thread")  # mounted once by the shared reading-thread owner
         self.assertTrue(ids)
         # Onboarding controls exist only in the empty/research-only state.
         html = (

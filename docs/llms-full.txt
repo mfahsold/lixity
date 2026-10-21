@@ -91,6 +91,8 @@ names. The browser app, CLI and Python API share one analysis pipeline;
 On current main, CLI workflows can reuse the project's configured manuscript;
 [default manuscript guidance](https://mfahsold.github.io/lixity/USAGE.md#default-manuscript)
 explains explicit project selection and settings scope.
+Current development also opens a passage's **Saved research** beside the text:
+follow its saved claim and dossier versions, then return to the passage.
 
 English and German have the broadest analysis resources. French, Spanish,
 Italian, Portuguese and Dutch offer localized interfaces with narrower heuristic
@@ -194,6 +196,11 @@ for retained research. Back to passage restores the requesting text. Reading
 preferences are browser-local; saves and retention are explicit. See
 [reader controls and coverage](https://mfahsold.github.io/lixity/USAGE.md#reading-paragraphs)
 and [research workflows](https://mfahsold.github.io/lixity/research/USAGE.md).
+On current main, Saved research opens exact saved passage associations in the
+same right context area: pinned claim/dossier versions and separately labelled
+current dossier decisions. Lists are bounded with totals; Review and exact-version
+viewers remain explicit. An empty summary means no saved links, not no facts.
+The presentation reads existing contracts and does not save, repin or infer links.
 Only profiled paragraphs have measurements and claim anchors. Plain reports
 keep their inspection layout; the bounded reader is not a Markdown editor.
 On current main, dossier departures also retain a guarded Back to dossier route;
@@ -1163,6 +1170,11 @@ dossier's close button; refresh explicitly for the latest revision. The
 [research workflow](research/USAGE.md#reading-and-cli-workflows) owns
 selection, evidence and retention semantics.
 
+**On current main (Unreleased):** the workspace switcher comes before project
+details, so a long title does not push Manuscript, Research and Project out of
+reach. **Project actions** keeps New, Open, guidance and available PDF exports
+together; version and license information follow those controls.
+
 <a id="link-a-manuscript-quote-to-a-claim-v030"></a>
 
 ### Link a manuscript quote to a claim
@@ -1178,6 +1190,18 @@ dossier reference opens the recorded dossier version; choose newer history
 explicitly when needed. Claim and dossier views can open their saved manuscript
 associations in Review. Only an exactly resolved current passage offers a direct
 jump; moved, changed, ambiguous and unavailable anchors retain their review state.
+
+**On current main (Unreleased):** choose a paragraph's **… → Saved research**,
+its saved-association count or a marked saved quotation to read its context
+beside the manuscript. The context shows up to five exact saved associations,
+with their total, pinned claim and dossier versions and author-assigned confidence.
+Associated decisions are labelled **current dossier context**; they do not
+reconstruct the historical state of the saved quotation. Each title opens its
+displayed version in the existing record viewer. **Review** remains a separate
+action for changed or unresolved anchors. An empty summary means no saved
+associations for this passage, not that no relevant facts exist. Opening or
+refreshing the summary reads existing records without saving or repinning them.
+
 When following a connection from the manuscript, **Back to passage** returns to
 the preserved origin while the project/source context still matches. The work
 thread groups this action with the originating chapter and lines. **Viewed version:**
@@ -1240,10 +1264,11 @@ Use Shift+right-click to open the browser's native context menu instead.
 **Values** opens **Passage values** with the selected paragraph's chapter, source
 lines, tense and style measurements in the closable context area. Opening or
 closing it leaves the global Analysis choice unchanged; turning Analysis Off
-keeps the inspector available. **Saved
-manuscript associations** opens the existing quote review for that paragraph.
-Switch between that
-tool and the saved dossier explicitly; closing the tool does not turn all
+keeps the inspector available. In v0.7.2, **Saved manuscript associations** opens
+the quote review for that paragraph. On current main, this entry and **Saved
+research** open the passage's saved context alongside; its **Review** action opens
+the dedicated quote review. Switch between passage values, saved research and
+the saved dossier explicitly; closing the tool does not turn all
 analysis off. On desktop, tools occupy adjacent space. On mobile, an explicit
 paragraph-to-tool action reveals the stacked tool heading; closing it or pressing
 Escape returns to the requesting passage and its paragraph control.
@@ -2552,6 +2577,19 @@ candidates have resolved coordinates but remain pending review until an explicit
 re-pin. Ambiguous quotes are not re-pinned; an edited quote requires an explicitly
 reviewed, uniquely resolvable replacement through `--new-quote`. These flags
 request a human review, not a semantic contradiction check or factual verdict.
+
+**On current main (Unreleased):** the paragraph menu's **Saved research**, its
+saved-association count and exact saved quotation marks open the existing right
+context tool. It shows up to five exact associations and their total, with pinned
+claim/dossier titles and versions, author-assigned confidence and separately
+labelled current dossier decisions. At most five decisions per displayed dossier
+are shown with their total. Titles use the existing exact-version viewers;
+**Review** remains available for unresolved anchors and the full review flow.
+No saved association means no stored link for that passage, not an absence of
+facts or relevant research. Opening, closing or retrying this summary performs
+reads only, without retention, indexing, version upgrades or repinning. Research
+setup remains explicit. This presentation adds no API or archive schema version.
+
 Retraction and note/claim revisions use the existing record history and strict
 revision API. A uniquely resolvable anchor is re-pinned explicitly: `lixity
 research reconcile-manuscript --accept-moved` (or `POST /api/research-manuscript-reanchor`)
@@ -5178,6 +5216,25 @@ sync. Exports use exclusive publication outside the archive/internal directory.
 The canonical project writer lock remains the only mutex; diagnostic error types
 distinguish contention, read-only/permission failures and other I/O errors.
 
+### Passage research presentation
+
+**On current main (Unreleased):** `manuscript-links.js` selects exact saved
+associations with the same resolved lines, paragraph hash, codepoint span and
+quotation matcher used for manuscript marks. Explicit paragraph activation
+composes existing GETs for pinned claim/dossier records and current dossier
+decision reviews; it adds no endpoint or archive schema. The first five
+associations and first five decisions per displayed dossier have explicit totals.
+Current dossier context is distinct from the historical claim/dossier pins.
+
+This composition stays in the existing link closure, with its root, project,
+source and review-generation guards. Duplicate exact reads coalesce within an
+activation; inconsistent snapshot envelopes fail instead of mixing versions.
+`LixityWorkbench` owns the `research` context tool alongside values and dossier,
+and `LixityReadingThread` owns the exact passage return. Opening a context neither
+replaces the prose node nor saves records. Unlinked text, an uninitialized archive,
+unavailable data and failed/stale reads have distinct states. The public demo
+prepares exact read aliases and retains its read-only fixture boundary.
+
 ## Configuration and multiple projects
 
 Explicit root settings own author identity, publication, chapter registers and
@@ -5355,6 +5412,13 @@ choice. Responsive changes keep the mobile switcher available. Exact manuscript
 return actions reuse the existing paragraph navigation and the same anchor matcher
 as inline association marks, with a current project/source context check on click.
 
+**On current main (Unreleased):** the native shell renders the product row,
+primary destinations, project identity, project actions and secondary version/
+license information in that DOM order. Navigation no longer depends on runtime
+reparenting. App chrome uses interface typography; exported document headers keep
+their existing presentation. The shared collapse owner hides project context and
+actions while retaining product identity and all three destinations.
+
 ### Shared manuscript reader
 
 **Since v0.7.2:** `ui/manuscript_reader.py` emits the shared command
@@ -5435,6 +5499,20 @@ once it commits, deliberate scrolling becomes the next origin. Reading settings
 observe their native disclosure state before rendering so initial placement does
 not depend on the later native `toggle` event.
 
+**On current main (Unreleased):** the existing dock measures its available
+desktop scrollport against the viewport, sticky return thread and containing
+grid's lower boundary. Dossier return settles this geometry at the restored
+document position before restoring inner scroll offsets, avoiding premature
+clamping. Temporary overview/focus suspension preserves accepted or stale/retry
+presentation; expired asynchronous reads cannot revive it.
+
+Reading feedback does not own layout or navigation. Persistent Analysis/local
+Values gutters use separate paint from the temporary arrival cue; its expiry
+does not reset the persistent marker's opacity. Prose avoids a second arrival
+outline. Interrupted context reveals continue from rendered opacity. The Analysis
+toggle's local selected-state recipe preserves text contrast during transitions;
+reduced motion retains static state and cancels active reveals.
+
 The shared jump helper reveals a real destination, accounts for sticky controls
 in its own scroll area and accepts start, center or nearest alignment. Arrival
 feedback observes the destination and its scrolling ancestors until stable;
@@ -5443,6 +5521,12 @@ uses the observer without realigning the restored position. Reduced motion is
 read at navigation time. [W3C C43](https://www.w3.org/WAI/WCAG22/Techniques/css/C43)
 and [focus-obscuration guidance](https://www.w3.org/WAI/WCAG22/Techniques/failures/F110.html)
 inform clearance checks, including short viewports and wrapped controls.
+
+Workspace changes remember their existing `#view-…` fragment through
+`replaceState`, without adding history entries. Fragment-driven navigation keeps
+its more precise destination. The hash handler ignores events
+whose destination no longer matches the current URL, so an older queued passage
+jump cannot reverse a newer view choice. A later genuine fragment still navigates.
 
 Action explanations reuse `tooltips.js`, localized label packs and native
 controls. Hover and keyboard focus expose supplemental text; the tooltip does
@@ -5884,6 +5968,12 @@ not the RFC's unimplemented proposals, for behavior and compatibility.
 On current main (Unreleased), capability metadata classifies Research as
 `status: "supported"`. This product classification changes no response or archive
 schema version, retention or revision guard, and does not certify factual accuracy.
+The manuscript paragraph action `data-reader-action="research"` opens existing
+saved context under `#workspace-context-panel [data-passage-research]`. It reads
+exact saved anchors and pinned claim/dossier records, with separately labelled
+current dossier decisions. It performs no retention, repinning or semantic
+mention recognition. Dedicated Review and existing exact-version viewers retain
+their roles; see [reader guidance](USAGE.md#link-a-manuscript-quote-to-a-claim).
 
 `service` manages only its owned local process and starts an empty workspace by
 default. `serve` runs in the foreground. CLI analysis/research/build calls do not
@@ -6040,7 +6130,7 @@ capability/context guards below. Selection drafts save nothing by themselves.
 |---|---|
 | `#manuscript-analysis-toggle` | constant-name **Analysis** toggle; `aria-pressed` and visible On/Off text identify diagnostic visibility independently of the dossier |
 | `#workbench-overview-open` / `#workbench-overview-back` | open dense analysis / return to preserved manuscript context |
-| `[data-context-tool="analysis"]` / `[data-context-tool="dossier"]` | explicitly select one active context tool; closing the tool does not itself hide all analysis |
+| `[data-context-tool="analysis"]` / `[data-context-tool="dossier"]` / `[data-context-tool="research"]` | explicitly select one active context tool; current main adds requested Saved research. Closing the tool does not itself hide all analysis |
 | `#workbench-thread` / `#workbench-return` | context-checked return to the original passage; on current main, a nearest dossier departure retains its saved version/position and an earlier passage return. The same control remains visible on narrow screens; replaced roots or changed project/source/research context invalidate it |
 | `#reader-settings .reader-shortcuts` | current main: visible localized reference to implemented passage-menu, search and close keys |
 | `[data-help]` / `#lixity-tooltip` | supplemental action/measurement explanation on hover or focus; inspect visible control names/states for operation, not tooltip visibility. Help does not authorize a write or retention |

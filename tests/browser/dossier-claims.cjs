@@ -298,6 +298,8 @@ server.serve_forever()
     await expect(native.locator('#tab-view-analysis')).toHaveAttribute('aria-selected', 'true');
     await expect(native.locator('#chapters .ptext').first()).toBeFocused();
     await native.locator('#chapters [data-manuscript-links-paragraph]').click();
+    await expect(native.locator('[data-passage-research]')).toHaveAttribute('data-state', 'ready');
+    await native.locator('[data-passage-research] [data-manuscript-links-paragraph]').click();
     await expect(native.locator('#research-manuscript-review blockquote')).toHaveText('A bird');
     await native.locator('#research-manuscript-review [data-research-history=claim]').click();
     await expect(native.locator('#research-revision-history-detail')).toContainText('Current linked');

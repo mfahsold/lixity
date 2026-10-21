@@ -233,6 +233,34 @@ async function nestedFixture(page) {
       } finally { await page.close(); }
     });
 
+    for (const width of [1440, 320]) for (const method of ['click', 'keyboard']) await check(`queued hash yields to explicit ${method} view ${width}`, async () => {
+      const state = await createPage(browser, width, 900, 'reduce'), {page} = state;
+      try {
+        const historyLength = await page.evaluate(() => history.length);
+        const selected = await page.evaluate(method => new Promise(resolve => {
+          const target = document.querySelector('#chapters .ptext');
+          window.addEventListener('hashchange', () => resolve(document.getElementById('tab-view-project').getAttribute('aria-selected')), {once: true});
+          location.hash = '#' + target.id;
+          if (method === 'click') document.getElementById('tab-view-project').click();
+          else document.getElementById('tab-view-analysis').dispatchEvent(new KeyboardEvent('keydown', {key: 'End', bubbles: true, cancelable: true}));
+        }), method);
+        assert.equal(selected, 'true', 'A queued older fragment event cannot reverse the newer explicit workspace choice');
+        assert.equal(new URL(page.url()).hash, '#view-project', 'Explicit workspace choice uses its existing fragment route without a new history entry');
+        assert.equal(await page.evaluate(() => history.length), historyLength + 1, 'Only the original fragment assignment adds a history entry');
+        await page.evaluate(() => switchActiveView('research'));
+        assert.equal(new URL(page.url()).hash, '#view-research', 'A programmatic departure keeps the current view reloadable');
+        await page.reload();
+        assert.equal(await page.locator('#tab-view-research').getAttribute('aria-selected'), 'true');
+        const restored = await page.evaluate(() => new Promise(resolve => {
+          window.addEventListener('hashchange', () => resolve(document.getElementById('tab-view-analysis').getAttribute('aria-selected')), {once: true});
+          location.hash = '#' + document.querySelector('#chapters .ptext').id;
+        }));
+        assert.equal(restored, 'true', 'A later genuine fragment destination still opens its manuscript view');
+        assert.equal(new URL(page.url()).hash, '#' + await page.locator('#chapters .ptext').first().getAttribute('id'), 'A real manuscript fragment remains precise');
+        await finish(state);
+      } finally { await page.close(); }
+    });
+
     await check('explicit centered instant destination', async () => {
       const state = await createPage(browser, 1440, 900, 'no-preference'), {page} = state;
       try {

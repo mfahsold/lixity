@@ -8,6 +8,13 @@ translated. The dashboard escapes text for its HTML context when rendering.
 _LANGUAGES = ("en", "de", "fr", "es", "it", "pt", "nl")
 
 _ROWS = {
+    'passage_research': ('Saved research', 'Gespeicherte Recherche', 'Recherche enregistrée', 'Investigación guardada', 'Ricerca salvata', 'Pesquisa guardada', 'Opgeslagen onderzoek'),
+    'passage_research_empty': ('No saved associations for this passage.', 'Keine gespeicherten Verknüpfungen für diese Textstelle.', 'Aucune association enregistrée pour ce passage.', 'No hay asociaciones guardadas para este pasaje.', 'Nessuna associazione salvata per questo passaggio.', 'Nenhuma associação guardada para este trecho.', 'Geen opgeslagen koppelingen voor deze passage.'),
+    'passage_research_count': ('Showing {shown} of {total} saved associations', '{shown} von {total} gespeicherten Verknüpfungen', '{shown} associations enregistrées sur {total}', '{shown} de {total} asociaciones guardadas', '{shown} di {total} associazioni salvate', '{shown} de {total} associações guardadas', '{shown} van {total} opgeslagen koppelingen'),
+    'passage_research_confidence': ('Author-assigned confidence', 'Vom Autor zugewiesene Sicherheit', 'Confiance attribuée par l’auteur', 'Confianza asignada por el autor', 'Attendibilità assegnata dall’autore', 'Confiança atribuída pelo autor', 'Door de auteur toegekende zekerheid'),
+    'passage_research_decisions': ('Current dossier context · associated decisions', 'Aktueller Dossierkontext · verknüpfte Entscheidungen', 'Contexte actuel du dossier · décisions associées', 'Contexto actual del dosier · decisiones asociadas', 'Contesto attuale del dossier · decisioni associate', 'Contexto atual do dossiê · decisões associadas', 'Huidige dossiercontext · gekoppelde beslissingen'),
+    'passage_research_setup': ('Open Research setup', 'Recherche-Einrichtung öffnen', 'Ouvrir la configuration de la recherche', 'Abrir configuración de investigación', 'Apri configurazione della ricerca', 'Abrir configuração da pesquisa', 'Onderzoeksinstellingen openen'),
+
     "project_actions": ("Project actions", "Projektaktionen", "Actions du projet", "Acciones del proyecto", "Azioni del progetto", "Ações do projeto", "Projectacties"),
     "reading_passage_values": ("Passage values", "Werte zur Textstelle", "Valeurs du passage", "Valores del pasaje", "Valori del passaggio", "Valores do trecho", "Passagewaarden"),
     "reading_thread": ("Passage and research", "Textstelle und Recherche", "Passage et recherche", "Pasaje e investigación", "Passaggio e ricerca", "Trecho e pesquisa", "Passage en onderzoek"),

@@ -539,6 +539,34 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   await page.locator('#dimensions').screenshot({path: path.join(artifacts, `report-style-${width}-${colorScheme}.png`)});
 }
 
+async function checkSavedPassageContext(page, width) {
+  const overviewBack = page.locator('#workbench-overview-back');
+  if (await overviewBack.isVisible()) await overviewBack.click();
+  await expect(page.locator('#chapters')).toBeVisible();
+  const passage = page.locator('#chapters .ptext').filter({hasText: demoQuote}).first();
+  const prose = passage.locator('.ptext-inner > p');
+  const original = await prose.textContent();
+  await passage.locator('[data-reader-paragraph]').click();
+  await page.locator('#manuscript-context-menu [data-reader-action=research]').click();
+  const context = page.locator('#workspace-context-panel [data-passage-research]');
+  await expect(context).toHaveAttribute('data-state', 'ready');
+  await expect(context.locator('blockquote')).toHaveText(demoQuote);
+  await expect(context).toContainText('Attempted warehouse entry');
+  await expect(context).toContainText('Warehouse 4 case notes');
+  await expect(context).toContainText('Current dossier context');
+  await context.locator('[data-research-history=claim]').click();
+  await expect(page.locator('#research-revision-history-detail')).toContainText('The customs log describes an attempted entry');
+  await page.keyboard.press('Escape');
+  await expect(context).toBeVisible();
+  await context.screenshot({path: path.join(artifacts, `demo-passage-research-${width}.png`)});
+  await context.locator('[data-passage-research-close]').click();
+  await expect(context).toBeHidden();
+  const back = page.locator('#workbench-return');
+  if (await back.isVisible()) await back.click();
+  await expect(prose).toHaveText(original);
+  await assertDemoReadOnly(page);
+}
+
 async function checkDemoCapabilities(page, width) {
   for (const id of ['btn-modal-new-project', 'btn-modal-open-project']) {
     await checkDemoLocalControl(page.locator('#' + id));
@@ -564,6 +592,7 @@ async function checkDemoCapabilities(page, width) {
   await page.locator('#controls').scrollIntoViewIfNeeded();
   await page.screenshot({path: path.join(artifacts, `demo-local-settings-${width}.png`)});
   await page.locator('#tab-view-analysis').click();
+  await checkSavedPassageContext(page, width);
 
   // The native form downloads a reviewed copy without running PDF generation.
   await openProjectActions(page);
@@ -704,6 +733,8 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   await expect(context.locator('a[href="../guides/installation.html"]')).toBeVisible();
   await context.locator(':scope > summary').click();
   if (javaScriptEnabled && (width === 320 || width === 390)) {
+    await page.locator('#tab-view-analysis').click();
+    await expect(page.locator('#chapters')).toBeVisible();
     const firstProseY = await page.locator('#chapters .ptext-inner > p').first().evaluate(
       paragraph => paragraph.getBoundingClientRect().top + scrollY,
     );

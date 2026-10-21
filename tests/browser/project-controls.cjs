@@ -16,8 +16,9 @@ fixtures = {}
 for language in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
     labels = {**get_language_profile(language).labels, **WORKSPACE_LABELS[language]}
     def localized(*args, **kwargs):
-        return original(*args, **kwargs, labels=labels, language_key=language,
-                        current_language=language)
+        return original(*args, **{**kwargs, 'title': 'Das synthetische Stadtarchiv und die lange Geschichte seiner verschwundenen Briefe: Eine Arbeitsfassung mit ausführlichem Titel',
+                        'manuscript_name': 'synthetisches_stadtarchiv_arbeitsfassung.md', 'labels': labels, 'language_key': language,
+                        'current_language': language})
     render.__globals__['render_dashboard'] = localized
     fixtures[language] = {'html': render(), 'labels': labels}
 def standalone(*args, **kwargs):
@@ -127,8 +128,8 @@ async function restoreFileReads(page) {
     // Project tasks use one reversible native disclosure; navigation stays visible.
     if (!readStateOnly) for (const locale of Object.keys(fixtures)) {
       language = locale;
-      for (const width of [1440, 320]) {
-        await page.setViewportSize({width, height: 900});
+      for (const [width, height] of [[1440, 900], [1024, 900], [320, 900], [320, 480]]) {
+        await page.setViewportSize({width, height});
         await page.goto('http://lixity.test/');
         const disclosure = page.locator('#project-actions');
         assert.equal(await disclosure.count(), 1, 'Project tasks have one disclosure');
@@ -140,6 +141,14 @@ async function restoreFileReads(page) {
         const nav = await page.locator('.view-navigation').boundingBox();
         const box = await summary.boundingBox();
         assert.ok(nav.y + nav.height <= box.y + 1, 'Destinations precede project actions');
+        const identity = await page.locator('.workspace-shell h1').boundingBox();
+        assert.ok(nav.y + nav.height <= identity.y, 'Primary destinations precede long project identity');
+        assert.ok(nav.y < 100, 'Long project titles cannot push primary navigation down');
+        assert.equal(await page.locator('.workspace-shell h1').evaluate(el => el.scrollHeight <= el.clientHeight + 1), true,
+          'The complete project title wraps without clipping');
+        assert.ok(await page.locator('.workspace-shell .project-meta').textContent().then(text => text.includes('synthetisches_stadtarchiv_arbeitsfassung.md')));
+        assert.equal(await page.locator('#tab-view-project').evaluate(el => Boolean(el.compareDocumentPosition(document.querySelector('.workspace-shell h1')) & Node.DOCUMENT_POSITION_FOLLOWING)), true,
+          'Keyboard and visual hierarchy share the same DOM order');
         assert.ok(box.height >= 44, 'Project tasks retain a touch target');
         await summary.focus(); await page.keyboard.press('Enter');
         assert.equal(await page.locator('#btn-modal-new-project').isVisible(), true);
@@ -151,7 +160,7 @@ async function restoreFileReads(page) {
         await page.keyboard.press('Space');
         assert.equal(await disclosure.evaluate(el => el.open), false);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-        await page.screenshot({path: path.join(screenshotDir, `project-actions-${locale}-${width}.png`)});
+        await page.screenshot({path: path.join(screenshotDir, `project-actions-${locale}-${width}x${height}.png`)});
       }
     }
     language = 'en';
@@ -189,6 +198,7 @@ async function restoreFileReads(page) {
       assert.equal((await page.locator('#manuscript-file-name').textContent()).trim(), 'picker.md');
       assert.equal(submissions.length, beforeSelection, 'Choosing a manuscript does not upload it');
 
+      const beforeDropURL = page.url();
       const dropResult = await dropFiles(page, [{name: hostileFilename, content: syntheticContent}]);
       assert.deepEqual(dropResult, {dragoverPrevented: true, dropPrevented: true}, 'Dropping files cannot navigate the page');
       assert.equal((await page.locator('#manuscript-file-name').textContent()).trim(), hostileFilename);
@@ -210,7 +220,7 @@ async function restoreFileReads(page) {
           assert.ok((await page.locator('#ctl-status').textContent()).includes(fixtures.en.labels.manuscript_file_invalid), 'Rejected file types have a clear localized explanation');
         }
       }
-      assert.equal(page.url(), 'http://lixity.test/');
+      assert.equal(page.url(), beforeDropURL, 'Dropping valid or invalid files preserves the current workspace URL');
 
       response = {ok: false, message: 'Synthetic duplicate filename', reload: false};
       let releaseLoad;

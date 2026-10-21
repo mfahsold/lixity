@@ -91,6 +91,12 @@ not the RFC's unimplemented proposals, for behavior and compatibility.
 On current main (Unreleased), capability metadata classifies Research as
 `status: "supported"`. This product classification changes no response or archive
 schema version, retention or revision guard, and does not certify factual accuracy.
+The manuscript paragraph action `data-reader-action="research"` opens existing
+saved context under `#workspace-context-panel [data-passage-research]`. It reads
+exact saved anchors and pinned claim/dossier records, with separately labelled
+current dossier decisions. It performs no retention, repinning or semantic
+mention recognition. Dedicated Review and existing exact-version viewers retain
+their roles; see [reader guidance](USAGE.md#link-a-manuscript-quote-to-a-claim).
 
 `service` manages only its owned local process and starts an empty workspace by
 default. `serve` runs in the foreground. CLI analysis/research/build calls do not
@@ -247,7 +253,7 @@ capability/context guards below. Selection drafts save nothing by themselves.
 |---|---|
 | `#manuscript-analysis-toggle` | constant-name **Analysis** toggle; `aria-pressed` and visible On/Off text identify diagnostic visibility independently of the dossier |
 | `#workbench-overview-open` / `#workbench-overview-back` | open dense analysis / return to preserved manuscript context |
-| `[data-context-tool="analysis"]` / `[data-context-tool="dossier"]` | explicitly select one active context tool; closing the tool does not itself hide all analysis |
+| `[data-context-tool="analysis"]` / `[data-context-tool="dossier"]` / `[data-context-tool="research"]` | explicitly select one active context tool; current main adds requested Saved research. Closing the tool does not itself hide all analysis |
 | `#workbench-thread` / `#workbench-return` | context-checked return to the original passage; on current main, a nearest dossier departure retains its saved version/position and an earlier passage return. The same control remains visible on narrow screens; replaced roots or changed project/source/research context invalidate it |
 | `#reader-settings .reader-shortcuts` | current main: visible localized reference to implemented passage-menu, search and close keys |
 | `[data-help]` / `#lixity-tooltip` | supplemental action/measurement explanation on hover or focus; inspect visible control names/states for operation, not tooltip visibility. Help does not authorize a write or retention |

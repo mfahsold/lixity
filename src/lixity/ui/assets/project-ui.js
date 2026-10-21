@@ -641,13 +641,19 @@ if (formOpen) {
 var workspaceScrollPositions = Object.create(null);
 var workspaceNavigationRevision = 0;
 document.addEventListener("lixity:workbench-change", function() { ++workspaceNavigationRevision; });
-function switchActiveView(viewName, restorePosition) {
+function switchActiveView(viewName, restorePosition, preserveHash) {
   if (!viewName) return;
   var tabs = document.querySelectorAll(".view-nav-tab");
   var panes = document.querySelectorAll(".view-pane");
   if (!panes.length || !Array.from(panes).some(function(pane) { return pane.dataset.viewPane === viewName; })) return;
-  if (window.LixityWorkbench) window.LixityWorkbench.dispatch({type: "view", value: viewName});
   var previous = document.querySelector(".view-pane.active");
+  if (!preserveHash && (restorePosition || (previous && previous.dataset.viewPane !== viewName))) {
+    // Explicit workspace intent supersedes fragment events already queued by
+    // an earlier passage jump, without adding a browser-history entry.
+    try { history.replaceState(null, "", location.pathname + location.search + "#view-" + viewName); }
+    catch (_) { /* The workspace remains usable without URL persistence. */ }
+  }
+  if (window.LixityWorkbench) window.LixityWorkbench.dispatch({type: "view", value: viewName});
   if (previous && previous.dataset.viewPane !== viewName) {
     workspaceScrollPositions[previous.dataset.viewPane] = window.scrollY;
   }
@@ -677,13 +683,14 @@ function switchActiveView(viewName, restorePosition) {
   }
 }
 
-function checkUrlHashView() {
+function checkUrlHashView(event) {
+  if (event && event.newURL !== window.location.href) return;
   var hash = window.location.hash;
   if (!hash) return;
   if (hash.startsWith("#view-")) {
     var v = hash.replace("#view-", "");
     if (["research", "analysis", "project"].includes(v)) {
-      switchActiveView(v);
+      switchActiveView(v, false, true);
       return;
     }
   }
@@ -696,7 +703,7 @@ function checkUrlHashView() {
   }
   var parentPane = target.closest(".view-pane");
   if (parentPane && parentPane.dataset.viewPane) {
-    switchActiveView(parentPane.dataset.viewPane);
+    switchActiveView(parentPane.dataset.viewPane, false, true);
     var revision = workspaceNavigationRevision;
     requestAnimationFrame(function () {
       if (window.location.hash === hash && workspaceNavigationRevision === revision) scrollAndFlash(target);
@@ -860,8 +867,7 @@ window.LixityManuscriptLinks = {
   var toggle = document.getElementById("workspace-navigation-toggle");
   var content = document.getElementById("workspace-navigation-content");
   if (!toggle || !content) return;
-  var destinations = content.querySelector(".view-navigation");
-  if (destinations) content.parentElement.insertBefore(destinations, content);
+  var destinations = content.parentElement.querySelector(".view-navigation");
   var desktop = window.matchMedia("(min-width: 1100px)");
   var manualCollapsed = false, companionOpen = false, companionOverride = null;
   var toggleFocused = false;
