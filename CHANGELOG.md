@@ -8,6 +8,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Changed
+- Public entry pages use a shorter product introduction, bounded linked screenshot
+  previews and direct documentation routes for first use, installation and reference.
 - Analysis overview groups secondary manuscript measurements in a reversible
   disclosure while keeping review routes, navigation and flagged passages visible.
   Scene measurements share a collapsed catalogue with direct routes from the

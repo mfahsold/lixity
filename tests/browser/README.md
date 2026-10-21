@@ -33,6 +33,11 @@ After staging, public-docs and visual-consistency checks remove their site copie
 even if browser launch or assertions fail; screenshots remain available in the
 reported artifact directory.
 
+Public-docs checks also bound product previews, preserve their complete aspect
+ratios and native full-size links, and verify the desktop introduction layout.
+Lazy images are inspected after scrolling to them and decoding their bytes.
+A held image response checks reserved preview space and stable following content.
+
 Localized suites retain all seven languages at desktop and mobile widths for
 rendering, labels and submitted machine values. Language-independent interaction
 and conflict scenarios run once per relevant viewport. Native server saves and

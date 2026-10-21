@@ -7,8 +7,9 @@
 
 Current release: 0.7.2; release tag: v0.7.2.
 
-This discovery index links maintained references. Published guides may describe
-newer behavior than an installed tool. The [complete documentation bundle](https://mfahsold.github.io/lixity/llms-full.txt)
+This discovery index links maintained references. The public demo follows current
+main; published guides can describe newer behavior than an installed release.
+The [complete documentation bundle](https://mfahsold.github.io/lixity/llms-full.txt)
 is generated from those references for offline reading.
 
 ## Start with the installed interface
@@ -60,8 +61,8 @@ have no measurements and remain outside comparisons. See Usage for exact rules.
 
 ## Choose a reference
 
-- [First look](https://mfahsold.github.io/lixity/guides/first-look.html): follow the Warehouse 4 demo from chapter comparison to research and PDF layouts.
-- [Installation and service lifecycle](https://mfahsold.github.io/lixity/guides/installation.html): install, select a project, start, stop and upgrade.
+- [First look](https://mfahsold.github.io/lixity/guides/first-look.html): a short read-only demo walkthrough, from manuscript review to research and PDF layouts.
+- [Installation](https://mfahsold.github.io/lixity/guides/installation.html): install the local app, select a project, start, stop and upgrade.
 - [Interpretation](https://mfahsold.github.io/lixity/guides/interpretation.html): measurements, review signals and uncertainty.
 - [Usage and configuration](https://mfahsold.github.io/lixity/USAGE.md): analysis workflows, settings, registers and PDF export; since v0.7.0, A4 editorial copies include line numbers and comment margins.
 - [Automation contracts](https://mfahsold.github.io/lixity/AGENTS.md): JSON versions, Python entrypoints, HTTP requests and context guards.

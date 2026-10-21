@@ -90,6 +90,8 @@ def check_or_sync_files(version: str, *, check_only: bool = False) -> list[str]:
                  f'"softwareVersion": "{version}"'),
                 (r'<span class="brand-badge">v\d+\.\d+\.\d+</span>',
                  f'<span class="brand-badge">v{version}</span>'),
+                (r'<a href="releases/v\d+\.\d+\.\d+\.md" id="current-release"',
+                 f'<a href="releases/v{version}.md" id="current-release"'),
                 (r'Current release: <a href="releases/v\d+\.\d+\.\d+\.md">v\d+\.\d+\.\d+</a>',
                  f'Current release: <a href="releases/v{version}.md">v{version}</a>'),
                 install_pin,
@@ -196,6 +198,8 @@ CURRENT_NOTE_CLAIMS: dict[Path, tuple[tuple[str, re.Pattern[str]], ...]] = {
          re.compile(r"\[(?:v\d+\.\d+\.\d+ release notes|Release notes)\]\((?:docs/releases/|https://mfahsold\.github\.io/lixity/releases/)v(\d+\.\d+\.\d+)\.md\)")),
     ),
     Path("docs/index.html"): (
+        ("current release-note target",
+         re.compile(r'<a href="releases/v(\d+\.\d+\.\d+)\.md" id="current-release"')),
         ("current release-note label",
          re.compile(r'Current release:\s*<a href="releases/v\d+\.\d+\.\d+\.md">v(\d+\.\d+\.\d+)</a>')),
         ("current release-note target",

@@ -42,6 +42,30 @@ async function withoutRequests(page, description, exercise) {
   }
 }
 
+async function checkLazyPreviewStability(page) {
+  let release;
+  const held = new Promise(resolve => { release = resolve; });
+  const imagePath = '**/screenshots/dashboard-dossier-image.png';
+  const holdImage = async route => { await held; await route.fallback(); };
+  await page.route(imagePath, holdImage);
+  try {
+    await page.goto('http://lixity.test/lixity/guides/research-pdf.html', {waitUntil: 'domcontentloaded'});
+    const image = page.locator('img[src="../screenshots/dashboard-dossier-image.png"]');
+    await image.scrollIntoViewIfNeeded();
+    const before = await image.boundingBox();
+    assert.ok(before.height > 100, 'A lazy screenshot reserves its bounded preview before its bytes arrive');
+    const followingTop = () => page.locator('#search').evaluate(node => node.getBoundingClientRect().top + scrollY);
+    const beforeTop = await followingTop();
+    release();
+    await image.evaluate(node => node.decode());
+    assert.ok(Math.abs(await followingTop() - beforeTop) <= 1,
+      'Loading screenshot bytes must not move the following content');
+  } finally {
+    release();
+    await page.unroute(imagePath, holdImage);
+  }
+}
+
 async function showOverview(page) {
   const open = page.locator('#workbench-overview-open');
   if (await open.isVisible()) await open.click();
@@ -823,6 +847,9 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
         for (const route of routes) {
           if (hasTouch && route !== 'demo/report.html') continue;
           if (!(javaScriptEnabled && colorScheme === 'light') && !fullMatrixRoutes.has(route)) continue;
+          if (!route && javaScriptEnabled && colorScheme === 'light' && !hasTouch && width !== 390) {
+            await checkLazyPreviewStability(page);
+          }
           await page.goto('http://lixity.test/lixity/' + route);
           assert.equal(await page.locator('h1').count(), 1);
           const headings = await page.locator('h1,h2,h3,h4,h5,h6').evaluateAll(nodes => nodes.map(node => Number(node.tagName[1])));
@@ -832,6 +859,30 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
           assert.deepEqual(await page.locator('main img').evaluateAll(nodes => nodes
             .filter(node => !(Number(node.getAttribute('width')) > 0 && Number(node.getAttribute('height')) > 0))
             .map(node => node.getAttribute('src'))), [], `${route} has images without dimensions`);
+          // Lazy images are measured after the user reaches them, not while
+          // their intrinsic bytes are still unavailable below the viewport.
+          for (const image of await page.locator('figure.frame img, figure.walkthrough img').all()) {
+            if (!await image.evaluate(node => node.getClientRects().length > 0)) continue;
+            await image.scrollIntoViewIfNeeded();
+            await image.evaluate(node => node.decode());
+          }
+          const previews = await page.locator('figure.frame :is(img, video), figure.walkthrough :is(img, video)').evaluateAll(nodes =>
+            nodes.filter(node => node.getClientRects().length > 0).map(node => {
+              const box = node.getBoundingClientRect();
+              return {source: node.getAttribute('src') || node.getAttribute('poster'),
+                width: box.width, height: box.height,
+                aspect: Number(node.getAttribute('width')) / Number(node.getAttribute('height')),
+                fit: getComputedStyle(node).objectFit,
+                fullSize: node.tagName !== 'IMG' || node.closest('a')?.getAttribute('href') === node.getAttribute('src')};
+            }));
+          for (const preview of previews) {
+            assert.ok(preview.height <= Math.min(450, 900 * .7 + 2) && preview.width <= 706,
+              `${route}: product preview stays bounded: ${JSON.stringify(preview)}`);
+            assert.ok(Math.abs(preview.width / preview.height - preview.aspect) < .01 || preview.fit === 'contain',
+              `${route}: the complete image fits without cropping or stretching: ${JSON.stringify(preview)}`);
+            assert.equal(preview.fullSize, true, `${route}: screenshot keeps a native full-size link`);
+          }
+          if (previews.length) await page.evaluate(() => window.scrollTo({top: 0, behavior: 'instant'}));
           assert.ok((await page.title()).length > 10);
           // Plain reports retain lazy paragraph payloads; the interactive demo
           // mounts continuous prose. Content pages need a readable article.
@@ -865,8 +916,18 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
             await page.locator('h1').scrollIntoViewIfNeeded();
           }
           if (!route) {
+            if (width === 1440) {
+              const columns = await page.locator('.hero').evaluate(hero => {
+                const copy = hero.querySelector('.hero-copy').getBoundingClientRect();
+                const image = hero.querySelector('.frame').getBoundingClientRect();
+                return {copyRight: copy.right, imageLeft: image.left};
+              });
+              assert.ok(columns.copyRight < columns.imageLeft, 'Desktop introduction and preview share one row');
+            }
             await expect(page.locator('main a[href="demo/report.html"]')).toHaveCount(1);
-            await expect(page.locator('main a[href="guides/installation.html"]')).toHaveCount(1);
+            await expect(page.locator('.hero-cta a[href="guides/installation.html"]')).toHaveCount(1);
+            await expect(page.locator('#guides a[href="guides/installation.html"]')).toHaveCount(1);
+            await expect(page.locator('#guides a[href="guides/first-look.html"]')).toHaveCount(1);
             const image = page.locator('.hero .frame img');
             await expect(image).toHaveCount(1);
             await image.evaluate(element => element.decode());
@@ -892,7 +953,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
         await page.locator('.hero-cta a[href="guides/installation.html"]').click();
         assert.ok(page.url().endsWith('/guides/installation.html'), 'The secondary CTA opens local installation');
         await page.goto('http://lixity.test/lixity/');
-        await page.locator('.release-note a[href="guides/first-look.html"]').click();
+        await page.locator('#guides a[href="guides/first-look.html"]').click();
         assert.ok(page.url().endsWith('/guides/first-look.html'));
         await page.locator('.ctl[href="../demo/report.html"]').click();
         assert.ok(page.url().endsWith('/demo/report.html'));

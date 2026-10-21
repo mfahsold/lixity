@@ -841,7 +841,7 @@ immersion or a writing defect. There is no automatic narrator-voice assessment.
 | **LIX** | ASL + share of long words (Björnsson: more than six characters, all languages) | a surface-structure estimate, not a universal difficulty or quality threshold |
 | **Dialogue ratio** | share of configured word tokens inside detected quotations | quotation and token regexes affect counts; no speaker attribution |
 | **Function words** | share of articles, pronouns, prepositions, conjunctions, particles, auxiliaries, modals | language-profile counts describe grammatical patterns, not artistic value |
-| **Perception filters** | verbs of perception/sensation ("sah", "hörte", "fühlte") | curated pattern counts; narrative distance still requires reading in context |
+| **Perception filters** | curated word-pattern matches (e.g. German "hörte", "roch", "fühlte") | lexical cues include environmental descriptions and idioms; they do not classify narrator mediation or narrative distance |
 | **Sentence classes** | staccato ≤ 6, medium 7–15, long 16–25, very long > 25 words | length bins; the legacy `complex_*` keys do not establish syntactic nesting |
 | **Tense severity** | 0 = neutral, 1 = watch, 2 = conspicuous, 3 = strong friction | flags switches and mixtures for review |
 

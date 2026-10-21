@@ -124,14 +124,9 @@ main { max-width: 76rem; margin: auto; padding: 0 1.5rem 3rem; }
   box-shadow: var(--shadow-lift);
   overflow: hidden;
 }
-.frame img, .frame video { display: block; width: 100%; height: auto; max-height: 34rem; object-fit: contain; object-position: top center; background: var(--surface); }
 .frame figcaption { padding: .7rem .2rem 0; color: var(--muted); font-size: var(--text-small); }
 
-/* The entrance gives the real reader one full-width, uncropped view. */
-.showcase .hero { grid-template-columns: 1fr; gap: 1.6rem; }
-.showcase .hero-copy { max-width: 46rem; }
-.showcase .hero-title { font-size: clamp(2.4rem, 5vw, 4rem); }
-.showcase .frame img { max-height: none; }
+.showcase .hero-title { font-size: clamp(2.2rem, 4vw, 3.2rem); }
 .showcase .section { padding: 2.5rem 0; }
 .workflow-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2rem; }
 .workflow-list h3 { margin: .5rem 0; }
@@ -229,8 +224,15 @@ footer nav { display: flex; flex-wrap: wrap; gap: 1rem; }
 .editorial-table tr:last-child td { border-bottom: 0; }
 .tech-metric { font-family: var(--font-mono); font-size: var(--text-small); color: var(--accent); }
 
-figure.walkthrough { margin: 1.4rem 0; max-width: 100%; }
-figure.walkthrough video, figure.walkthrough img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface, #fff); }
+figure.walkthrough { margin: 1.4rem 0; }
+/* Product captures are previews; their linked originals retain the full UI. */
+.frame, figure.walkthrough { max-width: 44rem; }
+.frame :is(img, video), figure.walkthrough :is(img, video) {
+  display: block; width: 100%; height: auto; max-width: 100%;
+  max-height: min(28rem, 70vh); margin-inline: auto;
+  object-fit: contain; object-position: top center; background: var(--surface);
+}
+figure.walkthrough :is(img, video) { border: 1px solid var(--line); border-radius: var(--radius); }
 figure.walkthrough figcaption { margin-top: .5rem; color: var(--muted, #555); font-size: var(--text-small); }
 
 /* --- Responsive ------------------------------------------------------- */
