@@ -179,7 +179,7 @@ function scrollAndFlash(target, options) {
 }
 
 function setPassageScrollMargin(target) {
-  var bars = document.querySelectorAll("#workbench-thread, #manuscript-reader-controls, #view-pane-analysis .toolbar");
+  var bars = document.querySelectorAll("#workbench-thread, #manuscript-reader-controls, #view-pane-analysis .toolbar, .research-dossier-location");
   var height = 0, rect = target.getBoundingClientRect();
   var container = passageScrollContainers(target)[0];
   bars.forEach(function(bar) {
@@ -400,6 +400,7 @@ function initKeyboardTabs(container, selector, manual) {
 }
 
 function revealStyleTarget(target) {
+  if (window.LixityAnalysisScope) window.LixityAnalysisScope.reveal(target);
   var panel = target.closest("#style-panels > .panel");
   if (panel) selectStyleView(panel.id, false);
 }

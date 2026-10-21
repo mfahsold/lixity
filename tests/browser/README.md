@@ -62,6 +62,19 @@ data, then verifies real keyboard, wheel and touch scrolling. Native `scrollend`
 separates inputs so an unfinished keyboard animation cannot overwrite a wheel
 result. Screenshots use only synthetic text.
 
+The section-navigation suite checks shared analysis links and actual dossier
+headings, compact current-section orientation, duplicate headings, nested scroll
+areas and reduced motion in all seven locales. The analysis-scope suite combines
+declared register/POV filters with FDR selection, reset and exact hidden-row jumps;
+the whole-manuscript reference must remain unchanged.
+
+The metric-overlays suite checks all seven paragraph metrics, transparent
+emphasis with opaque readable text, direction/value help, unavailable and valid
+zero results, Analysis Off, and preserved native selection/source identities.
+The decision-review suite reads exact decision/dossier versions side by side,
+stacks them on mobile, and checks read failures, late root-bound responses and
+the existing guarded acknowledgement/reopen writes.
+
 The claim-evidence-actions suite exercises empty evidence, the existing claim-bound
 composer and source-search handoff without saving. It checks preserved drafts,
 read failures/retry, stale responses and read-only capability boundaries at desktop
@@ -375,3 +388,18 @@ The work thread shows originating manuscript lines and the accepted viewed
 record's pinned/current version. History/edit transitions update that identity;
 returning or changing source context clears it. These cases also inspect the
 thread in both themes and with desktop navigation collapsed.
+
+When a temporary-filesystem quota is exhausted, browser fixtures can fail before
+Chromium starts even when `df` reports free space. Keep evidence on local disk
+and give the runner a task-local temporary directory instead of changing system
+quotas or deleting another task's output. On POSIX shells, for example:
+
+```sh
+mkdir -p .artifacts/browser-temp
+TMPDIR="$PWD/.artifacts/browser-temp" make browser-full
+```
+
+`.artifacts/` is ignored. Review synthetic captures before publishing any file;
+never place private manuscripts or credentials in test artifacts. Remove or
+archive only outputs owned by the completed task. The browser helpers and their
+Python fixture children inherit `TMPDIR`.

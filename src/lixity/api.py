@@ -336,6 +336,7 @@ def about() -> dict[str, Any]:
     from .research.models import ENTITY, Manifest
     from .style_fingerprint import (
         FEATURES,
+        LAYER_FEATURES,
         MIN_COMPARABLE_SENTENCES,
         MIN_COMPARABLE_WORDS,
         N_DIMENSIONS,
@@ -389,6 +390,12 @@ def about() -> dict[str, Any]:
                 "purpose": "paragraph tense/style estimates for supported body/list blocks",
                 "output": "json",
                 "schema_version": SCHEMA_VERSION,
+                "layer_projection": {
+                    "flag": "--layer", "choices": list(LAYER_FEATURES),
+                    "output": "text|json", "schema_version": "paragraph-layer/1",
+                    "only_notable_flag": "--only-notable", "only_notable_requires": "--layer",
+                    "reference_scope": "all_measurable_paragraphs_within_each_chapter",
+                },
             },
             {
                 "name": "dialogue",

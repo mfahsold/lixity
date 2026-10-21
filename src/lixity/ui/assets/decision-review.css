@@ -1,0 +1,17 @@
+/* Exact saved decision and dossier records in the existing Review surface. */
+.research-decision-review { margin-block: var(--space-3); border-top: 1px solid var(--line); padding-top: var(--space-2); }
+.research-decision-review > summary,
+.research-decision-review-earlier > summary { cursor: pointer; min-height: 2.5rem; align-content: center; font-size: var(--text-control); font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
+.research-decision-review > [data-decision-review-close] { margin-top: var(--space-3); }
+.research-decision-review > [data-decision-review-body] { padding-top: var(--space-2); }
+.research-decision-review-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-5); margin-block: var(--space-3); }
+.research-decision-review-grid > section { min-width: 0; overflow-wrap: anywhere; }
+.research-decision-review-grid > section + section { border-left: 1px solid var(--line); padding-left: var(--space-5); }
+.research-decision-review-grid h4 { margin: 0 0 var(--space-3); font-size: var(--text-control); line-height: var(--line-compact); }
+.research-decision-review-title { font-weight: var(--weight-semibold); margin-block: 0 var(--space-3); }
+.research-decision-review-earlier { margin-top: var(--space-5); padding-top: var(--space-2); border-top: 1px solid var(--line); }
+.research-decision-review-earlier > summary { margin-bottom: var(--space-3); }
+@media (max-width: 800px) {
+  .research-decision-review-grid { grid-template-columns: minmax(0, 1fr); }
+  .research-decision-review-grid > section + section { border-left: 0; border-top: 1px solid var(--line); padding-left: 0; padding-top: var(--space-5); }
+}

@@ -184,3 +184,11 @@ Separate literary case studies remain linked from the [Fontane article](https://
 and [tense-review article](https://mfahsold.github.io/lixity/blog/tense-switches.html).
 Their Fontane (Gutenberg #5323) and Austen (#1342) texts are public domain,
 separate from the software license, and are not the demo manuscript.
+
+Current main (Unreleased) additionally provides `profile --layer KEY` human output
+and opt-in `paragraph-layer/1` JSON (`--only-notable` filters after full chapter
+references); default profile schema 2 is unchanged. The UI shares that paragraph
+comparison, adds actual dossier-heading orientation, composes exact decision and
+dossier versions for guarded review, and offers display-only register/declared-POV
+heatmap filters with explicit whole-manuscript reference. See USAGE.md,
+research/USAGE.md, ARCHITECTURE.md and AGENTS.md for contracts and limits.

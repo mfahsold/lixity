@@ -99,13 +99,16 @@
 </head>
 <body id="top" tabindex="-1" class="site-page">
 <a class="skip-link" href="#content">Skip to guide</a>
-<nav class="site-return" aria-label="Lixity navigation"><a href="../">Home</a><a href="../#guides" aria-current="location">Guides</a><a href="../blog/index.html">Articles</a><a href="../demo/report.html">Demo</a></nav>
+<header class="site-header"><div class="header-inner">
+<a class="brand" href="../"><span class="brand-name">Lixity</span></a>
+<nav class="site-return" aria-label="Lixity navigation"><a href="../#guides">Guides</a><a href="installation.html">Install</a></nav>
+<button class="ctl theme-btn" id="themeToggle" type="button" hidden>Theme: system</button>
+</div></header>
 <main class="guide" id="content">
 <nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="../#guides">Guides</a></li><li><span aria-current="page">Research and PDF/OCR</span></li></ol></nav>
 <h1>Connect research to your manuscript</h1>
 <p>Collect sources, read and annotate in Zotero. Use Lixity's research workspace to connect selected evidence with claims, authorial decisions and exact manuscript quotations. A capture preserves the source version you used; it does not establish that a claim is true.</p>
 <p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-10-19">19 October 2026</time></p>
-<nav class="guide-nav" aria-label="Guides"><a href="first-look.html">First look</a><a href="installation.html">Installation</a><a href="interpretation.html">Interpret results</a><a href="manuscript-analysis-tools.html">Compare tools</a><a href="research-pdf.html" aria-current="page">Sources and PDF/OCR</a></nav>
 <div class="notice-box"><strong>Before importing:</strong> Choose the intended project and confirm that you may keep the source bytes. Text PDFs need Poppler; image-only scans need local Tesseract or a configured OCR worker. See <a href="installation.html#install">installation</a> and <a href="#ocr">PDF requirements</a>.</div>
 
 <nav class="guide-toc" aria-label="On this page"><strong>On this page</strong><ul><li><a href="#zotero">Zotero and evidence</a></li><li><a href="#manuscript-claims">Manuscript claims</a></li><li><a href="#places-and-routes">Places and journeys</a></li><li><a href="#manuscript-export">Manuscript PDF</a></li><li><a href="#publication">Publication details</a></li><li><a href="#ocr">Scans and OCR</a></li></ul></nav>
@@ -285,7 +288,7 @@ lixity research audit --project ./novel-research</code></pre>
 <h2 id="limits">Input and research limits</h2>
 <p>Text inputs must be nonempty UTF-8 without NUL bytes, up to 2 MiB; PDFs can be up to 50 MiB. Imports allow at most 5,000 nonempty passages. Search matches words using SQLite FTS5/BM25; it does not translate text or search by meaning. Refreshing a source does not automatically update your claims or decisions.</p>
 <p>See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md">implemented research reference</a> for CLI/API details. The broader <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/README.md">research RFC</a> includes unimplemented interfaces. Read <a href="interpretation.html">metric interpretation</a> before comparing a source with a manuscript.</p>
-<footer><a href="../#guides">All guides</a> · <a href="../">Lixity home</a> · <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">License and commercial use</a> · <a href="../#impressum">Legal notice</a></footer>
+<footer class="site-footer"><nav aria-label="Project resources"><a href="../#guides">All guides</a><a href="../blog/index.html">Articles</a><a href="https://github.com/mfahsold/lixity">Source code</a><a href="../LICENSING.md">License</a><a href="../#website-measurement">Website measurement</a><a href="../#impressum">Legal notice</a></nav></footer>
 </main>
 <a class="site-back-top" href="#top">Back to top ↑</a>
 </body>

@@ -19,6 +19,7 @@ function applyTheme() {
   if (themeButton) themeButton.textContent = `Theme: ${theme === 'auto' ? 'system' : theme}`;
 }
 applyTheme();
+if (themeButton) themeButton.hidden = false;
 if (themeButton) themeButton.addEventListener('click', () => {
   theme = themes[(themes.indexOf(theme) + 1) % themes.length];
   applyTheme();

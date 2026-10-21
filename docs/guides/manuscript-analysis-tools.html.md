@@ -80,4 +80,4 @@ No. Lixity computes deterministic statistics from your text and documents their 
 
 Tool names and links point to the official pages of their projects and vendors. Descriptions here are based on the public documentation available in October 2026 and are not endorsements.
 
-[All guides](../#guides) · [Lixity home](../) · [License and commercial use](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md) · [Legal notice](../#impressum)
+[All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](../LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

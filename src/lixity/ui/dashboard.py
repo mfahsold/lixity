@@ -21,9 +21,11 @@ from ..pipeline import DocumentAnalysis, paragraph_identity
 from ..site import docs_url
 from ..status import FLAG_MIN_SEVERITY
 from ..style_fingerprint import (
+    FEATURE_UNITS,
     FEATURES,
     LAYER_FEATURES,
     MIN_COMPARABLE_WORDS,
+    PARAGRAPH_LAYER_Z_CUTOFF,
     Z_COLOR_LIMIT,
     FingerprintThresholds,
     layer_stats,
@@ -87,6 +89,9 @@ _CSS_FILES = (
     "workspace-reader.css",
     "manuscript-links.css",
     "manuscript-reader.css",
+    "decision-review.css",
+    "analysis-scope.css",
+    "section-navigation.css",
 )
 _JS_FILES = (
     "vendor/preact-10.29.8.min.js",
@@ -97,8 +102,10 @@ _JS_FILES = (
     "component-layer.js",
     "tooltips.js",
     "interactions.js",
+    "section-navigation.js",
     "register-settings.js",
     "dashboard.js",
+    "analysis-scope.js",
     "zotero-results.js",
     "research-cards.js",
     "research-core.js",
@@ -321,25 +328,13 @@ def render_dashboard(
     }
 
     def _layer_text(key: str, value: float) -> str:
-        if key == "asl":
-            return f"ASL {N(value, 1)}"
-        if key in ("dialogue", "function"):
-            text_label = label(labels, "dialogue" if key == "dialogue" else "function_words")
-            return f"{text_label} {P(value)}"
-        return f"{label(labels, 'feat_' + key)} {N(value, 1)}"
-
-    def _layer_range(key: str) -> tuple[float, float]:
-        values = [value for value, _z in layer_data.get(key, {}).values()]
-        return (min(values), max(values)) if values else (0.0, 1.0)
-
-    # Bounds depend on the whole layer once; per-paragraph loops read them.
-    layer_bounds: dict[str, tuple[float, float]] = {
-        layer_key: _layer_range(layer_key) for layer_key in LAYER_FEATURES
-    }
+        field = LAYER_FEATURES[key]
+        units = FEATURE_UNITS.get(language_key, FEATURE_UNITS["en"])
+        return f"{label(labels, 'layer_' + key)}: {N(value, 1)} {units[field]}"
 
     def _layer_tip(key: str, value: float, z: float) -> str:
-        direction = label(labels, "layer_above" if z > 0 else "layer_below")
-        return f"{_layer_text(key, value)} · {direction}"
+        direction = label(labels, "layer_above" if z > 0 else "layer_below" if z < 0 else "layer_at")
+        return f"{_layer_text(key, value)} · {direction} · z = {N(z, 2, True)}"
 
     meta_bits: list[str] = []
     if chapters and total_words > 0:
@@ -877,18 +872,17 @@ def render_dashboard(
         parts.append(
             f'<button type="button" class="ctl" id="paragraph-filter-reset">{L("paragraph_filter_reset")}</button>'
         )
-        parts.append("<label>")
+        parts.append('<label class="metric-layer-control">')
         parts.append(f"{help_term(labels, 'layer', L('style_layer'))} ")
         parts.append('<select class="ctl" id="style-layer">')
         parts.append(f'<option value="">{L("layer_off")}</option>')
-        for layer_key in LAYER_FEATURES:
-            low, high = layer_bounds[layer_key]
-            parts.append(
-                f'<option value="{layer_key}" '
-                f'data-hint="{esc(label(labels, "layer_hint_" + layer_key), quote=True)}" '
-                f'data-range="{esc(f"{_layer_text(layer_key, low)} – {_layer_text(layer_key, high)}", quote=True)}">'
-                f"{esc(label(labels, 'layer_' + layer_key))}</option>"
-            )
+        parts.extend(
+            f'<option value="{layer_key}" '
+            f'data-hint="{esc(label(labels, "layer_hint_" + layer_key), quote=True)}" '
+            f'data-comparable="{len(layer_data[layer_key])}">'
+            f"{esc(label(labels, 'layer_' + layer_key))}</option>"
+            for layer_key in LAYER_FEATURES
+        )
         parts.append("</select></label>")
     parts.append('<span class="legend">')
     for key, color in (
@@ -916,21 +910,26 @@ def render_dashboard(
 
     parts.append(
         f'<div class="layer-legend" id="layer-legend" hidden="hidden" '
+        f'data-cutoff="{PARAGRAPH_LAYER_Z_CUTOFF}" '
+        f'data-profiled="{len(paragraphs)}" '
         f'data-outliers="{esc(label(labels, "layer_outliers"), quote=True)}" '
         f'data-outliers-one="{esc(label(labels, "layer_outliers_one"), quote=True)}">'
     )
     parts.append('<span class="layer-title" id="layer-legend-title" tabindex="0"></span>')
-    parts.append('<span class="z-gradient"></span>')
+    parts.append('<span class="z-gradient" aria-hidden="true"></span>')
     parts.append(
-        '<span class="layer-scale"><span id="layer-scale-low"></span>'
-        '<span id="layer-scale-high"></span></span>'
+        f'<span class="layer-scale"><span id="layer-scale-low">−{N(Z_COLOR_LIMIT, 1)} · {L("layer_below")}</span>'
+        f'<span id="layer-scale-high">+{N(Z_COLOR_LIMIT, 1)} · {L("layer_above")}</span></span>'
     )
-    parts.append('<span class="layer-count" id="layer-legend-count"></span>')
+    parts.append('<span class="layer-count" id="layer-legend-count" role="status" aria-live="polite"></span>')
     parts.append(
         f'<label class="layer-only"><input type="checkbox" id="layer-only"/> '
         f"{esc(label(labels, 'layer_only'))}</label>"
     )
     parts.append(f'<button class="ctl" id="layer-next">{esc(label(labels, "layer_next"))}</button>')
+    parts.append(f'<button class="ctl" id="layer-clear" type="button">{L("layer_clear")}</button>')
+    parts.append(f'<details class="layer-comparison-note"><summary>{L("layer_guide")}</summary>'
+                 f'<p class="ctl-note">{L("layer_comparison_help")}</p></details>')
     parts.append("</div>")
 
     if not tense_available:
@@ -1006,11 +1005,8 @@ def render_dashboard(
                     info = layer_data.get(key, {}).get(idx)
                     if info is not None:
                         value, z = info
-                        low, high = layer_bounds[key]
-                        span = (high - low) or 1.0
-                        position = (value - low) / span
-                        colour = z_color((position * 2.0 - 1.0) * Z_COLOR_LIMIT)
-                        layer_payload[key] = [colour, _layer_tip(key, value, z), round(z, 2)]
+                        colour = z_color(z)
+                        layer_payload[key] = [colour, f"{line_label(labels, p)} · {_layer_tip(key, value, z)}", round(z, 2)]
                 layer_attr = (
                     f" data-layers='{esc(json.dumps(layer_payload, ensure_ascii=False), quote=True)}'"
                     if layer_payload
@@ -1349,7 +1345,7 @@ def render_dashboard(
             (
                 "heatmap",
                 "style_fingerprint",
-                render_heatmap_panel(fingerprint, metrics, labels, language_key),
+                render_heatmap_panel(fingerprint, metrics, labels, language_key, characters=characters),
             ),
             (
                 "bands",

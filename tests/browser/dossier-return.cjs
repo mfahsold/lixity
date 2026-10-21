@@ -80,6 +80,9 @@ async function assertReturnAvailable(page) {
 async function depart(page, control, tab) {
   await control.scrollIntoViewIfNeeded();
   await control.focus();
+  // Capture the actionable position after sticky controls are cleared; the
+  // real click can otherwise scroll an obscured button after this snapshot.
+  await control.click({trial: true});
   const before = await positions(control);
   await control.click();
   await expect(page.locator(`[data-rtab=${tab}]`)).toHaveAttribute('aria-selected', 'true');

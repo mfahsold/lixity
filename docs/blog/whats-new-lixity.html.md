@@ -74,4 +74,4 @@ Built-in analysis and dashboard generation run on your computer without cloud ca
 
 If you try it: tell me which passage surprised you — that is the feedback that shapes the next release.
 
-[Lixity home](../) · [All articles](index.html) · [Report a reproducible issue](https://github.com/mfahsold/lixity/issues) · [Legal notice](../#impressum)
+[All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](../LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

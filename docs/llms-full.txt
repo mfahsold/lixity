@@ -25,20 +25,19 @@ Source: https://github.com/mfahsold/lixity/blob/main/README.md
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
-Lixity helps you explore rhythm, repeated words and dialogue in your manuscript,
-then return to the passages behind the numbers. Try the example in your browser
-before installing it for your own writing.
+Lixity is a local workbench for authors. Explore language patterns and keep
+sources, claims and notes beside your manuscript. Try an invented example in
+your browser before installing the app for your own writing.
 
 [Open the example manuscript](https://mfahsold.github.io/lixity/demo/report.html) ·
 [Take the short tour](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Install Lixity](https://mfahsold.github.io/lixity/guides/installation.html)
 
-<a href="https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png"><img src="https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png" width="640" alt="Lixity manuscript reader with continuous prose, chapter navigation and contextual tools"/></a>
+<a href="https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png"><img src="https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png" width="560" alt="Lixity manuscript reader with continuous prose, chapter navigation and contextual tools"/></a>
 
-The read-only demo opens *The Crate at Warehouse 4*, with six invented English
-chapters and credited research images, without an account or upload. Follow the
-[three-minute walkthrough](https://mfahsold.github.io/lixity/guides/first-look.html)
-or browse [more views and image credits](https://mfahsold.github.io/lixity/screenshots/README.md).
+The read-only example uses six invented English chapters and credited research
+images. It needs no account or upload and cannot import, edit or save.
+[More views and image credits](https://mfahsold.github.io/lixity/screenshots/README.md).
 
 <a id="start-here"></a>
 
@@ -87,6 +86,12 @@ does not update an already running service.
 The workspace keeps the short **Manuscript**, **Research** and **Project** view
 names. The browser app, CLI and Python API share one analysis pipeline;
 `lixity --help` and `lixity about --json` describe installed capabilities.
+
+On current main, selected paragraph metrics have transparent emphasis and
+source-anchored CLI output (`lixity profile --layer asl`). Dossier headings and
+exact decision/dossier review stay within the existing navigation; declared
+register/POV filters change the style table’s display while retaining its book
+reference. These additions are Unreleased; see the [usage guide](https://mfahsold.github.io/lixity/USAGE.md).
 
 On current main, CLI workflows can reuse the project's configured manuscript;
 [default manuscript guidance](https://mfahsold.github.io/lixity/USAGE.md#default-manuscript)
@@ -330,6 +335,14 @@ Separate literary case studies remain linked from the [Fontane article](https://
 and [tense-review article](https://mfahsold.github.io/lixity/blog/tense-switches.html).
 Their Fontane (Gutenberg #5323) and Austen (#1342) texts are public domain,
 separate from the software license, and are not the demo manuscript.
+
+Current main (Unreleased) additionally provides `profile --layer KEY` human output
+and opt-in `paragraph-layer/1` JSON (`--only-notable` filters after full chapter
+references); default profile schema 2 is unchanged. The UI shares that paragraph
+comparison, adds actual dossier-heading orientation, composes exact decision and
+dossier versions for guarded review, and offers display-only register/declared-POV
+heatmap filters with explicit whole-manuscript reference. See USAGE.md,
+research/USAGE.md, ARCHITECTURE.md and AGENTS.md for contracts and limits.
 
 ===============================================================================
 ## docs/ONBOARDING.md
@@ -1369,6 +1382,30 @@ Its cutoff-hit counts differ from FDR decisions; the bands are neither
 confidence intervals nor external editorial targets. Paragraph style layers
 show measured values and flag unusual values relative to the chapter.
 
+**On current main (Unreleased):** with **Analysis On**, select one metric in
+**Deviations**. A transparent background and up/down arrow on a notable paragraph
+refer to that chapter's median/MAD, not literary quality. The paragraph button
+explains its raw value, unit, source lines and local z; choose **Values** for the
+measurements. **Next deviation** opens the paragraph, and **Clear metric** removes
+only this metric. Analysis Off hides the paint and related hints while retaining
+your choice. Native text selection, search and saved research marks remain separate.
+
+The strip's colour and notable membership now use the same within-chapter
+comparison. The scale is fixed at z = −2.5 … +2.5; paragraph notability uses
+`abs(round(z, 2)) >= 1.5`. This is separate from chapter cutoffs and FDR.
+At least three measurable paragraphs and nonzero MAD are required. The legend
+reports comparable coverage and distinguishes no comparison from zero notable
+paragraphs; raw paragraph values remain available in both cases.
+
+In the **Style fingerprint** table, declared chapter registers and declared POV
+can filter the visible rows. The choices combine with FDR-only. The visible
+status states that the reference remains the full manuscript: no baseline,
+score, global count, register target or style dimension is recalculated. Only
+this table is filtered. **About this comparison** explains scope and register
+exemptions; **Clear chapter filters** restores all rows. Name mentions are not
+POV declarations. Following an exact hidden row anchor clears the display filters
+before the existing jump. A separate within-voice reference is not implemented.
+
 ### Style-space navigation
 
 In **Style dimensions**, drag to rotate, use the wheel or labeled buttons to
@@ -1449,6 +1486,28 @@ Densities are counts per 1,000 words, not percentages; short paragraphs can have
 large values from few matches. Nominalization suffix cues exclude curated
 function words unless a project regex override is supplied. They remain
 heuristics rather than a grammatical parse.
+
+**On current main (Unreleased):** inspect the same selected paragraph metric
+from the terminal, without printing manuscript prose:
+
+```bash
+lixity profile manuscript.md --layer asl
+lixity profile --layer filter --only-notable
+lixity profile --layer filter --only-notable --json
+```
+
+Choices are `asl`, `function`, `dialogue`, `filter`, `modal`, `nominal` and
+`passive`. Human output lists source-file/line anchors, raw values/units and local
+z. `--only-notable` filters output after computing all chapter references; it
+requires `--layer`. The summary keeps full profiled/comparable/notable counts
+separate from rows shown. Configured manuscript omission follows the existing
+[project resolver](#default-manuscript). Without `--layer`, profile retains its
+existing JSON v2 output, including when `--json` is omitted.
+
+With `--layer --json`, the opt-in envelope is `paragraph-layer/1`; unavailable
+comparisons have `z: null` and `notable: null`, while measured zero remains zero.
+Densities remain word-pattern counts per 1,000 words, not exact token spans or a
+grammatical interpretation. See [the contract](AGENTS.md#311-opt-in-paragraph-layers).
 
 ### `lixity dialogue`
 
@@ -3046,6 +3105,34 @@ links, section outlines and pinned/current revisions. CLI equivalents are
 These reports do not find every affected passage, infer contradictions, verify
 history or rewrite documents. Old pins may be intentional; audit is separate.
 
+**On current main (Unreleased):** **Read decision with dossier** opens a
+reversible comparison inside **Review** or **Affected dossiers**. It reads the
+exact latest saved decision and dossier versions named by that report. When an
+earlier assessment exists, its dossier version is separately available; the
+assessment labels both acknowledged versions. The columns stack on narrow screens.
+The relation concerns the whole dossier: no affected passage or semantic diff
+is inferred. Closing the comparison saves nothing. **Mark as applied** and
+**Reopen review** remain explicit snapshot/revision-guarded acknowledgements;
+failed, unavailable or stale reads do not establish that anything was verified.
+
+Long dossiers have a **Sections** list generated from their actual rendered
+headings, Notes, linked Claims and Citations. Close/reopen the native list; a
+compact current-heading link remains within the dossier while scrolling and
+returns to that list. Heading links use the existing scroll/reveal behavior,
+including collapsed section maps. Local heading IDs last for that accepted
+rendering; saved record/revision references are unchanged.
+
+For a human-readable daily manuscript check, use the existing explicit format:
+
+```sh
+lixity research review-manuscript --project ./novel --format text
+lixity research reconcile-manuscript --project ./novel --format table
+```
+
+Reconciliation previews write nothing. These commands keep JSON as their default
+for automation; `--json` selects it explicitly. No new token, UUID workflow or
+writer lock is needed merely to choose a human output format.
+
 Choose **Add to change set** in the editor, then **Review change set** to inspect,
 edit or remove queued drafts and reasons before saving together. Failed/stale
 saves preserve drafts for review. Drafts exist only in that browser tab and are
@@ -3825,8 +3912,13 @@ Text inputs are at most 2 MiB and must be valid UTF-8 without NUL bytes.
 PDF inputs are at most 50 MiB. Both routes allow at most 5,000 nonempty extracted
 passages. Search uses literal Unicode words joined with AND; it is
 not stemming, translation or semantic search. BM25 scores are ranks, not truth
-probabilities. Language tags do not translate quotations. Empty queries and missing FTS5 support produce errors. Stale indexes refresh
-automatically unless strict validation is requested.
+probabilities. Language tags do not translate quotations. Empty queries and
+missing FTS5 support produce errors. Stale indexes refresh automatically unless
+strict validation is requested. Index failures report their path and the actual
+SQLite cause; storage exhaustion or a damaged index does not imply missing FTS5.
+After resolving the reported cause, use `research reindex` to rebuild the
+disposable catalogue. A rebuild failure before replacement keeps the previously
+published index; rebuilding does not modify canonical research records.
 Source analysis emits `original_language_supplied` when source context names
 an original language; that free-text field alone does not establish historical
 language variety. This replaces the earlier experimental
@@ -5870,6 +5962,34 @@ serves dossier, history and manuscript-companion readers. Images remain separate
 versioned sources; neither their presence nor a route line establishes geographic
 calibration, navigability or historical accuracy.
 
+## Shared document orientation and metric presentation (current main)
+
+The Unreleased section-navigation helper decorates existing semantic links in
+analysis and accepted dossier renderings. One instance per connected host resolves
+the actual scroll root, coalesces reads/paint by animation frame and disposes
+observers when replaced. It delegates activation, disclosure reveal, sticky
+clearance and arrival to the existing interaction owner. Dossier heading IDs
+combine render-instance identity and local ordinals; they never replace domain
+record IDs or revision pins. A compact location link shares that current entry;
+it adds no scrollport, route or canonical data. The context dock preserves an
+already reached end when its measured available height changes, and preserves
+other reading offsets.
+
+Paragraph layers reuse `layer_stats` and the shared descriptive cutoff, with
+chapter median/MAD and rounded two-decimal z. The browser paints behind opaque
+prose without rewriting its nodes or combining metric colours. Colour, marker
+membership, source/value/unit explanation and the opt-in `paragraph-layer/1` CLI
+projection use the same comparison. Missing comparison is not zero. Display-only
+register/declared-POV controls change heatmap row visibility, preserving the
+accepted full-book analysis and existing exemption policy.
+
+Decision/dossier review composes exact existing record-version GETs inside the
+existing review surface. It retains pending, retry, unavailable and stale states;
+request, project/root token, snapshot and record identity prevent late reads from
+creating controls for another context. An author acknowledgement remains the
+existing explicit guarded mutation. No semantic diff, inferred affected passage,
+new archive schema or database authority is introduced.
+
 ===============================================================================
 ## docs/AGENTS.md
 
@@ -6039,6 +6159,31 @@ and [methods](METHODS.md) explain these changes. Current contracts include:
   `dialog_ratio` and chapter `dialog_pct` have different units. `clean_words`
   remains the legacy whitespace count. Punctuation keys are language-neutral.
 
+### 3.1.1 Opt-in paragraph layers
+
+**On current main (Unreleased):** `profile --layer KEY --json` has
+`meta.schema_version: "paragraph-layer/1"`. Default `profile`/`profile --json`
+keeps numeric schema 2; this is a separate opt-in projection, not a replacement.
+`about().commands` exposes the profile command's additive `layer_projection`
+descriptor while retaining its existing default output/schema keys.
+
+The body contains `layer`, canonical fingerprint `feature`, canonical English
+`unit`, `comparison`, `selection` and `paragraphs`. Choices are the seven existing
+paragraph layers: `asl|function|dialogue|filter|modal|nominal|passive`.
+`comparison` identifies `median_mad_robust_z`, all measurable paragraphs within
+each chapter, a minimum of 3, nonzero MAD, `z_decimals: 2` and `notable_abs_z: 1.5`.
+Scores reuse `layer_stats`; notability uses the rounded z, matching the browser.
+
+Each row retains its full-profile zero-based `index`, chapter number/title,
+source line span, words/sentences, raw `value`, rounded `z`, `comparable` and
+`notable`. Unknown comparison means `z: null` and `notable: null`; measured zero
+remains numeric zero. No prose or exact lexical spans are supplied.
+`selection` separates full `total_count`, `comparable_count`, `notable_count`
+from `selected_count` and `only_notable`. `--only-notable` requires `--layer` and
+selects rows after full references/counts are computed, without renumbering.
+Without `--json`, the selected-layer CLI prints a source-anchored human report.
+Chapter/FDR thresholds are different policies and are not changed by this view.
+
 ### 3.2 `style --json` (style reference, schema_version 4)
 
 Integer `measured_cells` reports the number of chapter–feature cells
@@ -6133,6 +6278,9 @@ capability/context guards below. Selection drafts save nothing by themselves.
 | `[data-context-tool="analysis"]` / `[data-context-tool="dossier"]` / `[data-context-tool="research"]` | explicitly select one active context tool; current main adds requested Saved research. Closing the tool does not itself hide all analysis |
 | `#workbench-thread` / `#workbench-return` | context-checked return to the original passage; on current main, a nearest dossier departure retains its saved version/position and an earlier passage return. The same control remains visible on narrow screens; replaced roots or changed project/source/research context invalidate it |
 | `#reader-settings .reader-shortcuts` | current main: visible localized reference to implemented passage-menu, search and close keys |
+| `#style-layer` / `#layer-clear` | current main: select/clear one paragraph metric; the Analysis mode controls its prose paint and hints, while the existing local Values remains independent |
+| `#analysis-scope-register` / `#analysis-scope-pov` | current main: optional author-declared groups filter only heatmap rows; the full-book reference and numerical outputs stay unchanged |
+| `[data-section-nav]` / `[data-section-link]` | current main: shared active-heading presentation over real targets; dossier IDs are local to an accepted rendering, not durable record references |
 | `[data-help]` / `#lixity-tooltip` | supplemental action/measurement explanation on hover or focus; inspect visible control names/states for operation, not tooltip visibility. Help does not authorize a write or retention |
 | `#project-actions > summary` | open or close Project actions before using its existing New/Open, guidance and PDF controls; loaded workspaces start collapsed, empty workspaces expanded |
 | `.reader-structural[data-start][data-end]` | readable source structure without a paragraph profile; inclusive source lines are presentation anchors, not a new research-anchor format |

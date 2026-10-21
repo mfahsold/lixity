@@ -221,6 +221,11 @@ class TestJsDomContract(unittest.TestCase):
         self.assertEqual(len(targets), len(set(targets)), "section links must be unique")
         for target in targets:
             self.assertIn(f'id="{target}"', html, f"Section nav has no target: {target}")
+            self.assertRegex(nav, rf'<a href="\#{target}" data-jump="\#{target}" '
+                             rf'data-section-link="{target}">[^<]+</a>')
+        self.assertNotIn('role="tab', nav)
+        self.assertIn('data-section-nav="analysis"', nav)
+
 
     def test_analysis_section_nav_follows_the_registry(self):
         """The nav order and labels come from the central registry."""
@@ -389,6 +394,17 @@ class TestJsDomContract(unittest.TestCase):
             + render_dashboard([], [], controls=True, enabled_actions=("analyze", "rebuild"))
             + render_dashboard([], [], controls=True, enabled_actions=("nda-draft",))
         )
+        # Declared chapter groups add conditional comparison controls.
+        from lixity.api import dashboard
+
+        scope_text = "\n\n".join(
+            f"## Chapter {number}\n\n" + (("moss " * length).strip() + ". ") * 30
+            for number, length in enumerate((5, 8, 12), 1)
+        )
+        html += dashboard(scope_text, project_config={
+            "register_profiles": {"Letters": {}}, "chapter_registers": {"2": "Letters"},
+            "characters": {"Alex": {"pov_in_chapters": [1, 3]}},
+        })
         missing = sorted(dom_id for dom_id in ids if f'id="{dom_id}"' not in html)
         self.assertEqual(missing, [], f"dashboard.js looks up missing ids: {missing}")
 

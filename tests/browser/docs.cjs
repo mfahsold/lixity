@@ -110,10 +110,18 @@ async function checkReturnNavigation(page, route, exercise) {
     await expect(navigation).toContainText('Read-only demo');
     await expect(breadcrumbs).toHaveCount(0);
   } else {
-    await expect(navigation.locator('a[href="../"]')).toBeVisible();
-    const demo = navigation.getByRole('link', {name: 'Demo', exact: true});
-    await expect(demo).toHaveAttribute('href', '../demo/report.html');
-    if (route.startsWith('examples/')) await expect(demo).not.toHaveAttribute('aria-current', /.+/);
+    if (route.startsWith('examples/')) {
+      await expect(navigation.locator('a[href="../"]')).toBeVisible();
+      const demo = navigation.getByRole('link', {name: 'Demo', exact: true});
+      await expect(demo).toHaveAttribute('href', '../demo/report.html');
+      await expect(demo).not.toHaveAttribute('aria-current', /.+/);
+    } else {
+      await expect(page.locator('.site-header .brand')).toHaveAttribute('href', '../');
+      await expect(navigation.getByRole('link', {name: 'Guides', exact: true})).toHaveAttribute('href', '../#guides');
+      await expect(navigation.getByRole('link', {name: 'Install', exact: true})).toHaveAttribute('href', route.startsWith('blog/') ? '../guides/installation.html' : 'installation.html');
+      await expect(navigation.getByRole('link', {name: 'Demo', exact: true})).toHaveCount(0);
+      await expect(page.locator('.guide-nav')).toHaveCount(0);
+    }
     await expect(breadcrumbs).toBeVisible();
     await expect(breadcrumbs.locator('[aria-current=page]')).toHaveCount(1);
     const parent = route.startsWith('guides/') ? '../#guides'
@@ -385,6 +393,14 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   await page.locator('[data-rtab=review]').click();
   await expect(page.locator('#research-editorial-review')).not.toContainText('Loading');
   await expect(page.locator('#research-editorial-review')).toContainText('Warehouse 4 case notes');
+  const decisionComparison = page.locator('#research-editorial-review [data-decision-review]').first();
+  await decisionComparison.locator(':scope > summary').click();
+  await expect(decisionComparison.locator('.research-decision-review-grid')).toBeVisible();
+  await expect(decisionComparison.locator('[data-decision-review-latest="decision"]')).toContainText('saved version');
+  await expect(decisionComparison.locator('[data-decision-review-latest="dossier"]')).toContainText('Warehouse 4 case notes');
+  await decisionComparison.locator('[data-decision-review-close]').click();
+  await expect(decisionComparison).not.toHaveAttribute('open', '');
+  await assertReadOnly();
   const manuscriptReview = page.locator('#research-manuscript-review');
   await expect(manuscriptReview.locator('.manuscript-link-review-item')).toHaveCount(1);
   await expect(manuscriptReview).toContainText('Attempted warehouse entry');
@@ -918,6 +934,11 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
           // Plain reports retain lazy paragraph payloads; the interactive demo
           // mounts continuous prose. Content pages need a readable article.
           const dashboard = route === 'demo/report.html' || route.startsWith('examples/');
+          if (!dashboard) {
+            const themeControl = page.locator('#themeToggle');
+            if (javaScriptEnabled) await expect(themeControl).toBeVisible();
+            else await expect(themeControl).toBeHidden();
+          }
           if (dashboard) {
             assert.ok(await page.locator('.chapter').count() > 0, `${route} renders chapters`);
             assert.ok(await page.locator('.chip').count() > 0, `${route} renders paragraph chips`);
@@ -962,9 +983,13 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
             assert.equal(await page.locator('#installation').evaluate(node => node.tagName), 'SECTION',
               'The installation fragment opens its own author-facing section');
             await expect(page.locator('#installation a[href="guides/installation.html"]')).toBeVisible();
-            await expect(page.locator('#guides a[href="demo/report.html"]')).toBeVisible();
-            await expect(page.locator('#guides a[href="guides/installation.html"]')).toHaveCount(1);
-            await expect(page.locator('#guides a[href="guides/first-look.html"]')).toHaveCount(1);
+            for (const destination of ['demo/report.html', 'guides/installation.html', 'guides/first-look.html']) {
+              await expect(page.locator(`#guides a[href="${destination}"]`)).toHaveCount(0);
+            }
+            await expect(page.locator('#guides > p a[href="guides/interpretation.html"]')).toBeVisible();
+            await expect(page.locator('#features blockquote')).toHaveText(demoQuote);
+            await expect(page.locator('#features a[href="demo/report.html#p-0"]')).toBeVisible();
+            await expect(page.locator('#features a[href="demo/report.html#matrix"]')).toBeVisible();
             const reference = page.locator('#guides details');
             await expect(reference).toHaveCount(1);
             assert.equal(await reference.evaluate(node => node.open), false,
@@ -1022,7 +1047,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
         await expect(page).toHaveURL('http://lixity.test/lixity/');
         await page.locator('.hero-cta a.primary[href="demo/report.html"]').click();
         assert.ok(page.url().endsWith('/demo/report.html'), 'The primary CTA opens the one demo directly');
-        await page.locator('.site-return a[href="../"]').click();
+        await page.locator('.site-header .brand, .site-return a[href="../"]').first().click();
         await expect(page).toHaveURL('http://lixity.test/lixity/');
         if (javaScriptEnabled) {
           await page.locator('#themeToggle').click();
@@ -1035,11 +1060,13 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
           await page.reload();
           await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
         }
-        await page.locator('nav a[href="interpretation.html"]').click();
+        await page.locator('.site-header .site-return a[href="../#guides"]').click();
+        await expect(page).toHaveURL('http://lixity.test/lixity/#guides');
+        await page.locator('#guides a[href="guides/interpretation.html"]').click();
         assert.ok(page.url().endsWith('/guides/interpretation.html'));
         if (javaScriptEnabled) {
           await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-          await page.locator('.site-return a[href="../"]').click();
+          await page.locator('.site-header .brand, .site-return a[href="../"]').first().click();
           await expect(page).toHaveURL('http://lixity.test/lixity/');
           await page.locator('#themeToggle').click();
           await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
@@ -1058,7 +1085,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
         await page.locator('.site-breadcrumbs a[href="index.html"]').click();
         await expect(page).toHaveURL('http://lixity.test/lixity/blog/index.html');
         await expect(page.locator('article h2 a').first()).toHaveAttribute('href', path.basename(articleURL.pathname));
-        await page.locator('.site-return a[href="../"]').click();
+        await page.locator('.site-header .brand, .site-return a[href="../"]').first().click();
         await expect(page).toHaveURL('http://lixity.test/lixity/');
       }
       if (colorScheme === 'light') await checkLegacyResearchURL(page, javaScriptEnabled);

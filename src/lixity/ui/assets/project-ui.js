@@ -788,77 +788,10 @@ window.LixityManuscriptLinks = {
 };
 
 
-// Highlight the analysis section currently in view in the sticky toolbar.
+// Analysis uses the same active-section presentation as accepted dossier renders.
 (function initAnalysisSections() {
-  var nav = document.getElementById("analysis-sections");
-  if (!nav) return;
-  var entries = [];
-  Array.prototype.forEach.call(nav.querySelectorAll("[data-section-link]"), function(link) {
-    var target = document.getElementById(link.getAttribute("data-section-link"));
-    if (target) entries.push({link: link, target: target});
-  });
-  if (entries.length < 2) return;
-  var current = null;
-  function activate(entry) {
-    if (entry === current) return;
-    current = entry;
-    entries.forEach(function(candidate) {
-      if (candidate === entry) candidate.link.setAttribute("aria-current", "true");
-      else candidate.link.removeAttribute("aria-current");
-    });
-  }
-  function closestSection() {
-    var visible = entries.filter(function(entry) { return entry.target.getClientRects().length > 0; });
-    if (!visible.length) return null;
-    var last = visible[visible.length - 1];
-    // The final section cannot always reach the marker before scrolling clamps.
-    if (Math.ceil(window.scrollY + window.innerHeight) >= document.documentElement.scrollHeight - 1 &&
-        last.target.getBoundingClientRect().top < window.innerHeight) return last;
-    var marker = window.scrollY + window.innerHeight * 0.3;
-    var best = visible[0];
-    visible.forEach(function(entry) {
-      if (entry.target.getBoundingClientRect().top + window.scrollY <= marker) best = entry;
-    });
-    return best;
-  }
-  var scheduled = false;
-  function update() {
-    scheduled = false;
-    activate(closestSection());
-  }
-  function schedule() {
-    if (scheduled) return;
-    scheduled = true;
-    window.requestAnimationFrame(update);
-  }
-  window.addEventListener("scroll", schedule, {passive: true});
-  window.addEventListener("resize", schedule, {passive: true});
-  document.addEventListener("toggle", schedule, true);
-  document.addEventListener("lixity:viewchange", schedule);
-  nav.addEventListener("click", function(event) {
-    var link = event.target && event.target.closest ? event.target.closest("[data-section-link]") : null;
-    if (!link) return;
-    entries.forEach(function(entry) { if (entry.link === link) activate(entry); });
-  });
-  nav.addEventListener("keydown", function(event) {
-    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
-    var focused = document.activeElement;
-    var idx = -1;
-    entries.forEach(function(entry, i) { if (entry.link === focused) idx = i; });
-    if (idx < 0) return;
-    var next = event.key === "ArrowRight" ? idx + 1 : idx - 1;
-    if (next < 0 || next >= entries.length) return;
-    event.preventDefault();
-    entries[next].link.click();
-    // Native fragment activation focuses the destination. Keep keyboard focus
-    // in this navigation so another arrow press can select the next section.
-    entries[next].link.focus({preventScroll: true});
-    var bounds = nav.getBoundingClientRect(), focusedBounds = entries[next].link.getBoundingClientRect();
-    // Reveal an overflowing link without undoing the vertical content jump.
-    if (focusedBounds.left < bounds.left) nav.scrollLeft += focusedBounds.left - bounds.left;
-    else if (focusedBounds.right > bounds.right) nav.scrollLeft += focusedBounds.right - bounds.right;
-  });
-  update();
+  if (window.LixitySectionNavigation) window.LixitySectionNavigation.mount(
+    document.getElementById("analysis-sections"), {host: document.getElementById("view-pane-analysis") || document.body, horizontal: true});
 })();
 
 // Share the desktop navigation toggle with companion reading. A temporary

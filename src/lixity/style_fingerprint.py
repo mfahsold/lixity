@@ -243,6 +243,7 @@ LAYER_PARAGRAPH_ATTR: dict[str, str] = {
     "nominal": "nominal_density",
     "passive": "passive_density",
 }
+PARAGRAPH_LAYER_Z_CUTOFF = 1.5
 
 # Dimensions to extract from the feature correlation matrix.
 N_DIMENSIONS = 3
@@ -1785,3 +1786,51 @@ def layer_stats(paragraphs: Sequence[Any], layer: str) -> dict[int, tuple[float,
         for idx, value in pairs:
             stats[idx] = (value, robust_z(value, centre, spread))
     return stats
+
+
+def paragraph_layer_projection(
+    paragraphs: Sequence[Any], layer: str, *, only_notable: bool = False
+) -> dict[str, Any]:
+    """Project one layer without changing its all-paragraph chapter reference.
+
+    Scores reuse ``layer_stats`` and round to the reader's two-decimal precision
+    before applying its descriptive cutoff. A measured zero remains a value;
+    absent comparisons have unknown scores and notability, including zero-MAD
+    chapters. Filtering selects output rows only after all scores are computed.
+    """
+    if layer not in LAYER_FEATURES:
+        raise ValueError(f"Unknown paragraph layer: {layer}")
+    feature = LAYER_FEATURES[layer]
+    unit = next(unit for field, _label, unit in FEATURES if field == feature)
+    stats = layer_stats(paragraphs, layer)
+    rows: list[dict[str, Any]] = []
+    for index, paragraph in enumerate(paragraphs):
+        value = getattr(paragraph, LAYER_PARAGRAPH_ATTR[layer], None)
+        if paragraph.words <= 0 or not isinstance(value, int | float):
+            value = None
+        z = round(stats[index][1], 2) if index in stats else None
+        rows.append({
+            "index": index, "chapter_num": paragraph.chapter_num,
+            "chapter_title": paragraph.chapter_title,
+            "start_line": paragraph.start_line, "end_line": paragraph.end_line,
+            "words": paragraph.words, "sentences": paragraph.sentences,
+            "value": value, "z": z, "comparable": z is not None,
+            "notable": abs(z) >= PARAGRAPH_LAYER_Z_CUTOFF if z is not None else None,
+        })
+    notable_count = sum(row["notable"] is True for row in rows)
+    selected = [row for row in rows if row["notable"] is True] if only_notable else rows
+    return {
+        "layer": layer, "feature": feature, "unit": unit,
+        "comparison": {
+            "reference_scope": "all_measurable_paragraphs_within_each_chapter",
+            "method": "median_mad_robust_z", "minimum_paragraphs": 3,
+            "requires_nonzero_mad": True, "z_decimals": 2,
+            "notable_abs_z": PARAGRAPH_LAYER_Z_CUTOFF,
+        },
+        "selection": {
+            "only_notable": only_notable, "total_count": len(rows),
+            "comparable_count": len(stats), "notable_count": notable_count,
+            "selected_count": len(selected),
+        },
+        "paragraphs": selected,
+    }

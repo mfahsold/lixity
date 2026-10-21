@@ -115,6 +115,13 @@ async function finish(page, errors, writes) {
           assert.equal(await page.locator('#matrix').isVisible(), true);
           assert.equal(await page.locator('#analysis-sections [aria-current=true]').getAttribute('data-section-link'),
             'matrix', 'The final chapter matrix remains current at the bottom of the page');
+          const alignment = await page.locator('#analysis-sections').evaluate(nav => {
+            const link = nav.querySelector('[aria-current=true]').getBoundingClientRect();
+            const dot = nav.querySelector('[data-section-indicator]').getBoundingClientRect();
+            return Math.max(Math.abs(dot.x + dot.width / 2 - (link.x + link.width / 2)),
+              Math.abs(dot.y + dot.height / 2 - (link.bottom - 2)));
+          });
+          assert.ok(alignment < 1, 'The measured indicator belongs to the current horizontal link');
           await page.evaluate(() => { document.getElementById('matrix').hidden = true; dispatchEvent(new Event('resize')); });
           await settle(page);
           assert.notEqual(await page.locator('#analysis-sections [aria-current=true]').getAttribute('data-section-link'),

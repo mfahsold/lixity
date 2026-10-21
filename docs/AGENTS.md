@@ -162,6 +162,31 @@ and [methods](METHODS.md) explain these changes. Current contracts include:
   `dialog_ratio` and chapter `dialog_pct` have different units. `clean_words`
   remains the legacy whitespace count. Punctuation keys are language-neutral.
 
+### 3.1.1 Opt-in paragraph layers
+
+**On current main (Unreleased):** `profile --layer KEY --json` has
+`meta.schema_version: "paragraph-layer/1"`. Default `profile`/`profile --json`
+keeps numeric schema 2; this is a separate opt-in projection, not a replacement.
+`about().commands` exposes the profile command's additive `layer_projection`
+descriptor while retaining its existing default output/schema keys.
+
+The body contains `layer`, canonical fingerprint `feature`, canonical English
+`unit`, `comparison`, `selection` and `paragraphs`. Choices are the seven existing
+paragraph layers: `asl|function|dialogue|filter|modal|nominal|passive`.
+`comparison` identifies `median_mad_robust_z`, all measurable paragraphs within
+each chapter, a minimum of 3, nonzero MAD, `z_decimals: 2` and `notable_abs_z: 1.5`.
+Scores reuse `layer_stats`; notability uses the rounded z, matching the browser.
+
+Each row retains its full-profile zero-based `index`, chapter number/title,
+source line span, words/sentences, raw `value`, rounded `z`, `comparable` and
+`notable`. Unknown comparison means `z: null` and `notable: null`; measured zero
+remains numeric zero. No prose or exact lexical spans are supplied.
+`selection` separates full `total_count`, `comparable_count`, `notable_count`
+from `selected_count` and `only_notable`. `--only-notable` requires `--layer` and
+selects rows after full references/counts are computed, without renumbering.
+Without `--json`, the selected-layer CLI prints a source-anchored human report.
+Chapter/FDR thresholds are different policies and are not changed by this view.
+
 ### 3.2 `style --json` (style reference, schema_version 4)
 
 Integer `measured_cells` reports the number of chapter–feature cells
@@ -256,6 +281,9 @@ capability/context guards below. Selection drafts save nothing by themselves.
 | `[data-context-tool="analysis"]` / `[data-context-tool="dossier"]` / `[data-context-tool="research"]` | explicitly select one active context tool; current main adds requested Saved research. Closing the tool does not itself hide all analysis |
 | `#workbench-thread` / `#workbench-return` | context-checked return to the original passage; on current main, a nearest dossier departure retains its saved version/position and an earlier passage return. The same control remains visible on narrow screens; replaced roots or changed project/source/research context invalidate it |
 | `#reader-settings .reader-shortcuts` | current main: visible localized reference to implemented passage-menu, search and close keys |
+| `#style-layer` / `#layer-clear` | current main: select/clear one paragraph metric; the Analysis mode controls its prose paint and hints, while the existing local Values remains independent |
+| `#analysis-scope-register` / `#analysis-scope-pov` | current main: optional author-declared groups filter only heatmap rows; the full-book reference and numerical outputs stay unchanged |
+| `[data-section-nav]` / `[data-section-link]` | current main: shared active-heading presentation over real targets; dossier IDs are local to an accepted rendering, not durable record references |
 | `[data-help]` / `#lixity-tooltip` | supplemental action/measurement explanation on hover or focus; inspect visible control names/states for operation, not tooltip visibility. Help does not authorize a write or retention |
 | `#project-actions > summary` | open or close Project actions before using its existing New/Open, guidance and PDF controls; loaded workspaces start collapsed, empty workspaces expanded |
 | `.reader-structural[data-start][data-end]` | readable source structure without a paragraph profile; inclusive source lines are presentation anchors, not a new research-anchor format |

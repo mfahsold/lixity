@@ -214,6 +214,16 @@ function showResearchTab(tabBtn) {
 }
 
 document.addEventListener("click", async function (event) {
+  var comparisonClose = event.target.closest("[data-decision-review-close]");
+  if (comparisonClose) {
+    collapseDisclosure(comparisonClose.closest("[data-decision-review]"));
+    return;
+  }
+  var comparisonRetry = event.target.closest("[data-decision-review-retry]");
+  if (comparisonRetry) {
+    loadResearchDecisionComparison(comparisonRetry.closest("[data-decision-review]"));
+    return;
+  }
   var ackButton = event.target.closest("[data-decision-ack-status]");
   if (ackButton) {
     var pair = ackButton.closest(".research-decision-acknowledgement");
@@ -223,6 +233,13 @@ document.addEventListener("click", async function (event) {
       expected_decision_revision: Number(pair.dataset.decisionAckDecisionRevision),
       expected_dossier_revision: Number(pair.dataset.decisionAckDossierRevision), status: ackButton.dataset.decisionAckStatus};
     var feedback = pair.querySelector("[data-decision-ack-feedback]");
+    var acknowledgementContext = {projectId: pair.dataset.decisionAckProject || null, token: pair.dataset.decisionAckToken};
+    if (!acceptResearchContext(acknowledgementContext, {})) {
+      feedback.textContent = uiLabel("research_decision_ack_conflict");
+      feedback.className = "ctl-status err";
+      feedback.hidden = false;
+      return;
+    }
     var restoreFocus = document.activeElement === ackButton;
     var updatedPair;
     function movedFocus(event) {
@@ -243,7 +260,14 @@ document.addEventListener("click", async function (event) {
     ackButton.setAttribute("aria-busy", "true");
     feedback.hidden = true;
     var acknowledged = await researchApiPost("research-decision-acknowledge", payload);
-    if (!pair.isConnected) { researchAcknowledgementPending = false; stopTrackingFocus(); return; }
+    if (!pair.isConnected || !acceptResearchContext(acknowledgementContext, acknowledged)) {
+      researchAcknowledgementPending = false;
+      delete pair.dataset.decisionAckPending;
+      ackButton.disabled = false;
+      ackButton.removeAttribute("aria-busy");
+      stopTrackingFocus();
+      return;
+    }
     delete pair.dataset.decisionAckPending;
     if (!acknowledged.ok) {
       ackButton.disabled = false;
@@ -262,6 +286,7 @@ document.addEventListener("click", async function (event) {
       decisionRevision: payload.expected_decision_revision, dossierId: payload.dossier_id,
       dossierRevision: payload.expected_dossier_revision, snapshot: acknowledged.snapshot,
       acknowledgement: {current: true, status: acknowledged.status}});
+    advanceResearchDecisionComparisons(payload, acknowledged);
     document.querySelectorAll(".research-decision-acknowledgement").forEach(function(displayed) {
       if (displayed.dataset.decisionAckSnapshot !== payload.expected_snapshot) return;
       displayed.dataset.decisionAckSnapshot = acknowledged.snapshot;
@@ -288,8 +313,20 @@ document.addEventListener("click", async function (event) {
   if (impactButton) {
     if (impactButton.parentElement.open) return;
     var impactHost = impactButton.parentElement.querySelector(".research-details-body");
+    var impactContext = researchReadContext();
+    var impactRequest = impactHost._decisionImpactRequest = (impactHost._decisionImpactRequest || 0) + 1;
     impactHost.textContent = uiLabel("research_loading");
     var impact = await researchApiGet("research/decision-impact?id=" + encodeURIComponent(impactButton.dataset.decisionImpact));
+    if (!impactHost.isConnected || impactRequest !== impactHost._decisionImpactRequest || !impactButton.parentElement.open) return;
+    if (!acceptResearchContext(impactContext, impact)) {
+      impactHost.textContent = uiLabel("research_decision_ack_conflict");
+      return;
+    }
+    if (impact.ok && (impact.schema_version !== "research-decision-impact-local/1" || !impact.snapshot ||
+        !impact.decision || impact.decision.id !== impactButton.dataset.decisionImpact || !Array.isArray(impact.dossiers))) {
+      impactHost.textContent = uiLabel("research_status_unavailable");
+      return;
+    }
     impactHost.innerHTML = impact.ok ?
       '<p class="ctl-note">' + escapeHtml(uiLabel("research_editorial_decision_date")) + ': ' + researchEditorialTime(impact.decision.created_at) + '</p>' +
       (impact.unlinked ? '<p>' + escapeHtml(uiLabel("research_editorial_no_linked_dossier")) + '</p>' : impact.dossiers.map(function(dossier) {
@@ -947,6 +984,16 @@ function highlightSearchTerms(text, query) {
     return;
   }
 });
+
+document.addEventListener("toggle", function(event) {
+  var disclosure = event.target;
+  if (!disclosure.matches("[data-decision-review]")) return;
+  if (disclosure.open) loadResearchDecisionComparison(disclosure);
+  else {
+    ++disclosure._decisionReviewRequest;
+    disclosure._decisionReviewPending = false;
+  }
+}, true);
 
 function researchEvidencePanelHtml(evData, claimId) {
   var links = evData.evidence_links;

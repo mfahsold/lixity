@@ -84,13 +84,16 @@
 </head>
 <body id="top" tabindex="-1" class="site-page">
 <a class="skip-link" href="#content">Skip to guide</a>
-<nav class="site-return" aria-label="Lixity navigation"><a href="../">Home</a><a href="../#guides" aria-current="location">Guides</a><a href="../blog/index.html">Articles</a><a href="../demo/report.html">Demo</a></nav>
+<header class="site-header"><div class="header-inner">
+<a class="brand" href="../"><span class="brand-name">Lixity</span></a>
+<nav class="site-return" aria-label="Lixity navigation"><a href="../#guides">Guides</a><a href="installation.html">Install</a></nav>
+<button class="ctl theme-btn" id="themeToggle" type="button" hidden>Theme: system</button>
+</div></header>
 <main class="guide" id="content">
 <nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="../#guides">Guides</a></li><li><span aria-current="page">Interpret results</span></li></ol></nav>
 <h1>Understand manuscript metrics and style consistency</h1>
 <p>Lixity describes patterns in the manuscript you provide. Its style reference compares chapters with that manuscript's own baseline. A signal is a reason to inspect a passage in context; it is not an objective quality score or an instruction to rewrite it.</p>
 <p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-10-19">19 October 2026</time></p>
-<nav class="guide-nav" aria-label="Guides"><a href="first-look.html">First look</a><a href="installation.html">Installation</a><a href="interpretation.html" aria-current="page">Interpret results</a><a href="manuscript-analysis-tools.html">Compare tools</a><a href="research-pdf.html">Sources and PDF/OCR</a></nav>
 
 <h2 id="consistency">What does consistency measure?</h2>
 <p>Consistency is the proportion of measured chapter–feature cells whose noise-adjusted deviation stays below the active mild threshold. A cell is one feature in one chapter, such as sentence length in chapter two. This is not simply the percentage of chapters that pass a test.</p>
@@ -220,7 +223,7 @@
 <h2 id="languages">Are the seven languages equally accurate?</h2>
 <p>The interface and language profiles cover English, German, French, Spanish, Italian, Portuguese and Dutch. English and German have the deepest linguistic heuristics. Complete translations of interface text do not establish equal linguistic accuracy. Mathematical identifiers stay language-neutral; quotations retain their original language.</p>
 <p>Read the <a href="https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md">estimator definitions and scientific references</a>, <a href="https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md">stability and limitations</a>, and <a href="https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md">JSON contracts</a>. For a first run, follow the <a href="first-look.html">Warehouse 4 project walkthrough</a>.</p>
-<footer><a href="../#guides">All guides</a> · <a href="../">Lixity home</a> · <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">License and commercial use</a> · <a href="../#impressum">Legal notice</a></footer>
+<footer class="site-footer"><nav aria-label="Project resources"><a href="../#guides">All guides</a><a href="../blog/index.html">Articles</a><a href="https://github.com/mfahsold/lixity">Source code</a><a href="../LICENSING.md">License</a><a href="../#website-measurement">Website measurement</a><a href="../#impressum">Legal notice</a></nav></footer>
 </main>
 <a class="site-back-top" href="#top">Back to top ↑</a>
 </body>

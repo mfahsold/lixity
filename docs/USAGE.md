@@ -348,6 +348,30 @@ Its cutoff-hit counts differ from FDR decisions; the bands are neither
 confidence intervals nor external editorial targets. Paragraph style layers
 show measured values and flag unusual values relative to the chapter.
 
+**On current main (Unreleased):** with **Analysis On**, select one metric in
+**Deviations**. A transparent background and up/down arrow on a notable paragraph
+refer to that chapter's median/MAD, not literary quality. The paragraph button
+explains its raw value, unit, source lines and local z; choose **Values** for the
+measurements. **Next deviation** opens the paragraph, and **Clear metric** removes
+only this metric. Analysis Off hides the paint and related hints while retaining
+your choice. Native text selection, search and saved research marks remain separate.
+
+The strip's colour and notable membership now use the same within-chapter
+comparison. The scale is fixed at z = −2.5 … +2.5; paragraph notability uses
+`abs(round(z, 2)) >= 1.5`. This is separate from chapter cutoffs and FDR.
+At least three measurable paragraphs and nonzero MAD are required. The legend
+reports comparable coverage and distinguishes no comparison from zero notable
+paragraphs; raw paragraph values remain available in both cases.
+
+In the **Style fingerprint** table, declared chapter registers and declared POV
+can filter the visible rows. The choices combine with FDR-only. The visible
+status states that the reference remains the full manuscript: no baseline,
+score, global count, register target or style dimension is recalculated. Only
+this table is filtered. **About this comparison** explains scope and register
+exemptions; **Clear chapter filters** restores all rows. Name mentions are not
+POV declarations. Following an exact hidden row anchor clears the display filters
+before the existing jump. A separate within-voice reference is not implemented.
+
 ### Style-space navigation
 
 In **Style dimensions**, drag to rotate, use the wheel or labeled buttons to
@@ -428,6 +452,28 @@ Densities are counts per 1,000 words, not percentages; short paragraphs can have
 large values from few matches. Nominalization suffix cues exclude curated
 function words unless a project regex override is supplied. They remain
 heuristics rather than a grammatical parse.
+
+**On current main (Unreleased):** inspect the same selected paragraph metric
+from the terminal, without printing manuscript prose:
+
+```bash
+lixity profile manuscript.md --layer asl
+lixity profile --layer filter --only-notable
+lixity profile --layer filter --only-notable --json
+```
+
+Choices are `asl`, `function`, `dialogue`, `filter`, `modal`, `nominal` and
+`passive`. Human output lists source-file/line anchors, raw values/units and local
+z. `--only-notable` filters output after computing all chapter references; it
+requires `--layer`. The summary keeps full profiled/comparable/notable counts
+separate from rows shown. Configured manuscript omission follows the existing
+[project resolver](#default-manuscript). Without `--layer`, profile retains its
+existing JSON v2 output, including when `--json` is omitted.
+
+With `--layer --json`, the opt-in envelope is `paragraph-layer/1`; unavailable
+comparisons have `z: null` and `notable: null`, while measured zero remains zero.
+Densities remain word-pattern counts per 1,000 words, not exact token spans or a
+grammatical interpretation. See [the contract](AGENTS.md#311-opt-in-paragraph-layers).
 
 ### `lixity dialogue`
 

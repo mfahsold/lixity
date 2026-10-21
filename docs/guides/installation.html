@@ -84,13 +84,16 @@
 </head>
 <body id="top" tabindex="-1" class="site-page">
 <a class="skip-link" href="#content">Skip to guide</a>
-<nav class="site-return" aria-label="Lixity navigation"><a href="../">Home</a><a href="../#guides" aria-current="location">Guides</a><a href="../blog/index.html">Articles</a><a href="../demo/report.html">Demo</a></nav>
+<header class="site-header"><div class="header-inner">
+<a class="brand" href="../"><span class="brand-name">Lixity</span></a>
+<nav class="site-return" aria-label="Lixity navigation"><a href="../#guides">Guides</a><a href="installation.html" aria-current="page">Install</a></nav>
+<button class="ctl theme-btn" id="themeToggle" type="button" hidden>Theme: system</button>
+</div></header>
 <main class="guide" id="content">
 <nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="../#guides">Guides</a></li><li><span aria-current="page">Installation</span></li></ol></nav>
 <h1>Install Lixity and open a manuscript locally</h1>
 <p>Explore sentence rhythm, vocabulary and style patterns in your Markdown manuscript. Lixity runs its analysis on your computer and saves a dashboard you can open in a browser. No account or manuscript upload is required.</p>
 <p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-10-20">20 October 2026</time></p>
-<nav class="guide-nav" aria-label="Guides"><a href="first-look.html">First look</a><a href="installation.html" aria-current="page">Installation</a><a href="interpretation.html">Interpret results</a><a href="manuscript-analysis-tools.html">Compare tools</a><a href="research-pdf.html">Sources and PDF/OCR</a></nav>
 
 <h2 id="requirements">What do I need?</h2>
 <p>Install <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a>. It installs the published package and supplies managed Python 3.12; no Git or separate Python install is needed. Lixity is on <a href="https://pypi.org/project/lixity/">PyPI</a>; every release also ships a pinned wheel with checksums on <a href="https://github.com/mfahsold/lixity/releases">GitHub Releases</a>, and released versions are archived on Zenodo for citation (concept DOI <a href="https://doi.org/10.5281/zenodo.23390297">10.5281/zenodo.23390297</a>). Installation needs an internet connection. Analysis runs offline afterward. PDF import has <a href="research-pdf.html#ocr">additional requirements</a>.</p>
@@ -171,7 +174,7 @@ lixity service restart --open</code></pre>
 <h2 id="python-api">Using the Python API?</h2>
 <p>Install Lixity in your Python project's own environment. The isolated command-line installation does not make <code>import lixity</code> available to other Python programs. See the <a href="../INSTALLATION.md#python-api-project-environment">Python setup commands</a>.</p>
 <p>Continue with the <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md">full installation reference</a>, <a href="https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md">shared pipeline architecture</a>, or <a href="research-pdf.html">research source workflow</a>.</p>
-<footer><a href="../#guides">All guides</a> · <a href="../">Lixity home</a> · <a href="https://github.com/mfahsold/lixity/issues">Report a reproducible issue</a> · <a href="../#impressum">Legal notice</a></footer>
+<footer class="site-footer"><nav aria-label="Project resources"><a href="../#guides">All guides</a><a href="../blog/index.html">Articles</a><a href="https://github.com/mfahsold/lixity">Source code</a><a href="../LICENSING.md">License</a><a href="../#website-measurement">Website measurement</a><a href="../#impressum">Legal notice</a></nav></footer>
 </main>
 <a class="site-back-top" href="#top">Back to top ↑</a>
 </body>

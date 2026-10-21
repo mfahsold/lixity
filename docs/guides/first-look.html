@@ -85,13 +85,16 @@
 </head>
 <body id="top" tabindex="-1" class="site-page">
 <a class="skip-link" href="#content">Skip to guide</a>
-<nav class="site-return" aria-label="Lixity navigation"><a href="../">Home</a><a href="../#guides" aria-current="location">Guides</a><a href="../blog/index.html">Articles</a><a href="../demo/report.html">Demo</a></nav>
+<header class="site-header"><div class="header-inner">
+<a class="brand" href="../"><span class="brand-name">Lixity</span></a>
+<nav class="site-return" aria-label="Lixity navigation"><a href="../#guides">Guides</a><a href="installation.html">Install</a></nav>
+<button class="ctl theme-btn" id="themeToggle" type="button" hidden>Theme: system</button>
+</div></header>
 <main class="guide" id="content">
 <nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="../#guides">Guides</a></li><li><span aria-current="page">First look</span></li></ol></nav>
 <h1>A three-minute first look</h1>
 <p>Read one manuscript, inspect a passage, follow its research and choose a PDF copy. The same manuscript and records appear throughout this short walkthrough.</p>
 <p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-10-21">21 October 2026</time></p>
-<nav class="guide-nav" aria-label="Guides"><a href="first-look.html" aria-current="page">First look</a><a href="installation.html">Installation</a><a href="interpretation.html">Interpret results</a><a href="manuscript-analysis-tools.html">Compare tools</a><a href="research-pdf.html">Sources and PDF/OCR</a></nav>
 
 <h2 id="example">1. Open the example and read a chapter</h2>
 <p><a class="ctl primary" href="../demo/report.html">Open the demo project</a></p>
@@ -111,11 +114,18 @@
 <p>Ask what changed: the kind of scene, what the character is doing, or how the sentences are arranged. These short chapters demonstrate a workflow; their numbers are not a quality verdict. <a href="interpretation.html">Interpretation</a> explains the signals. <a href="../USAGE.md#reading-paragraphs">Reader controls and coverage</a> covers text size, focus, keyboard access and supported formatting.</p>
 
 <h2 id="decision">3. Follow a quotation into research</h2>
-<p>Open <a href="../demo/report.html#research-manager"><strong>Research → Dossiers</strong></a> and <strong>View details</strong> on <strong>Warehouse 4 case notes</strong>. Inspect its historical images or choose <strong>Dossier alongside</strong> to keep it beside the manuscript.</p>
-<p><strong>In the development demo:</strong> return to the opening manuscript passage and choose <strong>… → Saved research</strong>, or its saved-association count. The right context shows the saved claim and dossier versions while the text stays visible. Open a title to read that version and its sources; close the viewer and use <strong>Back to passage</strong> to resume reading. On narrow screens the context sits above the text and can be closed with its close button or Escape.</p>
-<p>In <strong>Review</strong>, follow the saved quotation, “Someone had tried the eastern gate of Warehouse 4.” <strong>Go to manuscript passage</strong> returns to exactly matched text; <strong>Open claim</strong> shows its pinned claim and cited sources. When you follow a connection from a manuscript paragraph, close the record viewer and use <strong>Back to passage</strong> to return there.</p>
-<p>On current main, opening saved associations from an open dossier offers <strong>Back to dossier</strong>. It restores that dossier’s saved version and reading position. The return stays available on narrow screens. In the manuscript, <strong>Reading settings → Keyboard shortcuts</strong> explains the passage-menu, search and close keys; key actions also explain their purpose when focused or hovered.</p>
-<p>The retained passage, authored claim and manuscript quote are separate records. People, events and journeys are fictional; historical images do not verify them. Maps use OpenStreetMap and send the viewed area and client IP to its tile provider. Turn off the background or choose the sketch for offline use. <a href="research-pdf.html">Research workflows</a> explains explicit retention and saving in the local app.</p>
+<blockquote>Someone had tried the eastern gate of Warehouse 4.</blockquote>
+<p><strong>In the development demo:</strong> this opening quotation has an explicitly saved association. Follow it from the manuscript:</p>
+<ol>
+<li>At the opening paragraph, choose <strong>… → Saved research</strong>. The right context shows the saved claim and dossier versions while the text stays visible.</li>
+<li>Open the claim title to read that version and its retained sources. A retained source and an authored claim are separate records; the association does not establish factual truth.</li>
+<li>Close the viewer and use <strong>Back to passage</strong> to resume reading. On narrow screens the context sits above the text; its close button or Escape returns to the paragraph.</li>
+</ol>
+<details><summary>Explore dossiers and review</summary>
+<p>In <a href="../demo/report.html#research-manager"><strong>Research → Dossiers</strong></a>, open <strong>Warehouse 4 case notes</strong>. Its <strong>Sections</strong> list follows the actual headings; close and reopen it as needed. Choose <strong>Dossier alongside</strong> to keep the dossier beside the manuscript.</p>
+<p>From an open dossier, <strong>Back to dossier</strong> restores its saved version and reading position after you follow a connection. <strong>Review</strong> also lists the saved quotation; <strong>Go to manuscript passage</strong> follows its exact text match. <a href="../USAGE.md#reading-paragraphs">Reader guidance</a> covers controls and keyboard shortcuts.</p>
+<p>People, events and journeys are fictional. The historical images do not verify them. Maps use OpenStreetMap and send the viewed area and client IP to its tile provider; turn off the background or choose the sketch for offline use. <a href="research-pdf.html">Sources and PDF copies</a> explains retention and saving in the local app.</p>
+</details>
 
 <h2 id="exports">4. Choose a PDF copy</h2>
 <p>Compare the same manuscript as an <a href="../demo/warehouse-4-editor.pdf">editorial copy</a>, <a href="../demo/warehouse-4-book.pdf">reading copy</a>, <a href="../demo/warehouse-4-sheet.pdf">submission sheets</a> or <a href="../demo/warehouse-4-report.pdf">analysis report</a>. The <a href="research-pdf.html#manuscript-export">PDF guide</a> explains their purposes and limits.</p>
@@ -124,7 +134,7 @@
 <p><a href="installation.html">Install the local app</a>, then open your project or preview a manuscript import. Analysis runs on your computer. JavaScript enables the demo's interactive controls; manuscript text, tables, credits and PDF links remain readable without it.</p>
 <p>Lixity is open source under AGPL-3.0-or-later. Writing and self-publishing need no extra permission; a separate written commercial license exists for closed-source integrations. See <a href="../LICENSING.md">licensing</a>.</p>
 <p id="maker">Matthias Fahsold developed Lixity at ROST Services GmbH and used it while writing his debut novel. This walkthrough uses entirely invented manuscript text.</p>
-<footer><a href="../#guides">All guides</a> · <a href="../">Lixity home</a> · <a href="../demo/report.html">Warehouse 4 demo</a> · <a href="../#impressum">Legal notice</a></footer>
+<footer class="site-footer"><nav aria-label="Project resources"><a href="../#guides">All guides</a><a href="../blog/index.html">Articles</a><a href="https://github.com/mfahsold/lixity">Source code</a><a href="../LICENSING.md">License</a><a href="../#website-measurement">Website measurement</a><a href="../#impressum">Legal notice</a></nav></footer>
 </main>
 <a class="site-back-top" href="#top">Back to top ↑</a>
 </body>

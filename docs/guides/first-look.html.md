@@ -24,15 +24,23 @@ Ask what changed: the kind of scene, what the character is doing, or how the sen
 
 ## 3. Follow a quotation into research
 
-Open [**Research → Dossiers**](../demo/report.html#research-manager) and **View details** on **Warehouse 4 case notes**. Inspect its historical images or choose **Dossier alongside** to keep it beside the manuscript.
+Someone had tried the eastern gate of Warehouse 4.
 
-**In the development demo:** return to the opening manuscript passage and choose **… → Saved research**, or its saved-association count. The right context shows the saved claim and dossier versions while the text stays visible. Open a title to read that version and its sources; close the viewer and use **Back to passage** to resume reading. On narrow screens the context sits above the text and can be closed with its close button or Escape.
+**In the development demo:** this opening quotation has an explicitly saved association. Follow it from the manuscript:
 
-In **Review**, follow the saved quotation, “Someone had tried the eastern gate of Warehouse 4.” **Go to manuscript passage** returns to exactly matched text; **Open claim** shows its pinned claim and cited sources. When you follow a connection from a manuscript paragraph, close the record viewer and use **Back to passage** to return there.
+1. At the opening paragraph, choose **… → Saved research**. The right context shows the saved claim and dossier versions while the text stays visible.
 
-On current main, opening saved associations from an open dossier offers **Back to dossier**. It restores that dossier’s saved version and reading position. The return stays available on narrow screens. In the manuscript, **Reading settings → Keyboard shortcuts** explains the passage-menu, search and close keys; key actions also explain their purpose when focused or hovered.
+2. Open the claim title to read that version and its retained sources. A retained source and an authored claim are separate records; the association does not establish factual truth.
 
-The retained passage, authored claim and manuscript quote are separate records. People, events and journeys are fictional; historical images do not verify them. Maps use OpenStreetMap and send the viewed area and client IP to its tile provider. Turn off the background or choose the sketch for offline use. [Research workflows](research-pdf.html) explains explicit retention and saving in the local app.
+3. Close the viewer and use **Back to passage** to resume reading. On narrow screens the context sits above the text; its close button or Escape returns to the paragraph.
+
+**Explore dossiers and review**
+
+In [**Research → Dossiers**](../demo/report.html#research-manager), open **Warehouse 4 case notes**. Its **Sections** list follows the actual headings; close and reopen it as needed. Choose **Dossier alongside** to keep the dossier beside the manuscript.
+
+From an open dossier, **Back to dossier** restores its saved version and reading position after you follow a connection. **Review** also lists the saved quotation; **Go to manuscript passage** follows its exact text match. [Reader guidance](../USAGE.md#reading-paragraphs) covers controls and keyboard shortcuts.
+
+People, events and journeys are fictional. The historical images do not verify them. Maps use OpenStreetMap and send the viewed area and client IP to its tile provider; turn off the background or choose the sketch for offline use. [Sources and PDF copies](research-pdf.html) explains retention and saving in the local app.
 
 ## 4. Choose a PDF copy
 
@@ -46,4 +54,4 @@ Lixity is open source under AGPL-3.0-or-later. Writing and self-publishing need 
 
 Matthias Fahsold developed Lixity at ROST Services GmbH and used it while writing his debut novel. This walkthrough uses entirely invented manuscript text.
 
-[All guides](../#guides) · [Lixity home](../) · [Warehouse 4 demo](../demo/report.html) · [Legal notice](../#impressum)
+[All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](../LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

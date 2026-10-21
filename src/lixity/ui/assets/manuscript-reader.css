@@ -208,6 +208,25 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 .manuscript-reading.workbench-analysis:not(.workbench-overview) .layer-legend:not([hidden]),
 .manuscript-reading.workbench-analysis:not(.workbench-overview) .toolbar > .legend,
 .manuscript-reading.workbench-analysis:not(.workbench-overview) .toolbar > #paragraph-filter-reset { display: flex !important; }
+.manuscript-reading.workbench-analysis .toolbar > .metric-layer-control { display: flex !important; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+
+/* One selected measurement paints the page beneath fully opaque prose.
+   The wash marks membership, while arrows and Values carry the meaning. */
+.manuscript-reading.workbench-analysis:not(.workbench-overview).layer-on .ptext.metric-notable {
+  --paragraph-layer-wash: color-mix(in srgb, var(--paragraph-layer-color) 14%, transparent);
+  background: var(--paragraph-layer-wash); border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 .4rem var(--paragraph-layer-wash);
+}
+.manuscript-reading.workbench-analysis.layer-on .reader-paragraph-actions[data-layer-symbol] { opacity: 1; color: var(--fg); }
+.manuscript-reading.workbench-analysis.layer-on .reader-paragraph-actions[data-layer-symbol]::before {
+  content: attr(data-layer-symbol); font-size: var(--text-small); margin-inline-end: .15rem;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .manuscript-reading .ptext { transition: background-color 160ms var(--ease), box-shadow 160ms var(--ease); }
+}
+@media (forced-colors: active) {
+  .manuscript-reading.workbench-analysis:not(.workbench-overview).layer-on .ptext.metric-notable { outline: 1px dotted CanvasText; outline-offset: .4rem; box-shadow: none; }
+}
 
 .workbench-surface-label { font-size: var(--text-control); color: var(--accent); padding: .4rem .6rem; border-left: 3px solid var(--accent); }
 .workbench-overview .reader-settings, .workbench-overview #reader-focus, .workbench-overview .reader-chapter { display: none; }

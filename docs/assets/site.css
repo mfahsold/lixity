@@ -88,7 +88,6 @@ section[id], article[id] { scroll-margin-top: 4rem; }
 }
 .header-inner { max-width: 76rem; margin: auto; display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1.4rem; }
 .brand { display: flex; align-items: center; gap: .6rem; color: var(--fg-heading); text-decoration: none; }
-.brand-logo { width: 2rem; height: 2rem; display: grid; place-items: center; background: var(--action-bg); color: var(--on-action); border-radius: var(--radius-sm); font-family: var(--font-title); font-size: 1.4rem; }
 .brand-name { font-size: 1.25rem; font-weight: var(--weight-strong); }
 .brand-badge { padding: .12rem .5rem; border: 1px solid var(--line); border-radius: var(--radius-pill); color: var(--muted); font-size: var(--text-micro); }
 .header-inner .site-return { flex: 1; margin: 0; padding: 0; }
@@ -111,7 +110,7 @@ main { max-width: 76rem; margin: auto; padding: 0 1.5rem 3rem; }
 .hero-title { margin: 0 0 1.2rem; font-size: clamp(2.4rem, 4.6vw, 3.6rem); letter-spacing: -.025em; line-height: 1.06; }
 .hero-sub { font-size: clamp(1.1rem, 1.8vw, 1.35rem); line-height: 1.5; color: var(--fg); }
 .hero-copy > p { max-width: 62ch; }
-.hero-cta { display: flex; flex-wrap: wrap; gap: .8rem; margin: 1.7rem 0 1.1rem; }
+.hero-cta { display: flex; flex-wrap: wrap; align-items: center; gap: .8rem; margin: 1.7rem 0 1.1rem; }
 .release-note { color: var(--muted); font-size: var(--text-control); }
 .release-note { margin-top: 1.2rem; }
 
@@ -124,6 +123,8 @@ main { max-width: 76rem; margin: auto; padding: 0 1.5rem 3rem; }
   box-shadow: var(--shadow-lift);
   overflow: hidden;
 }
+.hero .frame { max-width: 40rem; justify-self: center; }
+.hero .frame-window img { display: block; width: auto; max-width: 100%; max-height: 22rem; margin-inline: auto; }
 .frame figcaption { padding: .7rem .2rem 0; color: var(--muted); font-size: var(--text-small); }
 
 .showcase .hero-title { font-size: clamp(2.2rem, 4vw, 3.2rem); }
@@ -131,6 +132,7 @@ main { max-width: 76rem; margin: auto; padding: 0 1.5rem 3rem; }
 .workflow-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2rem; }
 .workflow-list h3 { margin: .5rem 0; }
 .workflow-list p { max-width: 45ch; }
+.workflow-list blockquote { margin: .75rem 0; padding-inline-start: var(--space-3); border-inline-start: 2px solid var(--line-strong); font-family: var(--font-title); font-size: 1.15rem; line-height: var(--line-reading); }
 .resource-list > p { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: 1rem; }
 .showcase footer details { padding: .75rem 0; }
 .showcase footer summary { min-height: 2.75rem; align-content: center; }

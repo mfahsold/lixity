@@ -7,20 +7,19 @@
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
-Lixity helps you explore rhythm, repeated words and dialogue in your manuscript,
-then return to the passages behind the numbers. Try the example in your browser
-before installing it for your own writing.
+Lixity is a local workbench for authors. Explore language patterns and keep
+sources, claims and notes beside your manuscript. Try an invented example in
+your browser before installing the app for your own writing.
 
 [Open the example manuscript](https://mfahsold.github.io/lixity/demo/report.html) ·
 [Take the short tour](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Install Lixity](https://mfahsold.github.io/lixity/guides/installation.html)
 
-<a href="https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png"><img src="https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png" width="640" alt="Lixity manuscript reader with continuous prose, chapter navigation and contextual tools"/></a>
+<a href="https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png"><img src="https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png" width="560" alt="Lixity manuscript reader with continuous prose, chapter navigation and contextual tools"/></a>
 
-The read-only demo opens *The Crate at Warehouse 4*, with six invented English
-chapters and credited research images, without an account or upload. Follow the
-[three-minute walkthrough](https://mfahsold.github.io/lixity/guides/first-look.html)
-or browse [more views and image credits](https://mfahsold.github.io/lixity/screenshots/README.md).
+The read-only example uses six invented English chapters and credited research
+images. It needs no account or upload and cannot import, edit or save.
+[More views and image credits](https://mfahsold.github.io/lixity/screenshots/README.md).
 
 <a id="start-here"></a>
 
@@ -69,6 +68,12 @@ does not update an already running service.
 The workspace keeps the short **Manuscript**, **Research** and **Project** view
 names. The browser app, CLI and Python API share one analysis pipeline;
 `lixity --help` and `lixity about --json` describe installed capabilities.
+
+On current main, selected paragraph metrics have transparent emphasis and
+source-anchored CLI output (`lixity profile --layer asl`). Dossier headings and
+exact decision/dossier review stay within the existing navigation; declared
+register/POV filters change the style table’s display while retaining its book
+reference. These additions are Unreleased; see the [usage guide](https://mfahsold.github.io/lixity/USAGE.md).
 
 On current main, CLI workflows can reuse the project's configured manuscript;
 [default manuscript guidance](https://mfahsold.github.io/lixity/USAGE.md#default-manuscript)

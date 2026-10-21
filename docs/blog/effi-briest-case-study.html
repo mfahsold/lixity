@@ -58,7 +58,11 @@
 </head>
 <body id="top" tabindex="-1" class="site-page">
 <a class="skip-link" href="#content">Skip to article</a>
-<nav class="site-return" aria-label="Lixity navigation"><a href="../">Home</a><a href="../#guides">Guides</a><a href="index.html" aria-current="location">Articles</a><a href="../demo/report.html">Demo</a></nav>
+<header class="site-header"><div class="header-inner">
+<a class="brand" href="../"><span class="brand-name">Lixity</span></a>
+<nav class="site-return" aria-label="Lixity navigation"><a href="../#guides">Guides</a><a href="../guides/installation.html">Install</a></nav>
+<button class="ctl theme-btn" id="themeToggle" type="button" hidden>Theme: system</button>
+</div></header>
 <main class="guide" id="content">
 <nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="index.html">Articles</a></li><li><span aria-current="page">Effi Briest case study</span></li></ol></nav>
 <h1>A reference corridor from <em>Effi Briest</em>: measuring a draft against its own model</h1>
@@ -92,7 +96,7 @@ lixity style manuscript.md --json</code></pre>
 
 <h2 id="limits">What it does not say</h2>
 <p>Linguistic extraction depends on the selected language and its marker lists; the statistical definitions of median, MAD and the selection rules stay the same. Cross-language values are not a common literary norm. Missing standard errors mean that no error estimate is available, not that a measurement is certain. BH and BY have false-discovery guarantees only when their input probabilities and other assumptions are valid. Estimating the reference from the same chapters and applying a normal tail to <code>z*</code> does not establish those conditions. Here, the selected cells are an exploratory review list. No deviation is an error, and no result is a quality score.</p>
-<footer><a href="../">Lixity home</a> · <a href="index.html">All articles</a> · <a href="https://github.com/mfahsold/lixity/issues">Report a reproducible issue</a> · <a href="../#impressum">Legal notice</a></footer>
+<footer class="site-footer"><nav aria-label="Project resources"><a href="../#guides">All guides</a><a href="../blog/index.html">Articles</a><a href="https://github.com/mfahsold/lixity">Source code</a><a href="../LICENSING.md">License</a><a href="../#website-measurement">Website measurement</a><a href="../#impressum">Legal notice</a></nav></footer>
 </main>
 <a class="site-back-top" href="#top">Back to top ↑</a>
 </body>

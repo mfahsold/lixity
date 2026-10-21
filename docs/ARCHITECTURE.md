@@ -834,3 +834,31 @@ readers cannot open v8 archives. A shared offline coordinate view
 serves dossier, history and manuscript-companion readers. Images remain separate
 versioned sources; neither their presence nor a route line establishes geographic
 calibration, navigability or historical accuracy.
+
+## Shared document orientation and metric presentation (current main)
+
+The Unreleased section-navigation helper decorates existing semantic links in
+analysis and accepted dossier renderings. One instance per connected host resolves
+the actual scroll root, coalesces reads/paint by animation frame and disposes
+observers when replaced. It delegates activation, disclosure reveal, sticky
+clearance and arrival to the existing interaction owner. Dossier heading IDs
+combine render-instance identity and local ordinals; they never replace domain
+record IDs or revision pins. A compact location link shares that current entry;
+it adds no scrollport, route or canonical data. The context dock preserves an
+already reached end when its measured available height changes, and preserves
+other reading offsets.
+
+Paragraph layers reuse `layer_stats` and the shared descriptive cutoff, with
+chapter median/MAD and rounded two-decimal z. The browser paints behind opaque
+prose without rewriting its nodes or combining metric colours. Colour, marker
+membership, source/value/unit explanation and the opt-in `paragraph-layer/1` CLI
+projection use the same comparison. Missing comparison is not zero. Display-only
+register/declared-POV controls change heatmap row visibility, preserving the
+accepted full-book analysis and existing exemption policy.
+
+Decision/dossier review composes exact existing record-version GETs inside the
+existing review surface. It retains pending, retry, unavailable and stale states;
+request, project/root token, snapshot and record identity prevent late reads from
+creating controls for another context. An author acknowledgement remains the
+existing explicit guarded mutation. No semantic diff, inferred affected passage,
+new archive schema or database authority is introduced.

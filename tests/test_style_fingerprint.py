@@ -460,6 +460,37 @@ class TestFingerprintDashboard(unittest.TestCase):
         self.assertIn("<!DOCTYPE html>", html)
         self.assertNotIn('<table class="heatmap">', html)
 
+    def test_paragraph_layer_color_encodes_the_same_local_comparison_as_notability(self):
+        config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
+        paragraphs, chapters = ParagraphProfiler(config).profile_blocks(
+            parse_markdown_blocks(DIMENSION_SAMPLE)
+        )
+        rendered = render_dashboard(chapters, paragraphs, language_key="de")
+        chips = re.findall(r"data-target=\"p-(\d+)\" data-layers='([^']+)'", rendered)
+        self.assertTrue(chips)
+        compared = 0
+        for index, raw in chips:
+            payload = json.loads(html_module.unescape(raw))
+            for key, info in payload.items():
+                _value, score = layer_stats(paragraphs, key)[int(index)]
+                self.assertEqual(info[0], z_color(score))
+                self.assertEqual(info[2], round(score, 2))
+                self.assertIn("z", info[1])
+                self.assertIn(str(paragraphs[int(index)].start_line), info[1])
+                compared += 1
+        self.assertGreater(compared, 0)
+
+    def test_unavailable_paragraph_layer_has_no_invented_measurement_range(self):
+        config = CorpusConfig(language="en", chapter_regex=r"(?m)^##\s+")
+        paragraphs, chapters = ParagraphProfiler(config).profile_blocks(
+            parse_markdown_blocks("## One\n\nA short sentence.\n\nThe same sentence.")
+        )
+        rendered = render_dashboard(chapters, paragraphs, language_key="en")
+        option = re.search(r'<option value="asl"[^>]*>', rendered)
+        self.assertIsNotNone(option)
+        self.assertIn('data-comparable="0"', option.group(0))
+        self.assertNotIn("data-range=", option.group(0))
+
     def test_dimension_payload_preserves_untrusted_titles_as_data(self):
         title = '<img src=x onerror="window.injected=true"> & heading'
         rendered = api.dashboard(DIMENSION_SAMPLE.replace("Kap 1", title), language="de")

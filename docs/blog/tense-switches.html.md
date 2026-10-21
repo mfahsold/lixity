@@ -56,4 +56,4 @@ Verb-form patterns miss irony, ellipsis and unusual syntax. Dialogue and reporte
 
 Start with the [Warehouse 4 demo project](../demo/report.html): one invented manuscript with analysis, research and PDF layouts. The separate literary case studies of [Effi Briest](../examples/effi-briest.html) and [Pride and Prejudice](../examples/pride-and-prejudice.html) retain their opening-chapter dashboards and full-novel PDF reports. For your own manuscript, install, open the project and review one chapter.
 
-[Lixity home](../) · [All articles](index.html) · [Report a reproducible issue](https://github.com/mfahsold/lixity/issues) · [Legal notice](../#impressum)
+[All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](../LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

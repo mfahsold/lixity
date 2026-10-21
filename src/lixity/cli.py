@@ -4,7 +4,7 @@ import argparse
 import os
 import re
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import Any
 
 import orjson
@@ -33,7 +33,11 @@ from .pipeline import (
 from .project_identity import project_title
 from .scenes import scene_report_for_display
 from .site import docs_url
-from .style_fingerprint import FingerprintThresholds
+from .style_fingerprint import (
+    LAYER_FEATURES,
+    FingerprintThresholds,
+    paragraph_layer_projection,
+)
 from .ui import render_analysis
 from .ui.manuscript_document import reader_blocks
 from .workspace import resolve_manuscript_target
@@ -280,10 +284,14 @@ def _completion_scripts() -> tuple[str, str]:
     sections = " ".join(_ABOUT_SECTIONS)
     bash = _BASH_COMPLETION.replace("__LIXITY_COMMANDS__", names).replace(
         "__LIXITY_RESEARCH_COMMANDS__", research_actions
-    ).replace("__LIXITY_ABOUT_SECTIONS__", sections)
+    ).replace("__LIXITY_ABOUT_SECTIONS__", sections).replace(
+        "__LIXITY_PARAGRAPH_LAYERS__", " ".join(LAYER_FEATURES)
+    )
     zsh = _ZSH_COMPLETION.replace("__LIXITY_ZSH_COMMANDS__", descriptors).replace(
         "__LIXITY_RESEARCH_COMMANDS__", research_actions
-    ).replace("__LIXITY_ABOUT_SECTIONS__", sections)
+    ).replace("__LIXITY_ABOUT_SECTIONS__", sections).replace(
+        "__LIXITY_PARAGRAPH_LAYERS__", " ".join(LAYER_FEATURES)
+    )
     return bash, zsh
 
 
@@ -293,7 +301,7 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("research", "Local sources, dossiers, citations and lexical search (JSON)"),
     ("service", "Manage an owned local dashboard process"),
     ("analyze", "Corpus metrics (text/JSON, self-describing meta block)"),
-    ("profile", "Paragraph tense/style estimates for supported body/list blocks (JSON)"),
+    ("profile", "Paragraph tense/style estimates (JSON; --layer text/JSON)"),
     ("dialogue", "Dialogue turn structure (text/JSON)"),
     ("characters", "Curated name mentions and declared POV across chapters (text/JSON)"),
     ("pacing", "Scene structure, pacing and chapter hooks (text/JSON)"),
@@ -348,6 +356,12 @@ _lixity_complete() {
             COMPREPLY=( $(compgen -W "auto de en fr es it pt nl generic" -- "$cur") )
             return 0
             ;;
+        --layer)
+            if [[ ${COMP_WORDS[1]} == profile ]]; then
+                COMPREPLY=( $(compgen -W "__LIXITY_PARAGRAPH_LAYERS__" -- "$cur") )
+                return 0
+            fi
+            ;;
         --section)
             if [[ ${COMP_WORDS[1]} == about || ${COMP_WORDS[1]} == schema ]]; then
                 COMPREPLY=( $(compgen -W "__LIXITY_ABOUT_SECTIONS__" -- "$cur") )
@@ -385,6 +399,11 @@ _lixity_complete() {
     fi
     if [[ ${COMP_WORDS[1]} == scenes ]]; then
         COMPREPLY=( $(compgen -W "--help --project --language --json --chapter --scene --latest" -- "$cur") )
+        COMPREPLY+=( $(compgen -f -- "$cur") )
+        return 0
+    fi
+    if [[ ${COMP_WORDS[1]} == profile ]]; then
+        COMPREPLY=( $(compgen -W "$opts $style_opts --layer --only-notable" -- "$cur") )
         COMPREPLY+=( $(compgen -f -- "$cur") )
         return 0
     fi
@@ -458,6 +477,19 @@ __LIXITY_ZSH_COMMANDS__
             '--chapter[Canonical chapter number]:chapter:' \
             '(--latest)--scene[Exact measured or planned scene ID]:scene:' \
             '(--scene)--latest[Last measured scene in document order]'
+          ;;
+        profile)
+          _arguments \
+            '1:manuscript:_files' \
+            '--project[Explicit project root]:directory:_files -/' \
+            '--help[Help]' \
+            '--language[Language profile]:profile:(auto de en fr es it pt nl generic)' \
+            '--json[JSON output]' \
+            '--layer[Paragraph metric]:layer:(__LIXITY_PARAGRAPH_LAYERS__)' \
+            '--only-notable[With a layer, select notable paragraphs after comparison]' \
+            '-o[output file]:file:_files' \
+            '--output[output file]:file:_files' \
+            "${_lixity_style_flags[@]}"
           ;;
         serve)
           _arguments \
@@ -545,6 +577,43 @@ def _meta_payload(language_key: str, **body: Any) -> dict[str, Any]:
     payload = {"meta": {**_META, "language": language_key}}
     payload.update(body)
     return payload
+
+
+def _print_paragraph_layer(
+    report: dict[str, Any], source: str, language_key: str, labels: Mapping[str, str]
+) -> None:
+    """Print source anchors and measurements without including paragraph prose."""
+    from .format import num, safe_text
+    from .style_fingerprint import FEATURE_UNITS, FEATURES
+
+    feature = report["feature"]
+    label_key = next(label for field, label, _unit in FEATURES if field == feature)
+    unit = FEATURE_UNITS.get(language_key, {}).get(feature, report["unit"])
+    print(f"{labels.get(label_key, feature)} ({unit})")
+    print(
+        "Reference: all measurable paragraphs within each chapter; median/MAD robust z. "
+        "Requires at least 3 measurable paragraphs and nonzero MAD."
+    )
+    cutoff = num(report["comparison"]["notable_abs_z"], language_key, 2)
+    print(f"Notable: |round(z, 2)| >= {cutoff}; descriptive heuristic for human review.")
+    counts = report["selection"]
+    print(
+        f"{counts['total_count']} total · {counts['comparable_count']} comparable · "
+        f"{counts['notable_count']} notable · {counts['selected_count']} shown"
+    )
+    for row in report["paragraphs"]:
+        value = "—" if row["value"] is None else num(row["value"], language_key, 2)
+        comparison = (
+            "comparison unavailable" if row["z"] is None
+            else f"local z {num(row['z'], language_key, 2, signed=True)}"
+        )
+        notable = " · notable" if row["notable"] is True else ""
+        anchor = safe_text(f"{source}:{row['start_line']}-{row['end_line']}")
+        title = safe_text(row["chapter_title"])
+        print(
+            f"{anchor} · {row['chapter_num']}: {title} · "
+            f"{value} {unit} · {comparison}{notable}"
+        )
 
 
 def _print_about_json(section: str | None = None) -> None:
@@ -1295,6 +1364,15 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument(
             "--json", action="store_true", help=argparse.SUPPRESS if name == "pdf" else "JSON output"
         )
+        if name == "profile":
+            p.add_argument(
+                "--layer", choices=tuple(LAYER_FEATURES),
+                help="Inspect one paragraph metric and its within-chapter comparison (text; --json for paragraph-layer/1)",
+            )
+            p.add_argument(
+                "--only-notable", action="store_true",
+                help="With --layer, show only notable paragraphs; retain the full chapter reference",
+            )
         p.add_argument("-o", "--output", help="Target file (dashboard, pdf)")
         if name == "pdf":
             from .pdf_export import PDF_LAYOUTS
@@ -1361,6 +1439,8 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_ERROR
     if getattr(args, "min_chapters", None) is not None and args.min_chapters < 2:
         parser.error("--min-chapters must be at least 2")
+    if args.command == "profile" and args.only_notable and args.layer is None:
+        parser.error("--only-notable requires --layer")
     if args.command == "pdf" and args.json:
         parser.error("--json is not supported for PDF output; use analyze or style --json for measurements")
     if args.command == "serve":
@@ -1538,6 +1618,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "profile":
         fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
         paragraphs, chapters = profile_document(text, config, fp_thresholds)
+        if args.layer is not None:
+            payload = _meta_payload(
+                resolved.key,
+                **paragraph_layer_projection(paragraphs, args.layer, only_notable=args.only_notable),
+            )
+            payload["meta"]["schema_version"] = "paragraph-layer/1"
+            if args.json:
+                print(_json(payload, indent=True))
+            else:
+                _print_paragraph_layer(payload, args.file, resolved.key, resolved.labels)
+            return EXIT_OK
         payload = _meta_payload(
             resolved.key,
             chapters=[c.__dict__ for c in chapters],

@@ -1,0 +1,8 @@
+/* Declared chapter groups affect this matrix's display, never its reference. */
+.analysis-scope { margin-block: var(--space-3); }
+.analysis-scope[hidden] { display: none; }
+.analysis-scope-controls { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-3); }
+.analysis-scope-controls label { display: grid; gap: var(--space-1); flex: 1 1 12rem; min-width: 0; }
+.analysis-scope-controls select { width: 100%; min-width: 0; max-width: 100%; }
+.analysis-scope-controls button { white-space: normal; max-width: 100%; }
+.analysis-scope p { margin-block: var(--space-2) 0; }

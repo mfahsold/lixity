@@ -282,10 +282,11 @@ async function main() {
         });
         await save(capture.target, '#heatmap');
       } else if (name === 'dashboard-layer.png') {
-        await page.locator('#style-layer').selectOption('dialogue');
-        for (let index = 0; index < 3; index++) await page.locator('#ch-1 .chip').nth(index).click();
-        assert.equal(await page.locator('#ch-1 .ptext.open').count(), 3);
-        await save(capture.target, '#ch-1');
+        await page.locator('#style-layer').selectOption('asl');
+        assert.equal(await page.locator('#layer-legend').isVisible(), true);
+        assert.ok(await page.locator('#ch-1 .ptext.metric-notable').count() > 0);
+        await captureThrough(capture, '#workspace-reader-layout', '#ch-1');
+        await save(capture.target, '#workspace-reader-layout');
       } else if (name === 'dashboard-welcome.png') {
         await selectView('research');
         await save(capture.target);

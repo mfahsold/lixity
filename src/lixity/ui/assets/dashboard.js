@@ -235,6 +235,7 @@ if (microhint) {
 
 var layer = document.getElementById("style-layer");
 var layerLegend = document.getElementById("layer-legend");
+var layerCutoff = layerLegend ? Number(layerLegend.dataset.cutoff) : Infinity;
 
 function chipLayers(chip) {
   if (!chip._layers) {
@@ -253,24 +254,45 @@ function outlierChips() {
   return Array.prototype.slice.call(document.querySelectorAll(".chip.outlier"));
 }
 
+function paintLayerAction(panel, info) {
+  var actions = panel.querySelector(".reader-paragraph-actions");
+  if (!actions) return;
+  var shown = document.body.classList.contains("workbench-analysis") && !document.body.classList.contains("workbench-overview");
+  var notable = Boolean(shown && info && Math.abs(info[2]) >= layerCutoff);
+  if (!actions._metricBase) actions._metricBase = {label: actions.getAttribute("aria-label"), help: actions.dataset.help};
+  actions.setAttribute("aria-label", notable ? info[1] + " · " + actions._metricBase.label : actions._metricBase.label);
+  actions.dataset.help = notable ? info[1] + " · " + actions._metricBase.help : actions._metricBase.help;
+  if (notable) actions.dataset.layerSymbol = info[2] < 0 ? "↓" : "↑";
+  else delete actions.dataset.layerSymbol;
+}
+
 function applyLayer() {
   var key = layer ? layer.value : "";
   document.body.classList.toggle("layer-on", !!key);
   document.querySelectorAll(".chip").forEach(function (chip) {
     var info = key ? chipLayers(chip)[key] : null;
+    var panel = document.getElementById(chip.dataset.target);
+    var notable = Boolean(info && Math.abs(info[2]) >= layerCutoff);
     if (info) {
       chip.style.setProperty("--layer-color", info[0]);
       chip.classList.add("has-layer");
       chip.setAttribute("data-tip", info[1]);
       chip.removeAttribute("title");
-      chip.classList.toggle("outlier", Math.abs(info[2]) >= 1.5);
+      chip.classList.toggle("outlier", notable);
+      chip.setAttribute("aria-label", info[1]);
     } else {
       chip.style.removeProperty("--layer-color");
       chip.classList.remove("has-layer");
       chip.classList.remove("outlier");
       chip.removeAttribute("data-tip");
       var base = chip.getAttribute("data-tip-base");
-      if (base) chip.setAttribute("title", base);
+      if (base) { chip.setAttribute("title", base); chip.setAttribute("aria-label", base); }
+    }
+    if (panel) {
+      panel.classList.toggle("metric-notable", notable);
+      if (notable) panel.style.setProperty("--paragraph-layer-color", info[0]);
+      else panel.style.removeProperty("--paragraph-layer-color");
+      paintLayerAction(panel, info);
     }
   });
   outlierCursor = 0;
@@ -285,19 +307,16 @@ function applyLayer() {
         if (hint) title.setAttribute("data-tip", hint);
         else title.removeAttribute("data-tip");
       }
-      var low = document.getElementById("layer-scale-low");
-      var high = document.getElementById("layer-scale-high");
-      var range = option.getAttribute("data-range") || "";
-      var parts = range.split(" – ");
-      if (low) low.textContent = parts[0] || "";
-      if (high) high.textContent = parts[1] || "";
+      var comparable = Number(option.dataset.comparable);
+      var count = outlierChips().length;
       if (layerCount) {
-        var n = outlierChips().length;
-        var noun = n === 1
-          ? layerLegend.getAttribute("data-outliers-one")
-          : layerLegend.getAttribute("data-outliers");
-        layerCount.textContent = n ? n + " " + (noun || "") : "";
+        layerCount.textContent = comparable ? uiFormat("layer_coverage", {
+          notable: count, comparable: comparable, total: layerLegend.dataset.profiled
+        }) : uiLabel("layer_unavailable");
       }
+      if (layerNext) layerNext.disabled = count === 0;
+      if (layerOnly) layerOnly.disabled = comparable === 0;
+      if (comparable === 0) setFilter(layerOnly, "layer-only", false);
     }
   }
 }
@@ -314,7 +333,7 @@ if (layerNext) {
     if (outlierCursor >= chips.length) outlierCursor = 0;
     var chip = chips[outlierCursor++];
     toggleParagraph(chip, true, true);
-    scrollAndFlash(chip);
+    scrollAndFlash(document.getElementById(chip.dataset.target) || chip);
   });
 }
 
@@ -333,6 +352,20 @@ if (layer) {
   layer.addEventListener("change", applyLayer);
   applyLayer();
 }
+var layerClear = document.getElementById("layer-clear");
+if (layerClear) layerClear.addEventListener("click", function() {
+  if (layer) layer.value = "";
+  setFilter(layerOnly, "layer-only", false);
+  applyLayer();
+  if (layer) layer.focus({preventScroll: true});
+});
+document.addEventListener("lixity:reader-ready", applyLayer);
+document.addEventListener("lixity:workbench-change", function() {
+  document.querySelectorAll("#chapters .ptext.metric-notable").forEach(function(panel) {
+    var chip = paragraphChips[panel.id];
+    paintLayerAction(panel, chip && layer ? chipLayers(chip)[layer.value] : null);
+  });
+});
 async function jsonApi(url, options, responseType) {
   var t0 = performance.now();
   try {
@@ -666,6 +699,7 @@ if (settingsForm) {
 var fdrFilter = document.getElementById("heatmap-fdr-only");
 if (fdrFilter) {
   fdrFilter.addEventListener("change", function() {
+    if (window.LixityAnalysisScope) { window.LixityAnalysisScope.apply(); return; }
     var visible = 0;
     document.querySelectorAll("#heatmap tbody tr[data-fdr-count]").forEach(function(row) {
       row.hidden = fdrFilter.checked && Number(row.dataset.fdrCount) === 0;

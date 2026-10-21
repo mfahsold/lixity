@@ -214,7 +214,7 @@ def section_nav(links: Sequence[tuple[str, str]], labels: Mapping[str, str] | No
     if not links:
         return ""
     parts = [
-        f'<nav class="toolbar-sections" id="analysis-sections" '
+        f'<nav class="toolbar-sections section-navigation" id="analysis-sections" data-section-nav="analysis" '
         f'aria-label="{esc(label(labels, "sections"))}">'
     ]
     for target, label_key in links:

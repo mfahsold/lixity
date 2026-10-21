@@ -1101,7 +1101,7 @@ def main() -> int:
     _queue_capture(editorial_path, OUT_DIR / "dashboard-flags-dark.png", 1152, 501)
     _queue_capture(editorial_path, OUT_DIR / "dashboard-editorial.png", 1480, 760)
 
-    # 7. Style layer (draft chapter with the dialogue layer active) --------
+    # 7. Style layer (opening chapter with sentence-length emphasis) ------
     _queue_capture(
         dashboard_path,
         OUT_DIR / "dashboard-layer.png",

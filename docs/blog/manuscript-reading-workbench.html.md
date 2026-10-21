@@ -54,4 +54,4 @@ Built-in manuscript analysis runs locally without uploading the manuscript. Opti
 
 Try one small loop in the demo: read the opening, inspect one paragraph, then follow the saved warehouse quotation into research and back. The [first-look guide](https://mfahsold.github.io/lixity/guides/first-look.html) walks through the same project. When you return from a research note, which context do you need to resume reading the sentence?
 
-[Lixity home](../) · [All articles](index.html) · [Report a reproducible issue](https://github.com/mfahsold/lixity/issues) · [Legal notice](../#impressum)
+[All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](../LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

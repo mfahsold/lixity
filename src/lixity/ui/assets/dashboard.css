@@ -321,7 +321,12 @@ body.text-search-active .chapter .strip { display: none; }
 }
 .layer-legend .layer-count { font-variant-numeric: tabular-nums; }
 .layer-legend .layer-only { display: inline-flex; gap: .35rem; align-items: center; cursor: pointer; }
-.layer-legend button.ctl { margin-left: auto; }
+.layer-legend button.ctl { margin-left: 0; }
+.layer-legend .layer-count { flex: 1 1 15rem; }
+.layer-legend .layer-scale { flex-wrap: wrap; gap: var(--space-2); }
+.layer-comparison-note { flex-basis: 100%; }
+.layer-comparison-note > summary { cursor: pointer; padding-block: var(--space-2); }
+.layer-comparison-note p { max-width: 75ch; margin-block: var(--space-2); }
 body.layer-on .chip.has-layer { background: var(--layer-color); }
 body.layer-on .chip.has-layer.tense-present { border-top: 2px solid var(--present); }
 body.layer-on .chip.has-layer.tense-past { border-top: 2px solid var(--past); }

@@ -75,6 +75,7 @@ def render_heatmap_panel(
     metrics: Any | None,
     labels: Mapping[str, str] | None = None,
     language_key: str = "generic",
+    *, characters: Mapping[str, Any] | None = None,
 ) -> str:
     """Renders the diverging z-score heatmap matrix panel."""
     if fingerprint is None or metrics is None or not metrics.chapters:
@@ -88,6 +89,18 @@ def render_heatmap_panel(
 
     feature_layers = {field: key for key, field in LAYER_FEATURES.items()}
     z_mild = fingerprint.thresholds.z_mild
+    chapter_numbers = {chapter.num for chapter in metrics.chapters if chapter.num in fingerprint.z_scores}
+    register_names = sorted({name for number, name in fingerprint.chapter_registers.items()
+                             if number in chapter_numbers})
+    register_keys = {name: f"r-{index}" for index, name in enumerate(register_names)}
+    pov_groups = []
+    if characters and not characters.get("error"):
+        for figure in characters.get("figures", []):
+            members = {number for number in figure.get("declared_pov_chapters", [])
+                       if type(number) is int and number in chapter_numbers}
+            if members:
+                pov_groups.append((figure["name"], members))
+    pov_groups.sort(key=lambda group: group[0])
 
     parts: list[str] = ['<section class="panel" id="heatmap">']
     parts.append(
@@ -121,6 +134,37 @@ def render_heatmap_panel(
         f'{esc(fingerprint.thresholds.fdr_method.upper())} · q = {N(fingerprint.thresholds.fdr_q, 2)}'
         f' · |z*| ≥ {N(z_mild, 1)}</span></div>'
     )
+    if register_names or pov_groups:
+        parts.append(
+            f'<div class="analysis-scope" id="analysis-scope" hidden '
+            f'data-empty-label="{L("analysis_scope_empty")}"><div class="analysis-scope-controls">'
+        )
+        if register_names:
+            parts.append(f'<label for="analysis-scope-register">{L("analysis_scope_register")}'
+                         '<select class="ctl" id="analysis-scope-register">'
+                         f'<option value="">{L("analysis_scope_all")}</option>')
+            parts.extend(f'<option value="{register_keys[name]}">{esc(name)}</option>' for name in register_names)
+            if any(number not in fingerprint.chapter_registers for number in chapter_numbers):
+                parts.append(f'<option value="unassigned">{L("analysis_scope_unassigned")}</option>')
+            parts.append('</select></label>')
+        if pov_groups:
+            parts.append(f'<label for="analysis-scope-pov">{L("analysis_scope_pov")}'
+                         '<select class="ctl" id="analysis-scope-pov">'
+                         f'<option value="">{L("analysis_scope_all")}</option>')
+            for index, (name, _members) in enumerate(pov_groups):
+                parts.append(f'<option value="p-{index}">{esc(name)}</option>')
+            parts.append('</select></label>')
+        parts.append(f'<button type="button" class="ctl" id="analysis-scope-reset">'
+                     f'{L("analysis_scope_reset")}</button></div>')
+        template = label(labels, "analysis_scope_status")
+        initial = template.replace("{shown}", N(len(chapter_numbers), 0)).replace("{total}", N(len(chapter_numbers), 0))
+        parts.append(f'<p class="ctl-note" id="analysis-scope-status" role="status" '
+                     f'data-template="{esc(template)}">{esc(initial)}</p>'
+                     f'<details><summary>{L("layer_guide")}</summary>'
+                     f'<p class="ctl-note">{L("analysis_scope_hint")}</p>')
+        if register_names:
+            parts.append(f'<p class="ctl-note">{L("analysis_scope_exemption")}</p>')
+        parts.append('</details></div>')
     parts.append(f'<p id="heatmap-empty" class="panel-guide" role="status" hidden>{L("matrix_empty")}</p>')
     parts.append('<div class="heatmap-wrap" tabindex="0" role="region" '
                  f'aria-label="{L("style_fingerprint")}"><table class="heatmap"><thead><tr>')
@@ -141,7 +185,12 @@ def render_heatmap_panel(
             f' <span class="badge badge-register" title="{esc(register)}">{esc(register)}</span>'
             if register else ""
         )
-        parts.append(f'<tr data-fdr-count="{len(confirmed)}" data-register="{esc(register or "")}">'
+        pov_memberships = " ".join(f"p-{index}" for index, (_name, members) in enumerate(pov_groups)
+                                   if chapter.num in members)
+        parts.append(f'<tr id="heatmap-ch-{chapter.num}" data-chapter-num="{chapter.num}" '
+                     f'data-scope-register="{register_keys.get(register, "unassigned") if register is not None else "unassigned"}" '
+                     f'data-scope-pov="{pov_memberships}" '
+                     f'data-fdr-count="{len(confirmed)}" data-register="{esc(register or "")}">'
                      f'<td class="ch">{chapter.num}. {esc(chapter.title)}{register_badge}</td>')
         for field_name, label_key, _unit in FEATURES:
             z = fingerprint.z_scores[chapter.num].get(field_name)

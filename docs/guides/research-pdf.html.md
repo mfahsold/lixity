@@ -290,4 +290,4 @@ Text inputs must be nonempty UTF-8 without NUL bytes, up to 2 MiB; PDFs can be u
 
 See the [implemented research reference](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md) for CLI/API details. The broader [research RFC](https://github.com/mfahsold/lixity/blob/main/docs/research/README.md) includes unimplemented interfaces. Read [metric interpretation](interpretation.html) before comparing a source with a manuscript.
 
-[All guides](../#guides) · [Lixity home](../) · [License and commercial use](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md) · [Legal notice](../#impressum)
+[All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](../LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

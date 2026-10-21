@@ -170,6 +170,16 @@ class TestApiFacade(unittest.TestCase):
         for layout in ("report", "book", "sheet"):
             self.assertIn(layout, commands["pdf"]["purpose"])
 
+    def test_about_distinguishes_default_profile_from_opt_in_layer_contract(self):
+        from lixity.style_fingerprint import LAYER_FEATURES
+
+        profile = next(command for command in api.about()["commands"] if command["name"] == "profile")
+        self.assertEqual((profile["output"], profile["schema_version"]), ("json", 2))
+        projection = profile["layer_projection"]
+        self.assertEqual(projection["choices"], list(LAYER_FEATURES))
+        self.assertEqual(projection["schema_version"], "paragraph-layer/1")
+        self.assertEqual(projection["only_notable_requires"], "--layer")
+
     def test_exact_hd_d_matches_chapter_and_corpus_without_invented_se(self):
         text = "## Chapter\n\n" + "echo " * 100
         result = api.analyze(text, chapter_regex=r"(?m)^##\s+", project_config={})

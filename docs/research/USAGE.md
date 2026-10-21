@@ -655,6 +655,34 @@ links, section outlines and pinned/current revisions. CLI equivalents are
 These reports do not find every affected passage, infer contradictions, verify
 history or rewrite documents. Old pins may be intentional; audit is separate.
 
+**On current main (Unreleased):** **Read decision with dossier** opens a
+reversible comparison inside **Review** or **Affected dossiers**. It reads the
+exact latest saved decision and dossier versions named by that report. When an
+earlier assessment exists, its dossier version is separately available; the
+assessment labels both acknowledged versions. The columns stack on narrow screens.
+The relation concerns the whole dossier: no affected passage or semantic diff
+is inferred. Closing the comparison saves nothing. **Mark as applied** and
+**Reopen review** remain explicit snapshot/revision-guarded acknowledgements;
+failed, unavailable or stale reads do not establish that anything was verified.
+
+Long dossiers have a **Sections** list generated from their actual rendered
+headings, Notes, linked Claims and Citations. Close/reopen the native list; a
+compact current-heading link remains within the dossier while scrolling and
+returns to that list. Heading links use the existing scroll/reveal behavior,
+including collapsed section maps. Local heading IDs last for that accepted
+rendering; saved record/revision references are unchanged.
+
+For a human-readable daily manuscript check, use the existing explicit format:
+
+```sh
+lixity research review-manuscript --project ./novel --format text
+lixity research reconcile-manuscript --project ./novel --format table
+```
+
+Reconciliation previews write nothing. These commands keep JSON as their default
+for automation; `--json` selects it explicitly. No new token, UUID workflow or
+writer lock is needed merely to choose a human output format.
+
 Choose **Add to change set** in the editor, then **Review change set** to inspect,
 edit or remove queued drafts and reasons before saving together. Failed/stale
 saves preserve drafts for review. Drafts exist only in that browser tab and are
@@ -1434,8 +1462,13 @@ Text inputs are at most 2 MiB and must be valid UTF-8 without NUL bytes.
 PDF inputs are at most 50 MiB. Both routes allow at most 5,000 nonempty extracted
 passages. Search uses literal Unicode words joined with AND; it is
 not stemming, translation or semantic search. BM25 scores are ranks, not truth
-probabilities. Language tags do not translate quotations. Empty queries and missing FTS5 support produce errors. Stale indexes refresh
-automatically unless strict validation is requested.
+probabilities. Language tags do not translate quotations. Empty queries and
+missing FTS5 support produce errors. Stale indexes refresh automatically unless
+strict validation is requested. Index failures report their path and the actual
+SQLite cause; storage exhaustion or a damaged index does not imply missing FTS5.
+After resolving the reported cause, use `research reindex` to rebuild the
+disposable catalogue. A rebuild failure before replacement keeps the previously
+published index; rebuilding does not modify canonical research records.
 Source analysis emits `original_language_supplied` when source context names
 an original language; that free-text field alone does not establish historical
 language variety. This replaces the earlier experimental

@@ -315,20 +315,6 @@ function researchDossierDetailHtml(detail, readOnly) {
         '</div>';
     }
   }
-  var sections = detail.sections || [];
-  if (!sections.length && detail.body) {
-    var secMatches = detail.body.match(/^#{1,3}\s+(.+)$/gm);
-    if (secMatches) {
-      sections = secMatches.map(function(s) { return s.replace(/^#{1,3}\s+/, "").trim(); });
-    }
-  }
-  var sectionsHtml = "";
-  if (sections.length) {
-    sectionsHtml = '<div class="research-dossier-outline research-dossier-outline">' +
-      '<strong>' + escapeHtml(uiLabel("research_sections")) + ':</strong> ' +
-      sections.map(function(sec) { return '<span class="research-tag research-tag-section ml-1">' + escapeHtml(sec) + '</span>'; }).join("") +
-      '</div>';
-  }
   var bodyHtml = "";
   if (detail.section_map && Object.keys(detail.section_map).length > 1) {
     var secKeys = Object.keys(detail.section_map);
@@ -350,7 +336,7 @@ function researchDossierDetailHtml(detail, readOnly) {
     bodyHtml = (readOnly ? "" : (detail.editable_sections || []).map(function(section) { return researchDossierSectionAction(detail, section); }).join("")) +
       researchDossierBodyHtml(detail.body, detail);
   }
-  return '<div class="research-dossier-folder">' + reviewAlert + sectionsHtml +
+  var markup = '<div class="research-dossier-folder">' + reviewAlert +
     '<nav class="row" aria-label="' + escapeHtml(uiLabel("research_folder_global")) + '">' +
     '<span class="ctl-note">' + escapeHtml(uiLabel("research_folder_global")) + '</span>' +
     '<button type="button" class="ctl" data-research-global="claims">' + escapeHtml(uiLabel("research_tab_claims")) + '</button>' +
@@ -368,12 +354,80 @@ function researchDossierDetailHtml(detail, readOnly) {
       return researchCitationHtml(citation, !readOnly);
     }).join("") : '<p class="ctl-note">' + escapeHtml(uiLabel("research_revision_no_citations")) + '</p>') +
     '</section></div>';
+  return researchDossierContentsHtml(markup);
+}
+
+// Local render identity is independent of record identity and authored headings.
+var researchDossierContentsSerial = 0;
+function researchDossierContentsHtml(markup) {
+  var template = document.createElement("template"); template.innerHTML = markup;
+  var folder = template.content.firstElementChild, prefix = "dossier-section-" + (++researchDossierContentsSerial) + "-";
+  var contents = document.createElement("details"); contents.className = "research-dossier-contents";
+  contents.dataset.sectionContents = ""; contents.open = !window.matchMedia("(max-width: 900px)").matches;
+  var summary = document.createElement("summary"); summary.textContent = uiLabel("research_sections");
+  summary.id = prefix + "contents";
+  var nav = document.createElement("nav"); nav.className = "section-navigation";
+  nav.dataset.sectionNav = "dossier"; nav.setAttribute("aria-label", uiLabel("research_sections"));
+  var list = document.createElement("ul"); nav.appendChild(list); contents.append(summary, nav);
+  var levels = [], parents = [list], previous = null, mapDepth = 0, ordinal = 0;
+  var targets = folder.querySelectorAll(".research-folder-notes, .research-dossier-section-block > summary, " +
+    ".research-dossier-body-rendered h1, .research-dossier-body-rendered h2, .research-dossier-body-rendered h3, " +
+    ".research-dossier-body-rendered h4, .research-dossier-body-rendered h5, .research-dossier-body-rendered h6, " +
+    ".research-dossier-claims, .research-folder-citations");
+  targets.forEach(function(target) {
+    var depth = 0, text;
+    if (target.matches("section")) { levels = []; mapDepth = 0; text = target.querySelector("h4").textContent; }
+    else if (target.matches("summary")) { levels = []; mapDepth = 1; depth = 1; text = target.textContent; }
+    else {
+      var level = Number(target.tagName.slice(1));
+      while (levels.length && levels[levels.length - 1] >= level) levels.pop();
+      levels.push(level); depth = mapDepth + levels.length; text = target.textContent;
+    }
+    target.id = prefix + (++ordinal); target.dataset.sectionTarget = "";
+    while (parents.length > depth + 1) parents.pop();
+    if (parents.length < depth + 1 && previous) {
+      var nested = document.createElement("ul"); previous.appendChild(nested); parents.push(nested);
+    }
+    var item = document.createElement("li"), link = document.createElement("a");
+    link.href = "#" + target.id; link.dataset.jump = "#" + target.id;
+    link.dataset.sectionLink = target.id; link.textContent = text;
+    item.appendChild(link); parents[parents.length - 1].appendChild(item); previous = item;
+  });
+  var location = document.createElement("a"); location.className = "research-dossier-location";
+  location.dataset.sectionLocation = ""; location.href = "#" + summary.id; location.dataset.jump = "#" + summary.id;
+  var label = document.createElement("span"); label.textContent = uiLabel("research_sections");
+  var current = document.createElement("span"); current.dataset.sectionCurrent = "";
+  location.append(label, current);
+  location.title = location.textContent;
+  folder.prepend(contents, location); return template.innerHTML;
 }
 
 // This reverse list projects current Claim.dossier_ref associations and
 // counts explicitly retained links against their pinned dossier association.
 // It never infers unwritten prose use or reconstructs historical dossier claims.
 async function enhanceResearchDossierClaims(host, detail, stillCurrent) {
+  var nav = host.querySelector('[data-section-nav="dossier"]');
+  if (nav && !nav._dossierContents) {
+    nav._dossierContents = true;
+    nav.addEventListener("click", function(event) {
+      var link = event.target.closest("[data-section-link]");
+      var target = link && document.getElementById(link.dataset.sectionLink);
+      var rendered = target && host.contains(target) && target.closest(".research-dossier-body-rendered");
+      // Reuse the existing preview toggle before the delegated jump reveals
+      // disclosures and scrolls. The decoration owns neither activation nor source state.
+      if (rendered && rendered.hidden) {
+        var toggle = rendered.parentElement.querySelector("[data-source-toggle]");
+        if (toggle) toggle.click();
+      }
+    });
+  }
+  if (window.LixitySectionNavigation) window.LixitySectionNavigation.mount(nav, {host: host, location: host.querySelector("[data-section-location]"), onCurrent: function(link) {
+    var location = host.querySelector("[data-section-location]");
+    var current = location && location.querySelector("[data-section-current]");
+    var text = link ? " · " + link.textContent : "";
+    if (current && current.textContent !== text) current.textContent = text;
+    if (location && location.title !== location.textContent) location.title = location.textContent;
+  }});
   // A return reuses this accepted rendering, never a newer dossier selected
   // by title or an element left behind by a failed or superseded read.
   var context = researchReadContext();

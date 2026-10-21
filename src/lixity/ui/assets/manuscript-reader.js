@@ -159,7 +159,11 @@
     var bottom = Math.min(innerHeight - gutter, bounds.bottom);
     var height = Math.max(0, Math.floor(bottom - top)) + "px";
     if (dock.style.getPropertyValue("--context-available-height") !== height) {
+      var atEnd = dock.scrollTop > 0 && Math.ceil(dock.scrollTop + dock.clientHeight) >= dock.scrollHeight - 1;
       dock.style.setProperty("--context-available-height", height);
+      // A smaller scrollport must not leave a previously reached document end
+      // behind during a nested heading arrival. Other reading offsets stay put.
+      if (atEnd) dock.scrollTop = dock.scrollHeight - dock.clientHeight;
     }
   }
   function scheduleDockFit() {

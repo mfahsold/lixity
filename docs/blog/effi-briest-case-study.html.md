@@ -43,4 +43,4 @@ Or open the interactive view: `lixity service start --open`, then choose **Open 
 
 Linguistic extraction depends on the selected language and its marker lists; the statistical definitions of median, MAD and the selection rules stay the same. Cross-language values are not a common literary norm. Missing standard errors mean that no error estimate is available, not that a measurement is certain. BH and BY have false-discovery guarantees only when their input probabilities and other assumptions are valid. Estimating the reference from the same chapters and applying a normal tail to `z*` does not establish those conditions. Here, the selected cells are an exploratory review list. No deviation is an error, and no result is a quality score.
 
-[Lixity home](../) · [All articles](index.html) · [Report a reproducible issue](https://github.com/mfahsold/lixity/issues) · [Legal notice](../#impressum)
+[All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](../LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

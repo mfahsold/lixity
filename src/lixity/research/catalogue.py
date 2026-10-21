@@ -91,8 +91,8 @@ def reindex(repository: Repository) -> dict[str, Any]:
                 os.fsync(stream.fileno())
             os.replace(temporary, destination)
             sync_directory(destination.parent)
-        except sqlite3.Error:
-            raise ResearchError("Catalogue rebuild failed; SQLite with FTS5 support is required") from None
+        except sqlite3.Error as exc:
+            raise ResearchError(f"Catalogue rebuild failed at {destination}: {exc}") from exc
         finally:
             if os.path.exists(temporary):
                 os.unlink(temporary)
@@ -201,8 +201,8 @@ def search(
                 hits.append(citation)
         finally:
             connection.close()
-    except sqlite3.Error:
-        raise ResearchError("Search index unavailable; run research reindex with an FTS5-enabled SQLite") from None
+    except sqlite3.Error as exc:
+        raise ResearchError(f"Search index unavailable at {path}: {exc}; check storage and run research reindex") from exc
     if scope == "sources" and not hits:
         warnings.append("No source passage matches found; try --scope all to search dossiers, claims, and decisions.")
     return {"schema_version": "research-search-local/1", "project_id": snapshot.project.id,

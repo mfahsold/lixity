@@ -8,6 +8,24 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Changed
+- Analysis uses one selected metric for quiet transparent paragraph emphasis,
+  with value/unit/local-reference hints, comparable coverage, clear controls and
+  distinct unavailable/zero results. Colour now matches the chapter-relative z
+  used for notable membership; labels correctly describe median/MAD.
+- `profile --layer KEY` adds source-anchored human output and opt-in
+  `paragraph-layer/1` JSON. `--only-notable` retains full chapter references;
+  default profile JSON v2 remains unchanged.
+- Declared register/POV selectors filter only style-fingerprint table rows and
+  explicitly retain the whole-manuscript reference and existing register policy.
+- Analysis and dossiers share heading-navigation presentation. Dossiers gain
+  real heading links and compact persistent orientation, with native collapse
+  and existing scroll/return owners. Context resizing preserves a reached end.
+- Decision/dossier review reads exact saved versions together, including an
+  earlier assessed dossier. Delayed impact reads cannot mint acknowledgement
+  controls in a newly selected project; writes retain existing guards.
+- Public pages use a consistent editorial header and a concrete synthetic
+  passage/rhythm/research example, fewer repeated entry links and smaller complete
+  screenshot previews. Technical reference remains separately reachable.
 - Workspace destinations precede project identity and actions, including long
   titles. Version/license information is secondary; collapse, project dialogs
   and the existing PDF export remain available through the same controls.
@@ -46,6 +64,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Hook help explains the existing heuristic without changing its calculation.
 
 ### Fixed
+- Research index failures retain their actual SQLite cause and index path
+  instead of attributing storage or corruption errors to missing FTS5 support.
 - Research exports retain one accepted snapshot while copying records and blobs,
   verify copied content addresses and preserve an existing backup on failure
   before replacement. Errors after replacement identify uncertain durability.
