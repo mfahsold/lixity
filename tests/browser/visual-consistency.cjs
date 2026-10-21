@@ -132,8 +132,9 @@ async function checkScale(page, label) {
   }
 }
 (async () => {
-  const browser = await launchChromium();
+  let browser;
   try {
+    browser = await launchChromium();
     for (const theme of ['light', 'dark']) for (const hasTouch of [false, true]) {
       const context = await browser.newContext({colorScheme: theme, reducedMotion: 'reduce', hasTouch});
       const errors = [];
@@ -312,7 +313,9 @@ async function checkScale(page, label) {
       assert.deepEqual(errors, []);
       await context.close();
     }
-    fs.rmSync(siteRoot, {recursive: true, force: true});
     console.log(`Shared typography, identity labels, palette, action contrast, touch targets, focus, text-spacing, reduced motion and theme interaction passed. Screenshots: ${artifacts}`);
-  } finally { await browser.close(); }
+  } finally {
+    try { if (browser) await browser.close(); }
+    finally { fs.rmSync(siteRoot, {recursive: true, force: true}); }
+  }
 })().catch(error => { console.error(error); process.exitCode = 1; });

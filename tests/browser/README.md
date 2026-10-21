@@ -29,11 +29,27 @@ readiness and termination handling shared without replacing the real HTTP flows.
 Large Python-generated JSON fixtures use a disposable file-backed transport.
 Complete dashboard HTML and bundled assets are retained without a fixed stdout
 pipe budget; success, generation failures and malformed JSON all clean up files.
+After staging, public-docs and visual-consistency checks remove their site copies
+even if browser launch or assertions fail; screenshots remain available in the
+reported artifact directory.
 
 Localized suites retain all seven languages at desktop and mobile widths for
 rendering, labels and submitted machine values. Language-independent interaction
 and conflict scenarios run once per relevant viewport. Native server saves and
 intercepted responses cover different boundaries and remain separate.
+
+The scroll-regions suite checks six-row and long chapter charts in seven locales,
+desktop/mobile and both themes. It samples the rendered final bar to detect faded
+data, then verifies real keyboard, wheel and touch scrolling. Native `scrollend`
+separates inputs so an unfinished keyboard animation cannot overwrite a wheel
+result. Screenshots use only synthetic text.
+
+The claim-evidence-actions suite exercises empty evidence, the existing claim-bound
+composer and source-search handoff without saving. It checks preserved drafts,
+read failures/retry, stale responses and read-only capability boundaries at desktop
+and mobile widths. The list-filters suite also covers genuinely empty collections,
+arrival of the first records and filters with no matches; failed reads remain
+distinct from accepted empty results.
 
 The pages-analytics suite intercepts the public origin and GoatCounter pixel
 endpoint; no real counts are sent. It checks page paths and fixed link events,

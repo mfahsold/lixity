@@ -627,6 +627,15 @@ guards and pagination stay in panel scripts. Record keys preserve current detail
 or invalidate stale card state according to each renderer's refresh contract. Other panels migrate only
 when their state requires it; a new component is not a second business-rule layer.
 
+On current main, claim evidence models also bind to the accepted archive digest,
+project and context token. An identical record key alone is insufficient: links
+and source availability can change independently of the claim. Only unchanged
+bindings retain a loaded or pending panel; changed or absent bindings invalidate
+its owner and reject late reads. Startup obtains the existing versioned claim
+catalogue before exposing evidence actions, since the overview omits its digest.
+These bindings remain ephemeral presentation state without changing the archive
+contract.
+
 ## First-run journey (server contract)
 
 Empty workspaces offer create/open/import actions. After a successful workspace

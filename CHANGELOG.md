@@ -7,6 +7,19 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+- Chapter charts no longer fade their final rows when all entries already fit,
+  or at the end of an overflowing list. Native scrollbars remain visible for
+  long Pacing and Showing/Telling chapter lists.
+- Empty claim evidence offers a direct route to the existing evidence composer;
+  failed reads offer retry instead of appearing empty. Existing claims, retained
+  quotations and unsaved drafts keep their separate states.
+- Unchanged archive refreshes preserve an opened or loading evidence panel;
+  archive, claim or project changes still invalidate it. The public demo marks
+  evidence preparation as a local-app action instead of opening a disabled form.
+- Research catalogue filters are hidden for genuinely empty collections, while
+  active queries and failed or pending refreshes retain their editing context.
+
 ## [0.7.2] - 2026-10-20
 
 ### Changed

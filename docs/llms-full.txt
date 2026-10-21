@@ -219,7 +219,7 @@ URL. The [research entrypoint](https://mfahsold.github.io/lixity/research/README
 links implemented workflows and separate, unimplemented proposals.
 Product, response and archive versions are independent. Inspect installed schema
 capabilities before sharing an archive with another version.
-v0.7.1 reads research records/manifests v1–v8. Ordinary dossiers keep their older
+v0.7.2 reads research records/manifests v1–v8. Ordinary dossiers keep their older
 encoding until a geographic save; older readers cannot open v8 archives.
 
 **Since v0.7.1:** grouped research discovery, exact update dry runs,
@@ -232,6 +232,12 @@ for the supported v0.7.1 workflows and compatibility limits.
 **Since v0.7.2:** UI and CLI explain map/style-space measurements
 in place; additive `geography_summary` and `dimension_diagnostics` expose their
 support without changing stored records or existing scores.
+
+On current main, confirmed empty claim evidence offers the existing draft form;
+failed reads offer retry, and navigating never creates a link. Empty catalogue
+filters stay out of the way while active queries remain editable. Evidence views
+survive unchanged archive refreshes; changed archives or contexts invalidate them.
+These UI changes do not alter research storage or public API contracts.
 
 Public-site measurement is separate from the product: production Pages and its
 reviewed examples use GoatCounter for page paths and named links. Browser privacy
@@ -1227,6 +1233,9 @@ diacritics or cross paragraph boundaries. Text resembling markup remains text.
 Research list filters only match loaded record metadata; use
 **Research → Search** for retained source text.
 
+On current main, empty source and dossier collections omit their unused filter.
+A filter that finds no matches stays available so you can change or clear it.
+
 ### Source availability and saved analysis
 
 Reloading the local dashboard validates the selected
@@ -1389,6 +1398,11 @@ placeholders and give no independent pacing evidence. Tempo proxies are sentence
 length, staccato share, dialogue share and scene length. The hook score (0–3)
 adds one for each closing cue: at most eight words, terminal `?`/`!`/`…`, and
 closing dialogue. It measures these cues, not suspense or reader response.
+
+In the browser's **Pacing & scenes** and **Showing/telling** panels, long chapter
+charts scroll within their bounded area. Use the mouse wheel or touch, or focus
+a chapter row and use the keyboard's scrolling keys. All rows remain readable
+at the end; a short chart that already fits needs no inner scrolling.
 
 ### Scene registers and project targets
 
@@ -2330,6 +2344,17 @@ quote and full paragraph context, choose a claim/relation and save separately.
 The citation still identifies the whole paragraph, not a sentence-level selector.
 Ambiguous or cross-paragraph selections fail; whole-passage actions remain
 available for touch use. Preparing a draft writes nothing.
+
+On current main, loading a claim's empty evidence list offers **Link passage
+evidence to claim**. It opens the existing form and selects the claim only if
+the draft has none; existing passage, claim and rationale choices stay intact.
+Use **Find source passage** to continue the research. A claim can exist without
+evidence, so **Open claim** remains meaningful independently of its citations.
+Failed evidence reads show retry, not an empty list. Read-only examples do not
+offer an unavailable editing route; the public demo marks it as a local-app
+preview with an installation link. Unchanged archive refreshes keep an opened
+evidence panel. A changed archive or project clears it so you can reload the
+current evidence.
 
 In **Manuscript**, **Dossier alongside** opens a chosen dossier in a read-only
 companion. It starts closed with no automatic selection. Refresh explicitly for
@@ -5432,6 +5457,15 @@ Stable class/data hooks remain part of component output. Domain actions, context
 guards and pagination stay in panel scripts. Record keys preserve current details
 or invalidate stale card state according to each renderer's refresh contract. Other panels migrate only
 when their state requires it; a new component is not a second business-rule layer.
+
+On current main, claim evidence models also bind to the accepted archive digest,
+project and context token. An identical record key alone is insufficient: links
+and source availability can change independently of the claim. Only unchanged
+bindings retain a loaded or pending panel; changed or absent bindings invalidate
+its owner and reject late reads. Startup obtains the existing versioned claim
+catalogue before exposing evidence actions, since the overview omits its digest.
+These bindings remain ephemeral presentation state without changing the archive
+contract.
 
 ## First-run journey (server contract)
 

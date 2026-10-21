@@ -93,6 +93,17 @@ The citation still identifies the whole paragraph, not a sentence-level selector
 Ambiguous or cross-paragraph selections fail; whole-passage actions remain
 available for touch use. Preparing a draft writes nothing.
 
+On current main, loading a claim's empty evidence list offers **Link passage
+evidence to claim**. It opens the existing form and selects the claim only if
+the draft has none; existing passage, claim and rationale choices stay intact.
+Use **Find source passage** to continue the research. A claim can exist without
+evidence, so **Open claim** remains meaningful independently of its citations.
+Failed evidence reads show retry, not an empty list. Read-only examples do not
+offer an unavailable editing route; the public demo marks it as a local-app
+preview with an installation link. Unchanged archive refreshes keep an opened
+evidence panel. A changed archive or project clears it so you can reload the
+current evidence.
+
 In **Manuscript**, **Dossier alongside** opens a chosen dossier in a read-only
 companion. It starts closed with no automatic selection. Refresh explicitly for
 the latest dossier. The companion and paragraph **Values** inspector are

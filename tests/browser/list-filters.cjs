@@ -55,21 +55,13 @@ from lixity.server import LixityServerHandler
 base = Path(sys.argv[1])
 project = base / 'synthetic-project'
 api.init(project, title='Synthetic filter archive')
-source_ids = []
-for name, title, tags in [('alpha', 'Alpha "quoted" <img src=x onerror=alert(1)> ${longTitleSegment}', ['Ledger']), ('beta', 'Beta source', ['Forest'])]:
-    source = base / (name + '.txt')
-    source.write_text('Original ' + name + ' detail.', encoding='utf-8')
-    source_ids.append(api.ingest(project, source, title=title, context={'tags': tags}, allow_retention=True)['source_id'])
-dossier_ids = []
-for title, body, tags in [('Alpha dossier ${longTitleSegment}', 'Shipping excerpt.\\n\\n## Timeline\\nOriginal alpha dossier detail.', ['Harbor']), ('Beta dossier', 'Woodland excerpt.\\n\\n## Travel\\nOriginal beta dossier detail.', ['Forest'])]:
-    dossier_ids.append(api.create_dossier(project, title=title, body=body, tags=tags)['dossier_id'])
 LixityServerHandler.workspace_root = str(project)
 LixityServerHandler.research_dir = str(project)
 LixityServerHandler.exports_dir = str(base / 'exports')
 LixityServerHandler.language = 'en'
 LixityServerHandler.refresh()
 server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
-print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'project': str(project), 'sourceIds': source_ids, 'dossierIds': dossier_ids}), flush=True)
+print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'project': str(project)}), flush=True)
 server.serve_forever()
 `, artifacts], {cwd: root, env: pythonEnv, stdio: ['ignore', 'pipe', 'pipe']});
   let stderr = '';
@@ -95,10 +87,181 @@ server.serve_forever()
     await page.goto(fixture.url);
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
     await expect(page.locator('#research-manager')).toBeVisible();
+    await expect(page.locator('#research-dossiers-list')).toHaveText('No dossiers yet.');
+    await expect(page.locator('#r-filter-dossiers')).toBeHidden();
+
+    for (const language of ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl']) {
+      assert.equal((await (await page.request.post(fixture.url + '/api/settings', {data: {language}})).json()).ok, true);
+      for (const width of [1440, 320]) {
+        await page.setViewportSize({width, height: 900});
+        await page.reload();
+        await page.locator('[data-view=research]').click();
+        for (const kind of ['sources', 'dossiers']) {
+          const [response] = await Promise.all([
+            page.waitForResponse(response => researchReadMatcher(fixture.url + '/api/research/' + kind)(new URL(response.url()))),
+            page.locator(`[data-rtab=${kind}]`).click(),
+          ]);
+          const catalogue = await response.json();
+          assert.equal(catalogue.ok, true);
+          assert.deepEqual(catalogue[kind], [], `${language}/${width}: ${kind} is genuinely empty`);
+          await expect(page.locator('#research-' + kind + '-list > .ctl-note')).toBeVisible();
+          await expect(page.locator('#r-filter-' + kind)).toBeHidden();
+          await expect(page.locator('#r-filter-' + kind + '-status')).toBeHidden();
+        }
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+        await page.locator('#research-manager').screenshot({path: path.join(artifacts, `empty-${language}-${width}.png`)});
+      }
+    }
+    assert.equal((await (await page.request.post(fixture.url + '/api/settings', {data: {language: 'en'}})).json()).ok, true);
+    await page.setViewportSize({width: 1440, height: 1000});
+    await page.reload();
+
+    function seedCatalogue(name) {
+      return JSON.parse(execFileSync(python, ['-c', `
+import json, sys
+from pathlib import Path
+from lixity.research import api
+project = Path(sys.argv[1])
+source_ids = []
+for name, title, tags in [('alpha', 'Alpha "quoted" <img src=x onerror=alert(1)> ${longTitleSegment}', ['Ledger']), ('beta', 'Beta source', ['Forest'])]:
+    if name != sys.argv[2]:
+        continue
+    source = project.parent / (name + '.txt')
+    source.write_text('Original ' + name + ' detail.', encoding='utf-8')
+    source_ids.append(api.ingest(project, source, title=title, context={'tags': tags}, allow_retention=True)['source_id'])
+dossier_ids = []
+for name, title, body, tags in [('alpha', 'Alpha dossier ${longTitleSegment}', 'Shipping excerpt.\\n\\n## Timeline\\nOriginal alpha dossier detail.', ['Harbor']), ('beta', 'Beta dossier', 'Woodland excerpt.\\n\\n## Travel\\nOriginal beta dossier detail.', ['Forest'])]:
+    if name != sys.argv[2]:
+        continue
+    dossier_ids.append(api.create_dossier(project, title=title, body=body, tags=tags)['dossier_id'])
+print(json.dumps({'sourceIds': source_ids, 'dossierIds': dossier_ids}))
+`, fixture.project, name], {cwd: root, env: pythonEnv, encoding: 'utf8'}));
+    }
+    Object.assign(fixture, seedCatalogue('alpha'));
+    await page.evaluate(() => initResearchUI(true));
+    for (const kind of ['sources', 'dossiers']) {
+      await page.locator(`[data-rtab=${kind}]`).click();
+      await expect(page.locator('#research-' + kind + '-list .research-card')).toHaveCount(1);
+      await expect(page.locator('#r-filter-' + kind)).toBeVisible();
+    }
+    const secondRecords = seedCatalogue('beta');
+    fixture.sourceIds.push(...secondRecords.sourceIds);
+    fixture.dossierIds.push(...secondRecords.dossierIds);
+    await page.evaluate(() => initResearchUI(true));
     await page.locator('[data-rtab=sources]').click();
     await expect(page.locator('#research-sources-list .research-card')).toHaveCount(2);
     await expect(page.locator('#r-filter-sources')).toBeVisible();
     await expect(page.locator('#r-filter-sources')).toHaveAccessibleName('Filter sources…');
+
+    // Empty results are distinct from a pending/error read or a query with no matches.
+    for (const width of [1440, 320]) for (const kind of ['sources', 'dossiers']) {
+      await page.setViewportSize({width, height: 900});
+      await page.locator(`[data-rtab=${kind}]`).click();
+      const input = page.locator('#r-filter-' + kind);
+      const list = page.locator('#research-' + kind + '-list');
+      const refresh = () => page.evaluate(kind => kind === 'sources'
+        ? refreshResearchSources(null, null, true) : refreshResearchDossiers(null, null, true), kind);
+      await refresh();
+      let mode = 'native', release, started, gate, ready;
+      function holdEmpty() {
+        mode = 'held-empty';
+        gate = new Promise(resolve => { release = resolve; });
+        ready = new Promise(resolve => { started = resolve; });
+      }
+      const listMatch = researchReadMatcher(fixture.url + '/api/research/' + kind);
+      await page.route(listMatch, async route => {
+        const responseMode = mode;
+        const response = await route.fetch();
+        const data = await response.json();
+        if (responseMode === 'held-empty') { started(); await gate; }
+        if (responseMode === 'held-empty') data[kind] = [];
+        if (responseMode === 'error') { data.ok = false; data.message = 'Synthetic temporary catalogue failure'; }
+        if (responseMode === 'null') data[kind] = null;
+        if (responseMode === 'missing') delete data[kind];
+        if (responseMode === 'non-array') data[kind] = {records: []};
+        await route.fulfill({response, json: data});
+      });
+      try {
+        for (const malformed of ['null', 'missing', 'non-array']) {
+          mode = 'native';
+          await refresh();
+          await input.fill('retained query');
+          mode = malformed;
+          await refresh();
+          await expect(list).toHaveText(kind === 'sources' ? 'Failed to load sources' : 'Failed to load dossiers');
+          await expect(input).toHaveValue('retained query');
+          await expect(input).toBeFocused();
+          await input.fill('');
+          await input.press('Tab');
+          await expect(input).toBeVisible();
+        }
+        holdEmpty();
+        await page.evaluate(kind => {
+          window.pendingEmptyCatalogue = kind === 'sources'
+            ? refreshResearchSources(null, null, true) : refreshResearchDossiers(null, null, true);
+        }, kind);
+        await bounded(ready, kind + ' pending empty catalogue');
+        await expect(input).toBeVisible();
+        await input.fill('newer missing query');
+        release();
+        await bounded(page.evaluate(() => window.pendingEmptyCatalogue), kind + ' accepted empty catalogue');
+        await expect(list.locator('.research-card')).toHaveCount(0);
+        await expect(input).toHaveValue('newer missing query');
+        await expect(input).toBeVisible();
+        await expect(input).toBeFocused();
+        await input.fill('');
+        await expect(input).toBeFocused();
+        await expect(input).toBeVisible();
+        await input.press('Tab');
+        await expect(input).toBeHidden();
+        mode = 'error';
+        await refresh();
+        await expect(list).toContainText('Synthetic temporary catalogue failure');
+        await expect(input).toBeHidden();
+        for (const malformed of ['null', 'missing', 'non-array']) {
+          mode = malformed;
+          await refresh();
+          await expect(list).toHaveText(kind === 'sources' ? 'Failed to load sources' : 'Failed to load dossiers');
+          await expect(input).toBeHidden();
+        }
+        mode = 'native';
+        await refresh();
+        await expect(list.locator('.research-card')).toHaveCount(2);
+        await expect(input).toBeVisible();
+        await input.fill('missing');
+        await expect(list.locator('.research-card:visible')).toHaveCount(0);
+        await expect(input).toBeVisible();
+        mode = 'error';
+        await refresh();
+        await expect(input).toBeFocused();
+        await expect(input).toHaveValue('missing');
+        await input.fill('');
+        await input.press('Tab');
+        await expect(input).toBeVisible();
+
+        holdEmpty();
+        await page.evaluate(kind => {
+          window.staleEmptyCatalogue = kind === 'sources'
+            ? refreshResearchSources(null, null, true) : refreshResearchDossiers(null, null, true);
+        }, kind);
+        await bounded(ready, kind + ' stale empty catalogue');
+        mode = 'native';
+        await refresh();
+        release();
+        await bounded(page.evaluate(() => window.staleEmptyCatalogue), kind + ' rejected empty catalogue');
+        await expect(list.locator('.research-card')).toHaveCount(2);
+        await input.fill('missing');
+        await input.fill('');
+        await input.press('Tab');
+        await expect(input).toBeVisible();
+        await page.locator('#research-manager').screenshot({path: path.join(artifacts, `filter-state-${kind}-${width}.png`)});
+      } finally {
+        if (release) release();
+        await page.unroute(listMatch);
+      }
+    }
+    await page.setViewportSize({width: 1440, height: 1000});
+    await page.locator('[data-rtab=sources]').click();
 
     // Hold actual list/detail responses to exercise both orders without timing sleeps.
     for (const [kind, id, detailText] of [['sources', fixture.sourceIds[0], 'Original alpha detail.'],
@@ -358,6 +521,7 @@ api.create_dossier(p, title='Gamma dossier', body='A newly retained dossier.')
           await expect(page.locator('#research-' + kind + '-list .research-card:visible')).toHaveCount(1);
           await expect(page.locator('#research-' + kind + '-list .research-card:visible')).toContainText('Gamma');
           await input.fill('missing');
+          await expect(input).toBeVisible();
           await expect(page.locator('#r-filter-' + kind + '-status')).toContainText(noResults);
           await input.fill('gamma');
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${language} ${kind} overflow at ${width}`);
@@ -460,7 +624,7 @@ api.create_dossier(p, title='Gamma dossier', body='A newly retained dossier.')
       }
     }
     assert.deepEqual(errors, [], 'Research filters must not cause browser runtime errors');
-    console.log(`Research list filters: controlled list/detail races, coalesced reads, fresh import/create/revision/batch reads, stale responses, matching, inert text, preserved details, no typing requests, associations, complete long titles and seven languages at 1440/320 passed. Screenshots: ${artifacts}`);
+    console.log(`Research list filters: empty catalogues, first records, query/focus retention, pending/error/stale reads, controlled list/detail races, coalesced reads, fresh import/create/revision/batch reads, matching, inert text, preserved details, no typing requests, associations, complete long titles and seven languages at 1440/320 passed. Screenshots: ${artifacts}`);
   } finally {
     try {
       if (browser) await browser.close();

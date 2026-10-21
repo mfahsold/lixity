@@ -8,6 +8,9 @@ function filterResearchList(kind) {
   if (!input || !list || !status) return;
   var query = input.value.trim();
   var normalized = query.toLowerCase();
+  var state = researchListRefreshes[kind];
+  // Keep a query and its focus available when the last record disappears.
+  input.hidden = Boolean(state && state.count === 0 && !normalized && document.activeElement !== input);
   var cards = list.querySelectorAll(".research-card[data-filter-text]");
   var matches = 0;
   cards.forEach(function(card) {
@@ -19,6 +22,11 @@ function filterResearchList(kind) {
 }
 
 document.addEventListener("input", function(event) {
+  if (event.target.id === "r-filter-sources") filterResearchList("sources");
+  if (event.target.id === "r-filter-dossiers") filterResearchList("dossiers");
+});
+
+document.addEventListener("focusout", function(event) {
   if (event.target.id === "r-filter-sources") filterResearchList("sources");
   if (event.target.id === "r-filter-dossiers") filterResearchList("dossiers");
 });
@@ -89,12 +97,13 @@ async function refreshResearchSources(overview, changedId, freshRead) {
     researchSelectionProjectId = data.project_id;
     ++researchProjectStatusRead;
   }
-  if (!data.ok) {
+  if (!data.ok || !Array.isArray(data.sources)) {
     LixityResearchCards.render(listHost, {message: data.message || uiLabel("research_load_sources_failed")});
     filterResearchList("sources");
     return;
   }
-  var sources = data.sources || [];
+  var sources = data.sources;
+  reading.state.count = sources.length;
   var localImport = document.getElementById("r-local-import");
   if (localImport) localImport.hidden = sources.length > 0 && sources.every(function(s) { return s.context && s.context.external_reference; });
   var external = sources.find(function(s) { return s.context && s.context.external_reference; });
@@ -140,12 +149,13 @@ async function refreshResearchDossiers(overview, changedId, freshRead) {
   var reading = await researchListRead("dossiers", overview, changedId, freshRead);
   if (!acceptResearchList("dossiers", reading)) return;
   var data = reading.data;
-  if (!data.ok) {
+  if (!data.ok || !Array.isArray(data.dossiers)) {
     LixityResearchCards.render(listHost, {message: data.message || uiLabel("research_load_dossiers_failed")});
     filterResearchList("dossiers");
     return;
   }
-  var dossiers = data.dossiers || [];
+  var dossiers = data.dossiers;
+  reading.state.count = dossiers.length;
   ["r-claim-dossier-select", "r-decision-dossier-select"].forEach(function(selectId) {
     var dossierSelect = document.getElementById(selectId);
     if (!dossierSelect) return;
@@ -398,7 +408,11 @@ async function refreshResearchClaims(overview) {
   var linkClaimSelect = document.getElementById("r-link-claim-select");
   if (!listHost) return;
   if (!listHost.children.length) LixityResearchCards.render(listHost, {loading: true});
-  var data = overview && Array.isArray(overview.claims) ? overview : await researchApiGet("research/claims");
+  // Startup's overview has no archive snapshot. Evidence actions need the
+  // versioned catalogue before their result can survive an unchanged refresh.
+  var versionedOverview = overview && Array.isArray(overview.claims) &&
+    typeof overview.snapshot === "string" && overview.snapshot;
+  var data = versionedOverview ? overview : await researchApiGet("research/claims");
   if (request !== researchClaimsRead || !acceptResearchContext(context, data)) return;
   if (!data.ok) {
     researchClaimCardItems = [];
@@ -406,7 +420,7 @@ async function refreshResearchClaims(overview) {
     return;
   }
   var claims = data.claims || [];
-  researchClaimsSnapshot = data.snapshot || null;
+  researchClaimsSnapshot = typeof data.snapshot === "string" && data.snapshot || null;
   researchClaimChoices = Object.fromEntries(claims.map(function(claim) {return [claim.id, claim];}));
   refreshResearchClaimProjections();
   if (selectHost) {
@@ -430,7 +444,13 @@ async function refreshResearchClaims(overview) {
     LixityResearchCards.render(listHost, {message: uiLabel("research_no_claims")});
     return;
   }
+  var catalogueContext = researchClaimsSnapshot ? JSON.stringify([context.projectId, context.token, researchClaimsSnapshot]) : null;
+  var previousItems = new Map(researchClaimCardItems.map(function(item) {return [item.id, item];}));
   researchClaimCardItems = claims.map(function(c) {
+    var key = JSON.stringify(c), previous = previousItems.get(c.id);
+    // Evidence/source changes can leave the claim bytes unchanged. Reuse its
+    // pending or loaded panel only for the same accepted archive and context.
+    if (catalogueContext && previous && previous.key === key && previous.catalogueContext === catalogueContext) return previous;
     var confClass = c.confidence === "evidenced" ? "badge-success" : (c.confidence === "disputed" ? "badge-warning" : "badge-neutral");
     var confLabel = c.confidence === "evidenced" ? uiLabel("research_confidence_evidenced")
       : (c.confidence === "disputed" ? uiLabel("research_confidence_disputed") : uiLabel("research_confidence_hypothetical"));
@@ -448,7 +468,8 @@ async function refreshResearchClaims(overview) {
         (c.dossier_revision ? " · " + uiFormat("research_revision_number", { revision: c.dossier_revision }) : "");
     }
     return {
-      key: JSON.stringify(c),
+      key: key,
+      catalogueContext: catalogueContext,
       id: c.id,
       title: c.title,
       badges: [{label: confLabel, cls: confClass}],

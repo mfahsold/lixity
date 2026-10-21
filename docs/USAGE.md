@@ -249,6 +249,9 @@ diacritics or cross paragraph boundaries. Text resembling markup remains text.
 Research list filters only match loaded record metadata; use
 **Research → Search** for retained source text.
 
+On current main, empty source and dossier collections omit their unused filter.
+A filter that finds no matches stays available so you can change or clear it.
+
 ### Source availability and saved analysis
 
 Reloading the local dashboard validates the selected
@@ -411,6 +414,11 @@ placeholders and give no independent pacing evidence. Tempo proxies are sentence
 length, staccato share, dialogue share and scene length. The hook score (0–3)
 adds one for each closing cue: at most eight words, terminal `?`/`!`/`…`, and
 closing dialogue. It measures these cues, not suspense or reader response.
+
+In the browser's **Pacing & scenes** and **Showing/telling** panels, long chapter
+charts scroll within their bounded area. Use the mouse wheel or touch, or focus
+a chapter row and use the keyboard's scrolling keys. All rows remain readable
+at the end; a short chart that already fits needs no inner scrolling.
 
 ### Scene registers and project targets
 

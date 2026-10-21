@@ -905,6 +905,25 @@ function highlightSearchTerms(text, query) {
     return;
   }
 
+  var linkClaimEvidence = event.target.closest("[data-link-claim-evidence]");
+  if (linkClaimEvidence) {
+    var targetClaim = linkClaimEvidence.dataset.linkClaimEvidence;
+    var claimField = document.getElementById("r-link-claim-select");
+    var passageField = document.getElementById("r-link-passage-id");
+    if (!researchContextToken() || !researchClaimChoices[targetClaim] || !claimField || !passageField) return;
+    // An existing evidence draft belongs to its chosen claim. Opening another
+    // claim's guidance must not replace that choice or its retained passage.
+    if (!claimField.value) {
+      claimField.value = targetClaim;
+      claimField.dispatchEvent(new Event("change", {bubbles: true}));
+    }
+    revealDisclosures(claimField);
+    var nextField = claimField.value === targetClaim && !passageField.value.trim()
+      ? document.getElementById("r-find-passage") : claimField;
+    (nextField || claimField).focus();
+    return;
+  }
+
   var loadEvBtn = event.target.closest("[data-load-evidence]");
   if (loadEvBtn) {
     var cid = loadEvBtn.dataset.loadEvidence;
@@ -917,19 +936,34 @@ function highlightSearchTerms(text, query) {
     var evData = await researchApiGet("research/claims?claim_id=" + encodeURIComponent(cid));
     if (cardItem !== researchClaimCardItems.find(function(entry) { return entry.id === cid; }) ||
         evidenceToken !== researchContextToken() || evidenceProject !== researchSelectionProjectId) return;
-    cardItem.evidenceHtml = researchEvidencePanelHtml(evData);
+    cardItem.evidenceHtml = researchEvidencePanelHtml(evData, cid);
     renderResearchClaimCards();
     return;
   }
 });
 
-function researchEvidencePanelHtml(evData) {
-  if (!evData.ok) {
-    return '<span class="ctl-note">' + escapeHtml(evData.message || uiLabel("research_load_evidence_failed")) + '</span>';
+function researchEvidencePanelHtml(evData, claimId) {
+  var links = evData.evidence_links;
+  var renderable = Array.isArray(links) && links.every(function(link) {
+    if (!link || typeof link !== "object" || Array.isArray(link)) return false;
+    var cite = link.citation || {};
+    // Optional metadata may be absent. Objects in text/number fields can fail
+    // JSON value coercion and must not strand the panel in its loading state.
+    return [link.id, link.relation, link.passage_id, link.rationale, link.revision,
+      link.claim_revision, link.claim_latest_revision, cite.source_title, cite.verbatim].every(function(value) {
+      return value === null || typeof value !== "object";
+    });
+  });
+  if (!evData.ok || !renderable) {
+    return '<p class="ctl-note">' + escapeHtml(evData.message || uiLabel("research_load_evidence_failed")) + '</p>' +
+      '<button type="button" class="ctl ctl-compact" data-load-evidence="' + escapeHtml(claimId) + '">' +
+      escapeHtml(uiLabel("research_load_evidence")) + '</button>';
   }
-  var links = evData.evidence_links || [];
   if (!links.length) {
-    return '<span class="ctl-note">' + escapeHtml(uiLabel("research_no_linked_evidence")) + '</span>';
+    var canLink = researchContextToken() && researchClaimChoices[claimId] && document.getElementById("r-link-composer");
+    return '<p class="ctl-note">' + escapeHtml(uiLabel("research_no_linked_evidence")) + '</p>' +
+      (canLink ? '<button type="button" class="ctl ctl-compact" data-link-claim-evidence="' + escapeHtml(claimId) + '">' +
+      escapeHtml(uiLabel("research_link_heading")) + '</button>' : '');
   }
   return '<div class="research-block-heading">' + escapeHtml(uiCountFormat("research_linked_evidence_count", links.length)) + '</div>' +
       links.map(function(l) {

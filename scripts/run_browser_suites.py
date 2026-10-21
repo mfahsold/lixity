@@ -38,6 +38,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "project-controls.cjs",
         "research.cjs",
         "scenes.cjs",
+        "scroll-regions.cjs",
         "settings.cjs",
         "ui-usability.cjs",
         "visual-consistency.cjs",
@@ -56,6 +57,7 @@ AREAS: dict[str, tuple[str, ...]] = {
         "docs.cjs",
         "layout.cjs",
         "overlay-layout.cjs",
+        "scroll-regions.cjs",
         "visual-consistency.cjs",
     ),
     "analysis": (
@@ -73,6 +75,7 @@ AREAS: dict[str, tuple[str, ...]] = {
         "minimal-workflows.cjs",
         "paragraph-feedback.cjs",
         "scenes.cjs",
+        "scroll-regions.cjs",
         "style-space.cjs",
         "ui-usability.cjs",
         "visual-consistency.cjs",
@@ -92,6 +95,7 @@ AREAS: dict[str, tuple[str, ...]] = {
         "visual-consistency.cjs",
     ),
     "research": (
+        "claim-evidence-actions.cjs",
         "overlay-layout.cjs",
         "research-navigation.cjs",
         "decision-acknowledgement.cjs",

@@ -238,7 +238,7 @@ _PUBLIC_DEMO_CONTROLS = r"""document.addEventListener("DOMContentLoaded", functi
   });
   var localActions = ["#btn-modal-new-project", "#btn-modal-open-project", "#hero-btn-new-project", "#hero-btn-open-project", "#hero-btn-browse-project",
     "[data-action]", "[data-marker-kind]", "[data-marker-resolve]", "[data-research-revise]", "[data-decision-ack-status]",
-    "[data-use-passage]", ".selection-use", "[data-dossier-claim]", "[data-dossier-decision]", "[data-dossier-add-image]",
+    "[data-use-passage]", "[data-link-claim-evidence]", ".selection-use", "[data-dossier-claim]", "[data-dossier-decision]", "[data-dossier-add-image]",
     "[data-manuscript-link-selection]", "[data-manuscript-link-accept]",
     "#research-revision-edit-tab", "#research-revision-save", "#research-revision-batch-add", "#research-revision-batch-review",
     "#research-revision-batch-apply", "#research-revision-merge-apply", "[data-relation-retract]",

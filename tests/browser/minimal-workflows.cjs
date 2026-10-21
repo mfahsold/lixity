@@ -28,7 +28,7 @@ with tempfile.TemporaryDirectory() as directory:
     api.init(project, title='Synthetic minimal workflows')
     api.create_dossier(project, title='Synthetic dossier', body='Synthetic notes.')
     overview = api.project_overview(project)
-    print(json.dumps({'fixtures':fixtures,'overview':overview}))
+    print(json.dumps({'fixtures':fixtures,'overview':overview,'claims':api.list_claims(project)}))
 `], {cwd:root,env:{...process.env,PYTHONPATH:[path.join(root,'src'),path.join(root,'tests')].join(path.delimiter)},encoding:'utf8',maxBuffer:32*1024*1024});
 assert.equal(fixture.status,0,fixture.stderr);
 const data = JSON.parse(fixture.stdout);
@@ -53,13 +53,16 @@ const data = JSON.parse(fixture.stdout);
           return route.fulfill({status:markerResponse.status,json:markerResponse.body});
         }
         if(pathname==='/api/research/status') {gets.push(pathname);return route.fulfill({json:{ok:true,initialized:true,project_root:'/synthetic',...data.overview}});}
+        if(pathname==='/api/research/claims') {gets.push(pathname);return route.fulfill({json:{ok:true,...data.claims}});}
         if(pathname.startsWith('/api/')) {gets.push(pathname);return route.fulfill({json:{ok:true,...data.overview}});}
         return route.fulfill({contentType:'text/html',body:data.fixtures[language].html});
       });
       const beforeGets=gets.length;
       await page.goto('http://lixity.test/');
       await page.locator('#research-dossiers-list .research-card').waitFor({state:'attached'});
-      assert.deepEqual(gets.slice(beforeGets),['/api/research/status'],'Initial overview lists do not trigger four redundant GETs');
+      await page.waitForFunction(() => typeof researchClaimsSnapshot === 'string' && /^[0-9a-f]{64}$/.test(researchClaimsSnapshot));
+      assert.deepEqual(gets.slice(beforeGets),['/api/research/status','/api/research/claims'],
+        'Startup reuses three overview lists and reads the versioned claims catalogue once');
       assert.equal(await page.locator('[data-action=analyze]').count(),1,'Native refresh exposes a single analyze action');
       assert.equal(await page.locator('[data-action=rebuild]').count(),0,'The supported alias is not another native button');
       await openProjectActions(page);

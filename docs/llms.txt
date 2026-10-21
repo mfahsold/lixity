@@ -79,7 +79,7 @@ URL. The [research entrypoint](https://mfahsold.github.io/lixity/research/README
 links implemented workflows and separate, unimplemented proposals.
 Product, response and archive versions are independent. Inspect installed schema
 capabilities before sharing an archive with another version.
-v0.7.1 reads research records/manifests v1–v8. Ordinary dossiers keep their older
+v0.7.2 reads research records/manifests v1–v8. Ordinary dossiers keep their older
 encoding until a geographic save; older readers cannot open v8 archives.
 
 **Since v0.7.1:** grouped research discovery, exact update dry runs,
@@ -92,6 +92,12 @@ for the supported v0.7.1 workflows and compatibility limits.
 **Since v0.7.2:** UI and CLI explain map/style-space measurements
 in place; additive `geography_summary` and `dimension_diagnostics` expose their
 support without changing stored records or existing scores.
+
+On current main, confirmed empty claim evidence offers the existing draft form;
+failed reads offer retry, and navigating never creates a link. Empty catalogue
+filters stay out of the way while active queries remain editable. Evidence views
+survive unchanged archive refreshes; changed archives or contexts invalidate them.
+These UI changes do not alter research storage or public API contracts.
 
 Public-site measurement is separate from the product: production Pages and its
 reviewed examples use GoatCounter for page paths and named links. Browser privacy

@@ -134,7 +134,7 @@ async function checkReturnNavigation(page, route, exercise) {
 
 async function assertDemoReadOnly(page) {
   const writers = 'input[type=file], textarea, [data-research-revise], [data-dossier-add-image], ' +
-    '[data-dossier-claim], [data-dossier-decision], [data-use-passage], ' +
+    '[data-dossier-claim], [data-dossier-decision], [data-use-passage], [data-link-claim-evidence], ' +
     '[data-geo-add], [data-geo-remove], [data-action], [data-manuscript-link-selection], ' +
     '[data-manuscript-link-accept], #research-revision-edit-tab, #research-revision-save, ' +
     '#research-revision-batch-add, #r-dos-create-btn, #r-claim-create-btn, #r-decision-create-btn, ' +
@@ -340,6 +340,18 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   const claim = page.locator('#research-claims-list .research-card').filter({hasText: 'Attempted warehouse entry'});
   await claim.locator('[data-load-evidence]').click();
   await expect(claim.locator('.claim-evidence-subpanel')).toContainText('synthetic');
+  const emptyClaim = page.locator('#research-claims-list .research-card').filter({hasText: 'Harbour tour research notes'});
+  await emptyClaim.locator('[data-load-evidence]').click();
+  await expect(emptyClaim.locator('.claim-evidence-subpanel')).toContainText('No evidence linked to this claim.');
+  const linkEvidence = emptyClaim.locator('[data-link-claim-evidence]');
+  await checkDemoLocalControl(linkEvidence);
+  await expect(linkEvidence).toHaveAttribute('aria-disabled', 'true');
+  await withoutRequests(page, 'Read-only empty evidence guidance cannot open an editor or write', async () => {
+    await linkEvidence.evaluate(control => { control.disabled = false; control.click(); });
+    await expect(linkEvidence).toBeDisabled();
+    await expect(page.locator('#r-link-composer')).not.toHaveAttribute('open', '');
+  });
+  await emptyClaim.screenshot({path: path.join(artifacts, `research-empty-evidence-${width}-${colorScheme}.png`)});
   await page.locator('#r-open-timeline').click();
   await expect(page.locator('#research-claims-timeline .research-timeline-strip-row')).toHaveCount(2);
   await expect(page.locator('#research-claims-timeline')).toContainText('present day');
@@ -776,8 +788,9 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
 }
 
 (async () => {
-  const browser = await launchChromium();
+  let browser;
   try {
+    browser = await launchChromium();
     for (const [javaScriptEnabled, colorScheme, hasTouch = false] of [[true, 'light'], [false, 'light'], [true, 'dark'], [false, 'dark'], [true, 'light', true]]) {
       const context = await browser.newContext({javaScriptEnabled, colorScheme, hasTouch});
       const page = await context.newPage();
@@ -937,7 +950,9 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
       assert.deepEqual(errors, []);
       await context.close();
     }
-    fs.rmSync(root, {recursive: true, force: true});
     console.log(`Public docs: ${routes.length} selected HTML pages at desktop/390/320, representative surfaces in light/dark and JS on/off, static GET-only navigation, one six-chapter demo Analysis/Research state roundtrip with evidence/quote and PDF links, legacy research redirect, case-study rendering, keyboard/focus/console passed. Screenshots: ${artifacts}`);
-  } finally { await browser.close(); }
+  } finally {
+    try { if (browser) await browser.close(); }
+    finally { fs.rmSync(root, {recursive: true, force: true}); }
+  }
 })().catch(error => { console.error(error); process.exitCode = 1; });
