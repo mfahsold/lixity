@@ -166,6 +166,13 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
       await page.waitForURL(publicOrigin + '/lixity/guides/installation.html');
       await expect.poll(() => pixels.filter(pixel => pixel.url.searchParams.get('p') === 'install-open').length).toBe(1);
       assert.equal(pixels.filter(pixel => pixel.url.searchParams.get('p') === '/lixity/demo/report.html').length, 1);
+      await page.goto(publicOrigin + '/lixity/', {waitUntil: 'domcontentloaded'});
+      await expect.poll(() => pixels.filter(pixel => pixel.url.searchParams.get('p') === '/lixity/').length).toBe(1);
+      await page.locator('.site-return a[href="#installation"]').click();
+      await expect.poll(() => pixels.filter(pixel => pixel.url.searchParams.get('p') === 'install-open').length,
+        {message: 'The current landing-page Install section link records one installation event'}).toBe(2);
+      await expect(page.locator('#installation')).toBeInViewport();
+      await page.screenshot({path: path.join(artifacts, `landing-install-${width}.png`), fullPage: false});
       payloads({pixels});
       assert.deepEqual(await page.evaluate(() => window.__cspViolations), []);
       assert.deepEqual(requests.filter(request => request.method !== 'GET'), [], 'Public demo interactions make no server writes');

@@ -18,9 +18,9 @@ Updated 21 October 2026
 
 Choose a paragraph's **… → Values** to open its **Passage values** inspector. The separate **Analysis** switch shows diagnostics across the manuscript; Passage values remains usable with Analysis On or Off. Use **Analysis overview** to compare sentence rhythm in the setting and action chapters, then **Back to passage** to resume reading.
 
-**In the development demo:** turn **Analysis** on and choose a metric. Keep **Mark counted passages** checked, then hover a marked word or sentence for its explanation. The paragraph menu’s **Inspect text evidence** works by keyboard or right-click; Escape closes the explanation. The sentence word count and paragraph comparison are different measurements.
+**In the read-only demo:** turn **Analysis** on. The first switch-on selects **Sentence length** unless you already saved a metric choice. The adjacent control names the metric and shows **Highlights On/Off**; open it to choose another metric or change **Mark counted passages**. Hover or tap a marked word or sentence for its explanation. The paragraph menu’s **Inspect text evidence** also works by keyboard or right-click with Analysis Off; it enables Analysis while preserving an unchecked marking preference. Escape closes the explanation. The sentence word count and paragraph comparison are different measurements.
 
-**On current main (Unreleased):** expand **Manuscript measurements** for the secondary numbers, then collapse the same summary to return to the compact overview. A linked scene title reveals its detailed **Scene measurements**; both disclosure levels can be closed again. The passage return keeps your earlier reading context.
+**Since v0.7.3:** expand **Manuscript measurements** for the secondary numbers, then collapse the same summary to return to the compact overview. A linked scene title reveals its detailed **Scene measurements**; both disclosure levels can be closed again. The passage return keeps your earlier reading context.
 
 Ask what changed: the kind of scene, what the character is doing, or how the sentences are arranged. These short chapters demonstrate a workflow; their numbers are not a quality verdict. [Interpretation](interpretation.html) explains the signals. [Reader controls and coverage](../USAGE.md#reading-paragraphs) covers text size, focus, keyboard access and supported formatting.
 
@@ -28,7 +28,7 @@ Ask what changed: the kind of scene, what the character is doing, or how the sen
 
 Someone had tried the eastern gate of Warehouse 4.
 
-**In the development demo:** this opening quotation has an explicitly saved association. Follow it from the manuscript:
+**In the read-only demo:** this opening quotation has an explicitly saved association. Follow it from the manuscript:
 
 1. At the opening paragraph, choose **… → Saved research**. The right context shows the saved claim and dossier versions while the text stays visible.
 

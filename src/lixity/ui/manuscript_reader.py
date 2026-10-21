@@ -13,6 +13,7 @@ def reading_controls(
     reader_document: Sequence[ReaderBlock] | None = None,
     *,
     companion_controls: str = "",
+    analysis_controls: str = "",
 ) -> str:
     """Render progressive-enhancement controls; no second manuscript copy."""
     def text(key: str) -> str:
@@ -44,11 +45,12 @@ def reading_controls(
         f'<span class="analysis-state-measure">{text("reading_on")}</span>'
         f'<span class="analysis-state-measure">{text("reading_off")}</span>'
         f'<span id="manuscript-analysis-state">{text("reading_off")}</span></span></button>'
+        f'{analysis_controls}'
         f'<select id="manuscript-mode" hidden aria-hidden="true" tabindex="-1"><option value="read">{text("reading_read")}</option>'
         f'<option value="inspect">{text("reading_inspect")}</option></select>'
         f'<select class="ctl reader-chapter" id="reader-chapter" aria-label="{text("reading_chapter")}">'
         f'<option value="">{text("reading_chapter")}…</option>{options}</select>'
-        '<details class="reader-settings" id="reader-settings">'
+        '<details class="reader-settings" id="reader-settings" name="reader-settings">'
         f'<summary class="ctl">{text("reading_appearance")}</summary><div class="reader-settings-body">'
         f'<div class="reader-size-controls" role="group" aria-label="{text("reading_size")}">'
         f'<button class="ctl" type="button" id="reader-text-smaller" aria-label="{text("reading_smaller")}">A−</button>'

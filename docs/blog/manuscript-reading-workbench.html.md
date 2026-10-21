@@ -1,10 +1,10 @@
 # Give the manuscript room to read
 
-By [Matthias Fahsold](https://github.com/mfahsold) · Published 20 October 2026 · 5 minutes
+By [Matthias Fahsold](https://github.com/mfahsold) · Published 20 October 2026 · Updated 21 October 2026 · 6 minutes
 
 A manuscript analysis tool can show you so much about a paragraph that the paragraph becomes awkward to read. Sentence patterns, source lines, markers and research links all have a purpose. They also compete with the next sentence.
 
-Lixity v0.7.2 gives the manuscript more room. The interactive workspace opens as continuous prose with **Analysis Off**. The explicit **Analysis** switch displays its state in words; **Analysis overview** opens chapter comparisons with a direct **Back to passage** action. These reading controls are included in **v0.7.2**.
+Lixity v0.7.3 keeps the manuscript at the centre of that review. The interactive workspace opens as continuous prose with **Analysis Off**. The explicit **Analysis** switch displays its state in words; **Analysis overview** opens chapter comparisons with a direct **Back to passage** action. You can inspect what a measurement counted and follow a passage's saved research without losing the place you were reading.
 
 ![Lixity's synthetic Warehouse 4 manuscript with Analysis Off, with continuous prose, analysis display, chapter navigation and reading settings](../screenshots/dashboard-dark.png)
 
@@ -24,7 +24,13 @@ Suppose an action passage feels slower than you expected. Open its **…** menu 
 
 The same contextual menu opens with a right-click. With the paragraph or its button focused, **Shift+F10** opens it from the keyboard; arrow keys move between actions and Escape closes it. Shift+right-click still reaches the browser's native menu. Selecting text within one paragraph offers a small toolbar when an applicable action is available.
 
+For the text behind a measurement, turn **Analysis** on, choose a metric and leave **Mark counted passages** checked. Marks identify counted words, lexical patterns, quoted speech or sentences where the analysis can map them exactly to the displayed text. Hover a mark for its explanation, use a short stationary tap on touch screens, or choose **… → Inspect text evidence** with the keyboard or context menu. Escape closes the explanation. Turning analysis off or clearing the marking control removes the marks.
+
+The explanation separates the selected text from its paragraph value and chapter comparison. A sentence's word count does not establish an editorial fault; a literal perception-word match does not establish narrative distance. Some Markdown counting and display projections cannot yet be mapped exactly. Their measurements remain available, with an explicit unavailable explanation instead of guessed highlights. Native text selection, search marks and saved quotations keep their existing anchors; the highlights do not edit the manuscript.
+
 Choose **Analysis overview** when the question calls for chapter comparisons or sentence rhythm. The manuscript remains mounted with the same paragraph text and source anchors. Hiding analysis keeps the active passage inspector or dossier available beside the text. A different sentence length can belong to a scene's purpose or a character's voice. The number locates a difference; reading supplies the judgment about what to do with it.
+
+The overview keeps its review routes visible and puts secondary numbers under **Manuscript measurements**. Open that summary when the question needs them and close it to return to the compact view. A linked scene title similarly reveals grouped **Scene measurements**. Passage measurements cover profiled body paragraphs and list items; other source structure can remain reading-only. [The coverage reference](../USAGE.md#reading-paragraphs) distinguishes paragraph profiles from chapter and corpus measurements.
 
 ## Give research its own space
 
@@ -40,11 +46,15 @@ Paragraph Values and the dossier replace one another as the active side tool. Ea
 
 ## Make the return route explicit
 
-In Research's **Review** view, find the saved eastern-gate quotation. **Open claim** opens the authored claim; **Go to manuscript passage** returns to the exact matching text. The manuscript quotation, authored claim and retained source passage remain separate records. **Open claim** shows the linked claim revision and its dossier and source references; opening a newer version does not silently change those saved pins. When you begin through a manuscript paragraph's saved association instead, close the record viewer and choose **Back to passage** to resume that requesting manuscript text.
+Begin with the opening eastern-gate quotation in the manuscript. Choose **… → Saved research**. The right context shows the saved claim and dossier versions for that passage, with current dossier decisions separately labelled. Open the claim title to inspect that saved version and its retained source references. Close the viewer and choose **Back to passage** to resume the requesting text. On narrow screens the context sits above the manuscript; its close button or Escape returns to the paragraph.
+
+The manuscript quotation, authored claim and retained source passage remain separate records. The saved research list is bounded and shows totals. An empty list means no saved associations, not that the passage contains no facts. Opening a newer record does not silently replace saved version pins, and navigating this route does not create or refresh an association.
+
+The wider **Research → Review** view remains available for saved quotations. Its **Go to manuscript passage** action follows an exact matching anchor. When you leave an open dossier to follow a connection, **Back to dossier** restores that saved dossier version and reading position; the earlier manuscript return remains available. Changed project contexts invalidate a return instead of guessing a destination.
 
 In a configured local project, you can select text within one manuscript paragraph and choose **Link selection to claim**. Review the quotation, choose an existing claim, explicitly permit local retention and save the association. Selecting text or previewing that form writes nothing. The saved connection records what you associated; it does not establish factual support or turn the manuscript into source evidence.
 
-An exact return requires the current paragraph, line range and quotation to match its saved anchor. Changed or ambiguous anchors remain review tasks. Lixity does not silently infer a new connection. The public demo is read-only; saving associations requires a compatible local server and an explicitly configured research project. The research API remains experimental.
+An exact return requires the current paragraph, line range and quotation to match its saved anchor. Changed or ambiguous anchors remain review tasks. Lixity does not silently infer a new connection. The public demo is read-only; saving associations requires a compatible local server and an explicitly configured research project. Research keeps its own explicit-project and retention requirements.
 
 ## Know which document you are reading
 

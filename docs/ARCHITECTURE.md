@@ -101,7 +101,7 @@ restored-store publication. Inventory paths use the repository's existing
 containment/symlink boundary, which also rejects parent components. This is
 validation of the existing format, with no schema migration or alternate store.
 
-**On current main (Unreleased):** export owns the repository writer lock from
+**Since v0.7.3:** export owns the repository writer lock from
 accepted-snapshot selection until its compressed candidate is self-contained.
 This serializes commits and purge against the copied records/blobs. Root pointers
 come from that snapshot; stored object content addresses and the bytes actually
@@ -183,7 +183,7 @@ distinguish contention, read-only/permission failures and other I/O errors.
 
 ### Passage research presentation
 
-**On current main (Unreleased):** `manuscript-links.js` selects exact saved
+**Since v0.7.3:** `manuscript-links.js` selects exact saved
 associations with the same resolved lines, paragraph hash, codepoint span and
 quotation matcher used for manuscript marks. Explicit paragraph activation
 composes existing GETs for pinned claim/dossier records and current dossier
@@ -213,7 +213,7 @@ selection and validates configured regular files. The read-only Research CLI
 uses the same path owner after validating its archive, then preserves its domain
 review of missing/unreadable source bytes. Python text-analysis APIs stay explicit.
 
-**On current main (Unreleased):** `workspace.resolve_manuscript_target` selects
+**Since v0.7.3:** `workspace.resolve_manuscript_target` selects
 one root/source pair before analysis configuration is loaded. Command-level
 `--project` and root-configured omission use strict root-local settings; legacy
 explicit files and conventional scenes/build discovery without `--project`
@@ -350,7 +350,7 @@ inform the checks; defaults are product choices, not universal typographic optim
 Exact tokens and dimensions belong to CSS and executable checks rather than a
 second prose specification.
 
-**On current main (Unreleased):** prose heading roles cover all six Markdown
+**Since v0.7.3:** prose heading roles cover all six Markdown
 levels; subordinate headings do not fall through to small browser defaults.
 Fenced code inherits its block's size instead of compounding inline-code scaling.
 Shared controls inherit the interface font; canvas labels resolve the same UI and
@@ -377,7 +377,7 @@ choice. Responsive changes keep the mobile switcher available. Exact manuscript
 return actions reuse the existing paragraph navigation and the same anchor matcher
 as inline association marks, with a current project/source context check on click.
 
-**On current main (Unreleased):** the native shell renders the product row,
+**Since v0.7.3:** the native shell renders the product row,
 primary destinations, project identity, project actions and secondary version/
 license information in that DOM order. Navigation no longer depends on runtime
 reparenting. App chrome uses interface typography; exported document headers keep
@@ -405,7 +405,7 @@ source heading stays intact, and Project, Research and the analysis overview kee
 the generated project context. The existing workbench owner publishes the view
 attribute; no prose observer or second navigation state is introduced.
 
-Current-main exact analysis evidence is a separate optional projection, collected
+Exact analysis evidence in v0.7.3 is a separate optional projection, collected
 inside the existing paragraph-profile pass. `ParagraphMatcher` owns the same
 resolved counters used for profiles and literal evidence; the UI does not run a
 parallel linguistic detector. `DocumentAnalysis.evidence` is not part of default
@@ -416,6 +416,21 @@ are prepared, with explicit codepoint-to-UTF-16 conversion and hash validation.
 Search/research mark changes invalidate derived ranges, not source identities.
 Analysis visibility, metric changes and workspace changes cancel stale cards and
 marks. Unsupported or unprovable mappings remain explicit unavailable states.
+The existing reader preferences also retain the selected metric and marking
+choice. First explicit Analysis On defaults to `asl` only without a saved choice;
+the native disclosure beside the switch contains the single existing selector
+and marking checkbox. Explicit paragraph inspection can enable Analysis through
+the workbench owner while preserving disabled paint. Missing cryptographic
+verification is distinguished from a mismatching paragraph identity.
+
+The existing paragraph menu snapshots a native pointer caret as a transient
+UTF-16 paragraph offset and evidence identity. After normal source verification,
+inspection selects the existing counted span containing that point; it does not
+run another detector or guess a quotation after reflow. Ellipsis and keyboard
+actions without a literal pointer point keep the first-match entry. A transient
+opening token cancels superseded requests across the reader's layout wait while
+allowing its own position restoration; explicit pointer, wheel, scroll-key and
+view/layer changes take precedence.
 
 `manuscript_document.manuscript_blocks` supplies source-ordered semantic blocks
 with absolute inclusive line spans, before PDF-specific title suppression and
@@ -466,7 +481,7 @@ endpoints when marks change. Automatic review uses the existing research-status
 read before requesting archive records; context-bound pending reads are coalesced
 and invalidated on project changes.
 
-**On current main (Unreleased):** the existing reading thread owns one nearest
+**Since v0.7.3:** the existing reading thread owns one nearest
 dossier departure above an optional manuscript origin. An accepted dossier render
 provides its project/research context, saved revision and a current-render guard;
 departure captures the requesting control, tab and scroll ancestors. Return
@@ -481,7 +496,7 @@ once it commits, deliberate scrolling becomes the next origin. Reading settings
 observe their native disclosure state before rendering so initial placement does
 not depend on the later native `toggle` event.
 
-**On current main (Unreleased):** the existing dock measures its available
+**Since v0.7.3:** the existing dock measures its available
 desktop scrollport against the viewport, sticky return thread and containing
 grid's lower boundary. Dossier return settles this geometry at the restored
 document position before restoring inner scroll offsets, avoiding premature
@@ -540,7 +555,7 @@ dialog boundaries retain their distinct roles. Reader composition and companion
 spacing remain in their existing stylesheet owners, without a second display
 state or altered reading preferences.
 
-**On current main (Unreleased):** the overview wraps secondary KPIs in the native
+**Since v0.7.3:** the overview wraps secondary KPIs in the native
 `analysis-measurements` disclosure, initially collapsed for interactive workspaces
 and expanded for standalone reports. Review routes, section navigation and flags
 remain outside it. Scene detail disclosures share a second reversible catalogue;
@@ -777,7 +792,7 @@ guards and pagination stay in panel scripts. Record keys preserve current detail
 or invalidate stale card state according to each renderer's refresh contract. Other panels migrate only
 when their state requires it; a new component is not a second business-rule layer.
 
-On current main, claim evidence models also bind to the accepted archive digest,
+Since v0.7.3, claim evidence models also bind to the accepted archive digest,
 project and context token. An identical record key alone is insufficient: links
 and source availability can change independently of the claim. Only unchanged
 bindings retain a loaded or pending panel; changed or absent bindings invalidate
@@ -852,9 +867,11 @@ serves dossier, history and manuscript-companion readers. Images remain separate
 versioned sources; neither their presence nor a route line establishes geographic
 calibration, navigability or historical accuracy.
 
-## Shared document orientation and metric presentation (current main)
+<a id="shared-document-orientation-and-metric-presentation-current-main"></a>
 
-The Unreleased section-navigation helper decorates existing semantic links in
+## Shared document orientation and metric presentation
+
+The section-navigation helper added in v0.7.3 decorates existing semantic links in
 analysis and accepted dossier renderings. One instance per connected host resolves
 the actual scroll root, coalesces reads/paint by animation frame and disposes
 observers when replaced. It delegates activation, disclosure reveal, sticky

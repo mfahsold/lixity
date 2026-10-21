@@ -2,7 +2,7 @@
 
 Collect sources, read and annotate in Zotero. Use Lixity's research workspace to connect selected evidence with claims, authorial decisions and exact manuscript quotations. A capture preserves the source version you used; it does not establish that a claim is true.
 
-Updated 19 October 2026
+Updated 21 October 2026
 
 **Before importing:**
 
@@ -179,7 +179,7 @@ Use returned IDs, passage first and claim second. v0.7.1 also accepts complete b
 
 Exact resolved quotes are marked when their paragraph opens. Changed text or claim versions request review; an edit outside the quote resolves as *adjusted* and can be re-pinned explicitly in the review tab (or with `reconcile-manuscript --accept-moved`), while edited quotes and ambiguous paragraphs remain unresolved. Saved associations are listed in the research **Review** tab with their anchor state and review flags; listing them never writes or repins. These flags do not establish a contradiction or factual support. Both dossier readers show current linked claims with saved-version history and active saved quote counts. Zero saved links does not establish that a claim is unused in prose.
 
-**On current main (Unreleased):** a paragraph's **… → Saved research**, saved-association count or marked quotation opens saved context beside the manuscript. Read its exact claim and dossier versions and the author's confidence assessment. Associated decisions are labelled as current dossier context; they are not a reconstruction of that quotation's historical state. Titles open the displayed versions, and **Review** opens the dedicated anchor review. The summary shows up to five associations with their total. Opening it writes nothing, and an empty summary means only that this passage has no saved associations.
+**Since v0.7.3:** a paragraph's **… → Saved research**, saved-association count or marked quotation opens saved context beside the manuscript. Read its exact claim and dossier versions and the author's confidence assessment. Associated decisions are labelled as current dossier context; they are not a reconstruction of that quotation's historical state. Titles open the displayed versions, and **Review** opens the dedicated anchor review. The summary shows up to five associations with their total. Opening it writes nothing, and an empty summary means only that this passage has no saved associations.
 
 **Before the first save:**
 

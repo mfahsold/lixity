@@ -807,8 +807,37 @@ def render_dashboard(
         )
         parts.append("<div hidden>")
 
+    metric_control = ""
+    if paragraphs:
+        metric_control = (
+            '<label class="metric-layer-control">'
+            f'<span>{L("reading_text_analysis") if controls else help_term(labels, "layer", L("style_layer"))}</span> '
+            '<select class="ctl" id="style-layer">'
+            f'<option value="">{L("layer_off")}</option>'
+            + "".join(
+                f'<option value="{layer_key}" '
+                f'data-hint="{esc(label(labels, "layer_hint_" + layer_key), quote=True)}" '
+                f'data-comparable="{len(layer_data[layer_key])}">'
+                f"{esc(label(labels, 'layer_' + layer_key))}</option>"
+                for layer_key in LAYER_FEATURES
+            )
+            + "</select></label>"
+        )
     if has_reading and controls:
-        parts.append(reading_controls(chapters, labels, reader_document, companion_controls=reader_controls))
+        analysis_controls = (
+            '<div class="reader-analysis-controls">'
+            '<details class="reader-settings reader-analysis-settings" id="reader-analysis-settings" name="reader-settings">'
+            f'<summary class="ctl"><span id="reader-metric-state">{L("layer_off")}</span>'
+            f'<span>{L("evidence_settings")} <span id="reader-evidence-state">{L("reading_on")}</span></span></summary>'
+            '<div class="reader-settings-body">'
+            f'{metric_control}'
+            f'<label class="reader-evidence-toggle"><input type="checkbox" id="analysis-evidence-enabled" checked/> '
+            f'{L("evidence_show")}</label><p class="ctl-note">{L("evidence_interaction")}</p>'
+            '<p class="ctl-note" id="analysis-evidence-status" role="status" aria-live="polite"></p>'
+            '</div></details></div>'
+        ) if paragraphs else ""
+        parts.append(reading_controls(chapters, labels, reader_document, companion_controls=reader_controls,
+                                      analysis_controls=analysis_controls))
 
     if has_chapters:
         parts.append(f'<section class="panel" id="analysis-review"><h2>{L("review_title")}</h2>')
@@ -880,18 +909,8 @@ def render_dashboard(
         parts.append(
             f'<button type="button" class="ctl" id="paragraph-filter-reset">{L("paragraph_filter_reset")}</button>'
         )
-        parts.append('<label class="metric-layer-control">')
-        parts.append(f"{help_term(labels, 'layer', L('style_layer'))} ")
-        parts.append('<select class="ctl" id="style-layer">')
-        parts.append(f'<option value="">{L("layer_off")}</option>')
-        parts.extend(
-            f'<option value="{layer_key}" '
-            f'data-hint="{esc(label(labels, "layer_hint_" + layer_key), quote=True)}" '
-            f'data-comparable="{len(layer_data[layer_key])}">'
-            f"{esc(label(labels, 'layer_' + layer_key))}</option>"
-            for layer_key in LAYER_FEATURES
-        )
-        parts.append("</select></label>")
+        if not controls:
+            parts.append(metric_control)
     parts.append('<span class="legend">')
     for key, color in (
         ("present", "var(--present)"),
@@ -931,12 +950,6 @@ def render_dashboard(
         f'<label class="layer-only"><input type="checkbox" id="layer-only"/> '
         f"{esc(label(labels, 'layer_only'))}</label>"
     )
-    if controls:
-        parts.append(
-            f'<label class="layer-only"><input type="checkbox" id="analysis-evidence-enabled" checked/> '
-            f'{L("evidence_show")}</label>'
-            '<span class="ctl-note" id="analysis-evidence-status" role="status" aria-live="polite"></span>'
-        )
     parts.append(f'<button class="ctl" id="layer-next">{esc(label(labels, "layer_next"))}</button>')
     parts.append(f'<button class="ctl" id="layer-clear" type="button">{L("layer_clear")}</button>')
     parts.append(f'<details class="layer-comparison-note"><summary>{L("layer_guide")}</summary>'

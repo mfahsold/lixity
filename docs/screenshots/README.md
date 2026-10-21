@@ -53,7 +53,7 @@ and the editorial view ends after the selected paragraph and its note controls.
 Follow the full-size image links above to inspect the actual framing.
 The reader captures use **Analysis Off**; chapter comparisons and
 scenes open **Analysis overview**. Passage captures use the same native paragraph
-actions and optional **Analysis On** layer. These captures represent v0.7.2;
+actions and optional **Analysis On** layer. These captures represent v0.7.3;
 older installed packages can show an earlier interface.
 Scene images show the first three scenes, with the first expanded. Their sample
 register is an illustrative assignment; its values come from the analysis.

@@ -120,12 +120,19 @@ async function textRole(locator) {
         });
         await check(`${name} consistent interface type roles`, async () => {
           const primary = await textRole(page.locator('#tab-view-analysis'));
-          const settings = await textRole(page.locator('.reader-settings > summary'));
+          const settings = await textRole(page.locator('#reader-settings > summary'));
+          const analysisSettings = await textRole(page.locator('#reader-analysis-settings > summary'));
+          const metricName = await textRole(page.locator('#reader-metric-state'));
+          const highlightState = await textRole(page.locator('#reader-evidence-state'));
           const adjacent = await textRole(page.locator('#manuscript-analysis-toggle'));
           const help = await textRole(page.locator('.reader-shortcuts dd').first());
           assert.equal(primary.size, 14, 'Primary destinations retain control size on narrow screens');
           assert.equal(settings.size, adjacent.size, 'Adjacent reader commands share a type role');
           assert.equal(settings.size, 14);
+          assert.equal(analysisSettings.size, settings.size, 'Both reader settings summaries retain the control role');
+          assert.equal(metricName.size, settings.size, 'The selected metric remains a readable control label');
+          assert.equal(analysisSettings.family, settings.family);
+          assert.equal(highlightState.size, 13, 'Highlight state uses the supporting metadata role');
           assert.equal(help.size, 13, 'Supporting help remains readable and uses one metadata role');
         });
         await page.locator('#tab-view-research').click();

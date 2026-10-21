@@ -7,7 +7,14 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-10-21
+
 ### Changed
+- The first explicit reader Analysis activation selects Sentence length and
+  shows counted text. A sticky, named metric control groups the existing
+  selector, highlight preference and interaction help; deliberate None/Off
+  preferences remain visible and survive reloads. Paragraph inspection can
+  activate analysis directly without silently changing the highlight preference.
 - Research version history consolidates selected-version context and provenance,
   localizes read-only choices, omits absent optional fields and preserves pinned
   references, explicit false values, drafts and guarded version navigation.
@@ -16,7 +23,7 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Native project chrome removes the generic analysis slogan and repeated footer.
   A matching authored manuscript title remains in the document while its generated
   sidebar duplicate is suppressed only in reading mode.
-- Current-main manuscript analysis can mark exact counted sentences, words,
+- Manuscript analysis can mark exact counted sentences, words,
   patterns and quoted speech, with a hover/touch explanation and keyboard/context
   menu inspection. Evidence shares configured core counters, preserves prose and
   selection, and reports unmappable/unsupported states explicitly.
@@ -82,6 +89,14 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Hook help explains the existing heuristic without changing its calculation.
 
 ### Fixed
+- Right-click evidence inspection retains the clicked occurrence instead of
+  restarting at the paragraph's first match, including when enabling Analysis
+  changes the surrounding layout.
+- A touch inspection waits until the opening tap completes before presenting its
+  card, so that tap cannot accidentally operate the newly appeared explanation.
+  Unavailable browser text verification is distinct from a source-hash mismatch.
+- Public installation-link measurement includes the current landing section
+  anchor as well as the existing guide and historical anchor.
 - Research index failures retain their actual SQLite cause and index path
   instead of attributing storage or corruption errors to missing FTS5 support.
 - Research exports retain one accepted snapshot while copying records and blobs,
@@ -2600,7 +2615,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.7.2...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.7.3...HEAD
+[0.7.3]: https://github.com/mfahsold/lixity/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/mfahsold/lixity/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/mfahsold/lixity/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/mfahsold/lixity/compare/v0.6.0...v0.7.0

@@ -75,6 +75,11 @@ The analysis-evidence suite additionally checks exact verified text ranges,
 hover, touch and keyboard inspection, Unicode offsets, asynchronous cancellation,
 search/research mark coexistence and explicit unavailable mappings. Its geometry
 check counts repeated rectangle reads rather than setting a wall-clock threshold.
+Its disposable native first-entry flow enables Analysis through the visible control
+without preselecting a metric, then checks the named metric/highlight disclosure,
+direct inspection from Off or Focus reading, deliberate None/disabled highlights,
+settings focus and restored preferences across reloads at 1440 and 320×480 pixels.
+Missing browser identity-verification support remains distinct from a hash mismatch.
 The decision-review suite reads exact decision/dossier versions side by side,
 stacks them on mobile, and checks read failures, late root-bound responses and
 the existing guarded acknowledgement/reopen writes.

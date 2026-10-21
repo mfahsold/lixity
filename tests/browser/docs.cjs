@@ -1,3 +1,4 @@
+const {selectMetric} = require('./support/analysis-controls.cjs');
 const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
 const {openProjectActions} = require('./support/project-actions.cjs');
 // Validate the public static site without contacting production or loading private data.
@@ -532,7 +533,7 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   await page.locator('#paragraph-filter-reset').click();
   assert.equal(await page.locator('#filter-flags').isChecked(), false);
   assert.equal(await countVisible(), allVisible, 'Reset restores the paragraph map');
-  await page.locator('#style-layer').selectOption('asl');
+  await selectMetric(page, 'asl');
   assert.equal(await page.locator('#layer-legend').isVisible(), true);
   assert.ok(await page.locator('.chip.has-layer').count() > 0, 'Selecting a layer changes actual paragraph data');
   await page.locator('#paragraph-filter-reset').click();
@@ -803,7 +804,7 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   }).toBe(true);
   await openValues(page, passage);
   const inspectedValues = await page.locator('#reader-inspector-body').textContent();
-  await page.locator('#style-layer').selectOption('asl');
+  await selectMetric(page, 'asl');
   const passageId = await passage.getAttribute('id');
   const paragraphText = await passage.locator('p').first().innerText();
   await passage.locator('p').first().evaluate(node => {

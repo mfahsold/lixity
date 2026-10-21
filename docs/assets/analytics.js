@@ -78,7 +78,7 @@
         if (destination.origin === origin) {
           if (destination.pathname === '/lixity/demo/report.html') name = 'demo-open';
           else if (['/lixity/INSTALLATION.md', '/lixity/guides/installation.html'].includes(destination.pathname) ||
-                   (destination.pathname === '/lixity/' && destination.hash === '#install')) name = 'install-open';
+                   (destination.pathname === '/lixity/' && ['#install', '#installation'].includes(destination.hash))) name = 'install-open';
           else if (/^\/lixity\/demo\/warehouse-4-(book|editor|sheet|report)\.pdf$/.test(destination.pathname)) name = 'pdf-download';
         } else if (destination.origin === 'https://github.com' &&
                    /^\/mfahsold\/lixity\/?$/.test(destination.pathname)) name = 'repository-open';

@@ -110,7 +110,7 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
       }
       await page.locator('#ch-1 .chip').first().click();
       assert.equal(await page.locator('#ch-1 .ptext.open').count(), 1);
-      const paragraphHelp = page.locator('.toolbar .help:visible').first();
+      const paragraphHelp = page.locator('#manuscript-analysis-toggle[data-help]:visible');
       await paragraphHelp.focus();
       // Enter by native Tab: programmatic focus after touch is continuity,
       // rather than a request for a keyboard explanation.

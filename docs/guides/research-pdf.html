@@ -43,7 +43,7 @@
     "name": "Lixity",
     "url": "https://mfahsold.github.io/lixity/"
   },
-  "dateModified": "2026-10-19",
+  "dateModified": "2026-10-21",
   "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE",
   "mainEntityOfPage": "https://mfahsold.github.io/lixity/guides/research-pdf.html",
   "image": {
@@ -108,7 +108,7 @@
 <nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="../#guides">Guides</a></li><li><span aria-current="page">Research and PDF/OCR</span></li></ol></nav>
 <h1>Connect research to your manuscript</h1>
 <p>Collect sources, read and annotate in Zotero. Use Lixity's research workspace to connect selected evidence with claims, authorial decisions and exact manuscript quotations. A capture preserves the source version you used; it does not establish that a claim is true.</p>
-<p class="updated">Updated <time datetime="2026-10-19">19 October 2026</time></p>
+<p class="updated">Updated <time datetime="2026-10-21">21 October 2026</time></p>
 <div class="notice-box"><strong>Before importing:</strong> Choose the intended project and confirm that you may keep the source bytes. Text PDFs need Poppler; image-only scans need local Tesseract or a configured OCR worker. See <a href="installation.html#install">installation</a> and <a href="#ocr">PDF requirements</a>.</div>
 
 <nav class="guide-toc" aria-label="On this page"><strong>On this page</strong><ul><li><a href="#zotero">Zotero and evidence</a></li><li><a href="#manuscript-claims">Manuscript claims</a></li><li><a href="#places-and-routes">Places and journeys</a></li><li><a href="#manuscript-export">Manuscript PDF</a></li><li><a href="#publication">Publication details</a></li><li><a href="#ocr">Scans and OCR</a></li></ul></nav>
@@ -211,7 +211,7 @@ lixity research link urn:uuid:YOUR-PASSAGE-UUID urn:uuid:YOUR-CLAIM-UUID --relat
 <h2 id="manuscript-claims">Associate manuscript text with a claim</h2>
 <p><strong>Since v0.3.0:</strong> select text within one opened manuscript paragraph, choose <strong>Link selection to claim</strong>, choose a current claim, permit local retention of the quote and select <strong>Save association</strong>. Previewing writes nothing. Saving keeps a manual association to the exact claim version, with the quote and paragraph anchor; it does not import the complete manuscript or edit prose.</p>
 <p>Exact resolved quotes are marked when their paragraph opens. Changed text or claim versions request review; an edit outside the quote resolves as <em>adjusted</em> and can be re-pinned explicitly in the review tab (or with <code>reconcile-manuscript --accept-moved</code>), while edited quotes and ambiguous paragraphs remain unresolved. Saved associations are listed in the research <strong>Review</strong> tab with their anchor state and review flags; listing them never writes or repins. These flags do not establish a contradiction or factual support. Both dossier readers show current linked claims with saved-version history and active saved quote counts. Zero saved links does not establish that a claim is unused in prose.</p>
-<p><strong>On current main (Unreleased):</strong> a paragraph's <strong>… → Saved research</strong>, saved-association count or marked quotation opens saved context beside the manuscript. Read its exact claim and dossier versions and the author's confidence assessment. Associated decisions are labelled as current dossier context; they are not a reconstruction of that quotation's historical state. Titles open the displayed versions, and <strong>Review</strong> opens the dedicated anchor review. The summary shows up to five associations with their total. Opening it writes nothing, and an empty summary means only that this passage has no saved associations.</p>
+<p><strong>Since v0.7.3:</strong> a paragraph's <strong>… → Saved research</strong>, saved-association count or marked quotation opens saved context beside the manuscript. Read its exact claim and dossier versions and the author's confidence assessment. Associated decisions are labelled as current dossier context; they are not a reconstruction of that quotation's historical state. Titles open the displayed versions, and <strong>Review</strong> opens the dedicated anchor review. The summary shows up to five associations with their total. Opening it writes nothing, and an empty summary means only that this passage has no saved associations.</p>
 <div class="notice-box"><strong>Before the first save:</strong> back up the archive. Retention-confirmed manuscript links opt storage into v7, supported by v0.3.0 but not historical v3.0.1. The lower product number describes development maturity; archive and response schemas keep independent versions. Exported quotes remain private manuscript material. See <a href="../research/USAGE.md#associate-a-manuscript-quote-with-a-claim">anchoring, retention and compatibility</a>.</div>
 <h2 id="ocr">Can Lixity read scanned PDFs?</h2>
 <p>A PDF with selectable text can use local Poppler tools. An image-only scan needs locally installed Tesseract or a configured OCR worker to recognize text. Installing Lixity does not install either engine, download a model or start a worker service.</p>

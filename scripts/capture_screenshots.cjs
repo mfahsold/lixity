@@ -1,3 +1,4 @@
+const {selectMetric} = require('../tests/browser/support/analysis-controls.cjs');
 const {launchChromium} = require('./browser_tools.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -292,7 +293,7 @@ async function main() {
         });
         await save(capture.target, '#heatmap');
       } else if (name === 'dashboard-layer.png') {
-        await page.locator('#style-layer').selectOption('asl');
+        await selectMetric(page, 'asl');
         assert.equal(await page.locator('#layer-legend').isVisible(), true);
         assert.ok(await page.locator('#ch-1 .ptext.metric-notable').count() > 0);
         // Frame a complete passage excerpt, not offscreen prose whose lazy

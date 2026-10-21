@@ -5,7 +5,7 @@
 > instructions to rewrite. Analysis is deterministic for fixed text and settings;
 > research records also contain generated IDs and timestamps.
 
-Current release: 0.7.2; release tag: v0.7.2.
+Current release: 0.7.3; release tag: v0.7.3.
 
 This discovery index links maintained references. The public demo follows current
 main; published guides can describe newer behavior than an installed release.
@@ -50,14 +50,14 @@ for retained research. Back to passage restores the requesting text. Reading
 preferences are browser-local; saves and retention are explicit. See
 [reader controls and coverage](https://mfahsold.github.io/lixity/USAGE.md#reading-paragraphs)
 and [research workflows](https://mfahsold.github.io/lixity/research/USAGE.md).
-On current main, Saved research opens exact saved passage associations in the
+Since v0.7.3, Saved research opens exact saved passage associations in the
 same right context area: pinned claim/dossier versions and separately labelled
 current dossier decisions. Lists are bounded with totals; Review and exact-version
 viewers remain explicit. An empty summary means no saved links, not no facts.
 The presentation reads existing contracts and does not save, repin or infer links.
 Only profiled paragraphs have measurements and claim anchors. Plain reports
 keep their inspection layout; the bounded reader is not a Markdown editor.
-On current main, dossier departures also retain a guarded Back to dossier route;
+Since v0.7.3, dossier departures also retain a guarded Back to dossier route;
 mobile return controls stay visible. Reading settings includes actual keyboard
 shortcuts, and action help works on focus as well as hover. Nested scroll areas
 share settled destination feedback and live reduced-motion handling.
@@ -67,7 +67,7 @@ Root-only `manuscript` selects a contained relative default for workspace folder
 settings fail without choosing another file. Scene chapter/scene/latest output
 filters retain full references and declare their selection. Explicit planned IDs
 have no measurements and remain outside comparisons. See Usage for exact rules.
-On current main, all twelve analysis/export commands accept `--project` and
+Since v0.7.3, all twelve analysis/export commands accept `--project` and
 configured manuscript omission, with strict selected-root settings. Research
 manuscript commands share the root-local default while preserving write guards.
 Service status is read-only and nonlocking. Exports serialize snapshot copying
@@ -88,7 +88,7 @@ validates envelope shape. Existing JSON/archive versions remain unchanged.
 - [Architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md) and [localization](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md): integration boundaries and language coverage.
 - [Articles](https://mfahsold.github.io/lixity/blog/): interpretation examples, separate from API contracts.
 - [Manuscript reading workbench](https://mfahsold.github.io/lixity/blog/manuscript-reading-workbench.html): the Analysis On/Off, overview and manuscript–research workflow with explicit coverage limits.
-- [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.2.md) and [release history](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md).
+- [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.3.md) and [release history](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md).
 
 HTML guides and articles have Markdown alternatives: append `.md` to their HTML
 URL. The [research entrypoint](https://mfahsold.github.io/lixity/research/README.md)
@@ -109,13 +109,13 @@ for the supported v0.7.1 workflows and compatibility limits.
 in place; additive `geography_summary` and `dimension_diagnostics` expose their
 support without changing stored records or existing scores.
 
-On current main, confirmed empty claim evidence offers the existing draft form;
+Since v0.7.3, confirmed empty claim evidence offers the existing draft form;
 failed reads offer retry, and navigating never creates a link. Empty catalogue
 filters stay out of the way while active queries remain editable. Evidence views
 survive unchanged archive refreshes; changed archives or contexts invalidate them.
 These UI changes do not alter research storage or public API contracts.
 
-On current main (Unreleased), Analysis overview folds secondary values under
+Since v0.7.3, Analysis overview folds secondary values under
 Manuscript measurements while keeping review routes, navigation and flags visible.
 Scene rows reveal grouped, reversible measurement details. Long flags/scene lists
 support keyboard scrolling; wide comparisons retain row identity. Dialogue charts
@@ -185,7 +185,7 @@ and [tense-review article](https://mfahsold.github.io/lixity/blog/tense-switches
 Their Fontane (Gutenberg #5323) and Austen (#1342) texts are public domain,
 separate from the software license, and are not the demo manuscript.
 
-Current main (Unreleased) additionally provides `profile --layer KEY` human output
+Since v0.7.3, Lixity provides `profile --layer KEY` human output
 and opt-in `paragraph-layer/1` JSON (`--only-notable` filters after full chapter
 references); default profile schema 2 is unchanged. The UI shares that paragraph
 comparison, adds actual dossier-heading orientation, composes exact decision and
@@ -193,9 +193,13 @@ dossier versions for guarded review, and offers display-only register/declared-P
 heatmap filters with explicit whole-manuscript reference. See USAGE.md,
 research/USAGE.md, ARCHITECTURE.md and AGENTS.md for contracts and limits.
 
-Current-main exact reader evidence uses the same configured counters as profiles:
-Analysis On → select metric → Mark counted passages; hover or Inspect text evidence
-explains the exact span separately from its paragraph measurement. CLI opt-in
+Exact reader evidence in v0.7.3 uses the same configured counters as profiles.
+First explicit Analysis On selects Sentence length unless a browser-local metric
+choice exists. The adjacent control names the metric and Highlights On/Off;
+open it to select a metric or change Mark counted passages. None and unchecked
+marks persist. Hover, touch or Inspect text evidence explains the exact span
+separately from its paragraph measurement. Explicit inspection also works from
+Analysis Off, enabling Analysis while preserving disabled paint. CLI opt-in
 `profile --layer KEY --evidence [--json]` uses `paragraph-layer-evidence/1` with
 paragraph hashes, Unicode-codepoint spans and explicit mapping availability.
 Existing profile schema2 and paragraph-layer/1 remain unchanged.

@@ -139,7 +139,7 @@ purging one source must retain every blob owned by another accepted record.
 Physical deletion and rebuilding a cache are separate from accepting a new HEAD.
 Backups include authoritative records, manifests and blobs, not SQLite or locks.
 
-**On current main (Unreleased):** backup creation holds the existing project
+**Since v0.7.3:** backup creation holds the existing project
 writer lock until accepted records and blobs have been copied into a closed
 compressed candidate. This includes protection from concurrent purge. The
 candidate carries the selected HEAD and initial project bytes, with verified

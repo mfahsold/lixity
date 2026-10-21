@@ -72,7 +72,7 @@ print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'ids': ids,
     'dossier': dossier['dossier_id'], 'empty_dossier': empty_dossier['dossier_id'], 'labels': labels}), flush=True)
 server.serve_forever()
 `, artifacts);
-  let browser;
+  let browser, closePage;
   try {
     browser = await launchChromium();
     for (const [locale, labels] of Object.entries(server.fixture.labels)) for (const width of [1440, 320]) {
@@ -81,6 +81,15 @@ server.serve_forever()
       const errors = [], writes = [], external = [];
       let evidenceRead = 'native', held, release;
       let holdCatalogue = locale === 'en', catalogueHeld, releaseCatalogue, catalogueSnapshot = 'native';
+      closePage = async () => {
+        closePage = null;
+        holdCatalogue = false; evidenceRead = 'native';
+        if (releaseCatalogue) releaseCatalogue();
+        if (release) release();
+        // Finish intercepted reads before disposing their request context.
+        try { await page.unrouteAll({behavior: 'wait'}); }
+        finally { await page.close(); }
+      };
       page.on('pageerror', error => errors.push(error.message));
       page.on('console', message => {if (['error', 'warning'].includes(message.type())) errors.push(message.text());});
       await page.route('**/*', async route => {
@@ -258,15 +267,19 @@ server.serve_forever()
         await expect(empty.locator('button')).toHaveCount(0);
       }
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, `${locale}/${width}: no page overflow`);
+      await closePage();
       assert.deepEqual(errors, []); assert.deepEqual(writes, []); assert.deepEqual(external, []);
-      await page.close();
     }
     console.log('Claim evidence actions: native empty guidance, claim navigation, drafts, seven locales, desktop/mobile, read-only, loading/error retry and historical evidence passed. Screenshots: ' + artifacts);
   } finally {
-    if (browser) await browser.close();
-    await server.close();
-    for (const locale of ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl']) {
-      fs.rmSync(path.join(artifacts, locale + '.html'), {force: true});
+    try {
+      if (closePage) await closePage();
+    } finally {
+      if (browser) await browser.close();
+      await server.close();
+      for (const locale of ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl']) {
+        fs.rmSync(path.join(artifacts, locale + '.html'), {force: true});
+      }
     }
   }
 })().catch(error => {console.error(error); process.exitCode = 1;});

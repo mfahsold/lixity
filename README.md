@@ -68,18 +68,16 @@ does not update an already running service.
 The browser app, CLI and Python API share one analysis pipeline;
 `lixity --help` and `lixity about --json` describe installed capabilities.
 
-On current main, selected paragraph metrics mark counted text directly, with
-hover/context-menu explanations and source-anchored CLI evidence
-(`lixity profile --layer asl --evidence`). Dossier headings and
-exact decision/dossier review stay within the existing navigation; declared
-register/POV filters change the style table’s display while retaining its book
-reference. These additions are Unreleased; see the [usage guide](https://mfahsold.github.io/lixity/USAGE.md).
+Turn **Analysis** on beside the text, choose a metric and inspect its counted
+passages through hover, touch or the paragraph menu. The same literal evidence
+is available through `lixity profile manuscript.md --layer asl --evidence`.
+A passage's **Saved research** opens its saved claim and dossier versions beside
+the manuscript, with a return to the passage. See the
+[reader and CLI guide](https://mfahsold.github.io/lixity/USAGE.md).
 
-On current main, CLI workflows can reuse the project's configured manuscript;
+CLI workflows can reuse the project's configured manuscript;
 [default manuscript guidance](https://mfahsold.github.io/lixity/USAGE.md#default-manuscript)
 explains explicit project selection and settings scope.
-Current development also opens a passage's **Saved research** beside the text:
-follow its saved claim and dossier versions, then return to the passage.
 
 English and German have the broadest analysis resources. French, Spanish,
 Italian, Portuguese and Dutch offer localized interfaces with narrower heuristic
@@ -107,9 +105,9 @@ their own projects.
 
 ## Release, citation and license
 
-The current release is **v0.7.2**, in the pre-1.0 development line. Historical
+The current release is **v0.7.3**, in the pre-1.0 development line. Historical
 v3.0.1 and earlier tags remain available. Product and schema versions are
-independent; [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.2.md)
+independent; [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.3.md)
 cover archive compatibility and upgrades. See the
 [changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md) for subsequent work.
 The public demo follows current main and can show changes beyond the release.

@@ -1,3 +1,4 @@
+const {selectMetric} = require('./support/analysis-controls.cjs');
 const {openProjectActions} = require('./support/project-actions.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -120,7 +121,7 @@ const data = JSON.parse(fixture.stdout);
           await page.locator('#manuscript-analysis-toggle').click();
         }
         await page.locator('#filter-flags').check();
-        await page.locator('#style-layer').selectOption('asl');
+        await selectMetric(page, 'asl');
         await page.locator('#layer-only').check();
         await page.locator('#paragraph-filter-reset').click();
         assert.equal(await page.locator('#filter-flags').isChecked(),false);

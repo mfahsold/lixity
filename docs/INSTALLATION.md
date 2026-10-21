@@ -40,7 +40,7 @@ lixity --version
 lixity service start --open
 ```
 
-The current release is **v0.7.2**. See the [release notes](releases/v0.7.2.md)
+The current release is **v0.7.3**. See the [release notes](releases/v0.7.3.md)
 for changes and compatibility. `uv tool update-shell` configures new terminals;
 it does not change the terminal already open.
 
@@ -88,7 +88,7 @@ For a checksum-verified setup, install the pinned release wheel instead and
 verify it against `SHA256SUMS` on the release page:
 
 ```sh
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.7.2/lixity-0.7.2-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.7.3/lixity-0.7.3-py3-none-any.whl"
 ```
 
 `uv tool list` shows the installed source. This uses uv's
@@ -272,7 +272,7 @@ each invocation and is not saved: repeat `--backend process` on restart to keep
 that choice; otherwise restart uses `auto`. `lixity service status --json`
 reports readiness, installed/running versions, backend and log path; see the
 [command contract](USAGE.md#lixity-service) for states and exit codes.
-On current main (Unreleased), status reads existing storage without creating
+Since v0.7.3, status reads existing storage without creating
 folders, repairing permissions or waiting for a lifecycle write. Unreadable or
 changing state remains uncertain; it does not trigger an alternate runtime path.
 
@@ -430,7 +430,7 @@ Linux/macOS:
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@v0.7.2"
+.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@v0.7.3"
 .venv/bin/python -m pip check
 .venv/bin/python -c "import lixity; print(lixity.__version__)"
 ```
@@ -439,7 +439,7 @@ Windows PowerShell (no activation or execution-policy change needed):
 
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@v0.7.2"
+.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@v0.7.3"
 .\.venv\Scripts\python.exe -m pip check
 .\.venv\Scripts\python.exe -c "import lixity; print(lixity.__version__)"
 ```

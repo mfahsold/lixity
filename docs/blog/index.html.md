@@ -4,9 +4,9 @@ Practical articles for reading a draft, checking its research and investigating 
 
 ## [Give the manuscript room to read](manuscript-reading-workbench.html)
 
-Published 20 October 2026 · 5 minutes
+Updated 21 October 2026 · 6 minutes
 
-Read a scene, inspect one passage and keep a dossier beside the text. Follow a synthetic Warehouse 4 quotation into research and back, with the reading controls and their coverage limits explained.
+Inspect the text behind a measurement, follow a passage's saved claim and source, then return to the sentence. Try the complete loop in the invented Warehouse 4 manuscript.
 
 ## [When a chapter is meant to sound different](intentional-registers.html)
 

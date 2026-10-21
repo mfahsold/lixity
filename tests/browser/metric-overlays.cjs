@@ -1,3 +1,4 @@
+const {openAnalysisSettings, selectMetric} = require('./support/analysis-controls.cjs');
 // A selected metric paints behind canonical prose, without changing its identity.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -80,9 +81,12 @@ async function identity(page) {
       await page.evaluate(() => { window.originalMetricProse = document.querySelector('#chapters .ptext-inner > p'); });
       assert.equal(await page.locator('#style-layer').isVisible(), false, 'Reading starts unpainted');
       await page.locator('#manuscript-analysis-toggle').click();
-      assert.equal(await page.locator('#style-layer').isVisible(), true, 'Metric choice is directly available in enabled analysis');
+      assert.equal(await page.locator('#reader-analysis-settings > summary').isVisible(), true, 'Named metric choice is directly available beside enabled Analysis');
+      assert.equal(await page.locator('#reader-metric-state').textContent(), fixture.labels.layer_asl);
+      await openAnalysisSettings(page);
+      assert.equal(await page.locator('#style-layer').isVisible(), true, 'one visible disclosure click exposes the actual selector');
       for (const key of Object.keys(fixture.expected)) {
-        await page.locator('#style-layer').selectOption(key);
+        await selectMetric(page, key);
         await frames(page);
         assert.deepEqual(await page.locator('#chapters .metric-notable').evaluateAll(nodes => nodes.map(node => node.id)), fixture.expected[key]);
         assert.ok((await page.locator('#layer-legend-count').textContent()).includes(String(fixture.expected[key].length)));
@@ -142,6 +146,15 @@ async function identity(page) {
       assert.equal(await page.evaluate(() => window.originalMetricProse === document.querySelector('#chapters .ptext-inner > p')), true);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       assert.deepEqual(errors, []); assert.deepEqual(writes, []);
+      if (locale === 'en' && width === 1440) {
+        await selectMetric(page, 'passive');
+        await page.reload();
+        await page.locator('#manuscript-analysis-toggle').click();
+        assert.equal(await page.locator('#style-layer').inputValue(), 'passive');
+        assert.deepEqual(await page.locator('#chapters .metric-notable').evaluateAll(nodes => nodes.map(node => node.id)), fixture.expected.passive, 'restored metric reapplies the same shared paragraph comparison');
+        assert.equal(await page.locator('#layer-legend').isVisible(), true);
+        assert.equal(await page.locator('#reader-metric-state').textContent(), fixture.labels.layer_passive);
+      }
       if (locale === 'en' || locale === 'de') await page.screenshot({path: path.join(artifacts, `${locale}-${width}-${colorScheme}-${reducedMotion}.png`)});
       await page.close();
     }
@@ -153,7 +166,7 @@ async function identity(page) {
       await page.goto('http://lixity.test/');
       await page.locator('#tab-view-analysis').click();
       await page.locator('#manuscript-analysis-toggle').click();
-      await page.locator('#style-layer').selectOption('asl');
+      await selectMetric(page, 'asl');
       assert.equal(await page.locator('#layer-next').isDisabled(), true);
       assert.equal(await page.locator('.metric-notable').count(), 0);
       assert.equal(await page.locator('#layer-only').isDisabled(), kind === 'unavailable');

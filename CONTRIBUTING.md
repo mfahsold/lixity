@@ -223,6 +223,18 @@ Preserve mathematical limits and JSON compatibility notes. Reuse the shared
 Pages stylesheet and scripts; distinguish unreleased behavior from the current
 release. Keep `llms.txt` factual.
 
+Search and AI retrieval use the same maintained public evidence: descriptive
+page titles, one canonical URL, readable HTML, accurate application/article
+metadata, source links and real modification dates. Keep release information
+consistent with PyPI, the demo and installation guidance. Do not invent ratings
+or turn roadmap items into published capabilities. Google's
+[AI search guidance](https://developers.google.com/search/docs/fundamentals/ai-optimization-guide)
+does not require special AI markup; `llms.txt` serves documentation consumers,
+not a promised Google ranking improvement. Crawlability and a sitemap do not
+establish indexing, traffic or inclusion in generated answers. Inspect those
+outcomes through authorized Search Console and analytics access, and report
+unavailable measurements as unknown.
+
 Run `make docs-check` (`make docs-sync` updates release pins) and relevant
 [browser checks](tests/browser/README.md). Inspect desktop and mobile layouts,
 titles, links and reviewed public screenshots; set their actual image dimensions.

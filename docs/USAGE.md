@@ -114,7 +114,7 @@ focusing the passage. **Explore chapters** opens available chapter comparisons;
 navigate to the corresponding prose. These are review locations, not rankings
 or instructions to revise.
 
-**On current main (Unreleased):** the overview keeps these review routes,
+**Since v0.7.3:** the overview keeps these review routes,
 section navigation and flagged passages visible. Expand **Manuscript
 measurements** for the grouped scope, rhythm, language, vocabulary and style
 values; use the same summary to collapse them. Its open state survives switching
@@ -149,7 +149,7 @@ dossier's close button; refresh explicitly for the latest revision. The
 [research workflow](research/USAGE.md#reading-and-cli-workflows) owns
 selection, evidence and retention semantics.
 
-**On current main (Unreleased):** the workspace switcher comes before project
+**Since v0.7.3:** the workspace switcher comes before project
 details, so a long title does not push Manuscript, Research and Project out of
 reach. **Project actions** keeps New, Open, guidance and available PDF exports
 together; version and license information follow those controls.
@@ -170,7 +170,7 @@ explicitly when needed. Claim and dossier views can open their saved manuscript
 associations in Review. Only an exactly resolved current passage offers a direct
 jump; moved, changed, ambiguous and unavailable anchors retain their review state.
 
-**On current main (Unreleased):** choose a paragraph's **… → Saved research**,
+**Since v0.7.3:** choose a paragraph's **… → Saved research**,
 its saved-association count or a marked saved quotation to read its context
 beside the manuscript. The context shows up to five exact saved associations,
 with their total, pinned claim and dossier versions and author-assigned confidence.
@@ -192,7 +192,7 @@ Cited source
 quotations remain pinned retained passages; opening an ordinary source reader is
 not a new historical-source navigation contract.
 
-**On current main (Unreleased):** leaving an open dossier for its saved
+**Since v0.7.3:** leaving an open dossier for its saved
 associations or a global research collection offers **Back to dossier**. It
 restores that saved version, tab, scroll position and requesting control without
 reloading the dossier or discarding drafts. An earlier manuscript return remains
@@ -216,12 +216,20 @@ then **Back to passage** to restore the document context and prior analysis
 display choice. Hiding analysis leaves the overview and restores the prior
 passage tool. The inspector and dossier work with Analysis On or Off.
 
-**On current main (Unreleased):** turn **Analysis** on, choose a metric and leave
-**Mark counted passages** checked to highlight the actual counted words, patterns,
-quoted speech or sentences. Hover a mark for its explanation; the paragraph menu's
-**Inspect text evidence** offers the same view by keyboard or right-click. A short
-stationary tap opens it on touch screens. Escape closes it. Turning analysis off,
-clearing the metric or unchecking the marking control removes the marks.
+**Since v0.7.3:** the first explicit **Analysis On** selects **Sentence length**
+unless you have already saved a metric choice. The compact control beside
+**Analysis** names that metric and shows **Highlights On/Off**. Open it to choose
+a metric under **Text analysis** or change **Mark counted passages**. With marks
+enabled, the counted words, patterns, quoted speech or sentences are highlighted.
+Hover a mark for its explanation; a short stationary tap opens it on touch
+screens. Escape closes it. Turning analysis off, choosing **None** or unchecking
+the marking control removes the marks. Your metric and marking choices persist
+in the browser, including deliberate **None** and disabled marks.
+
+The paragraph menu's **Inspect text evidence** offers the same explanation by
+keyboard or right-click, including with Analysis Off or Focus reading. That
+explicit action enables Analysis and chooses Sentence length if no metric is
+selected, while preserving an unchecked marking preference.
 
 The explanation separates the counted passage from its paragraph measurement and
 chapter comparison. A sentence's word count does not make it an editorial fault;
@@ -236,7 +244,7 @@ for text size (16–28 nominal pixels), narrow/standard/wide text and
 compact/standard/relaxed line spacing. Appearance and the desktop split are local
 browser preferences; display changes do not edit the source.
 
-**On current main (Unreleased):** **Reading settings → Keyboard shortcuts**
+**Since v0.7.3:** **Reading settings → Keyboard shortcuts**
 lists the passage menu, search and close keys. Hovering or focusing key controls
 also gives a short explanation; Escape dismisses a tooltip. Essential actions
 remain labeled and work without hovering. In manuscript search, `Enter` selects
@@ -259,7 +267,7 @@ Use Shift+right-click to open the browser's native context menu instead.
 lines, tense and style measurements in the closable context area. Opening or
 closing it leaves the global Analysis choice unchanged; turning Analysis Off
 keeps the inspector available. In v0.7.2, **Saved manuscript associations** opens
-the quote review for that paragraph. On current main, this entry and **Saved
+the quote review for that paragraph. Since v0.7.3, this entry and **Saved
 research** open the passage's saved context alongside; its **Review** action opens
 the dedicated quote review. Switch between passage values, saved research and
 the saved dossier explicitly; closing the tool does not turn all
@@ -315,7 +323,7 @@ diacritics or cross paragraph boundaries. Text resembling markup remains text.
 Research list filters only match loaded record metadata; use
 **Research → Search** for retained source text.
 
-On current main, empty source and dossier collections omit their unused filter.
+Since v0.7.3, empty source and dossier collections omit their unused filter.
 A filter that finds no matches stays available so you can change or clear it.
 
 ### Source availability and saved analysis
@@ -340,7 +348,7 @@ Tabs group the heatmap, style reference, dimensions and structural diagnostics.
 Links to `#heatmap`, `#bands`, `#dimensions`, `#structural` and `#feat-<field>`
 select the relevant tab. All available panels remain readable without JavaScript.
 
-**On current main (Unreleased):** the chapter matrix shows `0` when a style
+**Since v0.7.3:** the chapter matrix shows `0` when a style
 comparison is available and no feature crosses its cutoff; `–` means that the
 comparison is unavailable. **What is counted** explains the existing coverage:
 chapter values use profiled body paragraphs and lists, while corpus/style
@@ -363,8 +371,9 @@ Its cutoff-hit counts differ from FDR decisions; the bands are neither
 confidence intervals nor external editorial targets. Paragraph style layers
 show measured values and flag unusual values relative to the chapter.
 
-**On current main (Unreleased):** with **Analysis On**, select one metric in
-**Deviations**. A transparent background and up/down arrow on a notable paragraph
+**Since v0.7.3:** with **Analysis On**, open the named metric control beside
+the switch and select one metric under **Text analysis**. A transparent background
+and up/down arrow on a notable paragraph
 refer to that chapter's median/MAD, not literary quality. The paragraph button
 explains its raw value, unit, source lines and local z; choose **Values** for the
 measurements. **Next deviation** opens the paragraph, and **Clear metric** removes
@@ -468,7 +477,7 @@ large values from few matches. Nominalization suffix cues exclude curated
 function words unless a project regex override is supplied. They remain
 heuristics rather than a grammatical parse.
 
-**On current main (Unreleased):** inspect the same selected paragraph metric
+**Since v0.7.3:** inspect the same selected paragraph metric
 from the terminal, without printing manuscript prose:
 
 ```bash
@@ -490,7 +499,7 @@ comparisons have `z: null` and `notable: null`, while measured zero remains zero
 Densities remain word-pattern counts per 1,000 words, not exact token spans or a
 grammatical interpretation. See [the contract](AGENTS.md#311-opt-in-paragraph-layers).
 
-On current main, add `--evidence` to a selected layer for literal counted spans:
+Since v0.7.3, add `--evidence` to a selected layer for literal counted spans:
 
 ```sh
 lixity profile --layer filter --evidence
@@ -516,7 +525,7 @@ A turn is a quotation segment, without speaker attribution. A dialogue paragraph
 has at least half its words inside detected quotations. `--json` returns these
 summary and per-chapter measurements for automation.
 
-**On current main (Unreleased):** the browser dialogue chart retains every
+**Since v0.7.3:** the browser dialogue chart retains every
 measured chapter in manuscript order, including chapters with zero detected
 turns. Long charts scroll within their bounded area rather than showing only
 the chapters with the most dialogue.
@@ -553,7 +562,7 @@ length, staccato share, dialogue share and scene length. The hook score (0–3)
 adds one for each closing cue: at most eight words, terminal `?`/`!`/`…`, and
 closing dialogue. It measures these cues, not suspense or reader response.
 
-**On current main (Unreleased):** the pacing panel labels average sentence length
+**Since v0.7.3:** the pacing panel labels average sentence length
 as **ASL**, gives its words-per-sentence unit and explains that bars are scaled
 to the largest chapter average. The **Hook** help describes the same 0–3
 heuristic; it adds no new suspense or quality score.
@@ -573,7 +582,7 @@ add `--json` for the scene envelope (schema version 1). The dashboard
 shows the same observations in **Scenes & style registers**. Chapters serve as
 scenes when there are no explicit dividers.
 
-**On current main (Unreleased):** the scene comparison table stays visible in a
+**Since v0.7.3:** the scene comparison table stays visible in a
 bounded scrolling region. Choose a scene's linked title to reveal its detailed
 measurements inside **Scene measurements**. The catalogue and each scene use
 native, reversible disclosures; close either summary when finished. These are
@@ -842,7 +851,7 @@ means false. Status succeeds only for a ready owned instance; stopped status
 exits 1, while stopping an already stopped instance succeeds. Stop preserves
 saved launch settings and logs.
 
-**On current main (Unreleased):** status does not create or repair storage or
+**Since v0.7.3:** status does not create or repair storage or
 acquire the lifecycle writer lock. Missing private folders are a normal stopped
 state. Unsafe, unreadable or changing records report uncertainty; status does not
 change runtime locations to work around a permission error. Lifecycle commands
@@ -1084,8 +1093,8 @@ idempotent output writes.
 
 Legacy CLI commands with an explicit manuscript path load settings relative to
 that manuscript; otherwise workspace discovery starts in the current directory.
-Current-main `--project` and configured-omission modes instead use strict settings
-from the selected root; see [default manuscript](#default-manuscript).
+The `--project` and configured-omission modes added in v0.7.3 instead use strict
+settings from the selected root; see [default manuscript](#default-manuscript).
 Project settings live in `lixity.toml` or `[tool.lixity]` in `pyproject.toml`.
 An explicit CLI option overrides its project value. Configured title affects
 dashboard/build presentation; artifact names still follow the manuscript name.
@@ -1174,7 +1183,7 @@ The published v0.7.2 release uses this setting for folder selection (Open
 Project, service startup and `build`), omitted `scenes` input and read-only
 Research manuscript review. Text-taking Python APIs do not discover files.
 
-**On current main (Unreleased):** all manuscript analysis/export commands accept
+**Since v0.7.3:** all manuscript analysis/export commands accept
 `--project PATH`: `analyze`, `profile`, `dialogue`, `pacing`, `showing`, `style`,
 `motifs`, `characters`, `dashboard`, `pdf`, `scenes` and `build`. With no file,
 these commands use the selected root's configured manuscript. Only `scenes` and

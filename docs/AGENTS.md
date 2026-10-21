@@ -69,7 +69,7 @@ Analysis defaults to English; choose another manuscript language or explicit
 `auto`. `LIXITY_LANG` selects terminal messages independently. Read active
 thresholds from result metadata rather than assuming `about` defaults.
 Legacy configuration precedence is CLI > UI session > project > user > code.
-On current main, analysis/export commands accept `--project PATH` and a root-local
+Since v0.7.3, analysis/export commands accept `--project PATH` and a root-local
 configured manuscript when input is omitted. These new selection modes exclude
 user/ancestor settings and keep root language/title/register scope. Legacy
 explicit files and conventional scenes/build discovery without `--project`
@@ -88,7 +88,7 @@ Research is a separate project API. Existing-archive CLI commands
 can use only a validated current project directory as a shortcut; Python/HTTP
 require explicit selection. Retention is explicit. See [research workflows](research/USAGE.md),
 not the RFC's unimplemented proposals, for behavior and compatibility.
-On current main (Unreleased), capability metadata classifies Research as
+Since v0.7.3, capability metadata classifies Research as
 `status: "supported"`. This product classification changes no response or archive
 schema version, retention or revision guard, and does not certify factual accuracy.
 The manuscript paragraph action `data-reader-action="research"` opens existing
@@ -102,7 +102,7 @@ their roles; see [reader guidance](USAGE.md#link-a-manuscript-quote-to-a-claim).
 default. `serve` runs in the foreground. CLI analysis/research/build calls do not
 switch an existing server's project. Service JSON uses `lixity-service-local/1`;
 exit `0` means `ok: true`, including an already-stopped `stop`. A stopped `status`
-returns false/nonzero. On current main, status is non-mutating and does not take
+returns false/nonzero. Since v0.7.3, status is non-mutating and does not take
 the lifecycle writer lock; unreadable/changing state remains unknown. Start uses
 new launch choices; restart uses saved choices
 plus explicit overrides. [Lifecycle details](INSTALLATION.md#running-the-server)
@@ -164,7 +164,7 @@ and [methods](METHODS.md) explain these changes. Current contracts include:
 
 ### 3.1.1 Opt-in paragraph layers
 
-**On current main (Unreleased):** `profile --layer KEY --json` has
+**Since v0.7.3:** `profile --layer KEY --json` has
 `meta.schema_version: "paragraph-layer/1"`. Default `profile`/`profile --json`
 keeps numeric schema 2; this is a separate opt-in projection, not a replacement.
 `about().commands` exposes the profile command's additive `layer_projection`
@@ -299,13 +299,15 @@ capability/context guards below. Selection drafts save nothing by themselves.
 | Hook | Meaning |
 |---|---|
 | `#manuscript-analysis-toggle` | constant-name **Analysis** toggle; `aria-pressed` and visible On/Off text identify diagnostic visibility independently of the dossier |
+| `#reader-analysis-settings` / `#reader-metric-state` / `#reader-evidence-state` | compact native disclosure beside Analysis names the selected metric and marking preference; opens the single metric selector, marking checkbox and explanations |
+| `#analysis-evidence-enabled` | browser-local marking preference; explicit evidence inspection remains available when unchecked. First explicit Analysis On selects `asl` only without a saved metric choice; deliberate None and unchecked marks survive Off/On and reload |
 | `#workbench-overview-open` / `#workbench-overview-back` | open dense analysis / return to preserved manuscript context |
-| `[data-context-tool="analysis"]` / `[data-context-tool="dossier"]` / `[data-context-tool="research"]` | explicitly select one active context tool; current main adds requested Saved research. Closing the tool does not itself hide all analysis |
-| `#workbench-thread` / `#workbench-return` | context-checked return to the original passage; on current main, a nearest dossier departure retains its saved version/position and an earlier passage return. The same control remains visible on narrow screens; replaced roots or changed project/source/research context invalidate it |
-| `#reader-settings .reader-shortcuts` | current main: visible localized reference to implemented passage-menu, search and close keys |
-| `#style-layer` / `#layer-clear` | current main: select/clear one paragraph metric; the Analysis mode controls its prose paint and hints, while the existing local Values remains independent |
-| `#analysis-scope-register` / `#analysis-scope-pov` | current main: optional author-declared groups filter only heatmap rows; the full-book reference and numerical outputs stay unchanged |
-| `[data-section-nav]` / `[data-section-link]` | current main: shared active-heading presentation over real targets; dossier IDs are local to an accepted rendering, not durable record references |
+| `[data-context-tool="analysis"]` / `[data-context-tool="dossier"]` / `[data-context-tool="research"]` | explicitly select one active context tool; Saved research opens the requested passage context. Closing the tool does not itself hide all analysis |
+| `#workbench-thread` / `#workbench-return` | context-checked return to the original passage; since v0.7.3, a nearest dossier departure retains its saved version/position and an earlier passage return. The same control remains visible on narrow screens; replaced roots or changed project/source/research context invalidate it |
+| `#reader-settings .reader-shortcuts` | visible localized reference to implemented passage-menu, search and close keys |
+| `#style-layer` / `#layer-clear` | select/clear one paragraph metric; the Analysis mode controls its prose paint and hints, while the existing local Values remains independent |
+| `#analysis-scope-register` / `#analysis-scope-pov` | optional author-declared groups filter only heatmap rows; the full-book reference and numerical outputs stay unchanged |
+| `[data-section-nav]` / `[data-section-link]` | shared active-heading presentation over real targets; dossier IDs are local to an accepted rendering, not durable record references |
 | `[data-help]` / `#lixity-tooltip` | supplemental action/measurement explanation on hover or focus; inspect visible control names/states for operation, not tooltip visibility. Help does not authorize a write or retention |
 | `#project-actions > summary` | open or close Project actions before using its existing New/Open, guidance and PDF controls; loaded workspaces start collapsed, empty workspaces expanded |
 | `.reader-structural[data-start][data-end]` | readable source structure without a paragraph profile; inclusive source lines are presentation anchors, not a new research-anchor format |

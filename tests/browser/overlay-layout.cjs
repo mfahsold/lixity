@@ -93,7 +93,7 @@ async function viewportContains(locator) {
       await check(locale + ' settings resize and short viewport', async () => {
         await page.locator('#reader-settings > summary').click();
         await page.setViewportSize({width: 390, height: 480}); await settle(page);
-        const settings = page.locator('.reader-settings-body');
+        const settings = page.locator('#reader-settings .reader-settings-body');
         assert.ok(await viewportContains(settings), 'An open settings popup follows the resized viewport');
         await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
         await page.setViewportSize({width: 320, height: 480}); await settle(page);

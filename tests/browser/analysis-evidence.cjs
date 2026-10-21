@@ -1,3 +1,4 @@
+const {openAnalysisSettings, selectMetric} = require('./support/analysis-controls.cjs');
 // Exact evidence highlights preserve prose nodes and expose the same explanation to pointer and keyboard users.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -5,6 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
 const {pythonFixture} = require('./support/python-fixture.cjs');
+const {startNativeServer} = require('./support/native-server.cjs');
 const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-analysis-evidence-'));
 const fixtures = pythonFixture(`
@@ -55,7 +57,7 @@ async function ranges(page) {
   return page.evaluate(() => [...(CSS.highlights?.get('lixity-analysis-evidence') || [])].map(range => range.toString()));
 }
 async function selected(page, key) {
-  await page.locator('#style-layer').selectOption(key);
+  await selectMetric(page, key);
   await page.locator('.ptext-inner > p').filter({hasText:'😀 I feel'}).first().scrollIntoViewIfNeeded();
   await page.waitForFunction(text => [...(CSS.highlights?.get('lixity-analysis-evidence') || [])].some(range => range.toString() === text), expected[key]);
   await page.evaluate(text => {
@@ -86,14 +88,193 @@ async function menuInspect(page, keyboard = false) {
   }
   await page.locator('#analysis-evidence-card').waitFor({state:'visible'});
 }
+async function marksEnabled(page, enabled) {
+  if (!await page.locator('#reader-analysis-settings').evaluate(node => node.open)) await page.locator('#reader-analysis-settings > summary').click();
+  await page.locator('#analysis-evidence-enabled').setChecked(enabled);
+  await page.keyboard.press('Escape');
+}
+async function nativeEntry(browser) {
+  const server = await startNativeServer(`
+import json, sys
+from pathlib import Path
+from http.server import ThreadingHTTPServer
+from lixity.server import LixityServerHandler
+project = Path(sys.argv[1]) / 'entry-project'
+project.mkdir(exist_ok=True)
+manuscript = project / 'manuscript.md'
+manuscript.write_text('# Synthetic first entry\\n\\n## The garden\\n\\nI feel the rain. The gate was opened slowly. The organization might return. I felt the breeze.\\n\\nThe keeper watches the garden.\\n', encoding='utf-8')
+LixityServerHandler.workspace_root = str(project)
+LixityServerHandler.research_dir = None
+LixityServerHandler.source_input = str(manuscript)
+LixityServerHandler.exports_dir = str(Path(sys.argv[1]) / 'exports')
+LixityServerHandler.language = 'en'
+LixityServerHandler.refresh()
+server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
+print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'manuscript': str(manuscript)}), flush=True)
+server.serve_forever()
+`, artifacts);
+  try {
+    const originalBytes = fs.readFileSync(server.fixture.manuscript);
+    for (const width of [1440, 320]) {
+      const page = await browser.newPage({viewport:{width,height:width === 320 ? 480 : 950}, hasTouch:width === 320, reducedMotion:'reduce'});
+      const errors = [], writes = [];
+      page.on('pageerror', error => errors.push(error.message));
+      page.on('request', request => {if (request.method() !== 'GET') writes.push(request.method() + ' ' + new URL(request.url()).pathname);});
+      await page.goto(server.fixture.url);
+      const paragraph = page.locator('.ptext-inner > p').filter({hasText:'I feel the rain.'}).first();
+      const actions = paragraph.locator('..').locator('.reader-paragraph-actions');
+      const text = await paragraph.textContent();
+      assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'false');
+      await page.locator('#manuscript-analysis-toggle').click();
+      // No programmatic layer activation: the author's first explicit On must work.
+      assert.equal(await page.locator('#style-layer').inputValue(), 'asl', 'first Analysis On selects named sentence length');
+      assert.equal(await page.locator('#manuscript-reader-controls #style-layer').count(), 1, 'one existing metric selector beside Analysis');
+      assert.equal(await page.locator('#style-layer').count(), 1);
+      assert.equal(await page.locator('#reader-metric-state').textContent(), 'Sentence length');
+      await openAnalysisSettings(page);
+      assert.equal(await page.locator('#style-layer').isVisible(), true, 'one adjacent disclosure click exposes the metric selector');
+      await page.screenshot({path:path.join(artifacts, `native-settings-${width}.png`)});
+      await page.keyboard.press('Escape');
+      // Native keyboard opening keeps one settings popover and returns its own focus.
+      await page.locator('#reader-settings > summary').focus(); await page.keyboard.press('Enter');
+      await page.locator('#reader-analysis-settings > summary').focus(); await page.keyboard.press('Enter');
+      assert.equal(await page.locator('#reader-settings').evaluate(node => node.open), false);
+      assert.equal(await page.locator('#reader-analysis-settings').evaluate(node => node.open), true);
+      await page.locator('#reader-settings > summary').focus(); await page.keyboard.press('Enter');
+      assert.equal(await page.locator('#reader-settings').evaluate(node => node.open), true, 'rapid reverse opening keeps the newer reading disclosure');
+      assert.equal(await page.locator('#reader-analysis-settings').evaluate(node => node.open), false);
+      await page.locator('#reader-analysis-settings > summary').focus(); await page.keyboard.press('Enter');
+      assert.equal(await page.locator('#reader-settings').evaluate(node => node.open), false, 'rapid opening keeps the newer analysis disclosure');
+      assert.equal(await page.locator('#reader-analysis-settings').evaluate(node => node.open), true);
+      await page.keyboard.press('Escape');
+      assert.equal(await page.locator('#reader-analysis-settings > summary').evaluate(node => node === document.activeElement), true);
+      await actions.click(); await page.keyboard.press('Escape');
+      await page.waitForFunction(() => [...(CSS.highlights.get('lixity-analysis-evidence') || [])].some(range => range.toString() === 'I feel the rain.'));
+      await page.screenshot({path:path.join(artifacts, `native-controls-${width}.png`)});
+      const point = await page.evaluate(() => {
+        const range = [...CSS.highlights.get('lixity-analysis-evidence')].find(range => range.toString() === 'I feel the rain.');
+        const rect = range.getClientRects()[0]; return {x:rect.x + rect.width / 2,y:rect.y + rect.height / 2};
+      });
+      if (width === 320) await page.touchscreen.tap(point.x, point.y);
+      else await page.mouse.move(point.x, point.y);
+      await page.locator('#analysis-evidence-card').waitFor({state:'visible'});
+      assert.equal(await page.locator('#analysis-evidence-card blockquote').textContent(), 'I feel the rain.');
+      await page.screenshot({path:path.join(artifacts, `native-first-on-${width}.png`)});
+      if (width === 1440) {
+        async function inspectAt(quote) {
+          const at = await paragraph.evaluate((node, quote) => {
+            const start = node.textContent.indexOf(quote), range = document.createRange();
+            range.setStart(node.firstChild, start); range.setEnd(node.firstChild, start + quote.length);
+            const rect = range.getClientRects()[0]; return {x:rect.x + rect.width / 2,y:rect.y + rect.height / 2};
+          }, quote);
+          await page.mouse.click(at.x, at.y, {button:'right'});
+          await page.locator('[data-reader-action="evidence"]').click();
+          await page.locator('#analysis-evidence-card').waitFor({state:'visible'});
+          assert.equal(await page.locator('#analysis-evidence-card blockquote').textContent(), quote, 'right-click inspects the exact pointed occurrence');
+        }
+        await page.keyboard.press('Escape');
+        await inspectAt('The gate was opened slowly.');
+        assert.equal(await page.locator('.analysis-evidence-sentence-words').textContent(), '5 words');
+        await page.keyboard.press('Escape');
+        await page.locator('#manuscript-analysis-toggle').click();
+        await inspectAt('The gate was opened slowly.'); // Retain the exact source point through enable/layout.
+        await page.keyboard.press('Escape');
+        await selectMetric(page, 'filter');
+        await inspectAt('felt');
+        await page.screenshot({path:path.join(artifacts, 'native-right-click-second-1440.png')});
+        await page.keyboard.press('Escape');
+        await selectMetric(page, 'asl');
+      }
+      await page.locator('#manuscript-analysis-toggle').click(); await settle(page);
+      assert.deepEqual(await ranges(page), []);
+      assert.equal(await page.locator('#analysis-evidence-card').isVisible(), false);
+      // The same action is discoverable with Analysis Off, through native context/keyboard input.
+      if (width === 1440) await paragraph.click({button:'right'});
+      else {await actions.focus(); await page.keyboard.press('Shift+F10');}
+      await page.locator('[data-reader-action="evidence"]').click();
+      await page.locator('#analysis-evidence-card').waitFor({state:'visible'});
+      assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'true');
+      await page.keyboard.press('Escape');
+      assert.equal(await actions.evaluate(node => node === document.activeElement), true, 'explicit inspection returns focus to passage');
+      await page.reload();
+      await page.locator('#manuscript-analysis-toggle').click();
+      assert.equal(await page.locator('#style-layer').inputValue(), 'asl');
+      assert.equal(await page.locator('body').evaluate(node => node.classList.contains('layer-on')), true, 'restored metric reapplies shared paragraph layer');
+      assert.equal(await page.locator('#layer-legend').isVisible(), true);
+      assert.equal(await page.locator('#layer-legend-title').textContent(), 'Sentence length');
+      await page.locator('#reader-analysis-settings > summary').click();
+      await page.locator('#analysis-evidence-enabled').uncheck();
+      await page.keyboard.press('Escape');
+      await page.locator('#manuscript-analysis-toggle').click();
+      await page.locator('#manuscript-analysis-toggle').click(); await settle(page);
+      assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false, 'On respects deliberate disabled marks');
+      assert.deepEqual(await ranges(page), []);
+      assert.match(await page.locator('#reader-analysis-settings > summary').textContent(), /Off/);
+      await selectMetric(page, '');
+      await page.locator('#manuscript-analysis-toggle').click();
+      await page.locator('#manuscript-analysis-toggle').click();
+      assert.equal(await page.locator('#style-layer').inputValue(), '', 'On respects deliberate None');
+      await page.reload();
+      await page.locator('#manuscript-analysis-toggle').click();
+      assert.equal(await page.locator('#style-layer').inputValue(), '', 'reload retains deliberate None');
+      assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false, 'reload retains disabled marks');
+      await actions.click(); await page.locator('[data-reader-action="evidence"]').click();
+      await page.locator('#analysis-evidence-card').waitFor({state:'visible'});
+      assert.equal(await page.locator('#style-layer').inputValue(), 'asl', 'explicit inspection chooses a usable metric after None');
+      assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false, 'inspection preserves paint preference');
+      await page.keyboard.press('Escape');
+      await page.locator('#reader-focus').click();
+      await actions.click(); await page.locator('[data-reader-action="evidence"]').click();
+      await page.locator('#analysis-evidence-card').waitFor({state:'visible'});
+      assert.equal(await page.locator('body').evaluate(node => node.classList.contains('reader-focus')), false, 'explicit inspection uses existing workbench exit from Focus reading');
+      await page.keyboard.press('Escape');
+      await page.locator('#paragraph-filter-reset').click();
+      await page.reload(); await page.locator('#manuscript-analysis-toggle').click();
+      assert.equal(await page.locator('#style-layer').inputValue(), '', 'reset remains a deliberate None after reload');
+      await openAnalysisSettings(page);
+      await page.locator('#manuscript-analysis-toggle').click();
+      assert.equal(await page.locator('#reader-analysis-settings').evaluate(node => node.open), false, 'Analysis Off closes its settings');
+      for (const interrupt of ['metric', 'scroll-key']) {
+        if (await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed') === 'true') await page.locator('#manuscript-analysis-toggle').click();
+        await actions.click();
+        await page.evaluate(() => {
+          window.heldEntryFrames = [];
+          window.entryRAF = requestAnimationFrame;
+          window.requestAnimationFrame = callback => {heldEntryFrames.push(callback); return heldEntryFrames.length;};
+          const inspect = LixityAnalysisEvidence.inspect;
+          LixityAnalysisEvidence.inspect = (...args) => (window.entryInspection = inspect(...args));
+        });
+        await page.locator('[data-reader-action="evidence"]').click();
+        if (interrupt === 'scroll-key') {
+          await actions.focus(); await page.keyboard.press('PageDown');
+        } else await page.evaluate(() => {
+          const select = document.getElementById('style-layer');
+          select.value = 'filter'; select.dispatchEvent(new Event('change', {bubbles:true}));
+        });
+        await page.evaluate(() => {
+          window.requestAnimationFrame = entryRAF;
+          heldEntryFrames.splice(0).forEach(callback => callback(performance.now()));
+        });
+        await page.evaluate(() => entryInspection);
+        assert.equal(await page.locator('#analysis-evidence-card').isVisible(), false, `a later ${interrupt} cancels inspection during its held opening layout`);
+      }
+      assert.equal(await paragraph.textContent(), text);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      assert.deepEqual(errors, []); assert.deepEqual(writes, []);
+      await page.close();
+    }
+    assert.deepEqual(fs.readFileSync(server.fixture.manuscript), originalBytes, 'reader controls never edit manuscript bytes');
+  } finally {await server.close();}
+}
 (async () => {
   const browser = await launchChromium();
   try {
+    await nativeEntry(browser);
     const long = await browser.newPage({viewport:{width:1440,height:950}, reducedMotion:'reduce'});
     await long.route('**/*', route => route.fulfill({contentType:'text/html',body:fixtures.longNative}));
     await long.goto('http://localhost/');
     await long.locator('#manuscript-analysis-toggle').click();
-    await long.locator('#style-layer').selectOption('filter');
+    await selectMetric(long, 'filter');
     await long.locator('.reader-paragraph-actions').first().click();
     await long.locator('[data-reader-action="evidence"]').click();
     await long.locator('#analysis-evidence-card').waitFor({state:'visible'});
@@ -107,7 +288,7 @@ async function menuInspect(page, keyboard = false) {
       return rect.top >= header.bottom && rect.bottom <= innerHeight;
     }), true, 'Next match reveals the actual offscreen evidence range');
     await long.keyboard.press('Escape');
-    await long.locator('#style-layer').selectOption('function');
+    await selectMetric(long, 'function');
     await long.locator('.ptext-inner > p').first().scrollIntoViewIfNeeded();
     await long.waitForFunction(() => CSS.highlights.get('lixity-analysis-evidence')?.size >= 1000);
     const benchmark = await long.evaluate(async () => {
@@ -206,7 +387,7 @@ async function menuInspect(page, keyboard = false) {
           window.retainedClaimMark = node.querySelector('.manuscript-claim-hit');
         });
         await page.waitForFunction(() => [...(CSS.highlights.get('lixity-analysis-evidence') || [])].some(range => range.toString() === 'feel' && range.intersectsNode(retainedClaimMark)));
-        await page.locator('#style-layer').selectOption('modal');
+        await selectMetric(page, 'modal');
         assert.equal(await paragraph.evaluate(node => node.querySelector('.manuscript-claim-hit') === retainedClaimMark), true, 'analysis never replaces existing research marks');
         await paragraph.evaluate(node => LixityManuscriptLinks.marks(node.closest('.ptext'), []));
         await selected(page, 'filter');
@@ -231,13 +412,13 @@ async function menuInspect(page, keyboard = false) {
         assert.equal(await page.locator('#analysis-evidence-card blockquote').textContent(), 'feel', 'cached hit geometry updates with reading font preferences');
         await page.keyboard.press('Escape');
       }
-      await page.locator('#analysis-evidence-enabled').uncheck();
+      await marksEnabled(page, false);
       await settle(page);
       assert.deepEqual(await ranges(page), []);
       await menuInspect(page); // Opting out of paint must not remove accessible inspection.
       assert.equal(await page.locator('#analysis-evidence-card blockquote').textContent(), 'feel');
       await page.keyboard.press('Escape');
-      await page.locator('#analysis-evidence-enabled').check();
+      await marksEnabled(page, true);
       await page.locator('#manuscript-analysis-toggle').click();
       await settle(page);
       assert.deepEqual(await ranges(page), []);
@@ -254,7 +435,7 @@ async function menuInspect(page, keyboard = false) {
     await native.locator('#manuscript-analysis-toggle').click();
     await selected(native, 'filter');
     assert.ok((await ranges(native)).includes('feel'), 'native shared detector contributes exact filter evidence');
-    await native.locator('#style-layer').selectOption('passive');
+    await selectMetric(native, 'passive');
     await native.locator('.ptext-inner > p').filter({hasText:'😀 I feel'}).first().scrollIntoViewIfNeeded();
     await native.waitForFunction(() => [...(CSS.highlights.get('lixity-analysis-evidence') || [])].some(range => range.toString() === 'was opened'));
     await menuInspect(native);
@@ -283,10 +464,11 @@ async function menuInspect(page, keyboard = false) {
     await native.close();
     console.log('native shared evidence renderer: passed');
     // Honest fallbacks and asynchronous cancellation use the same rendered dashboard.
-    for (const fault of ['unsupported', 'bad-hash', 'bad-offset', 'unavailable', 'zero', 'partial', 'stale-digest', 'forced-colors']) {
+    for (const fault of ['adjacent', 'unsupported', 'no-crypto', 'bad-hash', 'bad-offset', 'unavailable', 'zero', 'partial', 'stale-digest', 'forced-colors']) {
       const page = await browser.newPage({viewport:{width:320,height:480}, reducedMotion:'no-preference'});
       page.setDefaultTimeout(10000);
       if (fault === 'unsupported') await page.addInitScript(() => {window.Highlight = undefined;});
+      if (fault === 'no-crypto') await page.addInitScript(() => {Object.defineProperty(crypto, 'subtle', {value:undefined});});
       if (fault === 'stale-digest') await page.addInitScript(() => {
         const digest = crypto.subtle.digest.bind(crypto.subtle);
         window.releaseEvidenceHashes = [];
@@ -298,6 +480,12 @@ async function menuInspect(page, keyboard = false) {
       await page.evaluate(fault => {
         for (const entry of Object.values(paragraphContent)) {
           if (!entry[3]) continue;
+          if (fault === 'adjacent') {
+            // Independent UI transport projection: configured patterns may yield adjacent spans.
+            const start = entry[3].layers.filter.spans[0].start;
+            entry[3].layers.filter = {kind:'pattern',status:'available',count:2,mapped_count:2,
+              spans:[{start,end:start + 2,count:1},{start:start + 2,end:start + 4,count:1}]};
+          }
           if (fault === 'bad-hash') entry[3].paragraph_sha256 = '0'.repeat(64);
           if (fault === 'bad-offset') entry[3].layers.filter.spans[0].end = 999999;
           if (fault === 'unavailable') entry[3].layers.filter = {kind:'pattern',status:'unavailable',count:null,mapped_count:0,spans:[],reason:'source_mismatch'};
@@ -306,7 +494,7 @@ async function menuInspect(page, keyboard = false) {
         }
       }, fault);
       await page.locator('#manuscript-analysis-toggle').click();
-      await page.locator('#style-layer').selectOption('filter');
+      await selectMetric(page, 'filter');
       await page.locator('.ptext-inner > p').filter({hasText:'😀 I feel'}).first().scrollIntoViewIfNeeded();
       if (fault === 'stale-digest') {
         await page.waitForFunction(() => releaseEvidenceHashes.length > 0);
@@ -315,18 +503,35 @@ async function menuInspect(page, keyboard = false) {
         await settle(page);
         assert.deepEqual(await ranges(page), [], 'late verification never paints when analysis is off');
       } else {
-        if (['partial', 'forced-colors'].includes(fault)) await page.waitForFunction(() => CSS.highlights.get('lixity-analysis-evidence')?.size === 1);
+        if (fault === 'adjacent') await page.waitForFunction(() => CSS.highlights.get('lixity-analysis-evidence')?.size === 2);
+        else if (['partial', 'forced-colors'].includes(fault)) await page.waitForFunction(() => CSS.highlights.get('lixity-analysis-evidence')?.size === 1);
         else if (fault === 'zero') await page.waitForFunction(() => CSS.highlights.has('lixity-analysis-evidence') && CSS.highlights.get('lixity-analysis-evidence').size === 0);
         else {
           await page.waitForFunction(() => document.getElementById('analysis-evidence-status').textContent.length > 0);
           assert.deepEqual(await ranges(page), [], `${fault}: no invented highlight`);
         }
-        await menuInspect(page);
-        if (['unsupported', 'partial', 'forced-colors'].includes(fault)) assert.equal(await page.locator('#analysis-evidence-card blockquote').textContent(), 'feel');
+        if (fault === 'adjacent') {
+          await page.locator('.ptext').filter({hasText:'😀 I feel'}).first().locator('.reader-paragraph-actions').click();
+          await page.keyboard.press('Escape');
+          const at = await page.evaluate(() => {
+            const prose = document.querySelector('.ptext-inner > p'), offset = prose.textContent.indexOf('feel') + 2;
+            const range = document.createRange(); range.setStart(prose.firstChild, offset); range.setEnd(prose.firstChild, offset + 1);
+            const rect = range.getClientRects()[0], inspect = LixityAnalysisEvidence.inspect;
+            LixityAnalysisEvidence.inspect = (...args) => {window.boundaryPoint = args[2]; return inspect(...args);};
+            return {x:rect.x + .1,y:rect.y + rect.height / 2,offset};
+          });
+          await page.mouse.click(at.x, at.y, {button:'right'});
+          await page.locator('[data-reader-action="evidence"]').click();
+          await page.locator('#analysis-evidence-card').waitFor({state:'visible'});
+          assert.equal(await page.evaluate(() => boundaryPoint.offset), at.offset, 'native caret lands exactly at adjacent span boundary after Unicode prefix');
+        } else await menuInspect(page);
+        if (fault === 'adjacent') assert.equal(await page.locator('#analysis-evidence-card blockquote').textContent(), 'el', 'exclusive previous end belongs to the next span');
+        else if (['unsupported', 'partial', 'forced-colors'].includes(fault)) assert.equal(await page.locator('#analysis-evidence-card blockquote').textContent(), 'feel');
         else assert.equal(await page.locator('#analysis-evidence-card blockquote').count(), 0);
         if (fault === 'unavailable') assert.doesNotMatch(await page.locator('#analysis-evidence-card').textContent(), /Mapped:/, 'unavailable/source mismatch must not present measured zero coverage');
         if (fault === 'zero') assert.match(await page.locator('#analysis-evidence-card').textContent(), /0 of 0/, 'actual measured zero remains distinct from unknown');
         if (fault === 'bad-hash') assert.match(await page.locator('#analysis-evidence-card').textContent(), /identity/);
+        if (fault === 'no-crypto') assert.match(await page.locator('#analysis-evidence-card').textContent(), /HTTPS or on localhost/);
         if (fault === 'partial') assert.match(await page.locator('#analysis-evidence-card').textContent(), /1 of 2/);
         await page.keyboard.press('Escape');
         await page.locator('#tab-view-project').click();

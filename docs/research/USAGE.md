@@ -93,7 +93,7 @@ The citation still identifies the whole paragraph, not a sentence-level selector
 Ambiguous or cross-paragraph selections fail; whole-passage actions remain
 available for touch use. Preparing a draft writes nothing.
 
-On current main, loading a claim's empty evidence list offers **Link passage
+Since v0.7.3, loading a claim's empty evidence list offers **Link passage
 evidence to claim**. It opens the existing form and selects the claim only if
 the draft has none; existing passage, claim and rationale choices stay intact.
 Use **Find source passage** to continue the research. A claim can exist without
@@ -187,7 +187,7 @@ re-pin. Ambiguous quotes are not re-pinned; an edited quote requires an explicit
 reviewed, uniquely resolvable replacement through `--new-quote`. These flags
 request a human review, not a semantic contradiction check or factual verdict.
 
-**On current main (Unreleased):** the paragraph menu's **Saved research**, its
+**Since v0.7.3:** the paragraph menu's **Saved research**, its
 saved-association count and exact saved quotation marks open the existing right
 context tool. It shows up to five exact associations and their total, with pinned
 claim/dossier titles and versions, author-assigned confidence and separately
@@ -227,7 +227,7 @@ read-only `review-manuscript` alone also permits omission when the selected
 project's root config explicitly sets `manuscript = "drafts/manuscript.md"`.
 The root `lixity.toml` takes precedence over root `[tool.lixity]`; user and
 ancestor settings are excluded. Explicit input wins. The published v0.7.2 release
-keeps other manuscript paths required. On current main (Unreleased),
+keeps other manuscript paths required. Since v0.7.3,
 `find-anchor`, `link-manuscript`, `unlink-manuscript`,
 `reconcile-manuscript` and `compare` also reuse this root-local default. Existing
 argument forms and write/retention/revision guards remain; Python input stays
@@ -281,7 +281,7 @@ remain unavailable until the manuscript exists at its saved project-relative pat
 
 ### Read saved versions without losing context
 
-On current main (Unreleased), the shared research viewer separates **Edit** and
+Since v0.7.3, the shared research viewer separates **Edit** and
 **Saved versions**. Its context names the selected record kind, saved version and
 whether it is current or earlier. Version buttons navigate retained states; the
 selected detail shows its change reason and provenance once. Technical IDs and
@@ -671,7 +671,7 @@ links, section outlines and pinned/current revisions. CLI equivalents are
 These reports do not find every affected passage, infer contradictions, verify
 history or rewrite documents. Old pins may be intentional; audit is separate.
 
-**On current main (Unreleased):** **Read decision with dossier** opens a
+**Since v0.7.3:** **Read decision with dossier** opens a
 reversible comparison inside **Review** or **Affected dossiers**. It reads the
 exact latest saved decision and dossier versions named by that report. When an
 earlier assessment exists, its dossier version is separately available; the
@@ -1196,7 +1196,7 @@ containment checks as repository objects. An invalid backup is rejected before
 publishing the restored store; rejected history leaves an existing export untouched.
 Valid archives keep their existing format and immutable bytes.
 
-**On current main (Unreleased):** export holds the project writer lock while
+**Since v0.7.3:** export holds the project writer lock while
 selecting a snapshot and copying its records/blobs into a complete compressed
 candidate. Concurrent writers receive the existing busy diagnostic and can retry
 after export finishes. Compression time and source size affect that interval.

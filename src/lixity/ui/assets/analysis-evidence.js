@@ -7,7 +7,7 @@
   var status = document.getElementById("analysis-evidence-status");
   var supported = Boolean(window.CSS && CSS.highlights && window.Highlight);
   var visible = new Set(), records = new Map(), epoch = 0, frame = 0, request = 0;
-  var card = null, dismissTimer = 0, down = null, hoverFrame = 0, pointer = null, hoverTimer = 0, candidate = null;
+  var card = null, opening = null, dismissTimer = 0, down = null, hoverFrame = 0, pointer = null, hoverTimer = 0, candidate = null;
   var host = document.createElement("div");
   host.id = "analysis-evidence-card"; host.className = "analysis-evidence-card"; host.hidden = true;
   document.body.appendChild(host);
@@ -30,9 +30,10 @@
     if (!supported) return;
     CSS.highlights.delete("lixity-analysis-evidence"); CSS.highlights.delete("lixity-analysis-current");
   }
-  function close(restore) {
+  function close(restore, scrolling) {
     request++; clearTimeout(dismissTimer); clearTimeout(hoverTimer); candidate = null;
-    var previous = card; card = null; host.hidden = true;
+    var previous = card || opening; card = null; host.hidden = true;
+    if (!scrolling) opening = null;
     if (supported) CSS.highlights.delete("lixity-analysis-current");
     if (restore && previous && previous.pinned && previous.trigger && previous.trigger.isConnected) previous.trigger.focus({preventScroll:true});
   }
@@ -63,13 +64,14 @@
     records.set(panel, record);
     record.promise = (async function() {
       if (!prose || typeof record.text !== "string" || !evidence) return record;
+      if (!window.crypto || !crypto.subtle) {record.error = "evidence_verification_unavailable"; return record;}
       record.error = "evidence_mismatch";
       if (evidence.schema_version !== "paragraph-evidence/1" || evidence.offset_unit !== "unicode_codepoint" ||
           !/^[a-f0-9]{64}$/.test(evidence.paragraph_sha256 || "") || prose.textContent !== record.text ||
-          !window.crypto || !crypto.subtle || !evidence.layers || typeof evidence.layers !== "object") return record;
+          !evidence.layers || typeof evidence.layers !== "object") return record;
       var digest;
       try { digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(record.text)); }
-      catch (_) { return record; }
+      catch (_) { record.error = "evidence_verification_unavailable"; return record; }
       var hash = Array.from(new Uint8Array(digest), function(byte) { return byte.toString(16).padStart(2, "0"); }).join("");
       if (hash !== evidence.paragraph_sha256 || records.get(panel) !== record || prose.textContent !== record.text) return record;
       // Build one codepoint→UTF-16 table and text-node map per actual prose generation.
@@ -95,6 +97,7 @@
           var range = document.createRange(), start = point(offsets[span.start]), end = point(offsets[span.end]);
           range.setStart(start.node, start.offset); range.setEnd(end.node, end.offset);
           return {range:range, count:span.count, words:Number.isSafeInteger(span.words) && span.words >= 0 ? span.words : null,
+            start:offsets[span.start], end:offsets[span.end],
             quote:record.text.slice(offsets[span.start], offsets[span.end])};
         });
         record.layers[key] = {value:value, spans:spans};
@@ -129,6 +132,7 @@
       CSS.highlights.set("lixity-analysis-evidence", highlight);
     }
     setStatus(!supported ? message("evidence_unsupported") : failures.includes("evidence_mismatch") ? message("evidence_mismatch") :
+      failures.includes("evidence_verification_unavailable") ? message("evidence_verification_unavailable") :
       partial ? message("evidence_partial") : failures.length ? message("evidence_unavailable") : "");
   }
   function position(rect) {
@@ -197,12 +201,29 @@
     })};
     card.rect = range.getClientRects()[0]; paint();
   }
-  async function inspect(panel, trigger) {
+  async function inspect(panel, trigger, point) {
+    opening = null;
+    if (!available()) return;
+    if (!active() && window.LixityReader) {
+      window.LixityReader.enableEvidence();
+      var intent = {key:select.value, pinned:true, trigger:trigger || panel.querySelector(".reader-paragraph-actions")};
+      opening = intent;
+      // The reader restores its passage after the controls change height.
+      await new Promise(function(resolve) {requestAnimationFrame(function() {requestAnimationFrame(resolve);});});
+      if (opening !== intent || select.value !== intent.key) return;
+      opening = null;
+    }
     if (!active()) return;
     var serial = ++request, key = select.value, record = await prepare(panel);
     if (serial !== request || !active() || key !== select.value || !shown(panel) || records.get(panel) !== record) return;
-    card = {record:record, index:0, pinned:true, trigger:trigger || panel.querySelector(".reader-paragraph-actions"),
-      rect:(trigger || panel).getBoundingClientRect()};
+    var layer = record.layers[key], index = -1;
+    if (point && !record.error && point.hash === record.evidence.paragraph_sha256 && Number.isSafeInteger(point.offset) && layer) {
+      index = layer.spans.findIndex(function(span) {return span.start <= point.offset && point.offset < span.end;});
+      if (index < 0) index = layer.spans.findIndex(function(span) {return point.offset === span.end;});
+    }
+    var span = index >= 0 && layer.spans[index];
+    card = {record:record, index:index >= 0 ? index : 0, pinned:true, trigger:trigger || panel.querySelector(".reader-paragraph-actions"),
+      rect:span ? span.range.getClientRects()[0] : (trigger || panel).getBoundingClientRect()};
     paint(); host.querySelector("button").focus({preventScroll:true});
   }
   function hit(event) {
@@ -269,7 +290,10 @@
   chapters.addEventListener("pointerup", function(event) {
     var start = down; down = null;
     if (start && start.id === event.pointerId && Date.now() - start.time < 500 && window.scrollY === start.scroll &&
-        Math.hypot(event.clientX - start.x, event.clientY - start.y) < 8 && window.getSelection().isCollapsed) hover(event, true);
+        Math.hypot(event.clientX - start.x, event.clientY - start.y) < 8 && window.getSelection().isCollapsed) {
+      // Finish the tap's synthetic click before inserting a card beneath the finger.
+      requestAnimationFrame(function() {hover(event, true);});
+    }
   }, {passive:true});
   chapters.addEventListener("pointercancel", function() {down = null;}, {passive:true});
   host.addEventListener("pointerenter", function() {clearTimeout(dismissTimer);});
@@ -279,15 +303,21 @@
   document.addEventListener("pointerdown", function(event) {if (!host.contains(event.target)) close(false);}, {passive:true});
   document.addEventListener("focusin", function(event) {if (event.target.closest("dialog[open]")) close(false);});
   window.addEventListener("keydown", function(event) {
-    if (event.key === "Escape" && card) {event.preventDefault(); event.stopImmediatePropagation(); close(true);}
+    if (opening && !event.defaultPrevented && !event.isComposing &&
+        ["PageDown", "PageUp", "ArrowDown", "ArrowUp", "Home", "End", " "].includes(event.key) &&
+        !event.target.isContentEditable && !event.target.closest("input, textarea, select")) close(false);
+    if (event.key === "Escape" && (card || opening)) {event.preventDefault(); event.stopImmediatePropagation(); close(true);}
   }, true);
+  document.addEventListener("wheel", function(event) {if (opening && !host.contains(event.target)) close(false);}, {passive:true});
   document.addEventListener("scroll", function(event) {
     if (host.contains(event.target)) return;
     down = null;
     var arrival = card && card.arrival;
+    // Reader restoration emits scroll while an explicit opening settles. Actual
+    // pointer, wheel, keyboard and state changes cancel that opening separately.
     if (!arrival || arrival.x !== scrollX || arrival.y !== scrollY || arrival.containers.some(function(item) {
       return item.node.scrollLeft !== item.x || item.node.scrollTop !== item.y;
-    })) close(false);
+    })) close(false, true);
     schedule();
   }, {passive:true, capture:true});
   window.addEventListener("resize", function() {close(false); schedule();}, {passive:true});
@@ -313,6 +343,10 @@
     schedule();
   }, {rootMargin:"128px"});
   chapters.querySelectorAll(".ptext").forEach(function(panel) {observer.observe(panel);});
-  window.LixityAnalysisEvidence = {inspect:inspect, available:active};
+  function available() {
+    var state = LixityWorkbench.state();
+    return !document.hidden && state.view === "analysis" && state.surface === "document";
+  }
+  window.LixityAnalysisEvidence = {inspect:inspect, available:available};
   schedule();
 })();
