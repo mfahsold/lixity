@@ -416,6 +416,13 @@ are prepared, with explicit codepoint-to-UTF-16 conversion and hash validation.
 Search/research mark changes invalidate derived ranges, not source identities.
 Analysis visibility, metric changes and workspace changes cancel stale cards and
 marks. Unsupported or unprovable mappings remain explicit unavailable states.
+On current main, the paragraph menu opens one existing passage inspector. Its
+measurement action captures the source point and uses the evidence owner; its
+research action delegates to the existing explicit passage association reader.
+The presentation keeps computed counts and authored research separate without
+a new context state or transport contract. The floating card uses native counts
+and the existing paragraph comparison; it never parses localized numeric text.
+
 The existing reader preferences also retain the selected metric and marking
 choice. First explicit Analysis On defaults to `asl` only without a saved choice;
 the native disclosure beside the switch contains the single existing selector

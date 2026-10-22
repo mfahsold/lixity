@@ -158,10 +158,21 @@ async function settleGeometry(page) {
       const menu = page.locator('#manuscript-context-menu');
       assert.equal(await menu.isVisible(), true);
       assert.equal(await menu.getAttribute('role'), 'menu');
+      assert.equal(await menu.locator('[data-reader-action=evidence], [data-reader-action=research]').count(), 0,
+        'One passage entry replaces competing measurement/research menu labels');
       await menu.locator('[data-reader-action=values]').click();
       const inspector = page.locator('#reader-inspector');
       assert.equal(await inspector.isVisible(), true, 'Values open on request in the paragraph inspector');
+      const passageContext = page.locator('[data-context-tool=analysis]');
+      assert.notEqual((await passageContext.textContent()).trim(), analysisName,
+        'The passage context and global Analysis display have distinct names');
+      assert.equal((await passageContext.textContent()).trim(), await page.evaluate(() => uiLabel('reading_passage_context')),
+        'The existing passage tool has a localized context label');
       assert.ok((await page.locator('#reader-inspector-body').textContent()).trim());
+      assert.equal(await inspector.locator('[data-reader-action=evidence]').count(), 1,
+        'The passage context keeps explicit measurement inspection reachable');
+      assert.equal(await inspector.locator('[data-reader-action=research]').count(), 1,
+        'The same context exposes saved research before any research view was opened');
       assert.equal(await inspector.locator('.reader-passage-context [data-manuscript-links-paragraph]').getAttribute('data-manuscript-links-paragraph'), id,
         'The passage lens routes research to the inspected paragraph, independently of scroll position');
       assert.ok((await inspector.locator('.reader-passage-context p').textContent()).includes(await first.getAttribute('data-start')),

@@ -16,7 +16,7 @@
 <meta property="og:site_name" content="Lixity"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta property="og:image:width" content="2960"/>
-<meta property="og:image:height" content="1930"/>
+<meta property="og:image:height" content="2090"/>
 <meta property="og:image:alt" content="Lixity continuous manuscript reader with chapter navigation and contextual tools"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Lixity first look: one manuscript and research project"/>
@@ -44,14 +44,14 @@
     "name": "Lixity",
     "url": "https://mfahsold.github.io/lixity/"
   },
-  "dateModified": "2026-10-21",
+  "dateModified": "2026-10-22",
   "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE",
   "mainEntityOfPage": "https://mfahsold.github.io/lixity/guides/first-look.html",
   "image": {
     "@type": "ImageObject",
     "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-light.png",
     "width": 2960,
-    "height": 1930,
+    "height": 2090,
     "caption": "Lixity continuous manuscript reader with chapter navigation and contextual tools"
   }
 }
@@ -94,7 +94,9 @@
 <nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="../#guides">Guides</a></li><li><span aria-current="page">First look</span></li></ol></nav>
 <h1>A three-minute first look</h1>
 <p>Read one manuscript, inspect a passage, follow its research and choose a PDF copy.</p>
-<p class="updated">Updated <time datetime="2026-10-21">21 October 2026</time></p>
+<p class="updated">Updated <time datetime="2026-10-22">22 October 2026</time></p>
+
+<p class="section-note">This walkthrough follows the development demo. Installed v0.7.3 has separate Values, Inspect text evidence and Saved research menu entries.</p>
 
 <h2 id="example">1. Open the example and read a chapter</h2>
 <p><a class="ctl primary" href="../demo/report.html">Open the demo project</a></p>
@@ -104,13 +106,13 @@
     <source src="../videos/analysis-review.mp4" type="video/mp4"/>
     Your browser cannot play this walkthrough; the <a href="../screenshots/dashboard-heatmap.png">chapter map</a> shows the same step.
   </video>
-  <figcaption>Warehouse 4: a passage, its <strong>Values</strong> and chapter comparisons.</figcaption>
+  <figcaption>Warehouse 4: explore a passage and compare its chapter.</figcaption>
 </figure>
 
 <a id="contrast"></a>
 <h2 id="passage">2. Inspect one difference</h2>
-<p>Choose a paragraph's <strong>… → Values</strong> to open its <strong>Passage values</strong> inspector. The separate <strong>Analysis</strong> switch shows diagnostics across the manuscript; Passage values remains usable with Analysis On or Off. Use <strong>Analysis overview</strong> to compare sentence rhythm in the setting and action chapters, then <strong>Back to passage</strong> to resume reading.</p>
-<p><strong>In the read-only demo:</strong> turn <strong>Analysis</strong> on. The first switch-on selects <strong>Sentence length</strong> unless you already saved a metric choice. The adjacent control names the metric and shows <strong>Highlights On/Off</strong>; open it to choose another metric or change <strong>Mark counted passages</strong>. Hover or tap a marked word or sentence for its explanation. The paragraph menu’s <strong>Inspect text evidence</strong> also works by keyboard or right-click with Analysis Off; it enables Analysis while preserving an unchecked marking preference. Escape closes the explanation. The sentence word count and paragraph comparison are different measurements.</p>
+<p>Choose a paragraph's <strong>… → Explore passage</strong> to open its right context. <strong>Explain measurement</strong> opens the counted text; <strong>Research for this passage</strong> follows the passage’s explicit links. The separate <strong>Analysis</strong> switch shows diagnostics across the manuscript; the <strong>Passage</strong> inspector works with Analysis On or Off. Use <strong>Analysis overview</strong> to compare sentence rhythm in the setting and action chapters, then <strong>Back to passage</strong> to resume reading.</p>
+<p><strong>In the read-only demo:</strong> turn <strong>Analysis</strong> on. The first switch-on selects <strong>Sentence length</strong> unless you already saved a metric choice. The adjacent control names the metric and shows <strong>Highlights On/Off</strong>; open it to choose another metric or change <strong>Mark counted passages</strong>. Hover or tap a marked word or sentence for its explanation. <strong>Explore passage → Explain measurement</strong> also works by keyboard or right-click with Analysis Off; it enables Analysis while preserving an unchecked marking preference. Escape closes the explanation. The sentence word count and paragraph comparison are different measurements.</p>
 <p><strong>Since v0.7.3:</strong> expand <strong>Manuscript measurements</strong> for the secondary numbers, then collapse the same summary to return to the compact overview. A linked scene title reveals its detailed <strong>Scene measurements</strong>; both disclosure levels can be closed again. The passage return keeps your earlier reading context.</p>
 <p>Ask what changed: the kind of scene, what the character is doing, or how the sentences are arranged. These short chapters demonstrate a workflow; their numbers are not a quality verdict. <a href="interpretation.html">Interpretation</a> explains the signals. <a href="../USAGE.md#reading-paragraphs">Reader controls and coverage</a> covers text size, focus, keyboard access and supported formatting.</p>
 
@@ -118,8 +120,8 @@
 <blockquote>Someone had tried the eastern gate of Warehouse 4.</blockquote>
 <p><strong>In the read-only demo:</strong> this opening quotation has an explicitly saved association. Follow it from the manuscript:</p>
 <ol>
-<li>At the opening paragraph, choose <strong>… → Saved research</strong>. The right context shows the saved claim and dossier versions while the text stays visible.</li>
-<li>Open the claim title to read that version and its retained sources. A retained source and an authored claim are separate records; the association does not establish factual truth.</li>
+<li>At the opening paragraph, choose <strong>… → Explore passage → Research for this passage</strong>. The right context shows its linked claim and dossier while the text stays visible.</li>
+<li>Open a title to read the current entry and its sources, or choose <strong>Linked version</strong> for the exact earlier version used by the association. <strong>Versions</strong> expands its history without changing the entry. A retained source and an authored claim are separate records; the association does not establish factual truth.</li>
 <li>Close the viewer and use <strong>Back to passage</strong> to resume reading. On narrow screens the context sits above the text; its close button or Escape returns to the paragraph.</li>
 </ol>
 <details><summary>Explore dossiers and review</summary>

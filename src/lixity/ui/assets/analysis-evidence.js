@@ -143,6 +143,12 @@
     host.style.left = Math.max(8, Math.min(innerWidth - bounds.width - 8, rect.left)) + "px";
     host.style.top = Math.max(8, Math.min(innerHeight - bounds.height - 8, top)) + "px";
   }
+  function scrollPosition(containers, trigger) {
+    if (trigger) containers = Array.from(new Set(containers.concat(passageScrollContainers(trigger))));
+    return {x:scrollX, y:scrollY, containers:containers.map(function(container) {
+      return {node:container, x:container.scrollLeft, y:container.scrollTop};
+    })};
+  }
   function paint() {
     if (!card) return;
     var record = card.record, layer = record.layers[select.value];
@@ -155,24 +161,45 @@
       layer.value.status === "partial" ? "evidence_partial" : null);
     host.setAttribute("role", "dialog"); host.setAttribute("aria-modal", "false");
     host.setAttribute("aria-labelledby", "analysis-evidence-title");
+    var sentenceWords = span && layer.value.kind === "sentence" && span.words !== null;
+    var counted = span ? (sentenceWords ? span.words : span.count) :
+      !record.error && layer && layer.value.status !== "unavailable" && layer.value.count === 0 ? 0 : null;
+    var unitKey = sentenceWords || layer && layer.value.kind === "dialogue" ? "words" :
+      layer && layer.value.kind === "sentence" ? "evidence_sentence_unit" : "evidence_match_unit";
+    var unit = counted === 1 ? message(unitKey === "words" ? "words_one" : unitKey + "_one") : message(unitKey);
+    var comparison = info && Number.isFinite(info[2]) ? info : null;
+    var z = comparison && new Intl.NumberFormat(document.documentElement.lang, {
+      minimumFractionDigits:2, maximumFractionDigits:2, signDisplay:"always"
+    }).format(comparison[2]);
+    var marker = comparison && Math.max(0, Math.min(100, 50 + comparison[2] / 2.5 * 50));
     LixityComponents.mount(host, html`<div class="analysis-evidence-heading">
       <strong id="analysis-evidence-title">${option.textContent}</strong>
-      <button type="button" class="ctl" onClick=${function() {close(true);}}>${message("evidence_close")}</button>
+      <button type="button" class="ctl analysis-evidence-close" aria-label=${message("evidence_close")} onClick=${function() {close(true);}}>✕</button>
       </div>
-      ${span ? html`<blockquote aria-live=${card.pinned ? "polite" : "off"} aria-atomic="true">${span.quote}</blockquote><p>${uiCountFormat("evidence_" + layer.value.kind, span.count)}</p>` : null}
-      ${span && layer.value.kind === "sentence" && span.words !== null ? html`<p class="analysis-evidence-sentence-words">${span.words} ${message(span.words === 1 ? "words_one" : "words")}</p>` : null}
-      ${layer && layer.value.status !== "unavailable" ? html`<p>${uiCountFormat("evidence_coverage", layer.value.count, {mapped:layer.value.mapped_count})}</p>` : null}
-      <p class="analysis-evidence-value">${info ? info[1] : summary}</p>
-      ${!info ? html`<p>${message("layer_unavailable")}</p>` : null}
-      ${warning ? html`<p role="status">${message(warning)}</p>` : null}
-      ${!supported ? html`<p>${message("evidence_unsupported")}</p>` : null}
-      <details class="analysis-evidence-guide" onToggle=${function() {if (card) position(card.rect);}}><summary>${message("layer_guide")}</summary>
-        <p>${option.dataset.hint || ""}</p><p>${message("evidence_limit")}</p></details>
+      ${span ? html`<blockquote aria-live=${card.pinned ? "polite" : "off"} aria-atomic="true">${span.quote}</blockquote>` : null}
+      ${counted !== null ? html`<div class="analysis-evidence-measure">
+        <span class="analysis-evidence-scope">${message(span ? sentenceWords ? "evidence_sentence_scope" : "evidence_selected_scope" : "evidence_paragraph_scope")}</span>
+        <div class=${"analysis-evidence-count" + (sentenceWords ? " analysis-evidence-sentence-words" : "")}><strong class="analysis-evidence-number">${counted}</strong>${" "}<span class="analysis-evidence-unit">${unit}</span></div>
+      </div>` : null}
+      <section class="analysis-evidence-paragraph">
+        <strong class="analysis-evidence-scope">${message("evidence_paragraph_scope")}</strong>
+        <p class="analysis-evidence-value">${summary}</p>
+        ${comparison ? html`<div class="analysis-evidence-comparison" style=${{"--evidence-comparison-color":comparison[0], "--evidence-comparison-position":marker + "%"}}>
+          <strong class="analysis-evidence-scope">${message("evidence_comparison_scope")}</strong>
+          <div class="analysis-evidence-comparison-label"><span>${message(comparison[2] < 0 ? "layer_below" : comparison[2] > 0 ? "layer_above" : "layer_at")}</span><strong>${uiFormat("evidence_comparison_z", {value:z})}</strong></div>
+          <div class="analysis-evidence-scale" role="img" aria-label=${comparison[1]}><span></span></div>
+        </div>` : html`<p class="analysis-evidence-unavailable">${message("evidence_comparison_missing")}</p>`}
+      </section>
+      ${warning ? html`<p class="analysis-evidence-warning" role="status">${message(warning)}</p>` : null}
+      ${!supported ? html`<p class="analysis-evidence-warning">${message("evidence_unsupported")}</p>` : null}
       ${spans.length > 1 ? html`<div class="analysis-evidence-actions">
         <button type="button" class="ctl" onClick=${function() {step(-1);}}>${message("evidence_previous")}</button>
-        <span>${card.index + 1} / ${spans.length}</span>
+        <span class="analysis-evidence-progress">${card.index + 1} / ${spans.length}</span>
         <button type="button" class="ctl" onClick=${function() {step(1);}}>${message("evidence_next")}</button>
-      </div>` : null}`);
+      </div>` : null}
+      <details class="analysis-evidence-guide" onToggle=${function() {if (card) position(card.rect);}}><summary>${message("layer_guide")}</summary>
+        ${layer && layer.value.status !== "unavailable" ? html`<p>${uiCountFormat("evidence_coverage", layer.value.count, {mapped:layer.value.mapped_count})}</p>` : null}
+        <p>${option.dataset.hint || ""}</p><p>${message("evidence_limit")}</p></details>`);
     host.hidden = false;
     if (supported && span && enabled()) CSS.highlights.set("lixity-analysis-current", new Highlight(span.range));
     else if (supported) CSS.highlights.delete("lixity-analysis-current");
@@ -196,34 +223,50 @@
     if (rect.top < top || rect.bottom > innerHeight - 12) window.scrollBy({top:rect.top - top, behavior:"instant"});
     // Retain this explicit arrival across its queued scroll events only while
     // all actual positions still match. Any subsequent user scroll closes it.
-    card.arrival = {x:scrollX, y:scrollY, containers:containers.map(function(container) {
-      return {node:container, x:container.scrollLeft, y:container.scrollTop};
-    })};
+    card.arrival = scrollPosition(containers, card.trigger);
     card.rect = range.getClientRects()[0]; paint();
   }
   async function inspect(panel, trigger, point) {
     opening = null;
     if (!available()) return;
+    var settleLayout = trigger && trigger.closest("#reader-inspector") && trigger.dataset.readerEvidenceParagraph === panel.id;
     if (!active() && window.LixityReader) {
       window.LixityReader.enableEvidence();
+      settleLayout = true;
+    }
+    if (settleLayout) {
       var intent = {key:select.value, pinned:true, trigger:trigger || panel.querySelector(".reader-paragraph-actions")};
       opening = intent;
-      // The reader restores its passage after the controls change height.
+      // Settle the reader's queued passage/dock arrival before anchoring the card.
       await new Promise(function(resolve) {requestAnimationFrame(function() {requestAnimationFrame(resolve);});});
       if (opening !== intent || select.value !== intent.key) return;
       opening = null;
     }
     if (!active()) return;
+    var verification = {key:select.value, pinned:true, trigger:trigger || panel.querySelector(".reader-paragraph-actions"),
+      arrival:scrollPosition(passageScrollContainers(panel), trigger)};
+    opening = verification;
     var serial = ++request, key = select.value, record = await prepare(panel);
-    if (serial !== request || !active() || key !== select.value || !shown(panel) || records.get(panel) !== record) return;
+    var inspectorTrigger = trigger && trigger.isConnected && trigger.closest("#reader-inspector") && trigger.dataset.readerEvidenceParagraph === panel.id &&
+      panel.classList.contains("reader-inspector-target") && shown(trigger) &&
+      panel.isConnected && panel.getClientRects().length && !panel.closest("[hidden]");
+    if (serial !== request || opening !== verification || !active() || key !== select.value ||
+        (!shown(panel) && !inspectorTrigger) || records.get(panel) !== record) {
+      if (opening === verification) opening = null;
+      return;
+    }
+    opening = null;
     var layer = record.layers[key], index = -1;
     if (point && !record.error && point.hash === record.evidence.paragraph_sha256 && Number.isSafeInteger(point.offset) && layer) {
       index = layer.spans.findIndex(function(span) {return span.start <= point.offset && point.offset < span.end;});
       if (index < 0) index = layer.spans.findIndex(function(span) {return point.offset === span.end;});
     }
     var span = index >= 0 && layer.spans[index];
+    var sourceRect = span && span.range.getClientRects()[0];
+    var rangeVisible = sourceRect && sourceRect.bottom > 0 && sourceRect.top < innerHeight && sourceRect.right > 0 && sourceRect.left < innerWidth;
     card = {record:record, index:index >= 0 ? index : 0, pinned:true, trigger:trigger || panel.querySelector(".reader-paragraph-actions"),
-      rect:span ? span.range.getClientRects()[0] : (trigger || panel).getBoundingClientRect()};
+      rect:rangeVisible ? sourceRect : (trigger || panel).getBoundingClientRect(),
+      arrival:scrollPosition(passageScrollContainers(panel), trigger)};
     paint(); host.querySelector("button").focus({preventScroll:true});
   }
   function hit(event) {
@@ -312,7 +355,7 @@
   document.addEventListener("scroll", function(event) {
     if (host.contains(event.target)) return;
     down = null;
-    var arrival = card && card.arrival;
+    var arrival = card && card.arrival || opening && opening.arrival;
     // Reader restoration emits scroll while an explicit opening settles. Actual
     // pointer, wheel, keyboard and state changes cancel that opening separately.
     if (!arrival || arrival.x !== scrollX || arrival.y !== scrollY || arrival.containers.some(function(item) {

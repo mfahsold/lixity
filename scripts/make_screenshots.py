@@ -349,9 +349,10 @@ a[data-demo-local] {{ opacity: .65; }}
         ("editor", "Editorial manuscript PDF"), ("book", "Reading manuscript PDF"),
         ("sheet", "Submission manuscript PDF"), ("report", "Analysis report PDF"))]
     about_paragraphs = [
-        "Start in Research with Dossiers: Warehouse 4 case notes links to an authored claim and one saved manuscript quote. "
-        "Claims exposes the retained supporting passage; Review shows the exact saved quote and its claim-version pin. "
-        "Decisions records the author's fictional choices. These links are explicit associations, not automatic fact checks.",
+        "Start in Research with Dossiers: Warehouse 4 case notes connects the customs log, an office discrepancy and exact manuscript quotations. "
+        "The preliminary log and its correction disagree about where the crate was opened; claim versions preserve the earlier interpretation. "
+        "Review identifies the two quotations still linked to an earlier claim version. Decisions records the author's fictional choices. "
+        "These links are explicit associations, not automatic fact checks.",
         "Zotero normally owns bibliography, reading and source notes. Lixity retains selected evidence and authored records for manuscript work. "
         "This offline example has no live Zotero connection: its customs-log capture contains explicitly synthetic Zotero identity metadata, "
         "and source-return actions are disabled. The retained passage, authored claim and manuscript quote are separate records.",
@@ -469,23 +470,26 @@ def build_research_fixture(work_dir: Path, *, language: str = "en",
     (research_proj / "lixity.toml").write_text('author_name = "Example Author"\n', encoding="utf-8")
     source_text = """## Section 1: Port Authority Log – October 1923
 
-On the cold evening of October 14, 1923, customs officers on the night shift observed suspicious movements near Warehouse 4 in the Free Port zone.
-The autumn mist hung heavy over the Elbe river, obscuring the watercraft anchored along the quay.
-Two unidentified figures were seen attempting to force the secondary padlock on the eastern warehouse gate.
+At ten ten on the evening of October 14, 1923, the night watchman reported two unidentified figures attempting to force the external lock at the eastern gate of Warehouse 4.
+The autumn mist obscured the water beyond the quay lamps. The figures ran towards the basin when challenged. No customs seals on the inner warehouse doors were broken.
 
-When challenged by the night watchman, both individuals abandoned a wooden crate and fled along the cobblestone embankment toward Sandtorhafen.
-Officer Hansen inspected the abandoned crate and found forty bundles of untaxed Virginian tobacco leaves.
-The evidence was impounded and transferred to the central customs station at dawn.
+## Preliminary entry: dictated before the transfer
 
-## Section 2: Witness Statement and Follow-up
+Officer Hansen opened the crate beside the gate and found forty bundles of untaxed tobacco. The abandoned crate was prepared for transfer to the customs station at dawn.
 
-The night watchman reported that a small motor launch with muffled exhaust had been idling near the southern pier shortly before the incident.
-Inspection of the lock revealed fresh tool abrasions consistent with a heavy steel crowbar.
-No customs seals on the adjacent bonded storehouses had been broken during the encounter.
+## Follow-up: station inspection, October 15
+
+Correction to the preliminary entry: the crate was first opened at the customs station at six ten. The count of forty tobacco bundles belongs to that inspection, not to the quay. Hansen signed this amendment after checking the transfer sheet.
+
+A loose base board shifted while the crate was moved away from the drain. One lid plank cracked. The damaged lid was bound to prevent spillage; opening was deferred until arrival at the station. Mara identified the blood on the lid as hers. A blue label fragment and the older board number seventeen were retained separately.
+
+## Witness limits
+
+The watchman saw the two figures leave towards the basin. Mara saw a launch light and heard its engine after the light disappeared. Neither witness saw a crate loaded aboard, identified passengers or recovered a tool. The proposed crowbar and launch connection remain unconfirmed.
 """
     customs_file = work_dir / "customs_log_1923.txt"
     customs_file.write_text(source_text, encoding="utf-8")
-    research_api.ingest(
+    customs_res = research_api.ingest(
         research_proj,
         customs_file,
         title="Port Authority Customs Log (synthetic)",
@@ -509,8 +513,18 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
         "Mist covered the harbor before sunrise. A light wind carried drizzle "
         "across the eastern pier, and the quay lamps remained lit.\n\n"
         "## Setting Observations\n\n"
-        "The observer recorded wet cobblestones and distant bell signals. "
-        "These invented notes support a fictional scene; they are not historical evidence.\n",
+        "Wet cobblestones reflect a lamp more clearly than a face. From the eastern gate, "
+        "the lamp lights the lock and crate but leaves the water in darkness. An engine "
+        "can remain audible after the launch light disappears. This does not establish a route or boarding.\n\n"
+        "## Office notebook: two entries for cart seventeen\n\n"
+        "Mara copied a dispatch at eight in the evening. The ledger also lists cart seventeen "
+        "as returned at six forty that evening, without a receiving signature. The earlier "
+        "entry is squeezed into the margin. Reused boards, a copied number or a later ledger "
+        "entry could explain the discrepancy; the notebook does not identify a culprit.\n\n"
+        "## Reference limits\n\n"
+        "These invented notes support a fictional scene; they are not historical evidence. "
+        "The circa-1900 map and 1890–1900 harbour view are setting references. They cannot "
+        "establish the lamp position, weather, warehouse layout or journey on this invented night in 1923.\n",
         encoding="utf-8",
     )
     weather_res = research_api.ingest(
@@ -518,7 +532,7 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
         weather_file,
         title="Harbor Weather Notes (synthetic)",
         context={
-            "genre": "Fictional setting notes",
+            "genre": "Fictional setting and office notes",
             "place": "Imaginary harbor",
             "provenance_note": "Synthetic demonstration text; not an archival document or verified historical account.",
             "tags": ["Weather", "Setting"],
@@ -530,32 +544,75 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
     matches = search_res["hits"]
     if not matches:
         raise RuntimeError("Synthetic research source must produce a real passage citation")
-    passage_id = matches[0]["passage_id"]
+
+    def retained_passage(source: dict, phrase: str) -> str:
+        return next(passage["id"] for passage in source["passages"] if phrase in passage["verbatim"])
+
+    customs_source = research_api.get_source(research_proj, customs_res["source_id"])
+    weather_source = research_api.get_source(research_proj, weather_res["source_id"])
+    passage_id = retained_passage(customs_source, "night watchman reported two unidentified figures")
+    early_inspection = retained_passage(customs_source, "opened the crate beside the gate")
+    corrected_inspection = retained_passage(customs_source, "crate was first opened at the customs station")
+    damaged_lid = retained_passage(customs_source, "opening was deferred until arrival")
+    witness_limits = retained_passage(customs_source, "Neither witness saw a crate loaded aboard")
+    weather_passage = retained_passage(weather_source, "Mist covered the harbor")
+    visibility_passage = retained_passage(weather_source, "An engine can remain audible")
+    receipt_passage = retained_passage(weather_source, "ledger also lists cart seventeen")
 
     # Read-only browser responses below are serialized from this disposable,
     # API-created archive. The dashboard itself is the real controls UI.
     dossier_res = research_api.create_dossier(
         research_proj,
         title="Warehouse 4 case notes",
-        body="## Timeline\n\nCompare the night watchman's account with the synthetic customs log.\n\n"
-        "## Open Questions\n\nKeep source quotations separate from the author's fictional scene decisions.\n\n"
+        body="Fictional case file for the six-chapter harbour story. Times and testimony belong to the invented case.\n\n"
+        "## Timeline\n\n"
+        "| Time | Working sequence | Status |\n| --- | --- | --- |\n"
+        "| 14 October, 18:40 | Cart seventeen entered as returned | Receiving signature missing |\n"
+        "| 20:00 | Mara copies the dispatch | Crate not seen by Mara |\n"
+        "| 22:10 | Watchman calls for customs | Two figures leave towards the basin |\n"
+        "| Before dawn | Cracked lid bound; crate transferred | Contents still unknown to Mara |\n"
+        "| 15 October, 06:10 | Station inspection counts tobacco | Corrected log entry |\n\n"
+        "## Accounts to compare\n\n"
+        "The preliminary customs entry places the opening beside the gate. The signed follow-up "
+        "moves it to the station. Preserve both passages: the correction changes the author’s "
+        "working interpretation, not the retained earlier wording. The launch is heard, but boarding is not observed.\n\n"
+        "## Open Questions\n\n"
+        "- Who entered the return before Mara copied the dispatch?\n"
+        "- Does seventeen identify this crate, a cart, or a reused board?\n"
+        "- Why did Ivo reach for the label, and who told him to keep the gate clear?\n"
+        "- Is the blank receiving line an omission or a deliberate removal?\n\n"
+        "## Scene decisions\n\n"
+        "Keep the crate closed on the quay. Let handling account for the blood and cracked plank. "
+        "Introduce the number before the office scene; end with the missing signature rather than naming a culprit.\n\n"
         "## Evidence trail\n\nThese are explicit author associations, not automatic fact checks.\n\n"
         "```mermaid\nflowchart LR\n subgraph Retained evidence\n  P[Customs log passage]\n end\n"
-        " P --> C[Authored claim]\n C --> Q[Saved manuscript quote]\n C --> D[Author decision]\n```\n\n"
+        " P --> C[Authored claim]\n C --> Q[Manuscript quotation]\n C --> D[Author decision]\n```\n\n"
         "## Historical map\n\nCirca-1900 reference; not evidence of the invented 1923 incident.\n\n"
         "## Historical harbour view\n\n1890–1900 photochrom reference; not a photograph of the fictional event.",
         tags=["Warehouse", "Timeline"],
-        evidence_ids=[passage_id],
+        evidence_ids=[passage_id, early_inspection, corrected_inspection, damaged_lid, receipt_passage],
         geography=json.loads((BASE_DIR / "docs/research/examples/harbour-geography.json").read_text(encoding="utf-8")),
     )
-    weather_passage = research_api.get_source(research_proj, weather_res["source_id"])["passages"][0]["id"]
-    research_api.create_dossier(
+    weather_dossier = research_api.create_dossier(
         research_proj,
         title="Harbor setting notes",
-        body="## Weather\n\nUse the synthetic notes to review the harbor scene's atmosphere.\n\n"
-        "## Scene Planning\n\nThe weather and setting are fictional examples, not verified historical claims.",
+        body="Fictional atmosphere and sightline notes. The weather and setting are fictional examples, not verified historical claims.\n\n"
+        "## Weather\n\nMist closes the water view before it silences the launch. Rain has begun after the office closes; "
+        "the covered cart seat can register as a small unexplained detail. Wet boots and a cold stove carry the night into the office scene.\n\n"
+        "## Visibility and sound\n\n"
+        "| Position | Available impression | Limit |\n| --- | --- | --- |\n"
+        "| Quay lamp | Lock scratches, label, blood | Does not illuminate a face across the basin |\n"
+        "| Eastern gate | Launch light, then engine | No witnessed boarding or cargo transfer |\n"
+        "| Office desk | Paper edges, ink, ledger entries | Similar paper does not identify a sender |\n\n"
+        "## Scene Planning\n\nUse the long harbour sentences before the short rescue beats. "
+        "Keep Ivo’s movements visible without supplying his thoughts. Mara tries the label against her receipt; "
+        "the edges do not fit. The later ledger discrepancy must therefore remain a question, not a solved identification.\n\n"
+        "## Reference boundaries\n\nThe historical map and harbour image establish their own dated visual context. "
+        "The approximate walking and driving sketches are author-entered examples, not calculated routes or sightlines.\n\n"
+        "## Next research questions\n\nWhich details of customs procedure need historical checking before a longer novel uses them? "
+        "Could an actual warehouse layout support these movements? Leave both questions open in this fictional demonstration.",
         tags=["Weather", "Setting"],
-        evidence_ids=[weather_passage],
+        evidence_ids=[weather_passage, visibility_passage, receipt_passage, witness_limits],
     )
     image_resources = {}
     for item, visual_bytes in reviewed_visual_sources():
@@ -581,63 +638,124 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
     research_api.create_claim(
         research_proj,
         title="Reformed customs seal",
-        statement="The night watchman reports an unharmed seal on the bonded warehouses.",
-        confidence="hypothetical",
-        time_period="1922–1924",
-        place="Hamburg Free Port Zone",
+        statement="The watchman reports intact seals on the inner warehouse doors, despite scratches on the external lock.",
+        confidence="hypothetical", time_period="1922–1924", place="Hamburg Free Port Zone",
         dossier_id=dossier_res["dossier_id"],
     )
     research_api.create_claim(
         research_proj,
         title="Harbour tour research notes",
-        statement="Modern field notes describe the former free port as a museum quarter.",
-        confidence="hypothetical",
-        time_period="present day",
-        place="Hamburg",
+        statement="A future research visit could check the fictional warehouse layout against dated plans and surviving buildings.",
+        confidence="hypothetical", time_period="present day", place="Hamburg",
     )
     claim_res = research_api.create_claim(
         research_proj,
         title="Attempted warehouse entry",
         statement="The customs log describes an attempted entry at Warehouse 4 in October 1923.",
-        confidence="evidenced",
-        time_period="1923",
-        place="Hamburg Free Port Zone",
-        actors=["Night watchman", "Customs officers"],
+        confidence="evidenced", time_period="1923", place="Hamburg Free Port Zone",
+        actors=["Night watchman", "Customs officers"], dossier_id=dossier_res["dossier_id"],
+    )
+    research_api.link_evidence(
+        research_proj, claim_id=claim_res["claim_id"], passage_id=passage_id,
+        relation="supports", rationale="The initial fictional log reports the attempted entry; it does not identify the people.",
+    )
+    inspection = research_api.create_claim(
+        research_proj, title="Where the crate was opened",
+        statement="Hansen opened the crate on the quay before it was transferred to the customs station.",
+        confidence="hypothetical", time_period="1923-10-14", place="Eastern quay",
         dossier_id=dossier_res["dossier_id"],
     )
     research_api.link_evidence(
-        research_proj,
-        claim_id=claim_res["claim_id"],
-        passage_id=passage_id,
-        relation="supports",
-        rationale="The synthetic log describes the attempted entry.",
+        research_proj, claim_id=inspection["claim_id"], passage_id=early_inspection,
+        relation="supports", rationale="The preliminary entry places the inspection beside the gate.",
     )
-    research_api.record_decision(
-        research_proj,
-        title="Keep the inspection at dawn",
-        rationale="The synthetic source places the transfer at dawn; preserve that sequence.",
-        claim_id=claim_res["claim_id"],
-        impact_on_plot="The crate reaches the customs station in the following scene.",
+    research_api.link_evidence(
+        research_proj, claim_id=inspection["claim_id"], passage_id=corrected_inspection,
+        relation="contradicts", rationale="The signed correction explicitly places the first opening at the station.",
     )
-    research_api.record_decision(
-        research_proj,
-        title="Move the discovery scene",
-        rationale="Bring the discovery forward to make the fictional chapter flow clearer.",
-        claim_id=claim_res["claim_id"],
-        deviation_from_fact=True,
-        impact_on_plot="The protagonist arrives before the night watchman calls for help.",
+    research_api.revise_record(
+        research_proj, "claim", inspection["claim_id"], expected_revision=1,
+        changes={"statement": "The crate was first opened at the customs station after dawn; the preliminary quay inspection entry was corrected.",
+                 "confidence": "evidenced", "time_period": "1923-10-15", "place": "Customs station"},
+        change_kind="supersession", reason="Prefer the signed follow-up while preserving the earlier interpretation and its conflicting citations.",
+    )
+    research_api.link_evidence(
+        research_proj, claim_id=inspection["claim_id"], passage_id=corrected_inspection,
+        relation="supports", rationale="This citation is explicitly linked to the revised interpretation, not silently transferred from version 1.",
+    )
+    lid = research_api.create_claim(
+        research_proj, title="The cracked lid delayed inspection",
+        statement="The damaged lid was bound for transport, and opening was deferred until the station.",
+        confidence="evidenced", time_period="1923-10-14 / 1923-10-15", place="Eastern quay",
+        dossier_id=dossier_res["dossier_id"],
+    )
+    research_api.link_evidence(
+        research_proj, claim_id=lid["claim_id"], passage_id=damaged_lid, relation="supports",
+        rationale="The follow-up records the cracked plank, binding and deferred opening in the fictional sequence.",
+    )
+    receipt = research_api.create_claim(
+        research_proj, title="The missing receiving signature",
+        statement="Cart seventeen appears as returned before the dispatch Mara copied; the missing signature leaves the connection unresolved.",
+        confidence="hypothetical", time_period="1923-10-14", place="Warehouse office",
+        actors=["Mara", "Foreman"], dossier_id=dossier_res["dossier_id"],
+    )
+    research_api.link_evidence(
+        research_proj, claim_id=receipt["claim_id"], passage_id=receipt_passage, relation="contextualizes",
+        rationale="The fictional working notebook keeps several explanations open; it does not identify a culprit.",
+    )
+    research_api.create_claim_relation(
+        research_proj, lid["claim_id"], inspection["claim_id"], relation="causes",
+        rationale="Author interpretation for the scene: securing the damaged lid moves the inspection to the station. This link does not verify causality.",
     )
     manuscript = research_proj / "harbour-manuscript.md"
     manuscript.write_bytes(manuscript_bytes)
-    anchor = research_api.resolve_manuscript_anchor(
-        research_proj, manuscript, query="Someone had tried the eastern gate of Warehouse 4.",
+    manuscript_hash = sha256(manuscript_bytes).hexdigest()
+    for claim_id, revision, query in (
+        (claim_res["claim_id"], 1, "Someone had tried the eastern gate of Warehouse 4."),
+        (claim_res["claim_id"], 1, "Fresh scratches crossed the lock"),
+        (lid["claim_id"], 1, "One plank cracked."),
+        (inspection["claim_id"], 2, "The crate was first opened at the customs station at six ten."),
+        (receipt["claim_id"], 1, "Cart seventeen: returned, six forty in the evening."),
+    ):
+        anchor = research_api.resolve_manuscript_anchor(research_proj, manuscript, query=query)
+        research_api.link_manuscript_claim(
+            research_proj, manuscript, claim_id, claim_revision=revision,
+            selection={key: anchor[key] for key in ("start_line", "end_line", "paragraph_sha256", "start", "end", "quote")},
+            expected_project_id=anchor["project_id"], expected_snapshot=anchor["snapshot"],
+            expected_source_sha256=manuscript_hash, allow_retention=True,
+            note="Explicit author association in a synthetic manuscript; not evidence that the fictional incident happened.",
+        )
+    research_api.revise_record(
+        research_proj, "claim", claim_res["claim_id"], expected_revision=1,
+        changes={"statement": "The customs log reports an attempted entry at Warehouse 4 in October 1923; the implement, people and launch connection remain unconfirmed."},
+        change_kind="correction", reason="Distinguish the reported attempt from unobserved details; preserve both manuscript associations at their reviewed version 1.",
     )
-    research_api.link_manuscript_claim(
-        research_proj, manuscript, claim_res["claim_id"], claim_revision=1,
-        selection={key: anchor[key] for key in ("start_line", "end_line", "paragraph_sha256", "start", "end", "quote")},
-        expected_project_id=anchor["project_id"], expected_snapshot=anchor["snapshot"],
-        expected_source_sha256=sha256(manuscript.read_bytes()).hexdigest(), allow_retention=True,
-        note="Explicit author association in a synthetic manuscript; not evidence that the fictional incident happened.",
+    research_api.link_evidence(
+        research_proj, claim_id=claim_res["claim_id"], passage_id=passage_id,
+        relation="supports", rationale="The current wording describes the report, not independent verification of this invented incident.",
+    )
+    research_api.link_evidence(
+        research_proj, claim_id=claim_res["claim_id"], passage_id=witness_limits,
+        relation="qualifies", rationale="The witnesses do not establish a weapon, passengers or the launch connection.",
+    )
+    research_api.record_decision(
+        research_proj, title="Keep the inspection at dawn",
+        rationale="Use the signed station correction while preserving the contradictory preliminary entry in the research record.",
+        claim_id=inspection["claim_id"], dossier_ids=[dossier_res["dossier_id"]],
+        impact_on_plot="The crate stays closed through the quay scenes; the formal note reveals the tobacco after transfer.",
+    )
+    research_api.record_decision(
+        research_proj, title="Move the discovery scene",
+        rationale="Let Mara arrive before customs so her handling changes the physical evidence; this is an explicit fictional staging choice.",
+        claim_id=claim_res["claim_id"], dossier_ids=[dossier_res["dossier_id"], weather_dossier["dossier_id"]],
+        deviation_from_fact=True,
+        impact_on_plot="The cut, cracked plank and label make her an involved witness rather than a distant observer.",
+    )
+    research_api.record_decision(
+        research_proj, title="Leave the receiving signature blank",
+        rationale="The two ledger entries and reused board support a question, not a solved identification.",
+        claim_id=receipt["claim_id"], dossier_ids=[dossier_res["dossier_id"], weather_dossier["dossier_id"]],
+        impact_on_plot="Mara stops the foreman closing the book; the unresolved receiving line ends the story.",
     )
     sources_data = research_api.list_sources(research_proj)
     dossiers_data = research_api.list_dossiers(research_proj)
@@ -716,12 +834,19 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
         research_fixture["/api/research/claims?dossier_id=" + quote(dossier["id"], safe="")] = {
             "ok": True, **research_api.list_claims(research_proj, dossier_id=dossier["id"]),
         }
+    evidence_data = research_api.list_evidence_links(research_proj)
+    relations_data = research_api.list_claim_relations(research_proj)
     for kind, records in (("dossier", dossiers_data["dossiers"]), ("claim", claims_data["claims"]),
-                          ("decision", decisions_data["decisions"])):
+                          ("decision", decisions_data["decisions"]), ("evidence_link", evidence_data["evidence_links"]),
+                          ("claim_relation", [{"id": relation["relation_id"]} for relation in relations_data["relations"]])):
         for item in records:
             identifier = quote(item["id"], safe="")
             endpoint = "?kind=" + kind + "&id=" + identifier
             research_fixture["/api/research/record" + endpoint] = {"ok": True, **research_api.get_record(research_proj, kind, item["id"])}
+            if kind in ("claim", "dossier"):
+                context_query = urlencode({"project_token": RESEARCH_DEMO_MANUSCRIPT_CONTEXT,
+                                           "id": item["id"], "kind": kind})
+                research_fixture["/api/research/record?" + context_query] = research_fixture["/api/research/record" + endpoint]
             history = research_api.record_history(research_proj, kind, item["id"])
             research_fixture["/api/research/history" + endpoint] = {"ok": True, **history}
             for version in history["revisions"]:

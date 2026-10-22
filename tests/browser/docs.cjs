@@ -29,6 +29,18 @@ const returnJourneyRoutes = new Set(['', 'guides/first-look.html', 'blog/index.h
   'blog/whats-new-lixity.html', 'demo/report.html', 'examples/effi-briest.html']);
 const demoTitle = 'The Crate at Warehouse 4';
 const demoQuote = 'Someone had tried the eastern gate of Warehouse 4.';
+const demoSecondQuote = 'Fresh scratches crossed the lock';
+
+function manuscriptReviewItem(page, quote = demoQuote) {
+  return page.locator('#research-manuscript-review .manuscript-link-review-item')
+    .filter({has: page.getByText(quote, {exact: true})});
+}
+
+async function openResearchVersions(page) {
+  const versions = page.locator('#research-revision-versions');
+  await expect(versions).toBeVisible();
+  if (!await versions.evaluate(details => details.open)) await versions.locator(':scope > summary').click();
+}
 
 async function withoutRequests(page, description, exercise) {
   const requests = [];
@@ -322,8 +334,8 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   await checkDemoLocalControl(detail.locator('[data-dossier-claim]'));
   await checkDemoLocalControl(detail.locator('[data-dossier-decision]'));
   const authoredClaim = detail.locator('.research-dossier-claims-list li').filter({hasText: 'Attempted warehouse entry'});
-  await expect(authoredClaim.locator('[data-manuscript-link-count="1"]')).toBeVisible();
-  await expect(authoredClaim.locator('[data-claim-revision="1"]')).toBeVisible();
+  await expect(authoredClaim.locator('[data-manuscript-link-count="2"]')).toBeVisible();
+  await expect(authoredClaim.locator('[data-claim-revision="2"]')).toBeVisible();
   await expect(detail.locator('.dossier-image img')).toHaveCount(2);
   const dossierImages = await detail.locator('.dossier-image img').all();
   await Promise.all(dossierImages.map(image => image.evaluate(element => { element.loading = 'eager'; return element.decode(); })));
@@ -371,15 +383,37 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   await expect(history.locator('.dossier-image img')).toHaveCount(2);
   await expect(history.locator('.dossier-geography')).toContainText("Night watchman's walk");
   await assertReadOnly();
+  const versions = page.locator('#research-revision-versions');
+  await expect(versions).toBeVisible();
+  assert.equal(await versions.evaluate(details => details.open), false,
+    'The public entry opens with its version list collapsed');
+  await versions.locator(':scope > summary').click();
   await page.locator('#research-revision-history-list [data-research-revision="1"]').click();
   await expect(history.locator('.dossier-image img')).toHaveCount(0);
   await expect(history.locator('.dossier-geography')).toContainText("Night watchman's walk");
   await page.keyboard.press('Escape');
   await page.locator('[data-rtab=claims]').click();
-  await expect(page.locator('#research-claims-list .research-card')).toHaveCount(3);
+  await expect(page.locator('#research-claims-list .research-card')).toHaveCount(6);
   const claim = page.locator('#research-claims-list .research-card').filter({hasText: 'Attempted warehouse entry'});
   await claim.locator('[data-load-evidence]').click();
   await expect(claim.locator('.claim-evidence-subpanel')).toContainText('synthetic');
+  await expect(claim.locator('.claim-evidence-subpanel .research-passage-card')).toHaveCount(3);
+  await expect(claim.locator('.claim-evidence-subpanel')).toContainText('Qualifies');
+  const inspection = page.locator('#research-claims-list .research-card').filter({hasText: 'Where the crate was opened'});
+  await inspection.locator('[data-load-evidence]').click();
+  await expect(inspection.locator('.claim-evidence-subpanel .research-passage-card')).toHaveCount(3);
+  const contradiction = inspection.locator('.research-passage-card').filter({has: page.getByText('Contradicts', {exact: true})});
+  await expect(contradiction).toContainText('The signed correction explicitly places the first opening at the station.');
+  await contradiction.locator('[data-research-history=evidence_link]').click();
+  await expect(page.locator('#research-revision-kind')).toContainText('Evidence link · Version 1');
+  await expect(history).toContainText('Contradicts');
+  await expect(history).toContainText('the crate was first opened at the customs station at six ten');
+  await assertReadOnly();
+  await openResearchVersions(page);
+  await expect(page.locator('#research-revision-history-list [data-research-revision]')).toHaveCount(1);
+  await page.locator('#research-revision-history-list [data-research-revision="1"]').click();
+  await expect(history).toContainText('The signed correction explicitly places the first opening at the station.');
+  await page.keyboard.press('Escape');
   const emptyClaim = page.locator('#research-claims-list .research-card').filter({hasText: 'Harbour tour research notes'});
   await emptyClaim.locator('[data-load-evidence]').click();
   await expect(emptyClaim.locator('.claim-evidence-subpanel')).toContainText('No evidence linked to this claim.');
@@ -393,30 +427,60 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   });
   await emptyClaim.screenshot({path: path.join(artifacts, `research-empty-evidence-${width}-${colorScheme}.png`)});
   await page.locator('#r-open-timeline').click();
-  await expect(page.locator('#research-claims-timeline .research-timeline-strip-row')).toHaveCount(2);
+  await expect(page.locator('#research-claims-timeline .research-timeline-strip-row')).toHaveCount(5);
+  await expect(page.locator('#research-claims-timeline .research-timeline-unplaced > li')).toHaveCount(1);
   await expect(page.locator('#research-claims-timeline')).toContainText('present day');
+  await page.locator('[data-claim-view=list]').click();
+  const causalLink = page.locator('#research-claim-relations .research-relation-card');
+  await expect(causalLink).toHaveCount(1);
+  await expect(causalLink).toContainText('The cracked lid delayed inspection');
+  await expect(causalLink).toContainText('Where the crate was opened');
+  await expect(causalLink).toContainText('is proposed to cause');
+  await causalLink.locator('[data-research-history=claim_relation]').click();
+  await expect(page.locator('#research-revision-kind')).toContainText('Cause/effect link · Version 1');
+  await expect(history).toContainText('The cracked lid delayed inspection');
+  await expect(history).toContainText('Where the crate was opened');
+  await expect(history).toContainText('This link does not verify causality.');
+  await assertReadOnly();
+  await openResearchVersions(page);
+  await expect(page.locator('#research-revision-history-list [data-research-revision]')).toHaveCount(1);
+  await page.locator('#research-revision-history-list [data-research-revision="1"]').click();
+  await expect(history).toContainText('This link does not verify causality.');
+  await page.keyboard.press('Escape');
   await assertReadOnly();
   await page.locator('[data-rtab=decisions]').click();
-  await expect(page.locator('#research-decisions-list .research-card')).toHaveCount(2);
+  await expect(page.locator('#research-decisions-list .research-card')).toHaveCount(3);
   await page.locator('[data-rtab=review]').click();
   await expect(page.locator('#research-editorial-review')).not.toContainText('Loading');
   await expect(page.locator('#research-editorial-review')).toContainText('Warehouse 4 case notes');
-  const decisionComparison = page.locator('#research-editorial-review [data-decision-review]').first();
+  const decisionComparison = page.locator('#research-editorial-review .research-card')
+    .filter({has: page.getByText('Keep the inspection at dawn', {exact: true})})
+    .locator('[data-decision-review]');
+  await expect(decisionComparison).toHaveCount(1);
   await decisionComparison.locator(':scope > summary').click();
   await expect(decisionComparison.locator('.research-decision-review-grid')).toBeVisible();
-  await expect(decisionComparison.locator('[data-decision-review-latest="decision"]')).toContainText('saved version');
+  await expect(decisionComparison.locator('[data-decision-review-latest="decision"]')).toContainText('Latest decision · version');
   await expect(decisionComparison.locator('[data-decision-review-latest="dossier"]')).toContainText('Warehouse 4 case notes');
   await decisionComparison.locator('[data-decision-review-close]').click();
   await expect(decisionComparison).not.toHaveAttribute('open', '');
   await assertReadOnly();
   const manuscriptReview = page.locator('#research-manuscript-review');
-  await expect(manuscriptReview.locator('.manuscript-link-review-item')).toHaveCount(1);
-  await expect(manuscriptReview).toContainText('Attempted warehouse entry');
-  await expect(manuscriptReview.locator('blockquote')).toHaveText(demoQuote);
-  await expect(manuscriptReview).toContainText('Exact passage');
-  await expect(manuscriptReview).toContainText('Saved version 1');
-  await manuscriptReview.locator('[data-research-history=claim]').click();
+  await expect(manuscriptReview.locator('.manuscript-link-review-item')).toHaveCount(5);
+  await expect(manuscriptReview.locator('blockquote')).toHaveText([
+    demoQuote, demoSecondQuote, 'One plank cracked.',
+    'The crate was first opened at the customs station at six ten.',
+    'Cart seventeen: returned, six forty in the evening.',
+  ]);
+  const originalReview = manuscriptReviewItem(page);
+  await expect(originalReview).toHaveCount(1);
+  await expect(originalReview).toContainText('Attempted warehouse entry');
+  await expect(originalReview).toContainText('Exact passage');
+  await expect(originalReview).toContainText('Claim has a newer version');
+  await expect(originalReview.locator('[data-research-history=claim]')).toHaveAttribute('data-record-revision', '1');
+  await expect(originalReview.locator('[data-research-history=claim]')).toHaveText('Linked version 1');
+  await originalReview.locator('[data-research-history=claim]').click();
   await expect(history).toContainText('The customs log describes an attempted entry');
+  await expect(history).not.toContainText('the implement, people and launch connection remain unconfirmed');
   await page.keyboard.press('Escape');
   await manuscriptReview.scrollIntoViewIfNeeded();
   await page.screenshot({path: path.join(artifacts, `research-manuscript-review-${width}-${colorScheme}.png`)});
@@ -571,18 +635,38 @@ async function checkSavedPassageContext(page, width) {
   const prose = passage.locator('.ptext-inner > p');
   const original = await prose.textContent();
   await passage.locator('[data-reader-paragraph]').click();
-  await page.locator('#manuscript-context-menu [data-reader-action=research]').click();
+  await page.locator('#manuscript-context-menu [data-reader-action=values]').click();
+  await page.locator('#reader-inspector-body [data-reader-action=research]').click();
   const context = page.locator('#workspace-context-panel [data-passage-research]');
   await expect(context).toHaveAttribute('data-state', 'ready');
-  await expect(context.locator('blockquote')).toHaveText(demoQuote);
+  await expect(context.locator('.passage-research-item')).toHaveCount(1);
+  const associations = context.locator('[data-passage-research-associations]');
+  await expect(associations).not.toHaveAttribute('open', '');
+  await expect(associations.locator(':scope > summary')).toHaveText('Text associations (2)');
+  await expect(associations.locator('blockquote')).toHaveCount(2);
+  await expect(associations.locator('blockquote').first()).toBeHidden();
+  await associations.locator(':scope > summary').click();
+  await expect(associations.locator('blockquote')).toHaveText([demoQuote, demoSecondQuote]);
   await expect(context).toContainText('Attempted warehouse entry');
   await expect(context).toContainText('Warehouse 4 case notes');
-  await expect(context).toContainText('Current dossier context');
-  await context.locator('[data-research-history=claim]').click();
+  const decisions = context.locator('[data-passage-research-decisions]');
+  await expect(decisions).not.toHaveAttribute('open', '');
+  await expect(decisions.locator(':scope > summary')).toHaveText('3 decisions in current dossier');
+  await decisions.locator(':scope > summary').click();
+  await expect(decisions.locator('[data-research-history=decision]')).toHaveCount(3);
+  await expect(decisions).toContainText('Keep the inspection at dawn');
+  await expect(decisions).toContainText('Move the discovery scene');
+  await expect(decisions).toContainText('Leave the receiving signature blank');
+  await context.locator('.passage-record-title[data-research-history=claim]').click();
+  await expect(page.locator('#research-revision-kind')).toContainText('Claim · Version 2');
+  await expect(page.locator('#research-revision-history-detail')).toContainText('the implement, people and launch connection remain unconfirmed');
+  await page.keyboard.press('Escape');
+  await context.locator('.passage-record-pin[data-research-history=claim][data-record-revision="1"]').click();
+  await expect(page.locator('#research-revision-kind')).toContainText('Claim · Version 1');
   await expect(page.locator('#research-revision-history-detail')).toContainText('The customs log describes an attempted entry');
   await page.keyboard.press('Escape');
   await expect(context).toBeVisible();
-  await context.screenshot({path: path.join(artifacts, `demo-passage-research-${width}.png`)});
+  await page.locator('#workspace-context-panel').screenshot({path: path.join(artifacts, `demo-passage-research-${width}.png`)});
   await context.locator('[data-passage-research-close]').click();
   await expect(context).toBeHidden();
   const back = page.locator('#workbench-return');
@@ -697,7 +781,10 @@ async function checkDemoCapabilities(page, width) {
   await dossier.locator('[data-workspace-dossier]').click();
   await expect(page.locator('#tab-view-analysis')).toHaveAttribute('aria-selected', 'true');
   await expect(reader.locator('h3').first()).toHaveText('Warehouse 4 case notes');
-  await reader.locator('[data-dossier-enlarge]').first().click();
+  const companionImage = reader.locator('[data-dossier-enlarge]').first();
+  await companionImage.locator('..').scrollIntoViewIfNeeded();
+  await companionImage.locator('img').evaluate(image => image.decode());
+  await companionImage.click();
   const enlarged = page.locator('#modal-dossier-image-enlarge');
   await expect(enlarged).toBeVisible();
   const enlargedImage = enlarged.locator('.pswp__item[aria-hidden=false] img.pswp__img');
@@ -735,7 +822,7 @@ async function checkDemoCapabilities(page, width) {
   const markdown = fs.readFileSync(matrixPath, 'utf8');
   assert.match(markdown, /^# Research Claim-Evidence Matrix: The Crate at Warehouse 4/m);
   assert.match(markdown, /Attempted warehouse entry/);
-  assert.match(markdown, /\*\*Total Evidence Citations:\*\* 1/);
+  assert.match(markdown, /\*\*Total Evidence Citations:\*\* 8/);
   assert.match(markdown, /Warehouse 4 case notes/);
   await expect(matrixButton).toBeEnabled();
   await assertDemoReadOnly(page);
@@ -831,11 +918,12 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   assert.equal(await page.locator('#reader-inspector-body').textContent(), inspectedValues,
     'Returning from research preserves the selected passage values');
   await expect(page.locator('#' + passageId + ' p').first()).toHaveText(paragraphText);
-  await expect(page.locator('#' + passageId + ' mark.manuscript-claim-hit')).toHaveText(demoQuote);
+  await expect(page.locator('#' + passageId + ' mark.manuscript-claim-hit')).toHaveText([demoQuote, demoSecondQuote]);
   await page.locator('#tab-view-research').click();
   await expect(page.locator('[data-rtab=review]')).toHaveAttribute('aria-selected', 'true');
-  await expect(page.locator('#research-manuscript-review blockquote')).toHaveText(demoQuote);
-  await page.locator('#research-manuscript-review [data-manuscript-link-jump]').click();
+  const originalReview = manuscriptReviewItem(page);
+  await expect(originalReview.locator('blockquote')).toHaveText(demoQuote);
+  await originalReview.locator('[data-manuscript-link-jump]').click();
   await expect(page.locator('#tab-view-analysis')).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#' + passageId)).toBeFocused();
   await expect.poll(() => page.locator('#' + passageId).evaluate(panel => {

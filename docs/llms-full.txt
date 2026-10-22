@@ -35,8 +35,9 @@ your browser before installing the app for your own writing.
 
 <a href="https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png"><img src="https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png" width="560" alt="Lixity manuscript reader with continuous prose, chapter navigation and contextual tools"/></a>
 
-The read-only example uses six invented English chapters and credited research
-images. It needs no account or upload and cannot import, edit or save.
+The read-only example follows a suspicious harbour delivery through six invented
+English chapters, linked case notes and credited research images. It needs no
+account or upload and cannot import, edit or save.
 [More views and image credits](https://mfahsold.github.io/lixity/screenshots/README.md).
 
 <a id="start-here"></a>
@@ -89,8 +90,9 @@ The browser app, CLI and Python API share one analysis pipeline;
 Turn **Analysis** on beside the text, choose a metric and inspect its counted
 passages through hover, touch or the paragraph menu. The same literal evidence
 is available through `lixity profile manuscript.md --layer asl --evidence`.
-A passage's **Saved research** opens its saved claim and dossier versions beside
-the manuscript, with a return to the passage. See the
+A passage's research associations open its claims and dossier beside
+the manuscript, with a return to the passage. Exact earlier versions remain
+available independently of the current entry. See the
 [reader and CLI guide](https://mfahsold.github.io/lixity/USAGE.md).
 
 CLI workflows can reuse the project's configured manuscript;
@@ -192,7 +194,18 @@ English is the default analysis language; detection requires `--language auto`.
 Language-neutral JSON identifiers and units differ from translated display keys.
 Use active result metadata when interpreting thresholds and unavailable values.
 
-The interactive workspace opens in Manuscript with Analysis Off. Values opens
+On current main (Unreleased), Explore passage is the shared paragraph-menu
+entry. Explain measurement and Research for this passage remain distinct destinations in
+the existing context area: computed literal counts versus explicitly linked
+research. The compact measurement card scopes its sentence word count, paragraph
+value and chapter comparison separately; method/coverage is expandable.
+Ordinary research entry titles open the current version. Explicit Linked version
+actions retain their exact pins; the collapsed Versions list loads only on demand
+and does not change the displayed record. Text associations group exact quotes
+of one claim version separately from current dossier decisions. Human CLI output
+uses Version N; revision flags, identifiers and JSON schemas remain unchanged.
+
+The published v0.7.3 workspace opens in Manuscript with Analysis Off. Values opens
 Passage values independently of that display choice. Use Analysis overview for
 chapter comparisons and Dossier alongside
 for retained research. Back to passage restores the requesting text. Reading
@@ -1207,22 +1220,25 @@ the claim and quote, then permit retention before saving. Preview writes nothing
 saved links pin exact claim/paragraph versions and need review after changes.
 See [retention, anchoring and compatibility](research/USAGE.md#associate-a-manuscript-quote-with-a-claim).
 
-A saved association's **Open claim** shows the recorded claim revision. Its
-dossier reference opens the recorded dossier version; choose newer history
-explicitly when needed. Claim and dossier views can open their saved manuscript
+A recorded association retains the exact claim and dossier versions used for it.
+Claim and dossier views can open their manuscript
 associations in Review. Only an exactly resolved current passage offers a direct
 jump; moved, changed, ambiguous and unavailable anchors retain their review state.
 
-**Since v0.7.3:** choose a paragraph's **… → Saved research**,
-its saved-association count or a marked saved quotation to read its context
-beside the manuscript. The context shows up to five exact saved associations,
-with their total, pinned claim and dossier versions and author-assigned confidence.
-Associated decisions are labelled **current dossier context**; they do not
-reconstruct the historical state of the saved quotation. Each title opens its
-displayed version in the existing record viewer. **Review** remains a separate
+**On current main (Unreleased):** choose **Explore passage → Research for this
+passage**, its association count or a marked quotation to read the linked
+context beside the manuscript. The context shows up to five associations with
+their total, grouping quotations of the same claim version. Titles open the
+current entry; a separate **Linked version** button opens an earlier pinned
+version. **Text associations** contains the exact quotations and assessment of
+the linked claim version. **Decisions in current dossier** expands separately,
+with further decisions available beyond the first five. These decisions do not
+reconstruct the quotation's historical context. **Review** remains a separate
 action for changed or unresolved anchors. An empty summary means no saved
 associations for this passage, not that no relevant facts exist. Opening or
 refreshing the summary reads existing records without saving or repinning them.
+The published v0.7.3 menu calls this **Saved research** and opens the linked
+versions directly.
 
 When following a connection from the manuscript, **Back to passage** returns to
 the preserved origin while the project/source context still matches. The work
@@ -1269,7 +1285,32 @@ screens. Escape closes it. Turning analysis off, choosing **None** or unchecking
 the marking control removes the marks. Your metric and marking choices persist
 in the browser, including deliberate **None** and disabled marks.
 
-The paragraph menu's **Inspect text evidence** offers the same explanation by
+**On current main (Unreleased):** the paragraph menu has one **Explore passage**
+entry. Its existing right context offers **Explain measurement** and **Research
+for this passage**. The former explains counted text; the latter reads
+explicitly linked claims, sources and decisions. Hover and tap remain quick ways
+to open the measurement card. That card separates a selected sentence's word
+count from the paragraph measurement and chapter comparison; mapping details
+and limits are expandable. The context's **Passage** button selects the inspector;
+the separate **Analysis** switch controls manuscript indicators. Neither route
+infers factual truth.
+
+These routes share existing actions rather than creating separate records:
+
+| Task on current main | Passage route | Other access |
+| --- | --- | --- |
+| Explain counted text | **Explore passage → Explain measurement** | Hover or tap a marked word or sentence |
+| Read explicitly linked research | **Explore passage → Research for this passage** | The paragraph's association count |
+| Link a quotation to a claim | **Link selection to claim** in the paragraph menu | The selection toolbar or `Alt+L`, with a valid selection inside one paragraph |
+| Add a work marker | The paragraph menu's marker actions | The compact selection toolbar offers **Check**; the overview lists saved work markers |
+| Keep a chosen dossier beside the text | **Dossier alongside** in the paragraph menu | The reader toolbar and the dossier context control |
+
+**Dossier alongside** displays the dossier you explicitly choose. **Saved
+research** follows associations saved for the selected paragraph. Merely opening
+a dossier beside the manuscript does not link it to that passage.
+
+In the published v0.7.3 release, the paragraph menu's **Inspect text evidence**
+offers the same explanation by
 keyboard or right-click, including with Analysis Off or Focus reading. That
 explicit action enables Analysis and chooses Sentence length if no metric is
 selected, while preserving an unchecked marking preference.
@@ -1300,13 +1341,13 @@ Each analyzed paragraph has an **…** button. It opens the same contextual tool
 right-click on the prose or `Shift+F10`/the context-menu key while the paragraph
 or its button has focus. Arrow keys move through the menu; `Home`/`End` reach its
 first/last action. Escape closes it and restores focus. Actions depend on the
-available capabilities: **Values**, work markers, **Link selection to claim**
+available capabilities: **Explore passage** (**Values** in published v0.7.3), work markers, **Link selection to claim**
 for a valid selection, and the companion dossier. A selection within one paragraph
 also offers a compact toolbar. Marker notes and claim associations still require
 their existing explicit save and retention steps.
 Use Shift+right-click to open the browser's native context menu instead.
 
-**Values** opens **Passage values** with the selected paragraph's chapter, source
+In published v0.7.3, **Values** opens **Passage values** with the selected paragraph's chapter, source
 lines, tense and style measurements in the closable context area. Opening or
 closing it leaves the global Analysis choice unchanged; turning Analysis Off
 keeps the inspector available. In v0.7.2, **Saved manuscript associations** opens
@@ -1419,8 +1460,11 @@ the switch and select one metric under **Text analysis**. A transparent backgrou
 and up/down arrow on a notable paragraph
 refer to that chapter's median/MAD, not literary quality. The paragraph button
 explains its raw value, unit, source lines and local z; choose **Values** for the
-measurements. **Next deviation** opens the paragraph, and **Clear metric** removes
-only this metric. Analysis Off hides the paint and related hints while retaining
+measurements. **Next deviation** opens the paragraph. **Clear metric** removes
+the selected metric and its deviation filter, leaving the flagged-paragraph
+filter unchanged. **Show all paragraphs** clears both paragraph filters and the
+selected metric. These are different reset scopes, not separate analyses.
+Analysis Off hides the paint and related hints while retaining
 your choice. Native text selection, search and saved research marks remain separate.
 
 The strip's colour and notable membership now use the same within-chapter
@@ -2601,6 +2645,17 @@ preview with an installation link. Unchanged archive refreshes keep an opened
 evidence panel. A changed archive or project clears it so you can reload the
 current evidence.
 
+**On current main (Unreleased):** loaded claim evidence is grouped under the
+collapsible **Source quotations** heading. Closing and reopening it keeps the
+loaded quotations and unsaved fields without another read. Authored search
+results use **View entry** to open the current record; **View
+details** on a dossier card expands its inline detail instead.
+
+Claim choices in decision creation also use the existing evidence/relation
+picker labels: title, recorded period and version, with an ID only when
+those still match. The label helps distinguish records; choosing it does not
+create or update an association.
+
 In **Manuscript**, **Dossier alongside** opens a chosen dossier in a read-only
 companion. It starts closed with no automatic selection. Refresh explicitly for
 the latest dossier. The companion and paragraph **Values** inspector are
@@ -2696,6 +2751,14 @@ facts or relevant research. Opening, closing or retrying this summary performs
 reads only, without retention, indexing, version upgrades or repinning. Research
 setup remains explicit. This presentation adds no API or archive schema version.
 
+**On current main (Unreleased):** the shared **Explore passage** inspector calls
+this **Research for this passage**. Quotations of the same pinned claim are
+grouped under **Text associations**; its assessment belongs to that exact claim
+version. The title opens the current entry, while **Linked version N** explicitly
+opens an earlier pin. Current dossier decisions have their own counted
+disclosure, including further decisions beyond the first five. Expanding these
+details neither upgrades a link nor reconstructs its historical decision set.
+
 Retraction and note/claim revisions use the existing record history and strict
 revision API. A uniquely resolvable anchor is re-pinned explicitly: `lixity
 research reconcile-manuscript --accept-moved` (or `POST /api/research-manuscript-reanchor`)
@@ -2776,18 +2839,24 @@ and export/restore preserve accepted link records. Exported quotes remain
 private manuscript material; there is no full manuscript blob. Restored links
 remain unavailable until the manuscript exists at its saved project-relative path.
 
-### Read saved versions without losing context
+<a id="read-saved-versions-without-losing-context"></a>
 
-Since v0.7.3, the shared research viewer separates **Edit** and
-**Saved versions**. Its context names the selected record kind, saved version and
-whether it is current or earlier. Version buttons navigate retained states; the
-selected detail shows its change reason and provenance once. Technical IDs and
-the archive snapshot remain in the reversible **Technical details** disclosure.
+### Read entries and earlier versions without losing context
+
+**On current main (Unreleased):** ordinary entry actions open the current
+version in the shared read-only viewer. Explicit linked-version actions open
+their exact pin. The **Versions** disclosure loads the version list only when
+opened; expanding it never changes the displayed record. Choosing a version is
+explicit. The context names the selected kind, version and current/earlier state
+once; change provenance remains available without repeated version headings.
+**Edit** keeps its separate draft. Technical IDs and the archive snapshot remain
+in the **Technical details** disclosure. Published v0.7.3 instead uses separate
+**Edit** and **Saved versions** tabs with an initially visible version list.
 
 Read-only fields use the same localized choices as editing. Absent optional
 fields are omitted; an explicit false value or measured zero remains visible.
 A linked record and its pinned version appear together. **Source quotations**
-are retained evidence excerpts; **Saved manuscript associations** refer to the
+are retained evidence excerpts; **Manuscript associations** refer to the
 separate links back to your manuscript. Neither establishes factual truth.
 Arrow keys, Home and End move between the editor's tabs; returning to Edit keeps
 an unsaved draft. Reading earlier versions does not revise or retarget a record.
@@ -5606,6 +5675,13 @@ are prepared, with explicit codepoint-to-UTF-16 conversion and hash validation.
 Search/research mark changes invalidate derived ranges, not source identities.
 Analysis visibility, metric changes and workspace changes cancel stale cards and
 marks. Unsupported or unprovable mappings remain explicit unavailable states.
+On current main, the paragraph menu opens one existing passage inspector. Its
+measurement action captures the source point and uses the evidence owner; its
+research action delegates to the existing explicit passage association reader.
+The presentation keeps computed counts and authored research separate without
+a new context state or transport contract. The floating card uses native counts
+and the existing paragraph comparison; it never parses localized numeric text.
+
 The existing reader preferences also retain the selected metric and marking
 choice. First explicit Analysis On defaults to `asl` only without a saved choice;
 the native disclosure beside the switch contains the single existing selector

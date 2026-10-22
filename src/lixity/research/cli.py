@@ -187,22 +187,22 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 command.add_argument("--dry-run", action="store_true")
                 command.add_argument("--progress", action="store_true", help="Report real-time progress phases on stderr")
         if name in ("dossier", "claim", "link-evidence", "decision", "relate"):
-            command.add_argument("--update", action="store_true", help="Revise the named record")
+            command.add_argument("--update", action="store_true", help="Update the record; accepted changes create an immutable version")
             command.add_argument("--dry-run", action="store_true", help="Validate an --update exactly without writing or acquiring the writer lock")
-            command.add_argument("--prepare", action="store_true", help="Preview reconciliation with the current record; never changes the archive")
+            command.add_argument("--prepare", action="store_true", help="Preview an unsaved draft against the current version; never changes the archive")
             command.add_argument("--diff", action="store_true", help="Preview the change as a unified terminal diff; never writes")
-            command.add_argument("--from-revision", type=int, help="With --diff, compare this saved revision instead of a draft")
-            command.add_argument("--to-revision", type=int, help="Saved destination for --diff --from-revision (default: HEAD)")
-            command.add_argument("--base-revision", type=int, help="Original revision of the draft being prepared")
+            command.add_argument("--from-revision", type=int, help="With --diff, compare this immutable version instead of a draft")
+            command.add_argument("--to-revision", type=int, help="Destination version for --diff --from-revision (default: HEAD)")
+            command.add_argument("--base-revision", type=int, help="Original version of the unsaved draft being prepared")
             command.add_argument("--resolve", action="append", metavar="FIELD=current|mine",
                                  help="Explicit field choice for a --prepare conflict; repeat for each field")
-            command.add_argument("--history", action="store_true", help="List immutable revisions")
+            command.add_argument("--history", action="store_true", help="List immutable record versions")
             command.add_argument("--inspect", action="store_true", help="Inspect the latest record")
-            command.add_argument("--revision", type=int, help="Inspect one historical revision")
+            command.add_argument("--revision", type=int, help="Inspect one historical version")
             command.add_argument("--expected-snapshot", help="Optional strict archive digest; if omitted, update checks --expected-revision against the current record")
-            command.add_argument("--expected-revision", type=int, help="Reviewed record revision required for an update; changed associations need explicit pins when snapshot is omitted")
+            command.add_argument("--expected-revision", type=int, help="Reviewed record version required for an update; changed associations need explicit pins when snapshot is omitted")
             command.add_argument("--latest", action="store_true",
-                                 help="Use the current HEAD revision of the record as --expected-revision "
+                                 help="Use the current HEAD version of the record as --expected-revision "
                                       "(single-author convenience; implies --expected-snapshot from the same read)")
             command.add_argument("--change-kind", choices=("correction", "supersession"), help="Reason category required for --update or a reviewed --output packet")
             command.add_argument("--reason", help="Why this authored record is being revised")
@@ -213,7 +213,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
         if name == "link-manuscript":
             command.add_argument("--claim-id", required=True)
             command.add_argument("--claim-revision", type=int, required=True,
-                                 help="Exact reviewed claim revision to pin")
+                                 help="Exact reviewed claim version to pin")
             source_group = command.add_mutually_exclusive_group(required=True)
             source_group.add_argument("--selection",
                                       help="Selection JSON object (literal or local file) with start_line, "
@@ -326,8 +326,8 @@ def configure(parser: argparse.ArgumentParser) -> None:
                                  help="Zero-based human-output page offset (default: 0)")
         elif name == "dossier":
             command.epilog = (
-                "Inspect an ID with --format text to read saved places, route context and approximate distances; "
-                "--summary keeps the body excerpt short. JSON geography_summary describes the selected revision "
+                "Inspect an ID with --format text to read recorded places, route context and approximate distances; "
+                "--summary keeps the body excerpt short. JSON geography_summary describes the selected version "
                 "without changing stored records. Distances join supplied coordinates on a sphere, "
                 "not road routing, elevation or travel time; coordinate digits do not establish accuracy."
             )
@@ -337,7 +337,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
             content.add_argument("--file", help="Existing readable UTF-8 Markdown file; use --body for literal text")
             content.add_argument("--body", help="Literal authored Markdown body (alternative to --file PATH)")
             content.add_argument("--edit-file", help="Exported dossier edit document to reconcile with --prepare")
-            command.add_argument("--export-edit", metavar="PATH", help="Export a selected revision as an editable Markdown draft; never overwrites")
+            command.add_argument("--export-edit", metavar="PATH", help="Export a selected version as an editable Markdown draft; never overwrites")
             command.add_argument("--output", metavar="PATH", help="With --prepare --edit-file, write a ready reviewed packet for revise-batch; never overwrites")
             command.add_argument("--tags", help="Comma-separated tags")
             command.add_argument("--evidence", help="Comma-separated passage UUIDs")
@@ -626,7 +626,7 @@ def _revision_changes(args: argparse.Namespace) -> dict[str, Any]:
 def _missing_draft_message(args: argparse.Namespace) -> str:
     """Derive actionable input names from the owning fields and actual parser."""
     return (f"Supply at least one draft field for {args.research_command}: {', '.join(args.cli_draft_arguments)}. "
-            "Use --inspect to read the record or --history to list saved revisions")
+            "Use --inspect to read the record or --history to list immutable versions")
 
 
 def _revision_diff_text(comparison: dict[str, Any]) -> str:
@@ -886,7 +886,7 @@ def _current_project() -> str:
 
 
 def _record_text(result: dict[str, Any]) -> str:
-    """Render a record, immutable revision history, or an explicit diff preview."""
+    """Render a record, immutable version history, or an explicit diff preview."""
     from .presentation import geography_report, safe_text
 
     def prose(value: Any) -> str:
@@ -898,9 +898,9 @@ def _record_text(result: dict[str, Any]) -> str:
         return str(result["diff"]).rstrip() + "\n"
     if result.get("schema_version") == "research-history-local/1":
         lines = [f"# {safe_text(result['kind'])} {safe_text(result['record_id'])} history", "",
-                 f"Latest revision: {result['latest_revision']}"]
+                 f"Latest version: {result['latest_revision']}"]
         for revision in result["revisions"]:
-            lines.extend(["", f"Revision {revision['revision']}",
+            lines.extend(["", f"Version {revision['revision']}",
                           f"Created: {safe_text(revision['created_at'])}",
                           f"Actor: {safe_text(revision['created_by'])}"])
             change = revision.get("change")
@@ -912,7 +912,7 @@ def _record_text(result: dict[str, Any]) -> str:
     revision = record.get("revision")
     lines = [f"# {safe_text(title)}", ""]
     if revision is not None:
-        lines.append(f"Revision {revision}")
+        lines.append(f"Version {revision}")
     body = record.get("body") or record.get("excerpt") or record.get("statement") or record.get("rationale")
     if body:
         lines.extend(["", prose(body)])

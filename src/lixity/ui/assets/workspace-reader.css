@@ -34,13 +34,20 @@
   .reader-controls, .toolbar-note, .workspace-reader-panel { display: none !important; }
   .workspace-reader-layout.is-open { display: block; }
 }
-/* Saved associations share the existing context dock and its scrollport. */
+/* Passage research shares the existing context dock and its scrollport. */
 .workspace-context-panel.passage-research-open { scroll-margin-top: calc(var(--workbench-return-height, 0px) + var(--space-3)); }
 .passage-research[hidden] { display: none; }
 .passage-research { padding: var(--space-4); min-width: 0; }
 .passage-research .workspace-reader-head { margin-bottom: var(--space-4); align-items: flex-start; }
 .passage-research-item { padding-block: var(--space-4); border-top: 1px solid var(--line); }
-.passage-research-item .ctl { display: block; max-width: 100%; white-space: normal; text-align: start; margin-block: var(--space-2); overflow-wrap: anywhere; }
+.passage-research-item .ctl { max-width: 100%; white-space: normal; text-align: start; overflow-wrap: anywhere; }
+.passage-research-record { margin-bottom: var(--space-3); }
+.passage-research-record > .ctl-note { margin: 0; }
+.passage-research-item .passage-record-title { display: block; width: 100%; padding: var(--space-2); margin-inline: calc(-1 * var(--space-2)); border-color: transparent; background: transparent; color: var(--accent); font-weight: var(--weight-semibold); }
+.passage-research-item .passage-record-title:hover { background: var(--accent-light); color: var(--accent); }
+.passage-research-item .passage-record-pin { margin-top: var(--space-1); color: var(--fg-secondary); background: transparent; border-color: var(--line); }
+.passage-research-item .research-details { margin-top: var(--space-2); }
+.passage-research-item .research-details > .research-details { margin-inline-start: var(--space-3); }
 .passage-research blockquote { margin-inline: 0; padding-inline: var(--space-3); overflow-wrap: anywhere; }
 .passage-research-open .context-tool-tabs { flex-wrap: wrap; }
-.passage-research-open .context-tool-tabs .ctl { flex: 1 1 8rem; overflow-wrap: normal; }
+.passage-research-open .context-tool-tabs .ctl { flex: 1 1 0; min-width: 0; overflow-wrap: normal; }

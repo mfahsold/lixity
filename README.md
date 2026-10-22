@@ -17,8 +17,9 @@ your browser before installing the app for your own writing.
 
 <a href="https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png"><img src="https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png" width="560" alt="Lixity manuscript reader with continuous prose, chapter navigation and contextual tools"/></a>
 
-The read-only example uses six invented English chapters and credited research
-images. It needs no account or upload and cannot import, edit or save.
+The read-only example follows a suspicious harbour delivery through six invented
+English chapters, linked case notes and credited research images. It needs no
+account or upload and cannot import, edit or save.
 [More views and image credits](https://mfahsold.github.io/lixity/screenshots/README.md).
 
 <a id="start-here"></a>
@@ -71,8 +72,9 @@ The browser app, CLI and Python API share one analysis pipeline;
 Turn **Analysis** on beside the text, choose a metric and inspect its counted
 passages through hover, touch or the paragraph menu. The same literal evidence
 is available through `lixity profile manuscript.md --layer asl --evidence`.
-A passage's **Saved research** opens its saved claim and dossier versions beside
-the manuscript, with a return to the passage. See the
+A passage's research associations open its claims and dossier beside
+the manuscript, with a return to the passage. Exact earlier versions remain
+available independently of the current entry. See the
 [reader and CLI guide](https://mfahsold.github.io/lixity/USAGE.md).
 
 CLI workflows can reuse the project's configured manuscript;

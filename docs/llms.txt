@@ -43,7 +43,18 @@ English is the default analysis language; detection requires `--language auto`.
 Language-neutral JSON identifiers and units differ from translated display keys.
 Use active result metadata when interpreting thresholds and unavailable values.
 
-The interactive workspace opens in Manuscript with Analysis Off. Values opens
+On current main (Unreleased), Explore passage is the shared paragraph-menu
+entry. Explain measurement and Research for this passage remain distinct destinations in
+the existing context area: computed literal counts versus explicitly linked
+research. The compact measurement card scopes its sentence word count, paragraph
+value and chapter comparison separately; method/coverage is expandable.
+Ordinary research entry titles open the current version. Explicit Linked version
+actions retain their exact pins; the collapsed Versions list loads only on demand
+and does not change the displayed record. Text associations group exact quotes
+of one claim version separately from current dossier decisions. Human CLI output
+uses Version N; revision flags, identifiers and JSON schemas remain unchanged.
+
+The published v0.7.3 workspace opens in Manuscript with Analysis Off. Values opens
 Passage values independently of that display choice. Use Analysis overview for
 chapter comparisons and Dossier alongside
 for retained research. Back to passage restores the requesting text. Reading

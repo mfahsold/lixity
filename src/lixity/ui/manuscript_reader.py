@@ -79,7 +79,7 @@ def reading_controls(
         '</div>'
         '<aside class="reader-inspector panel" id="reader-inspector" hidden '
         'aria-labelledby="reader-inspector-title"><div class="workspace-reader-head">'
-        f'<h2 id="reader-inspector-title">{text("reading_passage_values")}</h2>'
+        f'<h2 id="reader-inspector-title">{text("reading_explore_passage")}</h2>'
         f'<button class="ctl" type="button" id="reader-inspector-close" aria-label="{text("modal_close")}">✕</button>'
         '</div><div id="reader-inspector-body"></div></aside>'
         f'<div class="manuscript-context-menu" id="manuscript-context-menu" role="menu" aria-label="{text("reading_actions")}" hidden></div>'

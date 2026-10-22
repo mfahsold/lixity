@@ -75,6 +75,10 @@ The analysis-evidence suite additionally checks exact verified text ranges,
 hover, touch and keyboard inspection, Unicode offsets, asynchronous cancellation,
 search/research mark coexistence and explicit unavailable mappings. Its geometry
 check counts repeated rectangle reads rather than setting a wall-clock threshold.
+The shared **Explore passage** entry opens the existing context inspector, with
+separate **Explain measurement** and **Research for this passage** actions. Native desktop
+and mobile checks cover localized sentence word counts, paragraph comparison
+scope and explanation opening when the mobile inspector moves prose offscreen.
 Its disposable native first-entry flow enables Analysis through the visible control
 without preselecting a metric, then checks the named metric/highlight disclosure,
 direct inspection from Off or Focus reading, deliberate None/disabled highlights,
@@ -88,8 +92,9 @@ The claim-evidence-actions suite exercises empty evidence, the existing claim-bo
 composer and source-search handoff without saving. It checks preserved drafts,
 read failures/retry, stale responses and read-only capability boundaries at desktop
 and mobile widths. Research-presentation checks all five authored record types
-in seven locales: readable saved versions, one change reason, localized fields,
-optional values, exact reference pins and keyboard tab changes with retained drafts.
+in seven locales: current entries by default, explicit earlier pins, a collapsed
+lazy version list that never selects a record implicitly, one change reason,
+localized fields, optional values and keyboard tab changes with retained drafts.
 The list-filters suite also covers genuinely empty collections,
 arrival of the first records and filters with no matches; failed reads remain
 distinct from accepted empty results.

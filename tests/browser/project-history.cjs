@@ -158,7 +158,7 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
         if (language === 'en') {
           assert.ok((await correction.locator('..').textContent()).includes('Fix an error'));
           assert.ok((await supersession.locator('..').textContent()).includes('Update the content or decision'));
-          assert.ok((await page.locator('#research-revision-kind').textContent()).includes('Saved version 1'));
+          assert.ok((await page.locator('#research-revision-kind').textContent()).includes('Version 1'));
         }
         assert.ok(!(await page.locator('#research-revision-kind').textContent()).includes(data.record.record.id));
         assert.ok(await page.locator('#research-revision-technical').isVisible());

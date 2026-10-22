@@ -11,6 +11,11 @@ const assert = require('node:assert/strict');
 const {expect} = require(path.join(playwrightModule, 'test'));
 const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-research-ui-'));
+async function openVersions(page) {
+  const versions = page.locator('#research-revision-versions');
+  await expect(versions).toBeVisible();
+  if (!await versions.evaluate(details => details.open)) await versions.locator(':scope > summary').click();
+}
 
 (async () => {
   const server = spawn(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-u', '-c', `
@@ -368,8 +373,9 @@ server.serve_forever()
     await page.locator('#r-search-query').fill('Opening');
     await page.locator('#r-search-btn').click();
     await expect(page.locator('#research-search-results')).toContainText('Synthetic dossier');
-    await expect(page.locator('#research-search-results')).toContainText('Saved version 1');
+    await expect(page.locator('#research-search-results')).toContainText('Version 1');
     assert.equal(await page.locator('#research-search-results [data-use-passage]').count(), 0);
+    await expect(page.locator('#research-search-results [data-research-history]')).toHaveAccessibleName('View entry');
     await page.locator('#research-search-results [data-research-history]').click();
     await expect(page.locator('#modal-research-revision')).toBeVisible();
     await expect(page.locator('#modal-research-revision')).toContainText('End of synthetic dossier.');
@@ -469,7 +475,7 @@ server.serve_forever()
     await page.locator(`[data-decision-impact="${impactChoiceId}"]`).click();
     const affectedHost = page.locator(`[data-decision-impact="${impactChoiceId}"]`).locator('..');
     await expect(affectedHost).toContainText('Synthetic dossier');
-    await expect(affectedHost).toContainText('Linked versions: 1; latest saved: 1');
+    await expect(affectedHost).toContainText('Linked versions: 1; latest: 1');
     await affectedHost.locator('[data-research-detail="dossier"]').click();
     await expect(affectedHost).toContainText('End of synthetic dossier.');
     await page.locator('[data-rtab=review]').click();
@@ -534,6 +540,10 @@ server.serve_forever()
     await expect(page.locator('#research-dossiers-list')).toContainText('Revised synthetic dossier');
     assert.equal((await (await page.request.get(fixture.url + '/api/research/dossiers')).json()).dossiers.length, 2);
     await page.locator(`[data-research-history=dossier][data-record-id="${dossierId}"]`).click();
+    await expect(page.locator('#research-revision-history-detail')).toContainText('<img src=x onerror=alert(1)>');
+    assert.equal(await page.locator('#research-revision-versions').evaluate(details => details.open), false,
+      'The current dossier opens directly before its optional version history');
+    await openVersions(page);
     await page.locator('[data-research-revision="1"]').click();
     await expect(page.locator('#research-revision-history-detail')).toContainText('End of synthetic dossier.');
     await page.locator('#research-revision-history-detail').scrollIntoViewIfNeeded();
@@ -658,6 +668,7 @@ server.serve_forever()
     await field('title').fill('My unsaved draft');
     await chooseChange();
     await page.locator('#research-revision-history-tab').click();
+    await openVersions(page);
     await expect(page.locator('[data-research-revision="2"]')).toContainText('Current');
     await page.locator('#research-revision-edit-tab').click();
     const concurrent = await (await page.request.get(fixture.url + `/api/research/record?kind=dossier&id=${encodeURIComponent(dossierId)}`)).json();
@@ -700,6 +711,7 @@ server.serve_forever()
     await page.locator('#research-revision-reload').click();
     await expect(field('title')).toHaveValue('Other editor title');
     await page.locator('#research-revision-history-tab').click();
+    await openVersions(page);
     await expect(page.locator('[data-research-revision="3"]')).toContainText('Current');
     await expect(page.locator('[data-research-revision="2"]')).not.toContainText('Current');
     await page.locator('#research-revision-edit-tab').click();
@@ -762,7 +774,7 @@ server.serve_forever()
     assert.equal(originalLink.record.claim_ref.revision, 1);
     await page.locator(`#research-claims-list [data-research-history=claim][data-record-id="${claimId}"]`).click();
     await expect(page.locator('#research-revision-history-detail')).toContainText(evidenceId);
-    await expect(page.locator('#research-revision-history-detail')).toContainText('Claim · Saved version 2');
+    await expect(page.locator('#research-revision-kind')).toContainText('Claim · Version 2');
     await page.keyboard.press('Escape');
     await page.locator('[data-rtab=decisions]').click();
     const decisionId = decisions.decisions[0].id;
@@ -1035,6 +1047,7 @@ server.serve_forever()
       }
       await page.locator('#research-manager').screenshot({path: path.join(artifacts, `locale-${language}-320.png`)});
       await page.locator(`#research-decisions-list [data-research-history=decision][data-record-id="${decisionId}"]`).click();
+      await openVersions(page);
       await page.locator('[data-research-revision="1"]').click();
       await expect(page.locator('#research-revision-history-detail')).toContainText('Bring the opening into the first chapter.');
       assert.ok(await revisionDialog.evaluate(element => element.scrollWidth <= element.clientWidth), `${language} revision history overflow`);

@@ -92,7 +92,7 @@ function researchDecisionComparisonError(disclosure, message) {
 
 function researchDecisionComparisonHistory(kind, id, revision) {
   return '<button type="button" class="ctl ctl-compact" data-research-history="' + kind + '" data-record-id="' +
-    escapeHtml(id) + '" data-record-revision="' + revision + '">' + escapeHtml(uiLabel("research_revision_history")) + '</button>';
+    escapeHtml(id) + '" data-record-revision="' + revision + '">' + escapeHtml(uiFormat("research_revision_number", {revision: revision})) + '</button>';
 }
 
 async function loadResearchDecisionComparison(disclosure) {

@@ -329,7 +329,7 @@
     return (heading ? heading.textContent.trim() + " · " : "") +
       uiFormat("reading_passage_lines", {start: panel.dataset.start, end: panel.dataset.end});
   }
-  function showValues(panel) {
+  function showValues(panel, point) {
     if (!panel) return;
     renderParagraph(panel);
     var values = panel.querySelector(".paragraph-values");
@@ -339,11 +339,28 @@
     var context = document.createElement("div"); context.className = "reader-passage-context";
     var location = document.createElement("p"); location.className = "ctl-note";
     location.textContent = passageContext(panel); context.appendChild(location);
+    var tools = document.createElement("div"); tools.className = "reader-passage-tools";
+    tools.setAttribute("role", "group"); tools.setAttribute("aria-label", uiLabel("reading_actions"));
+    if (window.LixityAnalysisEvidence && window.LixityAnalysisEvidence.available()) {
+      var explain = actionButton("evidence", "evidence_inspect", false);
+      explain.dataset.readerEvidenceParagraph = panel.id;
+      var source = paragraphContent[panel.id], project = document.body.dataset.manuscriptProjectToken;
+      var hash = panel.dataset.paragraphSha256;
+      explain.addEventListener("click", function() {
+        if (panel.isConnected && paragraphContent[panel.id] === source &&
+            document.body.dataset.manuscriptProjectToken === project && panel.dataset.paragraphSha256 === hash) {
+          window.LixityAnalysisEvidence.inspect(panel, explain, point);
+        }
+      });
+      tools.appendChild(explain);
+    }
     if (window.LixityManuscriptLinks && typeof window.LixityManuscriptLinks.review === "function") {
       var related = document.createElement("button"); related.type = "button"; related.className = "ctl";
       related.dataset.manuscriptLinksParagraph = panel.id;
-      related.textContent = uiLabel("manuscript_link_review"); context.appendChild(related);
+      related.dataset.readerAction = "research";
+      related.textContent = uiLabel("passage_research"); tools.appendChild(related);
     }
+    context.appendChild(tools);
     inspectorBody.replaceChildren(context, copy); inspectorTarget = panel;
     panel.classList.add("reader-inspector-target");
   }
@@ -444,9 +461,7 @@
     renderParagraph(panel);
     var fragment = document.createDocumentFragment();
     if (!compact) {
-      fragment.appendChild(actionButton("values", "paragraph_values", true));
-      if (window.LixityAnalysisEvidence && window.LixityAnalysisEvidence.available()) fragment.appendChild(actionButton("evidence", "evidence_inspect", true));
-      if (window.LixityManuscriptLinks && window.LixityManuscriptLinks.passage) fragment.appendChild(actionButton("research", "passage_research", true));
+      fragment.appendChild(actionButton("values", "reading_explore_passage", true));
     }
     if (panel.querySelector("[data-manuscript-link-selection]") && savedRange && Array.from(savedRange.toString()).length <= 10000) {
       fragment.appendChild(actionButton("link", "manuscript_link_action", !compact));
@@ -476,14 +491,9 @@
     renderParagraph(panel);
     if ((action === "values" || action === "companion") && document.body.classList.contains("reader-focus")) setFocus(false);
     if (action === "values") {
-      showValues(panel);
+      showValues(panel, point);
       requestTool("analysis", panel);
       document.getElementById("reader-inspector-close").focus({preventScroll: true});
-    } else if (action === "evidence") {
-      window.LixityAnalysisEvidence.inspect(panel, panel.querySelector(".reader-paragraph-actions"), point);
-    } else if (action === "research") {
-      rememberReadingPassage(panel, range);
-      window.LixityManuscriptLinks.passage(panel);
     } else if (action === "link") {
       if (!range) return;
       var selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
@@ -502,7 +512,17 @@
     settingsPanels.forEach(function(panel) {
       if (!panel.open) return;
       var summary = panel.querySelector("summary").getBoundingClientRect();
-      place(panel.querySelector(".reader-settings-body"), summary.left, summary.bottom + 6);
+      var body = panel.querySelector(".reader-settings-body"), gutter = 8, gap = 6;
+      var limit = Math.max(0, innerHeight - gutter * 2);
+      // Measure afresh after a resize; a previous placement may have capped height.
+      body.style.maxHeight = limit + "px";
+      // Enlarged chrome can move the anchor offscreen without adding usable space.
+      var below = Math.max(0, Math.min(limit, innerHeight - summary.bottom - gap - gutter));
+      var above = Math.max(0, Math.min(limit, summary.top - gap - gutter));
+      var downward = body.getBoundingClientRect().height <= below || below >= above;
+      body.style.maxHeight = (downward ? below : above) + "px";
+      var height = body.getBoundingClientRect().height;
+      place(body, summary.left, downward ? summary.bottom + gap : summary.top - gap - height);
     });
   }
   settingsPanels.forEach(function(panel) {

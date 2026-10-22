@@ -164,22 +164,25 @@ the claim and quote, then permit retention before saving. Preview writes nothing
 saved links pin exact claim/paragraph versions and need review after changes.
 See [retention, anchoring and compatibility](research/USAGE.md#associate-a-manuscript-quote-with-a-claim).
 
-A saved association's **Open claim** shows the recorded claim revision. Its
-dossier reference opens the recorded dossier version; choose newer history
-explicitly when needed. Claim and dossier views can open their saved manuscript
+A recorded association retains the exact claim and dossier versions used for it.
+Claim and dossier views can open their manuscript
 associations in Review. Only an exactly resolved current passage offers a direct
 jump; moved, changed, ambiguous and unavailable anchors retain their review state.
 
-**Since v0.7.3:** choose a paragraph's **… → Saved research**,
-its saved-association count or a marked saved quotation to read its context
-beside the manuscript. The context shows up to five exact saved associations,
-with their total, pinned claim and dossier versions and author-assigned confidence.
-Associated decisions are labelled **current dossier context**; they do not
-reconstruct the historical state of the saved quotation. Each title opens its
-displayed version in the existing record viewer. **Review** remains a separate
+**On current main (Unreleased):** choose **Explore passage → Research for this
+passage**, its association count or a marked quotation to read the linked
+context beside the manuscript. The context shows up to five associations with
+their total, grouping quotations of the same claim version. Titles open the
+current entry; a separate **Linked version** button opens an earlier pinned
+version. **Text associations** contains the exact quotations and assessment of
+the linked claim version. **Decisions in current dossier** expands separately,
+with further decisions available beyond the first five. These decisions do not
+reconstruct the quotation's historical context. **Review** remains a separate
 action for changed or unresolved anchors. An empty summary means no saved
 associations for this passage, not that no relevant facts exist. Opening or
 refreshing the summary reads existing records without saving or repinning them.
+The published v0.7.3 menu calls this **Saved research** and opens the linked
+versions directly.
 
 When following a connection from the manuscript, **Back to passage** returns to
 the preserved origin while the project/source context still matches. The work
@@ -226,7 +229,32 @@ screens. Escape closes it. Turning analysis off, choosing **None** or unchecking
 the marking control removes the marks. Your metric and marking choices persist
 in the browser, including deliberate **None** and disabled marks.
 
-The paragraph menu's **Inspect text evidence** offers the same explanation by
+**On current main (Unreleased):** the paragraph menu has one **Explore passage**
+entry. Its existing right context offers **Explain measurement** and **Research
+for this passage**. The former explains counted text; the latter reads
+explicitly linked claims, sources and decisions. Hover and tap remain quick ways
+to open the measurement card. That card separates a selected sentence's word
+count from the paragraph measurement and chapter comparison; mapping details
+and limits are expandable. The context's **Passage** button selects the inspector;
+the separate **Analysis** switch controls manuscript indicators. Neither route
+infers factual truth.
+
+These routes share existing actions rather than creating separate records:
+
+| Task on current main | Passage route | Other access |
+| --- | --- | --- |
+| Explain counted text | **Explore passage → Explain measurement** | Hover or tap a marked word or sentence |
+| Read explicitly linked research | **Explore passage → Research for this passage** | The paragraph's association count |
+| Link a quotation to a claim | **Link selection to claim** in the paragraph menu | The selection toolbar or `Alt+L`, with a valid selection inside one paragraph |
+| Add a work marker | The paragraph menu's marker actions | The compact selection toolbar offers **Check**; the overview lists saved work markers |
+| Keep a chosen dossier beside the text | **Dossier alongside** in the paragraph menu | The reader toolbar and the dossier context control |
+
+**Dossier alongside** displays the dossier you explicitly choose. **Saved
+research** follows associations saved for the selected paragraph. Merely opening
+a dossier beside the manuscript does not link it to that passage.
+
+In the published v0.7.3 release, the paragraph menu's **Inspect text evidence**
+offers the same explanation by
 keyboard or right-click, including with Analysis Off or Focus reading. That
 explicit action enables Analysis and chooses Sentence length if no metric is
 selected, while preserving an unchecked marking preference.
@@ -257,13 +285,13 @@ Each analyzed paragraph has an **…** button. It opens the same contextual tool
 right-click on the prose or `Shift+F10`/the context-menu key while the paragraph
 or its button has focus. Arrow keys move through the menu; `Home`/`End` reach its
 first/last action. Escape closes it and restores focus. Actions depend on the
-available capabilities: **Values**, work markers, **Link selection to claim**
+available capabilities: **Explore passage** (**Values** in published v0.7.3), work markers, **Link selection to claim**
 for a valid selection, and the companion dossier. A selection within one paragraph
 also offers a compact toolbar. Marker notes and claim associations still require
 their existing explicit save and retention steps.
 Use Shift+right-click to open the browser's native context menu instead.
 
-**Values** opens **Passage values** with the selected paragraph's chapter, source
+In published v0.7.3, **Values** opens **Passage values** with the selected paragraph's chapter, source
 lines, tense and style measurements in the closable context area. Opening or
 closing it leaves the global Analysis choice unchanged; turning Analysis Off
 keeps the inspector available. In v0.7.2, **Saved manuscript associations** opens
@@ -376,8 +404,11 @@ the switch and select one metric under **Text analysis**. A transparent backgrou
 and up/down arrow on a notable paragraph
 refer to that chapter's median/MAD, not literary quality. The paragraph button
 explains its raw value, unit, source lines and local z; choose **Values** for the
-measurements. **Next deviation** opens the paragraph, and **Clear metric** removes
-only this metric. Analysis Off hides the paint and related hints while retaining
+measurements. **Next deviation** opens the paragraph. **Clear metric** removes
+the selected metric and its deviation filter, leaving the flagged-paragraph
+filter unchanged. **Show all paragraphs** clears both paragraph filters and the
+selected metric. These are different reset scopes, not separate analyses.
+Analysis Off hides the paint and related hints while retaining
 your choice. Native text selection, search and saved research marks remain separate.
 
 The strip's colour and notable membership now use the same within-chapter

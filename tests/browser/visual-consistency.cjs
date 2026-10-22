@@ -197,7 +197,7 @@ async function checkScale(page, label) {
         await app.locator('#btn-modal-new-project').click();
         const createDialog = app.locator('#modal-project-create');
         assert.ok(await createDialog.isVisible());
-        assert.equal(await app.locator('#research-revision-edit-tab').getAttribute('aria-selected'), 'true',
+        assert.equal(await app.locator('#research-revision-history-tab').getAttribute('aria-selected'), 'true',
           'Opening project tabs must not reset the separate research revision tabs');
         // Short windows and mobile keyboards must not clip the end of a form.
         await app.setViewportSize({width, height: 480});

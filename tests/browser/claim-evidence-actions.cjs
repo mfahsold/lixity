@@ -58,7 +58,7 @@ for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
     labels[locale] = {key: WORKSPACE_LABELS[locale][key] for key in (
         'research_link_heading', 'research_no_linked_evidence',
         'research_loading_evidence', 'research_evidence_withdrawn_context', 'research_evidence_unavailable',
-        'research_dossier_claims_empty')}
+        'research_dossier_claims_empty', 'research_citations')}
 # Locale shells share this server's final manuscript context, as do embedding
 # hosts; presentation language does not request another project or analysis.
 token = re.search(r'data-manuscript-project-token="([^"]+)"', LixityServerHandler.dashboard_html).group(1)
@@ -79,6 +79,7 @@ server.serve_forever()
       const page = await browser.newPage({viewport: {width, height: 1000}});
       page.setDefaultTimeout(10000);
       const errors = [], writes = [], external = [];
+      let evidenceReads = 0;
       let evidenceRead = 'native', held, release;
       let holdCatalogue = locale === 'en', catalogueHeld, releaseCatalogue, catalogueSnapshot = 'native';
       closePage = async () => {
@@ -108,6 +109,7 @@ server.serve_forever()
           return route.fulfill({json: data});
         }
         if (url.pathname === '/api/research/claims' && url.searchParams.get('claim_id') === server.fixture.ids.empty) {
+          evidenceReads++;
           if (evidenceRead === 'held') {
             held = true;
             await new Promise(resolve => {release = resolve;});
@@ -148,6 +150,23 @@ server.serve_forever()
       await noClaim.click();
       await expect(noClaim.locator('..').locator('.research-dossier-claims')).toContainText(labels.research_dossier_claims_empty);
       await expect(noClaim.locator('..').locator('.research-dossier-claims [data-research-history=claim]')).toHaveCount(0);
+      await page.locator('[data-rtab=sources]').click();
+      const source = page.locator('[data-research-detail=source]').first();
+      await source.click();
+      const sourceDetails = source.locator('..').locator('.research-details-body');
+      const documentView = sourceDetails.locator('[data-source-view=doc]');
+      const passagesView = sourceDetails.locator('[data-source-view=passages]');
+      await expect(documentView).toHaveAttribute('aria-pressed', 'true');
+      await expect(passagesView).toHaveAttribute('aria-pressed', 'false');
+      await passagesView.focus(); await page.keyboard.press('Enter');
+      await expect(documentView).toHaveAttribute('aria-pressed', 'false');
+      await expect(passagesView).toHaveAttribute('aria-pressed', 'true');
+      await expect(sourceDetails.locator('.research-source-doc-wrap')).toBeHidden();
+      await expect(sourceDetails.locator('.research-source-passages-wrap')).toBeVisible();
+      await documentView.focus(); await page.keyboard.press('Enter');
+      await expect(documentView).toHaveAttribute('aria-pressed', 'true');
+      await expect(passagesView).toHaveAttribute('aria-pressed', 'false');
+      await expect(sourceDetails.locator('.research-source-doc-wrap')).toBeVisible();
       await openClaims(page);
       const empty = page.locator('[id="claim-evidence-' + server.fixture.ids.empty + '"]');
       await empty.locator('[data-load-evidence]').click();
@@ -155,6 +174,19 @@ server.serve_forever()
       // Removing the empty-state route would leave the reader at a dead end.
       const action = empty.getByRole('button', {name: labels.research_link_heading, exact: true});
       await expect(action).toBeVisible();
+      const evidenceDisclosure = empty.locator('details.research-details');
+      await expect(evidenceDisclosure).toHaveCount(1);
+      const evidenceSummary = evidenceDisclosure.locator(':scope > summary');
+      await expect(evidenceSummary).toHaveText(labels.research_citations);
+      const readsBeforeCollapse = evidenceReads;
+      const savedAction = await action.elementHandle();
+      await evidenceSummary.focus(); await page.keyboard.press('Enter');
+      await expect(action).toBeHidden();
+      assert.equal(await savedAction.evaluate(node => node.isConnected), true, 'collapsing evidence retains the loaded context DOM');
+      await page.keyboard.press('Enter');
+      await expect(action).toBeVisible();
+      assert.equal(evidenceReads, readsBeforeCollapse, 'reopening evidence reuses the accepted read instead of fetching again');
+      await savedAction.dispose();
       await expect(empty.locator('button')).toHaveCount(1);
       await empty.locator('..').screenshot({path: path.join(artifacts, `empty-${locale}-${width}.png`)});
       await action.click();
@@ -178,6 +210,10 @@ server.serve_forever()
       await expect(page.locator('#r-link-rationale')).toHaveValue('Retained draft rationale');
       await expect(page.locator('#r-link-relation')).toHaveValue('qualifies');
       await expect(page.locator('#r-link-claim-select')).toBeFocused();
+      await evidenceSummary.click(); await expect(action).toBeHidden();
+      await evidenceSummary.click(); await expect(action).toBeVisible();
+      await expect(page.locator('#r-link-passage-id')).toHaveValue('Retained draft passage');
+      await expect(page.locator('#r-link-rationale')).toHaveValue('Retained draft rationale');
       if (locale === 'en') {
         for (const state of ['withdrawn', 'unavailable', 'historical']) {
           const panel = page.locator('[id="claim-evidence-' + server.fixture.ids[state] + '"]');
@@ -226,7 +262,13 @@ server.serve_forever()
         await expect(empty).toContainText(labels.research_loading_evidence);
         assert.equal(await page.evaluate(id => researchClaimCardItems.find(item => item.id === id) === window.claimActionPreviousItem,
           server.fixture.ids.empty), true, 'Unchanged accepted catalogue keeps the evidence read owner');
+        await evidenceSummary.click();
+        await expect(evidenceDisclosure).toHaveJSProperty('open', false);
         evidenceRead = 'native'; release();
+        await expect(empty).not.toContainText(labels.research_loading_evidence);
+        await expect(evidenceDisclosure).toHaveJSProperty('open', false);
+        await expect(action).toBeHidden();
+        await evidenceSummary.click();
         await expect(action).toBeVisible();
         await page.locator('[data-rtab=dossiers]').click(); await openClaims(page);
         await expect(action).toBeVisible();

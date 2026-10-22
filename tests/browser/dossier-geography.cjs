@@ -642,6 +642,7 @@ server.serve_forever()
     await page.keyboard.press('Escape');
     await page.locator(`[data-research-history=dossier][data-record-id="${id}"]`).click();
     await expect(page.locator('#research-revision-history-detail .dossier-geography')).toContainText('Reviewed dateline area');
+    await page.locator('#research-revision-versions > summary').click();
     await page.locator('[data-research-revision="1"]').click();
     await expect(page.locator('#research-revision-history-detail .dossier-geography')).toContainText('Mira’s journey');
     await expect(page.locator('#research-revision-history-detail .geography-route-facts')).toContainText('km');

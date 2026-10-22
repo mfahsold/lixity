@@ -178,16 +178,52 @@ server.serve_forever()
       const context = page.locator('[data-passage-research]');
       await expect(context).toHaveAttribute('data-state', 'ready');
       await expect(page.locator('#tab-view-analysis')).toHaveAttribute('aria-selected', 'true');
-      await expect(context.locator('[data-research-history=claim]')).toHaveAttribute('data-record-revision', '2');
+      const currentClaim = context.locator('.passage-record-title[data-research-history=claim]');
+      await expect(currentClaim).toHaveAttribute('data-record-id', fixture.claim_id);
+      assert.equal(await currentClaim.getAttribute('data-record-revision'), null,
+        'An ordinary passage title requests the current claim instead of pinning its saved association');
       await expect(context.locator('blockquote')).toHaveText(selection.quote);
+      const currentRead = page.waitForResponse(response => {
+        const url = new URL(response.url());
+        return url.pathname === '/api/research/record' && url.searchParams.get('kind') === 'claim';
+      });
+      await currentClaim.click();
+      const currentResponse = await currentRead;
+      assert.equal(new URL(currentResponse.url()).searchParams.get('revision'), null);
+      const currentRecord = await currentResponse.json();
+      assert.equal(currentRecord.record.revision, 2);
+      assert.equal(currentRecord.is_latest, true);
+      await expect(page.locator('#research-revision-kind')).toHaveText('Claim · Version 2 · Current');
+      await expect(page.locator('#research-revision-history-detail')).toContainText('Reviewed synthetic claim version.');
+      await expect(page.locator('#research-revision-versions')).not.toHaveAttribute('open', '');
+      await page.keyboard.press('Escape');
+      await expect(page.locator('#modal-research-revision')).not.toBeVisible();
+      await expect(currentClaim).toBeFocused();
       await context.locator('[data-passage-research-close]').click();
       await page.locator('#tab-view-research').click();
       await page.locator('[data-rtab="review"]').click();
       const reviewRows = page.locator('#research-manuscript-review .manuscript-link-review-item');
       await reviewRows.first().waitFor();
       assert.equal(await reviewRows.count(), index + 1, 'The Review tab lists every persisted association once');
-      assert.match(await page.locator('#research-manuscript-review').textContent(), /saved associations/);
+      await expect(page.locator('#research-manuscript-review > p').first()).toHaveText(
+        index === 0 ? '1 association' : '2 associations');
       assert.equal(await page.locator('#research-manuscript-review blockquote').last().textContent(), selection.quote);
+      const linkedClaim = reviewRows.last().locator('[data-research-history=claim]');
+      await expect(linkedClaim).toHaveAttribute('data-record-id', fixture.claim_id);
+      await expect(linkedClaim).toHaveAttribute('data-record-revision', '2');
+      const pinnedRead = page.waitForResponse(response => {
+        const url = new URL(response.url());
+        return url.pathname === '/api/research/record' && url.searchParams.get('kind') === 'claim';
+      });
+      await linkedClaim.click();
+      const pinnedResponse = await pinnedRead;
+      assert.equal(new URL(pinnedResponse.url()).searchParams.get('revision'), '2',
+        'The explicit linked-version route retains the saved association pin');
+      assert.equal((await pinnedResponse.json()).record.revision, 2);
+      await expect(page.locator('#research-revision-history-detail')).toContainText('Reviewed synthetic claim version.');
+      await page.keyboard.press('Escape');
+      await expect(page.locator('#modal-research-revision')).not.toBeVisible();
+      await expect(linkedClaim).toBeFocused();
       await page.locator('#tab-view-analysis').click();
       const tokens = await page.evaluate(() => ({
         research: document.querySelector('#research-manager').dataset.researchToken,

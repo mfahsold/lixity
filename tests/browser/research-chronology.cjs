@@ -92,6 +92,9 @@ server.serve_forever()
       await page.locator('[data-claim-view=list]').click();
       const evidenceLabels = await page.locator('#r-link-claim-select option').allTextContents();
       assert.equal(new Set(evidenceLabels).size, evidenceLabels.length, 'Keyword evidence choices distinguish duplicate claim titles, periods and versions');
+      const decisionLabels = await page.locator('#r-decision-claim-select option').allTextContents();
+      assert.equal(new Set(decisionLabels).size, decisionLabels.length, 'Decision choices distinguish duplicate claim titles, periods and versions');
+      assert.deepEqual(decisionLabels.slice(1), evidenceLabels.slice(1), 'Decision and evidence pickers describe the same claim versions consistently');
       const reviewedClaimLabel = await page.locator(`#r-link-claim-select option[value="${fixture.claims[0]}"]`).textContent();
       assert.ok(reviewedClaimLabel.includes('1900'), 'The reviewed period is visible when choosing a claim');
       if (!await page.locator('#r-link-composer').evaluate(node => node.open)) await page.locator('#r-link-composer > summary').click();

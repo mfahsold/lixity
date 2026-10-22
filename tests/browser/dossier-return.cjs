@@ -105,7 +105,7 @@ async function depart(page, control, tab) {
   await expect(page.locator('#workbench-return')).toBeVisible();
   await expect(page.locator('#workbench-return')).toHaveText('Back to dossier');
   await expect(page.locator('#workbench-thread')).toContainText('Origin synthetic dossier');
-  await expect(page.locator('#workbench-thread')).toContainText('Saved version 2');
+  await expect(page.locator('#workbench-thread')).toContainText('Version 2');
   await assertReturnAvailable(page);
   if (page.dossierEvidence && !page.dossierEvidence.captured) {
     page.dossierEvidence.captured = true;
@@ -181,7 +181,7 @@ async function depart(page, control, tab) {
             await expect(page.locator('#workbench-return')).toBeHidden();
             await page.locator('#research-revision-history-detail [data-research-history=dossier]').click();
             await expect(page.locator('#research-revision-history-detail')).toContainText('An original synthetic note.');
-            await expect(page.locator('#research-revision-kind')).toHaveText('Dossier · Saved version 1 · Earlier version');
+            await expect(page.locator('#research-revision-kind')).toHaveText('Dossier · Version 1 · Earlier version');
             await page.keyboard.press('Escape');
             await expect(detail.locator('[data-research-history=claim]')).toBeFocused();
             // A cancelled pending viewer never becomes a dossier departure,

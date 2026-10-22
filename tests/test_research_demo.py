@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import quote, urlencode
 
 import pytest
 
@@ -88,8 +89,9 @@ def test_research_fixture_retains_reviewed_visuals_with_credit_and_fiction_bound
 def test_research_fixture_connects_retained_evidence_to_an_authored_claim_and_manuscript(tmp_path, research_fixture):
     project = tmp_path / "research-demo"
     links = research_fixture["/api/research/manuscript-links"]
-    assert len(links["links"]) == 1
-    link = links["links"][0]
+    assert len(links["links"]) == 5
+    link = next(item for item in links["links"] if item["anchor"]["quote"] ==
+                "Someone had tried the eastern gate of Warehouse 4.")
     assert link["anchor"]["source_path"] == "harbour-manuscript.md"
     assert link["anchor"]["quote"] == "Someone had tried the eastern gate of Warehouse 4."
     assert link["claim_title"] == "Attempted warehouse entry"
@@ -99,18 +101,74 @@ def test_research_fixture_connects_retained_evidence_to_an_authored_claim_and_ma
     assert (project / "harbour-manuscript.md").read_bytes() == manuscript_bytes
     assert api.list_manuscript_links(project) == {key: value for key, value in links.items() if key != "ok"}
     evidence = api.list_evidence_links(project, claim_id=link["claim_id"])["evidence_links"]
-    assert len(evidence) == 1
-    assert evidence[0]["relation"] == "supports"
+    assert {item["relation"] for item in evidence} == {"supports", "qualifies"}
     source = next(source for source in api.list_sources(project)["sources"]
                   if source["title"] == "Port Authority Customs Log (synthetic)")
     assert source["context"]["external_reference"]["server_id"] == "synthetic-offline-example"
     assert "No live Zotero connection" in source["context"]["provenance_note"]
     assert all(source["title"] != "harbour-manuscript.md" for source in api.list_sources(project)["sources"])
     review = research_fixture["/api/research/manuscript-review?project_token=synthetic-harbour-manuscript"]
-    assert review["links"][0]["anchor_state"] == "resolved"
-    assert review["review_needed_count"] == 0
+    assert all(item["anchor_state"] == "resolved" for item in review["links"])
+    assert review["review_needed_count"] == 2
+    assert all(item["flags"] == ["claim_changed"] for item in review["links"]
+               if item["review_needed"])
     assert review["current_source_sha256"] == hashlib.sha256((project / "harbour-manuscript.md").read_bytes()).hexdigest()
     assert api.audit(project)["ok"]
+
+
+def test_demo_records_source_disagreement_and_preserves_the_earlier_interpretation(tmp_path, research_fixture):
+    project = tmp_path / "research-demo"
+    claims = api.list_claims(project)["claims"]
+    assert len(claims) == 6
+    inspection = next(item for item in claims if item["title"] == "Where the crate was opened")
+    before = api.get_record(project, "claim", inspection["id"], revision=1)
+    current = api.get_record(project, "claim", inspection["id"])
+    assert "opened the crate on the quay" in before["record"]["statement"]
+    assert "customs station" in current["record"]["statement"]
+    assert current["record"]["revision"] == 2
+    evidence = api.list_evidence_links(project, claim_id=inspection["id"])["evidence_links"]
+    assert {(item["claim_revision"], item["relation"]) for item in evidence} == {
+        (1, "supports"), (1, "contradicts"), (2, "supports")}
+    quoted = {item["relation"]: item["citation"]["verbatim"] for item in evidence if item["claim_revision"] == 1}
+    assert "opened the crate beside the gate" in quoted["supports"]
+    assert "crate was first opened at the customs station" in quoted["contradicts"]
+    assert len(current["citations"]) == 1
+    assert "first opened at the customs station" in current["citations"][0]["verbatim"]
+    relations = api.list_claim_relations(project)["relations"]
+    assert len(relations) == 1
+    assert relations[0]["to_claim"]["claim_id"] == inspection["id"]
+    assert relations[0]["to_claim"]["revision"] == 2
+    assert not relations[0]["review_needed"]
+    assert api.audit(project)["ok"]
+
+
+def test_demo_serializes_every_rendered_record_kind_and_exact_version(tmp_path, research_fixture):
+    project = tmp_path / "research-demo"
+    groups = {
+        "dossier": api.list_dossiers(project)["dossiers"],
+        "claim": api.list_claims(project)["claims"],
+        "decision": api.list_decisions(project)["decisions"],
+        "evidence_link": api.list_evidence_links(project)["evidence_links"],
+        "claim_relation": api.list_claim_relations(project)["relations"],
+    }
+    for kind, records in groups.items():
+        assert records, kind
+        for record in records:
+            identifier = record["relation_id"] if kind == "claim_relation" else record["id"]
+            endpoint = "?kind=" + kind + "&id=" + quote(identifier, safe="")
+            assert research_fixture["/api/research/record" + endpoint] == {
+                "ok": True, **api.get_record(project, kind, identifier)}
+            history = api.record_history(project, kind, identifier)
+            assert research_fixture["/api/research/history" + endpoint] == {"ok": True, **history}
+            for version in history["revisions"]:
+                key = "/api/research/record" + endpoint + "&revision=" + str(version["revision"])
+                expected = {"ok": True, **api.get_record(project, kind, identifier, revision=version["revision"])}
+                assert research_fixture[key] == expected
+                assert research_fixture[key + "&research_token=synthetic-research-example"] == expected
+            if kind in ("claim", "dossier"):
+                context = urlencode({"project_token": "synthetic-harbour-manuscript", "id": identifier, "kind": kind})
+                assert research_fixture["/api/research/record?" + context] == {
+                    "ok": True, **api.get_record(project, kind, identifier)}
 
 
 def test_public_demo_externalizes_image_bytes_and_preserves_source_records(tmp_path, public_demo):
@@ -135,7 +193,7 @@ def test_public_demo_externalizes_image_bytes_and_preserves_source_records(tmp_p
     assert "Ships in the Harbor, Hamburg, Germany" in document
     assert "Zotero normally owns bibliography, reading and source notes" in document
     assert "no live Zotero connection" in document
-    assert "saved manuscript quote" in document
+    assert "exact manuscript quotations" in document
     assert len(re.findall(r'<section class="chapter(?: [^\"]*)?" id="ch-\d+"', document)) == 6
     assert 'data-manuscript-links="read"' in document
     source = (ROOT / "samples/first-look.md").read_bytes()
@@ -228,9 +286,9 @@ vm.runInNewContext(adapter, {window, document, CustomEvent, URL, Request, Respon
   const response = await window.fetch('/api/research/sources');
   assert.equal((await response.json()).sources.length, 4);
   const links = await (await window.fetch('/api/research/manuscript-links')).json();
-  assert.equal(links.links.length, 1);
+  assert.equal(links.links.length, 5);
   const review = await (await window.fetch('/api/research/manuscript-review?project_token=synthetic-harbour-manuscript&research_token=synthetic-research-example')).json();
-  assert.equal(review.links[0].anchor.quote, 'Someone had tried the eastern gate of Warehouse 4.');
+  assert.ok(review.links.some(link => link.anchor.quote === 'Someone had tried the eastern gate of Warehouse 4.'));
   const reader = await (await window.fetch('/api/research/dossiers?project_token=synthetic-harbour-manuscript&research_token=synthetic-research-example')).json();
   assert.equal(reader.dossiers.length, 2);
   const matrix = await window.fetch('/api/research/matrix?format=md&research_token=synthetic-research-example');

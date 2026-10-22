@@ -104,6 +104,17 @@ preview with an installation link. Unchanged archive refreshes keep an opened
 evidence panel. A changed archive or project clears it so you can reload the
 current evidence.
 
+**On current main (Unreleased):** loaded claim evidence is grouped under the
+collapsible **Source quotations** heading. Closing and reopening it keeps the
+loaded quotations and unsaved fields without another read. Authored search
+results use **View entry** to open the current record; **View
+details** on a dossier card expands its inline detail instead.
+
+Claim choices in decision creation also use the existing evidence/relation
+picker labels: title, recorded period and version, with an ID only when
+those still match. The label helps distinguish records; choosing it does not
+create or update an association.
+
 In **Manuscript**, **Dossier alongside** opens a chosen dossier in a read-only
 companion. It starts closed with no automatic selection. Refresh explicitly for
 the latest dossier. The companion and paragraph **Values** inspector are
@@ -199,6 +210,14 @@ facts or relevant research. Opening, closing or retrying this summary performs
 reads only, without retention, indexing, version upgrades or repinning. Research
 setup remains explicit. This presentation adds no API or archive schema version.
 
+**On current main (Unreleased):** the shared **Explore passage** inspector calls
+this **Research for this passage**. Quotations of the same pinned claim are
+grouped under **Text associations**; its assessment belongs to that exact claim
+version. The title opens the current entry, while **Linked version N** explicitly
+opens an earlier pin. Current dossier decisions have their own counted
+disclosure, including further decisions beyond the first five. Expanding these
+details neither upgrades a link nor reconstructs its historical decision set.
+
 Retraction and note/claim revisions use the existing record history and strict
 revision API. A uniquely resolvable anchor is re-pinned explicitly: `lixity
 research reconcile-manuscript --accept-moved` (or `POST /api/research-manuscript-reanchor`)
@@ -279,18 +298,24 @@ and export/restore preserve accepted link records. Exported quotes remain
 private manuscript material; there is no full manuscript blob. Restored links
 remain unavailable until the manuscript exists at its saved project-relative path.
 
-### Read saved versions without losing context
+<a id="read-saved-versions-without-losing-context"></a>
 
-Since v0.7.3, the shared research viewer separates **Edit** and
-**Saved versions**. Its context names the selected record kind, saved version and
-whether it is current or earlier. Version buttons navigate retained states; the
-selected detail shows its change reason and provenance once. Technical IDs and
-the archive snapshot remain in the reversible **Technical details** disclosure.
+### Read entries and earlier versions without losing context
+
+**On current main (Unreleased):** ordinary entry actions open the current
+version in the shared read-only viewer. Explicit linked-version actions open
+their exact pin. The **Versions** disclosure loads the version list only when
+opened; expanding it never changes the displayed record. Choosing a version is
+explicit. The context names the selected kind, version and current/earlier state
+once; change provenance remains available without repeated version headings.
+**Edit** keeps its separate draft. Technical IDs and the archive snapshot remain
+in the **Technical details** disclosure. Published v0.7.3 instead uses separate
+**Edit** and **Saved versions** tabs with an initially visible version list.
 
 Read-only fields use the same localized choices as editing. Absent optional
 fields are omitted; an explicit false value or measured zero remains visible.
 A linked record and its pinned version appear together. **Source quotations**
-are retained evidence excerpts; **Saved manuscript associations** refer to the
+are retained evidence excerpts; **Manuscript associations** refer to the
 separate links back to your manuscript. Neither establishes factual truth.
 Arrow keys, Home and End move between the editor's tabs; returning to Edit keeps
 an unsaved draft. Reading earlier versions does not revise or retarget a record.

@@ -448,7 +448,7 @@ server.serve_forever()
     const after = await (await page.request.get(fixture.url + '/api/research/sources')).json();
     assert.equal(after.sources.length, before.sources.length, 'A stale attachment leaves no orphan capture');
     await page.locator('#dossier-image-review').click();
-    await expect(page.locator('#dossier-image-current')).toContainText('Saved version 2');
+    await expect(page.locator('#dossier-image-current')).toContainText('Version 2');
     await expect(page.locator('#dossier-image-save')).toBeDisabled();
     await page.locator('#dossier-image-accept-current').click();
     await expect(page.locator('#dossier-image-save')).toBeEnabled();

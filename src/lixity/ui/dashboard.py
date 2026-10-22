@@ -274,6 +274,10 @@ def render_dashboard(
                     "marker_todo",
                     "marker_achtung",
                     "marker_note",
+                    "words",
+                    "words_one",
+                    "layer_below",
+                    "layer_above",
                     "ctx_genre",
                     "ctx_created_period",
                     "ctx_depicted_period",
@@ -770,7 +774,7 @@ def render_dashboard(
             '<div class="workspace-reader-layout" id="workspace-reader-layout">'
             '<div id="workspace-context-panel" class="workspace-context-panel" hidden>'
             '<div class="context-tool-tabs" role="group">'
-            f'<button type="button" class="ctl" data-context-tool="analysis" aria-pressed="false">{L("reading_passage_values")}</button>'
+            f'<button type="button" class="ctl" data-context-tool="analysis" aria-pressed="false">{L("reading_passage_context")}</button>'
             f'<button type="button" class="ctl" data-context-tool="dossier" aria-pressed="false" {"" if reader_enabled else "hidden"}>{L("reader_title")}</button></div>'
             '<aside class="panel workspace-reader-panel" id="workspace-reader-panel" '
             'aria-labelledby="workspace-reader-title" hidden>'

@@ -10,6 +10,11 @@ const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.
 const {expect} = require(path.join(playwrightModule, 'test'));
 const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-dossier-claims-'));
+async function openVersions(page) {
+  const versions = page.locator('#research-revision-versions');
+  await expect(versions).toBeVisible();
+  if (!await versions.evaluate(details => details.open)) await versions.locator(':scope > summary').click();
+}
 
 (async () => {
   const server = spawn(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-u', '-c', `
@@ -135,6 +140,11 @@ server.serve_forever()
       await linked.locator('[data-research-history=claim]').click();
       await expect(page.locator('#modal-research-revision')).toBeVisible();
       await expect(page.locator('#research-revision-history-detail')).toContainText('Current linked');
+      await expect(page.locator('#research-revision-history-tab')).toHaveAttribute('aria-selected', 'true');
+      assert.equal(await page.locator('#research-revision-versions').evaluate(details => details.open), false,
+        'The latest entry is readable before the optional version list is opened');
+      await expect(page.locator('#research-revision-history-list [data-research-revision]')).toHaveCount(0);
+      await openVersions(page);
       await expect(page.locator('#research-revision-history-list [data-research-revision]')).toHaveCount(2);
       await page.locator('#research-revision-history-list [data-research-revision="1"]').click();
       await expect(page.locator('#research-revision-history-detail')).toContainText('Original linked title');

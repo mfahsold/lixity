@@ -10,6 +10,7 @@ if (researchRevisionDialog) {
   var revisionEditTab = document.getElementById("research-revision-edit-tab");
   var revisionHistoryTab = document.getElementById("research-revision-history-tab");
   var revisionHistoryPane = document.getElementById("research-revision-history");
+  var revisionVersions = document.getElementById("research-revision-versions");
   var revisionHistoryList = document.getElementById("research-revision-history-list");
   var revisionHistoryDetail = document.getElementById("research-revision-history-detail");
   var revisionStatusHost = document.getElementById("research-revision-status");
@@ -33,10 +34,10 @@ if (researchRevisionDialog) {
   var revisionBatchCheck = document.getElementById("research-revision-batch-check");
   var revisionBatchApply = document.getElementById("research-revision-batch-apply");
   var revisionBatch = {projectId: null, entries: [], preview: null, pending: false, request: 0};
-  var revisionState = {kind: "", id: "", session: 0, request: 0, historyRequest: 0,
+  var revisionState = {kind: "", id: "", session: 0, request: 0, historyRequest: 0, historyListRequest: 0,
     current: null, initial: {}, dossierPins: {}, mode: "edit", historyLoaded: false, pending: false, loading: false, merge: null,
     section: null, sectionBase: null, sectionContent: null, historyInitialRevision: null,
-    historyView: null, historyEnvelope: null, context: null};
+    historyView: null, historyEnvelope: null, historySelectionRevision: null, context: null};
 
   function revisionContextMatches(data) {
     var context = revisionState.context;
@@ -343,8 +344,9 @@ if (researchRevisionDialog) {
       '<p><button type="button" class="ctl" data-manuscript-links-claim="' + escapeHtml(record.id) +
         '" data-record-revision="' + Number(record.revision) + '">' + escapeHtml(uiLabel("manuscript_link_review")) + '</button></p>' : '';
     return '<div class="research-revision-history-detail">' +
+      '<dl class="research-revision-readonly">' + rows + '</dl>' +
       '<p class="ctl-note research-revision-provenance">' + provenance.join(" · ") + '</p>' +
-      '<dl class="research-revision-readonly">' + rows + '</dl>' + manuscriptRoute +
+      manuscriptRoute +
       '<h4>' + escapeHtml(uiLabel("research_citations")) + '</h4>' +
       ((envelope.citations || []).length ? envelope.citations.map(function(cite) { return researchCitationHtml(cite, false); }).join("") :
         '<p class="ctl-note">' + escapeHtml(uiLabel("research_revision_no_citations")) + '</p>') +
@@ -372,25 +374,31 @@ if (researchRevisionDialog) {
       revisionShowCitations(revisionState.current.citations);
     }
     revisionPending(revisionState.pending);
-    if (!editing && revisionState.current && !revisionState.historyLoaded) revisionLoadHistory();
-    else if (!editing && revisionState.historyLoaded && revisionState.historyEnvelope &&
-        revisionContextMatches(revisionState.historyEnvelope)) {
-      revisionShowMeta(revisionState.historyEnvelope);
-      revisionNotices(revisionState.historyEnvelope);
-    } else if (!editing && revisionState.historyLoaded) {
-      revisionShowMeta(null);
-      revisionHistoryDetail.textContent = uiLabel("research_revision_conflict");
+    if (!editing && revisionState.current) {
+      var selected = revisionState.historySelectionRevision || revisionState.historyInitialRevision || revisionState.current.record.revision;
+      var viewed = revisionState.historyEnvelope;
+      if (!revisionContextMatches(revisionState.current) || viewed && !revisionContextMatches(viewed)) {
+        revisionShowMeta(null);
+        revisionHistoryDetail.textContent = uiLabel("research_revision_conflict");
+      } else {
+        if (viewed && viewed.record.revision === selected) {
+          revisionShowMeta(viewed);
+          revisionNotices(viewed);
+          revisionShowCitations(viewed.citations);
+        } else if (selected === revisionState.current.record.revision) revisionShowReadOnly(revisionState.current);
+        else revisionLoadHistorical(selected);
+        if (revisionVersions.open && !revisionState.historyLoaded) revisionLoadHistory();
+      }
     }
   }
 
   async function revisionLoadHistory() {
-    var request = ++revisionState.historyRequest;
+    var request = ++revisionState.historyListRequest;
     var session = revisionState.session;
     revisionHistoryList.textContent = uiLabel("research_revision_loading");
-    revisionHistoryDetail.replaceChildren();
     var data = await researchApiGet("research/history?kind=" + encodeURIComponent(revisionState.kind) +
       "&id=" + encodeURIComponent(revisionState.id));
-    if (session !== revisionState.session || request !== revisionState.historyRequest || !researchRevisionDialog.open || !revisionContextMatches(data)) return;
+    if (session !== revisionState.session || request !== revisionState.historyListRequest || !researchRevisionDialog.open || !revisionContextMatches(data)) return;
     if (!data.ok || (revisionState.current && data.project_id !== revisionState.current.project_id)) {
       revisionHistoryList.textContent = uiFormat("research_revision_load_failed", {reason: data.message || uiLabel("wizard_unknown_error")});
       return;
@@ -407,13 +415,27 @@ if (researchRevisionDialog) {
       button.type = "button";
       button.className = "ctl";
       button.dataset.researchRevision = String(item.revision);
+      button.setAttribute("aria-current", String(Boolean(revisionState.historyEnvelope && revisionState.historyEnvelope.record.revision === item.revision)));
       button.setAttribute("aria-description", item.change ? uiLabel("research_revision_" + item.change.change_kind) : uiLabel("research_revision_original"));
       button.textContent = uiFormat("research_revision_number", {revision: item.revision}) +
         (item.revision === data.latest_revision ? " · " + uiLabel("research_revision_current") : "");
       row.appendChild(button);
       revisionHistoryList.appendChild(row);
     });
-    revisionLoadHistorical(revisionState.historyInitialRevision || data.revisions[0].revision);
+  }
+
+  function revisionShowReadOnly(data) {
+    revisionHistoryDetail.innerHTML = revisionReadOnly(data);
+    revisionState.historyEnvelope = data;
+    revisionState.historyView = revisionViewedRecord(data, true);
+    revisionHistoryList.querySelectorAll("button[data-research-revision]").forEach(function(button) {
+      button.setAttribute("aria-current", String(Number(button.dataset.researchRevision) === data.record.revision));
+    });
+    if (revisionState.mode === "history") {
+      revisionShowMeta(data);
+      revisionNotices(data);
+      revisionShowCitations(data.citations);
+    }
   }
 
   async function revisionLoadHistorical(number) {
@@ -433,14 +455,7 @@ if (researchRevisionDialog) {
       revisionHistoryDetail.textContent = uiFormat("research_revision_load_failed", {reason: data.message || uiLabel("wizard_unknown_error")});
       return;
     }
-    revisionHistoryDetail.innerHTML = revisionReadOnly(data);
-    revisionState.historyEnvelope = data;
-    revisionState.historyView = revisionViewedRecord(data, true);
-    if (revisionState.mode === "history") {
-      revisionShowMeta(data);
-      revisionNotices(data);
-      revisionShowCitations(data.citations);
-    }
+    revisionShowReadOnly(data);
   }
 
   async function revisionLoadCurrent(replaceDraft) {
@@ -477,6 +492,7 @@ if (researchRevisionDialog) {
       if (replaceDraft) {
         revisionBuildFields(data.record);
         revisionState.historyRequest++;
+        revisionState.historyListRequest++;
         revisionState.historyLoaded = false;
         revisionState.historyEnvelope = null;
         revisionHistoryList.replaceChildren();
@@ -485,7 +501,7 @@ if (researchRevisionDialog) {
       revisionNotices(data);
       revisionShowCitations(data.citations);
       revisionStatus("", false);
-      if (revisionState.mode === "history" && !revisionState.historyLoaded) revisionLoadHistory();
+      if (revisionState.mode === "history") revisionSetTab("history");
     } finally {
       if (session === revisionState.session && request === revisionState.request) {
         revisionState.loading = false;
@@ -564,6 +580,7 @@ if (researchRevisionDialog) {
     revisionReason.value = reason;
     revisionForm.querySelectorAll('input[name="research_revision_change_kind"]').forEach(function(input) { input.checked = input.value === changeKind; });
     revisionState.historyRequest++;
+    revisionState.historyListRequest++;
     revisionState.historyLoaded = false;
     revisionState.historyEnvelope = null;
     revisionNotices(envelope);
@@ -942,11 +959,13 @@ if (researchRevisionDialog) {
     var session = revisionState.session;
     revisionState.request++;
     revisionState.historyRequest++;
+    revisionState.historyListRequest++;
     revisionState.kind = kind;
     revisionState.id = id;
     revisionState.context = researchReadContext();
     var pin = Number(historyRevision);
     revisionState.historyInitialRevision = mode === "history" && Number.isInteger(pin) && pin > 0 ? pin : null;
+    revisionState.historySelectionRevision = null;
     revisionState.historyView = null;
     revisionState.historyEnvelope = null;
     revisionState.section = kind === "dossier" && mode === "edit" ? section || null : null;
@@ -964,6 +983,7 @@ if (researchRevisionDialog) {
     revisionHistoryDetail.replaceChildren();
     revisionShowMeta(null);
     document.getElementById("research-revision-technical").open = false;
+    revisionVersions.open = false;
     revisionReload.hidden = true;
     revisionSave.disabled = true;
     revisionNotices(null);
@@ -984,6 +1004,7 @@ if (researchRevisionDialog) {
     revisionState.session++;
     revisionState.request++;
     revisionState.historyRequest++;
+    revisionState.historyListRequest++;
     revisionState.historyEnvelope = null;
   });
   researchRevisionDialog.addEventListener("cancel", function(event) {
@@ -991,13 +1012,13 @@ if (researchRevisionDialog) {
   });
   researchRevisionDialog.querySelector('[role="tablist"]').addEventListener("keydown", function(event) {
     if (revisionState.pending || !event.target.matches("#research-revision-edit-tab, #research-revision-history-tab")) return;
-    var tabs = [revisionEditTab, revisionHistoryTab], index = tabs.indexOf(event.target);
+    var tabs = [revisionHistoryTab, revisionEditTab], index = tabs.indexOf(event.target);
     if (event.key === "ArrowRight" || event.key === "ArrowLeft") index = 1 - index;
     else if (event.key === "Home") index = 0;
     else if (event.key === "End") index = 1;
     else return;
     event.preventDefault();
-    revisionSetTab(index === 0 ? "edit" : "history");
+    revisionSetTab(index === 0 ? "history" : "edit");
     tabs[index].focus();
   });
   researchRevisionDialog.addEventListener("click", function(event) {
@@ -1006,6 +1027,11 @@ if (researchRevisionDialog) {
       event.stopPropagation();
     }
   }, true);
+
+  revisionVersions.addEventListener("toggle", function() {
+    if (revisionVersions.open && revisionState.current && !revisionState.historyLoaded &&
+        researchRevisionDialog.open && revisionContextMatches(revisionState.current)) revisionLoadHistory();
+  });
 
   document.addEventListener("click", function(event) {
     var edit = event.target.closest("[data-research-revise]");
@@ -1020,8 +1046,13 @@ if (researchRevisionDialog) {
     if (!researchRevisionDialog.open) return;
     if (event.target.closest("#research-revision-edit-tab")) revisionSetTab("edit");
     else if (event.target.closest("#research-revision-history-tab")) revisionSetTab("history");
-    else if (event.target.closest("[data-research-revision]"))
-      revisionLoadHistorical(event.target.closest("[data-research-revision]").dataset.researchRevision);
+    else if (event.target.closest("[data-research-revision]")) {
+      var revision = Number(event.target.closest("[data-research-revision]").dataset.researchRevision);
+      if (Number.isInteger(revision) && revision > 0) {
+        revisionState.historySelectionRevision = revision;
+        revisionLoadHistorical(revision);
+      }
+    }
     else if (event.target.closest("#research-revision-reload")) {
       revisionState.sectionBase = null;
       revisionLoadCurrent(true);

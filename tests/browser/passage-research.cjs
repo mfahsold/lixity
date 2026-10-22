@@ -20,6 +20,8 @@ api.init(project, title='Synthetic passage research')
 dossier = api.create_dossier(project, title='Synthetic pinned dossier', body='# Notes\\n\\nA saved author plan.')
 claim = api.create_claim(project, title='Synthetic saved claim <img src=x>', statement='An old authored statement.', confidence='disputed', dossier_id=dossier['dossier_id'])
 decision = api.record_decision(project, title='Synthetic associated decision', rationale='An authored plan, not a fact.', dossier_ids=[dossier['dossier_id']])
+for index in range(6):
+    api.record_decision(project, title=f'Additional decision {index + 1}', rationale='An explicit author choice.', dossier_ids=[dossier['dossier_id']])
 manuscript = project / 'manuscript.md'
 manuscript.write_text('# Synthetic passage manuscript\\n\\n## Chapter\\n\\n😀 A repeated quotation. A repeated quotation.\\n\\nAn unrelated paragraph contains A repeated quotation.\\n\\nAn empty passage has no association.\\n', encoding='utf-8')
 anchor = api.resolve_manuscript_anchor(project, manuscript, query='😀 A repeated quotation.')
@@ -58,6 +60,11 @@ server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
 print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'claim': claim['claim_id'], 'other': other['claim_id'], 'dossier': dossier['dossier_id'], 'decision': decision['decision_id'], 'copied_token': research_context_token(copied)}), flush=True)
 server.serve_forever()
 `;
+async function savedResearchAction(page) {
+  const menu = page.locator('#manuscript-context-menu');
+  if (await menu.isVisible()) await menu.locator('[data-reader-action="values"]').click();
+  return page.locator('#reader-inspector-body [data-reader-action="research"]');
+}
 async function localeJourneys(browser) {
   for (const locale of ['de', 'fr', 'es', 'it', 'pt', 'nl']) {
     const server = await startNativeServer(source.replace("language = 'en'", `language = '${locale}'`), fs.mkdtempSync(path.join(artifacts, locale + '-')));
@@ -65,13 +72,14 @@ async function localeJourneys(browser) {
       for (const [width, height] of [[1440, 950], [390, 900], [320, 900], [320, 480]]) {
         const page = await browser.newPage({viewport: {width, height}, reducedMotion: 'reduce'});
         await page.goto(server.fixture.url);
-        const labels = await page.evaluate(() => Object.fromEntries(['passage_research', 'passage_research_confidence', 'passage_research_decisions', 'research_confidence_disputed'].map(key => [key, uiLabel(key)])));
+        const labels = await page.evaluate(() => Object.fromEntries(['passage_research', 'passage_research_confidence', 'research_confidence_disputed'].map(key => [key, uiLabel(key)])));
         await page.locator('#chapters [data-reader-paragraph]').first().click();
-        await expect(page.locator('[data-reader-action="research"]')).toHaveText(labels.passage_research);
+        await expect((await savedResearchAction(page))).toHaveText(labels.passage_research);
         assert.notEqual(labels.passage_research, 'Saved research', locale + ' has translated labels');
-        await page.locator('[data-reader-action="research"]').click();
+        await (await savedResearchAction(page)).click();
         const context = page.locator('[data-passage-research]');
         await expect(context).toHaveAttribute('data-state', 'ready');
+        if (height === 480) await expect(context.locator('.passage-record-title').first()).toBeInViewport();
         for (const label of Object.values(labels)) await expect(context).toContainText(label);
         assert.equal(await page.locator('[data-context-tool="research"]').evaluate(button => {
           const text = button.firstChild, range = document.createRange();
@@ -123,7 +131,7 @@ async function geometryJourneys(browser, shortServer) {
       const paragraph = page.locator('#chapters .ptext').first();
       await paragraph.locator('[data-reader-paragraph]').click();
       const top = (await paragraph.boundingBox()).y;
-      await page.locator('[data-reader-action="research"]').click();
+      await (await savedResearchAction(page)).click();
       await expect(page.locator('[data-passage-research]')).toHaveAttribute('data-state', 'ready');
       await assertDockGeometry(page);
       await expect.poll(async () => Math.abs((await paragraph.boundingBox()).y - top)).toBeLessThan(2);
@@ -152,7 +160,7 @@ async function geometryJourneys(browser, shortServer) {
         // Establish the same requested research tool before changing document scroll.
         if (position === 'reading') {
           await paragraph.locator('[data-reader-paragraph]').click();
-          await page.locator('[data-reader-action="research"]').click();
+          await (await savedResearchAction(page)).click();
           await expect(page.locator('[data-passage-research]')).toHaveAttribute('data-state', 'ready');
         }
       }
@@ -168,7 +176,7 @@ async function suspensionJourneys(browser, server) {
     const context = page.locator('[data-passage-research]');
     const trigger = page.locator('#chapters [data-reader-paragraph]').first();
     async function open() {
-      await trigger.click(); await page.locator('[data-reader-action="research"]').click();
+      await trigger.click(); await (await savedResearchAction(page)).click();
     }
     async function suspend(kind) {
       await page.locator(kind === 'overview' ? '#workbench-overview-open' : '#reader-focus').click();
@@ -183,7 +191,7 @@ async function suspensionJourneys(browser, server) {
       await open(); await expect(context).toHaveAttribute('data-state', 'ready');
       await suspend(kind); await resume(kind);
       await expect(context).toHaveAttribute('data-state', 'ready');
-      await expect(context.locator('[data-research-history=claim]')).toHaveCount(5);
+      await expect(context.locator('[data-research-history=claim]:not([data-record-revision])')).toHaveCount(1);
       await expect(context.locator('[data-manuscript-links-paragraph]')).toBeVisible();
       let release, held, completed;
       const waiting = new Promise(resolve => { held = resolve; });
@@ -232,11 +240,11 @@ async function guardJourneys(browser, server) {
   const context = page.locator('[data-passage-research]');
   async function open(index = 0) {
     await paragraphs.nth(index).locator('[data-reader-paragraph]').click();
-    await page.locator('[data-reader-action="research"]').click();
+    await (await savedResearchAction(page)).click();
   }
   await open(2);
   await expect(context).toHaveAttribute('data-state', 'empty');
-  await expect(context).toContainText('No saved associations for this passage.');
+  await expect(context).toContainText('No associations for this passage.');
   await context.locator('[data-passage-research-close]').focus();
   await page.keyboard.press('Escape');
   await expect(context).toBeHidden();
@@ -370,35 +378,54 @@ async function guardJourneys(browser, server) {
         selection.setBaseAndExtent(selection.focusNode, selection.focusOffset, selection.anchorNode, selection.anchorOffset);
       });
       await paragraph.locator('[data-reader-paragraph]').click();
-      await expect(page.locator('[data-reader-action="research"]')).toBeVisible({timeout: 1500});
-      await page.locator('[data-reader-action="research"]').focus();
+      await expect((await savedResearchAction(page))).toBeVisible({timeout: 1500});
+      await (await savedResearchAction(page)).focus();
       const originTop = (await paragraph.boundingBox()).y;
       await page.keyboard.press('Enter');
       const context = page.locator('#workspace-context-panel [data-passage-research]');
       await expect(context).toBeVisible();
       if (width > 900) await expect.poll(() => page.locator("#workspace-context-panel .context-tool-tabs").evaluate(node => node.getBoundingClientRect().top)).toBeGreaterThanOrEqual(0);
       if (width <= 900) await expect.poll(() => page.evaluate(() => document.getElementById("workspace-context-panel").getBoundingClientRect().top >= document.getElementById("workbench-thread").getBoundingClientRect().bottom)).toBe(true);
-      await expect(context).toContainText('Synthetic saved claim <img src=x>');
-      await expect(context).toContainText('Synthetic pinned dossier');
+      await expect(context).toContainText('Current claim title');
+      await expect(context).toContainText('Current dossier title');
       await expect(context).toContainText('Synthetic associated decision');
       await expect(context).toContainText('Disputed');
-      await expect(context).toContainText('Current dossier context');
-      await expect(context).not.toContainText('Current claim title');
-      await expect(context).not.toContainText('Current dossier title');
-      assert.equal(((await context.textContent()).match(/newer saved version 2/g) || []).length, 10, 'Claim and dossier updates remain independent warnings');
+      await expect(context.locator('.passage-research-item')).toHaveCount(1);
+      const associations = context.locator('[data-passage-research-associations]');
+      const decisions = context.locator('[data-passage-research-decisions]');
+      assert.equal(await associations.evaluate(node => node.open), false, 'Exact quotes stay behind one disclosure');
+      assert.equal(await decisions.evaluate(node => node.open), false, 'Current dossier decisions are optional context');
+      await expect(associations.locator('blockquote')).toHaveCount(5);
+      await expect(decisions.locator('summary').first()).toHaveText('7 decisions in current dossier');
+      await expect(decisions).not.toContainText('Showing 5 of 7');
       assert.equal(await context.locator(`[data-record-id="${server.fixture.other}"]`).count(), 0);
       assert.equal(await context.locator('img').count(), 0);
       await expect(context).toContainText('Showing 5 of 6');
       await expect(page.locator('[data-context-tool="research"]')).toHaveAttribute('aria-pressed', 'true');
-      assert.equal(reads.filter(url => url.searchParams.get('kind') === 'claim').length, 1, 'Repeated links share one pinned claim read');
-      assert.equal(reads.filter(url => url.searchParams.get('kind') === 'dossier').length, 1, 'Repeated links share one pinned dossier read');
+      assert.equal(reads.filter(url => url.searchParams.get('kind') === 'claim').length, 2, 'Repeated links share pinned and current claim reads');
+      assert.equal(reads.filter(url => url.searchParams.get('kind') === 'dossier').length, 2, 'Repeated links share pinned and current dossier reads');
+      await decisions.locator('summary').first().click();
+      await expect(decisions.locator('[data-research-history=decision]')).toHaveCount(5);
+      const more = decisions.locator('details');
+      assert.equal(await more.evaluate(node => node.open), false);
+      await more.locator('summary').click();
+      await expect(more.locator('[data-research-history=decision]').last()).toBeVisible();
+      await expect(decisions.locator('[data-research-history=decision]')).toHaveCount(7);
       for (const kind of ['claim', 'dossier', 'decision']) {
-        const trigger = context.locator(`[data-research-history="${kind}"]`).first();
+        const trigger = context.locator(`[data-research-history="${kind}"]:not([data-record-revision])`).first();
         await trigger.click();
-        await expect(page.locator('#research-revision-kind')).toContainText('Saved version 1');
+        await expect(page.locator('#research-revision-kind')).toContainText('Version ' + (kind === 'decision' ? 1 : 2));
         await expect(page.locator('#research-revision-history-detail')).toContainText({claim: 'An old authored statement.', dossier: 'A saved author plan.', decision: 'An authored plan, not a fact.'}[kind]);
         await page.keyboard.press('Escape');
         await expect(trigger).toBeFocused();
+      }
+      for (const kind of ['claim', 'dossier']) {
+        const pin = context.locator(`[data-research-history="${kind}"][data-record-revision="1"]`);
+        await pin.click();
+        await expect(page.locator('#research-revision-kind')).toContainText('Version 1');
+        await expect(page.locator('#research-revision-history-detail')).toContainText(kind === 'claim' ? 'Synthetic saved claim <img src=x>' : 'Synthetic pinned dossier');
+        await page.keyboard.press('Escape');
+        await expect(pin).toBeFocused();
       }
       assert.deepEqual(await prose.evaluate(el => ({text: el.textContent, hash: el.closest('.ptext').dataset.paragraphSha256})), before);
       assert.equal(await prose.evaluate((el, previous) => el === previous, node), true);

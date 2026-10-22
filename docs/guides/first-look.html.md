@@ -2,7 +2,9 @@
 
 Read one manuscript, inspect a passage, follow its research and choose a PDF copy.
 
-Updated 21 October 2026
+Updated 22 October 2026
+
+This walkthrough follows the development demo. Installed v0.7.3 has separate Values, Inspect text evidence and Saved research menu entries.
 
 ## 1. Open the example and read a chapter
 
@@ -12,13 +14,13 @@ Updated 21 October 2026
 
 [Video walkthrough](../videos/analysis-review.mp4)
 
-*Warehouse 4: a passage, its **Values** and chapter comparisons.*
+*Warehouse 4: explore a passage and compare its chapter.*
 
 ## 2. Inspect one difference
 
-Choose a paragraph's **… → Values** to open its **Passage values** inspector. The separate **Analysis** switch shows diagnostics across the manuscript; Passage values remains usable with Analysis On or Off. Use **Analysis overview** to compare sentence rhythm in the setting and action chapters, then **Back to passage** to resume reading.
+Choose a paragraph's **… → Explore passage** to open its right context. **Explain measurement** opens the counted text; **Research for this passage** follows the passage’s explicit links. The separate **Analysis** switch shows diagnostics across the manuscript; the **Passage** inspector works with Analysis On or Off. Use **Analysis overview** to compare sentence rhythm in the setting and action chapters, then **Back to passage** to resume reading.
 
-**In the read-only demo:** turn **Analysis** on. The first switch-on selects **Sentence length** unless you already saved a metric choice. The adjacent control names the metric and shows **Highlights On/Off**; open it to choose another metric or change **Mark counted passages**. Hover or tap a marked word or sentence for its explanation. The paragraph menu’s **Inspect text evidence** also works by keyboard or right-click with Analysis Off; it enables Analysis while preserving an unchecked marking preference. Escape closes the explanation. The sentence word count and paragraph comparison are different measurements.
+**In the read-only demo:** turn **Analysis** on. The first switch-on selects **Sentence length** unless you already saved a metric choice. The adjacent control names the metric and shows **Highlights On/Off**; open it to choose another metric or change **Mark counted passages**. Hover or tap a marked word or sentence for its explanation. **Explore passage → Explain measurement** also works by keyboard or right-click with Analysis Off; it enables Analysis while preserving an unchecked marking preference. Escape closes the explanation. The sentence word count and paragraph comparison are different measurements.
 
 **Since v0.7.3:** expand **Manuscript measurements** for the secondary numbers, then collapse the same summary to return to the compact overview. A linked scene title reveals its detailed **Scene measurements**; both disclosure levels can be closed again. The passage return keeps your earlier reading context.
 
@@ -30,9 +32,9 @@ Someone had tried the eastern gate of Warehouse 4.
 
 **In the read-only demo:** this opening quotation has an explicitly saved association. Follow it from the manuscript:
 
-1. At the opening paragraph, choose **… → Saved research**. The right context shows the saved claim and dossier versions while the text stays visible.
+1. At the opening paragraph, choose **… → Explore passage → Research for this passage**. The right context shows its linked claim and dossier while the text stays visible.
 
-2. Open the claim title to read that version and its retained sources. A retained source and an authored claim are separate records; the association does not establish factual truth.
+2. Open a title to read the current entry and its sources, or choose **Linked version** for the exact earlier version used by the association. **Versions** expands its history without changing the entry. A retained source and an authored claim are separate records; the association does not establish factual truth.
 
 3. Close the viewer and use **Back to passage** to resume reading. On narrow screens the context sits above the text; its close button or Escape returns to the paragraph.
 

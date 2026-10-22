@@ -120,9 +120,13 @@ class TestResearchCliOutput(unittest.TestCase):
                     self.assertIn(r"\x1b[2J", output)
                     self.assertIn(r"\x1b]52;c;synthetic\x07", output)
                     self.assertIn("First paragraph.\n\nSecond", output)
+                    self.assertIn("Version 1", output)
                     # JSON preserves the original data instead of rewriting the archive.
-                    record = json.loads(self.capture(kind, "show", identifier, "--project", str(root))[1])["record"]
+                    machine = json.loads(self.capture(kind, "show", identifier, "--project", str(root))[1])
+                    self.assertEqual(machine, api.get_record(root, kind, identifier))
+                    record = machine["record"]
                     self.assertEqual(record["title"], title)
+                    self.assertEqual(record["revision"], 1)
 
     def test_authored_history_text_preserves_revision_details(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -143,12 +147,16 @@ class TestResearchCliOutput(unittest.TestCase):
                                                           "--history", "--format", "text")
                     self.assertEqual((status, errors), (0, ""), errors)
                     self.assertIn(identifier, output)
-                    self.assertIn("Revision 2", output)
-                    self.assertIn("Revision 1", output)
-                    self.assertLess(output.index("Revision 2"), output.index("Revision 1"))
+                    self.assertIn("Latest version: 2", output)
+                    self.assertIn("Version 2", output)
+                    self.assertIn("Version 1", output)
+                    self.assertLess(output.index("Version 2"), output.index("Version 1"))
                     self.assertIn("correction", output)
                     self.assertIn("Synthetic history correction.", output)
                     self.assertIn("local-author", output)
+                    machine_status, machine, machine_errors = self.capture(kind, identifier, "--project", str(root), "--history")
+                    self.assertEqual((machine_status, machine_errors), (0, ""))
+                    self.assertEqual(json.loads(machine), api.record_history(root, kind, identifier))
 
     def test_dossier_text_explains_geography_in_full_summary_and_historical_reads(self):
         geography = {"type": "FeatureCollection", "features": [

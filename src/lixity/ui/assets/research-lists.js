@@ -427,7 +427,7 @@ async function refreshResearchClaims(overview) {
     var selectedDecisionClaim = selectHost.value;
     selectHost.innerHTML = '<option value="">' + escapeHtml(uiLabel("research_no_claim_linked")) + '</option>' +
       claims.map(function(c) {
-        return '<option value="' + escapeHtml(c.id) + '">' + escapeHtml(c.title) + '</option>';
+        return '<option value="' + escapeHtml(c.id) + '">' + escapeHtml(researchClaimChoiceLabel(c)) + '</option>';
       }).join("");
     if (claims.some(function(c) { return c.id === selectedDecisionClaim; })) selectHost.value = selectedDecisionClaim;
   }

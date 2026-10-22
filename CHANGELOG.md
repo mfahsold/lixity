@@ -7,6 +7,44 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+- One **Explore passage** menu entry groups measurement inspection and saved
+  research in the existing paragraph context. Quick hover and touch explanations
+  remain available at marked text. The **Passage** context label distinguishes
+  that tool from the global **Analysis** display switch.
+- Measurement cards give the selected sentence's word count a clear hierarchy,
+  separate paragraph comparisons and expandable mapping/method details.
+- The landing page explains manuscript analysis, linked research and PDF reading
+  copies in its existing three compact feature blocks.
+- Loaded claim quotations can be collapsed without discarding their contents.
+  Ordinary research entry actions show the current version. Earlier linked
+  versions remain explicit; a collapsed version list loads on demand without
+  changing the displayed entry or discarding an editing draft.
+- Research labels use compact version names across all seven UI languages and
+  human CLI record/history output; existing JSON fields and flags are unchanged.
+- Passage research groups quotations of the same linked claim and separates
+  exact associations from current dossier decisions, with distinct counts.
+- The six-chapter fictional demo has a stronger receipt/label mystery and about
+  15% more text, with richer dossiers, conflicting citations, claim histories,
+  explicit decisions, causal links and exact manuscript associations.
+
+### Fixed
+- Sentence word counts use the selected interface language, including singular
+  counts; browser labels no longer fall back to the English key.
+- Explicit measurement explanations can open from the mobile context inspector
+  when its associated paragraph is outside the viewport.
+- Reading and analysis settings share a disclosure indicator and keep their
+  popup beside its trigger, with internal scrolling on short screens.
+- Decision claim choices distinguish identical titles by period, saved version
+  and, when still necessary, ID, as the evidence and relation pickers already do.
+- Source document/passage controls expose their selected state consistently.
+- Stationary content reflow no longer opens incidental hover help; deliberate
+  pointer, keyboard and touch explanations retain their existing behavior.
+- Repeated hover departures cancel earlier dismissal timers, so an old hover
+  cannot close a subsequently opened touch explanation.
+- The read-only demo includes record/history fixtures for evidence and causal
+  links, so their entry and version controls reach real archive states.
+
 ## [0.7.3] - 2026-10-21
 
 ### Changed

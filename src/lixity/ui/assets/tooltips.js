@@ -71,6 +71,7 @@
   var touchHelp = null;
   var activatedEl = null;
   var activatedHover = false;
+  var pointerX = null, pointerY = null;
   var hideTimer = null;
   var textObserver = new MutationObserver(function() { if (activeEl) show(activeEl); });
 
@@ -187,17 +188,14 @@
     tip.style.top = top + "px";
   }
 
-  document.addEventListener("mouseover", function (e) {
-    if (Date.now() < touchUntil || activatedEl) return;
-    var el = e.target.closest("[data-help], [data-tip], [title]");
-    if (el && !el.closest(".tooltip-popup")) show(el);
-  }, { passive: true });
-
   document.addEventListener("mouseout", function (e) {
     if (Date.now() < touchUntil) return;
     var el = e.target.closest("[data-help], [data-tip]");
-    if (el && !el.contains(e.relatedTarget) && !tip.contains(e.relatedTarget)) {
-      hideTimer = setTimeout(hide, 160);
+    if (el && el === activeEl && !el.contains(e.relatedTarget) && !tip.contains(e.relatedTarget)) {
+      // Reflow can emit departures from inactive help. One owned timer must
+      // never outlive a later explicit touch or keyboard explanation.
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(function() { if (activeEl === el) hide(); }, 160);
     }
   }, { passive: true });
   tip.addEventListener("mouseenter", function() { clearTimeout(hideTimer); });
@@ -215,12 +213,15 @@
     hide();
   });
   document.addEventListener("pointermove", function(e) {
-    if (!activatedEl || (activatedHover && activatedEl.contains(e.target))) return;
+    var moved = pointerX !== e.clientX || pointerY !== e.clientY;
+    pointerX = e.clientX; pointerY = e.clientY;
+    // Reflow can put new metadata under a stationary pointer. Only physical
+    // movement requests hover help; focus and explicit touch keep their owners.
+    if (!moved || e.pointerType === "touch" || Date.now() < touchUntil ||
+        activatedEl && activatedHover && activatedEl.contains(e.target)) return;
     activatedEl = null;
-    // The corresponding mouseover may already have been suppressed. Physical
-    // pointer movement supplies the fresh intent for the incoming control.
     var el = e.target.closest("[data-help], [data-tip], [title]");
-    if (el && Date.now() >= touchUntil && !el.closest(".tooltip-popup")) show(el);
+    if (el && el !== activeEl && !el.closest(".tooltip-popup")) show(el);
   }, {passive: true});
 
   function dismissAction(target) {
@@ -234,6 +235,7 @@
   }
 
   document.addEventListener("pointerdown", function(e) {
+    pointerX = e.clientX; pointerY = e.clientY;
     if (activatedEl && !activatedEl.contains(e.target)) activatedEl = null;
     dismissAction(e.target);
     if (e.pointerType === "touch") touchUntil = Date.now() + 1000;

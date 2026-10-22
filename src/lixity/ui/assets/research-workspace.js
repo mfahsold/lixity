@@ -441,8 +441,8 @@ document.addEventListener("click", async function (event) {
         (contextRows ? '<h4>' + escapeHtml(uiLabel("research_source_context")) + '</h4><dl>' + contextRows + '</dl>' : '') +
         '<div class="research-source-view-bar">' +
           '<div class="row gap-2">' +
-            '<button type="button" class="ctl ctl-sm active" data-source-view="doc">📄 ' + escapeHtml(uiLabel("research_doc_view")) + '</button>' +
-            '<button type="button" class="ctl ctl-sm" data-source-view="passages">🔍 ' + escapeHtml(uiLabel("research_passages_view")) + ' (' + passagesCount + ')</button>' +
+            '<button type="button" class="ctl ctl-sm active" data-source-view="doc" aria-pressed="true">📄 ' + escapeHtml(uiLabel("research_doc_view")) + '</button>' +
+            '<button type="button" class="ctl ctl-sm" data-source-view="passages" aria-pressed="false">🔍 ' + escapeHtml(uiLabel("research_passages_view")) + ' (' + passagesCount + ')</button>' +
           '</div>' +
           '<button type="button" class="ctl ctl-sm research-source-toggle" data-source-toggle>' + escapeHtml(uiLabel("research_show_source")) + '</button>' +
         '</div>' +
@@ -496,8 +496,11 @@ document.addEventListener("click", async function (event) {
       var docWrap = host.querySelector(".research-source-doc-wrap");
       var passWrap = host.querySelector(".research-source-passages-wrap");
       var toggleRawBtn = bar.querySelector("[data-source-toggle]");
-      bar.querySelectorAll("[data-source-view]").forEach(function(b) { b.classList.remove("active"); });
-      sourceViewBtn.classList.add("active");
+      bar.querySelectorAll("[data-source-view]").forEach(function(button) {
+        var selected = button === sourceViewBtn;
+        button.classList.toggle("active", selected);
+        button.setAttribute("aria-pressed", String(selected));
+      });
       var isDoc = sourceViewBtn.dataset.sourceView === "doc";
       if (docWrap) docWrap.hidden = !isDoc;
       if (passWrap) passWrap.hidden = isDoc;
@@ -687,7 +690,7 @@ function highlightSearchTerms(text, query) {
             (statusLabel ? '<div class="ctl-note">' + escapeHtml(statusLabel) + '</div>' : '') +
             '<p class="research-passage-quote">' + highlightSearchTerms(h.excerpt || "", query) + '</p>' +
             '<button type="button" class="ctl" data-research-history="' + h.kind + '" data-record-id="' + escapeHtml(h.record_id) + '">' +
-              escapeHtml(uiLabel("research_view_details")) + '</button></div>';
+              escapeHtml(uiLabel("research_revision_view")) + '</button></div>';
         }
         return '<div class="research-passage-card">' +
           '<div class="research-passage-quote">„' + highlightSearchTerms(h.verbatim || "", query) + '“</div>' +

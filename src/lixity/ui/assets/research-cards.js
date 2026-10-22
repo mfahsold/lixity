@@ -101,14 +101,18 @@
       </details>` : null}
       ${item.reader ? html`<button type="button" class="ctl" data-workspace-dossier=${item.id}>${uiLabel("reader_toggle")}</button>` : null}
       ${item.evidence ? (item.evidenceHtml
-        ? html`<div class="claim-evidence-subpanel research-subpanel" id=${"claim-evidence-" + item.id}
-            dangerouslySetInnerHTML=${{__html: item.evidenceHtml}}></div>`
+        ? html`<div class="claim-evidence-subpanel research-subpanel" id=${"claim-evidence-" + item.id}>
+            <details class="research-details" open>
+              <summary>${uiLabel("research_citations")}</summary>
+              <div dangerouslySetInnerHTML=${{__html: item.evidenceHtml}}></div>
+            </details>
+          </div>`
         : html`<div class="claim-evidence-subpanel research-subpanel" id=${"claim-evidence-" + item.id}>
             <button type="button" class="ctl ctl-compact" data-load-evidence=${item.id}>${uiLabel("research_load_evidence")}</button>
           </div>`) : null}
       ${item.revision ? html`<div class="research-record-actions">
+        <button type="button" class="ctl" data-research-history=${item.revision} data-record-id=${item.id}>${uiLabel("research_revision_view")}</button>
         <button type="button" class="ctl" data-research-revise=${item.revision} data-record-id=${item.id}>${uiLabel("research_revision_edit")}</button>
-        <button type="button" class="ctl" data-research-history=${item.revision} data-record-id=${item.id}>${uiLabel("research_revision_history")}</button>
       </div>` : null}
     </div>`;
   }

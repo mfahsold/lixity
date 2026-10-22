@@ -18,7 +18,7 @@
 <meta property="og:url" content="https://mfahsold.github.io/lixity/"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png"/>
 <meta property="og:image:width" content="2960"/>
-<meta property="og:image:height" content="1930"/>
+<meta property="og:image:height" content="2090"/>
 <meta property="og:image:alt" content="Lixity continuous manuscript reader with chapter navigation and contextual tools"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Lixity — a local manuscript and research workbench"/>
@@ -85,7 +85,7 @@
     "priceCurrency": "EUR",
     "description": "Open source under AGPL-3.0-or-later. A separate written commercial license is available for integrations that cannot meet the AGPL."
   },
-  "dateModified": "2026-10-21"
+  "dateModified": "2026-10-22"
 }
 </script>
 <script type="application/ld+json">
@@ -97,7 +97,7 @@
   "url": "https://mfahsold.github.io/lixity/",
   "inLanguage": "en",
   "description": "Read your manuscript, explore language patterns and follow saved sources, claims and decisions beside the text. A local workbench for authors and editors.",
-  "dateModified": "2026-10-21"
+  "dateModified": "2026-10-22"
 }
 </script>
 </head>
@@ -127,7 +127,7 @@
     </div>
     <figure class="frame">
       <div class="frame-window">
-        <a href="screenshots/dashboard-dark.png"><img src="screenshots/dashboard-dark.png" width="2960" height="1930" alt="Lixity manuscript reader with continuous prose, chapter navigation and Analysis On/Off" fetchpriority="high"/></a>
+        <a href="screenshots/dashboard-dark.png"><img src="screenshots/dashboard-dark.png" width="2960" height="2090" alt="Lixity manuscript reader with continuous prose, chapter navigation and Analysis On/Off" fetchpriority="high"/></a>
       </div>
       <figcaption>Read-only development example with invented text; no account or upload. <a href="screenshots/dashboard-dark.png">Full-size view</a> · <a href="screenshots/README.md">More views and credits</a>.</figcaption>
     </figure>
@@ -135,21 +135,22 @@
 
   <section class="section" id="features" aria-labelledby="workflow-title">
     <span id="core-pillars"></span><span id="steps"></span>
-    <h2 id="workflow-title">Follow one passage</h2>
+    <h2 id="workflow-title">Read, investigate, review</h2>
     <div class="workflow-list">
       <article id="writing">
-        <span id="editorial-matrix"></span>
-        <h3>Read the scene</h3>
+        <span id="editorial-matrix"></span><span id="chapters"></span>
+        <h3>Read and explore your manuscript</h3>
+        <p>Compare sentence rhythm, repeated words and dialogue across chapters. Turn analysis on to inspect counted words and sentences in context.</p>
         <blockquote>Someone had tried the eastern gate of Warehouse 4.</blockquote>
-        <p>Mara finds scratches on a lock. <a href="demo/report.html#p-0">Read the opening passage</a> in the invented example manuscript.</p>
-      </article>
-      <article id="chapters">
-        <h3>Notice a change in rhythm</h3>
-        <p>The opening chapter averages <strong>13.6 words per sentence</strong>; the next, <strong>6.0</strong>. Does the shorter rhythm suit its action? <a href="demo/report.html#matrix">Compare the chapters</a> and return to their text.</p>
+        <p><a href="demo/report.html#p-0">Read the opening passage</a> in the invented example. Does the shorter rhythm in the next chapter suit its action? <a href="demo/report.html#matrix">Compare the chapters</a> and read the passages behind the numbers.</p>
       </article>
       <article id="research-workspace">
-        <h3>Follow the saved research</h3>
-        <p>That quotation is explicitly linked to an authored claim and retained source. At the passage, open <strong>… → Saved research</strong>, read the saved version and return to the manuscript. <a href="guides/first-look.html#decision">Follow the connection</a>.</p>
+        <h3>Keep the research behind a passage</h3>
+        <p>Gather sources, notes and author decisions in dossiers. Connect a claim to an exact manuscript quotation, open its saved context beside the text and return to the passage. <a href="guides/first-look.html#decision">Follow the example connection</a>.</p>
+      </article>
+      <article id="exports">
+        <h3>Make a copy for reading or review</h3>
+        <p>Create a compact reading PDF, an editorial copy with room for annotations, or submission sheets from the same manuscript. Your original text stays unchanged. <a href="guides/research-pdf.html#manuscript-export">Compare the PDF copies</a>.</p>
       </article>
     </div>
     <p class="section-note">Measurements guide your reading; they do not grade or rewrite prose. A saved source preserves the evidence used, not a guarantee that the claim is true.</p>
@@ -157,7 +158,7 @@
 
   <section class="section" id="installation" aria-labelledby="installation-title">
     <h2 id="installation-title">Try it with your own manuscript</h2>
-    <p class="section-note" id="faq">Open a Markdown manuscript in the local app, keep your review notes and make a reading or editorial PDF. Built-in analysis works offline; optional integrations have separate <a href="research/USAGE.md">data boundaries</a>.</p>
+    <p class="section-note" id="faq">Open your Markdown manuscript in the local app. Built-in analysis works offline on your computer; optional integrations have separate <a href="research/USAGE.md">data boundaries</a>.</p>
     <a class="ctl" href="guides/installation.html">Install Lixity</a>
   </section>
 

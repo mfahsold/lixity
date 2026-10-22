@@ -244,15 +244,14 @@
           matchesPanel(row, document.getElementById(reviewFilter.paragraphId))));
     });
     var fragment = document.createDocumentFragment();
-    fragment.appendChild(element("p", label("manuscript_link_review_count").replace("{count}", String(rows.length)), "ctl-note"));
+    fragment.appendChild(element("p", label(rows.length === 1 ? "manuscript_link_review_count_one" : "manuscript_link_review_count").replace("{count}", String(rows.length)), "ctl-note"));
     if (filtered && reviewFilter) {
       var all = element("button", label("manuscript_link_review"), "ctl");
       all.type = "button"; all.dataset.manuscriptLinksAll = ""; fragment.appendChild(all);
     }
     rows.forEach(function(row) {
       var item = element("div", "", "manuscript-link-review-item");
-      item.appendChild(element("p", (row.claim_title || row.claim_id) + " · " +
-        label("research_revision_number").replace("{revision}", row.claim_revision)));
+      item.appendChild(element("p", row.claim_title || row.claim_id));
       var state = ["resolved", "moved", "adjusted", "ambiguous", "changed"].includes(row.anchor_state) ? row.anchor_state : "unavailable_anchor";
       var flags = [label("manuscript_link_" + state)];
       (row.flags || []).forEach(function(flag) {
@@ -264,7 +263,7 @@
         var jump = element("button", label("manuscript_link_open_passage"), "ctl"); jump.type = "button";
         jump.dataset.manuscriptLinkJump = row.link_id; item.appendChild(jump);
       }
-      var history = element("button", label("research_claim_open"), "ctl"); history.type = "button";
+      var history = element("button", label("research_revision_linked_version").replace("{revision}", row.claim_revision), "ctl"); history.type = "button";
       history.dataset.researchHistory = "claim"; history.dataset.recordId = row.claim_id;
       history.dataset.recordRevision = String(row.claim_revision); item.appendChild(history);
       if (canWrite && (row.anchor_state === "moved" || row.anchor_state === "adjusted")) {
@@ -462,7 +461,7 @@
   var passageReview = element("button", label("manuscript_link_review"), "ctl"); passageReview.type = "button"; passageReview.hidden = true;
   passageHost.append(passageHead, passageBody, passageReview);
   var contextHost = document.getElementById("workspace-context-panel");
-  var passageTab = element("button", label("passage_research"), "ctl");
+  var passageTab = element("button", label("passage_research_tab"), "ctl");
   passageTab.type = "button"; passageTab.dataset.contextTool = "research"; passageTab.hidden = true;
   passageTab.setAttribute("aria-pressed", "false");
   if (contextHost) {
@@ -556,16 +555,32 @@
     }
   }
   function recordButton(kind, record) {
-    var button = element("button", record.title + " · " + label("research_revision_number").replace("{revision}", record.revision), "ctl");
+    var button = element("button", record.title, "ctl passage-record-title");
     button.type = "button"; button.dataset.researchHistory = kind;
-    button.dataset.recordId = record.id; button.dataset.recordRevision = String(record.revision);
+    button.dataset.recordId = record.id;
     return button;
   }
-  function pinnedRecord(item, kind, result) {
-    item.appendChild(recordButton(kind, result.record));
-    if (!result.is_latest) item.appendChild(element("p", label("research_revision_reference_update")
-      .replace("{kind}", label("research_revision_kind_" + kind)).replace("{pinned}", result.record.revision)
-      .replace("{latest}", result.latest_revision), "ctl-note"));
+  function pinnedRecord(item, kind, result, current) {
+    var section = element("div", "", "passage-research-record");
+    section.appendChild(element("p", label("research_revision_kind_" + kind), "ctl-note"));
+    section.appendChild(recordButton(kind, current.record));
+    if (!result.is_latest) {
+      var pin = element("button", label("research_revision_linked_version").replace("{revision}", result.record.revision), "ctl passage-record-pin");
+      pin.type = "button"; pin.dataset.researchHistory = kind;
+      pin.dataset.recordId = result.record.id; pin.dataset.recordRevision = String(result.record.revision);
+      section.appendChild(pin);
+    }
+    item.appendChild(section);
+  }
+  function passageDetails(title, attribute) {
+    var details = element("details", "", "research-details");
+    details.setAttribute(attribute, ""); details.appendChild(element("summary", title));
+    return details;
+  }
+  async function currentPassageRecord(owner, report, kind, result) {
+    if (result.is_latest) return result;
+    if (!Number.isInteger(result.latest_revision) || result.latest_revision <= result.record.revision) throw {state: "unavailable"};
+    return passageRead(owner, report, kind, result.record.id, result.latest_revision);
   }
   async function passageRead(owner, report, kind, id, revision) {
     var key = JSON.stringify([owner.context, report.snapshot, kind, id, revision]);
@@ -603,34 +618,71 @@
       var rows = passageResearchRows(report, panel);
       var composed = await Promise.all(rows.slice(0, 5).map(async function(row) {
         var claim = await passageRead(owner, report, "claim", row.claim_id, row.claim_revision);
-        var ref = claim.record.dossier_ref, dossier = null, detail = null;
+        var currentClaim = await currentPassageRecord(owner, report, "claim", claim);
+        var ref = claim.record.dossier_ref, dossier = null, currentDossier = null, detail = null;
         if (ref) {
           var values = await Promise.all([passageRead(owner, report, "dossier", ref.id, ref.revision), passageRead(owner, report, "context", ref.id, null)]);
           dossier = values[0]; detail = values[1];
+          currentDossier = await currentPassageRecord(owner, report, "dossier", dossier);
         }
-        return {row: row, claim: claim, dossier: dossier, detail: detail};
+        return {rows: [row], claim: claim, currentClaim: currentClaim, dossier: dossier, currentDossier: currentDossier, detail: detail};
       }));
       if (!passageCurrent(owner) || owner.reviewSerial !== reviewSerial) return;
       var fragment = document.createDocumentFragment();
-      fragment.appendChild(element("p", label("passage_research_count").replace("{shown}", composed.length).replace("{total}", rows.length), "ctl-note"));
+      fragment.appendChild(element("p", composed.length === rows.length ?
+        label(rows.length === 1 ? "manuscript_link_review_count_one" : "manuscript_link_review_count").replace("{count}", rows.length) :
+        label("passage_research_count").replace("{shown}", composed.length).replace("{total}", rows.length), "ctl-note"));
       if (!rows.length) fragment.appendChild(element("p", label("passage_research_empty"), "ctl-note"));
+      // Repeated exact quotations of one pinned claim share a single context
+      // entry; the association count and every retained quotation stay intact.
+      var groups = new Map();
       composed.forEach(function(value) {
+        var key = JSON.stringify([value.claim.record.id, value.claim.record.revision]);
+        if (groups.has(key)) groups.get(key).rows.push(value.rows[0]);
+        else groups.set(key, value);
+      });
+      groups.forEach(function(value) {
         var item = element("section", "", "passage-research-item");
-        item.appendChild(element("blockquote", value.row.anchor.quote));
-        item.appendChild(element("p", ["resolved"].concat(value.row.flags.filter(function(flag) {
-          return ["source_changed", "claim_changed", "claim_withdrawn"].includes(flag);
-        })).map(function(flag) { return label("manuscript_link_" + flag); }).join(" · "), "ctl-note"));
-        pinnedRecord(item, "claim", value.claim);
-        item.appendChild(element("p", label("passage_research_confidence") + ": " + label("research_confidence_" + value.claim.record.confidence), "ctl-note"));
+        pinnedRecord(item, "claim", value.claim, value.currentClaim);
+        var warnings = new Set();
+        value.rows.forEach(function(row) { row.flags.forEach(function(flag) {
+          if (["source_changed", "claim_withdrawn"].includes(flag)) warnings.add(label("manuscript_link_" + flag));
+        }); });
+        if (warnings.size) item.appendChild(element("p", Array.from(warnings).join(" · "), "ctl-note"));
         if (value.dossier) {
-          pinnedRecord(item, "dossier", value.dossier);
+          pinnedRecord(item, "dossier", value.dossier, value.currentDossier);
+        }
+        var associations = passageDetails(value.rows.length === 1 ? label("passage_research_link_details") :
+          label("passage_research_link_details_count").replace("{count}", value.rows.length), "data-passage-research-associations");
+        associations.appendChild(element("p", label("research_revision_kind_claim") + " · " +
+          label("research_revision_number").replace("{revision}", value.claim.record.revision), "ctl-note"));
+        associations.appendChild(element("p", label("passage_research_confidence") + ": " + label("research_confidence_" + value.claim.record.confidence), "ctl-note"));
+        value.rows.forEach(function(row) {
+          associations.appendChild(element("blockquote", row.anchor.quote));
+          associations.appendChild(element("p", label("manuscript_link_resolved"), "ctl-note"));
+        });
+        item.appendChild(associations);
+        if (value.dossier) {
           if (value.detail.decision_reviews.length) {
-            item.appendChild(element("p", label("passage_research_decisions"), "ctl-note"));
-            value.detail.decision_reviews.slice(0, 5).forEach(function(decision) {
+            var count = value.detail.decision_reviews.length;
+            var decisions = passageDetails(label(count === 1 ? "passage_research_decision_count_one" : "passage_research_decision_count")
+              .replace("{count}", count), "data-passage-research-decisions");
+            var more = count > 5 ? passageDetails(label(count === 6 ? "passage_research_more_decisions_one" : "passage_research_more_decisions")
+              .replace("{count}", count - 5), "data-passage-research-more-decisions") : null;
+            value.detail.decision_reviews.forEach(function(decision) {
               if (typeof decision.title !== "string" || !decision.decision_id || !Number.isInteger(decision.revision)) throw {state: "unavailable"};
-              item.appendChild(recordButton("decision", {id: decision.decision_id, title: decision.title, revision: decision.revision}));
             });
-            if (value.detail.decision_reviews.length > 5) item.appendChild(element("p", label("passage_research_count").replace("{shown}", 5).replace("{total}", value.detail.decision_reviews.length), "ctl-note"));
+            function appendDecision(host, decision) {
+              host.appendChild(recordButton("decision", {id: decision.decision_id, title: decision.title, revision: decision.revision}));
+            }
+            value.detail.decision_reviews.slice(0, 5).forEach(function(decision) { appendDecision(decisions, decision); });
+            if (more) more.addEventListener("toggle", function() {
+              if (!more.open || more.dataset.loaded || !passageCurrent(owner)) return;
+              value.detail.decision_reviews.slice(5).forEach(function(decision) { appendDecision(more, decision); });
+              more.dataset.loaded = "true";
+            });
+            if (more) decisions.appendChild(more);
+            item.appendChild(decisions);
           }
         }
         fragment.appendChild(item);

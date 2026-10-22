@@ -8,11 +8,18 @@ Analysis, research, screenshots and PDF layouts use that same project.
 
 Start with chapter 1's setting and chapter 2's action, then choose **Research →
 Dossiers → View details** on **Warehouse 4 case notes**. **Dossier alongside**
-opens its reading companion. In **Review**, follow the saved eastern-gate quote
-through **Open claim** to its pinned claim, dossier and source references, or use
+opens its reading companion. In **Review**, follow the eastern-gate quote
+through **Linked version** to its pinned claim, dossier and source references, or use
 **Go to manuscript passage** to read the quote. Starting from a manuscript
-paragraph's saved association preserves an origin: close the record viewer and
-choose **Back to passage** to return there. This demo demonstrates the v0.7.2 reading workflow.
+paragraph's association preserves an origin: close the record viewer and
+choose **Back to passage** to return there. The development demo follows current
+main: titles open current entries, explicit linked-version controls retain older
+pins, and **Versions** expands the history without switching the displayed entry.
+The case notes connect six claims, three decisions and five exact manuscript
+quotations. Explore conflicting inspection accounts, a qualified witness report,
+an authored cause/effect link and a corrected claim whose earlier manuscript
+links remain pinned. The timeline, diagrams, map and images provide different
+ways into the same two dossiers.
 Historical map/photo sources have
 [reviewed credits and file hashes](../assets/research/sources.json). People,
 customs records, incidents and journeys are invented; the visuals do not verify

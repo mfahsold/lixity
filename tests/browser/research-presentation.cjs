@@ -55,28 +55,64 @@ server.serve_forever()
     for (const locale of locales) for (const width of [1440, 320]) {
       const page = await browser.newPage({viewport: {width, height: 950}});
       page.setDefaultTimeout(10000);
-      const errors = [], writes = [];
+      const errors = [], writes = [], reads = [];
       page.on('pageerror', error => errors.push(error.message));
-      page.on('request', request => {if (request.method() === 'POST') writes.push(request.url());});
+      page.on('request', request => {
+        if (request.method() === 'POST') writes.push(request.url());
+        else if (request.method() === 'GET') reads.push(new URL(request.url()));
+      });
       await page.route(server.fixture.url + '/', route => route.fulfill({contentType: 'text/html', body: fs.readFileSync(path.join(artifacts, locale + '.html'), 'utf8')}));
+      await page.route(url => url.pathname === '/api/research/history', async route => {
+        const response = await route.fetch(), data = await response.json();
+        data.revisions.sort((left, right) => left.revision - right.revision);
+        await route.fulfill({json: data});
+      });
       await page.goto(server.fixture.url);
       await page.locator('#tab-view-research').click();
       await page.waitForFunction(() => Boolean(researchSelectionProjectId));
       const labels = server.fixture.labels[locale];
       const dialog = page.locator('#modal-research-revision');
       const detail = page.locator('#research-revision-history-detail');
-      async function open(kind, id) {
-        await page.evaluate(({kind, id}) => {
+      async function open(kind, id, revision) {
+        const firstRead = reads.length;
+        await page.evaluate(({kind, id, revision}) => {
           document.getElementById('synthetic-history-entry')?.remove();
           const button = document.createElement('button'); button.id = 'synthetic-history-entry';
           button.dataset.researchHistory = kind; button.dataset.recordId = id;
+          if (revision) button.dataset.recordRevision = String(revision);
           button.textContent = 'Synthetic history entry'; document.body.appendChild(button);
-        }, {kind, id});
+        }, {kind, id, revision});
         await page.locator('#synthetic-history-entry').click();
         await expect(detail.locator('dd').first()).toBeVisible();
+        return reads.slice(firstRead);
       }
+      async function showVersions() {
+        const disclosure = page.locator('#research-revision-versions');
+        if (!await disclosure.evaluate(node => node.open)) await disclosure.locator(':scope > summary').click();
+        await expect(page.locator('#research-revision-history-list [data-research-revision]')).toHaveCount(2);
+      }
+      const currentText = {claim: 'Current synthetic statement.', dossier: 'Current synthetic dossier body.',
+        evidence_link: 'Current synthetic evidence rationale.', claim_relation: 'Current synthetic relation rationale.',
+        decision: 'Current synthetic decision rationale.'};
       for (const [kind, id] of Object.entries(server.fixture.records)) {
-        await open(kind, id);
+        const opened = await open(kind, id);
+        await expect(detail).toContainText(currentText[kind]);
+        assert.equal(opened.filter(url => url.pathname === '/api/research/record' && url.searchParams.get('id') === id)[0].searchParams.get('revision'), null,
+          'An ordinary entry asks the record owner for current, without a historical pin');
+        assert.equal(opened.filter(url => url.pathname === '/api/research/history').length, 0,
+          'Opening an entry does not fetch its secondary version list');
+        assert.equal(await page.locator('#research-revision-versions').evaluate(node => node.open), false);
+        await expect(page.locator('#research-revision-history-list')).toBeHidden();
+        assert.equal(await dialog.locator('[role=tab]').first().getAttribute('id'), 'research-revision-history-tab',
+          'Reading is the primary entry mode');
+        const order = await dialog.evaluate(node => ({
+          fields: node.querySelector('#research-revision-history-detail dl').getBoundingClientRect().top,
+          provenance: node.querySelector('.research-revision-provenance').getBoundingClientRect().top,
+          versions: node.querySelector('#research-revision-versions > summary').getBoundingClientRect().top,
+          technical: node.querySelector('#research-revision-technical > summary').getBoundingClientRect().top,
+        }));
+        assert.ok(order.fields < order.provenance && order.fields < order.versions && order.fields < order.technical,
+          `The entry content precedes provenance, version navigation and technical details: ${JSON.stringify(order)}`);
         const reason = 'One synthetic ' + kind + ' change reason.';
         inventory.push({locale, width, kind, reasonOccurrences: (await dialog.innerText()).split(reason).length - 1,
           versionHeadings: await detail.locator('h4').allTextContents(), fields: await detail.locator('dt').allTextContents(),
@@ -87,6 +123,10 @@ server.serve_forever()
           assert.equal((await dialog.innerText()).split(reason).length - 1, 1, 'Selected change reason is presented once');
           assert.equal(await detail.locator('h4').filter({hasText: labels.research_revision_number.replace('{revision}', '2')}).count(), 0, 'Selected version belongs to one shared context, not a repeated detail heading');
           assert.equal(await page.locator('#research-revision-history-list small').count(), 0, 'Version navigation does not repeat change reasons');
+          await showVersions();
+          await expect(detail).toContainText(currentText[kind]);
+          assert.equal(await page.locator('#research-revision-history-list [data-research-revision]').first().getAttribute('data-research-revision'), '1',
+            'The real server history is deliberately presented with an earlier revision first');
           await expect(page.locator('#research-revision-history-list [data-research-revision="2"]')).toHaveAttribute('aria-description', labels.research_revision_correction);
           await expect(page.locator('#research-revision-history-list [data-research-revision="1"]')).toHaveAttribute('aria-description', labels.research_revision_original);
           await expect(page.locator('#research-revision-kind')).toContainText(labels.research_revision_current);
@@ -133,6 +173,7 @@ server.serve_forever()
         await page.keyboard.press('ArrowRight');
         await expect(page.locator('#research-revision-history-tab')).toBeFocused();
         await expect(page.locator('#research-revision-history-tab')).toHaveAttribute('aria-selected', 'true');
+        await showVersions();
         await page.locator('#research-revision-history-list [data-research-revision="1"]').click();
         await expect(page.locator('#research-revision-kind')).toContainText(labels.research_revision_earlier);
         await page.locator('#research-revision-history-tab').focus();
@@ -141,10 +182,21 @@ server.serve_forever()
         await expect(page.locator('#research-revision-field-statement')).toHaveValue('Unsaved synthetic draft.');
         await expect(page.locator('#research-revision-kind')).toContainText(labels.research_revision_current);
         await page.keyboard.press('End');
+        await expect(page.locator('#research-revision-edit-tab')).toBeFocused();
+        await expect(page.locator('#research-revision-field-statement')).toHaveValue('Unsaved synthetic draft.');
+        await page.keyboard.press('Home');
         await expect(page.locator('#research-revision-history-tab')).toBeFocused();
         await expect(page.locator('#research-revision-kind')).toContainText(labels.research_revision_earlier);
-        await page.keyboard.press('Home');
-        await expect(page.locator('#research-revision-edit-tab')).toBeFocused();
+        await dialog.locator('.modal-close').click();
+        const pinnedReads = await open('claim', server.fixture.records.claim, 1);
+        assert.equal(pinnedReads.find(url => url.pathname === '/api/research/record').searchParams.get('revision'), '1');
+        await expect(detail).toContainText('Original synthetic statement.');
+        await expect(page.locator('#research-revision-kind')).toContainText(labels.research_revision_earlier);
+        assert.equal(await page.locator('#research-revision-versions').evaluate(node => node.open), false,
+          'An explicitly pinned entry is readable without expanding version navigation');
+        await dialog.locator('.modal-close').click();
+        await open('claim', server.fixture.records.claim);
+        await expect(detail).toContainText('Current synthetic statement.');
         await dialog.locator('.modal-close').click();
         if (locale === 'en' && width === 1440) {
           // Malformed optional values are data: preserve explicit numeric

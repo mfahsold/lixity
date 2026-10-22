@@ -11,11 +11,18 @@
 .reader-size-controls output { min-width: 2ch; text-align: center; font-size: var(--text-small); }
 .reader-settings { position: relative; }
 .reader-settings > summary {
-  display: flex; align-items: center; cursor: pointer; list-style: none;
-  min-height: 2.5rem; padding: .45rem .65rem;
+  position: relative; display: flex; align-items: center; cursor: pointer; list-style: none;
+  min-height: 2.5rem; padding: .45rem 1.65rem .45rem .65rem;
   border: 1px solid transparent; border-radius: var(--radius-sm);
 }
 .reader-settings > summary::-webkit-details-marker { display: none; }
+.reader-settings > summary::after {
+  content: ""; position: absolute; inset-inline-end: .65rem; top: 50%;
+  width: .4rem; height: .4rem; border-inline-end: 1.5px solid currentColor;
+  border-block-end: 1.5px solid currentColor; color: var(--muted);
+  transform: translateY(-70%) rotate(45deg);
+}
+.reader-settings[open] > summary::after { transform: translateY(-30%) rotate(225deg); }
 .reader-settings-body {
   position: fixed; z-index: 15;
   display: grid; gap: .55rem; width: 16rem; max-width: calc(100vw - 2rem);
@@ -36,8 +43,7 @@
 .reader-analysis-controls .metric-layer-control > span { font-size: var(--text-note); color: var(--fg-secondary); }
 .reader-analysis-controls select { width: 100%; min-width: 0; }
 .reader-analysis-settings > summary { display: grid; gap: .1rem; max-width: 14rem; white-space: normal; line-height: 1.25; }
-.manuscript-reader-controls .reader-analysis-settings > summary { border: 1px solid var(--line); background: var(--surface); padding-inline-end: 1.35rem; }
-.reader-analysis-settings > summary::after { content: "▾"; position: absolute; right: .45rem; top: .65rem; color: var(--muted); }
+.manuscript-reader-controls .reader-analysis-settings > summary { border: 1px solid var(--line); background: var(--surface); }
 .reader-analysis-settings > summary > span + span { font-size: var(--text-note); }
 #reader-metric-state { color: var(--fg); }
 #reader-evidence-state { font-weight: var(--weight-semibold); }
@@ -46,6 +52,10 @@
 #analysis-evidence-status:empty { display: none; }
 .reader-analysis-settings:has(#analysis-evidence-status:not(:empty)) > summary { text-decoration: underline dotted; text-underline-offset: .25em; }
 .reader-paragraph-actions { display: none; }
+.reader-passage-context { padding-block-end: var(--space-4); border-bottom: 1px solid var(--line); margin-block-end: var(--space-4); }
+.reader-passage-tools { display: grid; gap: var(--space-2); grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); }
+.reader-passage-tools .ctl { min-width: 0; min-height: 44px; text-align: start; white-space: normal; }
+.reader-passage-tools [data-reader-action="evidence"] { color: var(--accent); background: var(--accent-light); border-color: color-mix(in srgb, var(--accent) 30%, var(--line)); }
 .manuscript-reading .manuscript-reader-controls { position: sticky; }
 body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: block; }
 .manuscript-reading:not(.workbench-overview) #analysis-review,

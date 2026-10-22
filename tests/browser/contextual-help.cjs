@@ -9,6 +9,8 @@ const {pythonFixture} = require('./support/python-fixture.cjs');
 
 const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-contextual-help-'));
+const settingsOnly = process.argv.includes('--settings-only');
+const touchOnly = process.argv.includes('--touch-only');
 const fixtures = pythonFixture(`
 import json
 from lixity import CorpusConfig
@@ -163,6 +165,99 @@ async function keyboardActions(page) {
   assert.equal(await page.locator('body').evaluate(node => node.classList.contains('text-search-active')), false);
 }
 
+async function hoverIntent(page) {
+  const y = page.viewportSize().height - 80;
+  await page.evaluate(top => {
+    const host = document.createElement('div'); host.id = 'synthetic-hover-intent';
+    Object.assign(host.style, {position: 'fixed', left: '12px', top: top + 'px', width: '220px', height: '60px', zIndex: '10000'});
+    host.textContent = 'Synthetic loading metadata'; document.body.appendChild(host);
+  }, y);
+  try {
+    await page.mouse.move(30, y + 20); await page.keyboard.press('Escape');
+    await page.evaluate(() => {
+      const metadata = document.createElement('span');
+      metadata.title = 'Synthetic exact timestamp'; metadata.textContent = 'Synthetic readable date';
+      Object.assign(metadata.style, {display: 'block', width: '100%', height: '100%'});
+      document.getElementById('synthetic-hover-intent').replaceChildren(metadata);
+    });
+    await settle(page);
+    const tip = page.locator('#lixity-tooltip');
+    await expect(tip).toHaveAttribute('aria-hidden', 'true');
+    await page.mouse.move(31, y + 20);
+    await expect(tip).toHaveAttribute('aria-hidden', 'false');
+    await expect(tip).toHaveText('Synthetic exact timestamp');
+    await page.keyboard.press('Escape');
+    await expect(tip).toHaveAttribute('aria-hidden', 'true');
+  } finally {
+    await page.mouse.move(0, 0);
+    await page.evaluate(() => document.getElementById('synthetic-hover-intent').remove());
+  }
+}
+
+async function touchAfterHoverDeparture(browser) {
+  const state = await createPage(browser, fixtures.en, 320), {page} = state;
+  try {
+    const now = new Date('2026-10-22T12:00:00Z');
+    await page.clock.install({time: now});
+    await page.clock.pauseAt(now);
+    await page.evaluate(() => {
+      const host = document.createElement('div'); host.id = 'synthetic-hover-departures';
+      Object.assign(host.style, {position: 'fixed', inset: '100px 0 auto', height: '150px', zIndex: '10000', background: 'white'});
+      document.body.appendChild(host);
+      window.syntheticHoverDepartures = 0;
+      host.addEventListener('mouseout', event => {
+        if (event.target.matches('.help')) window.syntheticHoverDepartures++;
+      });
+    });
+    const tip = page.locator('#lixity-tooltip');
+    for (const left of [20, 140]) {
+      await page.mouse.move(left + 20, 120);
+      await page.evaluate(left => {
+        const help = document.createElement('span'); help.className = 'help'; help.tabIndex = 0;
+        help.dataset.help = 'Synthetic hover context'; help.textContent = 'Hover context';
+        Object.assign(help.style, {position: 'absolute', left: left + 'px', top: '0', width: '80px', height: '45px'});
+        document.getElementById('synthetic-hover-departures').appendChild(help);
+      }, left);
+      await page.clock.runFor(20);
+      await page.mouse.move(left + 20, 120);
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
+      await page.mouse.move(left + 110, 120);
+    }
+    assert.equal(await page.evaluate(() => window.syntheticHoverDepartures), 2,
+      'Two real departures from reflowed inactive help precede the touch gesture');
+    await page.evaluate(() => {
+      const help = document.createElement('span'); help.className = 'help'; help.tabIndex = 0;
+      help.id = 'synthetic-touch-help'; help.dataset.help = 'Synthetic touch explanation'; help.textContent = 'Touch explanation';
+      Object.assign(help.style, {position: 'absolute', left: '20px', top: '70px', width: '220px', height: '45px'});
+      document.getElementById('synthetic-hover-departures').appendChild(help);
+    });
+    const help = page.locator('#synthetic-touch-help');
+    await help.focus(); await page.keyboard.press('Escape');
+    await expect(tip).toHaveAttribute('aria-hidden', 'true');
+    await help.tap();
+    await expect(tip).toHaveAttribute('aria-hidden', 'false');
+    await page.clock.runFor(200);
+    await expect(tip, 'Old hover departures cannot dismiss an explicitly opened touch explanation').toHaveAttribute('aria-hidden', 'false');
+    await help.tap();
+    await expect(tip).toHaveAttribute('aria-hidden', 'true');
+    await page.clock.runFor(1100);
+    await page.mouse.move(40, 190);
+    await expect(tip).toHaveAttribute('aria-hidden', 'false');
+    await page.mouse.move(280, 190);
+    await page.clock.runFor(200);
+    await expect(tip, 'A real mouse departure still dismisses its own hover explanation').toHaveAttribute('aria-hidden', 'true');
+    await page.locator('#synthetic-hover-departures').click({position: {x: 290, y: 130}});
+    await help.focus();
+    await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
+    await expect(help).toBeFocused();
+    await expect(tip).toHaveAttribute('aria-hidden', 'false');
+    await page.keyboard.press('Escape');
+    await expect(tip).toHaveAttribute('aria-hidden', 'true');
+    assert.deepEqual(state.errors, []); assert.deepEqual(state.writes, []);
+    assert.deepEqual(await manuscript(page), state.source);
+  } finally { await page.close(); }
+}
+
 async function adjacentToolbarActions(page, locale, width) {
   await page.locator('#chapters .ptext').nth(8).scrollIntoViewIfNeeded();
   const trigger = page.locator('#reader-focus'), tip = page.locator('#lixity-tooltip');
@@ -240,6 +335,88 @@ async function shortcutReference(page, labels, locale, width, height = 900) {
   assert.equal(await page.locator('#reader-settings').evaluate(node => node.open), false);
 }
 
+async function settingsGeometry(page, locale, width) {
+  const analysis = page.locator('#manuscript-analysis-toggle');
+  const wasEnabled = await analysis.getAttribute('aria-pressed') === 'true';
+  if (await analysis.getAttribute('aria-pressed') !== 'true') await analysis.click();
+  try {
+    for (const height of [480, 900]) {
+      await page.setViewportSize({width, height}); await settle(page);
+      for (const id of ['reader-settings', 'reader-analysis-settings']) {
+        await page.setViewportSize({width, height}); await settle(page);
+        const settings = page.locator('#' + id), summary = settings.locator(':scope > summary');
+        const closedArrow = await summary.evaluate(node => getComputedStyle(node, '::after').transform);
+        await summary.click(); await settle(page);
+        const body = settings.locator('.reader-settings-body');
+        const geometry = await settings.evaluate(node => {
+          const trigger = node.querySelector('summary').getBoundingClientRect();
+          const panel = node.querySelector('.reader-settings-body').getBoundingClientRect();
+          return {trigger: trigger.toJSON(), panel: panel.toJSON(),
+            arrow: getComputedStyle(node.querySelector('summary'), '::after').content,
+            transform: getComputedStyle(node.querySelector('summary'), '::after').transform,
+            overflow: node.querySelector('.reader-settings-body').scrollWidth > node.querySelector('.reader-settings-body').clientWidth};
+        });
+        const {trigger, panel} = geometry;
+        assert.ok(panel.bottom <= trigger.top || panel.top >= trigger.bottom,
+          `A reading dropdown leaves its own close trigger exposed: ${JSON.stringify({locale, width, height, id, geometry})}`);
+        assert.ok(panel.left >= 8 && panel.right <= width - 8 && panel.top >= 8 && panel.bottom <= height - 8,
+          'An anchored reading dropdown remains inside the viewport gutter');
+        assert.notEqual(geometry.arrow, 'none', 'Every reading dropdown has a visible disclosure affordance');
+        assert.notEqual(geometry.transform, closedArrow, 'The disclosure affordance shows its open state');
+        assert.equal(geometry.overflow, false, 'Localized controls wrap inside the anchored panel');
+        assert.equal(await page.locator('.reader-settings[open]').count(), 1);
+        await page.screenshot({path: path.join(artifacts, `${locale}-${width}-${height}-${id}.png`)});
+        if (height === 900) {
+          await page.setViewportSize({width, height: 480}); await settle(page);
+          const resized = await settings.evaluate(node => ({
+            trigger: node.querySelector('summary').getBoundingClientRect().toJSON(),
+            panel: node.querySelector('.reader-settings-body').getBoundingClientRect().toJSON(),
+          }));
+          assert.ok(resized.panel.bottom <= resized.trigger.top || resized.panel.top >= resized.trigger.bottom,
+            'An open reading dropdown keeps its trigger exposed after the viewport becomes short');
+          assert.ok(resized.panel.top >= 8 && resized.panel.bottom <= 472,
+            'An open reading dropdown recalculates its available scroll height after resize');
+        }
+        await summary.click();
+        assert.equal(await settings.evaluate(node => node.open), false, 'The same visible trigger closes its dropdown');
+        await expect(body).toBeHidden();
+      }
+    }
+  } finally {
+    const open = page.locator('.reader-settings[open] > summary');
+    if (await open.count()) {await open.focus(); await page.keyboard.press('Escape');}
+    if (!wasEnabled && await analysis.getAttribute('aria-pressed') === 'true') await analysis.click();
+  }
+}
+
+async function enlargedSettings(page, locale) {
+  await page.setViewportSize({width: 1440, height: 900});
+  await page.evaluate(() => scrollTo(0, 0)); await settle(page);
+  const summary = page.locator('#reader-settings > summary');
+  try {
+    await summary.click();
+    await page.setViewportSize({width: 390, height: 480}); await settle(page);
+    await page.evaluate(() => {document.documentElement.style.fontSize = '200%';});
+    await page.setViewportSize({width: 320, height: 480}); await settle(page);
+    const body = page.locator('#reader-settings .reader-settings-body');
+    const box = await body.boundingBox();
+    assert.ok(box && box.x >= 0 && box.x + box.width <= 320 && box.y >= 0 && box.y + box.height <= 480,
+      `An enlarged reading popup stays bounded when resizing puts its anchor outside the viewport: ${JSON.stringify({locale, box})}`);
+    await page.locator('#reader-spacing').scrollIntoViewIfNeeded();
+    const field = await page.locator('#reader-spacing').boundingBox();
+    assert.ok(field.y >= box.y && field.y + field.height <= box.y + box.height,
+      'The final enlarged reading setting remains reachable inside the popup');
+    await page.screenshot({path: path.join(artifacts, `${locale}-320-480-settings-enlarged.png`)});
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('#reader-settings').evaluate(node => node.open), false);
+  } finally {
+    await page.evaluate(() => {document.documentElement.style.fontSize = '';});
+    if (await page.locator('#reader-settings').evaluate(node => node.open)) {
+      await summary.focus(); await page.keyboard.press('Escape');
+    }
+  }
+}
+
 async function nativeControls(page, width, labels) {
   const activate = locator => width === 320 ? locator.tap() : locator.click();
   const analysis = page.locator('#manuscript-analysis-toggle');
@@ -304,10 +481,19 @@ async function nativeControls(page, width, labels) {
     catch (error) { failures.push(new Error(name + ': ' + error.message, {cause: error})); }
   }
   try {
-    for (const [locale, fixture] of Object.entries(fixtures)) for (const width of [1440, 320]) {
+    if (!settingsOnly) await touchAfterHoverDeparture(browser);
+    for (const [locale, fixture] of touchOnly ? [] : Object.entries(fixtures)) for (const width of [1440, 320]) {
       const state = await createPage(browser, fixture, width), {page} = state;
       try {
+        if (settingsOnly) {
+          await settingsGeometry(page, locale, width);
+          if (width === 320) await enlargedSettings(page, locale);
+          assert.deepEqual(state.errors, []); assert.deepEqual(state.writes, []);
+          assert.deepEqual(await manuscript(page), state.source);
+          continue;
+        }
         await check(`${locale} ${width} contextual help`, () => helpControls(page, fixture.labels, locale, width));
+        await hoverIntent(page);
         await check(`${locale} ${width} adjacent toolbar actions`, () => adjacentToolbarActions(page, locale, width));
         await check(`${locale} ${width} keyboard actions`, () => keyboardActions(page));
         await check(`${locale} ${width} keyboard reference`, () => shortcutReference(page, fixture.labels, locale, width));
@@ -316,12 +502,18 @@ async function nativeControls(page, width, labels) {
           await page.setViewportSize({width, height: 480}); await settle(page);
           await check(`${locale} ${width} short keyboard reference`, () => shortcutReference(page, fixture.labels, locale, width, 480));
         }
+        await settingsGeometry(page, locale, width);
+        if (width === 320) await enlargedSettings(page, locale);
         assert.deepEqual(state.errors, []); assert.deepEqual(state.writes, []);
         assert.deepEqual(await manuscript(page), state.source);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       } finally { await page.close(); }
     }
     if (failures.length) throw new AggregateError(failures, 'Contextual help regressions');
-    console.log('Contextual help: seven localized desktop/mobile control descriptions, focus/hover/Escape, bounded shortcuts, actual passage/search keys, native click/tap and unchanged source passed. Screenshots: ' + artifacts);
+    console.log((touchOnly
+      ? 'Contextual touch help: native rapid hover departures, explicit touch continuity, second-tap dismissal and mouse/keyboard transitions passed. Screenshots: '
+      : settingsOnly
+      ? 'Reading dropdowns: seven desktop/mobile locales, short viewport, anchored internal scrolling, open resize, disclosure state, native close and unchanged source passed. Screenshots: '
+      : 'Contextual help: seven localized desktop/mobile control descriptions, focus/hover/Escape, anchored dropdowns and bounded shortcuts, actual passage/search keys, native click/tap and unchanged source passed. Screenshots: ') + artifacts);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -126,7 +126,7 @@ async function identity(page) {
       await frames(page);
       assert.equal(await page.locator('#' + expected[0]).isVisible(), true);
       await page.locator('#' + expected[0] + ' [data-reader-paragraph]').click();
-      assert.ok((await page.locator('#manuscript-context-menu').textContent()).includes(fixture.labels.paragraph_values));
+      assert.ok((await page.locator('#manuscript-context-menu').textContent()).includes(fixture.labels.reading_explore_passage));
       await page.keyboard.press('Escape');
       await page.locator('#manuscript-analysis-toggle').click();
       assert.equal(await page.locator('#layer-legend').isVisible(), false);

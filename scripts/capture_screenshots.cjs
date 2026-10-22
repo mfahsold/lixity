@@ -532,7 +532,7 @@ async function main() {
           await flagRow.hover();
           await page.waitForTimeout(1200);
         }
-        await say('Open a paragraph to read its values and source lines');
+        await say('Explore a passage for its values and source lines');
         await page.locator('#workbench-overview-back').click();
         const paragraph = page.locator('#ch-1 .ptext').nth(2);
         await paragraph.locator('[data-reader-paragraph]').click();
@@ -558,7 +558,7 @@ async function main() {
         await paragraph.scrollIntoViewIfNeeded();
         assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'false');
         await page.waitForTimeout(1500);
-        await say('Open local Values for a passage and its source lines');
+        await say('Explore a passage and its source lines');
         await paragraph.locator('[data-reader-paragraph]').click();
         await page.locator('[data-reader-action=values]').click();
         assert.equal(await page.locator('#reader-inspector').isVisible(), true);

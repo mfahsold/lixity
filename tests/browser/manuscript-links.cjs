@@ -37,6 +37,11 @@ async function waitUntil(predicate) {
     await new Promise(resolve => setTimeout(resolve, 10));
   }
 }
+async function openVersions(page) {
+  const versions = page.locator('#research-revision-versions');
+  await versions.waitFor({state: 'visible'});
+  if (!await versions.evaluate(details => details.open)) await versions.locator(':scope > summary').click();
+}
 async function selectText(page, text) {
   await page.locator('#chapters .ptext .ptext-inner > p').first().evaluate((p, quote) => {
     const walker = document.createTreeWalker(p, NodeFilter.SHOW_TEXT), nodes = [];
@@ -58,7 +63,7 @@ async function selectText(page, text) {
     for (const width of [1440, 390, 320]) {
       const page = await browser.newPage({viewport: {width, height: 900}});
       page.setDefaultTimeout(10000);
-      const errors = [], writes = [], recordReads = []; let anchorState = 'moved', holdHistorical = false, historicalHeld, releaseHistorical;
+      const errors = [], writes = [], recordReads = []; let historyReads = 0, anchorState = 'moved', holdHistorical = false, historicalHeld, releaseHistorical;
       let holdCurrent = false, currentHeld, releaseCurrent, failCurrent = false;
       let holdHistoryList = false, historyListHeld = false, releaseHistoryList;
       let holdEditorial = false, editorialHeld = 0, releaseEditorial;
@@ -78,6 +83,7 @@ async function selectText(page, text) {
               anchor, anchor_state: anchorState, flags: [], resolved_start_line: anchor.start_line, resolved_end_line: anchor.end_line}]}});
         }
         if (url.pathname === '/api/research/history') {
+          ++historyReads;
           if (holdHistoryList) {
             historyListHeld = true;
             await new Promise(resolve => { releaseHistoryList = resolve; });
@@ -142,6 +148,9 @@ async function selectText(page, text) {
       await page.locator('#research-manuscript-review [data-research-history=claim]').click();
       const claimHistory = page.locator('#research-revision-history-detail');
       await claimHistory.getByText('Pinned original claim', {exact: true}).waitFor();
+      assert.equal(await page.locator('#research-revision-versions').evaluate(details => details.open), false,
+        'A pinned entry opens directly with its optional version list collapsed');
+      assert.equal(historyReads, 0, 'Opening an entry does not fetch its version list');
       assert.equal(recordReads[0].searchParams.get('revision'), '1',
         'Opening the saved association requests its pinned version before loading any newer claim evidence');
       assert.match(await claimHistory.textContent(), /dossier-original/,
@@ -171,6 +180,7 @@ async function selectText(page, text) {
       assert.equal(await editTitle.inputValue(), 'New explicit draft after current fields are ready',
         'Changing tabs after the current read preserves the author draft');
       await page.locator('#research-revision-history-tab').click();
+      await openVersions(page);
       await page.locator('#research-revision-history-list [data-research-revision="2"]').click();
       await claimHistory.getByText('Latest changed claim', {exact: true}).waitFor();
       assert.match(await claimHistory.textContent(), /Latest source quotation|dossier-latest/,
@@ -237,6 +247,7 @@ async function selectText(page, text) {
       assert.match(await thread.textContent(), /Latest changed claim.*Version 2.*current/i);
       holdHistoryList = true;
       await page.locator('#research-revision-history-tab').click();
+      await openVersions(page);
       await waitUntil(() => historyListHeld);
       await page.locator('#research-revision-edit-tab').click();
       await editTitle.fill('Unsaved draft while history loads');
@@ -244,13 +255,23 @@ async function selectText(page, text) {
       const currentThread = await thread.textContent();
       assert.match(currentMeta, /Version 2/i);
       assert.match(currentThread, /Latest changed claim.*Version 2.*current/i);
-      holdHistorical = true; historicalHeld = false;
+      const readsBeforeHistoryList = recordReads.length;
       holdHistoryList = false; releaseHistoryList();
-      await waitUntil(() => historicalHeld);
+      await page.locator('#research-revision-history-list [data-research-revision="1"]').waitFor({state: 'attached'});
+      assert.equal(recordReads.length, readsBeforeHistoryList,
+        'Loading the optional version list never chooses or reads another version automatically');
       assert.equal(await page.locator('#research-revision-kind').textContent(), currentMeta,
-        'A delayed History list cannot clear active Edit metadata while its hidden record loads');
+        'A delayed version list cannot clear active Edit metadata');
       assert.equal(await thread.textContent(), currentThread,
-        'A hidden history read cannot clear the active viewed current version');
+        'A hidden version list cannot replace the active viewed current version');
+      await page.locator('#research-revision-history-tab').click();
+      holdHistorical = true; historicalHeld = false;
+      await page.locator('#research-revision-history-list [data-research-revision="1"]').click();
+      await waitUntil(() => historicalHeld);
+      await page.locator('#research-revision-edit-tab').click();
+      assert.equal(await page.locator('#research-revision-kind').textContent(), currentMeta);
+      assert.equal(await thread.textContent(), currentThread,
+        'An explicitly requested historical read does not replace the active Edit identity');
       holdHistorical = false; releaseHistorical();
       await page.waitForFunction(() => document.querySelector('#research-revision-history-detail').textContent.includes('Pinned original claim'));
       assert.equal(await page.locator('#research-revision-edit-tab').getAttribute('aria-selected'), 'true');
@@ -438,7 +459,8 @@ async function selectText(page, text) {
         assert.equal(await page.locator('#research-manuscript-review-section').isVisible(), true, 'A bound manuscript reveals the review section');
         assert.equal(await reviewRows.count(), 1);
         const reviewText = await page.locator('#research-manuscript-review').textContent();
-        assert.match(reviewText, /1 saved associations/, 'The review count names the saved associations');
+        assert.equal(await page.locator('#research-manuscript-review > p').first().textContent(), '1 association',
+          'The review count names the manuscript association');
         assert.match(reviewText, /Exact passage/, 'Resolved anchors report their state');
         assert.match(reviewText, /Synthetic claim/, 'The pinned claim title stays visible');
         assert.equal(await page.locator('#research-manuscript-review blockquote').textContent(), 'safe selected');
@@ -528,7 +550,7 @@ async function selectText(page, text) {
             {moved: 'Moved passage: review required', adjusted: 'Adjusted paragraph, quote found: can be accepted',
               ambiguous: 'Multiple possible passages: review required',
               changed: 'Passage changed: review required', unavailable: 'Source unavailable: review required'}[anchorState]);
-          assert.match(await page.locator('#research-manuscript-review').textContent(), /Source bytes changed · Claim has a newer version/);
+          assert.match(await page.locator('#research-manuscript-review').textContent(), /Manuscript changed · Claim has a newer version/);
           assert.equal(await page.locator('#research-manuscript-review [data-manuscript-link-jump]').count(), 0, 'Unresolved anchors never offer an exact return');
           if (anchorState === 'moved' || anchorState === 'adjusted') {
             const accept = page.locator('#research-manuscript-review [data-manuscript-link-accept]').first();
