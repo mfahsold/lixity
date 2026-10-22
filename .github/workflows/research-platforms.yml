@@ -1,8 +1,14 @@
-# Cross-platform suites are local-first. Dispatch this workflow when a change
-# needs macOS or Windows evidence.
+# Cross-platform suites are local-first. Dispatch focused portability seams
+# when a change needs macOS/Windows evidence; request full research explicitly.
 name: research-platforms
 on:
   workflow_dispatch:
+    inputs:
+      scope:
+        description: Portability seams by default; full research/lifecycle suite only when needed
+        type: choice
+        default: portability
+        options: [portability, full]
 permissions:
   contents: read
 concurrency:
@@ -25,8 +31,12 @@ jobs:
           cache-dependency-path: pyproject.toml
       - run: python -m pip install . pytest
       - name: Install native PDF test dependencies
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && inputs.scope == 'full'
         run: brew install poppler
-      - name: Run research and packaged lifecycle suites on this platform
+      - name: Run targeted portability seams on this platform
+        if: inputs.scope != 'full'
+        run: python -m pytest tests -m portability -W error -q -p no:asyncio
+      - name: Run full research and packaged lifecycle suites on this platform
+        if: inputs.scope == 'full'
         run: >-
           python -c "from pathlib import Path; import pytest; patterns = ('test_research*.py', 'test_service*.py', 'test_server_startup.py', 'test_server_research*.py', 'test_launcher*.py'); tests = sorted({path for pattern in patterns for path in Path('tests').glob(pattern)}); assert tests, 'No platform tests found'; raise SystemExit(pytest.main([str(path) for path in tests] + ['-W', 'error', '-q', '-p', 'no:asyncio']))"

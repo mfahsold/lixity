@@ -12,6 +12,8 @@ from lixity.site_export import prepare_site
 from tests.test_research_images import png
 from tests.test_site_export import file_bytes, site_data
 
+pytestmark = pytest.mark.portability
+
 
 @pytest.fixture
 def publication_project(tmp_path):

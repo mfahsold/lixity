@@ -478,6 +478,16 @@ Without make, create the environment as above and use its Python to run
 Keep an editable engine checkout separate from manuscript folders; reuse the
 package rather than copying engine code into every book project.
 
+For contributors, `make check` is the everyday local source check and
+`make browser` covers rendered changes. Before preparing a release, use
+`make release-check RELEASE_TAG=vX.Y.Z`, plus `make browser-full` for UI changes.
+Heavy GitHub test/browser/platform workflows are manual fallbacks. Tagged
+releases still build/attest packages and then deploy Pages from the same published tag;
+manual Pages dispatch is a deliberate preview. A local Linux check does
+not replace Windows/macOS verification for platform-sensitive changes. See
+[contributor checks](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#development-setup)
+for the canonical paths and focused/manual-full platform options.
+
 ## Troubleshooting
 
 | Symptom | Action |

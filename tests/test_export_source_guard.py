@@ -7,6 +7,8 @@ import pytest
 from lixity.cli import main
 from lixity.io import FileUtils
 
+pytestmark = pytest.mark.portability
+
 
 @pytest.mark.parametrize('command', ['pdf', 'dashboard'])
 @pytest.mark.parametrize('alias', ['same', 'symlink', 'hardlink'])

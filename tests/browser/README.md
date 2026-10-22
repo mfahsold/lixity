@@ -12,13 +12,17 @@ make browser-full     # every suite, run before a release (3 workers)
 
 `--list` prints the suite names, `--group fast|full` selects the everyday core
 surfaces or everything, `--area NAME` runs one surface (`docs`, `research`,
-`analysis`, `project`, `tokens`), `--changed [BASE]` maps modified git paths
+`analysis`, `project`, `sharing`, `tokens`), `--changed [BASE]` maps modified git paths
 to the affected areas (falling back to the full set when a shared foundation
 changed), `--jobs N` runs independent suites in parallel, `--only NAME`
 selects suites and `--start NAME` resumes after a failure.
 
 Shared jump and tooltip changes select the full set: they affect research,
 dialogs and the generated demo as well as the manuscript surface.
+The `sharing` area covers the reading-website exporter, prepared transport,
+reader/companion rendering, publication settings and public examples. Use
+`--area sharing` for those boundaries; shared UI foundations still select the
+full set.
 
 Completed runs end with a summary of completed/selected suites, passed, failed,
 not run and elapsed time. Failures include a sorted list of suite names and exit

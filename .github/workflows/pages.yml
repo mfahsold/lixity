@@ -1,13 +1,12 @@
 name: pages
 on:
-  push:
-    branches: ["main"]
-    paths:
-      - "docs/**"
-      - "scripts/stage_pages.py"
-      - "src/lixity/ui/assets/design-tokens.css"
-      - ".github/workflows/pages.yml"
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      source_ref:
+        description: Verified release ref to publish
+        required: true
+        type: string
 permissions:
   contents: read
   pages: write
@@ -24,7 +23,14 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source_ref || github.ref }}
       - uses: actions/configure-pages@v6
+      - name: Verify generated documentation
+        run: |
+          python3 scripts/sync_docs.py --check
+          python3 scripts/build_llms_full.py --check
+          python3 scripts/build_guide_markdown.py --check
       - name: Stage public product documentation
         run: python3 scripts/stage_pages.py --output "$RUNNER_TEMP/lixity-pages"
       - uses: actions/upload-pages-artifact@v5

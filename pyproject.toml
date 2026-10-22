@@ -92,7 +92,10 @@ where = ["src"]
 lixity = ["py.typed", "ui/assets/*", "ui/assets/vendor/*"]
 
 [tool.pytest.ini_options]
-markers = ["native_pdf: requires real Poppler executables rather than synthetic subprocesses"]
+markers = [
+    "native_pdf: requires real Poppler executables rather than synthetic subprocesses",
+    "portability: filesystem, process and installed-package seams for focused Windows/macOS verification",
+]
 
 [tool.mypy]
 python_version = "3.10"

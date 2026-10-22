@@ -56,7 +56,7 @@ commands. The make targets create an isolated `.venv`; they do not alter global 
 make install-dev          # or: python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 make check                # ruff + mypy --strict + pytest -W error
 make browser              # everyday local Playwright checks (browser-full: all)
-make docs-check           # version pins, changelog, staged-site link integrity
+make docs-check           # standalone generated-doc and staged-site checks
 ```
 
 For the dashboard, use `make run` in the foreground, or `make start` and
@@ -72,22 +72,39 @@ RUFF_CACHE_DIR=/tmp/ruff_cache .venv/bin/ruff check src tests scripts
 .venv/bin/mypy --strict src
 ```
 
-Core CI (`.github/workflows/tests.yml`) is one `check` job on Python 3.12 for
-every pull request, push to `main` and manual dispatch: Ruff, `mypy` and the
-full suite with real Poppler PDF tests. Compatibility interpreters, browser
-regression suites and Windows/macOS suites are local-first. Run `make check`
-with each supported interpreter, `make browser` for rendered desktop/mobile
-workflows, and dispatch the manual `browser` or `research-platforms` workflow
-when a change needs an independent platform signal. Configure required status
-checks from `check`. Pip downloads are cached, and newer pushes cancel
-superseded runs.
+`make check` is the canonical everyday source check; it includes documentation
+Python tests in the full suite. Use `make browser` for UI changes and
+`make browser-full` before a release that changes rendered behavior. Browser
+selection and native desktop/mobile coverage are documented in
+[the browser entrypoint](tests/browser/README.md).
+
+GitHub's `tests`, `browser` and `research-platforms` workflows are manual
+fallbacks; pushes and pull requests do not automatically repeat these heavy
+suites. The `tests` workflow preserves Ruff, strict `mypy` and the full Python
+suite with Poppler on Linux/Python 3.12. Run relevant supported interpreters
+locally. Filesystem, process-lifecycle, packaging and native-tool changes also
+need Windows/macOS evidence, either on those systems or from a deliberately
+dispatched `research-platforms` run. A Linux pass does not establish equivalent
+Windows/macOS behavior.
+The platform workflow defaults to the central pytest `portability` marker
+(`python -m pytest tests -m portability -W error -q -p no:asyncio`), covering
+archive/filesystem, service observation, installed-package notices and read-only
+export seams. Select `scope=full` only when the full research/lifecycle suite is
+needed on both systems. The ordinary local full suite still runs every test;
+markers do not remove coverage from `make check`.
+
+When workflow files change, run `make workflow-check` with actionlint installed,
+or `make workflow-check ACTIONLINT=/path/to/actionlint`. This explicitly validates
+all `.github/workflows/*.yml` files and fails if the tool is unavailable; it is
+not a required Python dependency or part of the default source/release targets.
 
 Build artifacts with `make build`. The shared `scripts/check_release.py` builds
 the source archive and wheel in a fresh temporary directory, compares both
 packages' Python modules, typing marker and UI assets against source filenames
 and bytes, and checks exact version metadata. Only after validation does it
 replace managed `dist/` artifacts and write `SHA256SUMS`. Unrelated files or
-directories in `dist/` cause an error and are preserved. CI uses the same checker.
+directories in `dist/` cause an error and are preserved. The release workflow
+uses the same checker.
 The source archive also includes and verifies shared Python test fixtures.
 
 Native PDF tests need Poppler (`pdftotext` and `pdftoppm`) and report an explicit
@@ -95,7 +112,10 @@ skip if it is missing. Select them locally with `pytest -m native_pdf`.
 Synthetic worker and Tesseract protocol tests need no model or installed OCR engine.
 Optional hooks are installed with `pre-commit install`; see
 [`.pre-commit-config.yaml`](.pre-commit-config.yaml). Tags matching `v*` build
-release packages; authorized documentation pushes to `main` deploy Pages.
+release packages; after GitHub publication and a successful or intentionally
+skipped PyPI step, the release pipeline deploys Pages from the same tag.
+Main pushes do not publish unreleased documentation automatically;
+manual Pages dispatch remains available for a deliberate preview.
 
 ### Test architecture
 
@@ -151,14 +171,19 @@ pins (`make docs-sync`), run:
 make release-check RELEASE_TAG=vX.Y.Z
 ```
 
-This runs `make check` and `make docs-check`, builds fresh archives, requires an
-exact tag/source/wheel/sdist version match, and installs the wheel in a temporary
-isolated environment outside the checkout. It checks dependencies, CLI version
-and `about --json` metadata. The output is the verified wheel, source archive and
-`SHA256SUMS` in `dist/`. Recheck existing artifacts without rebuilding with
+This runs `make check` once, `make docs-generated-check` and the dependency audit,
+then builds fresh archives, requires an exact tag/source/wheel/sdist version match,
+and installs the wheel in a temporary
+isolated environment outside the checkout. It checks dependencies, CLI/distribution
+identity, diagnostics, all three reading-website formats and a neutral document PDF.
+The output is the verified wheel, source archive and
+`SHA256SUMS` in `dist/`. Full pytest already covers Pages/documentation tests;
+`docs-generated-check` adds check-only version-pin, bundle and guide-alternative
+validation without running those tests twice. `make docs-check` remains the
+complete standalone documentation check. Recheck existing artifacts without rebuilding with
 `.venv/bin/python scripts/check_release.py --tag vX.Y.Z --smoke`.
 
-Code-only releases can skip the generated documentation surfaces. When the UI
+Code-only releases can skip media regeneration. When the UI
 or the published guides change, regenerate them first with `make docs-sync`,
 `make examples` and `make screenshots` (and `make videos` for the walkthroughs).
 The documentation tests compare every bundled UI asset in all three public
@@ -167,23 +192,26 @@ version string still matches. Before rollout, verify the installed distribution
 and running service separately; rebuilding public pages does not update either.
 
 Preparation does not commit, tag, push or publish. After reviewing the changes
-and obtaining release authorization, run `make browser` for UI-affecting changes,
+and obtaining release authorization, complete `make browser-full` for UI-affecting releases,
 push the reviewed commit to `main` and its matching `vX.Y.Z` tag. The tag
 workflow only builds, verifies and smoke-installs the artifacts from the tag,
 attests them for `gh attestation verify`, attaches them to a draft release and
 publishes that draft only when every asset is present. The full source and
-documentation checks already ran locally through `make release-check` and in the
-`check` job. Verify a downloaded artifact with:
+documentation checks must already have passed locally through `make release-check`;
+the tag workflow does not rerun the heavy source/browser suites. Release build,
+smoke installation and attestation remain automatic; after GitHub publication
+and a successful or intentionally skipped PyPI step, the release pipeline
+deploys Pages from that exact tag.
+Verify a downloaded artifact with:
 
 ```bash
 gh attestation verify dist/lixity-X.Y.Z-py3-none-any.whl -R mfahsold/lixity
 ```
 
 Repository-level immutable releases are enabled, so published assets and tags
-cannot change afterwards. Prepare and review the release notes before tagging;
-to correct an already published release, disable the setting with
-`gh api --method DELETE repos/mfahsold/lixity/immutable-releases`, then enable
-it again afterwards.
+remain fixed. Prepare and review release notes before tagging. Corrected code or
+artifacts belong in a new patch release, preserving the earlier checksums and
+provenance.
 
 Every tagged release is distributed and archived automatically:
 
@@ -194,7 +222,12 @@ Every tagged release is distributed and archived automatically:
 - Zenodo archives each new release once the repository is enabled there, so
   released versions receive a DOI without a local step.
 
-Documentation deployment remains the separate Pages workflow. A new release with
+Documentation deployment uses the separate reusable Pages workflow, called for
+the published release tag after those publication steps. A PyPI catch-up dispatch
+also pins Pages to its selected existing tag. The `github-pages` environment must
+permit version tags (`v*`); existing branch policies remain separate. A manual
+Pages dispatch can deliberately preview an explicitly selected, permitted ref.
+A new release with
 a lower version number requires explicit version selection by installations
 already using a higher version; this workflow does not change package-manager
 ordering.
@@ -253,11 +286,13 @@ works in a checkout but breaks on Pages. The documentation tests validate links
 against the staged tree.
 
 Review staged paths and content for private data, local reports and planning.
-After an authorized push, verify CI and the public deployment.
+After an authorized tagged release or manual Pages preview, verify the public
+deployment and any explicitly dispatched test workflows. Ordinary pushes do not
+start the heavy test suites or deploy Pages.
 
-The Pages push-path filter does not currently watch `src/lixity/ui/assets/components.css`.
-After an authorized `main` push that changes only that shared stylesheet, deploy
-it manually with `gh workflow run pages.yml --ref main`, then verify the deployment.
+Shared component changes also affect staged Pages and embedded examples. Review
+them through the same local browser checks, then publish the release tag or use
+`gh workflow run pages.yml --ref main` for an authorized preview.
 
 The visual-consistency browser check covers palette, contrast, focus and enlarged
 text spacing; it is not a full accessibility audit. Ground design claims in

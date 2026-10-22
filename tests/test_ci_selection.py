@@ -85,3 +85,20 @@ class TestBrowserSuiteSelection(unittest.TestCase):
         self.assertEqual(suites_for_paths(["src/lixity/ui/dashboard.py"]), all_suites)
         self.assertEqual(suites_for_paths(["src/lixity/ui/new_panel.py"]), all_suites)
         self.assertEqual(suites_for_paths(["tests/browser/docs.cjs"]), ["docs.cjs"])
+
+    def test_reading_website_changes_select_their_native_and_public_journeys(self):
+        from scripts.run_browser_suites import AREAS, suite_names, suites_for_paths
+
+        expected = [name for name in suite_names() if name in AREAS["sharing"]]
+        self.assertIn("reader-publication-native.cjs", expected)
+        self.assertIn("site-publication-settings.cjs", expected)
+        self.assertIn("docs.cjs", expected)
+        self.assertNotIn("style-space.cjs", expected)
+        for path in (
+            "src/lixity/site_export.py", "src/lixity/site_contracts.py",
+            "src/lixity/site_publications.py", "src/lixity/server/routes_site.py",
+            "src/lixity/ui/publication.py", "src/lixity/ui/assets/read-only-site.js",
+            "src/lixity/ui/assets/reader-publication.css",
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(suites_for_paths([path]), expected)

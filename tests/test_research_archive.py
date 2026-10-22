@@ -13,6 +13,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from lixity.cli import main
 from lixity.research import api, archive
 from lixity.research.archive import export_archive, restore_archive
@@ -24,6 +26,8 @@ from lixity.research.repository import (
     digest,
     encode,
 )
+
+pytestmark = pytest.mark.portability
 
 
 class TestResearchArchive(unittest.TestCase):
@@ -161,8 +165,8 @@ else:
             Path("research/HEAD.json"),
             Path("research/project.json"),
             Path(f"research/manifests/{snapshot.digest}.json"),
-            original.record_path(snapshot.manifest.entries[0]).relative_to(self.project),
-            next((original.data / "blobs").iterdir()).relative_to(self.project),
+            original.record_path(snapshot.manifest.entries[0]).relative_to(original.root),
+            next((original.data / "blobs").iterdir()).relative_to(original.root),
             Path("research/new/nested/backup.tar.gz"),
             Path(".lixity/research"),
             Path(".lixity/research/writer.lock"),
@@ -183,6 +187,15 @@ else:
                 self.assertEqual(after, before)
                 self.assertEqual(lock.stat().st_ino, lock_inode)
                 self.assertEqual(list(project.rglob(".tmp-export-*")), [])
+
+    def test_export_protected_destinations_with_a_symlinked_project_root(self) -> None:
+        alias = self.root / "project-alias"
+        try:
+            alias.symlink_to(self.project, target_is_directory=True)
+        except OSError as exc:
+            self.skipTest(f"Directory symlinks unavailable: {exc}")
+        self.project = alias
+        self.test_export_rejects_store_and_cache_destinations_without_mutation()
 
     def test_export_rejects_symlink_aliases_into_store_and_cache(self) -> None:
         for index, relative in enumerate(("research", ".lixity/research", "research/HEAD.json")):

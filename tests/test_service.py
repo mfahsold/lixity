@@ -12,6 +12,8 @@ import pytest
 
 from lixity import __version__
 
+pytestmark = pytest.mark.portability
+
 
 def test_package_module_entrypoint_uses_the_installed_cli(tmp_path):
     source = Path(__file__).resolve().parents[1] / "src"

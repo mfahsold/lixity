@@ -182,14 +182,15 @@ def _software_notices() -> dict[str, bytes]:
     if license_path.is_file():
         files["licenses/Lixity-LICENSE"] = license_path.read_bytes()
     else:
-        try:
-            distribution = metadata.distribution("lixity")
+        # A checkout added to sys.path must not shadow the loaded installation.
+        for distribution in metadata.distributions(name="lixity", path=[str(package.parent)]):
             for entry in distribution.files or ():
-                if entry.name == "LICENSE" and "licenses" in entry.parts:
+                if (entry.parts and entry.parts[0].endswith(".dist-info")
+                        and entry.parts[1:] in (("LICENSE",), ("licenses", "LICENSE"))):
                     files["licenses/Lixity-LICENSE"] = Path(str(distribution.locate_file(entry))).read_bytes()
                     break
-        except metadata.PackageNotFoundError:
-            pass
+            if "licenses/Lixity-LICENSE" in files:
+                break
     if "licenses/Lixity-LICENSE" not in files:
         raise ResearchError("The installed Lixity license is unavailable; repair the installation before exporting")
     return files

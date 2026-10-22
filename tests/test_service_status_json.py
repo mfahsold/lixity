@@ -10,6 +10,8 @@ import pytest
 
 from lixity import __version__, api, cli, service
 
+pytestmark = pytest.mark.portability
+
 
 @pytest.fixture
 def isolated_status(tmp_path, monkeypatch):

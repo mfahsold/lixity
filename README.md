@@ -1,6 +1,6 @@
 # Lixity
 
-[![tests](https://github.com/mfahsold/lixity/actions/workflows/tests.yml/badge.svg)](https://github.com/mfahsold/lixity/actions)
+[![Checks: local-first](https://img.shields.io/badge/checks-local--first-blue)](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#development-setup)
 [![PyPI](https://img.shields.io/pypi/v/lixity)](https://pypi.org/project/lixity/)
 [![Downloads](https://img.shields.io/pypi/dm/lixity)](https://pypistats.org/packages/lixity)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23390297.svg)](https://doi.org/10.5281/zenodo.23390297)

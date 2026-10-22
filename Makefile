@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test browser browser-changed browser-full lint typecheck check audit build release-check screenshots videos examples clean docs-check docs-sync run start serve stop restart status
+.PHONY: help install install-dev test browser browser-changed browser-full lint typecheck workflow-check check audit build release-check screenshots videos examples clean docs-check docs-generated-check docs-sync run start serve stop restart status
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -6,6 +6,7 @@ VPY := $(VENV)/bin/python
 RUFF_CACHE ?= /tmp/ruff_cache
 MYPY_CACHE ?= /tmp/mypy_cache
 PYTEST_CACHE ?= /tmp/pytest_cache
+ACTIONLINT ?= actionlint
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -41,15 +42,18 @@ lint: ## Ruff lint (src, tests, scripts)
 typecheck: ## mypy --strict on the package
 	MYPY_CACHE_DIR=$(MYPY_CACHE) $(VENV)/bin/mypy --strict src
 
+workflow-check: ## Lint GitHub workflows (needs actionlint; override ACTIONLINT for its path)
+	"$(ACTIONLINT)" .github/workflows/*.yml
+
 audit: ## Dependency audit baseline (needs the dev extra with pip-audit)
 	$(VPY) -m pip_audit . --progress-spinner off
 
-check: lint typecheck test ## Everything CI cares about locally
+check: lint typecheck test ## Canonical local source checks: Ruff, strict mypy and the full test suite
 
 build: ## Build fresh source-verified sdist + wheel and checksums into dist/
 	$(VPY) scripts/check_release.py --build
 
-release-check: check docs-check audit ## Check source/docs and prepare release artifacts (RELEASE_TAG=vX.Y.Z)
+release-check: check docs-generated-check audit ## Local release gate; test once, check generated docs, audit and verify artifacts
 	@test -n "$(RELEASE_TAG)" || (echo "Set RELEASE_TAG=vX.Y.Z to match the source version"; exit 1)
 	$(VPY) scripts/check_release.py --build --smoke --tag "$(RELEASE_TAG)"
 
@@ -63,12 +67,13 @@ videos: ## Record and publish the walkthrough videos (needs Chromium and ffmpeg)
 examples: ## Regenerate the published example reports and their PDFs
 	PYTHONPATH=src $(VPY) scripts/build_examples.py
 
-docs-check: ## Check documentation version consistency and link integrity
+docs-generated-check: ## Check generated version pins, documentation bundle and guide alternatives
 	$(PYTHON) scripts/sync_docs.py --check
 	$(PYTHON) scripts/build_llms_full.py --check
 	$(PYTHON) scripts/build_guide_markdown.py --check
-	PYTHONPATH=src $(VPY) -m pytest tests/test_pages.py tests/test_guide_markdown.py -q -W error -p no:asyncio -o cache_dir=$(PYTEST_CACHE)
-	PYTHONPATH=src $(VPY) -m pytest tests/test_documentation.py -W error -q -p no:asyncio -o cache_dir=$(PYTEST_CACHE)
+
+docs-check: docs-generated-check ## Standalone documentation checks, including staged-site links and generated content
+	PYTHONPATH=src $(VPY) -m pytest tests/test_pages.py tests/test_guide_markdown.py tests/test_documentation.py -q -W error -p no:asyncio -o cache_dir=$(PYTEST_CACHE)
 
 docs-sync: ## Synchronize documentation version references to match __version__
 	$(PYTHON) scripts/sync_docs.py

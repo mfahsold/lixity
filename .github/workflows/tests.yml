@@ -1,8 +1,7 @@
+# Full source checks run locally with `make check`; retain this job as an
+# explicitly dispatched fallback instead of repeating it on every push or PR.
 name: tests
 on:
-  push:
-    branches: ["main"]
-  pull_request:
   workflow_dispatch:
 permissions:
   contents: read

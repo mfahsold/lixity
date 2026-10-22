@@ -16,6 +16,8 @@ from lixity.research import api
 from lixity.research.repository import Repository, ResearchError
 from tests.test_research_images import png
 
+pytestmark = pytest.mark.portability
+
 
 def exporter():
     assert importlib.util.find_spec('lixity.site_export') is not None, 'Project website export is missing'

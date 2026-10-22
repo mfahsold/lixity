@@ -4,7 +4,7 @@
 Every ``tests/browser/*.cjs`` file is an independent suite. ``--group fast``
 runs the everyday core surfaces; ``--group full`` (the default) runs every
 suite and belongs before a release. ``--area NAME`` runs the suites for one
-surface (``docs``, ``research``, ``analysis``, ``project``, ``tokens``), and
+surface (``docs``, ``research``, ``analysis``, ``project``, ``sharing``, ``tokens``), and
 ``--changed`` maps changed git paths to the affected areas (falling back to the
 full set when a shared renderer or unknown UI path changed). ``--jobs N`` runs
 N independent suites in parallel and keeps the machine reasonably busy; the
@@ -51,6 +51,14 @@ GROUPS: dict[str, tuple[str, ...]] = {
 # Surface areas for targeted runs (--area and --changed). Every suite belongs
 # to at least one area; tests/test_ci_selection.py verifies complete coverage.
 AREAS: dict[str, tuple[str, ...]] = {
+    "sharing": (
+        "read-only-site.cjs",
+        "read-only-site-data.cjs",
+        "reader-publication.cjs",
+        "reader-publication-native.cjs",
+        "site-publication-settings.cjs",
+        "docs.cjs",
+    ),
     "docs": (
         "docs.cjs",
         "pages-analytics.cjs",
@@ -149,6 +157,11 @@ AREAS: dict[str, tuple[str, ...]] = {
 PATH_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("docs/*", ("docs",)),
     ("scripts/stage_pages.py", ("docs",)),
+    ("src/lixity/site_*.py", ("sharing",)),
+    ("src/lixity/server/routes_site.py", ("sharing",)),
+    ("src/lixity/ui/publication.py", ("sharing",)),
+    ("src/lixity/ui/assets/read-only-site.js", ("sharing",)),
+    ("src/lixity/ui/assets/reader-publication.*", ("sharing",)),
     ("src/lixity/ui/assets/design-tokens.css", ("tokens",)),
     ("src/lixity/ui/assets/components.css", ("tokens", "analysis", "project")),
     ("src/lixity/ui/assets/research*", ("research",)),
@@ -165,7 +178,7 @@ PATH_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("src/lixity/ui/modals.py", ("project", "research")),
     ("src/lixity/ui/settings.py", ("project",)),
     ("src/lixity/ui/assets/register-settings.js", ("project",)),
-    ("src/lixity/ui/assets/site-publication-settings.js", ("project",)),
+    ("src/lixity/ui/assets/site-publication-settings.js", ("project", "sharing")),
     ("src/lixity/server/routes_project.py", ("project",)),
     ("src/lixity/server/routes_nda.py", ("project",)),
     ("src/lixity/ui/assets/interactions.js", ("full",)),
