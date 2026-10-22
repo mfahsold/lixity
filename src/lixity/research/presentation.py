@@ -10,6 +10,44 @@ from rich.console import Console
 from ..format import safe_text as safe_text
 
 
+def revision_write_summary(result: dict[str, Any], *, expected_revision: int) -> dict[str, Any]:
+    """Project an existing write result without copying authored content or re-reading."""
+    preview = result["schema_version"] == "research-revision-write-preview-local/1"
+    record = result["candidate" if preview else "record"]
+    changed = record["revision"] != expected_revision
+    summary = {
+        "schema_version": "research-revision-write-summary-local/1",
+        **{key: result[key] for key in ("project_id", "snapshot", "kind", "record_id")},
+        "dry_run": preview, "ready": True, "changed": changed,
+        "base_revision": expected_revision,
+        "change": record.get("change") if changed else None,
+    }
+    if preview:
+        summary["candidate_revision"] = record["revision"]
+        summary["changed_fields"] = [field["field"] for field in result["fields"]]
+    else:
+        summary["revision"] = record["revision"]
+    if "warnings" in result:
+        summary["warnings"] = result["warnings"]
+    return summary
+
+
+def revision_write_report(result: dict[str, Any]) -> str:
+    """Describe a compact result without treating a preview as an accepted version."""
+    if not result["changed"]:
+        status = f"No changes · version {result.get('candidate_revision', result.get('revision'))}"
+    elif result["dry_run"]:
+        status = f"Preview ready · would create version {result['candidate_revision']}"
+    else:
+        status = f"Saved version {result['revision']}"
+    lines = [f"{status} · {safe_text(result['record_id'])}"]
+    if result.get("changed_fields"):
+        lines.append("Changed fields: " + ", ".join(safe_text(field) for field in result["changed_fields"]))
+    if result.get("warnings"):
+        lines.append("Warnings: " + safe_text(result["warnings"]))
+    return "\n".join(lines) + "\n"
+
+
 def _safe(value: Any, *, markdown: bool) -> str:
     text = safe_text(value)
     if markdown:

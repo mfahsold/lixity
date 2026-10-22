@@ -29,6 +29,11 @@ Lixity is a local workbench for authors. Explore language patterns and keep
 sources, claims and notes beside your manuscript. Try an invented example in
 your browser before installing the app for your own writing.
 
+> **Version line:** The current release is **v0.7.4**, in the pre-1.0 **0.x** line.
+> Historical **1.x** and **3.x** tags predate the numbering reset; use the current
+> release rather than the numerically largest tag. Product, JSON response and
+> archive schema versions are independent.
+
 [Open the example manuscript](https://mfahsold.github.io/lixity/demo/report.html) ·
 [Take the short tour](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Install Lixity](https://mfahsold.github.io/lixity/guides/installation.html)
@@ -90,6 +95,8 @@ does not update an already running service.
 
 The browser app, CLI and Python API share one analysis pipeline;
 `lixity --help` and `lixity about --json` describe installed capabilities.
+Current main (unreleased after v0.7.4) adds `--body-only` section exports and
+`--compact` update receipts; see the [section-editing workflow](https://mfahsold.github.io/lixity/research/USAGE.md#work-on-one-dossier-section).
 
 Turn **Analysis** on beside the text, choose a metric and inspect its counted
 passages through hover, touch or the paragraph menu. The same literal evidence
@@ -129,9 +136,7 @@ their own projects.
 
 ## Release, citation and license
 
-The current release is **v0.7.4**, in the pre-1.0 development line. Historical
-v3.0.1 and earlier tags remain available. Product and schema versions are
-independent; [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.4.md)
+[Release notes](https://mfahsold.github.io/lixity/releases/v0.7.4.md)
 cover archive compatibility and upgrades. See the
 [changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md) for subsequent work.
 The public demo uses the same interface as v0.7.4, with a fictional project and
@@ -162,6 +167,8 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/llms.txt
 > research records also contain generated IDs and timestamps.
 
 Current release: 0.7.4; release tag: v0.7.4.
+The current 0.x product line follows a numbering reset; historical 1.x/3.x tags
+are older. Product, response and archive schema numbers are independent.
 
 This discovery index links maintained references. The public demo follows current
 main; published guides can describe newer behavior than an installed release.
@@ -306,6 +313,14 @@ the existing revision store. Dossier `--file` requires a readable UTF-8 file;
 literal text uses `--body`. See [research revisions](https://mfahsold.github.io/lixity/research/USAGE.md#update-one-reviewed-record)
 and [character profiles](https://mfahsold.github.io/lixity/USAGE.md#character-profiles)
 for the supported v0.7.1 workflows and compatibility limits.
+
+**Current main (unreleased after v0.7.4):** selected dossier reads add
+`section_level`; `--section HEADING --format text --body-only` exports selected
+content without display metadata. `--update [--dry-run] --compact` on authored
+records provides an opt-in receipt (`research-revision-write-summary-local/1`)
+while default full JSON remains unchanged. See the
+[section roundtrip](https://mfahsold.github.io/lixity/research/USAGE.md#work-on-one-dossier-section)
+and [automation contracts](https://mfahsold.github.io/lixity/AGENTS.md).
 
 **Since v0.7.2:** UI and CLI explain map/style-space measurements
 in place; additive `geography_summary` and `dimension_diagnostics` expose their
@@ -581,6 +596,11 @@ integrations. See [licensing](LICENSING.md) before installation.
 Analysis runs offline; downloading Python, the package and dependencies requires
 network access. No manuscript upload, account or API key is required.
 
+> **Version line:** The current release is **v0.7.4**, in the pre-1.0 **0.x** line.
+> Historical **1.x** and **3.x** tags predate the product-number reset; a larger
+> historical number does not mean a newer release. Product, JSON response and
+> archive schema versions are independent.
+
 ## Where Lixity is published
 
 | Channel | Use it for | Notes |
@@ -613,7 +633,7 @@ lixity doctor
 lixity service start --open
 ```
 
-The current release is **v0.7.4**. See the [release notes](releases/v0.7.4.md)
+See the [release notes](releases/v0.7.4.md)
 for changes and compatibility. `uv tool update-shell` configures new terminals;
 it does not change the terminal already open.
 
@@ -713,6 +733,9 @@ version, then run `lixity service restart --open` to reuse the recorded launch
 settings. A checkout, installed package and running service can contain different
 code even when `--version` matches: unreleased commits retain the release number.
 Reload browser tabs after the restart.
+
+Current main (unreleased after v0.7.4) includes `--body-only` section exports and
+`--compact` update receipts; see the [section-editing workflow](research/USAGE.md#work-on-one-dossier-section).
 
 </details>
 
@@ -2823,6 +2846,7 @@ or extend language-specific linguistic validation.
 - [Read sources and connect claims](#reading-and-cli-workflows) — evidence, quotations and the manuscript companion.
 - [Read entries and versions](#read-entries-and-earlier-versions-without-losing-context) — current records and explicit earlier pins.
 - [Edit a dossier](#edit-an-exported-markdown-dossier) — a reviewed Markdown round trip, without overwriting the archive.
+- [Edit one section](#work-on-one-dossier-section) — read, compare, validate and save a bounded change.
 - [Review decisions](#review-decisions-and-save-related-revisions-together) — compare context and explicitly acknowledge a reviewed version.
 - [Place claims in time](#claim-chronology-and-causeeffect-links) — authored dates and causal connections; missing dates stay unplaced.
 - [Use Zotero](#zotero-desktop-bridge) or [OCR](#self-hosted-pdf-and-ocr-extraction) — optional capture tools and their data boundaries.
@@ -3329,6 +3353,8 @@ lixity research review --project ./novel --json
 ```
 
 Human reports bound long lists/findings; request JSON for the complete payload.
+`audit --format text` provides a human integrity report with scope, record totals
+and bounded findings; audit remains read-only.
 Output formats/defaults are command-specific: inspect `--help` or
 `lixity about --json`. `--pager` requires explicit use with a human format and
 interactive input/output; pipes never start one. Progress phases use stderr,
@@ -3357,6 +3383,15 @@ When omitted, the backend checks the reviewed target revision and uses that
 read's snapshot for the strict commit. Earlier unrelated writes are allowed;
 changed targets and later races fail without retry or rebase. An explicit
 snapshot guards the entire archive, including unrelated changes.
+
+**Current main (unreleased after v0.7.4):** add `--compact` to
+`--update [--dry-run]` on `dossier`, `claim`, `link-evidence`, `decision` or
+`relate` for a short receipt without the record body. The opt-in CLI schema is
+`research-revision-write-summary-local/1`; warnings are retained. Previews report
+`candidate_revision` and `changed_fields`; applied results report accepted
+`revision`. Unchanged requests report `changed: false`, `change: null` without
+advancing HEAD. Default JSON and Python/HTTP responses remain complete.
+`--format text --compact` gives a human receipt on `dossier`, `claim` and `decision`.
 
 Since v0.7.2, a validated authored update whose normalized content is unchanged
 returns the existing record and revision. It does not advance the archive HEAD
@@ -3421,8 +3456,17 @@ restored draft link retains the revision you inspected.
 Bounded reads accept named IDs, positional IDs and `show`/`inspect`
 with the same section/summary/citation controls, including `--revision N`.
 Section and summary are distinct modes; summary and citation omission apply only
-to reads. Unbounded inspection keeps its record envelope. Section edits still use
+to reads. `--summary` bounds the read's body excerpt, not mutation output.
+Unbounded inspection keeps its record envelope. Section edits still use
 the ordinary revision workflow below.
+
+**Current main (unreleased after v0.7.4):** human section reads preserve the
+selected heading's original level. Add `--body-only` to a selected
+`--section ... --format text` read to export only its content as UTF-8 Markdown,
+including nested headings, without the dossier title, version or selected heading.
+It adds no final newline. The ordinary human display is not a replacement file:
+copying its title/version/heading into `--file` would store that display metadata
+as section content. JSON remains the default and keeps its existing fields.
 
 In a dossier, choose **Edit section** beside an unambiguous heading. The existing
 revision editor opens that section's content, including its subsections. It keeps
@@ -3450,6 +3494,116 @@ is appropriate. JSON/API comparisons and ordinary mutation output are unchanged.
 Preparation can combine section text and ordinary metadata changes through the
 same revision path; unrelated current sections survive. Python entrypoints and
 result contracts are in the [automation reference](../AGENTS.md#51-research-api-lixityresearchapi).
+
+#### Read, edit and verify a section
+
+This Bash example uses invented notes in a new scratch directory. The
+`--body-only` and `--compact` steps require the unreleased behavior described above.
+
+```sh
+cat > notes.md <<'MD'
+# Harbour notes
+
+## Timeline
+
+The ferry leaves at dawn.
+
+### Crossing
+
+Allow two hours.
+
+## Characters
+
+Mira keeps the blue notebook.
+MD
+lixity research init --project ./section-demo --title "Section editing demo" --language en
+lixity research dossier --project ./section-demo --title "Harbour notes" --file notes.md
+```
+
+Creation returns JSON. Replace `DOSSIER_ID` below with its full `dossier_id`.
+Read the current section and record the displayed revision, then export the
+editable content and a comparison copy of its sibling:
+
+```sh
+lixity research dossier DOSSIER_ID --project ./section-demo --section Timeline --format text
+lixity research dossier DOSSIER_ID --project ./section-demo --section Timeline --format text --body-only > timeline.md
+lixity research dossier DOSSIER_ID --project ./section-demo --section Characters --format text --body-only > characters.before.md
+```
+
+The first command prints:
+
+```text
+# Harbour notes
+
+Version 1
+
+## Timeline
+
+The ferry leaves at dawn.
+
+### Crossing
+
+Allow two hours.
+```
+
+`timeline.md` contains only the content below `## Timeline`. Edit that file,
+retaining any nested headings you want to keep. For this example, replace it with:
+
+```sh
+cat > timeline.md <<'MD'
+The ferry leaves at noon.
+
+### Crossing
+
+Allow three hours.
+MD
+lixity research dossier DOSSIER_ID --project ./section-demo --section Timeline \
+  --file timeline.md --diff --format text
+```
+
+The preview reports `H2 'Timeline' includes 1 descendant heading` and shows
+`The ferry leaves at dawn.` → `The ferry leaves at noon.` and
+`Allow two hours.` → `Allow three hours.`. Inspect the whole diff, including
+the unchanged neighboring heading. Compare first, then validate the intended write
+against the revision you read:
+
+```sh
+lixity research dossier DOSSIER_ID --project ./section-demo --section Timeline \
+  --file timeline.md --update --dry-run --expected-revision 1 \
+  --change-kind correction --reason "Corrected synthetic ferry timing" --compact --format text
+```
+
+Exit 0 validates this request without writing. The compact preview prints the
+following, with your full ID in place of `DOSSIER_ID`:
+
+```text
+Preview ready · would create version 2 · DOSSIER_ID
+Changed fields: body
+```
+
+Version 2 is a candidate; a dry-run does not reserve revision 1. To save the same
+reviewed request:
+
+```sh
+lixity research dossier DOSSIER_ID --project ./section-demo --section Timeline \
+  --file timeline.md --update --expected-revision 1 --change-kind correction \
+  --reason "Corrected synthetic ferry timing" --compact --format text
+lixity research dossier DOSSIER_ID --project ./section-demo --section Timeline --format text
+lixity research dossier DOSSIER_ID --project ./section-demo --section Characters --format text --body-only > characters.after.md
+cmp characters.before.md characters.after.md
+```
+
+The write prints `Saved version 2 · DOSSIER_ID`; it does not echo the dossier body.
+The section read shows `Version 2`, the noon departure and three-hour crossing.
+`cmp` exits 0 without output: the sibling still contains exactly
+`Mira keeps the blue notebook.`. Revision 1 remains readable with `--revision 1`.
+
+If another writer changes this dossier after your read, the guarded update fails
+without saving. Read the new revision and use the [draft conflict workflow](#resolve-conflicting-drafts)
+with `--prepare --base-revision 1` to review your file against it; repeat comparison
+and validation with the resulting reviewed revision. Other dossier revisions can
+advance independently when `--expected-snapshot` is omitted. Adding that snapshot
+also rejects unrelated archive changes.
 
 ### Edit an exported Markdown dossier
 
@@ -7261,6 +7415,17 @@ withdrawn evidence while preserving full-paragraph citation semantics.
   after the comment is the unchanged body suffix. Unknown/duplicate keys fail.
   This is authored-record exchange, not source ingest or automatic synchronization.
 
+**Unreleased, after v0.7.4:** `--update [--dry-run] --compact` on `dossier`,
+`claim`, `link-evidence`, `decision` and `relate` projects the existing result as
+`research-revision-write-summary-local/1`, without another archive read. Fields
+are `project_id`, `snapshot`, `kind`, `record_id`, `dry_run`, `ready`, `changed`,
+`base_revision` and `change` (null for a no-op). A preview has
+`candidate_revision` and exact `changed_fields`; an applied result has `revision`
+instead. A candidate is not an accepted version. Claim `warnings` are retained;
+authored bodies and comparison values are omitted. The default JSON and Python
+revision contracts above are unchanged. Existing text output formats also accept
+`--compact`; `--summary` remains a separate dossier read option.
+
 CLI aliases and bare UUIDv4 normalization are input conveniences, not new domain
 identifiers. Exact arguments belong to installed help; the [Markdown workflow](research/USAGE.md#edit-an-exported-markdown-dossier)
 owns file creation, preview and explicit application.
@@ -7562,6 +7727,16 @@ for a bounded exact-version read. Full/section/summary reads include `project_id
 source/version pins with `available|withdrawn|purged|missing` status; unavailable
 entries have no image URL. Historical reads resolve the pinned image version,
 not the latest source. Record/history dossier envelopes also include `images`.
+
+**Unreleased, after v0.7.4:** selected dossier reads additionally report
+`section_level` (1–6 for an actual ATX heading, null for an implicit preamble).
+Human section reads preserve that level. CLI `--section HEADING --format text
+--body-only` emits only the selected `content` as UTF-8, without a display wrapper,
+selected heading or appended newline. Existing surrounding CR/LF trimming and
+descendant headings are retained. Use an actual unique `editable_sections` target
+for updates; an implicit preamble is only a read selection. Redirect source
+containing terminal controls or Unicode formatting to a file; raw unsafe terminal
+output is refused. See the [section roundtrip](research/USAGE.md#work-on-one-dossier-section).
 
 Local image endpoints:
 

@@ -9,6 +9,11 @@ integrations. See [licensing](LICENSING.md) before installation.
 Analysis runs offline; downloading Python, the package and dependencies requires
 network access. No manuscript upload, account or API key is required.
 
+> **Version line:** The current release is **v0.7.4**, in the pre-1.0 **0.x** line.
+> Historical **1.x** and **3.x** tags predate the product-number reset; a larger
+> historical number does not mean a newer release. Product, JSON response and
+> archive schema versions are independent.
+
 ## Where Lixity is published
 
 | Channel | Use it for | Notes |
@@ -41,7 +46,7 @@ lixity doctor
 lixity service start --open
 ```
 
-The current release is **v0.7.4**. See the [release notes](releases/v0.7.4.md)
+See the [release notes](releases/v0.7.4.md)
 for changes and compatibility. `uv tool update-shell` configures new terminals;
 it does not change the terminal already open.
 
@@ -141,6 +146,9 @@ version, then run `lixity service restart --open` to reuse the recorded launch
 settings. A checkout, installed package and running service can contain different
 code even when `--version` matches: unreleased commits retain the release number.
 Reload browser tabs after the restart.
+
+Current main (unreleased after v0.7.4) includes `--body-only` section exports and
+`--compact` update receipts; see the [section-editing workflow](research/USAGE.md#work-on-one-dossier-section).
 
 </details>
 

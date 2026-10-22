@@ -39,6 +39,7 @@ or extend language-specific linguistic validation.
 - [Read sources and connect claims](#reading-and-cli-workflows) — evidence, quotations and the manuscript companion.
 - [Read entries and versions](#read-entries-and-earlier-versions-without-losing-context) — current records and explicit earlier pins.
 - [Edit a dossier](#edit-an-exported-markdown-dossier) — a reviewed Markdown round trip, without overwriting the archive.
+- [Edit one section](#work-on-one-dossier-section) — read, compare, validate and save a bounded change.
 - [Review decisions](#review-decisions-and-save-related-revisions-together) — compare context and explicitly acknowledge a reviewed version.
 - [Place claims in time](#claim-chronology-and-causeeffect-links) — authored dates and causal connections; missing dates stay unplaced.
 - [Use Zotero](#zotero-desktop-bridge) or [OCR](#self-hosted-pdf-and-ocr-extraction) — optional capture tools and their data boundaries.
@@ -545,6 +546,8 @@ lixity research review --project ./novel --json
 ```
 
 Human reports bound long lists/findings; request JSON for the complete payload.
+`audit --format text` provides a human integrity report with scope, record totals
+and bounded findings; audit remains read-only.
 Output formats/defaults are command-specific: inspect `--help` or
 `lixity about --json`. `--pager` requires explicit use with a human format and
 interactive input/output; pipes never start one. Progress phases use stderr,
@@ -573,6 +576,15 @@ When omitted, the backend checks the reviewed target revision and uses that
 read's snapshot for the strict commit. Earlier unrelated writes are allowed;
 changed targets and later races fail without retry or rebase. An explicit
 snapshot guards the entire archive, including unrelated changes.
+
+**Current main (unreleased after v0.7.4):** add `--compact` to
+`--update [--dry-run]` on `dossier`, `claim`, `link-evidence`, `decision` or
+`relate` for a short receipt without the record body. The opt-in CLI schema is
+`research-revision-write-summary-local/1`; warnings are retained. Previews report
+`candidate_revision` and `changed_fields`; applied results report accepted
+`revision`. Unchanged requests report `changed: false`, `change: null` without
+advancing HEAD. Default JSON and Python/HTTP responses remain complete.
+`--format text --compact` gives a human receipt on `dossier`, `claim` and `decision`.
 
 Since v0.7.2, a validated authored update whose normalized content is unchanged
 returns the existing record and revision. It does not advance the archive HEAD
@@ -637,8 +649,17 @@ restored draft link retains the revision you inspected.
 Bounded reads accept named IDs, positional IDs and `show`/`inspect`
 with the same section/summary/citation controls, including `--revision N`.
 Section and summary are distinct modes; summary and citation omission apply only
-to reads. Unbounded inspection keeps its record envelope. Section edits still use
+to reads. `--summary` bounds the read's body excerpt, not mutation output.
+Unbounded inspection keeps its record envelope. Section edits still use
 the ordinary revision workflow below.
+
+**Current main (unreleased after v0.7.4):** human section reads preserve the
+selected heading's original level. Add `--body-only` to a selected
+`--section ... --format text` read to export only its content as UTF-8 Markdown,
+including nested headings, without the dossier title, version or selected heading.
+It adds no final newline. The ordinary human display is not a replacement file:
+copying its title/version/heading into `--file` would store that display metadata
+as section content. JSON remains the default and keeps its existing fields.
 
 In a dossier, choose **Edit section** beside an unambiguous heading. The existing
 revision editor opens that section's content, including its subsections. It keeps
@@ -666,6 +687,116 @@ is appropriate. JSON/API comparisons and ordinary mutation output are unchanged.
 Preparation can combine section text and ordinary metadata changes through the
 same revision path; unrelated current sections survive. Python entrypoints and
 result contracts are in the [automation reference](../AGENTS.md#51-research-api-lixityresearchapi).
+
+#### Read, edit and verify a section
+
+This Bash example uses invented notes in a new scratch directory. The
+`--body-only` and `--compact` steps require the unreleased behavior described above.
+
+```sh
+cat > notes.md <<'MD'
+# Harbour notes
+
+## Timeline
+
+The ferry leaves at dawn.
+
+### Crossing
+
+Allow two hours.
+
+## Characters
+
+Mira keeps the blue notebook.
+MD
+lixity research init --project ./section-demo --title "Section editing demo" --language en
+lixity research dossier --project ./section-demo --title "Harbour notes" --file notes.md
+```
+
+Creation returns JSON. Replace `DOSSIER_ID` below with its full `dossier_id`.
+Read the current section and record the displayed revision, then export the
+editable content and a comparison copy of its sibling:
+
+```sh
+lixity research dossier DOSSIER_ID --project ./section-demo --section Timeline --format text
+lixity research dossier DOSSIER_ID --project ./section-demo --section Timeline --format text --body-only > timeline.md
+lixity research dossier DOSSIER_ID --project ./section-demo --section Characters --format text --body-only > characters.before.md
+```
+
+The first command prints:
+
+```text
+# Harbour notes
+
+Version 1
+
+## Timeline
+
+The ferry leaves at dawn.
+
+### Crossing
+
+Allow two hours.
+```
+
+`timeline.md` contains only the content below `## Timeline`. Edit that file,
+retaining any nested headings you want to keep. For this example, replace it with:
+
+```sh
+cat > timeline.md <<'MD'
+The ferry leaves at noon.
+
+### Crossing
+
+Allow three hours.
+MD
+lixity research dossier DOSSIER_ID --project ./section-demo --section Timeline \
+  --file timeline.md --diff --format text
+```
+
+The preview reports `H2 'Timeline' includes 1 descendant heading` and shows
+`The ferry leaves at dawn.` → `The ferry leaves at noon.` and
+`Allow two hours.` → `Allow three hours.`. Inspect the whole diff, including
+the unchanged neighboring heading. Compare first, then validate the intended write
+against the revision you read:
+
+```sh
+lixity research dossier DOSSIER_ID --project ./section-demo --section Timeline \
+  --file timeline.md --update --dry-run --expected-revision 1 \
+  --change-kind correction --reason "Corrected synthetic ferry timing" --compact --format text
+```
+
+Exit 0 validates this request without writing. The compact preview prints the
+following, with your full ID in place of `DOSSIER_ID`:
+
+```text
+Preview ready · would create version 2 · DOSSIER_ID
+Changed fields: body
+```
+
+Version 2 is a candidate; a dry-run does not reserve revision 1. To save the same
+reviewed request:
+
+```sh
+lixity research dossier DOSSIER_ID --project ./section-demo --section Timeline \
+  --file timeline.md --update --expected-revision 1 --change-kind correction \
+  --reason "Corrected synthetic ferry timing" --compact --format text
+lixity research dossier DOSSIER_ID --project ./section-demo --section Timeline --format text
+lixity research dossier DOSSIER_ID --project ./section-demo --section Characters --format text --body-only > characters.after.md
+cmp characters.before.md characters.after.md
+```
+
+The write prints `Saved version 2 · DOSSIER_ID`; it does not echo the dossier body.
+The section read shows `Version 2`, the noon departure and three-hour crossing.
+`cmp` exits 0 without output: the sibling still contains exactly
+`Mira keeps the blue notebook.`. Revision 1 remains readable with `--revision 1`.
+
+If another writer changes this dossier after your read, the guarded update fails
+without saving. Read the new revision and use the [draft conflict workflow](#resolve-conflicting-drafts)
+with `--prepare --base-revision 1` to review your file against it; repeat comparison
+and validation with the resulting reviewed revision. Other dossier revisions can
+advance independently when `--expected-snapshot` is omitted. Adding that snapshot
+also rejects unrelated archive changes.
 
 ### Edit an exported Markdown dossier
 

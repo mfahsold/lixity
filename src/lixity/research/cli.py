@@ -191,6 +191,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
         if name in ("dossier", "claim", "link-evidence", "decision", "relate"):
             command.add_argument("--update", action="store_true", help="Update the record; accepted changes create an immutable version")
             command.add_argument("--dry-run", action="store_true", help="Validate an --update exactly without writing or acquiring the writer lock")
+            command.add_argument("--compact", action="store_true", help="With --update [--dry-run], return a short receipt without the record body; default JSON stays complete")
             command.add_argument("--prepare", action="store_true", help="Preview an unsaved draft against the current version; never changes the archive")
             command.add_argument("--diff", action="store_true", help="Preview the change as a unified terminal diff; never writes")
             command.add_argument("--from-revision", type=int, help="With --diff, compare this immutable version instead of a draft")
@@ -328,10 +329,26 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--offset", type=_non_negative, default=0,
                                  help="Zero-based human-output page offset (default: 0)")
         elif name == "dossier":
+            command.formatter_class = argparse.RawDescriptionHelpFormatter
             command.epilog = (
-                "Inspect an ID with --format text to read recorded places, route context and approximate distances; "
-                "--summary keeps the body excerpt short. JSON geography_summary describes the selected version "
-                "without changing stored records. Distances join supplied coordinates on a sphere, "
+                "Examples (use --project PATH for an archive outside the current directory):\n"
+                "  lixity research dossier ID --section Evidence --format text\n"
+                "  lixity research dossier ID --section Evidence --format text --body-only > section.md\n"
+                "  lixity research dossier ID --section Evidence --file section.md --diff --format text\n"
+                "  lixity research dossier ID --section Evidence --file section.md --update --dry-run \\\n"
+                "    --expected-revision N --change-kind correction --reason 'Reviewed evidence' --compact\n"
+                "  lixity research dossier ID --section Evidence --file section.md --update "
+                "--expected-revision N --change-kind correction --reason 'Reviewed evidence'\n"
+                "  lixity research dossier ID --export-edit dossier-edit.md\n"
+                "  lixity research dossier ID --prepare --edit-file dossier-edit.md\n\n"
+                "--body-only writes the selected content as UTF-8 without display headings or an added newline.\n"
+                "Redirect it to a file for source text containing terminal controls or bidi formatting.\n"
+                "Only actual, unique headings listed in editable_sections are section-edit targets;\n"
+                "implicit preambles are read-only selections. A selected heading includes all descendants.\n\n"
+                "Inspect an ID with --format text to read recorded places, route context and approximate\n"
+                "distances; --summary keeps the body excerpt short. JSON geography_summary describes the\n"
+                "selected version without changing stored records. Distances join supplied coordinates\n"
+                "on a sphere, "
                 "not road routing, elevation or travel time; coordinate digits do not establish accuracy."
             )
             command.add_argument("--dossier-id", help="Dossier UUID to inspect")
@@ -355,6 +372,9 @@ def configure(parser: argparse.ArgumentParser) -> None:
                                       "and body excerpt without full text; distances are not road routing or travel time")
             command.add_argument("--section", help="Inspect or replace the named heading's content and all descendants; "
                                  "an H1 can select nearly the entire dossier (preview with --diff)")
+            command.add_argument("--body-only", action="store_true",
+                                 help="With a selected --section --format text read, emit only its source content; "
+                                      "redirect to a file for an editable draft (no added newline)")
             command.add_argument("--omit-citations", action="store_true", help="Omit resolved citations from output")
         elif name == "dossier-image":
             command.add_argument("--dossier-id", required=True, help="Dossier UUID to revise")
@@ -762,6 +782,21 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
         "relate": "relation_id",
     }[command])
     prepare = getattr(args, "prepare", False)
+    if args.compact and (not args.update or prepare or args.diff or args.history or args.inspect
+                         or args.revision is not None or getattr(args, "format", "json") not in ("json", "text")
+                         or getattr(args, "action", None) == "list"
+                         or any(getattr(args, field, None) for field in
+                                ("body_only", "summary", "omit_citations", "export_edit", "edit_file", "output"))):
+        raise ResearchError("--compact requires --update [--dry-run] with JSON or text output; "
+                            "it does not apply to reads, diffs, preparation or export modes")
+    if command == "dossier" and args.body_only:
+        fields = (*_REVISION_FIELDS["dossier"], "export_edit", "edit_file", "output")
+        if (not record_id or args.section is None or args.format != "text"
+                or getattr(args, "action", None) == "list"
+                or any((args.update, prepare, args.diff, args.history, args.summary, args.dry_run))
+                or any(getattr(args, field, None) is not None for field in fields)):
+            raise ResearchError("--body-only requires a selected dossier ID, --section and --format text; "
+                                "it applies only to source body reads, without authored fields or write/history modes")
     bounded_dossier = command == "dossier" and (
         args.section is not None or args.summary or args.omit_citations)
     if bounded_dossier:
@@ -854,13 +889,18 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
                 options["section"] = args.section
             if args.dry_run:
                 options["dry_run"] = True
-            return api.revise_record(
+            result = api.revise_record(
                 args.project, kind, record_id, changes=changes,
                 expected_snapshot=args.expected_snapshot,
                 expected_revision=args.expected_revision,
                 change_kind=args.change_kind, reason=args.reason, actor=args.actor,
                 **options,
             )
+            if args.compact:
+                from .presentation import revision_write_summary
+
+                return revision_write_summary(result, expected_revision=args.expected_revision)
+            return result
         except ResearchConflictError as error:
             raise ResearchConflictError(f"{error}. Use --prepare --base-revision {args.expected_revision} "
                                         "with your draft fields to review current changes before saving") from None
@@ -935,7 +975,10 @@ def _record_text(result: dict[str, Any]) -> str:
     if revision is not None:
         lines.append(f"Version {revision}")
     if record.get("section"):
-        lines.extend(["", f"## {safe_text(record['section'])}"])
+        level = record.get("section_level")
+        heading = (f"{'#' * level} {safe_text(record['section'])}" if level is not None
+                   else f"Section: {safe_text(record['section'])} (implicit preamble)")
+        lines.extend(["", heading])
     body = record["content"] if "content" in record else (
         record.get("body") or record.get("excerpt") or record.get("statement") or record.get("rationale"))
     if body:
@@ -1614,7 +1657,27 @@ def run(args: argparse.Namespace) -> int:
                 report = audit_report(result, markdown=markdown)
             print_report(report, pager=args.pager)
             return 1 if result.get("ok") is False else 0
+        if (result.get("schema_version") == "research-revision-write-summary-local/1"
+                and getattr(args, "format", "json") == "text"):
+            from .presentation import revision_write_report
+
+            print(revision_write_report(result), end="")
+            return 0
         if command in ("dossier", "claim", "decision") and getattr(args, "format", "json") == "text":
+            if command == "dossier" and args.body_only:
+                from .presentation import safe_text
+
+                content = result["content"]
+                terminal_text = content.replace("\r\n", "\n").replace("\n", "").replace("\t", "")
+                if sys.stdout.isatty() and safe_text(terminal_text) != terminal_text:
+                    raise ResearchError("--body-only source contains terminal controls or Unicode formatting; "
+                                        "redirect stdout to a file to retain the exact source content")
+                # Binary output avoids newline translation and locale-dependent encodings.
+                if (buffer := getattr(sys.stdout, "buffer", None)) is not None:
+                    buffer.write(content.encode("utf-8"))
+                else:
+                    sys.stdout.write(content)
+                return 0
             list_keys = ("dossiers", "claims", "decisions")
             if isinstance(result, dict) and any(k in result for k in list_keys):
                 from .presentation import record_list_report

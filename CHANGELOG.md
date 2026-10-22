@@ -7,6 +7,23 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- Dossier section reads support `--format text --body-only` for an editable UTF-8
+  draft without display metadata or an extra newline. Nested headings remain;
+  unsafe terminal controls require redirected output. The research guide includes
+  a synthetic read/edit/diff/guarded-update roundtrip and expected output.
+- Authored-record `--update [--dry-run] --compact` provides a small CLI receipt
+  with the accepted or candidate version, explicit no-op status and claim warnings.
+  Preview receipts list changed fields without copying their values. Existing
+  full JSON and Python/API write contracts are unchanged.
+
+### Fixed
+- Human dossier section reads preserve the actual heading level instead of
+  presenting every selected heading as H2. Selected JSON reads add `section_level`;
+  implicit preambles have no invented heading level.
+- README and installation explain the current 0.x product numbering separately
+  from historical 1.x/3.x tags and independent schema versions.
+
 ## [0.7.4] - 2026-10-22
 
 ### Added

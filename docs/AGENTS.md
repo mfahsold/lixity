@@ -647,6 +647,17 @@ withdrawn evidence while preserving full-paragraph citation semantics.
   after the comment is the unchanged body suffix. Unknown/duplicate keys fail.
   This is authored-record exchange, not source ingest or automatic synchronization.
 
+**Unreleased, after v0.7.4:** `--update [--dry-run] --compact` on `dossier`,
+`claim`, `link-evidence`, `decision` and `relate` projects the existing result as
+`research-revision-write-summary-local/1`, without another archive read. Fields
+are `project_id`, `snapshot`, `kind`, `record_id`, `dry_run`, `ready`, `changed`,
+`base_revision` and `change` (null for a no-op). A preview has
+`candidate_revision` and exact `changed_fields`; an applied result has `revision`
+instead. A candidate is not an accepted version. Claim `warnings` are retained;
+authored bodies and comparison values are omitted. The default JSON and Python
+revision contracts above are unchanged. Existing text output formats also accept
+`--compact`; `--summary` remains a separate dossier read option.
+
 CLI aliases and bare UUIDv4 normalization are input conveniences, not new domain
 identifiers. Exact arguments belong to installed help; the [Markdown workflow](research/USAGE.md#edit-an-exported-markdown-dossier)
 owns file creation, preview and explicit application.
@@ -948,6 +959,16 @@ for a bounded exact-version read. Full/section/summary reads include `project_id
 source/version pins with `available|withdrawn|purged|missing` status; unavailable
 entries have no image URL. Historical reads resolve the pinned image version,
 not the latest source. Record/history dossier envelopes also include `images`.
+
+**Unreleased, after v0.7.4:** selected dossier reads additionally report
+`section_level` (1–6 for an actual ATX heading, null for an implicit preamble).
+Human section reads preserve that level. CLI `--section HEADING --format text
+--body-only` emits only the selected `content` as UTF-8, without a display wrapper,
+selected heading or appended newline. Existing surrounding CR/LF trimming and
+descendant headings are retained. Use an actual unique `editable_sections` target
+for updates; an implicit preamble is only a read selection. Redirect source
+containing terminal controls or Unicode formatting to a file; raw unsafe terminal
+output is refused. See the [section roundtrip](research/USAGE.md#work-on-one-dossier-section).
 
 Local image endpoints:
 

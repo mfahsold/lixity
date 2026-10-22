@@ -11,6 +11,11 @@ Lixity is a local workbench for authors. Explore language patterns and keep
 sources, claims and notes beside your manuscript. Try an invented example in
 your browser before installing the app for your own writing.
 
+> **Version line:** The current release is **v0.7.4**, in the pre-1.0 **0.x** line.
+> Historical **1.x** and **3.x** tags predate the numbering reset; use the current
+> release rather than the numerically largest tag. Product, JSON response and
+> archive schema versions are independent.
+
 [Open the example manuscript](https://mfahsold.github.io/lixity/demo/report.html) ·
 [Take the short tour](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Install Lixity](https://mfahsold.github.io/lixity/guides/installation.html)
@@ -72,6 +77,8 @@ does not update an already running service.
 
 The browser app, CLI and Python API share one analysis pipeline;
 `lixity --help` and `lixity about --json` describe installed capabilities.
+Current main (unreleased after v0.7.4) adds `--body-only` section exports and
+`--compact` update receipts; see the [section-editing workflow](https://mfahsold.github.io/lixity/research/USAGE.md#work-on-one-dossier-section).
 
 Turn **Analysis** on beside the text, choose a metric and inspect its counted
 passages through hover, touch or the paragraph menu. The same literal evidence
@@ -111,9 +118,7 @@ their own projects.
 
 ## Release, citation and license
 
-The current release is **v0.7.4**, in the pre-1.0 development line. Historical
-v3.0.1 and earlier tags remain available. Product and schema versions are
-independent; [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.4.md)
+[Release notes](https://mfahsold.github.io/lixity/releases/v0.7.4.md)
 cover archive compatibility and upgrades. See the
 [changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md) for subsequent work.
 The public demo uses the same interface as v0.7.4, with a fictional project and
