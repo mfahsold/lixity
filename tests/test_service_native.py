@@ -87,6 +87,7 @@ def start_disposable(tmp_path, overrides):
     return app, result
 
 
+@pytest.mark.portability
 def test_native_start_status_restart_and_stop_preserve_explicit_project_and_thresholds(
     tmp_path, monkeypatch
 ):
@@ -204,6 +205,7 @@ def test_foreign_listener_is_not_claimed_or_stopped(tmp_path):
         assert listener.getsockname()[1] == port
 
 
+@pytest.mark.portability
 def test_simultaneous_starts_share_one_owned_child(tmp_path, monkeypatch):
     for key in ("LIXITY_DIR", "LIXITY_HOST", "LIXITY_PORT"):
         monkeypatch.delenv(key, raising=False)

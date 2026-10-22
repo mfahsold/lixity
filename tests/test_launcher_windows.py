@@ -11,7 +11,10 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="Native Windows PowerShell lifecycle")
+pytestmark = [
+    pytest.mark.portability,
+    pytest.mark.skipif(sys.platform != "win32", reason="Native Windows PowerShell lifecycle"),
+]
 
 
 def test_powershell_wrapper_preserves_project_spaces_unicode_and_language(tmp_path):

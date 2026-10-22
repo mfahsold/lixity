@@ -33,6 +33,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   remain manual GitHub fallbacks; release-tag publishing deploys Pages from the
   same verified ref after package publishing. Local release checks avoid repeating
   documentation tests, and reading-website changes select their own browser area.
+  Release arguments now fail before heavy work; checkout-local caches and aligned
+  check-only Ruff hooks improve the development loop. Shared browser helpers and
+  failed Git comparisons can no longer silently omit affected suites.
 - `service status --json` intentionally uses `lixity-service-status/1`:
   `ok` describes successful inspection, so known stopped, starting and unmanaged
   busy states exit 0. `running` indicates readiness; unknown state keeps
@@ -69,6 +72,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   explicit decisions, causal links and exact manuscript associations.
 
 ### Fixed
+- Research archive candidate syncing uses a writable descriptor on Windows.
+- Service observation accounts for Windows' different path/descriptor timestamp
+  clocks while retaining same-API mutation, identity and ownership checks.
+- Human `dossier --diff --format text --section` previews explain nested heading
+  scope without another archive read or a JSON/API contract change.
 - Installed reading-website exports resolve license metadata beside the loaded
   package, including standard legacy layouts, instead of a shadowing checkout.
 - PDF/dashboard CLI exports reject source paths and their symbolic/hard-link

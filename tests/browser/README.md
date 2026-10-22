@@ -17,6 +17,12 @@ to the affected areas (falling back to the full set when a shared foundation
 changed), `--jobs N` runs independent suites in parallel, `--only NAME`
 selects suites and `--start NAME` resumes after a failure.
 
+A failed Git comparison, including an invalid `BASE`, stops selection with an
+error. Shared support files and runner changes select all suites, as do unknown
+or deleted suite paths; they never silently select zero tests. Only an exact
+registered root-level suite path selects that suite alone. Selection is an
+iteration aid, not a substitute for the complete pre-release run.
+
 Shared jump and tooltip changes select the full set: they affect research,
 dialogs and the generated demo as well as the manuscript surface.
 The `sharing` area covers the reading-website exporter, prepared transport,

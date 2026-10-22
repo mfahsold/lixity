@@ -67,8 +67,8 @@ is selected with `make start LIXITY_PORT=9000`. See
 Without make:
 
 ```bash
-PYTHONPATH=src .venv/bin/python -m pytest -W error -q -p no:asyncio
-RUFF_CACHE_DIR=/tmp/ruff_cache .venv/bin/ruff check src tests scripts
+PYTHONPATH=src .venv/bin/python -m pytest -W error -q --durations=15 -p no:asyncio
+.venv/bin/ruff check src tests scripts
 .venv/bin/mypy --strict src
 ```
 
@@ -77,6 +77,19 @@ Python tests in the full suite. Use `make browser` for UI changes and
 `make browser-full` before a release that changes rendered behavior. Browser
 selection and native desktop/mobile coverage are documented in
 [the browser entrypoint](tests/browser/README.md).
+
+During development, run the affected test module first. After a failure, pytest's
+`--ff -x` runs previous failures first and stops at the next failure; `--lf` is
+useful for a repair loop but does not establish a complete pass. Keep the full
+release gate. `make test` reports the slowest 15 cases so runtime changes have
+evidence. Default Ruff, mypy and pytest caches stay inside each checkout;
+override `RUFF_CACHE`, `MYPY_CACHE` or `PYTEST_CACHE` only deliberately.
+Use the same pinned Ruff in the editor and optional commit hook; its native
+[language server](https://docs.astral.sh/ruff/editors/) reports issues while
+editing. Keep strict mypy as the shared type-checking authority rather than
+introducing a second incompatible checker configuration. For edited JavaScript,
+`node --check path/to/file.js` catches syntax errors before a browser run.
+These checks complement focused behavior tests; they do not prove runtime behavior.
 
 GitHub's `tests`, `browser` and `research-platforms` workflows are manual
 fallbacks; pushes and pull requests do not automatically repeat these heavy
@@ -89,7 +102,8 @@ Windows/macOS behavior.
 The platform workflow defaults to the central pytest `portability` marker
 (`python -m pytest tests -m portability -W error -q -p no:asyncio`), covering
 archive/filesystem, service observation, installed-package notices and read-only
-export seams. Select `scope=full` only when the full research/lifecycle suite is
+export seams, plus real start/restart/stop, simultaneous starts and the Windows
+PowerShell wrapper. Select `scope=full` only when the full research/lifecycle suite is
 needed on both systems. The ordinary local full suite still runs every test;
 markers do not remove coverage from `make check`.
 
@@ -110,7 +124,8 @@ The source archive also includes and verifies shared Python test fixtures.
 Native PDF tests need Poppler (`pdftotext` and `pdftoppm`) and report an explicit
 skip if it is missing. Select them locally with `pytest -m native_pdf`.
 Synthetic worker and Tesseract protocol tests need no model or installed OCR engine.
-Optional hooks are installed with `pre-commit install`; see
+For optional hooks, install `pre-commit` separately, then run
+`pre-commit install`; see
 [`.pre-commit-config.yaml`](.pre-commit-config.yaml). Tags matching `v*` build
 release packages; after GitHub publication and a successful or intentionally
 skipped PyPI step, the release pipeline deploys Pages from the same tag.
@@ -171,7 +186,8 @@ pins (`make docs-sync`), run:
 make release-check RELEASE_TAG=vX.Y.Z
 ```
 
-This runs `make check` once, `make docs-generated-check` and the dependency audit,
+This first rejects a missing or source-mismatched tag or absent/empty release notes, before heavy checks even
+under `make -j`. It then runs `make check` once, `make docs-generated-check` and the dependency audit,
 then builds fresh archives, requires an exact tag/source/wheel/sdist version match,
 and installs the wheel in a temporary
 isolated environment outside the checkout. It checks dependencies, CLI/distribution

@@ -4,7 +4,9 @@ import contextlib
 import hashlib
 import io
 import json
+import os
 import shutil
+import stat
 import subprocess
 import sys
 import tarfile
@@ -269,6 +271,28 @@ else:
         ):
             export_archive(self.project, output)
         self.assertEqual(output.read_bytes(), previous)
+        self.assertEqual(list(self.root.glob(".tmp-export-*")), [])
+
+    def test_export_syncs_candidate_with_a_windows_compatible_writable_descriptor(self) -> None:
+        output = self.root / "durable.tar.gz"
+        original_fsync = os.fsync
+        synchronized = []
+
+        def windows_fsync(descriptor):
+            info = os.fstat(descriptor)
+            if stat.S_ISREG(info.st_mode):
+                # Windows rejects syncing read-only handles. A zero-byte write
+                # enforces that access requirement without changing the archive.
+                os.write(descriptor, b"")
+                synchronized.append(info)
+            original_fsync(descriptor)
+
+        with patch.object(archive.os, "fsync", side_effect=windows_fsync):
+            exported = export_archive(self.project, output)
+
+        self.assertTrue(any(os.path.samestat(info, output.stat()) for info in synchronized))
+        restored = restore_archive(output, self.root / "restored-durable")
+        self.assertEqual(restored["snapshot"], exported["snapshot"])
         self.assertEqual(list(self.root.glob(".tmp-export-*")), [])
 
     def test_export_prepublication_failures_preserve_existing_archive(self) -> None:

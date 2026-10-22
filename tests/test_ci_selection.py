@@ -102,3 +102,34 @@ class TestBrowserSuiteSelection(unittest.TestCase):
         ):
             with self.subTest(path=path):
                 self.assertEqual(suites_for_paths([path]), expected)
+
+    def test_shared_browser_support_and_runner_changes_select_every_suite(self):
+        from scripts.run_browser_suites import suite_names, suites_for_paths
+
+        expected = suite_names()
+        for path in (
+            "tests/browser/support/native-server.cjs",
+            "tests/browser/support/analysis-controls.cjs",
+            "tests/browser/support/python-fixture.test.cjs",
+            "tests/browser/support/docs.cjs",
+            "tests/browser/deleted-suite.cjs",
+            "scripts/browser_tools.cjs",
+            "scripts/run_browser_suites.py",
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(suites_for_paths([path]), expected)
+
+    def test_invalid_changed_base_fails_before_listing_or_running_suites(self):
+        from scripts.run_browser_suites import changed_git_paths
+
+        missing = "__lixity_missing_browser_selection_base__"
+        with self.assertRaisesRegex(RuntimeError, "git diff failed"):
+            changed_git_paths(missing)
+        root = Path(__file__).resolve().parents[1]
+        result = subprocess.run(  # noqa: S603 - fixed interpreter and local CLI
+            [sys.executable, "scripts/run_browser_suites.py", "--changed", missing, "--list"],
+            cwd=root, capture_output=True, text=True, timeout=10, check=False,
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("Cannot determine browser changes", result.stderr)
+        self.assertNotIn(".cjs", result.stdout)

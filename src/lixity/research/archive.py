@@ -207,7 +207,7 @@ def export_archive(project: str | Path, output: str | Path) -> dict[str, Any]:
                             raise ResearchStorageError("Research file checksum changed during export")
 
         # The candidate no longer depends on repository files; release writers.
-        with temp_tar.open("rb") as stream:
+        with temp_tar.open("r+b") as stream:
             os.fsync(stream.fileno())
         os.replace(temp_tar, out_path)
         try:

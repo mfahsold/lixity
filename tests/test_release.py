@@ -3,6 +3,9 @@
 import hashlib
 import importlib.util
 import io
+import shutil
+import subprocess
+import sys
 import tarfile
 import zipfile
 from pathlib import Path
@@ -157,6 +160,49 @@ def test_bad_tag_fails_before_build_changes_outputs(release_script, release_tree
     with pytest.raises(ValueError, match="tag"):
         release_script.build(root, dist, "v3.0.1")
     assert stale.read_bytes() == b"preserve until successful build"
+
+
+def test_source_preflight_does_not_touch_artifacts(
+        release_script, release_tree, monkeypatch, capsys):
+    root, dist, _ = release_tree
+    sentinel = dist / "private.txt"
+    sentinel.write_text("preserve me")
+    monkeypatch.setattr(release_script, "__file__", str(root / "scripts/check_release.py"))
+    monkeypatch.setattr(sys, "argv", [str(SCRIPT), "--source-only", "--tag", "v0.3.0"])
+    release_script.main()
+    assert "release source verified: 0.3.0" in capsys.readouterr().out
+    assert list(dist.iterdir()) == [sentinel]
+    assert sentinel.read_text() == "preserve me"
+
+
+@pytest.mark.parametrize("tag", [None, "v0.0.0", "v0.3.0"])
+def test_release_make_rejects_bad_tag_before_starting_heavy_checks(tmp_path, tag):
+    make = shutil.which("make")
+    if make is None:
+        pytest.skip("GNU make is optional on this platform")
+    root = SCRIPT.parents[1]
+    shutil.copy2(root / "Makefile", tmp_path / "Makefile")
+    (tmp_path / "scripts").mkdir()
+    shutil.copy2(SCRIPT, tmp_path / "scripts/check_release.py")
+    version = tmp_path / "src/lixity/_version.py"
+    version.parent.mkdir(parents=True)
+    version.write_text('__version__ = "0.3.0"\n')
+    probe = tmp_path / "probe.mk"
+    probe.write_text(
+        "lint typecheck test docs-generated-check audit:\n"
+        '\t@echo HEAVY_CHECK_STARTED\n\t@exit 19\n'
+    )
+    result = subprocess.run(  # noqa: S603 - fixed make targets in synthetic project
+        [make, "-j4", "-f", "Makefile", "-f", "probe.mk", "release-check",
+         f"VPY={sys.executable}", f"RELEASE_TAG={tag or ''}"],
+        cwd=tmp_path, capture_output=True, text=True, timeout=15, check=False,
+    )
+    assert result.returncode != 0
+    output = result.stdout + result.stderr
+    assert "HEAVY_CHECK_STARTED" not in output
+    expected = ("Set RELEASE_TAG" if tag is None else "Missing release notes"
+                if tag == "v0.3.0" else "does not match source version")
+    assert expected in output
 
 
 def test_fresh_build_replaces_stale_artifacts_only_after_validation(

@@ -6,6 +6,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -777,8 +778,9 @@ def test_status_reports_directory_replacement_during_probe_as_unknown(tmp_path, 
 
 
 @pytest.mark.parametrize("replacement_check", (1, 2))
+@pytest.mark.parametrize("observe_replacement", (False, True))
 def test_status_retries_record_replacement_that_changes_open_inode_ctime(
-    tmp_path, monkeypatch, replacement_check
+    tmp_path, monkeypatch, replacement_check, observe_replacement
 ):
     import lixity.service as service
 
@@ -788,25 +790,52 @@ def test_status_retries_record_replacement_that_changes_open_inode_ctime(
     service._write_json(temporary, replacement)
     initial = manager.runtime_file.stat()
     original_fstat = service.os.fstat
+    original_metadata = service._metadata
     reads = 0
+    pending = observed = False
+
+    def observe_path(path):
+        nonlocal pending, observed
+        if path == manager.runtime_file and pending:
+            if not observed:
+                observed = True
+                return original_metadata(temporary)
+            # The replacement observation closed the previous reader before
+            # retrying. Windows permits the actual replace after that close.
+            os.replace(temporary, path)
+            pending = False
+        return original_metadata(path)
 
     def replace_after_read(descriptor):
-        nonlocal reads
+        nonlocal reads, pending
         metadata = original_fstat(descriptor)
         if (metadata.st_dev, metadata.st_ino) == (initial.st_dev, initial.st_ino):
             reads += 1
             if reads == replacement_check:
+                if observe_replacement or sys.platform == "win32":
+                    # Windows denies replacing this open descriptor. Inject
+                    # the same replacement/ctime observations, then publish
+                    # after the inspection closes it; do not skip the race.
+                    pending = True
+                    fields = ("st_mode", "st_uid", "st_size", "st_mtime_ns", "st_ctime_ns", "st_dev", "st_ino")
+                    values = {field: getattr(metadata, field) for field in fields}
+                    values["st_ctime_ns"] += 1
+                    return SimpleNamespace(**values)
                 os.replace(temporary, manager.runtime_file)
                 return original_fstat(descriptor)
         return metadata
 
     monkeypatch.setattr(service.os, "fstat", replace_after_read)
+    monkeypatch.setattr(service, "_metadata", observe_path)
     result = manager.control("status", {})
     assert result["state"] == "starting" and not result["ok"], result
     assert result["pid"] == 12346
 
 
-def test_record_read_does_not_turn_disappearance_after_replacement_into_absence(tmp_path, monkeypatch):
+@pytest.mark.parametrize("observe_replacement", (False, True))
+def test_record_read_does_not_turn_disappearance_after_replacement_into_absence(
+    tmp_path, monkeypatch, observe_replacement
+):
     import lixity.service as service
 
     manager, record = _status_owned_fixture(tmp_path, monkeypatch)
@@ -820,8 +849,14 @@ def test_record_read_does_not_turn_disappearance_after_replacement_into_absence(
         if path == manager.runtime_file:
             reads += 1
             if reads == 2:
+                if observe_replacement or sys.platform == "win32":
+                    # Report the replacement while its Windows reader is open;
+                    # perform the actual replace/remove after the retry closes it.
+                    return original_lstat(temporary)
                 os.replace(temporary, path)
             elif reads == 3:
+                if observe_replacement or sys.platform == "win32":
+                    os.replace(temporary, path)
                 path.unlink()
         return original_lstat(path, *args, **kwargs)
 
@@ -880,3 +915,93 @@ def test_status_preserves_disappearance_uncertainty_across_outer_retries(
     result = manager.control("status", {})
     assert result["state"] == "unknown" and not result["ok"], result
     assert "changed" in result["message"] if disappearing == "directory" else "disappeared" in result["message"]
+
+
+@pytest.mark.parametrize("change", (None, "fd_ctime", "path_ctime", "path_ctime_after_read", "mtime", "size"))
+def test_windows_record_reads_keep_same_api_change_checks_when_ctime_apis_differ(
+    tmp_path, monkeypatch, change
+):
+    import lixity.service as service
+
+    path = tmp_path / "record.json"
+    service._write_json(path, {"value": "synthetic"})
+    original = path.read_bytes()
+    real_fstat, real_lstat = service.os.fstat, Path.lstat
+    descriptor_reads = path_reads = 0
+    fields = ("st_mode", "st_uid", "st_size", "st_mtime_ns", "st_ctime_ns", "st_dev", "st_ino")
+
+    def by_descriptor(descriptor):
+        nonlocal descriptor_reads
+        descriptor_reads += 1
+        metadata = real_fstat(descriptor)
+        values = {field: getattr(metadata, field) for field in fields}
+        # CPython's Windows lstat ctime is creation time; fstat can report change time.
+        values["st_ctime_ns"] += 1_000_000
+        if change == "fd_ctime" and descriptor_reads > 1:
+            values["st_ctime_ns"] += 1
+        if change == "mtime":
+            values["st_mtime_ns"] += 1
+        if change == "size":
+            values["st_size"] += 1
+        return SimpleNamespace(**values)
+
+    def by_path(selected, *args, **kwargs):
+        nonlocal path_reads
+        metadata = real_lstat(selected, *args, **kwargs)
+        if selected != path:
+            return metadata
+        path_reads += 1
+        if (change == "path_ctime" and path_reads > 1) or (
+            change == "path_ctime_after_read" and path_reads > 2
+        ):
+            values = {field: getattr(metadata, field) for field in fields}
+            values["st_ctime_ns"] += 1
+            return SimpleNamespace(**values)
+        return metadata
+
+    with monkeypatch.context() as scoped:
+        scoped.setattr(service.sys, "platform", "win32")
+        scoped.setattr(service.os, "fstat", by_descriptor)
+        scoped.setattr(Path, "lstat", by_path)
+        if change is None:
+            assert service._read_json(path) == {"value": "synthetic"}
+        else:
+            with pytest.raises(service.ServiceError, match="changed in place"):
+                service._read_json(path)
+    assert path.read_bytes() == original
+
+
+def test_status_preserves_records_when_windows_open_reader_denies_replacement(tmp_path, monkeypatch):
+    import lixity.service as service
+
+    manager, record = _status_owned_fixture(tmp_path, monkeypatch)
+    original = manager.runtime_file.read_bytes()
+    temporary = manager.runtime_dir / "replacement.json"
+    service._write_json(temporary, {**record, "pid": 12346, "birth": "replacement"})
+    replacement_bytes = temporary.read_bytes()
+    initial = manager.runtime_file.stat()
+    original_fstat = service.os.fstat
+    attempted = False
+
+    def denied_replacement(descriptor):
+        nonlocal attempted
+        metadata = original_fstat(descriptor)
+        if not attempted and (metadata.st_dev, metadata.st_ino) == (initial.st_dev, initial.st_ino):
+            attempted = True
+            if sys.platform != "win32":
+                raise PermissionError(errno.EACCES, "Synthetic Windows sharing violation")
+            # Exercise the actual Windows sharing restriction, not a skip.
+            try:
+                os.replace(temporary, manager.runtime_file)
+            except PermissionError as exc:
+                assert exc.winerror == 5
+                raise
+            pytest.fail("An ordinary Windows reader unexpectedly allowed replacement")
+        return metadata
+
+    monkeypatch.setattr(service.os, "fstat", denied_replacement)
+    result = manager.control("status", {})
+    assert attempted
+    assert result["state"] == "unknown" and not result["ok"], result
+    assert manager.runtime_file.read_bytes() == original
+    assert temporary.read_bytes() == replacement_bytes

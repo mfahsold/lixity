@@ -223,10 +223,17 @@ def main() -> None:
     parser.add_argument("--tag", help="Require the exact v<source-version> tag")
     parser.add_argument("--build", action="store_true", help="Build fresh verified archives")
     parser.add_argument("--smoke", action="store_true", help="Install and smoke-test the wheel")
+    parser.add_argument("--source-only", action="store_true",
+                        help="Check source/tag identity without building or reading artifacts")
     args = parser.parse_args()
+    if args.source_only and (args.build or args.smoke):
+        parser.error("--source-only cannot build or smoke-test artifacts")
     root = Path(__file__).resolve().parents[1]
     dist = args.dist.absolute()
     try:
+        if args.source_only:
+            print(f"release source verified: {source_version(root, args.tag)}")
+            return
         if args.build:
             build(root, dist, args.tag)
         version = validate(root, dist, args.tag)

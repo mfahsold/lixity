@@ -16,7 +16,7 @@
 <meta property="og:site_name" content="Lixity"/>
 <meta property="article:author" content="https://github.com/mfahsold"/>
 <meta property="article:published_time" content="2026-10-20"/>
-<meta property="article:modified_time" content="2026-10-21"/>
+<meta property="article:modified_time" content="2026-10-22"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png"/>
 <meta property="og:image:width" content="2960"/>
 <meta property="og:image:height" content="2090"/>
@@ -42,7 +42,7 @@
   "mainEntityOfPage": "https://mfahsold.github.io/lixity/blog/manuscript-reading-workbench.html",
   "inLanguage": "en",
   "datePublished": "2026-10-20",
-  "dateModified": "2026-10-21",
+  "dateModified": "2026-10-22",
   "author": {
     "@type": "Person",
     "name": "Matthias Fahsold",
@@ -73,12 +73,12 @@
 <main class="guide" id="content">
 <nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="index.html">Articles</a></li><li><span aria-current="page">Manuscript workbench</span></li></ol></nav>
 <h1>Give the manuscript room to read</h1>
-<p class="updated">By <a href="https://github.com/mfahsold">Matthias Fahsold</a> · Published <time datetime="2026-10-20">20 October 2026</time> · Updated <time datetime="2026-10-21">21 October 2026</time> · 6 minutes</p>
+<p class="updated">By <a href="https://github.com/mfahsold">Matthias Fahsold</a> · Published <time datetime="2026-10-20">20 October 2026</time> · Updated <time datetime="2026-10-22">22 October 2026</time> · 7 minutes</p>
 
 <p>A manuscript analysis tool can show you so much about a paragraph that the
 paragraph becomes awkward to read. Sentence patterns, source lines, markers and
 research links all have a purpose. They also compete with the next sentence.</p>
-<p>Lixity v0.7.3 keeps the manuscript at the centre of that review. The
+<p>Lixity v0.7.4 keeps the manuscript at the centre of that review. The
 interactive workspace opens as continuous prose with <strong>Analysis Off</strong>. The
 explicit <strong>Analysis</strong> switch displays its state in words; <strong>Analysis overview</strong>
 opens chapter comparisons with a direct <strong>Back to passage</strong> action. You can inspect
@@ -104,7 +104,8 @@ when its size changes. Images, maps and the style-space view retain their own
 zoom or movement controls.</p>
 <h2 id="ask-one-question-of-a-paragraph">Ask one question of a paragraph</h2>
 <p>Suppose an action passage feels slower than you expected. Open its <strong>…</strong> menu
-and choose <strong>Values</strong>. The closable <strong>Passage values</strong> inspector shows
+and choose <strong>Explore passage</strong>, then <strong>Explain measurement</strong>.
+The closable passage inspector shows
 that paragraph's source lines and available tense and style measurements,
 independently of the Analysis On/Off choice. The
 <strong>Analysis</strong> switch alone reveals diagnostics without opening a side tool
@@ -119,9 +120,15 @@ applicable action is available.</p>
 leave <strong>Mark counted passages</strong> checked. Marks identify counted words,
 lexical patterns, quoted speech or sentences where the analysis can map them
 exactly to the displayed text. Hover a mark for its explanation, use a short
-stationary tap on touch screens, or choose <strong>… → Inspect text evidence</strong>
+stationary tap on touch screens, or open <strong>Explore passage → Explain measurement</strong>
 with the keyboard or context menu. Escape closes the explanation. Turning analysis
 off or clearing the marking control removes the marks.</p>
+<p>Two visible keys keep the colors distinct. <strong>Counted text</strong> explains
+the underline or tint on the words or sentence actually counted.
+<strong>Paragraph comparison</strong> explains blue/orange paragraph backgrounds
+relative to that chapter. Both can be visible together. A colored paragraph is
+not a claim that every word in it caused the difference; inspect a concrete mark
+for the measured text and use the paragraph comparison for context.</p>
 <p>The explanation separates the selected text from its paragraph value and chapter
 comparison. A sentence's word count does not establish an editorial fault; a literal
 perception-word match does not establish narrative distance. Some Markdown
@@ -157,7 +164,7 @@ On desktop, the project navigation folds down to make room; you can reopen it,
 and closing the dossier restores the previous choice. Drag the divider to adjust
 the two reading areas. You can also focus the divider with Tab and use Left/Right;
 Home/End reach its limits. Narrow screens stack the documents.</p>
-<p>Paragraph Values and the dossier replace one another as the active side tool.
+<p>The passage inspector and the dossier replace one another as the active side tool.
 Each has a direct closing route. Display and companion changes try to retain the
 visible paragraph's position, so consulting context need not mean finding the
 sentence again. On narrow screens, opening a tool from a passage reveals its
@@ -166,14 +173,15 @@ Brief feedback marks reveals and returns without moving the manuscript surface;
 reduced-motion preferences disable the optional effects.</p>
 <h2 id="make-the-return-route-explicit">Make the return route explicit</h2>
 <p>Begin with the opening eastern-gate quotation in the manuscript. Choose
-<strong>… → Saved research</strong>. The right context shows the saved claim and dossier
-versions for that passage, with current dossier decisions separately labelled.
-Open the claim title to inspect that saved version and its retained source
-references. Close the viewer and choose <strong>Back to passage</strong> to resume the
+<strong>… → Explore passage → Research for this passage</strong>. The right context
+groups its linked claims and dossiers, with current dossier decisions separately labelled.
+Open a title to read the current entry and its retained source references.
+Use <strong>Linked version</strong> explicitly to inspect the earlier version
+retained by that association. Close the viewer and choose <strong>Back to passage</strong> to resume the
 requesting text. On narrow screens the context sits above the manuscript; its
 close button or Escape returns to the paragraph.</p>
 <p>The manuscript quotation, authored claim and retained source passage remain
-separate records. The saved research list is bounded and shows totals. An empty
+separate records. The passage research list is bounded and shows totals. An empty
 list means no saved associations, not that the passage contains no facts.
 Opening a newer record does not silently replace saved version pins, and
 navigating this route does not create or refresh an association.</p>
@@ -195,6 +203,25 @@ Lixity does not silently infer a new connection. The public demo is read-only;
 saving associations requires a compatible local server and an explicitly
 configured research project. Research keeps its own explicit-project and
 retention requirements.</p>
+<h2 id="share-a-reading-copy">Share a reading copy</h2>
+<p>In the local app, <strong>Project actions → Reading website</strong> downloads
+a browser-readable project copy. Choose <strong>Review workspace</strong> to
+share manuscript analysis, with research as a separate choice. The public demo
+is generated by that same exporter; it uses the product's read-only controls.</p>
+<p>For a reader-facing experience, choose <strong>Novel and companion</strong>
+or <strong>Companion only</strong>. A publication profile selects the dossier
+sections, images, diagrams and optional citations or offline maps to include.
+Try the <a href="../demo/reader/index.html">novel with companion</a> or the
+<a href="../demo/companion/index.html">standalone companion</a>. Confirming a
+chapter reveals the selected background material; previewing a chapter does not
+advance progress. A separate export limit physically leaves later content out.</p>
+<p>Unzip the copy and open <code>index.html</code>, or host its folder as a static
+website. The recipient needs no Lixity installation. The copy cannot edit your
+working project, but its included files can be inspected and copied: local
+progress is not access control. Review the selected content before sharing;
+original source files require a separate explicit choice and redistribution rights.
+The <a href="../guides/research-pdf.html#reading-website">sharing guide</a>
+explains the formats and their boundaries.</p>
 <h2 id="know-which-document-you-are-reading">Know which document you are reading</h2>
 <p>The browser reader now retains source structure around the same measured
 paragraphs: preface, subheadings, quotations, code, notes, dividers and excluded

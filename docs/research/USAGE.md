@@ -353,6 +353,8 @@ with JSON, text or table output. It cannot be combined with a selected record,
 creation or revision fields. `--tags` remains comma-separated authored metadata;
 always use that full spelling when creating or revising tags. Tags remain
 1–50 characters and are classifications, not aliases or unique record IDs.
+An existing provenance-style tag can be queried with its full literal value,
+such as `--tag "ursprung:notes/history.md"`; prefix filtering is not implemented.
 
 `--section` text output includes the matched heading and its content, including
 nested subsections. Other sections are omitted; an empty section stays empty.
@@ -651,6 +653,16 @@ ignored; repeated heading names reject ambiguous reads/updates. Other text,
 line endings and evidence references are preserved. Prepared section drafts
 start from the selected base revision, never a silently substituted current body.
 
+**Scope warning:** selecting a top-level H1 can select nearly the entire dossier.
+Replacing it also removes or replaces its nested headings and their content.
+Use the exact narrower heading for a local edit, and inspect `--diff` before
+`--update`. There is no direct-content-only selector; the subtree semantics are
+the same for reading and editing.
+Use `--diff --format text --section "Heading"` for a human preview that also
+reports the selected heading level and number of nested headings, when present.
+The warning describes selection scope; it does not decide whether replacing it
+is appropriate. JSON/API comparisons and ordinary mutation output are unchanged.
+
 Preparation can combine section text and ordinary metadata changes through the
 same revision path; unrelated current sections survive. Python entrypoints and
 result contracts are in the [automation reference](../AGENTS.md#51-research-api-lixityresearchapi).
@@ -679,6 +691,15 @@ and its internal `.lixity` directory; existing files are never overwritten.
 
 Since v0.7.4, `dossier show ID --export-edit draft.md` and the direct ID form
 are equivalent. Explicit incompatible inspection/editing modes still fail.
+
+For several related edits in one dossier, change all affected sections in this
+single exported draft, then prepare and apply it once. The result is one dossier
+revision, guarded against its base and the reviewed snapshot. For several
+dossiers, prepare one operation per dossier and use the existing atomic change
+set. Do not queue the same dossier ID repeatedly: duplicate IDs are rejected;
+a dedicated multi-section patch format is not implemented.
+This whole-body draft detects concurrent body edits as a conflict; it does not
+automatically merge independently changed sections. Resolve the preview explicitly.
 
 The leading comment identifies the project, record and base revision. Its
 `fields` object edits title, language, tags, geography and evidence IDs; the

@@ -1,5 +1,5 @@
-# Optional local hooks. Install with: pre-commit install
-# CI still runs ruff + mypy + pytest via .github/workflows/tests.yml
+# Optional local hooks. Install pre-commit separately, then: pre-commit install
+# Full local checks: make check. GitHub's tests workflow is a manual fallback.
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
@@ -10,8 +10,7 @@ repos:
       - id: check-added-large-files
         args: ["--maxkb=512"]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.8
+    rev: v0.17.0
     hooks:
-      - id: ruff
-        args: [--fix]
+      - id: ruff-check
         files: ^(src|tests|scripts)/

@@ -278,6 +278,68 @@ class TestResearchCliOutput(unittest.TestCase):
             self.assertIn('"revision": 1', output)
             self.assertIn('"revision": 2', output)
 
+    def test_section_diff_explains_the_observed_subtree_without_another_archive_read(self):
+        from lixity.research.repository import Repository
+
+        title = "Market\x1b]0;synthetic\x07"
+        body = (f"# {title}\n\nOpening.\n\n## Audience\n\nNotes.\n\n"
+                "```md\n## Not a heading\n```\n\n### Criteria\n\nDetails.\n\n"
+                "# Appendix\n\nPreserve this sibling.\n")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            api.init(root, title="Synthetic subtree scope")
+            dossier = api.create_dossier(root, "Market notes", body)["dossier_id"]
+            before = retained_files(root)
+            original_snapshot = Repository.snapshot
+            with patch.object(Repository, "snapshot", autospec=True,
+                              side_effect=original_snapshot) as observed:
+                status, output, errors = self.capture(
+                    "dossier", dossier, "--project", str(root), "--diff", "--format", "text",
+                    "--section", title, "--body", "Reviewed opening.",
+                )
+            self.assertEqual((status, errors), (0, ""))
+            self.assertIn("Section scope: H1", output)
+            self.assertIn("2 descendant headings", output)
+            self.assertIn("replaces their content", output)
+            self.assertIn(title.encode("unicode_escape").decode("ascii"), output)
+            self.assertNotIn("\x1b", output)
+            self.assertNotIn("\x07", output)
+            self.assertEqual(observed.call_count, 1)
+            self.assertEqual(retained_files(root), before)
+
+    def test_section_diff_keeps_leaf_and_machine_output_unchanged(self):
+        body = "# Overview\n\nNotes.\n\n## Leaf\n\nOld details.\n\n# Appendix\n\nKeep.\n"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            api.init(root, title="Synthetic leaf and JSON scope")
+            dossier = api.create_dossier(root, "Notes", body)["dossier_id"]
+            before = retained_files(root)
+            comparison = api.preview_record_changes(
+                root, "dossier", dossier, changes={"body": "New."}, section="Overview",
+            )
+            for section in ("Overview", "Leaf"):
+                with self.subTest(section=section):
+                    status, output, errors = self.capture(
+                        "dossier", dossier, "--project", str(root), "--diff", "--json",
+                        "--section", section, "--body", "New.",
+                    )
+                    self.assertEqual((status, errors), (0, ""))
+                    self.assertNotIn("Section scope:", output)
+            for section, previous in (("Leaf", "Old details."), ("Appendix", "Keep.")):
+                with self.subTest(leaf=section):
+                    leaf_status, leaf, leaf_errors = self.capture(
+                        "dossier", dossier, "--project", str(root), "--diff", "--format", "text",
+                        "--section", section, "--body", "New.",
+                    )
+                    self.assertEqual((leaf_status, leaf_errors), (0, ""))
+                    self.assertNotIn("Section scope:", leaf)
+                    self.assertIn("-" + previous, leaf)
+                    self.assertIn("+New.", leaf)
+            self.assertEqual(api.preview_record_changes(
+                root, "dossier", dossier, changes={"body": "New."}, section="Overview",
+            ), comparison)
+            self.assertEqual(retained_files(root), before)
+
     def test_diff_keeps_one_observation_when_another_writer_advances(self):
         from lixity.research.repository import Repository
         from tests.research_support import revise_record

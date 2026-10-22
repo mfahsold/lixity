@@ -10,9 +10,9 @@ Give a reader a browsable project copy, follow a passage into Research and back,
 
 ## [Give the manuscript room to read](manuscript-reading-workbench.html)
 
-Updated 21 October 2026 · 6 minutes
+Updated 22 October 2026 · 7 minutes
 
-Inspect the text behind a measurement, follow a passage's saved claim and source, then return to the sentence. Try the complete loop in the invented Warehouse 4 manuscript.
+Distinguish counted text from paragraph comparison, follow passage research and return, then share a reading copy. Try the complete loop in the invented Warehouse 4 manuscript.
 
 ## [When a chapter is meant to sound different](intentional-registers.html)
 

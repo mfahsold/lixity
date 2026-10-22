@@ -155,6 +155,8 @@ AREAS: dict[str, tuple[str, ...]] = {
 # Path patterns -> area names; "full" forces the complete suite set when a
 # shared foundation changed. Unmatched UI paths also fall back to "full".
 PATH_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("scripts/run_browser_suites.py", ("full",)),
+    ("scripts/browser_tools.cjs", ("full",)),
     ("docs/*", ("docs",)),
     ("scripts/stage_pages.py", ("docs",)),
     ("src/lixity/site_*.py", ("sharing",)),
@@ -223,8 +225,10 @@ def changed_git_paths(base: str | None = None) -> list[str]:
         result = subprocess.run(  # noqa: S603 - fixed git arguments
             command, cwd=ROOT, check=False, capture_output=True, text=True
         )
-        if result.returncode == 0:
-            found.update(line.strip() for line in result.stdout.splitlines() if line.strip())
+        if result.returncode:
+            detail = result.stderr.strip() or f"exit {result.returncode}"
+            raise RuntimeError(f"git {command[1]} failed: {detail}")
+        found.update(line.strip() for line in result.stdout.splitlines() if line.strip())
     return sorted(found)
 
 
@@ -245,8 +249,9 @@ def suites_for_paths(paths: list[str], available: list[str] | None = None) -> li
         if path.startswith("tests/browser/") and path.endswith(".cjs"):
             relevant = True
             candidate = Path(path).name
-            if candidate in known:
-                selected.add(candidate)
+            if path != f"tests/browser/{candidate}" or candidate not in known:
+                return list(names)
+            selected.add(candidate)
             continue
         matched = False
         for pattern, areas in PATH_RULES:
@@ -376,7 +381,10 @@ def main() -> int:
             selected.update(AREAS[area])
         names = [name for name in names if name in selected]
     elif arguments.changed is not None:
-        paths = changed_git_paths(arguments.changed or None)
+        try:
+            paths = changed_git_paths(arguments.changed or None)
+        except (OSError, RuntimeError) as exc:
+            parser.error(f"Cannot determine browser changes: {exc}")
         names = suites_for_paths(paths, names)
     else:
         if arguments.group == "fast":

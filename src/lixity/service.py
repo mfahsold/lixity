@@ -294,7 +294,9 @@ def _inspect_dir(path: Path) -> tuple[int, int, int, int] | None:
     return metadata.st_dev, metadata.st_ino, metadata.st_mode, metadata.st_uid
 
 
-def _check_record_change(before: os.stat_result | None, after: os.stat_result | None) -> None:
+def _check_record_change(
+    before: os.stat_result | None, after: os.stat_result | None, *, compare_ctime: bool = True
+) -> None:
     if before is not None and after is None:
         raise ServiceError("Managed record disappeared during inspection; retry status")
     if before is None and after is None:
@@ -304,9 +306,9 @@ def _check_record_change(before: os.stat_result | None, after: os.stat_result | 
     ):
         raise _RecordReplaced("Managed records changed during inspection; retry status")
     if after is not None and (
-        before.st_mode, before.st_uid, before.st_size, before.st_mtime_ns, before.st_ctime_ns
-    ) != (
-        after.st_mode, after.st_uid, after.st_size, after.st_mtime_ns, after.st_ctime_ns
+        (before.st_mode, before.st_uid, before.st_size, before.st_mtime_ns)
+        != (after.st_mode, after.st_uid, after.st_size, after.st_mtime_ns)
+        or (compare_ctime and before.st_ctime_ns != after.st_ctime_ns)
     ):
         raise ServiceError("Managed record changed in place during inspection; preserve it for inspection")
 
@@ -345,12 +347,14 @@ def _read_json_once(path: Path) -> dict[str, Any] | None:
         opened = os.fstat(handle.fileno())
         _validate_record_file(opened)
         _check_record_change(metadata, _metadata(path))
-        _check_record_change(metadata, opened)
+        # Windows lstat may expose creation time as ctime while fstat exposes
+        # change time. Compare that clock only within the same API below.
+        _check_record_change(metadata, opened, compare_ctime=sys.platform != "win32")
         raw = handle.read(65537)
         after_read = os.fstat(handle.fileno())
         # Replacing the path also changes the unlinked open inode's ctime.
         # Establish replacement before classifying metadata changes in place.
-        _check_record_change(opened, _metadata(path))
+        _check_record_change(metadata, _metadata(path))
         _check_record_change(opened, after_read)
     if len(raw) > 65536:
         raise ServiceError("Managed record exceeds its size limit")

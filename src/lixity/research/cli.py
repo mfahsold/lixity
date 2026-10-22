@@ -353,7 +353,8 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--summary", action="store_true",
                                  help="Return metadata, geography coverage and route distances, section outline, "
                                       "and body excerpt without full text; distances are not road routing or travel time")
-            command.add_argument("--section", help="Inspect or update only the named heading section")
+            command.add_argument("--section", help="Inspect or replace the named heading's content and all descendants; "
+                                 "an H1 can select nearly the entire dossier (preview with --diff)")
             command.add_argument("--omit-citations", action="store_true", help="Omit resolved citations from output")
         elif name == "dossier-image":
             command.add_argument("--dossier-id", required=True, help="Dossier UUID to revise")
@@ -634,7 +635,7 @@ def _missing_draft_message(args: argparse.Namespace) -> str:
             "Use --inspect to read the record or --history to list immutable versions")
 
 
-def _revision_diff_text(comparison: dict[str, Any]) -> str:
+def _revision_diff_text(comparison: dict[str, Any], *, section: str | None = None) -> str:
     """Render canonical editable-field comparisons without another archive read."""
     import difflib
 
@@ -659,6 +660,20 @@ def _revision_diff_text(comparison: dict[str, Any]) -> str:
     for item in comparison["fields"]:
         name, before, after = item["field"], item["before"], item["after"]
         if name == "body":
+            if kind == "dossier" and section is not None:
+                from .sections import _section_spans, _section_subtree_end
+
+                spans = _section_spans(str(before or ""))
+                selected = next((span for span in spans
+                                 if span.title.casefold() == section.strip().casefold()), None)
+                if selected is not None:
+                    end = _section_subtree_end(spans, selected, len(str(before or "")))
+                    descendants = sum(selected.start < span.start < end for span in spans)
+                    if descendants:
+                        noun = "heading" if descendants == 1 else "headings"
+                        lines.append(f"Section scope: H{selected.level} '{selected.title}' includes "
+                                     f"{descendants} descendant {noun}; replacing this subtree also "
+                                     "replaces their content.")
             lines.extend(difflib.unified_diff(str(before or "").splitlines(), str(after or "").splitlines(),
                                             fromfile=f"{kind} r{first}", tofile=destination, lineterm=""))
         else:
@@ -818,7 +833,8 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
         else:
             comparison = api.preview_record_changes(args.project, kind, record_id, changes=changes,
                                                     **({"section": args.section} if getattr(args, "section", None) else {}))
-        return {"schema_version": "research-revision-diff-local/1", "diff": _revision_diff_text(comparison)}
+        return {"schema_version": "research-revision-diff-local/1", "diff": _revision_diff_text(
+            comparison, section=getattr(args, "section", None) if args.format == "text" else None)}
     if args.update:
         if getattr(args, "latest", False) and args.expected_revision is None:
             current = api.get_record(args.project, kind, record_id)

@@ -3,9 +3,9 @@
 PYTHON ?= python3
 VENV ?= .venv
 VPY := $(VENV)/bin/python
-RUFF_CACHE ?= /tmp/ruff_cache
-MYPY_CACHE ?= /tmp/mypy_cache
-PYTEST_CACHE ?= /tmp/pytest_cache
+RUFF_CACHE ?= .ruff_cache
+MYPY_CACHE ?= .mypy_cache
+PYTEST_CACHE ?= .pytest_cache
 ACTIONLINT ?= actionlint
 
 help: ## Show this help
@@ -24,8 +24,8 @@ install-dev: ## Create .venv and install with dev extras
 	"$(VPY)" -m pip check
 	"$(VPY)" -m lixity.cli --version
 
-test: ## Run the full test suite (warnings as errors)
-	PYTHONPATH=src $(VPY) -m pytest -W error -q -p no:asyncio -o cache_dir=$(PYTEST_CACHE)
+test: ## Run the full test suite (warnings as errors, slowest cases reported)
+	PYTHONPATH=src $(VPY) -m pytest -W error -q --durations=15 -p no:asyncio -o cache_dir=$(PYTEST_CACHE)
 
 browser: ## Run the everyday browser checks (needs Node and Playwright)
 	$(PYTHON) scripts/run_browser_suites.py --group fast --jobs 3
@@ -53,8 +53,11 @@ check: lint typecheck test ## Canonical local source checks: Ruff, strict mypy a
 build: ## Build fresh source-verified sdist + wheel and checksums into dist/
 	$(VPY) scripts/check_release.py --build
 
-release-check: check docs-generated-check audit ## Local release gate; test once, check generated docs, audit and verify artifacts
+release-check: ## Validate the tag first, then test once, check generated docs, audit and verify artifacts
 	@test -n "$(RELEASE_TAG)" || (echo "Set RELEASE_TAG=vX.Y.Z to match the source version"; exit 1)
+	$(VPY) scripts/check_release.py --source-only --tag "$(RELEASE_TAG)"
+	@test -s "docs/releases/$(RELEASE_TAG).md" || (echo "Missing release notes: docs/releases/$(RELEASE_TAG).md"; exit 1)
+	$(MAKE) check docs-generated-check audit
 	$(VPY) scripts/check_release.py --build --smoke --tag "$(RELEASE_TAG)"
 
 screenshots: ## Regenerate docs/screenshots (needs headless Chromium)
