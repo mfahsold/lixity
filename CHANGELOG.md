@@ -8,6 +8,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Native **Project overview**, `lixity project [PATH] [--json]` and Python
+  `api.inspect_project` share a bounded, read-only project metadata model
+  (`lixity-project-structure/1`). Sources, conventional output locations and
+  findings remain distinct; existing output provenance is explicitly unknown.
+  No folders, role registry or submission bindings are created.
 - Read-only `research find-anchor --query-format markdown` accepts copied inline
   emphasis through the shared displayed-text projection and returns the exact
   quote, offsets and paragraph hash. Default queries and write/re-pin selections
@@ -44,6 +49,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   paragraph/comparison panel; method and counting guidance start collapsed.
 
 ### Fixed
+- Project output downloads decode filenames once, reject source/configuration
+  aliases and unsafe paths, and bound actual descriptor reads. Overview links
+  carry the selected project context and reject stale tabs after a switch.
 - Literal manuscript anchor lookup now rejects overlapping duplicate quotes as
   ambiguous, including `ana` in `banana`, instead of silently choosing one.
 - Overlapping automatic research status reads share only their in-flight

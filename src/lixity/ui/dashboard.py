@@ -71,6 +71,7 @@ from .narration import (
     render_sentence_dist_panel,
     render_showing_panel,
 )
+from .project_overview import project_overview
 from .research_panel import render_research_panel
 from .settings import settings_form
 from .structural import style_structural
@@ -94,6 +95,7 @@ _CSS_FILES = (
     "section-navigation.css",
     "analysis-evidence.css",
     "reader-publication.css",
+    "project-overview.css",
 )
 _JS_FILES = (
     "read-only-site.js",
@@ -122,6 +124,7 @@ _JS_FILES = (
     "workspace-state.js",
     "workspace-motion.js",
     "project-ui.js",
+    "project-overview.js",
     "dossier-images.js",
     "dossier-geography.js",
     "style-space.js",
@@ -219,6 +222,7 @@ def render_dashboard(
     site_publication_context_token: str = "",
     reader_document: Sequence[ReaderBlock] | None = None,
     paragraph_evidence: Mapping[int, Mapping[str, Any]] | None = None,
+    project_overview_enabled: bool = False,
 ) -> str:
     """Renders the complete, deterministic single-file dashboard.
 
@@ -235,6 +239,8 @@ def render_dashboard(
     and an opaque ``manuscript_pdf_token`` for the selected server context.
     ``research_context_token`` binds native research controls to their selected
     research root; standalone renderers supply no guessed context.
+    ``project_overview_enabled`` enables explicit local project inspection;
+    embedding and read-only exports omit that surface by default.
     ``project_author`` and ``identity_check`` describe saved project identity and
     a read-only manuscript comparison. Author editing requires the explicit
     ``author_setting_enabled`` capability; its default supplies no personal name.
@@ -249,6 +255,7 @@ def render_dashboard(
     esc = html.escape
     allowed_actions = set(enabled_actions) if enabled_actions is not None else None
     can_edit = controls and not read_only
+    show_project_overview = can_edit and project_overview_enabled
 
     def action_enabled(action: str) -> bool:
         return not read_only and (allowed_actions is None or action in allowed_actions)
@@ -588,6 +595,9 @@ def render_dashboard(
         )
         parts.append('<section class="panel controls" id="controls">')
         parts.append(f"<h2>{L('workspace_project')}</h2>")
+        if show_project_overview:
+            parts.append(project_overview(labels, research_navigation=bool(
+                research_context_token and research_context_token == site_publication_context_token)))
 
         # Hosts that advertise `load` get their upload control here. The native
         # app imports through the single project dialog instead, so this view
@@ -691,7 +701,7 @@ def render_dashboard(
             f'<div class="ctl-status" id="ctl-status" role="status" aria-live="polite">{L("server_hint")}</div>'
         )
         # Generated files belong to the Results step, directly under the actions.
-        if artifacts:
+        if artifacts and not show_project_overview:
             parts.append('<section class="panel">')
             parts.append(f"<h2>{help_term(labels, 'artifacts', L('generated_files'))}</h2>")
             parts.append('<div class="artifacts">')

@@ -796,6 +796,40 @@ the explicit guards below.
 
 ### 5.2 HTTP Server Endpoints (for web UI and interactive agent loops)
 
+**Current main, unreleased after v0.7.4:** read-only project inspection is also
+available without HTTP through `api.inspect_project(project,
+selected_manuscript=None)` and `lixity project [PATH] [--json]` (or `--project
+PATH`). `lixity-project-structure/1` returns `ok`, `has_errors`, absolute local
+`root`, `roles`, `artifacts`, `issues` and `truncated`. Roles contain `role`,
+nullable relative `path` and `state`; the manuscript also records `selection`
+and nullable `configured_path`. States are `available`, `missing`, `unassigned`,
+`invalid`, `ambiguous`, `unreadable`, `unsafe` or `unknown`. Artifacts contain
+`name`, relative `path`, nullable `size_bytes`, `provenance: "unknown"` and
+`downloadable`. Issues carry a stable `code`, `severity` and nullable relative
+`path`; translate these through the shared workspace label pack, not exception
+strings. An existing root returns `ok: true` even with findings. CLI error
+findings exit 1; optional missing roles do not. Unavailable roots raise
+`ValueError`/`OSError` in Python and fail the CLI without an invented report.
+
+Only root-local settings bytes are read (maximum 1 MiB each); no manuscript,
+artifact contents or research revisions are loaded. Scans stop at 2,000 entries
+and return at most 200 flat outputs. `truncated: true` means incomplete, including
+conservative termination exactly at a scan boundary. Availability is metadata,
+not integrity or provenance. Returned local paths are private and are never
+included by this feature in static reports/reading websites. For limits and
+human interpretation, see [project inspection](USAGE.md#inspect-project-structure).
+
+`GET /api/project-structure?project_token=...` requires the current token from
+`#settings-form` and an explicitly selected project. It rejects absent/duplicate
+tokens (400), stale selection/settings (409), and cross-origin requests (403).
+Its token check uses the same configuration ceiling. A completed inspection
+returns 200 even with findings; it neither changes the selection nor initializes
+research. Overview `/artifact/<encoded-name>?project_token=...` links revalidate
+the context and eligible file at download time (409 for a changed context).
+Legacy unscoped artifact URLs remain accepted, with the same safe file checks.
+Context tokens guard selection; they are not authentication or content-version
+locks. Local metadata can change after an observation.
+
 When running `lixity serve --port 8765`, local agents can trigger deterministic workspace actions over HTTP:
 
 Browser API diagnostics report request metadata without copying response bodies

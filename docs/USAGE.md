@@ -60,6 +60,7 @@ or a different output.
 | I want a foreground server for development or integration | `lixity serve` | loopback HTTP server, live settings, manuscript upload, research panel |
 | I want to start or manage the installed app | `lixity service` | managed start, stop, restart and status without a source checkout |
 | Which installation and service am I using? | `lixity doctor` | package versions, module/interpreter location, contracts and owned service status |
+| Which files are sources or outputs, and are their locations usable? | `lixity project --project PATH` (current main) | read-only roles, existing outputs and bounded structure findings |
 | I want to manage and cite research sources | `lixity research` | immutable archives, citations, dossiers, manuscript grounding |
 | I want a printable document, report or reading copy | `lixity pdf` | neutral/editorial A4, A4 report, A5 book, 30×60 sheet |
 | I want to share a browsable reading copy | `lixity export-site` | static website, optional research and original sources |
@@ -84,6 +85,53 @@ writes nothing until confirmation; opening reconnects an existing project.
 For research, use Zotero for ordinary source work and Lixity for retained evidence,
 authored records and manuscript associations; the [research guide](research/USAGE.md)
 defines that boundary and the optional local-import workflow.
+
+### Inspect project structure
+
+**Current main, unreleased after v0.7.4:** open **Project** to inspect the selected
+folder. **Sources** identifies the selected/configured manuscript and native
+research folder; **Outputs** lists existing files directly under `exports/`
+and the conventional `exports/archive/` location. Open the manuscript or matching
+research workspace through its existing view, or open an eligible output.
+**Check again** repeats the metadata inspection without rebuilding analysis.
+There is no background scan of all projects.
+
+The equivalent CLI works without a running service:
+
+```bash
+lixity project --project /path/to/book
+lixity project /path/to/book --json
+```
+
+Without a selector, the CLI inspects the current directory only. It reads root
+`pyproject.toml`/`lixity.toml`, never user or ancestor settings. Manuscript
+selection reuses the configured relative path and existing workspace discovery;
+the live overview also identifies disagreement with the currently selected file.
+Missing optional research/output folders are normal. Ambiguous or unavailable
+sources, invalid settings, unsafe links and source/configuration aliases produce
+explicit findings. Exit 1 means an error finding or an unavailable inspection;
+warnings and an unassigned manuscript alone do not fail the command.
+
+**Available** means the filesystem metadata was accessible. It does not certify
+research integrity, output contents or freshness. Existing outputs always show
+**Source and generation history unknown**: filenames and modification times do
+not prove which manuscript/configuration generated them. Run `research audit`
+for archive integrity and `build` to produce analysis outputs deliberately.
+Submission documents remain **Unassigned**; this view does not guess which
+dossier is an exposé or invent a second folder convention.
+
+Inspection reads no manuscript/output contents or research history. Configuration
+reads stop at 1 MiB per file; discovery and output scans stop at 2,000 directory
+entries and return at most 200 output files. Reaching a limit is reported as an
+incomplete inspection, not a clean bill of health. Nested output folders are not
+inventoried. The native view requires a current selected-project context; a changed
+or oversized configuration can require reopening the view or CLI inspection.
+Downloads recheck their file and project context when opened.
+
+This feature creates, edits, moves and deletes no files. Git, backups, private
+recipient records and unknown project files remain outside its remit. Static
+reports and exported reading websites contain no local project inventory or
+live structure controls.
 
 <a id="download-a-manuscript-pdf-since-v240"></a>
 

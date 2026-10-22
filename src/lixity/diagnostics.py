@@ -59,6 +59,7 @@ def doctor(*, port: int = DEFAULT_PORT) -> dict[str, Any]:
         "schemas": {
             "analysis": installed["meta"]["schema_version"],
             "style": commands["style"]["schema_version"],
+            "project_structure": commands["project"]["schema_version"],
             "research_records": commands["research"]["record_schema_versions"],
             "research_manifests": commands["research"]["manifest_schema_versions"],
             "reading_website": commands["export-site"]["schema_version"],

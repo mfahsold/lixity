@@ -23,6 +23,7 @@ from ..config import (
     validate_author_name,
     validate_project_title,
 )
+from ..project_structure import MAX_CONFIG_BYTES, inspect_project
 from ..research import api as research_api
 from ..research.repository import Repository, ResearchError
 from ..workspace import resolve_project_target
@@ -63,6 +64,28 @@ def _project_probe(directory: Path) -> dict[str, Any]:
 
 class ProjectRoutesMixin(ResponseMixin):
     """Handlers for the non-research workspace actions."""
+
+    def _handle_project_structure(self) -> None:
+        """Observe the explicitly selected root only, guarded against stale tabs."""
+        query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+        tokens = query.get("project_token", [])
+        if len(tokens) != 1 or not tokens[0]:
+            self._json({"ok": False, "message": "Choose one current project context token"}, 400)
+            return
+        with self._workspace_lock:
+            root = self.get_author_project_root()
+            if root is None:
+                self._json({"ok": False, "message": "Open a project before inspecting its structure"}, 400)
+                return
+            if tokens[0] != project_settings_token(root, self.source_input, maximum_config_bytes=MAX_CONFIG_BYTES):
+                self._json({"ok": False, "message": "Project context changed; reopen the project view"}, 409)
+                return
+            try:
+                report = inspect_project(root, selected_manuscript=self.source_input)
+            except (OSError, ValueError, RuntimeError):
+                self._json({"ok": False, "message": "Selected project could not be inspected"}, 400)
+                return
+            self._json(report)
 
     def _handle_project_paths(self) -> None:
         """List one local directory level for the Open Project chooser."""

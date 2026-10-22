@@ -58,6 +58,11 @@ rendering, labels and submitted machine values. Language-independent interaction
 and conflict scenarios run once per relevant viewport. Native server saves and
 intercepted responses cover different boundaries and remain separate.
 
+The project-structure suite checks the native read-only overview in seven locales,
+desktop/mobile navigation, literal filenames, encoded output downloads, stale
+project rejection and mismatched research contexts. Synthetic source, settings
+and output bytes must remain unchanged after inspection.
+
 The anchor-navigation suite checks real nested scroll areas, short mobile
 viewports, single arrival feedback, superseded jumps and live reduced motion.
 Dossier-return uses a disposable native archive to check exact returns, saved

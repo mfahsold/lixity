@@ -327,6 +327,7 @@ def _completion_scripts() -> tuple[str, str]:
 #: Top-level commands: name and help text drive the parser and both emitted
 #: completion scripts, so adding a command lists it everywhere at once.
 _COMMANDS: tuple[tuple[str, str], ...] = (
+    ("project", "Inspect project sources, output locations and structural issues without writing"),
     ("research", "Local sources, dossiers, citations and lexical search (JSON)"),
     ("service", "Manage an owned local dashboard process"),
     ("analyze", "Corpus metrics (text/JSON, self-describing meta block)"),
@@ -432,6 +433,11 @@ _lixity_complete() {
         COMPREPLY=( $(compgen -W "--project --file --title --language --actor --source-id --version-id --reason --allow-retention --dry-run --context --thresholds --query --limit --passage --help" -- "$cur") )
         return 0
     fi
+    if [[ ${COMP_WORDS[1]} == project ]]; then
+        COMPREPLY=( $(compgen -W "--help --project --json" -- "$cur") )
+        COMPREPLY+=( $(compgen -d -- "$cur") )
+        return 0
+    fi
     if [[ ${COMP_WORDS[1]} == scenes ]]; then
         COMPREPLY=( $(compgen -W "--help --project --language --json --chapter --scene --latest" -- "$cur") )
         COMPREPLY+=( $(compgen -f -- "$cur") )
@@ -502,6 +508,10 @@ __LIXITY_ZSH_COMMANDS__
           ;;
         completion)
           _values 'shell' bash zsh sh
+          ;;
+        project)
+          _arguments '1:project directory:_files -/' \\
+            '--project[Explicit project root]:directory:_files -/' '--json[JSON inspection]' '--help[Help]'
           ;;
         doctor)
           _arguments '--json[JSON diagnostics]' '--port[Service port]:port:' '--help[Help]'
@@ -1199,6 +1209,46 @@ def _cmd_build(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _cmd_project(args: argparse.Namespace) -> int:
+    """Print the same bounded, metadata-only observation used by the native UI."""
+    from .format import safe_text
+    from .project_structure import inspect_project
+    from .workspace_labels import (
+        PROJECT_STRUCTURE_ISSUE_LABELS,
+        PROJECT_STRUCTURE_ROLE_LABELS,
+        PROJECT_STRUCTURE_STATE_LABELS,
+        WORKSPACE_LABELS,
+    )
+
+    try:
+        result = inspect_project(getattr(args, "project_path", "."))
+    except (OSError, ValueError, RuntimeError) as exc:
+        print(safe_text(f"{_m('err_prefix')} {exc}"), file=sys.stderr)
+        return EXIT_ERROR
+    if args.json:
+        print(_json(result, indent=True))
+    else:
+        labels = WORKSPACE_LABELS[_lang()]
+        def text(key: str) -> str:
+            return labels.get(key, key)
+        print(text("project_structure_title"))
+        print(safe_text(result["root"]))
+        for role in result["roles"]:
+            name = text(PROJECT_STRUCTURE_ROLE_LABELS[role["role"]])
+            state = text(PROJECT_STRUCTURE_STATE_LABELS[role["state"]])
+            print(safe_text(f"{name}: {role['path'] or '—'} · {state}"))
+        if result["artifacts"]:
+            print("\n" + text("project_structure_outputs"))
+            for artifact in result["artifacts"]:
+                print(safe_text(f"  {artifact['path']} · " + text("project_structure_provenance_unknown")))
+        for issue in result["issues"]:
+            message = text(PROJECT_STRUCTURE_ISSUE_LABELS[issue["code"]])
+            path = f" · {issue['path']}" if issue["path"] is not None else ""
+            severity = text("project_structure_issue_" + issue["severity"])
+            print(safe_text(f"[{severity}] {message}{path}"))
+    return EXIT_ERROR if result["has_errors"] else EXIT_OK
+
+
 def _positive_chapter(raw: str) -> int:
     value = int(raw)
     if value < 1:
@@ -1311,6 +1361,18 @@ def main(argv: list[str] | None = None) -> int:
             configure_service(sub.add_parser(name, help=help_text))
             continue
         p = sub.add_parser(name, help=help_text, description=help_text)
+        if name == "project":
+            selector = p.add_mutually_exclusive_group()
+            selector.add_argument("project_path", nargs="?", default=argparse.SUPPRESS,
+                                  help="Explicit project folder (default: current directory)")
+            selector.add_argument("--project", dest="project_path", default=argparse.SUPPRESS,
+                                  metavar="PATH", help="Explicit project folder (same as positional)")
+            p.add_argument("--json", action="store_true", help="Metadata observation and structural findings as JSON")
+            p.epilog = ("Reads only the selected root and bounded export metadata. No files are moved, "
+                        "created or repaired; research integrity and output freshness are not inferred. "
+                        "Exit 1 indicates structural errors or an unavailable project. "
+                        "Example: lixity project --project ./novel --json")
+            continue
         if name == "doctor":
             p.add_argument("--json", action="store_true", help="Machine-readable installation diagnostics")
             p.add_argument("--port", type=int, default=None, help=f"Service port (default: LIXITY_PORT or {DEFAULT_PORT})")
@@ -1548,6 +1610,8 @@ def main(argv: list[str] | None = None) -> int:
                 "--sans-bold-font", default=None, help="TrueType file for report headings"
             )
     args = parser.parse_args(argv)
+    if args.command == "project":
+        return _cmd_project(args)
     if args.command == "service":
         from .service import run as run_service
 

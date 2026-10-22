@@ -18,9 +18,11 @@ import os
 import re
 import stat
 import unicodedata
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from .config import read_explicit_project_config
 from .io import FileUtils
@@ -131,14 +133,18 @@ class AmbiguousManuscriptError(ValueError):
     """A folder contains several possible manuscripts and needs a selector."""
 
 
-def configured_manuscript(root: str | Path) -> str | None:
+def configured_manuscript(
+    root: str | Path, *, project_config: Mapping[str, Any] | None = None,
+) -> str | None:
     """Resolve one root-local manuscript setting without requiring source bytes.
 
     Missing/unreadable source state belongs to the caller (notably Research
     review). Invalid settings and paths escaping this project always fail.
+    An explicit ``project_config`` mapping, including an empty one, reuses
+    already inspected root-local settings without reopening their files.
     """
     base = Path(root).expanduser().resolve()
-    settings = read_explicit_project_config(base)
+    settings = read_explicit_project_config(base) if project_config is None else project_config
     if "manuscript" not in settings:
         return None
     value = settings["manuscript"]
@@ -197,12 +203,19 @@ def resolve_manuscript_target(
     return Workspace(root=str(base), manuscript=selected)
 
 
-def discover(root: str | None = None, explicit: str | None = None) -> Workspace:
+def discover(
+    root: str | None = None, explicit: str | None = None,
+    *, project_config: Mapping[str, Any] | None = None, entry_names: Sequence[str] | None = None,
+) -> Workspace:
     """Resolves the manuscript of a workspace.
 
     Order: explicit path, root-local configured manuscript, ``<foldername>.md``, ``manuscript.md``/``manuskript.md``,
     then the only remaining Markdown file. Raises ``FileNotFoundError`` when no
     manuscript exists and ``ValueError`` when the choice is ambiguous.
+    ``project_config`` reuses an already read root-local mapping. ``entry_names``
+    reuses captured names for the fallback instead of listing the folder again;
+    bounded callers must report an incomplete capture before invoking discovery.
+    Omitted arguments preserve ordinary filesystem/configuration discovery.
     """
     if explicit:
         path = os.path.abspath(explicit)
@@ -211,7 +224,7 @@ def discover(root: str | None = None, explicit: str | None = None) -> Workspace:
         return Workspace(root=os.path.dirname(path), manuscript=path)
 
     base = os.path.abspath(root or os.getcwd())
-    configured = configured_manuscript(base)
+    configured = configured_manuscript(base, project_config=project_config)
     if configured is not None:
         try:
             info = os.stat(configured)
@@ -227,7 +240,7 @@ def discover(root: str | None = None, explicit: str | None = None) -> Workspace:
 
     markdown = sorted(
         os.path.join(base, entry)
-        for entry in os.listdir(base)
+        for entry in (os.listdir(base) if entry_names is None else entry_names)
         if entry.lower().endswith(".md")
         and os.path.splitext(entry)[0].lower() not in _IGNORED_STEMS
         and os.path.isfile(os.path.join(base, entry))

@@ -1,11 +1,10 @@
 """lixity.api – Programmatic API facade for scripts, agents and integrations.
 
-Provides deterministic functions for corpus linguistics, tense profiling,
-self-calibrated style references, work markers and dashboards. Every call
-accepts explicit language and threshold settings; pass project settings when
-several projects are involved. JSON payloads carry their schema version in
-``meta``. Interface contracts live in ``docs/AGENTS.md``; interpretation
-limits in ``docs/METHODS.md``.
+Provides deterministic analysis with explicit language and threshold settings;
+pass project settings when several projects are involved. Analysis JSON carries
+its schema version in ``meta``. ``inspect_project`` is a separate metadata-only
+filesystem observation with its own top-level schema version. Interface
+contracts live in ``docs/AGENTS.md``; interpretation limits in ``docs/METHODS.md``.
 """
 
 from __future__ import annotations
@@ -24,6 +23,8 @@ from .pipeline import (
     profile_document,
     resolve_document_config,
 )
+from .project_structure import PROJECT_STRUCTURE_SCHEMA
+from .project_structure import inspect_project as inspect_project
 from .status import SCHEMA_VERSION_STYLE
 from .style_fingerprint import FingerprintThresholds as FingerprintThresholds
 from .ui import render_analysis
@@ -469,6 +470,13 @@ def about() -> dict[str, Any]:
                 "purpose": "local HTTP development server and interactive dashboard (127.0.0.1)",
                 "output": "server",
                 "discovery": "/api",
+            },
+            {
+                "name": "project",
+                "purpose": "read-only project sources, output locations and structural findings",
+                "output": "text|json",
+                "schema_version": PROJECT_STRUCTURE_SCHEMA,
+                "writes": False,
             },
             {
                 "name": "doctor",

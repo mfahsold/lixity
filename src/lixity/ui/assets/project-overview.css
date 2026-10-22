@@ -1,0 +1,27 @@
+.project-overview { margin: .5rem 0 1.5rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--line); }
+.project-overview-heading { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.project-overview-heading h3 { margin: 0; }
+.project-overview-heading .ctl { flex-shrink: 0; }
+.project-overview-root { display: flex; flex-wrap: wrap; gap: .25rem .65rem; margin: .5rem 0 1rem; font-size: .85rem; }
+.project-overview-root span { color: var(--muted); }
+.project-overview code { overflow-wrap: anywhere; white-space: normal; }
+.project-overview-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.project-overview-group { min-width: 0; }
+.project-overview-group h4, .project-overview-findings h4 { font-size: .9rem; margin: 0 0 .6rem; }
+.project-overview-list, .project-overview-issues { list-style: none; margin: 0; padding: 0; }
+.project-overview-row { padding: .65rem 0; border-top: 1px solid var(--line); min-width: 0; }
+.project-overview-row-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .25rem .65rem; }
+.project-overview-row-heading strong { font-size: .9rem; }
+.project-overview-row code { display: block; margin: .3rem 0; font-size: .8rem; }
+.project-overview-state, .project-overview-row .ctl-note { color: var(--muted); font-size: .8rem; }
+.project-overview-row .ctl { margin-top: .35rem; }
+.project-overview-artifacts { margin-top: .75rem; }
+.project-overview-artifacts .project-overview-row-heading strong { overflow-wrap: anywhere; }
+.project-overview-findings { margin-top: 1.25rem; }
+.project-overview-issues li { padding: .45rem 0; font-size: .85rem; }
+.project-overview-issues strong { margin-right: .45rem; }
+.project-overview-issues code { display: block; margin-top: .2rem; font-size: .8rem; }
+@media (max-width: 620px) {
+  .project-overview-columns { grid-template-columns: minmax(0, 1fr); }
+  .project-overview-heading { align-items: flex-start; flex-wrap: wrap; }
+}

@@ -93,6 +93,10 @@ counted spans; blue/orange value-and-arrow markers compare notable paragraphs
 with their chapter. Both preferences persist in the browser. It also adds
 `--body-only` section exports and `--compact` update receipts; see the
 [section-editing workflow](https://mfahsold.github.io/lixity/research/USAGE.md#work-on-one-dossier-section).
+The native **Project overview** and `lixity project --project PATH` also separate
+sources, existing outputs and read-only structure findings. They neither move
+files nor establish that an output matches the current manuscript; see
+[project inspection](https://mfahsold.github.io/lixity/USAGE.md#inspect-project-structure).
 
 CLI workflows can reuse the project's configured manuscript;
 [default manuscript guidance](https://mfahsold.github.io/lixity/USAGE.md#default-manuscript)

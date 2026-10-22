@@ -39,6 +39,14 @@ research entities. A native server lists registered operations at `GET /api`.
 Python consumers use `from lixity import api`; research uses
 `from lixity.research import api as research_api`.
 
+Current main (unreleased after v0.7.4) adds `lixity project --project PATH
+[--json]`, `api.inspect_project` and the native Project overview. Their shared
+`lixity-project-structure/1` observes bounded local metadata without creating
+files or reading manuscript/research contents. Sources and outputs are separate;
+existing output provenance stays unknown. See
+[project inspection](https://mfahsold.github.io/lixity/USAGE.md#inspect-project-structure)
+and [contracts](https://mfahsold.github.io/lixity/AGENTS.md#52-http-server-endpoints-for-web-ui-and-interactive-agent-loops).
+
 Since v0.7.4, `doctor --json` reports imported/distribution/service versions,
 module/interpreter locations, contract versions and issues under `lixity-doctor/1`.
 It reads no manuscripts/project configuration and performs no installation,

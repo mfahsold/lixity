@@ -103,6 +103,19 @@ class TestBrowserSuiteSelection(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertEqual(suites_for_paths([path]), expected)
 
+    def test_project_overview_changes_select_the_project_journeys(self):
+        from scripts.run_browser_suites import AREAS, suite_names, suites_for_paths
+
+        expected = [name for name in suite_names() if name in AREAS["project"]]
+        self.assertIn("project-structure.cjs", expected)
+        for path in (
+            "src/lixity/project_structure.py", "src/lixity/ui/project_overview.py",
+            "src/lixity/ui/assets/project-overview.js", "src/lixity/ui/assets/project-overview.css",
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(suites_for_paths([path]), expected)
+        self.assertEqual(suites_for_paths(["tests/browser/project-structure.cjs"]), ["project-structure.cjs"])
+
     def test_shared_browser_support_and_runner_changes_select_every_suite(self):
         from scripts.run_browser_suites import suite_names, suites_for_paths
 

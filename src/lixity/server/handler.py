@@ -8,10 +8,13 @@ from __future__ import annotations
 
 import json
 import os
+import stat
 from http.server import BaseHTTPRequestHandler
+from pathlib import Path
 from typing import Any, ClassVar
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
+from ..project_structure import MAX_CONFIG_BYTES, project_artifact_path
 from ..research import api as research_api
 from ..workspace_labels import WORKSPACE_LABELS
 from ._state import RefreshOutcome
@@ -22,6 +25,7 @@ from .constants import (
     MIME_TYPES,
 )
 from .discovery import api_index
+from .pdf_context import project_settings_token
 from .routes_manuscript_research import ManuscriptResearchRoutesMixin
 from .routes_markers import MarkerRoutesMixin
 from .routes_nda import NdaRoutesMixin
@@ -46,6 +50,7 @@ class LixityServerHandler(
     GET_ROUTES: ClassVar[dict[str, str]] = {
         "/api": "_handle_api_index",
         "/api/": "_handle_api_index",
+        "/api/project-structure": "_handle_project_structure",
         "/api/project-paths": "_handle_project_paths",
         "/api/research/status": "_handle_research_status",
         "/api/research/sources": "_handle_research_sources",
@@ -133,7 +138,7 @@ class LixityServerHandler(
             self._serve_artifact(path[len("/artifact/"):])
             return
 
-        if path == "/api/project-paths" and not self._same_origin():
+        if path in ("/api/project-paths", "/api/project-structure") and not self._same_origin():
             self._json({"ok": False, "message": "Cross-origin request forbidden"}, 403)
             return
         handler_name = self.GET_ROUTES.get(path)
@@ -195,29 +200,60 @@ class LixityServerHandler(
         self._handle_research_zotero(payload, capture=True)
 
     def _serve_artifact(self, raw_name: str) -> None:
-        """Stream a generated artifact, refusing any path outside exports/."""
-        name = os.path.basename(raw_name.strip("/"))
-        target = os.path.realpath(os.path.join(self.exports_dir, name))
-        real_exports = os.path.realpath(self.exports_dir)
-        if not target.startswith(real_exports + os.sep) or not os.path.isfile(target):
+        """Read one contained output with fresh identity and optional context guards."""
+        try:
+            name = unquote(raw_name, errors="strict")
+        except UnicodeError:
             self._json({"ok": False, "message": "Artifact not found"}, 404)
             return
+        tokens = parse_qs(urlparse(self.path).query, keep_blank_values=True).get("project_token")
+        if tokens is not None and (len(tokens) != 1 or not tokens[0]):
+            self._json({"ok": False, "message": "Choose one current project context token"}, 400)
+            return
+        if not self._same_origin():
+            self._json({"ok": False, "message": "Cross-origin request forbidden"}, 403)
+            return
+        with self._workspace_lock:
+            selected_root = self.get_author_project_root()
+            root = selected_root or Path(self.workspace_root)
+            source = self.source_input
+            if tokens is not None and (selected_root is None or tokens[0] != project_settings_token(root, source, maximum_config_bytes=MAX_CONFIG_BYTES)):
+                self._json({"ok": False, "message": "Project context changed; reopen the project view"}, 409)
+                return
         try:
-            size = os.path.getsize(target)
-        except OSError:
-            self._json({"ok": False, "message": "Artifact not found"}, 404)
+            target = project_artifact_path(root, name, selected_manuscript=source)
+            flags = os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_NOFOLLOW", 0)
+            with os.fdopen(os.open(target, flags), "rb") as handle:
+                opened = os.fstat(handle.fileno())
+                if not stat.S_ISREG(opened.st_mode):
+                    raise ValueError("Artifact is no longer a regular file")
+                if opened.st_size > MAX_ARTIFACT_BYTES:
+                    self._json({"ok": False, "message": "Artifact exceeds the serving limit"}, 413)
+                    return
+                # The observed length bounds allocation even for tiny outputs.
+                # Growth is detected by the extra byte and fresh descriptor stats.
+                content = handle.read(opened.st_size + 1)
+                after = os.fstat(handle.fileno())
+            if len(content) != opened.st_size or any(
+                getattr(opened, field) != getattr(after, field)
+                for field in ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+            ):
+                raise ValueError("Artifact changed while reading")
+            checked = project_artifact_path(root, name, selected_manuscript=source)
+            final = checked.stat()
+            if checked != target or any(getattr(after, field) != getattr(final, field)
+                for field in ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")):
+                raise ValueError("Artifact identity changed")
+        except (OSError, RuntimeError, ValueError):
+            self._json({"ok": False, "message": "Artifact not found or no longer available"}, 404)
             return
-        if size > MAX_ARTIFACT_BYTES:
-            self._json({"ok": False, "message": "Artifact exceeds the serving limit"}, 413)
-            return
-
-        ctype = MIME_TYPES.get(os.path.splitext(target)[1].lower(), "application/octet-stream")
-        try:
-            with open(target, "rb") as handle:
-                content = handle.read()
-        except OSError:
-            self._json({"ok": False, "message": "Failed to read artifact"}, 500)
-            return
+        if tokens is not None:
+            with self._workspace_lock:
+                current_root = self.get_author_project_root()
+                if current_root != root or tokens[0] != project_settings_token(current_root, self.source_input, maximum_config_bytes=MAX_CONFIG_BYTES):
+                    self._json({"ok": False, "message": "Project context changed; reopen the project view"}, 409)
+                    return
+        ctype = MIME_TYPES.get(target.suffix.lower(), "application/octet-stream")
         self._send(200, content, ctype)
 
     def do_POST(self) -> None:

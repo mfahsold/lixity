@@ -110,7 +110,13 @@ def _parse_project_toml(content: str) -> dict[str, Any]:
         raise ValueError("Project config could not be parsed; nothing was changed") from exc
 
 
-def project_config_snapshot(path: Path) -> tuple[tuple[int, ...] | None, bytes]:
+class ProjectConfigTooLargeError(ValueError):
+    """A bounded project inspection cannot safely read this configuration."""
+
+
+def project_config_snapshot(
+    path: Path, *, maximum_bytes: int | None = None,
+) -> tuple[tuple[int, ...] | None, bytes]:
     """Read only a regular root config, without blocking on special file nodes."""
     try:
         info = path.lstat()
@@ -126,7 +132,9 @@ def project_config_snapshot(path: Path) -> tuple[tuple[int, ...] | None, bytes]:
         opened = os.fstat(stream.fileno())
         if not stat.S_ISREG(opened.st_mode) or (opened.st_dev, opened.st_ino) != (info.st_dev, info.st_ino):
             raise ValueError("Project config changed while reading; nothing was changed")
-        content = stream.read()
+        content = stream.read() if maximum_bytes is None else stream.read(maximum_bytes + 1)
+        if maximum_bytes is not None and len(content) > maximum_bytes:
+            raise ProjectConfigTooLargeError("Project configuration exceeds the inspection byte limit")
     return (info.st_dev, info.st_ino, info.st_mtime_ns, info.st_ctime_ns, info.st_size, info.st_mode), content
 
 
@@ -378,11 +386,14 @@ def read_project_config(directory: str | Path) -> dict[str, Any]:
     return {}
 
 
-def read_explicit_project_config(directory: str | Path) -> dict[str, Any]:
+def read_explicit_project_config(
+    directory: str | Path, *, maximum_bytes: int | None = None,
+) -> dict[str, Any]:
     """Read only this root's settings; selection must not ignore invalid config.
 
     Unlike ordinary analysis loading, this strict read never consults user or
     ancestor files. Existing TOML/stat warnings become actionable errors.
+    An optional ceiling bounds the actual nonsymlink descriptor read per file.
     """
     settings: dict[str, Any] = {}
     try:
@@ -390,6 +401,13 @@ def read_explicit_project_config(directory: str | Path) -> dict[str, Any]:
             warnings.simplefilter("error", UserWarning)
             for name in ("pyproject.toml", "lixity.toml"):
                 path = Path(directory) / name
+                if maximum_bytes is not None:
+                    identity, content = project_config_snapshot(path, maximum_bytes=maximum_bytes)
+                    if identity is not None:
+                        # Match FileUtils.read_file's universal-newline semantics.
+                        text = content.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n")
+                        settings.update(_load_toml(path, text=text))
+                    continue
                 try:
                     info = path.lstat()
                 except FileNotFoundError:

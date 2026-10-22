@@ -271,6 +271,30 @@ not supply accounts, encryption, copy prevention or a restorable backup. See
 
 ## Configuration and multiple projects
 
+**Current main, unreleased after v0.7.4:** `project_structure.inspect_project`
+owns one metadata-only read model for the native Project overview, `lixity
+project` and `api.inspect_project`. It reuses the strict root-local TOML reader
+and workspace selectors; the inspector passes its bounded configuration mapping
+to selection instead of reopening settings. Configuration byte limits apply to
+the actual descriptor read, including a file that grows after metadata checks.
+Ordinary analysis/settings reads retain their existing behavior.
+
+The `lixity-project-structure/1` envelope distinguishes inspection completion
+(`ok`), error findings (`has_errors`) and incomplete observations (`truncated`).
+Roles describe existing conventions, not a second registry. Research directory
+presence is not archive validation. Output provenance remains `unknown` until
+a producing source/settings record exists; neither timestamps nor embedded
+assertions establish it. Submission roles have no inferred dossier/path binding.
+
+This is a bounded metadata observation, not an atomic filesystem snapshot. The
+native route binds it to the selected project context; output downloads share
+the eligibility checks, revalidate source/configuration aliases and file identity,
+bound the descriptor read, and reject changed scoped contexts. The browser loads
+the overview only on activation/refresh and drops stale pending responses. Static
+reports/websites receive neither the overview shell nor local inventory data.
+There is no migration, cleanup operation or general file manager. Explicit
+document-role bindings and generation provenance remain future model work.
+
 Explicit root settings own author identity, publication, reading-site profiles,
 chapter registers and project-local character profiles; user/ancestor defaults cannot supply them.
 The optional root `manuscript` setting follows the same project-only boundary.

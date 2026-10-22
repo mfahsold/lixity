@@ -231,6 +231,7 @@ def build_server_dashboard(
         project_author=project_author,
         identity_check=identity_check,
         author_setting_enabled=bool(source_input or project_root is not None),
+        project_overview_enabled=bool(source_input or project_root is not None),
         publication=publication_values,
         publication_error=publication_error,
         site_publications=identity_settings.get("site_publications", {}),
