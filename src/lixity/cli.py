@@ -97,6 +97,19 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         ),
         "about_commands": "Commands:",
         "about_license": "License: {license}",
+        'doctor_cli_version': 'CLI version',
+        'doctor_distribution_version': 'Package metadata',
+        'doctor_module_path': 'Imported module',
+        'doctor_interpreter': 'Python interpreter',
+        'doctor_service': 'Service state',
+        'doctor_unknown': 'Unavailable',
+        'doctor_ok': 'Installation checks passed.',
+        'doctor_invalid_service_port': 'Service port must be an integer between 1 and 65535.',
+        'doctor_service_version_unavailable': 'The running service version is unavailable. Inspect its installation before deciding whether to restart it.',
+        'doctor_distribution_version_mismatch': 'Imported Lixity and package metadata have different versions. Reinstall Lixity in the intended environment.',
+        'doctor_distribution_metadata_unavailable': 'Package metadata is unavailable. Repair the installation before relying on its version.',
+        'doctor_service_inspection_unavailable': 'Service state could not be verified. Inspect service status before restarting it.',
+        'doctor_service_version_mismatch': 'The running service uses another version. Restart it after updating the installation.',
         "err_prefix": "[error]",
         "err_shell": "Unknown shell: {shell} (bash|zsh)",
         "err_file": "File not readable: {file} ({exc})",
@@ -112,6 +125,7 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "build_dry_run": ("Dry run: {changed} to write, {unchanged} unchanged – no files changed."),
         "build_done": "Done: {changed} written, {unchanged} unchanged.",
         "dashboard_written": "Dashboard written: {output}",
+        "site_export_done": "Read-only website exported. Review included content before sharing.",
         "dashboard_unchanged": "Dashboard unchanged: {output}",
         "pdf_written": "PDF written: {output}",
         "pdf_unchanged": "PDF unchanged: {output}",
@@ -183,6 +197,19 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         ),
         "about_commands": "Kommandos:",
         "about_license": "Lizenz: {license}",
+        'doctor_cli_version': 'CLI-Version',
+        'doctor_distribution_version': 'Paketmetadaten',
+        'doctor_module_path': 'Importiertes Modul',
+        'doctor_interpreter': 'Python-Interpreter',
+        'doctor_service': 'Dienststatus',
+        'doctor_unknown': 'Nicht verfügbar',
+        'doctor_ok': 'Installationsprüfung erfolgreich.',
+        'doctor_invalid_service_port': 'Der Dienstport muss eine ganze Zahl zwischen 1 und 65535 sein.',
+        'doctor_service_version_unavailable': 'Die Version des laufenden Dienstes ist nicht verfügbar. Prüfe seine Installation vor einem möglichen Neustart.',
+        'doctor_distribution_version_mismatch': 'Importiertes Lixity und Paketmetadaten haben unterschiedliche Versionen. Installiere Lixity in der gewünschten Umgebung neu.',
+        'doctor_distribution_metadata_unavailable': 'Paketmetadaten sind nicht verfügbar. Repariere die Installation, bevor du dich auf deren Versionsangabe verlässt.',
+        'doctor_service_inspection_unavailable': 'Der Dienststatus konnte nicht geprüft werden. Prüfe service status vor einem Neustart.',
+        'doctor_service_version_mismatch': 'Der laufende Dienst verwendet eine andere Version. Starte ihn nach dem Aktualisieren der Installation neu.',
         "err_prefix": "[Fehler]",
         "err_shell": "Unbekannte Shell: {shell} (bash|zsh)",
         "err_file": "Datei nicht lesbar: {file} ({exc})",
@@ -200,6 +227,7 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         ),
         "build_done": "Fertig: {changed} geschrieben, {unchanged} unverändert.",
         "dashboard_written": "Dashboard geschrieben: {output}",
+        "site_export_done": "Website-Lesekopie exportiert. Prüfe die enthaltenen Inhalte vor der Weitergabe.",
         "dashboard_unchanged": "Dashboard unverändert: {output}",
         "pdf_written": "PDF geschrieben: {output}",
         "pdf_unchanged": "PDF unverändert: {output}",
@@ -311,9 +339,11 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("showing", "Showing vs. telling balance (text/JSON)"),
     ("style", "Self-calibrated style reference of the manuscript (text/JSON, schema v4)"),
     ("dashboard", "Generate a single-file HTML dashboard"),
+    ("export-site", "Export a static read-only project website"),
     ("pdf", "Compose a PDF for editing, reading, submission or analysis"),
     ("serve", "Run local HTTP development server and interactive dashboard"),
     ("build", "Idempotent workspace build of analysis exports and artifact archive"),
+    ("doctor", "Inspect installed versions, module location and local service without changing them"),
     ("about", "Installed metadata: commands, configuration, languages, features and heuristics"),
     ("schema", "Installed metadata: commands, configuration, languages, features and heuristics"),
     ("completion", "Shell completion script (bash or zsh)"),
@@ -394,12 +424,21 @@ _lixity_complete() {
         COMPREPLY=( $(compgen -W "--json --section --help" -- "$cur") )
         return 0
     fi
+    if [[ ${COMP_WORDS[1]} == doctor ]]; then
+        COMPREPLY=( $(compgen -W "--json --port --help" -- "$cur") )
+        return 0
+    fi
     if [[ ${COMP_WORDS[1]} == research ]]; then
         COMPREPLY=( $(compgen -W "--project --file --title --language --actor --source-id --version-id --reason --allow-retention --dry-run --context --thresholds --query --limit --passage --help" -- "$cur") )
         return 0
     fi
     if [[ ${COMP_WORDS[1]} == scenes ]]; then
         COMPREPLY=( $(compgen -W "--help --project --language --json --chapter --scene --latest" -- "$cur") )
+        COMPREPLY+=( $(compgen -f -- "$cur") )
+        return 0
+    fi
+    if [[ ${COMP_WORDS[1]} == export-site ]]; then
+        COMPREPLY=( $(compgen -W "--help --project --language --json -o --output --include-research --include-source-files --mode --publication-profile --max-chapter" -- "$cur") )
         COMPREPLY+=( $(compgen -f -- "$cur") )
         return 0
     fi
@@ -464,6 +503,9 @@ __LIXITY_ZSH_COMMANDS__
         completion)
           _values 'shell' bash zsh sh
           ;;
+        doctor)
+          _arguments '--json[JSON diagnostics]' '--port[Service port]:port:' '--help[Help]'
+          ;;
         about|schema)
           _arguments '--json[JSON output]' '--help[Help]' \
             '--section[One metadata section as JSON]:section:(__LIXITY_ABOUT_SECTIONS__)'
@@ -504,6 +546,21 @@ __LIXITY_ZSH_COMMANDS__
             '--no-project[Start without preloading a project]' \
             '--research-project[Explicit research project root]:directory:_files -/' \
             "${_lixity_style_flags[@]}"
+          ;;
+        export-site)
+          _arguments \
+            '1:manuscript:_files' \
+            '--project[Explicit project root]:directory:_files -/' \
+            '--language[Language profile]:profile:(auto de en fr es it pt nl generic)' \
+            '--mode[Reading format]:mode:(review reader companion)' \
+            '--publication-profile[Root-local reading profile]:name:' \
+            '--max-chapter[Omit content after this chapter]:chapter:' \
+            '--include-research[Include authored history and cited excerpts]' \
+            '--include-source-files[Also include original source files and full text]' \
+            '--json[Print the export manifest]' \
+            '--help[Help]' \
+            '-o[New website directory]:directory:_files -/' \
+            '--output[New website directory]:directory:_files -/'
           ;;
         service)
           _arguments \
@@ -861,10 +918,15 @@ def _cmd_motifs(args: argparse.Namespace) -> int:
 
     from .motifs import motif_report
 
-    config, resolved = resolve_document_config(
-        text, args.language, project_config=args._project_config
-    )
-    report = motif_report(text, motifs, config, phrase_size=max(2, args.phrases))
+    try:
+        config, resolved = resolve_document_config(
+            text, args.language, project_config=args._project_config,
+            **({"motif_regexes": motifs} if args.motif else {}),
+        )
+        report = motif_report(text, motifs if args.motif else None, config, phrase_size=max(2, args.phrases))
+    except ValueError as exc:
+        print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+        return EXIT_ERROR
 
     if args.json:
         print(_json(_meta_payload(resolved.key, **report.to_dict()), indent=True))
@@ -893,14 +955,31 @@ def _cmd_motifs(args: argparse.Namespace) -> int:
         words = ", ".join(f"{word} ({count})" for word, count in report.top_words)
         con.print(f"[bold]{_m('mot_top_words')}[/bold] {words}")
 
+    from .language_data import UI_LABELS
+
+    labels = UI_LABELS[_lang()]
     if report.repeated_phrases:
         table = Table(box=box.SIMPLE, header_style="bold green")
         table.add_column(_m("mot_phrase"))
-        table.add_column(_m("mot_count"), justify="right")
+        table.add_column(labels["mot_global_count"], justify="right")
         table.add_column(_m("mot_chapters"))
         for phrase in report.repeated_phrases:
             table.add_row(phrase.phrase, str(phrase.count), ", ".join(map(str, phrase.chapters)))
         con.print(table)
+
+    if report.echoes:
+        con.print(f"[bold]{labels['mot_echoes']}[/bold]")
+        con.print(labels["mot_echo_note"])
+        table = Table(box=box.SIMPLE, header_style="bold green")
+        table.add_column(_m("mot_phrase"))
+        table.add_column(labels["mot_echo_chapter"], justify="right")
+        table.add_column(labels["mot_echo_count"], justify="right")
+        table.add_column(labels["mot_echo_words"], justify="right")
+        for echo in report.echoes:
+            table.add_row(echo.term, str(echo.chapter), str(echo.count),
+                          f"{echo.first_word}–{echo.last_word}")
+        con.print(table)
+        con.print(labels["mot_echo_limits"])
     return EXIT_OK
 
 
@@ -968,6 +1047,12 @@ def _cmd_pdf(args: argparse.Namespace) -> int:
     from .pdf_layouts import FontChoice
 
     workspace = args._workspace
+    output = args.output or os.path.join(workspace.root, f"{workspace.slug}-{args.layout}.pdf")
+    try:
+        FileUtils.require_distinct_output(workspace.manuscript, output)
+    except (OSError, ValueError) as exc:
+        print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+        return EXIT_ERROR
 
     choice = FontChoice(
         serif=args.serif_font,
@@ -1000,11 +1085,12 @@ def _cmd_pdf(args: argparse.Namespace) -> int:
     except (OSError, PdfError, ValueError, RuntimeError) as exc:
         print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
         return EXIT_ERROR
-    # Default output belongs to the selected workspace root.
-    output = args.output or os.path.join(workspace.root, f"{workspace.slug}-{args.layout}.pdf")
     try:
-        changed = FileUtils.atomic_write_bytes_if_changed(output, payload)
-    except OSError as exc:
+        changed = FileUtils.atomic_write_bytes_if_changed(
+            output, payload,
+            before_replace=lambda: FileUtils.require_distinct_output(workspace.manuscript, output),
+        )
+    except (OSError, ValueError) as exc:
         print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
         return EXIT_ERROR
     print(_m("pdf_written" if changed else "pdf_unchanged", output=output))
@@ -1013,17 +1099,19 @@ def _cmd_pdf(args: argparse.Namespace) -> int:
 
 def _cmd_build(args: argparse.Namespace) -> int:
     """Idempotent workspace build: analyzes the manuscript and publishes artifacts."""
+    from .motifs import motif_report
+
     workspace = args._workspace
 
     try:
         text = workspace.read_manuscript()
         title = _document_title(args, workspace.manuscript, text)
+        config, resolved = resolve_document_config(
+            text, args.language, project_config=args._project_config
+        )
     except (OSError, ValueError) as exc:
         print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
         return EXIT_ERROR
-    config, resolved = resolve_document_config(
-        text, args.language, project_config=args._project_config
-    )
 
     fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
     analysis = analyze_document(text, config, fp_thresholds)
@@ -1062,6 +1150,7 @@ def _cmd_build(args: argparse.Namespace) -> int:
             reader_document=reader_blocks(text, config, analysis.paragraphs),
             title=title,
             flag_min_severity=fp_thresholds.flag_min_severity,
+            motifs=motif_report(text, config=config).to_dict(),
             scenes=scene_report_for_display(
                 text,
                 config,
@@ -1222,6 +1311,30 @@ def main(argv: list[str] | None = None) -> int:
             configure_service(sub.add_parser(name, help=help_text))
             continue
         p = sub.add_parser(name, help=help_text, description=help_text)
+        if name == "doctor":
+            p.add_argument("--json", action="store_true", help="Machine-readable installation diagnostics")
+            p.add_argument("--port", type=int, default=None, help=f"Service port (default: LIXITY_PORT or {DEFAULT_PORT})")
+            continue
+        if name == "export-site":
+            from .site_contracts import SITE_MODES
+
+            p.add_argument("file", nargs="?", help="Manuscript inside the selected project (default: project manuscript)")
+            p.add_argument("--project", required=True, metavar="PATH", help="Explicit project root")
+            p.add_argument("-o", "--output", required=True, help="A new directory for the reading website; existing paths are never overwritten")
+            p.add_argument("--language", default=None, help="Analysis language (default: project language or en)")
+            p.add_argument("--include-research", action="store_true", help="Include authored research, revision history, cited excerpts and manuscript links")
+            p.add_argument("--include-source-files", action="store_true", help="Include selected source files with redistribution permission; review mode also requires --include-research")
+            p.add_argument("--mode", choices=SITE_MODES, default="review", help="Review workspace, novel with curated notes, or companion without novel text")
+            p.add_argument("--publication-profile", metavar="NAME", help="Root-local site_publications profile for reader/companion mode")
+            p.add_argument("--max-chapter", type=int, metavar="N", help="In publication modes, omit later chapters, notes and their assets from the exported files")
+            p.add_argument("--json", action="store_true", help="Print the versioned export manifest as JSON")
+            p.epilog = (
+                "Creates a portable read-only snapshot, not an authenticated website or backup. "
+                "Open index.html locally or serve the exported directory with static hosting. "
+                "Review all included content before sharing; copying cannot be prevented. "
+                "Exporting does not publish, upload or change the source project."
+            )
+            continue
         if name not in ("serve", "completion", "about", "schema"):
             p.add_argument("--project", metavar="PATH",
                            help="Select an explicit project root; relative manuscript files resolve inside it; settings are root-local (no user or ancestor configuration)")
@@ -1411,7 +1524,8 @@ def main(argv: list[str] | None = None) -> int:
                 choices=PDF_LAYOUTS,
                 default="report",
                 help="editor: A4 editorial copy with line numbers and comment margins · "
-                "book: A5 reading copy · sheet: 30 lines of 60 characters · report: A4 analysis",
+                "book: A5 reading copy · sheet: 30 lines of 60 characters · report: A4 analysis · "
+                "document: neutral A4 text without line numbers or a generated cover",
             )
             p.add_argument(
                 "--title",
@@ -1442,6 +1556,30 @@ def main(argv: list[str] | None = None) -> int:
         from .research.cli import run as run_research
 
         return run_research(args)
+    if args.command == "doctor":
+        from .diagnostics import DOCTOR_SCHEMA, doctor
+
+        try:
+            port = args.port if args.port is not None else int(os.environ.get("LIXITY_PORT") or DEFAULT_PORT)
+            result = doctor(port=port)
+        except ValueError:
+            result = {"schema_version": DOCTOR_SCHEMA, "ok": False,
+                      "error": {"code": "invalid-service-port", "message": _m("doctor_invalid_service_port")}}
+        if args.json:
+            print(orjson.dumps(result).decode("utf-8"))
+        elif "error" in result:
+            print(f"{_m('err_prefix')} {result['error']['message']}", file=sys.stderr)
+        else:
+            installation = result["installation"]
+            for key in ("cli_version", "distribution_version", "module_path", "interpreter"):
+                print(f"{_m('doctor_' + key)}: {installation[key] if installation[key] is not None else _m('doctor_unknown')}")
+            service = result["service"]
+            print(f"{_m('doctor_service')}: {service['state']} ({service['port']})")
+            for issue in result["issues"]:
+                print("- " + _m("doctor_" + issue["code"].replace("-", "_")))
+            if result["ok"]:
+                print(_m("doctor_ok"))
+        return EXIT_OK if result["ok"] else EXIT_ERROR
     if args.command == "about":
         _print_about_json(args.section) if args.json or args.section else _print_about_text()
         return EXIT_OK
@@ -1459,6 +1597,32 @@ def main(argv: list[str] | None = None) -> int:
         # argparse choices already rejected unknown shells; keep a defensive path
         print(f"{_m('err_prefix')} {_m('err_shell', shell=args.shell)}", file=sys.stderr)
         return EXIT_ERROR
+    if args.command == "export-site":
+        from .site_contracts import SiteExportOptions
+        from .site_export import export_site
+
+        try:
+            options = SiteExportOptions(include_research=args.include_research,
+                                        include_source_files=args.include_source_files,
+                                        mode=args.mode, publication_profile=args.publication_profile,
+                                        max_chapter=args.max_chapter)
+            manifest = export_site(
+                args.project, args.output, manuscript=args.file, language=args.language,
+                **options.model_dump(exclude_defaults=True),
+            )
+        except (OSError, ValueError, RuntimeError) as exc:
+            print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+            return EXIT_ERROR
+        if args.json:
+            print(_json(manifest, indent=True))
+        else:
+            from pathlib import Path
+
+            from .format import safe_text
+
+            print(safe_text(str(Path(args.output).expanduser().resolve() / "index.html")))
+            print(_m("site_export_done"))
+        return EXIT_OK
     if getattr(args, "min_chapters", None) is not None and args.min_chapters < 2:
         parser.error("--min-chapters must be at least 2")
     if args.command == "profile" and args.only_notable and args.layer is None:
@@ -1711,8 +1875,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     output = args.output or "lixity-dashboard.html"
     try:
-        changed = FileUtils.atomic_write_if_changed(output, html)
-    except OSError as exc:
+        FileUtils.require_distinct_output(args.file, output)
+        changed = FileUtils.atomic_write_if_changed(
+            output, html, before_replace=lambda: FileUtils.require_distinct_output(args.file, output),
+        )
+    except (OSError, ValueError) as exc:
         print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
         return EXIT_ERROR
     print(_m("dashboard_written" if changed else "dashboard_unchanged", output=output))

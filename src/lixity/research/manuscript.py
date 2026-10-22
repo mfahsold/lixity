@@ -99,6 +99,13 @@ def list_manuscript_links(
     project: str | Path, *, claim_id: str | None = None, include_retracted: bool = False
 ) -> dict[str, Any]:
     snapshot = Repository(project).snapshot()
+    return manuscript_links_data(snapshot, claim_id=claim_id, include_retracted=include_retracted)
+
+
+def manuscript_links_data(
+    snapshot: Snapshot, *, claim_id: str | None = None, include_retracted: bool = False
+) -> dict[str, Any]:
+    """Build the native association list from one verified archive view."""
     if claim_id is not None:
         try:
             snapshot.latest(Reference(id=claim_id).id, Claim)

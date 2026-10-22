@@ -59,8 +59,9 @@
         !["image/png", "image/jpeg"].includes(image.media_type)) return null;
     var pin = target.exec("lixity:image/" + image.source_id + "/" + image.source_version_id);
     if (!pin) return null;
-    return "/api/research/image?project_id=" + encodeURIComponent(context.project_id) +
+    var url = "/api/research/image?project_id=" + encodeURIComponent(context.project_id) +
       "&source_id=" + encodeURIComponent(pin[1]) + "&version_id=" + encodeURIComponent(pin[2]);
+    return window.LixitySite.readOnly ? window.LixitySite.resourceUrl(url) : url;
   }
   function sourceContextHtml(image, collapsed) {
     if (!image || !image.context) return "";

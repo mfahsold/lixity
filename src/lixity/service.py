@@ -50,6 +50,14 @@ _OPTIONS = (
     "flag_min_severity",
 )
 _CHILDREN: dict[int, subprocess.Popen[bytes]] = {}
+STATUS_SCHEMA = "lixity-service-status/1"
+_STATUS_MESSAGES = {
+    "running": "Lixity is running",
+    "starting": "Owned Lixity process is still starting",
+    "stopped": "Lixity is stopped",
+    "busy": "Port is occupied by an unmanaged process",
+    "unknown": "Cannot determine the managed service status",
+}
 
 
 class ServiceError(ValueError):
@@ -1264,8 +1272,64 @@ class ManagedServe:
                 ready_path.unlink()
 
 
+def _status_data(result: Mapping[str, Any], port: int | None) -> dict[str, Any]:
+    """Project one observation without exposing storage, launch settings or errors."""
+    state = result.get("state")
+    if state not in _STATUS_MESSAGES:
+        state = "unknown"
+    known = state != "unknown"
+    port = port if type(port) is int and 1 <= port <= 65535 else None
+    url = result.get("url")
+    if port is None or url not in (f"http://127.0.0.1:{port}/", f"http://localhost:{port}/"):
+        url = None
+    pid, backend, version = (
+        result.get("pid"), result.get("backend"), result.get("running_version")
+    )
+    if state not in ("running", "starting"):
+        pid = backend = version = None
+    if type(pid) is not int or not 0 < pid <= 2**31 - 1:
+        pid = None
+    if backend not in ("process", "systemd"):
+        backend = None
+    if not isinstance(version, str) or len(version) > 100 or not re.fullmatch(
+        r"[0-9]+(?:\.[0-9]+)*(?:(?:a|b|rc|\.dev|\.post)[0-9]+)*"
+        r"(?:\+[A-Za-z0-9]+(?:[._-][A-Za-z0-9]+)*)?", version
+    ):
+        version = None
+    return {
+        "schema_version": STATUS_SCHEMA,
+        "ok": known,
+        "running": state == "running" if known else None,
+        "state": state,
+        "port": port,
+        "url": url,
+        "pid": pid,
+        "backend": backend,
+        "installed_version": __version__,
+        "running_version": version,
+        "message": _STATUS_MESSAGES[state],
+    }
+
+
+def service_status(port: int) -> dict[str, Any]:
+    """Inspect the owned instance once, without creating storage or reading projects.
+
+    ``ok`` describes a known observation; ``running`` means the owned instance is
+    ready. Unknown or unreadable state stays unknown rather than becoming stopped.
+    """
+    result: dict[str, Any] = {}
+    try:
+        if type(port) is not int:
+            raise ServiceError("Port must be an integer")
+        result = ServiceManager(port).control("status", {})
+    except (ServiceError, OSError, ValueError, RuntimeError):
+        pass
+    return _status_data(result, port)
+
+
 def run(args: argparse.Namespace) -> int:
     """Print a lifecycle result without interpreting project/source text."""
+    port: int | None = None
     try:
         port = (
             args.port
@@ -1277,13 +1341,17 @@ def run(args: argparse.Namespace) -> int:
             key: getattr(args, key, None) for key in ("host", "project", "no_project", *_OPTIONS)
         }
         result = manager.control(args.action, choices)
-    except (ServiceError, OSError, ValueError) as exc:
+    except (ServiceError, OSError, ValueError, RuntimeError) as exc:
         result = {
             "schema_version": "lixity-service-local/1",
             "ok": False,
             "state": "unknown",
             "message": str(exc),
         }
+    if args.json and args.action == "status":
+        result = _status_data(result, port)
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result["ok"] else 1
     if args.json:
         print(json.dumps(result, ensure_ascii=False))
     else:

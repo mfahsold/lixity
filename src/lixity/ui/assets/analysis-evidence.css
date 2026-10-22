@@ -1,10 +1,17 @@
 /* Native highlights leave prose, source anchors, selection and existing marks intact. */
-::highlight(lixity-analysis-evidence) {
+::highlight(lixity-analysis-evidence), .analysis-evidence-swatch {
   background-color: color-mix(in srgb, var(--accent) 23%, transparent);
   text-decoration: underline;
   text-decoration-color: var(--accent);
   text-decoration-thickness: 1px;
 }
+.analysis-evidence-swatch { padding: .15em .35em; color: var(--fg); }
+.layer-legend-group { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem 1rem; flex-basis: 100%; min-width: 0; }
+.layer-legend-group[hidden] { display: none; }
+.layer-legend-group > strong { color: var(--fg); }
+.layer-legend-group > p { flex-basis: 100%; margin: 0; line-height: var(--line-control); }
+#layer-evidence-legend { padding-bottom: var(--space-3); border-bottom: 1px solid var(--line); }
+#analysis-evidence-status:not(:empty) { color: var(--fg); }
 ::highlight(lixity-analysis-current) {
   background-color: color-mix(in srgb, var(--accent) 36%, transparent);
   text-decoration: underline;
@@ -58,7 +65,7 @@
 .analysis-evidence-guide { margin-block-start: var(--space-2); color: var(--muted); font-size: var(--text-note); }
 .analysis-evidence-guide summary { cursor: pointer; min-height: 44px; display: list-item; padding-block: var(--space-3); box-sizing: border-box; }
 @media (forced-colors: active) {
-  ::highlight(lixity-analysis-evidence), ::highlight(lixity-analysis-current) { background-color: Highlight; color: HighlightText; text-decoration-color: HighlightText; }
+  ::highlight(lixity-analysis-evidence), ::highlight(lixity-analysis-current), .analysis-evidence-swatch { background-color: Highlight; color: HighlightText; text-decoration-color: HighlightText; }
   .analysis-evidence-card { border: 2px solid CanvasText; box-shadow: none; }
   .analysis-evidence-scale { border: 1px solid CanvasText; }
   .analysis-evidence-scale::before { background: CanvasText; }

@@ -201,7 +201,19 @@ server.serve_forever()
       await expect(currentClaim).toBeFocused();
       await context.locator('[data-passage-research-close]').click();
       await page.locator('#tab-view-research').click();
+      let releaseReview, reviewStarted;
+      const heldReview = new Promise(resolve => {releaseReview = resolve;});
+      const reviewReady = new Promise(resolve => {reviewStarted = resolve;});
+      const reviewRoute = url => url.pathname === '/api/research/manuscript-review';
+      const holdReview = async route => {
+        const response = await route.fetch();
+        reviewStarted(); await heldReview;
+        await route.fulfill({response});
+      };
+      await page.route(reviewRoute, holdReview);
+      const refreshedReview = page.waitForResponse(response => new URL(response.url()).pathname === '/api/research/manuscript-review');
       await page.locator('[data-rtab="review"]').click();
+      await reviewReady;
       const reviewRows = page.locator('#research-manuscript-review .manuscript-link-review-item');
       await reviewRows.first().waitFor();
       assert.equal(await reviewRows.count(), index + 1, 'The Review tab lists every persisted association once');
@@ -211,6 +223,7 @@ server.serve_forever()
       const linkedClaim = reviewRows.last().locator('[data-research-history=claim]');
       await expect(linkedClaim).toHaveAttribute('data-record-id', fixture.claim_id);
       await expect(linkedClaim).toHaveAttribute('data-record-revision', '2');
+      const linkedClaimNode = await linkedClaim.elementHandle();
       const pinnedRead = page.waitForResponse(response => {
         const url = new URL(response.url());
         return url.pathname === '/api/research/record' && url.searchParams.get('kind') === 'claim';
@@ -221,9 +234,38 @@ server.serve_forever()
         'The explicit linked-version route retains the saved association pin');
       assert.equal((await pinnedResponse.json()).record.revision, 2);
       await expect(page.locator('#research-revision-history-detail')).toContainText('Reviewed synthetic claim version.');
+      releaseReview();
+      await (await refreshedReview).finished();
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      await page.unroute(reviewRoute, holdReview);
       await page.keyboard.press('Escape');
       await expect(page.locator('#modal-research-revision')).not.toBeVisible();
       await expect(linkedClaim).toBeFocused();
+      assert.equal(await linkedClaimNode.evaluate(node => node.isConnected && node === document.activeElement), true,
+        'An unchanged real review response preserves the actual modal opener, not just an equivalent button');
+      await linkedClaimNode.dispose();
+      await page.evaluate(paragraphId => LixityManuscriptLinks.review({paragraphId}), panelId);
+      await expect(reviewRows).toHaveCount(1);
+      await expect(page.locator('#research-manuscript-review [data-manuscript-links-all]')).toBeVisible();
+      await page.locator('#research-manuscript-review [data-manuscript-links-all]').click();
+      await expect(reviewRows).toHaveCount(index + 1);
+      await expect(page.locator('#research-manuscript-review [data-manuscript-links-all]')).toHaveCount(0);
+      await page.route(reviewRoute, async route => {
+        const response = await route.fetch(), report = await response.json();
+        report.links[report.links.length - 1].claim_title = 'Changed synthetic review title';
+        await route.fulfill({json: report});
+      }, {times: 1});
+      await page.locator('#r-review-refresh').click();
+      await expect(reviewRows.last()).toContainText('Changed synthetic review title');
+      await page.locator('#r-review-refresh').click();
+      await expect(reviewRows.last()).toContainText('Synthetic current claim');
+      await page.route(reviewRoute, route => route.fulfill({json:{ok:false,message:'Synthetic review unavailable'}}), {times: 1});
+      await page.locator('#r-review-refresh').click();
+      await expect(page.locator('#research-manuscript-review')).toContainText('Synthetic review unavailable');
+      await expect(reviewRows).toHaveCount(0);
+      await page.locator('#r-review-refresh').click();
+      await expect(reviewRows).toHaveCount(index + 1);
+      await expect(reviewRows.last()).toContainText('Synthetic current claim');
       await page.locator('#tab-view-analysis').click();
       const tokens = await page.evaluate(() => ({
         research: document.querySelector('#research-manager').dataset.researchToken,

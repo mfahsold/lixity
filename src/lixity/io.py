@@ -18,7 +18,30 @@ class FileUtils:
     """
 
     @staticmethod
-    def atomic_write_if_changed(filepath: str, content: str, encoding: str = "utf-8") -> bool:
+    def require_distinct_output(source: str, target: str) -> None:
+        """Reject source aliases before an export and again before replacement.
+
+        Resolved names cover directory/leaf symlinks; file identity additionally
+        covers hard links. Unreadable identities fail rather than assuming that
+        replacement is safe. This inspection creates no output directories.
+        """
+        source_name = os.path.normcase(os.path.realpath(source))
+        target_name = os.path.normcase(os.path.realpath(target))
+        if source_name == target_name:
+            raise ValueError("Export output must not replace the manuscript or an alias of it")
+        try:
+            same = os.path.samefile(source, target)
+        except FileNotFoundError:
+            os.stat(source)  # Only a missing destination is an acceptable unknown.
+            return
+        if same:
+            raise ValueError("Export output must not replace the manuscript or an alias of it")
+
+    @staticmethod
+    def atomic_write_if_changed(
+        filepath: str, content: str, encoding: str = "utf-8", *,
+        before_replace: Callable[[], None] | None = None,
+    ) -> bool:
         """
         Writes the passed content to disk only if it differs
         from the current file content.
@@ -37,7 +60,9 @@ class FileUtils:
                 return False
         except OSError:
             pass  # Missing, unreadable or incorrectly encoded target -> replace.
-        return FileUtils.atomic_write_bytes_if_changed(filepath, content.encode(encoding))
+        return FileUtils.atomic_write_bytes_if_changed(
+            filepath, content.encode(encoding), before_replace=before_replace,
+        )
 
     @staticmethod
     def atomic_write_bytes_if_changed(

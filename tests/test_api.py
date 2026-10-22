@@ -172,8 +172,8 @@ class TestApiFacade(unittest.TestCase):
         commands = {command["name"]: command for command in api.about()["commands"]}
         self.assertIn("pdf", commands)
         self.assertEqual(commands["pdf"]["output"], "pdf")
-        for layout in ("report", "book", "sheet"):
-            self.assertIn(layout, commands["pdf"]["purpose"])
+        for purpose in ("report", "editorial", "A5", "sheet", "document"):
+            self.assertIn(purpose, commands["pdf"]["purpose"])
 
     def test_about_distinguishes_default_profile_from_opt_in_layer_contract(self):
         from lixity.style_fingerprint import LAYER_FEATURES

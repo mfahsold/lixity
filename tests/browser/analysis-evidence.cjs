@@ -17,9 +17,11 @@ from lixity.pipeline import analyze_document
 from lixity.language import get_language_profile
 from lixity.workspace_labels import WORKSPACE_LABELS
 from lixity.ui import render_dashboard
+from lixity.api import dashboard
 text = '# Synthetic evidence\\n\\n😀 I feel the gate. The gate was opened slowly. "I can wait," she said. The organization might return. Wait. ' + 'The patient keeper watches the garden and the quiet river. ' * 8
 analysis = analyze_document(text, CorpusConfig(language='en'), resolve_thresholds(project_config={}), include_evidence=True)
 result = {}
+result['static'] = dashboard(text, language='en', title='Synthetic static comparison')
 for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
     page = render_dashboard(analysis.chapters, analysis.paragraphs, metrics=analysis.metrics,
         fingerprint=analysis.fingerprint, paragraph_evidence=analysis.evidence, title='Synthetic evidence', controls=True,
@@ -368,6 +370,8 @@ server.serve_forever()
 (async () => {
   const browser = await launchChromium();
   try {
+    await nativeLegends(browser);
+    if (process.env.LIXITY_LEGENDS_ONLY) return;
     await pendingInspectorCards(browser);
     await localizedSentenceCards(browser);
     for (const width of [1440, 320]) {
@@ -702,3 +706,112 @@ server.serve_forever()
     console.log('analysis-evidence passed; artifacts: ' + artifacts);
   } finally {await browser.close();}
 })().catch(error => {console.error(error); process.exitCode=1;});
+
+async function nativeLegends(browser) {
+  const classic = await browser.newPage({viewport:{width:320,height:480}});
+  try {
+    await classic.route('**/*', route => route.fulfill({contentType:'text/html',body:fixtures.static}));
+    await classic.goto('http://localhost/');
+    await classic.locator('#style-layer').selectOption('asl');
+    assert.equal(await classic.locator('#layer-comparison-legend').isVisible(), true);
+    assert.equal(await classic.locator('#layer-evidence-legend').isVisible(), false, 'Classic reports have no active counted-text owner');
+    assert.equal(await classic.locator('#analysis-evidence-status').isVisible(), false);
+  } finally {await classic.close();}
+  const source = String.raw`
+import json, sys
+from pathlib import Path
+from http.server import ThreadingHTTPServer
+from lixity.server import LixityServerHandler
+project = Path(sys.argv[1])
+manuscript = project / 'legend.md'
+manuscript.write_text('## Synthetic legend chapter\n\nI feel the rain.\n\nThe gate was opened slowly beside the quiet garden.\n\nWait. The keeper watches the courtyard and listens.\n', encoding='utf-8')
+(project / 'lixity.toml').write_text('title = "Synthetic legend clarity"\n', encoding='utf-8')
+LixityServerHandler.workspace_root = str(project)
+LixityServerHandler.source_input = str(manuscript)
+LixityServerHandler.language = LOCALE
+LixityServerHandler.refresh()
+server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
+print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'manuscript': str(manuscript)}), flush=True)
+server.serve_forever()
+`;
+  for (const locale of ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl']) {
+    const directory = fs.mkdtempSync(path.join(artifacts, 'legend-' + locale + '-'));
+    const server = await startNativeServer(source.replace('LOCALE', JSON.stringify(locale)), directory);
+    const bytes = fs.readFileSync(server.fixture.manuscript);
+    try {
+      const cases = [{width:1440}, {width:320}];
+      if (locale === 'en') cases.push({width:320, fault:'unsupported'}, {width:320, fault:'missing'});
+      for (const {width, fault} of cases) {
+        const page = await browser.newPage({viewport:{width,height:width === 320 ? 480 : 950}, reducedMotion:'reduce', colorScheme:width === 320 ? 'dark' : 'light'});
+        const errors = [], writes = [];
+        page.on('pageerror', error => errors.push(error.message));
+        page.on('console', message => {if (['error', 'warning'].includes(message.type())) errors.push(message.text());});
+        page.on('request', request => {if (request.method() !== 'GET') writes.push(request.url());});
+        if (fault === 'unsupported') await page.addInitScript(() => {window.Highlight = undefined;});
+        try {
+          await page.goto(server.fixture.url);
+          assert.equal(new URL(page.url()).origin, server.fixture.url);
+          assert.match(await page.title(), /Synthetic legend clarity/);
+          assert.equal(await page.locator('h1').textContent(), 'Synthetic legend clarity');
+          const before = await page.locator('#chapters .ptext').evaluateAll(nodes => nodes.map(node => ({id:node.id, hash:node.dataset.paragraphSha256, text:node.querySelector('.ptext-inner > p').textContent})));
+          if (fault === 'missing') await page.evaluate(() => {Object.values(paragraphContent).forEach(entry => {entry[3] = null;});});
+          const legend = page.locator('#layer-legend'), counted = page.locator('#layer-evidence-legend'), comparison = page.locator('#layer-comparison-legend');
+          assert.equal(await legend.isVisible(), false);
+          await page.locator('#manuscript-analysis-toggle').click();
+          assert.equal(await counted.isVisible(), true, 'Counted text has its own visible legend');
+          assert.equal(await comparison.isVisible(), true, 'Paragraph comparison has a separate visible legend');
+          assert.equal(await page.locator('.toolbar > .legend').isVisible(), false, 'An active metric hides the unrelated tense key in reading');
+          const labels = await page.evaluate(() => ({counted:uiLabel('legend_counted_text'), comparison:uiLabel('legend_paragraph_comparison')}));
+          assert.equal(await counted.locator('strong').textContent(), labels.counted);
+          assert.equal(await comparison.locator('strong').first().textContent(), labels.comparison);
+          assert.equal(await counted.locator('.analysis-evidence-swatch').evaluate(node => getComputedStyle(node).textDecorationLine.includes('underline')), true);
+          for (const key of ['asl', 'passive']) {
+            await selectMetric(page, key);
+            const current = await page.locator('#style-layer option:checked').evaluate(node => ({title:node.textContent,hint:node.dataset.hint}));
+            assert.equal(await page.locator('#layer-comparison-hint').textContent(), current.hint);
+            assert.equal(await page.locator('#layer-comparison-hint').isVisible(), true);
+            assert.ok((await page.locator('#layer-evidence-hint').textContent()).includes(current.title));
+          }
+          if (fault) {
+            await page.locator('#chapters .ptext').first().scrollIntoViewIfNeeded();
+            await page.waitForFunction(() => document.getElementById('analysis-evidence-status').textContent.length > 0);
+            assert.equal(await page.locator('#analysis-evidence-status').isVisible(), true);
+            assert.equal(await page.locator('#reader-analysis-settings').evaluate(node => node.open), false);
+            assert.equal(await page.locator('#analysis-evidence-status').evaluate(node => Boolean(node.closest('#reader-analysis-settings'))), false, 'Unavailable marks are explained outside the closed settings');
+            assert.equal(await page.evaluate(() => CSS.highlights?.get('lixity-analysis-evidence')?.size || 0), 0);
+          }
+          await openAnalysisSettings(page); await page.locator('#analysis-evidence-enabled').uncheck();
+          await page.keyboard.press('Escape');
+          assert.equal(await counted.isVisible(), false);
+          assert.equal(await comparison.isVisible(), true, 'Disabling counted marks retains paragraph comparisons');
+          await page.reload(); await page.locator('#manuscript-analysis-toggle').click();
+          assert.equal(await counted.isVisible(), false, 'Reload preserves the unchecked preference');
+          assert.equal(await page.locator('#style-layer').inputValue(), 'passive');
+          await openAnalysisSettings(page); await page.locator('#analysis-evidence-enabled').check();
+          await page.keyboard.press('Escape');
+          assert.equal(await counted.isVisible(), true);
+          await legend.evaluate(node => {
+            const toolbar = document.getElementById('manuscript-reader-controls').getBoundingClientRect();
+            window.scrollBy({top:node.getBoundingClientRect().top - toolbar.bottom - 8,behavior:'instant'});
+          });
+          await settle(page);
+          assert.equal(await legend.evaluate(node => {const box=node.getBoundingClientRect(); return box.left >= 0 && box.right <= innerWidth;}), true);
+          assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+          await page.screenshot({path:path.join(artifacts, `legends-${locale}-${width}-${fault || 'mapped'}.png`)});
+          await page.locator('#workbench-overview-open').click();
+          assert.equal(await page.locator('.toolbar > .legend').isVisible(), true, 'Overview retains the tense key');
+          await page.locator('#workbench-overview-back').click();
+          await page.locator('#manuscript-analysis-toggle').click();
+          assert.equal(await legend.isVisible(), false);
+          await page.locator('#manuscript-analysis-toggle').click();
+          await selectMetric(page, '');
+          assert.equal(await legend.isVisible(), false);
+          assert.deepEqual(await page.locator('#chapters .ptext').evaluateAll(nodes => nodes.map(node => ({id:node.id, hash:node.dataset.paragraphSha256, text:node.querySelector('.ptext-inner > p').textContent}))), before);
+          assert.deepEqual(errors, []); assert.deepEqual(writes, []);
+        } finally {await page.close();}
+      }
+      assert.deepEqual(fs.readFileSync(server.fixture.manuscript), bytes);
+    } finally {await server.close();}
+  }
+  console.log('Native legends: distinct counted text/comparison keys, visible color meaning, Off/None/unchecked persistence, unavailable marks, and source identity passed in seven locales at desktop/mobile. ' + artifacts);
+}

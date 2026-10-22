@@ -177,6 +177,7 @@ function researchPassageActions(passageId, context) {
 }
 
 function researchCitationHtml(cite, interactive) {
+  if (window.LixitySite.readOnly) interactive = false;
   var unavailable = Boolean(cite.error) || !["available", "withdrawn"].includes(cite.availability);
   var withdrawn = cite.availability === "withdrawn";
   var availability = unavailable ? uiLabel("research_evidence_unavailable") : (withdrawn ? uiLabel("research_evidence_withdrawn_context") : uiLabel("research_evidence_retained_unreviewed"));
@@ -200,7 +201,7 @@ function researchDetailsControl(kind, id) {
 function researchRevisionActions(kind, id) {
   var attrs = ' data-record-id="' + escapeHtml(id) + '"';
   return '<div class="research-record-actions">' +
-    '<button type="button" class="ctl" data-research-revise="' + kind + '"' + attrs + '>' + escapeHtml(uiLabel("research_revision_edit")) + '</button>' +
+    (!window.LixitySite.readOnly ? '<button type="button" class="ctl" data-research-revise="' + kind + '"' + attrs + '>' + escapeHtml(uiLabel("research_revision_edit")) + '</button>' : '') +
     '<button type="button" class="ctl" data-research-history="' + kind + '"' + attrs + '>' + escapeHtml(uiLabel("research_revision_history")) + '</button>' +
     '</div>';
 }
@@ -216,6 +217,7 @@ function zoteroLibraryIdentity(library) {
 }
 
 function zoteroOpenLink(library, key, quiet) {
+  if (window.LixitySite.readOnly) return "";
   if (!/^[A-Z0-9]{8}$/.test(key || "") || !/^(users\/\d+|groups\/[1-9]\d*)$/.test(library || "")) return "";
   var prefix = library.startsWith("groups/") ? library : "library";
   var href = 'zotero://select/' + prefix + '/items/' + key;

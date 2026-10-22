@@ -7,7 +7,7 @@ from typing import Any
 from ..config import MAX_AUTHOR_NAME_CHARS, MAX_PROJECT_TITLE_CHARS
 from ..publication import PUBLICATION_FIELDS
 from ..site import docs_url
-from ..style_fingerprint import FEATURES, FingerprintThresholds
+from ..style_fingerprint import FEATURE_UNITS, FEATURES, FingerprintThresholds
 from .components import checkbox_field, esc, help_term, label
 
 
@@ -25,6 +25,9 @@ def settings_form(
     publication_error: str = "",
     project_token: str = "",
     register_settings: Mapping[str, Any] | None = None,
+    site_publications: Mapping[str, Any] | None = None,
+    site_publication_context_token: str = "",
+    language_key: str | None = None,
 ) -> str:
     def translated(key: str) -> str:
         return esc(label(labels, key))
@@ -225,7 +228,11 @@ def settings_form(
         f'{translated("settings_save_analysis_hint" if author_setting_enabled and project_token else "settings_save_analysis_unavailable")}</p>',
         '</fieldset>',
         *publication_parts,
-        register_editor(labels, register_settings or {}, editable=author_setting_enabled and bool(project_token)),
+        register_editor(labels, register_settings or {}, editable=author_setting_enabled and bool(project_token),
+                        language_key=language_key or current_language),
+        site_publication_editor(labels, site_publications if site_publications is not None else {},
+                                editable=author_setting_enabled and bool(project_token),
+                                context_token=site_publication_context_token),
         '<div class="settings-actions">',
         f'<button type="submit" class="ctl primary" data-action="settings" data-payload="settings">{translated("apply")}</button>',
         f'<button type="button" class="ctl" id="settings-reset">{translated("reset_thresholds")}</button>',
@@ -236,17 +243,51 @@ def settings_form(
     return "".join(parts)
 
 
-def register_editor(labels: Mapping[str, str] | None, settings: Mapping[str, Any], *, editable: bool) -> str:
+def site_publication_editor(
+    labels: Mapping[str, str] | None, profiles: Mapping[str, Any], *, editable: bool,
+    context_token: str = "",
+) -> str:
+    """Keep curated publication drafts in the existing project settings save."""
+    keys = ("title", "hint", "unavailable", "id", "id_hint", "name", "introduction", "add_profile", "profile",
+            "entries", "entry", "add_entry", "dossier", "choose_dossier", "revision", "current",
+            "version", "section", "whole_body", "after", "after_hint", "override", "citations", "geography",
+            "scope", "missing", "loading", "load_error", "invalid", "raw_error", "raw", "recover",
+            "move_up", "move_down")
+    terms = {"publication_editor_" + key: label(labels, "publication_editor_" + key) for key in keys}
+    terms["remove_recent_project"] = label(labels, "remove_recent_project")
+    return (
+        '<details class="settings-advanced" id="settings-site-publications">'
+        f'<summary id="settings-site-publications-summary">{esc(terms["publication_editor_title"])}</summary>'
+        f'<p class="panel-guide">{esc(terms["publication_editor_hint"])}</p>'
+        + ("" if editable else f'<p class="ctl-note">{esc(terms["publication_editor_unavailable"])}</p>')
+        + '<fieldset class="site-publication-editor" id="site-publication-editor" '
+        f'data-initial="{esc(json.dumps(profiles, ensure_ascii=False))}" '
+        f'data-labels="{esc(json.dumps(terms, ensure_ascii=False))}" data-context-token="{esc(context_token)}"'
+        f'{"" if editable else " disabled"}>'
+        f'<legend>{esc(terms["publication_editor_title"])}</legend>'
+        '<p class="ctl-status" data-site-publication-status role="status" aria-live="polite"></p>'
+        '<div data-site-publication-profiles></div>'
+        f'<button type="button" class="ctl" data-site-publication-add-profile>{esc(terms["publication_editor_add_profile"])}</button>'
+        '</fieldset></details>'
+    )
+
+
+def register_editor(
+    labels: Mapping[str, str] | None, settings: Mapping[str, Any], *, editable: bool,
+    language_key: str = "en",
+) -> str:
     """Use the shared settings save for explicit chapter registers and ranges."""
     initial = {key: settings.get(key, {}) for key in ("register_profiles", "chapter_registers")}
     terms = {key: label(labels, key) for key in (
         "register_name", "register_target", "register_lower", "register_upper", "register_add_target",
         "register_selector", "register_invalid", "remove_recent_project")}
-    features = [(name, label(labels, key)) for name, key, _ in FEATURES]
+    units = FEATURE_UNITS.get(language_key, {})
+    features = [(name, f"{label(labels, key)} · {units.get(name, unit)}") for name, key, unit in FEATURES]
     return (
         '<details class="settings-advanced" id="settings-registers">'
-        f'<summary>{esc(label(labels, "register_title"))}</summary>'
+        f'<summary id="settings-registers-summary">{esc(label(labels, "register_title"))}</summary>'
         f'<p class="panel-guide">{esc(label(labels, "register_hint"))}</p>'
+        f'<p class="ctl-note">{esc(label(labels, "register_scope_hint"))}</p>'
         + ("" if editable else f'<p class="ctl-note">{esc(label(labels, "register_unavailable"))}</p>')
         + f'<fieldset class="register-editor" id="register-editor" data-initial="{esc(json.dumps(initial, ensure_ascii=False))}" '
         f'data-labels="{esc(json.dumps(terms, ensure_ascii=False))}" data-features="{esc(json.dumps(features, ensure_ascii=False))}"'

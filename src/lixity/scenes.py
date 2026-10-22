@@ -74,10 +74,12 @@ def scene_report(
     analyzer = CorpusAnalyzer(config, sample_text=text)
     measured_chapters = {chapter.num: chapter for chapter in (_premeasured_chapters or ())}
     items: list[dict[str, Any]] = []
+    chapter_dividers: dict[int, int] = {}
     breaks = 0
     for chapter_num, title, body in split_chapters(text, config):
         clean = re.sub(r"<!--.*?-->", "", body, flags=re.DOTALL)
         parts, scene_breaks = split_scenes(clean)
+        chapter_dividers[chapter_num] = scene_breaks
         breaks += scene_breaks
         for index, part in enumerate(parts, 1):
             measured = measured_chapters.get(chapter_num) if not scene_breaks else None
@@ -110,7 +112,26 @@ def scene_report(
     missing = assignments.keys() - {item["id"] for item in items}
     unplanned = missing - planned
     if unplanned:
-        raise ValueError("Scene assignments no longer match this manuscript: " + ", ".join(sorted(unplanned)))
+        details = []
+        for chapter in sorted({int(identifier.split(":")[0]) for identifier in unplanned}):
+            if chapter not in chapter_dividers:
+                details.append(f"Chapter {chapter} is not present in this manuscript.")
+                continue
+            identifiers = [item["id"] for item in items if item["chapter"] == chapter]
+            count = len(identifiers)
+            dividers = chapter_dividers[chapter]
+            details.append(
+                f"Chapter {chapter}: {count} measured scene{'s' if count != 1 else ''} "
+                f"({', '.join(identifiers) or 'none'}); "
+                f"{dividers} recognized scene divider{'s' if dividers != 1 else ''}."
+            )
+        raise ValueError(
+            "Scene assignments no longer match this manuscript: " + ", ".join(sorted(unplanned))
+            + "\n" + "\n".join(details)
+            + "\nReview scene_analysis.assignments after merging or removing scenes. "
+            "For unwritten scenes, explicitly list their assigned IDs in scene_analysis.planned. "
+            "Review intended scene breaks: use a standalone --- or * * *. Blank lines do not split scenes."
+        )
     baselines: dict[str, dict[str, Any]] = {}
     for group in targets:
         members = [item for item in items if item["group"] == group]

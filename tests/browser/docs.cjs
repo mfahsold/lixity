@@ -1,11 +1,11 @@
 const {selectMetric} = require('./support/analysis-controls.cjs');
 const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
-const {openProjectActions} = require('./support/project-actions.cjs');
 // Validate the public static site without contacting production or loading private data.
 const fs = require('node:fs');
 const path = require('node:path');
 const {expect} = require(path.join(playwrightModule, 'test'));
 const os = require('node:os');
+const http = require('node:http');
 const assert = require('node:assert/strict');
 const {spawnSync} = require('node:child_process');
 const repository = path.resolve(__dirname, '../..');
@@ -22,11 +22,14 @@ function htmlRoutes(directory, prefix = '') {
   });
 }
 const routes = htmlRoutes(root).filter(route => route !== 'demo/research.html').sort();
+const publicationRoutes = new Set(['demo/reader/index.html', 'demo/companion/index.html']);
+for (const route of publicationRoutes) assert.ok(routes.includes(route), `Missing curated public example: ${route}`);
 // Every content page gets all widths. Shared surface types cover theme/JS variants.
 const fullMatrixRoutes = new Set(['', 'guides/first-look.html', 'guides/research-pdf.html', 'demo/report.html',
-  'examples/effi-briest.html', 'blog/index.html', 'blog/whats-new-lixity.html', 'blog/manuscript-reading-workbench.html']);
+  'examples/effi-briest.html', 'blog/index.html', 'blog/whats-new-lixity.html', 'blog/manuscript-reading-workbench.html', ...publicationRoutes]);
 const returnJourneyRoutes = new Set(['', 'guides/first-look.html', 'blog/index.html',
-  'blog/whats-new-lixity.html', 'demo/report.html', 'examples/effi-briest.html']);
+  'blog/whats-new-lixity.html', 'demo/report.html', 'examples/effi-briest.html', ...publicationRoutes]);
+let origin;
 const demoTitle = 'The Crate at Warehouse 4';
 const demoQuote = 'Someone had tried the eastern gate of Warehouse 4.';
 const demoSecondQuote = 'Fresh scratches crossed the lock';
@@ -62,7 +65,7 @@ async function checkLazyPreviewStability(page) {
   const holdImage = async route => { await held; await route.fallback(); };
   await page.route(imagePath, holdImage);
   try {
-    await page.goto('http://lixity.test/lixity/guides/research-pdf.html', {waitUntil: 'domcontentloaded'});
+    await page.goto(origin + '/lixity/guides/research-pdf.html', {waitUntil: 'domcontentloaded'});
     const image = page.locator('img[src="../screenshots/dashboard-dossier-image.png"]');
     await image.scrollIntoViewIfNeeded();
     const before = await image.boundingBox();
@@ -122,6 +125,11 @@ async function checkReturnNavigation(page, route, exercise) {
     await expect(navigation.locator('a')).toHaveCount(1);
     await expect(navigation).toContainText('Read-only demo');
     await expect(breadcrumbs).toHaveCount(0);
+  } else if (publicationRoutes.has(route)) {
+    await expect(navigation.locator('a')).toHaveCount(4);
+    await expect(navigation.getByRole('link', {name:'Author workspace', exact:true})).toHaveAttribute('href', '../report.html');
+    await expect(navigation.getByRole('link', {name:'Short tour', exact:true})).toHaveAttribute('href', '../../guides/first-look.html');
+    await expect(breadcrumbs).toHaveCount(0);
   } else {
     if (route.startsWith('examples/')) {
       await expect(navigation.locator('a[href="../"]')).toBeVisible();
@@ -146,7 +154,10 @@ async function checkReturnNavigation(page, route, exercise) {
   await expect(backTop).toBeVisible();
   if (!exercise) return;
   const menuBefore = await navigation.boundingBox();
-  const disclosure = page.locator('details:visible').filter({has: page.locator('summary:visible')}).first();
+  // The Reading menu intentionally closes on focus leaving it. The public
+  // provenance disclosure keeps the persistent native state checked here.
+  const disclosure = route === 'demo/report.html' ? page.locator('#example-context')
+    : page.locator('details:visible').filter({has: page.locator('summary:visible')}).first();
   const hasDisclosure = await disclosure.count();
   const initiallyOpen = hasDisclosure ? await disclosure.getAttribute('open') !== null : false;
   if (hasDisclosure) await disclosure.locator('summary').first().click();
@@ -193,32 +204,67 @@ async function assertDemoReadOnly(page) {
     '#r-ingest-btn, #r-zotero-browse';
   await expect(page.locator(`:is(${writers}):visible:not(:disabled)`)).toHaveCount(0);
   await expect(page.locator('a[href^="zotero:"]')).toHaveCount(0);
-  for (const control of await page.locator('[data-demo-local]').all()) await expect(control).toBeDisabled();
+  await expect(page.locator('body')).toHaveAttribute('data-read-only', 'true');
+  await expect(page.locator('[data-requires-write]:visible, [data-requires-live]:visible')).toHaveCount(0);
+  await expect(page.locator('.demo-local-note, [data-demo-local]')).toHaveCount(0);
   await expect(page.locator('[contenteditable=true]:visible')).toHaveCount(0);
 }
 
-async function checkDemoLocalControl(control) {
-  // Native authoring sections may start compact, but remain inspectable.
-  for (let depth = 0; depth < 8; depth++) {
-    const closed = control.locator('xpath=ancestor::details[not(@open)][last()]');
-    if (!await closed.count()) break;
-    await closed.locator(':scope > summary').click();
+async function checkPublicationExample(page, route, javaScriptEnabled, width, colorScheme) {
+  const reader = route === 'demo/reader/index.html';
+  await assertDemoReadOnly(page);
+  await expect(page.locator('#research-manager, #manuscript-analysis-panels')).toHaveCount(0);
+  await expect(page.locator('.publication-introduction')).toContainText('Keep this context beside the story');
+  if (reader) {
+    await expect(page.locator('.publication-novel .chapter')).toHaveCount(6);
+    await expect(page.locator('.publication-novel')).toContainText(demoQuote);
+  } else {
+    await expect(page.locator('.publication-novel, #chapters')).toHaveCount(0);
+    assert.ok(!(await page.content()).includes('A blank signature is an absence, not a name.'),
+      'The chapter-three companion cap removes the late note from every byte');
   }
-  await expect(control).toBeVisible();
-  await expect(control).toBeDisabled();
-  await expect(control).toHaveAttribute('data-demo-local', 'true');
-  const note = control.locator('xpath=ancestor::*[.//*[contains(concat(" ",normalize-space(@class)," ")," demo-local-note ")]][1]')
-    .locator('.demo-local-note').first();
-  await expect(note).toBeVisible();
-  await expect(note).toContainText(/Local app/i);
-  const installation = note.locator('a[href="../guides/installation.html"]');
-  await expect(installation).toBeVisible();
-  assert.ok((await installation.innerText()).trim(), 'Local-only guidance includes a named installation link');
-  await installation.focus();
-  await expect(installation).toBeFocused();
-  const description = await control.getAttribute('aria-describedby');
-  assert.ok(description && description.split(/\s+/).includes(await note.getAttribute('id')),
-    'The unavailable control is associated with its visible explanation');
+  if (!javaScriptEnabled) {
+    await expect(page.locator('#publication-context noscript')).toBeVisible();
+    await expect(page.locator('#publication-entries article')).toHaveCount(0);
+    return;
+  }
+  await page.locator('#publication-progress-reset').click();
+  const entries = page.locator('#publication-entries'), contents = page.locator('#publication-contents');
+  await expect(entries.locator('article')).toHaveCount(3);
+  await expect(contents).not.toContainText('Light and sound');
+  await expect(contents).not.toContainText('The receiving signature');
+  const images = await entries.locator('.dossier-image img').all();
+  assert.equal(images.length, 2);
+  await Promise.all(images.map(image => image.evaluate(element => {element.loading='eager';return element.decode();})));
+  assert.ok(await images[0].evaluate(element => element.naturalWidth > 1000));
+  await withoutRequests(page, 'Published progress, search and preview never call an API or load hidden assets', async () => {
+    await page.locator('#publication-progress').selectOption('3');
+    await expect(entries.locator('article')).toHaveCount(3);
+    await page.locator('#publication-progress-apply').click();
+    await expect(entries.locator('article')).toHaveCount(5);
+    await page.locator('#publication-context-search').fill('The receiving signature');
+    await expect(entries.locator('article')).toHaveCount(0);
+    await page.locator('#publication-context-search').fill('');
+    await expect(entries.locator('article')).toHaveCount(5);
+    if (reader) {
+      await page.locator('#publication-preview-open').click();
+      await page.locator('#publication-preview-progress').selectOption('6');
+      await page.locator('#publication-preview-form button[type=submit]').click();
+      await expect(entries).toContainText('A blank signature is an absence, not a name.');
+      await expect(page.locator('#publication-progress')).toHaveValue('3');
+      await page.locator('#publication-preview-close').click();
+      await expect(entries).not.toContainText('The receiving signature');
+    } else {
+      await expect(page.locator('#publication-progress option[value="6"]')).toHaveCount(0);
+    }
+    await contents.getByRole('link', {name:'Light and sound', exact:true}).click();
+    await expect(entries.getByRole('heading', {name:'Light and sound', exact:true})).toBeFocused();
+  });
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await page.locator('#publication-progress-reset').click();
+  await page.locator('#publication-context').evaluate(context => context.scrollTo({top:0, behavior:'instant'}));
+  await page.evaluate(() => window.scrollTo({top:0, behavior:'instant'}));
+  await page.screenshot({path:path.join(artifacts, `publication-${reader?'reader':'companion'}-${width}-${colorScheme}.png`)});
 }
 
 async function checkGeographyInsights(page, geography) {
@@ -228,12 +274,9 @@ async function checkGeographyInsights(page, geography) {
   await geography.scrollIntoViewIfNeeded();
   await expect(map).toBeVisible();
   await map.scrollIntoViewIfNeeded();
-  await expect(geography.locator('[data-geo-basemap]')).toBeChecked();
-  await expect(map.locator('.leaflet-tile-loaded').first()).toBeVisible();
-  await expect(map.locator('.leaflet-control-attribution')).toContainText('OpenStreetMap');
-  // Offline interactions remain independently testable after the default
-  // background has been explicitly disabled, without changing the map view.
-  await geography.locator('[data-geo-basemap]').uncheck();
+  await expect(geography.locator('[data-geo-basemap]')).toBeHidden();
+  await expect(geography.locator('[data-geo-basemap]')).not.toBeChecked();
+  await expect(map.locator('.leaflet-tile')).toHaveCount(0);
   await expect(geography.locator('li')).toHaveCount(5);
   await expect(geography.locator('.geography-overview')).toContainText('5 located');
   await expect(geography.locator('.geography-overview')).toContainText('0 unplaced');
@@ -282,6 +325,7 @@ async function checkGeographyInsights(page, geography) {
     await expect(geography.locator('[data-geo-select][aria-pressed=true]')).toHaveCount(0);
     await route.locator('button[data-geo-select]').click();
     await expect(selected).toContainText("Night watchman's walk");
+    await expect(geography.locator('[data-geo-basemap]')).toBeHidden();
     await expect(geography.locator('[data-geo-basemap]')).not.toBeChecked();
   });
 }
@@ -313,12 +357,7 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   await expect(page.locator('#research-sources-list .research-card')).toHaveCount(4);
   await expect(page.locator('#zotero-box')).not.toHaveAttribute('open', '');
   const zoteroReturn = page.locator('#research-sources-list .research-zotero-link');
-  await expect(zoteroReturn).toHaveCount(1);
-  await expect(zoteroReturn).toHaveAttribute('aria-disabled', 'true');
-  await expect(zoteroReturn).not.toHaveAttribute('href', /.+/);
-  assert.equal(await zoteroReturn.evaluate(link =>
-    link.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}))), false,
-  'Offline fixture source-return links cannot activate the Zotero protocol');
+  await expect(zoteroReturn).toHaveCount(0);
   await page.locator('#r-filter-sources').fill('Hamburg free-port');
   await expect(page.locator('#research-sources-list .research-card').locator('visible=true')).toHaveCount(1);
   const source = page.locator('#research-sources-list .research-card').filter({hasText: 'Hamburg free-port area, circa 1900'});
@@ -331,8 +370,7 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   const dossier = page.locator('#research-dossiers-list .research-card').filter({hasText: 'Warehouse 4 case notes'});
   await dossier.locator('[data-research-detail=dossier]').click();
   const detail = dossier.locator('.research-details-body');
-  await checkDemoLocalControl(detail.locator('[data-dossier-claim]'));
-  await checkDemoLocalControl(detail.locator('[data-dossier-decision]'));
+  await expect(detail.locator('[data-dossier-claim], [data-dossier-decision]')).toHaveCount(0);
   const authoredClaim = detail.locator('.research-dossier-claims-list li').filter({hasText: 'Attempted warehouse entry'});
   await expect(authoredClaim.locator('[data-manuscript-link-count="2"]')).toBeVisible();
   await expect(authoredClaim.locator('[data-claim-revision="2"]')).toBeVisible();
@@ -343,7 +381,7 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   for (const image of dossierImages) {
     await image.evaluate(element => { element.loading = 'eager'; return element.decode(); });
     assert.ok(await image.evaluate(element => element.naturalWidth > 1000 && element.naturalHeight > 1000), 'Reviewed public images decode at their original resolution');
-    assert.match(await image.getAttribute('src'), /\.\.\/assets\/research\/hamburg-.+\.jpg$/);
+    assert.match(await image.getAttribute('src'), /^assets\/sources\/[0-9a-f]{64}\.jpg$/);
     await image.locator('..').click();
     const enlarged = page.locator('#modal-dossier-image-enlarge');
     await expect(enlarged).toBeVisible();
@@ -417,14 +455,8 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   const emptyClaim = page.locator('#research-claims-list .research-card').filter({hasText: 'Harbour tour research notes'});
   await emptyClaim.locator('[data-load-evidence]').click();
   await expect(emptyClaim.locator('.claim-evidence-subpanel')).toContainText('No evidence linked to this claim.');
-  const linkEvidence = emptyClaim.locator('[data-link-claim-evidence]');
-  await checkDemoLocalControl(linkEvidence);
-  await expect(linkEvidence).toHaveAttribute('aria-disabled', 'true');
-  await withoutRequests(page, 'Read-only empty evidence guidance cannot open an editor or write', async () => {
-    await linkEvidence.evaluate(control => { control.disabled = false; control.click(); });
-    await expect(linkEvidence).toBeDisabled();
-    await expect(page.locator('#r-link-composer')).not.toHaveAttribute('open', '');
-  });
+  await expect(emptyClaim.locator('[data-link-claim-evidence]')).toHaveCount(0);
+  await expect(page.locator('#r-link-composer')).toBeHidden();
   await emptyClaim.screenshot({path: path.join(artifacts, `research-empty-evidence-${width}-${colorScheme}.png`)});
   await page.locator('#r-open-timeline').click();
   await expect(page.locator('#research-claims-timeline .research-timeline-strip-row')).toHaveCount(5);
@@ -676,47 +708,28 @@ async function checkSavedPassageContext(page, width) {
 }
 
 async function checkDemoCapabilities(page, width) {
-  for (const id of ['btn-modal-new-project', 'btn-modal-open-project']) {
-    await checkDemoLocalControl(page.locator('#' + id));
+  for (const selector of ['#btn-modal-new-project', '#btn-modal-open-project', '#tab-view-project', '[data-action=settings]']) {
+    await expect(page.locator(selector)).toBeHidden();
   }
-  await page.locator('#btn-modal-new-project').evaluate(control => {
-    control.disabled = false;
-    control.click();
+  await withoutRequests(page, 'The production website transport rejects every mutation before network access', async () => {
+    for (const endpoint of ['/api/research-dossier', '/api/manuscript-pdf']) {
+      assert.equal(await page.evaluate(async endpoint => {
+        try { await fetch(endpoint, {method: 'POST', body: '{}'}); return false; }
+        catch (_) { return true; }
+      }, endpoint), true);
+    }
   });
-  await expect(page.locator('#modal-project-create')).not.toBeVisible();
-  await expect(page.locator('#btn-modal-new-project')).toBeDisabled();
-  assert.equal(await page.evaluate(async () => {
-    try {
-      await fetch('/api/research-dossier', {method: 'POST', body: '{}'});
-      return false;
-    } catch (_) { return true; }
-  }), true, 'The public adapter rejects a write even when called outside a disabled form');
-  await page.locator('#tab-view-project').click();
-  await expect(page.locator('#view-pane-project')).toBeVisible();
-  await checkDemoLocalControl(page.locator('[data-action=settings]'));
-  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
-    `Inspectable local settings stay within ${width}px`);
-  await expect(page.locator('#view-pane-project')).toHaveCSS('opacity', '1');
-  await page.locator('#controls').scrollIntoViewIfNeeded();
-  await page.screenshot({path: path.join(artifacts, `demo-local-settings-${width}.png`)});
   await page.locator('#tab-view-analysis').click();
   await checkSavedPassageContext(page, width);
 
-  // The native form downloads a reviewed copy without running PDF generation.
-  await openProjectActions(page);
-  await page.locator('#manuscript-pdf-title').click();
-  await expect(page.locator('#manuscript-pdf')).toContainText(/prepared copies/i);
-  await page.locator('#manuscript-pdf-layout').selectOption('book');
   const pdfDownload = page.waitForEvent('download');
-  await page.locator('#manuscript-pdf-download').click();
+  await page.locator('#demo-downloads a[href="warehouse-4-book.pdf"]').click();
   const pdf = await pdfDownload;
-  assert.equal(pdf.suggestedFilename(), 'manuscript-book.pdf');
+  assert.equal(pdf.suggestedFilename(), 'warehouse-4-book.pdf');
   const pdfPath = path.join(artifacts, `demo-book-${width}.pdf`);
   await pdf.saveAs(pdfPath);
   assert.deepEqual(fs.readFileSync(pdfPath), fs.readFileSync(path.join(root, 'demo/warehouse-4-book.pdf')),
-    'The native PDF picker downloads the exact prepared book PDF');
-  await expect(page.locator('#manuscript-pdf-layout')).toHaveValue('book');
-  await page.locator('#manuscript-pdf-title').click();
+    'The website downloads the exact reviewed book PDF');
 
   await showOverview(page);
   for (const id of ['heatmap', 'bands', 'dimensions', 'structural']) {
@@ -740,11 +753,7 @@ async function checkDemoCapabilities(page, width) {
   const passage = page.locator('#chapters .ptext.open').first();
   const passageId = await passage.getAttribute('id');
   const originalText = await passage.locator('p').first().innerText();
-  await expect(passage.locator('[data-marker-kind]')).toHaveCount(4);
-  for (const marker of await passage.locator('[data-marker-kind]').all()) {
-    await expect(marker).toBeDisabled();
-    await expect(marker).toHaveAttribute('data-demo-local', 'true');
-  }
+  await expect(passage.locator('[data-marker-kind]:visible')).toHaveCount(0);
   await passage.locator('.reader-paragraph-actions').click();
   await expect(page.locator('#manuscript-context-menu [data-reader-action=todo]')).toHaveCount(0);
   await page.keyboard.press('Escape');
@@ -770,14 +779,9 @@ async function checkDemoCapabilities(page, width) {
 
   await page.locator('#tab-view-research').click();
   await page.locator('[data-rtab=dossiers]').click();
-  await checkDemoLocalControl(page.locator('#r-dos-create-btn'));
-  const collapse = page.locator('[data-close-disclosure=r-dos-composer]');
-  await expect(collapse).toBeEnabled();
-  await collapse.click();
-  await expect(page.locator('#r-dos-create-btn')).toBeHidden();
-  await expect(page.locator('#r-dos-composer > summary')).toBeFocused();
+  await expect(page.locator('#r-dos-composer')).toBeHidden();
   const dossier = page.locator('#research-dossiers-list .research-card').filter({hasText: 'Warehouse 4 case notes'});
-  await checkDemoLocalControl(dossier.locator('[data-research-revise=dossier]'));
+  await expect(dossier.locator('[data-research-revise=dossier]')).toHaveCount(0);
   await dossier.locator('[data-workspace-dossier]').click();
   await expect(page.locator('#tab-view-analysis')).toHaveAttribute('aria-selected', 'true');
   await expect(reader.locator('h3').first()).toHaveText('Warehouse 4 case notes');
@@ -802,12 +806,9 @@ async function checkDemoCapabilities(page, width) {
   await expect(page.locator('#' + passageId + ' p').first()).toHaveText(originalText);
 
   await page.locator('#tab-view-research').click();
-  for (const [tab, submit] of [['search', 'r-search-btn'], ['grounding', 'r-ground-btn']]) {
-    await page.locator(`[data-rtab=${tab}]`).click();
-    await expect(page.locator('#rtab-' + tab)).toBeVisible();
-    await checkDemoLocalControl(page.locator('#' + submit));
-    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
-      `Local-only ${tab} guidance stays within ${width}px`);
+  for (const tab of ['search', 'grounding']) {
+    await expect(page.locator(`[data-rtab=${tab}]`)).toBeHidden();
+    await expect(page.locator('#rtab-' + tab)).toBeHidden();
   }
   await page.locator('[data-rtab=claims]').click();
   const matrixButton = page.locator('#r-claim-matrix-btn');
@@ -852,9 +853,10 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
     assert.ok(firstProseY < 1200, `The compact demo reaches prose within 1200px, got ${firstProseY}`);
   }
   if (javaScriptEnabled) {
-    await expect(page.locator('#tab-view-project'), 'The public demo keeps the native Project & Settings workspace discoverable').toBeVisible();
+    await expect(page.locator('#tab-view-project')).toBeHidden();
+    await expect(page.locator('.site-read-only-notice')).toBeVisible();
   }
-  for (const layout of ['editor', 'book', 'sheet', 'report']) {
+  for (const layout of ['editor', 'book', 'sheet', 'report', 'document']) {
     await expect(page.locator(`a[href="warehouse-4-${layout}.pdf"]`).first()).toBeVisible();
   }
   await checkReport(page, javaScriptEnabled, width, colorScheme);
@@ -864,7 +866,7 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   }
   await expect(page.locator('#tab-view-analysis')).toBeVisible();
   await expect(page.locator('#tab-view-research')).toBeVisible();
-  await expect(page.locator('#tab-view-project')).toBeEnabled();
+  await expect(page.locator('#tab-view-project')).toBeHidden();
   await expect(page.locator('body')).toHaveAttribute('data-manuscript-links', 'read');
   if (colorScheme !== 'light' || width === 390) {
     await page.locator('#tab-view-research').click();
@@ -904,9 +906,11 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   await page.evaluate(() => getSelection().removeAllRanges());
   await page.locator('#tab-view-analysis').focus();
   await page.keyboard.press('End');
-  await expect(page.locator('#tab-view-project')).toBeFocused();
-  await expect(page.locator('#tab-view-project')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#tab-view-research')).toBeFocused();
+  await expect(page.locator('#tab-view-research')).toHaveAttribute('aria-selected', 'true');
   await page.keyboard.press(width >= 1100 ? 'ArrowUp' : 'ArrowLeft');
+  await expect(page.locator('#tab-view-analysis')).toBeFocused();
+  await page.keyboard.press(width >= 1100 ? 'ArrowDown' : 'ArrowRight');
   await expect(page.locator('#tab-view-research')).toBeFocused();
   await expect(page.locator('#tab-view-research')).toHaveAttribute('aria-selected', 'true');
   await checkResearchDemo(page, true, width, colorScheme);
@@ -945,8 +949,8 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
 }
 
 async function checkLegacyResearchURL(page, javaScriptEnabled) {
-  await page.goto('http://lixity.test/lixity/demo/research.html');
-  await expect(page).toHaveURL('http://lixity.test/lixity/demo/report.html#research-manager');
+  await page.goto(origin + '/lixity/demo/research.html');
+  await expect(page).toHaveURL(origin + '/lixity/demo/report.html#research-manager');
   await expect(page.locator('h1')).toHaveText(demoTitle);
   await expect(page.locator('link[rel=canonical]')).toHaveAttribute('href', 'https://mfahsold.github.io/lixity/demo/report.html');
   if (javaScriptEnabled) {
@@ -960,7 +964,25 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
 
 (async () => {
   let browser;
+  // Chromium's native download requests bypass Playwright routing. Serve only
+  // the staged local files so a download cannot escape to a public hostname.
+  const staticRequests = [];
+  const server = http.createServer((request, response) => {
+    staticRequests.push({method: request.method, path: request.url});
+    const url = new URL(request.url, 'http://localhost');
+    const relative = decodeURIComponent(url.pathname).replace(/^\/lixity\//, '');
+    const file = path.resolve(root, relative);
+    if (request.method !== 'GET' || !url.pathname.startsWith('/lixity/') ||
+        !file.startsWith(root + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+      response.writeHead(404); response.end(); return;
+    }
+    response.writeHead(200, {'Content-Type': {'.pdf': 'application/pdf', '.txt': 'text/plain',
+      '.jpg': 'image/jpeg', '.png': 'image/png'}[path.extname(file)] || 'application/octet-stream'});
+    response.end(fs.readFileSync(file));
+  });
   try {
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+    origin = 'http://127.0.0.1:' + server.address().port;
     browser = await launchChromium();
     for (const [javaScriptEnabled, colorScheme, hasTouch = false] of [[true, 'light'], [false, 'light'], [true, 'dark'], [false, 'dark'], [true, 'light', true]]) {
       const context = await browser.newContext({javaScriptEnabled, colorScheme, hasTouch});
@@ -972,14 +994,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
         const request = route.request();
         const url = new URL(request.url());
         assert.equal(request.method(), 'GET', 'The public journey must make only static GET requests');
-        if (url.origin === 'https://tile.openstreetmap.org' && /^\/\d+\/\d+\/\d+\.png$/.test(url.pathname) && !url.search) {
-          // Synthetic tile bytes keep the default map journey deterministic;
-          // published captures use normal current-viewport OSM requests.
-          await route.fulfill({contentType: 'image/png', body: Buffer.from(
-            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jC1sAAAAASUVORK5CYII=', 'base64')});
-          return;
-        }
-        assert.equal(url.origin, 'http://lixity.test', 'Only the visible OSM map may request an external resource');
+        assert.equal(url.origin, origin, 'The website never requests external map tiles or private APIs');
         assert.ok(url.pathname.startsWith('/lixity/'), 'The public journey must not call an API');
         const relative = decodeURIComponent(url.pathname).replace(/^\/lixity\//, '') || 'index.html';
         let file = path.resolve(root, relative);
@@ -997,7 +1012,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
           if (!route && javaScriptEnabled && colorScheme === 'light' && !hasTouch && width !== 390) {
             await checkLazyPreviewStability(page);
           }
-          await page.goto('http://lixity.test/lixity/' + route);
+          await page.goto(origin + '/lixity/' + route);
           assert.equal(await page.locator('h1').count(), 1);
           const headings = await page.locator('h1,h2,h3,h4,h5,h6').evaluateAll(nodes => nodes.map(node => Number(node.tagName[1])));
           headings.forEach((level, index) => {
@@ -1034,7 +1049,8 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
           // Plain reports retain lazy paragraph payloads; the interactive demo
           // mounts continuous prose. Content pages need a readable article.
           const dashboard = route === 'demo/report.html' || route.startsWith('examples/');
-          if (!dashboard) {
+          const publication = publicationRoutes.has(route);
+          if (!dashboard && !publication) {
             const themeControl = page.locator('#themeToggle');
             if (javaScriptEnabled) await expect(themeControl).toBeVisible();
             else await expect(themeControl).toBeHidden();
@@ -1042,7 +1058,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
           if (dashboard) {
             assert.ok(await page.locator('.chapter').count() > 0, `${route} renders chapters`);
             assert.ok(await page.locator('.chip').count() > 0, `${route} renders paragraph chips`);
-          } else {
+          } else if (!publication) {
             assert.ok((await page.locator('main').innerText()).length > 1000,
               `${route} has too little visible text`);
           }
@@ -1123,15 +1139,16 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
           }
           await page.screenshot({path: path.join(artifacts, `${route ? path.basename(route, '.html') : 'home'}-${width}-${colorScheme}${javaScriptEnabled ? '' : '-js-off'}.png`), fullPage: route === '' || route === 'guides/first-look.html'});
           if (route === 'demo/report.html') await checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme);
+          if (publication) await checkPublicationExample(page, route, javaScriptEnabled, width, colorScheme);
         }
-        await page.goto('http://lixity.test/lixity/');
+        await page.goto(origin + '/lixity/');
         await page.locator('.site-header a[href="#installation"]').focus();
         await page.keyboard.press('Enter');
-        await expect(page).toHaveURL('http://lixity.test/lixity/#installation');
+        await expect(page).toHaveURL(origin + '/lixity/#installation');
         await expect(page.locator('#installation h2')).toBeInViewport();
         await page.locator('#installation a[href="guides/installation.html"]').click();
         assert.ok(page.url().endsWith('/guides/installation.html'), 'An eager visitor can reach installation through the header and its dedicated section');
-        await page.goto('http://lixity.test/lixity/');
+        await page.goto(origin + '/lixity/');
         await page.locator('.hero-cta a[href="guides/first-look.html"]').click();
         assert.ok(page.url().endsWith('/guides/first-look.html'), 'The secondary CTA offers a tour before installation');
         await page.locator('.ctl[href="../demo/report.html"]').click();
@@ -1140,15 +1157,15 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
         await page.locator('#example-context a[href="../guides/first-look.html"]').click();
         assert.ok(page.url().endsWith('/guides/first-look.html'), 'The report returns to the walkthrough');
         await page.locator('.site-breadcrumbs a[href="../#guides"]').click();
-        await expect(page).toHaveURL('http://lixity.test/lixity/#guides');
+        await expect(page).toHaveURL(origin + '/lixity/#guides');
         await expect(page.locator('#guides h2')).toBeInViewport();
         await returnToTop(page, 'Guides parent');
         await page.locator('.brand[href="./"]').click();
-        await expect(page).toHaveURL('http://lixity.test/lixity/');
+        await expect(page).toHaveURL(origin + '/lixity/');
         await page.locator('.hero-cta a.primary[href="demo/report.html"]').click();
         assert.ok(page.url().endsWith('/demo/report.html'), 'The primary CTA opens the one demo directly');
         await page.locator('.site-header .brand, .site-return a[href="../"]').first().click();
-        await expect(page).toHaveURL('http://lixity.test/lixity/');
+        await expect(page).toHaveURL(origin + '/lixity/');
         if (javaScriptEnabled) {
           await page.locator('#themeToggle').click();
           await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
@@ -1161,13 +1178,13 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
           await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
         }
         await page.locator('.site-header .site-return a[href="../#guides"]').click();
-        await expect(page).toHaveURL('http://lixity.test/lixity/#guides');
+        await expect(page).toHaveURL(origin + '/lixity/#guides');
         await page.locator('#guides a[href="guides/interpretation.html"]').click();
         assert.ok(page.url().endsWith('/guides/interpretation.html'));
         if (javaScriptEnabled) {
           await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
           await page.locator('.site-header .brand, .site-return a[href="../"]').first().click();
-          await expect(page).toHaveURL('http://lixity.test/lixity/');
+          await expect(page).toHaveURL(origin + '/lixity/');
           await page.locator('#themeToggle').click();
           await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
           await page.locator('#themeToggle').click();
@@ -1175,7 +1192,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
           await page.evaluate(() => localStorage.removeItem('lixity-theme'));
         }
         // The blog index lists the newest article; its page renders standalone.
-        await page.goto('http://lixity.test/lixity/blog/');
+        await page.goto(origin + '/lixity/blog/');
         const newestArticle = page.locator('article h2 a').first();
         const articleURL = new URL(await newestArticle.getAttribute('href'), page.url());
         await newestArticle.click();
@@ -1183,18 +1200,23 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
         assert.equal(await page.locator('link[rel="canonical"]').getAttribute('href'),
           'https://mfahsold.github.io' + articleURL.pathname, 'Canonical URL matches the published page');
         await page.locator('.site-breadcrumbs a[href="index.html"]').click();
-        await expect(page).toHaveURL('http://lixity.test/lixity/blog/index.html');
+        await expect(page).toHaveURL(origin + '/lixity/blog/index.html');
         await expect(page.locator('article h2 a').first()).toHaveAttribute('href', path.basename(articleURL.pathname));
         await page.locator('.site-header .brand, .site-return a[href="../"]').first().click();
-        await expect(page).toHaveURL('http://lixity.test/lixity/');
+        await expect(page).toHaveURL(origin + '/lixity/');
       }
       if (colorScheme === 'light') await checkLegacyResearchURL(page, javaScriptEnabled);
       assert.deepEqual(errors, []);
+      assert.ok(staticRequests.every(request => request.method === 'GET' && request.path.startsWith('/lixity/')),
+        'Native downloads use only the disposable local static server');
       await context.close();
     }
     console.log(`Public docs: ${routes.length} selected HTML pages at desktop/390/320, representative surfaces in light/dark and JS on/off, static GET-only navigation, one six-chapter demo Analysis/Research state roundtrip with evidence/quote and PDF links, legacy research redirect, case-study rendering, keyboard/focus/console passed. Screenshots: ${artifacts}`);
   } finally {
     try { if (browser) await browser.close(); }
-    finally { fs.rmSync(root, {recursive: true, force: true}); }
+    finally {
+      await new Promise(resolve => server.close(resolve));
+      fs.rmSync(root, {recursive: true, force: true});
+    }
   }
 })().catch(error => { console.error(error); process.exitCode = 1; });

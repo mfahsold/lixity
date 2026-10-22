@@ -7,7 +7,7 @@ import sys
 import time
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from pydantic import ValidationError
 
@@ -124,6 +124,8 @@ class _ResearchHelpFormatter(argparse.HelpFormatter):
 
 
 def configure(parser: argparse.ArgumentParser) -> None:
+    from ..language import LANGUAGE_CHOICES
+
     parser.formatter_class = _ResearchHelpFormatter
     commands = parser.add_subparsers(dest="research_command", required=True, metavar="COMMAND")
     for name, help_text, group, aliases in COMMAND_DEFINITIONS:
@@ -315,7 +317,8 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--source-id", required=True, help="Source UUID")
             command.add_argument("--manuscript", help="Path to manuscript file (default: selected project config manuscript)")
             command.add_argument("--version-id", help="Explicit source version UUID")
-            command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"), help="Manuscript language override")
+            command.add_argument("--language", choices=LANGUAGE_CHOICES,
+                                 help="Manuscript language (default: selected project's root-local language, otherwise en; auto explicitly detects)")
             command.add_argument("--top-n", type=int, default=20, help="Number of top terms to return (default: 20)")
             command.add_argument("--output", help="Optional output file destination")
         elif name == "sources":
@@ -340,6 +343,8 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--export-edit", metavar="PATH", help="Export a selected version as an editable Markdown draft; never overwrites")
             command.add_argument("--output", metavar="PATH", help="With --prepare --edit-file, write a ready reviewed packet for revise-batch; never overwrites")
             command.add_argument("--tags", help="Comma-separated tags")
+            command.add_argument("--tag", action="append", dest="filter_tags",
+                                 help="List-only exact stored tag filter (case-sensitive); repeat to require all tags")
             command.add_argument("--evidence", help="Comma-separated passage UUIDs")
             command.add_argument("--geography", metavar="JSON_OR_FILE",
                                  help="Dossier GeoJSON FeatureCollection: Point/LineString/Polygon or null geometry, "
@@ -913,7 +918,10 @@ def _record_text(result: dict[str, Any]) -> str:
     lines = [f"# {safe_text(title)}", ""]
     if revision is not None:
         lines.append(f"Version {revision}")
-    body = record.get("body") or record.get("excerpt") or record.get("statement") or record.get("rationale")
+    if record.get("section"):
+        lines.extend(["", f"## {safe_text(record['section'])}"])
+    body = record["content"] if "content" in record else (
+        record.get("body") or record.get("excerpt") or record.get("statement") or record.get("rationale"))
     if body:
         lines.extend(["", prose(body)])
     impact = record.get("impact_on_plot")
@@ -985,7 +993,9 @@ def run(args: argparse.Namespace) -> int:
             if action in ("show", "inspect"):
                 if rid is None and getattr(args, flag, None) is None:
                     raise ResearchError("show/inspect requires a record ID")
-                if command != "dossier" or args.revision is None:
+                # A dossier export owns its explicit mode, like a historical
+                # read; the selector verb must not add a conflicting flag.
+                if command != "dossier" or (args.revision is None and args.export_edit is None):
                     args.inspect = True
             elif action is not None and action != "list":
                 if rid is not None:
@@ -999,6 +1009,23 @@ def run(args: argparse.Namespace) -> int:
                 if getattr(args, flag, None) not in (None, rid):
                     raise ResearchError("Positional record ID conflicts with the named record ID")
                 setattr(args, flag, rid)
+        dossier_tags: list[str] | None = None
+        if command == "dossier" and (filter_tags := getattr(args, "filter_tags", None)) is not None:
+            from pydantic import TypeAdapter
+
+            from .models import Dossier
+
+            fields = (*_REVISION_FIELDS["dossier"], "section", "revision", "export_edit", "edit_file", "output")
+            modes = ("summary", "omit_citations", "update", "prepare", "diff", "history", "inspect")
+            if (args.dossier_id or any(getattr(args, field, None) is not None for field in fields)
+                    or any(getattr(args, mode, False) for mode in modes)):
+                raise ResearchError("--tag filters dossier lists only; do not combine it with a selected record or creation/revision fields")
+            try:
+                dossier_tags = TypeAdapter(cast(Any, Dossier.model_fields["tags"].annotation)).validate_python(filter_tags, strict=True)
+            except ValidationError as error:
+                raise ResearchError(f"Invalid --tag filter: {error}") from None
+            if any(not tag.strip() for tag in dossier_tags):
+                raise ResearchError("--tag requires a nonblank stored tag")
         if command == "ingest":
             if (args.resume and not args.checkpoint) or (not args.file and not args.resume and not args.discard_checkpoint):
                 print("[error] Supply --file, or --checkpoint PATH --resume, or --discard-checkpoint PATH", file=sys.stderr)
@@ -1354,13 +1381,22 @@ def run(args: argparse.Namespace) -> int:
             sys.stdout.write(html)
             return 0
         elif command == "compare":
+            language = getattr(args, "language", None)
+            if language is None:
+                from ..config import read_explicit_project_config
+                from ..language import LANGUAGE_CHOICES
+                from .repository import Repository
+
+                language = read_explicit_project_config(Repository(args.project).root).get("language", "en")
+                if not isinstance(language, str) or language not in LANGUAGE_CHOICES:
+                    raise ResearchError(f"Unsupported project manuscript language: {language!r}")
             format_choice: Literal["json", "md"] = "md" if getattr(args, "format", "json") == "md" else "json"
             raw = api.compare_source(
                 args.project,
                 args.source_id,
                 args.manuscript,
                 version_id=args.version_id,
-                language=getattr(args, "language", None),
+                language=language,
                 top_n=getattr(args, "top_n", 20),
                 format=format_choice,
             )
@@ -1429,6 +1465,9 @@ def run(args: argparse.Namespace) -> int:
                 )
             else:
                 result = api.list_dossiers(args.project)
+                if dossier_tags is not None:
+                    result["dossiers"] = [dossier for dossier in result["dossiers"]
+                                          if all(tag in dossier["tags"] for tag in dossier_tags)]
         elif command == "claim":
             if getattr(args, "claim_id", None) and not getattr(args, "title", None):
                 result = api.list_evidence_links(args.project, claim_id=args.claim_id)

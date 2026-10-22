@@ -6,6 +6,75 @@ not the broader interchange proposal. Inspect installed entity definitions with
 `lixity research schema` and supported contracts with `lixity about --json`.
 Product, entity, manifest and response versions are separate.
 
+## Reading website projection
+
+Since v0.7.4, `lixity.site_export` produces a static publication projection of
+one selected project. It does not add a reader role to an archive entity or
+change a stored permission: the recipient receives a copy of the included
+content. The source archive's entity and manifest contracts are unchanged.
+
+```mermaid
+flowchart LR
+    P[Explicit project] --> V[Verify manuscript and research snapshot]
+    V --> S[Select export scope]
+    S --> R[Review: native read-only workspace]
+    S --> C[Reader or companion: curated publication profile]
+    S --> D[Prepared reads or selected publication content]
+    C --> W
+    R --> W[Reading website]
+    D --> W
+    W --> M[Export manifest with file hashes and disclosure scope]
+```
+
+`lixity-read-only-site/1` identifies the website manifest;
+`lixity-read-only-site-data/1` identifies its embedded prepared-response
+envelope. These are export contracts, not new research record versions. The
+source manuscript SHA-256 and selected research snapshot identify the input
+stand. File hashes detect changed bytes; they do not authenticate the sender.
+
+The default review copy contains manuscript analysis and no research. Explicit
+research inclusion adds authored records and their history, exact pinned
+associations and cited excerpts. Source files and full extraction text require
+a separate opt-in. Current entry navigation and linked historical revisions
+retain their distinct meaning. Missing or withdrawn evidence remains an
+availability state, never replacement evidence or an automatically updated pin.
+This export is not a restorable archive and does not reconstruct the entire
+project directory.
+
+`site_publications` belongs to the explicit project's configuration, not to a
+research entity. Its generated schema is exposed through configuration metadata.
+A named profile contains a public title/introduction and ordered entries:
+`dossier_id`, optional `revision` and unique `section`, `reveal_after_chapter`,
+optional public `title`, `include_citations` and `include_geography`. Omitted
+revision means current at export time; the actual resolved revision remains in
+the publication. Omitted section explicitly selects the entire dossier body.
+Citations and geography belong to the whole selected dossier revision, not an
+inferred section. Both fields default to false. Source redistribution consent
+is a per-export choice and is never stored in the profile.
+
+The `lixity-reader-publication/1` projection contains only curated entries,
+resolved versions, canonical chapter numbers, release gates and selected media.
+Its envelope has an empty prepared-response table. Internal claims, decisions,
+source context, history and reverse joins are excluded. `reader` includes literal
+manuscript blocks through the export cap; `companion` includes none, and does not
+publish private manuscript filenames. An explicit quote authored in a selected
+dossier remains part of that author's selected body.
+
+Release gates govern display after the reader confirms progress; they are not
+permissions or encryption. `max_chapter` instead physically omits later entries
+and their dependency assets, and truncates reader-mode manuscript chapters.
+A manifest records mode, profile, publication identity, cap and entry count.
+Changing a profile does not revise the original dossier or alter its links.
+
+The response table permits only enumerated reads. Mutation requests and
+unknown routes fail closed, including when the copy is hosted beside a live
+`/api`. The UI uses the shared product components with an explicit read-only
+profile. Browser display preferences may change locally; archive settings,
+records, source bytes and manuscript text cannot be written through this
+transport. No host paths, configuration, search databases, locks, credentials
+or runtime diagnostics belong to the export. The [usage guide](../USAGE.md#export-a-reading-website)
+describes disclosure and hosting limits.
+
 ## Authority and identity
 
 | Stored data | Responsibility | Recovery rule |

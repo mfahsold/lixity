@@ -5,7 +5,7 @@
 > instructions to rewrite. Analysis is deterministic for fixed text and settings;
 > research records also contain generated IDs and timestamps.
 
-Current release: 0.7.3; release tag: v0.7.3.
+Current release: 0.7.4; release tag: v0.7.4.
 
 This discovery index links maintained references. The public demo follows current
 main; published guides can describe newer behavior than an installed release.
@@ -20,6 +20,7 @@ uv tool update-shell
 # Open a new terminal, then:
 lixity --version
 lixity about --json
+lixity doctor --json
 lixity COMMAND --help
 lixity research COMMAND --help
 lixity service start --open
@@ -36,6 +37,41 @@ research entities. A native server lists registered operations at `GET /api`.
 Python consumers use `from lixity import api`; research uses
 `from lixity.research import api as research_api`.
 
+Since v0.7.4, `doctor --json` reports imported/distribution/service versions,
+module/interpreter locations, contract versions and issues under `lixity-doctor/1`.
+It reads no manuscripts/project configuration and performs no installation,
+repair or restart. A healthy stopped service is valid; mismatches or unavailable
+observations exit 1. Out-of-range numeric ports or invalid `LIXITY_PORT` return
+the same schema with `ok: false` and `error.code: "invalid-service-port"`.
+Non-integer explicit `--port` values remain argument usage errors (exit 2).
+
+`service status --json` intentionally changed to `lixity-service-status/1`:
+`ok` means successful inspection, including known stopped/starting/unmanaged busy
+states (exit 0). `running` means ready and owned; unknown is `ok: false`,
+`running: null`, exit 1. Log paths and raw errors are omitted. Human stopped
+status still exits 1; other lifecycle JSON remains `lixity-service-local/1`.
+See the [service and doctor contracts](https://mfahsold.github.io/lixity/USAGE.md#lixity-service).
+
+`pdf --layout document` adds neutral A4 through the shared composer: authored
+headings remain; entered title/author are metadata only. It adds no title page,
+header/footer, byline, line numbers or analysis. PDF/dashboard CLI exports reject
+source paths and symbolic/hard-link aliases before writing and at final
+replacement. EPUB, DOCX, custom trim sizes and PDF/UA/PDF/X conformance are absent.
+
+Since v0.7.4, `lixity export-site --project . -o NEW_DIRECTORY` produces a
+portable reading website through `lixity.site_export.prepare_site`/`export_site`.
+`export-site --mode reader|companion --publication-profile NAME` uses root-local
+`site_publications` curation; `--max-chapter` omits later content before assembly.
+Local reading progress is display guidance, not access control. Raw research
+history is available only in the separate review-workspace format.
+The native Project action downloads the same bundle as ZIP. Research is explicit
+(`--include-research`, including authored history and cited excerpts); originals
+and full extracted source text require `--include-source-files` too. The copy
+uses the product UI and a closed prepared-read transport, with no live API
+fallback, writes, automatic analytics or external map tiles. The manifest is
+`lixity-read-only-site/1`; embedded data is `lixity-read-only-site-data/1`.
+Archive schemas are unchanged. It is a copy, not access control or a backup.
+
 **Since v0.6.0:** `lixity schema --section configuration` returns
 generated settings metadata; see the [usage reference](https://mfahsold.github.io/lixity/USAGE.md#configuration-corpusconfig).
 
@@ -43,25 +79,24 @@ English is the default analysis language; detection requires `--language auto`.
 Language-neutral JSON identifiers and units differ from translated display keys.
 Use active result metadata when interpreting thresholds and unavailable values.
 
-On current main (Unreleased), Explore passage is the shared paragraph-menu
+Since v0.7.4, Explore passage is the shared paragraph-menu
 entry. Explain measurement and Research for this passage remain distinct destinations in
 the existing context area: computed literal counts versus explicitly linked
 research. The compact measurement card scopes its sentence word count, paragraph
 value and chapter comparison separately; method/coverage is expandable.
+Separate visible Counted text and Paragraph comparison keys explain exact
+underlined spans versus blue/orange chapter-relative paragraph backgrounds.
 Ordinary research entry titles open the current version. Explicit Linked version
 actions retain their exact pins; the collapsed Versions list loads only on demand
 and does not change the displayed record. Text associations group exact quotes
 of one claim version separately from current dossier decisions. Human CLI output
 uses Version N; revision flags, identifiers and JSON schemas remain unchanged.
 
-The published v0.7.3 workspace opens in Manuscript with Analysis Off. Values opens
-Passage values independently of that display choice. Use Analysis overview for
-chapter comparisons and Dossier alongside
-for retained research. Back to passage restores the requesting text. Reading
-preferences are browser-local; saves and retention are explicit. See
-[reader controls and coverage](https://mfahsold.github.io/lixity/USAGE.md#reading-paragraphs)
-and [research workflows](https://mfahsold.github.io/lixity/research/USAGE.md).
-Since v0.7.3, Saved research opens exact saved passage associations in the
+The workspace opens in Manuscript with Analysis Off. Explore passage opens
+paragraph measurements without changing the global display choice. Explicit
+Explain measurement can enable Analysis while retaining disabled text marks.
+
+Since v0.7.4, Research for this passage opens exact retained passage associations in the
 same right context area: pinned claim/dossier versions and separately labelled
 current dossier decisions. Lists are bounded with totals; Review and exact-version
 viewers remain explicit. An empty summary means no saved links, not no facts.
@@ -99,14 +134,14 @@ validates envelope shape. Existing JSON/archive versions remain unchanged.
 - [Architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md) and [localization](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md): integration boundaries and language coverage.
 - [Articles](https://mfahsold.github.io/lixity/blog/): interpretation examples, separate from API contracts.
 - [Manuscript reading workbench](https://mfahsold.github.io/lixity/blog/manuscript-reading-workbench.html): the Analysis On/Off, overview and manuscript–research workflow with explicit coverage limits.
-- [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.3.md) and [release history](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md).
+- [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.4.md) and [release history](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md).
 
 HTML guides and articles have Markdown alternatives: append `.md` to their HTML
 URL. The [research entrypoint](https://mfahsold.github.io/lixity/research/README.md)
 links implemented workflows and separate, unimplemented proposals.
 Product, response and archive versions are independent. Inspect installed schema
 capabilities before sharing an archive with another version.
-v0.7.2 reads research records/manifests v1–v8. Ordinary dossiers keep their older
+v0.7.2 and later read research records/manifests v1–v8. Ordinary dossiers keep their older
 encoding until a geographic save; older readers cannot open v8 archives.
 
 **Since v0.7.1:** grouped research discovery, exact update dry runs,
@@ -138,10 +173,11 @@ blockquotes. Scores and public API formats are unchanged. Overview To-do drafts,
 focused keyboard drills and Back to passage reuse existing save and context-return
 behavior.
 
-Public-site measurement is separate from the product: production Pages and its
-reviewed examples use GoatCounter for page paths and named links. Browser privacy
+Public-site measurement is separate from the product: published documentation
+and the author-workspace demo use GoatCounter for page paths and named links. Browser privacy
 signals disable it; query/hash, forms, selections and local project data are
-excluded. Local app and exported reports contain no marketing measurement.
+excluded. The local app, curated reader/companion examples and ordinary exports
+contain no marketing measurement.
 
 ## Data boundaries
 
@@ -176,7 +212,8 @@ and [security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md).
 is the default read-only product walkthrough: six synthetic English chapters,
 all three native workspace views, retained sources, authored claims and a saved
 manuscript quote in one project. Its [manuscript](https://mfahsold.github.io/lixity/research/examples/harbour-manuscript.md)
-also supplies all four PDFs: [editorial](https://mfahsold.github.io/lixity/demo/warehouse-4-editor.pdf),
+also supplies five PDFs: [neutral A4 document](https://mfahsold.github.io/lixity/demo/warehouse-4-document.pdf),
+[editorial](https://mfahsold.github.io/lixity/demo/warehouse-4-editor.pdf),
 [reading](https://mfahsold.github.io/lixity/demo/warehouse-4-book.pdf),
 [submission](https://mfahsold.github.io/lixity/demo/warehouse-4-sheet.pdf) and
 [analysis report](https://mfahsold.github.io/lixity/demo/warehouse-4-report.pdf).
@@ -184,9 +221,10 @@ No upload or account is required. The old research-demo URL is a compatibility
 entry into this same project, not a second dataset.
 
 Browser controls include a dossier alongside the manuscript, prepared PDF
-downloads and the claim-evidence matrix. Actions marked Local app, including
-Search and Compare, stay visible as disabled previews with an
-[installation link](https://mfahsold.github.io/lixity/guides/installation.html).
+downloads and the claim-evidence matrix. Editing, project administration and
+archive Search/Compare are absent; manuscript search and local list filters
+remain available. Imports and writes require the
+[local app](https://mfahsold.github.io/lixity/guides/installation.html).
 The demo cannot import, edit or save, or generate new analysis or PDFs.
 
 The [source catalogue](https://mfahsold.github.io/lixity/assets/research/sources.json)

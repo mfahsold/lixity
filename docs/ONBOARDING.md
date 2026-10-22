@@ -3,8 +3,8 @@
 Explore [*The Crate at Warehouse 4*](https://mfahsold.github.io/lixity/demo/report.html),
 the shared demo project for manuscript analysis, research and PDF layouts.
 The [illustrated first look](guides/first-look.html) follows that same project;
-then use your own manuscript below. The read-only demo demonstrates the v0.7.2
-reading workflow. [Installation](INSTALLATION.md) covers setup, upgrades and
+then use your own manuscript below. The demo is generated through the same
+reading-website export as your own shareable copies. [Installation](INSTALLATION.md) covers setup, upgrades and
 service management;
 [interpretation](guides/interpretation.html) explains the measurements.
 
@@ -41,7 +41,7 @@ lixity service start --open
 
 The default address is `http://127.0.0.1:8765/`. The app's welcome guidance and
 field explanations describe the next action. **Project actions** groups New/Open,
-**Show guidance** and PDF export. It starts expanded in an empty workspace and
+**Show guidance**, PDF export and **Reading website**. It starts expanded in an empty workspace and
 collapsed when a manuscript is loaded; the three workspace destinations stay visible.
 
 ### Open or import?
@@ -62,14 +62,18 @@ continue and initialize Research if it is still absent.
 
 Start in **Manuscript** and read a passage. Turn **Analysis**
 On to show diagnostics in place; this does not open a tool or narrow the prose.
-Choose a paragraph's **… → Values** for its **Passage values** inspector, which
+Choose a paragraph's **… → Explore passage** for measurement explanations or
+research beside that passage. The **Passage values** inspector
 works with Analysis On or Off. **Analysis overview**
 opens chapter comparisons; **Back to passage** restores your place and prior
 Analysis On/Off choice.
 The opening candidate is not a quality ranking; read the text before
 deciding whether a difference matters. Settings explain saved versus session-only
-choices. Standalone HTML is read-only; project writes and manuscript PDF downloads
-require the native server. See [PDF layouts](USAGE.md#lixity-pdf).
+choices. A standalone analysis report is read-only. To share manuscript,
+analysis and optional research together, choose **Project actions → Reading
+website**. The ZIP copy opens in a browser without a running Lixity server;
+project writes and new PDF generation require the local app. See
+[reading websites](USAGE.md#export-a-reading-website) and [PDF layouts](USAGE.md#lixity-pdf).
 
 ### Choose a view
 
@@ -84,7 +88,7 @@ keyboard controls, companion sizing and coverage. Changing a view writes nothing
 
 | What you want to do | Where to start |
 | --- | --- |
-| Read a difference in context | **Manuscript**: choose **… → Values** for one paragraph; use **Analysis** independently for diagnostics. |
+| Read a difference in context | **Manuscript**: choose **… → Explore passage** for one paragraph; use **Analysis** independently for diagnostics. |
 | Compare chapter positions | **Analysis overview → Style dimensions**: select a chapter or use a flat axis view to inspect overlaps. |
 | Follow a source into an argument | **Research**: open a dossier, inspect its evidence and follow a saved manuscript quotation. |
 | Change the manuscript or analysis setup | **Project**: check the active project and whether a setting is saved or session-only. |

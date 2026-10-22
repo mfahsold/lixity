@@ -127,159 +127,8 @@ def reviewed_visual_sources(asset_dir: Path | None = None) -> list[tuple[dict, b
     return sources
 
 
-_PUBLIC_READ_ADAPTER = r"""(function () {
-  "use strict";
-  var nativeFetch = window.fetch.bind(window);
-  var base = new URL(document.baseURI);
-  var analyticsConfig = new URL("../assets/analytics.json", base).href;
-  var images = new Set([
-    new URL("../assets/research/hamburg-free-port-1900.jpg", base).href,
-    new URL("../assets/research/hamburg-harbour-1890-1900.jpg", base).href
-  ]);
-  var records = nativeFetch(new URL("research-data.json", base)).then(function (response) {
-    if (!response.ok) throw new Error("Read-only example data is unavailable");
-    return response.json();
-  });
-  window.fetch = async function (input, options) {
-    var request = typeof input === "string" || input instanceof URL ? null : input;
-    var url = new URL(request ? request.url : input, base);
-    var method = String(options && options.method || request && request.method || "GET").toUpperCase();
-    // Reuse the native PDF downloader; its bounded request selects an existing
-    // reviewed file here, never a generation service or an outgoing POST.
-    if (method === "POST" && url.origin === base.origin && url.pathname === "/api/manuscript-pdf" && !url.search) {
-      var payload;
-      try { payload = JSON.parse(options && options.body || request && await request.text() || ""); } catch (_) { payload = null; }
-      if (!payload || payload.project_token !== "synthetic-harbour-manuscript" ||
-          ["editor", "book", "sheet", "report"].indexOf(payload.layout) < 0 ||
-          Object.keys(payload).some(function (key) { return key !== "layout" && key !== "project_token"; })) {
-        throw new Error("Read-only example permits prepared demo PDF downloads only");
-      }
-      var prepared = await nativeFetch(new URL("warehouse-4-" + payload.layout + ".pdf", base));
-      if (prepared.ok) document.dispatchEvent(new CustomEvent("lixity:public-pdf-download"));
-      return prepared;
-    }
-    if (method !== "GET" || url.origin !== base.origin) throw new Error("Read-only example permits local fixture reads only");
-    if (url.href === analyticsConfig) return nativeFetch(input, options);
-    if (images.has(url.href)) return nativeFetch(url);
-    var fixture = await records, key = url.pathname + url.search;
-    if (!Object.prototype.hasOwnProperty.call(fixture, key)) throw new Error("Read-only example has no fixture for this request");
-    if (url.pathname === "/api/research/matrix") return new Response(fixture[key].text,
-      {status: 200, headers: {"Content-Type": "text/markdown; charset=utf-8"}});
-    return new Response(JSON.stringify(fixture[key]), {status: 200, headers: {"Content-Type": "application/json"}});
-  };
-})();"""
-
-
-_PUBLIC_DEMO_CONTROLS = r"""document.addEventListener("DOMContentLoaded", function () {
-  "use strict";
-  var imageResources = __REVIEWED_IMAGES__;
-  var restoreImages = window.LixityDossierImages.restoreMarkdown;
-  window.LixityDossierImages.restoreMarkdown = function (rendered, prepared) {
-    var template = document.createElement("template");
-    template.innerHTML = restoreImages(rendered, prepared);
-    template.content.querySelectorAll("img").forEach(function (image) {
-      var resource = imageResources[image.getAttribute("src")];
-      if (!resource) throw new Error("Read-only example image is absent from the reviewed fixture");
-      image.setAttribute("src", resource);
-    });
-    return template.innerHTML;
-  };
-  var noteSerial = 0;
-  function localNote(host, reason) {
-    var note = host.querySelector(":scope > .demo-local-note");
-    if (note) return note;
-    note = document.createElement("p"); note.className = "ctl-note demo-local-note";
-    note.id = "demo-local-note-" + (++noteSerial);
-    var badge = document.createElement("strong"); badge.textContent = "Local app";
-    var link = document.createElement("a"); link.href = "../guides/installation.html";
-    link.textContent = "Install Lixity";
-    note.append(badge, document.createTextNode(" · "), link);
-    if (reason) note.append(document.createTextNode(" — " + reason));
-    var summary = host.tagName === "DETAILS" && host.querySelector(":scope > summary");
-    if (summary) summary.after(note); else host.prepend(note);
-    return note;
-  }
-  function unavailable(control, note) {
-    if ("disabled" in control && !control.disabled) control.disabled = true;
-    if (control.tagName === "A") { control.removeAttribute("href"); control.setAttribute("role", "link"); }
-    if (!control.dataset.demoLocal) {
-      control.dataset.demoLocal = "true";
-      control.setAttribute("aria-disabled", "true");
-    }
-    var described = (control.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean);
-    if (described.indexOf(note.id) < 0) control.setAttribute("aria-describedby",
-      described.filter(function (id) { return id.indexOf("demo-local-note-") !== 0; }).concat(note.id).join(" "));
-  }
-  // Native browser controls stay available by default. Only operations that
-  // require the local engine or project files are marked unavailable.
-  [
-    ["#controls", "Applying project settings, registers and analysis requires the local engine."],
-    ["#nda-draft", "Creating an agreement from your details requires the local app."],
-    ["#rtab-search", "Archive search uses the local research index. List filters remain available in this demo."],
-    ["#rtab-grounding", "Comparing sources with your manuscript requires the local analysis engine."],
-    ["#research-setup-guide", "OCR and Zotero diagnostics run on your computer."],
-    ["#zotero-box", "Connecting Zotero and capturing selected attachments requires the local app."],
-    ["#r-local-import", "Importing files and OCR require the local app."],
-    ["#research-init-box", "Creating a research archive requires a local project."],
-    ["#modal-project-create, #modal-project-open", "Creating or opening your project requires the local app."],
-    ["#r-dos-composer", "Creating and saving dossiers requires a local project."],
-    ["#r-claim-composer, #r-link-composer", "Creating claims and linking evidence requires a local project."],
-    ["#r-relation-composer", "Saving relationships between claims requires a local project."],
-    ["#r-decision-composer", "Recording author decisions requires a local project."]
-  ].forEach(function (spec) {
-    document.querySelectorAll(spec[0]).forEach(function (host) {
-      host.dataset.demoLocalScope = "true";
-      if (host.classList.contains("research-composer")) {
-        var badge = document.createElement("small"); badge.className = "demo-local-badge";
-        badge.textContent = "Local app"; host.querySelector(":scope > summary").appendChild(badge);
-      }
-      localNote(host, spec[1]);
-    });
-  });
-  var localActions = ["#btn-modal-new-project", "#btn-modal-open-project", "#hero-btn-new-project", "#hero-btn-open-project", "#hero-btn-browse-project",
-    "[data-action]", "[data-marker-kind]", "[data-marker-resolve]", "[data-research-revise]", "[data-decision-ack-status]",
-    "[data-use-passage]", "[data-link-claim-evidence]", ".selection-use", "[data-dossier-claim]", "[data-dossier-decision]", "[data-dossier-add-image]",
-    "[data-manuscript-link-selection]", "[data-manuscript-link-accept]",
-    "#research-revision-edit-tab", "#research-revision-save", "#research-revision-batch-add", "#research-revision-batch-review",
-    "#research-revision-batch-apply", "#research-revision-merge-apply", "[data-relation-retract]",
-    "a[href^='zotero:']", "a[href^='/api/']"].join(", ");
-  function markLocalActions() {
-    document.querySelectorAll("[data-demo-local-scope]").forEach(function (host) {
-      var note = host.querySelector(":scope > .demo-local-note");
-      host.querySelectorAll("button:not([data-close-disclosure]), input, select, textarea").forEach(function (control) { unavailable(control, note); });
-    });
-    document.querySelectorAll(localActions).forEach(function (control) {
-      var scope = control.closest("[data-demo-local-scope]");
-      var host = scope || control.closest(".marker-row, .research-record-actions, .research-passage-actions, .selection-toolbar, .dossier-image-actions, .research-decision-acknowledgement") || control.parentElement;
-      var note = scope ? scope.querySelector(":scope > .demo-local-note") : localNote(host, "");
-      unavailable(control, note);
-    });
-    document.querySelectorAll(".manuscript-link-review, #research-manuscript-review-section").forEach(function (host) {
-      localNote(host, "Linking selected text and accepting changed anchors requires a local project.");
-    });
-  }
-  document.addEventListener("click", function (event) {
-    if (event.target.closest("[data-demo-local]")) { event.preventDefault(); event.stopImmediatePropagation(); }
-  }, true);
-  document.addEventListener("submit", function (event) {
-    if (event.target.id === "manuscript-pdf-form") return;
-    event.preventDefault(); event.stopImmediatePropagation();
-  }, true);
-  ["dragover", "drop"].forEach(function (name) {
-    document.addEventListener(name, function (event) { event.preventDefault(); event.stopImmediatePropagation(); }, true);
-  });
-  var pdf = document.getElementById("manuscript-pdf-form");
-  var pdfNote = document.createElement("p"); pdfNote.className = "ctl-note";
-  pdfNote.textContent = "Downloads prepared copies of this demo manuscript. Generating your own PDFs requires the local app.";
-  pdf.appendChild(pdfNote);
-  markLocalActions();
-  new MutationObserver(markLocalActions).observe(document.body, {childList: true, subtree: true, attributes: true, attributeFilter: ["disabled", "href"]});
-  if (location.hash && location.hash !== "#top") checkUrlHashView(); else switchActiveView("analysis");
-});"""
-
-
-def build_research_demo(root: Path, research_fixture: dict) -> Path:
-    """Publish one native analysis/research project with bounded fixture reads."""
+def build_research_demo(root: Path, project: Path) -> Path:
+    """Wrap the production website export of the reviewed synthetic project."""
     from build_examples import (
         SITE,
         _analytics_endpoint,
@@ -290,78 +139,61 @@ def build_research_demo(root: Path, research_fixture: dict) -> Path:
         _site_navigation,
     )
 
-    from lixity.pdf_export import compose_pdf
+    from lixity.pdf_export import PDF_LAYOUTS, compose_pdf
+    from lixity.site_contracts import SiteManifest
+    from lixity.site_export import prepare_site
 
-    manuscript_bytes = DEMO_MANUSCRIPT.read_bytes()
+    manuscript = project / "harbour-manuscript.md"
+    manuscript_bytes = manuscript.read_bytes()
+    if manuscript_bytes != DEMO_MANUSCRIPT.read_bytes():
+        raise ValueError("The public demo must use the reviewed synthetic manuscript")
     text = manuscript_bytes.decode("utf-8")
     title = manuscript_title(text)
     public_manuscript = root / "docs/research/examples/harbour-manuscript.md"
     public_manuscript.parent.mkdir(parents=True, exist_ok=True)
     public_manuscript.write_bytes(manuscript_bytes)
 
-    resources = {url: "../" + value["asset_path"].removeprefix("docs/")
-                 for url, value in research_fixture.items() if "asset_path" in value}
-
-    def public_value(value):
-        if isinstance(value, str):
-            return resources.get(value, value)
-        if isinstance(value, dict):
-            return {key: public_value(item) for key, item in value.items()}
-        if isinstance(value, list):
-            return [public_value(item) for item in value]
-        return value
-
-    fixture = {url: public_value(value) for url, value in research_fixture.items()
-               if url.startswith("/api/research/") and url not in resources}
-    document = render_research_workspace(research_fixture, enabled_actions=[
-        action for action in NATIVE_UI_ACTIONS
-        if action not in ("research-manuscript-link", "research-manuscript-reanchor")
-    ] + ["research-manuscript-review"], engine_name="Lixity · read-only",
-        manuscript_name="Fictional demo",
-        project_author="Example Author",
-        author_setting_enabled=True, project_token="a" * 64, nda_project_name=title,
-        identity_check=manuscript_identity_check(text, title, "Example Author"))
+    bundle = prepare_site(project, manuscript=manuscript, include_research=True, include_source_files=True)
+    files = {name: content for name, content in bundle.files.items() if name not in ("index.html", "manifest.json")}
+    document = bundle.files["index.html"].decode("utf-8")
+    # The reviewed public wrapper has one additional, disclosed image endpoint.
+    # Replace the private export policy rather than intersecting two policies.
+    document = re.sub(r'<meta http-equiv="Content-Security-Policy"[^>]*>', "", document, count=1)
     page_title = "Lixity project demo — " + title
     document = _replace_title(document, page_title)
     head = _head_metadata(canonical=f"{SITE}/demo/report.html", title=page_title,
                           description="Explore one fictional harbour project: compare six manuscript chapters, then follow a dossier through retained evidence to an authored claim and the same manuscript passage.",
                           language="en", preview_image=("screenshots/dashboard-dossier-image.png",
                               "Historical Hamburg map retained with source provenance in a research dossier"))
-    policy = f"""<style>
-#example-context {{ margin-block: 1rem; }}
-.demo-local-note {{ display: flex; flex-wrap: wrap; gap: .25em; align-items: baseline; margin-block: .5rem; }}
-.demo-local-note strong {{ color: var(--muted); font-size: var(--text-note); }}
-.demo-local-badge {{ color: inherit; font-size: var(--text-note); margin-inline-start: .4em; }}
-[data-demo-local] {{ cursor: default; }}
-a[data-demo-local] {{ opacity: .65; }}
-</style>
-<script id="research-demo-adapter">{_PUBLIC_READ_ADAPTER}</script>
-<script id="research-demo-controls">{_PUBLIC_DEMO_CONTROLS.replace("__REVIEWED_IMAGES__", json.dumps(resources))}</script>
-"""
+    policy = '<style>#example-context { margin-block: 1rem; }</style>'
     counter = _analytics_endpoint(root)
     counter_source = f" {counter}" if counter else ""
+    site_code = counter.removeprefix("https://").split(".", 1)[0] if counter else None
+    head = head.replace('src="../assets/analytics.js"',
+                        'src="../assets/analytics.js" data-site-code="' +
+                        html.escape(json.dumps(site_code), quote=True) + '"', 1)
     restrictions = ('<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; '
                     'script-src \'self\' \'unsafe-inline\'; style-src \'unsafe-inline\'; '
-                    f'img-src \'self\' data: blob: https://tile.openstreetmap.org{counter_source}; '
-                    'connect-src \'self\'; font-src data:; base-uri \'none\'; form-action \'none\'"/>')
+                    f'img-src \'self\' data: blob:{counter_source}; '
+                    'connect-src \'none\'; font-src data:; base-uri \'none\'; form-action \'none\'"/>')
     document = document.replace("</head>", restrictions + head + policy + "</head>", 1)
     pdf_links = [(f"warehouse-4-{layout}.pdf", label) for layout, label in (
         ("editor", "Editorial manuscript PDF"), ("book", "Reading manuscript PDF"),
-        ("sheet", "Submission manuscript PDF"), ("report", "Analysis report PDF"))]
+        ("sheet", "Submission manuscript PDF"), ("report", "Analysis report PDF"),
+        ("document", "Document PDF (A4)"))]
     about_paragraphs = [
         "Start in Research with Dossiers: Warehouse 4 case notes connects the customs log, an office discrepancy and exact manuscript quotations. "
         "The preliminary log and its correction disagree about where the crate was opened; claim versions preserve the earlier interpretation. "
         "Review identifies the two quotations still linked to an earlier claim version. Decisions records the author's fictional choices. "
         "These links are explicit associations, not automatic fact checks.",
         "Zotero normally owns bibliography, reading and source notes. Lixity retains selected evidence and authored records for manuscript work. "
-        "This offline example has no live Zotero connection: its customs-log capture contains explicitly synthetic Zotero identity metadata, "
-        "and source-return actions are disabled. The retained passage, authored claim and manuscript quote are separate records.",
+        "This offline example has no live Zotero connection; local Zotero identities are omitted from the website. "
+        "The retained passage, authored claim and manuscript quote are separate records.",
         "The customs log, weather notes, manuscript, people, Warehouse 4 incident and journeys are fictional demonstration records. "
         "The dated public-domain visuals provide setting references and do not verify events or conditions in 1923. "
         "Select a dossier image or diagram to enlarge and zoom it. Coordinates are approximate author-entered examples. "
-        "Visible maps use OpenStreetMap by default; tile requests reveal the viewed area and client IP to the provider "
-        "and stop outside the visible map/project context. "
-        "Switch the background off for offline vectors; the coordinate sketch remains available. "
+        "Maps use the packaged coordinates and offline vectors without requesting background tiles. "
+        "The coordinate sketch remains available. "
         "No route or line of sight is calculated.",
         "These short synthetic chapters and language-dependent heuristics support human review; "
         "they are not a benchmark, calibration corpus or writing-quality verdict.",
@@ -371,7 +203,7 @@ a[data-demo-local] {{ opacity: .65; }}
         '<details class="panel" id="example-context" aria-labelledby="example-heading">'
         '<summary id="example-heading">About this read-only demo</summary>'
         '<p>Read in Manuscript, then explore the same project in Research. '
-        'This demo cannot import, edit or save; actions marked Local app require installation.</p>'
+        'This demo cannot import, edit or save. It uses the same read-only website export as a local project.</p>'
         '<div class="license-links"><a href="../guides/first-look.html">Follow the walkthrough</a>'
         '<a href="#demo-downloads">Download PDFs</a>'
         '<a href="../guides/installation.html">Install the local app</a></div>'
@@ -394,8 +226,8 @@ a[data-demo-local] {{ opacity: .65; }}
                        f'<a href="{html.escape(item["rights_url"], quote=True)}">Public-domain rights statement</a></p>')
     credits.append('<p><a href="../assets/research/sources.json">Reviewed image provenance manifest</a></p></section>')
     downloads = ('<section class="panel" id="demo-downloads"><h2>Download this project</h2>'
-                 '<p>All four PDFs use the same fictional manuscript shown in Analysis and linked in Research.</p>'
-                 '<div class="license-links">' + " ".join(f'<a href="{href}">{label}</a>' for href, label in pdf_links) +
+                 '<p>All PDFs use the same fictional manuscript shown in Analysis and linked in Research.</p>'
+                 '<div class="license-links">' + " ".join(f'<a href="{href}" download>{label}</a>' for href, label in pdf_links) +
                  '<a href="../research/examples/harbour-manuscript.md">Synthetic manuscript source</a>'
                  '<a href="#demo-license">Distribution license</a></div></section>')
     license_text = html.escape((BASE_DIR / "LICENSE").read_text(encoding="utf-8"))
@@ -408,23 +240,36 @@ a[data-demo-local] {{ opacity: .65; }}
     document = _site_navigation(document, title, demo=True, breadcrumbs=False)
     destination = root / "docs/demo/report.html"
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(_finalize(document), encoding="utf-8")
-    destination.with_name("research-data.json").write_text(json.dumps(fixture, ensure_ascii=False), encoding="utf-8")
-    for layout in ("editor", "book", "sheet", "report"):
-        destination.with_name(f"warehouse-4-{layout}.pdf").write_bytes(compose_pdf(
+    files["report.html"] = _finalize(document).encode("utf-8")
+    for layout in PDF_LAYOUTS:
+        files[f"warehouse-4-{layout}.pdf"] = compose_pdf(
             text, manuscript="harbour-manuscript.md", layout=layout, language="en",
             title=title, author="Example Author", project_config={},
-        ))
-    destination.with_name("research.html").write_text(
+        )
+    files["research.html"] = (
         '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/>'
         '<meta name="viewport" content="width=device-width, initial-scale=1"/>'
         '<title>Lixity project demo — research</title>'
         f'<link rel="canonical" href="{SITE}/demo/report.html"/>'
         '<meta http-equiv="refresh" content="0; url=report.html#research-manager"/>'
         '</head><body><p>Research is part of the same Warehouse 4 project. '
-        '<a href="report.html#research-manager">Open the project research view</a>.</p></body></html>\n',
-        encoding="utf-8",
-    )
+        '<a href="report.html#research-manager">Open the project research view</a>.</p></body></html>\n'
+    ).encode()
+    manifest = {**bundle.manifest, "entrypoint": "report.html",
+                "disclosures": [*bundle.manifest["disclosures"],
+                    "The public Pages wrapper adds reviewed navigation, PDF downloads, source credits and optional privacy-respecting analytics."],
+                "capabilities": {**bundle.manifest["capabilities"], "automatic_external_requests": bool(counter)}, "files": {
+        name: {"sha256": sha256(content).hexdigest(), "byte_length": len(content)}
+        for name, content in sorted(files.items())
+    }}
+    SiteManifest.model_validate(manifest)
+    files["manifest.json"] = (json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    for name, content in files.items():
+        target = destination.parent / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(content)
+    # This response map belonged to the former demo-only transport.
+    destination.with_name("research-data.json").unlink(missing_ok=True)
     return destination
 
 
@@ -456,6 +301,60 @@ def render_research_workspace(research_fixture: dict, **options) -> str:
     )
 
 
+def build_publication_examples(root: Path, project: Path) -> dict[str, Path]:
+    """Publish two reviewed synthetic profiles through the production exporter.
+
+    The reader includes all six chapters; the standalone companion is capped at
+    chapter three. No analytics or source-project mutation is added here.
+    """
+    from build_examples import SITE, _finalize, _head_metadata, _site_navigation
+
+    from lixity.site_contracts import SiteManifest
+    from lixity.site_export import prepare_site
+
+    manuscript = project / "harbour-manuscript.md"
+    if manuscript.read_bytes() != DEMO_MANUSCRIPT.read_bytes():
+        raise ValueError("Public publications require the reviewed synthetic manuscript")
+    outputs = {}
+    for mode, cap in (("reader", None), ("companion", 3)):
+        bundle = prepare_site(project, manuscript=manuscript, mode=mode,
+            publication_profile="readers", max_chapter=cap, include_source_files=True)
+        document = bundle.files["index.html"].decode("utf-8")
+        title = "Warehouse 4 — " + ("read with context" if mode == "reader" else "a reader's companion")
+        description = ("Read six fictional harbour chapters with context you reveal as you read." if mode == "reader" else
+                       "Explore a fictional harbour's setting beside your book; this companion contains no novel text and stops at chapter three.")
+        metadata = _head_metadata(canonical=f"{SITE}/demo/{mode}/index.html", title=title,
+            description=description, language="en", analytics=False)
+        document = document.replace("</head>", metadata + "</head>", 1)
+        document = _site_navigation(document, title, demo=True, breadcrumbs=False, links=(
+            ("../report.html", "Author workspace"), ("../reader/", "Read with context"),
+            ("../companion/", "Companion only"), ("../../guides/first-look.html", "Short tour")))
+        notice = ('<details class="panel"><summary>About this synthetic reading example</summary>'
+            '<p>The people, records and incident are invented. Reveal context deliberately with the reading-progress control. '
+            'All content included in a static file remains inspectable; chapter caps remove later material before export.</p>'
+            '<p>The map and harbour view are public-domain setting references from circa 1900, not evidence of the fictional 1923 incident. '
+            '<a href="../../assets/research/sources.json">Image credits and reviewed provenance</a>. '
+            'The ordinary product export has the same reading interface and no visitor counter.</p></details>')
+        document = document.replace("<footer>", notice + "<footer>", 1)
+        files = {**bundle.files, "index.html": _finalize(document).encode("utf-8")}
+        files.pop("manifest.json")
+        manifest = {**bundle.manifest,
+            "disclosures": [*bundle.manifest["disclosures"],
+                "The reviewed public wrapper adds navigation, canonical metadata and visual credits; no analytics."],
+            "files": {name: {"sha256": sha256(content).hexdigest(), "byte_length": len(content)}
+                      for name, content in sorted(files.items())}}
+        SiteManifest.model_validate(manifest)
+        files["manifest.json"] = (json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
+        directory = root / "docs/demo" / mode
+        directory.mkdir(parents=True, exist_ok=True)
+        for name, content in files.items():
+            target = directory / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(content)
+        outputs[mode] = directory / "index.html"
+    return outputs
+
+
 def build_research_fixture(work_dir: Path, *, language: str = "en",
                            nda_project_name: str = "") -> dict:
     """Create the disposable research example through the ordinary project API."""
@@ -467,7 +366,10 @@ def build_research_fixture(work_dir: Path, *, language: str = "en",
 
     manuscript_bytes = DEMO_MANUSCRIPT.read_bytes()
     research_api.init(research_proj, title=manuscript_title(manuscript_bytes.decode("utf-8")), language="en")
-    (research_proj / "lixity.toml").write_text('author_name = "Example Author"\n', encoding="utf-8")
+    (research_proj / "lixity.toml").write_text(
+        'author_name = "Example Author"\n\n[characters.Mara]\n\n[characters.Ivo]\n\n[characters.Hansen]\n',
+        encoding="utf-8",
+    )
     source_text = """## Section 1: Port Authority Log – October 1923
 
 At ten ten on the evening of October 14, 1923, the night watchman reported two unidentified figures attempting to force the external lock at the eastern gate of Warehouse 4.
@@ -610,7 +512,16 @@ The watchman saw the two figures leave towards the basin. Mara saw a launch ligh
         "## Reference boundaries\n\nThe historical map and harbour image establish their own dated visual context. "
         "The approximate walking and driving sketches are author-entered examples, not calculated routes or sightlines.\n\n"
         "## Next research questions\n\nWhich details of customs procedure need historical checking before a longer novel uses them? "
-        "Could an actual warehouse layout support these movements? Leave both questions open in this fictional demonstration.",
+        "Could an actual warehouse layout support these movements? Leave both questions open in this fictional demonstration.\n\n"
+        "## Reader introduction\n\nThe harbour in this story is an invented place within a real city's visual history. "
+        "The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, "
+        "rather than a plan of the characters' movements.\n\n"
+        "## Reader weather\n\nLight reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain "
+        "distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.\n\n"
+        "## Reader witness limits\n\nSeeing a light, hearing an engine and seeing someone board a boat are different observations. "
+        "The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.\n\n"
+        "## Reader final clue\n\nA blank signature is an absence, not a name. The two ledger entries, reused board and torn paper "
+        "leave several possible connections. The morning handover preserves the question instead of identifying a culprit.",
         tags=["Weather", "Setting"],
         evidence_ids=[weather_passage, visibility_passage, receipt_passage, witness_limits],
     )
@@ -757,6 +668,21 @@ The watchman saw the two figures leave towards the basin. Mara saw a launch ligh
         claim_id=receipt["claim_id"], dossier_ids=[dossier_res["dossier_id"], weather_dossier["dossier_id"]],
         impact_on_plot="Mara stops the foreman closing the book; the unresolved receiving line ends the story.",
     )
+    from lixity.config import prepare_project_settings
+
+    current_case = research_api.get_dossier(research_proj, dossier_res["dossier_id"])
+    prepare_project_settings(research_proj, {"site_publications": {"readers": {
+        "title": "Warehouse 4 — a reader's companion",
+        "introduction": "Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.",
+        "entries": [
+            {"dossier_id": weather_dossier["dossier_id"], "revision": 1, "section": "Reader introduction", "title": "The harbour around the story", "reveal_after_chapter": 0},
+            {"dossier_id": dossier_res["dossier_id"], "revision": current_case["revision"], "section": "Historical map", "title": "A map from another time", "reveal_after_chapter": 0},
+            {"dossier_id": dossier_res["dossier_id"], "revision": current_case["revision"], "section": "Historical harbour view", "title": "The harbour in colour", "reveal_after_chapter": 0},
+            {"dossier_id": weather_dossier["dossier_id"], "revision": 1, "section": "Reader weather", "title": "Light and sound", "reveal_after_chapter": 1},
+            {"dossier_id": weather_dossier["dossier_id"], "revision": 1, "section": "Reader witness limits", "title": "What a witness can tell", "reveal_after_chapter": 3},
+            {"dossier_id": weather_dossier["dossier_id"], "revision": 1, "section": "Reader final clue", "title": "The receiving signature", "reveal_after_chapter": 6},
+        ],
+    }}}).commit()
     sources_data = research_api.list_sources(research_proj)
     dossiers_data = research_api.list_dossiers(research_proj)
     claims_data = research_api.list_claims(research_proj)
@@ -1268,7 +1194,8 @@ def main() -> int:
     cite_res = research_api.cite(research_proj, passage_id)
     research_html = research_api.source_dashboard(research_proj, search_res["hits"][0]["source_id"])
     _queue_capture(_write_html("dashboard-research.html", research_html), OUT_DIR / "dashboard-research.png", 1480, 960)
-    build_research_demo(BASE_DIR, research_fixture)
+    build_research_demo(BASE_DIR, research_proj)
+    build_publication_examples(BASE_DIR, research_proj)
     _write_html("research-workspace-fixture.json", json.dumps(research_fixture, ensure_ascii=False))
     research_workspace = _write_html(
         "dashboard-research-workspace.html",

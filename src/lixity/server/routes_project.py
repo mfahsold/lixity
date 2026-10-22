@@ -153,7 +153,7 @@ class ProjectRoutesMixin(ResponseMixin):
             root = self.get_author_project_root()
             current_token = project_settings_token(root, self.source_input)
             if (save_defaults or any(key in payload for key in (
-                    "publication", "register_profiles", "chapter_registers", "project_token"))) and (
+                    "publication", "register_profiles", "chapter_registers", "site_publications", "project_token"))) and (
                     not current_token or payload.get("project_token") != current_token):
                 self._json({"ok": False, "message": "The selected project or its settings changed; reload before saving"}, 409)
                 return

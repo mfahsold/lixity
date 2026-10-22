@@ -155,6 +155,8 @@ def smoke(dist: Path, version: str) -> None:
     env.pop("PYTHONHOME", None)
     with tempfile.TemporaryDirectory(prefix="lixity-release-smoke-") as directory:
         work = Path(directory)
+        env["LIXITY_SERVICE_STATE_DIR"] = str(work / "service-state")
+        env["LIXITY_SERVICE_RUNTIME_DIR"] = str(work / "service-runtime")
         subprocess.run(  # noqa: S603 - fixed interpreter and venv module
             [sys.executable, "-m", "venv", str(work / "venv")], check=True, env=env,
         )
@@ -174,6 +176,45 @@ def smoke(dist: Path, version: str) -> None:
         about = json.loads(run([str(cli), "about", "--json"]))
         if about["meta"]["version"] != version:
             raise ValueError("installed about metadata differs from release version")
+        status = json.loads(run([str(cli), "service", "status", "--port", "59973", "--json"]))
+        if status["schema_version"] != "lixity-service-status/1" or not status["ok"]:
+            raise ValueError("installed service status did not return its inspection contract")
+        diagnostics = json.loads(run([str(cli), "doctor", "--port", "59973", "--json"]))
+        if (diagnostics["schema_version"] != "lixity-doctor/1" or not diagnostics["ok"]
+                or diagnostics["installation"]["distribution_version"] != version):
+            raise ValueError("installed diagnostics disagree with the release installation")
+
+        # Exercise package-data and license discovery from the installed wheel,
+        # outside the source checkout, through all three publication formats.
+        run([str(executable), "-c", """
+from pathlib import Path
+from lixity.config import prepare_project_settings
+from lixity.research import api
+from lixity.site_export import export_site
+project = Path('synthetic-project')
+project.mkdir()
+(project / 'manuscript.md').write_text(chr(10).join([
+    '## One', '', 'Synthetic opening.', '', '## Two', '', 'LATE_SMOKE_SENTINEL', '']), encoding='utf-8')
+(project / 'lixity.toml').write_text('manuscript = "manuscript.md"' + chr(10), encoding='utf-8')
+api.init(project, title='Synthetic reading project')
+dossier = api.create_dossier(project, 'Public note', 'Approved synthetic background.')['dossier_id']
+prepare_project_settings(project, {'site_publications': {'readers': {
+    'title': 'Synthetic companion', 'entries': [{'dossier_id': dossier}]}}}).commit()
+for mode in ('review', 'reader', 'companion'):
+    options = {} if mode == 'review' else {'publication_profile': 'readers', 'max_chapter': 1}
+    target = Path('website-' + mode)
+    manifest = export_site(project, target, mode=mode, **options)
+    assert manifest['mode'] == mode
+    assert (target / 'licenses/Lixity-LICENSE').is_file()
+    content = (target / 'index.html').read_text(encoding='utf-8')
+    assert 'data-read-only="true"' in content
+    if mode != 'review': assert 'LATE_SMOKE_SENTINEL' not in content
+    if mode == 'companion': assert 'Synthetic opening.' not in content
+"""])
+        run([str(cli), "pdf", str(work / "synthetic-project/manuscript.md"),
+             "--layout", "document", "-o", str(work / "document.pdf")])
+        if not (work / "document.pdf").read_bytes().startswith(b"%PDF-"):
+            raise ValueError("installed neutral document export did not produce a PDF")
 
 
 def main() -> None:

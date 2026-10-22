@@ -2,7 +2,7 @@
 
 Lixity describes patterns in the manuscript you provide. Its style reference compares chapters with that manuscript's own baseline. A signal is a reason to inspect a passage in context; it is not an objective quality score or an instruction to rewrite it.
 
-Updated 19 October 2026
+Updated 22 October 2026
 
 ## What does consistency measure?
 
@@ -20,7 +20,7 @@ For API compatibility, style JSON schema version 4 retains the historical numeri
 
 ## Compare scenes within a register
 
-The Scenes & style registers view measures scenes separately. Assign registers and target ranges in project settings; each register has its own manuscript-only median. Counts and approximate standard errors show the data behind the values. Targets are your choices, not automatic writing rules. [Set up scene comparisons](../USAGE.md#scene-registers-and-project-targets).
+The Scenes & style registers view measures scenes separately. Assign scene registers and target ranges in `lixity.toml`; each scene register has its own manuscript-only median. Chapter registers have a separate editor in Project settings, and display filters do not recalculate the whole-book reference. Counts and approximate standard errors show the data behind the values. Targets are your choices, not automatic writing rules. [Set up scene comparisons](../USAGE.md#scene-registers-and-project-targets).
 
 ## How much text is enough?
 

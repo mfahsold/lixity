@@ -46,8 +46,8 @@ async function refreshResearchProjectInfo() {
     clearZoteroSelection();
     zoteroProjectId = status.project_id || null;
   }
-  if (activeRootEl && status && status.ok && status.project_root) {
-    var rootPath = String(status.project_root);
+  if (activeRootEl && status && status.ok && (status.project_root || status.project_title)) {
+    var rootPath = String(status.project_root || status.project_title);
     var rootName = rootPath.split(/[\\/]/).filter(Boolean).pop() || rootPath;
     activeRootEl.className = "ctl-note";
     activeRootEl.title = rootPath;
@@ -414,7 +414,11 @@ document.addEventListener("click", async function (event) {
       var context = detail.context || {};
       var external = context.external_reference;
       var sourceReturn = external ? zoteroOpenLink(external.library, external.item_key) : "";
-      var captureContext = '<p class="ctl-note">' + escapeHtml(uiLabel("research_captures_hint")) + '</p>' +
+      var original = window.LixitySite.readOnly && window.LixitySite.resourceUrl('/api/site-resource?' +
+        new URLSearchParams({source_id: detail.id, version_id: detail.version_id}));
+      var captureContext = (!window.LixitySite.readOnly ? '<p class="ctl-note">' + escapeHtml(uiLabel("research_captures_hint")) + '</p>' : '') +
+        (original ? '<p><a data-site-original-source href="' + escapeHtml(original) + '" download>' +
+          escapeHtml(uiLabel("site_source_original")) + '</a></p>' : '') +
         (sourceReturn ? '<p>' + sourceReturn + '</p>' : '');
       var contextRows = ["genre", "created_period", "depicted_period", "place", "perspective", "original_language", "is_translation", "provenance_note", "origin_url"].filter(function(key) {
         return context[key] !== null && context[key] !== undefined && context[key] !== "";
@@ -429,6 +433,8 @@ document.addEventListener("click", async function (event) {
         return;
       }
       var fullDocText = detail.text || (detail.passages || []).map(function(p) { return p.verbatim; }).join("\n\n");
+      if (window.LixitySite.readOnly && !detail.text) captureContext += '<p class="ctl-note site-source-excerpts">' +
+        escapeHtml(uiLabel("site_source_excerpts")) + '</p>';
       var docRendered = fullDocText ? renderSafeMarkdown(fullDocText) : '<p class="ctl-note">' + escapeHtml(uiLabel("research_no_records")) + '</p>';
       var passagesCount = detail.passages ? detail.passages.length : 0;
       var passagesHtml = (detail.passages || []).map(function(p) {
@@ -446,9 +452,9 @@ document.addEventListener("click", async function (event) {
           '</div>' +
           '<button type="button" class="ctl ctl-sm research-source-toggle" data-source-toggle>' + escapeHtml(uiLabel("research_show_source")) + '</button>' +
         '</div>' +
-        '<div class="selection-toolbar"><button type="button" class="ctl selection-use" disabled>' +
+        (!window.LixitySite.readOnly ? '<div class="selection-toolbar"><button type="button" class="ctl selection-use" disabled>' +
           escapeHtml(uiLabel("selection_use")) + '</button><p class="ctl-note selection-reading" role="status">' +
-          escapeHtml(uiLabel("selection_hint")) + '</p></div>' +
+          escapeHtml(uiLabel("selection_hint")) + '</p></div>' : '') +
         '<div class="research-source-doc-wrap">' +
           '<div class="research-prose markdown-body research-source-doc-rendered">' + docRendered + '</div>' +
           '<pre class="research-source-doc-raw" hidden>' + escapeHtml(fullDocText) + '</pre>' +
@@ -1016,7 +1022,7 @@ function researchEvidencePanelHtml(evData, claimId) {
       escapeHtml(uiLabel("research_load_evidence")) + '</button>';
   }
   if (!links.length) {
-    var canLink = researchContextToken() && researchClaimChoices[claimId] && document.getElementById("r-link-composer");
+    var canLink = !window.LixitySite.readOnly && researchContextToken() && researchClaimChoices[claimId] && document.getElementById("r-link-composer");
     return '<p class="ctl-note">' + escapeHtml(uiLabel("research_no_linked_evidence")) + '</p>' +
       (canLink ? '<button type="button" class="ctl ctl-compact" data-link-claim-evidence="' + escapeHtml(claimId) + '">' +
       escapeHtml(uiLabel("research_link_heading")) + '</button>' : '');

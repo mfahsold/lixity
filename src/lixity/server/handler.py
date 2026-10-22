@@ -27,6 +27,7 @@ from .routes_markers import MarkerRoutesMixin
 from .routes_nda import NdaRoutesMixin
 from .routes_pdf import ManuscriptPdfRoutesMixin
 from .routes_project import ProjectRoutesMixin
+from .routes_site import SiteExportRoutesMixin
 
 
 class LixityServerHandler(
@@ -35,6 +36,7 @@ class LixityServerHandler(
     ManuscriptResearchRoutesMixin,
     NdaRoutesMixin,
     ManuscriptPdfRoutesMixin,
+    SiteExportRoutesMixin,
     BaseHTTPRequestHandler,
 ):
     """Serves the dashboard and the workspace action endpoints."""
@@ -68,6 +70,7 @@ class LixityServerHandler(
     POST_ROUTES: ClassVar[dict[str, str]] = {
         "nda-draft": "_handle_nda_draft",
         "manuscript-pdf": "_handle_manuscript_pdf",
+        "site-export": "_handle_site_export",
         "analyze": "_handle_refresh",
         "rebuild": "_handle_refresh",
         "marker-add": "_handle_marker_add",

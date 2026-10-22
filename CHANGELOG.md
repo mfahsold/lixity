@@ -7,7 +7,43 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.4] - 2026-10-22
+
+### Added
+- `lixity doctor [--json]` reports imported/distribution/service versions,
+  module/interpreter locations and JSON contract versions without reading a
+  manuscript or repairing/restarting anything. A stopped service is valid.
+- `pdf --layout document` and the native PDF selector provide neutral A4 text
+  for exposés and everyday documents through the shared composer. Authored titles
+  and structure remain; entered title/author are metadata only, with no generated
+  title page, header/footer, byline, line numbers or analysis.
+- Export an explicitly selected project as a static read-only reading website
+  through `lixity export-site`, `lixity.site_export` or the native ZIP download.
+  Research and original source files are separate opt-ins. A versioned export
+  manifest records scope, source identities and file hashes; the copy uses the
+  shared product UI with a fail-closed prepared-read transport.
+- Curated novel-and-companion and standalone-companion website formats share
+  root-local `site_publications` profiles. Explicit dossier versions/sections,
+  chapter release gates and optional citations/maps define the selected material.
+  A chapter cap removes later content and assets before assembly; reader progress
+  is a separate local display aid. Original sources need per-export opt-in.
+
 ### Changed
+- `service status --json` intentionally uses `lixity-service-status/1`:
+  `ok` describes successful inspection, so known stopped, starting and unmanaged
+  busy states exit 0. `running` indicates readiness; unknown state keeps
+  `ok: false`, `running: null` and exit 1. Log paths and raw errors are omitted. Human status and
+  other lifecycle JSON keep their existing behavior.
+- Simultaneous text evidence and paragraph emphasis have distinct visible keys:
+  **Counted text** explains the underline/tint, while **Paragraph comparison**
+  explains blue/orange chapter-relative backgrounds. Exact-evidence availability
+  stays visible outside the closed settings popup.
+- Local phrase echoes already present in JSON now appear in human CLI output and
+  the analysis overview, with local counts and explicit chapter-prose word bounds.
+- Chapter register feature choices and target rows show their shared units and
+  distinguish scene targets from chapter profiles and display-only filtering.
+- The research guide has a task index; adapter guidance explains optional scene
+  and exact-evidence inputs and shared character configuration.
 - One **Explore passage** menu entry groups measurement inspection and saved
   research in the existing paragraph context. Quick hover and touch explanations
   remain available at marked text. The **Passage** context label distinguishes
@@ -15,7 +51,7 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Measurement cards give the selected sentence's word count a clear hierarchy,
   separate paragraph comparisons and expandable mapping/method details.
 - The landing page explains manuscript analysis, linked research and PDF reading
-  copies in its existing three compact feature blocks.
+  copies and browsable reading websites in its existing three compact feature blocks.
 - Loaded claim quotations can be collapsed without discarding their contents.
   Ordinary research entry actions show the current version. Earlier linked
   versions remain explicit; a collapsed version list loads on demand without
@@ -29,6 +65,31 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   explicit decisions, causal links and exact manuscript associations.
 
 ### Fixed
+- PDF/dashboard CLI exports reject source paths and their symbolic/hard-link
+  aliases before writing and again immediately before atomic replacement.
+- Button-styled links share the real control box, alignment and wrapping used by
+  app buttons; their minimum height also applies inside ordinary Pages prose.
+  Long localized headings and checkbox labels wrap at enlarged text sizes.
+- Native views, PDF downloads and reading websites consistently use the selected
+  project's configuration, including manuscripts in configured subdirectories.
+- Configured `motif_regexes` and compatible legacy `motifs` now resolve once
+  across chapter measurements, CLI, Python, native panels and the motif panel in
+  `build` dashboards. Explicit patterns
+  replace configuration; conflicting duplicate names fail clearly. Empty
+  patterns consistently count no occurrences.
+- An unchanged manuscript Review refresh preserves its row controls, so closing
+  a pinned-entry viewer returns keyboard focus to the actual opener. Changed
+  reports and filters still refresh, and read failures remain explicit.
+- Stale scene assignments report measured scene/divider counts and recovery
+  choices without accepting missing assignments or inventing planned text.
+- Human style passports label robust deviations as z*, rather than ordinary σ.
+- `research dossier show ID --export-edit PATH` no longer injects a conflicting
+  implicit inspection flag; export and archive write guards remain unchanged.
+- Research lists show complete IDs; dossier lists support exact tag filters and
+  `--section --format text` returns the selected section body, including nested
+  content and explicit saved versions. `research compare` inherits the selected
+  root's project language unless overridden; a missing setting and the Python API
+  retain English defaults.
 - Sentence word counts use the selected interface language, including singular
   counts; browser labels no longer fall back to the English key.
 - Explicit measurement explanations can open from the mobile context inspector
@@ -2653,7 +2714,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.7.3...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.7.4...HEAD
+[0.7.4]: https://github.com/mfahsold/lixity/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/mfahsold/lixity/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/mfahsold/lixity/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/mfahsold/lixity/compare/v0.7.0...v0.7.1

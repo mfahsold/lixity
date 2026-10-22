@@ -1,5 +1,6 @@
 """Public Pages staging excludes local planning and private working material."""
 
+import hashlib
 import json
 import struct
 import tempfile
@@ -170,9 +171,10 @@ class TestPagesStaging(unittest.TestCase):
                       "blog/article.html", "blog/article.html.md",
                       "assets/research/hamburg-free-port-1900.jpg",
                       "assets/research/hamburg-harbour-1890-1900.jpg", "assets/research/sources.json",
-                      "demo/report.html", "demo/research.html", "demo/research-data.json",
+                      "demo/report.html", "demo/research.html",
                       "demo/warehouse-4-editor.pdf", "demo/warehouse-4-book.pdf",
                       "demo/warehouse-4-sheet.pdf", "demo/warehouse-4-report.pdf",
+                      "demo/warehouse-4-document.pdf",
                       "research/USAGE.md", "research/examples/synthetic-source.txt",
                       "screenshots/public.png", "sitemap.xml", ".nojekyll",
                       "examples/novel.html", "examples/novel-report.pdf")
@@ -181,7 +183,7 @@ class TestPagesStaging(unittest.TestCase):
                        ".planning/secret.md", "research/.scratch/session.md",
                        "screenshots/local.log", "private/source.txt")
             private += ("blog/session-notes.md",)
-            private += ("assets/research/unreviewed.jpg", "demo/local-source.json",)
+            private += ("assets/research/unreviewed.jpg", "demo/local-source.json", "demo/research-data.json")
             private += ("demo/unapproved.html", "demo/source.md", "demo/output.json",
                         "demo/archive.zip", "demo/helpers/input.html", "demo/private.pdf",
                         "demo/warehouse-4-draft.pdf")
@@ -200,6 +202,34 @@ class TestPagesStaging(unittest.TestCase):
             self.assertEqual(count, len(published))
             with self.assertRaises(FileExistsError):
                 stage(docs, output)
+
+    def test_demo_publishes_only_verified_production_bundle_members(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            docs = root / "docs"
+            members = {"report.html": b"<html>Reviewed demo</html>",
+                       "assets/sources/" + "a" * 64 + ".jpg": b"reviewed source image",
+                       "licenses/Lixity-LICENSE": b"reviewed license"}
+            for name, content in members.items():
+                target = docs / "demo" / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(content)
+            excluded = docs / "demo/assets/sources" / ("b" * 64 + ".jpg")
+            excluded.write_bytes(b"unlisted local image")
+            (docs / "demo/warehouse-4-book.pdf").write_bytes(b"stale unlisted PDF")
+            manifest = {"schema_version": "lixity-read-only-site/1", "entrypoint": "report.html", "files": {
+                name: {"sha256": hashlib.sha256(content).hexdigest(), "byte_length": len(content)}
+                for name, content in members.items()}}
+            (docs / "demo/manifest.json").write_text(json.dumps(manifest))
+            output = root / "published"
+            stage(docs, output)
+            published = {path.relative_to(output / "demo").as_posix()
+                         for path in (output / "demo").rglob("*") if path.is_file()}
+            self.assertEqual(published, {*members, "manifest.json"})
+            excluded.rename(excluded.with_suffix(".png"))
+            (docs / "demo" / next(name for name in members if name.endswith(".jpg"))).write_bytes(b"changed")
+            with self.assertRaisesRegex(ValueError, "checksum|changed"):
+                stage(docs, root / "changed")
 
     def test_symlink_cannot_publish_external_bytes(self):
         with tempfile.TemporaryDirectory() as directory:

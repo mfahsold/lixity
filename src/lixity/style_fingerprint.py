@@ -66,7 +66,7 @@ FEATURES: tuple[tuple[str, str, str], ...] = (
     ("start_entropy", "feat_start_entropy", "bit"),
     ("first_person_start_rate", "feat_ich_start", "% of sentences"),
     ("guiraud_r", "feat_guiraud", "index"),
-    ("hd_d", "feat_hd_d", "index"),
+    ("hd_d", "feat_hd_d", "index (0–1)"),
 )
 
 #: Chapters below this word count get no feature comparisons at all: rates,
@@ -108,7 +108,7 @@ FEATURE_UNITS: dict[str, dict[str, str]] = {
         "start_entropy": "bit",
         "first_person_start_rate": "% of sentences",
         "guiraud_r": "index",
-        "hd_d": "index",
+        "hd_d": "index (0–1)",
     },
     "de": {
         "asl": "Wörter je Satz",
@@ -126,7 +126,7 @@ FEATURE_UNITS: dict[str, dict[str, str]] = {
         "start_entropy": "bit",
         "first_person_start_rate": "% der Sätze",
         "guiraud_r": "Index",
-        "hd_d": "Index",
+        "hd_d": "Index (0–1)",
     },
     "fr": {
         "asl": "mots par phrase",
@@ -144,7 +144,7 @@ FEATURE_UNITS: dict[str, dict[str, str]] = {
         "start_entropy": "bit",
         "first_person_start_rate": "% des phrases",
         "guiraud_r": "indice",
-        "hd_d": "indice",
+        "hd_d": "indice (0–1)",
     },
     "es": {
         "asl": "palabras por frase",
@@ -162,7 +162,7 @@ FEATURE_UNITS: dict[str, dict[str, str]] = {
         "start_entropy": "bit",
         "first_person_start_rate": "% de frases",
         "guiraud_r": "índice",
-        "hd_d": "índice",
+        "hd_d": "índice (0–1)",
     },
     "it": {
         "asl": "parole per frase",
@@ -180,7 +180,7 @@ FEATURE_UNITS: dict[str, dict[str, str]] = {
         "start_entropy": "bit",
         "first_person_start_rate": "% delle frasi",
         "guiraud_r": "indice",
-        "hd_d": "indice",
+        "hd_d": "indice (0–1)",
     },
     "pt": {
         "asl": "palavras por frase",
@@ -198,7 +198,7 @@ FEATURE_UNITS: dict[str, dict[str, str]] = {
         "start_entropy": "bit",
         "first_person_start_rate": "% de frases",
         "guiraud_r": "índice",
-        "hd_d": "índice",
+        "hd_d": "índice (0–1)",
     },
     "nl": {
         "asl": "woorden per zin",
@@ -216,7 +216,7 @@ FEATURE_UNITS: dict[str, dict[str, str]] = {
         "start_entropy": "bit",
         "first_person_start_rate": "% van zinnen",
         "guiraud_r": "index",
-        "hd_d": "index",
+        "hd_d": "index (0–1)",
     },
 }
 
@@ -1665,7 +1665,7 @@ class StyleFingerprint:
         for chapter_num, mean_abs in self.top_deviants(5):
             dev = self.deviations.get(chapter_num, {})
             named = ", ".join(
-                f"{labels.get(field_labels.get(k, k), k)} {format_num(z, language_key, 1, signed=True)}σ"
+                f"{labels.get(field_labels.get(k, k), k)} z* {format_num(z, language_key, 1, signed=True)}"
                 for k, z in sorted(dev.items(), key=lambda kv: abs(kv[1]), reverse=True)[:4]
             )
             lines.append(

@@ -31,6 +31,7 @@
   }
 
   function CatalogueLink(props) {
+    if (window.LixitySite.readOnly) return null;
     var key = props.itemKey || "";
     var library = props.library || "";
     if (!/^[A-Z0-9]{8}$/.test(key) || !/^(users\/\d+|groups\/[1-9]\d*)$/.test(library)) return null;
@@ -112,7 +113,7 @@
           </div>`) : null}
       ${item.revision ? html`<div class="research-record-actions">
         <button type="button" class="ctl" data-research-history=${item.revision} data-record-id=${item.id}>${uiLabel("research_revision_view")}</button>
-        <button type="button" class="ctl" data-research-revise=${item.revision} data-record-id=${item.id}>${uiLabel("research_revision_edit")}</button>
+        ${!window.LixitySite.readOnly ? html`<button type="button" class="ctl" data-research-revise=${item.revision} data-record-id=${item.id}>${uiLabel("research_revision_edit")}</button>` : null}
       </div>` : null}
     </div>`;
   }

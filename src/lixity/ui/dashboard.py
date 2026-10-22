@@ -59,7 +59,7 @@ from .components import (
 from .dimensions import style_dimensions
 from .dossier_images import image_limits_attribute
 from .heatmap import render_heatmap_panel, render_register_targets, render_style_passport_panel
-from .manuscript_document import ReaderBlock
+from .manuscript_document import ReaderBlock, reader_block_html
 from .manuscript_reader import reading_controls
 from .markers_panel import render_markers_panel
 from .modals import render_project_modals
@@ -94,8 +94,10 @@ _CSS_FILES = (
     "analysis-scope.css",
     "section-navigation.css",
     "analysis-evidence.css",
+    "reader-publication.css",
 )
 _JS_FILES = (
+    "read-only-site.js",
     "vendor/preact-10.29.8.min.js",
     "vendor/htm-3.1.1.umd.js",
     "vendor/leaflet-1.9.4.min.js",
@@ -106,6 +108,7 @@ _JS_FILES = (
     "interactions.js",
     "section-navigation.js",
     "register-settings.js",
+    "site-publication-settings.js",
     "dashboard.js",
     "analysis-scope.js",
     "zotero-results.js",
@@ -127,6 +130,7 @@ _JS_FILES = (
     "manuscript-links.js",
     "manuscript-reader.js",
     "analysis-evidence.js",
+    "reader-publication.js",
 )
 
 
@@ -191,6 +195,7 @@ def render_dashboard(
     tense_available: bool = True,
     engine_name: str = "Lixity",
     controls: bool = False,
+    read_only: bool = False,
     api_base: str = "/api",
     manuscript_name: str = "",
     current_language: str | None = None,
@@ -211,12 +216,16 @@ def render_dashboard(
     project_token: str = "",
     manuscript_source_sha256: str = "",
     register_settings: Mapping[str, Any] | None = None,
+    site_publications: Mapping[str, Any] | None = None,
+    site_publication_context_token: str = "",
     reader_document: Sequence[ReaderBlock] | None = None,
     paragraph_evidence: Mapping[int, Mapping[str, Any]] | None = None,
 ) -> str:
     """Renders the complete, deterministic single-file dashboard.
 
-    ``controls=True`` adds the local control panel. ``enabled_actions`` limits
+    ``controls=True`` adds the native workspace. ``read_only=True`` preserves
+    its reading surfaces while removing local administration and writes.
+    ``enabled_actions`` limits
     optional actions to those implemented by the embedding server; ``None``
     preserves the other existing controls. NDA generation requires explicit
     ``nda-draft`` capability; ``nda_project_name`` supplies a real project name
@@ -240,16 +249,18 @@ def render_dashboard(
     """
     esc = html.escape
     allowed_actions = set(enabled_actions) if enabled_actions is not None else None
+    can_edit = controls and not read_only
 
     def action_enabled(action: str) -> bool:
-        return allowed_actions is None or action in allowed_actions
+        return not read_only and (allowed_actions is None or action in allowed_actions)
 
     reader_enabled = (
         controls and allowed_actions is not None and "research-reader" in allowed_actions
     )
     manuscript_links_mode = (
-        "1" if allowed_actions is not None and "research-manuscript-link" in allowed_actions
-        else "read" if allowed_actions is not None and "research-manuscript-review" in allowed_actions
+        "1" if not read_only and allowed_actions is not None and "research-manuscript-link" in allowed_actions
+        else "read" if allowed_actions is not None and
+        {"research-manuscript-review", "research-manuscript-link"}.intersection(allowed_actions)
         else "0"
     )
 
@@ -356,7 +367,7 @@ def render_dashboard(
 
     has_chapters = bool(chapters) and total_words > 0
     has_reading = has_chapters or bool(reader_document)
-    default_view = "analysis" if has_reading else "research"
+    default_view = "analysis" if has_reading or (read_only and not research_context_token) else "research"
     body_class = "lixity-workspace" if controls else "lixity-report"
     if controls and has_reading:
         body_class += " has-reading"
@@ -376,12 +387,14 @@ def render_dashboard(
         f"<style>{_bundle(_CSS_FILES)}</style>",
         "</head>",
         f'<body id="top" class="{body_class}" data-api="{esc(api_base)}" data-ui-labels="{workspace_labels_json}" '
+        f'data-read-only="{str(read_only).lower()}" '
         f'data-manuscript-source-sha256="{esc(manuscript_source_sha256)}" '
         f'data-manuscript-project-token="{esc(manuscript_pdf_token)}" '
         f'data-manuscript-links="{manuscript_links_mode}" '
         f'data-image-limits="{image_limits_attribute()}" '
         f'data-dossier-image-capable="{str(controls and allowed_actions is not None and action_enabled("research-dossier-image")).lower()}">',
         f'<a class="skip-link" href="#chapters">{L("skip_main")}</a>',
+        *((f'<p class="site-read-only-notice" role="note">{L("site_read_only")}</p>',) if read_only else ()),
         '<div class="page">',
         *(('<div class="workspace-shell"><div class="workspace-shell-header">',
            f'<button type="button" class="ctl workspace-navigation-toggle" id="workspace-navigation-toggle" '
@@ -402,10 +415,10 @@ def render_dashboard(
             f'<button type="button" class="view-nav-tab{" active" if default_view == "analysis" else ""}" data-view="analysis" role="tab" id="tab-view-analysis" aria-controls="view-pane-analysis" aria-selected="{"true" if default_view == "analysis" else "false"}">'
             f"<span>{L('workspace_analysis')}</span>"
             "</button>"
-            f'<button type="button" class="view-nav-tab{" active" if default_view == "research" else ""}" data-view="research" role="tab" id="tab-view-research" aria-controls="view-pane-research" aria-selected="{"true" if default_view == "research" else "false"}">'
+            f'<button type="button" class="view-nav-tab{" active" if default_view == "research" else ""}" data-view="research" role="tab" id="tab-view-research" {"data-requires-live " if read_only and not research_context_token else ""}aria-controls="view-pane-research" aria-selected="{"true" if default_view == "research" else "false"}">'
             f"<span>{L('workspace_research')}</span>"
             "</button>"
-            f'<button type="button" class="view-nav-tab" data-view="project" role="tab" id="tab-view-project" aria-controls="view-pane-project" aria-selected="false">'
+            f'<button type="button" class="view-nav-tab" data-view="project" role="tab" id="tab-view-project" data-requires-write aria-controls="view-pane-project" aria-selected="false">'
             f"<span>{L('workspace_project')}</span>"
             "</button>"
             "</nav>"
@@ -413,7 +426,7 @@ def render_dashboard(
         parts.append('<div id="workspace-navigation-content">')
         parts.append(project_header(title, labels, language_name, engine_name, compact=True, meta=project_meta))
         parts.append(
-            '<details class="workspace-actions" id="project-actions"'
+            '<details class="workspace-actions" id="project-actions" data-requires-write'
             + ("" if has_reading else " open") + ">"
         )
         parts.append(f'<summary>{L("project_actions")}</summary>')
@@ -427,6 +440,12 @@ def render_dashboard(
         parts.append(
             f'<button type="button" class="ctl" id="btn-modal-open-project">{L("open_project")}</button>'
         )
+        if allowed_actions is not None and action_enabled("site-export"):
+            parts.append(
+                '<button type="button" class="ctl" id="btn-site-export"'
+                + ("" if manuscript_pdf_token else " disabled")
+                + f'>{L("site_export")}</button>'
+            )
         show_guidance_hidden = "" if chapters else " hidden"
         parts.append(
             f'<button type="button" class="ctl" id="welcome-show" aria-controls="welcome-hero" aria-expanded="false"{show_guidance_hidden}>{L("welcome_show")}</button>'
@@ -481,7 +500,7 @@ def render_dashboard(
         parts.append(
             '<section class="welcome-hero" id="welcome-hero"'
             + (" hidden" if chapters else "")
-            + ">"
+            + " data-requires-write>"
         )
         if controls:
             parts.append(
@@ -563,10 +582,10 @@ def render_dashboard(
         parts.append(
             f'<div class="view-pane{" active" if default_view == "research" else ""}" id="view-pane-research" data-view-pane="research" role="tabpanel" aria-labelledby="tab-view-research">'
         )
-        parts.append(render_research_panel(labels, research_context_token=research_context_token))
+        parts.append(render_research_panel(labels, research_context_token=research_context_token, read_only=read_only))
         parts.append("</div>")
         parts.append(
-            '<div class="view-pane" id="view-pane-project" data-view-pane="project" role="tabpanel" aria-labelledby="tab-view-project">'
+            '<div class="view-pane" id="view-pane-project" data-view-pane="project" data-requires-write role="tabpanel" aria-labelledby="tab-view-project">'
         )
         parts.append('<section class="panel controls" id="controls">')
         parts.append(f"<h2>{L('workspace_project')}</h2>")
@@ -616,6 +635,9 @@ def render_dashboard(
                 publication_error=publication_error,
                 project_token=project_token,
                 register_settings=register_settings,
+                site_publications=site_publications,
+                site_publication_context_token=site_publication_context_token,
+                language_key=language_key,
             )
         )
 
@@ -837,7 +859,6 @@ def render_dashboard(
             f'{metric_control}'
             f'<label class="reader-evidence-toggle"><input type="checkbox" id="analysis-evidence-enabled" checked/> '
             f'{L("evidence_show")}</label><p class="ctl-note">{L("evidence_interaction")}</p>'
-            '<p class="ctl-note" id="analysis-evidence-status" role="status" aria-live="polite"></p>'
             '</div></details></div>'
         ) if paragraphs else ""
         parts.append(reading_controls(chapters, labels, reader_document, companion_controls=reader_controls,
@@ -943,7 +964,14 @@ def render_dashboard(
         f'data-outliers="{esc(label(labels, "layer_outliers"), quote=True)}" '
         f'data-outliers-one="{esc(label(labels, "layer_outliers_one"), quote=True)}">'
     )
+    parts.append('<div class="layer-legend-group" id="layer-evidence-legend">'
+                 f'<strong class="analysis-evidence-swatch">{L("legend_counted_text")}</strong>'
+                 '<p id="layer-evidence-hint"></p>'
+                 '<p class="ctl-note" id="analysis-evidence-status" role="status" aria-live="polite"></p></div>')
+    parts.append('<div class="layer-legend-group" id="layer-comparison-legend">'
+                 f'<strong>{L("legend_paragraph_comparison")}</strong>')
     parts.append('<span class="layer-title" id="layer-legend-title" tabindex="0"></span>')
+    parts.append('<p id="layer-comparison-hint"></p>')
     parts.append('<span class="z-gradient" aria-hidden="true"></span>')
     parts.append(
         f'<span class="layer-scale"><span id="layer-scale-low">−{N(Z_COLOR_LIMIT, 1)} · {L("layer_below")}</span>'
@@ -958,7 +986,7 @@ def render_dashboard(
     parts.append(f'<button class="ctl" id="layer-clear" type="button">{L("layer_clear")}</button>')
     parts.append(f'<details class="layer-comparison-note"><summary>{L("layer_guide")}</summary>'
                  f'<p class="ctl-note">{L("layer_comparison_help")}</p></details>')
-    parts.append("</div>")
+    parts.append("</div></div>")
 
     if not tense_available:
         parts.append(f'<p class="hint">{L("no_tense")}</p>')
@@ -1056,7 +1084,7 @@ def render_dashboard(
                 parts.append(
                     f'<div class="ptext" id="p-{idx}" data-start="{p.start_line}" '
                     f'data-end="{p.end_line}" data-paragraph-sha256="{paragraph_identity(p)["paragraph_sha256"]}" '
-                    f'data-markers="{int(controls)}">'
+                    f'data-markers="{int(can_edit)}">'
                 )
                 anchor = f"{line_label(labels, p)} · {dom_label} · {sev_label}"
                 stats = (
@@ -1081,7 +1109,7 @@ def render_dashboard(
                     f"<summary>{L('paragraph_values')}</summary>"
                     f'<div class="anchor">{esc(anchor)}</div><div class="stats">{esc(stats)}</div></details>'
                 )
-                if controls:
+                if can_edit:
                     buttons = " ".join(
                         f'<button class="ctl" data-marker-kind="{esc(kind, quote=True)}" '
                         f'data-line="{p.start_line}">+ {esc(label(labels, "marker_" + kind))}</button>'
@@ -1122,8 +1150,7 @@ def render_dashboard(
             if block.profile_index is not None:
                 parts.append(profile_markup[block.profile_index])
             else:
-                tag = "h3" if block.kind == "heading" else "blockquote" if block.kind == "quote" else "pre" if block.kind == "code" else "div"
-                parts.append(f'<{tag} class="reader-structural reader-{esc(block.kind)}" data-start="{block.start_line}" data-end="{block.end_line}">{esc(block.text)}</{tag}>')
+                parts.append(reader_block_html(block))
                 if block.kind in {"paragraph", "quote", "code", "note", "list_item"}:
                     parts.append(f'<p class="reader-coverage">{L("reading_coverage")}</p>')
         if section_open:
@@ -1325,7 +1352,7 @@ def render_dashboard(
             f'<th scope="col" class="num">{L("line")}</th>'
             f'<th scope="col">{label(labels, "flags_excerpt")}</th>'
         )
-        if controls:
+        if can_edit:
             parts.append('<th scope="col"></th>')
         parts.append("</tr></thead><tbody>")
         for p in flagged:
@@ -1348,7 +1375,7 @@ def render_dashboard(
                 f'<td class="num">{esc(line_label(labels, p))}</td>'
                 f'<td class="flag-excerpt">{esc(excerpt)}</td>'
             )
-            if controls:
+            if can_edit:
                 parts.append(
                     f'<td><div class="row marker-row">'
                     f'<button class="ctl" data-marker-kind="todo" '
@@ -1426,8 +1453,8 @@ def render_dashboard(
         )
 
     # --- Work markers (editor-visible, set from the dashboard) -------
-    parts.append(render_register_targets(fingerprint, metrics, labels, language_key))
-    parts.append(render_markers_panel(markers, chapters, labels, controls))
+    parts.append(render_register_targets(fingerprint, metrics, labels, language_key, settings_available=can_edit))
+    parts.append(render_markers_panel(markers, chapters, labels, can_edit))
 
     # --- Chapter matrix ---------------------------------------------------
     if chapters:

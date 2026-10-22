@@ -198,15 +198,63 @@ activation; inconsistent snapshot envelopes fail instead of mixing versions.
 and `LixityReadingThread` owns the exact passage return. Opening a context neither
 replaces the prose node nor saves records. Unlinked text, an uninitialized archive,
 unavailable data and failed/stale reads have distinct states. The public demo
-prepares exact read aliases and retains its read-only fixture boundary.
+uses the same static website projection and read-only profile as exported
+project reading copies.
+
+### Static reading websites
+
+`site_export.prepare_site` reads an explicit project and assembles a bounded
+`SiteBundle`. Review mode uses the shared pipeline and `render_analysis`, with
+the native UI's read-only capabilities. Its research data is a separate opt-in
+projection of one verified snapshot; original source files and full extraction
+text require another opt-in. Snapshot-scoped native response helpers avoid
+repeatedly loading the archive. No global cross-request archive cache or relaxed
+corruption check is involved.
+
+Reader and companion modes resolve a validated root `site_publications` profile
+against that snapshot. They select current or explicitly pinned dossier versions,
+unique heading subtrees, public titles and chapter release gates before rendering.
+They never serialize native Research responses or calculate manuscript analysis.
+Whole-dossier citations and geography require explicit profile fields; images and
+source bytes require a separate, one-export choice. Reverse associations, internal
+claims, decisions and history are not inferred publication selections.
+
+An export cap removes later entries and dependency assets before serialization;
+reader mode additionally truncates canonical manuscript chapters and omits markers,
+front matter and appendices. Companion mode passes no manuscript blocks to the
+shared reading shell. Both reuse the literal ReaderBlock renderer and native
+Markdown, diagram, image and geographic components. Browser-local progress is an
+explicit reading aid, scoped to publication identity, source hash and cap. It does
+not establish access rights: included later bytes remain inspectable. Invalid or
+unavailable storage starts at chapter zero, and preview never advances progress.
+
+The embedded `lixity-read-only-site-data/1` response table contains enumerated
+prepared reads. The first-loaded static transport returns these reads without
+a server, rejects mutation and unknown requests, and never falls back to a
+host's `/api`. Shared UI owners suppress unsupported editing and administrative
+actions. Retained media uses explicit bundled-resource mappings; maps start
+with offline geometry, without external tiles or implicit analytics requests.
+Browser-local reading preferences remain available.
+
+`export_site` publishes a fresh directory only after complete assembly; existing
+destinations are rejected. The native `site-export` route downloads an in-memory
+ZIP, bound to the current manuscript metadata token and rechecked selection.
+It does not publish a site or create files in the source project. The website
+manifest inventories scope, source identities and file digests. It is a public
+projection contract, separate from archive entity/manifest versions; it does
+not supply accounts, encryption, copy prevention or a restorable backup. See
+[the data model](research/DATA_MODEL.md#reading-website-projection) and
+[the sharing workflow](USAGE.md#export-a-reading-website).
 
 ## Configuration and multiple projects
 
-Explicit root settings own author identity, publication, chapter registers and
-project-local character profiles; user/ancestor defaults cannot supply them.
+Explicit root settings own author identity, publication, reading-site profiles,
+chapter registers and project-local character profiles; user/ancestor defaults cannot supply them.
 The optional root `manuscript` setting follows the same project-only boundary.
 `config.read_explicit_project_config` reuses the existing TOML parser but reads
 only root pyproject/lixity files and promotes failed reads to errors.
+The native view, PDF composer and website exporter all use this selected root,
+including when the manuscript is in a subdirectory with another configuration.
 `workspace.configured_manuscript` owns contained relative-path resolution without
 reading source bytes. `discover` applies explicit → configured → conventional
 selection and validates configured regular files. The read-only Research CLI
@@ -416,9 +464,12 @@ are prepared, with explicit codepoint-to-UTF-16 conversion and hash validation.
 Search/research mark changes invalidate derived ranges, not source identities.
 Analysis visibility, metric changes and workspace changes cancel stale cards and
 marks. Unsupported or unprovable mappings remain explicit unavailable states.
-On current main, the paragraph menu opens one existing passage inspector. Its
+Since v0.7.4, the paragraph menu opens one existing passage inspector. Its
 measurement action captures the source point and uses the evidence owner; its
 research action delegates to the existing explicit passage association reader.
+An identical accepted manuscript-review report in the same source/project
+context retains its list nodes, preserving native dialog focus-return targets.
+A changed report or list filter still renders; errors clear the accepted report.
 The presentation keeps computed counts and authored research separate without
 a new context state or transport contract. The floating card uses native counts
 and the existing paragraph comparison; it never parses localized numeric text.

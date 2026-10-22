@@ -354,6 +354,7 @@ if (researchRevisionDialog) {
   }
 
   function revisionSetTab(mode) {
+    if (window.LixitySite.readOnly) mode = "history";
     revisionState.mode = mode;
     var editing = mode === "edit";
     revisionForm.hidden = !editing;
@@ -954,6 +955,7 @@ if (researchRevisionDialog) {
   });
 
   async function revisionOpen(kind, id, mode, section, baseRevision, historyRevision) {
+    if (window.LixitySite.readOnly && mode === "edit") return;
     if (!revisionSpecs[kind] || !id) return;
     revisionState.session++;
     var session = revisionState.session;
@@ -1011,6 +1013,7 @@ if (researchRevisionDialog) {
     if (revisionState.pending) event.preventDefault();
   });
   researchRevisionDialog.querySelector('[role="tablist"]').addEventListener("keydown", function(event) {
+    if (window.LixitySite.readOnly) return;
     if (revisionState.pending || !event.target.matches("#research-revision-edit-tab, #research-revision-history-tab")) return;
     var tabs = [revisionHistoryTab, revisionEditTab], index = tabs.indexOf(event.target);
     if (event.key === "ArrowRight" || event.key === "ArrowLeft") index = 1 - index;

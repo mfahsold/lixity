@@ -88,18 +88,27 @@ async function frames(page) {
         assert.ok(localCue.width >= 2, 'Local Values has a persistent gutter');
         await paragraph.scrollIntoViewIfNeeded();
         await page.waitForFunction(id => !document.getElementById(id).classList.contains('reader-layer-enter'), await paragraph.getAttribute('id'));
-        const before = await paragraph.evaluate(node => {
+        await paragraph.evaluate(node => {
           const prose = node.querySelector('.ptext-inner > p'), selection = getSelection();
           selection.setBaseAndExtent(prose.firstChild, prose.firstChild.length, prose.firstChild, 0);
-          const state = {text: prose.textContent, hash: node.dataset.paragraphSha256,
-            anchor: selection.anchorOffset, focus: selection.focusOffset, box: node.getBoundingClientRect().toJSON()};
           flashOnArrival(node);
-          return state;
         });
         await page.waitForFunction(id => {
           const node = document.getElementById(id);
           return node.classList.contains('flash') && node.classList.contains('reader-return-target');
         }, await paragraph.getAttribute('id'));
+        assert.equal(await page.locator('#analysis-evidence-status').isVisible(), true);
+        assert.match(await page.locator('#analysis-evidence-status').textContent(), /Only the paragraph value is available/,
+          'The fixture\'s asynchronously rendered evidence warning is present before the expiry baseline');
+        // The arrival owner waits for scrollports and async legend layout to
+        // settle. Measure cue expiry from that committed arrival, not mid-jump.
+        const before = await paragraph.evaluate(node => {
+          const prose = node.querySelector('.ptext-inner > p'), selection = getSelection();
+          return {text: prose.textContent, hash: node.dataset.paragraphSha256,
+            anchor: selection.anchorOffset, focus: selection.focusOffset, box: node.getBoundingClientRect().toJSON()};
+        });
+        assert.equal(before.anchor, before.text.length, 'The settled arrival preserves the backward selection anchor');
+        assert.equal(before.focus, 0, 'The settled arrival preserves the backward selection focus');
         const paint = await paragraph.evaluate(node => {
           const arrival = node.getAnimations({subtree: true}).find(animation => animation.animationName === 'reader-passage-arrival');
           if (arrival) { arrival.pause(); arrival.currentTime = 1390; }

@@ -161,6 +161,10 @@ and `about --json` metadata. The output is the verified wheel, source archive an
 Code-only releases can skip the generated documentation surfaces. When the UI
 or the published guides change, regenerate them first with `make docs-sync`,
 `make examples` and `make screenshots` (and `make videos` for the walkthroughs).
+The documentation tests compare every bundled UI asset in all three public
+reports with the packaged source. A stale demo is a failing check, even if its
+version string still matches. Before rollout, verify the installed distribution
+and running service separately; rebuilding public pages does not update either.
 
 Preparation does not commit, tag, push or publish. After reviewing the changes
 and obtaining release authorization, run `make browser` for UI-affecting changes,

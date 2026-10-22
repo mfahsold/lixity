@@ -1,0 +1,118 @@
+{
+  "analysis": {
+    "language": "en",
+    "thresholds": {
+      "dim_score_threshold": 2.5,
+      "fdr_method": "bh",
+      "fdr_q": 0.05,
+      "flag_min_severity": 2,
+      "min_chapters": 2,
+      "z_mild": 2.5,
+      "z_strong": 3.5
+    }
+  },
+  "capabilities": {
+    "analysis": true,
+    "automatic_external_requests": true,
+    "read_only": true,
+    "research": true,
+    "source_files": true
+  },
+  "created_at": "2026-10-22T14:10:26.523136+00:00",
+  "disclosures": [
+    "Contains manuscript prose, analysis and work-marker notes.",
+    "Contains accessible authored research history, notes, source metadata and cited excerpts; local Zotero identities are omitted.",
+    "Includes original source bytes and images; retention does not grant redistribution rights. Review mode also includes full extracted text.",
+    "A local reading snapshot, not a research backup or access-control system. No automatic publishing.",
+    "Saved prose and source URLs can contain personal information; review before sharing.",
+    "The public Pages wrapper adds reviewed navigation, PDF downloads, source credits and optional privacy-respecting analytics."
+  ],
+  "entrypoint": "report.html",
+  "files": {
+    "assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg": {
+      "byte_length": 2515979,
+      "sha256": "2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d"
+    },
+    "assets/sources/3dc1cb5d584640ee1b3c1c3d1b3afff15e3062fbd7548fb1b033cf602af4eb02.txt": {
+      "byte_length": 1534,
+      "sha256": "3dc1cb5d584640ee1b3c1c3d1b3afff15e3062fbd7548fb1b033cf602af4eb02"
+    },
+    "assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg": {
+      "byte_length": 2809171,
+      "sha256": "993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64"
+    },
+    "assets/sources/ab266eb9f3ada14cdf115e01c55da06c181a85ffa0c3d22fd5f5a647b68bb25f.txt": {
+      "byte_length": 1106,
+      "sha256": "ab266eb9f3ada14cdf115e01c55da06c181a85ffa0c3d22fd5f5a647b68bb25f"
+    },
+    "licenses/Lixity-LICENSE": {
+      "byte_length": 34523,
+      "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0"
+    },
+    "licenses/htm.LICENSE": {
+      "byte_length": 11341,
+      "sha256": "740725f7252e750af735d0028cc534970772f513331e9f68150fede8fb3ce00f"
+    },
+    "licenses/leaflet.LICENSE": {
+      "byte_length": 1395,
+      "sha256": "53e8dc25862014e4324741ca18fbe3611e11d42ef69f59f86ea8c5389647d4cb"
+    },
+    "licenses/mermaid.LICENSE": {
+      "byte_length": 1089,
+      "sha256": "ec9fb67dcb25eccc416ed56e1aab819222c805a2a4bfe4cb19e7556bf2ffde80"
+    },
+    "licenses/photoswipe.LICENSE": {
+      "byte_length": 1129,
+      "sha256": "2c223af0b21d32240087ee189eb70fd315907b6ade8b561e24265baccd6a98e7"
+    },
+    "licenses/preact.LICENSE": {
+      "byte_length": 1087,
+      "sha256": "1fe6958409c8c257a70c587a18b6f7f412b179b456630790d30b2ec9a8e4b7d4"
+    },
+    "report.html": {
+      "byte_length": 5650101,
+      "sha256": "9ddf4ae1e89708b0252dfb65c246e4bcbb8b6c55c21a1825169e2717cc337965"
+    },
+    "research.html": {
+      "byte_length": 490,
+      "sha256": "70ae94240099650341521d1c85a8938be6d24c3952d2b69337b45d4ea73a8d6a"
+    },
+    "warehouse-4-book.pdf": {
+      "byte_length": 70831,
+      "sha256": "7de8b303e4dfaef7a70c626b6aead2f0c40c0e24c8ab9fcbdebd82be0c41ef9b"
+    },
+    "warehouse-4-document.pdf": {
+      "byte_length": 58929,
+      "sha256": "cff6dc1bec8d31aa1115f948b893b5fa546f22805bde5c76cf8977ff2f166e07"
+    },
+    "warehouse-4-editor.pdf": {
+      "byte_length": 68839,
+      "sha256": "6901b58ff53d6092920e08473e3b86c8ec642f25bdfac8421ba4617f5376ecfd"
+    },
+    "warehouse-4-report.pdf": {
+      "byte_length": 66692,
+      "sha256": "e194a53333a50ebeb502e7b6f60f6dc1770a123273079a93d3d02b511ce27ec5"
+    },
+    "warehouse-4-sheet.pdf": {
+      "byte_length": 55426,
+      "sha256": "47ad0f31f5f2afa7537ccc81749e4a7b1ad2cccbee3db1aad2cd69b274fe5925"
+    }
+  },
+  "manuscript": {
+    "name": "harbour-manuscript.md",
+    "source_sha256": "218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112"
+  },
+  "mode": "review",
+  "product_version": "0.7.4",
+  "project": {
+    "id": "urn:uuid:c350bdec-f628-4531-a176-4dbab0ba1ceb",
+    "language": "en",
+    "title": "The Crate at Warehouse 4"
+  },
+  "research": {
+    "included": true,
+    "revision_count": 59,
+    "snapshot": "0185a62c091b135a8779848f87a4d52359e5be92bbb0abfd4e7bd064ec329f7e"
+  },
+  "schema_version": "lixity-read-only-site/1"
+}

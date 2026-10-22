@@ -385,6 +385,7 @@ class TestJsDomContract(unittest.TestCase):
         ids.discard("research-evidence-draft")  # created beside the existing evidence form
         ids.discard("r-dos-geography")  # mounted by the shared optional geography editor
         ids.discard("workbench-thread")  # mounted once by the shared reading-thread owner
+        ids.discard("lixity-site-data")  # injected only by the prepared website exporter
         self.assertTrue(ids)
         # Onboarding controls exist only in the empty/research-only state.
         html = (
@@ -393,6 +394,7 @@ class TestJsDomContract(unittest.TestCase):
             + render_dashboard([], [], controls=True)
             + render_dashboard([], [], controls=True, enabled_actions=("analyze", "rebuild"))
             + render_dashboard([], [], controls=True, enabled_actions=("nda-draft",))
+            + render_dashboard([], [], controls=True, enabled_actions=("site-export",))
         )
         # Declared chapter groups add conditional comparison controls.
         from lixity.api import dashboard
@@ -405,6 +407,9 @@ class TestJsDomContract(unittest.TestCase):
             "register_profiles": {"Letters": {}}, "chapter_registers": {"2": "Letters"},
             "characters": {"Alex": {"pov_in_chapters": [1, 3]}},
         })
+        from lixity.ui.publication import render_publication
+
+        html += render_publication({"mode":"companion", "title":"Synthetic context", "max_chapter":0})
         missing = sorted(dom_id for dom_id in ids if f'id="{dom_id}"' not in html)
         self.assertEqual(missing, [], f"dashboard.js looks up missing ids: {missing}")
 

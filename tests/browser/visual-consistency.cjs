@@ -80,6 +80,29 @@ async function checkTypography(page, label) {
 // The design tokens are the single source for radius and type sizes: every
 // control shares one radius, badges and tags are pills, and the sampled text
 // roles stay on the published ladder.
+async function checkNarrowComponentProse(page, label) {
+  const sizes = await page.evaluate(() => {
+    const probe = document.createElement('section');
+    probe.style.width = '120px';
+    probe.innerHTML = '<h2>Geheimhoudingsovereenkomst</h2><p>Hoofdstuktoewijzingen</p>' +
+      '<label class="form-checkbox"><input type="checkbox"/><span>Zusätzliche Hintergrundinformationen</span></label>' +
+      '<div class="row"><select class="ctl field-wide"><option>A long source title</option></select>' +
+      '<input class="ctl field-narrow" aria-label="Source title"/></div>';
+    document.body.appendChild(probe);
+    const result = {width: probe.clientWidth, overflow: probe.scrollWidth};
+    probe.remove(); return result;
+  });
+  assert.ok(sizes.overflow <= sizes.width, `${label} long localized prose fits narrow controls: ${JSON.stringify(sizes)}`);
+}
+async function checkControlBoxes(page, label) {
+  const tooShort = await page.locator('a.ctl:visible, button.ctl:not(.ctl-link):visible')
+    .evaluateAll(elements => elements.map(element => {
+      const box = element.getBoundingClientRect(), css = getComputedStyle(element);
+      return {text: element.textContent.trim().slice(0, 80), height: box.height,
+        minimum: parseFloat(css.minHeight)};
+    }).filter(box => box.height + .5 < box.minimum));
+  assert.deepEqual(tooShort, [], `${label} actionable boxes respect their minimum height`);
+}
 async function checkScale(page, label) {
   const ladder = await page.evaluate(() => {
     return Object.fromEntries(['--text-micro', '--text-note', '--text-small', '--text-control',
@@ -182,6 +205,8 @@ async function checkScale(page, label) {
         await checkTypography(app, `${theme} ${width}px`);
         await checkScale(app, `${theme} ${width}px app`);
         await checkScale(site, `${theme} ${width}px site`);
+        await checkControlBoxes(site, `${theme} ${width}px site`);
+        await checkNarrowComponentProse(site, `${theme} ${width}px site`);
         await app.locator('#tab-view-analysis').click();
         await checkScale(app, `${theme} ${width}px analysis`);
         await identity.setViewportSize({width, height: 1000});

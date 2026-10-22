@@ -42,6 +42,7 @@ lixity analyze --help
 lixity research --help
 lixity research ingest --help
 lixity about --json
+lixity doctor --json
 ```
 
 `about` (also `schema --json`) reports installed command metadata, languages,
@@ -100,19 +101,34 @@ their roles; see [reader guidance](USAGE.md#link-a-manuscript-quote-to-a-claim).
 
 `service` manages only its owned local process and starts an empty workspace by
 default. `serve` runs in the foreground. CLI analysis/research/build calls do not
-switch an existing server's project. Service JSON uses `lixity-service-local/1`;
-exit `0` means `ok: true`, including an already-stopped `stop`. A stopped `status`
-returns false/nonzero. Since v0.7.3, status is non-mutating and does not take
+switch an existing server's project. Since v0.7.4, `service status --json` uses
+`lixity-service-status/1`: `ok` means successful inspection; known running,
+starting, stopped and unmanaged-port busy states exit 0. `running` is true only
+for a ready owned instance, false for other known states and null for unknown
+state (`ok: false`, exit 1). It omits log paths, launch settings and raw errors.
+This intentionally replaces the older status JSON contract. Human stopped status
+still exits 1. Other lifecycle JSON remains `lixity-service-local/1`, including
+successful already-stopped `stop`. Since v0.7.3, status is non-mutating and does not take
 the lifecycle writer lock; unreadable/changing state remains unknown. Start uses
 new launch choices; restart uses saved choices
 plus explicit overrides. [Lifecycle details](INSTALLATION.md#running-the-server)
 include environment isolation and installed/running versions.
+`doctor --json` uses `lixity-doctor/1` with `installation`, `service`, `schemas`,
+`issues` and `ok`. It reports imported/distribution/service versions and installation
+paths without reading manuscripts/project configuration or repairing/restarting
+anything. A healthy stopped service is valid; discrepancies or unavailable
+observations exit 1. Out-of-range numeric ports or invalid `LIXITY_PORT` return
+the same schema with `ok: false` and `error.code: "invalid-service-port"`;
+non-integer explicit `--port` values remain usage errors (exit 2).
+See [doctor](USAGE.md#lixity-doctor).
 An invalid explicit foreground `serve` selector fails before binding; it does not
 select the caller's directory. Valid empty/ambiguous directories retain their
 neutral workspace behavior, and `--no-project` intentionally selects none.
 
 Outputs use the shared atomic writer; failures propagate without a direct-overwrite
-fallback. [Architecture](ARCHITECTURE.md#configuration-and-multiple-projects)
+fallback. PDF/dashboard CLI exports reject source path, symlink and hard-link
+aliases both before writing and immediately before replacement.
+[Architecture](ARCHITECTURE.md#configuration-and-multiple-projects)
 defines publication guards and [PDF usage](USAGE.md#lixity-pdf) defines layout limits.
 
 ## 3. JSON contracts
@@ -748,6 +764,37 @@ When running `lixity serve --port 8765`, local agents can trigger deterministic 
 Browser API diagnostics report request metadata without copying response bodies
 to the console.
 
+**Since v0.7.4:** `POST /api/site-export` requires
+`{"project_token":"<current manuscript metadata token>","include_research":false,"include_source_files":false}`.
+Optional fields are `mode` (`review`, `reader`, `companion`; default `review`),
+`publication_profile` and `max_chapter`. The installed `export-site` command's
+`scope_schema` describes the strict shared request options. Review mode rejects
+profile/cap and requires research inclusion for source files. Reader/companion
+require a root-local profile and reject raw research inclusion; selected source
+files remain a separate choice. Booleans and chapter numbers are strict types.
+
+The route captures the explicit selected project, active language/title/thresholds,
+assembles a static website and rechecks its manuscript metadata token and selection
+before returning an `application/zip` attachment. It creates no source-project
+export files and never publishes. The attachment name uses the exported public
+title. Invalid input or unavailable data returns 400; stale selected context
+returns 409; an oversized download returns 413. Review mode refuses to silently
+combine a manuscript with a separately selected research root. Host and Origin
+checks apply to every format.
+
+Python callers use `lixity.site_export.prepare_site(project, *, manuscript=None,
+language=None, title=None, thresholds=None, include_research=False,
+include_source_files=False, mode="review", publication_profile=None,
+max_chapter=None)` to obtain a `SiteBundle` with `files`, `manifest` and `to_zip()`.
+`export_site(project, output, **same_options)` writes a new directory and returns
+its `lixity-read-only-site/1` manifest. Existing destinations are rejected.
+The inline envelope is `lixity-read-only-site-data/1`. Review reads preserve native
+response contracts; mutation and unknown requests fail closed. Curated formats
+instead carry `lixity-reader-publication/1` with an empty response table and no
+analysis. An export cap removes content before serialization; local chapter
+progress only hides included content. See [sharing scope](USAGE.md#export-a-reading-website)
+and [projection semantics](research/DATA_MODEL.md#reading-website-projection).
+
 **Since v0.7.2:** `GET /` and `/index.html` validate the active
 manuscript before reusing the dashboard. Missing/unreadable input or failed
 config/render rebuilds retain the last successful HTML/info/source digest and add
@@ -768,7 +815,10 @@ or manuscript path, not `--project` / `--manuscript` flags.
 `POST /api/manuscript-pdf` accepts
 `{"layout": "book", "project_token": "<opaque current-context token>"}`.
 Layouts are `book`, `sheet` and `report`; since v0.7.0 they also include
-`editor` for an A4 annotation copy. The token belongs to the selected
+`editor` for an A4 annotation copy, and v0.7.4 adds `document` for neutral A4 text.
+The latter retains authored headings, puts entered title/author in metadata only
+and adds no title page, byline, header/footer, line numbers or analysis.
+The token belongs to the selected
 manuscript context and must be passed unchanged; stale context is rejected
 instead of exporting another project's manuscript. The response is binary
 `application/pdf` with an attachment filename, not a JSON record envelope.
@@ -795,7 +845,7 @@ selection metadata; file edits alone do not create a content-version lock.
   for the header and NDA defaults; explicit language/threshold preferences remain.
 - `POST /api/load`: `{"name": "manuscript.md", "content": "..."}`; legacy upload into `exports/manuscripts/`, not an existing-project opener. An existing saved filename returns HTTP 409 without replacing its bytes or switching the active manuscript.
 - `POST /api/settings`: `{"language": "en", "z_mild": 2.5, "z_strong": 3.5, "fdr_q": 0.05}`.
-  Title, author and publication save to the selected root's `lixity.toml`;
+  Title, author, publication and `site_publications` save to the selected root's `lixity.toml`;
   language/thresholds are session-only by default. Optional `author_name` needs
   an active project and single-line text up to 500 characters (empty clears).
   Publication uses the [shared field contract](USAGE.md#publication-settings).
@@ -1112,6 +1162,28 @@ restart values.
 Re-read active settings from passport `meta`; `about` reports defaults.
 Use `lixity.pipeline.analyze_document` when several views need the same
 analysis result, rather than recalculating the corpus through multiple calls.
+
+### 5.4 Keep an adapter aligned with the native dashboard
+
+A custom publication/export adapter is a separate integration, not a native
+workspace upgrade. Missing panels can result from omitted renderer inputs even
+when the installed package is current. Reuse one resolved project configuration
+and `analyze_document(text, config, thresholds, include_evidence=True)` result.
+`render_analysis(result, resolved, ...)` wires its chapters, paragraphs, metrics,
+fingerprint and `paragraph_evidence` together. Pass the shared scene report as
+`scenes`, and use `resolve_character_settings` for names/aliases and declared
+viewpoints instead of maintaining a second figure list. Reuse `reader_blocks`
+for canonical manuscript structure; do not build another paragraph-offset map.
+
+The native server already supplies these optional inputs. `api.dashboard`
+provides scene/register and configured-character panels but does not collect
+exact text evidence by default; the lower-level pipeline opt-in is explicit.
+A self-contained report is not a running local server: enabling server controls
+without their genuine endpoints creates unavailable actions. Prefer the native
+workspace for the interactive author workflow; keep book-specific publication
+formats in their own project. If a native build is also run as a cross-check,
+choose its output location deliberately and record which pipeline is canonical.
+Validate rendered desktop/mobile states after changing adapter inputs.
 
 ## 6. Constraints for editing workflows
 

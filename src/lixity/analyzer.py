@@ -325,7 +325,7 @@ class CorpusAnalyzer:
             for s_name, s_pat in self.lang.signal_keywords.items()
         }
         c_motifs = {
-            m_name: len(re.findall(m_pat, cl_b, re.IGNORECASE))
+            m_name: len(compile_pattern(m_pat).findall(cl_b))
             for m_name, m_pat in self.config.motif_regexes.items()
         }
         c_fil = len(self._filter_re.findall(cl_b))

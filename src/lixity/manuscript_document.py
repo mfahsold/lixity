@@ -464,21 +464,25 @@ def manuscript_blocks(text: str, config: CorpusConfig) -> list[SourceManuscriptB
     return blocks
 
 
-def manuscript_sections(text: str, config: CorpusConfig) -> ManuscriptSections:
+def manuscript_sections(
+    text: str, config: CorpusConfig, *, include_title: bool = False,
+) -> ManuscriptSections:
     """Retain the whole document using configured chapter boundaries.
 
-    The first ``#`` title in the preface is supplied by the surrounding document layout
-    and omitted here. Preface material remains an untitled section. The analysis
-    appendix marker and prose-token filters deliberately do not apply to exports.
+    By default the first ``#`` title in the preface is supplied by the surrounding
+    layout and omitted here. ``include_title`` retains that authored heading for
+    layouts without an automatic title. Preface material remains an untitled
+    section. Analysis appendix markers and prose-token filters do not apply.
     """
     protected, sentinel, _literal_lines = _protected_source(text)
     headings = chapter_heading_spans(protected, config)
     first_end = headings[0][0] if headings else len(text)
     prefix = _blocks(text[:first_end], start_line=1, front_matter=True)
-    for index, block in enumerate(prefix):
-        if block.kind == "heading" and block.level == 1:
-            prefix.pop(index)
-            break
+    if not include_title:
+        for index, block in enumerate(prefix):
+            if block.kind == "heading" and block.level == 1:
+                prefix.pop(index)
+                break
     sections: ManuscriptSections = [("", prefix)] if prefix else []
     for index, (_start, end, line, raw_title) in enumerate(headings):
         title = raw_title.replace(sentinel, "<")

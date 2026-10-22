@@ -40,8 +40,8 @@ DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
 
 UNINTERPRETED_KEYS = frozenset({"phrases", "capabilities"})
-PROJECT_ONLY_KEYS = ("author_name", "draft_notice", "publication", "register_profiles", "chapter_registers", "characters", "manuscript")
-PERSISTED_SETTINGS_KEYS = ("title", "author_name", "publication", "register_profiles", "chapter_registers")
+PROJECT_ONLY_KEYS = ("author_name", "draft_notice", "publication", "site_publications", "register_profiles", "chapter_registers", "characters", "manuscript")
+PERSISTED_SETTINGS_KEYS = ("title", "author_name", "publication", "site_publications", "register_profiles", "chapter_registers")
 
 # Keys that may appear in [tool.lixity] (documented schema).
 TOOL_KEYS = frozenset(
@@ -50,6 +50,7 @@ TOOL_KEYS = frozenset(
         "author_name",
         "draft_notice",
         "publication",
+        "site_publications",
         "z_mild",
         "z_strong",
         "fdr_q",
@@ -262,6 +263,13 @@ def prepare_project_settings(
             value = validate_project_title(raw)
         elif key == "publication":
             value = PublicationSettings.model_validate(raw).model_dump()
+        elif key == "site_publications":
+            from .site_publications import parse_site_publications
+
+            # TOML has no null value: omitted optionals retain their exact
+            # JSON defaults when the owning model reads this table again.
+            value = {name: profile.model_dump(exclude_none=True)
+                     for name, profile in parse_site_publications(raw).items()}
         elif key == "language":
             value = raw
         elif key in THRESHOLD_KEYS:
@@ -471,6 +479,7 @@ def configuration_metadata() -> dict[str, Any]:
     not replace the existing validators or model the entire project file.
     """
     from .characters import character_configuration_schema
+    from .site_publications import site_publications_schema
     from .style_fingerprint import FingerprintThresholds
 
     corpus_schema = CorpusConfig.model_json_schema()
@@ -506,6 +515,7 @@ def configuration_metadata() -> dict[str, Any]:
         ),
         "corpus_schema": corpus_schema,
         "publication_schema": publication_configuration_schema(),
+        "site_publications_schema": site_publications_schema(),
         "characters_schema": character_configuration_schema(),
         "threshold_schema": {
             "type": "object", "properties": properties, "additionalProperties": False,

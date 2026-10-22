@@ -10,6 +10,7 @@ import json, sys
 from pathlib import Path
 from http.server import ThreadingHTTPServer
 from lixity.server import LixityServerHandler
+from lixity.style_fingerprint import FEATURE_UNITS
 from lixity.workspace_labels import WORKSPACE_LABELS
 project = Path(sys.argv[1])
 manuscript = project / 'manuscript.md'
@@ -21,7 +22,7 @@ LixityServerHandler.refresh()
 server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
 keys = ('register_name', 'register_target', 'register_lower', 'register_upper')
 labels = {language: {key: terms[key] for key in keys} for language, terms in WORKSPACE_LABELS.items()}
-print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'labels': labels}), flush=True)
+print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'labels': labels, 'units': FEATURE_UNITS}), flush=True)
 server.serve_forever()
 `, artifacts);
   let browser, release;
@@ -55,15 +56,19 @@ server.serve_forever()
       const name = 'Voice <img src=x onerror=alert(1)> \"A\" ' + width;
       await card.locator('[data-register-field=register_name]').fill(name);
       await card.locator('[data-register-add-target]').click();
-      await card.locator('[data-register-field=register_target]').selectOption('asl');
+      await card.locator('[data-register-field=register_target]').selectOption('passive_density');
+      assert.ok((await card.locator('[data-register-field=register_target] option:checked').textContent()).includes(fixture.units.en.passive_density),
+        'Feature choices state the measured unit before the author enters bounds');
       await card.locator('[data-register-field=register_lower]').fill('12');
       await card.locator('[data-register-field=register_upper]').fill('5');
       await page.locator('[data-register-add-assignment]').click();
       const assignment = page.locator('[data-register-assignment]');
       await assignment.locator('[data-register-field=register_selector]').fill('1');
       await assignment.locator('[data-register-field=register_name]').fill(name);
-      let requests = 0;
-      const observe = request => { if (request.url() === endpoint) requests++; };
+      let requests = 0, savedPayload;
+      const observe = request => {
+        if (request.url() === endpoint) { requests++; savedPayload = request.postDataJSON(); }
+      };
       page.on('request', observe);
       await page.locator('[data-action=settings]').click();
       assert.equal(requests, 0, 'Reversed bounds are rejected before submitting');
@@ -73,6 +78,7 @@ server.serve_forever()
       if (width === 1440) {
         await card.locator('[data-register-add-target]').click();
         const duplicate = card.locator('[data-register-range]').last();
+        await duplicate.locator('[data-register-field=register_target]').selectOption('passive_density');
         await duplicate.locator('[data-register-field=register_lower]').fill('5');
         await duplicate.locator('[data-register-field=register_upper]').fill('12');
         await page.locator('[data-action=settings]').click();
@@ -84,6 +90,8 @@ server.serve_forever()
       const response = page.waitForResponse(result => result.url() === endpoint);
       await page.locator('[data-action=settings]').click();
       assert.equal((await response).status(), 200);
+      assert.deepEqual(savedPayload.register_profiles[name], {passive_density: {lower: 5, upper: 12}},
+        'Localized feature units do not enter machine keys or bound values');
       await page.waitForFunction(() => !document.querySelector('[data-action=settings]').disabled);
       page.off('request', observe);
       await page.reload();
@@ -100,14 +108,20 @@ server.serve_forever()
         assert.match(await page.title(), /Synthetic registers/);
         assert.equal(await page.locator('#register-editor').isDisabled(), false);
         assert.equal(await card.locator('[data-register-field=register_name]').inputValue(), name);
-        assert.equal(await card.locator('[data-register-field=register_target]').inputValue(), 'asl');
+        assert.equal(await card.locator('[data-register-field=register_target]').inputValue(), 'passive_density');
+        assert.ok((await card.locator('[data-register-field=register_target] option:checked').textContent()).includes(fixture.units[locale].passive_density));
         assert.equal(await card.locator('[data-register-field=register_lower]').inputValue(), '5');
         assert.equal(await card.locator('[data-register-field=register_upper]').inputValue(), '12');
         assert.equal(await assignment.locator('[data-register-field=register_selector]').inputValue(), '1');
         assert.equal(await page.locator('#register-targets [data-register]').count(), 1);
+        assert.ok((await page.locator('#register-targets [data-register]').textContent()).includes(fixture.units[locale].passive_density),
+          'The saved comparison repeats the same localized measurement unit');
         assert.equal(await page.locator('#register-targets img, #register-editor img').count(), 0, 'Names stay inert');
         await card.locator('[data-register-add-target]').click();
         const added = card.locator('[data-register-range]').last();
+        await added.locator('[data-register-field=register_target]').selectOption('hd_d');
+        assert.ok((await added.locator('[data-register-field=register_target] option:checked').textContent()).includes('0–1'),
+          'HD-D bounds expose the index scale rather than a percentage');
         for (const key of ['register_target', 'register_lower', 'register_upper']) {
           assert.equal(await added.locator('[data-register-field=' + key + ']').evaluate(input => input.parentElement.firstChild.textContent),
             fixture.labels[locale][key], 'Dynamically added controls use the selected locale');
@@ -119,6 +133,35 @@ server.serve_forever()
         assert.deepEqual(fs.readFileSync(path.join(artifacts, 'manuscript.md')), before);
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'No horizontal viewport overflow');
         await page.locator('#settings-registers').screenshot({path: path.join(artifacts, `${locale}-${width}.png`)});
+        if (locale === 'en') {
+          await page.locator('#settings-registers > summary').click();
+          await page.locator('[data-view=analysis]').click();
+          const overview = page.locator('#workbench-overview-open');
+          if (await overview.isVisible()) await overview.click();
+          if (width === 320) {
+            const tableScroll = page.locator('#register-targets .table-wrap');
+            assert.equal(await tableScroll.getAttribute('tabindex'), '0', 'The comparison scrollport is keyboard reachable');
+            assert.equal(await tableScroll.getAttribute('role'), 'region');
+            assert.ok(await tableScroll.getAttribute('aria-label'));
+            assert.ok(await tableScroll.evaluate(element => element.scrollWidth > element.clientWidth),
+              'Seven comparison columns retain readable widths inside their own scrollport');
+            assert.equal(await page.locator('#register-targets thead th').evaluateAll(cells => cells.every(cell => cell.getBoundingClientRect().height < 50)), true,
+              'Column headings do not wrap into vertical letter stacks');
+            await tableScroll.focus();
+            await page.keyboard.press('ArrowRight');
+            await page.waitForFunction(() => document.querySelector('#register-targets .table-wrap').scrollLeft > 0);
+            await tableScroll.evaluate(element => { element.scrollLeft = 0; });
+          }
+          await page.locator('#register-targets').screenshot({path: path.join(artifacts, `targets-${width}.png`)});
+          const editRegisters = page.locator('#register-targets a.ctl-link');
+          await editRegisters.focus();
+          await page.keyboard.press('Enter');
+          await page.waitForFunction(() => document.querySelector('#settings-registers').open);
+          assert.equal(await page.locator('#tab-view-project').getAttribute('aria-selected'), 'true',
+            'The comparison links back to the existing project settings');
+          assert.equal(await page.locator('#settings-registers').evaluate(details => details.contains(document.activeElement)), true,
+            'Keyboard navigation reaches the revealed register settings');
+        }
       }
     }
     // A newly added row while a real save is pending must prevent reload.

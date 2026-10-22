@@ -136,12 +136,12 @@ def test_dashboard_reads_shared_project_configuration_once(tmp_path: Path):
     manuscript = tmp_path / "manuscript.md"
     manuscript.write_text("# Synthetic title\n\n## Morning\n\nA synthetic sentence.\n", encoding="utf-8")
     calls: list[str | None] = []
-    original = views.load_project_config
+    original = views.read_explicit_project_config
 
     def counting(start=None):
         calls.append(str(start) if start is not None else None)
         return original(start)
 
-    with patch.object(views, "load_project_config", counting):
+    with patch.object(views, "read_explicit_project_config", counting):
         build_server_dashboard(str(manuscript), project_root=tmp_path, language="en")
-    assert calls == [str(manuscript)]
+    assert calls == [str(tmp_path)]

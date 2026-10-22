@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Regenerate the published read-only example reports.
 
-Three dashboard pages are published on the documentation site:
+Five reading examples are published on the documentation site:
 
 * ``demo/report.html`` - one synthetic six-chapter analysis/research project;
+* ``demo/reader/index.html`` - its curated manuscript/context reading website;
+* ``demo/companion/index.html`` - a standalone companion capped at chapter three;
 * ``examples/effi-briest.html`` - the opening chapters of a public-domain novel;
 * ``examples/pride-and-prejudice.html`` - the opening chapters of a public-domain novel.
 
-The project also includes four manuscript/analysis PDF layouts and a bounded
+The project also includes five manuscript/analysis PDF layouts and a bounded
 static research fixture. Its former research URL is a compatibility redirect.
 The two classic works also ship as complete analysis reports
 (``examples/<slug>-report.pdf``). The Effi Briest excerpt additionally demonstrates
@@ -120,6 +122,7 @@ def _head_metadata(
     language: str,
     about: tuple[str, str] | None = None,
     preview_image: tuple[str, str] | None = None,
+    analytics: bool = True,
 ) -> str:
     escaped = html.escape(description, quote=True)
     escaped_title = html.escape(title, quote=True)
@@ -154,8 +157,8 @@ def _head_metadata(
         }
     return (
         f'<link rel="canonical" href="{canonical}"/>\n'
-        '<script defer src="../assets/analytics.js"></script>\n'
-        f'<meta name="description" content="{escaped}"/>\n'
+        + ('<script defer src="../assets/analytics.js"></script>\n' if analytics else '')
+        + f'<meta name="description" content="{escaped}"/>\n'
         '<meta property="og:type" content="article"/>\n'
         '<meta property="og:site_name" content="Lixity"/>\n'
         f'<meta property="og:title" content="{escaped_title}"/>\n'
@@ -214,6 +217,7 @@ def _notice(heading: str, paragraphs: list[str], links: list[tuple[str, str]]) -
 
 def _site_navigation(
     report: str, title: str, *, demo: bool = False, breadcrumbs: bool = True,
+    links: tuple[tuple[str, str], ...] | None = None,
 ) -> str:
     """Keep public examples connected without adding external report assets."""
     stylesheet = (ROOT / "docs/assets/site.css").read_text(encoding="utf-8")
@@ -233,12 +237,17 @@ def _site_navigation(
         '<a href="../demo/report.html">Demo</a>'
         '</nav>'
     )
+    if links is not None:
+        navigation = '<nav class="site-return" aria-label="Lixity navigation">' + ''.join(
+            f'<a href="{html.escape(href, quote=True)}">{html.escape(label)}</a>' for href, label in links) + '</nav>'
     if breadcrumbs and not demo:
         navigation += (
             '<nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol>'
             '<li><a href="../">Home</a></li>' +
             f'<li><span aria-current="page">{html.escape(title)}</span></li></ol></nav>'
         )
+    if not re.search(r'<body\b[^>]*\bid="top"', report):
+        report = re.sub(r'<body(?=\s|>)', '<body id="top"', report, count=1)
     _require(report.count('<body id="top"') == 1, "the report must have one top target")
     report = report.replace('<body id="top"', '<body id="top" tabindex="-1"', 1)
     report, class_count = re.subn(
@@ -246,8 +255,10 @@ def _site_navigation(
         lambda match: match[1] + match[2] + ' site-page"', report, count=1,
     )
     _require(class_count == 1, "the report must retain its native body class")
-    _require(report.count('<div class="page">') == 1, "the report must have one page container")
-    report = report.replace('<div class="page">', '<div class="page">' + navigation, 1)
+    page = re.search(r'<div class="page"(?: id="[^"]*")?>', report)
+    _require(page is not None, "the report must have one page container")
+    if page is not None:
+        report = report[:page.end()] + navigation + report[page.end():]
     report = report.replace('</head>', '<style>' + styles + '</style></head>', 1)
     return report.replace('</body>', '<a class="site-back-top" href="#top">Back to top ↑</a></body>', 1)
 
@@ -256,11 +267,18 @@ def build_demo(root: Path) -> Path:
     """Build the one public project through the shared native workspace builder."""
     from tempfile import TemporaryDirectory
 
-    from make_screenshots import build_research_demo, build_research_fixture
+    from make_screenshots import (
+        build_publication_examples,
+        build_research_demo,
+        build_research_fixture,
+    )
 
     with TemporaryDirectory(prefix="lixity-public-demo-") as directory:
-        fixture = build_research_fixture(Path(directory))
-        return build_research_demo(root, fixture)
+        build_research_fixture(Path(directory))
+        project = Path(directory) / "research-demo"
+        demo = build_research_demo(root, project)
+        build_publication_examples(root, project)
+        return demo
 
 
 def excerpt(text: str, chapters: int) -> str:
@@ -343,6 +361,9 @@ def main() -> int:
         (demo, f"{demo.stat().st_size:,} bytes"),
         (ROOT / "LICENSE", ""),
     ]
+    for mode in ("reader", "companion"):
+        page = ROOT / f"docs/demo/{mode}/index.html"
+        outputs.append((page, f"{page.stat().st_size:,} bytes"))
     for example in EXAMPLES:
         page, pdf = build_classic(ROOT, example)
         outputs.append((page, f"{page.stat().st_size:,} bytes"))

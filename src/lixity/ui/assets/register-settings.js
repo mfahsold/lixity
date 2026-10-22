@@ -3,6 +3,15 @@
   "use strict";
   var editor = document.getElementById("register-editor");
   if (!editor) return;
+  document.addEventListener("click", function(event) {
+    var link = event.target.closest("a[data-register-settings]");
+    if (!link) return;
+    var summary = document.getElementById("settings-registers-summary");
+    if (!summary) return;
+    event.preventDefault();
+    scrollAndFlash(summary);
+    summary.focus({preventScroll: true});
+  });
   var initial = JSON.parse(editor.dataset.initial);
   var labels = JSON.parse(editor.dataset.labels);
   var features = JSON.parse(editor.dataset.features);

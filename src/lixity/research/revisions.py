@@ -210,6 +210,10 @@ def record_history(project: str | Path, kind: str, record_id: str) -> dict[str, 
     """List accepted revisions, newest first, without copying their bodies."""
     repository = Repository(project)
     snapshot = repository.snapshot()
+    return _record_history(snapshot, kind, record_id)
+
+
+def _record_history(snapshot: Snapshot, kind: str, record_id: str) -> dict[str, Any]:
     latest = _record(snapshot, kind, record_id, include_withdrawn=True)
     records = sorted((r for r in snapshot.revisions.values() if r.id == record_id),
                      key=lambda r: r.revision, reverse=True)

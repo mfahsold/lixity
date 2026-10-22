@@ -9,6 +9,7 @@ from .analyzer import CorpusAnalyzer
 from .language import ResolvedLanguage, resolve_language
 from .markdown_parser import parse_markdown_blocks
 from .models import CorpusConfig, CorpusMetrics
+from .motifs import resolve_motif_settings
 from .paragraph_evidence import ParagraphEvidence
 from .style_fingerprint import (
     FingerprintThresholds,
@@ -40,6 +41,9 @@ def resolve_document_config(
     """Resolve known corpus settings once; explicit language/overrides win."""
     settings = {key: value for key, value in (project_config or {}).items()
                 if key in CorpusConfig.model_fields and key != "language"}
+    motif_settings = ({"motif_regexes": overrides["motif_regexes"]} if "motif_regexes" in overrides
+                      else project_config or {})
+    settings["motif_regexes"] = resolve_motif_settings(None, motif_settings)
     config = CorpusConfig(language=language, **(settings | overrides))
     resolved = resolve_language(config, sample_text=text)
     return config.model_copy(update={"language": resolved.key}), resolved

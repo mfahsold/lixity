@@ -161,10 +161,10 @@
       '<p class="ctl-note geography-projection-hint">' + safe(label("projection_hint")) + '</p>' : '';
     var mapControls = canMap ? '<button type="button" class="ctl ctl-sm" data-geo-map aria-expanded="false">' + safe(label("map")) + '</button>' +
       '<div class="geography-map-tools" hidden><button type="button" class="ctl ctl-sm" data-geo-fit>' + safe(label("fit")) + '</button>' +
-      '<label class="form-checkbox"><input type="checkbox" data-geo-basemap/><span>' + safe(label("basemap")) + '</span></label>' +
-      '<p class="ctl-note geography-basemap-hint">' + safe(label("basemap_hint")) + '</p></div>' +
+      '<label class="form-checkbox" data-requires-live><input type="checkbox" data-geo-basemap/><span>' + safe(label("basemap")) + '</span></label>' +
+      '<p class="ctl-note geography-basemap-hint" data-requires-live>' + safe(label("basemap_hint")) + '</p></div>' +
       '<div class="geography-map" hidden role="group" aria-label="' + safe(label("map_label")) + '"></div><p class="ctl-status geography-map-status" role="status"></p>' : '';
-    return '<section class="dossier-geography" data-geo-context="' + safe(mapContext()) + '" data-geo-geometries="' + safe(JSON.stringify(value.features.map(function(feature) { return feature.geometry; }))) + '"><h4>' + safe(label("title")) + '</h4><p class="ctl-note">' + safe(label("hint")) + '</p>' +
+    return '<section class="dossier-geography" data-geo-context="' + safe(mapContext()) + '" data-geo-geometries="' + safe(JSON.stringify(value.features.map(function(feature) { return feature.geometry; }))) + '"><h4>' + safe(label("title")) + '</h4><p class="ctl-note">' + safe(label(window.LixitySite.readOnly ? "snapshot_hint" : "hint")) + '</p>' +
       overview + legend + '<p class="ctl-note geography-navigation-hint">' + safe(label("navigation_hint")) + '</p>' +
       '<div class="geography-selected" role="status" aria-live="polite"><p class="ctl-note">' + safe(label("selected_empty")) + '</p></div>' +
       '<div class="row geography-selection-actions">' + (canMap ? '<button type="button" class="ctl ctl-sm" data-geo-frame disabled>' + safe(label("frame")) + '</button>' : '') +
@@ -244,7 +244,7 @@
     return true;
   }
   function preference(root) {
-    if (!preferences.has(root)) preferences.set(root, {map: true, tiles: true});
+    if (!preferences.has(root)) preferences.set(root, {map: true, tiles: !window.LixitySite.readOnly});
     return preferences.get(root);
   }
   function stopTiles(state, paused) {
@@ -385,6 +385,7 @@
   });
   document.addEventListener("change", function(event) {
     if (!event.target.matches("[data-geo-basemap]")) return;
+    if (window.LixitySite.readOnly) { event.target.checked = false; return; }
     var root = event.target.closest(".dossier-geography"), state = maps.get(root);
     if (!state || state.context !== mapContext() || !visible(root)) { event.target.checked = false; return; }
     preference(root).tiles = event.target.checked;
@@ -392,6 +393,7 @@
     startTiles(state);
   });
   function startTiles(state) {
+    if (window.LixitySite.readOnly) return;
     var root = state.root;
     if (state.tiles || !preference(root).tiles || state.context !== mapContext() ||
         root.dataset.geoContext !== mapContext() || !viewed(state.host)) return;

@@ -40,6 +40,7 @@ function researchDecisionAcknowledgement(context) {
   var status = ack ? uiLabel(ack.current === true ?
     (applied ? "research_decision_applied" : "research_decision_review_needed") :
     "research_decision_earlier_assessment") : "";
+  if (window.LixitySite.readOnly) return status ? '<p class="ctl-note">' + escapeHtml(status) + '</p>' : '';
   var blocked = (context.flags || []).includes("withdrawn_dossier");
   return '<div class="research-decision-acknowledgement" data-decision-ack-dossier="' + escapeHtml(context.dossierId) +
     '" data-decision-ack-decision="' + escapeHtml(context.decisionId) +

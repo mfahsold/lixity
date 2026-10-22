@@ -50,7 +50,6 @@
 .reader-evidence-toggle { display: flex; gap: .5rem; align-items: center; min-height: 44px; }
 .reader-evidence-toggle input { flex-shrink: 0; }
 #analysis-evidence-status:empty { display: none; }
-.reader-analysis-settings:has(#analysis-evidence-status:not(:empty)) > summary { text-decoration: underline dotted; text-underline-offset: .25em; }
 .reader-paragraph-actions { display: none; }
 .reader-passage-context { padding-block-end: var(--space-4); border-bottom: 1px solid var(--line); margin-block-end: var(--space-4); }
 .reader-passage-tools { display: grid; gap: var(--space-2); grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); }
@@ -233,8 +232,9 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 
 .manuscript-reading.workbench-overview .toolbar-sections { display: flex !important; }
 .manuscript-reading.workbench-analysis:not(.workbench-overview) .layer-legend:not([hidden]),
-.manuscript-reading.workbench-analysis:not(.workbench-overview) .toolbar > .legend,
 .manuscript-reading.workbench-analysis:not(.workbench-overview) .toolbar > #paragraph-filter-reset { display: flex !important; }
+.manuscript-reading.workbench-overview .toolbar > .legend,
+.manuscript-reading.workbench-analysis:not(.workbench-overview):not(.layer-on) .toolbar > .legend { display: flex !important; }
 .manuscript-reading.workbench-analysis .toolbar > .metric-layer-control { display: flex !important; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 
 /* One selected measurement paints the page beneath fully opaque prose.

@@ -16,22 +16,37 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 
 class TestDocumentation(unittest.TestCase):
+    def test_published_reports_bundle_the_current_packaged_interface(self):
+        """Demo/classic UI must not silently drift from the release's native UI."""
+        from lixity.ui.dashboard import _CSS_FILES, _JS_FILES
+
+        assets = ROOT / "src/lixity/ui/assets"
+        for relative in ("demo/report.html", "examples/effi-briest.html", "examples/pride-and-prejudice.html"):
+            report = (ROOT / "docs" / relative).read_text(encoding="utf-8")
+            for name in (*_CSS_FILES, *_JS_FILES):
+                with self.subTest(report=relative, asset=name):
+                    self.assertEqual(report.count((assets / name).read_text(encoding="utf-8").strip()), 1,
+                                     "Regenerate public reports with 'make examples' before publishing UI changes")
+
     def test_public_demo_can_read_exact_passage_research_versions(self):
         """The read-only adapter must serve native context-bound pinned reads."""
         import json
         from urllib.parse import urlencode
 
-        from make_screenshots import RESEARCH_DEMO_CONTEXT, RESEARCH_DEMO_MANUSCRIPT_CONTEXT
-
-        fixture = json.loads((ROOT / "docs/demo/research-data.json").read_text(encoding="utf-8"))
+        document = (ROOT / "docs/demo/report.html").read_text(encoding="utf-8")
+        data = re.search(r'<script[^>]*id="lixity-site-data"[^>]*>(.*?)</script>', document, re.DOTALL)
+        self.assertIsNotNone(data, "The public demo must use the production website transport")
+        fixture = json.loads(data[1])["responses"]
+        project_token = re.search(r'data-manuscript-project-token="([^"]+)"', document)[1]
+        research_token = re.search(r'data-research-token="([^"]+)"', document)[1]
         reports = [value for value in fixture.values()
                    if value.get("schema_version") == "research-manuscript-review-local/1"]
         self.assertTrue(reports)
 
         def record(kind, identifier, revision, snapshot):
-            query = urlencode({"project_token": RESEARCH_DEMO_MANUSCRIPT_CONTEXT,
+            query = urlencode(sorted({"project_token": project_token,
                                "id": identifier, "kind": kind, "revision": revision,
-                               "research_token": RESEARCH_DEMO_CONTEXT})
+                               "research_token": research_token}.items()))
             key = "/api/research/record?" + query
             self.assertTrue(key in fixture, f"Native passage-context request has no prepared response: {key}")
             result = fixture[key]
@@ -138,7 +153,7 @@ class TestDocumentation(unittest.TestCase):
                 resolved[page] = local
             self.assertIn(pages[1], resolved[pages[0]])
             self.assertIn(pages[2], resolved[pages[1]])
-            for layout in ("editor", "book", "sheet", "report"):
+            for layout in ("editor", "book", "sheet", "report", "document"):
                 pdf = output / "demo" / f"warehouse-4-{layout}.pdf"
                 self.assertIn(pdf, resolved[pages[2]], "All PDF examples belong to the same demo project")
                 self.assertTrue(pdf.read_bytes().startswith(b"%PDF-"), f"Invalid staged PDF: {pdf.name}")

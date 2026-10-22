@@ -339,6 +339,30 @@ class TestStyleFingerprint(unittest.TestCase):
         self.assertIn("Referenz des Normalmodells", german)
         self.assertNotIn("FDR-bestätigt", german)
 
+    def test_passport_names_robust_deviations_without_sigma_and_preserves_json(self):
+        from lixity.format import num
+
+        sentences = (
+            "A door closes.", "A wooden door closes.", "A quiet wooden door closes.",
+            "A quiet wooden door closes beside the river while the last harbour lamp throws its light across the empty loading yard.",
+        )
+        text = "\n\n".join(f"## Chapter {number}\n\n" + (sentence + " ") * 40
+                             for number, sentence in enumerate(sentences, 1))
+        fingerprint = StyleFingerprint.from_metrics(CorpusAnalyzer().analyze_text(text))
+        labels = {label_key: field for field, label_key, _unit in FEATURES}
+        before = json.dumps(fingerprint.passport(), sort_keys=True)
+        strongest = fingerprint.top_deviants(5)
+        self.assertTrue(fingerprint.deviations)
+        for language in ("en", "de", "fr", "es", "it", "pt", "nl"):
+            with self.subTest(language=language):
+                text = fingerprint.passport_text(labels=labels, language_key=language)
+                self.assertNotIn("σ", text)
+                for chapter, _mean in strongest:
+                    deviations = sorted(fingerprint.deviations.get(chapter, {}).items(), key=lambda item: abs(item[1]), reverse=True)[:4]
+                    for field, value in deviations:
+                        self.assertIn(f"{field} z* {num(value, language, 1, signed=True)}", text)
+                self.assertEqual(json.dumps(fingerprint.passport(), sort_keys=True), before)
+
     def test_comparability_floors_withhold_unstable_comparisons(self):
         long_sentence = " ".join(["Der lange Satz zieht sich über die ganze Zeile"] * 6)
         metrics = CorpusAnalyzer(self.config).analyze_text(

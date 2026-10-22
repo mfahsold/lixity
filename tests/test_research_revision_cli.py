@@ -21,6 +21,60 @@ class TestResearchRevisionCli(unittest.TestCase):
             status = cli.run(self.parse(*args))
         return status, json.loads(output.getvalue())
 
+    def test_dossier_edit_export_selectors_share_current_and_historical_drafts(self):
+        from tests.research_support import capture_research, retained_files, revise_record
+
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory) / "project"
+            api.init(project, title="Synthetic export aliases")
+            identifier = api.create_dossier(project, "Notes", "Original body.")["dossier_id"]
+            revise_record(project, "dossier", identifier, {"body": "Current body."})
+            before = retained_files(project)
+            for command in ("dossier", "dossiers"):
+                selectors = ((identifier,), ("--dossier-id", identifier), ("show", identifier), ("inspect", identifier))
+                for index, selector in enumerate(selectors):
+                    for revision in (None, 1):
+                        with self.subTest(command=command, selector=selector, revision=revision):
+                            target = Path(directory) / f"{command}-{index}-{revision}.md"
+                            flags = () if revision is None else ("--revision", str(revision))
+                            status, output, errors = capture_research(
+                                command, *selector, "--project", str(project), "--export-edit", str(target), *flags)
+                            self.assertEqual((status, errors), (0, ""))
+                            self.assertEqual(json.loads(output), {
+                                "schema_version": "research-dossier-edit-export-local/1",
+                                "record_id": identifier, "output": str(target.absolute())})
+                            self.assertEqual(target.read_text(encoding="utf-8"),
+                                             api.export_dossier_edit(project, identifier, revision=revision))
+                            self.assertEqual(retained_files(project), before)
+                            exported = target.read_bytes()
+                            status, output, errors = capture_research(
+                                command, *selector, "--project", str(project), "--export-edit", str(target), *flags)
+                            self.assertEqual((status, output), (1, ""))
+                            self.assertTrue(errors)
+                            self.assertEqual(target.read_bytes(), exported)
+                            self.assertEqual(retained_files(project), before)
+
+    def test_dossier_export_verbs_keep_explicit_mode_and_mutation_guards(self):
+        from tests.research_support import capture_research, retained_files
+
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory) / "project"
+            api.init(project, title="Synthetic export guards")
+            identifier = api.create_dossier(project, "Notes", "Original body.")["dossier_id"]
+            before = retained_files(project)
+            target = Path(directory) / "draft.md"
+            for verb in ("show", "inspect"):
+                for flags in (("--inspect",), ("--history",), ("--prepare",),
+                              ("--update", "--latest", "--change-kind", "correction", "--reason", "Synthetic edit"),
+                              ("--body", "Changed body.")):
+                    with self.subTest(verb=verb, flags=flags):
+                        status, output, errors = capture_research(
+                            "dossier", verb, identifier, "--project", str(project), "--export-edit", str(target), *flags)
+                        self.assertEqual((status, output), (1, ""))
+                        self.assertTrue(errors)
+                        self.assertFalse(target.exists())
+                        self.assertEqual(retained_files(project), before)
+
 
     def test_invalid_dossier_files_fail_before_each_operation_can_write(self):
         from lixity.research.repository import Repository

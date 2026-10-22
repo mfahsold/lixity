@@ -113,6 +113,10 @@ def dossier_reviews(snapshot: Snapshot) -> dict[str, list[dict[str, Any]]]:
 
 def decision_impact(project: str | Path, decision_id: str, *, outline: Outline | None = None) -> dict[str, Any]:
     snapshot = Repository(project).snapshot()
+    return decision_impact_data(snapshot, decision_id, outline=outline)
+
+
+def decision_impact_data(snapshot: Snapshot, decision_id: str, *, outline: Outline | None = None) -> dict[str, Any]:
     graph = decision_graph(snapshot, outline=outline, decision_id=decision_id)
     if decision_id not in graph:
         raise ResearchError("Decision not found or has been withdrawn")
@@ -122,6 +126,10 @@ def decision_impact(project: str | Path, decision_id: str, *, outline: Outline |
 
 def editorial_review(project: str | Path, *, outline: Outline | None = None) -> dict[str, Any]:
     snapshot = Repository(project).snapshot()
+    return editorial_review_data(snapshot, outline=outline)
+
+
+def editorial_review_data(snapshot: Snapshot, *, outline: Outline | None = None) -> dict[str, Any]:
     graph = decision_graph(snapshot, outline=outline)
     candidates = []
     for impact in graph.values():

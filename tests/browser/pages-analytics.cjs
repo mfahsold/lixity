@@ -4,7 +4,6 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
-const {openProjectActions} = require('./support/project-actions.cjs');
 const {expect} = require(path.join(playwrightModule, 'test'));
 const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-pages-analytics-'));
@@ -23,6 +22,7 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
 <a id="pdf-editor" href="/lixity/demo/warehouse-4-editor.pdf">Editorial PDF</a>
 <a id="pdf-sheet" href="/lixity/demo/warehouse-4-sheet.pdf">Sheet PDF</a>
 <a id="pdf-report" href="/lixity/demo/warehouse-4-report.pdf">Report PDF</a>
+<a id="pdf-document" href="/lixity/demo/warehouse-4-document.pdf">Document PDF</a>
 <a id="other-pdf" href="/lixity/private.pdf">Unreviewed PDF</a>
 <a id="untracked" data-goatcounter-click="PRIVATE CUSTOM EVENT" href="https://example.test/private">Other destination</a>
 <a id="spoof" href="https://github.com.evil.test/mfahsold/lixity">Other host</a></main>
@@ -148,17 +148,22 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
       await page.locator('#manuscript-analysis-toggle').click();
       await page.locator('#manuscript-analysis-toggle').click();
       assert.deepEqual(await page.locator('#chapters .ptext').allTextContents(), prose);
-      await expect(page.locator('#r-claim-create-btn')).toBeDisabled();
-      await openProjectActions(page);
-      await page.locator('#manuscript-pdf-title').click();
-      await page.locator('#manuscript-pdf-layout').selectOption('book');
-      const downloaded = page.waitForEvent('download');
-      await page.locator('#manuscript-pdf-download').click();
-      const download = await downloaded;
-      const destination = path.join(artifacts, `native-demo-${width}.pdf`);
-      await download.saveAs(destination);
-      assert.deepEqual(fs.readFileSync(destination), fs.readFileSync(path.join(root, 'docs/demo/warehouse-4-book.pdf')));
-      await expect.poll(() => pixels.filter(pixel => pixel.url.searchParams.get('p') === 'pdf-download').length).toBe(1);
+      await expect(page.locator('#r-claim-create-btn')).toBeHidden();
+      await expect(page.locator('meta[http-equiv="Content-Security-Policy"]')).toHaveCount(1);
+      assert.equal(requests.some(request => request.url.endsWith('/assets/analytics.json')), false,
+        'The public website uses reviewed inline analytics configuration without opening its read-only transport');
+      // Native anchor downloads bypass Playwright routing in Chromium. The
+      // public-docs suite checks exact PDF bytes against its local HTTP server;
+      // this public-origin fixture checks the CTA event without live traffic.
+      for (const [index, layout] of ['book', 'document'].entries()) {
+        const pdfLink = page.locator(`#demo-downloads a[href="warehouse-4-${layout}.pdf"]`);
+        await expect(pdfLink).toHaveAttribute('download', '');
+        await page.evaluate(() => document.addEventListener('click', event => {
+          if (event.target.closest('#demo-downloads a')) event.preventDefault();
+        }, {once: true}));
+        await pdfLink.click();
+        await expect.poll(() => pixels.filter(pixel => pixel.url.searchParams.get('p') === 'pdf-download').length).toBe(index + 1);
+      }
       assert.deepEqual(await page.evaluate(() => window.__cspViolations), []);
       await page.screenshot({path: path.join(artifacts, `native-demo-${width}.png`), fullPage: false});
       await page.locator('#example-context > summary').click();
@@ -198,9 +203,9 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
       await settle(page);
       assert.equal(state.pixels.length, 1, 'The public demo completion event is ignored on other pages');
       const clicks = ['demo', 'install', 'repository', 'pdf', 'untracked', 'spoof', 'demo',
-        'install-reference', 'install-anchor', 'pdf-editor', 'pdf-sheet', 'pdf-report', 'other-pdf'];
+        'install-reference', 'install-anchor', 'pdf-editor', 'pdf-sheet', 'pdf-report', 'pdf-document', 'other-pdf'];
       for (const id of clicks) await page.locator('#' + id).click();
-      await expect.poll(() => state.pixels.length).toBe(11);
+      await expect.poll(() => state.pixels.length).toBe(12);
       assert.deepEqual(payloads(state).slice(1), [
         {p: 'demo-open', e: 'true', t: 'Open demo', r: ''},
         {p: 'install-open', e: 'true', t: 'Open installation', r: ''},
@@ -209,12 +214,12 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
         {p: 'demo-open', e: 'true', t: 'Open demo', r: ''},
         {p: 'install-open', e: 'true', t: 'Open installation', r: ''},
         {p: 'install-open', e: 'true', t: 'Open installation', r: ''},
-        ...Array.from({length: 3}, () => ({p: 'pdf-download', e: 'true', t: 'Download PDF', r: ''})),
+        ...Array.from({length: 4}, () => ({p: 'pdf-download', e: 'true', t: 'Download PDF', r: ''})),
       ]);
       assert.deepEqual(await page.evaluate(() => window.__navigationPrevented), Array(clicks.length).fill(false));
       await page.addScriptTag({url: publicOrigin + '/lixity/assets/analytics.js'});
       await settle(page);
-      assert.equal(state.pixels.length, 11, 'Duplicate inclusion cannot add a pageview or event listener');
+      assert.equal(state.pixels.length, 12, 'Duplicate inclusion cannot add a pageview or event listener');
       assert.deepEqual(state.unexpected, []);
       assert.deepEqual(state.warnings, []);
       assert.deepEqual(state.errors, []);
@@ -275,6 +280,6 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
     await configuring.context.close();
     assert.deepEqual(JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../docs/assets/analytics.json'), 'utf8')),
       {site_code: 'mfahsold'}, 'Only the explicitly selected hosted property is activated');
-    console.log('Pages analytics: actual generated demo/CSP/native PDF and installation journeys; pixel payloads, gates, errors and bounded images passed. No backend hit sent. Screenshots: ' + artifacts);
+    console.log('Pages analytics: actual generated demo/CSP/PDF CTA and installation journeys; pixel payloads, gates, errors and bounded images passed. No backend hit sent. Screenshots: ' + artifacts);
   } finally { await browser.close(); }
 })().catch(error => {console.error(error); process.exitCode = 1;});

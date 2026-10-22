@@ -8,11 +8,17 @@ Text sources can be analysed separately or compared with a manuscript.
 It does not implement the entire [RFC](README.md).
 
 Product versions describe development maturity; response and archive schemas
-are independent. v0.7.2 reads research records/manifests v1–v8, including
+are independent. v0.7.2 and later read research records/manifests v1–v8, including
 historical v3.0.1 archives. Reading an archive does not upgrade it. See
 [compatibility and limits](#limits) before writing with an older application.
 Since v0.7.0, optional dossier geography uses v8. Ordinary dossier encodings stay
 unchanged until a geographic save; older readers cannot open v8 archives.
+
+For a browsable copy, use [Reading website](../USAGE.md#export-a-reading-website)
+in Project actions or `lixity export-site`. Research inclusion is explicit and
+includes authored history and cited excerpts; original source files and full
+extraction text are a separate choice. This is a static reading copy, not an
+archive restore format or a hosted account with revocable permissions.
 
 Use `lixity research --help` to discover implemented commands and
 `lixity research COMMAND --help` for exact arguments and output formats.
@@ -27,6 +33,17 @@ imports, embeddings/semantic search, automatic factual verification, prose
 rewriting or automatic Zotero synchronization. Interface text supports seven
 languages; research CLI help/errors are English. Labels do not translate sources
 or extend language-specific linguistic validation.
+
+## Find a task
+
+- [Read sources and connect claims](#reading-and-cli-workflows) — evidence, quotations and the manuscript companion.
+- [Read entries and versions](#read-entries-and-earlier-versions-without-losing-context) — current records and explicit earlier pins.
+- [Edit a dossier](#edit-an-exported-markdown-dossier) — a reviewed Markdown round trip, without overwriting the archive.
+- [Review decisions](#review-decisions-and-save-related-revisions-together) — compare context and explicitly acknowledge a reviewed version.
+- [Place claims in time](#claim-chronology-and-causeeffect-links) — authored dates and causal connections; missing dates stay unplaced.
+- [Use Zotero](#zotero-desktop-bridge) or [OCR](#self-hosted-pdf-and-ocr-extraction) — optional capture tools and their data boundaries.
+- [Compare a manuscript and sources](#cross-corpus-comparison-and-evidence-grounding) — lexical overlap with an explicit language.
+- [Export and restore](#export-and-restoration) — verified archive copies and recovery limits.
 
 ## Research workflows
 
@@ -104,7 +121,7 @@ preview with an installation link. Unchanged archive refreshes keep an opened
 evidence panel. A changed archive or project clears it so you can reload the
 current evidence.
 
-**On current main (Unreleased):** loaded claim evidence is grouped under the
+**Since v0.7.4:** loaded claim evidence is grouped under the
 collapsible **Source quotations** heading. Closing and reopening it keeps the
 loaded quotations and unsaved fields without another read. Authored search
 results use **View entry** to open the current record; **View
@@ -117,7 +134,7 @@ create or update an association.
 
 In **Manuscript**, **Dossier alongside** opens a chosen dossier in a read-only
 companion. It starts closed with no automatic selection. Refresh explicitly for
-the latest dossier. The companion and paragraph **Values** inspector are
+the latest dossier. The companion and paragraph **Explore passage** inspector are
 alternative tools; the **Analysis** display is a separate choice. Reading changes
 neither document, evidence links nor the statistical baseline. See
 [reader controls](../USAGE.md#reading-paragraphs) for display preferences,
@@ -210,7 +227,7 @@ facts or relevant research. Opening, closing or retrying this summary performs
 reads only, without retention, indexing, version upgrades or repinning. Research
 setup remains explicit. This presentation adds no API or archive schema version.
 
-**On current main (Unreleased):** the shared **Explore passage** inspector calls
+**Since v0.7.4:** the shared **Explore passage** inspector calls
 this **Research for this passage**. Quotations of the same pinned claim are
 grouped under **Text associations**; its assessment belongs to that exact claim
 version. The title opens the current entry, while **Linked version N** explicitly
@@ -302,15 +319,14 @@ remain unavailable until the manuscript exists at its saved project-relative pat
 
 ### Read entries and earlier versions without losing context
 
-**On current main (Unreleased):** ordinary entry actions open the current
+**Since v0.7.4:** ordinary entry actions open the current
 version in the shared read-only viewer. Explicit linked-version actions open
 their exact pin. The **Versions** disclosure loads the version list only when
 opened; expanding it never changes the displayed record. Choosing a version is
 explicit. The context names the selected kind, version and current/earlier state
 once; change provenance remains available without repeated version headings.
 **Edit** keeps its separate draft. Technical IDs and the archive snapshot remain
-in the **Technical details** disclosure. Published v0.7.3 instead uses separate
-**Edit** and **Saved versions** tabs with an initially visible version list.
+in the **Technical details** disclosure.
 
 Read-only fields use the same localized choices as editing. Absent optional
 fields are omitted; an explicit false value or measured zero remains visible.
@@ -319,6 +335,31 @@ are retained evidence excerpts; **Manuscript associations** refer to the
 separate links back to your manuscript. Neither establishes factual truth.
 Arrow keys, Home and End move between the editor's tabs; returning to Edit keeps
 an unsaved draft. Reading earlier versions does not revise or retarget a record.
+
+For daily CLI reads, list dossiers and copy a complete ID into the next command.
+Since v0.7.4, human dossier, claim and decision lists print complete IDs without
+ellipsis. JSON keeps the same identifiers and response fields.
+
+```sh
+lixity research dossier list --project ./novel --format table
+lixity research dossier list --project ./novel --tag history --tag harbour
+lixity research dossier DOSSIER_ID --project ./novel --section "Timeline" --format text
+lixity research dossier show DOSSIER_ID --project ./novel --section "Timeline" --revision 1 --format text
+```
+
+`--tag` is an exact, case-sensitive list filter; repeat it to require **all**
+specified tags. It matches current tags only, preserves list ordering and works
+with JSON, text or table output. It cannot be combined with a selected record,
+creation or revision fields. `--tags` remains comma-separated authored metadata;
+always use that full spelling when creating or revising tags. Tags remain
+1–50 characters and are classifications, not aliases or unique record IDs.
+
+`--section` text output includes the matched heading and its content, including
+nested subsections. Other sections are omitted; an empty section stays empty.
+Heading lookup ignores case and surrounding selector whitespace, but duplicate
+matching headings are ambiguous and require reading the full dossier. Direct ID,
+`show ID`, `inspect ID` and `--dossier-id ID` use the same section read. An explicit
+`--revision N` retains that version; opening text never re-pins or saves it.
 
 ### Claims linked to a dossier
 
@@ -635,6 +676,9 @@ reviewed project and snapshot; a later archive change requires another preview,
 not substituting a newer digest. Applying reads the packet, not later edits to
 the Markdown file. Export and packet output require new files outside the archive
 and its internal `.lixity` directory; existing files are never overwritten.
+
+Since v0.7.4, `dossier show ID --export-edit draft.md` and the direct ID form
+are equivalent. Explicit incompatible inspection/editing modes still fail.
 
 The leading comment identifies the project, record and base revision. Its
 `fields` object edits title, language, tags, geography and evidence IDs; the
@@ -1182,9 +1226,20 @@ lixity research compare --project ./novel --source-id SOURCE_ID \
 Counts share core prose scope: body paragraphs, lists and blockquotes, excluding
 code/comments/footnote definitions. With chapters, headings/front matter/appendix
 are excluded; otherwise remaining document prose is used. Comparison uses code-
-default parsing, source language and the explicit manuscript language (English by
-default); it does not inherit custom project `chapter_regex`/`appendix_marker`.
-Inspect the chapter trace before comparing with a differently configured dashboard.
+default parsing and the archived source language; it does not inherit custom
+project `chapter_regex`/`appendix_marker`. Inspect the chapter trace before
+comparing with a differently configured dashboard.
+
+Since v0.7.4, the CLI uses explicit `--language` first, otherwise the selected
+project's root-local `language`, otherwise English. Root `lixity.toml` overrides
+root `[tool.lixity]`; ancestor, user and nested manuscript settings are excluded.
+The archive's project language is not a fallback for a missing analysis setting.
+Use `--language auto` to request detection explicitly, or set
+`language = "auto"` in the selected root. A required malformed, unreadable or invalid language
+configuration fails instead of silently using English or `generic`. Supplying
+both a manuscript path and `--language` needs no project configuration read.
+The Python API keeps its English default unless `language` is supplied. Check
+the returned `manuscript_language`, `lexical_comparable` and comparison limits.
 
 Cross-language comparisons retain numbers but set `meta.lexical_comparable: false`
 and `cross_language_lexical_comparison` in `comparison_limits`; do not read lexical

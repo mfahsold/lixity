@@ -10,7 +10,7 @@
       !projectToken() || !bridge.contextToken() || !document.body.dataset.manuscriptSourceSha256) return;
   var draft = null, serial = 0, reviewSerial = 0, review = null, reviewContext = null, remembered = null, reviewProjectId = null, reviewPending = null;
   var passageOwner = null, passageReads = new Map(), reviewFailure = null;
-  var reviewFilter = null, openingRelated = false, relatedDestination = null;
+  var reviewFilter = null, renderedReviewFilter = null, openingRelated = false, relatedDestination = null;
   var pending = new Set(), dialog, picker, quotation, statement, consent, save, status, filterInput;
   var chapters = document.getElementById("chapters");
   if (!chapters) return;
@@ -295,6 +295,9 @@
   }
   function applyReview(report, value) {
     if (!live(value)) return;
+    var unchanged = review && reviewContext && same(value, reviewContext) &&
+      JSON.stringify(report) === JSON.stringify(review);
+    var filterKey = JSON.stringify(reviewFilter);
     if (passageOwner && passageOwner.reviewSerial && review && report.snapshot !== review.snapshot) invalidatePassage();
     reviewFailure = null;
     review = report; reviewContext = value; reviewProjectId = report.project_id;
@@ -309,8 +312,13 @@
       bridge.marks(panel, spans);
       paragraphLinksControl(panel);
     });
-    reviewBody.replaceChildren(renderReviewItems(report));
-    if (reviewTabHost) reviewTabHost.replaceChildren(renderReviewItems(report, true));
+    // An identical refresh must retain controls that native dialogs use as
+    // their focus-return targets. Filters still own a distinct rendered view.
+    if (!unchanged) reviewBody.replaceChildren(renderReviewItems(report));
+    if (reviewTabHost && (!unchanged || renderedReviewFilter !== filterKey)) {
+      reviewTabHost.replaceChildren(renderReviewItems(report, true));
+      renderedReviewFilter = filterKey;
+    }
   }
   function reviewNote(message, stale) {
     var note = element("p", message || label("manuscript_link_unavailable"), "ctl-status err");

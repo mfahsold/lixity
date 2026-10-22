@@ -8,7 +8,7 @@ from ..site import docs_url
 from .components import checkbox_field, esc, help_term, label, loading_state
 
 
-def render_research_panel(labels: Mapping[str, str] | None = None, *, research_context_token: str = "") -> str:
+def render_research_panel(labels: Mapping[str, str] | None = None, *, research_context_token: str = "", read_only: bool = False) -> str:
     """Renders the local research archive panel and its tab panes."""
 
     def L(key: str) -> str:
@@ -22,16 +22,16 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
     def pane(key: str) -> str:
         visibility = '' if key == 'dossiers' else ' style="display:none;"'
         return (f'<div class="research-tab-pane" id="rtab-{key}" role="tabpanel" '
-                f'aria-labelledby="research-tab-{key}" tabindex="0"{visibility}>')
+                f'{"data-requires-live " if key in ("search", "grounding") else ""}aria-labelledby="research-tab-{key}" tabindex="0"{visibility}>')
 
     parts: list[str] = [f'<section class="panel controls" id="research-manager" data-research-token="{esc(research_context_token)}">']
     parts.append(f'<h2 id="research-panel-title">{L("research_panel")}</h2>')
     parts.append('<div class="row row-between m-0">')
-    parts.append(f'<p class="ctl-note m-0" id="research-hint">{L("research_hint")}</p>')
+    parts.append(f'<p class="ctl-note m-0" id="research-hint">{L("site_research_hint" if read_only else "research_hint")}</p>')
     parts.append(f'<span class="ctl-status loading fw-medium" id="r-active-root">{L("research_loading")}</span>')
     parts.append('</div>')
 
-    parts.append('<details class="settings-advanced" id="research-setup-guide">')
+    parts.append('<details class="settings-advanced" id="research-setup-guide" data-requires-write>')
     parts.append(f'<summary>{L("setup_title")}</summary><div class="ctl-group">')
     parts.append(f'<p class="ctl-note">{L("setup_intro")}</p>')
     parts.append(f'<button type="button" class="ctl" id="research-setup-check">{L("setup_check")}</button>')
@@ -56,7 +56,7 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
     parts.append(f'<details><summary>{L("setup_advanced")}</summary><pre class="research-dossier-body-source" id="setup-diagnostics"></pre></details>')
     parts.append('</div></details>')
 
-    parts.append(f'<button type="button" class="ctl" id="research-revision-batch-review" hidden>{L("research_revision_batch_review")}</button>')
+    parts.append(f'<button type="button" class="ctl" id="research-revision-batch-review" data-requires-write hidden>{L("research_revision_batch_review")}</button>')
     parts.append('<div class="research-navigation" id="research-navigation">')
     parts.append(f'<button type="button" class="ctl research-navigation-control" '
                  f'id="research-navigation-previous" aria-controls="research-tabs" '
@@ -66,14 +66,14 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
         selected = key == "dossiers"
         parts.append(f'<button type="button" class="ctl{" active" if selected else ""}" '
                      f'id="research-tab-{key}" data-rtab="{key}" role="tab" '
-                     f'aria-controls="rtab-{key}" aria-selected="{str(selected).lower()}" '
+                     f'{"data-requires-live " if key in ("search", "grounding") else ""}aria-controls="rtab-{key}" aria-selected="{str(selected).lower()}" '
                      f'tabindex="{0 if selected else -1}">{L("research_tab_" + key)}</button>')
     parts.append('</div>')
     parts.append(f'<button type="button" class="ctl research-navigation-control" '
                  f'id="research-navigation-next" aria-controls="research-tabs" '
                  f'aria-label="{L("research_navigation_next")}" hidden>&rsaquo;</button></div>')
 
-    parts.append('<div id="research-init-box" class="ctl-group" style="display:none;">')
+    parts.append('<div id="research-init-box" data-requires-write class="ctl-group" style="display:none;">')
     parts.append(f'<span class="ctl-label">{help_term(labels, "research_init", L("research_not_initialized"))}</span>')
     parts.append(f'<p class="ctl-note">{L("research_init_note")}</p>')
     parts.append('<div class="row">')
@@ -84,11 +84,11 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
 
     parts.append(pane("sources"))
     parts.append(f'<h3 class="section-heading">{L("zotero_retained")}</h3>')
-    parts.append(f'<p class="ctl-note">{L("research_captures_hint")}</p>')
+    parts.append(f'<p class="ctl-note">{L("site_research_hint" if read_only else "research_captures_hint")}</p>')
     parts.append(f'<input class="ctl full-width mb-2" type="search" id="r-filter-sources" aria-label="{L("research_filter_sources")}" placeholder="{L("research_filter_sources")}"/>')
     parts.append('<p class="ctl-note" id="r-filter-sources-status" aria-live="polite" hidden></p>')
     parts.append(f'<div id="research-sources-list">{loading_state(label(labels, "research_loading"))}</div>')
-    parts.append('<details class="settings-advanced" id="zotero-box">')
+    parts.append('<details class="settings-advanced" id="zotero-box" data-requires-write>')
     parts.append(f'<summary>{L("research_capture_zotero")}</summary><div class="ctl-group">')
     parts.append(f'<p class="ctl-note">{L("zotero_intro")}</p>')
     parts.append('<div class="row">')
@@ -102,7 +102,7 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
     parts.append('</div>')
     parts.append(checkbox_field('<input type="checkbox" id="r-zotero-retention"/>', L("research_retention_zotero")))
     parts.append('<div id="r-zotero-results" aria-live="polite"></div></div></details>')
-    parts.append('<details class="settings-advanced" id="r-local-import">')
+    parts.append('<details class="settings-advanced" id="r-local-import" data-requires-write>')
     parts.append(f'<summary>{L("research_import_alternative")}</summary>')
 
     parts.append('<div class="ctl-group">')
@@ -149,7 +149,7 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
     parts.append('</div>')
 
     parts.append(pane("dossiers"))
-    parts.append('<details class="research-composer" id="r-dos-composer">')
+    parts.append('<details class="research-composer" id="r-dos-composer" data-requires-write>')
     parts.append(f'<summary data-help="{L("help_research_dossier")}">{L("research_dossier_heading")}</summary><div class="ctl-group research-composer-body">')
     parts.append('<div class="row mb-2">')
     parts.append(form_field("r-dos-title", "research_dossier_title",
@@ -187,7 +187,7 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
     parts.append(f'<button type="button" class="ctl" id="r-claim-matrix-btn">{L("research_export_matrix")}</button>')
     parts.append('</div>')
     parts.append('<div id="rtab-claims-list">')
-    parts.append('<details class="research-composer" id="r-claim-composer">')
+    parts.append('<details class="research-composer" id="r-claim-composer" data-requires-write>')
     parts.append(f'<summary data-help="{L("help_research_claim")}">{L("research_claim_heading")}</summary><div class="ctl-group research-composer-body">')
     parts.append('    <div class="row mb-2">')
     parts.append(form_field("r-claim-title", "research_claim_title",
@@ -225,7 +225,7 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
     parts.append('    </div>')
     parts.append('  </div>')
     parts.append('</details>')
-    parts.append('<details class="research-composer" id="r-link-composer">')
+    parts.append('<details class="research-composer" id="r-link-composer" data-requires-write>')
     parts.append(f'<summary data-help="{L("help_research_evidence")}">{L("research_link_heading")}</summary><div class="ctl-group research-composer-body">')
     parts.append(f'<button type="button" class="ctl" id="r-find-passage">{L("research_find_passage")}</button>')
     parts.append('    <div class="row mb-2">')
@@ -251,7 +251,7 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
     parts.append(f'  <div id="research-claims-list">{loading_state(label(labels, "research_loading"))}</div>')
     parts.append('<div class="ctl-group research-relation-section">')
     parts.append(f'<h3>{L("research_relation_heading")}</h3><p class="ctl-note">{L("research_relation_hint")}</p>')
-    parts.append(f'<details class="research-composer" id="r-relation-composer"><summary>{L("research_relation_create")}</summary>')
+    parts.append(f'<details class="research-composer" id="r-relation-composer" data-requires-write><summary>{L("research_relation_create")}</summary>')
     parts.append('<form id="r-relation-form">')
     parts.append('<div class="research-relation-fields">')
     for role in ("from", "to"):
@@ -275,7 +275,7 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
     # Tab Pane: Decisions
     parts.append(pane("decisions"))
     parts.append(f'<p class="ctl-note" id="research-decisions-intro">{L("research_decisions_intro")}</p>')
-    parts.append('<details class="research-composer" id="r-decision-composer">')
+    parts.append('<details class="research-composer" id="r-decision-composer" data-requires-write>')
     parts.append(f'<summary data-help="{L("help_research_decision")}">{L("research_decision_heading")}</summary><div class="ctl-group research-composer-body">')
     parts.append('    <div class="row mb-2">')
     parts.append(form_field("r-decision-title", "research_decision_title",

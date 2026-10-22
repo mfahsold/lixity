@@ -5,6 +5,8 @@ Each layout exists because a different reader needs different geometry:
 * the report answers "what did the analysis find" and follows the measured
   report the CLI already writes;
 * the editorial copy leaves correction space and numbers manuscript lines;
+* the neutral A4 document retains authored text without adding a title page,
+  running heads, line numbers or analysis;
 * the book layout is for reading a manuscript continuously, so it uses a serif
   measure, indented paragraphs, chapter openings and running heads;
 * the 30 by 60 sheet is a submission format: fixed character grid, fixed line
@@ -529,6 +531,8 @@ def _render_manuscript(document: Document, sections: ManuscriptSections,
             heading_runs = _manuscript_runs(ManuscriptBlock("heading", heading), sheet=sheet)
             visible_heading = "".join(text for text, _role in heading_runs)
             heading_size = style.size if sheet else (17.0 if style.mode == "editor" else 13.5)
+            if style.mode == "document":
+                heading_size = 16.0
             document.add(Block(
                 visible_heading, role="mono" if sheet else "heading", size=heading_size,
                 leading=style.leading / heading_size,
@@ -557,6 +561,8 @@ def _render_manuscript(document: Document, sections: ManuscriptSections,
             if semantic.kind == "heading":
                 role = "mono" if sheet else "heading"
                 size = style.size if sheet else (13.0 if style.mode == "editor" else max(11.0, style.size * 1.12))
+                if style.mode == "document":
+                    size = max(style.size, 20.0 - semantic.level * 2.0)
                 align = GRID if sheet else LEFT
                 before = 0.0 if sheet else style.leading
                 after = style.leading * (1.0 if sheet else 0.5)
@@ -677,15 +683,37 @@ def editor_pdf(
     return document.render()
 
 
+def document_pdf(
+    *,
+    title: str,
+    author: str = "",
+    chapters: Sequence[tuple[str, Sequence[str | ManuscriptBlock]]] | None = None,
+    body: str = "",
+    choice: FontChoice | None = None,
+    metadata: Mapping[str, str] | None = None,
+) -> bytes:
+    """Render neutral A4 text; title and author are metadata, not added prose."""
+    sections = _book_sections(chapters, body, include_title=True)
+    document = Document(
+        _manuscript_fonts(choice, sections), page_size=A4,
+        margins=(72.0, 72.0, 72.0, 72.0),
+        metadata={"title": title, "author": author, **(metadata or {})},
+    )
+    document.baseline = 16.2
+    _render_manuscript(document, sections, _ManuscriptStyle("document", 12.0, 16.2, 8.1))
+    return document.render()
+
+
 def _book_sections(
     chapters: Sequence[tuple[str, Sequence[str | ManuscriptBlock]]] | None, body: str,
+    *, include_title: bool = False,
 ) -> ManuscriptSections:
     if chapters is not None:
         return [(heading, [ManuscriptBlock("paragraph", block) if isinstance(block, str) else block
                            for block in blocks]) for heading, blocks in chapters]
     from .models import CorpusConfig
 
-    return manuscript_sections(body, CorpusConfig())
+    return manuscript_sections(body, CorpusConfig(), include_title=include_title)
 
 
 _MARKDOWN_INLINE = re.compile(r"(\*\*|__|\*|_|`)")
@@ -757,6 +785,7 @@ __all__ = [
     "FontChoice",
     "FontUnavailable",
     "book_pdf",
+    "document_pdf",
     "editor_pdf",
     "manuscript_pdf",
     "report_pdf",

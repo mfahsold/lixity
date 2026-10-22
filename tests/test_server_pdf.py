@@ -58,7 +58,7 @@ def file_bytes(project):
 @pytest.mark.parametrize("layout,page_size", [
     ("editor", b"595.276 841.890"),
     ("book", b"419.528 595.276"), ("sheet", b"595.276 841.890"),
-    ("report", b"595.276 841.890"),
+    ("report", b"595.276 841.890"), ("document", b"595.276 841.890"),
 ])
 def test_each_layout_downloads_a_pdf_without_creating_or_changing_files(pdf_server, layout, page_size):
     port, project, _handler, token = pdf_server
@@ -107,16 +107,16 @@ def test_download_resolves_shared_project_configuration_once(pdf_server, monkeyp
 
     port, project, _handler, token = pdf_server
     calls: list[str | None] = []
-    original = routes_pdf.load_project_config
+    original = routes_pdf.read_explicit_project_config
 
     def counting(start=None):
         calls.append(str(start) if start is not None else None)
         return original(start)
 
-    monkeypatch.setattr(routes_pdf, "load_project_config", counting)
+    monkeypatch.setattr(routes_pdf, "read_explicit_project_config", counting)
     status, _headers, body = request(port, {"layout": "book", "project_token": token})
     assert status == 200, body.decode("utf-8", errors="replace")
-    assert calls == [str(project / "synthetic.md")]
+    assert calls == [str(project)]
 
 
 @pytest.mark.parametrize("source_state", ["unselected", "missing", "empty", "headings"])

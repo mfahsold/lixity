@@ -313,8 +313,8 @@ def render_motifs_panel(
     motifs: Mapping[str, Any] | None,
     labels: Mapping[str, str] | None = None,
 ) -> str:
-    """Renders the motifs and repeated phrases panel."""
-    if not (motifs and (motifs.get("motifs") or motifs.get("repeated_phrases"))):
+    """Render motifs, manuscript phrase totals and local chapter-prose echoes."""
+    if not (motifs and (motifs.get("motifs") or motifs.get("repeated_phrases") or motifs.get("echoes"))):
         return ""
 
     def L(key: str) -> str:
@@ -342,9 +342,10 @@ def render_motifs_panel(
         parts.append("</tbody></table></div>")
 
     if motifs.get("repeated_phrases"):
-        parts.append('<div class="table-wrap"><table><thead><tr>')
+        parts.append('<div class="table-wrap motif-phrases" tabindex="0" role="region" '
+                     f'aria-label="{L("mot_phrase")}"><table><thead><tr>')
         parts.extend(
-            f"<th>{L(key)}</th>" for key in ("mot_phrase", "mot_count", "mot_chapters")
+            f"<th>{L(key)}</th>" for key in ("mot_phrase", "mot_global_count", "mot_chapters")
         )
         parts.append("</tr></thead><tbody>")
         for phrase in motifs["repeated_phrases"]:
@@ -359,6 +360,25 @@ def render_motifs_panel(
                 f"</tr>"
             )
         parts.append("</tbody></table></div>")
+
+    if motifs.get("echoes"):
+        parts.append(f'<h3>{L("mot_echoes")}</h3><p class="panel-guide">{L("mot_echo_note")}</p>')
+        parts.append('<div class="table-wrap motif-echoes" tabindex="0" role="region" '
+                     f'aria-label="{L("mot_echoes")}"><table><thead><tr>')
+        parts.extend(
+            f"<th>{L(key)}</th>" for key in ("mot_phrase", "mot_echo_chapter", "mot_echo_count", "mot_echo_words")
+        )
+        parts.append("</tr></thead><tbody>")
+        for echo in motifs["echoes"]:
+            chapter = int(echo["chapter"])
+            parts.append(
+                f'<tr><td class="name">{esc(echo["term"])}</td>'
+                f'<td class="num"><a href="#ch-{chapter}" data-jump="#ch-{chapter}">{chapter}</a></td>'
+                f'<td class="num">{int(echo["count"])}</td>'
+                f'<td class="num">{int(echo["first_word"])}–{int(echo["last_word"])}</td></tr>'
+            )
+        parts.append('</tbody></table></div>')
+        parts.append(f'<details><summary>{L("mot_echo_method")}</summary><p>{L("mot_echo_limits")}</p></details>')
 
     parts.append("</section>")
     return "".join(parts)

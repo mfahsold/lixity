@@ -122,6 +122,24 @@ server.serve_forever()
         }
         assert.ok(!text.includes('\\emph{') && !text.includes('\\textbf{'), 'Supported TeX text commands are rendered instead of copied literally');
       }
+      await page.locator('#manuscript-pdf-layout').selectOption('document');
+      const documentDownload = page.waitForEvent('download');
+      await page.locator('#manuscript-pdf-download').click();
+      const plain = await documentDownload;
+      assert.equal(plain.suggestedFilename(), 'manuscript-document.pdf');
+      const plainPath = path.join(artifacts, `native-document-${width}.pdf`);
+      await plain.saveAs(plainPath);
+      assert.equal(requests.at(-1).layout, 'document');
+      assert.match(fs.readFileSync(plainPath).toString('latin1'), /\/MediaBox \[0 0 595\.\d+ 841\.\d+\]/);
+      const plainText = spawnSync('pdftotext', [plainPath, '-'], {encoding: 'utf8'});
+      if (!plainText.error) {
+        assert.equal(plainText.status, 0, plainText.stderr);
+        assert.ok(plainText.stdout.includes('Editorial fixture'), 'Neutral documents retain the authored title');
+        assert.ok(plainText.stdout.includes('First retained list item'), 'Neutral documents retain actual source prose');
+        assert.ok(!plainText.stdout.includes('Synthetic editorial fixture'), 'Entered metadata does not add a control header or cover');
+      }
+      assert.deepEqual(fs.readFileSync(server.fixture.manuscript), before);
+      await page.locator('#manuscript-pdf').screenshot({path: path.join(artifacts, `native-document-${width}.png`)});
       if (width === 1440) {
         const invalid = Buffer.concat([before, Buffer.from('\nUnsupported math $x^2 + y^2$.\n')]);
         const downloadsBefore = downloads;
@@ -204,7 +222,7 @@ server.serve_forever()
       assert.equal(await form.getAttribute('data-project-token'), 'synthetic-token');
       assert.equal(await select.inputValue(), 'editor', 'Editorial A4 is the initial choice');
       assert.deepEqual(await select.locator('option').evaluateAll(options => options.map(option => option.value)),
-        ['editor', 'book', 'sheet', 'report']);
+        ['editor', 'book', 'sheet', 'report', 'document']);
       assert.equal(await button.isDisabled(), false);
       assert.ok((await button.textContent()).trim().length > 0);
       assert.doesNotMatch(await form.textContent(), /manuscript_pdf_[a-z_]+/, 'Controls use translated labels');
@@ -215,7 +233,7 @@ server.serve_forever()
         assert.equal(await form.isVisible(), true, `Project export remains visible in ${view}`);
       }
 
-      for (const layout of ['editor', 'book', 'sheet', 'report']) {
+      for (const layout of ['editor', 'book', 'sheet', 'report', 'document']) {
         await select.selectOption(layout);
         assert.equal(requests.length, downloads.length, 'Selecting a layout sends nothing');
         pending = new Promise(resolve => {release = resolve;});
@@ -305,6 +323,6 @@ server.serve_forever()
       await page.close();
     }
     const nativeTextChecked = await checkNativeEditorialPdf(browser);
-    console.log(`Manuscript PDF: editorial default and four layouts; capability/JavaScript gating, project-bound downloads, exact bytes, pending/errors/retry in seven desktop/mobile locales; real native Markdown/TeX-text PDF bytes/A4/pages at1440/320 and explicit math HTTP400 without a download passed; ${nativeTextChecked ? 'extracted content verified' : 'text inspection skipped (pdftotext unavailable)'}. Screenshots: ${artifacts}`);
+    console.log(`Manuscript PDF: editorial default and five layouts; capability/JavaScript gating, project-bound downloads, exact bytes, pending/errors/retry in seven desktop/mobile locales; real native Markdown/TeX-text PDF bytes/A4/pages at1440/320 and explicit math HTTP400 without a download passed; ${nativeTextChecked ? 'extracted content verified' : 'text inspection skipped (pdftotext unavailable)'}. Screenshots: ${artifacts}`);
   } finally {await browser.close();}
 })().catch(error => {console.error(error); process.exitCode = 1;});

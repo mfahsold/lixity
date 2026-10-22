@@ -125,7 +125,11 @@ def manuscript_pdf_controls(
     """The single native PDF form, placed with the global project commands."""
     def L(key: str) -> str:
         return esc(label(labels, key))
+    from ..pdf_export import PDF_LAYOUTS
+
     disabled = "" if available else " disabled"
+    choices = "".join(f'<option value="{layout}">{L("manuscript_pdf_" + layout)}</option>'
+                      for layout in PDF_LAYOUTS)
     return (
         '<details class="manuscript-pdf" id="manuscript-pdf">'
         f'<summary class="ctl" id="manuscript-pdf-title">{L("manuscript_pdf_title")}</summary>'
@@ -136,10 +140,7 @@ def manuscript_pdf_controls(
         '<div class="manuscript-pdf-actions"><div class="setting-field">'
         f'<label for="manuscript-pdf-layout">{L("manuscript_pdf_layout")}</label>'
         f'<select class="ctl" id="manuscript-pdf-layout" name="layout"{disabled}>'
-        f'<option value="editor">{L("manuscript_pdf_editor")}</option>'
-        f'<option value="book">{L("manuscript_pdf_book")}</option>'
-        f'<option value="sheet">{L("manuscript_pdf_sheet")}</option>'
-        f'<option value="report">{L("manuscript_pdf_report")}</option></select></div>'
+        f'{choices}</select></div>'
         '<button type="submit" class="ctl primary" id="manuscript-pdf-download" disabled>'
         f'{L("manuscript_pdf_download")}</button></div>'
         '<p class="ctl-status" id="manuscript-pdf-status" role="status" aria-live="polite">'

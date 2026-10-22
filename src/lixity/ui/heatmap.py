@@ -7,6 +7,7 @@ from typing import Any
 
 from ..format import num as format_num
 from ..style_fingerprint import (
+    FEATURE_UNITS,
     FEATURES,
     LAYER_FEATURES,
     MIN_COMPARABLE_SENTENCES,
@@ -43,16 +44,23 @@ FEATURE_HELP_KEYS: dict[str, str] = {
 def render_register_targets(
     fingerprint: StyleFingerprint | None, metrics: Any | None,
     labels: Mapping[str, str] | None, language_key: str,
+    *, settings_available: bool = False,
 ) -> str:
     """Author ranges are descriptive comparisons, independent of statistical z."""
     if fingerprint is None or not fingerprint.register_targets or metrics is None:
         return ""
     titles = {chapter.num: chapter.title for chapter in metrics.chapters}
     features = {name: label(labels, key) for name, key, _ in FEATURES}
+    units = {name: FEATURE_UNITS.get(language_key, {}).get(name, unit) for name, _key, unit in FEATURES}
     parts = ['<section class="panel" id="register-targets">',
              f'<h2>{esc(label(labels, "register_title"))}</h2>',
              f'<p class="panel-guide">{esc(label(labels, "register_hint"))}</p>',
-             '<div class="table-wrap"><table><thead><tr>']
+             f'<p class="ctl-note">{esc(label(labels, "register_scope_hint"))}</p>']
+    if settings_available:
+        parts.append('<p><a class="ctl-link" href="#settings-registers-summary" data-register-settings>'
+                     f'{esc(label(labels, "register_edit"))}</a></p>')
+    parts.append('<div class="table-wrap" tabindex="0" role="region" '
+                 f'aria-label="{esc(label(labels, "register_title"))}"><table><thead><tr>')
     parts.extend(f'<th scope="col">{esc(label(labels, key))}</th>' for key in (
         "chapter", "register_name", "register_target", "register_lower", "register_upper", "scene_value", "status"))
     parts.append('</tr></thead><tbody>')
@@ -61,7 +69,8 @@ def render_register_targets(
         for feature, comparison in targets.items():
             parts.append(f'<tr data-register="{esc(register)}">'
                          f'<th scope="row">{number}. {esc(titles.get(number, ""))}</th>'
-                         f'<td>{esc(register)}</td><td>{esc(features.get(feature, feature))}</td>')
+                         f'<td>{esc(register)}</td><td>{esc(features.get(feature, feature))} '
+                         f'<small>{esc(units.get(feature, ""))}</small></td>')
             for key in ("lower", "upper", "value"):
                 value = comparison[key]
                 parts.append(f'<td>{format_num(value, language_key, 2) if value is not None else "–"}</td>')

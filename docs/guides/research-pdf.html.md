@@ -2,7 +2,7 @@
 
 Collect sources, read and annotate in Zotero. Use Lixity's research workspace to connect selected evidence with claims, authorial decisions and exact manuscript quotations. A capture preserves the source version you used; it does not establish that a claim is true.
 
-Updated 21 October 2026
+Updated 22 October 2026
 
 **Before importing:**
 
@@ -20,9 +20,11 @@ and
 
 Open **PDF export** above the workspace views, choose a purpose and select **Download PDF**. The same composer serves the browser and CLI; downloads create no server export files and change no manuscript. Standalone HTML has no download action.
 
-**Since v0.7.0:** the initial choice is an A4 editorial copy with line numbers and a correction margin. Compare the same six chapters of *The Crate at Warehouse 4* in all four prepared files below; these are exports from the shared demo project.
+**Since v0.7.0:** the initial choice is an A4 editorial copy with line numbers and a correction margin. Compare the same six chapters of *The Crate at Warehouse 4* in all five prepared files below; these are exports from the shared demo project.
 
-- **Editorial copy:** A4, readable text and space for annotations. [Example PDF](../demo/warehouse-4-editor.pdf).
+- **Neutral document:** plain A4 for an exposé or everyday text, with authored headings and no added title page, header, footer or line numbers. [Example PDF](../demo/warehouse-4-document.pdf).
+
+- **Editorial copy:** A4, readable text and space for annotations. [Same excerpt](../demo/warehouse-4-editor.pdf).
 
 - **Reading copy:** A5, chapter openings and continuous reading. [Same excerpt](../demo/warehouse-4-book.pdf).
 
@@ -32,14 +34,29 @@ Open **PDF export** above the workspace views, choose a purpose and select **Dow
 
 ```
 lixity pdf manuscript.md --layout editor -o editorial.pdf
+lixity pdf expose.md --layout document -o expose.pdf
 lixity pdf --help
 ```
 
+**Since v0.7.4:** the neutral document keeps the manuscript's own title and structure; configured title and author are PDF metadata only. It adds no analysis, byline or control notice. CLI PDF and dashboard outputs must differ from the source, including symbolic and hard-link aliases; the guard runs again immediately before atomic replacement.
+
 Manuscript copies retain subheadings, scene breaks, lists, quotations, inline emphasis and endnotes. A bounded set of embedded LaTeX text commands is supported without executing TeX. Unsupported TeX constructs fail explicitly; mathematics and image placement are unavailable. Host TrueType fonts keep supported text searchable and copyable. Missing glyphs identify the font role and Unicode codepoint; there is no mixed-script fallback, contextual shaping, bidirectional layout or PDF/X preflight. See [options and limits](../USAGE.md#lixity-pdf).
+
+## Share a reading website
+
+In **Project actions → Reading website**, download a ZIP that a reader can unzip and open in a browser. Choose a review workspace, a novel with selected background material, or a standalone companion without the novel text. The reader needs no Lixity installation.
+
+For a reader companion, prepare a named profile under **Project → Settings → Reading website profiles**: select dossier sections, public titles and the chapter after which each note should appear. A reader explicitly confirms their progress; scrolling does not mark chapters as read. Images, diagrams and offline maps can keep the background easy to explore.
+
+Try the fictional [novel and companion](../demo/reader/) or [standalone companion](../demo/companion/). Change the completed chapter to see the difference.
+
+**For an excerpt, set an export chapter limit.** Later material and its assets are left out of the files. The progress control alone only hides included material; it is not access protection. Selected dossier text may itself contain spoilers, so review the copy before sharing.
+
+The review workspace has a different scope: optional Research includes internal notes, earlier authored versions and cited excerpts. Original source files always require a separate choice. Anyone with the files can copy them; confidential hosting needs its own access controls. See [configuration and exact sharing scope](../USAGE.md#export-a-reading-website).
 
 ## Enter publication details
 
-Open **Project → Settings → A5 book PDF details** in the native workspace. This optional section starts collapsed and requires an explicit project. Title, author and publication data use the existing configuration and PDF composer. Select the inclusion checkbox to add entered imprint text after the A5 reading copy's title page. A4 editorial copies, submission sheets and reports omit it; all-empty fields add no blank imprint page. Long entries can continue across pages.
+Open **Project → Settings → A5 book PDF details** in the native workspace. This optional section starts collapsed and requires an explicit project. Title, author and publication data use the existing configuration and PDF composer. Select the inclusion checkbox to add entered imprint text after the A5 reading copy's title page. Neutral documents, A4 editorial copies, submission sheets and reports omit it; all-empty fields add no blank imprint page. Long entries can continue across pages.
 
 Enter publisher/self-publisher name and address, printer name and address, edition, year, print and digital ISBNs, rights notice, credits or other information as needed. Every text field defaults to empty. Lixity checks syntax and bounds, not assigned ISBNs, rights or legal completeness, and supplies no inferred identity, address, copyright notice or DNB catalog claim. See the [complete configuration contract](../USAGE.md#publication-settings).
 
@@ -51,7 +68,7 @@ Digital provider/website duties are separate. [MStV § 18](https://www.gesetze-b
 
 [ISBNs are voluntary](https://german-isbn.de/faq/faq-isbn); separately available print, PDF and EPUB formats use distinct numbers when assigned. Lixity compares canonical identifiers, so equivalent ISBN-10 and ISBN-13 forms cannot identify two different formats. A rights notice is optional: [copyright generally arises without formalities](https://www.wipo.int/en/web/copyright/faq-copyright). [Legal deposit](https://www.gesetze-im-internet.de/dnbg/__14.html) is a separate publication process that Lixity does not perform.
 
-[BFSG § 1](https://www.gesetze-im-internet.de/bfsg/__1.html) covers consumer e-book services provided after 28 June 2025; [§ 3(3)](https://www.gesetze-im-internet.de/bfsg/__3.html) exempts microenterprises providing services. Scope and exceptions must be checked for the publication. Lixity exports fixed-layout A5 book/A4 sheet/A4 report PDFs, without EPUB, PDF/UA or PDF/X certification. Searchable text, metadata and bookmarks do not establish BFSG compliance.
+[BFSG § 1](https://www.gesetze-im-internet.de/bfsg/__1.html) covers consumer e-book services provided after 28 June 2025; [§ 3(3)](https://www.gesetze-im-internet.de/bfsg/__3.html) exempts microenterprises providing services. Scope and exceptions must be checked for the publication. Lixity exports fixed-layout A4 document/editorial/sheet/report and A5 book PDFs, without EPUB, DOCX, custom trim sizes or PDF/UA/PDF/X certification. Searchable text, metadata and bookmarks do not establish BFSG compliance.
 
 **Since v0.3.0:** PDFs share title/author/language metadata and corrected font subsets. A5 chapters have bookmarks; body pages have bounded running headers and physical folios. Title/imprint pages have no running decorations but still count toward folios. A4 sheets and reports show current/total page counts outside the body grid.
 
@@ -97,7 +114,7 @@ In the [Warehouse 4 demo project's Research view](../demo/report.html#research-m
 
 *Historical visual references stay attached to exact source versions. [Mobile map view](../screenshots/dashboard-dossier-image-mobile.png) · [Harbour photochrom](../screenshots/dashboard-dossier-photo.png) · [Places and journeys](../screenshots/dashboard-dossier-geography.png) · [Credits and file hashes](../assets/research/sources.json).*
 
-Use **Places and routes** in the dossier editor for named points, paths and areas. Maps open with OpenStreetMap; turn off the background or choose the numbered sketch for offline use. Tile requests disclose the viewed area and client IP to the provider and stop outside the visible map/project context. The view explains its measurements and limits; historical map images remain separate evidence. See [geography and v8 compatibility](../research/USAGE.md#keep-places-and-journeys-in-a-dossier).
+Use **Places and routes** in the dossier editor for named points, paths and areas. In the local app, maps open with OpenStreetMap; turn off the background or choose the numbered sketch for offline use. Exported reading websites keep their map geometry offline and make no tile requests. Tile requests disclose the viewed area and client IP to the provider and stop outside the visible map/project context. The view explains its measurements and limits; historical map images remain separate evidence. See [geography and v8 compatibility](../research/USAGE.md#keep-places-and-journeys-in-a-dossier).
 
 Images and rendered diagrams share a [local zoom viewer](../screenshots/dashboard-dossier-image-zoom.png). [Mermaid diagrams](../screenshots/dashboard-dossier-diagram.png) retain their source; restricted or unsupported syntax stays readable as source. No CDN or diagram upload is required.
 
@@ -179,7 +196,7 @@ Use returned IDs, passage first and claim second. v0.7.1 also accepts complete b
 
 Exact resolved quotes are marked when their paragraph opens. Changed text or claim versions request review; an edit outside the quote resolves as *adjusted* and can be re-pinned explicitly in the review tab (or with `reconcile-manuscript --accept-moved`), while edited quotes and ambiguous paragraphs remain unresolved. Saved associations are listed in the research **Review** tab with their anchor state and review flags; listing them never writes or repins. These flags do not establish a contradiction or factual support. Both dossier readers show current linked claims with saved-version history and active saved quote counts. Zero saved links does not establish that a claim is unused in prose.
 
-**Since v0.7.3:** a paragraph's **… → Saved research**, saved-association count or marked quotation opens saved context beside the manuscript. Read its exact claim and dossier versions and the author's confidence assessment. Associated decisions are labelled as current dossier context; they are not a reconstruction of that quotation's historical state. Titles open the displayed versions, and **Review** opens the dedicated anchor review. The summary shows up to five associations with their total. Opening it writes nothing, and an empty summary means only that this passage has no saved associations.
+**Since v0.7.4:** choose **Explore passage → Research for this passage**, a passage association count or a marked quotation to open its linked context beside the manuscript. Quotations of the same claim share a compact card; current dossier decisions have a separate count. Titles open current entries; **Linked version** opens the exact earlier claim or dossier version retained by the association. Current decisions do not reconstruct the quotation's historical state. **Review** opens the dedicated anchor review. Opening context writes nothing, and an empty summary means only that this passage has no saved associations.
 
 **Before the first save:**
 

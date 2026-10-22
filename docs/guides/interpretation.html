@@ -43,7 +43,7 @@
     "name": "Lixity",
     "url": "https://mfahsold.github.io/lixity/"
   },
-  "dateModified": "2026-10-19",
+  "dateModified": "2026-10-22",
   "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE",
   "mainEntityOfPage": "https://mfahsold.github.io/lixity/guides/interpretation.html",
   "image": {
@@ -93,7 +93,7 @@
 <nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="../#guides">Guides</a></li><li><span aria-current="page">Interpret results</span></li></ol></nav>
 <h1>Understand manuscript metrics and style consistency</h1>
 <p>Lixity describes patterns in the manuscript you provide. Its style reference compares chapters with that manuscript's own baseline. A signal is a reason to inspect a passage in context; it is not an objective quality score or an instruction to rewrite it.</p>
-<p class="updated">Updated <time datetime="2026-10-19">19 October 2026</time></p>
+<p class="updated">Updated <time datetime="2026-10-22">22 October 2026</time></p>
 
 <h2 id="consistency">What does consistency measure?</h2>
 <p>Consistency is the proportion of measured chapter–feature cells whose noise-adjusted deviation stays below the active mild threshold. A cell is one feature in one chapter, such as sentence length in chapter two. This is not simply the percentage of chapters that pass a test.</p>
@@ -105,7 +105,7 @@
 <p>For API compatibility, style JSON schema version 4 retains the historical numeric <code>consistency</code> value. The new <code>measured_cells</code> field identifies the supporting count. When it is zero, the retained value <code>1.0</code> is a compatibility sentinel and must not be displayed as 100%. Older JSON without the field cannot establish availability from that number alone.</p>
 
 <h2 id="scenes">Compare scenes within a register</h2>
-<p>The Scenes &amp; style registers view measures scenes separately. Assign registers and target ranges in project settings; each register has its own manuscript-only median. Counts and approximate standard errors show the data behind the values. Targets are your choices, not automatic writing rules. <a href="../USAGE.md#scene-registers-and-project-targets">Set up scene comparisons</a>.</p>
+<p>The Scenes &amp; style registers view measures scenes separately. Assign scene registers and target ranges in <code>lixity.toml</code>; each scene register has its own manuscript-only median. Chapter registers have a separate editor in Project settings, and display filters do not recalculate the whole-book reference. Counts and approximate standard errors show the data behind the values. Targets are your choices, not automatic writing rules. <a href="../USAGE.md#scene-registers-and-project-targets">Set up scene comparisons</a>.</p>
 
 <h2 id="minimums">How much text is enough?</h2>
 <div class="feature-table-wrapper" role="region" aria-label="Minimum text requirements" tabindex="0">

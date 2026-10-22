@@ -2,6 +2,12 @@
 
 Practical articles for reading a draft, checking its research and investigating a question: is this change of voice deliberate, is a phrase repeating too close by, or did the chapter's tense drift? Each article connects a tool to a reading decision. All examples use public-domain or synthetic texts.
 
+## [What's new in Lixity 0.7.4: share a reading website](whats-new-lixity.html)
+
+Updated 22 October 2026 · 8 minutes
+
+Give a reader a browsable project copy, follow a passage into Research and back, and tell counted text from paragraph comparisons. Includes the earlier 0.4.8 notes as release history.
+
 ## [Give the manuscript room to read](manuscript-reading-workbench.html)
 
 Updated 21 October 2026 · 6 minutes
@@ -19,12 +25,6 @@ A letter, a child's account or a formal record can differ on purpose. Record tha
 Published 19 October 2026 · 4 minutes
 
 Repetition across a book and repetition inside one passage raise different questions. Count a synthetic example yourself, see how local windows and overlapping phrases affect the result, then read the echo in context.
-
-## [What's new in Lixity: numbers you can compare, evidence that survives edits](whats-new-lixity.html)
-
-Posted 16 October 2026 · 7 minutes
-
-Documented comparability floors replace big-looking statistics from short chapters, evidence anchors now tolerate edits outside the quote (with an explicit re-pin), and the interface, research workspace and service logs are consolidated. What changed in Lixity 0.4.8.
 
 ## [Finding tense switches in a novel — and deciding which ones matter](tense-switches.html)
 
@@ -44,13 +44,15 @@ The
 
 [first-look guide](../guides/first-look.html)
 
-walks from install to the first passage in a few minutes;
+walks through the browser demo in a few minutes;
 
 [public-domain examples](../examples/effi-briest.html)
 
 show finished analyses without installation.
 
 ## More reading
+
+- [Share a reading website](../guides/research-pdf.html#reading-website) — choose what a reader receives in a fixed project snapshot.
 
 - [How to interpret the results](../guides/interpretation.html) — what z*, FDR sets and heuristic profiles do and do not establish.
 

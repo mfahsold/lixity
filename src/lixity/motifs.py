@@ -15,6 +15,7 @@ device. The report provides counts and locations so the editor can decide.
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -26,6 +27,35 @@ from .markdown_parser import prose_text, split_chapters
 from .models import CorpusConfig
 
 MIN_PHRASE_COUNT = 3  # a repeated n-gram must occur at least this often
+
+
+def resolve_motif_settings(
+    explicit: Mapping[str, str] | None, settings: Mapping[str, Any],
+) -> dict[str, str]:
+    """Resolve explicit patterns or compatible canonical/legacy project tables.
+
+    An explicit mapping replaces project patterns, including an empty mapping.
+    Project tables combine distinct names; conflicting duplicate names fail
+    instead of silently changing which pattern a named motif measures.
+    """
+    tables = (("motifs", explicit),) if explicit is not None else (
+        (key, settings[key]) for key in ("motif_regexes", "motifs") if key in settings
+    )
+    patterns: dict[str, str] = {}
+    for key, table in tables:
+        if not isinstance(table, Mapping):
+            raise ValueError(f"{key} must be a table of motif names and regular expressions")
+        for name, pattern in table.items():
+            if not isinstance(name, str) or not name.strip() or not isinstance(pattern, str):
+                raise ValueError(f"{key} must map nonblank motif names to regular-expression strings")
+            try:
+                compile_pattern(pattern)
+            except re.error as exc:
+                raise ValueError(f"Invalid {key} pattern for {name}: {exc}") from exc
+            if name in patterns and patterns[name] != pattern:
+                raise ValueError(f"Conflicting motif {name} in motif_regexes and motifs")
+            patterns[name] = pattern
+    return patterns
 
 
 @dataclass(frozen=True)
@@ -126,8 +156,13 @@ def motif_report(
     echo_min_count: int = 2,
     top_echoes: int = 20,
 ) -> MotifReport:
-    """Motif presence and repetition signals (deterministic, offline)."""
+    """Motif presence and repetition signals (deterministic, offline).
+
+    Omitted patterns inherit ``config.motif_regexes``; an explicit mapping,
+    including ``{}``, replaces those configured patterns.
+    """
     config = config or CorpusConfig()
+    patterns = resolve_motif_settings(motifs, {"motif_regexes": config.motif_regexes})
     resolved = resolve_language(config, sample_text=text)
     word_re = compile_word_pattern(resolved.word_regex)
     content_blacklist = resolved.function_words | resolved.stopwords
@@ -140,7 +175,7 @@ def motif_report(
     total_words = sum(len(word_re.findall(body)) for body in chapter_bodies.values())
 
     motif_items: list[MotifPresence] = []
-    for name, pattern in (motifs or {}).items():
+    for name, pattern in patterns.items():
         compiled = compile_pattern(pattern)
         per_chapter: dict[int, int] = {}
         for number, body in chapter_bodies.items():

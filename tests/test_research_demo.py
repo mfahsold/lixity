@@ -21,6 +21,12 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import make_screenshots  # noqa: E402
 
 
+def site_data(document):
+    match = re.search(r'<script[^>]*id="lixity-site-data"[^>]*>(.*?)</script>', document, re.DOTALL)
+    assert match, "The demo must use the production website's frozen read provider"
+    return json.loads(match[1])
+
+
 @pytest.fixture
 def research_fixture(tmp_path):
     return make_screenshots.build_research_fixture(tmp_path)
@@ -43,7 +49,11 @@ def public_demo(tmp_path, research_fixture, monkeypatch):
         return b"%PDF-synthetic-demo\n" + json.dumps({"text": text, **options}).encode("utf-8")
 
     monkeypatch.setattr(pdf_export, "compose_pdf", synthetic_pdf)
-    return make_screenshots.build_research_demo(tmp_path, research_fixture)
+    project = tmp_path / "research-demo"
+    before = {path.relative_to(project): path.read_bytes() for path in project.rglob("*") if path.is_file()}
+    target = make_screenshots.build_research_demo(tmp_path, project)
+    assert {path.relative_to(project): path.read_bytes() for path in project.rglob("*") if path.is_file()} == before
+    return target
 
 
 def test_visual_fixture_refuses_missing_or_changed_reviewed_assets(tmp_path):
@@ -175,10 +185,12 @@ def test_public_demo_externalizes_image_bytes_and_preserves_source_records(tmp_p
     target = public_demo
     assert target == tmp_path / "docs/demo/report.html"
     document = target.read_text(encoding="utf-8")
-    fixture_path = target.with_name("research-data.json")
-    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
-    assert '<span class="product-name">Lixity · read-only</span>' in document
-    assert re.search(r'<p class="project-meta">[^<]*Fictional demo</p>', document)
+    data = site_data(document)
+    fixture = data["responses"]
+    assert 'data-read-only="true"' in document
+    assert "research-demo-adapter" not in document
+    assert "research-demo-controls" not in document
+    assert not target.with_name("research-data.json").exists()
     provenance = re.search(
         r'<details\b(?P<attributes>[^>]*\bid="example-context"[^>]*)>(?P<body>.*?)</details>',
         document, re.DOTALL,
@@ -194,13 +206,14 @@ def test_public_demo_externalizes_image_bytes_and_preserves_source_records(tmp_p
     assert "Zotero normally owns bibliography, reading and source notes" in document
     assert "no live Zotero connection" in document
     assert "exact manuscript quotations" in document
+    assert "All PDFs use the same fictional manuscript" in document
     assert len(re.findall(r'<section class="chapter(?: [^\"]*)?" id="ch-\d+"', document)) == 6
     assert 'data-manuscript-links="read"' in document
     source = (ROOT / "samples/first-look.md").read_bytes()
     assert f'data-manuscript-source-sha256="{hashlib.sha256(source).hexdigest()}"' in document
     assert (tmp_path / "docs/research/examples/harbour-manuscript.md").read_bytes() == source
     assert (ROOT / "LICENSE").read_text(encoding="utf-8").strip() in html.unescape(document)
-    for layout in ("editor", "book", "sheet", "report"):
+    for layout in ("editor", "book", "sheet", "report", "document"):
         filename = f"warehouse-4-{layout}.pdf"
         assert f'href="{filename}"' in document
         attachment = target.with_name(filename).read_bytes()
@@ -215,19 +228,38 @@ def test_public_demo_externalizes_image_bytes_and_preserves_source_records(tmp_p
     assert 'href="report.html#research-manager"' in legacy
     assert 'rel="canonical" href="https://mfahsold.github.io/lixity/demo/report.html"' in legacy
     assert "research-demo-adapter" not in legacy
-    assert "content_base64" not in fixture_path.read_text(encoding="utf-8")
-    assert "Mara stopped beneath the quay lamp" not in fixture_path.read_text(encoding="utf-8")
+    assert "content_base64" not in json.dumps(data)
     assert all(url.startswith("/api/research/") for url in fixture)
     assert not any(url.startswith("/api/research/image") for url in fixture)
     dossiers = fixture["/api/research/dossiers"]["dossiers"]
     dossier_id = next(dossier["id"] for dossier in dossiers if dossier["title"] == "Warehouse 4 case notes")
     details = fixture["/api/research/dossiers?id=" + dossier_id.replace(":", "%3A")]
-    assert {image["url"] for image in details["images"]} == {
-        "../assets/research/hamburg-free-port-1900.jpg", "../assets/research/hamburg-harbour-1890-1900.jpg"}
+    assert len(details["images"]) == 2
+    assert all(data["resources"][image["url"]].startswith("assets/sources/") for image in details["images"])
     for item in json.loads((ROOT / "docs/assets/research/sources.json").read_text(encoding="utf-8"))["sources"]:
         source_bytes = (ROOT / "docs/assets/research" / item["filename"]).read_bytes()
         assert base64.b64encode(source_bytes).decode("ascii") not in document
         assert hashlib.sha256(source_bytes).hexdigest() == item["sha256"]
+
+
+def test_public_demo_manifest_covers_the_wrapped_production_site(tmp_path, public_demo):
+    directory = public_demo.parent
+    manifest = json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["schema_version"] == "lixity-read-only-site/1"
+    assert manifest["entrypoint"] == "report.html"
+    assert manifest["capabilities"]["research"] is True
+    assert manifest["capabilities"]["source_files"] is True
+    assert manifest["capabilities"]["automatic_external_requests"] is False
+    document = public_demo.read_text(encoding="utf-8")
+    assert document.count('http-equiv="Content-Security-Policy"') == 1
+    assert 'data-site-code="null"' in document
+    assert "external_reference" not in json.dumps(site_data(document))
+    for name, item in manifest["files"].items():
+        content = (directory / name).read_bytes()
+        assert item == {"sha256": hashlib.sha256(content).hexdigest(), "byte_length": len(content)}
+    assert "report.html" in manifest["files"]
+    assert "index.html" not in manifest["files"]
+    assert all(f"warehouse-4-{layout}.pdf" in manifest["files"] for layout in ("editor", "book", "sheet", "report", "document"))
 
 
 def test_demo_read_fixtures_match_native_companion_and_matrix(tmp_path, research_fixture):
@@ -242,87 +274,133 @@ def test_demo_read_fixtures_match_native_companion_and_matrix(tmp_path, research
     assert research_fixture["/api/research/matrix?format=md"] == {"text": matrix}
 
 
-@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is needed to exercise the public read adapter")
-def test_public_read_adapter_rejects_writes_external_urls_and_unknown_local_reads(public_demo):
-    target = public_demo
-    adapter = re.search(r'<script id="research-demo-adapter">(.*?)</script>', target.read_text(encoding="utf-8"), re.DOTALL)
-    assert adapter is not None
-    payload = {"adapter": adapter[1], "fixture": json.loads(target.with_name("research-data.json").read_text(encoding="utf-8"))}
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is needed to exercise the production read provider")
+def test_public_demo_uses_production_transport_without_pdf_write_exceptions(public_demo):
+    document = public_demo.read_text(encoding="utf-8")
+    runtime = (ROOT / "src/lixity/ui/assets/read-only-site.js").read_text(encoding="utf-8")
+    payload = {"runtime": runtime, "data": site_data(document)}
     script = """
 const assert = require('node:assert/strict'), vm = require('node:vm'), fs = require('node:fs');
-const {adapter, fixture} = JSON.parse(fs.readFileSync(0, 'utf8'));
-const calls = [], events = [];
-const configUrl = 'https://demo.invalid/assets/analytics.json';
-let preparedOK = true, lastNative;
-const preparedFiles = ['https://demo.invalid/demo/warehouse-4-editor.pdf',
-  'https://demo.invalid/demo/warehouse-4-book.pdf', 'https://demo.invalid/demo/warehouse-4-sheet.pdf',
-  'https://demo.invalid/demo/warehouse-4-report.pdf'];
-const window = {fetch: async (input, options) => {
-  lastNative = {input, options};
-  const url = input instanceof Request ? input.url : String(input);
-  calls.push(url);
-  if (url === configUrl) return new Response(JSON.stringify({site_code: 'synthetic'}));
-  if (preparedFiles.includes(url)) {
-    return new Response('%PDF-synthetic-transport-check', {
-      status: preparedOK ? 200 : 404, headers: {'Content-Type': 'application/pdf'}});
-  }
-  if (url !== 'https://demo.invalid/demo/research-data.json') throw Error('Unexpected native fetch');
-  return new Response(JSON.stringify(fixture), {headers: {'Content-Type': 'application/json'}});
-}};
-class CustomEvent {
-  constructor(type, options) { this.type = type; this.detail = options?.detail ?? null; }
-}
-const document = {baseURI: 'https://demo.invalid/demo/research.html',
-  dispatchEvent(event) { events.push({type: event.type, detail: event.detail}); return true; }};
-vm.runInNewContext(adapter, {window, document, CustomEvent, URL, Request, Response, Set});
+const {runtime, data} = JSON.parse(fs.readFileSync(0, 'utf8'));
+const calls = [];
+const window = {fetch: async input => {calls.push(String(input)); return new Response('prepared resource');}};
+const document = {baseURI: 'https://demo.invalid/demo/report.html', body: {dataset: {readOnly: 'true'}},
+  getElementById(id) {assert.equal(id, 'lixity-site-data'); return {textContent: JSON.stringify(data)};}};
+vm.runInNewContext(runtime, {window, document, URL, Request, Response, Map, Set});
 (async () => {
-  const configRequest = new Request(configUrl);
-  const configOptions = {credentials: 'omit', redirect: 'error', referrerPolicy: 'no-referrer', cache: 'no-cache'};
-  assert.deepEqual(await (await window.fetch(configRequest, configOptions)).json(), {site_code: 'synthetic'});
-  assert.equal(lastNative.input, configRequest);
-  assert.equal(lastNative.options, configOptions);
-  await assert.rejects(() => window.fetch(configUrl + '?unexpected=1'), /read.only/i);
-  await assert.rejects(() => window.fetch(configUrl, {method: 'POST'}), /read.only/i);
-  const response = await window.fetch('/api/research/sources');
-  assert.equal((await response.json()).sources.length, 4);
+  const sources = await (await window.fetch('/api/research/sources')).json();
+  assert.equal(sources.sources.length, 4);
   const links = await (await window.fetch('/api/research/manuscript-links')).json();
   assert.equal(links.links.length, 5);
-  const review = await (await window.fetch('/api/research/manuscript-review?project_token=synthetic-harbour-manuscript&research_token=synthetic-research-example')).json();
+  const reviewKey = Object.keys(data.responses).find(key => key.startsWith('/api/research/manuscript-review?'));
+  const review = await (await window.fetch(reviewKey)).json();
   assert.ok(review.links.some(link => link.anchor.quote === 'Someone had tried the eastern gate of Warehouse 4.'));
-  const reader = await (await window.fetch('/api/research/dossiers?project_token=synthetic-harbour-manuscript&research_token=synthetic-research-example')).json();
-  assert.equal(reader.dossiers.length, 2);
-  const matrix = await window.fetch('/api/research/matrix?format=md&research_token=synthetic-research-example');
+  const matrixKey = Object.keys(data.responses).find(key => key.startsWith('/api/research/matrix?') && key.includes('format=md'));
+  const matrix = await window.fetch(matrixKey);
   assert.ok(matrix.headers.get('Content-Type').startsWith('text/markdown'));
   assert.match(await matrix.text(), /Attempted warehouse entry/);
-  for (const layout of ['editor', 'book', 'sheet', 'report']) {
-    const prepared = await window.fetch('/api/manuscript-pdf', {method: 'POST', body: JSON.stringify({
-      layout, project_token: 'synthetic-harbour-manuscript'})});
-    assert.equal(prepared.headers.get('Content-Type'), 'application/pdf');
-    assert.equal(await prepared.text(), '%PDF-synthetic-transport-check');
+  assert.deepEqual(calls, [], 'Reading prepared research never falls back to the network');
+  for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
+    for (const route of ['/api/manuscript-pdf', '/api/research-dossier', '/api/research-manuscript-link']) {
+      await assert.rejects(() => window.fetch(route, {method, body: '{}'}), /read.only/i);
+    }
   }
-  assert.deepEqual(events, Array.from({length: 4}, () => ({type: 'lixity:public-pdf-download', detail: null})));
-  preparedOK = false;
-  const missingPDF = await window.fetch('/api/manuscript-pdf', {method: 'POST', body: JSON.stringify({
-    layout: 'book', project_token: 'synthetic-harbour-manuscript'})});
-  assert.equal(missingPDF.status, 404);
-  assert.equal(events.length, 4);
-  for (const body of [{layout: '../secret', project_token: 'synthetic-harbour-manuscript'},
-    {layout: 'book', project_token: 'another-project'},
-    {layout: 'book', project_token: 'synthetic-harbour-manuscript', manuscript: 'private bytes'}]) {
-    await assert.rejects(() => window.fetch('/api/manuscript-pdf', {method: 'POST', body: JSON.stringify(body)}), /read.only/i);
+  for (const route of ['/api/project-paths', '/api/research/unknown',
+    '/api/research/sources?research_token=unrecognized', 'https://example.org/api/research/sources',
+    'zotero://select/library/items/DEMOLOG1']) {
+    await assert.rejects(() => window.fetch(route), /not included/i);
   }
-  await assert.rejects(() => window.fetch('/api/research/sources', {method: 'POST'}), /read.only/i);
-  await assert.rejects(() => window.fetch('/api/research-manuscript-link', {method: 'POST'}), /read.only/i);
-  await assert.rejects(() => window.fetch('zotero://select/library/items/DEMOLOG1'), /read.only/i);
-  await assert.rejects(() => window.fetch('https://example.org/api/research/sources'), /read.only/i);
-  await assert.rejects(() => window.fetch('/api/project-paths'), /read.only/i);
-  await assert.rejects(() => window.fetch('/api/research/unknown'), /read.only/i);
-  await assert.rejects(() => window.fetch('/api/research/manuscript-links?research_token=unrecognized'), /read.only/i);
-  await assert.rejects(() => window.fetch('/api/research/dossiers?project_token=unrecognized&research_token=synthetic-research-example'), /read.only/i);
-  assert.equal(events.length, 4);
-  assert.deepEqual(calls, ['https://demo.invalid/demo/research-data.json', configUrl, ...preparedFiles, preparedFiles[1]]);
+  assert.deepEqual(calls, []);
+  const image = Object.entries(data.resources).find(([, path]) => path.endsWith('.jpg'));
+  assert.ok(image, 'The production export includes the reviewed image resource');
+  assert.equal(window.LixitySite.resourceUrl(image[0]), image[1]);
+  assert.equal(await (await window.fetch(image[0])).text(), 'prepared resource');
+  assert.deepEqual(calls, [new URL(image[1], document.baseURI).href]);
 })().catch(error => {console.error(error); process.exitCode = 1;});
 """
     completed = subprocess.run([shutil.which("node"), "-e", script], input=json.dumps(payload),  # noqa: S603
                                text=True, encoding="utf-8", capture_output=True, check=False)
     assert completed.returncode == 0, completed.stderr
+
+
+@pytest.fixture
+def public_publications(tmp_path, research_fixture):
+    builder = getattr(make_screenshots, 'build_publication_examples', None)
+    assert callable(builder), 'The public reader and companion examples are missing'
+    return builder(tmp_path, tmp_path / 'research-demo')
+
+
+def test_public_reader_and_companion_use_the_production_scope_and_assets(tmp_path, public_publications):
+    from lixity.site_export import prepare_site
+    from lixity.ui.dashboard import _CSS_FILES, _JS_FILES
+
+    project = tmp_path / 'research-demo'
+    for mode, target in public_publications.items():
+        page = target.read_text()
+        cap = 3 if mode == 'companion' else None
+        native = prepare_site(project, manuscript='harbour-manuscript.md', mode=mode,
+            publication_profile='readers', max_chapter=cap, include_source_files=True)
+        assert site_data(page) == site_data(native.files['index.html'].decode())
+        assert 'src="../assets/analytics.js"' not in page
+        assert 'src="../../assets/analytics.js"' not in page
+        assert f'rel="canonical" href="https://mfahsold.github.io/lixity/demo/{mode}/index.html"' in page
+        assert 'href="../report.html"' in page
+        assert 'href="../../guides/first-look.html"' in page
+        assert 'href="../../assets/research/sources.json"' in page
+        assert site_data(page)['responses'] == {}
+        for asset in (*_CSS_FILES, *_JS_FILES):
+            assert page.count((ROOT / 'src/lixity/ui/assets' / asset).read_text().strip()) == 1, asset
+        manifest = json.loads(target.with_name('manifest.json').read_text())
+        assert manifest['mode'] == mode
+        assert manifest['capabilities']['automatic_external_requests'] is False
+        assert manifest['capabilities']['analysis'] is False
+        assert manifest['research']['included'] is False
+        for name, item in manifest['files'].items():
+            content = (target.parent / name).read_bytes()
+            assert item == {'sha256': hashlib.sha256(content).hexdigest(), 'byte_length': len(content)}
+
+
+def test_public_companion_contains_no_novel_and_actual_cap_omits_late_content(tmp_path, public_publications):
+    from lixity.site_export import prepare_site
+
+    companion = public_publications['companion'].read_text()
+    source = (ROOT / 'samples/first-look.md').read_text()
+    data = site_data(companion)['publication']
+    assert data['max_chapter'] == 3
+    assert data['chapters'] == [{'number': 1}, {'number': 2}, {'number': 3}]
+    for paragraph in (part.strip() for part in source.split('\n\n') if len(part.strip()) > 60):
+        assert paragraph not in companion
+    assert 'The receiving signature' not in companion
+    assert 'A blank signature is an absence, not a name.' not in companion
+    assert 'No receiving signature had yet been identified' not in companion
+    capped = prepare_site(tmp_path / 'research-demo', manuscript='harbour-manuscript.md',
+        mode='reader', publication_profile='readers', max_chapter=3, include_source_files=True)
+    public = b'\n'.join(capped.files.values())
+    assert b'Someone had tried the eastern gate of Warehouse 4.' in public
+    assert b'The Customs Note' not in public
+    assert b'A blank signature is an absence, not a name.' not in public
+    assert b'No receiving signature had yet been identified' not in public
+
+
+def test_pages_stages_only_two_approved_publication_manifest_inventories(tmp_path, public_publications):
+    from scripts.stage_pages import stage
+
+    docs = tmp_path / 'docs'
+    unapproved = ('demo/reader/local-notes.txt', 'demo/companion/extra.html',
+                  'demo/other/index.html', 'demo/other/manifest.json')
+    for name in unapproved:
+        path = docs / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('UNREVIEWED_LOCAL_MATERIAL')
+    destination = tmp_path / 'published'
+    stage(docs, destination)
+    expected = set()
+    for mode, target in public_publications.items():
+        manifest = json.loads(target.with_name('manifest.json').read_text())
+        expected.update('demo/' + mode + '/' + name for name in [*manifest['files'], 'manifest.json'])
+    actual = {path.relative_to(destination).as_posix() for path in (destination / 'demo').rglob('*') if path.is_file()}
+    assert actual == expected
+    assert not any((destination / name).exists() for name in unapproved)
+    public_publications['reader'].write_text('Changed after review')
+    with pytest.raises(ValueError, match=r'changed|checksum'):
+        stage(docs, tmp_path / 'changed-output')

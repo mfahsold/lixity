@@ -995,6 +995,13 @@ def get_source(project: str | Path, source_id: str) -> dict[str, Any]:
     """Retrieve full details of a specific source including its passages."""
     repository = Repository(project)
     snapshot = repository.snapshot()
+    return _get_source(repository, snapshot, source_id)
+
+
+def _get_source(repository: Repository, snapshot: Snapshot, source_id: str, *,
+                include_text: bool = True, passage_ids: set[str] | None = None,
+                strict_text: bool = False) -> dict[str, Any]:
+    """Read source details from one verified view; exports may bound disclosure."""
 
     source = snapshot.get(Reference(id=source_id), Source)
 
@@ -1024,6 +1031,7 @@ def get_source(project: str | Path, source_id: str) -> dict[str, Any]:
         rec
         for rec in snapshot.records.values()
         if isinstance(rec, Passage) and rec.extraction_ref.id in extraction_ids
+        and (passage_ids is None or rec.id in passage_ids)
     ]
     passages.sort(key=lambda p: (p.start, p.end))
     # The detail response exposes verbatim text, so verify it against retained
@@ -1037,14 +1045,19 @@ def get_source(project: str | Path, source_id: str) -> dict[str, Any]:
         for rec in snapshot.records.values()
         if isinstance(rec, Extraction) and rec.id in extraction_ids
     ]
-    if extractions:
+    if extractions and include_text:
         chk = extractions[0].text_blob.sha256
         if chk in snapshot.texts:
             full_text = snapshot.texts[chk]
+        elif strict_text:
+            try:
+                full_text = repository.read_blob(extractions[0].text_blob).decode("utf-8")
+            except UnicodeError as exc:
+                raise ResearchError("Retained source text is not valid UTF-8; cannot export full text") from exc
         else:
             with contextlib.suppress(ResearchError, OSError):
                 full_text = repository.read_blob(extractions[0].text_blob).decode("utf-8", errors="replace")
-    if not full_text and passages:
+    if include_text and not full_text and passages:
         full_text = "\n\n".join(p.verbatim for p in passages if p.verbatim)
 
     return {
@@ -1202,6 +1215,14 @@ def get_dossier(project: str | Path, dossier_id: str, *,
     """Retrieve details of a specific dossier with optional section or summary bounding."""
     repository = Repository(project)
     snapshot = repository.snapshot()
+    return _get_dossier(repository, snapshot, dossier_id, section=section, revision=revision,
+                        summary=summary, include_citations=include_citations)
+
+
+def _get_dossier(repository: Repository, snapshot: Snapshot, dossier_id: str, *,
+                 section: str | None = None, revision: int | None = None,
+                 summary: bool = False, include_citations: bool = True) -> dict[str, Any]:
+    """Build native dossier detail against one accepted snapshot."""
 
     if revision is not None and (type(revision) is not int or revision < 1):
         raise ResearchError("Revision must be a positive integer")
@@ -1473,6 +1494,11 @@ def list_claim_relations(
     if type(include_retracted) is not bool:
         raise ResearchError("include_retracted must be a boolean")
     snapshot = Repository(project).snapshot()
+    return _list_claim_relations(snapshot, claim_id=claim_id, include_retracted=include_retracted)
+
+
+def _list_claim_relations(snapshot: Snapshot, *, claim_id: str | None = None,
+                          include_retracted: bool = False) -> dict[str, Any]:
     unavailable = {record.target_ref.id for record in snapshot.records.values() if isinstance(record, Tombstone)}
     selected = [record for record in snapshot.records.values() if isinstance(record, ClaimRelation)
                 and record.id not in unavailable and (include_retracted or record.state == "active")
@@ -1548,6 +1574,11 @@ def list_evidence_links(project: str | Path, *, claim_id: str | None = None) -> 
     """
     repository = Repository(project)
     snapshot = repository.snapshot()
+    return _list_evidence_links(repository, snapshot, claim_id=claim_id)
+
+
+def _list_evidence_links(repository: Repository, snapshot: Snapshot, *,
+                         claim_id: str | None = None) -> dict[str, Any]:
 
     withdrawn_or_purged = {
         record.target_ref.id
@@ -1742,6 +1773,10 @@ def _list_decisions(snapshot: Snapshot) -> dict[str, Any]:
 def project_overview(project: str | Path) -> dict[str, Any]:
     """Collect dashboard lists from one verified archive view, without caching."""
     snapshot = Repository(project).snapshot()
+    return _project_overview(snapshot)
+
+
+def _project_overview(snapshot: Snapshot) -> dict[str, Any]:
     data: dict[str, Any] = {"project_id": snapshot.project.id,
                             "project_title": snapshot.project.title,
                             "project_language": snapshot.project.language}
@@ -1797,6 +1832,10 @@ def claim_matrix_data(project: str | Path) -> dict[str, Any]:
     """Compute the claim-evidence-decision matrix as plain data."""
     repository = Repository(project)
     snapshot = repository.snapshot()
+    return _claim_matrix_data(repository, snapshot)
+
+
+def _claim_matrix_data(repository: Repository, snapshot: Snapshot) -> dict[str, Any]:
 
     withdrawn_or_purged = {
         record.target_ref.id

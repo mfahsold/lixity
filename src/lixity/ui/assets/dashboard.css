@@ -1,5 +1,4 @@
 * { box-sizing: border-box; }
-[hidden] { display: none !important; }
 body {
   margin: 0;
   padding: 2.25rem 1.5rem 4rem;
@@ -1973,6 +1972,8 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
   .view-navigation { display: none !important; }
   .view-pane { display: block !important; }
 }
+#register-targets table { min-width: 48rem; }
+#register-targets thead th, #register-targets td:nth-child(n+4) { white-space: nowrap; }
 .scene-overview { margin: .4rem 0 .9rem; max-height: 26rem; overflow: auto; }
 .scene-overview table { min-width: 36rem; table-layout: fixed; }
 .scene-overview thead th, .scene-overview td { white-space: nowrap; }
@@ -1992,6 +1993,8 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
 .scene-detail .table-wrap { margin-top: .6rem; }
 #characters table { min-width: 48rem; }
 #characters th { white-space: nowrap; }
+.motif-phrases table, .motif-echoes table { min-width: 32rem; }
+#motifs th, #motifs td.num { white-space: nowrap; }
 .scene-detail th small { display: block; font-weight: normal; opacity: .7; }
 .scene-detail table { min-width: 44rem; }
 .scene-detail th:not(:first-child), .scene-detail td { min-width: 6rem; white-space: nowrap; }
@@ -2070,3 +2073,7 @@ footer:empty { display: none; }
   position: absolute; width: 1px; height: 1px; margin: 0; padding: 0; border: 0;
   overflow: hidden; clip-path: inset(50%); white-space: nowrap;
 }
+/* Snapshot capabilities belong to the shared workspace, including lazy panes. */
+body[data-read-only="true"] [data-requires-write],
+body[data-read-only="true"] [data-requires-live] { display: none !important; }
+.site-read-only-notice { margin: 0; padding: .45rem 1rem; color: var(--muted); background: var(--surface); font-size: .85rem; text-align: center; }

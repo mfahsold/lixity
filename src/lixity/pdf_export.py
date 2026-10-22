@@ -9,14 +9,14 @@ from .config import resolve_thresholds, validate_author_name, validate_draft_not
 from .formatters import ReportFormatter
 from .manuscript_document import inline_runs, manuscript_sections
 from .markdown_parser import prose_paragraphs
-from .pdf_layouts import FontChoice, book_pdf, editor_pdf, manuscript_pdf, report_pdf
+from .pdf_layouts import FontChoice, book_pdf, document_pdf, editor_pdf, manuscript_pdf, report_pdf
 from .pipeline import analyze_document, resolve_document_config
 from .project_identity import project_title
 from .publication import load_publication, publication_imprint
 from .style_fingerprint import FingerprintThresholds
 from .workspace_labels import WORKSPACE_LABELS
 
-PDF_LAYOUTS = ("editor", "book", "sheet", "report")
+PDF_LAYOUTS = ("editor", "book", "sheet", "report", "document")
 
 
 def pdf_title(manuscript: str, text: str, project_config: Mapping[str, Any]) -> str:
@@ -61,12 +61,15 @@ def compose_pdf(
             author=document_author, draft_notice=document_draft,
             metadata=metadata, choice=choice,
         )
-    sections = manuscript_sections(text, config)
+    sections = manuscript_sections(text, config, include_title=layout == "document")
     if require_prose and not any(
         block.kind in ("paragraph", "quote", "list_item") and block.text.strip()
         for _heading, blocks in sections for block in blocks
     ):
         raise ValueError("The selected manuscript contains no supported prose")
+    if layout == "document":
+        return document_pdf(title=document_title, author=document_author,
+                            chapters=sections, metadata=metadata, choice=choice)
     if layout == "book":
         return book_pdf(title=document_title, author=document_author, draft_notice=document_draft,
                         chapters=sections, choice=choice, metadata=metadata,

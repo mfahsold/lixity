@@ -2,7 +2,7 @@
 
 > Generated file for AI agents and offline reading. Do not edit it by hand:
 > run `python scripts/build_llms_full.py` after changing a bundled document.
-> The individually published files remain authoritative. Product version 0.7.3.
+> The individually published files remain authoritative. Product version 0.7.4.
 
 Lixity is open source under AGPL-3.0-or-later; writing for any purpose is
 covered. A separate written commercial license exists only for closed-source
@@ -73,13 +73,17 @@ does not update an already running service.
 ## What you can do
 
 - **Manuscript & Analysis.** Open paragraph values and work markers, or compare
-  chapters against the manuscript's own patterns. Analysis can be turned on and off.
+  chapters against the manuscript's own patterns and review local phrase echoes.
+  Analysis can be turned on and off.
 - **Research & Dossiers.** Link retained sources, authored claims and decisions
-  to exact manuscript quotations. Keep a dossier
-  alongside a passage; Zotero remains your collection tool. Retention is explicit,
+  to exact manuscript quotations. Keep source images, maps and dated claims with
+  the dossier beside a passage; Zotero remains your collection tool. Retention is explicit,
   and archive integrity does not establish factual truth.
 - **Project & exports.** Manage project metadata and create editorial, reading,
-  submission or analysis PDFs, terminal reports and versioned JSON.
+  submission or analysis PDFs, terminal reports and versioned JSON. Export a
+  review website, a novel with curated companion material, or a standalone
+  companion. Reveal notes after a confirmed chapter, or omit later material
+  entirely for an excerpt.
   NDA generation creates a draft without
   recording consent or signatures; dossier Markdown edits require explicit preview
   and apply. See [export and project limits](https://mfahsold.github.io/lixity/USAGE.md).
@@ -125,12 +129,13 @@ their own projects.
 
 ## Release, citation and license
 
-The current release is **v0.7.3**, in the pre-1.0 development line. Historical
+The current release is **v0.7.4**, in the pre-1.0 development line. Historical
 v3.0.1 and earlier tags remain available. Product and schema versions are
-independent; [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.3.md)
+independent; [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.4.md)
 cover archive compatibility and upgrades. See the
 [changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md) for subsequent work.
-The public demo follows current main and can show changes beyond the release.
+The public demo uses the same interface as v0.7.4, with a fictional project and
+read-only research. Importing and saving require the local app.
 
 Cite [Lixity on Zenodo](https://doi.org/10.5281/zenodo.23390297), with metadata in
 [`CITATION.cff`](https://github.com/mfahsold/lixity/blob/main/CITATION.cff).
@@ -156,7 +161,7 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/llms.txt
 > instructions to rewrite. Analysis is deterministic for fixed text and settings;
 > research records also contain generated IDs and timestamps.
 
-Current release: 0.7.3; release tag: v0.7.3.
+Current release: 0.7.4; release tag: v0.7.4.
 
 This discovery index links maintained references. The public demo follows current
 main; published guides can describe newer behavior than an installed release.
@@ -171,6 +176,7 @@ uv tool update-shell
 # Open a new terminal, then:
 lixity --version
 lixity about --json
+lixity doctor --json
 lixity COMMAND --help
 lixity research COMMAND --help
 lixity service start --open
@@ -187,6 +193,41 @@ research entities. A native server lists registered operations at `GET /api`.
 Python consumers use `from lixity import api`; research uses
 `from lixity.research import api as research_api`.
 
+Since v0.7.4, `doctor --json` reports imported/distribution/service versions,
+module/interpreter locations, contract versions and issues under `lixity-doctor/1`.
+It reads no manuscripts/project configuration and performs no installation,
+repair or restart. A healthy stopped service is valid; mismatches or unavailable
+observations exit 1. Out-of-range numeric ports or invalid `LIXITY_PORT` return
+the same schema with `ok: false` and `error.code: "invalid-service-port"`.
+Non-integer explicit `--port` values remain argument usage errors (exit 2).
+
+`service status --json` intentionally changed to `lixity-service-status/1`:
+`ok` means successful inspection, including known stopped/starting/unmanaged busy
+states (exit 0). `running` means ready and owned; unknown is `ok: false`,
+`running: null`, exit 1. Log paths and raw errors are omitted. Human stopped
+status still exits 1; other lifecycle JSON remains `lixity-service-local/1`.
+See the [service and doctor contracts](https://mfahsold.github.io/lixity/USAGE.md#lixity-service).
+
+`pdf --layout document` adds neutral A4 through the shared composer: authored
+headings remain; entered title/author are metadata only. It adds no title page,
+header/footer, byline, line numbers or analysis. PDF/dashboard CLI exports reject
+source paths and symbolic/hard-link aliases before writing and at final
+replacement. EPUB, DOCX, custom trim sizes and PDF/UA/PDF/X conformance are absent.
+
+Since v0.7.4, `lixity export-site --project . -o NEW_DIRECTORY` produces a
+portable reading website through `lixity.site_export.prepare_site`/`export_site`.
+`export-site --mode reader|companion --publication-profile NAME` uses root-local
+`site_publications` curation; `--max-chapter` omits later content before assembly.
+Local reading progress is display guidance, not access control. Raw research
+history is available only in the separate review-workspace format.
+The native Project action downloads the same bundle as ZIP. Research is explicit
+(`--include-research`, including authored history and cited excerpts); originals
+and full extracted source text require `--include-source-files` too. The copy
+uses the product UI and a closed prepared-read transport, with no live API
+fallback, writes, automatic analytics or external map tiles. The manifest is
+`lixity-read-only-site/1`; embedded data is `lixity-read-only-site-data/1`.
+Archive schemas are unchanged. It is a copy, not access control or a backup.
+
 **Since v0.6.0:** `lixity schema --section configuration` returns
 generated settings metadata; see the [usage reference](https://mfahsold.github.io/lixity/USAGE.md#configuration-corpusconfig).
 
@@ -194,25 +235,24 @@ English is the default analysis language; detection requires `--language auto`.
 Language-neutral JSON identifiers and units differ from translated display keys.
 Use active result metadata when interpreting thresholds and unavailable values.
 
-On current main (Unreleased), Explore passage is the shared paragraph-menu
+Since v0.7.4, Explore passage is the shared paragraph-menu
 entry. Explain measurement and Research for this passage remain distinct destinations in
 the existing context area: computed literal counts versus explicitly linked
 research. The compact measurement card scopes its sentence word count, paragraph
 value and chapter comparison separately; method/coverage is expandable.
+Separate visible Counted text and Paragraph comparison keys explain exact
+underlined spans versus blue/orange chapter-relative paragraph backgrounds.
 Ordinary research entry titles open the current version. Explicit Linked version
 actions retain their exact pins; the collapsed Versions list loads only on demand
 and does not change the displayed record. Text associations group exact quotes
 of one claim version separately from current dossier decisions. Human CLI output
 uses Version N; revision flags, identifiers and JSON schemas remain unchanged.
 
-The published v0.7.3 workspace opens in Manuscript with Analysis Off. Values opens
-Passage values independently of that display choice. Use Analysis overview for
-chapter comparisons and Dossier alongside
-for retained research. Back to passage restores the requesting text. Reading
-preferences are browser-local; saves and retention are explicit. See
-[reader controls and coverage](https://mfahsold.github.io/lixity/USAGE.md#reading-paragraphs)
-and [research workflows](https://mfahsold.github.io/lixity/research/USAGE.md).
-Since v0.7.3, Saved research opens exact saved passage associations in the
+The workspace opens in Manuscript with Analysis Off. Explore passage opens
+paragraph measurements without changing the global display choice. Explicit
+Explain measurement can enable Analysis while retaining disabled text marks.
+
+Since v0.7.4, Research for this passage opens exact retained passage associations in the
 same right context area: pinned claim/dossier versions and separately labelled
 current dossier decisions. Lists are bounded with totals; Review and exact-version
 viewers remain explicit. An empty summary means no saved links, not no facts.
@@ -250,14 +290,14 @@ validates envelope shape. Existing JSON/archive versions remain unchanged.
 - [Architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md) and [localization](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md): integration boundaries and language coverage.
 - [Articles](https://mfahsold.github.io/lixity/blog/): interpretation examples, separate from API contracts.
 - [Manuscript reading workbench](https://mfahsold.github.io/lixity/blog/manuscript-reading-workbench.html): the Analysis On/Off, overview and manuscript–research workflow with explicit coverage limits.
-- [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.3.md) and [release history](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md).
+- [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.4.md) and [release history](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md).
 
 HTML guides and articles have Markdown alternatives: append `.md` to their HTML
 URL. The [research entrypoint](https://mfahsold.github.io/lixity/research/README.md)
 links implemented workflows and separate, unimplemented proposals.
 Product, response and archive versions are independent. Inspect installed schema
 capabilities before sharing an archive with another version.
-v0.7.2 reads research records/manifests v1–v8. Ordinary dossiers keep their older
+v0.7.2 and later read research records/manifests v1–v8. Ordinary dossiers keep their older
 encoding until a geographic save; older readers cannot open v8 archives.
 
 **Since v0.7.1:** grouped research discovery, exact update dry runs,
@@ -289,10 +329,11 @@ blockquotes. Scores and public API formats are unchanged. Overview To-do drafts,
 focused keyboard drills and Back to passage reuse existing save and context-return
 behavior.
 
-Public-site measurement is separate from the product: production Pages and its
-reviewed examples use GoatCounter for page paths and named links. Browser privacy
+Public-site measurement is separate from the product: published documentation
+and the author-workspace demo use GoatCounter for page paths and named links. Browser privacy
 signals disable it; query/hash, forms, selections and local project data are
-excluded. Local app and exported reports contain no marketing measurement.
+excluded. The local app, curated reader/companion examples and ordinary exports
+contain no marketing measurement.
 
 ## Data boundaries
 
@@ -327,7 +368,8 @@ and [security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md).
 is the default read-only product walkthrough: six synthetic English chapters,
 all three native workspace views, retained sources, authored claims and a saved
 manuscript quote in one project. Its [manuscript](https://mfahsold.github.io/lixity/research/examples/harbour-manuscript.md)
-also supplies all four PDFs: [editorial](https://mfahsold.github.io/lixity/demo/warehouse-4-editor.pdf),
+also supplies five PDFs: [neutral A4 document](https://mfahsold.github.io/lixity/demo/warehouse-4-document.pdf),
+[editorial](https://mfahsold.github.io/lixity/demo/warehouse-4-editor.pdf),
 [reading](https://mfahsold.github.io/lixity/demo/warehouse-4-book.pdf),
 [submission](https://mfahsold.github.io/lixity/demo/warehouse-4-sheet.pdf) and
 [analysis report](https://mfahsold.github.io/lixity/demo/warehouse-4-report.pdf).
@@ -335,9 +377,10 @@ No upload or account is required. The old research-demo URL is a compatibility
 entry into this same project, not a second dataset.
 
 Browser controls include a dossier alongside the manuscript, prepared PDF
-downloads and the claim-evidence matrix. Actions marked Local app, including
-Search and Compare, stay visible as disabled previews with an
-[installation link](https://mfahsold.github.io/lixity/guides/installation.html).
+downloads and the claim-evidence matrix. Editing, project administration and
+archive Search/Compare are absent; manuscript search and local list filters
+remain available. Imports and writes require the
+[local app](https://mfahsold.github.io/lixity/guides/installation.html).
 The demo cannot import, edit or save, or generate new analysis or PDFs.
 
 The [source catalogue](https://mfahsold.github.io/lixity/assets/research/sources.json)
@@ -376,8 +419,8 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md
 Explore [*The Crate at Warehouse 4*](https://mfahsold.github.io/lixity/demo/report.html),
 the shared demo project for manuscript analysis, research and PDF layouts.
 The [illustrated first look](guides/first-look.html) follows that same project;
-then use your own manuscript below. The read-only demo demonstrates the v0.7.2
-reading workflow. [Installation](INSTALLATION.md) covers setup, upgrades and
+then use your own manuscript below. The demo is generated through the same
+reading-website export as your own shareable copies. [Installation](INSTALLATION.md) covers setup, upgrades and
 service management;
 [interpretation](guides/interpretation.html) explains the measurements.
 
@@ -414,7 +457,7 @@ lixity service start --open
 
 The default address is `http://127.0.0.1:8765/`. The app's welcome guidance and
 field explanations describe the next action. **Project actions** groups New/Open,
-**Show guidance** and PDF export. It starts expanded in an empty workspace and
+**Show guidance**, PDF export and **Reading website**. It starts expanded in an empty workspace and
 collapsed when a manuscript is loaded; the three workspace destinations stay visible.
 
 ### Open or import?
@@ -435,14 +478,18 @@ continue and initialize Research if it is still absent.
 
 Start in **Manuscript** and read a passage. Turn **Analysis**
 On to show diagnostics in place; this does not open a tool or narrow the prose.
-Choose a paragraph's **… → Values** for its **Passage values** inspector, which
+Choose a paragraph's **… → Explore passage** for measurement explanations or
+research beside that passage. The **Passage values** inspector
 works with Analysis On or Off. **Analysis overview**
 opens chapter comparisons; **Back to passage** restores your place and prior
 Analysis On/Off choice.
 The opening candidate is not a quality ranking; read the text before
 deciding whether a difference matters. Settings explain saved versus session-only
-choices. Standalone HTML is read-only; project writes and manuscript PDF downloads
-require the native server. See [PDF layouts](USAGE.md#lixity-pdf).
+choices. A standalone analysis report is read-only. To share manuscript,
+analysis and optional research together, choose **Project actions → Reading
+website**. The ZIP copy opens in a browser without a running Lixity server;
+project writes and new PDF generation require the local app. See
+[reading websites](USAGE.md#export-a-reading-website) and [PDF layouts](USAGE.md#lixity-pdf).
 
 ### Choose a view
 
@@ -457,7 +504,7 @@ keyboard controls, companion sizing and coverage. Changing a view writes nothing
 
 | What you want to do | Where to start |
 | --- | --- |
-| Read a difference in context | **Manuscript**: choose **… → Values** for one paragraph; use **Analysis** independently for diagnostics. |
+| Read a difference in context | **Manuscript**: choose **… → Explore passage** for one paragraph; use **Analysis** independently for diagnostics. |
 | Compare chapter positions | **Analysis overview → Style dimensions**: select a chapter or use a flat axis view to inspect overlaps. |
 | Follow a source into an argument | **Research**: open a dossier, inspect its evidence and follow a saved manuscript quotation. |
 | Change the manuscript or analysis setup | **Project**: check the active project and whether a setting is saved or session-only. |
@@ -562,10 +609,11 @@ Open a new terminal, then verify and start the app:
 
 ```sh
 lixity --version
+lixity doctor
 lixity service start --open
 ```
 
-The current release is **v0.7.3**. See the [release notes](releases/v0.7.3.md)
+The current release is **v0.7.4**. See the [release notes](releases/v0.7.4.md)
 for changes and compatibility. `uv tool update-shell` configures new terminals;
 it does not change the terminal already open.
 
@@ -613,7 +661,7 @@ For a checksum-verified setup, install the pinned release wheel instead and
 verify it against `SHA256SUMS` on the release page:
 
 ```sh
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.7.3/lixity-0.7.3-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.7.4/lixity-0.7.4-py3-none-any.whl"
 ```
 
 `uv tool list` shows the installed source. This uses uv's
@@ -657,8 +705,8 @@ To test unreleased source changes, install
 uv tool install --python 3.12 --managed-python --reinstall-package lixity "git+https://github.com/mfahsold/lixity.git@main"
 ```
 
-`main` changes over time; the published demo represents one build, not a pinned
-release or a guarantee that the latest checkout is identical. Review
+`main` changes over time; an unreleased checkout can differ from the published
+release and demo. Review
 [release notes](https://github.com/mfahsold/lixity/releases) before switching.
 Stop the managed service before replacing its installation, verify the new
 version, then run `lixity service restart --open` to reuse the recorded launch
@@ -795,11 +843,22 @@ uses a detached process. `--backend process` explicitly chooses the latter;
 are transient and do not enable startup at login. Backend selection applies to
 each invocation and is not saved: repeat `--backend process` on restart to keep
 that choice; otherwise restart uses `auto`. `lixity service status --json`
-reports readiness, installed/running versions, backend and log path; see the
+reports readiness, installed/running versions and backend without log paths; see the
 [command contract](USAGE.md#lixity-service) for states and exit codes.
+Since v0.7.4, its `lixity-service-status/1` response exits 0 for a known stopped,
+starting or unmanaged-port busy state as well as a running instance. Check
+`running` for readiness; unknown state exits 1 with `running: null`. Human
+stopped status still exits 1; other lifecycle JSON is unchanged.
 Since v0.7.3, status reads existing storage without creating
 folders, repairing permissions or waiting for a lifecycle write. Unreadable or
 changing state remains uncertain; it does not trigger an alternate runtime path.
+
+Use `lixity doctor --json` (or `--port PORT` for another instance) to compare the
+imported CLI, distribution and running-service versions, module/interpreter
+locations and JSON contract versions. It reads no manuscripts or project
+configuration and performs no repair, installation or restart. A healthy stopped
+service is valid; mismatches or unavailable metadata/status exit 1. See
+[diagnostic output](USAGE.md#lixity-doctor) before acting on its findings.
 
 Saved launch settings and `service-PORT.log` live separately from the package:
 
@@ -955,7 +1014,7 @@ Linux/macOS:
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@v0.7.3"
+.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@v0.7.4"
 .venv/bin/python -m pip check
 .venv/bin/python -c "import lixity; print(lixity.__version__)"
 ```
@@ -964,7 +1023,7 @@ Windows PowerShell (no activation or execution-policy change needed):
 
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@v0.7.3"
+.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@v0.7.4"
 .\.venv\Scripts\python.exe -m pip check
 .\.venv\Scripts\python.exe -c "import lixity; print(lixity.__version__)"
 ```
@@ -1115,8 +1174,10 @@ or a different output.
 | I want to see and click all of it | `lixity dashboard` | single-file HTML, all panels, offline |
 | I want a foreground server for development or integration | `lixity serve` | loopback HTTP server, live settings, manuscript upload, research panel |
 | I want to start or manage the installed app | `lixity service` | managed start, stop, restart and status without a source checkout |
+| Which installation and service am I using? | `lixity doctor` | package versions, module/interpreter location, contracts and owned service status |
 | I want to manage and cite research sources | `lixity research` | immutable archives, citations, dossiers, manuscript grounding |
-| I want a printable report or reading copy | `lixity pdf` | A4 report, A5 book layout, 30×60 sheet |
+| I want a printable document, report or reading copy | `lixity pdf` | neutral/editorial A4, A4 report, A5 book, 30×60 sheet |
+| I want to share a browsable reading copy | `lixity export-site` | static website, optional research and original sources |
 | I want a reproducible artifact set | `lixity build` | `exports/`, archive rotation |
 | What can the engine do? | `lixity about --json` | languages, features, thresholds, commands |
 | What does the installed tool expose? | `lixity schema` | capability metadata, equivalent to `about --json`; not an analysis-result JSON Schema |
@@ -1146,11 +1207,108 @@ defines that boundary and the optional local-import workflow.
 Open **Project actions → PDF export**, choose a layout, then
 **Download PDF**. Since v0.7.0, **A4 editorial copy** is the initial choice;
 **A5 reading copy**, **A4 manuscript sheets** and **A4 analysis report** are also available.
+Since v0.7.4, **A4 document** adds a neutral copy for exposés and everyday text.
 Changing the layout alone does not generate a file. The download uses the same
 composer and project metadata as [`lixity pdf`](#lixity-pdf), returning bytes
 directly without creating server export files. Reload after switching projects
 or externally changing root configuration; stale export context is rejected.
 JavaScript and a compatible native server are required.
+
+### Export a reading website
+
+Since v0.7.4, **Project actions → Reading website** downloads a fixed project
+copy as ZIP. Unzip it and open `index.html`, or serve the folder on static
+hosting. The recipient needs no Lixity installation or running service.
+Later project changes require a new export.
+
+| Format | Included content | Intended use |
+| --- | --- | --- |
+| Review workspace | Manuscript and analysis; optionally internal research and history | Author/editor review |
+| Novel and companion | Reading text plus explicitly curated background notes | Read the story with chapter-dependent context |
+| Companion only | Curated notes without the novel or analysis | A separate companion for someone reading elsewhere |
+
+```bash
+lixity export-site --project . -o editorial-copy --include-research
+lixity export-site --project . -o novel-copy --mode reader --publication-profile readers
+lixity export-site --project . -o companion-copy --mode companion --publication-profile readers
+lixity export-site --project . -o excerpt-copy --mode reader --publication-profile readers --max-chapter 4
+```
+
+The destination must be a **new directory**. Existing paths are never
+overwritten. With no mode flag, the default is the review workspace. It includes
+manuscript text, work-marker notes and analysis, including exact text marks.
+`--include-research` adds authored dossiers, claims, decisions, their accessible
+revision history, cited excerpts, manuscript associations, timelines and map
+geometry. This can include internal notes and superseded wording; review the
+copy before sharing it. In review mode, original source files and complete
+extracted source text require `--include-source-files` together with
+`--include-research`. Local retention permission does not establish permission
+to redistribute a source.
+
+#### Curate a reader publication
+
+In **Project → Settings → Reading website profiles**, create a named publication
+profile. Choose
+an existing dossier, either its full body or a unique section, and the chapter
+after which it may appear. Chapter 0 means before the first chapter. A blank
+revision uses the current dossier when exporting; an explicit revision keeps
+that version. Each export records the actual resolved version.
+
+The profile is a validated root-local `site_publications` project setting,
+separate from PDF imprint settings and accepted Research records:
+
+```toml
+[site_publications.readers]
+title = "Notes beside the story"
+introduction = "Choose the last chapter you have finished."
+
+[[site_publications.readers.entries]]
+dossier_id = "urn:uuid:11111111-1111-4111-8111-111111111111"
+section = "Harbour"
+title = "The harbour setting"
+reveal_after_chapter = 2
+include_citations = false
+include_geography = false
+```
+
+Use a real dossier ID from your project. Citations and geography are off by
+default. If selected, these are the **whole pinned dossier's** citations or map;
+there is no inferred section-to-citation/map association. Review that content
+before including it. Publication modes do not automatically include claims,
+internal decisions, reverse links, revision history, source context notes or
+complete extracted source text. `--include-research` is rejected for these
+formats; choose the curated profile instead. Selected retained media needs the
+separate source-file inclusion choice.
+
+Readers explicitly set the last chapter they have finished. Scrolling and
+chapter navigation do not count as reading. Later notes have no visible titles
+or preview snippets. Progress is browser-local; unavailable or invalid storage
+starts at chapter 0. Previewing later notes is separate from saved progress.
+
+Progressive reveal is **display guidance**, not encryption: a full reading
+website contains its later notes in inspectable files. For a bounded edition,
+`--max-chapter N` excludes later notes and their dependencies before the website
+is serialized. In novel-and-companion mode it also removes later novel chapters.
+A companion-only copy contains no novel prose, diagnostics or work-marker notes,
+except quotations the author deliberately selected in the published dossier.
+One-off research/source-file choices are not stored as future redistribution
+permission or automatically saved export defaults.
+
+#### Sharing limits and automation
+
+Editing, project switching, import, analysis recalculation and research writes
+are unavailable in the copy. Ordinary exports make no automatic analytics,
+external font or map-tile requests. Dossier map geometry works offline; external
+reference links require deliberate activation. `manifest.json` inventories scope,
+source identity and files; `--json` prints it for automation. Exporting changes
+neither the manuscript nor the research archive. The public website may add its
+separately disclosed analytics wrapper; that is not part of ordinary exports.
+
+A reading website is **not access control, encryption or a backup**. Anyone
+with its files can read or copy the included content. Confidential hosting needs
+its own access controls. Use [archive export and restoration](research/USAGE.md#export-and-restoration)
+for restorable backups. The complete bundle is bounded to 200 MiB; source/data
+and revision limits fail explicitly rather than silently dropping material.
 
 <a id="start-a-review-since-v230"></a>
 
@@ -1225,7 +1383,7 @@ Claim and dossier views can open their manuscript
 associations in Review. Only an exactly resolved current passage offers a direct
 jump; moved, changed, ambiguous and unavailable anchors retain their review state.
 
-**On current main (Unreleased):** choose **Explore passage → Research for this
+**Since v0.7.4:** choose **Explore passage → Research for this
 passage**, its association count or a marked quotation to read the linked
 context beside the manuscript. The context shows up to five associations with
 their total, grouping quotations of the same claim version. Titles open the
@@ -1237,8 +1395,6 @@ reconstruct the quotation's historical context. **Review** remains a separate
 action for changed or unresolved anchors. An empty summary means no saved
 associations for this passage, not that no relevant facts exist. Opening or
 refreshing the summary reads existing records without saving or repinning them.
-The published v0.7.3 menu calls this **Saved research** and opens the linked
-versions directly.
 
 When following a connection from the manuscript, **Back to passage** returns to
 the preserved origin while the project/source context still matches. The work
@@ -1285,7 +1441,7 @@ screens. Escape closes it. Turning analysis off, choosing **None** or unchecking
 the marking control removes the marks. Your metric and marking choices persist
 in the browser, including deliberate **None** and disabled marks.
 
-**On current main (Unreleased):** the paragraph menu has one **Explore passage**
+**Since v0.7.4:** the paragraph menu has one **Explore passage**
 entry. Its existing right context offers **Explain measurement** and **Research
 for this passage**. The former explains counted text; the latter reads
 explicitly linked claims, sources and decisions. Hover and tap remain quick ways
@@ -1295,9 +1451,16 @@ and limits are expandable. The context's **Passage** button selects the inspecto
 the separate **Analysis** switch controls manuscript indicators. Neither route
 infers factual truth.
 
+Since v0.7.4, **Counted text** and **Paragraph comparison** have separate visible
+keys. The underline/tint sample identifies literal counted spans; hover or tap
+for the concrete count. Paragraph backgrounds use blue/orange for direction
+relative to the chapter, explained beside their scale. A marked sentence's word
+count and its paragraph's average are different quantities. Disabling text
+marks leaves the comparison key available; unavailable exact evidence is stated.
+
 These routes share existing actions rather than creating separate records:
 
-| Task on current main | Passage route | Other access |
+| Task | Passage route | Other access |
 | --- | --- | --- |
 | Explain counted text | **Explore passage → Explain measurement** | Hover or tap a marked word or sentence |
 | Read explicitly linked research | **Explore passage → Research for this passage** | The paragraph's association count |
@@ -1305,15 +1468,14 @@ These routes share existing actions rather than creating separate records:
 | Add a work marker | The paragraph menu's marker actions | The compact selection toolbar offers **Check**; the overview lists saved work markers |
 | Keep a chosen dossier beside the text | **Dossier alongside** in the paragraph menu | The reader toolbar and the dossier context control |
 
-**Dossier alongside** displays the dossier you explicitly choose. **Saved
-research** follows associations saved for the selected paragraph. Merely opening
+**Dossier alongside** displays the dossier you explicitly choose. **Research
+for this passage** follows associations saved for the selected paragraph. Merely opening
 a dossier beside the manuscript does not link it to that passage.
 
-In the published v0.7.3 release, the paragraph menu's **Inspect text evidence**
-offers the same explanation by
-keyboard or right-click, including with Analysis Off or Focus reading. That
-explicit action enables Analysis and chooses Sentence length if no metric is
-selected, while preserving an unchecked marking preference.
+**Explore passage → Explain measurement** also works by keyboard or right-click,
+including with Analysis Off or Focus reading. That explicit action enables
+Analysis and chooses Sentence length if no metric is selected, while preserving
+an unchecked marking preference.
 
 The explanation separates the counted passage from its paragraph measurement and
 chapter comparison. A sentence's word count does not make it an editorial fault;
@@ -1341,21 +1503,18 @@ Each analyzed paragraph has an **…** button. It opens the same contextual tool
 right-click on the prose or `Shift+F10`/the context-menu key while the paragraph
 or its button has focus. Arrow keys move through the menu; `Home`/`End` reach its
 first/last action. Escape closes it and restores focus. Actions depend on the
-available capabilities: **Explore passage** (**Values** in published v0.7.3), work markers, **Link selection to claim**
+available capabilities: **Explore passage**, work markers, **Link selection to claim**
 for a valid selection, and the companion dossier. A selection within one paragraph
 also offers a compact toolbar. Marker notes and claim associations still require
 their existing explicit save and retention steps.
 Use Shift+right-click to open the browser's native context menu instead.
 
-In published v0.7.3, **Values** opens **Passage values** with the selected paragraph's chapter, source
-lines, tense and style measurements in the closable context area. Opening or
-closing it leaves the global Analysis choice unchanged; turning Analysis Off
-keeps the inspector available. In v0.7.2, **Saved manuscript associations** opens
-the quote review for that paragraph. Since v0.7.3, this entry and **Saved
-research** open the passage's saved context alongside; its **Review** action opens
-the dedicated quote review. Switch between passage values, saved research and
-the saved dossier explicitly; closing the tool does not turn all
-analysis off. On desktop, tools occupy adjacent space. On mobile, an explicit
+**Explore passage** opens the selected paragraph's chapter, source lines, tense
+and measurements in the closable context area. Opening or closing it leaves the
+global Analysis choice unchanged. **Research for this passage** reads explicit
+associations alongside; **Review** opens their dedicated quote review. Switch
+between passage measurements, linked research and the chosen dossier explicitly;
+closing the tool does not turn all analysis off. On desktop, tools occupy adjacent space. On mobile, an explicit
 paragraph-to-tool action reveals the stacked tool heading; closing it or pressing
 Escape returns to the requesting passage and its paragraph control.
 **Focus reading** temporarily hides surrounding navigation and
@@ -1722,6 +1881,10 @@ Save this in the project's `lixity.toml` (or under `[tool.lixity.scene_analysis]
 in `pyproject.toml`). These numbers illustrate settings, not recommended prose.
 Assignments use chapter:scene numbers; review them after inserting or removing
 scenes. Invalid assignments are reported instead of silently moving a register.
+Since v0.7.4, the error names measured scene and recognized divider counts for
+each affected chapter, or states that the chapter is absent. Review missing
+standalone dividers, removed/merged scenes and configuration; blank lines alone
+do not separate scenes. Explicitly planned scenes remain separate from measurements.
 Each group gets its own manuscript-only median and MAD, with at least two
 available observations per feature. Unassigned scenes have no register baseline.
 Research sources never enter these references.
@@ -1766,6 +1929,17 @@ These are not validated confidence intervals or a literary-quality score.
 Existing analyze/profile (v2) and style (v4) envelopes remain unchanged.
 
 ### `lixity motifs`
+
+Configured motifs use the root-local `[motif_regexes]` table. The compatible
+legacy `[motifs]` spelling is also accepted. Since v0.7.4, distinct names from
+both tables combine consistently in chapter measurements, the live dashboard,
+the motif panel in `build` dashboards, CLI and Python reports. Other optional
+`build` panels retain their existing scope. Identical duplicates deduplicate;
+different patterns under the same name fail explicitly. Prefer one table for a new project.
+`--motif NAME=REGEX` replaces configured motifs for that invocation. In Python,
+an omitted mapping inherits configuration; an explicit `{}` suppresses curated
+motifs while leaving generic repetition analysis available. An empty configured
+regex counts no occurrences, consistently with other empty cue patterns.
 
 Track a curated regular-expression motif alongside frequent content words and
 repeated n-grams:
@@ -1846,17 +2020,22 @@ Create a local reading copy without a browser or external converter:
 lixity pdf manuscript.md --layout book --author "Example Writer" -o reading.pdf
 # Since v0.7.0: an annotation copy with page and line numbers.
 lixity pdf manuscript.md --layout editor -o editorial.pdf
+# Since v0.7.4: neutral A4 text without generated title/header material.
+lixity pdf expose.md --layout document -o expose.pdf
 ```
 
 | Layout | Page | Purpose |
 | :--- | :--- | :--- |
 | `editor` (since v0.7.0) | A4 | Editorial reading with line numbers and room for comments |
+| `document` (since v0.7.4) | A4 | Neutral text with authored headings; no added title page, headers, footers or line numbers |
 | `report` | A4 | Analysis report with cover page and repeated table headers |
 | `book` | A5 | Continuous reading with serif text, mirrored margins and chapter openings |
 | `sheet` | A4 | Submission grid, at most 30 lines per page and 60 characters per line |
 
-Output defaults beside the manuscript; `-o` selects another path. Unchanged input,
+Output defaults in the selected workspace root; `-o` selects another path. Unchanged input,
 settings and fonts produce identical output. The manuscript is not modified.
+PDF and dashboard CLI exports reject the source path and its symbolic/hard-link
+aliases, before writing and again immediately before atomic replacement.
 The [native download form](#download-a-manuscript-pdf) uses the same composer
 without writing a CLI output path.
 
@@ -1866,9 +2045,13 @@ not a title candidate. `--author` overrides project `author_name`; an explicitly
 empty value clears the byline. PDF metadata includes title/author when present
 and the resolved language. A5 has chapter bookmarks and body-page title/author
 headers; title/imprint pages omit decorations but count toward physical folios.
-A4 headers and current/total page footers sit outside the prose/grid area.
+A4 editorial, sheet and report headers and page footers sit outside the prose/grid area.
+The neutral `document` layout retains the authored first title and other headings;
+configured title/author overrides affect metadata only. It adds no byline,
+analysis, imprint, title page or running furniture.
 The optional `draft_notice` project setting (or `--draft-notice` override) adds
-a running-header notice in every layout; an empty override clears it. See
+a running-header notice in the other four layouts; `document` omits it.
+An empty override clears the notice. See
 [publication settings](#publication-settings) for optional A5 imprint text.
 
 Fonts come from the host and can be pinned per role with CLI options listed by
@@ -1883,10 +2066,11 @@ rendering for every script.
 
 Since v0.7.0, manuscript structure is preserved independently of the analysis text:
 prefaces, subheadings, scene breaks, lists, quotations and notes survive export.
-Inline emphasis uses font styles; notes are collected as endnotes. Embedded
+Inline emphasis uses font styles; note definitions retain their text. Embedded
 LaTeX text formatting is a bounded subset, never executed as TeX. Unsupported
 TeX constructs report an error rather than silently changing the manuscript.
 Compare the same six-chapter *The Crate at Warehouse 4* manuscript as an
+[A4 document](demo/warehouse-4-document.pdf),
 [editorial copy](demo/warehouse-4-editor.pdf),
 [reading copy](demo/warehouse-4-book.pdf),
 [submission grid](demo/warehouse-4-sheet.pdf) or
@@ -1897,8 +2081,8 @@ images, typeset mathematics, create page-numbered tables of contents or alternat
 recto/verso running heads. Image references remain labelled text. See
 [Architecture](ARCHITECTURE.md) for the shared composition boundary.
 
-These fixed-layout PDFs are for editing, analysis, reading and submission. There is no
-EPUB export, bleed/crop marks, print color management, printer preflight or
+These fixed-layout PDFs are for everyday documents, editing, analysis, reading and submission.
+There is no EPUB/DOCX export, custom trim size, bleed/crop marks, print color management, printer preflight or
 PDF/UA/PDF/X certification. Searchable text, metadata and bookmarks alone do
 not establish accessibility or production compliance.
 
@@ -1929,13 +2113,20 @@ For foreground `lixity serve PATH`, an invalid explicit path fails before startu
 A valid directory without a unique manuscript can open an empty workspace;
 `lixity serve --no-project` intentionally starts without selecting a project.
 
-For automation, `lixity service status --json` returns
-`lixity-service-local/1`: `schema_version`, `ok`, `state`, `message`, plus
-`url`, `pid`, `backend`, `installed_version`, `running_version` and `log` when
-the manager initializes (unavailable values may be null). States are `running`,
-`starting`, `stopped`, `busy` and `unknown`. Exit 0 means `ok: true`; exit 1
-means false. Status succeeds only for a ready owned instance; stopped status
-exits 1, while stopping an already stopped instance succeeds. Stop preserves
+**Changed in v0.7.4:** `lixity service status --json` uses the status-specific
+`lixity-service-status/1` contract: `schema_version`, `ok`, `running`, `state`,
+`port`, `url`, `pid`, `backend`, `installed_version`, `running_version` and
+`message`. `ok` means the inspection succeeded: known `running`, `starting`,
+`stopped` and unmanaged-port `busy` states exit 0. `running` means a ready owned
+instance; it is false for the other known states. An unreadable, invalid or
+changing state remains `unknown`, with `ok: false`, `running: null` and exit 1.
+Unavailable metadata can be null; log paths, launch settings and raw errors are
+omitted. Scripts parsing the older lifecycle envelope must update explicitly.
+
+Human `service status` keeps its existing exit codes: a ready owned instance
+exits 0; stopped, starting, busy and unknown states exit 1. JSON for `start`,
+`restart` and `stop` remains `lixity-service-local/1` with its existing fields and
+success semantics; stopping an already stopped instance succeeds. Stop preserves
 saved launch settings and logs.
 
 **Since v0.7.3:** status does not create or repair storage or
@@ -1943,6 +2134,30 @@ acquire the lifecycle writer lock. Missing private folders are a normal stopped
 state. Unsafe, unreadable or changing records report uncertainty; status does not
 change runtime locations to work around a permission error. Lifecycle commands
 prepare their private storage when explicitly requested.
+
+### `lixity doctor`
+
+Inspect the installation and owned service without opening a manuscript project:
+
+```sh
+lixity doctor
+lixity doctor --json --port 9000
+```
+
+Since v0.7.4, `doctor` compares the imported CLI version, installed distribution
+metadata and a running service's reported version. It reports the module and
+interpreter paths, supported JSON contract versions and the shared read-only
+service observation. It does not install, repair, restart, create service storage
+or read manuscript/project configuration. Version agreement does not establish
+that an installation matches an unreleased source checkout.
+
+JSON uses `lixity-doctor/1` with `ok`, `installation`, `service`, `schemas` and
+`issues` (each issue has `code` and `severity`). A consistent installation with a
+stopped service is healthy and exits 0; reported mismatches or unavailable
+metadata/status exit 1. The port uses `--port`, then `LIXITY_PORT`, then 8765.
+An out-of-range numeric port or invalid `LIXITY_PORT` returns `ok: false` and
+`error: {code: "invalid-service-port", message: ...}` under the same schema, with
+exit 1. A non-integer explicit `--port` is a normal argument usage error (exit 2).
 
 ### `lixity build`
 
@@ -2321,10 +2536,23 @@ increase mention counts or fill mention gaps. Chapter numbers must exist in the
 current manuscript. No pronoun resolution, narrator inference or named-entity
 recognition is performed. Use configuration discovery for accepted fields and bounds.
 
+For an existing adapter that keeps its own figure list, move the reviewed names
+into `[characters]` profiles, then omit explicit `--name`/`--names` selections
+when calling `lixity characters --project ./novel`. Pass the same root-local
+settings as `project_config` to Python APIs; an explicit adapter name list still
+overrides the profiles. Review literal aliases rather than mechanically copying
+regex syntax, and never use a pronoun such as `I` as an alias for a viewpoint.
+Verify the resulting mentions and declared POV separately. This does not edit
+the manuscript or infer character presence.
+
 ### Chapter register settings
 
 In the native workspace, **Project → Settings → Chapter registers** edits named
-registers, optional feature bounds and chapter assignments. **Apply** validates,
+registers, optional feature bounds and chapter assignments. Since v0.7.4,
+feature choices and target rows show the shared units, including per-1,000-word
+densities and HD-D's 0–1 scale. Scene groups remain configured separately in
+`scene_analysis`; the style-table display filters do not change the whole-book
+reference. **Apply** validates,
 rebuilds and saves both tables together in the selected project's `lixity.toml`.
 It requires the current project token and preserves newer browser drafts during
 pending saves. Resetting detection thresholds does not reset registers.
@@ -2354,6 +2582,11 @@ or factual defect. Scene registers remain separately configured through the
 existing `scene_analysis` settings.
 
 ### Local repetition echoes
+
+Since v0.7.4, human `lixity motifs FILE` output and the analysis overview also
+show **Local phrase echoes**, including local count, chapter and inclusive
+chapter-prose word bounds. These remain separate from whole-book repeated phrase
+counts. The overview links to the chapter, not an invented exact line anchor.
 
 `lixity motifs FILE --json` and `api.motifs` add `echoes` alongside repeated
 phrases and content-word counts. Each echo contains `term`, `chapter`, `count`,
@@ -2433,8 +2666,8 @@ The BFSG covers consumer e-book services provided after 28 June 2025. Scope and
 exceptions matter, including the microenterprise exemption for services under
 § 3(3). See [BFSG § 1](https://www.gesetze-im-internet.de/bfsg/__1.html)
 and [§ 3](https://www.gesetze-im-internet.de/bfsg/__3.html).
-Lixity's supported exports remain A5 book, A4 sheet and A4 report PDFs. They
-provide fixed-layout reading copies, not EPUB or certified PDF/UA/PDF/X files;
+Lixity exports A4 document/editorial/sheet/report and A5 book PDFs. These
+fixed layouts do not include EPUB, DOCX, custom trim sizes or certified PDF/UA/PDF/X files;
 an imprint, searchable text or bookmarks do not establish BFSG compliance.
 
 ### Project NDA configuration (`[nda]`)
@@ -2549,11 +2782,17 @@ Text sources can be analysed separately or compared with a manuscript.
 It does not implement the entire [RFC](README.md).
 
 Product versions describe development maturity; response and archive schemas
-are independent. v0.7.2 reads research records/manifests v1–v8, including
+are independent. v0.7.2 and later read research records/manifests v1–v8, including
 historical v3.0.1 archives. Reading an archive does not upgrade it. See
 [compatibility and limits](#limits) before writing with an older application.
 Since v0.7.0, optional dossier geography uses v8. Ordinary dossier encodings stay
 unchanged until a geographic save; older readers cannot open v8 archives.
+
+For a browsable copy, use [Reading website](../USAGE.md#export-a-reading-website)
+in Project actions or `lixity export-site`. Research inclusion is explicit and
+includes authored history and cited excerpts; original source files and full
+extraction text are a separate choice. This is a static reading copy, not an
+archive restore format or a hosted account with revocable permissions.
 
 Use `lixity research --help` to discover implemented commands and
 `lixity research COMMAND --help` for exact arguments and output formats.
@@ -2568,6 +2807,17 @@ imports, embeddings/semantic search, automatic factual verification, prose
 rewriting or automatic Zotero synchronization. Interface text supports seven
 languages; research CLI help/errors are English. Labels do not translate sources
 or extend language-specific linguistic validation.
+
+## Find a task
+
+- [Read sources and connect claims](#reading-and-cli-workflows) — evidence, quotations and the manuscript companion.
+- [Read entries and versions](#read-entries-and-earlier-versions-without-losing-context) — current records and explicit earlier pins.
+- [Edit a dossier](#edit-an-exported-markdown-dossier) — a reviewed Markdown round trip, without overwriting the archive.
+- [Review decisions](#review-decisions-and-save-related-revisions-together) — compare context and explicitly acknowledge a reviewed version.
+- [Place claims in time](#claim-chronology-and-causeeffect-links) — authored dates and causal connections; missing dates stay unplaced.
+- [Use Zotero](#zotero-desktop-bridge) or [OCR](#self-hosted-pdf-and-ocr-extraction) — optional capture tools and their data boundaries.
+- [Compare a manuscript and sources](#cross-corpus-comparison-and-evidence-grounding) — lexical overlap with an explicit language.
+- [Export and restore](#export-and-restoration) — verified archive copies and recovery limits.
 
 ## Research workflows
 
@@ -2645,7 +2895,7 @@ preview with an installation link. Unchanged archive refreshes keep an opened
 evidence panel. A changed archive or project clears it so you can reload the
 current evidence.
 
-**On current main (Unreleased):** loaded claim evidence is grouped under the
+**Since v0.7.4:** loaded claim evidence is grouped under the
 collapsible **Source quotations** heading. Closing and reopening it keeps the
 loaded quotations and unsaved fields without another read. Authored search
 results use **View entry** to open the current record; **View
@@ -2658,7 +2908,7 @@ create or update an association.
 
 In **Manuscript**, **Dossier alongside** opens a chosen dossier in a read-only
 companion. It starts closed with no automatic selection. Refresh explicitly for
-the latest dossier. The companion and paragraph **Values** inspector are
+the latest dossier. The companion and paragraph **Explore passage** inspector are
 alternative tools; the **Analysis** display is a separate choice. Reading changes
 neither document, evidence links nor the statistical baseline. See
 [reader controls](../USAGE.md#reading-paragraphs) for display preferences,
@@ -2751,7 +3001,7 @@ facts or relevant research. Opening, closing or retrying this summary performs
 reads only, without retention, indexing, version upgrades or repinning. Research
 setup remains explicit. This presentation adds no API or archive schema version.
 
-**On current main (Unreleased):** the shared **Explore passage** inspector calls
+**Since v0.7.4:** the shared **Explore passage** inspector calls
 this **Research for this passage**. Quotations of the same pinned claim are
 grouped under **Text associations**; its assessment belongs to that exact claim
 version. The title opens the current entry, while **Linked version N** explicitly
@@ -2843,15 +3093,14 @@ remain unavailable until the manuscript exists at its saved project-relative pat
 
 ### Read entries and earlier versions without losing context
 
-**On current main (Unreleased):** ordinary entry actions open the current
+**Since v0.7.4:** ordinary entry actions open the current
 version in the shared read-only viewer. Explicit linked-version actions open
 their exact pin. The **Versions** disclosure loads the version list only when
 opened; expanding it never changes the displayed record. Choosing a version is
 explicit. The context names the selected kind, version and current/earlier state
 once; change provenance remains available without repeated version headings.
 **Edit** keeps its separate draft. Technical IDs and the archive snapshot remain
-in the **Technical details** disclosure. Published v0.7.3 instead uses separate
-**Edit** and **Saved versions** tabs with an initially visible version list.
+in the **Technical details** disclosure.
 
 Read-only fields use the same localized choices as editing. Absent optional
 fields are omitted; an explicit false value or measured zero remains visible.
@@ -2860,6 +3109,31 @@ are retained evidence excerpts; **Manuscript associations** refer to the
 separate links back to your manuscript. Neither establishes factual truth.
 Arrow keys, Home and End move between the editor's tabs; returning to Edit keeps
 an unsaved draft. Reading earlier versions does not revise or retarget a record.
+
+For daily CLI reads, list dossiers and copy a complete ID into the next command.
+Since v0.7.4, human dossier, claim and decision lists print complete IDs without
+ellipsis. JSON keeps the same identifiers and response fields.
+
+```sh
+lixity research dossier list --project ./novel --format table
+lixity research dossier list --project ./novel --tag history --tag harbour
+lixity research dossier DOSSIER_ID --project ./novel --section "Timeline" --format text
+lixity research dossier show DOSSIER_ID --project ./novel --section "Timeline" --revision 1 --format text
+```
+
+`--tag` is an exact, case-sensitive list filter; repeat it to require **all**
+specified tags. It matches current tags only, preserves list ordering and works
+with JSON, text or table output. It cannot be combined with a selected record,
+creation or revision fields. `--tags` remains comma-separated authored metadata;
+always use that full spelling when creating or revising tags. Tags remain
+1–50 characters and are classifications, not aliases or unique record IDs.
+
+`--section` text output includes the matched heading and its content, including
+nested subsections. Other sections are omitted; an empty section stays empty.
+Heading lookup ignores case and surrounding selector whitespace, but duplicate
+matching headings are ambiguous and require reading the full dossier. Direct ID,
+`show ID`, `inspect ID` and `--dossier-id ID` use the same section read. An explicit
+`--revision N` retains that version; opening text never re-pins or saves it.
 
 ### Claims linked to a dossier
 
@@ -3176,6 +3450,9 @@ reviewed project and snapshot; a later archive change requires another preview,
 not substituting a newer digest. Applying reads the packet, not later edits to
 the Markdown file. Export and packet output require new files outside the archive
 and its internal `.lixity` directory; existing files are never overwritten.
+
+Since v0.7.4, `dossier show ID --export-edit draft.md` and the direct ID form
+are equivalent. Explicit incompatible inspection/editing modes still fail.
 
 The leading comment identifies the project, record and base revision. Its
 `fields` object edits title, language, tags, geography and evidence IDs; the
@@ -3723,9 +4000,20 @@ lixity research compare --project ./novel --source-id SOURCE_ID \
 Counts share core prose scope: body paragraphs, lists and blockquotes, excluding
 code/comments/footnote definitions. With chapters, headings/front matter/appendix
 are excluded; otherwise remaining document prose is used. Comparison uses code-
-default parsing, source language and the explicit manuscript language (English by
-default); it does not inherit custom project `chapter_regex`/`appendix_marker`.
-Inspect the chapter trace before comparing with a differently configured dashboard.
+default parsing and the archived source language; it does not inherit custom
+project `chapter_regex`/`appendix_marker`. Inspect the chapter trace before
+comparing with a differently configured dashboard.
+
+Since v0.7.4, the CLI uses explicit `--language` first, otherwise the selected
+project's root-local `language`, otherwise English. Root `lixity.toml` overrides
+root `[tool.lixity]`; ancestor, user and nested manuscript settings are excluded.
+The archive's project language is not a fallback for a missing analysis setting.
+Use `--language auto` to request detection explicitly, or set
+`language = "auto"` in the selected root. A required malformed, unreadable or invalid language
+configuration fails instead of silently using English or `generic`. Supplying
+both a manuscript path and `--language` needs no project configuration read.
+The Python API keeps its English default unless `language` is supplied. Check
+the returned `manuscript_language`, `lexical_comparable` and comparison limits.
 
 Cross-language comparisons retain numbers but set `meta.lexical_comparable: false`
 and `cross_language_lexical_comparison` in `comparison_limits`; do not read lexical
@@ -4076,6 +4364,75 @@ owns component boundaries. This document describes the implemented local model,
 not the broader interchange proposal. Inspect installed entity definitions with
 `lixity research schema` and supported contracts with `lixity about --json`.
 Product, entity, manifest and response versions are separate.
+
+## Reading website projection
+
+Since v0.7.4, `lixity.site_export` produces a static publication projection of
+one selected project. It does not add a reader role to an archive entity or
+change a stored permission: the recipient receives a copy of the included
+content. The source archive's entity and manifest contracts are unchanged.
+
+```mermaid
+flowchart LR
+    P[Explicit project] --> V[Verify manuscript and research snapshot]
+    V --> S[Select export scope]
+    S --> R[Review: native read-only workspace]
+    S --> C[Reader or companion: curated publication profile]
+    S --> D[Prepared reads or selected publication content]
+    C --> W
+    R --> W[Reading website]
+    D --> W
+    W --> M[Export manifest with file hashes and disclosure scope]
+```
+
+`lixity-read-only-site/1` identifies the website manifest;
+`lixity-read-only-site-data/1` identifies its embedded prepared-response
+envelope. These are export contracts, not new research record versions. The
+source manuscript SHA-256 and selected research snapshot identify the input
+stand. File hashes detect changed bytes; they do not authenticate the sender.
+
+The default review copy contains manuscript analysis and no research. Explicit
+research inclusion adds authored records and their history, exact pinned
+associations and cited excerpts. Source files and full extraction text require
+a separate opt-in. Current entry navigation and linked historical revisions
+retain their distinct meaning. Missing or withdrawn evidence remains an
+availability state, never replacement evidence or an automatically updated pin.
+This export is not a restorable archive and does not reconstruct the entire
+project directory.
+
+`site_publications` belongs to the explicit project's configuration, not to a
+research entity. Its generated schema is exposed through configuration metadata.
+A named profile contains a public title/introduction and ordered entries:
+`dossier_id`, optional `revision` and unique `section`, `reveal_after_chapter`,
+optional public `title`, `include_citations` and `include_geography`. Omitted
+revision means current at export time; the actual resolved revision remains in
+the publication. Omitted section explicitly selects the entire dossier body.
+Citations and geography belong to the whole selected dossier revision, not an
+inferred section. Both fields default to false. Source redistribution consent
+is a per-export choice and is never stored in the profile.
+
+The `lixity-reader-publication/1` projection contains only curated entries,
+resolved versions, canonical chapter numbers, release gates and selected media.
+Its envelope has an empty prepared-response table. Internal claims, decisions,
+source context, history and reverse joins are excluded. `reader` includes literal
+manuscript blocks through the export cap; `companion` includes none, and does not
+publish private manuscript filenames. An explicit quote authored in a selected
+dossier remains part of that author's selected body.
+
+Release gates govern display after the reader confirms progress; they are not
+permissions or encryption. `max_chapter` instead physically omits later entries
+and their dependency assets, and truncates reader-mode manuscript chapters.
+A manifest records mode, profile, publication identity, cap and entry count.
+Changing a profile does not revise the original dossier or alter its links.
+
+The response table permits only enumerated reads. Mutation requests and
+unknown routes fail closed, including when the copy is hosted beside a live
+`/api`. The UI uses the shared product components with an explicit read-only
+profile. Browser display preferences may change locally; archive settings,
+records, source bytes and manuscript text cannot be written through this
+transport. No host paths, configuration, search databases, locks, credentials
+or runtime diagnostics belong to the export. The [usage guide](../USAGE.md#export-a-reading-website)
+describes disclosure and hosting limits.
 
 ## Authority and identity
 
@@ -5457,15 +5814,63 @@ activation; inconsistent snapshot envelopes fail instead of mixing versions.
 and `LixityReadingThread` owns the exact passage return. Opening a context neither
 replaces the prose node nor saves records. Unlinked text, an uninitialized archive,
 unavailable data and failed/stale reads have distinct states. The public demo
-prepares exact read aliases and retains its read-only fixture boundary.
+uses the same static website projection and read-only profile as exported
+project reading copies.
+
+### Static reading websites
+
+`site_export.prepare_site` reads an explicit project and assembles a bounded
+`SiteBundle`. Review mode uses the shared pipeline and `render_analysis`, with
+the native UI's read-only capabilities. Its research data is a separate opt-in
+projection of one verified snapshot; original source files and full extraction
+text require another opt-in. Snapshot-scoped native response helpers avoid
+repeatedly loading the archive. No global cross-request archive cache or relaxed
+corruption check is involved.
+
+Reader and companion modes resolve a validated root `site_publications` profile
+against that snapshot. They select current or explicitly pinned dossier versions,
+unique heading subtrees, public titles and chapter release gates before rendering.
+They never serialize native Research responses or calculate manuscript analysis.
+Whole-dossier citations and geography require explicit profile fields; images and
+source bytes require a separate, one-export choice. Reverse associations, internal
+claims, decisions and history are not inferred publication selections.
+
+An export cap removes later entries and dependency assets before serialization;
+reader mode additionally truncates canonical manuscript chapters and omits markers,
+front matter and appendices. Companion mode passes no manuscript blocks to the
+shared reading shell. Both reuse the literal ReaderBlock renderer and native
+Markdown, diagram, image and geographic components. Browser-local progress is an
+explicit reading aid, scoped to publication identity, source hash and cap. It does
+not establish access rights: included later bytes remain inspectable. Invalid or
+unavailable storage starts at chapter zero, and preview never advances progress.
+
+The embedded `lixity-read-only-site-data/1` response table contains enumerated
+prepared reads. The first-loaded static transport returns these reads without
+a server, rejects mutation and unknown requests, and never falls back to a
+host's `/api`. Shared UI owners suppress unsupported editing and administrative
+actions. Retained media uses explicit bundled-resource mappings; maps start
+with offline geometry, without external tiles or implicit analytics requests.
+Browser-local reading preferences remain available.
+
+`export_site` publishes a fresh directory only after complete assembly; existing
+destinations are rejected. The native `site-export` route downloads an in-memory
+ZIP, bound to the current manuscript metadata token and rechecked selection.
+It does not publish a site or create files in the source project. The website
+manifest inventories scope, source identities and file digests. It is a public
+projection contract, separate from archive entity/manifest versions; it does
+not supply accounts, encryption, copy prevention or a restorable backup. See
+[the data model](research/DATA_MODEL.md#reading-website-projection) and
+[the sharing workflow](USAGE.md#export-a-reading-website).
 
 ## Configuration and multiple projects
 
-Explicit root settings own author identity, publication, chapter registers and
-project-local character profiles; user/ancestor defaults cannot supply them.
+Explicit root settings own author identity, publication, reading-site profiles,
+chapter registers and project-local character profiles; user/ancestor defaults cannot supply them.
 The optional root `manuscript` setting follows the same project-only boundary.
 `config.read_explicit_project_config` reuses the existing TOML parser but reads
 only root pyproject/lixity files and promotes failed reads to errors.
+The native view, PDF composer and website exporter all use this selected root,
+including when the manuscript is in a subdirectory with another configuration.
 `workspace.configured_manuscript` owns contained relative-path resolution without
 reading source bytes. `discover` applies explicit → configured → conventional
 selection and validates configured regular files. The read-only Research CLI
@@ -5675,9 +6080,12 @@ are prepared, with explicit codepoint-to-UTF-16 conversion and hash validation.
 Search/research mark changes invalidate derived ranges, not source identities.
 Analysis visibility, metric changes and workspace changes cancel stale cards and
 marks. Unsupported or unprovable mappings remain explicit unavailable states.
-On current main, the paragraph menu opens one existing passage inspector. Its
+Since v0.7.4, the paragraph menu opens one existing passage inspector. Its
 measurement action captures the source point and uses the evidence owner; its
 research action delegates to the existing explicit passage association reader.
+An identical accepted manuscript-review report in the same source/project
+context retains its list nodes, preserving native dialog focus-return targets.
+A changed report or list filter still renders; errors clear the accepted report.
 The presentation keeps computed counts and authored research separate without
 a new context state or transport contract. The floating card uses native counts
 and the existing paragraph comparison; it never parses localized numeric text.
@@ -6217,6 +6625,7 @@ lixity analyze --help
 lixity research --help
 lixity research ingest --help
 lixity about --json
+lixity doctor --json
 ```
 
 `about` (also `schema --json`) reports installed command metadata, languages,
@@ -6275,19 +6684,34 @@ their roles; see [reader guidance](USAGE.md#link-a-manuscript-quote-to-a-claim).
 
 `service` manages only its owned local process and starts an empty workspace by
 default. `serve` runs in the foreground. CLI analysis/research/build calls do not
-switch an existing server's project. Service JSON uses `lixity-service-local/1`;
-exit `0` means `ok: true`, including an already-stopped `stop`. A stopped `status`
-returns false/nonzero. Since v0.7.3, status is non-mutating and does not take
+switch an existing server's project. Since v0.7.4, `service status --json` uses
+`lixity-service-status/1`: `ok` means successful inspection; known running,
+starting, stopped and unmanaged-port busy states exit 0. `running` is true only
+for a ready owned instance, false for other known states and null for unknown
+state (`ok: false`, exit 1). It omits log paths, launch settings and raw errors.
+This intentionally replaces the older status JSON contract. Human stopped status
+still exits 1. Other lifecycle JSON remains `lixity-service-local/1`, including
+successful already-stopped `stop`. Since v0.7.3, status is non-mutating and does not take
 the lifecycle writer lock; unreadable/changing state remains unknown. Start uses
 new launch choices; restart uses saved choices
 plus explicit overrides. [Lifecycle details](INSTALLATION.md#running-the-server)
 include environment isolation and installed/running versions.
+`doctor --json` uses `lixity-doctor/1` with `installation`, `service`, `schemas`,
+`issues` and `ok`. It reports imported/distribution/service versions and installation
+paths without reading manuscripts/project configuration or repairing/restarting
+anything. A healthy stopped service is valid; discrepancies or unavailable
+observations exit 1. Out-of-range numeric ports or invalid `LIXITY_PORT` return
+the same schema with `ok: false` and `error.code: "invalid-service-port"`;
+non-integer explicit `--port` values remain usage errors (exit 2).
+See [doctor](USAGE.md#lixity-doctor).
 An invalid explicit foreground `serve` selector fails before binding; it does not
 select the caller's directory. Valid empty/ambiguous directories retain their
 neutral workspace behavior, and `--no-project` intentionally selects none.
 
 Outputs use the shared atomic writer; failures propagate without a direct-overwrite
-fallback. [Architecture](ARCHITECTURE.md#configuration-and-multiple-projects)
+fallback. PDF/dashboard CLI exports reject source path, symlink and hard-link
+aliases both before writing and immediately before replacement.
+[Architecture](ARCHITECTURE.md#configuration-and-multiple-projects)
 defines publication guards and [PDF usage](USAGE.md#lixity-pdf) defines layout limits.
 
 ## 3. JSON contracts
@@ -6923,6 +7347,37 @@ When running `lixity serve --port 8765`, local agents can trigger deterministic 
 Browser API diagnostics report request metadata without copying response bodies
 to the console.
 
+**Since v0.7.4:** `POST /api/site-export` requires
+`{"project_token":"<current manuscript metadata token>","include_research":false,"include_source_files":false}`.
+Optional fields are `mode` (`review`, `reader`, `companion`; default `review`),
+`publication_profile` and `max_chapter`. The installed `export-site` command's
+`scope_schema` describes the strict shared request options. Review mode rejects
+profile/cap and requires research inclusion for source files. Reader/companion
+require a root-local profile and reject raw research inclusion; selected source
+files remain a separate choice. Booleans and chapter numbers are strict types.
+
+The route captures the explicit selected project, active language/title/thresholds,
+assembles a static website and rechecks its manuscript metadata token and selection
+before returning an `application/zip` attachment. It creates no source-project
+export files and never publishes. The attachment name uses the exported public
+title. Invalid input or unavailable data returns 400; stale selected context
+returns 409; an oversized download returns 413. Review mode refuses to silently
+combine a manuscript with a separately selected research root. Host and Origin
+checks apply to every format.
+
+Python callers use `lixity.site_export.prepare_site(project, *, manuscript=None,
+language=None, title=None, thresholds=None, include_research=False,
+include_source_files=False, mode="review", publication_profile=None,
+max_chapter=None)` to obtain a `SiteBundle` with `files`, `manifest` and `to_zip()`.
+`export_site(project, output, **same_options)` writes a new directory and returns
+its `lixity-read-only-site/1` manifest. Existing destinations are rejected.
+The inline envelope is `lixity-read-only-site-data/1`. Review reads preserve native
+response contracts; mutation and unknown requests fail closed. Curated formats
+instead carry `lixity-reader-publication/1` with an empty response table and no
+analysis. An export cap removes content before serialization; local chapter
+progress only hides included content. See [sharing scope](USAGE.md#export-a-reading-website)
+and [projection semantics](research/DATA_MODEL.md#reading-website-projection).
+
 **Since v0.7.2:** `GET /` and `/index.html` validate the active
 manuscript before reusing the dashboard. Missing/unreadable input or failed
 config/render rebuilds retain the last successful HTML/info/source digest and add
@@ -6943,7 +7398,10 @@ or manuscript path, not `--project` / `--manuscript` flags.
 `POST /api/manuscript-pdf` accepts
 `{"layout": "book", "project_token": "<opaque current-context token>"}`.
 Layouts are `book`, `sheet` and `report`; since v0.7.0 they also include
-`editor` for an A4 annotation copy. The token belongs to the selected
+`editor` for an A4 annotation copy, and v0.7.4 adds `document` for neutral A4 text.
+The latter retains authored headings, puts entered title/author in metadata only
+and adds no title page, byline, header/footer, line numbers or analysis.
+The token belongs to the selected
 manuscript context and must be passed unchanged; stale context is rejected
 instead of exporting another project's manuscript. The response is binary
 `application/pdf` with an attachment filename, not a JSON record envelope.
@@ -6970,7 +7428,7 @@ selection metadata; file edits alone do not create a content-version lock.
   for the header and NDA defaults; explicit language/threshold preferences remain.
 - `POST /api/load`: `{"name": "manuscript.md", "content": "..."}`; legacy upload into `exports/manuscripts/`, not an existing-project opener. An existing saved filename returns HTTP 409 without replacing its bytes or switching the active manuscript.
 - `POST /api/settings`: `{"language": "en", "z_mild": 2.5, "z_strong": 3.5, "fdr_q": 0.05}`.
-  Title, author and publication save to the selected root's `lixity.toml`;
+  Title, author, publication and `site_publications` save to the selected root's `lixity.toml`;
   language/thresholds are session-only by default. Optional `author_name` needs
   an active project and single-line text up to 500 characters (empty clears).
   Publication uses the [shared field contract](USAGE.md#publication-settings).
@@ -7287,6 +7745,28 @@ restart values.
 Re-read active settings from passport `meta`; `about` reports defaults.
 Use `lixity.pipeline.analyze_document` when several views need the same
 analysis result, rather than recalculating the corpus through multiple calls.
+
+### 5.4 Keep an adapter aligned with the native dashboard
+
+A custom publication/export adapter is a separate integration, not a native
+workspace upgrade. Missing panels can result from omitted renderer inputs even
+when the installed package is current. Reuse one resolved project configuration
+and `analyze_document(text, config, thresholds, include_evidence=True)` result.
+`render_analysis(result, resolved, ...)` wires its chapters, paragraphs, metrics,
+fingerprint and `paragraph_evidence` together. Pass the shared scene report as
+`scenes`, and use `resolve_character_settings` for names/aliases and declared
+viewpoints instead of maintaining a second figure list. Reuse `reader_blocks`
+for canonical manuscript structure; do not build another paragraph-offset map.
+
+The native server already supplies these optional inputs. `api.dashboard`
+provides scene/register and configured-character panels but does not collect
+exact text evidence by default; the lower-level pipeline opt-in is explicit.
+A self-contained report is not a running local server: enabling server controls
+without their genuine endpoints creates unavailable actions. Prefer the native
+workspace for the interactive author workflow; keep book-specific publication
+formats in their own project. If a native build is also run as a cross-check,
+choose its output location deliberately and record which pipeline is canonical.
+Validate rendered desktop/mobile states after changing adapter inputs.
 
 ## 6. Constraints for editing workflows
 

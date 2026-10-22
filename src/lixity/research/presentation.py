@@ -322,9 +322,7 @@ def record_list_report(command: str, result: dict[str, Any], *, markdown: bool =
     def cell(row: Any, field: str) -> str:
         value = row.get(field, "") if isinstance(row, dict) else ""
         text = str(value).replace("|", "\\|")
-        if field == "id":
-            return text[:8] + "…" if len(text) > 9 else text
-        return text[:60]
+        return text if field == "id" else text[:60]
 
     if markdown:
         lines = ["| " + " | ".join(name for _, name in _RECORD_COLUMNS) + " |",

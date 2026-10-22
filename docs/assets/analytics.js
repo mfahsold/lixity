@@ -21,11 +21,16 @@
     warn('configuration location is invalid.'); return;
   }
 
-  fetch(configUrl.href, {credentials: 'omit', redirect: 'error', cache: 'no-cache', referrerPolicy: 'no-referrer'})
-    .then(response => {
-      if (!response.ok) throw new Error('configuration');
-      return response.json();
-    }).then(config => {
+  // Prepared public pages may pin the reviewed site code without widening the
+  // product website's closed read transport. Private exports never add this script.
+  const configuration = loader.hasAttribute('data-site-code')
+    ? Promise.resolve().then(() => ({site_code: JSON.parse(loader.getAttribute('data-site-code'))}))
+    : fetch(configUrl.href, {credentials: 'omit', redirect: 'error', cache: 'no-cache', referrerPolicy: 'no-referrer'})
+      .then(response => {
+        if (!response.ok) throw new Error('configuration');
+        return response.json();
+      });
+  configuration.then(config => {
       if (!config || Array.isArray(config) || typeof config !== 'object') {
         warn('configuration is invalid.'); return;
       }
@@ -79,7 +84,7 @@
           if (destination.pathname === '/lixity/demo/report.html') name = 'demo-open';
           else if (['/lixity/INSTALLATION.md', '/lixity/guides/installation.html'].includes(destination.pathname) ||
                    (destination.pathname === '/lixity/' && ['#install', '#installation'].includes(destination.hash))) name = 'install-open';
-          else if (/^\/lixity\/demo\/warehouse-4-(book|editor|sheet|report)\.pdf$/.test(destination.pathname)) name = 'pdf-download';
+          else if (/^\/lixity\/demo\/warehouse-4-(book|editor|sheet|report|document)\.pdf$/.test(destination.pathname)) name = 'pdf-download';
         } else if (destination.origin === 'https://github.com' &&
                    /^\/mfahsold\/lixity\/?$/.test(destination.pathname)) name = 'repository-open';
         if (name) count(name, labels[name], '', true);

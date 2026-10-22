@@ -15,8 +15,8 @@ from typing import Any
 from ..characters import presence_report, resolve_character_settings
 from ..config import (
     load_project_config,
+    read_explicit_project_config,
     resolve_thresholds,
-    same_config_scope,
     validate_author_name,
 )
 from ..dialogue import dialogue_report
@@ -115,20 +115,14 @@ def build_server_dashboard(
             manuscript_name = os.path.basename(source_input)
 
     source_is_file = bool(source_input and os.path.isfile(source_input))
-    settings = load_project_config(source_input) if source_is_file else {}
-    if not source_input and project_root is not None:
-        settings = load_project_config(project_root)
+    settings = (read_explicit_project_config(project_root) if project_root is not None else
+                load_project_config(source_input) if source_is_file else {})
     identity_settings = settings
-    if project_root is not None:
-        # Author/publication stay project-local; reuse the settings read when
-        # the manuscript already sits in the selected root.
-        if source_input and not (source_is_file and same_config_scope(project_root, source_input)):
-            identity_settings = load_project_config(project_root)
-    elif source_input and not source_is_file:
+    if project_root is None and source_input and not source_is_file:
         identity_settings = load_project_config(Path(source_input).parent)
-    if project_root is not None or not source_is_file:
-        # Chapter assignments belong to the explicitly selected workspace,
-        # including manuscripts imported beneath its exports directory.
+    if project_root is None and not source_is_file:
+        # Legacy missing-source views retain project-local identity without
+        # interpreting unrelated ambient analysis settings as measured prose.
         settings = {**settings, **{key: identity_settings.get(key, {})
                                   for key in ("register_profiles", "chapter_registers")}}
         settings.pop("characters", None)
@@ -218,7 +212,7 @@ def build_server_dashboard(
         dialogue=dialogue_report(text, config).to_dict(),
         characters=character_report,
         pacing=pacing_report(text, config).to_dict(),
-        motifs=motif_report(text, settings.get("motifs", {}), config).to_dict(),
+        motifs=motif_report(text, config=config).to_dict(),
         showing=showing_report(text, config, metrics=metrics).to_dict(),
         scenes=scene_report_for_display(text, config, settings.get("scene_analysis"),
                                         premeasured_chapters=metrics.chapters),
@@ -239,6 +233,9 @@ def build_server_dashboard(
         author_setting_enabled=bool(source_input or project_root is not None),
         publication=publication_values,
         publication_error=publication_error,
+        site_publications=identity_settings.get("site_publications", {}),
+        site_publication_context_token=research_context_token(
+            project_root or (Path(source_input).parent if source_input else None)),
         register_settings=settings,
         project_token=project_settings_token(
             project_root or (Path(source_input).parent if source_input else None), source_input,

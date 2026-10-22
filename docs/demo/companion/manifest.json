@@ -1,0 +1,82 @@
+{
+  "analysis": null,
+  "capabilities": {
+    "analysis": false,
+    "automatic_external_requests": false,
+    "read_only": true,
+    "research": false,
+    "source_files": true
+  },
+  "created_at": "2026-10-22T14:10:27.201806+00:00",
+  "disclosures": [
+    "Contains only the selected publication profile, approved dossier content and explicitly selected citations/maps.",
+    "Reading progress hides content already included in this file; it is not access control.",
+    "The export chapter cap removes later publication entries and resources before assembly.",
+    "Contains no manuscript prose or analysis.",
+    "Includes original source bytes and images; retention does not grant redistribution rights. Only selected publication dependencies are copied.",
+    "A local reading snapshot, not a research backup or access-control system. No automatic publishing.",
+    "Saved prose and source URLs can contain personal information; review before sharing.",
+    "The reviewed public wrapper adds navigation, canonical metadata and visual credits; no analytics."
+  ],
+  "entrypoint": "index.html",
+  "files": {
+    "assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg": {
+      "byte_length": 2515979,
+      "sha256": "2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d"
+    },
+    "assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg": {
+      "byte_length": 2809171,
+      "sha256": "993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64"
+    },
+    "index.html": {
+      "byte_length": 4181933,
+      "sha256": "b355f3bc87960700589572d04a7c77bfa5744f224589011ef6a0139fd8500788"
+    },
+    "licenses/Lixity-LICENSE": {
+      "byte_length": 34523,
+      "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0"
+    },
+    "licenses/htm.LICENSE": {
+      "byte_length": 11341,
+      "sha256": "740725f7252e750af735d0028cc534970772f513331e9f68150fede8fb3ce00f"
+    },
+    "licenses/leaflet.LICENSE": {
+      "byte_length": 1395,
+      "sha256": "53e8dc25862014e4324741ca18fbe3611e11d42ef69f59f86ea8c5389647d4cb"
+    },
+    "licenses/mermaid.LICENSE": {
+      "byte_length": 1089,
+      "sha256": "ec9fb67dcb25eccc416ed56e1aab819222c805a2a4bfe4cb19e7556bf2ffde80"
+    },
+    "licenses/photoswipe.LICENSE": {
+      "byte_length": 1129,
+      "sha256": "2c223af0b21d32240087ee189eb70fd315907b6ade8b561e24265baccd6a98e7"
+    },
+    "licenses/preact.LICENSE": {
+      "byte_length": 1087,
+      "sha256": "1fe6958409c8c257a70c587a18b6f7f412b179b456630790d30b2ec9a8e4b7d4"
+    }
+  },
+  "manuscript": {
+    "source_sha256": "218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112"
+  },
+  "mode": "companion",
+  "product_version": "0.7.4",
+  "project": {
+    "id": "urn:uuid:c350bdec-f628-4531-a176-4dbab0ba1ceb",
+    "language": "en",
+    "title": "Warehouse 4 — a reader's companion"
+  },
+  "publication": {
+    "entry_count": 5,
+    "identity": "98b6aa239af35393adaf4a2b6ffbbae08705bd233c6ea7f4645544ee0027ecbf",
+    "max_chapter": 3,
+    "profile": "readers"
+  },
+  "research": {
+    "included": false,
+    "revision_count": 0,
+    "snapshot": null
+  },
+  "schema_version": "lixity-read-only-site/1"
+}

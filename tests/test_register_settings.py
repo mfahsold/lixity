@@ -6,11 +6,72 @@ from pathlib import Path
 import pytest
 
 from lixity import config
+from lixity.analyzer import CorpusAnalyzer
 from lixity.config import load_project_config
 from lixity.models import CorpusConfig
 from lixity.server.pdf_context import project_settings_token
 from lixity.server.views import build_server_dashboard
-from tests.support import HtmlControls, recording_handler
+from lixity.style_fingerprint import FEATURE_UNITS, FingerprintThresholds, StyleFingerprint
+from lixity.ui.heatmap import render_register_targets
+from lixity.ui.settings import settings_form
+from tests.support import HtmlControls, labels_for, recording_handler
+
+
+@pytest.mark.parametrize("language", ("en", "de", "fr", "es", "it", "pt", "nl"))
+def test_register_controls_and_comparisons_show_shared_feature_units(tmp_path: Path, language):
+    manuscript = tmp_path / "manuscript.md"
+    manuscript.write_text("\n\n".join(
+        f"## Chapter {number}\n\n" + "The rain falls across the quiet garden. " * 30
+        for number in range(1, 6)))
+    (tmp_path / "lixity.toml").write_text(
+        '[register_profiles.voice]\npassive_density = [5, 12]\nhd_d = { lower = 0.1 }\n'
+        '[chapter_registers]\n"1" = "voice"\n')
+    markup, _ = build_server_dashboard(str(manuscript), project_root=tmp_path, language=language)
+    editor = HtmlControls(markup).elements["register-editor"]
+    features = dict(json.loads(editor["data-features"]))
+    passive_unit = FEATURE_UNITS[language]["passive_density"]
+    assert passive_unit in features["passive_density"]
+    assert "0–1" in features["hd_d"]
+    targets = markup.split('id="register-targets"', 1)[1].split("</section>", 1)[0]
+    assert passive_unit in targets
+    assert "0–1" in targets
+    assert 'href="#settings-registers-summary"' in targets
+    assert labels_for(language)["register_scope_hint"] in targets
+
+
+def test_passive_register_ranges_preserve_measurement_and_global_reference():
+    metrics = CorpusAnalyzer(CorpusConfig(language="en")).analyze_text("\n\n".join(
+        f"## Chapter {number}\n\n" + "The rain falls across the quiet garden. " * 30
+        for number in range(1, 6)))
+    for chapter, value in zip(metrics.chapters, (6.51, 6.51, 1.0, 4.0, 12.0), strict=True):
+        chapter.passive_density = value
+    plain = StyleFingerprint.from_metrics(metrics)
+    registered = StyleFingerprint.from_metrics(metrics, config=CorpusConfig(
+        chapter_registers={"1": "forensic", "2": "action"},
+        register_profiles={"forensic": {"passive_density": [5, 12]},
+                           "action": {"passive_density": {"upper": 4}}},
+    ))
+    assert registered.register_targets[1]["passive_density"] == {
+        "lower": 5.0, "upper": 12.0, "value": 6.51, "position": "within",
+    }
+    assert registered.register_targets[2]["passive_density"] == {
+        "lower": None, "upper": 4.0, "value": 6.51, "position": "above",
+    }
+    assert registered.values == plain.values
+    assert registered.baseline == plain.baseline
+    assert registered.z_scores == plain.z_scores
+    assert registered.dimensions == plain.dimensions
+    static = render_register_targets(registered, metrics, labels_for("en"), "en")
+    assert 'href="#settings-registers-summary"' not in static
+    assert "per 1,000 words" in static
+
+
+def test_register_units_use_display_locale_with_automatic_analysis_language():
+    markup = settings_form(labels_for("de"), "Synthetic project", "auto", [("auto", "Automatic")],
+                           FingerprintThresholds(), language_key="de")
+    features = dict(json.loads(HtmlControls(markup).elements["register-editor"]["data-features"]))
+    assert FEATURE_UNITS["de"]["passive_density"] in features["passive_density"]
+    assert FEATURE_UNITS["en"]["passive_density"] not in features["passive_density"]
 
 
 def test_register_settings_load_only_from_the_explicit_project(tmp_path: Path, monkeypatch):

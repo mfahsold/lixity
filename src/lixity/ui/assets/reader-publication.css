@@ -1,0 +1,33 @@
+/* Curated reading uses the shared text/media renderers without edit surfaces. */
+.publication-site .page { max-width: 90rem; }
+.publication-header { border-bottom: 1px solid var(--line); margin-bottom: 1rem; }
+.publication-introduction { max-width: 70ch; white-space: pre-wrap; margin-bottom: 1rem; }
+.publication-progress-controls { display: grid; gap: .6rem; margin: 1rem 0; }
+.publication-progress-controls h2 { margin: 0; font-size: 1.1rem; }
+.publication-progress-controls .row { margin: 0; align-items: center; }
+.publication-progress-controls > button { justify-self: start; }
+.publication-progress-controls form[hidden] { display: none; }
+.publication-progress-controls select { max-width: 100%; }
+.publication-reading-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(19rem, 1fr); gap: 2rem; align-items: start; width: 100%; min-width: 0; }
+.publication-reading-layout:not(:has(.publication-novel)) { display: block; max-width: 75ch; margin-inline: auto; }
+.publication-reading-controls { margin-bottom: 1rem; }
+.publication-context { position: sticky; top: 1rem; max-height: calc(100dvh - 2rem); overflow: auto; min-width: 0; }
+.publication-reading-layout:not(:has(.publication-novel)) .publication-context { position: static; max-height: none; overflow: visible; }
+.publication-context h2 { margin-top: 0; }
+.publication-context input { width: 100%; }
+.publication-context .publication-scope { padding-bottom: 1rem; border-bottom: 1px solid var(--line); }
+.publication-context a { color: var(--accent); }
+.publication-context article { border-top: 1px solid var(--line); padding-block: 1rem; }
+.publication-context article h3 { margin-top: 0; }
+.publication-context .research-prose { overflow-wrap: anywhere; }
+.publication-site .reader-structural { white-space: pre-wrap; overflow-wrap: anywhere; }
+.publication-site .chapter { margin-block: 2rem; }
+.publication-site #chapters { font-size: var(--reader-font-size, 1.15rem); line-height: 1.65; }
+.publication-site footer { margin-top: 2rem; }
+@media (max-width: 900px) {
+  .publication-reading-layout { display: flex; flex-direction: column; gap: 1rem; }
+  .publication-context { order: -1; position: static; width: 100%; max-height: 60dvh; }
+  .publication-novel { width: 100%; }
+  .publication-progress-controls .row { align-items: stretch; }
+  .publication-progress-controls label { flex-basis: 100%; }
+}

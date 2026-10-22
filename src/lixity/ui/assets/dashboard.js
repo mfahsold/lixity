@@ -266,6 +266,12 @@ function paintLayerAction(panel, info) {
   else delete actions.dataset.layerSymbol;
 }
 
+function syncEvidenceLegend() {
+  var legend = document.getElementById("layer-evidence-legend");
+  var toggle = document.getElementById("analysis-evidence-enabled");
+  if (legend) legend.hidden = !toggle || !toggle.checked;
+}
+
 function applyLayer() {
   var key = layer ? layer.value : "";
   document.body.classList.toggle("layer-on", !!key);
@@ -301,12 +307,16 @@ function applyLayer() {
     if (key && layer) {
       var option = layer.options[layer.selectedIndex];
       var title = document.getElementById("layer-legend-title");
+      var hint = option.getAttribute("data-hint") || "";
       if (title) {
         title.textContent = option.textContent;
-        var hint = option.getAttribute("data-hint") || "";
         if (hint) title.setAttribute("data-tip", hint);
         else title.removeAttribute("data-tip");
       }
+      var comparisonHint = document.getElementById("layer-comparison-hint");
+      if (comparisonHint) comparisonHint.textContent = hint;
+      var evidenceHint = document.getElementById("layer-evidence-hint");
+      if (evidenceHint) evidenceHint.textContent = uiFormat("legend_counted_text_hint", {metric: option.textContent});
       var comparable = Number(option.dataset.comparable);
       var count = outlierChips().length;
       if (layerCount) {
@@ -319,8 +329,12 @@ function applyLayer() {
       if (comparable === 0) setFilter(layerOnly, "layer-only", false);
     }
   }
+  syncEvidenceLegend();
   document.dispatchEvent(new CustomEvent("lixity:analysis-layer-change"));
 }
+
+var evidenceLegendToggle = document.getElementById("analysis-evidence-enabled");
+if (evidenceLegendToggle) evidenceLegendToggle.addEventListener("change", syncEvidenceLegend);
 
 if (layerOnly) {
   layerOnly.addEventListener("change", function () {
@@ -591,6 +605,110 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
   });
   pending(false);
 })();
+(function initSiteExport() {
+  var open = document.getElementById("btn-site-export");
+  var dialog = document.getElementById("modal-site-export");
+  if (!open || !dialog || window.LixitySite.readOnly) return;
+  var form = document.getElementById("site-export-form");
+  var research = document.getElementById("site-export-research");
+  var sources = document.getElementById("site-export-sources");
+  var mode = document.getElementById("site-export-mode");
+  var profile = document.getElementById("site-export-profile");
+  var cap = document.getElementById("site-export-max-chapter");
+  var downloadButton = document.getElementById("site-export-download");
+  var status = document.getElementById("site-export-status");
+  var token = document.body.dataset.manuscriptProjectToken;
+  var busy = false;
+  function savedProfiles() {
+    return window.LixityPublicationSettings ? window.LixityPublicationSettings.savedProfiles() : {};
+  }
+  function updateProfiles() {
+    var current = profile.value;
+    profile.replaceChildren(new Option(uiLabel("publication_export_choose_profile"), ""));
+    Object.entries(savedProfiles()).forEach(function(entry) { profile.add(new Option(entry[1].title, entry[0])); });
+    if (Object.prototype.hasOwnProperty.call(savedProfiles(), current)) profile.value = current;
+    sync();
+  }
+  cap.add(new Option(uiLabel("analysis_scope_all"), ""));
+  cap.add(new Option(uiLabel("publication_before"), "0"));
+  var chapters = document.getElementById("reader-chapter");
+  if (chapters) Array.from(chapters.options).forEach(function(option) {
+    var match = /^ch-(\d+)$/.exec(option.value);
+    if (match) cap.add(new Option(uiFormat("publication_chapter", {number:Number(match[1])}), match[1]));
+  });
+  function sync() {
+    var curated = mode.value !== "review";
+    mode.disabled = busy || !token;
+    profile.disabled = cap.disabled = busy || !token || !curated;
+    research.disabled = busy || !token || curated;
+    downloadButton.disabled = busy || !token || (curated && !Object.prototype.hasOwnProperty.call(savedProfiles(), profile.value));
+    sources.disabled = busy || (!curated && !research.checked);
+    if (!curated && !research.checked) sources.checked = false;
+    document.getElementById("site-export-publication-options").hidden = !curated;
+    document.getElementById("site-export-research-option").hidden = curated;
+    document.getElementById("site-export-scope").textContent = uiLabel("publication_export_scope_" + mode.value);
+    form.setAttribute("aria-busy", String(busy));
+  }
+  function message(key, failed, reason) {
+    status.className = "ctl-status " + (failed ? "err" : "ok");
+    status.textContent = uiLabel(key) + (reason ? " " + reason : "");
+  }
+  open.addEventListener("click", function() {
+    if (open.disabled) return;
+    mode.value = "review"; research.checked = sources.checked = false;
+    profile.value = cap.value = ""; updateProfiles(); dialog.showModal();
+  });
+  mode.addEventListener("change", function() { research.checked = sources.checked = false; sync(); });
+  profile.addEventListener("change", sync);
+  document.addEventListener("lixity:site-publications-saved", updateProfiles);
+  document.getElementById("site-export-edit-profiles").addEventListener("click", function() {
+    dialog.close(); switchActiveView("project");
+    var editor = document.getElementById("settings-site-publications");
+    if (editor) { editor.open = true; editor.querySelector("summary").focus(); }
+  });
+  research.addEventListener("change", sync);
+  form.addEventListener("submit", async function(event) {
+    event.preventDefault();
+    if (busy || !token) return;
+    var curated = mode.value !== "review";
+    if (curated && !Object.prototype.hasOwnProperty.call(savedProfiles(), profile.value)) return;
+    var payload = {project_token:token, include_research:!curated && research.checked,
+      include_source_files:(curated || research.checked) && sources.checked};
+    if (curated) {
+      payload.mode = mode.value; payload.publication_profile = profile.value;
+      payload.max_chapter = cap.value === "" ? null : Number(cap.value);
+    }
+    busy = true; sync(); message("site_export_busy");
+    var reason = "";
+    try {
+      var response = await fetch(API + "/site-export", {
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        try { var body = await response.json(); if (typeof body.message === "string") reason = body.message; }
+        catch (_) { /* Preserve the localized failure explanation. */ }
+        throw new Error("Website export unavailable");
+      }
+      if ((response.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase() !== "application/zip") {
+        throw new Error("Website export unavailable");
+      }
+      var blob = await response.blob();
+      var magic = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+      if (blob.size < 22 || magic[0] !== 0x50 || magic[1] !== 0x4b ||
+          !((magic[2] === 3 && magic[3] === 4) || (magic[2] === 5 && magic[3] === 6))) {
+        throw new Error("Website export unavailable");
+      }
+      var url = URL.createObjectURL(blob), download = document.createElement("a");
+      download.href = url; download.download = "lixity-reading-website.zip";
+      document.body.appendChild(download); download.click(); download.remove();
+      setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+      message("site_export_success");
+    } catch (_) { message("site_export_error", true, reason); }
+    finally { busy = false; sync(); }
+  });
+  updateProfiles();
+})();
 (function initNdaDraft() {
   var form = document.getElementById("nda-draft-form");
   if (!form) return;
@@ -765,10 +883,12 @@ async function submitSettings() {
   strong.setCustomValidity(strong.valueAsNumber < mild.valueAsNumber
     ? document.getElementById("settings-order-error").textContent : "");
   if (window.LixityRegisterSettings) Object.assign(payload, window.LixityRegisterSettings.readChanges());
+  if (window.LixityPublicationSettings) Object.assign(payload, window.LixityPublicationSettings.readChanges());
   if (!settings.checkValidity()) {
-    var invalid = settings.querySelector(":invalid");
-    var disclosure = invalid && invalid.closest("details");
-    if (disclosure) disclosure.open = true;
+    var invalid = settings.querySelector("input:invalid, select:invalid, textarea:invalid");
+    for (var ancestor = invalid && invalid.parentElement; ancestor && ancestor !== settings; ancestor = ancestor.parentElement) {
+      if (ancestor.tagName === "DETAILS") ancestor.open = true;
+    }
     settings.reportValidity();
     return;
   }
@@ -826,6 +946,9 @@ async function submitSettings() {
       if (payload.register_profiles && window.LixityRegisterSettings) window.LixityRegisterSettings.accepted({
         register_profiles: payload.register_profiles, chapter_registers: payload.chapter_registers
       });
+      if (Object.prototype.hasOwnProperty.call(payload, "site_publications") && window.LixityPublicationSettings) {
+        window.LixityPublicationSettings.accepted(payload.site_publications);
+      }
     }
     return result;
   }

@@ -3,6 +3,7 @@
 from bisect import bisect_left, bisect_right
 from collections.abc import Sequence
 from dataclasses import dataclass
+from html import escape
 from typing import Literal
 
 from ..manuscript_document import BlockKind, _protected_source, manuscript_blocks
@@ -28,6 +29,16 @@ class ReaderBlock:
     level: int = 3
     profile_index: int | None = None
     is_chapter: bool = False
+
+
+def reader_block_html(block: ReaderBlock, *, heading_level: int = 3) -> str:
+    """Render one literal source block through the shared safe reading boundary."""
+    tag = (f"h{max(2, min(6, heading_level))}" if block.kind == "heading" else
+           "blockquote" if block.kind == "quote" else "pre" if block.kind == "code" else
+           "p" if block.kind == "profile" else "div")
+    return (f'<{tag} class="reader-structural reader-{escape(block.kind)}" '
+            f'data-start="{block.start_line}" data-end="{block.end_line}">'
+            f'{escape(block.text)}</{tag}>')
 
 
 def reader_blocks(

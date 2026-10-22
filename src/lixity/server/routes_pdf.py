@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .. import pdf_export
-from ..config import load_project_config, same_config_scope
+from ..config import load_project_config, read_explicit_project_config
 from ..io import FileUtils
 from ..pdf_document import PdfError
 from ..workspace import slugify
@@ -46,13 +46,14 @@ class ManuscriptPdfRoutesMixin(ResponseMixin):
                 text = FileUtils.read_file(source)
                 if not text.strip():
                     raise ValueError("The selected manuscript is empty")
-                # The general loader warns and falls back for bad configuration.
-                # A download must not silently compose with different settings.
-                with warnings.catch_warnings():
-                    warnings.filterwarnings("error", category=UserWarning, module=r"lixity\.config")
-                    settings = load_project_config(source)
-                    identity = (settings if same_config_scope(project_root, source)
-                                else load_project_config(project_root))
+                if project_root is not None:
+                    settings = read_explicit_project_config(project_root)
+                else:
+                    # Legacy ambient downloads must still fail on bad config.
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings("error", category=UserWarning, module=r"lixity\.config")
+                        settings = load_project_config(source)
+                identity = settings
 
             content = pdf_export.compose_pdf(
                 text, manuscript=source, layout=layout, language=language,

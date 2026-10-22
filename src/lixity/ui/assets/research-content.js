@@ -163,6 +163,10 @@ function renderSafeMarkdown(rawText, dossierContext) {
         return protect('<code class="lixity-ref" title="' + referenceTitle.replace(/"/g, "&quot;") + '">' + label + ' (' + cleanUrl.replace(/^lixity:/i, "") + ')</code>');
       }
       var visibleLabel = parseInline(label, true);
+      if (window.LixitySite.readOnly && !/^(https?:\/\/|#)/i.test(cleanUrl)) {
+        var resource = window.LixitySite.resourceUrl(cleanUrl);
+        return protect(resource ? '<a href="' + resource.replace(/"/g, "&quot;") + '" target="_blank" rel="noopener">' + visibleLabel + '</a>' : visibleLabel + ' (' + cleanUrl + ')');
+      }
       if (/^(javascript|data|vbscript):/i.test(cleanUrl)) {
         return protect(visibleLabel + ' (' + cleanUrl + ')');
       }
@@ -305,6 +309,7 @@ function researchDossierBodyHtml(bodyText, dossierContext) {
 }
 
 function researchDossierDetailHtml(detail, readOnly) {
+  readOnly = readOnly || window.LixitySite.readOnly;
   var reviewAlert = "";
   if (detail.review_needed && detail.decision_reviews && detail.decision_reviews.length) {
     var needed = detail.decision_reviews.filter(function(r) { return r.status === "review_needed"; });
@@ -514,6 +519,7 @@ async function enhanceResearchDossierClaims(host, detail, stillCurrent) {
 }
 
 function researchDossierSectionAction(detail, section) {
+  if (window.LixitySite.readOnly) return "";
   if (!(detail.editable_sections || []).includes(section)) return "";
   return '<div class="row"><button type="button" class="ctl ctl-sm" data-research-revise="dossier" data-record-id="' +
     escapeHtml(detail.id) + '" data-dossier-section="' + escapeHtml(section).replace(/"/g, "&quot;") +

@@ -212,7 +212,7 @@ def test_configuration_discovery_describes_installed_models_and_threshold_domain
     assert "author_name" in settings["project_only_keys"]
     assert "title" not in settings["project_only_keys"]
     assert settings["native_settings"]["persisted_keys"] == [
-        "title", "author_name", "publication", "register_profiles", "chapter_registers",
+        "title", "author_name", "publication", "site_publications", "register_profiles", "chapter_registers",
     ]
     assert set(settings["native_settings"]["session_keys"]) == {
         "language", "z_mild", "z_strong", "fdr_q", "fdr_method", "min_chapters",

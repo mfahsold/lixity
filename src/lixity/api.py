@@ -246,10 +246,15 @@ def motifs(
     at least 3 occurrences) with their chapter spread.
 
     ``motifs`` maps a display name to a regular expression
-    (``{"Wut": r"\b(Wut|wütend\w*)\b"}``). Returns ``{"meta", "motifs", "top_words",
+    (``{"Wut": r"\b(Wut|wütend\w*)\b"}``). An explicit mapping, including
+    ``{}``, replaces configured motifs; omission inherits the resolved
+    ``motif_regexes`` and compatible legacy ``motifs`` project tables.
+    Returns ``{"meta", "motifs", "top_words",
     "repeated_phrases", "echoes", "chapters"}``. Echoes use the default local
     window; configurable echo controls belong to ``motifs.motif_report``.
     """
+    if motifs is not None:
+        config_overrides = {**config_overrides, "motif_regexes": motifs}
     config, resolved = resolve_document_config(text, language, **config_overrides)
     from .motifs import motif_report
 
@@ -331,9 +336,11 @@ def dashboard(
 
 def about() -> dict[str, Any]:
     """Installed metadata and configuration schemas, without project values."""
+    from .diagnostics import DOCTOR_SCHEMA
     from .diversity import HD_D_DRAW_SIZE, MIN_TOKENS_LD
     from .research.cli import command_metadata
     from .research.models import ENTITY, Manifest
+    from .site_contracts import DATA_SCHEMA, SITE_SCHEMA, SiteExportOptions
     from .style_fingerprint import (
         FEATURES,
         LAYER_FEATURES,
@@ -445,8 +452,16 @@ def about() -> dict[str, Any]:
                 "output": "html",
             },
             {
+                "name": "export-site",
+                "purpose": "static read-only project website with explicitly included research and source files",
+                "output": "directory|json",
+                "schema_version": SITE_SCHEMA,
+                "data_schema_version": DATA_SCHEMA,
+                "scope_schema": SiteExportOptions.model_json_schema(),
+            },
+            {
                 "name": "pdf",
-                "purpose": "composed PDF analysis report, A5 book layout or 30x60 submission sheet",
+                "purpose": "PDF analysis report, editorial copy, A5 reading copy, 30x60 sheet or neutral A4 document",
                 "output": "pdf",
             },
             {
@@ -456,10 +471,17 @@ def about() -> dict[str, Any]:
                 "discovery": "/api",
             },
             {
+                "name": "doctor",
+                "purpose": "read-only installation versions, module location and local service diagnostics",
+                "output": "text|json",
+                "schema_version": DOCTOR_SCHEMA,
+            },
+            {
                 "name": "service",
                 "purpose": "start, stop, restart or inspect an explicitly owned local dashboard process",
                 "output": "text|json",
                 "schema_version": "lixity-service-local/1",
+                "status_schema_version": "lixity-service-status/1",
             },
             {
                 "name": "build",

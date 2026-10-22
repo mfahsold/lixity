@@ -55,13 +55,17 @@ does not update an already running service.
 ## What you can do
 
 - **Manuscript & Analysis.** Open paragraph values and work markers, or compare
-  chapters against the manuscript's own patterns. Analysis can be turned on and off.
+  chapters against the manuscript's own patterns and review local phrase echoes.
+  Analysis can be turned on and off.
 - **Research & Dossiers.** Link retained sources, authored claims and decisions
-  to exact manuscript quotations. Keep a dossier
-  alongside a passage; Zotero remains your collection tool. Retention is explicit,
+  to exact manuscript quotations. Keep source images, maps and dated claims with
+  the dossier beside a passage; Zotero remains your collection tool. Retention is explicit,
   and archive integrity does not establish factual truth.
 - **Project & exports.** Manage project metadata and create editorial, reading,
-  submission or analysis PDFs, terminal reports and versioned JSON.
+  submission or analysis PDFs, terminal reports and versioned JSON. Export a
+  review website, a novel with curated companion material, or a standalone
+  companion. Reveal notes after a confirmed chapter, or omit later material
+  entirely for an excerpt.
   NDA generation creates a draft without
   recording consent or signatures; dossier Markdown edits require explicit preview
   and apply. See [export and project limits](https://mfahsold.github.io/lixity/USAGE.md).
@@ -107,12 +111,13 @@ their own projects.
 
 ## Release, citation and license
 
-The current release is **v0.7.3**, in the pre-1.0 development line. Historical
+The current release is **v0.7.4**, in the pre-1.0 development line. Historical
 v3.0.1 and earlier tags remain available. Product and schema versions are
-independent; [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.3.md)
+independent; [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.4.md)
 cover archive compatibility and upgrades. See the
 [changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md) for subsequent work.
-The public demo follows current main and can show changes beyond the release.
+The public demo uses the same interface as v0.7.4, with a fictional project and
+read-only research. Importing and saving require the local app.
 
 Cite [Lixity on Zenodo](https://doi.org/10.5281/zenodo.23390297), with metadata in
 [`CITATION.cff`](https://github.com/mfahsold/lixity/blob/main/CITATION.cff).
