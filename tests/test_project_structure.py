@@ -1,5 +1,6 @@
 """Project structure inspection observes metadata without reorganizing sources."""
 
+import errno
 import importlib
 import importlib.util
 import json
@@ -521,7 +522,12 @@ def test_unreadable_inventory_is_not_reported_as_empty_healthy(tmp_path, monkeyp
 def test_undecodable_output_name_keeps_json_serializable(tmp_path):
     exports = tmp_path / "exports"
     exports.mkdir()
-    descriptor = os.open(os.fsencode(exports) + b"/synthetic-\xff.txt", os.O_CREAT | os.O_WRONLY, 0o600)
+    try:
+        descriptor = os.open(os.fsencode(exports) + b"/synthetic-\xff.txt", os.O_CREAT | os.O_WRONLY, 0o600)
+    except OSError as exc:
+        if exc.errno == errno.EILSEQ:
+            pytest.skip("Filesystem rejects undecodable byte filenames")
+        raise
     os.close(descriptor)
     result = inspect(tmp_path)
     json.dumps(result, ensure_ascii=False).encode("utf-8")
