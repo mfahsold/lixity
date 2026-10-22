@@ -342,7 +342,7 @@ async function settingsGeometry(page, locale, width) {
   try {
     for (const height of [480, 900]) {
       await page.setViewportSize({width, height}); await settle(page);
-      for (const id of ['reader-settings', 'reader-analysis-settings']) {
+      for (const id of ['reader-settings']) {
         await page.setViewportSize({width, height}); await settle(page);
         const settings = page.locator('#' + id), summary = settings.locator(':scope > summary');
         const closedArrow = await summary.evaluate(node => getComputedStyle(node, '::after').transform);
@@ -380,6 +380,27 @@ async function settingsGeometry(page, locale, width) {
         await summary.click();
         assert.equal(await settings.evaluate(node => node.open), false, 'The same visible trigger closes its dropdown');
         await expect(body).toBeHidden();
+      }
+      const group = page.locator('#reader-analysis-settings');
+      assert.equal(await group.getAttribute('role'), 'group', 'Analysis settings are direct controls, not another popup');
+      assert.equal(await group.locator('summary').count(), 0);
+      for (const selector of ['#style-layer', '#analysis-evidence-enabled', '#analysis-comparison-enabled']) {
+        const control = page.locator(selector);
+        await expect(control).toBeVisible();
+        const geometry = await control.evaluate(node => {
+          const bounds = (node.closest('label') || node).getBoundingClientRect();
+          return {left:bounds.left, right:bounds.right, scroll:node.scrollWidth, client:node.clientWidth};
+        });
+        assert.ok(geometry.left >= 0 && geometry.right <= width,
+          `Direct localized analysis controls stay inside the viewport: ${JSON.stringify({locale, width, height, selector, geometry})}`);
+        if (selector !== '#style-layer') {
+          const checked = await control.isChecked();
+          await control.focus(); await page.keyboard.press('Space');
+          assert.equal(await control.isChecked(), !checked, 'Keyboard toggles the independently selected analysis decoration');
+          await expect(control).toBeFocused();
+          await page.keyboard.press('Space');
+          assert.equal(await control.isChecked(), checked);
+        }
       }
     }
   } finally {

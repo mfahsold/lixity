@@ -12,6 +12,11 @@
 #research-revision-history-list { margin-bottom: var(--space-3); }
 #research-revision-history-list .ctl { padding: .35rem .6rem; }
 .research-revision-provenance { margin-top: 0; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .research-navigation { flex-wrap: wrap; justify-content: space-between; }
+  .research-navigation > .research-tabs { flex-basis: 100%; order: -1; align-items: stretch; }
+  .research-navigation .research-tabs > button[role="tab"] { white-space: normal; }
+}
 @media (pointer: coarse) {
   .research-navigation-control { min-width: 2.75rem; min-height: 2.75rem; }
 }

@@ -342,7 +342,7 @@
       try {
         // Archive absence is a normal project state. The status endpoint can
         // represent it without calling a review endpoint that requires setup.
-        var archive = await bridge.read("research/status");
+        var archive = await bridge.read("research/status", undefined, automatic === true);
         if (request !== reviewSerial || !live(value)) return;
         if (!archive.ok || archive.initialized !== true) {
           clearReview(archive.ok && archive.initialized === false ? label("research_not_initialized") : bridge.errorText(archive));
@@ -394,6 +394,7 @@
   var contextObserver = new MutationObserver(function() {
     if (passageOwner && (!passageOwner.panel.isConnected || passageOwner.hash !== passageOwner.panel.dataset.paragraphSha256)) invalidatePassage();
     var next = context(); if (same(next, observedContext)) return;
+    invalidateResearchStatusReads();
     stopRelatedDestination();
     invalidatePassage();
     observedContext = next; ++reviewSerial; reviewProjectId = null; remembered = null; reviewPending = null; reviewFilter = null;

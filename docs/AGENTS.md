@@ -317,16 +317,24 @@ navigation lists only rendered panels.
 PDF export, the read-only dossier companion and research saves use the explicit
 capability/context guards below. Selection drafts save nothing by themselves.
 
+**Current main (unreleased after v0.7.4):** the native metric selector is directly
+visible with independent, browser-persisted Counted text and Paragraph comparison
+switches. Counted text uses violet underlines; notable paragraph comparisons use
+blue/orange raw-value and direction markers with a clear prose background.
+Analysis Off and Focus hide both displays without resetting their preferences.
+
 | Hook | Meaning |
 |---|---|
 | `#manuscript-analysis-toggle` | constant-name **Analysis** toggle; `aria-pressed` and visible On/Off text identify diagnostic visibility independently of the dossier |
-| `#reader-analysis-settings` / `#reader-metric-state` / `#reader-evidence-state` | compact native disclosure beside Analysis names the selected metric and marking preference; opens the single metric selector, marking checkbox and explanations |
-| `#analysis-evidence-enabled` | browser-local marking preference; explicit evidence inspection remains available when unchecked. First explicit Analysis On selects `asl` only without a saved metric choice; deliberate None and unchecked marks survive Off/On and reload |
+| `#reader-analysis-settings` | direct native metric/control group while Analysis is on; contains one selector and the two independent display switches |
+| `#analysis-evidence-enabled` / `#analysis-comparison-enabled` | browser-local counted-text/comparison preferences; first explicit Analysis On selects `asl` only without a saved metric choice. Deliberate None and either disabled switch survive Off/On and reload; explicit inspection preserves both switch preferences |
+| `.reader-comparison-value` | notable paragraph's raw value and down/up direction; opens the existing measurement explanation |
+| `#layer-legend .layer-comparison-note` | counting and comparison method disclosure, collapsed by default |
 | `#workbench-overview-open` / `#workbench-overview-back` | open dense analysis / return to preserved manuscript context |
 | `[data-context-tool="analysis"]` / `[data-context-tool="dossier"]` / `[data-context-tool="research"]` | explicitly select one active context tool; Saved research opens the requested passage context. Closing the tool does not itself hide all analysis |
 | `#workbench-thread` / `#workbench-return` | context-checked return to the original passage; since v0.7.3, a nearest dossier departure retains its saved version/position and an earlier passage return. The same control remains visible on narrow screens; replaced roots or changed project/source/research context invalidate it |
 | `#reader-settings .reader-shortcuts` | visible localized reference to implemented passage-menu, search and close keys |
-| `#style-layer` / `#layer-clear` | select/clear one paragraph metric; the Analysis mode controls its prose paint and hints, while the existing local Values remains independent |
+| `#style-layer` / `#layer-clear` | select/clear one paragraph metric; None hides both indicator types without changing their preferences. Local Values remains independent |
 | `#analysis-scope-register` / `#analysis-scope-pov` | optional author-declared groups filter only heatmap rows; the full-book reference and numerical outputs stay unchanged |
 | `[data-section-nav]` / `[data-section-link]` | shared active-heading presentation over real targets; dossier IDs are local to an accepted rendering, not durable record references |
 | `[data-help]` / `#lixity-tooltip` | supplemental action/measurement explanation on hover or focus; inspect visible control names/states for operation, not tooltip visibility. Help does not authorize a write or retention |
@@ -779,6 +787,12 @@ When running `lixity serve --port 8765`, local agents can trigger deterministic 
 
 Browser API diagnostics report request metadata without copying response bodies
 to the console.
+
+**Current main (unreleased after v0.7.4):** overlapping automatic browser
+`GET /api/research/status` consumers share only a pending observation for the
+same root/project/source and exact request. Settled responses are not cached.
+Explicit refreshes always read again; context changes and writes invalidate
+pending sharing. This changes no endpoint, response envelope or write guard.
 
 **Since v0.7.4:** `POST /api/site-export` requires
 `{"project_token":"<current manuscript metadata token>","include_research":false,"include_source_files":false}`.

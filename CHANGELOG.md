@@ -17,7 +17,22 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Preview receipts list changed fields without copying their values. Existing
   full JSON and Python/API write contracts are unchanged.
 
+### Changed
+- Native Analysis exposes its metric selector directly, with independent,
+  browser-persisted **Counted text** and **Paragraph comparison** switches.
+  None, disabled switches and Off/On retain the author's choices; Focus hides
+  both displays temporarily and restores them on exit.
+- Violet underlines identify counted spans. Blue/orange raw-value markers and
+  direction arrows compare notable paragraphs with their chapter without a
+  prose background wash. Measurement cards put quotation/count before a separate
+  paragraph/comparison panel; method and counting guidance start collapsed.
+
 ### Fixed
+- Overlapping automatic research status reads share only their in-flight
+  workspace observation. Explicit refreshes remain fresh; context changes and
+  mutations invalidate sharing without retaining settled responses.
+- Research tab labels and companion selectors remain readable on narrow screens
+  with enlarged text; wrapped research destinations retain aligned control boxes.
 - Website exports count authored record versions against the research-history
   limit, rather than every retained source passage. Curated reader/companion
   copies no longer apply a limit for history they do not include. Input-byte,

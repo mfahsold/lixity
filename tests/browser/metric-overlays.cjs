@@ -1,5 +1,5 @@
 const {openAnalysisSettings, selectMetric} = require('./support/analysis-controls.cjs');
-// A selected metric paints behind canonical prose, without changing its identity.
+// Metric and comparison controls preserve canonical prose and source anchors.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -14,6 +14,7 @@ from lixity.language import get_language_profile
 from lixity.workspace_labels import WORKSPACE_LABELS
 from lixity.style_fingerprint import LAYER_PARAGRAPH_ATTR, layer_stats
 from dashboard_fixtures import full_dashboard
+reading_html = full_dashboard()
 full_dashboard.__globals__['SAMPLE'] = '## Measured paragraphs\\n\\n' + '\\n\\n'.join(
     'A synthetic paragraph %d. ' % n + 'The archive holds letters beside the quiet courtyard. ' * 8
     for n in range(7)) + '\\n\\n## Constant chapter\\n\\nOne sentence.\\n\\nTwo words.\\n\\nThree words.'
@@ -43,7 +44,14 @@ for kind, values in (('unavailable', [0]), ('zero', [0, 1, 2])):
         return html
     full_dashboard.__globals__['render_dashboard'] = alternate
     full_dashboard()
-print(json.dumps({'locales': fixtures, 'extra': extra}))
+# Deliberately large display data exercises wrapping, not statistical plausibility.
+def large_value(*args, **kwargs):
+    for index, paragraph in enumerate(args[1]):
+        paragraph.asl = [0, 1, 2, 3, 8, 30, 6e24][index % 7]
+    return original(*args, **{**kwargs, 'labels': {**get_language_profile('en').labels, **WORKSPACE_LABELS['en']}, 'language_key': 'en'})
+full_dashboard.__globals__['render_dashboard'] = large_value
+large_value_html = full_dashboard()
+print(json.dumps({'locales': fixtures, 'extra': extra, 'large_value_html': large_value_html, 'reading_html': reading_html}))
 `, {root});
 const fixtures = generated.locales;
 async function frames(page) {
@@ -55,9 +63,172 @@ async function identity(page) {
     hash: node.dataset.paragraphSha256, text: node.querySelector('.ptext-inner > p').textContent,
   })));
 }
+async function comparisonRegression(browser, width, name, check, html = fixtures.en.html) {
+  const page = await browser.newPage({viewport: {width, height: 900}, reducedMotion: 'reduce'});
+  const errors = [], writes = [];
+  page.on('pageerror', error => errors.push(error.message));
+  try {
+    await page.route('**/*', route => {
+      if (route.request().method() !== 'GET') writes.push(route.request().url());
+      const url = new URL(route.request().url());
+      if (url.origin !== 'http://lixity.test') return route.abort();
+      return route.fulfill(url.pathname.startsWith('/api/')
+        ? {json: {ok: true, locked: true, records: [], candidates: []}}
+        : {contentType: 'text/html', body: html});
+    });
+    await page.goto('http://lixity.test/');
+    await page.locator('#tab-view-analysis').click();
+    const original = await identity(page);
+    await page.locator('#manuscript-analysis-toggle').click();
+    await selectMetric(page, 'asl');
+    await check(page);
+    assert.deepEqual(await identity(page), original, name + ' preserves canonical prose and anchors');
+    assert.deepEqual(errors, []); assert.deepEqual(writes, []);
+  } finally {
+    await page.screenshot({path: path.join(artifacts, name + '.png')});
+    await page.close();
+  }
+}
+
+async function verifyComparisonRegressions(browser) {
+  // Independent cases keep layout, magnification and state failures visible together.
+  const checks = await Promise.allSettled([
+    ...[1440, 320].map(width => comparisonRegression(browser, width, `comparison-prose-retention-${width}`, async page => {
+      if (width === 320) await page.setViewportSize({width, height: 480});
+      const target = page.locator('#p-4');
+      assert.equal(await target.locator(':scope > .reader-comparison-value').isVisible(), true);
+      await target.evaluate(node => {
+        const prose = node.querySelector('.ptext-inner > p');
+        window.retainedMetricProse = prose;
+        window.retainedMetricText = prose.firstChild;
+        getSelection().setBaseAndExtent(prose.firstChild, 12, prose.firstChild, 2);
+      });
+      for (const action of ['focus on', 'focus off', 'analysis off', 'analysis on']) {
+        // Each transition starts with this marked passage directly below the
+        // current toolbar; Focus can expose an earlier panel after its resize.
+        await target.evaluate(node => {
+          const boundary = document.querySelector('.manuscript-reader-controls').getBoundingClientRect().bottom;
+          window.scrollBy(0, node.getBoundingClientRect().top - boundary - 3);
+        });
+        await frames(page);
+        const before = await page.evaluate(() => {
+          const anchor = window.LixityReader.capture();
+          const prose = anchor.panel.querySelector('.ptext-inner > p');
+          return {panel: anchor.panel.id, top: prose.getBoundingClientRect().top};
+        });
+        assert.equal(before.panel, 'p-4', action + ' captures the visible marked passage');
+        // Dispatch through the real control without a pointer clearing the selection.
+        const control = action.startsWith('focus') ? '#reader-focus' : '#manuscript-analysis-toggle';
+        await page.locator(control).evaluate(node => node.click());
+        await frames(page);
+        const after = await page.evaluate(id => {
+          const prose = document.querySelector('#' + id + ' .ptext-inner > p');
+          const selection = getSelection();
+          return {top: prose.getBoundingClientRect().top,
+            sameProse: prose === window.retainedMetricProse,
+            sameSelection: selection.anchorNode === window.retainedMetricText && selection.focusNode === window.retainedMetricText,
+            anchor: selection.anchorOffset, focus: selection.focusOffset};
+        }, before.panel);
+        assert.ok(Math.abs(after.top - before.top) <= 2, JSON.stringify({width, action, before, after}));
+        assert.deepEqual({...after, top: undefined}, {top: undefined, sameProse: true, sameSelection: true, anchor: 12, focus: 2});
+      }
+      // Existing callers can still explicitly request the panel's original position.
+      const manualTop = await target.evaluate(node => node.getBoundingClientRect().top);
+      await page.locator('#reader-focus').evaluate(node => node.click());
+      await frames(page);
+      await target.evaluate((node, top) => window.LixityReader.restore({panel: node, top}), manualTop);
+      await frames(page);
+      assert.ok(Math.abs((await target.boundingBox()).y - manualTop) <= 2, 'Manual panel/top anchors retain their existing meaning');
+    }, generated.reading_html)),
+    comparisonRegression(browser, 1100, 'comparison-badge-inspector', async page => {
+      await page.locator('#analysis-evidence-enabled').uncheck();
+      await page.locator('#chapters [data-reader-paragraph]').first().click();
+      await page.locator('#manuscript-context-menu [data-reader-action="values"]').click();
+      await page.locator('#reader-inspector').waitFor({state: 'visible'});
+      const marker = page.locator('#' + fixtures.en.expected.asl[0] + ' > .reader-comparison-value');
+      await marker.scrollIntoViewIfNeeded(); await frames(page);
+      // Use a normal pointer click: a visible badge covered by navigation is unusable.
+      await marker.click({timeout: 2000});
+      await page.locator('#analysis-evidence-card').waitFor({state: 'visible'});
+      assert.equal(await page.locator('#analysis-evidence-title').textContent(), fixtures.en.labels.layer_asl);
+      assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false,
+        'Explaining a comparison does not enable counted-text marks');
+      await page.keyboard.press('Escape');
+      assert.equal(await page.locator('#analysis-evidence-card').isVisible(), false);
+      assert.equal(await marker.evaluate(node => node === document.activeElement), true,
+        'Escape returns focus to the comparison badge');
+    }),
+    comparisonRegression(browser, 1440, 'comparison-off-chip-semantics', async page => {
+      const chip = page.locator('.chip[data-target="' + fixtures.en.expected.asl[0] + '"]');
+      const metric = await chip.getAttribute('data-tip');
+      const base = await chip.getAttribute('data-tip-base');
+      assert.ok(metric && base && metric !== base, 'The fixture distinguishes metric and tense descriptions');
+      await page.locator('#analysis-comparison-enabled').uncheck();
+      await page.locator('#workbench-overview-open').click();
+      assert.equal(await page.locator('body').evaluate(node => node.classList.contains('comparison-on')), false);
+      assert.equal(await chip.getAttribute('aria-label'), base, 'Comparison-off chips describe their displayed tense colors');
+      assert.equal(await chip.getAttribute('title'), base);
+      assert.equal(await chip.getAttribute('data-tip'), null);
+      await page.locator('#analysis-comparison-enabled').check();
+      assert.equal(await page.locator('body').evaluate(node => node.classList.contains('comparison-on')), true);
+      assert.equal(await chip.getAttribute('aria-label'), metric, 'Re-enabling comparison restores its selected metric description');
+      assert.equal(await chip.getAttribute('data-tip'), metric);
+      assert.equal(await chip.getAttribute('title'), null);
+    }),
+    ...[1440, 1100].flatMap(width => [
+      {name: 'enlarged', target: fixtures.en.expected.asl[0], html: fixtures.en.html},
+      {name: 'large-value', target: 'p-6', html: generated.large_value_html},
+    ].map(value => comparisonRegression(browser, width, `comparison-badge-${value.name}-${width}`, async page => {
+      await page.locator('#analysis-evidence-enabled').uncheck();
+      const marker = page.locator('#' + value.target + ' > .reader-comparison-value');
+      if (value.name === 'large-value') assert.ok((await marker.textContent()).length > 30, 'The fixture has a long formatted value to wrap');
+      for (const scale of [200, 100]) {
+        await page.evaluate(value => { document.documentElement.style.fontSize = value + '%'; }, scale);
+        for (const inspector of [false, true]) {
+          if (inspector) {
+            await page.locator('#chapters [data-reader-paragraph]').first().click();
+            await page.locator('#manuscript-context-menu [data-reader-action="values"]').click();
+            await page.locator('#reader-inspector').waitFor({state: 'visible'});
+          }
+          await marker.scrollIntoViewIfNeeded(); await frames(page);
+          await marker.click({timeout: 2000});
+          await page.locator('#analysis-evidence-card').waitFor({state: 'visible'});
+          await page.keyboard.press('Escape');
+          assert.equal(await marker.evaluate(node => node === document.activeElement), true);
+          const bounds = await marker.evaluate(node => {
+            const box = node.getBoundingClientRect(), panel = node.parentNode.getBoundingClientRect();
+            return {inside: box.left >= panel.left - .5 && box.right <= panel.right + .5,
+              textFits: node.scrollWidth <= node.clientWidth, height: box.height};
+          });
+          assert.ok(bounds.inside && bounds.textFits && bounds.height >= 44,
+            JSON.stringify({width, scale, inspector, bounds}));
+          if (value.name === 'large-value' && width === 1100 && scale === 200 && inspector) {
+            assert.ok(bounds.height > 44, 'The long value wraps within the enlarged split pane');
+          }
+          assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false);
+          await page.screenshot({path: path.join(artifacts, `comparison-${value.name}-${width}-${scale}-${inspector ? 'inspector' : 'plain'}.png`)});
+          if (inspector) await page.locator('#reader-inspector-close').click();
+        }
+      }
+    }, value.html))),
+    comparisonRegression(browser, 1440, 'comparison-focus-chapter-reading', async page => {
+      assert.equal(await page.locator('#chapters .strip').first().isVisible(), true);
+      assert.equal(await page.locator('#chapters .chapter-head .meta').first().isVisible(), true);
+      await page.locator('#reader-focus').click();
+      assert.equal(await page.locator('#chapters .strip:visible').count(), 0, 'Focus hides paragraph-comparison strips');
+      assert.equal(await page.locator('#chapters .chapter-head .meta:visible').count(), 0, 'Focus hides chapter measurements');
+      await page.locator('#reader-focus').click();
+      assert.equal(await page.locator('#chapters .strip').first().isVisible(), true);
+      assert.equal(await page.locator('#chapters .chapter-head .meta').first().isVisible(), true);
+    }),
+  ]);
+  const failed = checks.filter(check => check.status === 'rejected').map(check => check.reason);
+  if (failed.length) throw new AggregateError(failed, 'Paragraph comparison regressions failed');
+}
 (async () => {
   const browser = await launchChromium();
   try {
+    await verifyComparisonRegressions(browser);
     const cases = Object.keys(fixtures).flatMap(locale => [1440, 320].map(width => ({locale, width, height: width === 320 ? 480 : 900, colorScheme: 'light', reducedMotion: 'reduce'})));
     for (const colorScheme of ['light', 'dark']) for (const reducedMotion of ['no-preference', 'reduce']) {
       cases.push({locale: 'en', width: 1440, height: 900, colorScheme, reducedMotion});
@@ -81,10 +252,12 @@ async function identity(page) {
       await page.evaluate(() => { window.originalMetricProse = document.querySelector('#chapters .ptext-inner > p'); });
       assert.equal(await page.locator('#style-layer').isVisible(), false, 'Reading starts unpainted');
       await page.locator('#manuscript-analysis-toggle').click();
-      assert.equal(await page.locator('#reader-analysis-settings > summary').isVisible(), true, 'Named metric choice is directly available beside enabled Analysis');
-      assert.equal(await page.locator('#reader-metric-state').textContent(), fixture.labels.layer_asl);
+      assert.equal(await page.locator('#analysis-comparison-enabled').isVisible(), true, 'Paragraph comparison has its own directly available switch');
+      assert.equal(await page.locator('#analysis-evidence-enabled').isVisible(), true, 'Counted text can be switched independently without a disclosure');
+      assert.equal(await page.locator('#style-layer').isVisible(), true, 'The active metric is a direct control');
+      assert.equal(await page.locator('#style-layer option:checked').textContent(), fixture.labels.layer_asl);
       await openAnalysisSettings(page);
-      assert.equal(await page.locator('#style-layer').isVisible(), true, 'one visible disclosure click exposes the actual selector');
+      assert.equal(await page.locator('#style-layer').isVisible(), true, 'the selector needs no settings disclosure');
       for (const key of Object.keys(fixture.expected)) {
         await selectMetric(page, key);
         await frames(page);
@@ -106,7 +279,9 @@ async function identity(page) {
           const a = lum(background), b = lum(foreground);
           return {background: css.backgroundColor, opacity: ink.opacity, contrast: (Math.max(a, b) + .05) / (Math.min(a, b) + .05)};
         });
-        assert.notEqual(style.background, 'rgba(0, 0, 0, 0)');
+        assert.equal(style.background, 'rgba(0, 0, 0, 0)', 'Paragraph comparison leaves the prose background clear');
+        assert.equal(await painted.locator(':scope > .reader-comparison-value').isVisible(), true);
+        assert.match(await painted.locator(':scope > .reader-comparison-value').textContent(), /^[↓↑] /);
         assert.equal(style.opacity, '1');
         assert.ok(style.contrast >= 4.5, JSON.stringify({options, key, style}));
       }
@@ -121,6 +296,27 @@ async function identity(page) {
       });
       assert.deepEqual(retainedSelection, {same: true, anchor: 12, focus: 2});
       const expected = fixture.expected.passive;
+      await page.locator('#analysis-comparison-enabled').uncheck();
+      assert.equal(await page.locator('.reader-comparison-value:visible').count(), 0);
+      assert.equal(await page.locator('#layer-comparison-legend').isVisible(), false);
+      assert.equal(await page.locator('#layer-evidence-legend').isVisible(), true);
+      assert.equal(await page.locator('#layer-next').isEnabled(), false);
+      await page.locator('#analysis-comparison-enabled').check();
+      await page.locator('#analysis-evidence-enabled').uncheck();
+      assert.equal(await page.locator('#layer-comparison-legend').isVisible(), true);
+      assert.equal(await page.locator('#layer-evidence-legend').isVisible(), false);
+      await page.locator('#analysis-evidence-enabled').check();
+      await page.locator('#reader-focus').click();
+      assert.equal(await page.locator('#layer-legend').isVisible(), false, 'Focus hides both analysis legends');
+      assert.equal(await page.locator('.reader-comparison-value:visible').count(), 0, 'Focus hides comparison markers');
+      assert.equal(await page.locator('#chapters .strip:visible').count(), 0, 'Focus hides paragraph-comparison strips');
+      assert.equal(await page.locator('#chapters .chapter-head .meta:visible').count(), 0, 'Focus hides chapter measurements');
+      await page.locator('#reader-focus').click();
+      assert.equal(await page.locator('#chapters .strip').first().isVisible(), true);
+      assert.equal(await page.locator('#chapters .chapter-head .meta').first().isVisible(), true);
+      assert.equal(await page.locator('#analysis-comparison-enabled').isChecked(), true);
+      assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), true);
+      assert.equal(await page.locator('.reader-comparison-value:visible').count(), expected.length);
       if (locale === 'en' || locale === 'de') await page.locator('#chapters').screenshot({path: path.join(artifacts, `painted-${locale}-${width}-${colorScheme}-${reducedMotion}.png`)});
       await page.locator('#layer-next').click();
       await frames(page);
@@ -137,7 +333,7 @@ async function identity(page) {
       assert.equal(await page.locator('#' + expected[0]).evaluate(node => getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)');
       await page.locator('#manuscript-analysis-toggle').click();
       assert.equal(await page.locator('#style-layer').inputValue(), 'passive');
-      await page.locator('#layer-clear').click();
+      await selectMetric(page, '');
       assert.equal(await page.locator('#style-layer').inputValue(), '');
       assert.equal(await page.locator('.metric-notable').count(), 0);
       assert.equal(await page.locator('[data-layer-symbol]').count(), 0);
@@ -148,12 +344,18 @@ async function identity(page) {
       assert.deepEqual(errors, []); assert.deepEqual(writes, []);
       if (locale === 'en' && width === 1440) {
         await selectMetric(page, 'passive');
+        await page.locator('#analysis-comparison-enabled').uncheck();
+        await page.locator('#analysis-evidence-enabled').uncheck();
         await page.reload();
         await page.locator('#manuscript-analysis-toggle').click();
         assert.equal(await page.locator('#style-layer').inputValue(), 'passive');
         assert.deepEqual(await page.locator('#chapters .metric-notable').evaluateAll(nodes => nodes.map(node => node.id)), fixture.expected.passive, 'restored metric reapplies the same shared paragraph comparison');
-        assert.equal(await page.locator('#layer-legend').isVisible(), true);
-        assert.equal(await page.locator('#reader-metric-state').textContent(), fixture.labels.layer_passive);
+        assert.equal(await page.locator('#layer-legend').isVisible(), false);
+        assert.equal(await page.locator('#style-layer option:checked').textContent(), fixture.labels.layer_passive);
+        assert.equal(await page.locator('#analysis-comparison-enabled').isChecked(), false);
+        assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false);
+        await page.locator('#analysis-comparison-enabled').check();
+        assert.equal(await page.locator('#layer-comparison-legend').isVisible(), true);
       }
       if (locale === 'en' || locale === 'de') await page.screenshot({path: path.join(artifacts, `${locale}-${width}-${colorScheme}-${reducedMotion}.png`)});
       await page.close();
@@ -175,6 +377,6 @@ async function identity(page) {
         : fixtures.en.labels.layer_coverage.replace('{notable}', '0').replace('{comparable}', String(fixture.comparable)).replace('{total}', String(fixture.total)));
       await page.close();
     }
-    console.log('Metric overlays: seven locales, desktop/short touch mobile, themes/motion, all seven metrics, exact prose/anchors, coverage, clear and Analysis states passed. ' + artifacts);
+    console.log('Metric overlays: seven locales, desktop/short touch mobile, themes/motion, all seven metrics, exact prose/anchors, 200% text and large-value clicks, Focus, coverage, clear and Analysis states passed. ' + artifacts);
   } finally { await browser.close(); }
 })().catch(error => {console.error(error); process.exitCode = 1;});

@@ -2,9 +2,11 @@
 
 By [Matthias Fahsold](https://github.com/mfahsold) · Published 20 October 2026 · Updated 22 October 2026 · 7 minutes
 
+**Current main (unreleased after v0.7.4):** this walkthrough follows the repository's generated demo, including the direct analysis controls and revised marks described below.
+
 A manuscript analysis tool can show you so much about a paragraph that the paragraph becomes awkward to read. Sentence patterns, source lines, markers and research links all have a purpose. They also compete with the next sentence.
 
-Lixity v0.7.4 keeps the manuscript at the centre of that review. The interactive workspace opens as continuous prose with **Analysis Off**. The explicit **Analysis** switch displays its state in words; **Analysis overview** opens chapter comparisons with a direct **Back to passage** action. You can inspect what a measurement counted and follow a passage's saved research without losing the place you were reading.
+Lixity keeps the manuscript at the centre of that review. The interactive workspace opens as continuous prose with **Analysis Off**. The explicit **Analysis** switch displays its state in words; **Analysis overview** opens chapter comparisons with a direct **Back to passage** action. You can inspect what a measurement counted and follow a passage's saved research without losing the place you were reading.
 
 ![Lixity's synthetic Warehouse 4 manuscript with Analysis Off, with continuous prose, analysis display, chapter navigation and reading settings](../screenshots/dashboard-dark.png)
 
@@ -14,7 +16,7 @@ Lixity v0.7.4 keeps the manuscript at the centre of that review. The interactive
 
 Open the [Warehouse 4 demo](https://mfahsold.github.io/lixity/demo/report.html). Its six short English chapters follow Mara through an invented harbour incident. Read the opening setting, then use the chapter control to move to chapter 2's action. You can compare their pace before opening a single measurement.
 
-The reader uses ordinary scrolling and text selection. **A−** and **A+** change text size; **Reading settings** adjusts width and line spacing. Those preferences stay in your browser and leave the manuscript unchanged. **Focus reading** hides the surrounding navigation and side tools temporarily. Its return control, or Escape, brings the workspace back.
+The reader uses ordinary scrolling and text selection. **A−** and **A+** change text size; **Reading settings** adjusts width and line spacing. Those preferences stay in your browser and leave the manuscript unchanged. **Focus reading** hides the surrounding navigation, side tools and both analysis displays temporarily. Its return control, or Escape, restores the workspace and previous display choices.
 
 The aim is a usable reading surface with tools nearby. Manuscript text reflows when its size changes. Images, maps and the style-space view retain their own zoom or movement controls.
 
@@ -24,11 +26,11 @@ Suppose an action passage feels slower than you expected. Open its **…** menu 
 
 The same contextual menu opens with a right-click. With the paragraph or its button focused, **Shift+F10** opens it from the keyboard; arrow keys move between actions and Escape closes it. Shift+right-click still reaches the browser's native menu. Selecting text within one paragraph offers a small toolbar when an applicable action is available.
 
-For the text behind a measurement, turn **Analysis** on, choose a metric and leave **Mark counted passages** checked. Marks identify counted words, lexical patterns, quoted speech or sentences where the analysis can map them exactly to the displayed text. Hover a mark for its explanation, use a short stationary tap on touch screens, or open **Explore passage → Explain measurement** with the keyboard or context menu. Escape closes the explanation. Turning analysis off or clearing the marking control removes the marks.
+For the text behind a measurement, turn **Analysis** on, choose a metric in the direct **Measure** selector and leave **Counted text** checked. Its independent **Paragraph comparison** switch controls paragraph markers. The metric and both switches persist in the browser; deliberate **None** and disabled switches survive Off/On and reload. Violet underlines identify counted words, lexical patterns, quoted speech or sentences where the analysis can map them exactly to the displayed text. Hover a mark for its explanation, use a short stationary tap on touch screens, or open **Explore passage → Explain measurement** with the keyboard or context menu. Escape closes the explanation. Turning Analysis off hides both displays; clearing one switch hides only its own marks.
 
-Two visible keys keep the colors distinct. **Counted text** explains the underline or tint on the words or sentence actually counted. **Paragraph comparison** explains blue/orange paragraph backgrounds relative to that chapter. Both can be visible together. A colored paragraph is not a claim that every word in it caused the difference; inspect a concrete mark for the measured text and use the paragraph comparison for context.
+Two visible keys keep the colors distinct. **Counted text** explains the violet underline on the words or sentence actually counted. **Paragraph comparison** explains blue/orange raw-value markers and down/up arrows for notable paragraphs below/above their chapter median. Both can be visible together while the prose background stays clear. Click the comparison marker or inspect a counted span for its measurement. **Read these marks** keeps the method and counting guidance collapsed until needed.
 
-The explanation separates the selected text from its paragraph value and chapter comparison. A sentence's word count does not establish an editorial fault; a literal perception-word match does not establish narrative distance. Some Markdown counting and display projections cannot yet be mapped exactly. Their measurements remain available, with an explicit unavailable explanation instead of guessed highlights. Native text selection, search marks and saved quotations keep their existing anchors; the highlights do not edit the manuscript.
+The compact explanation puts the selected quotation and count first, with the paragraph value and chapter comparison in a separate panel. A sentence's word count does not establish an editorial fault; a literal perception-word match does not establish narrative distance. Some Markdown counting and display projections cannot yet be mapped exactly. Their measurements remain available, with an explicit unavailable explanation instead of guessed highlights. Native text selection, search marks and saved quotations keep their existing anchors; the highlights do not edit the manuscript.
 
 Choose **Analysis overview** when the question calls for chapter comparisons or sentence rhythm. The manuscript remains mounted with the same paragraph text and source anchors. Hiding analysis keeps the active passage inspector or dossier available beside the text. A different sentence length can belong to a scene's purpose or a character's voice. The number locates a difference; reading supplies the judgment about what to do with it.
 

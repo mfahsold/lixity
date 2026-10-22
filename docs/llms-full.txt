@@ -95,16 +95,22 @@ does not update an already running service.
 
 The browser app, CLI and Python API share one analysis pipeline;
 `lixity --help` and `lixity about --json` describe installed capabilities.
-Current main (unreleased after v0.7.4) adds `--body-only` section exports and
-`--compact` update receipts; see the [section-editing workflow](https://mfahsold.github.io/lixity/research/USAGE.md#work-on-one-dossier-section).
 
 Turn **Analysis** on beside the text, choose a metric and inspect its counted
-passages through hover, touch or the paragraph menu. The same literal evidence
-is available through `lixity profile manuscript.md --layer asl --evidence`.
+passages through hover, touch or the paragraph menu.
+The same literal evidence is available through
+`lixity profile manuscript.md --layer asl --evidence`.
 A passage's research associations open its claims and dossier beside
 the manuscript, with a return to the passage. Exact earlier versions remain
 available independently of the current entry. See the
 [reader and CLI guide](https://mfahsold.github.io/lixity/USAGE.md).
+
+Current main (unreleased after v0.7.4) exposes the metric directly, with independent
+**Counted text** and **Paragraph comparison** switches. Violet underlines identify
+counted spans; blue/orange value-and-arrow markers compare notable paragraphs
+with their chapter. Both preferences persist in the browser. It also adds
+`--body-only` section exports and `--compact` update receipts; see the
+[section-editing workflow](https://mfahsold.github.io/lixity/research/USAGE.md#work-on-one-dossier-section).
 
 CLI workflows can reuse the project's configured manuscript;
 [default manuscript guidance](https://mfahsold.github.io/lixity/USAGE.md#default-manuscript)
@@ -139,8 +145,9 @@ their own projects.
 [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.4.md)
 cover archive compatibility and upgrades. See the
 [changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md) for subsequent work.
-The public demo uses the same interface as v0.7.4, with a fictional project and
-read-only research. Importing and saving require the local app.
+The repository's generated demo follows the interface documented here, including
+unreleased changes, with a fictional project and read-only research. Importing
+and saving require the local app.
 
 Cite [Lixity on Zenodo](https://doi.org/10.5281/zenodo.23390297), with metadata in
 [`CITATION.cff`](https://github.com/mfahsold/lixity/blob/main/CITATION.cff).
@@ -1483,31 +1490,35 @@ display choice. Hiding analysis leaves the overview and restores the prior
 passage tool. The inspector and dossier work with Analysis On or Off.
 
 **Since v0.7.3:** the first explicit **Analysis On** selects **Sentence length**
-unless you have already saved a metric choice. The compact control beside
-**Analysis** names that metric and shows **Highlights On/Off**. Open it to choose
-a metric under **Text analysis** or change **Mark counted passages**. With marks
-enabled, the counted words, patterns, quoted speech or sentences are highlighted.
+unless you have already saved a metric choice.
+**Current main (unreleased after v0.7.4):** use the directly visible **Measure**
+selector while Analysis is on. **Counted text** and **Paragraph comparison** are
+independent switches: keep either, both or neither. With counted text enabled,
+violet underlines identify counted words, patterns, quoted speech or sentences.
 Hover a mark for its explanation; a short stationary tap opens it on touch
-screens. Escape closes it. Turning analysis off, choosing **None** or unchecking
-the marking control removes the marks. Your metric and marking choices persist
-in the browser, including deliberate **None** and disabled marks.
+screens. Escape closes it. Analysis Off and **None** hide both kinds of indicator;
+unchecking either switch hides only its own marks and key. The selected metric and
+both switch preferences persist in the browser, including deliberate **None** and
+disabled switches. Turning Analysis on again preserves those choices.
 
 **Since v0.7.4:** the paragraph menu has one **Explore passage**
 entry. Its existing right context offers **Explain measurement** and **Research
 for this passage**. The former explains counted text; the latter reads
 explicitly linked claims, sources and decisions. Hover and tap remain quick ways
-to open the measurement card. That card separates a selected sentence's word
-count from the paragraph measurement and chapter comparison; mapping details
-and limits are expandable. The context's **Passage** button selects the inspector;
+to open the measurement card. In current main, the compact card puts the selected
+quotation and its count first, with the paragraph measurement and chapter
+comparison in a separate panel. Mapping details and limits stay collapsed under
+**About this comparison**. The context's **Passage** button selects the inspector;
 the separate **Analysis** switch controls manuscript indicators. Neither route
 infers factual truth.
 
-Since v0.7.4, **Counted text** and **Paragraph comparison** have separate visible
-keys. The underline/tint sample identifies literal counted spans; hover or tap
-for the concrete count. Paragraph backgrounds use blue/orange for direction
-relative to the chapter, explained beside their scale. A marked sentence's word
-count and its paragraph's average are different quantities. Disabling text
-marks leaves the comparison key available; unavailable exact evidence is stated.
+The visible keys distinguish violet **Counted text** underlines from
+**Paragraph comparison**. Notable paragraphs have a raw-value marker with a
+down/up arrow and a blue/orange edge for below/above the chapter median; the prose
+background stays clear. Click the marker to inspect the measurement. **Read these
+marks** keeps the comparison method and counting guidance collapsed until opened.
+A marked sentence's word count and its paragraph's average are different
+quantities. Unavailable exact evidence is stated explicitly.
 
 These routes share existing actions rather than creating separate records:
 
@@ -1526,7 +1537,7 @@ a dossier beside the manuscript does not link it to that passage.
 **Explore passage → Explain measurement** also works by keyboard or right-click,
 including with Analysis Off or Focus reading. That explicit action enables
 Analysis and chooses Sentence length if no metric is selected, while preserving
-an unchecked marking preference.
+both display-switch preferences.
 
 The explanation separates the counted passage from its paragraph measurement and
 chapter comparison. A sentence's word count does not make it an editorial fault;
@@ -1569,7 +1580,8 @@ closing the tool does not turn all analysis off. On desktop, tools occupy adjace
 paragraph-to-tool action reveals the stacked tool heading; closing it or pressing
 Escape returns to the requesting passage and its paragraph control.
 **Focus reading** temporarily hides surrounding navigation and
-tools; its visible exit or Escape restores the workspace. Opening a tool exits
+tools, counted-text underlines and paragraph comparison markers; its visible exit
+or Escape restores the workspace and prior display choices. Opening a tool exits
 focus coherently. Text-size, layout and companion changes retain the visible
 source block's position where available. Menus close on scrolling or resizing;
 switching workspace closes temporary menus and reading settings.
@@ -1665,17 +1677,17 @@ Its cutoff-hit counts differ from FDR decisions; the bands are neither
 confidence intervals nor external editorial targets. Paragraph style layers
 show measured values and flag unusual values relative to the chapter.
 
-**Since v0.7.3:** with **Analysis On**, open the named metric control beside
-the switch and select one metric under **Text analysis**. A transparent background
-and up/down arrow on a notable paragraph
-refer to that chapter's median/MAD, not literary quality. The paragraph button
-explains its raw value, unit, source lines and local z; choose **Values** for the
-measurements. **Next deviation** opens the paragraph. **Clear metric** removes
+**Current main (unreleased after v0.7.4):** with **Analysis On**, choose one metric
+in the direct **Measure** selector. Blue/orange raw-value markers and down/up
+arrows identify notable paragraph comparisons against that chapter's median/MAD;
+the prose background stays clear. The marker opens the paragraph measurement
+and its local comparison; **Values** retains the full paragraph measurements.
+**Next deviation** opens the paragraph. **Clear metric** removes
 the selected metric and its deviation filter, leaving the flagged-paragraph
 filter unchanged. **Show all paragraphs** clears both paragraph filters and the
 selected metric. These are different reset scopes, not separate analyses.
-Analysis Off hides the paint and related hints while retaining
-your choice. Native text selection, search and saved research marks remain separate.
+Analysis Off hides the marks and related keys while retaining your choices.
+Native text selection, search and saved research marks remain separate.
 
 The strip's colour and notable membership now use the same within-chapter
 comparison. The scale is fixed at z = −2.5 … +2.5; paragraph notability uses
@@ -7105,16 +7117,24 @@ navigation lists only rendered panels.
 PDF export, the read-only dossier companion and research saves use the explicit
 capability/context guards below. Selection drafts save nothing by themselves.
 
+**Current main (unreleased after v0.7.4):** the native metric selector is directly
+visible with independent, browser-persisted Counted text and Paragraph comparison
+switches. Counted text uses violet underlines; notable paragraph comparisons use
+blue/orange raw-value and direction markers with a clear prose background.
+Analysis Off and Focus hide both displays without resetting their preferences.
+
 | Hook | Meaning |
 |---|---|
 | `#manuscript-analysis-toggle` | constant-name **Analysis** toggle; `aria-pressed` and visible On/Off text identify diagnostic visibility independently of the dossier |
-| `#reader-analysis-settings` / `#reader-metric-state` / `#reader-evidence-state` | compact native disclosure beside Analysis names the selected metric and marking preference; opens the single metric selector, marking checkbox and explanations |
-| `#analysis-evidence-enabled` | browser-local marking preference; explicit evidence inspection remains available when unchecked. First explicit Analysis On selects `asl` only without a saved metric choice; deliberate None and unchecked marks survive Off/On and reload |
+| `#reader-analysis-settings` | direct native metric/control group while Analysis is on; contains one selector and the two independent display switches |
+| `#analysis-evidence-enabled` / `#analysis-comparison-enabled` | browser-local counted-text/comparison preferences; first explicit Analysis On selects `asl` only without a saved metric choice. Deliberate None and either disabled switch survive Off/On and reload; explicit inspection preserves both switch preferences |
+| `.reader-comparison-value` | notable paragraph's raw value and down/up direction; opens the existing measurement explanation |
+| `#layer-legend .layer-comparison-note` | counting and comparison method disclosure, collapsed by default |
 | `#workbench-overview-open` / `#workbench-overview-back` | open dense analysis / return to preserved manuscript context |
 | `[data-context-tool="analysis"]` / `[data-context-tool="dossier"]` / `[data-context-tool="research"]` | explicitly select one active context tool; Saved research opens the requested passage context. Closing the tool does not itself hide all analysis |
 | `#workbench-thread` / `#workbench-return` | context-checked return to the original passage; since v0.7.3, a nearest dossier departure retains its saved version/position and an earlier passage return. The same control remains visible on narrow screens; replaced roots or changed project/source/research context invalidate it |
 | `#reader-settings .reader-shortcuts` | visible localized reference to implemented passage-menu, search and close keys |
-| `#style-layer` / `#layer-clear` | select/clear one paragraph metric; the Analysis mode controls its prose paint and hints, while the existing local Values remains independent |
+| `#style-layer` / `#layer-clear` | select/clear one paragraph metric; None hides both indicator types without changing their preferences. Local Values remains independent |
 | `#analysis-scope-register` / `#analysis-scope-pov` | optional author-declared groups filter only heatmap rows; the full-book reference and numerical outputs stay unchanged |
 | `[data-section-nav]` / `[data-section-link]` | shared active-heading presentation over real targets; dossier IDs are local to an accepted rendering, not durable record references |
 | `[data-help]` / `#lixity-tooltip` | supplemental action/measurement explanation on hover or focus; inspect visible control names/states for operation, not tooltip visibility. Help does not authorize a write or retention |
@@ -7567,6 +7587,12 @@ When running `lixity serve --port 8765`, local agents can trigger deterministic 
 
 Browser API diagnostics report request metadata without copying response bodies
 to the console.
+
+**Current main (unreleased after v0.7.4):** overlapping automatic browser
+`GET /api/research/status` consumers share only a pending observation for the
+same root/project/source and exact request. Settled responses are not cached.
+Explicit refreshes always read again; context changes and writes invalidate
+pending sharing. This changes no endpoint, response envelope or write guard.
 
 **Since v0.7.4:** `POST /api/site-export` requires
 `{"project_token":"<current manuscript metadata token>","include_research":false,"include_source_files":false}`.

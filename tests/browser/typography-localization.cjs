@@ -121,18 +121,20 @@ async function textRole(locator) {
         await check(`${name} consistent interface type roles`, async () => {
           const primary = await textRole(page.locator('#tab-view-analysis'));
           const settings = await textRole(page.locator('#reader-settings > summary'));
-          const analysisSettings = await textRole(page.locator('#reader-analysis-settings > summary'));
-          const metricName = await textRole(page.locator('#reader-metric-state'));
-          const highlightState = await textRole(page.locator('#reader-evidence-state'));
+          const metric = await textRole(page.locator('#style-layer'));
+          const metricLabel = await textRole(page.locator('.metric-layer-control > span'));
+          const counted = await textRole(page.locator('.analysis-evidence-key'));
+          const comparison = await textRole(page.locator('.analysis-comparison-key'));
           const adjacent = await textRole(page.locator('#manuscript-analysis-toggle'));
           const help = await textRole(page.locator('.reader-shortcuts dd').first());
           assert.equal(primary.size, 14, 'Primary destinations retain control size on narrow screens');
           assert.equal(settings.size, adjacent.size, 'Adjacent reader commands share a type role');
           assert.equal(settings.size, 14);
-          assert.equal(analysisSettings.size, settings.size, 'Both reader settings summaries retain the control role');
-          assert.equal(metricName.size, settings.size, 'The selected metric remains a readable control label');
-          assert.equal(analysisSettings.family, settings.family);
-          assert.equal(highlightState.size, 13, 'Highlight state uses the supporting metadata role');
+          assert.equal(metric.size, settings.size, 'The directly selected metric retains the control role');
+          assert.equal(metric.family, settings.family);
+          assert.equal(metricLabel.size, 13, 'The metric scope uses the supporting metadata role');
+          assert.equal(counted.size, 13, 'The counted-text switch keeps a readable supporting label');
+          assert.equal(comparison.size, counted.size, 'Both independent analysis switches share a type role');
           assert.equal(help.size, 13, 'Supporting help remains readable and uses one metadata role');
         });
         await page.locator('#tab-view-research').click();

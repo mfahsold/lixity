@@ -81,6 +81,27 @@ print(json.dumps({locale:render_dashboard([], [], controls=True, title='Syntheti
       assert.deepEqual(errors, []);
       if (locale === 'en' || locale === 'de') await page.locator('#research-manager').screenshot({
         path:path.join(artifacts, `${locale}-${width}-${colorScheme}.png`)});
+      if (['de', 'pt'].includes(locale) && width === 320 && colorScheme === 'light') {
+        await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+        for (const enlargedWidth of [390, 320]) {
+          await page.setViewportSize({width:enlargedWidth, height:900});
+          for (const tab of await tabs.all()) {
+            await tab.focus();
+            const fits = await tab.evaluate(button => {
+              const box = button.getBoundingClientRect();
+              const viewport = button.parentElement.getBoundingClientRect();
+              return button.scrollWidth <= button.clientWidth + 1
+                && button.scrollHeight <= button.clientHeight + 1
+                && box.left >= viewport.left - 1 && box.right <= viewport.right + 1;
+            });
+            assert.ok(fits, `${locale}/${enlargedWidth}: enlarged destination text fits its button and scrollport`);
+          }
+          const heights = await tabs.evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().height));
+          assert.ok(Math.max(...heights) - Math.min(...heights) <= 1,
+            `${locale}/${enlargedWidth}: wrapped destination labels keep the strip aligned`);
+          await page.screenshot({path:path.join(artifacts, `${locale}-${enlargedWidth}-enlarged.png`)});
+        }
+      }
       await page.close();
     }
     console.log('Research navigation: named tab/panel relationships, manual keyboard selection, visible mobile overflow and no writes passed in seven locales at1440/320 light/dark. '+artifacts);

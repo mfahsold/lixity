@@ -144,10 +144,14 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
         'The actual generated CSP permits the owned analytics runtime');
       assert.deepEqual(payloads({pixels}), [{p: '/lixity/demo/report.html',
         t: 'Lixity project demo — The Crate at Warehouse 4', r: '', e: 'false'}]);
-      const prose = await page.locator('#chapters .ptext').allTextContents();
+      const sourceState = () => page.locator('#chapters .ptext').evaluateAll(panels => panels.map(panel => ({
+        id: panel.id, start: panel.dataset.start, end: panel.dataset.end, hash: panel.dataset.paragraphSha256,
+        text: panel.querySelector('.ptext-inner > p').textContent,
+      })));
+      const prose = await sourceState();
       await page.locator('#manuscript-analysis-toggle').click();
       await page.locator('#manuscript-analysis-toggle').click();
-      assert.deepEqual(await page.locator('#chapters .ptext').allTextContents(), prose);
+      assert.deepEqual(await sourceState(), prose, 'Analysis changes controls, never canonical prose or source anchors');
       await expect(page.locator('#r-claim-create-btn')).toBeHidden();
       await expect(page.locator('meta[http-equiv="Content-Security-Policy"]')).toHaveCount(1);
       assert.equal(requests.some(request => request.url.endsWith('/assets/analytics.json')), false,

@@ -185,13 +185,13 @@
   var inspectorBody = document.getElementById("reader-inspector-body");
   var focus = document.getElementById("reader-focus");
   var settings = document.getElementById("reader-settings");
-  var analysisSettings = document.getElementById("reader-analysis-settings");
-  var settingsPanels = [settings, analysisSettings].filter(Boolean);
+  var settingsPanels = [settings].filter(Boolean);
   var metric = document.getElementById("style-layer"), evidenceToggle = document.getElementById("analysis-evidence-enabled");
+  var comparisonToggle = document.getElementById("analysis-comparison-enabled");
   var width = document.getElementById("reader-width");
   var spacing = document.getElementById("reader-spacing");
   var current = null, savedRange = null, evidencePoint = null, returnTarget = null, selecting = false;
-  var preferences = {size: 18, width: "standard", spacing: "standard", metric: null, evidence: true};
+  var preferences = {size: 18, width: "standard", spacing: "standard", metric: null, evidence: true, comparison: true};
   function read(key) { try { return localStorage.getItem(key); } catch (_) { return null; } }
   function save(key, value) { try { localStorage.setItem(key, value); } catch (_) { /* Display works without storage. */ } }
   try {
@@ -202,20 +202,17 @@
       if (["compact", "standard", "relaxed"].includes(stored.spacing)) preferences.spacing = stored.spacing;
       if (typeof stored.metric === "string" && metric && Array.from(metric.options).some(function(option) {return option.value === stored.metric;})) preferences.metric = stored.metric;
       if (typeof stored.evidence === "boolean") preferences.evidence = stored.evidence;
+      if (typeof stored.comparison === "boolean") preferences.comparison = stored.comparison;
     }
   } catch (_) { /* A malformed preference never changes manuscript data. */ }
   if (metric && preferences.metric !== null) metric.value = preferences.metric;
   if (evidenceToggle) evidenceToggle.checked = preferences.evidence;
-  function evidenceState() {
-    var state = document.getElementById("reader-evidence-state");
-    if (state) state.textContent = uiLabel(evidenceToggle && evidenceToggle.checked ? "reading_on" : "reading_off");
-    var metricState = document.getElementById("reader-metric-state");
-    if (metricState && metric) metricState.textContent = metric.options[metric.selectedIndex].textContent;
-  }
+  if (comparisonToggle) comparisonToggle.checked = preferences.comparison;
   function rememberAnalysis() {
     if (metric) preferences.metric = metric.value;
     if (evidenceToggle) preferences.evidence = evidenceToggle.checked;
-    evidenceState(); save("lixity.manuscript.reader", JSON.stringify(preferences));
+    if (comparisonToggle) preferences.comparison = comparisonToggle.checked;
+    save("lixity.manuscript.reader", JSON.stringify(preferences));
   }
   function defaultMetric(force) {
     if (!metric || metric.value || (!force && preferences.metric !== null)) return;
@@ -224,15 +221,14 @@
   }
   if (metric) metric.addEventListener("change", rememberAnalysis);
   if (evidenceToggle) evidenceToggle.addEventListener("change", rememberAnalysis);
+  if (comparisonToggle) comparisonToggle.addEventListener("change", rememberAnalysis);
   var clearMetric = document.getElementById("layer-clear");
   if (clearMetric) clearMetric.addEventListener("click", function() {
     rememberAnalysis();
-    if (analysisSettings) analysisSettings.querySelector("summary").focus({preventScroll:true});
+    if (metric) metric.focus({preventScroll:true});
   });
   var resetParagraphs = document.getElementById("paragraph-filter-reset");
   if (resetParagraphs) resetParagraphs.addEventListener("click", rememberAnalysis);
-  document.addEventListener("lixity:analysis-layer-change", evidenceState);
-  evidenceState();
   function capture() {
     if (workbench.state().view !== "analysis" || workbench.state().surface !== "document") return null;
     if (pendingDockAnchor && pendingDockAnchor.revision === arrangementRevision) return pendingDockAnchor.anchor;
@@ -241,7 +237,11 @@
       var rect = candidate.getBoundingClientRect();
       return rect.height > 0 && rect.bottom > boundary && rect.top < innerHeight;
     });
-    return panel ? {panel: panel, top: panel.getBoundingClientRect().top} : null;
+    if (!panel) return null;
+    var anchor = {panel: panel, top: panel.getBoundingClientRect().top};
+    var prose = panel.querySelector(".ptext-inner > p");
+    if (prose) anchor.proseOffset = prose.getBoundingClientRect().top - anchor.top;
+    return anchor;
   }
   function restore(anchor, arrival) {
     if (!anchor) return;
@@ -249,7 +249,11 @@
     requestAnimationFrame(function() {
       if (revision !== arrangementRevision) return;
       if (anchor.panel.isConnected) {
-        window.scrollBy(0, anchor.panel.getBoundingClientRect().top - anchor.top);
+        var top = anchor.panel.getBoundingClientRect().top;
+        var prose = anchor.panel.querySelector(".ptext-inner > p");
+        // Inline analysis controls may disappear while the prose stays in view.
+        if (prose && Number.isFinite(anchor.proseOffset)) top = prose.getBoundingClientRect().top - anchor.proseOffset;
+        window.scrollBy(0, top - anchor.top);
         if (arrival && window.LixityMotion) window.LixityMotion.passage(anchor.panel);
       }
       if (pendingDockAnchor && pendingDockAnchor.revision === revision) pendingDockAnchor = null;
@@ -396,7 +400,6 @@
       button.setAttribute("aria-pressed", String(state.contextTool === button.dataset.contextTool));
     });
     analysisToggle.setAttribute("aria-pressed", String(state.analysisVisible));
-    if ((!state.analysisVisible || state.focus) && analysisSettings) analysisSettings.open = false;
     document.getElementById("manuscript-analysis-state").textContent = uiLabel(state.analysisVisible ? "reading_on" : "reading_off");
     mode.value = state.surface === "overview" ? "inspect" : "read";
     document.getElementById("workbench-overview-open").hidden = state.surface === "overview";

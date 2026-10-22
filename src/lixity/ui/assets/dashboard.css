@@ -323,14 +323,15 @@ body.text-search-active .chapter .strip { display: none; }
 .layer-legend button.ctl { margin-left: 0; }
 .layer-legend .layer-count { flex: 1 1 15rem; }
 .layer-legend .layer-scale { flex-wrap: wrap; gap: var(--space-2); }
+.layer-legend .layer-scale > span { border-inline-start: 3px solid var(--layer-direction-color); padding-inline-start: .4rem; }
 .layer-comparison-note { flex-basis: 100%; }
 .layer-comparison-note > summary { cursor: pointer; padding-block: var(--space-2); }
 .layer-comparison-note p { max-width: 75ch; margin-block: var(--space-2); }
-body.layer-on .chip.has-layer { background: var(--layer-color); }
-body.layer-on .chip.has-layer.tense-present { border-top: 2px solid var(--present); }
-body.layer-on .chip.has-layer.tense-past { border-top: 2px solid var(--past); }
-body.layer-on .chip.has-layer.tense-mixed { border-top: 2px solid var(--mixed); }
-body.layer-on .chip.has-layer.tense-neutral { border-top: 2px solid var(--neutral); }
+body.comparison-on .chip.has-layer { background: var(--layer-color); }
+body.comparison-on .chip.has-layer.tense-present { border-top: 2px solid var(--present); }
+body.comparison-on .chip.has-layer.tense-past { border-top: 2px solid var(--past); }
+body.comparison-on .chip.has-layer.tense-mixed { border-top: 2px solid var(--mixed); }
+body.comparison-on .chip.has-layer.tense-neutral { border-top: 2px solid var(--neutral); }
 .chapter.flash, .ptext.flash, .panel.flash, section.flash,
 .ctl.flash, .research-timeline li.flash > .research-card { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
 .ptext.flash { background: color-mix(in srgb, var(--accent-light) 55%, transparent); }

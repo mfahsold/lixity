@@ -27,7 +27,6 @@ from ..style_fingerprint import (
     LAYER_PARAGRAPH_ATTR,
     MIN_COMPARABLE_WORDS,
     PARAGRAPH_LAYER_Z_CUTOFF,
-    Z_COLOR_LIMIT,
     FingerprintThresholds,
     layer_stats,
     z_color,
@@ -837,12 +836,13 @@ def render_dashboard(
     if paragraphs:
         metric_control = (
             '<label class="metric-layer-control">'
-            f'<span>{L("reading_text_analysis") if controls else help_term(labels, "layer", L("style_layer"))}</span> '
+            f'<span>{L("analysis_measure") if controls else help_term(labels, "layer", L("style_layer"))}</span> '
             '<select class="ctl" id="style-layer">'
             f'<option value="">{L("layer_off")}</option>'
             + "".join(
                 f'<option value="{layer_key}" '
                 f'data-hint="{esc(label(labels, "layer_hint_" + layer_key), quote=True)}" '
+                f'data-unit="{esc(FEATURE_UNITS.get(language_key, FEATURE_UNITS["en"])[LAYER_FEATURES[layer_key]], quote=True)}" '
                 f'data-comparable="{len(layer_data[layer_key])}">'
                 f"{esc(label(labels, 'layer_' + layer_key))}</option>"
                 for layer_key in LAYER_FEATURES
@@ -851,15 +851,15 @@ def render_dashboard(
         )
     if has_reading and controls:
         analysis_controls = (
-            '<div class="reader-analysis-controls">'
-            '<details class="reader-settings reader-analysis-settings" id="reader-analysis-settings" name="reader-settings">'
-            f'<summary class="ctl"><span id="reader-metric-state">{L("layer_off")}</span>'
-            f'<span>{L("evidence_settings")} <span id="reader-evidence-state">{L("reading_on")}</span></span></summary>'
-            '<div class="reader-settings-body">'
+            f'<div class="reader-analysis-controls" id="reader-analysis-settings" role="group" '
+            f'aria-label="{L("reading_text_analysis")}">'
             f'{metric_control}'
+            '<div class="reader-analysis-switches">'
             f'<label class="reader-evidence-toggle"><input type="checkbox" id="analysis-evidence-enabled" checked/> '
-            f'{L("evidence_show")}</label><p class="ctl-note">{L("evidence_interaction")}</p>'
-            '</div></details></div>'
+            f'<span class="analysis-evidence-key">{L("legend_counted_text")}</span></label>'
+            f'<label class="reader-comparison-toggle"><input type="checkbox" id="analysis-comparison-enabled" checked/> '
+            f'<span class="analysis-comparison-key">{L("legend_paragraph_comparison")}</span></label>'
+            '</div></div>'
         ) if paragraphs else ""
         parts.append(reading_controls(chapters, labels, reader_document, companion_controls=reader_controls,
                                       analysis_controls=analysis_controls))
@@ -966,16 +966,15 @@ def render_dashboard(
     )
     parts.append('<div class="layer-legend-group" id="layer-evidence-legend">'
                  f'<strong class="analysis-evidence-swatch">{L("legend_counted_text")}</strong>'
-                 '<p id="layer-evidence-hint"></p>'
                  '<p class="ctl-note" id="analysis-evidence-status" role="status" aria-live="polite"></p></div>')
     parts.append('<div class="layer-legend-group" id="layer-comparison-legend">'
                  f'<strong>{L("legend_paragraph_comparison")}</strong>')
     parts.append('<span class="layer-title" id="layer-legend-title" tabindex="0"></span>')
-    parts.append('<p id="layer-comparison-hint"></p>')
-    parts.append('<span class="z-gradient" aria-hidden="true"></span>')
     parts.append(
-        f'<span class="layer-scale"><span id="layer-scale-low">−{N(Z_COLOR_LIMIT, 1)} · {L("layer_below")}</span>'
-        f'<span id="layer-scale-high">+{N(Z_COLOR_LIMIT, 1)} · {L("layer_above")}</span></span>'
+        f'<span class="layer-scale"><span id="layer-scale-low" '
+        f'style="--layer-direction-color:{z_color(-PARAGRAPH_LAYER_Z_CUTOFF)}">↓ {L("layer_below")}</span>'
+        f'<span id="layer-scale-high" style="--layer-direction-color:{z_color(PARAGRAPH_LAYER_Z_CUTOFF)}">'
+        f'↑ {L("layer_above")}</span></span>'
     )
     parts.append('<span class="layer-count" id="layer-legend-count" role="status" aria-live="polite"></span>')
     parts.append(
@@ -983,10 +982,12 @@ def render_dashboard(
         f"{esc(label(labels, 'layer_only'))}</label>"
     )
     parts.append(f'<button class="ctl" id="layer-next">{esc(label(labels, "layer_next"))}</button>')
-    parts.append(f'<button class="ctl" id="layer-clear" type="button">{L("layer_clear")}</button>')
-    parts.append(f'<details class="layer-comparison-note"><summary>{L("layer_guide")}</summary>'
-                 f'<p class="ctl-note">{L("layer_comparison_help")}</p></details>')
-    parts.append("</div></div>")
+    parts.append('</div>')
+    parts.append(f'<details class="layer-comparison-note"><summary>{L("analysis_marks_help")}</summary>'
+                 '<p id="layer-evidence-hint"></p><p id="layer-comparison-hint"></p>'
+                 f'<p class="ctl-note">{L("layer_comparison_help")}</p>'
+                 f'<button class="ctl" id="layer-clear" type="button">{L("layer_clear")}</button></details>')
+    parts.append("</div>")
 
     if not tense_available:
         parts.append(f'<p class="hint">{L("no_tense")}</p>')
@@ -1062,7 +1063,8 @@ def render_dashboard(
                     if info is not None:
                         value, z = info
                         colour = z_color(z)
-                        layer_payload[key] = [colour, f"{line_label(labels, p)} · {_layer_tip(key, value, z)}", round(z, 2)]
+                        layer_payload[key] = [colour, f"{line_label(labels, p)} · {_layer_tip(key, value, z)}",
+                                              round(z, 2), N(value, 1)]
                 layer_attr = (
                     f" data-layers='{esc(json.dumps(layer_payload, ensure_ascii=False), quote=True)}'"
                     if layer_payload

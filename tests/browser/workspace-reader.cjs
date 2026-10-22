@@ -63,6 +63,22 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
       const navigationToggle = page.locator('#workspace-navigation-toggle');
       const navigation = page.locator('#workspace-navigation-content');
       const originalWidth = await page.locator('.workspace-shell').evaluate(node => node.getBoundingClientRect().width);
+      await page.locator('#chapters .ptext').last().scrollIntoViewIfNeeded();
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      const departure = await page.evaluate(() => {
+        const anchor = LixityReader.capture(); return {id:anchor.panel.id, top:anchor.top};
+      });
+      assert.equal(await toggle.evaluate(node => {
+        const bounds = node.getBoundingClientRect();
+        return bounds.top >= 0 && bounds.bottom <= innerHeight &&
+          document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)?.closest('#workspace-reader-toggle') === node;
+      }), true, 'companion navigation remains reachable at the current deep reading position');
+      await toggle.click();
+      await page.waitForFunction(() => !document.querySelector('#workspace-reader-dossier').disabled);
+      await toggle.click();
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      assert.ok(Math.abs(await page.locator('#' + departure.id).evaluate(node => node.getBoundingClientRect().top) - departure.top) <= 2,
+        'opening and closing the companion restores the exact deep reading position');
       await toggle.click();
       if (width >= 1100) {
         assert.equal(await navigation.isVisible(), false, 'Companion automatically frees desktop navigation space');
@@ -104,6 +120,22 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
       if (locale === 'de') {
         await page.locator('#workspace-reader').scrollIntoViewIfNeeded();
         await page.screenshot({path: path.join(artifacts, `reader-${width}.png`)});
+      }
+      if (['de', 'pt'].includes(locale) && width === 320) {
+        await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+        for (const enlargedWidth of [390, 320]) {
+          await page.setViewportSize({width:enlargedWidth, height:900});
+          const readable = await select.evaluate(element => {
+            const control = element.getBoundingClientRect();
+            const row = element.closest('.workspace-reader-controls').getBoundingClientRect();
+            return control.width >= Math.min(8 * parseFloat(getComputedStyle(element).fontSize), row.width) - 1;
+          });
+          assert.ok(readable, `${locale}/${enlargedWidth}: enlarged dossier selection retains a readable width`);
+          await select.scrollIntoViewIfNeeded();
+          await page.screenshot({path:path.join(artifacts, `reader-${locale}-${enlargedWidth}-enlarged.png`)});
+        }
+        await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+        await page.setViewportSize({width, height:900});
       }
       await toggle.click();
       assert.equal(await panel.isVisible(), false);

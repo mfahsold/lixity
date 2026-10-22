@@ -144,6 +144,30 @@ async function settleGeometry(page) {
             `Compact entry keeps ${selector} available`);
         }
         await page.screenshot({path: path.join(artifacts, `reading-entry-${width}.png`)});
+        await page.setViewportSize({width, height:480});
+        await page.evaluate(() => {document.documentElement.style.fontSize = '200%';});
+        await page.locator('#chapters .ptext').last().scrollIntoViewIfNeeded();
+        await settleGeometry(page);
+        const enlarged = await page.locator('#manuscript-reader-controls').evaluate(node => ({
+          height:node.getBoundingClientRect().height, viewport:innerHeight,
+          scroll:node.scrollHeight, client:node.clientHeight,
+        }));
+        assert.ok(enlarged.height <= enlarged.viewport * .45 + 1,
+          'Enlarged sticky navigation leaves more than half the short viewport for manuscript prose');
+        assert.ok(enlarged.scroll > enlarged.client, 'Enlarged navigation remains an internally scrollable control group');
+        const readingScroll = await page.evaluate(() => scrollY);
+        const overview = page.locator('#workbench-overview-open');
+        await overview.focus();
+        assert.equal(await page.evaluate(() => scrollY), readingScroll,
+          'Keyboard access scrolls enlarged navigation internally without moving the manuscript');
+        assert.equal(await overview.evaluate(node => {
+          const bounds = node.getBoundingClientRect(), toolbar = node.closest('#manuscript-reader-controls').getBoundingClientRect();
+          return bounds.top >= toolbar.top && bounds.bottom <= toolbar.bottom;
+        }), true, 'The focused enlarged navigation action is visible inside its scrollport');
+        await page.screenshot({path: path.join(artifacts, `reading-navigation-${width}-enlarged.png`)});
+        await page.evaluate(() => {document.documentElement.style.fontSize = ''; scrollTo({top:0, behavior:'instant'});});
+        await page.setViewportSize({width, height:900});
+        await settleGeometry(page);
       }
       const anchors = await sourceState(page);
       assert.ok(anchors.every(item => item.id && Number(item.start) <= Number(item.end) && /^[a-f0-9]{64}$/.test(item.hash)));

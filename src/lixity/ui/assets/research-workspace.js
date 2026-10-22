@@ -26,14 +26,14 @@ function ocrReading(ocr) {
   return {label: labelText, guidance: guidanceText, badge: badgeClass};
 }
 
-async function refreshResearchProjectInfo() {
+async function refreshResearchProjectInfo(freshRead) {
   var statusRead = ++researchProjectStatusRead;
   var activeRootEl = document.getElementById("r-active-root");
   if (activeRootEl && (!activeRootEl.textContent || activeRootEl.textContent.trim() === "")) {
     activeRootEl.className = "ctl-status loading";
     activeRootEl.textContent = uiLabel("research_loading");
   }
-  var status = await researchApiGet("research/status");
+  var status = await researchApiGet("research/status", undefined, freshRead === false);
   if (statusRead !== researchProjectStatusRead) return {ok: false, superseded: true};
   if (status.ok === true && researchSelectionProjectId !== (status.project_id || null)) {
     ++researchSearchRead; ++researchClaimsRead; ++researchProjectionRead;
@@ -134,7 +134,7 @@ async function refreshResearchProjectInfo() {
 
 async function initResearchUI(freshRead) {
   researchStatus(uiLabel("research_loading"), "loading");
-  var status = await refreshResearchProjectInfo();
+  var status = await refreshResearchProjectInfo(Boolean(freshRead));
   if (status.superseded) return;
   var initBox = document.getElementById("research-init-box");
   var tabs = document.getElementById("research-tabs");

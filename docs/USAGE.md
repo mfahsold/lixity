@@ -335,31 +335,35 @@ display choice. Hiding analysis leaves the overview and restores the prior
 passage tool. The inspector and dossier work with Analysis On or Off.
 
 **Since v0.7.3:** the first explicit **Analysis On** selects **Sentence length**
-unless you have already saved a metric choice. The compact control beside
-**Analysis** names that metric and shows **Highlights On/Off**. Open it to choose
-a metric under **Text analysis** or change **Mark counted passages**. With marks
-enabled, the counted words, patterns, quoted speech or sentences are highlighted.
+unless you have already saved a metric choice.
+**Current main (unreleased after v0.7.4):** use the directly visible **Measure**
+selector while Analysis is on. **Counted text** and **Paragraph comparison** are
+independent switches: keep either, both or neither. With counted text enabled,
+violet underlines identify counted words, patterns, quoted speech or sentences.
 Hover a mark for its explanation; a short stationary tap opens it on touch
-screens. Escape closes it. Turning analysis off, choosing **None** or unchecking
-the marking control removes the marks. Your metric and marking choices persist
-in the browser, including deliberate **None** and disabled marks.
+screens. Escape closes it. Analysis Off and **None** hide both kinds of indicator;
+unchecking either switch hides only its own marks and key. The selected metric and
+both switch preferences persist in the browser, including deliberate **None** and
+disabled switches. Turning Analysis on again preserves those choices.
 
 **Since v0.7.4:** the paragraph menu has one **Explore passage**
 entry. Its existing right context offers **Explain measurement** and **Research
 for this passage**. The former explains counted text; the latter reads
 explicitly linked claims, sources and decisions. Hover and tap remain quick ways
-to open the measurement card. That card separates a selected sentence's word
-count from the paragraph measurement and chapter comparison; mapping details
-and limits are expandable. The context's **Passage** button selects the inspector;
+to open the measurement card. In current main, the compact card puts the selected
+quotation and its count first, with the paragraph measurement and chapter
+comparison in a separate panel. Mapping details and limits stay collapsed under
+**About this comparison**. The context's **Passage** button selects the inspector;
 the separate **Analysis** switch controls manuscript indicators. Neither route
 infers factual truth.
 
-Since v0.7.4, **Counted text** and **Paragraph comparison** have separate visible
-keys. The underline/tint sample identifies literal counted spans; hover or tap
-for the concrete count. Paragraph backgrounds use blue/orange for direction
-relative to the chapter, explained beside their scale. A marked sentence's word
-count and its paragraph's average are different quantities. Disabling text
-marks leaves the comparison key available; unavailable exact evidence is stated.
+The visible keys distinguish violet **Counted text** underlines from
+**Paragraph comparison**. Notable paragraphs have a raw-value marker with a
+down/up arrow and a blue/orange edge for below/above the chapter median; the prose
+background stays clear. Click the marker to inspect the measurement. **Read these
+marks** keeps the comparison method and counting guidance collapsed until opened.
+A marked sentence's word count and its paragraph's average are different
+quantities. Unavailable exact evidence is stated explicitly.
 
 These routes share existing actions rather than creating separate records:
 
@@ -378,7 +382,7 @@ a dossier beside the manuscript does not link it to that passage.
 **Explore passage → Explain measurement** also works by keyboard or right-click,
 including with Analysis Off or Focus reading. That explicit action enables
 Analysis and chooses Sentence length if no metric is selected, while preserving
-an unchecked marking preference.
+both display-switch preferences.
 
 The explanation separates the counted passage from its paragraph measurement and
 chapter comparison. A sentence's word count does not make it an editorial fault;
@@ -421,7 +425,8 @@ closing the tool does not turn all analysis off. On desktop, tools occupy adjace
 paragraph-to-tool action reveals the stacked tool heading; closing it or pressing
 Escape returns to the requesting passage and its paragraph control.
 **Focus reading** temporarily hides surrounding navigation and
-tools; its visible exit or Escape restores the workspace. Opening a tool exits
+tools, counted-text underlines and paragraph comparison markers; its visible exit
+or Escape restores the workspace and prior display choices. Opening a tool exits
 focus coherently. Text-size, layout and companion changes retain the visible
 source block's position where available. Menus close on scrolling or resizing;
 switching workspace closes temporary menus and reading settings.
@@ -517,17 +522,17 @@ Its cutoff-hit counts differ from FDR decisions; the bands are neither
 confidence intervals nor external editorial targets. Paragraph style layers
 show measured values and flag unusual values relative to the chapter.
 
-**Since v0.7.3:** with **Analysis On**, open the named metric control beside
-the switch and select one metric under **Text analysis**. A transparent background
-and up/down arrow on a notable paragraph
-refer to that chapter's median/MAD, not literary quality. The paragraph button
-explains its raw value, unit, source lines and local z; choose **Values** for the
-measurements. **Next deviation** opens the paragraph. **Clear metric** removes
+**Current main (unreleased after v0.7.4):** with **Analysis On**, choose one metric
+in the direct **Measure** selector. Blue/orange raw-value markers and down/up
+arrows identify notable paragraph comparisons against that chapter's median/MAD;
+the prose background stays clear. The marker opens the paragraph measurement
+and its local comparison; **Values** retains the full paragraph measurements.
+**Next deviation** opens the paragraph. **Clear metric** removes
 the selected metric and its deviation filter, leaving the flagged-paragraph
 filter unchanged. **Show all paragraphs** clears both paragraph filters and the
 selected metric. These are different reset scopes, not separate analyses.
-Analysis Off hides the paint and related hints while retaining
-your choice. Native text selection, search and saved research marks remain separate.
+Analysis Off hides the marks and related keys while retaining your choices.
+Native text selection, search and saved research marks remain separate.
 
 The strip's colour and notable membership now use the same within-chapter
 comparison. The scale is fixed at z = −2.5 … +2.5; paragraph notability uses

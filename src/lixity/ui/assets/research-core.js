@@ -19,20 +19,52 @@ function researchStatus(message, ok) {
   }
 }
 
+var researchStatusReads = new Map(), researchStatusReadContext = null;
+
+function invalidateResearchStatusReads() {
+  researchStatusReads.clear();
+}
+
 async function researchApiPost(action, payload) {
   payload = researchBoundPayload(payload);
-  var data = await jsonApi(API + "/" + action, {method: "POST",
-    headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload || {})});
+  // Neither a pre-write read nor one started during the write can supply its refresh.
+  invalidateResearchStatusReads();
+  var data;
+  try {
+    data = await jsonApi(API + "/" + action, {method: "POST",
+      headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload || {})});
+  } finally {
+    invalidateResearchStatusReads();
+  }
   if (data.ok && ["research-ingest", "research-dossier", "research-claim-add", "research-decision-add"].includes(action)) {
     await refreshResearchProjectInfo();
   }
   return data;
 }
 
-function researchApiGet(endpoint, responseType) {
+function researchApiGet(endpoint, responseType, sharePending) {
+  var isStatus = endpoint.split("?")[0] === "research/status";
   var token = researchContextToken();
   if (token) endpoint += (endpoint.includes("?") ? "&" : "?") + "research_token=" + encodeURIComponent(token);
-  return jsonApi(API + "/" + endpoint, undefined, responseType);
+  var url = API + "/" + endpoint;
+  if (!isStatus) return jsonApi(url, undefined, responseType);
+  // The research token identifies the exact root, including restored copies.
+  var host = document.getElementById("manuscript-pdf-form") || document.getElementById("workspace-reader") || document.body;
+  var project = host === document.body ? host.dataset.manuscriptProjectToken : host.dataset.projectToken;
+  var context = JSON.stringify([token, project || "", document.body.dataset.manuscriptSourceSha256 || ""]);
+  if (context !== researchStatusReadContext) {
+    invalidateResearchStatusReads();
+    researchStatusReadContext = context;
+  }
+  var key = JSON.stringify([context, url, responseType || null]);
+  if (sharePending && researchStatusReads.has(key)) return researchStatusReads.get(key);
+  // Ordinary reads replace the pending owner; automatic consumers may join only
+  // while this exact observation is unfinished. No result survives settlement.
+  var pending = jsonApi(url, undefined, responseType).finally(function() {
+    if (researchStatusReads.get(key) === pending) researchStatusReads.delete(key);
+  });
+  researchStatusReads.set(key, pending);
+  return pending;
 }
 
 function researchFormStatus(button, message, state) {

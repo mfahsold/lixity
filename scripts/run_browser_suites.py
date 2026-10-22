@@ -146,6 +146,7 @@ AREAS: dict[str, tuple[str, ...]] = {
         "manuscript-links.cjs",
         "research-chronology.cjs",
         "research-selection.cjs",
+        "research-status.cjs",
         "research.cjs",
         "typography-localization.cjs",
         "workspace-reader.cjs",

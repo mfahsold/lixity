@@ -194,6 +194,11 @@ async function finish(page, errors, writes) {
               id: node.id, start: node.dataset.start, end: node.dataset.end,
               text: node.querySelector('.ptext-inner > p').textContent,
             })));
+            assert.equal(await page.locator('#workbench-overview-open').evaluate(node => {
+              const bounds = node.getBoundingClientRect();
+              return bounds.top >= 0 && bounds.bottom <= innerHeight &&
+                document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)?.closest('#workbench-overview-open') === node;
+            }), true, 'overview navigation stays reachable without scrolling away from the current passage');
             await openOverview(page);
             await page.locator('#analysis-measurements > summary').click();
             assert.equal(await page.locator('#style-tab-bands').count(), 1);

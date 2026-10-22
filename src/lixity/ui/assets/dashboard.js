@@ -248,6 +248,7 @@ function chipLayers(chip) {
 var layerOnly = document.getElementById("layer-only");
 var layerNext = document.getElementById("layer-next");
 var layerCount = document.getElementById("layer-legend-count");
+var comparisonToggle = document.getElementById("analysis-comparison-enabled");
 var outlierCursor = 0;
 
 function outlierChips() {
@@ -257,29 +258,53 @@ function outlierChips() {
 function paintLayerAction(panel, info) {
   var actions = panel.querySelector(".reader-paragraph-actions");
   if (!actions) return;
-  var shown = document.body.classList.contains("workbench-analysis") && !document.body.classList.contains("workbench-overview");
+  var shown = document.body.classList.contains("workbench-analysis") && !document.body.classList.contains("workbench-overview") &&
+    !document.body.classList.contains("reader-focus") && (!comparisonToggle || comparisonToggle.checked);
   var notable = Boolean(shown && info && Math.abs(info[2]) >= layerCutoff);
   if (!actions._metricBase) actions._metricBase = {label: actions.getAttribute("aria-label"), help: actions.dataset.help};
   actions.setAttribute("aria-label", notable ? info[1] + " · " + actions._metricBase.label : actions._metricBase.label);
   actions.dataset.help = notable ? info[1] + " · " + actions._metricBase.help : actions._metricBase.help;
   if (notable) actions.dataset.layerSymbol = info[2] < 0 ? "↓" : "↑";
   else delete actions.dataset.layerSymbol;
+  var marker = panel.querySelector(":scope > .reader-comparison-value");
+  if (!marker && notable && info[3] !== undefined) {
+    marker = document.createElement("button"); marker.type = "button";
+    marker.className = "reader-comparison-value";
+    marker.addEventListener("click", function() {
+      if (window.LixityAnalysisEvidence && LixityAnalysisEvidence.available()) LixityAnalysisEvidence.inspect(panel, marker);
+      else actions.click();
+    });
+    panel.prepend(marker);
+  }
+  if (marker) {
+    marker.hidden = !notable;
+    if (notable) {
+      marker.textContent = actions.dataset.layerSymbol + " " + info[3];
+      marker.setAttribute("aria-label", info[1] + ". " + uiLabel("evidence_inspect"));
+      marker.title = info[1];
+    }
+  }
 }
 
 function syncEvidenceLegend() {
   var legend = document.getElementById("layer-evidence-legend");
   var toggle = document.getElementById("analysis-evidence-enabled");
   if (legend) legend.hidden = !toggle || !toggle.checked;
+  var comparison = document.getElementById("layer-comparison-legend");
+  if (comparison) comparison.hidden = comparisonToggle && !comparisonToggle.checked;
+  if (layerLegend) layerLegend.hidden = !layer || !layer.value || Boolean(legend && legend.hidden && comparison && comparison.hidden);
 }
 
 function applyLayer() {
   var key = layer ? layer.value : "";
+  var comparing = !!key && (!comparisonToggle || comparisonToggle.checked);
   document.body.classList.toggle("layer-on", !!key);
+  document.body.classList.toggle("comparison-on", comparing);
   document.querySelectorAll(".chip").forEach(function (chip) {
     var info = key ? chipLayers(chip)[key] : null;
     var panel = document.getElementById(chip.dataset.target);
     var notable = Boolean(info && Math.abs(info[2]) >= layerCutoff);
-    if (info) {
+    if (info && comparing) {
       chip.style.setProperty("--layer-color", info[0]);
       chip.classList.add("has-layer");
       chip.setAttribute("data-tip", info[1]);
@@ -309,7 +334,7 @@ function applyLayer() {
       var title = document.getElementById("layer-legend-title");
       var hint = option.getAttribute("data-hint") || "";
       if (title) {
-        title.textContent = option.textContent;
+        title.textContent = option.dataset.unit ? option.textContent + " · " + option.dataset.unit : option.textContent;
         if (hint) title.setAttribute("data-tip", hint);
         else title.removeAttribute("data-tip");
       }
@@ -324,9 +349,9 @@ function applyLayer() {
           notable: count, comparable: comparable, total: layerLegend.dataset.profiled
         }) : uiLabel("layer_unavailable");
       }
-      if (layerNext) layerNext.disabled = count === 0;
-      if (layerOnly) layerOnly.disabled = comparable === 0;
-      if (comparable === 0) setFilter(layerOnly, "layer-only", false);
+      if (layerNext) layerNext.disabled = count === 0 || !comparing;
+      if (layerOnly) layerOnly.disabled = comparable === 0 || !comparing;
+      if (comparable === 0 || !comparing) setFilter(layerOnly, "layer-only", false);
     }
   }
   syncEvidenceLegend();
@@ -335,6 +360,7 @@ function applyLayer() {
 
 var evidenceLegendToggle = document.getElementById("analysis-evidence-enabled");
 if (evidenceLegendToggle) evidenceLegendToggle.addEventListener("change", syncEvidenceLegend);
+if (comparisonToggle) comparisonToggle.addEventListener("change", applyLayer);
 
 if (layerOnly) {
   layerOnly.addEventListener("change", function () {

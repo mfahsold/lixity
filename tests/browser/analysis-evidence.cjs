@@ -101,7 +101,7 @@ async function menuInspect(page, keyboard = false) {
   await page.locator('#analysis-evidence-card').waitFor({state:'visible'});
 }
 async function marksEnabled(page, enabled) {
-  if (!await page.locator('#reader-analysis-settings').evaluate(node => node.open)) await page.locator('#reader-analysis-settings > summary').click();
+  await openAnalysisSettings(page);
   await page.locator('#analysis-evidence-enabled').setChecked(enabled);
   await page.keyboard.press('Escape');
 }
@@ -133,6 +133,17 @@ async function localizedSentenceCards(browser) {
       assert.equal(await card.locator('.analysis-evidence-number').textContent(), String(count), 'sentence count has a distinct numeric presentation');
       assert.equal(await card.locator('.analysis-evidence-paragraph').count(), 1, 'paragraph value is explicitly separated from the selected sentence');
       assert.equal(await card.locator('.analysis-evidence-guide').evaluate(node => node.open), false, 'method and coverage stay secondary by default');
+      const selection = await card.evaluate(node => {
+        const quote = node.querySelector('blockquote').getBoundingClientRect();
+        const count = node.querySelector('.analysis-evidence-measure').getBoundingClientRect();
+        return {quoteRight:quote.right, countLeft:count.left, offset:Math.abs(quote.top - count.top)};
+      });
+      assert.ok(selection.countLeft >= selection.quoteRight && selection.offset <= 1,
+        'the selected quote and localized count share a compact scope before the paragraph reference');
+      if (locale === 'de' && width === 320 && count === 1) {
+        assert.ok(await card.evaluate(node => node.getBoundingClientRect().height < 408),
+          'a short sentence explanation leaves viewport room for reading');
+      }
       assert.equal(await card.locator('.analysis-evidence-close').evaluate(node => {const box=node.getBoundingClientRect(); return box.width >= 44 && box.height >= 44;}), true, 'compact close remains an accessible touch target');
       assert.equal(await card.evaluate(node => {const box=node.getBoundingClientRect(); return box.left >= 0 && box.right <= innerWidth && box.top >= 0 && box.bottom <= innerHeight;}), true, 'native localized card remains inside viewport');
       if (count === 4) await page.screenshot({path:path.join(artifacts, `sentence-${locale}-${width}.png`)});
@@ -211,26 +222,38 @@ server.serve_forever()
       await page.locator('#manuscript-analysis-toggle').click();
       // No programmatic layer activation: the author's first explicit On must work.
       assert.equal(await page.locator('#style-layer').inputValue(), 'asl', 'first Analysis On selects named sentence length');
-      assert.equal(await page.locator('#manuscript-reader-controls #style-layer').count(), 1, 'one existing metric selector beside Analysis');
+      assert.equal(await page.locator('#reader-analysis-settings #style-layer').count(), 1, 'one direct metric selector in the analysis controls');
       assert.equal(await page.locator('#style-layer').count(), 1);
-      assert.equal(await page.locator('#reader-metric-state').textContent(), 'Sentence length');
+      assert.equal(await page.locator('#style-layer option:checked').textContent(), 'Sentence length');
       await openAnalysisSettings(page);
-      assert.equal(await page.locator('#style-layer').isVisible(), true, 'one adjacent disclosure click exposes the metric selector');
+      assert.equal(await page.locator('#style-layer').isVisible(), true, 'the metric selector is directly visible beside the analysis switches');
+      assert.equal(await page.locator('#analysis-evidence-enabled').isVisible(), true);
+      assert.equal(await page.locator('#analysis-comparison-enabled').isVisible(), true);
+      assert.equal(await page.locator('#reader-analysis-settings > summary').count(), 0);
       await page.screenshot({path:path.join(artifacts, `native-settings-${width}.png`)});
       await page.keyboard.press('Escape');
-      // Native keyboard opening keeps one settings popover and returns its own focus.
+      // Direct analysis controls support keyboard input without opening a popup.
+      const metric = page.locator('#style-layer');
+      await metric.focus(); await page.keyboard.press('End'); await page.keyboard.press('Enter');
+      assert.equal(await metric.inputValue(), 'passive', 'native keyboard input changes the selected metric');
+      await page.keyboard.press('Home'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter');
+      assert.equal(await metric.inputValue(), 'asl');
+      assert.equal(await metric.evaluate(node => node === document.activeElement), true);
+      for (const id of ['analysis-evidence-enabled', 'analysis-comparison-enabled']) {
+        const control = page.locator('#' + id), other = page.locator('#' + (id === 'analysis-evidence-enabled' ? 'analysis-comparison-enabled' : 'analysis-evidence-enabled'));
+        await control.focus(); await page.keyboard.press('Space');
+        assert.equal(await control.isChecked(), false);
+        assert.equal(await other.isChecked(), true, 'the two analysis decorations have independent controls');
+        assert.equal(await control.evaluate(node => node === document.activeElement), true);
+        await page.keyboard.press('Space'); assert.equal(await control.isChecked(), true);
+      }
+      // Appearance retains its keyboard popup and returns focus to its trigger.
       await page.locator('#reader-settings > summary').focus(); await page.keyboard.press('Enter');
-      await page.locator('#reader-analysis-settings > summary').focus(); await page.keyboard.press('Enter');
-      assert.equal(await page.locator('#reader-settings').evaluate(node => node.open), false);
-      assert.equal(await page.locator('#reader-analysis-settings').evaluate(node => node.open), true);
-      await page.locator('#reader-settings > summary').focus(); await page.keyboard.press('Enter');
-      assert.equal(await page.locator('#reader-settings').evaluate(node => node.open), true, 'rapid reverse opening keeps the newer reading disclosure');
-      assert.equal(await page.locator('#reader-analysis-settings').evaluate(node => node.open), false);
-      await page.locator('#reader-analysis-settings > summary').focus(); await page.keyboard.press('Enter');
-      assert.equal(await page.locator('#reader-settings').evaluate(node => node.open), false, 'rapid opening keeps the newer analysis disclosure');
-      assert.equal(await page.locator('#reader-analysis-settings').evaluate(node => node.open), true);
+      assert.equal(await page.locator('#reader-settings').evaluate(node => node.open), true);
+      assert.equal(await page.locator('.reader-settings[open]').count(), 1);
       await page.keyboard.press('Escape');
-      assert.equal(await page.locator('#reader-analysis-settings > summary').evaluate(node => node === document.activeElement), true);
+      assert.equal(await page.locator('#reader-settings').evaluate(node => node.open), false);
+      assert.equal(await page.locator('#reader-settings > summary').evaluate(node => node === document.activeElement), true);
       await actions.click(); await page.keyboard.press('Escape');
       await page.waitForFunction(() => [...(CSS.highlights.get('lixity-analysis-evidence') || [])].some(range => range.toString() === 'I feel the rain.'));
       await page.evaluate(() => {
@@ -301,15 +324,17 @@ server.serve_forever()
       assert.equal(await page.locator('#style-layer').inputValue(), 'asl');
       assert.equal(await page.locator('body').evaluate(node => node.classList.contains('layer-on')), true, 'restored metric reapplies shared paragraph layer');
       assert.equal(await page.locator('#layer-legend').isVisible(), true);
-      assert.equal(await page.locator('#layer-legend-title').textContent(), 'Sentence length');
-      await page.locator('#reader-analysis-settings > summary').click();
+      assert.equal(await page.locator('#layer-legend-title').textContent(), 'Sentence length · words per sentence',
+        'the restored metric names its raw measurement unit');
       await page.locator('#analysis-evidence-enabled').uncheck();
       await page.keyboard.press('Escape');
       await page.locator('#manuscript-analysis-toggle').click();
       await page.locator('#manuscript-analysis-toggle').click(); await settle(page);
       assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false, 'On respects deliberate disabled marks');
       assert.deepEqual(await ranges(page), []);
-      assert.match(await page.locator('#reader-analysis-settings > summary').textContent(), /Off/);
+      assert.equal(await page.locator('#analysis-comparison-enabled').isChecked(), true, 'paragraph comparison survives disabling counted text');
+      await page.locator('#analysis-comparison-enabled').uncheck();
+      assert.equal(await page.locator('body').evaluate(node => node.classList.contains('comparison-on')), false);
       await selectMetric(page, '');
       await page.locator('#manuscript-analysis-toggle').click();
       await page.locator('#manuscript-analysis-toggle').click();
@@ -318,10 +343,12 @@ server.serve_forever()
       await page.locator('#manuscript-analysis-toggle').click();
       assert.equal(await page.locator('#style-layer').inputValue(), '', 'reload retains deliberate None');
       assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false, 'reload retains disabled marks');
+      assert.equal(await page.locator('#analysis-comparison-enabled').isChecked(), false, 'reload independently retains disabled paragraph comparison');
       await actions.click(); await explainFromMenu(page);
       await page.locator('#analysis-evidence-card').waitFor({state:'visible'});
       assert.equal(await page.locator('#style-layer').inputValue(), 'asl', 'explicit inspection chooses a usable metric after None');
       assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false, 'inspection preserves paint preference');
+      assert.equal(await page.locator('#analysis-comparison-enabled').isChecked(), false, 'inspection preserves comparison preference');
       await page.keyboard.press('Escape');
       await page.locator('#reader-focus').click();
       await actions.click(); await explainFromMenu(page);
@@ -333,7 +360,7 @@ server.serve_forever()
       assert.equal(await page.locator('#style-layer').inputValue(), '', 'reset remains a deliberate None after reload');
       await openAnalysisSettings(page);
       await page.locator('#manuscript-analysis-toggle').click();
-      assert.equal(await page.locator('#reader-analysis-settings').evaluate(node => node.open), false, 'Analysis Off closes its settings');
+      assert.equal(await page.locator('#reader-analysis-settings').isVisible(), false, 'Analysis Off hides the direct metric and switches');
       for (const interrupt of ['metric', 'scroll-key']) {
         if (await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed') === 'true') await page.locator('#manuscript-analysis-toggle').click();
         await actions.click();
@@ -769,15 +796,27 @@ server.serve_forever()
             await selectMetric(page, key);
             const current = await page.locator('#style-layer option:checked').evaluate(node => ({title:node.textContent,hint:node.dataset.hint}));
             assert.equal(await page.locator('#layer-comparison-hint').textContent(), current.hint);
+            const guide = legend.locator('.layer-comparison-note');
+            assert.equal(await guide.evaluate(node => node.open), false, 'detailed counting/comparison guidance stays secondary by default');
+            assert.equal(await page.locator('#layer-comparison-hint').isVisible(), false);
+            await guide.locator('summary').click();
             assert.equal(await page.locator('#layer-comparison-hint').isVisible(), true);
             assert.ok((await page.locator('#layer-evidence-hint').textContent()).includes(current.title));
+            await guide.locator('summary').click();
           }
+          await page.locator('#analysis-comparison-enabled').uncheck();
+          assert.equal(await comparison.isVisible(), false, 'the comparison switch controls its own legend');
+          assert.equal(await counted.isVisible(), true, 'disabling paragraph comparison retains counted-text explanation');
+          assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), true);
+          assert.equal(await page.locator('.reader-comparison-value:visible').count(), 0, 'disabled comparison hides raw paragraph buttons');
+          await page.locator('#analysis-comparison-enabled').check();
+          assert.equal(await comparison.isVisible(), true);
           if (fault) {
             await page.locator('#chapters .ptext').first().scrollIntoViewIfNeeded();
             await page.waitForFunction(() => document.getElementById('analysis-evidence-status').textContent.length > 0);
             assert.equal(await page.locator('#analysis-evidence-status').isVisible(), true);
-            assert.equal(await page.locator('#reader-analysis-settings').evaluate(node => node.open), false);
-            assert.equal(await page.locator('#analysis-evidence-status').evaluate(node => Boolean(node.closest('#reader-analysis-settings'))), false, 'Unavailable marks are explained outside the closed settings');
+            assert.equal(await page.locator('#reader-analysis-settings').isVisible(), true);
+            assert.equal(await page.locator('#analysis-evidence-status').evaluate(node => Boolean(node.closest('#reader-analysis-settings'))), false, 'Unavailable marks are explained outside the direct analysis controls');
             assert.equal(await page.evaluate(() => CSS.highlights?.get('lixity-analysis-evidence')?.size || 0), 0);
           }
           await openAnalysisSettings(page); await page.locator('#analysis-evidence-enabled').uncheck();

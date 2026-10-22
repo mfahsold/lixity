@@ -176,10 +176,12 @@
       <strong id="analysis-evidence-title">${option.textContent}</strong>
       <button type="button" class="ctl analysis-evidence-close" aria-label=${message("evidence_close")} onClick=${function() {close(true);}}>✕</button>
       </div>
-      ${span ? html`<blockquote aria-live=${card.pinned ? "polite" : "off"} aria-atomic="true">${span.quote}</blockquote>` : null}
-      ${counted !== null ? html`<div class="analysis-evidence-measure">
-        <span class="analysis-evidence-scope">${message(span ? sentenceWords ? "evidence_sentence_scope" : "evidence_selected_scope" : "evidence_paragraph_scope")}</span>
-        <div class=${"analysis-evidence-count" + (sentenceWords ? " analysis-evidence-sentence-words" : "")}><strong class="analysis-evidence-number">${counted}</strong>${" "}<span class="analysis-evidence-unit">${unit}</span></div>
+      ${span || counted !== null ? html`<div class=${"analysis-evidence-selection" + (span ? " analysis-evidence-has-quote" : "")}>
+        ${span ? html`<blockquote aria-live=${card.pinned ? "polite" : "off"} aria-atomic="true">${span.quote}</blockquote>` : null}
+        ${counted !== null ? html`<div class="analysis-evidence-measure">
+          <span class="analysis-evidence-scope">${message(span ? sentenceWords ? "evidence_sentence_scope" : "evidence_selected_scope" : "evidence_paragraph_scope")}</span>
+          <div class=${"analysis-evidence-count" + (sentenceWords ? " analysis-evidence-sentence-words" : "")}><strong class="analysis-evidence-number">${counted}</strong>${" "}<span class="analysis-evidence-unit">${unit}</span></div>
+        </div>` : null}
       </div>` : null}
       <section class="analysis-evidence-paragraph">
         <strong class="analysis-evidence-scope">${message("evidence_paragraph_scope")}</strong>
@@ -193,9 +195,9 @@
       ${warning ? html`<p class="analysis-evidence-warning" role="status">${message(warning)}</p>` : null}
       ${!supported ? html`<p class="analysis-evidence-warning">${message("evidence_unsupported")}</p>` : null}
       ${spans.length > 1 ? html`<div class="analysis-evidence-actions">
-        <button type="button" class="ctl" onClick=${function() {step(-1);}}>${message("evidence_previous")}</button>
+        <button type="button" class="ctl" aria-label=${message("evidence_previous")} onClick=${function() {step(-1);}}><span aria-hidden="true">←</span><span class="analysis-evidence-navigation-label">${message("evidence_previous")}</span></button>
         <span class="analysis-evidence-progress">${card.index + 1} / ${spans.length}</span>
-        <button type="button" class="ctl" onClick=${function() {step(1);}}>${message("evidence_next")}</button>
+        <button type="button" class="ctl" aria-label=${message("evidence_next")} onClick=${function() {step(1);}}><span class="analysis-evidence-navigation-label">${message("evidence_next")}</span><span aria-hidden="true">→</span></button>
       </div>` : null}
       <details class="analysis-evidence-guide" onToggle=${function() {if (card) position(card.rect);}}><summary>${message("layer_guide")}</summary>
         ${layer && layer.value.status !== "unavailable" ? html`<p>${uiCountFormat("evidence_coverage", layer.value.count, {mapped:layer.value.mapped_count})}</p>` : null}

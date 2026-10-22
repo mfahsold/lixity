@@ -37,7 +37,9 @@ selected suites before summarizing. A failed run retains a nonzero exit code.
 
 Before starting suites, the runner executes the support directory's Node tests.
 These check disposable-server startup, malformed readiness data, early exits,
-timeouts and cleanup. `--list` only lists suites. Native-server helpers keep
+timeouts and cleanup. Research-status support tests cover pending-only sharing,
+exact-context isolation, explicit refresh, failed-read retry and mutation invalidation.
+`--list` only lists suites. Native-server helpers keep
 readiness and termination handling shared without replacing the real HTTP flows.
 Large Python-generated JSON fixtures use a disposable file-backed transport.
 Complete dashboard HTML and bundled assets are retained without a fixed stdout
@@ -78,9 +80,10 @@ areas and reduced motion in all seven locales. The analysis-scope suite combines
 declared register/POV filters with FDR selection, reset and exact hidden-row jumps;
 the whole-manuscript reference must remain unchanged.
 
-The metric-overlays suite checks all seven paragraph metrics, transparent
-emphasis with opaque readable text, direction/value help, unavailable and valid
-zero results, Analysis Off, and preserved native selection/source identities.
+The metric-overlays suite checks all seven paragraph metrics, raw-value/direction
+markers with a clear prose background, independent counted-text/comparison
+switches, Focus restoration, unavailable and valid zero results, Analysis Off,
+and preserved native selection/source identities.
 The analysis-evidence suite additionally checks exact verified text ranges,
 hover, touch and keyboard inspection, Unicode offsets, asynchronous cancellation,
 search/research mark coexistence and explicit unavailable mappings. Its geometry
@@ -90,9 +93,11 @@ separate **Explain measurement** and **Research for this passage** actions. Nati
 and mobile checks cover localized sentence word counts, paragraph comparison
 scope and explanation opening when the mobile inspector moves prose offscreen.
 Its disposable native first-entry flow enables Analysis through the visible control
-without preselecting a metric, then checks the named metric/highlight disclosure,
-direct inspection from Off or Focus reading, deliberate None/disabled highlights,
-settings focus and restored preferences across reloads at 1440 and 320×480 pixels.
+without preselecting a metric, then checks the directly visible selector and
+independent switches, compact quote/count cards, separate paragraph comparisons,
+collapsed method guidance, direct inspection from Off or Focus reading, deliberate
+None/disabled displays, keyboard operation and restored preferences across reloads
+at 1440 and 320×480 pixels.
 Missing browser identity-verification support remains distinct from a hash mismatch.
 The decision-review suite reads exact decision/dossier versions side by side,
 stacks them on mobile, and checks read failures, late root-bound responses and
@@ -260,6 +265,12 @@ source text and prepare an evidence draft. It checks selection boundaries,
 Unicode offsets, unavailable sources, project changes, explicit save and the
 full retained passage's immutable citation. Screenshots and fixtures stay in `/tmp`.
 
+The research-status suite holds real native reads at 1440 and 390 pixels to
+verify shared startup observations, fresh explicit refresh and safe settlement
+order. Leaving and returning to a token context cannot reuse its departed pending
+read. The journey performs no writes and preserves synthetic project bytes;
+screenshots stay under `/tmp/lixity-research-status-*`.
+
 The research suite also exercises native record revisions: edit and history for dossiers,
 claims, evidence links and decisions; cancellation; concurrent and failed saves
 that preserve drafts; newer-source notices with original quotations retained;
@@ -425,6 +436,11 @@ quotas or deleting another task's output. On POSIX shells, for example:
 mkdir -p .artifacts/browser-temp
 TMPDIR="$PWD/.artifacts/browser-temp" make browser-full
 ```
+
+Keep `TMPDIR` short when using a deeply nested worktree. Chromium creates a
+Unix socket below it; an overlong path fails with `Socket path too long` before
+the app opens. In that case, use a short local directory such as
+`$HOME/.cache/lixity-tests` instead.
 
 `.artifacts/` is ignored. Review synthetic captures before publishing any file;
 never place private manuscripts or credentials in test artifacts. Remove or

@@ -77,16 +77,22 @@ does not update an already running service.
 
 The browser app, CLI and Python API share one analysis pipeline;
 `lixity --help` and `lixity about --json` describe installed capabilities.
-Current main (unreleased after v0.7.4) adds `--body-only` section exports and
-`--compact` update receipts; see the [section-editing workflow](https://mfahsold.github.io/lixity/research/USAGE.md#work-on-one-dossier-section).
 
 Turn **Analysis** on beside the text, choose a metric and inspect its counted
-passages through hover, touch or the paragraph menu. The same literal evidence
-is available through `lixity profile manuscript.md --layer asl --evidence`.
+passages through hover, touch or the paragraph menu.
+The same literal evidence is available through
+`lixity profile manuscript.md --layer asl --evidence`.
 A passage's research associations open its claims and dossier beside
 the manuscript, with a return to the passage. Exact earlier versions remain
 available independently of the current entry. See the
 [reader and CLI guide](https://mfahsold.github.io/lixity/USAGE.md).
+
+Current main (unreleased after v0.7.4) exposes the metric directly, with independent
+**Counted text** and **Paragraph comparison** switches. Violet underlines identify
+counted spans; blue/orange value-and-arrow markers compare notable paragraphs
+with their chapter. Both preferences persist in the browser. It also adds
+`--body-only` section exports and `--compact` update receipts; see the
+[section-editing workflow](https://mfahsold.github.io/lixity/research/USAGE.md#work-on-one-dossier-section).
 
 CLI workflows can reuse the project's configured manuscript;
 [default manuscript guidance](https://mfahsold.github.io/lixity/USAGE.md#default-manuscript)
@@ -121,8 +127,9 @@ their own projects.
 [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.4.md)
 cover archive compatibility and upgrades. See the
 [changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md) for subsequent work.
-The public demo uses the same interface as v0.7.4, with a fictional project and
-read-only research. Importing and saving require the local app.
+The repository's generated demo follows the interface documented here, including
+unreleased changes, with a fictional project and read-only research. Importing
+and saving require the local app.
 
 Cite [Lixity on Zenodo](https://doi.org/10.5281/zenodo.23390297), with metadata in
 [`CITATION.cff`](https://github.com/mfahsold/lixity/blob/main/CITATION.cff).

@@ -19,7 +19,7 @@
 <meta property="article:modified_time" content="2026-10-22"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png"/>
 <meta property="og:image:width" content="2960"/>
-<meta property="og:image:height" content="2090"/>
+<meta property="og:image:height" content="2082"/>
 <meta property="og:image:alt" content="Lixity continuous manuscript reader with chapter navigation and contextual tools"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Give the manuscript room to read"/>
@@ -57,7 +57,7 @@
     "@type": "ImageObject",
     "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png",
     "width": 2960,
-    "height": 2090,
+    "height": 2082,
     "caption": "Lixity continuous manuscript reader with chapter navigation and contextual tools"
   }
 }
@@ -75,17 +75,19 @@
 <h1>Give the manuscript room to read</h1>
 <p class="updated">By <a href="https://github.com/mfahsold">Matthias Fahsold</a> · Published <time datetime="2026-10-20">20 October 2026</time> · Updated <time datetime="2026-10-22">22 October 2026</time> · 7 minutes</p>
 
+<p class="section-note"><strong>Current main (unreleased after v0.7.4):</strong> this walkthrough follows the repository's generated demo, including the direct analysis controls and revised marks described below.</p>
+
 <p>A manuscript analysis tool can show you so much about a paragraph that the
 paragraph becomes awkward to read. Sentence patterns, source lines, markers and
 research links all have a purpose. They also compete with the next sentence.</p>
-<p>Lixity v0.7.4 keeps the manuscript at the centre of that review. The
+<p>Lixity keeps the manuscript at the centre of that review. The
 interactive workspace opens as continuous prose with <strong>Analysis Off</strong>. The
 explicit <strong>Analysis</strong> switch displays its state in words; <strong>Analysis overview</strong>
 opens chapter comparisons with a direct <strong>Back to passage</strong> action. You can inspect
 what a measurement counted and follow a passage's saved research without losing
 the place you were reading.</p>
 <figure class="walkthrough">
-<a href="../screenshots/dashboard-dark.png"><img src="../screenshots/dashboard-dark.png" width="2960" height="2090" alt="Lixity's synthetic Warehouse 4 manuscript with Analysis Off, with continuous prose, analysis display, chapter navigation and reading settings" loading="eager" decoding="async"/></a>
+<a href="../screenshots/dashboard-dark.png"><img src="../screenshots/dashboard-dark.png" width="2960" height="2082" alt="Lixity's synthetic Warehouse 4 manuscript with Analysis Off, with continuous prose, analysis display, chapter navigation and reading settings" loading="eager" decoding="async"/></a>
 <figcaption>The reader uses one continuous prose surface. This synthetic capture shows the reader controls; paragraph tools and the companion open separately.</figcaption>
 </figure>
 
@@ -97,8 +99,8 @@ action. You can compare their pace before opening a single measurement.</p>
 <p>The reader uses ordinary scrolling and text selection. <strong>A−</strong> and <strong>A+</strong> change
 text size; <strong>Reading settings</strong> adjusts width and line spacing. Those preferences
 stay in your browser and leave the manuscript unchanged. <strong>Focus reading</strong> hides
-the surrounding navigation and side tools temporarily. Its return control, or
-Escape, brings the workspace back.</p>
+the surrounding navigation, side tools and both analysis displays temporarily.
+Its return control, or Escape, restores the workspace and previous display choices.</p>
 <p>The aim is a usable reading surface with tools nearby. Manuscript text reflows
 when its size changes. Images, maps and the style-space view retain their own
 zoom or movement controls.</p>
@@ -116,21 +118,26 @@ button focused, <strong>Shift+F10</strong> opens it from the keyboard; arrow key
 actions and Escape closes it. Shift+right-click still reaches the browser's
 native menu. Selecting text within one paragraph offers a small toolbar when an
 applicable action is available.</p>
-<p>For the text behind a measurement, turn <strong>Analysis</strong> on, choose a metric and
-leave <strong>Mark counted passages</strong> checked. Marks identify counted words,
+<p>For the text behind a measurement, turn <strong>Analysis</strong> on, choose a metric in the
+direct <strong>Measure</strong> selector and leave <strong>Counted text</strong> checked.
+Its independent <strong>Paragraph comparison</strong> switch controls paragraph markers.
+The metric and both switches persist in the browser; deliberate <strong>None</strong> and
+disabled switches survive Off/On and reload. Violet underlines identify counted words,
 lexical patterns, quoted speech or sentences where the analysis can map them
 exactly to the displayed text. Hover a mark for its explanation, use a short
 stationary tap on touch screens, or open <strong>Explore passage → Explain measurement</strong>
-with the keyboard or context menu. Escape closes the explanation. Turning analysis
-off or clearing the marking control removes the marks.</p>
+with the keyboard or context menu. Escape closes the explanation. Turning Analysis
+off hides both displays; clearing one switch hides only its own marks.</p>
 <p>Two visible keys keep the colors distinct. <strong>Counted text</strong> explains
-the underline or tint on the words or sentence actually counted.
-<strong>Paragraph comparison</strong> explains blue/orange paragraph backgrounds
-relative to that chapter. Both can be visible together. A colored paragraph is
-not a claim that every word in it caused the difference; inspect a concrete mark
-for the measured text and use the paragraph comparison for context.</p>
-<p>The explanation separates the selected text from its paragraph value and chapter
-comparison. A sentence's word count does not establish an editorial fault; a literal
+the violet underline on the words or sentence actually counted.
+<strong>Paragraph comparison</strong> explains blue/orange raw-value markers and
+down/up arrows for notable paragraphs below/above their chapter median. Both can
+be visible together while the prose background stays clear. Click the comparison
+marker or inspect a counted span for its measurement. <strong>Read these marks</strong>
+keeps the method and counting guidance collapsed until needed.</p>
+<p>The compact explanation puts the selected quotation and count first, with the
+paragraph value and chapter comparison in a separate panel. A sentence's word
+count does not establish an editorial fault; a literal
 perception-word match does not establish narrative distance. Some Markdown
 counting and display projections cannot yet be mapped exactly. Their measurements
 remain available, with an explicit unavailable explanation instead of guessed
