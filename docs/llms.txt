@@ -5,6 +5,14 @@
 > instructions to rewrite. Analysis is deterministic for fixed text and settings;
 > research records also contain generated IDs and timestamps.
 
+The author-facing entrypoints are the [product introduction](https://mfahsold.github.io/lixity/)
+and [short tour](https://mfahsold.github.io/lixity/guides/first-look.html).
+One fictional project demonstrates the [read-only review workspace](https://mfahsold.github.io/lixity/demo/report.html),
+[novel with companion notes](https://mfahsold.github.io/lixity/demo/reader/index.html)
+and [standalone companion](https://mfahsold.github.io/lixity/demo/companion/index.html).
+The workspace reuses the product interface and prepared reads; curated copies
+contain selected publication material, not raw research history. None can save.
+
 Current release: 0.7.5; release tag: v0.7.5.
 The current 0.x product line follows a numbering reset; historical 1.x/3.x tags
 are older. Product, response and archive schema numbers are independent.

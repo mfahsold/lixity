@@ -7,14 +7,12 @@
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
-Lixity is a local workbench for authors. Explore language patterns and keep
-sources, claims and notes beside your manuscript. Try an invented example in
-your browser before installing the app for your own writing.
+**Your manuscript at the center. Analysis and research within reach.**
 
-> **Version line:** The current release is **v0.7.5**, in the pre-1.0 **0.x** line.
-> Historical **1.x** and **3.x** tags predate the numbering reset; use the current
-> release rather than the numerically largest tag. Product, JSON response and
-> archive schema versions are independent.
+Lixity is a local workbench for authors and editors working with Markdown
+manuscripts. Read continuously, investigate a language pattern, or follow an
+exact quotation into its linked research, then return to the passage.
+Measurements inform your judgment; they do not grade or rewrite your prose.
 
 [Open the example manuscript](https://mfahsold.github.io/lixity/demo/report.html) ·
 [Take the short tour](https://mfahsold.github.io/lixity/guides/first-look.html) ·
@@ -26,6 +24,19 @@ The read-only example follows a suspicious harbour delivery through six invented
 English chapters, linked case notes and credited research images. It needs no
 account or upload and cannot import, edit or save.
 [More views and image credits](https://mfahsold.github.io/lixity/screenshots/README.md).
+
+## From a passage to the context behind it
+
+| When you want to… | Lixity helps you… |
+| :--- | :--- |
+| Understand a change in rhythm or voice | Compare chapters against your own manuscript's patterns, then inspect the counted text. |
+| Revisit the research behind a line | Follow explicitly linked claims and dossiers to retained source passages, images and author decisions. |
+| Resume reading without losing context | Keep a dossier alongside the manuscript or return from a research entry to the original passage. |
+| Prepare a copy for someone else | Export a PDF, a read-only review workspace, or a reading website with selected companion notes. |
+
+Source evidence, authored claims and creative decisions stay distinct.
+Links can preserve exact earlier revisions; a newer record does not silently
+replace the version used. A retained source is not a guarantee of factual truth.
 
 <a id="start-here"></a>
 
@@ -78,6 +89,15 @@ does not update an already running service.
 The browser app, CLI and Python API share one analysis pipeline;
 `lixity --help` and `lixity about --json` describe installed capabilities.
 
+Try the same fictional project as a
+[novel with companion notes](https://mfahsold.github.io/lixity/demo/reader/index.html)
+or a [standalone companion](https://mfahsold.github.io/lixity/demo/companion/index.html).
+These curated reading copies are different from the analysis/research workspace:
+they contain selected material, not the full archive.
+
+<details>
+<summary>Analysis controls, revision-aware research and project inspection</summary>
+
 Turn **Analysis** on beside the text and choose the visible metric. Switch
 **Counted text** and **Paragraph comparison** independently. Violet underlines identify
 counted spans; blue/orange value-and-arrow markers compare notable paragraphs
@@ -98,6 +118,8 @@ files nor establish that an output matches the current manuscript; see
 CLI workflows can reuse the project's configured manuscript;
 [default manuscript guidance](https://mfahsold.github.io/lixity/USAGE.md#default-manuscript)
 explains explicit project selection and settings scope.
+
+</details>
 
 English and German have the broadest analysis resources. French, Spanish,
 Italian, Portuguese and Dutch offer localized interfaces with narrower heuristic
@@ -124,6 +146,11 @@ contains synthetic or public-domain examples. Book-specific adapters belong in
 their own projects.
 
 ## Release, citation and license
+
+> **Version line:** The current release is **v0.7.5**, in the pre-1.0 **0.x** line.
+> Historical **1.x** and **3.x** tags predate the numbering reset; use the current
+> release rather than the numerically largest tag. Product, JSON response and
+> archive schema versions are independent.
 
 [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.5.md)
 cover archive compatibility and upgrades. See the

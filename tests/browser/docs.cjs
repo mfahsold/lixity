@@ -1151,6 +1151,17 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
             await expect(page.locator('#features blockquote')).toHaveText(demoQuote);
             await expect(page.locator('#features a[href="demo/report.html#p-0"]')).toBeVisible();
             await expect(page.locator('#features a[href="demo/report.html#matrix"]')).toBeVisible();
+            const readingCopies = page.locator('#reading-copies');
+            await expect(readingCopies.locator('article')).toHaveCount(3);
+            for (const destination of ['demo/report.html', 'demo/reader/index.html', 'demo/companion/index.html']) {
+              await expect(readingCopies.locator(`a[href="${destination}"]`)).toBeVisible();
+            }
+            await expect(readingCopies).toContainText('not access control');
+            const dossierPreview = page.locator('#passage-context img');
+            await dossierPreview.evaluate(element => element.decode());
+            assert.deepEqual(await dossierPreview.evaluate(element => [element.naturalWidth, element.naturalHeight]),
+              [Number(await dossierPreview.getAttribute('width')), Number(await dossierPreview.getAttribute('height'))],
+              'The research preview reserves its actual image dimensions');
             const reference = page.locator('#guides details');
             await expect(reference).toHaveCount(1);
             assert.equal(await reference.evaluate(node => node.open), false,
