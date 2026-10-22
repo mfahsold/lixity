@@ -177,6 +177,36 @@ small representative fault in an isolated copy; never mutate the shared source
 tree while other tests or agents are using it. Test counts and single-run
 timings alone do not establish coverage or performance.
 
+### Investigating performance
+
+Measure the operation authors actually wait for: a fresh public API read, a
+complete analysis, or a native browser interaction. Separate fresh `Repository`
+instances from repeated reads on one instance, and label a warm filesystem cache
+as warm. Record synthetic input size/shape, Python version, source revision,
+wall time, CPU time and several individual runs; compare their medians on the
+same machine without other test workers. Fixture construction, profiling and
+memory instrumentation belong outside timed runs. Check both tiny records and
+large payloads: reducing small-read allocations must not double image/PDF memory.
+A small test or a faster
+inner loop does not establish an equivalent end-to-end improvement.
+
+Use [cProfile](https://docs.python.org/3/library/profile.html) for call attribution,
+then measure again without it: its instrumentation is not a benchmark. Inspect
+allocations separately with [tracemalloc](https://docs.python.org/3/library/tracemalloc.html).
+Keep profiles and measurements in ignored `.artifacts/`; never add a real book
+archive to tests. The existing operation-count regressions cover revision path
+checks, complete archive scans for citation batches, selected-history traversal,
+anchor lookups without linguistic analysis and chapter effect comparisons.
+Prefer these deterministic cost checks over machine-dependent time limits.
+
+Faster reads must preserve bounded I/O, checksums, strict schemas, source quote
+verification and project isolation. Test missing/changed files, symlinked path
+components, withdrawals/purges, pinned versions and a subsequent fresh read.
+A timestamp or file-size signature is not a checksum. A shared `Snapshot` cache
+would also change nested mutable-model ownership and external-tamper detection;
+do not extend its lifetime as a shortcut. Profile remaining work before adding
+threads, dependencies, a database service or a native extension.
+
 ### Preparing a release
 
 After updating the source version, changelog, release notes and documentation

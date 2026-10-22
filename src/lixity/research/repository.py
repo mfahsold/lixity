@@ -270,7 +270,16 @@ class Repository:
 
     def read(self, path: Path, *, maximum: int = MAX_RESEARCH_OBJECT_BYTES) -> bytes:
         with self.safe(path).open("rb") as stream:
-            content = stream.read(maximum + 1)
+            # Small records should not allocate the full object ceiling per read.
+            first_size = min(8192, maximum + 1)
+            content = stream.read(first_size)
+            if len(content) == first_size and first_size <= maximum:
+                if stream.seekable():
+                    # A large seekable object needs only one full payload buffer.
+                    stream.seek(0)
+                    content = stream.read(maximum + 1)
+                else:
+                    content += stream.read(maximum + 1 - len(content))
         if len(content) > maximum:
             raise ResearchStorageError("Research object exceeds the supported size")
         return content
@@ -282,7 +291,11 @@ class Repository:
         return content
 
     def record_path(self, entry: Entry) -> Path:
-        return self.safe(Path(self._revisions_text, entry.kind, entry.ref.id[9:], f"{entry.ref.revision}.json"))
+        return self.safe(self._record_path(entry))
+
+    def _record_path(self, entry: Entry) -> Path:
+        """Construct a revision path; its I/O owner must still check containment."""
+        return Path(self._revisions_text, entry.kind, entry.ref.id[9:], f"{entry.ref.revision}.json")
 
     def snapshot(self, kinds: frozenset[str] | None = None) -> Snapshot:
         """Read the accepted snapshot; ``kinds`` narrows large archives.
@@ -306,7 +319,7 @@ class Repository:
             for entry in manifest.entries:
                 if wanted is not None and entry.kind not in wanted:
                     continue
-                record = ENTITY.validate_json(self.verified(self.record_path(entry), entry.sha256))
+                record = ENTITY.validate_json(self.verified(self._record_path(entry), entry.sha256))
                 key = (record.id, record.revision)
                 if key in revisions or reference(record) != entry.ref or record.kind != entry.kind:
                     raise ResearchError("Duplicate or mismatched record identity")
@@ -696,10 +709,8 @@ class Repository:
     def citation(self, snapshot: Snapshot, passage: Passage) -> dict[str, Any]:
         source, version = self.quote(snapshot, passage)
         withdrawn = any(
-            isinstance(rec, Tombstone)
-            and rec.operation in ("withdraw", "purge")
-            and rec.target_ref.id in (version.id, source.id)
-            for rec in snapshot.records.values()
+            operation in ("withdraw", "purge") and identifier in (version.id, source.id)
+            for operation, _kind, identifier in snapshot.lifecycle
         )
         return {
             "schema_version": "research-citation-local/1", "project_id": snapshot.project.id,

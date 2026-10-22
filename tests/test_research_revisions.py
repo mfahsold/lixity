@@ -2,12 +2,14 @@
 
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
 from lixity.research import api
-from lixity.research.models import Claim, Decision, Reference
+from lixity.research.models import Claim, Decision, Dossier, Reference
 from lixity.research.repository import Repository, ResearchConflictError, ResearchError
+from lixity.research.revisions import _record_history
 from tests.research_support import revise_record
 
 
@@ -330,6 +332,50 @@ class TestResearchRevisions(unittest.TestCase):
         claim = Repository(self.project).snapshot().get(Reference(id=self.claim), Claim)
         self.assertEqual(claim.dossier_ref.revision, 1)
         self.assertTrue(api.audit(self.project)["ok"])
+
+    def test_history_serializes_change_metadata_without_serializing_dossier_bodies(self):
+        self.revise("dossier", self.dossier, {"body": "Revised synthetic note."})
+        snapshot = Repository(self.project).snapshot()
+        dumped_records = []
+        original_dump = Dossier.model_dump
+
+        def counted_dump(record, *args, **kwargs):
+            dumped_records.append(record.id)
+            return original_dump(record, *args, **kwargs)
+
+        with patch.object(Dossier, "model_dump", counted_dump):
+            history = _record_history(snapshot, "dossier", self.dossier)
+
+        self.assertEqual(history["schema_version"], "research-history-local/1")
+        self.assertEqual(history["latest_revision"], 2)
+        self.assertEqual([entry["revision"] for entry in history["revisions"]], [2, 1])
+        self.assertEqual(history["revisions"][0]["change"], {
+            "change_kind": "correction", "reason": "Author reviewed this change.", "previous_revision": 1,
+        })
+        self.assertIsNone(history["revisions"][1]["change"])
+        self.assertEqual(history["revisions"][0]["created_by"], "test-author")
+        self.assertEqual(history["revisions"][0]["images"], [])
+        self.assertEqual(history["revisions"][0]["geography_feature_count"], 0)
+        self.assertEqual(dumped_records, [], "History must not serialize retained dossier contents")
+
+    def test_history_does_not_iterate_unrelated_accepted_revisions(self):
+        self.revise("dossier", self.dossier, {"title": "Revised reading room"})
+        self.revise("claim", self.claim, {"statement": "Reviewed opening date."})
+        snapshot = Repository(self.project).snapshot()
+        visited = []
+
+        class CountedRevisions(dict):
+            def values(self):
+                for record in super().values():
+                    visited.append(record.id)
+                    yield record
+
+        snapshot = replace(snapshot, revisions=CountedRevisions(snapshot.revisions))
+        history = _record_history(snapshot, "dossier", self.dossier)
+
+        self.assertEqual([entry["revision"] for entry in history["revisions"]], [2, 1])
+        self.assertEqual(history["record_id"], self.dossier)
+        self.assertEqual(visited, [], "Selected history must not scan the accepted revision archive")
 
     def test_claim_evidence_and_decision_corrections_and_supersession(self):
         claim = self.revise("claim", self.claim, {"statement": "Possibly opened in 1924.", "confidence": "disputed", "place": "Reading room", "actors": ["Librarian"]})

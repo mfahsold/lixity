@@ -694,7 +694,8 @@ quotes are nonblank, at most 10,000 codepoints, and notes at most 2,000 characte
 The anchor projection removes supported emphasis, comments and footnote anchors,
 but retains link/code syntax. `find-anchor` matches a query exactly and
 case-sensitively without Unicode normalization; it does not use the separate
-prose-counting projection to identify quotes.
+prose-counting projection to identify quotes. On current main, overlapping
+literal matches also make a query ambiguous (`ana` occurs twice in `banana`).
 Manuscript paths must stay inside the explicit project, including symlink
 resolution. Expected project, snapshot, source bytes and current claim revision
 must match; save rejects withdrawn claims and stale or ambiguous selections.

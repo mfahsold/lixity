@@ -201,7 +201,8 @@ link and inline-code syntax remain as text. Soft-wrapped lines are joined and
 source line endings normalized, while the raw-source SHA-256 binds the original
 bytes. `find-anchor` matches the query exactly, case-sensitively, without fuzzy
 matching or Unicode normalization. Use `word` for `*word*`, but retain link/code
-syntax present in the paragraph text. Prose counting uses a separate projection
+syntax present in the paragraph text. On current main, overlapping matches also
+count as ambiguous: `ana` occurs twice in `banana`. Prose counting uses a separate projection
 that excludes destinations, images and code. Cross-paragraph, ambiguous or stale
 selections fail. Paths escaping the project, including through
 symlinks, are rejected. Source bytes are checked again before publication; this

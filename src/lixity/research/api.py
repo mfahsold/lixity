@@ -112,14 +112,15 @@ from .repository import (
     digest,
 )
 from .revisions import (
-    apply_record_revisions as apply_record_revisions,
-)
-from .revisions import (
+    EvidenceCitationReader,
     claim_relation_view,
     dossier_withdrawal,
     require_active_dossier_association,
     resolve_evidence_citation,
     source_updates,
+)
+from .revisions import (
+    apply_record_revisions as apply_record_revisions,
 )
 from .revisions import (
     compare_record_revisions as compare_record_revisions,
@@ -1244,7 +1245,8 @@ def _get_dossier(repository: Repository, snapshot: Snapshot, dossier_id: str, *,
     sections = _extract_sections(dossier.body, spans)
     editable_sections = [] if availability else _editable_section_titles(spans)
     if summary:
-        resolved_citations = [_resolve_evidence_citation(repository, snapshot, ref) for ref in dossier.evidence_refs] if include_citations else []
+        reader = EvidenceCitationReader(repository, snapshot)
+        resolved_citations = [reader.read(ref) for ref in dossier.evidence_refs] if include_citations else []
         return {
             "id": dossier.id,
             **availability,
@@ -1295,7 +1297,8 @@ def _get_dossier(repository: Repository, snapshot: Snapshot, dossier_id: str, *,
             "review_needed": any(r["status"] == "review_needed" for r in decision_reviews),
         }
 
-    resolved_citations = [_resolve_evidence_citation(repository, snapshot, ref) for ref in dossier.evidence_refs] if include_citations else []
+    reader = EvidenceCitationReader(repository, snapshot)
+    resolved_citations = [reader.read(ref) for ref in dossier.evidence_refs] if include_citations else []
 
     return {
         "id": dossier.id,
@@ -1588,6 +1591,7 @@ def _list_evidence_links(repository: Repository, snapshot: Snapshot, *,
     }
 
     links_list: list[dict[str, Any]] = []
+    reader = EvidenceCitationReader(repository, snapshot)
     for record in snapshot.records.values():
         if not isinstance(record, EvidenceLink) or record.id in withdrawn_or_purged:
             continue
@@ -1596,7 +1600,7 @@ def _list_evidence_links(repository: Repository, snapshot: Snapshot, *,
 
         claim_latest = snapshot.records.get(record.claim_ref.id)
         claim_latest_revision = claim_latest.revision if isinstance(claim_latest, Claim) else record.claim_ref.revision
-        citation = resolve_evidence_citation(repository, snapshot, record.passage_ref)
+        citation = reader.read(record.passage_ref)
         links_list.append({
             "id": record.id,
             "revision": record.revision,
@@ -1861,12 +1865,13 @@ def _claim_matrix_data(repository: Repository, snapshot: Snapshot) -> dict[str, 
     # Evidence links grouped by claim_id
     evidence_by_claim: dict[str, list[dict[str, Any]]] = {}
     total_evidence_count = 0
+    reader = EvidenceCitationReader(repository, snapshot)
     for record in snapshot.records.values():
         if isinstance(record, EvidenceLink) and record.id not in withdrawn_or_purged:
             cid = record.claim_ref.id
             if cid not in evidence_by_claim:
                 evidence_by_claim[cid] = []
-            citation = resolve_evidence_citation(repository, snapshot, record.passage_ref)
+            citation = reader.read(record.passage_ref)
             evidence_by_claim[cid].append({
                 "link_id": record.id,
                 "relation": record.relation,

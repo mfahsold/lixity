@@ -10,10 +10,9 @@ from pydantic import ValidationError
 
 from ..config import _load_toml
 from ..io import FileUtils
-from ..pipeline import paragraph_identity, profile_document, resolve_document_config
+from ..pipeline import document_paragraph_texts, paragraph_identity, resolve_document_config
 from ..status import ManuscriptFlag, ManuscriptState
-from ..style_fingerprint import FingerprintThresholds
-from ..style_profile import ParagraphProfile
+from ..style_profile import ParagraphProfile, ParagraphText
 from .models import (
     Claim,
     ManuscriptAnchor,
@@ -46,7 +45,7 @@ def _paragraphs(
     repository: Repository,
     language: str | None,
     project_config: Mapping[str, Any] | None,
-) -> list[ParagraphProfile]:
+) -> list[ParagraphText]:
     # Only this project's files participate. No user or ancestor config discovery.
     settings: dict[str, Any] = {}
     try:
@@ -63,7 +62,7 @@ def _paragraphs(
         config, _ = resolve_document_config(
             text, language or settings.get("language", "en"), project_config=settings
         )
-        return profile_document(text, config, FingerprintThresholds())[0]
+        return document_paragraph_texts(text, config)
     except (ValueError, Warning) as exc:
         raise ResearchError("Could not resolve explicit manuscript analysis settings") from exc
 
@@ -74,8 +73,8 @@ def manuscript_link_view(snapshot: Snapshot, record: ManuscriptClaimLink) -> dic
     current = snapshot.latest(claim.id, Claim)
     changed = current.revision != claim.revision
     withdrawn = any(
-        isinstance(r, Tombstone) and r.target_kind == "claim" and r.target_ref.id == claim.id
-        for r in snapshot.records.values()
+        kind == "claim" and identifier == claim.id
+        for _operation, kind, identifier in snapshot.lifecycle
     )
     return {
         "link_id": record.id,
@@ -132,7 +131,7 @@ def manuscript_review_data(
     *,
     source_path: str,
     source_sha256: str | None,
-    paragraphs: Sequence[ParagraphProfile],
+    paragraphs: Sequence[ParagraphProfile | ParagraphText],
     source_state: str = "available",
 ) -> dict[str, Any]:
     """Derive review flags only; resolving happens in an explicit re-pin."""
@@ -149,7 +148,7 @@ def manuscript_review_data(
         displayed_flags = (ManuscriptFlag.CLAIM_CHANGED, ManuscriptFlag.CLAIM_WITHDRAWN)
         flags: list[str] = [flag for flag in displayed_flags if row[flag]]
         anchor = record.anchor
-        resolved: ParagraphProfile | None = None
+        resolved: ParagraphProfile | ParagraphText | None = None
         resolved_start: int | None = None
         resolved_end: int | None = None
         candidate_lines: list[int] = []
@@ -262,19 +261,21 @@ def review_manuscript_links(
 
 
 def _quote_occurrences(
-    paragraphs: Sequence[ParagraphProfile], quote: str
-) -> list[tuple[ParagraphProfile, int]]:
-    """Every exact occurrence of a quote in displayed paragraph text.
+    paragraphs: Sequence[ParagraphProfile | ParagraphText], quote: str, *, limit: int | None = None,
+) -> list[tuple[ParagraphProfile | ParagraphText, int]]:
+    """Exact quote occurrences in displayed text, stopping at an optional limit.
 
     The recorded quote is the link's contract: whole-paragraph hashes guard the
     pinned identity, but a still-unique quote keeps the anchor resolvable when
     the surrounding paragraph text changes.
     """
-    occurrences: list[tuple[ParagraphProfile, int]] = []
+    occurrences: list[tuple[ParagraphProfile | ParagraphText, int]] = []
     for paragraph in paragraphs:
         start = paragraph.text.find(quote)
         while start != -1:
             occurrences.append((paragraph, start))
+            if limit is not None and len(occurrences) >= limit:
+                return occurrences
             start = paragraph.text.find(quote, start + 1)
     return occurrences
 
@@ -313,20 +314,19 @@ def resolve_manuscript_anchor(
             if paragraph.start_line <= line <= paragraph.end_line
         ]
         scope = "in the paragraph at the given line"
-    occurrences = sum(paragraph.text.count(query) for paragraph in paragraphs)
-    if occurrences == 0:
+    occurrences = _quote_occurrences(paragraphs, query, limit=2)
+    if not occurrences:
         raise ResearchError(
             f"Quote was not found {scope}; inline Markdown markers are removed from the displayed text"
         )
-    if occurrences > 1:
+    if len(occurrences) > 1:
         lines = ", ".join(
             str(paragraph.start_line) for paragraph in paragraphs if query in paragraph.text
         )
         raise ResearchError(
             f"Quote is ambiguous {scope} (lines: {lines}); add --line to choose one"
         )
-    paragraph = next(paragraph for paragraph in paragraphs if query in paragraph.text)
-    start = paragraph.text.find(query)
+    paragraph, start = occurrences[0]
     identity = paragraph_identity(paragraph)
     return {
         "schema_version": "research-anchor-local/1",

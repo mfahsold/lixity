@@ -18,6 +18,17 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   full JSON and Python/API write contracts are unchanged.
 
 ### Changed
+- Research reads avoid repeated revision-path traversal and repeated archive
+  scans for citation batches. Selected history reads serialize change metadata
+  without copying full dossier bodies. Tiny records avoid allocating the entire
+  read ceiling; large seekable blobs retain their original allocation bound.
+  Bounded reads, checksums, schemas,
+  pinned citations and fresh per-call archive validation remain in force.
+- Manuscript anchor lookup reuses the profiler's exact displayed-text projection
+  without calculating linguistic measurements. Chapter Cliff effects use sorted
+  tie groups with the same exact values instead of quadratic comparisons. Sn
+  robust scale selects the same order statistics in O(n log n) time and linear
+  memory for finite samples, retaining its documented medians and scaling.
 - Native Analysis exposes its metric selector directly, with independent,
   browser-persisted **Counted text** and **Paragraph comparison** switches.
   None, disabled switches and Off/On retain the author's choices; Focus hides
@@ -28,6 +39,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   paragraph/comparison panel; method and counting guidance start collapsed.
 
 ### Fixed
+- Literal manuscript anchor lookup now rejects overlapping duplicate quotes as
+  ambiguous, including `ana` in `banana`, instead of silently choosing one.
 - Overlapping automatic research status reads share only their in-flight
   workspace observation. Explicit refreshes remain fresh; context changes and
   mutations invalidate sharing without retaining settled responses.

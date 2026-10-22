@@ -77,7 +77,15 @@ class Record(StrictModel):
     @field_validator("created_at")
     @classmethod
     def valid_timestamp(cls, value: str) -> str:
-        datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f%z")
+        if not value.isascii():
+            # Preserve the historical Unicode-decimal syntax accepted by strptime.
+            datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f%z")
+            return value
+        # The field fixes the syntax; strip Z for Python 3.10 ISO parsing.
+        # Python 3.14 accepts ISO end-of-day rollover, unlike this contract.
+        if value[11:13] > "23":
+            raise ValueError("Timestamp hour must be from 00 to 23")
+        datetime.fromisoformat(value[:-1])
         return value
 
 

@@ -389,6 +389,28 @@ def cliff_delta(x: list[float], y: list[float]) -> float:
     return (wins - losses) / n if n else 0.0
 
 
+def _chapter_cliff_deltas(values: Mapping[int, float | None]) -> dict[int, float]:
+    """Exact singleton-versus-rest effects from finite values in O(n log n).
+
+    Each tie group has the same integer counts of smaller/larger observations.
+    The focal observation is a tie, so omitting it changes only the denominator.
+    """
+    ordered = sorted(((ch, value) for ch, value in values.items() if value is not None),
+                     key=lambda item: item[1])
+    n = len(ordered)
+    result: dict[int, float] = {}
+    i = 0
+    while i < n:
+        j = i + 1
+        while j < n and ordered[j][1] == ordered[i][1]:
+            j += 1
+        delta = (i - (n - j)) / (n - 1) if n > 1 else 0.0
+        for chapter, _value in ordered[i:j]:
+            result[chapter] = delta
+        i = j
+    return result
+
+
 def effect_label(delta: float) -> str:
     """Romano et al. (2006) bands for |Cliff's delta|."""
     magnitude = abs(delta)
@@ -856,21 +878,50 @@ def sn_estimator(values: list[float]) -> float:
 
     Sn = 1.1926 · low-median_i { high-median_j |xi − xj| }, including self
     distances. Uses Gaussian asymptotic scaling, without a finite-n correction.
-    Returns 0.0 for fewer than 2 observations.
+    Finite samples use O(n log n) time and O(n) memory: each inner median is
+    selected from two monotone distance sequences around a sorted observation.
+    Returns 0.0 for fewer than 2 observations. Nonfinite direct inputs retain
+    the exhaustive implementation's ordering behavior; production rejects them.
     """
     n = len(values)
     if n < 2:
         return 0.0
 
-    inner_medians: list[float] = []
-    for i in range(n):
-        diffs = sorted(abs(values[i] - values[j]) for j in range(n))
-        inner_medians.append(diffs[n // 2])
+    try:
+        finite = all(math.isfinite(value) for value in values)
+    except OverflowError:
+        # Python integers can exceed the float range without their exact
+        # differences doing so. Keep the original direct-call behavior.
+        finite = False
+    if not finite:
+        inner_medians = [sorted(abs(value - other) for other in values)[n // 2]
+                         for value in values]
+        return SN_TO_SIGMA * sorted(inner_medians)[(n - 1) // 2]
 
-    raw = sorted(inner_medians)[(n - 1) // 2]
-    # Asymptotic consistency factor for Gaussian: 1.1926
-    cn = SN_TO_SIGMA
-    return cn * raw
+    ordered = sorted(values)
+    inner_medians = []
+    count = n // 2 + 1  # high inner median: number of observations on the left
+    for i, value in enumerate(ordered):
+        # Distances increase away from value on each side. Include the self
+        # distance on the lower side and partition their merged order at count.
+        lower_size, upper_size = i + 1, n - i - 1
+        low, high = max(0, count - upper_size), min(count, lower_size)
+        while low <= high:
+            lower = (low + high) // 2
+            upper = count - lower
+            lower_left = abs(value - ordered[i - lower + 1]) if lower else -math.inf
+            lower_right = abs(value - ordered[i - lower]) if lower < lower_size else math.inf
+            upper_left = abs(value - ordered[i + upper]) if upper else -math.inf
+            upper_right = abs(value - ordered[i + upper + 1]) if upper < upper_size else math.inf
+            if lower_left > upper_right:
+                high = lower - 1
+            elif upper_left > lower_right:
+                low = lower + 1
+            else:
+                inner_medians.append(max(lower_left, upper_left))
+                break
+    raw = sorted(inner_medians)[(n - 1) // 2]  # low outer median
+    return SN_TO_SIGMA * raw
 
 
 def qn_estimator(values: list[float]) -> float:
@@ -1142,18 +1193,16 @@ class StyleFingerprint:
                 "sigma": sigma,
                 "n": len(obs),
             }
+            chapter_cliffs = _chapter_cliff_deltas(values[field_name])
             for chapter in chapters:
                 value = values[field_name].get(chapter.num)
                 if value is None:
                     continue
-                others = [
-                    v for ch, v in values[field_name].items() if ch != chapter.num and v is not None
-                ]
                 z_raw = robust_z(value, centre, spread)
                 z_sig = significance_z(value, centre, sigma, ses[field_name][chapter.num])
                 z_scores[chapter.num][field_name] = z_sig
                 effect_sizes[chapter.num][field_name] = z_raw
-                cliffs[chapter.num][field_name] = cliff_delta([value], others)
+                cliffs[chapter.num][field_name] = chapter_cliffs[chapter.num]
                 measured_cells += 1
                 if abs(z_sig) < thresholds.z_mild:
                     in_band += 1

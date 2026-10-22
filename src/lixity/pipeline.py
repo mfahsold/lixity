@@ -16,7 +16,13 @@ from .style_fingerprint import (
     StyleFingerprint,
     lexical_structural_diagnostics,
 )
-from .style_profile import ChapterProfile, ParagraphProfile, ParagraphProfiler, ProfileThresholds
+from .style_profile import (
+    ChapterProfile,
+    ParagraphProfile,
+    ParagraphProfiler,
+    ParagraphText,
+    ProfileThresholds,
+)
 
 
 @dataclass(frozen=True)
@@ -28,7 +34,7 @@ class DocumentAnalysis:
     evidence: dict[int, ParagraphEvidence] | None = None
 
 
-def paragraph_identity(paragraph: ParagraphProfile) -> dict[str, Any]:
+def paragraph_identity(paragraph: ParagraphProfile | ParagraphText) -> dict[str, Any]:
     """Identify the exact displayed profile text, without retaining that text."""
     return {"start_line": paragraph.start_line, "end_line": paragraph.end_line,
             "paragraph_sha256": sha256(paragraph.text.encode("utf-8")).hexdigest()}
@@ -47,6 +53,11 @@ def resolve_document_config(
     config = CorpusConfig(language=language, **(settings | overrides))
     resolved = resolve_language(config, sample_text=text)
     return config.model_copy(update={"language": resolved.key}), resolved
+
+
+def document_paragraph_texts(text: str, config: CorpusConfig) -> list[ParagraphText]:
+    """Reuse the profile's exact displayed-text projection without style analysis."""
+    return ParagraphProfiler(config, sample_text=text).text_blocks(parse_markdown_blocks(text, config))
 
 
 def profile_document(

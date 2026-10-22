@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+from dataclasses import replace
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -9,6 +10,7 @@ import pytest
 
 from lixity.pipeline import profile_document, resolve_document_config
 from lixity.research import api, cli
+from lixity.research.manuscript import manuscript_links_data
 from lixity.research.models import Head, Manifest, Reference, Tombstone
 from lixity.research.repository import (
     Repository,
@@ -56,6 +58,33 @@ def save_link(archive, **overrides):
 def accepted_bytes(project):
     return {path.relative_to(project).as_posix(): path.read_bytes()
             for path in (project / "research").rglob("*") if path.is_file()}
+
+
+@pytest.mark.parametrize("target_kind,expected", [("claim", True), ("source", False)])
+def test_manuscript_link_availability_uses_indexed_claim_lifecycle(manuscript_archive, target_kind, expected):
+    project, _manuscript, claim, _dossier = manuscript_archive
+    save_link(manuscript_archive)
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    tombstone = Tombstone(**api.envelope(snapshot.project.id, "synthetic-author"),
+                          target_kind=target_kind, target_ref=Reference(id=claim, revision=2),
+                          operation="withdraw", reason="Synthetic availability review")
+    snapshot = repository.commit([tombstone], {}, snapshot)
+
+    class CountedRecords(dict):
+        scans = 0
+
+        def values(self):
+            self.scans += 1
+            return super().values()
+
+    records = CountedRecords(snapshot.records)
+    snapshot = replace(snapshot, records=records)
+    records.scans = 0
+    result = manuscript_links_data(snapshot)
+    assert result["links"][0]["claim_withdrawn"] is expected
+    assert result["links"][0]["review_needed"] is expected
+    assert records.scans == 1
 
 
 def test_save_preserves_old_records_and_retains_only_selected_quote(manuscript_archive):
@@ -464,6 +493,27 @@ def test_resolve_manuscript_anchor_reports_exact_fields(manuscript_archive):
         api.resolve_manuscript_anchor(project, "draft.md", query="room")
     narrowed = api.resolve_manuscript_anchor(project, "draft.md", query="room", line=3)
     assert narrowed["start_line"] == 3
+
+
+@pytest.mark.parametrize("text, quote", [("banana", "ana"), ("aaa", "aa"), ("Owl 🦉🦉🦉", "🦉🦉")])
+def test_resolve_manuscript_anchor_rejects_overlapping_occurrences(manuscript_archive, text, quote):
+    project, manuscript, _, _ = manuscript_archive
+    manuscript.write_text(f"## Fruit\n\n{text}\n", encoding="utf-8")
+    for line in (None, 3):
+        with pytest.raises(ResearchError, match="ambiguous"):
+            api.resolve_manuscript_anchor(project, manuscript, query=quote, line=line)
+
+
+def test_anchor_resolution_does_not_measure_linguistic_features(manuscript_archive, monkeypatch):
+    from lixity.paragraph_evidence import ParagraphMatcher
+
+    def unexpected_measurement(*args, **kwargs):
+        raise AssertionError("Literal anchor lookup must not measure paragraph style")
+
+    monkeypatch.setattr(ParagraphMatcher, "count", unexpected_measurement)
+    project, manuscript, _, _ = manuscript_archive
+    result = api.resolve_manuscript_anchor(project, manuscript, query="🦉 A visitor arrived.")
+    assert {key: result[key] for key in selection()} == selection()
 
 
 def test_paragraph_edit_outside_the_quote_stays_resolvable(manuscript_archive):

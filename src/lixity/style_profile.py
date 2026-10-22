@@ -4,6 +4,7 @@ Classifies narrative tense (present / past / mixed / neutral), detects tense fri
 and switches between consecutive paragraphs, and tracks paragraph-level style densities.
 """
 
+from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
 
@@ -29,6 +30,7 @@ __all__ = [
     "ChapterProfile",
     "ParagraphProfile",
     "ParagraphProfiler",
+    "ParagraphText",
     "ProfileThresholds",
     "classify_severity",
     "dominance_from_hits",
@@ -150,6 +152,23 @@ class ParagraphProfile:
         return self.severity >= self.flag_min
 
 
+@dataclass(frozen=True)
+class ParagraphText:
+    """Exact displayed paragraph text and its original line span."""
+
+    start_line: int
+    end_line: int
+    text: str
+
+
+@dataclass
+class _ProfileChapter:
+    num: int
+    title: str
+    start_line: int
+    end_line: int
+
+
 def flagged_paragraphs(
     paragraphs: list[ParagraphProfile], min_severity: int | None = None
 ) -> list[ParagraphProfile]:
@@ -204,6 +223,36 @@ class ParagraphProfiler:
     def _dominant(self, present: int, past: int) -> str:
         return dominance_from_hits(present, past, self.thresholds.neutral_max_hits)
 
+    def _profile_texts(
+        self, blocks: list[dict[str, Any]],
+    ) -> Iterator[tuple[_ProfileChapter, ParagraphText, str]]:
+        """Share profile membership and display projection without measuring style."""
+        chapter = _ProfileChapter(0, "", 0, 0)
+        for block in blocks:
+            btype = block.get("type")
+            if btype == "h2":
+                title = block.get("text", "").strip()
+                if title == self._appendix_title:
+                    break
+                chapter = _ProfileChapter(block.get("chapter_num", chapter.num + 1), title,
+                                          block.get("start_line", 0), block.get("end_line", 0))
+                continue
+            if chapter.num == 0 and block.get("chapter_num"):
+                chapter = _ProfileChapter(block["chapter_num"], block.get("chapter_title", ""),
+                                          block.get("start_line", 0), block.get("end_line", 0))
+            if chapter.num == 0 or btype not in ("p", "list_item"):
+                continue
+            raw_text = block.get("text", "")
+            display_text = strip_inline_markup(raw_text)
+            if display_text:
+                chapter.end_line = block.get("end_line", chapter.end_line)
+                yield chapter, ParagraphText(block.get("start_line", 0),
+                                             block.get("end_line", 0), display_text), raw_text
+
+    def text_blocks(self, blocks: list[dict[str, Any]]) -> list[ParagraphText]:
+        """Project the exact profile text/anchors without linguistic measurements."""
+        return [paragraph for _chapter, paragraph, _raw in self._profile_texts(blocks)]
+
     def profile_blocks(
         self, blocks: list[dict[str, Any]], *, evidence: dict[int, ParagraphEvidence] | None = None,
     ) -> tuple[list[ParagraphProfile], list[ChapterProfile]]:
@@ -211,16 +260,12 @@ class ParagraphProfiler:
         paragraphs: list[ParagraphProfile] = []
         chapters: list[ChapterProfile] = []
 
-        chapter_num = 0
-        chapter_title = ""
-        chapter_start = 0
-        chapter_end = 0
+        chapter: _ProfileChapter | None = None
         chapter_paragraphs: list[ParagraphProfile] = []
         prev_dominant: str | None = None
-        in_appendix = False
 
         def close_chapter() -> None:
-            if chapter_num == 0 or not chapter_paragraphs:
+            if chapter is None or not chapter_paragraphs:
                 return  # do not list empty chapters (e.g. an acknowledgements section still open)
             present = sum(p.present_hits for p in chapter_paragraphs)
             past = sum(p.past_hits for p in chapter_paragraphs)
@@ -235,10 +280,10 @@ class ParagraphProfiler:
 
             chapters.append(
                 ChapterProfile(
-                    num=chapter_num,
-                    title=chapter_title,
-                    start_line=chapter_start,
-                    end_line=chapter_end,
+                    num=chapter.num,
+                    title=chapter.title,
+                    start_line=chapter.start_line,
+                    end_line=chapter.end_line,
                     words=total_words,
                     paragraphs=len(chapter_paragraphs),
                     present_hits=present,
@@ -251,36 +296,12 @@ class ParagraphProfiler:
                 )
             )
 
-        for block in blocks:
-            btype = block.get("type")
-            if btype == "h2":
-                if block.get("text", "").strip() == self._appendix_title:
-                    in_appendix = True
-                    break
+        for current_chapter, paragraph, raw_text in self._profile_texts(blocks):
+            if current_chapter is not chapter:
                 close_chapter()
-                chapter_num = block.get("chapter_num", chapter_num + 1)
-                chapter_title = block.get("text", "").strip()
-                chapter_start = block.get("start_line", 0)
-                chapter_end = block.get("end_line", 0)
+                chapter = current_chapter
                 chapter_paragraphs = []
                 prev_dominant = None
-                continue
-
-            if chapter_num == 0 and block.get("chapter_num"):
-                chapter_num = block["chapter_num"]
-                chapter_title = block.get("chapter_title", "")
-                chapter_start = block.get("start_line", 0)
-                chapter_end = block.get("end_line", 0)
-
-            if in_appendix or chapter_num == 0:
-                continue
-            if btype not in ("p", "list_item"):
-                continue
-
-            raw_text = block.get("text", "")
-            display_text = strip_inline_markup(raw_text)
-            if not display_text:
-                continue
 
             clean = counting_inline_text(raw_text)
 
@@ -319,10 +340,10 @@ class ParagraphProfiler:
             passive_density = per_mille(counts.passive, words)
 
             profile = ParagraphProfile(
-                chapter_num=chapter_num,
-                chapter_title=chapter_title,
-                start_line=block.get("start_line", 0),
-                end_line=block.get("end_line", 0),
+                chapter_num=chapter.num,
+                chapter_title=chapter.title,
+                start_line=paragraph.start_line,
+                end_line=paragraph.end_line,
                 words=words,
                 sentences=len(sentences),
                 present_hits=present,
@@ -339,14 +360,13 @@ class ParagraphProfiler:
                 modal_density=round(modal_density, 1),
                 nominal_density=round(nominal_density, 1),
                 passive_density=round(passive_density, 1),
-                text=display_text,
+                text=paragraph.text,
                 flag_min=self.thresholds.flag_min_severity,
             )
             if evidence is not None:
-                evidence[len(paragraphs)] = self._matcher.evidence(clean, display_text, counts)
+                evidence[len(paragraphs)] = self._matcher.evidence(clean, paragraph.text, counts)
             paragraphs.append(profile)
             chapter_paragraphs.append(profile)
-            chapter_end = block.get("end_line", chapter_end)
             prev_dominant = dominant
 
         close_chapter()

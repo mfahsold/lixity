@@ -86,6 +86,24 @@ source is unavailable. No versioned JSON fields or automatic configuration
 watcher are added. Research overviews reuse one validated archive snapshot without
 a persistent cache.
 
+Current main reduces read cost within these existing operation boundaries.
+Revision reads perform one complete containment walk immediately before bounded
+I/O, followed by checksum and schema validation; public checked-path helpers
+retain their safety contract. A small initial read avoids allocating the entire
+32 MiB object ceiling for tiny JSON records. Larger seekable objects rewind
+and use the original bounded read, avoiding a second payload-sized allocation;
+nonseekable buffered streams retain bounded continuation. Timestamp parsing uses the native ISO calendar
+parser for strict ASCII records, with guards for older accepted syntax. Full
+snapshots still read and verify every accepted revision; no filesystem metadata
+shortcut or cross-request parsed-record cache replaces those checks.
+
+Citation batches derive active source-version heads once per verified snapshot
+read, while each citation still verifies its pinned passage against retained
+bytes. The comparison head never changes the cited version. History selects one
+identity's contiguous accepted revisions and serializes change metadata without
+copying dossier bodies. These projections are local to the call. The existing
+lifecycle index keeps citation availability separate from factual accuracy.
+
 Plain inline prose uses the existing markup cleaner directly when it contains
 none of the escape, code or link openers. Syntax-bearing input retains the same
 delimiter recognizer; the optimization changes neither the counting projection
@@ -121,6 +139,11 @@ opted-in save requires record/manifest v7; reads never upgrade existing archives
 Historical v3.0.1 supports only v1–v6 despite its higher product number.
 
 `pipeline.paragraph_identity` supplies the same identity to rendering and research.
+Current-main anchor reads use the same displayed-paragraph projection as the
+full profiler, without running linguistic counters or chapter aggregation.
+The parser's chapter membership, inline display text, line spans and hashes
+remain shared. Literal occurrence matching counts overlapping occurrences;
+an ambiguous quotation is rejected rather than pinned to its first match.
 `FileUtils.read_source_snapshot` binds raw bytes and decoded text; creation checks
 source containment and bytes again before publication. Review uses the validated
 archive snapshot and existing pipeline paragraphs. It preserves anchors and claim
@@ -326,6 +349,17 @@ standard errors before scoring; documented unavailable-value conventions remain
 separate. Research claim-confidence and evidence-relation normalization belongs
 to `research.api`; supplied invalid HTTP values fail rather than receiving an
 omission default.
+
+Current main computes chapter-versus-rest Cliff effects from sorted finite tie
+groups in O(C log C) per feature rather than rebuilding and comparing C separate
+rest-of-manuscript lists. Integer wins/losses and the C−1 denominator preserve
+exact effect values, including ties and signed zero. This changes computation
+cost rather than the statistical interpretation, reference scope or JSON schema.
+Sn likewise selects each high inner median by binary partition of two monotone
+distance sequences around a sorted observation, then takes the low outer median.
+Finite observations use O(C log C) work and O(C) memory with the same Gaussian
+scaling and floating-point distances. Direct nonfinite inputs retain the legacy
+exhaustive behavior; production feature validation still rejects nonfinite data.
 
 The shared Markdown parser defines measurement prose and chapter numbering.
 Inline counting retains visible link labels and excludes link targets,

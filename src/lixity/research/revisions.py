@@ -4,7 +4,7 @@ import re
 from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from pydantic import ValidationError
 
@@ -87,25 +87,57 @@ def _record(snapshot: Snapshot, kind: str, identifier: str, revision: int | None
     return record
 
 
+def _latest_citation_versions(snapshot: Snapshot) -> dict[str, SourceVersion]:
+    """Project active version heads once within one already verified read."""
+    unavailable = {r.target_ref.id for r in snapshot.records.values() if isinstance(r, Tombstone)}
+    latest: dict[str, SourceVersion] = {}
+    for record in snapshot.records.values():
+        if (isinstance(record, SourceVersion) and record.id not in unavailable
+                and record.source_ref.id not in unavailable):
+            previous = latest.get(record.source_ref.id)
+            if previous is None or record.sequence > previous.sequence:
+                latest[record.source_ref.id] = record
+    return latest
+
+
+class EvidenceCitationReader:
+    """Resolve a batch against one snapshot; never retained across public reads.
+
+    Snapshot-derived lookups are shared only for this batch. Every citation verifies
+    its exact passage against retained bytes through Repository.citation().
+    """
+
+    def __init__(self, repository: Repository, snapshot: Snapshot):
+        self.repository = repository
+        self.snapshot = snapshot
+        self._versions: dict[str, SourceVersion] | None = None
+        self._purged_passages: set[Reference] | None = None
+
+    def read(self, ref: Reference) -> dict[str, Any]:
+        repository, snapshot = self.repository, self.snapshot
+        try:
+            citation = repository.citation(snapshot, snapshot.get(ref, Passage))
+        except ResearchError:
+            if self._purged_passages is None:
+                self._purged_passages = {r.target_ref for r in snapshot.records.values()
+                                         if isinstance(r, Tombstone) and r.operation == "purge"
+                                         and r.target_kind == "passage"}
+            result: dict[str, Any] = {"id": ref.id, "passage_id": ref.id, "error": "Citation unavailable or missing"}
+            if ref in self._purged_passages:
+                result["availability"] = "purged"
+            return result
+        if self._versions is None:
+            self._versions = _latest_citation_versions(snapshot)
+        cited = snapshot.get(Reference(id=citation["source_version_id"]), SourceVersion)
+        latest = self._versions.get(citation["source_id"], cited)
+        citation.update(source_sequence=cited.sequence, latest_source_version_id=latest.id,
+                        latest_source_sequence=latest.sequence, newer_source_available=latest.sequence > cited.sequence)
+        return citation
+
+
 def resolve_evidence_citation(repository: Repository, snapshot: Snapshot, ref: Reference) -> dict[str, Any]:
     """Keep unavailable evidence explicit without exposing unverified quotes."""
-    try:
-        citation = repository.citation(snapshot, snapshot.get(ref, Passage))
-    except ResearchError:
-        purged = any(isinstance(r, Tombstone) and r.operation == "purge" and
-                     r.target_kind == "passage" and r.target_ref == ref for r in snapshot.records.values())
-        result: dict[str, Any] = {"id": ref.id, "passage_id": ref.id, "error": "Citation unavailable or missing"}
-        if purged:
-            result["availability"] = "purged"
-        return result
-    unavailable = {r.target_ref.id for r in snapshot.records.values() if isinstance(r, Tombstone)}
-    versions = [r for r in snapshot.records.values() if isinstance(r, SourceVersion)
-                and r.source_ref.id == citation["source_id"] and r.id not in unavailable]
-    cited = snapshot.get(Reference(id=citation["source_version_id"]), SourceVersion)
-    latest = max(versions, key=lambda r: r.sequence) if versions and citation["source_id"] not in unavailable else cited
-    citation.update(source_sequence=cited.sequence, latest_source_version_id=latest.id,
-                    latest_source_sequence=latest.sequence, newer_source_available=latest.sequence > cited.sequence)
-    return citation
+    return EvidenceCitationReader(repository, snapshot).read(ref)
 
 
 def source_updates(citations: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -162,9 +194,10 @@ def _view(repository: Repository, snapshot: Snapshot, record: Authored) -> dict[
             # revision it refers to; do not silently move it to a revised claim.
             links = [r for r in snapshot.records.values()
                      if isinstance(r, EvidenceLink) and r.claim_ref == claim_ref]
-    citations = [resolve_evidence_citation(repository, snapshot, ref) for ref in dict.fromkeys(refs)]
+    reader = EvidenceCitationReader(repository, snapshot)
+    citations = [reader.read(ref) for ref in dict.fromkeys(refs)]
     for link in links:
-        citation = resolve_evidence_citation(repository, snapshot, link.passage_ref)
+        citation = reader.read(link.passage_ref)
         citation.update(evidence_link_id=link.id, evidence_link_revision=link.revision,
                         claim_revision=link.claim_ref.revision)
         citations.append(citation)
@@ -215,8 +248,8 @@ def record_history(project: str | Path, kind: str, record_id: str) -> dict[str, 
 
 def _record_history(snapshot: Snapshot, kind: str, record_id: str) -> dict[str, Any]:
     latest = _record(snapshot, kind, record_id, include_withdrawn=True)
-    records = sorted((r for r in snapshot.revisions.values() if r.id == record_id),
-                     key=lambda r: r.revision, reverse=True)
+    # Repository validation guarantees every accepted revision from 1 to latest.
+    records = [cast(Authored, snapshot.revisions[(record_id, number)]) for number in range(latest.revision, 0, -1)]
     from .images import resolve_dossier_images
     return {
         "schema_version": "research-history-local/1", "project_id": snapshot.project.id,
@@ -224,7 +257,7 @@ def _record_history(snapshot: Snapshot, kind: str, record_id: str) -> dict[str, 
         "latest_revision": latest.revision,
         **(dossier_withdrawal(snapshot, record_id) if isinstance(latest, Dossier) else {}),
         "revisions": [{"revision": r.revision, "created_at": r.created_at,
-                       "created_by": r.created_by, "change": r.model_dump(mode="json").get("change"),
+                       "created_by": r.created_by, "change": r.change.model_dump(mode="json") if r.change else None,
                        **({"images": resolve_dossier_images(snapshot, r.body),
                            "geography_feature_count": len(r.geography.features) if r.geography else 0}
                           if isinstance(r, Dossier) else {})}
