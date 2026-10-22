@@ -785,31 +785,47 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
     }
     busy = true; sync(); message("site_export_busy");
     var reason = "";
+    var failureKey = "site_export_network_error";
     try {
       var response = await fetch(API + "/site-export", {
         method: "POST", headers: {"Content-Type": "application/json"},
         body: JSON.stringify(payload),
       });
       if (!response.ok) {
-        try { var body = await response.json(); if (typeof body.message === "string") reason = body.message; }
-        catch (_) { /* Preserve the localized failure explanation. */ }
+        reason = "HTTP " + response.status;
+        try {
+          var body = await response.json();
+          if (body && typeof body.message === "string" && body.message.trim()) reason = body.message;
+        }
+        catch (_) { /* Preserve the HTTP status for non-JSON errors. */ }
         throw new Error("Website export unavailable");
       }
+      failureKey = "site_export_response_error";
       if ((response.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase() !== "application/zip") {
-        throw new Error("Website export unavailable");
+        reason = uiLabel(failureKey) + " (HTTP " + response.status + "; Content-Type: " +
+          (response.headers.get("Content-Type") || "\u2014") + ")";
+        throw new Error("Expected a ZIP response");
       }
       var blob = await response.blob();
       var magic = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
       if (blob.size < 22 || magic[0] !== 0x50 || magic[1] !== 0x4b ||
           !((magic[2] === 3 && magic[3] === 4) || (magic[2] === 5 && magic[3] === 6))) {
-        throw new Error("Website export unavailable");
+        reason = uiLabel(failureKey);
+        throw new Error("Invalid ZIP response");
       }
+      failureKey = "site_export_download_error";
       var url = URL.createObjectURL(blob), download = document.createElement("a");
       download.href = url; download.download = "lixity-reading-website.zip";
       document.body.appendChild(download); download.click(); download.remove();
       setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
       message("site_export_success");
-    } catch (_) { message("site_export_error", true, reason); }
+    } catch (error) {
+      if (!reason) {
+        reason = uiLabel(failureKey);
+        if (error instanceof Error) reason += " (" + error.name + ": " + error.message + ")";
+      }
+      message("site_export_error", true, reason);
+    }
     finally { busy = false; sync(); }
   });
   updateProfiles();

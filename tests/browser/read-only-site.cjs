@@ -40,10 +40,15 @@ print(json.dumps(documents))
       page.on('pageerror', error => errors.push(error.message));
       const posts = [];
       let rejectNext = false;
+      let failure = '';
       await page.route('http://lixity.test/**', async route => {
         const request = route.request();
         if (request.url().endsWith('/api/site-export')) {
           posts.push(request.postDataJSON());
+          if (failure === 'network') return route.abort('failed');
+          if (failure === 'http') return route.fulfill({status:502, contentType:'text/html', body:'Synthetic proxy error'});
+          if (failure === 'html') return route.fulfill({contentType:'text/html', body:'Synthetic non-ZIP response'});
+          if (failure === 'zip') return route.fulfill({contentType:'application/zip', body:'Not a ZIP'});
           if (rejectNext) {
             rejectNext = false;
             await route.fulfill({status:409, contentType:'application/json', body:JSON.stringify({message:'Synthetic context changed.'})});
@@ -95,7 +100,7 @@ print(json.dumps(documents))
         assert.ok(await page.locator('#modal-site-export').evaluate(element => element.scrollWidth <= element.clientWidth + 1));
         await page.locator('#site-export-mode').selectOption('review');
       }
-      if (locale === 'en' && width === 1440) {
+      if (locale === 'en') {
         await page.locator('#site-export-research').check();
         await page.locator('#site-export-sources').check();
         rejectNext = true;
@@ -107,6 +112,35 @@ print(json.dumps(documents))
         await page.locator('#site-export-download').click();
         await retryDownload;
         assert.deepEqual(posts.slice(-2), Array(2).fill({project_token:'selected-manuscript-context', include_research:true, include_source_files:true}));
+        for (const [kind, detail] of [
+          ['network', 'could not reach the application'],
+          ['http', 'HTTP 502'],
+          ['html', 'Content-Type: text/html'],
+          ['zip', 'could not be read as a valid ZIP'],
+        ]) {
+          failure = kind;
+          await page.locator('#site-export-download').click();
+          await expect(page.locator('#site-export-status.err')).toContainText(detail);
+          await expect(page.locator('#site-export-download')).toBeEnabled();
+          await expect(page.locator('#site-export-research')).toBeChecked();
+          await expect(page.locator('#site-export-sources')).toBeChecked();
+          if (kind === 'html') {
+            await page.locator('#modal-site-export').screenshot({path:path.join(artifacts, `website-error-${width}.png`)});
+          }
+        }
+        failure = '';
+        await page.evaluate(() => {
+          window.lixityOriginalCreateObjectURL = URL.createObjectURL;
+          URL.createObjectURL = () => {throw new TypeError('Synthetic download failure');};
+        });
+        await page.locator('#site-export-download').click();
+        await expect(page.locator('#site-export-status.err')).toContainText('browser could not start the download');
+        await expect(page.locator('#site-export-status.err')).toContainText('TypeError: Synthetic download failure');
+        await page.evaluate(() => {URL.createObjectURL = window.lixityOriginalCreateObjectURL;});
+        const recoveredDownload = page.waitForEvent('download');
+        await page.locator('#site-export-download').click();
+        await recoveredDownload;
+        await expect(page.locator('#site-export-status.ok')).toBeVisible();
       }
       const dialog = page.locator('#modal-site-export');
       assert.ok(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth + 1));

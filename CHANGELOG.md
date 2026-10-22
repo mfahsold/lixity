@@ -7,6 +7,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+- Reading-website export failures retain HTTP status codes and distinguish
+  unreachable application, invalid ZIP response and browser download failures,
+  including available technical details, without resetting export options.
+
 ### Changed
 - Heatmap cells, style-reference cutoff-hit counts and all style-space loadings
   share a read-only chapter measurement dialog. It retains chapter context and
