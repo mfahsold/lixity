@@ -874,6 +874,15 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   await expect(page.locator('#tab-view-research')).toBeVisible();
   await expect(page.locator('#tab-view-project')).toBeHidden();
   await expect(page.locator('body')).toHaveAttribute('data-manuscript-links', 'read');
+  const quickStart = page.locator('#demo-quick-start');
+  await expect(quickStart).toBeVisible();
+  await quickStart.getByRole('button', {name: 'Read the manuscript'}).click();
+  await expect(page.locator('#tab-view-analysis')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#view-pane-analysis')).toBeVisible();
+  await quickStart.getByRole('button', {name: 'Explore research'}).click();
+  await expect(page.locator('#tab-view-research')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#view-pane-research')).toBeVisible();
+  await assertDemoReadOnly(page);
   if (colorScheme !== 'light' || width === 390) {
     await page.locator('#tab-view-research').click();
     await page.locator('[data-rtab=dossiers]').click();

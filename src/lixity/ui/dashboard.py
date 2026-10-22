@@ -793,10 +793,12 @@ def render_dashboard(
     if controls and has_reading:
         reader_controls = (
             '<div class="reader-controls">'
-            '<button type="button" class="ctl" id="workspace-reader-toggle" '
+            '<button type="button" class="ctl reader-compact-control" id="workspace-reader-toggle" '
+            f'aria-label="{L("reader_toggle")}" title="{L("reader_toggle")}" '
             f'data-help="{L("reader_hint")}" '
             'aria-expanded="false" aria-controls="workspace-reader-panel" disabled>'
-            f'{L("reader_toggle")}</button><p class="ctl-note">'
+            '<span class="reader-control-icon" aria-hidden="true">▤</span>'
+            f'<span class="reader-control-label">{L("reader_toggle")}</span></button><p class="ctl-note">'
             f"{L('reader_hint') if manuscript_pdf_token else L('reader_unavailable')}</p></div>"
         ) if reader_enabled else ""
         parts.append(
@@ -843,6 +845,15 @@ def render_dashboard(
         parts.append("<div hidden>")
 
     metric_control = ""
+    layer_navigation = (
+        f'<div class="reader-outlier-navigation" role="group" aria-label="{L("legend_paragraph_comparison")}">'
+        f'<button class="ctl" type="button" id="layer-prev" disabled '
+        f'aria-label="{L("layer_previous")}" title="{L("layer_previous")}">↑</button>'
+        f'<output id="layer-position" aria-live="polite" aria-atomic="true" '
+        f'aria-label="{esc(label(labels, "layer_position").format(current=0, total=0), quote=True)}">0 / 0</output>'
+        f'<button class="ctl" type="button" id="layer-next" disabled '
+        f'aria-label="{L("layer_next")}" title="{L("layer_next")}">↓</button></div>'
+    )
     if paragraphs:
         metric_control = (
             '<label class="metric-layer-control">'
@@ -864,6 +875,7 @@ def render_dashboard(
             f'<div class="reader-analysis-controls" id="reader-analysis-settings" role="group" '
             f'aria-label="{L("reading_text_analysis")}">'
             f'{metric_control}'
+            f'{layer_navigation}'
             '<div class="reader-analysis-switches">'
             f'<label class="reader-evidence-toggle"><input type="checkbox" id="analysis-evidence-enabled" checked/> '
             f'<span class="analysis-evidence-key">{L("legend_counted_text")}</span></label>'
@@ -991,7 +1003,8 @@ def render_dashboard(
         f'<label class="layer-only"><input type="checkbox" id="layer-only"/> '
         f"{esc(label(labels, 'layer_only'))}</label>"
     )
-    parts.append(f'<button class="ctl" id="layer-next">{esc(label(labels, "layer_next"))}</button>')
+    if not (has_reading and controls and paragraphs):
+        parts.append(layer_navigation)
     parts.append('</div>')
     parts.append(f'<details class="layer-comparison-note"><summary>{L("analysis_marks_help")}</summary>'
                  '<p id="layer-evidence-hint"></p><p id="layer-comparison-hint"></p>'

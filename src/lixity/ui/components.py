@@ -338,7 +338,7 @@ def loading_bars(
         sign = "pos" if value >= 0 else "neg"
         layer = (layers or {}).get(name)
         attrs = (
-            f' data-layer="{html.escape(layer, quote=True)}" data-jump="#chapters"'
+            f' data-layer="{html.escape(layer, quote=True)}" data-jump="#chapters" data-dimension-loading="1"'
             f' role="button" tabindex="0"'
             if layer
             else ""

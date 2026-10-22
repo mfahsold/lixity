@@ -12,7 +12,7 @@ const generated = pythonFixture(`
 import json
 from lixity.language import get_language_profile
 from lixity.workspace_labels import WORKSPACE_LABELS
-from lixity.style_fingerprint import LAYER_PARAGRAPH_ATTR, layer_stats
+from lixity.style_fingerprint import LAYER_PARAGRAPH_ATTR, layer_stats, z_color
 from dashboard_fixtures import full_dashboard
 reading_html = full_dashboard()
 full_dashboard.__globals__['SAMPLE'] = '## Measured paragraphs\\n\\n' + '\\n\\n'.join(
@@ -51,7 +51,14 @@ def large_value(*args, **kwargs):
     return original(*args, **{**kwargs, 'labels': {**get_language_profile('en').labels, **WORKSPACE_LABELS['en']}, 'language_key': 'en'})
 full_dashboard.__globals__['render_dashboard'] = large_value
 large_value_html = full_dashboard()
-print(json.dumps({'locales': fixtures, 'extra': extra, 'large_value_html': large_value_html, 'reading_html': reading_html}))
+def paint_values(*args, **kwargs):
+    for index, paragraph in enumerate(args[1]):
+        paragraph.asl = [0, 50, 51, 52, 53, 54, 100][index % 7]
+    return original(*args, **{**kwargs, 'labels': {**get_language_profile('en').labels, **WORKSPACE_LABELS['en']}, 'language_key': 'en'})
+full_dashboard.__globals__['render_dashboard'] = paint_values
+paint_html = full_dashboard()
+print(json.dumps({'locales': fixtures, 'extra': extra, 'large_value_html': large_value_html, 'reading_html': reading_html,
+                  'paint_html': paint_html, 'palette': [z_color(z) for z in (-2.5, -1.75, -1, -.5, 0, .5, 1, 1.75, 2.5)]}))
 `, {root});
 const fixtures = generated.locales;
 async function frames(page) {
@@ -62,6 +69,108 @@ async function identity(page) {
     id: node.id, start: node.dataset.start, end: node.dataset.end,
     hash: node.dataset.paragraphSha256, text: node.querySelector('.ptext-inner > p').textContent,
   })));
+}
+async function paintedPixels(target, positions) {
+  const image = await target.screenshot({animations: 'disabled'});
+  return target.page().evaluate(async ({image, positions}) => {
+    const picture = new Image(); picture.src = 'data:image/png;base64,' + image;
+    await picture.decode();
+    const canvas = document.createElement('canvas'); canvas.width = picture.width; canvas.height = picture.height;
+    const context = canvas.getContext('2d'); context.drawImage(picture, 0, 0);
+    return positions.map(position => Array.from(context.getImageData(
+      Math.min(picture.width - 1, Math.floor(position * picture.width)), Math.floor(picture.height / 2), 1, 1).data));
+  }, {image: image.toString('base64'), positions});
+}
+async function verifyComparisonPaint(browser) {
+  for (const width of [1440, 320]) for (const colorScheme of ['light', 'dark']) {
+    const page = await browser.newPage({viewport: {width, height: width === 320 ? 480 : 900}, colorScheme, reducedMotion: 'reduce'});
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    try {
+      await page.route('**/*', route => route.fulfill(new URL(route.request().url()).pathname.startsWith('/api/')
+        ? {json: {ok: true, locked: true, records: [], candidates: []}} : {contentType: 'text/html', body: generated.paint_html}));
+      await page.goto('http://lixity.test/');
+      await page.locator('#tab-view-analysis').click();
+      await page.locator('#manuscript-analysis-toggle').click(); await selectMetric(page, 'asl');
+      const target = page.locator('#p-0');
+      for (const paragraph of [target, page.locator('#p-6')]) {
+        const paint = await paragraph.evaluate(node => {
+          const prose = node.querySelector('.ptext-inner > p'), style = getComputedStyle(node);
+          return {gradient: style.backgroundImage, opacity: style.opacity, inkOpacity: getComputedStyle(prose).opacity,
+            ink: getComputedStyle(prose).color, hue: style.getPropertyValue('--paragraph-layer-color').trim()};
+        });
+        assert.match(paint.gradient, /^linear-gradient\(/, 'Notable paragraphs have a restrained directional wash');
+        assert.equal(paint.opacity, '1'); assert.equal(paint.inkOpacity, '1');
+        // Hide ink only for a paint sample: the browser must composite the real
+        // gradient over its actual reader surface, not merely report backgroundColor.
+        await paragraph.evaluate(node => node.querySelectorAll(':scope > *').forEach(child => { child.style.visibility = 'hidden'; }));
+        const samples = await paintedPixels(paragraph, [0, .325, .65, .95]);
+        await paragraph.evaluate(node => node.querySelectorAll(':scope > *').forEach(child => { child.style.removeProperty('visibility'); }));
+        const base = samples[3], hue = paint.hue.match(/\w\w/g).map(value => parseInt(value, 16));
+        const alpha = colorScheme === 'dark' ? .09 : .06;
+        for (const [index, weight] of [[0, 1], [1, .5], [2, 0]]) {
+          const expected = hue.map((channel, i) => Math.round(channel * alpha * weight + base[i] * (1 - alpha * weight)));
+          assert.ok(expected.every((channel, i) => Math.abs(channel - samples[index][i]) <= 2), JSON.stringify({width, colorScheme, index, expected, actual: samples[index]}));
+        }
+        const ink = paint.ink.match(/[\d.]+/g).slice(0, 3).map(Number);
+        function luminance(rgb) { return rgb.slice(0, 3).map(n => n / 255).map(n => n <= .04045 ? n / 12.92 : ((n + .055) / 1.055) ** 2.4).reduce((sum, n, i) => sum + n * [.2126, .7152, .0722][i], 0); }
+        for (const sample of samples) {
+          const values = [luminance(ink), luminance(sample)].sort((a, b) => a - b);
+          assert.ok((values[1] + .05) / (values[0] + .05) >= 4.5, 'Prose retains contrast over every sampled gradient stop');
+        }
+      }
+      await target.scrollIntoViewIfNeeded(); await frames(page);
+      await target.locator(':scope > .reader-comparison-value').click();
+      const scale = page.locator('#analysis-evidence-card .analysis-evidence-scale');
+      await scale.waitFor();
+      assert.equal(await scale.evaluate(node => getComputedStyle(node).backgroundImage),
+        await page.locator('.z-gradient').first().evaluate(node => getComputedStyle(node).backgroundImage),
+        'Chapter and paragraph legends share the exact statistical gradient');
+      await page.locator('#analysis-evidence-card').evaluate(node => { node.scrollTop = node.scrollHeight; });
+      const hideMarker = await page.addStyleTag({content: '.analysis-evidence-scale { border-radius: 0; } .analysis-evidence-scale::before, .analysis-evidence-scale span { visibility: hidden !important; }'});
+      const colors = await paintedPixels(scale, [.01, .15, .3, .4, .5, .6, .7, .85, .99]);
+      await hideMarker.evaluate(node => node.remove());
+      generated.palette.forEach((color, index) => {
+        const expected = color.match(/\w\w/g).map(value => parseInt(value, 16));
+        assert.ok(expected.every((channel, i) => Math.abs(channel - colors[index][i]) <= 3), JSON.stringify({colorScheme, color, actual: colors[index]}));
+      });
+      await page.keyboard.press('Escape');
+      await page.screenshot({path: path.join(artifacts, `comparison-wash-${width}-${colorScheme}.png`)});
+      await page.locator('#analysis-comparison-enabled').uncheck();
+      assert.equal(await target.evaluate(node => getComputedStyle(node).backgroundImage), 'none');
+      await page.locator('#analysis-comparison-enabled').check();
+      await page.locator('#reader-focus').click();
+      assert.equal(await target.evaluate(node => getComputedStyle(node).backgroundImage), 'none');
+      await page.locator('#reader-focus').click();
+      await page.locator('#manuscript-analysis-toggle').click();
+      assert.equal(await target.evaluate(node => getComputedStyle(node).backgroundImage), 'none');
+      await page.locator('#manuscript-analysis-toggle').click();
+      await page.locator('#workbench-overview-open').click();
+      assert.equal(await target.evaluate(node => getComputedStyle(node).backgroundImage), 'none');
+      await page.locator('#workbench-overview-back').click();
+      await target.locator('.reader-paragraph-actions').click();
+      await page.locator('#manuscript-context-menu [data-reader-action="values"]').click();
+      const selected = await target.evaluate(node => {
+        const probe = document.createElement('span'); probe.style.color = 'var(--accent)'; document.body.appendChild(probe);
+        const result = {gutter: getComputedStyle(node, '::before').backgroundColor, accent: getComputedStyle(probe).color,
+          comparison: getComputedStyle(node.querySelector('.reader-comparison-value')).borderInlineStartColor};
+        probe.remove(); return result;
+      });
+      assert.equal(selected.gutter, selected.accent, 'Inspection uses the separate blue selection gutter');
+      assert.notEqual(selected.comparison, selected.accent, 'The comparison marker retains its statistical direction');
+      await page.emulateMedia({forcedColors: 'active'});
+      const forced = await target.evaluate(node => ({gradient: getComputedStyle(node).backgroundImage,
+        gutter: getComputedStyle(node, '::before').backgroundColor,
+        marker: getComputedStyle(node.querySelector('.reader-comparison-value')).borderInlineStartColor}));
+      assert.equal(forced.gradient, 'none');
+      assert.equal(forced.gutter, forced.marker, 'Forced colors preserve a visible system-color gutter and comparison edge');
+      assert.match(await target.locator('.reader-comparison-value').textContent(), /^[↓↑] /);
+      assert.deepEqual(errors, []);
+    } catch (error) {
+      await page.screenshot({path: path.join(artifacts, `comparison-paint-failure-${width}-${colorScheme}.png`)});
+      throw error;
+    } finally { await page.close(); }
+  }
 }
 async function comparisonRegression(browser, width, name, check, html = fixtures.en.html) {
   const page = await browser.newPage({viewport: {width, height: 900}, reducedMotion: 'reduce'});
@@ -169,7 +278,9 @@ async function verifyComparisonRegressions(browser) {
       assert.equal(await chip.getAttribute('aria-label'), base, 'Comparison-off chips describe their displayed tense colors');
       assert.equal(await chip.getAttribute('title'), base);
       assert.equal(await chip.getAttribute('data-tip'), null);
+      await page.locator('#workbench-overview-back').click();
       await page.locator('#analysis-comparison-enabled').check();
+      await page.locator('#workbench-overview-open').click();
       assert.equal(await page.locator('body').evaluate(node => node.classList.contains('comparison-on')), true);
       assert.equal(await chip.getAttribute('aria-label'), metric, 'Re-enabling comparison restores its selected metric description');
       assert.equal(await chip.getAttribute('data-tip'), metric);
@@ -228,6 +339,8 @@ async function verifyComparisonRegressions(browser) {
 (async () => {
   const browser = await launchChromium();
   try {
+    await verifyComparisonPaint(browser);
+    if (process.env.LIXITY_PAINT_ONLY) { console.log('Comparison paint: composited gradients, prose contrast, exact statistical palette and independent states passed. ' + artifacts); return; }
     await verifyComparisonRegressions(browser);
     const cases = Object.keys(fixtures).flatMap(locale => [1440, 320].map(width => ({locale, width, height: width === 320 ? 480 : 900, colorScheme: 'light', reducedMotion: 'reduce'})));
     for (const colorScheme of ['light', 'dark']) for (const reducedMotion of ['no-preference', 'reduce']) {

@@ -428,6 +428,7 @@ document.addEventListener("click", async function (event) {
       }).join("");
       if (["image/png", "image/jpeg"].includes(detail.media_type)) {
         detailHost.innerHTML = captureContext + '<p class="ctl-note">' + escapeHtml(uiLabel("research_context_unverified")) + '</p>' +
+          (window.LixityDossierImages ? window.LixityDossierImages.sourcePreviewHtml(detail, sourceSelectionProject) : '') +
           '<p><strong>' + escapeHtml(detail.media_type) + '</strong> · ' + escapeHtml(uiLabel("image_text_unavailable")) + '</p>' +
           (contextRows ? '<h4>' + escapeHtml(uiLabel("research_source_context")) + '</h4><dl>' + contextRows + '</dl>' : '');
         return;

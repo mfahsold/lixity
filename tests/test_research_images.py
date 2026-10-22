@@ -140,6 +140,39 @@ class TestResearchImages(unittest.TestCase):
         self.assertEqual(api.get_record(self.project, "dossier", self.dossier, revision=1)["images"], [])
         self.assertEqual(api.record_history(self.project, "dossier", self.dossier)["revisions"][0]["images"], full["images"])
 
+    def test_attachment_replaces_one_exact_ordinary_markdown_image(self):
+        original = ('# Visual notes\n\nBefore ![Local plan](bilder/plan_(old).jpg "Plan") after.\n\n'
+                    '# Context\n\nUnchanged notes.')
+        self.dossier = api.create_dossier(self.project, "Import local reference", original)["dossier_id"]
+        marker = '![Local plan](bilder/plan_(old).jpg "Plan")'
+        result = self.attach(replace_reference=marker)
+        image = result["images"][0]
+        expected = original.replace(
+            marker, f"![Synthetic image](lixity:image/{image['source_id']}/{image['source_version_id']})"
+        )
+        self.assertEqual(result["record"]["body"], expected)
+        self.assertEqual(api.get_record(self.project, "dossier", self.dossier, revision=1)["record"]["body"], original)
+
+    def test_attachment_replacement_rejects_code_duplicate_and_native_references(self):
+        marker = "![Local plan](bilder/plan.jpg)"
+        for body in (f"```\n{marker}\n```", f"{marker}\n\n{marker}"):
+            with self.subTest(body=body):
+                self.dossier = api.create_dossier(self.project, "Reject ambiguous replacement", body)["dossier_id"]
+                before = Repository(self.project).snapshot()
+                with self.assertRaisesRegex(ResearchError, "reference"):
+                    self.attach(replace_reference=marker)
+                after = Repository(self.project).snapshot()
+                self.assertEqual(after.digest, before.digest)
+                self.assertEqual(api.list_sources(self.project)["sources"], [])
+        attached = self.attach()
+        image = attached["images"][0]
+        native = f"![Synthetic image](lixity:image/{image['source_id']}/{image['source_version_id']})"
+        before = Repository(self.project).snapshot()
+        with self.assertRaisesRegex(ResearchError, "reference"):
+            self.attach(replace_reference=native)
+        self.assertEqual(Repository(self.project).snapshot().digest, before.digest)
+        self.assertEqual(len(api.list_sources(self.project)["sources"]), 1)
+
     def test_attachment_preserves_existing_dossier_bytes(self):
         original = "# Notes\r\n\r\nOriginal note.  \r\n\r\n"
         self.dossier = api.create_dossier(self.project, "Exact original body", original)["dossier_id"]

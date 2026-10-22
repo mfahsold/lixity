@@ -10,6 +10,7 @@
 .manuscript-reading.workbench-analysis:not(.reader-focus) .reader-secondary-controls { display: flex; flex-wrap: wrap; gap: .5rem; padding-block: .5rem; }
 .reader-focus .reader-secondary-controls { display: none !important; }
 .reader-mode-label { color: var(--muted); font-size: var(--text-small); }
+.reader-control-icon { display: none; }
 .reader-chapter { max-width: 18rem; min-width: 0; flex: 1 1 10rem; }
 .reader-size-controls { display: inline-flex; align-items: center; gap: .35rem; }
 .reader-size-controls output { min-width: 2ch; text-align: center; font-size: var(--text-small); }
@@ -42,12 +43,15 @@
 .reader-shortcuts kbd { font-family: var(--font-mono); font-size: inherit; white-space: nowrap; }
 .reader-settings:not([open]) > .reader-settings-body { display: none; }
 .reader-analysis-controls { display: none; }
-.workbench-analysis:not(.reader-focus) .reader-analysis-controls { display: flex; }
-.reader-analysis-controls { flex: 1 1 100%; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); padding-top: var(--space-2); border-top: 1px solid var(--line); }
+.workbench-analysis:not(.reader-focus):not(.workbench-overview) .reader-analysis-controls { display: grid; }
+.reader-analysis-controls { flex: 1 1 100%; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-1) var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--line); }
 .reader-analysis-controls .metric-layer-control { display: flex; align-items: center; gap: .5rem; min-width: 0; flex: 1 1 16rem; }
-.reader-analysis-controls .metric-layer-control > span { font-size: var(--text-note); color: var(--fg-secondary); }
-.reader-analysis-controls select { flex: 1 1 12rem; width: 100%; min-width: 0; }
-.reader-analysis-switches { display: flex; flex-wrap: wrap; gap: .4rem 1rem; }
+.reader-analysis-controls .metric-layer-control > span { flex-shrink: 0; font-size: var(--text-note); color: var(--fg-secondary); }
+.reader-analysis-controls select { flex: 1 1 auto; width: 100%; min-width: 0; }
+.reader-analysis-switches { display: flex; grid-column: 1 / -1; flex-wrap: wrap; gap: .25rem .65rem; min-width: 0; }
+.reader-outlier-navigation { display: inline-flex; align-items: center; gap: var(--space-1); }
+.reader-outlier-navigation .ctl { min-width: 44px; min-height: 44px; padding: .4rem; }
+.reader-outlier-navigation output { min-width: 4.5ch; text-align: center; color: var(--fg-secondary); font: var(--text-note)/var(--line-control) var(--font); font-variant-numeric: tabular-nums; }
 .reader-evidence-toggle, .reader-comparison-toggle { display: flex; gap: .5rem; align-items: center; min-height: 44px; font-size: var(--text-note); }
 .reader-evidence-toggle input, .reader-comparison-toggle input { flex-shrink: 0; }
 .analysis-evidence-key { text-decoration: underline; text-decoration-color: var(--analysis-evidence-color); text-decoration-thickness: 2px; text-underline-offset: .2em; }
@@ -146,10 +150,22 @@ body.lixity-workspace.reader-focus { padding-left: 1.5rem; }
 .reader-focus .workspace-reader-layout.is-open { display: block; }
 .reader-focus .reader-controls { display: none; }
 @media (max-width: 600px) {
-  .manuscript-reader-controls { gap: .35rem; }
+  .manuscript-reader-controls { gap: .35rem; padding-block: .35rem; }
   .reader-mode-label { display: none; }
   .reader-chapter { flex: 1 1 8rem; width: 8rem; max-width: none; }
   .reader-size-controls { margin-left: auto; }
+  .reader-compact-control { width: 44px; min-height: 44px; padding: .4rem; justify-content: center; }
+  .reader-control-label { display: none; }
+  .reader-control-icon { display: inline; font-size: 1rem; line-height: 1; }
+  .manuscript-reader-controls .analysis-state { display: none; }
+  .reader-settings > summary.reader-compact-control { padding-inline: .25rem .7rem; }
+  .reader-settings > summary.reader-compact-control::after { inset-inline-end: .25rem; width: .25rem; height: .25rem; }
+  .reader-analysis-controls { padding-top: var(--space-1); }
+  .reader-analysis-controls .metric-layer-control { position: relative; }
+  .reader-analysis-controls .metric-layer-control > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .reader-analysis-switches { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-1) var(--space-2); }
+  .reader-evidence-toggle, .reader-comparison-toggle { min-width: 0; gap: var(--space-1); line-height: var(--line-control); }
+  .reader-evidence-toggle > span, .reader-comparison-toggle > span { min-width: 0; overflow-wrap: normal; }
   .manuscript-reading .chapter { padding: .5rem calc(var(--reader-action-gutter) + .5rem) 2rem .15rem; }
   .manuscript-reading #chapters { margin-top: .5rem; }
   .manuscript-reading .chapter-head { margin-bottom: var(--space-4); }
@@ -240,6 +256,13 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 .manuscript-reading.workbench-analysis .toolbar > .metric-layer-control { display: flex !important; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 
 /* Comparison lives at the paragraph edge; the counted text has its own underline. */
+.manuscript-reading.workbench-analysis.comparison-on:not(.workbench-overview):not(.reader-focus) .ptext.metric-notable {
+  --paragraph-layer-wash: light-dark(color-mix(in srgb, var(--paragraph-layer-color) 6%, transparent), color-mix(in srgb, var(--paragraph-layer-color) 9%, transparent));
+  background-image: linear-gradient(to right, var(--paragraph-layer-wash), transparent 65%);
+}
+.manuscript-reading.workbench-analysis.comparison-on:not(.workbench-overview):not(.reader-focus) .ptext.metric-notable:not(.reader-inspector-target)::before {
+  background: var(--paragraph-layer-color); width: 3px;
+}
 .reader-comparison-value { display: none; }
 .manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus).comparison-on .reader-comparison-value:not([hidden]) {
   display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; justify-self: start;
@@ -252,6 +275,8 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 .reader-comparison-value:hover { text-decoration: underline; }
 @media (forced-colors: active) {
   .reader-comparison-value { border-inline-start-color: CanvasText; }
+  .manuscript-reading.workbench-analysis.comparison-on:not(.workbench-overview):not(.reader-focus) .ptext.metric-notable { background-image: none; }
+  #chapters .ptext::before, #chapters .reader-return-target::after { background: CanvasText; }
 }
 
 .workbench-surface-label { font-size: var(--text-control); color: var(--accent); padding: .4rem .6rem; border-left: 3px solid var(--accent); }

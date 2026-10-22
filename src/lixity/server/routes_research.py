@@ -171,6 +171,7 @@ class ResearchRoutesMixin(ResponseMixin):
                     root, dossier_id, content,
                     expected_snapshot=expected_snapshot, expected_revision=expected_revision,
                     alt=payload.get("alt", ""), caption=payload.get("caption"), section=payload.get("section"),
+                    replace_reference=payload.get("replace_reference"),
                     reason=payload.get("reason"), change_kind=payload.get("change_kind", "supersession"), **common)
             else:
                 result = research_api.ingest_image(root, content, source_id=payload.get("source_id"),

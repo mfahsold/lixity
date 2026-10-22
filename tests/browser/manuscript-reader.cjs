@@ -289,7 +289,7 @@ async function settleGeometry(page) {
           `Heatmap ${activation} reveals the manuscript instead of scrolling a hidden chapter`);
         assert.equal(await toggle.getAttribute('aria-expanded'), 'true', 'Chapter navigation expands its destination');
         assert.equal(await page.locator('#style-layer').inputValue(), selectedLayer, 'Chapter navigation retains the selected metric');
-        assert.equal(await analysis.getAttribute('aria-pressed'), 'false', 'Chapter navigation restores the prior Analysis setting');
+        assert.equal(await analysis.getAttribute('aria-pressed'), 'true', 'A metric drill reveals Analysis for the chosen measurement');
         assert.equal(await chapter.locator('.ptext').first().isVisible(), true);
         await settleGeometry(page);
         assert.ok(await chapter.locator('.chapter-head h2').evaluate(node => {

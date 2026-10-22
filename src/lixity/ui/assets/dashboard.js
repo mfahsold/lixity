@@ -4,6 +4,13 @@ function setFilter(input, bodyClass, on) {
   document.body.classList.toggle(bodyClass, on);
 }
 
+function selectAnalysisMetric(key) {
+  if (!layer) return;
+  // Chapter-only measurements intentionally clear a previous paragraph layer.
+  layer.value = key || "";
+  layer.dispatchEvent(new Event("change", {bubbles: true}));
+}
+
 function activate(el) {
   // drill-down: carry the context filters on the way to the deeper level
   if (el.hasAttribute("data-review-passage")) {
@@ -18,10 +25,11 @@ function activate(el) {
   if (el.matches("td.z[data-chapter]")) { jumpToChapter(el); return; }
   if (el.hasAttribute("data-line")) { jumpToLine(el); return; }
   var key = el.getAttribute("data-layer");
-  if (key && layer) { layer.value = key; applyLayer(); }
+  if (el.hasAttribute("data-layer")) selectAnalysisMetric(key);
   var jump = el.getAttribute("data-jump");
   var target = jump ? document.querySelector(jump) : null;
-  if (target) scrollAndFlash(target);
+  if (target && key && target.closest("#chapters")) rememberPassageLocation(target);
+  if (target) scrollAndFlash(target, {analysisVisible: el.hasAttribute("data-layer") ? true : undefined});
 }
 
 function jumpToLine(row) {
@@ -246,13 +254,76 @@ function chipLayers(chip) {
 }
 
 var layerOnly = document.getElementById("layer-only");
+var layerPrevious = document.getElementById("layer-prev");
 var layerNext = document.getElementById("layer-next");
+var layerPosition = document.getElementById("layer-position");
 var layerCount = document.getElementById("layer-legend-count");
 var comparisonToggle = document.getElementById("analysis-comparison-enabled");
-var outlierCursor = 0;
+var layerOutliers = [];
 
 function outlierChips() {
-  return Array.prototype.slice.call(document.querySelectorAll(".chip.outlier"));
+  return layerOutliers;
+}
+
+function currentOutlierPassage() {
+  var selection = window.getSelection();
+  var node = selection && !selection.isCollapsed && selection.focusNode;
+  var element = node && (node.nodeType === 1 ? node : node.parentElement);
+  var selected = element && element.closest("#chapters .ptext");
+  if (selected) return selected;
+  var focused = document.activeElement && document.activeElement.closest("#chapters .ptext");
+  if (focused) {
+    var bounds = focused.getBoundingClientRect();
+    var controls = document.getElementById("manuscript-reader-controls");
+    var boundary = controls ? controls.getBoundingClientRect().bottom : 0;
+    if (bounds.height > 0 && bounds.bottom > boundary && bounds.top < innerHeight) return focused;
+  }
+  var anchor = window.LixityReader && window.LixityReader.capture();
+  if (anchor) return anchor.panel;
+  // Standalone reports use the same navigation without the continuous reader.
+  return Array.prototype.find.call(document.querySelectorAll("#chapters .ptext.open"), function(panel) {
+    var bounds = panel.getBoundingClientRect();
+    return bounds.height > 0 && bounds.bottom > 0 && bounds.top < innerHeight;
+  }) || null;
+}
+
+function syncOutlierNavigation() {
+  var chips = outlierChips(), panel = chips.length ? currentOutlierPassage() : null;
+  var position = panel ? chips.findIndex(function(chip) { return chip.dataset.target === panel.id; }) + 1 : 0;
+  if (layerPosition) {
+    var text = position + " / " + chips.length;
+    if (layerPosition.textContent !== text) layerPosition.textContent = text;
+    if (UI_LABELS) {
+      var description = uiFormat("layer_position", {current: position, total: chips.length});
+      if (layerPosition.getAttribute("aria-label") !== description) {
+        layerPosition.setAttribute("aria-label", description);
+        layerPosition.title = description;
+      }
+    }
+  }
+  var disabled = !chips.length || !layer || !layer.value || Boolean(comparisonToggle && !comparisonToggle.checked);
+  if (layerPrevious) layerPrevious.disabled = disabled;
+  if (layerNext) layerNext.disabled = disabled;
+}
+
+function stepOutlier(direction) {
+  var chips = outlierChips();
+  if (!chips.length) return;
+  var panel = currentOutlierPassage();
+  var candidates = direction < 0 ? chips.slice().reverse() : chips;
+  var chip = panel && candidates.find(function(candidate) {
+    var target = document.getElementById(candidate.dataset.target);
+    return target && Boolean(panel.compareDocumentPosition(target) & (direction < 0 ? 2 : 4));
+  });
+  chip = chip || candidates[0];
+  var target = document.getElementById(chip.dataset.target);
+  // A selection supplies the first origin, then the new passage owns later steps.
+  var selection = window.getSelection();
+  if (selection && !selection.isCollapsed) selection.removeAllRanges();
+  toggleParagraph(chip, true, true);
+  rememberPassageLocation(target);
+  scrollAndFlash(target || chip, {analysisVisible: true});
+  syncOutlierNavigation();
 }
 
 function paintLayerAction(panel, info) {
@@ -326,7 +397,7 @@ function applyLayer() {
       paintLayerAction(panel, info);
     }
   });
-  outlierCursor = 0;
+  layerOutliers = Array.prototype.slice.call(document.querySelectorAll(".chip.outlier"));
   if (layerLegend) {
     layerLegend.hidden = !key;
     if (key && layer) {
@@ -349,11 +420,11 @@ function applyLayer() {
           notable: count, comparable: comparable, total: layerLegend.dataset.profiled
         }) : uiLabel("layer_unavailable");
       }
-      if (layerNext) layerNext.disabled = count === 0 || !comparing;
       if (layerOnly) layerOnly.disabled = comparable === 0 || !comparing;
       if (comparable === 0 || !comparing) setFilter(layerOnly, "layer-only", false);
     }
   }
+  syncOutlierNavigation();
   syncEvidenceLegend();
   document.dispatchEvent(new CustomEvent("lixity:analysis-layer-change"));
 }
@@ -367,26 +438,31 @@ if (layerOnly) {
     document.body.classList.toggle("layer-only", layerOnly.checked);
   });
 }
-if (layerNext) {
-  layerNext.addEventListener("click", function () {
-    var chips = outlierChips();
-    if (!chips.length) return;
-    if (outlierCursor >= chips.length) outlierCursor = 0;
-    var chip = chips[outlierCursor++];
-    toggleParagraph(chip, true, true);
-    scrollAndFlash(document.getElementById(chip.dataset.target) || chip);
-  });
+if (layerPrevious) layerPrevious.addEventListener("click", function() { stepOutlier(-1); });
+if (layerNext) layerNext.addEventListener("click", function() { stepOutlier(1); });
+var outlierFrame = null;
+function scheduleOutlierNavigation() {
+  if (outlierFrame !== null) return;
+  outlierFrame = requestAnimationFrame(function() { outlierFrame = null; syncOutlierNavigation(); });
 }
+var outlierScrollTimer = null;
+document.addEventListener("scroll", function() {
+  clearTimeout(outlierScrollTimer);
+  outlierScrollTimer = setTimeout(scheduleOutlierNavigation, 120);
+}, {capture: true, passive: true});
+document.addEventListener("scrollend", function() {
+  clearTimeout(outlierScrollTimer); scheduleOutlierNavigation();
+}, {capture: true, passive: true});
+document.addEventListener("selectionchange", scheduleOutlierNavigation);
+document.addEventListener("focusin", scheduleOutlierNavigation);
 
 function jumpToChapter(cell) {
   var key = cell.getAttribute("data-layer");
-  if (key && layer) {
-    layer.value = key;
-    applyLayer();
-  }
+  if (cell.hasAttribute("data-layer")) selectAnalysisMetric(key);
   var section = document.getElementById("ch-" + cell.getAttribute("data-chapter"));
   if (!section) return;
-  scrollAndFlash(section);
+  rememberPassageLocation(section);
+  scrollAndFlash(section, {analysisVisible: cell.hasAttribute("data-layer") ? true : undefined});
 }
 
 if (layer) {
@@ -406,6 +482,7 @@ document.addEventListener("lixity:workbench-change", function() {
     var chip = paragraphChips[panel.id];
     paintLayerAction(panel, chip && layer ? chipLayers(chip)[layer.value] : null);
   });
+  syncOutlierNavigation();
 });
 async function jsonApi(url, options, responseType) {
   var t0 = performance.now();

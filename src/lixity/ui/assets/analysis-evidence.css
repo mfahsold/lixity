@@ -60,7 +60,7 @@
 .analysis-evidence-comparison-label { display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-1) var(--space-2); color: var(--muted); font-size: var(--text-note); }
 .analysis-evidence-comparison-label > span::before { content: ""; display: inline-block; width: .45rem; height: .45rem; margin-inline-end: .4rem; border-radius: var(--radius-pill); background: var(--evidence-comparison-color); }
 .analysis-evidence-comparison-label strong { color: var(--fg); font-variant-numeric: tabular-nums; }
-.analysis-evidence-scale { position: relative; height: 8px; margin-block: var(--space-2) var(--space-1); border-radius: var(--radius-pill); background: linear-gradient(to right, color-mix(in srgb, var(--accent) 48%, var(--surface)), var(--bg-subtle) 50%, color-mix(in srgb, var(--past) 48%, var(--surface))); }
+.analysis-evidence-scale { position: relative; height: 8px; margin-block: var(--space-2) var(--space-1); border-radius: var(--radius-pill); background: var(--analysis-comparison-gradient); }
 .analysis-evidence-scale::before { content: ""; position: absolute; inset-inline-start: 50%; top: -2px; height: 12px; width: 1px; background: var(--muted); }
 .analysis-evidence-scale span { position: absolute; inset-inline-start: clamp(5px, var(--evidence-comparison-position), calc(100% - 5px)); top: -1px; width: 10px; height: 10px; border: 2px solid var(--fg); border-radius: var(--radius-pill); background: var(--evidence-comparison-color); transform: translateX(-50%); }
 .analysis-evidence-card .analysis-evidence-unavailable { margin-block: var(--space-2) 0; color: var(--muted); font-size: var(--text-note); }

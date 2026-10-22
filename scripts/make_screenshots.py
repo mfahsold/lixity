@@ -165,7 +165,23 @@ def build_research_demo(root: Path, project: Path) -> Path:
                           description="Explore one fictional harbour project: compare six manuscript chapters, then follow a dossier through retained evidence to an authored claim and the same manuscript passage.",
                           language="en", preview_image=("screenshots/dashboard-dossier-image.png",
                               "Historical Hamburg map retained with source provenance in a research dossier"))
-    policy = '<style>#example-context { margin-block: 1rem; }</style>'
+    policy = (
+        '<style>'
+        '#example-context { margin-block: 1rem; }'
+        '.demo-quick-start { display: flex; align-items: center; justify-content: space-between; '
+        'gap: var(--space-3); margin-block: var(--space-3); padding: var(--space-3); '
+        'border-inline-start: 3px solid var(--accent); background: var(--surface); }'
+        '.demo-quick-start-copy { min-width: 0; }'
+        '.demo-quick-start h2 { margin: 0 0 var(--space-1); font-size: var(--text-body); }'
+        '.demo-quick-start p { margin: 0; color: var(--fg-secondary); }'
+        '.demo-quick-start-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); flex-shrink: 0; }'
+        '@media (max-width: 600px) { .demo-quick-start { align-items: stretch; flex-direction: column; '
+        'gap: var(--space-2); padding: var(--space-2); } '
+        '.demo-quick-start-actions { flex-wrap: nowrap; gap: var(--space-1); } '
+        '.demo-quick-start-actions > .ctl { width: auto; min-height: 2rem; padding: .25rem .45rem; '
+        'font-size: var(--text-small); } }'
+        '</style>'
+    )
     counter = _analytics_endpoint(root)
     counter_source = f" {counter}" if counter else ""
     site_code = counter.removeprefix("https://").split(".", 1)[0] if counter else None
@@ -210,12 +226,25 @@ def build_research_demo(root: Path, project: Path) -> Path:
         + "".join("<p>" + paragraph + "</p>" for paragraph in about_paragraphs)
         + '</details>'
     )
-    fallback = ('<noscript><style>.view-navigation,#project-controls,#view-pane-research,#view-pane-project,.reader-controls,.marker-row {display:none !important;}'
+    fallback = ('<noscript><style>.view-navigation,#project-controls,#view-pane-research,#view-pane-project,.reader-controls,.marker-row,#demo-quick-start {display:none !important;}'
                 '#view-pane-analysis {display:block !important;}</style>'
                 '<section class="panel"><p>Interactive research requires JavaScript. '
                 'The complete manuscript analysis, PDF downloads and source credits remain available below. '
                 '<a href="../guides/installation.html">Install the full local app</a>.</p></section></noscript>')
     document = _insert_notice(document, fallback)
+    quick_start = (
+        '<section class="panel demo-quick-start" id="demo-quick-start" aria-labelledby="demo-quick-start-title">'
+        '<div class="demo-quick-start-copy"><h2 id="demo-quick-start-title">Explore this project</h2>'
+        '<p>Read the manuscript, then explore its linked research.</p></div>'
+        '<div class="demo-quick-start-actions">'
+        '<button class="ctl" type="button" data-switch-view="analysis">Read the manuscript</button>'
+        '<button class="ctl" type="button" data-switch-view="research">Explore research</button>'
+        '</div></section>'
+    )
+    navigation_content = '<div id="workspace-navigation-content">'
+    if document.count(navigation_content) != 1:
+        raise ValueError("The demo must retain one native workspace navigation container")
+    document = document.replace(navigation_content, quick_start + navigation_content, 1)
     credits = ['<section class="panel" id="research-source-credits"><h2>Image source credits</h2>']
     for item, _content in reviewed_visual_sources():
         credits.append(f'<h3>{html.escape(item["title"])}</h3><p>{html.escape(item["created_period"])}. '

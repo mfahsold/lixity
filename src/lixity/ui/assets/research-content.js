@@ -310,6 +310,7 @@ function researchDossierBodyHtml(bodyText, dossierContext) {
 
 function researchDossierDetailHtml(detail, readOnly) {
   readOnly = readOnly || window.LixitySite.readOnly;
+  var imageContext = Object.assign({}, detail, {image_editable: !readOnly});
   var reviewAlert = "";
   if (detail.review_needed && detail.decision_reviews && detail.decision_reviews.length) {
     var needed = detail.decision_reviews.filter(function(r) { return r.status === "review_needed"; });
@@ -327,7 +328,7 @@ function researchDossierDetailHtml(detail, readOnly) {
       return '<details class="research-dossier-section-block" open>' +
         '<summary><span>' + escapeHtml(k) + '</span></summary>' +
         (readOnly ? "" : researchDossierSectionAction(detail, k)) +
-        '<div class="research-prose markdown-body">' + renderSafeMarkdown(detail.section_map[k], detail) + '</div>' +
+        '<div class="research-prose markdown-body">' + renderSafeMarkdown(detail.section_map[k], imageContext) + '</div>' +
       '</details>';
     }).join("");
     bodyHtml = '<div class="research-dossier-body-wrap">' +
@@ -339,7 +340,7 @@ function researchDossierDetailHtml(detail, readOnly) {
     '</div>';
   } else {
     bodyHtml = (readOnly ? "" : (detail.editable_sections || []).map(function(section) { return researchDossierSectionAction(detail, section); }).join("")) +
-      researchDossierBodyHtml(detail.body, detail);
+      researchDossierBodyHtml(detail.body, imageContext);
   }
   var markup = '<div class="research-dossier-folder">' + reviewAlert +
     '<nav class="row" aria-label="' + escapeHtml(uiLabel("research_folder_global")) + '">' +
@@ -367,6 +368,7 @@ var researchDossierContentsSerial = 0;
 function researchDossierContentsHtml(markup) {
   var template = document.createElement("template"); template.innerHTML = markup;
   var folder = template.content.firstElementChild, prefix = "dossier-section-" + (++researchDossierContentsSerial) + "-";
+  if (window.LixityDossierImages) window.LixityDossierImages.addOverview(folder);
   var contents = document.createElement("details"); contents.className = "research-dossier-contents";
   contents.dataset.sectionContents = ""; contents.open = !window.matchMedia("(max-width: 900px)").matches;
   var summary = document.createElement("summary"); summary.textContent = uiLabel("research_sections");

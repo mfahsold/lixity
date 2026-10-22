@@ -121,6 +121,9 @@
       readChapter.setAttribute("href", "#ch-" + selectedPoint.ch);
       readChapter.setAttribute("data-jump", "#ch-" + selectedPoint.ch);
     }
+    document.querySelectorAll("#dimensions [data-dimension-loading]").forEach(function(loading) {
+      loading.setAttribute("data-jump", "#ch-" + selectedPoint.ch);
+    });
   }
 
   function selectChapter(point) {

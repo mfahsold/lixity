@@ -200,6 +200,56 @@ def _escaped(body: str, offset: int) -> bool:
 
 
 @dataclass(frozen=True)
+class MarkdownImageReference:
+    start: int
+    end: int
+    marker: str
+    destination: str
+
+
+def extract_markdown_image_references(body: str) -> list[MarkdownImageReference]:
+    """Find active single-line inline image syntax without resolving its target."""
+    masked = markdown_code_mask(body)
+    starts = re.compile(r"!\[((?:\\[^\r\n]|[^\]\\\r\n])*)\]\(")
+    references: list[MarkdownImageReference] = []
+    for match in starts.finditer(body):
+        if masked[match.start()] != "!" or _escaped(body, match.start()):
+            continue
+        depth, angle, quote = 1, False, None
+        end = match.end()
+        while end < len(body) and body[end] not in "\r\n":
+            character = body[end]
+            if character == "\\":
+                end += 2
+                continue
+            if quote:
+                if character == quote:
+                    quote = None
+            elif angle:
+                if character == ">":
+                    angle = False
+            elif character == "<" and not body[match.end():end].strip():
+                angle = True
+            elif character in "\"'" and end > match.end() and body[end - 1].isspace():
+                quote = character
+            elif character == "(":
+                depth += 1
+            elif character == ")":
+                depth -= 1
+                if depth == 0:
+                    break
+            end += 1
+        if depth or quote or angle:
+            continue
+        marker_end = end + 1
+        references.append(MarkdownImageReference(
+            start=match.start(), end=marker_end, marker=body[match.start():marker_end],
+            destination=body[match.end():end].strip(),
+        ))
+    return references
+
+
+@dataclass(frozen=True)
 class ImageReference:
     source_id: str
     source_version_id: str

@@ -13,6 +13,8 @@
   --accent-light: light-dark(#eaf2f8, #202f43);
   --accent-focus: light-dark(rgba(43, 92, 143, 0.25), rgba(74, 138, 212, 0.35));
   --analysis-evidence-color: light-dark(#6f45a5, #c9afff);
+  /* z_color positions across the fixed -2.5 to +2.5 comparison range. */
+  --analysis-comparison-gradient: linear-gradient(90deg in srgb, #2b6cb0 0%, #7ba7d0 30%, #e5e7eb 50%, #e8b07a 70%, #c05621 100%);
   --present: light-dark(#2d8664, #34d399);
   --present-light: light-dark(#e6f4ea, #064e3b);
   --past: light-dark(#b57635, #fbbf24);

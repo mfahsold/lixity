@@ -29,8 +29,8 @@ print(json.dumps(render_analysis(analysis, resolved, title='Synthetic long manus
 (async () => {
   const browser = await launchChromium();
   try {
-    for (const width of [1440, 320]) {
-      const page = await browser.newPage({viewport: {width, height: 900}, reducedMotion: 'reduce'});
+    for (const width of [1440, 320]) for (const reducedMotion of ['reduce', 'no-preference']) {
+      const page = await browser.newPage({viewport: {width, height: 900}, reducedMotion});
       const errors = [], writes = [];
       page.on('pageerror', error => errors.push(error.message));
       await page.route('http://lixity.test/**', route => {
@@ -64,10 +64,35 @@ print(json.dumps(render_analysis(analysis, resolved, title='Synthetic long manus
       await toggle.click(); await toggle.click();
       assert.deepEqual(await last.evaluate(node => ({id: node.id, hash: node.dataset.paragraphSha256,
         start: node.dataset.start, end: node.dataset.end, text: node.querySelector('.ptext-inner > p').textContent})), identity);
+      if (reducedMotion === 'no-preference') {
+        await last.scrollIntoViewIfNeeded();
+        await toggle.click();
+        const work = await page.evaluate(() => {
+          const chapters = document.getElementById('chapters');
+          const visibleParagraphs = Array.from(chapters.querySelectorAll('.chapter')).filter(node => {
+            const box = node.getBoundingClientRect(); return box.bottom > 0 && box.top < innerHeight;
+          }).reduce((count, node) => count + node.querySelectorAll('.ptext').length, 0);
+          const original = Element.prototype.getBoundingClientRect;
+          let reads = 0;
+          Element.prototype.getBoundingClientRect = function() {
+            if (this.matches('.ptext')) reads++;
+            return original.call(this);
+          };
+          try { LixityMotion.analysis(chapters); }
+          finally { Element.prototype.getBoundingClientRect = original; }
+          return {reads, visibleParagraphs, marked: chapters.querySelectorAll('.reader-layer-enter').length};
+        });
+        assert.ok(work.reads > 0 && work.reads <= work.visibleParagraphs,
+          'Motion measures paragraphs in visible chapters, not the entire manuscript: ' + JSON.stringify(work));
+        assert.ok(work.marked > 0 && work.marked <= 8, 'Normal motion remains bounded to eight visible feedback targets');
+        await page.emulateMedia({reducedMotion: 'reduce'});
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        assert.equal(await page.locator('.reader-layer-enter').count(), 0, 'A live preference change clears layer feedback');
+      }
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       assert.deepEqual(errors, []); assert.deepEqual(writes, []);
       await page.close();
     }
-    console.log('Long manuscript:100k synthetic words/2000 paragraphs ready, searchable, selectable and reversible at1440/320.');
+    console.log('Long manuscript: 100k synthetic words/2000 paragraphs ready, searchable, selectable and reversible at 1440/320; ordinary/reduced motion bounds geometry reads and feedback targets.');
   } finally {await browser.close();}
 })().catch(error => {console.error(error); process.exitCode = 1;});

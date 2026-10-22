@@ -31,7 +31,10 @@
         }
         value.analysisVisible = true; value.surface = "overview"; value.contextTool = "none";
       } else if (value.surface === "overview") {
-        value.surface = "document"; value.contextTool = suspendedTool; value.analysisVisible = suspendedAnalysis;
+        value.surface = "document"; value.contextTool = suspendedTool;
+        value.analysisVisible = command.analysisVisible === undefined ? suspendedAnalysis : Boolean(command.analysisVisible);
+      } else if (command.analysisVisible !== undefined) {
+        value.analysisVisible = Boolean(command.analysisVisible);
       }
       value.transient = null;
     } else if (command.type === "tool") {

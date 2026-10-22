@@ -60,6 +60,9 @@ research, a dossier alongside the manuscript, prepared PDF downloads and a
 claim-evidence matrix.
 Editing, project administration, archive Search and Compare are unavailable in
 the reading copy. Manuscript search and research list filters remain available.
+At the top of the demo, **Read the manuscript** and **Explore research** switch
+the native workspace views; both use the same prepared, read-only project
+snapshot.
 The demo cannot import or save; generating new analysis or PDFs requires the
 [local app](../guides/installation.html).
 

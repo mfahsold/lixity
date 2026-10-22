@@ -548,7 +548,7 @@ table.heatmap th.ch { z-index: 3; }
   width: 7rem;
   height: .55rem;
   border-radius: var(--radius-xs);
-  background: linear-gradient(90deg, #2b6cb0, #7ba7d0, #e4e6ea, #e8b07a, #c05621);
+  background: var(--analysis-comparison-gradient);
 }
 
 /* --- Flagged passages list -------------------------------------------- */

@@ -35,6 +35,7 @@ from .images import (
     IMAGE_SUFFIXES,
     IMAGE_TYPES,
     extract_image_references,
+    extract_markdown_image_references,
     image_descriptions,
     resolve_dossier_images,
     validate_image,
@@ -450,6 +451,7 @@ def read_image(project: str | Path, *, project_id: str, source_id: str, version_
 def attach_dossier_image(project: str | Path, dossier_id: str, content: bytes, *, filename: str,
                          expected_snapshot: str, expected_revision: int, allow_retention: bool = False,
                          alt: str = "", caption: str | None = None, section: str | None = None,
+                         replace_reference: str | None = None,
                          title: str | None = None, context: Mapping[str, Any] | None = None,
                          origin_url: str | None = None, reason: str | None = None,
                          change_kind: str = "supersession", actor: str = "local-author") -> dict[str, Any]:
@@ -472,6 +474,16 @@ def attach_dossier_image(project: str | Path, dossier_id: str, content: bytes, *
         raise ResearchError("Image attachment requires a dossier")
     if snapshot.digest != expected_snapshot or previous.revision != expected_revision:
         raise ResearchConflictError("Research snapshot or dossier revision changed; reload and retry attachment")
+    replacement = None
+    if replace_reference is not None:
+        if not isinstance(replace_reference, str) or not replace_reference or section is not None:
+            raise ResearchError("Image replacement requires one exact ordinary Markdown image reference")
+        matches = [reference for reference in extract_markdown_image_references(previous.body)
+                   if reference.marker == replace_reference
+                   and not re.match(r"<?lixity:", reference.destination, re.IGNORECASE)]
+        if previous.body.count(replace_reference) != 1 or len(matches) != 1:
+            raise ResearchError("Image replacement reference must occur exactly once outside Markdown code")
+        replacement = matches[0]
     validate_image(content, filename=filename)
     with tempfile.TemporaryDirectory(prefix="lixity-image-") as directory:
         path = Path(directory) / ("image" + Path(filename).suffix.lower())
@@ -482,7 +494,9 @@ def attach_dossier_image(project: str | Path, dossier_id: str, content: bytes, *
     markup = f"![{escaped_alt}](lixity:image/{prepared.source_id}/{prepared.result['source_version_id']})"
     if caption:
         markup += "\n\n" + caption
-    if section is None:
+    if replacement is not None:
+        body = previous.body[:replacement.start] + markup + previous.body[replacement.end:]
+    elif section is None:
         line_break = re.search(r"\r\n|\r|\n", previous.body)
         newline = line_break.group() if line_break else "\n"
         prefix = "" if not previous.body or previous.body.endswith(newline * 2) else newline if previous.body.endswith(newline) else newline * 2
@@ -491,10 +505,10 @@ def attach_dossier_image(project: str | Path, dossier_id: str, content: bytes, *
         if not isinstance(section, str):
             raise ResearchError("Image section must identify an existing unique dossier heading")
         spans = _section_spans(previous.body)
-        matches = [span for span in spans if span.title.casefold() == section.strip().casefold()]
-        if len(matches) != 1:
+        section_matches = [span for span in spans if span.title.casefold() == section.strip().casefold()]
+        if len(section_matches) != 1:
             raise ResearchError("Image section must identify an existing unique dossier heading")
-        selected = matches[0]
+        selected = section_matches[0]
         existing = previous.body[selected.content_start:_section_subtree_end(spans, selected, len(previous.body))]
         body = update_section(previous.body, section, existing.rstrip() + "\n\n" + markup)
     if not any(ref.source_id == prepared.source_id and ref.source_version_id == prepared.result["source_version_id"]

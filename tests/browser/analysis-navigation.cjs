@@ -16,6 +16,7 @@ from lixity.language import get_language_profile
 from lixity.pipeline import analyze_document
 from lixity.scenes import scene_report_for_display
 from lixity.ui import render_dashboard
+from lixity.ui.manuscript_document import reader_blocks
 from lixity.workspace_labels import WORKSPACE_LABELS
 
 voices = (
@@ -34,6 +35,10 @@ analysis = analyze_document(text, config, resolve_thresholds(project_config={}))
 analysis.paragraphs[0].severity = 3
 analysis.chapters[0].flagged = sum(paragraph.is_flagged for paragraph in analysis.paragraphs
                                 if paragraph.chapter_num == analysis.chapters[0].num)
+# Controlled paragraph display values provide several outliers; chapter/PCA
+# measurements retain their independently computed synthetic-text baselines.
+for index, paragraph in enumerate(analysis.paragraphs):
+    paragraph.asl = (0, 1, 2, 3, 8, 30, 60)[index % 7]
 scenes = scene_report_for_display(text, config, premeasured_chapters=analysis.metrics.chapters)
 result = {}
 for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
@@ -41,7 +46,9 @@ for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
         analysis.chapters, analysis.paragraphs, metrics=analysis.metrics,
         fingerprint=analysis.fingerprint, scenes=scenes, title='Synthetic navigation',
         labels={**get_language_profile(locale).labels, **WORKSPACE_LABELS[locale]},
-        language_key=locale, controls=True, enabled_actions=['analyze'])
+        language_key=locale, controls=True, enabled_actions=['analyze', 'research-reader'],
+        manuscript_pdf_token='synthetic-navigation-project',
+        reader_document=reader_blocks(text, config, analysis.paragraphs))
 print(json.dumps(result))
 `, {root});
 
@@ -106,6 +113,116 @@ async function finish(page, errors, writes) {
   }
   try {
     for (const width of [1440, 320]) {
+      await check('compact abnormal paragraph navigation ' + width, async () => {
+        const {page, errors, writes} = await createPage(browser, 'en', width);
+        try {
+          await page.locator('#manuscript-analysis-toggle').click();
+          assert.equal(await page.locator('#manuscript-reader-controls #style-layer').count(), 1,
+            'The only metric selector stays in the sticky reading controls');
+          assert.equal(await page.locator('#manuscript-reader-controls #analysis-evidence-enabled').count(), 1);
+          assert.equal(await page.locator('#manuscript-reader-controls #analysis-comparison-enabled').count(), 1);
+          assert.equal(await page.locator('#layer-prev').count(), 1);
+          const metric = await page.locator('#style-layer').evaluate(select => {
+            const cutoff = Number(document.getElementById('layer-legend').dataset.cutoff);
+            return Array.from(select.options).map(option => ({key: option.value,
+              ids: Array.from(document.querySelectorAll('#chapters .chip')).filter(chip => {
+                const info = JSON.parse(chip.dataset.layers || '{}')[option.value];
+                return info && Math.abs(info[2]) >= cutoff;
+              }).map(chip => chip.dataset.target),
+            })).find(candidate => candidate.ids.length >= 3);
+          });
+          assert.ok(metric, 'The synthetic manuscript has multiple abnormal paragraphs for one metric');
+          await page.locator('#style-layer').selectOption(metric.key);
+          const middle = Math.floor(metric.ids.length / 2);
+          await page.evaluate(id => scrollAndFlash(document.getElementById(id)), metric.ids[middle]);
+          await settle(page);
+          assert.equal((await page.locator('#layer-position').textContent()).trim(), `${middle + 1} / ${metric.ids.length}`);
+          await page.locator('#layer-next').focus(); await page.keyboard.press('Enter'); await settle(page);
+          assert.equal(new URL(page.url()).hash, '#' + metric.ids[(middle + 1) % metric.ids.length],
+            'Next continues from the current passage in manuscript order');
+          await page.locator('#analysis-comparison-enabled').uncheck();
+          await page.locator('#analysis-comparison-enabled').check();
+          await page.locator('#layer-prev').focus(); await page.keyboard.press('Space'); await settle(page);
+          assert.equal(new URL(page.url()).hash, '#' + metric.ids[middle],
+            'Reapplying the same metric does not reset abnormal navigation to the first paragraph');
+          assert.equal(await page.locator('#style-layer').inputValue(), metric.key);
+          assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'true');
+          await page.evaluate(({focused, current}) => {
+            const panel = document.getElementById(focused); panel.tabIndex = -1;
+            panel.focus({preventScroll: true}); scrollAndFlash(document.getElementById(current));
+          }, {focused: metric.ids[0], current: metric.ids[middle]});
+          await settle(page);
+          assert.equal((await page.locator('#layer-position').textContent()).trim(), `${middle + 1} / ${metric.ids.length}`,
+            'A paragraph focused above the viewport does not override the current reading position');
+          await page.locator('#' + metric.ids[middle] + ' .ptext-inner > p').evaluate(prose => {
+            const range = document.createRange(); range.selectNodeContents(prose);
+            const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range);
+          });
+          await page.locator('#layer-next').click(); await settle(page);
+          assert.equal(new URL(page.url()).hash, '#' + metric.ids[(middle + 1) % metric.ids.length],
+            'A selected passage supplies the starting point for paragraph navigation');
+          await page.locator('#layer-next').click(); await settle(page);
+          assert.equal(new URL(page.url()).hash, '#' + metric.ids[(middle + 2) % metric.ids.length],
+            'A previous text selection does not restart each subsequent navigation step');
+          await page.locator('#text-search').fill('Synthetic passage 0.');
+          await page.locator('#text-search').press('Enter'); await settle(page);
+          await page.locator('#layer-next').click(); await settle(page);
+          assert.equal(await page.locator('#' + metric.ids[0]).isVisible(), true,
+            'Global paragraph navigation reveals an abnormal passage outside the current search');
+          assert.equal(await page.locator('#text-search').inputValue(), '');
+          assert.equal(await page.locator('#style-layer').inputValue(), metric.key,
+            'Revealing a filtered passage retains the selected metric');
+          await page.locator('#style-layer').selectOption('');
+          assert.equal(await page.locator('#layer-prev').isDisabled(), true);
+          assert.equal(await page.locator('#layer-next').isDisabled(), true);
+          assert.equal((await page.locator('#layer-position').textContent()).trim(), '0 / 0');
+          await finish(page, errors, writes);
+        } finally { await page.close(); }
+      });
+
+      await check('metric and dimension chapter drills ' + width, async () => {
+        const {page, errors, writes} = await createPage(browser, 'en', width);
+        try {
+          await page.locator('#text-search').fill('quiet garden');
+          await page.locator('#text-search').press('Enter'); await settle(page);
+          await openOverview(page);
+          await page.locator('#analysis-measurements > summary').click();
+          await page.evaluate(() => revealStyleTarget(document.getElementById('heatmap')));
+          const supported = page.locator('#heatmap td.z[data-layer=asl]').last();
+          const chapter = await supported.getAttribute('data-chapter');
+          await supported.focus(); await page.keyboard.press('Enter'); await settle(page);
+          assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'true',
+            'A metric-specific chapter drill carries its metric into visible Analysis');
+          assert.equal(await page.locator('#style-layer').inputValue(), 'asl');
+          assert.equal(await page.locator('#ch-' + chapter).isVisible(), true,
+            'The chosen metric chapter is revealed beyond the previous search filter');
+          assert.equal(await page.locator('#text-search').inputValue(), '');
+          assert.equal(await page.evaluate(() => document.activeElement.id), 'ch-' + chapter,
+            'A keyboard metric drill keeps focus on its revealed chapter after clearing search');
+          assert.equal(new URL(page.url()).hash, '#ch-' + chapter);
+          await openOverview(page);
+          await page.evaluate(() => revealStyleTarget(document.getElementById('heatmap')));
+          const unsupported = page.locator('#heatmap td.z[data-layer=""]').last();
+          assert.ok(await unsupported.count(), 'There is a chapter-only measurement in the synthetic matrix');
+          await unsupported.focus(); await page.keyboard.press('Enter'); await settle(page);
+          assert.equal(await page.locator('#style-layer').inputValue(), '',
+            'A chapter-only measurement never displays the previous paragraph metric');
+          assert.equal(await page.locator('#chapters .metric-notable').count(), 0);
+          await openOverview(page);
+          await page.evaluate(() => revealStyleTarget(document.getElementById('dimensions')));
+          const chosen = await page.locator('#dim-chapter-select option').last().getAttribute('value');
+          await page.locator('#dim-chapter-select').selectOption(chosen);
+          const loading = page.locator('#dimensions .load[data-layer]').first();
+          const key = await loading.getAttribute('data-layer');
+          await loading.focus(); await page.keyboard.press('Enter'); await settle(page);
+          assert.equal(new URL(page.url()).hash, '#ch-' + chosen,
+            'Dimension loadings retain the selected chapter when returning to the manuscript');
+          assert.equal(await page.locator('#style-layer').inputValue(), key);
+          assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'true');
+          await finish(page, errors, writes);
+        } finally { await page.close(); }
+      });
+
       await check('bottom selection ' + width, async () => {
         const {page, errors, writes} = await createPage(browser, 'en', width);
         try {
@@ -238,6 +355,23 @@ async function finish(page, errors, writes) {
       await check('localized navigation spacing ' + locale + ' ' + width, async () => {
         const {page, errors, writes} = await createPage(browser, locale, width);
         try {
+          await page.locator('#manuscript-analysis-toggle').click();
+          if (width === 320) await page.setViewportSize({width, height: 480});
+          await page.locator('#manuscript-reader-controls').evaluate(node => { node.scrollTop = 0; });
+          await settle(page);
+          const controls = await page.locator('#manuscript-reader-controls').boundingBox();
+          if (width === 320) assert.ok(controls.height <= 480 * .45 + 1,
+            'Compact analysis leaves most of the short viewport available for manuscript prose');
+          for (const selector of ['#style-layer', '.reader-outlier-navigation', '.reader-evidence-toggle',
+            '.reader-comparison-toggle', '#reader-settings > summary', '#reader-focus', '#workbench-overview-open',
+            '#workspace-reader-toggle']) {
+            const box = await page.locator(selector).boundingBox();
+            assert.ok(box && box.y >= controls.y - 1 && box.y + box.height <= controls.y + controls.height + 1,
+              `${selector} stays visible in compact localized reading controls: ${JSON.stringify({box, controls})}`);
+          }
+          await page.screenshot({path: path.join(artifacts, `analysis-controls-${locale}-${width}.png`)});
+          if (width === 320) await page.setViewportSize({width, height: 900});
+          await page.locator('#manuscript-analysis-toggle').click();
           await openOverview(page);
           const links = await page.locator('#analysis-sections a').evaluateAll(nodes => nodes.map(node => ({
             box: node.getBoundingClientRect().toJSON(), targetExists: !!document.getElementById(node.dataset.sectionLink),
@@ -268,7 +402,8 @@ async function finish(page, errors, writes) {
       });
     }
     if (failures.length) throw new AggregateError(failures, 'Analysis navigation regressions');
-    console.log('Analysis navigation: bottom selection, hidden targets, keyboard destinations, nested disclosures, ' +
+    console.log('Analysis navigation: compact localized controls, passage-relative abnormal navigation, metric/chapter context, ' +
+      'bottom selection, hidden targets, keyboard destinations, nested disclosures, ' +
       'normal/reduced-motion passage/context return, hidden Style tabs, seven-language spacing and horizontal keyboard navigation ' +
       'at desktop/mobile passed. Screenshots: ' + artifacts);
   } finally { await browser.close(); }

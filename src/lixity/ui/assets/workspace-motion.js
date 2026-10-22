@@ -22,10 +22,20 @@
     animation.onfinish = function() { if (animations.get(node) === animation) animations.delete(node); };
   }
   function visible(root, selector) {
-    return Array.from(root.querySelectorAll(selector)).filter(function(node) {
+    var nodes = [], chapters = new Map();
+    Array.prototype.some.call(root.querySelectorAll(selector), function(node) {
+      var chapter = node.closest(".chapter");
+      if (chapter) {
+        // One chapter bound avoids measuring every paragraph in offscreen chapters.
+        if (!chapters.has(chapter)) chapters.set(chapter, chapter.getBoundingClientRect());
+        var bounds = chapters.get(chapter);
+        if (bounds.bottom <= 0 || bounds.top >= innerHeight) return false;
+      }
       var rect = node.getBoundingClientRect();
-      return rect.height > 0 && rect.height <= innerHeight * 2 && rect.bottom > 0 && rect.top < innerHeight;
-    }).slice(0, 8);
+      if (rect.height > 0 && rect.height <= innerHeight * 2 && rect.bottom > 0 && rect.top < innerHeight) nodes.push(node);
+      return nodes.length === 8;
+    });
+    return nodes;
   }
   function markPassage(node) {
     ++passageRevision;

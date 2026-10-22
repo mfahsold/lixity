@@ -5,6 +5,8 @@
   var uuid = "urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
   var target = new RegExp("^lixity:image/(" + uuid + ")/(" + uuid + ")$");
   var reads = new Map();
+  var replacements = new WeakMap();
+  var mediaSequence = 0;
   var state = {generation: 0, pending: false, bytes: null, url: null, current: null, review: null};
   var dialog, form;
   function label(key) {
@@ -96,19 +98,76 @@
       '" loading="lazy" decoding="async"></button><figcaption>' + safe(image.title || alt || label("attachment")) +
       ' <span class="ctl-note">' + safe(label("retained")) + '</span>' + sourceContextHtml(image, true) + '</figcaption></figure>';
   }
+  function sourcePreviewHtml(detail, projectId) {
+    if (!detail || !projectId || !["image/png", "image/jpeg"].includes(detail.media_type)) return "";
+    var pin = target.exec("lixity:image/" + detail.id + "/" + detail.version_id);
+    if (!pin) return "";
+    var image = {project_id: projectId, source_id: detail.id, source_version_id: detail.version_id,
+      availability: "available", media_type: detail.media_type, title: detail.title};
+    return figure(detail.title || label("attachment"), pin, {project_id: projectId, images: [image]});
+  }
+  // Recognize bounded, single-line inline image syntax without resolving its
+  // destination. The backend uses the same boundaries for explicit replacement.
+  function inlineReferences(text) {
+    var starts = /!\[((?:\\[^\r\n]|[^\]\\\r\n])*)\]\(/g, match, refs = [], masked = codeMask(text);
+    while ((match = starts.exec(text))) {
+      if (masked[match.index] !== "!" || escaped(text, match.index)) continue;
+      var depth = 1, angle = false, quote = null, end = starts.lastIndex;
+      for (; end < text.length && !/[\r\n]/.test(text[end]); end++) {
+        var character = text[end];
+        if (character === "\\") { end++; continue; }
+        if (quote) { if (character === quote) quote = null; continue; }
+        if (angle) { if (character === ">") angle = false; continue; }
+        if (character === "<" && !text.slice(starts.lastIndex, end).trim()) { angle = true; continue; }
+        if ((character === '"' || character === "'") && /\s/.test(text[end - 1])) { quote = character; continue; }
+        if (character === "(") depth++;
+        if (character === ")" && --depth === 0) break;
+      }
+      if (depth || quote || angle) continue;
+      var rawDestination = text.slice(starts.lastIndex, end), destination = rawDestination.trim();
+      refs.push({start: match.index, end: end + 1, marker: text.slice(match.index, end + 1),
+        alt: match[1].replace(/\\([\\\[\]])/g, "$1"), destination: destination, rawDestination: rawDestination});
+      starts.lastIndex = end + 1;
+    }
+    return refs;
+  }
+  function ordinary(reference) { return !/^<?lixity:/i.test(reference.destination); }
+  function canReplace(detail, marker) {
+    var body = detail && typeof detail.body === "string" ? detail.body : "";
+    if (!marker || !body) return false;
+    var known = replacements.get(detail);
+    if (!known || known.body !== body) {
+      known = {body: body, markers: new Set(inlineReferences(body).filter(ordinary).map(function(reference) { return reference.marker; }))};
+      replacements.set(detail, known);
+    }
+    var first = body.indexOf(marker);
+    return known.markers.has(marker) && first !== -1 && body.indexOf(marker, first + marker.length) === -1;
+  }
+  function unretainedFigure(reference, context) {
+    var editable = context && context.image_editable === true && !window.LixitySite.readOnly && capable() &&
+      context.id && context.snapshot && context.revision && canReplace(context, reference.marker);
+    return '<figure class="dossier-image dossier-image-unavailable dossier-image-unretained"><figcaption><strong>' +
+      safe(reference.alt || label("attachment")) + '</strong><p>' + safe(label("not_retained")) +
+      '</p><code class="dossier-image-destination">' + safe(reference.destination) + '</code><p class="ctl-note">' +
+      safe(label("import_hint")) + '</p>' + (editable ? '<button type="button" class="ctl" data-dossier-replace-image="' +
+      safe(context.id) + '" data-image-reference="' + safe(reference.marker) + '" data-image-alt="' + safe(reference.alt) + '">' +
+      safe(label("import")) + '</button>' : '') + '</figcaption></figure>';
+  }
   function prepareMarkdown(raw, context) {
-    var text = String(raw || ""), html = [], masked = codeMask(text);
+    var text = String(raw || ""), html = [];
     // A per-render token cannot collide with hostile manuscript placeholders.
     var token = "LIXITYIMAGE" + Array.from(crypto.getRandomValues(new Uint32Array(4))).join("") + "TOKEN";
-    if (!context || !context.project_id || !Array.isArray(context.images)) return {text: text, html: html, token: token};
-    text = text.replace(/!\[((?:\\[^\r\n]|[^\]\\\r\n])*)\]\((lixity:image[^\r\n)]*)\)/g, function(match, alt, destination, offset) {
-      var pin = target.exec(destination);
-      if (!pin || masked[offset] !== "!" || escaped(text, offset)) return match;
-      var replacement = token + html.length + "END";
-      html.push(figure(alt.replace(/\\([\\\[\]])/g, "$1"), pin, context));
-      return replacement;
+    var pieces = [], end = 0;
+    inlineReferences(text).forEach(function(reference) {
+      var pin = target.exec(reference.rawDestination), rendered;
+      if (pin && context && context.project_id && Array.isArray(context.images)) rendered = figure(reference.alt, pin, context);
+      else if (context && ordinary(reference)) rendered = unretainedFigure(reference, context);
+      if (!rendered) return;
+      pieces.push(text.slice(end, reference.start), token + html.length + "END");
+      html.push(rendered); end = reference.end;
     });
-    return {text: text, html: html, token: token};
+    pieces.push(text.slice(end));
+    return {text: pieces.join(""), html: html, token: token};
   }
   function restoreMarkdown(html, prepared) {
     prepared.html.forEach(function(figureHtml, index) {
@@ -116,6 +175,39 @@
       html = html.replace("<p>" + token + "</p>", figureHtml).replace(token, figureHtml);
     });
     return html;
+  }
+  function addOverview(folder) {
+    var body = folder.querySelector(".research-dossier-body-rendered");
+    if (!body) return;
+    var figures = body.querySelectorAll(".dossier-image");
+    if (!figures.length) return;
+    var overview = document.createElement("details"), summary = document.createElement("summary"), list = document.createElement("ul");
+    overview.className = "dossier-media-overview";
+    summary.textContent = uiFormat("image_media", {count: figures.length});
+    overview.append(summary, list);
+    var heading = "";
+    body.querySelectorAll("h1, h2, h3, h4, h5, h6, .dossier-image").forEach(function(node) {
+      if (!node.matches(".dossier-image")) { heading = node.textContent; return; }
+      var section = node.closest(".research-dossier-section-block");
+      var location = section ? section.querySelector("summary").textContent : heading;
+      var image = node.querySelector("img"), caption = node.querySelector("figcaption");
+      var name = image && image.alt || caption && caption.firstChild.textContent || label("attachment");
+      node.id = "dossier-media-" + (++mediaSequence); node.tabIndex = -1;
+      var item = document.createElement("li"), link = document.createElement("a");
+      link.href = "#" + node.id; link.dataset.dossierMediaTarget = node.id;
+      var title = document.createElement("span");
+      title.className = "dossier-media-name";
+      title.textContent = name;
+      link.appendChild(title);
+      if (location) {
+        var sectionName = document.createElement("span");
+        sectionName.className = "dossier-media-section";
+        sectionName.textContent = location;
+        link.appendChild(sectionName);
+      }
+      item.appendChild(link); list.appendChild(item);
+    });
+    body.closest(".research-dossier-body-wrap").before(overview);
   }
   function actionsHtml(detail) {
     if (!capable() || !detail || !detail.id || !detail.project_id || !detail.snapshot || !detail.revision) return "";
@@ -135,14 +227,18 @@
   }
   function updateSave() {
     field("save").disabled = state.pending || !state.bytes || !field("alt").value.trim() ||
-      !field("retention").checked || Boolean(state.conflict);
+      !field("retention").checked || Boolean(state.conflict) ||
+      Boolean(state.replaceReference && !canReplace(state.current, state.replaceReference));
   }
   function setBusy(busy) {
     state.pending = busy;
     form.setAttribute("aria-busy", String(busy));
     form.querySelectorAll("input, textarea, select, button").forEach(function(control) { control.disabled = busy; });
     dialog.querySelector("[data-image-close]").disabled = busy;
-    if (!busy) { field("accept-current").disabled = !state.review; updateSave(); }
+    if (!busy) {
+      field("section").disabled = Boolean(state.replaceReference);
+      field("accept-current").disabled = !state.review; updateSave();
+    }
   }
   function makeDialog() {
     if (dialog) return;
@@ -153,6 +249,7 @@
     dialog.innerHTML = '<div class="modal-card"><div class="modal-header"><h3 id="dossier-image-title">' + safe(label("add")) +
       '</h3><button type="button" class="modal-close" data-image-close aria-label="' + safe(label("close")) + '">×</button></div>' +
       '<form id="dossier-image-form" class="modal-body"><p id="dossier-image-target" class="ctl-note"></p>' +
+      '<p id="dossier-image-replacement" class="ctl-note" hidden><strong>' + safe(label("replace")) + '</strong><code></code></p>' +
       '<label class="form-label" for="dossier-image-file">' + safe(label("file")) + '</label><input class="ctl" id="dossier-image-file" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg">' +
       '<p class="ctl-note">' + safe(uiFormat("image_limits", {bytes: bounds.bytes / 1048576, pixels: bounds.pixels / 1000000})) + '</p><div id="dossier-image-preview" aria-live="polite"></div>' +
       '<label class="form-label" for="dossier-image-alt">' + safe(label("alt")) + '</label><input class="ctl" id="dossier-image-alt" type="text" required maxlength="' + bounds.alt + '">' +
@@ -180,7 +277,7 @@
     form.addEventListener("submit", saveAttachment);
     field("review").addEventListener("click", reviewCurrent);
     field("accept-current").addEventListener("click", function() {
-      if (!state.review || state.pending) return;
+      if (!state.review || state.pending || state.replaceReference && !canReplace(state.review, state.replaceReference)) return;
       state.current = state.review; state.conflict = false; field("conflict").hidden = true;
       populateSections(state.current);
       status(label("reviewed")); updateSave();
@@ -194,10 +291,14 @@
     });
     if (Array.from(select.options).some(function(option) { return option.value === previous; })) select.value = previous;
   }
-  function openAttachment(detail, trigger) {
+  function openAttachment(detail, trigger, replacement) {
     if (!capable() || state.pending || !detail || dialog && dialog.open) return;
     makeDialog(); form.reset(); releasePreview(); state.generation++;
     state.current = detail; state.trigger = trigger || document.activeElement; state.review = null; state.conflict = false;
+    state.replaceReference = replacement && replacement.marker || null;
+    field("replacement").hidden = !state.replaceReference;
+    field("replacement").querySelector("code").textContent = state.replaceReference || "";
+    if (replacement) field("alt").value = replacement.alt || "";
     field("target").textContent = detail.title || (detail.record && detail.record.title) || detail.id;
     field("conflict").hidden = true; field("accept-current").hidden = true; field("current").replaceChildren();
     populateSections(detail); status(""); setBusy(false); dialog.showModal(); field("file").focus();
@@ -280,7 +381,8 @@
       catch (_) { status(label("invalid_origin"), true); return; }
       payload.origin_url = field("origin").value.trim();
     }
-    if (field("section").value) payload.section = field("section").value;
+    if (state.replaceReference) payload.replace_reference = state.replaceReference;
+    else if (field("section").value) payload.section = field("section").value;
     setBusy(true); status(label("saving"));
     var result;
     try { result = await researchApiPost("research-dossier-image", payload); }
@@ -302,10 +404,12 @@
     try { result = await researchApiGet("research/dossiers?id=" + encodeURIComponent(id)); }
     catch (_) { result = {ok: false}; }
     if (result.ok && result.project_id === current.project_id) {
-      state.review = result;
+      var replaceMissing = state.replaceReference && !canReplace(result, state.replaceReference);
+      state.review = replaceMissing ? null : result;
       field("current").innerHTML = '<p class="ctl-note">' + safe(uiFormat("research_revision_number", {revision: result.revision})) +
         '</p><div class="research-prose markdown-body">' + renderSafeMarkdown(result.body, result) + '</div>';
-      field("accept-current").hidden = false;
+      field("accept-current").hidden = Boolean(replaceMissing);
+      if (replaceMissing) status(label("replace_missing"), true);
     } else status(result.message || label("failed"), true);
     setBusy(false);
   }
@@ -326,6 +430,19 @@
   document.addEventListener("click", function(event) {
     var add = event.target.closest("[data-dossier-add-image]");
     if (add) openAttachment(reads.get(add.dataset.dossierAddImage), add);
+    var replace = event.target.closest("[data-dossier-replace-image]");
+    if (replace) openAttachment(reads.get(replace.dataset.dossierReplaceImage), replace,
+      {marker: replace.dataset.imageReference, alt: replace.dataset.imageAlt});
+    var jump = event.target.closest("[data-dossier-media-target]");
+    if (jump) {
+      var destination = document.getElementById(jump.dataset.dossierMediaTarget);
+      if (destination && jump.closest(".research-dossier-folder").contains(destination)) {
+        event.preventDefault();
+        var rendered = destination.closest(".research-dossier-body-rendered");
+        if (rendered && rendered.hidden) rendered.parentElement.querySelector("[data-source-toggle]").click();
+        scrollAndFlash(destination); destination.focus({preventScroll: true});
+      }
+    }
     var button = event.target.closest("[data-dossier-enlarge]");
     if (button) enlarge(button);
   });
@@ -337,5 +454,5 @@
     image.closest("button").replaceWith(note); figureNode.classList.add("dossier-image-unavailable");
   }, true);
   window.LixityDossierImages = {prepareMarkdown: prepareMarkdown, restoreMarkdown: restoreMarkdown,
-    actionsHtml: actionsHtml, openAttachment: openAttachment};
+    actionsHtml: actionsHtml, openAttachment: openAttachment, sourcePreviewHtml: sourcePreviewHtml, addOverview: addOverview};
 })();
