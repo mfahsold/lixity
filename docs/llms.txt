@@ -5,7 +5,7 @@
 > instructions to rewrite. Analysis is deterministic for fixed text and settings;
 > research records also contain generated IDs and timestamps.
 
-Current release: 0.7.4; release tag: v0.7.4.
+Current release: 0.7.5; release tag: v0.7.5.
 The current 0.x product line follows a numbering reset; historical 1.x/3.x tags
 are older. Product, response and archive schema numbers are independent.
 
@@ -39,7 +39,7 @@ research entities. A native server lists registered operations at `GET /api`.
 Python consumers use `from lixity import api`; research uses
 `from lixity.research import api as research_api`.
 
-Current main (unreleased after v0.7.4) adds `lixity project --project PATH
+Project inspection includes `lixity project --project PATH
 [--json]`, `api.inspect_project` and the native Project overview. Their shared
 `lixity-project-structure/1` observes bounded local metadata without creating
 files or reading manuscript/research contents. Sources and outputs are separate;
@@ -96,7 +96,7 @@ research. The compact measurement card scopes its sentence word count, paragraph
 value and chapter comparison separately; method/coverage is expandable.
 Separate visible Counted text and Paragraph comparison keys explain exact
 underlined spans versus blue/orange chapter-relative paragraph backgrounds.
-On current main, the metric selector is directly visible. Independent Counted
+The metric selector is directly visible. Independent Counted
 text and Paragraph comparison switches retain their browser-local settings;
 violet underlines mark counted spans, while blue/orange values and direction
 arrows compare paragraphs without tinting the prose background. Focus temporarily
@@ -118,7 +118,7 @@ viewers remain explicit. An empty summary means no saved links, not no facts.
 The presentation reads existing contracts and does not save, repin or infer links.
 Only profiled paragraphs have measurements and claim anchors. Plain reports
 keep their inspection layout; the bounded reader is not a Markdown editor.
-On current main, read-only `research find-anchor --query-format markdown` accepts
+Read-only `research find-anchor --query-format markdown` accepts
 copied inline emphasis using the shared displayed-text projection. Default
 queries and all write/re-pin selections remain literal. The returned quote,
 offsets and hash identify the actual paragraph; headings are outside this scope.
@@ -155,7 +155,7 @@ validates envelope shape. Existing JSON/archive versions remain unchanged.
 - [Architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md) and [localization](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md): integration boundaries and language coverage.
 - [Articles](https://mfahsold.github.io/lixity/blog/): interpretation examples, separate from API contracts.
 - [Manuscript reading workbench](https://mfahsold.github.io/lixity/blog/manuscript-reading-workbench.html): the Analysis On/Off, overview and manuscript–research workflow with explicit coverage limits.
-- [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.4.md) and [release history](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md).
+- [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.5.md) and [release history](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md).
 
 HTML guides and articles have Markdown alternatives: append `.md` to their HTML
 URL. The [research entrypoint](https://mfahsold.github.io/lixity/research/README.md)
@@ -172,7 +172,7 @@ literal text uses `--body`. See [research revisions](https://mfahsold.github.io/
 and [character profiles](https://mfahsold.github.io/lixity/USAGE.md#character-profiles)
 for the supported v0.7.1 workflows and compatibility limits.
 
-**Current main (unreleased after v0.7.4):** selected dossier reads add
+Selected dossier reads add
 `section_level`; `--section HEADING --format text --body-only` exports selected
 content without display metadata. `--update [--dry-run] --compact` on authored
 records provides an opt-in receipt (`research-revision-write-summary-local/1`)

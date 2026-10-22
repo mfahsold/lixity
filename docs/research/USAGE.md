@@ -201,7 +201,7 @@ link and inline-code syntax remain as text. Soft-wrapped lines are joined and
 source line endings normalized, while the raw-source SHA-256 binds the original
 bytes. `find-anchor` matches the query exactly, case-sensitively, without fuzzy
 matching or Unicode normalization. Use `word` for `*word*`, but retain link/code
-syntax present in the paragraph text. On current main, an explicit
+syntax present in the paragraph text. An explicit
 `--query-format markdown` also accepts copied inline formatting: it applies the
 same supported emphasis/comment/footnote-anchor cleanup and trims outer
 whitespace before exact matching. The default remains `--query-format display`.
@@ -269,7 +269,7 @@ lixity research reconcile-manuscript --project ./novel novel.md --accept-moved
 
 #### Find a quote copied from Markdown
 
-On current main, use the explicit read-only query mode for a quote copied with
+Use the explicit read-only query mode for a quote copied with
 inline emphasis. For example, a paragraph containing `The **reading room** was
 open.` can be located with:
 
@@ -629,7 +629,7 @@ read's snapshot for the strict commit. Earlier unrelated writes are allowed;
 changed targets and later races fail without retry or rebase. An explicit
 snapshot guards the entire archive, including unrelated changes.
 
-**Current main (unreleased after v0.7.4):** add `--compact` to
+Add `--compact` to
 `--update [--dry-run]` on `dossier`, `claim`, `link-evidence`, `decision` or
 `relate` for a short receipt without the record body. The opt-in CLI schema is
 `research-revision-write-summary-local/1`; warnings are retained. Previews report
@@ -705,7 +705,7 @@ to reads. `--summary` bounds the read's body excerpt, not mutation output.
 Unbounded inspection keeps its record envelope. Section edits still use
 the ordinary revision workflow below.
 
-**Current main (unreleased after v0.7.4):** human section reads preserve the
+Human section reads preserve the
 selected heading's original level. Add `--body-only` to a selected
 `--section ... --format text` read to export only its content as UTF-8 Markdown,
 including nested headings, without the dossier title, version or selected heading.

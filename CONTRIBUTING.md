@@ -268,6 +268,15 @@ Every tagged release is distributed and archived automatically:
 - Zenodo archives each new release once the repository is enabled there, so
   released versions receive a DOI without a local step.
 
+Zenodo processing is asynchronous and outside the Actions result. Verify the
+specific version's public record and DOI before reporting archival complete;
+a successful GitHub/PyPI/Pages run alone does not establish it. Investigate a
+missing record in Zenodo's GitHub integration release/error view rather than
+republishing an immutable tag. When both metadata files exist,
+`.zenodo.json` takes precedence over `CITATION.cff`; maintain their product
+description and conceptual citation consistently. See
+[Zenodo's metadata guidance](https://help.zenodo.org/docs/github/describe-software/).
+
 Documentation deployment uses the separate reusable Pages workflow, called for
 the published release tag after those publication steps. A PyPI catch-up dispatch
 also pins Pages to its selected existing tag. The `github-pages` environment must
@@ -277,6 +286,24 @@ A new release with
 a lower version number requires explicit version selection by installations
 already using a higher version; this workflow does not change package-manager
 ordering.
+
+### Release communication
+
+Use the verified release notes as the source for communication. Update an
+existing canonical article when the workflow changed; keep short patch pointers
+proportionate to their reader impact. Preserve established article identities
+and canonical URLs instead of creating a competing copy for every patch.
+For examples of distinct patch and feature communication, see
+[NumPy's release guidance](https://numpy.org/doc/stable/dev/releasing.html).
+
+The release workflow publishes packages and documentation; it sends no social
+posts. Keep account credentials, exact drafts, approval/send state and metric
+snapshots in the separate outreach workspace. Preview the final composed text
+and platform-specific limits before an explicitly authorized send. A draft or a
+successful dry run is not publication. Read the destination back after sending,
+record its identity and source version, and inspect an uncertain result before
+retrying. Keep delivery, article views, repository activity and website traffic
+as separate observations; unavailable statistics remain unknown.
 
 ### Public website measurement
 

@@ -2,7 +2,7 @@
 
 By [Matthias Fahsold](https://github.com/mfahsold) · Published 20 October 2026 · Updated 22 October 2026 · 7 minutes
 
-**Current main (unreleased after v0.7.4):** this walkthrough follows the repository's generated demo, including the direct analysis controls and revised marks described below.
+**Lixity 0.7.5:** this walkthrough follows the released app and its generated demo, including the direct analysis controls and revised marks described below. [Read the release notes](../releases/v0.7.5.md).
 
 A manuscript analysis tool can show you so much about a paragraph that the paragraph becomes awkward to read. Sentence patterns, source lines, markers and research links all have a purpose. They also compete with the next sentence.
 
@@ -59,6 +59,12 @@ The wider **Research → Review** view remains available for saved quotations. I
 In a configured local project, you can select text within one manuscript paragraph and choose **Link selection to claim**. Review the quotation, choose an existing claim, explicitly permit local retention and save the association. Selecting text or previewing that form writes nothing. The saved connection records what you associated; it does not establish factual support or turn the manuscript into source evidence.
 
 An exact return requires the current paragraph, line range and quotation to match its saved anchor. Changed or ambiguous anchors remain review tasks. Lixity does not silently infer a new connection. The public demo is read-only; saving associations requires a compatible local server and an explicitly configured research project. Research keeps its own explicit-project and retention requirements.
+
+## Keep sources and outputs distinct
+
+The local **Project overview** separates the manuscript and research locations from generated output files and structural findings. It checks the selected folder without moving files, reading manuscript contents or auditing the research archive. Existing output history remains unknown: a filename alone does not prove which manuscript version produced it.
+
+The same read-only inspection is available as `lixity project --project /path/to/book --json`. Output links recheck the selected project when opened. This local folder view is deliberately absent from static reading copies. The [project guide](../USAGE.md#inspect-project-structure) explains bounds, unavailable states and the distinction from archive audit.
 
 ## Share a reading copy
 

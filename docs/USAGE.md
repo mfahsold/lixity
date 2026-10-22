@@ -60,7 +60,7 @@ or a different output.
 | I want a foreground server for development or integration | `lixity serve` | loopback HTTP server, live settings, manuscript upload, research panel |
 | I want to start or manage the installed app | `lixity service` | managed start, stop, restart and status without a source checkout |
 | Which installation and service am I using? | `lixity doctor` | package versions, module/interpreter location, contracts and owned service status |
-| Which files are sources or outputs, and are their locations usable? | `lixity project --project PATH` (current main) | read-only roles, existing outputs and bounded structure findings |
+| Which files are sources or outputs, and are their locations usable? | `lixity project --project PATH` | read-only roles, existing outputs and bounded structure findings |
 | I want to manage and cite research sources | `lixity research` | immutable archives, citations, dossiers, manuscript grounding |
 | I want a printable document, report or reading copy | `lixity pdf` | neutral/editorial A4, A4 report, A5 book, 30×60 sheet |
 | I want to share a browsable reading copy | `lixity export-site` | static website, optional research and original sources |
@@ -88,7 +88,7 @@ defines that boundary and the optional local-import workflow.
 
 ### Inspect project structure
 
-**Current main, unreleased after v0.7.4:** open **Project** to inspect the selected
+Open **Project** to inspect the selected
 folder. **Sources** identifies the selected/configured manuscript and native
 research folder; **Outputs** lists existing files directly under `exports/`
 and the conventional `exports/archive/` location. Open the manuscript or matching
@@ -269,7 +269,7 @@ for restorable backups. Limits fail explicitly rather than silently dropping
 material: 64 MiB each for manuscript input, archived record input and prepared
 website data; 50,000 prepared research responses; and 200 MiB for the complete bundle.
 
-**Current main (unreleased after v0.7.4):** review exports with research limit
+Review exports with research limit
 authored history to 10,000 revisions (dossiers, claims, decisions and their links).
 Source and passage records do not consume that count; curated reader/companion exports do
 not apply the history count. The manifest's `research.revision_count` still counts
@@ -400,7 +400,7 @@ passage tool. The inspector and dossier work with Analysis On or Off.
 
 **Since v0.7.3:** the first explicit **Analysis On** selects **Sentence length**
 unless you have already saved a metric choice.
-**Current main (unreleased after v0.7.4):** use the directly visible **Measure**
+Use the directly visible **Measure**
 selector while Analysis is on. **Counted text** and **Paragraph comparison** are
 independent switches: keep either, both or neither. With counted text enabled,
 violet underlines identify counted words, patterns, quoted speech or sentences.
@@ -414,7 +414,7 @@ disabled switches. Turning Analysis on again preserves those choices.
 entry. Its existing right context offers **Explain measurement** and **Research
 for this passage**. The former explains counted text; the latter reads
 explicitly linked claims, sources and decisions. Hover and tap remain quick ways
-to open the measurement card. In current main, the compact card puts the selected
+to open the measurement card. The compact card puts the selected
 quotation and its count first, with the paragraph measurement and chapter
 comparison in a separate panel. Mapping details and limits stay collapsed under
 **About this comparison**. The context's **Passage** button selects the inspector;
@@ -586,7 +586,7 @@ Its cutoff-hit counts differ from FDR decisions; the bands are neither
 confidence intervals nor external editorial targets. Paragraph style layers
 show measured values and flag unusual values relative to the chapter.
 
-**Current main (unreleased after v0.7.4):** with **Analysis On**, choose one metric
+With **Analysis On**, choose one metric
 in the direct **Measure** selector. Blue/orange raw-value markers and down/up
 arrows identify notable paragraph comparisons against that chapter's median/MAD;
 the prose background stays clear. The marker opens the paragraph measurement
@@ -952,7 +952,7 @@ it. Bar length shows the magnitude of the balance; its signed number gives the
 direction: positive means more showing signals, negative more telling signals
 relative to this manuscript. For concrete wording, enable manuscript **Analysis**
 and choose a component such as **Perception filters**, **Modals**, **Nominal style** or
-**Passive**. On current main, **Counted text** marks the exact
+**Passive**. **Counted text** marks the exact
 lexical cues independently of **Paragraph comparison**. Inspect a marked span
 to read its count and counting rule.
 

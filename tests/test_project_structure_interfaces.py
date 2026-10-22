@@ -10,6 +10,8 @@ from lixity.cli import main
 from lixity.server.pdf_context import project_settings_token
 from tests.support import LoopbackServer, make_handler
 
+pytestmark = pytest.mark.portability
+
 
 def project_files(root):
     return {path.relative_to(root).as_posix(): path.read_bytes()

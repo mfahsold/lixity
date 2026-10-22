@@ -15,6 +15,8 @@ from lixity.research.limits import MAX_RESEARCH_OBJECT_BYTES
 from lixity.research.models import Passage, Project, Reference, Tombstone
 from lixity.research.repository import Repository, ResearchStorageError, Snapshot, digest
 
+pytestmark = pytest.mark.portability
+
 
 @pytest.fixture
 def archive(tmp_path):

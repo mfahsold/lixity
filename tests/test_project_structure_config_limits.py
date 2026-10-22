@@ -9,6 +9,8 @@ from lixity import config, workspace
 from lixity.server import pdf_context, routes_project
 from tests.support import recording_handler
 
+pytestmark = pytest.mark.portability
+
 
 def observe_reads(monkeypatch, *, grow=None):
     requests, streams = [], []

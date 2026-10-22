@@ -25,7 +25,7 @@ const routes = htmlRoutes(root).filter(route => route !== 'demo/research.html').
 const publicationRoutes = new Set(['demo/reader/index.html', 'demo/companion/index.html']);
 for (const route of publicationRoutes) assert.ok(routes.includes(route), `Missing curated public example: ${route}`);
 // Every content page gets all widths. Shared surface types cover theme/JS variants.
-const fullMatrixRoutes = new Set(['', 'guides/first-look.html', 'guides/research-pdf.html', 'demo/report.html',
+const fullMatrixRoutes = new Set(['', 'guides/first-look.html', 'guides/interpretation.html', 'guides/research-pdf.html', 'demo/report.html',
   'examples/effi-briest.html', 'blog/index.html', 'blog/whats-new-lixity.html', 'blog/manuscript-reading-workbench.html', ...publicationRoutes]);
 const returnJourneyRoutes = new Set(['', 'guides/first-look.html', 'blog/index.html',
   'blog/whats-new-lixity.html', 'demo/report.html', 'examples/effi-briest.html', ...publicationRoutes]);
@@ -152,6 +152,12 @@ async function checkReturnNavigation(page, route, exercise) {
   }
   const backTop = page.locator('a.site-back-top[href="#top"]');
   await expect(backTop).toBeVisible();
+  if (page.viewportSize().width <= 700 && await page.locator('body > main').count()) {
+    const contentBottom = await page.locator('body > main').evaluate(node => node.getBoundingClientRect().bottom);
+    const returnTop = await backTop.evaluate(node => node.getBoundingClientRect().top);
+    assert.ok(returnTop >= contentBottom,
+      `${route || 'home'} keeps mobile return navigation after the text instead of covering it`);
+  }
   if (!exercise) return;
   const menuBefore = await navigation.boundingBox();
   // The Reading menu intentionally closes on focus leaving it. The public
@@ -1083,6 +1089,16 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
             }
             await page.locator('h1').scrollIntoViewIfNeeded();
           }
+          if (route === 'guides/interpretation.html') {
+            await page.locator('a[href="first-look.html#passage"]').click();
+            await expect(page).toHaveURL(/first-look\.html#passage$/);
+            await page.goto(origin + '/lixity/' + route);
+          }
+          if (route === 'guides/research-pdf.html') {
+            await page.locator('.guide-toc a[href="#search"]').click();
+            await expect(page).toHaveURL(/#search$/);
+            await page.locator('h1').scrollIntoViewIfNeeded();
+          }
           if (!route) {
             if (width === 1440) {
               const columns = await page.locator('.hero').evaluate(hero => {
@@ -1095,6 +1111,26 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
             await expect(page.locator('.hero-cta a.primary[href="demo/report.html"]')).toHaveAccessibleName('Open the example manuscript');
             await expect(page.locator('.hero-cta a[href="guides/first-look.html"]')).toHaveAccessibleName('Take the short tour');
             await expect(page.locator('.site-header a[href="#installation"]')).toBeVisible();
+            const commandLink = page.locator('.site-header a[href="#command-line"]');
+            await expect(commandLink).toBeVisible();
+            await commandLink.focus();
+            await page.keyboard.press('Enter');
+            await expect(page).toHaveURL(/#command-line$/);
+            const commands = page.locator('#command-line');
+            await expect(commands).toBeInViewport();
+            const commandColumns = await commands.locator('article').evaluateAll(nodes => nodes.map(node => {
+              const box = node.getBoundingClientRect();
+              return {left: box.left, right: box.right, top: box.top, bottom: box.bottom,
+                codeTop: node.querySelector('pre').getBoundingClientRect().top};
+            }));
+            assert.equal(commandColumns.length, 2);
+            if (width === 1440) assert.ok(commandColumns[0].right < commandColumns[1].left,
+              'Desktop command examples share one row');
+            if (width === 1440) assert.ok(Math.abs(commandColumns[0].codeTop - commandColumns[1].codeTop) < 1,
+              'Desktop command examples align their code blocks despite different note lengths');
+            if (width === 320) assert.ok(commandColumns[0].bottom < commandColumns[1].top,
+              'Narrow command examples stack in reading order');
+            await page.locator('h1').scrollIntoViewIfNeeded();
             await expect(page.locator('#installation')).toHaveCount(1);
             assert.equal(await page.locator('#installation').evaluate(node => node.tagName), 'SECTION',
               'The installation fragment opens its own author-facing section');

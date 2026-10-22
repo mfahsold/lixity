@@ -4,6 +4,20 @@ Lixity describes patterns in the manuscript you provide. Its style reference com
 
 Updated 22 October 2026
 
+## Read the analysis marks
+
+Turn **Analysis** on and choose a metric in **Measure**. The separate **Counted text** and **Paragraph comparison** switches let you inspect the counted passages, the chapter comparison, or both.
+
+### Counted text
+
+Violet underlines identify the exact words or sentences counted by the chosen metric. Hover or tap a mark to see the quotation and its count.
+
+### ↓ ↑ Paragraph comparison
+
+Blue/down and orange/up markers identify notable lower and higher paragraph values relative to the chapter. Their number is the paragraph's raw value. Color and direction describe a difference, not a quality grade.
+
+A selected sentence's word count and its paragraph's comparison have different scopes. The explanation card shows them separately; **Read these marks** opens the counting and method details. **Focus reading** temporarily hides both displays and restores your choices on exit. [Try the marks in the short tour](first-look.html#passage).
+
 ## What does consistency measure?
 
 Consistency is the proportion of measured chapter–feature cells whose noise-adjusted deviation stays below the active mild threshold. A cell is one feature in one chapter, such as sentence length in chapter two. This is not simply the percentage of chapters that pass a test.

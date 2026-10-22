@@ -122,6 +122,8 @@ Images and rendered diagrams share a [local zoom viewer](../screenshots/dashboar
 
 The dashboard Search tab includes sources and current dossiers, claims and decisions. Choose a narrower scope when needed, then use **View details** to read a result. Search refreshes an outdated index automatically; `--strict` reports an error instead. Only source passages can be cited as evidence.
 
+For a known source or dossier, its list filter narrows the loaded title and tag metadata immediately. Use **Search → All records** to find words inside retained text and current authored notes; earlier versions are outside that search.
+
 ```
 lixity research search --project ./sample-project --query "inspector" --scope all
 lixity research search --project ./sample-project --query "inspector" --scope decisions

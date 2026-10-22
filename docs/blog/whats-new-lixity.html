@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>What's new in Lixity 0.7.4: share a reading website — Lixity blog</title>
-<meta name="description" content="Share a read-only manuscript website, follow a passage into Research and back, and distinguish counted text from paragraph comparisons in Lixity 0.7.4."/>
+<title>What's new in Lixity 0.7.5: clearer marks and project structure — Lixity blog</title>
+<meta name="description" content="Interpret two separate analysis layers, inspect sources and outputs without moving files, and edit dossier sections safely in Lixity 0.7.5."/>
 <link rel="canonical" href="https://mfahsold.github.io/lixity/blog/whats-new-lixity.html"/>
 <link rel="stylesheet" href="../assets/site.css"/>
 <script src="../assets/site.js" defer></script>
 <meta property="og:type" content="article"/>
-<meta property="og:title" content="What's new in Lixity 0.7.4: share a reading website"/>
-<meta property="og:description" content="Share a read-only manuscript website, follow a passage into Research and back, and distinguish counted text from paragraph comparisons in Lixity 0.7.4."/>
+<meta property="og:title" content="What's new in Lixity 0.7.5: clearer marks and project structure"/>
+<meta property="og:description" content="Interpret two separate analysis layers, inspect sources and outputs without moving files, and edit dossier sections safely in Lixity 0.7.5."/>
 <meta property="og:url" content="https://mfahsold.github.io/lixity/blog/whats-new-lixity.html"/>
 <meta property="og:site_name" content="Lixity"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
@@ -18,8 +18,8 @@
 <meta property="og:image:height" content="2082"/>
 <meta property="og:image:alt" content="Lixity continuous manuscript reader with chapter navigation and contextual tools"/>
 <meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:title" content="What's new in Lixity 0.7.4: share a reading website"/>
-<meta name="twitter:description" content="Share a read-only manuscript website, follow a passage into Research and back, and distinguish counted text from paragraph comparisons in Lixity 0.7.4."/>
+<meta name="twitter:title" content="What's new in Lixity 0.7.5: clearer marks and project structure"/>
+<meta name="twitter:description" content="Interpret two separate analysis layers, inspect sources and outputs without moving files, and edit dossier sections safely in Lixity 0.7.5."/>
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta name="twitter:image:alt" content="Lixity continuous manuscript reader with chapter navigation and contextual tools"/>
 <link rel="alternate" type="text/markdown" href="whats-new-lixity.html.md" title="Markdown version of this page"/>
@@ -29,8 +29,8 @@
 {
   "@context": "https://schema.org",
   "@type": "TechArticle",
-  "headline": "What's new in Lixity 0.7.4: share a reading website",
-  "description": "Share a read-only manuscript website, follow a passage into Research and back, and distinguish counted text from paragraph comparisons in Lixity 0.7.4.",
+  "headline": "What's new in Lixity 0.7.5: clearer marks and project structure",
+  "description": "Interpret two separate analysis layers, inspect sources and outputs without moving files, and edit dossier sections safely in Lixity 0.7.5.",
   "url": "https://mfahsold.github.io/lixity/blog/whats-new-lixity.html",
   "inLanguage": "en",
   "datePublished": "2026-10-16",
@@ -65,10 +65,13 @@
 </div></header>
 <main class="guide" id="content">
 <nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="index.html">Articles</a></li><li><span aria-current="page">What&#x27;s new in Lixity</span></li></ol></nav>
-<h1>What's new in Lixity 0.7.4: share a reading website</h1>
+<h1>What's new in Lixity 0.7.5: clearer marks and project structure</h1>
 <p class="updated">Updated <time datetime="2026-10-22">22 October 2026</time> · First posted <time datetime="2026-10-16">16 October 2026</time> · 8 minutes</p>
 
-<p>Let someone read your manuscript, inspect its analysis and follow the research you choose to share. Lixity 0.7.4 adds a reading website exported from the same app you use locally. It also makes the route from a passage to its research and back clearer. The earlier 0.4.8 notes remain below as release history.</p>
+<p>Lixity 0.7.5 separates the words a measurement counted from a paragraph's chapter comparison. A local project overview identifies sources, output locations and structural findings without reorganizing files. Section drafts now complete a read/edit/diff/update roundtrip, while research reads avoid unnecessary repeated work. See the <a href="../releases/v0.7.5.md">release notes and upgrade details</a>.</p>
+
+<h2 id="project-overview">Sources and outputs in one local view</h2>
+<p>Open <strong>Project</strong> or run <code>lixity project --project /path/to/book</code> for a read-only metadata inspection. Source locations, existing output files and structural findings stay distinct. A file's presence is not proof of freshness, and output provenance remains unknown. The overview moves nothing and is absent from exported reading websites. See <a href="../USAGE.md#inspect-project-structure">project inspection</a>.</p>
 
 <h2 id="reading-website">A reading copy without an installation</h2>
 <p>Choose <strong>Project actions → Reading website</strong> to download a ZIP. A reader can unzip it and open <code>index.html</code>, or you can put the folder on a static website host. They need no Lixity installation or account. The copy retains manuscript reading, analysis and navigation; editing, imports and project administration stay in the local app.</p>
@@ -79,7 +82,7 @@
 <p>The <a href="../guides/first-look.html">three-minute first look</a> follows this loop in the invented Warehouse 4 project. Its public demo uses the same production website export, with prepared PDF copies linked directly from the page.</p>
 
 <h2 id="two-legends">See what was counted and what was compared</h2>
-<p>Two separate keys now explain the analysis marks. <strong>Counted text</strong> identifies the underlined or tinted words and sentences behind the selected measurement. <strong>Paragraph comparison</strong> explains the blue-to-orange paragraph backgrounds relative to the manuscript. Inspect a marked passage for its concrete value. A sentence’s word count and a paragraph’s comparison are different measurements; neither is a quality verdict.</p>
+<p>Choose the visible metric, then switch <strong>Counted text</strong> and <strong>Paragraph comparison</strong> independently. Violet underlines identify counted words or sentences. Blue/orange raw-value markers and arrows compare notable paragraphs with their chapter, without tinting the prose background. Inspection puts the concrete quotation and count before the separate comparison. A sentence's word count and a paragraph's comparison answer different questions; neither is a quality verdict. The <a href="../guides/interpretation.html">interpretation guide</a> explains these descriptive signals and their limits.</p>
 
 <section aria-labelledby="historical-048">
 <h2 id="historical-048">Historical notes: Lixity 0.4.8</h2>

@@ -86,7 +86,7 @@ source is unavailable. No versioned JSON fields or automatic configuration
 watcher are added. Research overviews reuse one validated archive snapshot without
 a persistent cache.
 
-Current main reduces read cost within these existing operation boundaries.
+The archive reader reduces read cost within these existing operation boundaries.
 Revision reads perform one complete containment walk immediately before bounded
 I/O, followed by checksum and schema validation; public checked-path helpers
 retain their safety contract. A small initial read avoids allocating the entire
@@ -271,7 +271,7 @@ not supply accounts, encryption, copy prevention or a restorable backup. See
 
 ## Configuration and multiple projects
 
-**Current main, unreleased after v0.7.4:** `project_structure.inspect_project`
+`project_structure.inspect_project`
 owns one metadata-only read model for the native Project overview, `lixity
 project` and `api.inspect_project`. It reuses the strict root-local TOML reader
 and workspace selectors; the inspector passes its bounded configuration mapping
@@ -374,7 +374,7 @@ separate. Research claim-confidence and evidence-relation normalization belongs
 to `research.api`; supplied invalid HTTP values fail rather than receiving an
 omission default.
 
-Current main computes chapter-versus-rest Cliff effects from sorted finite tie
+The analysis core computes chapter-versus-rest Cliff effects from sorted finite tie
 groups in O(C log C) per feature rather than rebuilding and comparing C separate
 rest-of-manuscript lists. Integer wins/losses and the C−1 denominator preserve
 exact effect values, including ties and signed zero. This changes computation

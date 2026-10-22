@@ -75,7 +75,7 @@
 <h1>Give the manuscript room to read</h1>
 <p class="updated">By <a href="https://github.com/mfahsold">Matthias Fahsold</a> · Published <time datetime="2026-10-20">20 October 2026</time> · Updated <time datetime="2026-10-22">22 October 2026</time> · 7 minutes</p>
 
-<p class="section-note"><strong>Current main (unreleased after v0.7.4):</strong> this walkthrough follows the repository's generated demo, including the direct analysis controls and revised marks described below.</p>
+<p class="section-note"><strong>Lixity 0.7.5:</strong> this walkthrough follows the released app and its generated demo, including the direct analysis controls and revised marks described below. <a href="../releases/v0.7.5.md">Read the release notes</a>.</p>
 
 <p>A manuscript analysis tool can show you so much about a paragraph that the
 paragraph becomes awkward to read. Sentence patterns, source lines, markers and
@@ -210,6 +210,17 @@ Lixity does not silently infer a new connection. The public demo is read-only;
 saving associations requires a compatible local server and an explicitly
 configured research project. Research keeps its own explicit-project and
 retention requirements.</p>
+<h2 id="project-sources-and-outputs">Keep sources and outputs distinct</h2>
+<p>The local <strong>Project overview</strong> separates the manuscript and research
+locations from generated output files and structural findings. It checks the
+selected folder without moving files, reading manuscript contents or auditing
+the research archive. Existing output history remains unknown: a filename alone
+does not prove which manuscript version produced it.</p>
+<p>The same read-only inspection is available as
+<code>lixity project --project /path/to/book --json</code>. Output links recheck
+the selected project when opened. This local folder view is deliberately absent
+from static reading copies. The <a href="../USAGE.md#inspect-project-structure">project guide</a>
+explains bounds, unavailable states and the distinction from archive audit.</p>
 <h2 id="share-a-reading-copy">Share a reading copy</h2>
 <p>In the local app, <strong>Project actions → Reading website</strong> downloads
 a browser-readable project copy. Choose <strong>Review workspace</strong> to

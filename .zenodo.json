@@ -1,6 +1,6 @@
 {
-  "title": "Lixity — quantitative text linguistics and stylometry for literary manuscripts",
-  "description": "Lixity analyses literary manuscripts locally and deterministically: sentence rhythm, lexical diversity (HD-D, MTLD, MATTR, Maas, Yule's K), language-calibrated readability, dialogue share, paragraph-level tense profiles and a self-calibrating style reference with robust median/MAD bands, noise-adjusted deviations, Benjamini-Hochberg/Benjamini-Yekutieli selections and effect sizes. It runs offline without a cloud service and is implemented in pure Python. Statistical signals support human review; they are not literary-quality scores.",
+  "title": "Lixity — local manuscript analysis and research workbench for authors",
+  "description": "Lixity is a local workbench for authors, with a browser app, CLI and Python API. Deterministic manuscript analysis covers sentence rhythm, lexical diversity, language-calibrated readability, dialogue, paragraph-level tense and self-calibrating style references with robust statistics. Exact passages connect to retained sources, claims and revisioned research dossiers. PDF and static reading-website exports make explicitly selected material shareable; read-only project inspection distinguishes sources and outputs without moving files or asserting output freshness. The analysis engine runs offline in pure Python. Statistical signals support human review, not literary-quality scores; archive integrity does not establish factual truth.",
   "upload_type": "software",
   "license": "AGPL-3.0-or-later",
   "access_right": "open",
@@ -18,7 +18,10 @@
     "manuscript analysis",
     "lexical diversity",
     "readability",
-    "local-first"
+    "local-first",
+    "research archive",
+    "writing tools",
+    "evidence"
   ],
   "related_identifiers": [
     {

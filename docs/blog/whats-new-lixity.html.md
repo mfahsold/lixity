@@ -1,8 +1,12 @@
-# What's new in Lixity 0.7.4: share a reading website
+# What's new in Lixity 0.7.5: clearer marks and project structure
 
 Updated 22 October 2026 · First posted 16 October 2026 · 8 minutes
 
-Let someone read your manuscript, inspect its analysis and follow the research you choose to share. Lixity 0.7.4 adds a reading website exported from the same app you use locally. It also makes the route from a passage to its research and back clearer. The earlier 0.4.8 notes remain below as release history.
+Lixity 0.7.5 separates the words a measurement counted from a paragraph's chapter comparison. A local project overview identifies sources, output locations and structural findings without reorganizing files. Section drafts now complete a read/edit/diff/update roundtrip, while research reads avoid unnecessary repeated work. See the [release notes and upgrade details](../releases/v0.7.5.md).
+
+## Sources and outputs in one local view
+
+Open **Project** or run `lixity project --project /path/to/book` for a read-only metadata inspection. Source locations, existing output files and structural findings stay distinct. A file's presence is not proof of freshness, and output provenance remains unknown. The overview moves nothing and is absent from exported reading websites. See [project inspection](../USAGE.md#inspect-project-structure).
 
 ## A reading copy without an installation
 
@@ -18,7 +22,7 @@ The [three-minute first look](../guides/first-look.html) follows this loop in th
 
 ## See what was counted and what was compared
 
-Two separate keys now explain the analysis marks. **Counted text** identifies the underlined or tinted words and sentences behind the selected measurement. **Paragraph comparison** explains the blue-to-orange paragraph backgrounds relative to the manuscript. Inspect a marked passage for its concrete value. A sentence’s word count and a paragraph’s comparison are different measurements; neither is a quality verdict.
+Choose the visible metric, then switch **Counted text** and **Paragraph comparison** independently. Violet underlines identify counted words or sentences. Blue/orange raw-value markers and arrows compare notable paragraphs with their chapter, without tinting the prose background. Inspection puts the concrete quotation and count before the separate comparison. A sentence's word count and a paragraph's comparison answer different questions; neither is a quality verdict. The [interpretation guide](../guides/interpretation.html) explains these descriptive signals and their limits.
 
 ## Historical notes: Lixity 0.4.8
 

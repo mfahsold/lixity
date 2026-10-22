@@ -317,7 +317,7 @@ navigation lists only rendered panels.
 PDF export, the read-only dossier companion and research saves use the explicit
 capability/context guards below. Selection drafts save nothing by themselves.
 
-**Current main (unreleased after v0.7.4):** the native metric selector is directly
+The native metric selector is directly
 visible with independent, browser-persisted Counted text and Paragraph comparison
 switches. Counted text uses violet underlines; notable paragraph comparisons use
 blue/orange raw-value and direction markers with a clear prose background.
@@ -660,7 +660,7 @@ withdrawn evidence while preserving full-paragraph citation semantics.
   after the comment is the unchanged body suffix. Unknown/duplicate keys fail.
   This is authored-record exchange, not source ingest or automatic synchronization.
 
-**Unreleased, after v0.7.4:** `--update [--dry-run] --compact` on `dossier`,
+`--update [--dry-run] --compact` on `dossier`,
 `claim`, `link-evidence`, `decision` and `relate` projects the existing result as
 `research-revision-write-summary-local/1`, without another archive read. Fields
 are `project_id`, `snapshot`, `kind`, `record_id`, `dry_run`, `ready`, `changed`,
@@ -694,7 +694,7 @@ quotes are nonblank, at most 10,000 codepoints, and notes at most 2,000 characte
 The anchor projection removes supported emphasis, comments and footnote anchors,
 but retains link/code syntax. `find-anchor` matches a query exactly and
 case-sensitively without Unicode normalization; it does not use the separate
-prose-counting projection to identify quotes. On current main,
+prose-counting projection to identify quotes. For Markdown-formatted lookup,
 `resolve_manuscript_anchor(project, manuscript, *, query, query_format="display",
 line=None, language=None, project_config=None)` accepts an explicit
 `query_format="markdown"` (CLI: `find-anchor --query-format markdown`). This
@@ -796,7 +796,7 @@ the explicit guards below.
 
 ### 5.2 HTTP Server Endpoints (for web UI and interactive agent loops)
 
-**Current main, unreleased after v0.7.4:** read-only project inspection is also
+Read-only project inspection is also
 available without HTTP through `api.inspect_project(project,
 selected_manuscript=None)` and `lixity project [PATH] [--json]` (or `--project
 PATH`). `lixity-project-structure/1` returns `ok`, `has_errors`, absolute local
@@ -835,7 +835,7 @@ When running `lixity serve --port 8765`, local agents can trigger deterministic 
 Browser API diagnostics report request metadata without copying response bodies
 to the console.
 
-**Current main (unreleased after v0.7.4):** overlapping automatic browser
+Overlapping automatic browser
 `GET /api/research/status` consumers share only a pending observation for the
 same root/project/source and exact request. Settled responses are not cached.
 Explicit refreshes always read again; context changes and writes invalidate
@@ -872,7 +872,7 @@ analysis. An export cap removes content before serialization; local chapter
 progress only hides included content. See [sharing scope](USAGE.md#export-a-reading-website)
 and [projection semantics](research/DATA_MODEL.md#reading-website-projection).
 
-**Current main (unreleased after v0.7.4):** the 10,000-revision limit applies
+The 10,000-revision limit applies
 only to authored history in review exports with `include_research=true`:
 `dossier`, `claim`, `evidence_link`, `decision`, `claim_relation` and
 `manuscript_claim_link`. Source and passage records do not count; reader/companion projections
@@ -1037,7 +1037,7 @@ source/version pins with `available|withdrawn|purged|missing` status; unavailabl
 entries have no image URL. Historical reads resolve the pinned image version,
 not the latest source. Record/history dossier envelopes also include `images`.
 
-**Unreleased, after v0.7.4:** selected dossier reads additionally report
+Selected dossier reads additionally report
 `section_level` (1–6 for an actual ATX heading, null for an implicit preamble).
 Human section reads preserve that level. CLI `--section HEADING --format text
 --body-only` emits only the selected `content` as UTF-8, without a display wrapper,

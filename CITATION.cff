@@ -1,16 +1,12 @@
 cff-version: 1.2.0
 message: "If you use Lixity, please cite it as below."
-title: "Lixity — Quantitative text linguistics, stylometry and self-calibrating style references"
-version: "0.7.4"
+title: "Lixity — Local manuscript analysis and research workbench for authors"
+version: "0.7.5"
 date-released: "2026-10-22"
 license: AGPL-3.0-or-later
 repository-code: "https://github.com/mfahsold/lixity"
 url: "https://mfahsold.github.io/lixity/"
 doi: "10.5281/zenodo.23390297"
-identifiers:
-  - type: doi
-    value: "10.5281/zenodo.23390298"
-    description: "Version DOI for v0.4.4"
 abstract: >-
   Offline, deterministic text-linguistics engine for literary manuscripts:
   sentence rhythm, lexical diversity (HD-D, MTLD, MATTR,
@@ -20,7 +16,12 @@ abstract: >-
   Benjamini-Yekutieli selections, effect sizes) with exploratory diagnostics
   (guarded changepoints, Mann-Kendall, Sn/Qn, Hill, Wasserstein-KS,
   Dunning keyness and fitted co-occurrence degree tails). Pure Python 3.10+,
-  no cloud calls. Statistical signals support human review, not quality scores.
+  no cloud analysis. The local browser app, CLI and Python API connect passages
+  with retained sources, claims and revisioned dossiers. Export PDFs or static
+  reading websites with explicitly selected research. Read-only project inspection
+  distinguishes source locations from generated outputs without moving files or
+  inferring output freshness. Statistical signals support human review, not
+  quality scores; archive integrity does not establish factual truth.
 authors:
   - family-names: Fahsold
     given-names: Matthias

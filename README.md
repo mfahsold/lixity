@@ -11,7 +11,7 @@ Lixity is a local workbench for authors. Explore language patterns and keep
 sources, claims and notes beside your manuscript. Try an invented example in
 your browser before installing the app for your own writing.
 
-> **Version line:** The current release is **v0.7.4**, in the pre-1.0 **0.x** line.
+> **Version line:** The current release is **v0.7.5**, in the pre-1.0 **0.x** line.
 > Historical **1.x** and **3.x** tags predate the numbering reset; use the current
 > release rather than the numerically largest tag. Product, JSON response and
 > archive schema versions are independent.
@@ -78,20 +78,17 @@ does not update an already running service.
 The browser app, CLI and Python API share one analysis pipeline;
 `lixity --help` and `lixity about --json` describe installed capabilities.
 
-Turn **Analysis** on beside the text, choose a metric and inspect its counted
-passages through hover, touch or the paragraph menu.
-The same literal evidence is available through
-`lixity profile manuscript.md --layer asl --evidence`.
-A passage's research associations open its claims and dossier beside
-the manuscript, with a return to the passage. Exact earlier versions remain
-available independently of the current entry. See the
-[reader and CLI guide](https://mfahsold.github.io/lixity/USAGE.md).
-
-Current main (unreleased after v0.7.4) exposes the metric directly, with independent
-**Counted text** and **Paragraph comparison** switches. Violet underlines identify
+Turn **Analysis** on beside the text and choose the visible metric. Switch
+**Counted text** and **Paragraph comparison** independently. Violet underlines identify
 counted spans; blue/orange value-and-arrow markers compare notable paragraphs
-with their chapter. Both preferences persist in the browser. It also adds
-`--body-only` section exports and `--compact` update receipts; see the
+with their chapter. Both preferences persist in the browser. Hover, touch and the
+paragraph menu explain the concrete text; the CLI exposes the same evidence with
+`lixity profile manuscript.md --layer asl --evidence`.
+
+A passage's research associations open its claims and dossier beside the
+manuscript, with a return to the passage. Current entries and exact linked earlier
+versions remain distinct. Dossier editing offers `--body-only` section drafts and
+`--compact` update receipts; see the
 [section-editing workflow](https://mfahsold.github.io/lixity/research/USAGE.md#work-on-one-dossier-section).
 The native **Project overview** and `lixity project --project PATH` also separate
 sources, existing outputs and read-only structure findings. They neither move
@@ -128,7 +125,7 @@ their own projects.
 
 ## Release, citation and license
 
-[Release notes](https://mfahsold.github.io/lixity/releases/v0.7.4.md)
+[Release notes](https://mfahsold.github.io/lixity/releases/v0.7.5.md)
 cover archive compatibility and upgrades. See the
 [changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md) for subsequent work.
 The repository's generated demo follows the interface documented here, including

@@ -14,6 +14,10 @@ Passing tests establish only their assertions; confirm that those assertions
 cover the requested behavior. Check an issue's premise against the base before
 implementing it. Fix an incorrect verification before changing correct code.
 
+Select non-sensitive fields before printing diagnostics. Raw webhook URLs,
+environment values and service command lines can contain credentials; do not
+render those responses wholesale, even during read-only checks.
+
 ## Keep changes reviewable
 
 Inspect `git status --short`, `git diff` and `git diff --stat` after an edit pass.

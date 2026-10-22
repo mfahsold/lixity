@@ -115,6 +115,8 @@ def check_or_sync_files(version: str, *, check_only: bool = False) -> list[str]:
     for guide in sorted((ROOT / "docs" / "guides").glob("*.html")):
         pins = [install_pin]
         if guide.name == "installation.html":
+            pins.append((r'The current release is <strong>v\d+\.\d+\.\d+</strong>',
+                         f'The current release is <strong>v{version}</strong>'))
             pins.append((r'This installs the current release, <strong>v\d+\.\d+\.\d+</strong>',
                          f'This installs the current release, <strong>v{version}</strong>'))
             pins.append((r'<a href="\.\./releases/v\d+\.\d+\.\d+\.md">release notes</a>',
@@ -159,6 +161,8 @@ CURRENT_CLAIMS: tuple[tuple[str, re.Pattern[str]], ...] = (
      re.compile(r"current release(?:\s+is)?[\s:*>]*\**v?(\d+\.\d+\.\d+)", re.I)),
     ("current HTML install statement",
      re.compile(r"This installs the current release, <strong>v(\d+\.\d+\.\d+)</strong>")),
+    ("current HTML version notice",
+     re.compile(r"The current release is <strong>v(\d+\.\d+\.\d+)</strong>")),
     ("release tag pin",
      re.compile(r"release tag:\s*v(\d+\.\d+\.\d+)", re.I)),
     ("release history pin",

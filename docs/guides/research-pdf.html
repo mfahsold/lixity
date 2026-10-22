@@ -111,7 +111,7 @@
 <p class="updated">Updated <time datetime="2026-10-22">22 October 2026</time></p>
 <div class="notice-box"><strong>Before importing:</strong> Choose the intended project and confirm that you may keep the source bytes. Text PDFs need Poppler; image-only scans need local Tesseract or a configured OCR worker. See <a href="installation.html#install">installation</a> and <a href="#ocr">PDF requirements</a>.</div>
 
-<nav class="guide-toc" aria-label="On this page"><strong>On this page</strong><ul><li><a href="#zotero">Zotero and evidence</a></li><li><a href="#manuscript-claims">Manuscript claims</a></li><li><a href="#places-and-routes">Places and journeys</a></li><li><a href="#manuscript-export">Manuscript PDF</a></li><li><a href="#reading-website">Reading website</a></li><li><a href="#publication">Publication details</a></li><li><a href="#ocr">Scans and OCR</a></li></ul></nav>
+<nav class="guide-toc" aria-label="On this page"><strong>On this page</strong><ul><li><a href="#zotero">Zotero and evidence</a></li><li><a href="#search">Search and current notes</a></li><li><a href="#manuscript-claims">Manuscript claims</a></li><li><a href="#places-and-routes">Places and journeys</a></li><li><a href="#manuscript-export">Manuscript PDF</a></li><li><a href="#reading-website">Reading website</a></li><li><a href="#publication">Publication details</a></li><li><a href="#ocr">Scans and OCR</a></li></ul></nav>
 <h2 id="manuscript-export">Export a manuscript as PDF</h2>
 <p>Open <strong>PDF export</strong> above the workspace views, choose a purpose and select <strong>Download PDF</strong>. The same composer serves the browser and CLI; downloads create no server export files and change no manuscript. Standalone HTML has no download action.</p>
 <p><strong>Since v0.7.0:</strong> the initial choice is an A4 editorial copy with line numbers and a correction margin. Compare the same six chapters of <em>The Crate at Warehouse 4</em> in all five prepared files below; these are exports from the shared demo project.</p>
@@ -170,6 +170,7 @@ lixity research search --project ./sample-project --query "reading room"</code><
 
 <h2 id="search">Search sources and current notes</h2>
 <p>The dashboard Search tab includes sources and current dossiers, claims and decisions. Choose a narrower scope when needed, then use <strong>View details</strong> to read a result. Search refreshes an outdated index automatically; <code>--strict</code> reports an error instead. Only source passages can be cited as evidence.</p>
+<p>For a known source or dossier, its list filter narrows the loaded title and tag metadata immediately. Use <strong>Search → All records</strong> to find words inside retained text and current authored notes; earlier versions are outside that search.</p>
 <pre><code>lixity research search --project ./sample-project --query "inspector" --scope all
 lixity research search --project ./sample-project --query "inspector" --scope decisions</code></pre>
 <p>The CLI defaults to source passages. Search matches words in current records, not their history; it does not reconcile conflicting claims or decide whether a proposal is final. Keep decisions and open questions explicit in your notes.</p>

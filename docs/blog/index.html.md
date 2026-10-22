@@ -2,11 +2,11 @@
 
 Practical articles for reading a draft, checking its research and investigating a question: is this change of voice deliberate, is a phrase repeating too close by, or did the chapter's tense drift? Each article connects a tool to a reading decision. All examples use public-domain or synthetic texts.
 
-## [What's new in Lixity 0.7.4: share a reading website](whats-new-lixity.html)
+## [What's new in Lixity 0.7.5: clearer marks and project structure](whats-new-lixity.html)
 
 Updated 22 October 2026 · 8 minutes
 
-Give a reader a browsable project copy, follow a passage into Research and back, and tell counted text from paragraph comparisons. Includes the earlier 0.4.8 notes as release history.
+Interpret two separate analysis layers, inspect sources and outputs without moving files, and edit dossier sections safely. Reading-website workflows and earlier release history remain available.
 
 ## [Give the manuscript room to read](manuscript-reading-workbench.html)
 

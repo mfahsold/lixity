@@ -4,17 +4,17 @@ Read one manuscript, inspect a passage, follow its research and choose a PDF cop
 
 Updated 22 October 2026
 
-**Current main (unreleased after v0.7.4):** this walkthrough follows the repository's generated demo. It uses the same reading website export available in **Project actions → Reading website**. Its manuscript, analysis and chosen Research are a fixed snapshot; importing and saving require a local project. See [how to make your own reading website](research-pdf.html#reading-website).
+This walkthrough follows the generated demo. It uses the same reading website export available in **Project actions → Reading website**. Its manuscript, analysis and chosen Research are a fixed snapshot; importing and saving require a local project. See [how to make your own reading website](research-pdf.html#reading-website).
 
 ## 1. Open the example and read a chapter
 
 [Open the demo project](../demo/report.html)
 
-*The Crate at Warehouse 4* has six invented English chapters, one research archive and four prepared PDF layouts. Read chapter 1's setting and [chapter 2's action](../demo/report.html#ch-2). No installation, account or upload is needed. The read-only demo keeps reading and navigation; import, editing and project settings are available in the [local app](installation.html).
+*The Crate at Warehouse 4* has six invented English chapters, one research archive and prepared PDF copies. Read chapter 1's setting and [chapter 2's action](../demo/report.html#ch-2). No installation, account or upload is needed. The read-only demo keeps reading and navigation; import, editing and project settings are available in the [local app](installation.html).
 
 [Video walkthrough](../videos/analysis-review.mp4)
 
-*Warehouse 4: explore a passage and compare its chapter. Recorded with v0.7.4; the current demo uses the controls described below.*
+*Warehouse 4: explore a passage and compare its chapter. Recorded with v0.7.5 using the same app controls as the demo.*
 
 ## 2. Inspect one difference
 
@@ -26,7 +26,7 @@ Choose a paragraph's **… → Explore passage** to open its right context. **Ex
 
 **Since v0.7.3:** expand **Manuscript measurements** for the secondary numbers, then collapse the same summary to return to the compact overview. A linked scene title reveals its detailed **Scene measurements**; both disclosure levels can be closed again. The passage return keeps your earlier reading context.
 
-Ask what changed: the kind of scene, what the character is doing, or how the sentences are arranged. These short chapters demonstrate a workflow; their numbers are not a quality verdict. [Interpretation](interpretation.html) explains the signals. [Reader controls and coverage](../USAGE.md#reading-paragraphs) covers text size, focus, keyboard access and supported formatting.
+Ask what changed: the kind of scene, what the character is doing, or how the sentences are arranged. These short chapters demonstrate a workflow; their numbers are not a quality verdict. [The mark key](interpretation.html#analysis-marks) explains the colors and scopes. [Reader controls and coverage](../USAGE.md#reading-paragraphs) covers text size, focus, keyboard access and supported formatting.
 
 ## 3. Follow a quotation into research
 
@@ -55,6 +55,8 @@ Use the direct PDF links below or in the demo page; the exported website does no
 ## Use your own project
 
 [Install the local app](installation.html), then open your project or preview a manuscript import. Analysis runs on your computer. JavaScript enables the demo's interactive controls; manuscript text, tables, credits and PDF links remain readable without it.
+
+In the local app, open **Project** for a read-only overview of the selected manuscript, research folder and existing outputs. It inspects metadata without rebuilding analysis; output source and generation history remain unknown. The exported demo has no local project-folder view. [Project inspection and CLI](../USAGE.md#inspect-project-structure).
 
 Lixity is open source under AGPL-3.0-or-later. Writing and self-publishing need no extra permission; a separate written commercial license exists for closed-source integrations. See [licensing](../LICENSING.md).
 

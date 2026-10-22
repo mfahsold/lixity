@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = pytest.mark.portability
+
 
 def inspect(project, **kwargs):
     assert importlib.util.find_spec("lixity.project_structure") is not None, "Project structure inspection is missing"

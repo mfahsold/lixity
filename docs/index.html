@@ -39,7 +39,7 @@
   "@id": "https://mfahsold.github.io/lixity/#software",
   "applicationCategory": "WritingApplication",
   "operatingSystem": "Windows, macOS, Linux",
-  "softwareVersion": "0.7.4",
+  "softwareVersion": "0.7.5",
   "description": "Read your manuscript, explore language patterns and follow saved sources, claims and decisions beside the text. A local workbench for authors and editors.",
   "url": "https://mfahsold.github.io/lixity/",
   "downloadUrl": "https://pypi.org/project/lixity/",
@@ -107,10 +107,11 @@
 <header class="site-header">
   <div class="header-inner">
     <a class="brand" href="./" aria-current="page"><span class="brand-name">Lixity</span></a>
-    <a href="releases/v0.7.4.md" id="current-release" title="Current release notes"><span class="brand-badge">v0.7.4</span></a>
+    <a href="releases/v0.7.5.md" id="current-release" title="Current release notes"><span class="brand-badge">v0.7.5</span></a>
     <nav class="site-return" aria-label="Lixity navigation">
       <a href="#guides">Guides</a>
       <a href="#installation">Install</a>
+      <a href="#command-line">CLI</a>
     </nav>
     <button class="ctl theme-btn" id="themeToggle" type="button" hidden>Theme: system</button>
   </div>
@@ -141,7 +142,7 @@
       <article id="writing">
         <span id="editorial-matrix"></span><span id="chapters"></span>
         <h3>Read and explore your manuscript</h3>
-        <p>Compare sentence rhythm, repeated words and dialogue across chapters. Turn analysis on to inspect counted words and sentences in context.</p>
+        <p>Compare sentence rhythm, repeated words and dialogue across chapters. Turn analysis on to inspect counted words and sentences in context. <a href="guides/interpretation.html#analysis-marks">Read the colors and marks</a>.</p>
         <blockquote>Someone had tried the eastern gate of Warehouse 4.</blockquote>
         <p><a href="demo/report.html#p-0">Read the opening passage</a> in the invented example. Does the shorter rhythm in the next chapter suit its action? <a href="demo/report.html#matrix">Compare the chapters</a> and read the passages behind the numbers.</p>
       </article>
@@ -161,6 +162,25 @@
     <h2 id="installation-title">Try it with your own manuscript</h2>
     <p class="section-note" id="faq">Open your Markdown manuscript in the local app. Built-in analysis works offline on your computer; optional integrations have separate <a href="research/USAGE.md">data boundaries</a>.</p>
     <a class="ctl" href="guides/installation.html">Install Lixity</a>
+  </section>
+
+  <section class="section" id="command-line" aria-labelledby="command-line-title">
+    <h2 id="command-line-title">Work from the command line</h2>
+    <p>Use the same local engine in a terminal or script. These commands work without a running service.</p>
+    <div class="command-list">
+      <article>
+        <h3>Inspect a project's files</h3>
+        <p>The local app's <strong>Project overview</strong> identifies the manuscript, research folder and existing outputs. The CLI provides the same read-only inspection.</p>
+        <pre><code>lixity project --project ./novel</code></pre>
+        <p class="section-note">Inspection reads metadata; existing outputs have unknown source and generation history. <a href="USAGE.md#inspect-project-structure">Scope and limits</a>.</p>
+      </article>
+      <article>
+        <h3>Analyze a manuscript</h3>
+        <p>Print a terminal report with sentence rhythm, vocabulary, readability and dialogue measurements. Choose the manuscript's analysis language explicitly.</p>
+        <pre><code>lixity analyze manuscript.md --language en</code></pre>
+        <p class="section-note"><a href="USAGE.md#which-command-for-which-question">Choose a command</a> · <a href="AGENTS.md">CLI, Python and HTTP contracts</a>.</p>
+      </article>
+    </div>
   </section>
 
   <section class="section" id="guides">

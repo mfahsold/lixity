@@ -4,7 +4,7 @@ Explore sentence rhythm, vocabulary and style patterns in your Markdown manuscri
 
 Updated 22 October 2026
 
-**Version line:** The current release is **v0.7.4**, in the pre-1.0 **0.x** line. Historical **1.x** and **3.x** tags predate the numbering reset. A larger historical number does not mean a newer release; product and schema versions are independent.
+**Version line:** The current release is **v0.7.5**, in the pre-1.0 **0.x** line. Historical **1.x** and **3.x** tags predate the numbering reset. A larger historical number does not mean a newer release; product and schema versions are independent.
 
 ## What do I need?
 
@@ -32,7 +32,7 @@ lixity --version
 lixity service start --open
 ```
 
-This installs the current release, **v0.7.4**, from PyPI in uv's [isolated tool environment](https://docs.astral.sh/uv/concepts/tools/). Shell integration applies to new terminals. See the [release notes](../releases/v0.7.4.md) for changes and compatibility.
+This installs the current release, **v0.7.5**, from PyPI in uv's [isolated tool environment](https://docs.astral.sh/uv/concepts/tools/). Shell integration applies to new terminals. See the [release notes](../releases/v0.7.5.md) for changes and compatibility.
 
 ## Start the workspace
 
@@ -61,7 +61,7 @@ Open the project again, or provide its path when starting. `restart --open` rest
 For a reproducible setup, verify the release wheel against its `SHA256SUMS`, then install it instead:
 
 ```
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.7.4/lixity-0.7.4-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.7.5/lixity-0.7.5-py3-none-any.whl"
 ```
 
 A pinned wheel keeps its fixed source URL; replace it explicitly when updating. See the [installation reference](../INSTALLATION.md#updates-and-removal).
