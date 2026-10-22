@@ -16,6 +16,7 @@ SITE_SCHEMA = "lixity-read-only-site/1"
 DATA_SCHEMA = "lixity-read-only-site-data/1"
 MAX_SITE_BYTES = 200 * 1024 * 1024
 MAX_SITE_DATA_BYTES = 64 * 1024 * 1024
+# Review copies budget authored archive versions; source passages are byte-bounded.
 MAX_SITE_REVISIONS = 10_000
 MAX_SITE_RESPONSES = 50_000
 Digest = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]

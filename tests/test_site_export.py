@@ -267,6 +267,34 @@ def test_export_has_no_external_active_resource_policy(project):
     assert "form-action 'none'" in policy[1]
 
 
+def test_source_passages_do_not_use_the_authored_history_budget(project, research, tmp_path, monkeypatch):
+    module = exporter()
+    from lixity.research.revisions import KINDS
+
+    source = tmp_path / 'many-passages.txt'
+    source.write_text('\n\n'.join(f'Synthetic register paragraph {number}.' for number in range(30)))
+    api.ingest(project, source, allow_retention=True)
+    snapshot = Repository(project).snapshot()
+    authored_versions = sum(entry.kind in KINDS for entry in snapshot.manifest.entries)
+    assert len(snapshot.revisions) > authored_versions
+    monkeypatch.setattr(module, 'MAX_SITE_REVISIONS', authored_versions)
+    before = file_bytes(project)
+
+    bundle = module.prepare_site(project, include_research=True)
+
+    assert file_bytes(project) == before
+    data = site_data(bundle)
+    for revision in (1, 2):
+        record = response(data, 'record', kind='claim', id=research['claim'], revision=revision)['record']
+        assert record['revision'] == revision
+    assert bundle.manifest['research']['revision_count'] == len(snapshot.revisions)
+    monkeypatch.setattr(module, 'MAX_SITE_REVISIONS', authored_versions - 1)
+    destination = tmp_path / 'rejected-site'
+    with pytest.raises(ResearchError, match=r'authored.*revision'):
+        module.export_site(project, destination, include_research=True)
+    assert not destination.exists() and file_bytes(project) == before
+
+
 def test_config_change_and_export_limits_fail_explicitly(project, research, tmp_path, monkeypatch):
     module = exporter()
     with monkeypatch.context() as context:

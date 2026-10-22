@@ -18,6 +18,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   full JSON and Python/API write contracts are unchanged.
 
 ### Fixed
+- Website exports count authored record versions against the research-history
+  limit, rather than every retained source passage. Curated reader/companion
+  copies no longer apply a limit for history they do not include. Input-byte,
+  prepared-response, bundle-size and integrity checks remain in force.
 - Human dossier section reads preserve the actual heading level instead of
   presenting every selected heading as H2. Selected JSON reads add `section_level`;
   implicit preambles have no invented heading level.

@@ -57,6 +57,9 @@ section as JSON. The additive `configuration` object has independent schema
 `lixity-configuration/1`: accepted/project-only/uninterpreted keys, corpus,
 threshold and publication component schemas, and native-settings persistence/session scope.
 v0.7.1 adds `characters_schema` from the owning character-profile model.
+`configuration.site_publications_schema` describes curated website profiles in
+the selected root's `lixity.toml` or `[tool.lixity]` in its `pyproject.toml`;
+see the [complete TOML example and inclusion boundaries](USAGE.md#curate-a-reader-publication).
 It describes installed defaults and validation vocabulary, never effective project
 values or a complete schema for every project setting. Discovery commands read no
 project configuration. Older releases use unfiltered `about --json` and command
@@ -120,6 +123,8 @@ anything. A healthy stopped service is valid; discrepancies or unavailable
 observations exit 1. Out-of-range numeric ports or invalid `LIXITY_PORT` return
 the same schema with `ok: false` and `error.code: "invalid-service-port"`;
 non-integer explicit `--port` values remain usage errors (exit 2).
+This optional installation/service diagnostic is not a per-write prerequisite;
+keep each operation's revision, snapshot and project-context checks.
 See [doctor](USAGE.md#lixity-doctor).
 An invalid explicit foreground `serve` selector fails before binding; it does not
 select the caller's directory. Valid empty/ambiguous directories retain their
@@ -805,6 +810,17 @@ instead carry `lixity-reader-publication/1` with an empty response table and no
 analysis. An export cap removes content before serialization; local chapter
 progress only hides included content. See [sharing scope](USAGE.md#export-a-reading-website)
 and [projection semantics](research/DATA_MODEL.md#reading-website-projection).
+
+**Current main (unreleased after v0.7.4):** the 10,000-revision limit applies
+only to authored history in review exports with `include_research=true`:
+`dossier`, `claim`, `evidence_link`, `decision`, `claim_relation` and
+`manuscript_claim_link`. Source and passage records do not count; reader/companion projections
+skip this history count. `manifest.research.revision_count` retains its existing
+meaning: all accepted record versions, including sources and passages, when research
+is included; otherwise 0. It is not the authored-history budget.
+Separate limits remain: 64 MiB each for manuscript input, archive record input
+and prepared website data, 50,000 prepared research responses and a 200 MiB
+complete bundle. Oversized inputs fail without publishing partial output.
 
 **Since v0.7.2:** `GET /` and `/index.html` validate the active
 manuscript before reusing the dashboard. Missing/unreadable input or failed

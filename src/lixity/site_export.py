@@ -151,13 +151,17 @@ def _config_state(repository: Repository) -> dict[str, str | None]:
     return result
 
 
-def _snapshot(repository: Repository) -> Snapshot:
-    """Reject oversized histories before retaining all decoded record objects."""
+def _snapshot(repository: Repository, *, include_history: bool) -> Snapshot:
+    """Bound retained input bytes and the authored history actually being exported."""
     head = Head.model_validate_json(repository.read(repository.data / "HEAD.json", maximum=4096))
     manifest = Manifest.model_validate_json(repository.verified(
         repository.data / "manifests" / f"{head.sha256}.json", head.sha256))
-    if len(manifest.entries) > MAX_SITE_REVISIONS:
-        raise ResearchError("Website export supports at most 10,000 research revisions")
+    if include_history:
+        authored_revisions = sum(entry.kind in KINDS for entry in manifest.entries)
+        if authored_revisions > MAX_SITE_REVISIONS:
+            raise ResearchError(f"Website research history contains {authored_revisions:,} authored revisions; "
+                                f"the export limit is {MAX_SITE_REVISIONS:,}. Export without research or "
+                                "choose a curated reader/companion publication profile")
     total = 0
     for entry in manifest.entries:
         path = repository.record_path(entry)
@@ -424,7 +428,8 @@ def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
     config, resolved = resolve_document_config(text, language or settings.get("language", "en"), project_config=settings)
     effective_thresholds = thresholds or resolve_thresholds(project_config=settings)
     display_title = project_title(str(source), text, settings, title)
-    snapshot = _snapshot(repository) if include_research or mode != "review" else None
+    snapshot = (_snapshot(repository, include_history=include_research)
+                if include_research or mode != "review" else None)
     token = _checksum(_json({"source": source_hash, "research": snapshot.digest if snapshot else None,
                              "language": resolved.key, "thresholds": asdict(effective_thresholds), "title": display_title}))
     files = _software_notices()

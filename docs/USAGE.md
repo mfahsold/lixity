@@ -113,6 +113,7 @@ Later project changes require a new export.
 | Companion only | Curated notes without the novel or analysis | A separate companion for someone reading elsewhere |
 
 ```bash
+lixity export-site --project . -o manuscript-copy
 lixity export-site --project . -o editorial-copy --include-research
 lixity export-site --project . -o novel-copy --mode reader --publication-profile readers
 lixity export-site --project . -o companion-copy --mode companion --publication-profile readers
@@ -122,6 +123,9 @@ lixity export-site --project . -o excerpt-copy --mode reader --publication-profi
 The destination must be a **new directory**. Existing paths are never
 overwritten. With no mode flag, the default is the review workspace. It includes
 manuscript text, work-marker notes and analysis, including exact text marks.
+The dialog starts with research and source-file inclusion unchecked each time.
+Leave research unchecked for a manuscript/analysis copy, or choose a reader format
+and publication profile for selected companion notes.
 `--include-research` adds authored dossiers, claims, decisions, their accessible
 revision history, cited excerpts, manuscript associations, timelines and map
 geometry. This can include internal notes and superseded wording; review the
@@ -140,7 +144,9 @@ revision uses the current dossier when exporting; an explicit revision keeps
 that version. Each export records the actual resolved version.
 
 The profile is a validated root-local `site_publications` project setting,
-separate from PDF imprint settings and accepted Research records:
+separate from PDF imprint settings and accepted Research records. Save this TOML
+in the selected project's root `lixity.toml` (or prefix its tables with
+`tool.lixity.` in that root's `pyproject.toml`):
 
 ```toml
 [site_publications.readers]
@@ -164,6 +170,9 @@ internal decisions, reverse links, revision history, source context notes or
 complete extracted source text. `--include-research` is rejected for these
 formats; choose the curated profile instead. Selected retained media needs the
 separate source-file inclusion choice.
+`lixity about --section configuration` exposes
+`configuration.site_publications_schema` with all accepted profile/entry fields;
+unknown fields are rejected. Profiles do not inherit from user or ancestor settings.
 
 Readers explicitly set the last chapter they have finished. Scrolling and
 chapter navigation do not count as reading. Later notes have no visible titles
@@ -192,8 +201,17 @@ separately disclosed analytics wrapper; that is not part of ordinary exports.
 A reading website is **not access control, encryption or a backup**. Anyone
 with its files can read or copy the included content. Confidential hosting needs
 its own access controls. Use [archive export and restoration](research/USAGE.md#export-and-restoration)
-for restorable backups. The complete bundle is bounded to 200 MiB; source/data
-and revision limits fail explicitly rather than silently dropping material.
+for restorable backups. Limits fail explicitly rather than silently dropping
+material: 64 MiB each for manuscript input, archived record input and prepared
+website data; 50,000 prepared research responses; and 200 MiB for the complete bundle.
+
+**Current main (unreleased after v0.7.4):** review exports with research limit
+authored history to 10,000 revisions (dossiers, claims, decisions and their links).
+Source and passage records do not consume that count; curated reader/companion exports do
+not apply the history count. The manifest's `research.revision_count` still counts
+all accepted record versions when research is included, so it may exceed 10,000.
+The byte and response limits above still apply. For a history-limit error, export
+without internal research or select a curated reader/companion profile.
 
 <a id="start-a-review-since-v230"></a>
 
@@ -1035,6 +1053,8 @@ interpreter paths, supported JSON contract versions and the shared read-only
 service observation. It does not install, repair, restart, create service storage
 or read manuscript/project configuration. Version agreement does not establish
 that an installation matches an unreleased source checkout.
+Use this optional diagnostic when investigating installation/service issues;
+ordinary writes and exports use their own validation and revision/context guards.
 
 JSON uses `lixity-doctor/1` with `ok`, `installation`, `service`, `schemas` and
 `issues` (each issue has `code` and `severity`). A consistent installation with a

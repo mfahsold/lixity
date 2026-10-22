@@ -82,6 +82,40 @@ def test_standalone_companion_contains_only_curated_content_and_no_manuscript_or
     assert not any(name.startswith('assets/sources/') for name in bundle.files)
 
 
+@pytest.mark.parametrize('mode', ('reader', 'companion'))
+def test_curated_publications_do_not_spend_an_unexported_archive_history_budget(publication_project, monkeypatch, mode):
+    import lixity.site_export as module
+
+    root, *_ = publication_project
+    before = file_bytes(root)
+    monkeypatch.setattr(module, 'MAX_SITE_REVISIONS', 1)
+
+    bundle = module.prepare_site(root, mode=mode, publication_profile='readers', max_chapter=1)
+
+    assert file_bytes(root) == before
+    assert bundle.manifest['research'] == {'included': False, 'snapshot': None, 'revision_count': 0}
+    assert site_data(bundle)['publication']['entries'][0]['revision'] == 2
+    assert b'LATE_ENTRY_BODY' not in bundle.files['index.html']
+
+
+@pytest.mark.parametrize('mode', ('review', 'reader', 'companion'))
+def test_all_research_reading_modes_keep_the_aggregate_record_input_limit(publication_project, monkeypatch, mode):
+    import lixity.site_export as module
+    from lixity.research.repository import Repository
+
+    root, *_ = publication_project
+    repository = Repository(root)
+    total = sum(repository.record_path(entry).stat().st_size for entry in repository.snapshot().manifest.entries)
+    before = file_bytes(root)
+    monkeypatch.setattr(module, 'MAX_SITE_DATA_BYTES', total - 1)
+    options = {'include_research': True} if mode == 'review' else {'publication_profile': 'readers'}
+
+    with pytest.raises(ResearchError, match='research records exceed'):
+        module.prepare_site(root, mode=mode, **options)
+
+    assert file_bytes(root) == before
+
+
 def test_reader_cap_removes_later_prose_and_diagnostics_before_rendering(publication_project):
     root, *_ = publication_project
     bundle = prepare_site(root, mode='reader', publication_profile='readers', max_chapter=1)

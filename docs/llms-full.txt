@@ -1261,6 +1261,7 @@ Later project changes require a new export.
 | Companion only | Curated notes without the novel or analysis | A separate companion for someone reading elsewhere |
 
 ```bash
+lixity export-site --project . -o manuscript-copy
 lixity export-site --project . -o editorial-copy --include-research
 lixity export-site --project . -o novel-copy --mode reader --publication-profile readers
 lixity export-site --project . -o companion-copy --mode companion --publication-profile readers
@@ -1270,6 +1271,9 @@ lixity export-site --project . -o excerpt-copy --mode reader --publication-profi
 The destination must be a **new directory**. Existing paths are never
 overwritten. With no mode flag, the default is the review workspace. It includes
 manuscript text, work-marker notes and analysis, including exact text marks.
+The dialog starts with research and source-file inclusion unchecked each time.
+Leave research unchecked for a manuscript/analysis copy, or choose a reader format
+and publication profile for selected companion notes.
 `--include-research` adds authored dossiers, claims, decisions, their accessible
 revision history, cited excerpts, manuscript associations, timelines and map
 geometry. This can include internal notes and superseded wording; review the
@@ -1288,7 +1292,9 @@ revision uses the current dossier when exporting; an explicit revision keeps
 that version. Each export records the actual resolved version.
 
 The profile is a validated root-local `site_publications` project setting,
-separate from PDF imprint settings and accepted Research records:
+separate from PDF imprint settings and accepted Research records. Save this TOML
+in the selected project's root `lixity.toml` (or prefix its tables with
+`tool.lixity.` in that root's `pyproject.toml`):
 
 ```toml
 [site_publications.readers]
@@ -1312,6 +1318,9 @@ internal decisions, reverse links, revision history, source context notes or
 complete extracted source text. `--include-research` is rejected for these
 formats; choose the curated profile instead. Selected retained media needs the
 separate source-file inclusion choice.
+`lixity about --section configuration` exposes
+`configuration.site_publications_schema` with all accepted profile/entry fields;
+unknown fields are rejected. Profiles do not inherit from user or ancestor settings.
 
 Readers explicitly set the last chapter they have finished. Scrolling and
 chapter navigation do not count as reading. Later notes have no visible titles
@@ -1340,8 +1349,17 @@ separately disclosed analytics wrapper; that is not part of ordinary exports.
 A reading website is **not access control, encryption or a backup**. Anyone
 with its files can read or copy the included content. Confidential hosting needs
 its own access controls. Use [archive export and restoration](research/USAGE.md#export-and-restoration)
-for restorable backups. The complete bundle is bounded to 200 MiB; source/data
-and revision limits fail explicitly rather than silently dropping material.
+for restorable backups. Limits fail explicitly rather than silently dropping
+material: 64 MiB each for manuscript input, archived record input and prepared
+website data; 50,000 prepared research responses; and 200 MiB for the complete bundle.
+
+**Current main (unreleased after v0.7.4):** review exports with research limit
+authored history to 10,000 revisions (dossiers, claims, decisions and their links).
+Source and passage records do not consume that count; curated reader/companion exports do
+not apply the history count. The manifest's `research.revision_count` still counts
+all accepted record versions when research is included, so it may exceed 10,000.
+The byte and response limits above still apply. For a history-limit error, export
+without internal research or select a curated reader/companion profile.
 
 <a id="start-a-review-since-v230"></a>
 
@@ -2183,6 +2201,8 @@ interpreter paths, supported JSON contract versions and the shared read-only
 service observation. It does not install, repair, restart, create service storage
 or read manuscript/project configuration. Version agreement does not establish
 that an installation matches an unreleased source checkout.
+Use this optional diagnostic when investigating installation/service issues;
+ordinary writes and exports use their own validation and revision/context guards.
 
 JSON uses `lixity-doctor/1` with `ok`, `installation`, `service`, `schemas` and
 `issues` (each issue has `code` and `severity`). A consistent installation with a
@@ -6825,6 +6845,9 @@ section as JSON. The additive `configuration` object has independent schema
 `lixity-configuration/1`: accepted/project-only/uninterpreted keys, corpus,
 threshold and publication component schemas, and native-settings persistence/session scope.
 v0.7.1 adds `characters_schema` from the owning character-profile model.
+`configuration.site_publications_schema` describes curated website profiles in
+the selected root's `lixity.toml` or `[tool.lixity]` in its `pyproject.toml`;
+see the [complete TOML example and inclusion boundaries](USAGE.md#curate-a-reader-publication).
 It describes installed defaults and validation vocabulary, never effective project
 values or a complete schema for every project setting. Discovery commands read no
 project configuration. Older releases use unfiltered `about --json` and command
@@ -6888,6 +6911,8 @@ anything. A healthy stopped service is valid; discrepancies or unavailable
 observations exit 1. Out-of-range numeric ports or invalid `LIXITY_PORT` return
 the same schema with `ok: false` and `error.code: "invalid-service-port"`;
 non-integer explicit `--port` values remain usage errors (exit 2).
+This optional installation/service diagnostic is not a per-write prerequisite;
+keep each operation's revision, snapshot and project-context checks.
 See [doctor](USAGE.md#lixity-doctor).
 An invalid explicit foreground `serve` selector fails before binding; it does not
 select the caller's directory. Valid empty/ambiguous directories retain their
@@ -7573,6 +7598,17 @@ instead carry `lixity-reader-publication/1` with an empty response table and no
 analysis. An export cap removes content before serialization; local chapter
 progress only hides included content. See [sharing scope](USAGE.md#export-a-reading-website)
 and [projection semantics](research/DATA_MODEL.md#reading-website-projection).
+
+**Current main (unreleased after v0.7.4):** the 10,000-revision limit applies
+only to authored history in review exports with `include_research=true`:
+`dossier`, `claim`, `evidence_link`, `decision`, `claim_relation` and
+`manuscript_claim_link`. Source and passage records do not count; reader/companion projections
+skip this history count. `manifest.research.revision_count` retains its existing
+meaning: all accepted record versions, including sources and passages, when research
+is included; otherwise 0. It is not the authored-history budget.
+Separate limits remain: 64 MiB each for manuscript input, archive record input
+and prepared website data, 50,000 prepared research responses and a 200 MiB
+complete bundle. Oversized inputs fail without publishing partial output.
 
 **Since v0.7.2:** `GET /` and `/index.html` validate the active
 manuscript before reusing the dashboard. Missing/unreadable input or failed
