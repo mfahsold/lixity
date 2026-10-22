@@ -39,8 +39,9 @@ OG_IMAGE_ALT = "Lixity continuous manuscript reader with chapter navigation and 
 LICENSE_URL = "https://github.com/mfahsold/lixity/blob/main/LICENSE"
 
 #: A published example stays a quick page load; past this size the excerpt is
-#: cut further instead of shipping a multi-megabyte HTML document.
-MAX_PAGE_BYTES = 1_500_000
+#: cut further instead of shipping a multi-megabyte HTML document. The shared
+#: chapter measurement inspector adds a bounded 25 kB allowance.
+MAX_PAGE_BYTES = 1_525_000
 
 
 @dataclass(frozen=True)

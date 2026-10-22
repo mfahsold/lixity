@@ -13,6 +13,21 @@ code, pre { font-family: var(--font-mono); }
 .page { max-width: 72rem; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-4); }
 .page > * { min-width: 0; margin-block: 0; }
 .workspace-shell { display: grid; gap: var(--space-3); min-width: 0; }
+#analysis-metric-context { max-width: 52rem; width: min(94vw, 52rem); }
+#analysis-metric-context h2 { font-size: var(--text-body); }
+#analysis-metric-context .modal-body { gap: var(--space-3); }
+#analysis-metric-context .modal-footer {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  flex: none;
+}
+#analysis-metric-context p { margin: 0; }
+#metric-context-chapter, .metric-context-value { font-weight: var(--weight-strong); }
+#analysis-metric-context table { min-width: 40rem; }
+#metric-context-values th { min-width: 10rem; }
+#metric-context-values td { font-variant-numeric: tabular-nums; }
+#metric-context-values .ctl { text-align: start; justify-content: flex-start; }
+.metric-context-selected { background: var(--accent-light); }
 h1 {
   font-size: 1.45rem;
   font-weight: var(--weight-strong);

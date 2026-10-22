@@ -57,7 +57,12 @@ from .components import (
 )
 from .dimensions import style_dimensions
 from .dossier_images import image_limits_attribute
-from .heatmap import render_heatmap_panel, render_register_targets, render_style_passport_panel
+from .heatmap import (
+    render_heatmap_panel,
+    render_metric_context,
+    render_register_targets,
+    render_style_passport_panel,
+)
 from .manuscript_document import ReaderBlock, reader_block_html
 from .manuscript_reader import reading_controls
 from .markers_panel import render_markers_panel
@@ -128,6 +133,7 @@ _JS_FILES = (
     "dossier-images.js",
     "dossier-geography.js",
     "style-space.js",
+    "metric-context.js",
     "workspace-reader.js",
     "manuscript-links.js",
     "manuscript-reader.js",
@@ -1462,6 +1468,7 @@ def render_dashboard(
         parts.append('</div><div id="style-panels">')
         parts.extend(content for _, _, content in style_views if content)
         parts.append("</div></section>")
+        parts.append(render_metric_context(fingerprint, metrics.chapters, labels, language_key))
     elif fingerprint is not None and metrics is not None and metrics.chapters:
         # Chapters exist, but none reaches the comparability floor: explain the
         # minimum instead of presenting an empty or misleading style reference.

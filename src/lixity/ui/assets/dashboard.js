@@ -12,6 +12,8 @@ function selectAnalysisMetric(key) {
 }
 
 function activate(el) {
+  if (el.hasAttribute("data-metric-feature") && window.LixityMetricContext &&
+      window.LixityMetricContext.open(el)) return;
   // drill-down: carry the context filters on the way to the deeper level
   if (el.hasAttribute("data-review-passage")) {
     var clearSearch = document.getElementById("text-search-clear");
@@ -1091,4 +1093,3 @@ document.querySelectorAll("[data-action]").forEach(function (btn) {
     runAction(btn.dataset.action, payload, btn);
   });
 });
-

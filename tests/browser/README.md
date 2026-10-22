@@ -103,6 +103,10 @@ independent switches, compact quote/count cards, separate paragraph comparisons,
 collapsed method guidance, direct inspection from Off or Focus reading, deliberate
 None/disabled displays, keyboard operation and restored preferences across reloads
 at 1440 and 320×480 pixels.
+Analysis-navigation also checks the shared chapter measurement dialog from
+heatmap cells and style-space loadings: all 16 metrics, chapter retention,
+chapter-only layer limits, explicit manuscript navigation, metric switching and
+Escape/focus restoration without writes.
 Missing browser identity-verification support remains distinct from a hash mismatch.
 The decision-review suite reads exact decision/dossier versions side by side,
 stacks them on mobile, and checks read failures, late root-bound responses and

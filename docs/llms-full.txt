@@ -123,6 +123,11 @@ with their chapter. Both preferences persist in the browser. Hover, touch and th
 paragraph menu explain the concrete text; the CLI exposes the same evidence with
 `lixity profile manuscript.md --layer asl --evidence`.
 
+**Current main (unreleased):** matrix cells and style-space loadings share
+chapter measurements: meaning, units, manuscript reference and the other
+metrics of the same chapter. Reading the text is an explicit next action;
+chapter-only measurements do not invent word-level highlights.
+
 A passage's research associations open its claims and dossier beside the
 manuscript, with a return to the passage. Current entries and exact linked earlier
 versions remain distinct. Dossier editing offers `--body-only` section drafts and
@@ -175,7 +180,9 @@ cover archive compatibility and upgrades. See the
 [changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md) for subsequent work.
 The repository's generated demo follows the interface documented here, including
 unreleased changes, with a fictional project and read-only research. Importing
-and saving require the local app.
+and saving require the local app. A push to `main` alone does not deploy Pages
+or update a running local installation; see
+[update and deployment boundaries](https://mfahsold.github.io/lixity/INSTALLATION.md).
 
 Cite [Lixity on Zenodo](https://doi.org/10.5281/zenodo.23390297), with metadata in
 [`CITATION.cff`](https://github.com/mfahsold/lixity/blob/main/CITATION.cff).
@@ -401,6 +408,11 @@ support keyboard scrolling; wide comparisons retain row identity. Dialogue chart
 include every measured chapter in manuscript order, including zero turns; pacing
 labels explain ASL units, relative bars and the existing Hook heuristic. The chapter
 matrix distinguishes measured zero cutoff crossings from unavailable comparisons.
+Current main (unreleased): heatmap cells, style-reference cutoff counts and every
+style-space loading open shared read-only chapter measurements: definitions,
+units, sample counts, manuscript medians and z* from the existing fingerprint.
+Metric switches keep the chapter; Read chapter explicitly selects the supported
+paragraph layer or clears it. Axis loadings are not chapter contributions.
 Chapter values still cover profiled paragraphs/lists; corpus/style also includes
 blockquotes. Scores and public API formats are unchanged. Overview To-do drafts,
 focused keyboard drills and Back to passage reuse existing save and context-return
@@ -1135,9 +1147,18 @@ For contributors, `make check` is the everyday local source check and
 `make browser` covers rendered changes. Before preparing a release, use
 `make release-check RELEASE_TAG=vX.Y.Z`, plus `make browser-full` for UI changes.
 Heavy GitHub test/browser/platform workflows are manual fallbacks. Tagged
-releases still build/attest packages and then deploy Pages from the same published tag;
-manual Pages dispatch is a deliberate preview. A local Linux check does
-not replace Windows/macOS verification for platform-sensitive changes. See
+releases build/attest packages and deploy Pages from that published tag; manual
+Pages dispatch is a deliberate preview. Pushing `main` alone updates neither
+the deployed site nor a local installation.
+
+Installing an update changes the installed package, not another checkout or an
+already running process; restart the managed service to load it. A **Reading
+website** / `lixity export-site` output is a separate fixed project snapshot:
+regenerate it deliberately after source/archive changes. It neither publishes
+to Pages nor follows later edits automatically.
+
+A local Linux check does not replace Windows/macOS verification for
+platform-sensitive changes. See
 [contributor checks](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#development-setup)
 for the canonical paths and focused/manual-full platform options.
 
@@ -1271,14 +1292,14 @@ or a different output.
 | Question | Command | Key numbers |
 | :--- | :--- | :--- |
 | How does the manuscript read overall? | `lixity analyze` | ASL, CV, TTR, HD-D, MTLD, Flesch, LIX, dialogue, registers |
-| Where does the tense slip? | `lixity profile` | per paragraph: dominant tense, mix, switch, severity 0–3 |
-| Is this chapter still *this book's* style? | `lixity style` | median/MAD bands, z\*, FDR set, style dimensions |
+| Where do heuristic tense markers change or mix? | `lixity profile` | per paragraph: dominant tense, mix, switch, severity 0–3 |
+| How does each chapter differ from this manuscript's reference? | `lixity style` | median/MAD bands, z\*, FDR set, style dimensions |
 | How is the dialogue structured? | `lixity dialogue` | turns, turn lengths, turns per 1,000 words, dialogue paragraphs |
 | Who appears where — and when not? | `lixity characters` | mentions, chapters present, span, longest gap |
 | Where are the scenes and hooks? | `lixity pacing` | scenes, scene length, ASL curve, hook score 0–3 |
 | What repeats itself? | `lixity motifs` | motif presence, top content words, repeated n-grams |
-| Which chapters *tell* instead of *show*? | `lixity showing` | tell/show z, balance per chapter (self-calibrating) |
-| I want to see and click all of it | `lixity dashboard` | single-file HTML, all panels, offline |
+| How do showing/telling proxy signals vary across chapters? | `lixity showing` | language-pattern z and balance per chapter; not a narrative classification |
+| I want to browse the available analysis panels | `lixity dashboard` | self-contained HTML; research and writes require the local app |
 | I want a foreground server for development or integration | `lixity serve` | loopback HTTP server, live settings, manuscript upload, research panel |
 | I want to start or manage the installed app | `lixity service` | managed start, stop, restart and status without a source checkout |
 | Which installation and service am I using? | `lixity doctor` | package versions, module/interpreter location, contracts and owned service status |
@@ -1632,16 +1653,13 @@ unchecking either switch hides only its own marks and key. The selected metric a
 both switch preferences persist in the browser, including deliberate **None** and
 disabled switches. Turning Analysis on again preserves those choices.
 
-**Since v0.7.4:** the paragraph menu has one **Explore passage**
-entry. Its existing right context offers **Explain measurement** and **Research
-for this passage**. The former explains counted text; the latter reads
-explicitly linked claims, sources and decisions. Hover and tap remain quick ways
-to open the measurement card. The compact card puts the selected
-quotation and its count first, with the paragraph measurement and chapter
-comparison in a separate panel. Mapping details and limits stay collapsed under
-**About this comparison**. The context's **Passage** button selects the inspector;
-the separate **Analysis** switch controls manuscript indicators. Neither route
-infers factual truth.
+**Explore passage** opens chapter/source-line context and measurements in the
+existing passage inspector without changing global Analysis. Its **Explain
+measurement** action inspects counted text; **Research for this passage** reads
+explicitly linked claims, sources and decisions. Switch between passage values,
+linked research and the chosen dossier explicitly. On mobile, a paragraph-to-tool
+action reveals the stacked tool heading; close or Escape returns to that passage
+and its control. Desktop tools occupy adjacent space.
 
 The visible keys distinguish violet **Counted text** underlines from
 **Paragraph comparison**. Notable paragraphs have a raw-value marker with a
@@ -1649,7 +1667,7 @@ down/up arrow and a blue/orange edge for below/above the chapter median; the pro
 background stays clear. Click the marker to inspect the measurement. **Read these
 marks** keeps the comparison method and counting guidance collapsed until opened.
 A marked sentence's word count and its paragraph's average are different
-quantities. Unavailable exact evidence is stated explicitly.
+quantities.
 
 These routes share existing actions rather than creating separate records:
 
@@ -1670,13 +1688,14 @@ including with Analysis Off or Focus reading. That explicit action enables
 Analysis and chooses Sentence length if no metric is selected, while preserving
 both display-switch preferences.
 
-The explanation separates the counted passage from its paragraph measurement and
-chapter comparison. A sentence's word count does not make it an editorial fault;
-a perception-word match does not establish narrative distance. Some Markdown
-counting/display projections cannot yet be mapped exactly: the value remains,
-but Lixity states that exact evidence is unavailable instead of guessing. Browsers
-without native text highlighting retain the explicit inspection route. Text,
-selection, saved quotations and search marks keep their existing identities.
+The measurement card puts the quotation and its count first, with paragraph
+measurement and chapter comparison in a separate panel. Mapping limits stay
+under **About this comparison**. A word count is not an editorial fault; a
+perception-word match does not establish narrative distance. When exact
+counting/display mapping cannot be verified, the value remains but its evidence
+is explicitly unavailable. Browsers without native text highlighting retain
+explicit inspection. Text, selection, saved quotations and search marks keep
+their identities.
 
 Choose a chapter in the reader toolbar. **Reading settings** groups **A−**/**A+**
 for text size (16–28 nominal pixels), narrow/standard/wide text and
@@ -1702,14 +1721,6 @@ also offers a compact toolbar. Marker notes and claim associations still require
 their existing explicit save and retention steps.
 Use Shift+right-click to open the browser's native context menu instead.
 
-**Explore passage** opens the selected paragraph's chapter, source lines, tense
-and measurements in the closable context area. Opening or closing it leaves the
-global Analysis choice unchanged. **Research for this passage** reads explicit
-associations alongside; **Review** opens their dedicated quote review. Switch
-between passage measurements, linked research and the chosen dossier explicitly;
-closing the tool does not turn all analysis off. On desktop, tools occupy adjacent space. On mobile, an explicit
-paragraph-to-tool action reveals the stacked tool heading; closing it or pressing
-Escape returns to the requesting passage and its paragraph control.
 **Focus reading** temporarily hides surrounding navigation and
 tools, counted-text underlines and paragraph comparison markers; its visible exit
 or Escape restores the workspace and prior display choices. Opening a tool exits
@@ -1785,6 +1796,27 @@ Tabs group the heatmap, style reference, dimensions and structural diagnostics.
 Links to `#heatmap`, `#bands`, `#dimensions`, `#structural` and `#feat-<field>`
 select the relevant tab. All available panels remain readable without JavaScript.
 
+Keep the three comparison scopes separate:
+
+| View | Measurement / reference | What it does not establish |
+| --- | --- | --- |
+| Paragraph comparison | One paragraph's raw value against that chapter's median/MAD | A chapter-level z* or a writing fault |
+| Chapter fingerprint | One chapter feature against the manuscript reference, with noise-adjusted z* | A cross-metric ranking or an external writing target |
+| Style dimensions | Chapter coordinates and axis loadings in standardized midrank space | Paragraph evidence, chapter z*, causal contributions or quality |
+
+The [methods](METHODS.md) define these quantities; the
+[interpretation guide](guides/interpretation.html) explains their limits.
+
+**Current main (unreleased):** selecting a heatmap cell or a style-reference
+cutoff-hit count opens **Chapter measurements** before navigating. It explains
+the selected metric, its unit and chapter sample, alongside all 16 canonical
+chapter values, manuscript medians, reference sample counts and z* values.
+Switching metrics keeps the same chapter and does not change manuscript marks.
+Each metric has its own unit and reference. `–` remains unavailable, never zero.
+**Read chapter** uses the existing manuscript navigation and selects only an
+applicable paragraph layer; chapter-only metrics clear the prior layer rather
+than substituting word marks. Closing or Escape returns focus to the trigger.
+
 **Since v0.7.3:** the chapter matrix shows `0` when a style
 comparison is available and no feature crosses its cutoff; `–` means that the
 comparison is unavailable. **What is counted** explains the existing coverage:
@@ -1843,6 +1875,12 @@ zoom/rotate, and select chapter points or **Chapter scores** links to read a
 chapter. Toggle the trajectory or cutoff box and reset the camera as needed.
 Rotation is opt-in and pauses in a hidden tab. Cards show positive/negative
 loadings; the table gives the same measured chapter scores and flags.
+
+**Current main (unreleased):** every loading, including chapter-only metrics,
+opens the same **Chapter measurements** view for the selected chapter.
+The originating axis and loading coefficient remain distinct from the chapter's
+measurement and z*. Selecting another metric removes that axis-origin caption;
+it does not recompute scores, infer chapter contributions or establish causality.
 
 The chapter selector keeps the chosen chapter's
 scores beside the plot. Choose a flat axis pair in **View** when points overlap;
@@ -2475,7 +2513,7 @@ immersion or a writing defect. There is no automatic narrator-voice assessment.
 | **Guiraud R** | V / √N | remains length-dependent; compare with sampling and corpus context |
 | **Yule's K** | vocabulary repetition measure | repetition does not establish a stable narrator or a quality verdict |
 | **ASW** | average syllables per word | a language-dependent heuristic input to readability formulas |
-| **MTLD** | mean segment length until TTR < 0.72 (forward/backward averaged) | larger values mean longer diverse segments; requires ≥ 100 tokens |
+| **MTLD** | mean segment length until TTR ≤ 0.72 (forward/backward averaged) | larger values mean longer diverse segments; requires ≥ 100 tokens |
 | **MATTR** | moving-average TTR over a 50-token window | describes local repetition; compare the same window and tokenization |
 | **Maas a²** | (log₁₀ N − log₁₀ V) / (log₁₀ N)² | requires ≥ 100 tokens; lower means more types at the same N, not better prose |
 | **Flesch** | language-calibrated Flesch family (Amstad for German) | formula output is not clipped to 0–100; not reader comprehension |
@@ -2531,10 +2569,9 @@ chapters. See [interpretation](guides/interpretation.html) for short-text limits
 - Explicit project title/metadata can supply the title; filenames remain the
   artifact naming basis.
 
-For a review, follow a heatmap cell or paragraph strip to the passage, then
-compare the measurement with the chapter's purpose. See
-[dashboard navigation](#dashboard-workflow) rather than treating a highlighted
-value as an editing instruction.
+For review, use [chapter measurements](#style-area) or a paragraph's measurement
+explanation, then read the passage against its intended purpose. A highlighted
+value is not an editing instruction.
 
 Line anchors in reports and dashboards refer to lines in the source file, so
 findings stay navigable in the editor.
@@ -6565,12 +6602,13 @@ The presentation keeps computed counts and authored research separate without
 a new context state or transport contract. The floating card uses native counts
 and the existing paragraph comparison; it never parses localized numeric text.
 
-The existing reader preferences also retain the selected metric and marking
-choice. First explicit Analysis On defaults to `asl` only without a saved choice;
-the native disclosure beside the switch contains the single existing selector
-and marking checkbox. Explicit paragraph inspection can enable Analysis through
-the workbench owner while preserving disabled paint. Missing cryptographic
-verification is distinguished from a mismatching paragraph identity.
+The reader's directly visible native controls share one metric selector and
+independent Counted text / Paragraph comparison switches. Browser preferences
+preserve each choice, including deliberate None and disabled switches. First
+explicit Analysis On defaults to `asl` only without a saved choice. Explicit
+measurement inspection delegates visibility to the workbench owner without
+overwriting disabled paint. Missing cryptographic verification remains distinct
+from a mismatching paragraph identity.
 
 The existing paragraph menu snapshots a native pointer caret as a transient
 UTF-16 paragraph offset and evidence identity. After normal source verification,
@@ -6608,23 +6646,19 @@ Focus mode is reversible and temporary. Layout changes capture the first visible
 source block and restore its viewport position after reflow where possible, rather
 than persisting a second text offset or editing manuscript content.
 
-Paragraph ellipsis buttons, pointer context menus and keyboard context-menu
-shortcuts share the same action builder. A valid single-paragraph selection
-offers a small toolbar. Marker and claim actions delegate to the established
-handlers, including their explicit save, capability and retention checks; no
-parallel write API is introduced. Values reuse the paragraph's measured markup
-in the closable Passage values inspector, alongside chapter/source-line context
-and the existing saved-research route when supported. Opening Values does not
-force the global Analysis layer on. Explicit Values/dossier
-controls replace the active dock content while retaining each tool's selection.
-Closing the dock does not hide the diagnostic layer; turning Analysis Off
-preserves an explicitly open Values inspector or dossier. Overview return
-restores the previous layer visibility and context tool. On narrow screens, an explicit passage
-tool request stores its own origin and reveals the stacked dock heading; close
-or Escape restores the requesting passage and focus. That intentional destination
-scroll is not overwritten by ordinary reading-anchor restoration. Desktop tools
-keep the adjacent layout. Menus expose
-arrow/Home/End navigation and restore trigger focus on Escape.
+Paragraph ellipsis, pointer context menus and keyboard context-menu shortcuts
+share one action builder; valid single-paragraph selection adds a small toolbar.
+Marker and claim actions retain existing save, capability and retention guards.
+**Explore passage** reuses the paragraph's measured markup in the closable
+context inspector without changing global Analysis. **Explain measurement**
+delegates to the evidence owner and can enable Analysis; a saved-research route
+uses existing association reads. Tool changes retain each selection, and closing
+the dock does not hide manuscript marks. Analysis Off preserves an explicitly
+open inspector or dossier. Overview return restores prior visibility and context.
+On narrow screens, an explicit tool request stores its own origin and reveals
+the stacked dock; close/Escape restores that passage and focus instead of an
+unrelated reading anchor. Desktop tools remain adjacent. Menus retain
+arrow/Home/End navigation and Escape focus return.
 Association refreshes skip unchanged annotation DOM and preserve native selection
 endpoints when marks change. Automatic review uses the existing research-status
 read before requesting archive records; context-bound pending reads are coalesced
@@ -7037,12 +7071,32 @@ already reached end when its measured available height changes, and preserves
 other reading offsets.
 
 Paragraph layers reuse `layer_stats` and the shared descriptive cutoff, with
-chapter median/MAD and rounded two-decimal z. The browser paints behind opaque
-prose without rewriting its nodes or combining metric colours. Colour, marker
+chapter median/MAD and rounded two-decimal z. The browser adds separate
+gutter/value markers, not a whole-prose wash, without rewriting prose nodes or
+combining metric colours. Colour, marker
 membership, source/value/unit explanation and the opt-in `paragraph-layer/1` CLI
 projection use the same comparison. Missing comparison is not zero. Display-only
 register/declared-POV controls change heatmap row visibility, preserving the
 accepted full-book analysis and existing exemption policy.
+
+**Current main (unreleased):** `ui.heatmap.render_metric_context` projects the
+existing 16-feature `StyleFingerprint` into one native chapter measurement
+dialog. Heatmap cells, style-reference cutoff-hit counts and all dimension
+loadings use the existing activation dispatcher and `metric-context.js`.
+Metric switches retain the selected chapter without changing paragraph marks;
+only the explicit reading action delegates to `jumpToChapter`, choosing an
+applicable paragraph layer or clearing it. Native modality owns Escape and
+closing restores trigger focus, while a reading action transfers focus to the
+manuscript through its existing navigation owner.
+
+Definitions, units, reference medians, sample counts and z* come from existing
+feature/help packs and fingerprint values, not browser recomputation. Dimension
+loadings keep their axis/coefficient origin separate from chapter measurements;
+switching to another metric removes that caption. Chapter z*, within-chapter
+paragraph z and PCA coordinates/loadings are distinct, not interchangeable
+scores. The same renderer and bundled controller serve local dashboards and
+generated read-only examples, without another data model, endpoint or archive
+schema. [Usage](USAGE.md#style-area) owns the interaction and scope comparison.
 
 Decision/dossier review composes exact existing record-version GETs inside the
 existing review surface. It retains pending, retry, unavailable and stale states;
@@ -7367,9 +7421,10 @@ absent text or a smaller HTML payload.
 Style jumps reveal their owning tabs. In standalone reports, chapter/paragraph
 jumps expand folded chapters; the interactive reader keeps chapters
 and prose continuous and hides chapter-fold controls. Its paragraph menu opens
-Values in the contextual inspector instead of an inline disclosure. Opening
-Values preserves the global Analysis choice; Analysis Off preserves an explicitly
-open Values inspector. Overview return restores the previous layer and tool. Section
+**Explore passage** in the contextual inspector instead of an inline disclosure.
+Opening that inspector preserves global Analysis; its explicit **Explain
+measurement** action may enable it. Analysis Off preserves an explicitly
+open inspector. Overview return restores the previous layer and tool. Section
 navigation lists only rendered panels.
 
 PDF export, the read-only dossier companion and research saves use the explicit
@@ -7408,10 +7463,14 @@ Analysis Off and Focus hide both displays without resetting their preferences.
 | `data-line="<n>"` | jump to the paragraph containing that source line (opens it); falls back to the chapter |
 | `data-target="p-<idx>"` | exact paragraph panel to open on jump (flagged-list rows) |
 | `[data-chapter-toggle]` | standalone report: fold or unfold a chapter body (strip and paragraphs); jumps and search steps expand a collapsed chapter; hidden in the continuous interactive reader |
-| `data-chapter="<n>"` | heatmap cell: open that chapter (with its layer) |
+| `data-chapter="<n>"` | chapter navigation target; on metric triggers, the chapter to inspect before reading |
+| `[data-metric-feature="<field>"]` | current main (unreleased): heatmap cells, reference cutoff-hit counts and dimension loadings open shared chapter measurements using canonical fingerprint fields; no manuscript mutation |
+| `#analysis-metric-context` / `#metric-context-values` | current main: native measurement dialog and metric switches within the same chapter; raw units, medians, sample counts and z* remain distinct |
+| `#metric-context-read` / `[data-metric-close]` | current main: explicitly navigate with the applicable paragraph layer (or clear it); close/Escape restores trigger focus without changing the selected layer |
+| `[data-dimension-loading]` | current main: metric trigger follows the style-space selected chapter; axis/loading origin is not a chapter contribution |
 | `#style-tab-<panel-id>` / `data-style-view="<panel-id>"` | native style tab for `heatmap`, `bands`, `dimensions` or `structural`; its `aria-controls` points to that existing panel |
 | `.paragraph-values > summary` | standalone report and no-JavaScript fallback: native disclosure for source lines and measurements; inline Values is hidden in the interactive reader |
-| `.reader-paragraph-actions[data-reader-paragraph]` / `#manuscript-context-menu [data-reader-action="values"]` | interactive reader: open the paragraph action menu, then explicitly open Passage values without changing global Analysis visibility |
+| `.reader-paragraph-actions[data-reader-paragraph]` / `#manuscript-context-menu [data-reader-action="values"]` | interactive reader: open the paragraph menu, then **Explore passage** without changing global Analysis visibility; the internal `values` action key is unchanged |
 | `#reader-inspector` / `#reader-inspector-body` / `#reader-inspector-close` | contextual Passage values inspector, its passage context, source lines/measurements, saved-research route when supported and close action; the manuscript text remains in its original DOM |
 | `#hero-btn-new-project` / `#analysis-empty-import` | native **Analyze a manuscript** action; opens the existing import dialog without submitting it |
 | `#analysis-review [data-review-passage]` | native passage link; clears search/paragraph filters, opens its `data-target` and focuses the paragraph panel |

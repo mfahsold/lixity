@@ -205,6 +205,11 @@ support keyboard scrolling; wide comparisons retain row identity. Dialogue chart
 include every measured chapter in manuscript order, including zero turns; pacing
 labels explain ASL units, relative bars and the existing Hook heuristic. The chapter
 matrix distinguishes measured zero cutoff crossings from unavailable comparisons.
+Current main (unreleased): heatmap cells, style-reference cutoff counts and every
+style-space loading open shared read-only chapter measurements: definitions,
+units, sample counts, manuscript medians and z* from the existing fingerprint.
+Metric switches keep the chapter; Read chapter explicitly selects the supported
+paragraph layer or clears it. Axis loadings are not chapter contributions.
 Chapter values still cover profiled paragraphs/lists; corpus/style also includes
 blockquotes. Scores and public API formats are unchanged. Overview To-do drafts,
 focused keyboard drills and Back to passage reuse existing save and context-return

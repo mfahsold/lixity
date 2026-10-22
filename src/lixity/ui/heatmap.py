@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import json
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from ..format import num as format_num
+from ..models import ChapterMetrics
 from ..style_fingerprint import (
     FEATURE_UNITS,
     FEATURES,
@@ -30,7 +32,7 @@ FEATURE_HELP_KEYS: dict[str, str] = {
     "passive_density": "passive",
     "nominalization_density": "nominal",
     "adjective_density": "adjective",
-    "long_word_pct": "lix",
+    "long_word_pct": "long_words",
     "start_entropy": "start_entropy",
     "first_person_start_rate": "first_start",
     "guiraud_r": "guiraud",
@@ -39,6 +41,77 @@ FEATURE_HELP_KEYS: dict[str, str] = {
     "mattr": "mattr",
     "maas_a2": "maas",
 }
+
+
+def render_metric_context(
+    fingerprint: StyleFingerprint,
+    chapters: Sequence[ChapterMetrics],
+    labels: Mapping[str, str] | None = None,
+    language_key: str = "generic",
+) -> str:
+    """Project existing chapter measurements into one shared, read-only inspector."""
+    layers = {field: key for key, field in LAYER_FEATURES.items()}
+    units = FEATURE_UNITS.get(language_key, FEATURE_UNITS["en"])
+    features = {}
+    for field, key, unit in FEATURES:
+        base = fingerprint.baseline.get(field, {})
+        supported = int(base.get("n", 0)) >= fingerprint.thresholds.min_chapters
+        features[field] = {
+            "label": label(labels, key),
+            "unit": units.get(field, unit),
+            "help": label(labels, "help_" + FEATURE_HELP_KEYS.get(field, field)),
+            "layer": layers.get(field, ""),
+            "median": format_num(float(base["median"]), language_key, 2) if supported else "–",
+            "n": int(base.get("n", 0)),
+        }
+    chapter_data = {}
+    for chapter in chapters:
+        chapter_data[str(chapter.num)] = {
+            "title": f"{chapter.num}. {chapter.title}",
+            "sample": f"{chapter.words} {label(labels, 'words')} · {chapter.sentences} {label(labels, 'sentences')}",
+            "values": {
+                field: {
+                    "value": format_num(value, language_key, 2) if value is not None else "–",
+                    "z": format_num(z, language_key, 2, signed=True) if z is not None else "–",
+                }
+                for field, _key, _unit in FEATURES
+                for value in [fingerprint.values.get(field, {}).get(chapter.num)]
+                for z in [fingerprint.z_scores.get(chapter.num, {}).get(field)]
+            },
+        }
+    payload = esc(json.dumps(
+        {
+            "features": features,
+            "chapters": chapter_data,
+            "labels": {"loading": label(labels, "dim_loading"), "poles": label(labels, "dim_poles")},
+        },
+        ensure_ascii=False, separators=(",", ":")
+    ))
+    return (
+        f'<dialog class="lixity-modal" id="analysis-metric-context" closedby="any" '
+        f'aria-labelledby="metric-context-title" data-metric-context="{payload}">'
+        '<div class="modal-card"><div class="modal-header">'
+        f'<h2 id="metric-context-title" tabindex="-1">{esc(label(labels, "metric_context_title"))}</h2>'
+        f'<button type="button" class="modal-close" data-metric-close aria-label="{esc(label(labels, "modal_close"))}">✕</button>'
+        '</div><div class="modal-body">'
+        '<p id="metric-context-chapter"></p><p class="ctl-note" id="metric-context-sample"></p>'
+        '<p id="metric-context-origin" hidden></p>'
+        '<p id="metric-context-definition"></p><p class="metric-context-value" id="metric-context-value"></p>'
+        f'<p class="ctl-note">{esc(label(labels, "metric_context_hint"))}</p>'
+        '<p class="ctl-note" id="metric-context-no-layer" hidden>'
+        f'{esc(label(labels, "metric_context_no_layer"))}</p>'
+        '<div class="table-wrap" tabindex="0" role="region" aria-labelledby="metric-context-caption">'
+        '<table><caption id="metric-context-caption">'
+        f'{esc(label(labels, "metric_context_title"))}</caption><thead><tr>'
+        f'<th scope="col">{esc(label(labels, "register_target"))}</th>'
+        f'<th scope="col">{esc(label(labels, "scene_value"))}</th>'
+        f'<th scope="col">{esc(label(labels, "metric_context_reference"))}</th>'
+        '<th scope="col">z*</th></tr></thead><tbody id="metric-context-values"></tbody></table></div>'
+        '</div><div class="modal-footer">'
+        f'<button type="button" class="ctl" data-metric-close>{esc(label(labels, "modal_close"))}</button>'
+        f'<a class="ctl primary" id="metric-context-read">{esc(label(labels, "dim_read_chapter"))}</a>'
+        '</div></div></dialog>'
+    )
 
 
 def render_register_targets(
@@ -203,8 +276,20 @@ def render_heatmap_panel(
                      f'<td class="ch">{chapter.num}. {esc(chapter.title)}{register_badge}</td>')
         for field_name, label_key, _unit in FEATURES:
             z = fingerprint.z_scores[chapter.num].get(field_name)
+            layer_key = feature_layers.get(field_name, "")
+            cell_attrs = (
+                f' data-chapter="{chapter.num}" data-layer="{layer_key}"'
+                f' data-metric-feature="{field_name}"'
+                + (' data-only="1"' if layer_key and z is not None and abs(z) >= z_mild else "")
+                + ' tabindex="0" role="button"'
+            )
             if z is None:
-                parts.append('<td class="z">–</td>')
+                description = esc(
+                    f"{label(labels, label_key)} · {label(labels, 'chapter')} {chapter.num} · "
+                    f"{label(labels, 'project_identity_unavailable')}",
+                    quote=True,
+                )
+                parts.append(f'<td class="z"{cell_attrs} aria-label="{description}">–</td>')
                 continue
             raw = fingerprint.values[field_name].get(chapter.num)
             raw_text = N(raw, 2) if isinstance(raw, float) else str(raw)
@@ -222,11 +307,9 @@ def render_heatmap_panel(
                 f'<span class="fdr-marker" aria-label="{L("fdr_flagged")}">●</span>'
                 if field_name in confirmed else ""
             )
-            layer_key = feature_layers.get(field_name, "")
-            cell_attrs = (
-                f' data-chapter="{chapter.num}" data-layer="{layer_key}"'
-                + (' data-only="1"' if layer_key and abs(z) >= z_mild else "")
-                + ' tabindex="0" role="button"'
+            cell_attrs += (
+                f' aria-label="{esc(label(labels, label_key))} · '
+                f'{L("chapter")} {chapter.num} · z* {N(z, 1, signed=True)}"'
             )
             if abs(z) < 0.05:
                 parts.append(
@@ -331,12 +414,14 @@ def render_style_passport_panel(
             )
             count_attrs = [
                 f'data-jump="#ch-{strongest}"',
+                f'data-chapter="{strongest}"',
+                f'data-metric-feature="{field_name}"',
+                f'data-layer="{layer or ""}"',
                 'role="button"',
                 'tabindex="0"',
                 f'title="{esc(title_text, quote=True)}"',
             ]
             if layer:
-                count_attrs.append(f'data-layer="{layer}"')
                 count_attrs.append('data-only="1"')
             parts.append(
                 f'<span class="band-count band-outlier" {" ".join(count_attrs)}>{n_out}</span>'

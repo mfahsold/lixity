@@ -309,9 +309,10 @@ absent text or a smaller HTML payload.
 Style jumps reveal their owning tabs. In standalone reports, chapter/paragraph
 jumps expand folded chapters; the interactive reader keeps chapters
 and prose continuous and hides chapter-fold controls. Its paragraph menu opens
-Values in the contextual inspector instead of an inline disclosure. Opening
-Values preserves the global Analysis choice; Analysis Off preserves an explicitly
-open Values inspector. Overview return restores the previous layer and tool. Section
+**Explore passage** in the contextual inspector instead of an inline disclosure.
+Opening that inspector preserves global Analysis; its explicit **Explain
+measurement** action may enable it. Analysis Off preserves an explicitly
+open inspector. Overview return restores the previous layer and tool. Section
 navigation lists only rendered panels.
 
 PDF export, the read-only dossier companion and research saves use the explicit
@@ -350,10 +351,14 @@ Analysis Off and Focus hide both displays without resetting their preferences.
 | `data-line="<n>"` | jump to the paragraph containing that source line (opens it); falls back to the chapter |
 | `data-target="p-<idx>"` | exact paragraph panel to open on jump (flagged-list rows) |
 | `[data-chapter-toggle]` | standalone report: fold or unfold a chapter body (strip and paragraphs); jumps and search steps expand a collapsed chapter; hidden in the continuous interactive reader |
-| `data-chapter="<n>"` | heatmap cell: open that chapter (with its layer) |
+| `data-chapter="<n>"` | chapter navigation target; on metric triggers, the chapter to inspect before reading |
+| `[data-metric-feature="<field>"]` | current main (unreleased): heatmap cells, reference cutoff-hit counts and dimension loadings open shared chapter measurements using canonical fingerprint fields; no manuscript mutation |
+| `#analysis-metric-context` / `#metric-context-values` | current main: native measurement dialog and metric switches within the same chapter; raw units, medians, sample counts and z* remain distinct |
+| `#metric-context-read` / `[data-metric-close]` | current main: explicitly navigate with the applicable paragraph layer (or clear it); close/Escape restores trigger focus without changing the selected layer |
+| `[data-dimension-loading]` | current main: metric trigger follows the style-space selected chapter; axis/loading origin is not a chapter contribution |
 | `#style-tab-<panel-id>` / `data-style-view="<panel-id>"` | native style tab for `heatmap`, `bands`, `dimensions` or `structural`; its `aria-controls` points to that existing panel |
 | `.paragraph-values > summary` | standalone report and no-JavaScript fallback: native disclosure for source lines and measurements; inline Values is hidden in the interactive reader |
-| `.reader-paragraph-actions[data-reader-paragraph]` / `#manuscript-context-menu [data-reader-action="values"]` | interactive reader: open the paragraph action menu, then explicitly open Passage values without changing global Analysis visibility |
+| `.reader-paragraph-actions[data-reader-paragraph]` / `#manuscript-context-menu [data-reader-action="values"]` | interactive reader: open the paragraph menu, then **Explore passage** without changing global Analysis visibility; the internal `values` action key is unchanged |
 | `#reader-inspector` / `#reader-inspector-body` / `#reader-inspector-close` | contextual Passage values inspector, its passage context, source lines/measurements, saved-research route when supported and close action; the manuscript text remains in its original DOM |
 | `#hero-btn-new-project` / `#analysis-empty-import` | native **Analyze a manuscript** action; opens the existing import dialog without submitting it |
 | `#analysis-review [data-review-passage]` | native passage link; clears search/paragraph filters, opens its `data-target` and focuses the paragraph panel |

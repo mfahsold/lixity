@@ -7,6 +7,19 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+- Heatmap cells, style-reference cutoff-hit counts and all style-space loadings
+  share a read-only chapter measurement dialog. It retains chapter context and
+  shows definitions, units, sample size, manuscript medians and z* for the
+  existing 16 metrics, without recomputation or a cross-metric quality ranking.
+  Explicit **Read chapter** reuses manuscript navigation; chapter-only metrics
+  clear unsupported paragraph layers. Axis loadings remain distinct from
+  chapter measurements, and close/Escape restores the original trigger.
+- Documentation separates paragraph, chapter and style-axis comparisons,
+  corrects obsolete control descriptions and MTLD's inclusive factor threshold,
+  consolidates passage-inspection guidance, and distinguishes pushed source,
+  installed/running code, deployed Pages and fixed reading exports.
+
 ## [0.7.5] - 2026-10-22
 
 ### Added

@@ -285,6 +285,7 @@ async function settleGeometry(page) {
         await page.locator('#workbench-overview-open').click();
         if (activation === 'click') await cell.click();
         else { await cell.focus(); await cell.press('Enter'); }
+        await page.locator('#metric-context-read').click();
         assert.equal(await page.locator('#chapters').isVisible(), true,
           `Heatmap ${activation} reveals the manuscript instead of scrolling a hidden chapter`);
         assert.equal(await toggle.getAttribute('aria-expanded'), 'true', 'Chapter navigation expands its destination');

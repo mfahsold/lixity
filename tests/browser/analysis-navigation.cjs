@@ -30,6 +30,7 @@ text = '\\n\\n'.join(
         (voices[chapter - 1] * (6 + paragraph % 4))
         for paragraph in range(10))
     for chapter in range(1, 5))
+text += '\\n\\n## Brief chapter\\n\\nRain.'
 config = CorpusConfig(language='en', chapter_regex=r'(?m)^##\\s+')
 analysis = analyze_document(text, config, resolve_thresholds(project_config={}))
 analysis.paragraphs[0].severity = 3
@@ -191,6 +192,13 @@ async function finish(page, errors, writes) {
           const supported = page.locator('#heatmap td.z[data-layer=asl]').last();
           const chapter = await supported.getAttribute('data-chapter');
           await supported.focus(); await page.keyboard.press('Enter'); await settle(page);
+          assert.equal(await page.locator('#analysis-metric-context').isVisible(), true,
+            'A chapter comparison explains its measurement before leaving the overview');
+          assert.equal(await page.locator('#metric-context-values tr').count(), 16);
+          assert.equal(await page.locator('#metric-context-values [data-metric-row=asl] button').getAttribute('aria-pressed'), 'true');
+          assert.match(await page.locator('#metric-context-value').textContent(), /^– /,
+            'An unavailable chapter measurement remains unavailable, not zero');
+          await page.locator('#metric-context-read').click(); await settle(page);
           assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'true',
             'A metric-specific chapter drill carries its metric into visible Analysis');
           assert.equal(await page.locator('#style-layer').inputValue(), 'asl');
@@ -205,6 +213,9 @@ async function finish(page, errors, writes) {
           const unsupported = page.locator('#heatmap td.z[data-layer=""]').last();
           assert.ok(await unsupported.count(), 'There is a chapter-only measurement in the synthetic matrix');
           await unsupported.focus(); await page.keyboard.press('Enter'); await settle(page);
+          assert.equal(await page.locator('#metric-context-no-layer').isVisible(), true,
+            'Chapter-only measurements explain why there are no exact paragraph marks');
+          await page.locator('#metric-context-read').click(); await settle(page);
           assert.equal(await page.locator('#style-layer').inputValue(), '',
             'A chapter-only measurement never displays the previous paragraph metric');
           assert.equal(await page.locator('#chapters .metric-notable').count(), 0);
@@ -212,13 +223,43 @@ async function finish(page, errors, writes) {
           await page.evaluate(() => revealStyleTarget(document.getElementById('dimensions')));
           const chosen = await page.locator('#dim-chapter-select option').last().getAttribute('value');
           await page.locator('#dim-chapter-select').selectOption(chosen);
-          const loading = page.locator('#dimensions .load[data-layer]').first();
+          const loading = page.locator('#dimensions .load[data-layer]:not([data-layer=""])').first();
           const key = await loading.getAttribute('data-layer');
           await loading.focus(); await page.keyboard.press('Enter'); await settle(page);
+          assert.equal(await page.locator('#metric-context-chapter').textContent(),
+            await page.locator('#dim-chapter-select option:checked').textContent());
+          assert.equal(await page.locator('#metric-context-origin').isVisible(), true);
+          await page.locator('#metric-context-read').click(); await settle(page);
           assert.equal(new URL(page.url()).hash, '#ch-' + chosen,
             'Dimension loadings retain the selected chapter when returning to the manuscript');
           assert.equal(await page.locator('#style-layer').inputValue(), key);
           assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'true');
+          await openOverview(page);
+          await page.evaluate(() => revealStyleTarget(document.getElementById('dimensions')));
+          const chapterOnlyLoading = page.locator('#dimensions .load[data-layer=""]').first();
+          assert.ok(await chapterOnlyLoading.count(), 'The dimension also exposes measurements without paragraph layers');
+          const priorLayer = await page.locator('#style-layer').inputValue();
+          await chapterOnlyLoading.click();
+          assert.equal(await page.locator('#metric-context-no-layer').isVisible(), true);
+          await page.locator('#metric-context-values [data-metric-row=asl] button').click();
+          assert.equal(await page.locator('#metric-context-no-layer').isVisible(), false);
+          assert.equal(await page.locator('#metric-context-origin').isVisible(), false,
+            'Another metric is not presented as the original axis loading');
+          assert.equal(await page.locator('#style-layer').inputValue(), priorLayer,
+            'Inspecting another chapter metric does not change the manuscript layer');
+          await page.keyboard.press('Escape');
+          assert.equal(await page.locator('#analysis-metric-context').isVisible(), false);
+          assert.equal(await chapterOnlyLoading.evaluate(node => node === document.activeElement), true,
+            'Closing restores focus to the exact loading without losing the selected chapter');
+          await page.evaluate(() => revealStyleTarget(document.getElementById('bands')));
+          const cutoff = page.locator('#bands .band-outlier[data-metric-feature]').first();
+          await cutoff.click();
+          assert.equal(await page.locator('#metric-context-chapter').textContent(),
+            await page.locator('#heatmap-ch-' + await cutoff.getAttribute('data-chapter') + ' .ch').textContent());
+          await page.locator('#metric-context-values [data-metric-row=dialog_pct] button').click();
+          const dialogValue = await page.locator('#metric-context-value').textContent();
+          assert.ok(!dialogValue.startsWith('–'), 'A measured zero is not missing');
+          await page.locator('[data-metric-close]').first().click();
           await finish(page, errors, writes);
         } finally { await page.close(); }
       });
@@ -397,6 +438,47 @@ async function finish(page, errors, writes) {
               'Revealing the focused nav link does not scroll vertically back to the navigation');
             await page.screenshot({path: path.join(artifacts, `${locale}-${width}-matrix.png`)});
           }
+          await page.locator('#analysis-measurements').evaluate(node => { node.open = true; });
+          await page.evaluate(() => revealStyleTarget(document.getElementById('heatmap')));
+          const metric = page.locator('#heatmap [data-metric-feature=hd_d]').first();
+          const priorMetric = await page.locator('#style-layer').inputValue();
+          await metric.focus(); await metric.press('Enter');
+          if (width === 320) await page.setViewportSize({width, height: 480});
+          const dialog = page.locator('#analysis-metric-context');
+          assert.equal(await dialog.isVisible(), true);
+          assert.equal(await page.locator('#metric-context-no-layer').isVisible(), true);
+          assert.equal(await page.locator('#metric-context-values tr').count(), 16);
+          assert.ok((await page.locator('#metric-context-definition').textContent()).length > 20);
+          const bounds = await dialog.boundingBox();
+          assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= width + 1,
+            'The localized measurement dialog fits the viewport');
+          const readBounds = await page.locator('#metric-context-read').boundingBox();
+          assert.ok(readBounds.y >= 0 && readBounds.y + readBounds.height <= (width === 320 ? 480 : 900),
+            'The explicit manuscript action stays visible even on a short mobile viewport');
+          if (width === 320) {
+            const table = dialog.locator('.table-wrap');
+            assert.ok(await table.evaluate(node => node.scrollWidth > node.clientWidth),
+              'Wide measurement columns scroll instead of crushing localized labels');
+            assert.ok(await dialog.locator('thead th').nth(1).evaluate(node => node.clientWidth >= 100),
+              'Measured values retain a readable column width');
+          }
+          await page.screenshot({path: path.join(artifacts, `metric-context-${locale}-${width}.png`)});
+          const lastMetric = page.locator('#metric-context-values tr').last().locator('button');
+          await lastMetric.scrollIntoViewIfNeeded();
+          await lastMetric.click();
+          assert.equal(await page.locator('#metric-context-title').evaluate(node => node === document.activeElement), true,
+            'Switching a metric brings its explanation back into the visible reading area');
+          await page.keyboard.press('Escape');
+          assert.equal(await metric.evaluate(node => node === document.activeElement), true);
+          assert.equal(await page.locator('#style-layer').inputValue(), priorMetric);
+          await page.evaluate(() => revealStyleTarget(document.getElementById('dimensions')));
+          await page.locator('#dimensions [data-dimension-loading]').first().click();
+          const origin = page.locator('#metric-context-origin');
+          assert.equal(await origin.isVisible(), true);
+          assert.ok(!(await origin.textContent()).match(/dim_loading|dim_poles/),
+            'Axis captions use the owning localized label pack, not missing global UI keys');
+          await page.screenshot({path: path.join(artifacts, `metric-origin-${locale}-${width}.png`)});
+          await page.keyboard.press('Escape');
           await finish(page, errors, writes);
         } finally { await page.close(); }
       });

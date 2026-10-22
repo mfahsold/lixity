@@ -10,10 +10,12 @@ Contracts of the centralised dashboard UI (`lixity.ui`):
   are actually rendered.
 """
 
+import json
 import os
 import re
 import sys
 import unittest
+from html import unescape
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -618,6 +620,7 @@ class TestLabelCompleteness(unittest.TestCase):
             "nominal",
             "adjective",
             "lix",
+            "long_words",
             "start_entropy",
             "first_start",
             "guiraud",
@@ -748,6 +751,66 @@ class TestLabelCompleteness(unittest.TestCase):
 
 class TestShowDontTellComponents(unittest.TestCase):
     """The visual (data-ink) components are part of the render."""
+
+    def test_metric_context_preserves_canonical_values_missingness_and_units(self):
+        from lixity.format import num
+        from lixity.style_fingerprint import (
+            FEATURE_UNITS,
+            FEATURES,
+            LAYER_FEATURES,
+            StyleFingerprint,
+        )
+        from lixity.ui.heatmap import render_metric_context
+
+        config = CorpusConfig(language="en")
+        text = '## <img src=x onerror="alert(1)">\n\n' + "The garden waits. " * 90
+        text += "\n\n## Brief\n\nRain."
+        metrics = CorpusAnalyzer(config).analyze_text(text)
+        fingerprint = StyleFingerprint.from_metrics(metrics)
+        for locale in LANGUAGES:
+            with self.subTest(locale=locale):
+                rendered = render_metric_context(
+                    fingerprint, metrics.chapters, WORKSPACE_LABELS[locale], locale
+                )
+                match = re.search(r'data-metric-context="([^"]*)"', rendered)
+                self.assertIsNotNone(match)
+                payload = json.loads(unescape(match[1]))
+                self.assertEqual(set(payload["features"]), {field for field, _, _ in FEATURES})
+                self.assertEqual(len(payload["chapters"]), 2)
+                self.assertNotIn('<img src=x', rendered)
+                self.assertEqual(payload["chapters"]["1"]["title"], f"1. {metrics.chapters[0].title}")
+                for field, _label_key, _unit in FEATURES:
+                    meta = payload["features"][field]
+                    self.assertEqual(meta["unit"], FEATURE_UNITS[locale][field])
+                    self.assertEqual(meta["median"], "–", "An insufficient reference is not a zero median")
+                    self.assertEqual(meta["layer"], next((layer for layer, name in LAYER_FEATURES.items()
+                                                         if name == field), ""))
+                    self.assertTrue(meta["help"])
+                    for chapter in metrics.chapters:
+                        raw = fingerprint.values[field][chapter.num]
+                        self.assertEqual(payload["chapters"][str(chapter.num)]["values"][field]["value"],
+                                         num(raw, locale, 2) if raw is not None else "–")
+                self.assertEqual(payload["chapters"]["1"]["values"]["dialog_pct"]["value"], num(0, locale, 2))
+                self.assertEqual(payload["chapters"]["2"]["values"]["hd_d"]["value"], "–")
+
+        complete = "\n\n".join(f"## Chapter {index}\n\n" + "The garden waits. " * 90
+                               for index in range(1, 4))
+        metrics = CorpusAnalyzer(config).analyze_text(complete)
+        fingerprint = StyleFingerprint.from_metrics(metrics)
+        rendered = render_metric_context(fingerprint, metrics.chapters, language_key="en")
+        payload = json.loads(unescape(re.search(r'data-metric-context="([^"]*)"', rendered)[1]))
+        for field, _key, _unit in FEATURES:
+            base = fingerprint.baseline[field]
+            self.assertEqual(payload["features"][field]["median"], num(base["median"], "en", 2))
+            self.assertEqual(payload["features"][field]["n"], base["n"])
+            self.assertEqual(payload["chapters"]["1"]["values"][field]["z"],
+                             num(fingerprint.z_scores[1][field], "en", 2, signed=True))
+
+    def test_metric_context_is_rendered_once_and_empty_workspace_remains_valid(self):
+        rendered = _full_dashboard()
+        self.assertEqual(rendered.count('id="analysis-metric-context"'), 1)
+        self.assertIn('data-metric-feature="hd_d"', rendered)
+        self.assertNotIn('id="analysis-metric-context"', render_dashboard([], []))
 
     def test_pacing_explains_chapter_fallback_without_changing_legacy_exports(self):
         from lixity.pacing import pacing_report

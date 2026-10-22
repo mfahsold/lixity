@@ -105,6 +105,11 @@ with their chapter. Both preferences persist in the browser. Hover, touch and th
 paragraph menu explain the concrete text; the CLI exposes the same evidence with
 `lixity profile manuscript.md --layer asl --evidence`.
 
+**Current main (unreleased):** matrix cells and style-space loadings share
+chapter measurements: meaning, units, manuscript reference and the other
+metrics of the same chapter. Reading the text is an explicit next action;
+chapter-only measurements do not invent word-level highlights.
+
 A passage's research associations open its claims and dossier beside the
 manuscript, with a return to the passage. Current entries and exact linked earlier
 versions remain distinct. Dossier editing offers `--body-only` section drafts and
@@ -157,7 +162,9 @@ cover archive compatibility and upgrades. See the
 [changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md) for subsequent work.
 The repository's generated demo follows the interface documented here, including
 unreleased changes, with a fictional project and read-only research. Importing
-and saving require the local app.
+and saving require the local app. A push to `main` alone does not deploy Pages
+or update a running local installation; see
+[update and deployment boundaries](https://mfahsold.github.io/lixity/INSTALLATION.md).
 
 Cite [Lixity on Zenodo](https://doi.org/10.5281/zenodo.23390297), with metadata in
 [`CITATION.cff`](https://github.com/mfahsold/lixity/blob/main/CITATION.cff).

@@ -43,6 +43,35 @@ PROJECT_STRUCTURE_ISSUE_LABELS = {
 }
 
 _ROWS = {
+    "help_long_words": (
+        "Share of counted words longer than the configured long-word threshold. This is one input to LIX, not the LIX score itself. Word length does not establish difficulty or quality.",
+        "Anteil gezählter Wörter über der eingestellten Langwortgrenze. Das ist ein Bestandteil von LIX, nicht der LIX-Wert selbst. Wortlänge belegt weder Schwierigkeit noch Qualität.",
+        "Part des mots comptés dépassant le seuil configuré pour les mots longs. C’est un élément du LIX, pas le score LIX lui-même. La longueur ne prouve ni difficulté ni qualité.",
+        "Proporción de palabras contadas que superan el umbral configurado de palabras largas. Es un componente de LIX, no la puntuación LIX. La longitud no demuestra dificultad ni calidad.",
+        "Quota di parole contate che superano la soglia configurata per le parole lunghe. È un componente di LIX, non il punteggio LIX. La lunghezza non dimostra difficoltà né qualità.",
+        "Proporção de palavras contadas acima do limite configurado de palavras longas. É um componente de LIX, não a pontuação LIX. O comprimento não demonstra dificuldade nem qualidade.",
+        "Aandeel getelde woorden boven de ingestelde grens voor lange woorden. Dit is een onderdeel van LIX, niet de LIX-score zelf. Woordlengte bewijst geen moeilijkheid of kwaliteit.",
+    ),
+    "metric_context_title": ("Chapter measurements", "Kapitelmesswerte", "Mesures du chapitre", "Medidas del capítulo", "Misure del capitolo", "Medidas do capítulo", "Hoofdstukmetingen"),
+    "metric_context_reference": ("Manuscript median", "Manuskriptmedian", "Médiane du manuscrit", "Mediana del manuscrito", "Mediana del manoscritto", "Mediana do manuscrito", "Manuscriptmediaan"),
+    "metric_context_hint": (
+        "Compare each value in its own unit. z* compares this chapter with the manuscript reference, not with other metrics. A dash means unavailable, not zero. These comparisons do not explain causes or judge quality.",
+        "Jeden Wert in seiner eigenen Einheit lesen. z* vergleicht dieses Kapitel mit der Manuskriptreferenz, nicht mit anderen Metriken. Ein Strich bedeutet nicht verfügbar, nicht null. Die Vergleiche erklären keine Ursachen und bewerten keine Qualität.",
+        "Lire chaque valeur dans son unité. z* compare ce chapitre à la référence du manuscrit, pas aux autres mesures. Un tiret signifie indisponible, pas zéro. Ces comparaisons n’expliquent ni causes ni qualité.",
+        "Lea cada valor en su unidad. z* compara este capítulo con la referencia del manuscrito, no con otras métricas. Una raya indica no disponible, no cero. No explica causas ni evalúa la calidad.",
+        "Leggere ogni valore nella propria unità. z* confronta il capitolo con il riferimento del manoscritto, non con altre misure. Un trattino indica indisponibile, non zero. Non spiega cause né valuta la qualità.",
+        "Leia cada valor na sua unidade. z* compara este capítulo com a referência do manuscrito, não com outras métricas. Um traço indica indisponível, não zero. Não explica causas nem avalia qualidade.",
+        "Lees elke waarde in haar eigen eenheid. z* vergelijkt dit hoofdstuk met de manuscriptreferentie, niet met andere metingen. Een streep betekent niet beschikbaar, niet nul. Dit verklaart geen oorzaken en beoordeelt geen kwaliteit.",
+    ),
+    "metric_context_no_layer": (
+        "This measurement has no exact paragraph layer. Read the chapter in context; no substitute word marks will be shown.",
+        "Für diesen Messwert gibt es keine exakte Absatzebene. Das Kapitel im Kontext lesen; es werden keine ersatzweisen Wortmarkierungen gezeigt.",
+        "Cette mesure n’a pas de couche exacte par paragraphe. Lire le chapitre en contexte ; aucun marquage de substitution ne sera affiché.",
+        "Esta medida no tiene una capa exacta por párrafo. Lea el capítulo en contexto; no se mostrarán marcas sustitutivas.",
+        "Questa misura non ha un livello esatto per paragrafo. Leggere il capitolo nel contesto; non saranno mostrati segni sostitutivi.",
+        "Esta medida não tem uma camada exata por parágrafo. Leia o capítulo em contexto; não serão mostradas marcações substitutas.",
+        "Deze meting heeft geen exacte alinealaag. Lees het hoofdstuk in context; er worden geen vervangende woordmarkeringen getoond.",
+    ),
     'project_structure_title': ('Project overview', 'Projektübersicht', 'Vue d’ensemble du projet', 'Resumen del proyecto', 'Panoramica del progetto', 'Visão geral do projeto', 'Projectoverzicht'),
     'project_structure_scope': ('Read-only inspection of sources and generated files.', 'Schreibgeschützte Prüfung von Quellen und erzeugten Dateien.', 'Inspection en lecture seule des sources et fichiers générés.', 'Inspección de solo lectura de fuentes y archivos generados.', 'Verifica in sola lettura di fonti e file generati.', 'Inspeção somente leitura de fontes e arquivos gerados.', 'Alleen-lezencontrole van bronnen en gegenereerde bestanden.'),
     'project_structure_sources': ('Sources', 'Quellen', 'Sources', 'Fuentes', 'Fonti', 'Fontes', 'Bronnen'),

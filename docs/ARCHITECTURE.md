@@ -532,12 +532,13 @@ The presentation keeps computed counts and authored research separate without
 a new context state or transport contract. The floating card uses native counts
 and the existing paragraph comparison; it never parses localized numeric text.
 
-The existing reader preferences also retain the selected metric and marking
-choice. First explicit Analysis On defaults to `asl` only without a saved choice;
-the native disclosure beside the switch contains the single existing selector
-and marking checkbox. Explicit paragraph inspection can enable Analysis through
-the workbench owner while preserving disabled paint. Missing cryptographic
-verification is distinguished from a mismatching paragraph identity.
+The reader's directly visible native controls share one metric selector and
+independent Counted text / Paragraph comparison switches. Browser preferences
+preserve each choice, including deliberate None and disabled switches. First
+explicit Analysis On defaults to `asl` only without a saved choice. Explicit
+measurement inspection delegates visibility to the workbench owner without
+overwriting disabled paint. Missing cryptographic verification remains distinct
+from a mismatching paragraph identity.
 
 The existing paragraph menu snapshots a native pointer caret as a transient
 UTF-16 paragraph offset and evidence identity. After normal source verification,
@@ -575,23 +576,19 @@ Focus mode is reversible and temporary. Layout changes capture the first visible
 source block and restore its viewport position after reflow where possible, rather
 than persisting a second text offset or editing manuscript content.
 
-Paragraph ellipsis buttons, pointer context menus and keyboard context-menu
-shortcuts share the same action builder. A valid single-paragraph selection
-offers a small toolbar. Marker and claim actions delegate to the established
-handlers, including their explicit save, capability and retention checks; no
-parallel write API is introduced. Values reuse the paragraph's measured markup
-in the closable Passage values inspector, alongside chapter/source-line context
-and the existing saved-research route when supported. Opening Values does not
-force the global Analysis layer on. Explicit Values/dossier
-controls replace the active dock content while retaining each tool's selection.
-Closing the dock does not hide the diagnostic layer; turning Analysis Off
-preserves an explicitly open Values inspector or dossier. Overview return
-restores the previous layer visibility and context tool. On narrow screens, an explicit passage
-tool request stores its own origin and reveals the stacked dock heading; close
-or Escape restores the requesting passage and focus. That intentional destination
-scroll is not overwritten by ordinary reading-anchor restoration. Desktop tools
-keep the adjacent layout. Menus expose
-arrow/Home/End navigation and restore trigger focus on Escape.
+Paragraph ellipsis, pointer context menus and keyboard context-menu shortcuts
+share one action builder; valid single-paragraph selection adds a small toolbar.
+Marker and claim actions retain existing save, capability and retention guards.
+**Explore passage** reuses the paragraph's measured markup in the closable
+context inspector without changing global Analysis. **Explain measurement**
+delegates to the evidence owner and can enable Analysis; a saved-research route
+uses existing association reads. Tool changes retain each selection, and closing
+the dock does not hide manuscript marks. Analysis Off preserves an explicitly
+open inspector or dossier. Overview return restores prior visibility and context.
+On narrow screens, an explicit tool request stores its own origin and reveals
+the stacked dock; close/Escape restores that passage and focus instead of an
+unrelated reading anchor. Desktop tools remain adjacent. Menus retain
+arrow/Home/End navigation and Escape focus return.
 Association refreshes skip unchanged annotation DOM and preserve native selection
 endpoints when marks change. Automatic review uses the existing research-status
 read before requesting archive records; context-bound pending reads are coalesced
@@ -1004,12 +1001,32 @@ already reached end when its measured available height changes, and preserves
 other reading offsets.
 
 Paragraph layers reuse `layer_stats` and the shared descriptive cutoff, with
-chapter median/MAD and rounded two-decimal z. The browser paints behind opaque
-prose without rewriting its nodes or combining metric colours. Colour, marker
+chapter median/MAD and rounded two-decimal z. The browser adds separate
+gutter/value markers, not a whole-prose wash, without rewriting prose nodes or
+combining metric colours. Colour, marker
 membership, source/value/unit explanation and the opt-in `paragraph-layer/1` CLI
 projection use the same comparison. Missing comparison is not zero. Display-only
 register/declared-POV controls change heatmap row visibility, preserving the
 accepted full-book analysis and existing exemption policy.
+
+**Current main (unreleased):** `ui.heatmap.render_metric_context` projects the
+existing 16-feature `StyleFingerprint` into one native chapter measurement
+dialog. Heatmap cells, style-reference cutoff-hit counts and all dimension
+loadings use the existing activation dispatcher and `metric-context.js`.
+Metric switches retain the selected chapter without changing paragraph marks;
+only the explicit reading action delegates to `jumpToChapter`, choosing an
+applicable paragraph layer or clearing it. Native modality owns Escape and
+closing restores trigger focus, while a reading action transfers focus to the
+manuscript through its existing navigation owner.
+
+Definitions, units, reference medians, sample counts and z* come from existing
+feature/help packs and fingerprint values, not browser recomputation. Dimension
+loadings keep their axis/coefficient origin separate from chapter measurements;
+switching to another metric removes that caption. Chapter z*, within-chapter
+paragraph z and PCA coordinates/loadings are distinct, not interchangeable
+scores. The same renderer and bundled controller serve local dashboards and
+generated read-only examples, without another data model, endpoint or archive
+schema. [Usage](USAGE.md#style-area) owns the interaction and scope comparison.
 
 Decision/dossier review composes exact existing record-version GETs inside the
 existing review surface. It retains pending, retry, unavailable and stale states;

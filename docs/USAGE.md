@@ -49,14 +49,14 @@ or a different output.
 | Question | Command | Key numbers |
 | :--- | :--- | :--- |
 | How does the manuscript read overall? | `lixity analyze` | ASL, CV, TTR, HD-D, MTLD, Flesch, LIX, dialogue, registers |
-| Where does the tense slip? | `lixity profile` | per paragraph: dominant tense, mix, switch, severity 0–3 |
-| Is this chapter still *this book's* style? | `lixity style` | median/MAD bands, z\*, FDR set, style dimensions |
+| Where do heuristic tense markers change or mix? | `lixity profile` | per paragraph: dominant tense, mix, switch, severity 0–3 |
+| How does each chapter differ from this manuscript's reference? | `lixity style` | median/MAD bands, z\*, FDR set, style dimensions |
 | How is the dialogue structured? | `lixity dialogue` | turns, turn lengths, turns per 1,000 words, dialogue paragraphs |
 | Who appears where — and when not? | `lixity characters` | mentions, chapters present, span, longest gap |
 | Where are the scenes and hooks? | `lixity pacing` | scenes, scene length, ASL curve, hook score 0–3 |
 | What repeats itself? | `lixity motifs` | motif presence, top content words, repeated n-grams |
-| Which chapters *tell* instead of *show*? | `lixity showing` | tell/show z, balance per chapter (self-calibrating) |
-| I want to see and click all of it | `lixity dashboard` | single-file HTML, all panels, offline |
+| How do showing/telling proxy signals vary across chapters? | `lixity showing` | language-pattern z and balance per chapter; not a narrative classification |
+| I want to browse the available analysis panels | `lixity dashboard` | self-contained HTML; research and writes require the local app |
 | I want a foreground server for development or integration | `lixity serve` | loopback HTTP server, live settings, manuscript upload, research panel |
 | I want to start or manage the installed app | `lixity service` | managed start, stop, restart and status without a source checkout |
 | Which installation and service am I using? | `lixity doctor` | package versions, module/interpreter location, contracts and owned service status |
@@ -410,16 +410,13 @@ unchecking either switch hides only its own marks and key. The selected metric a
 both switch preferences persist in the browser, including deliberate **None** and
 disabled switches. Turning Analysis on again preserves those choices.
 
-**Since v0.7.4:** the paragraph menu has one **Explore passage**
-entry. Its existing right context offers **Explain measurement** and **Research
-for this passage**. The former explains counted text; the latter reads
-explicitly linked claims, sources and decisions. Hover and tap remain quick ways
-to open the measurement card. The compact card puts the selected
-quotation and its count first, with the paragraph measurement and chapter
-comparison in a separate panel. Mapping details and limits stay collapsed under
-**About this comparison**. The context's **Passage** button selects the inspector;
-the separate **Analysis** switch controls manuscript indicators. Neither route
-infers factual truth.
+**Explore passage** opens chapter/source-line context and measurements in the
+existing passage inspector without changing global Analysis. Its **Explain
+measurement** action inspects counted text; **Research for this passage** reads
+explicitly linked claims, sources and decisions. Switch between passage values,
+linked research and the chosen dossier explicitly. On mobile, a paragraph-to-tool
+action reveals the stacked tool heading; close or Escape returns to that passage
+and its control. Desktop tools occupy adjacent space.
 
 The visible keys distinguish violet **Counted text** underlines from
 **Paragraph comparison**. Notable paragraphs have a raw-value marker with a
@@ -427,7 +424,7 @@ down/up arrow and a blue/orange edge for below/above the chapter median; the pro
 background stays clear. Click the marker to inspect the measurement. **Read these
 marks** keeps the comparison method and counting guidance collapsed until opened.
 A marked sentence's word count and its paragraph's average are different
-quantities. Unavailable exact evidence is stated explicitly.
+quantities.
 
 These routes share existing actions rather than creating separate records:
 
@@ -448,13 +445,14 @@ including with Analysis Off or Focus reading. That explicit action enables
 Analysis and chooses Sentence length if no metric is selected, while preserving
 both display-switch preferences.
 
-The explanation separates the counted passage from its paragraph measurement and
-chapter comparison. A sentence's word count does not make it an editorial fault;
-a perception-word match does not establish narrative distance. Some Markdown
-counting/display projections cannot yet be mapped exactly: the value remains,
-but Lixity states that exact evidence is unavailable instead of guessing. Browsers
-without native text highlighting retain the explicit inspection route. Text,
-selection, saved quotations and search marks keep their existing identities.
+The measurement card puts the quotation and its count first, with paragraph
+measurement and chapter comparison in a separate panel. Mapping limits stay
+under **About this comparison**. A word count is not an editorial fault; a
+perception-word match does not establish narrative distance. When exact
+counting/display mapping cannot be verified, the value remains but its evidence
+is explicitly unavailable. Browsers without native text highlighting retain
+explicit inspection. Text, selection, saved quotations and search marks keep
+their identities.
 
 Choose a chapter in the reader toolbar. **Reading settings** groups **A−**/**A+**
 for text size (16–28 nominal pixels), narrow/standard/wide text and
@@ -480,14 +478,6 @@ also offers a compact toolbar. Marker notes and claim associations still require
 their existing explicit save and retention steps.
 Use Shift+right-click to open the browser's native context menu instead.
 
-**Explore passage** opens the selected paragraph's chapter, source lines, tense
-and measurements in the closable context area. Opening or closing it leaves the
-global Analysis choice unchanged. **Research for this passage** reads explicit
-associations alongside; **Review** opens their dedicated quote review. Switch
-between passage measurements, linked research and the chosen dossier explicitly;
-closing the tool does not turn all analysis off. On desktop, tools occupy adjacent space. On mobile, an explicit
-paragraph-to-tool action reveals the stacked tool heading; closing it or pressing
-Escape returns to the requesting passage and its paragraph control.
 **Focus reading** temporarily hides surrounding navigation and
 tools, counted-text underlines and paragraph comparison markers; its visible exit
 or Escape restores the workspace and prior display choices. Opening a tool exits
@@ -563,6 +553,27 @@ Tabs group the heatmap, style reference, dimensions and structural diagnostics.
 Links to `#heatmap`, `#bands`, `#dimensions`, `#structural` and `#feat-<field>`
 select the relevant tab. All available panels remain readable without JavaScript.
 
+Keep the three comparison scopes separate:
+
+| View | Measurement / reference | What it does not establish |
+| --- | --- | --- |
+| Paragraph comparison | One paragraph's raw value against that chapter's median/MAD | A chapter-level z* or a writing fault |
+| Chapter fingerprint | One chapter feature against the manuscript reference, with noise-adjusted z* | A cross-metric ranking or an external writing target |
+| Style dimensions | Chapter coordinates and axis loadings in standardized midrank space | Paragraph evidence, chapter z*, causal contributions or quality |
+
+The [methods](METHODS.md) define these quantities; the
+[interpretation guide](guides/interpretation.html) explains their limits.
+
+**Current main (unreleased):** selecting a heatmap cell or a style-reference
+cutoff-hit count opens **Chapter measurements** before navigating. It explains
+the selected metric, its unit and chapter sample, alongside all 16 canonical
+chapter values, manuscript medians, reference sample counts and z* values.
+Switching metrics keeps the same chapter and does not change manuscript marks.
+Each metric has its own unit and reference. `–` remains unavailable, never zero.
+**Read chapter** uses the existing manuscript navigation and selects only an
+applicable paragraph layer; chapter-only metrics clear the prior layer rather
+than substituting word marks. Closing or Escape returns focus to the trigger.
+
 **Since v0.7.3:** the chapter matrix shows `0` when a style
 comparison is available and no feature crosses its cutoff; `–` means that the
 comparison is unavailable. **What is counted** explains the existing coverage:
@@ -621,6 +632,12 @@ zoom/rotate, and select chapter points or **Chapter scores** links to read a
 chapter. Toggle the trajectory or cutoff box and reset the camera as needed.
 Rotation is opt-in and pauses in a hidden tab. Cards show positive/negative
 loadings; the table gives the same measured chapter scores and flags.
+
+**Current main (unreleased):** every loading, including chapter-only metrics,
+opens the same **Chapter measurements** view for the selected chapter.
+The originating axis and loading coefficient remain distinct from the chapter's
+measurement and z*. Selecting another metric removes that axis-origin caption;
+it does not recompute scores, infer chapter contributions or establish causality.
 
 The chapter selector keeps the chosen chapter's
 scores beside the plot. Choose a flat axis pair in **View** when points overlap;
@@ -1253,7 +1270,7 @@ immersion or a writing defect. There is no automatic narrator-voice assessment.
 | **Guiraud R** | V / √N | remains length-dependent; compare with sampling and corpus context |
 | **Yule's K** | vocabulary repetition measure | repetition does not establish a stable narrator or a quality verdict |
 | **ASW** | average syllables per word | a language-dependent heuristic input to readability formulas |
-| **MTLD** | mean segment length until TTR < 0.72 (forward/backward averaged) | larger values mean longer diverse segments; requires ≥ 100 tokens |
+| **MTLD** | mean segment length until TTR ≤ 0.72 (forward/backward averaged) | larger values mean longer diverse segments; requires ≥ 100 tokens |
 | **MATTR** | moving-average TTR over a 50-token window | describes local repetition; compare the same window and tokenization |
 | **Maas a²** | (log₁₀ N − log₁₀ V) / (log₁₀ N)² | requires ≥ 100 tokens; lower means more types at the same N, not better prose |
 | **Flesch** | language-calibrated Flesch family (Amstad for German) | formula output is not clipped to 0–100; not reader comprehension |
@@ -1309,10 +1326,9 @@ chapters. See [interpretation](guides/interpretation.html) for short-text limits
 - Explicit project title/metadata can supply the title; filenames remain the
   artifact naming basis.
 
-For a review, follow a heatmap cell or paragraph strip to the passage, then
-compare the measurement with the chapter's purpose. See
-[dashboard navigation](#dashboard-workflow) rather than treating a highlighted
-value as an editing instruction.
+For review, use [chapter measurements](#style-area) or a paragraph's measurement
+explanation, then read the passage against its intended purpose. A highlighted
+value is not an editing instruction.
 
 Line anchors in reports and dashboards refer to lines in the source file, so
 findings stay navigable in the editor.

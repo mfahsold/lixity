@@ -100,6 +100,8 @@ Use the labels, numerical values and selected thresholds alongside a chart's col
 
 Style axes summarize patterns in ranked chapter measurements. Their variance labels describe this rank space, not the variance of raw word counts or a quality score. Only chapters with all required measurements appear in the plot; its footer shows coverage. At least three complete chapters and three varying features are needed, which does not establish a reliable narrator or register classification. See the [methods notes](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md#5-exploratory-style-dimensions).
 
+**Current main (unreleased):** heatmap cells, reference cutoff-hit counts and all style-space loadings open the same chapter measurement view. Read the definition, unit, sample and manuscript reference alongside the other metrics of that chapter. Switching metrics does not change manuscript marks. **Read chapter** deliberately opens the text; chapter-only metrics clear unsupported paragraph layers. An axis loading is not a chapter contribution, and comparing metrics does not establish causality.
+
 Display label keys such as `feat_asl` are not API functions or result fields. Read actual model keys: corpus metrics use `asl`, `dialog_ratio` and `filter_density`; chapter metrics use `asl`, `dialog_pct` and `filter_density`. Style feature identifiers appear in `features[].feature` and deviation/FDR entries. Keep the scope and units with each reported value.
 
 ## Are the seven languages equally accurate?

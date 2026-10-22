@@ -883,6 +883,25 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   await expect(page.locator('#tab-view-research')).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#view-pane-research')).toBeVisible();
   await assertDemoReadOnly(page);
+  await page.locator('#tab-view-analysis').click();
+  await showOverview(page);
+  await page.locator('#analysis-measurements').evaluate(node => { node.open = true; });
+  await page.locator('#style-tab-heatmap').click();
+  await page.locator('#heatmap [data-metric-feature=long_word_pct]').first().click();
+  await expect(page.locator('#analysis-metric-context')).toBeVisible();
+  await expect(page.locator('#metric-context-values tr')).toHaveCount(16);
+  await expect(page.locator('#metric-context-definition')).toContainText('not the LIX score itself');
+  await expect(page.locator('#metric-context-no-layer')).toBeVisible();
+  if (width === 320) {
+    assert.ok(await page.locator('#analysis-metric-context .table-wrap').evaluate(node =>
+      node.scrollWidth > node.clientWidth), 'The demo retains readable horizontally scrolling measurement columns');
+  }
+  await page.screenshot({path: path.join(artifacts, `demo-metric-context-${width}-${colorScheme}.png`)});
+  await page.locator('#metric-context-read').click();
+  await expect(page.locator('#chapters')).toBeVisible();
+  await expect(page.locator('#style-layer')).toHaveValue('');
+  await assertDemoReadOnly(page);
+  await page.locator('#tab-view-research').click();
   if (colorScheme !== 'light' || width === 390) {
     await page.locator('#tab-view-research').click();
     await page.locator('[data-rtab=dossiers]').click();

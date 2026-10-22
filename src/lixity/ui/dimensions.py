@@ -121,7 +121,9 @@ def style_dimensions(
             chip_layers = {feature_name(name): feature_layers[name]
                            for name, _ in positive + negative if name in feature_layers}
             parts.append(f'<div class="dim-card"><div class="dim-header"><span class="dim-title">{translated("style_dimensions")} {dim["index"]}</span><span class="badge">{format_pct(dim["variance"] * 100, language_key, 0)} {translated("dim_variance")}</span></div>')
-            parts.append(loading_bars(entries, max((abs(value) for _, value in entries), default=1), layers=chip_layers))
+            chip_features = {feature_name(name): name for name, _ in positive + negative}
+            parts.append(loading_bars(entries, max((abs(value) for _, value in entries), default=1),
+                                      layers=chip_layers, features=chip_features, dimension=dim["index"]))
             for pole, absent in ((positive, "dim_no_positive"), (negative, "dim_no_negative")):
                 if not pole:
                     parts.append(f'<p class="hint">{translated(absent)}</p>')

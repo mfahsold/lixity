@@ -325,11 +325,13 @@ def loading_bars(
     entries: list[tuple[str, float]],
     limit: float,
     layers: Mapping[str, str] | None = None,
+    features: Mapping[str, str] | None = None,
+    dimension: int | None = None,
 ) -> str:
     """Diverging mini-bars for dimension loadings (positive accent, negative blue).
 
-    ``layers`` maps a label to a style-layer key; matching chips become links
-    that activate that layer.
+    ``features`` identifies chapter measurements; ``layers`` supplies applicable
+    paragraph layers for the existing reading action.
     """
     scale = max(limit, 1e-9)
     bars = []
@@ -337,12 +339,20 @@ def loading_bars(
         width = min(100.0, abs(value) / scale * 100.0)
         sign = "pos" if value >= 0 else "neg"
         layer = (layers or {}).get(name)
-        attrs = (
-            f' data-layer="{html.escape(layer, quote=True)}" data-jump="#chapters" data-dimension-loading="1"'
-            f' role="button" tabindex="0"'
-            if layer
-            else ""
-        )
+        feature = (features or {}).get(name)
+        attrs = ""
+        if feature:
+            attrs = (
+                f' data-metric-feature="{esc(feature)}" data-dimension-loading="1"'
+                f' data-dimension-index="{dimension}" data-loading="{value}"'
+                f' data-layer="{esc(layer or "")}" data-jump="#chapters"'
+                ' role="button" tabindex="0"'
+            )
+        elif layer:
+            attrs = (
+                f' data-layer="{esc(layer)}" data-jump="#chapters" data-dimension-loading="1"'
+                ' role="button" tabindex="0"'
+            )
         bars.append(
             f'<span class="load {sign}" style="--w:{width:.1f}%" title="{esc(name)}"{attrs}>'
             f'<span class="load-track"><i></i></span><b>{esc(name)}</b></span>'
@@ -388,4 +398,3 @@ def loading_state(text: str, element_id: str | None = None, role: str = "status"
         f'<span class="loading-text">{esc(text)}</span>'
         f"</div>"
     )
-
