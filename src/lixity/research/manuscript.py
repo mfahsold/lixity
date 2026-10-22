@@ -10,6 +10,7 @@ from pydantic import ValidationError
 
 from ..config import _load_toml
 from ..io import FileUtils
+from ..markdown_parser import strip_inline_markup
 from ..pipeline import document_paragraph_texts, paragraph_identity, resolve_document_config
 from ..status import ManuscriptFlag, ManuscriptState
 from ..style_profile import ParagraphProfile, ParagraphText
@@ -285,17 +286,25 @@ def resolve_manuscript_anchor(
     manuscript: str | Path,
     *,
     query: str,
+    query_format: Literal["display", "markdown"] = "display",
     line: int | None = None,
     language: str | None = None,
     project_config: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Resolve one displayed-text quote to exact selection fields (read-only).
 
-    Offsets and quotes refer to ``ParagraphProfile.text`` with inline Markdown
-    markers removed; quotes copied from the Markdown file may need cleanup first.
+    Offsets and quotes refer to ``ParagraphProfile.text``. The default query is
+    literal displayed text; explicit Markdown queries use that same projection
+    before exact matching. Neither mode includes headings or folds Unicode/case.
     """
+    if query_format not in ("display", "markdown"):
+        raise ResearchError("Unsupported query format; choose display or markdown")
     if not isinstance(query, str) or not query.strip():
         raise ResearchError("Provide a nonempty quote to resolve")
+    if query_format == "markdown":
+        query = strip_inline_markup(query)
+        if not query.strip():
+            raise ResearchError("Provide a nonempty displayed quote after Markdown cleanup")
     if line is not None and (type(line) is not int or line < 1):
         raise ResearchError("Line must be a positive integer")
     repository = Repository(project)
@@ -316,9 +325,13 @@ def resolve_manuscript_anchor(
         scope = "in the paragraph at the given line"
     occurrences = _quote_occurrences(paragraphs, query, limit=2)
     if not occurrences:
-        raise ResearchError(
-            f"Quote was not found {scope}; inline Markdown markers are removed from the displayed text"
-        )
+        message = f"Quote was not found {scope}"
+        if query_format == "display":
+            message += ("; inline Markdown markers are removed from the displayed text. "
+                        "For a copied Markdown quote, use find-anchor --query-format markdown")
+        else:
+            message += " after supported inline Markdown cleanup"
+        raise ResearchError(message + "; headings are outside paragraph anchors")
     if len(occurrences) > 1:
         lines = ", ".join(
             str(paragraph.start_line) for paragraph in paragraphs if query in paragraph.text

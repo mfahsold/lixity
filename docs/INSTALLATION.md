@@ -496,6 +496,22 @@ not replace Windows/macOS verification for platform-sensitive changes. See
 [contributor checks](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#development-setup)
 for the canonical paths and focused/manual-full platform options.
 
+## Read documentation offline
+
+Installed command help and schema discovery work without a network connection:
+use `lixity COMMAND --help`, `lixity research COMMAND --help`,
+`lixity about --json` and `lixity research schema`. They describe the code in
+that installation; they do not require the workspace service.
+
+For longer guides, retain a matching source checkout and open `docs/USAGE.md`,
+`docs/research/USAGE.md` or the generated `docs/llms-full.txt` in a local text or
+Markdown reader. The bundle combines the references; it is not a rendered
+documentation website. Package installations do not include these guides, and
+there is no `lixity docs --serve` command. Contributors can preview the approved
+Pages tree using the existing
+[documentation preview workflow](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#updating-documentation-and-pages).
+External links and public-site analytics remain separate from offline reading.
+
 ## Troubleshooting
 
 | Symptom | Action |

@@ -8,6 +8,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Read-only `research find-anchor --query-format markdown` accepts copied inline
+  emphasis through the shared displayed-text projection and returns the exact
+  quote, offsets and paragraph hash. Default queries and write/re-pin selections
+  stay literal; case, Unicode, ambiguity and paragraph boundaries stay exact.
+  The research guide includes a reviewed lookup-to-selection workflow.
 - Dossier section reads support `--format text --body-only` for an editable UTF-8
   draft without display metadata or an extra newline. Nested headings remain;
   unsafe terminal controls require redirected output. The research guide includes

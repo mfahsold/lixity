@@ -146,7 +146,8 @@ that version. Each export records the actual resolved version.
 The profile is a validated root-local `site_publications` project setting,
 separate from PDF imprint settings and accepted Research records. Save this TOML
 in the selected project's root `lixity.toml` (or prefix its tables with
-`tool.lixity.` in that root's `pyproject.toml`):
+`tool.lixity.` in that root's `pyproject.toml`). Profiles are not read from
+`.lixity/config.json`.
 
 ```toml
 [site_publications.readers]
@@ -162,7 +163,9 @@ include_citations = false
 include_geography = false
 ```
 
-Use a real dossier ID from your project. Citations and geography are off by
+Use a real dossier ID from your project. The entries form an explicit allowlist:
+reader and companion exports include only selected dossier bodies or sections.
+Leave internal dossiers out of that list. Citations and geography are off by
 default. If selected, these are the **whole pinned dossier's** citations or map;
 there is no inferred section-to-citation/map association. Review that content
 before including it. Publication modes do not automatically include claims,
@@ -170,9 +173,22 @@ internal decisions, reverse links, revision history, source context notes or
 complete extracted source text. `--include-research` is rejected for these
 formats; choose the curated profile instead. Selected retained media needs the
 separate source-file inclusion choice.
-`lixity about --section configuration` exposes
-`configuration.site_publications_schema` with all accepted profile/entry fields;
-unknown fields are rejected. Profiles do not inherit from user or ancestor settings.
+
+Inspect the installed profile JSON Schema without opening a project:
+
+```sh
+lixity about --section configuration |
+  python3 -c 'import json, sys; print(json.dumps(json.load(sys.stdin)["configuration"]["site_publications_schema"], indent=2))'
+```
+
+This JSON describes the TOML setting; it does not create a separate configuration
+file. Profiles accept `title`, `introduction` and `entries`. Each entry accepts
+`dossier_id`, `revision`, `section`, `reveal_after_chapter`, `title`,
+`include_citations` and `include_geography`; unknown fields are rejected.
+Theme settings, paths and exclusion lists are not profile fields. Choose the
+destination with `-o`; `--mode`, `--max-chapter` and the research/source-file
+inclusion flags belong to `export-site`. Profiles do not inherit from user or
+ancestor settings.
 
 Readers explicitly set the last chapter they have finished. Scrolling and
 chapter navigation do not count as reading. Later notes have no visible titles
@@ -880,6 +896,23 @@ app shows `–` and explains the missing support while retaining raw measurement
 For compatibility, JSON component z-scores fall back to zero with too few
 chapters; identical balances yield empty `most_telling`/`most_showing` ranks.
 Empty ranks mean no distinguishable ordering, not identical artistic effect.
+
+The native **Analysis overview → Narrative distance (show/tell)** panel already
+shows these chapter values and links back to the manuscript. Review-workspace
+website copies include that analysis; curated reader/companion copies exclude
+it. Bar length shows the magnitude of the balance; its signed number gives the
+direction: positive means more showing signals, negative more telling signals
+relative to this manuscript. For concrete wording, enable manuscript **Analysis**
+and choose a component such as **Perception filters**, **Modals**, **Nominal style** or
+**Passive**. On current main, **Counted text** marks the exact
+lexical cues independently of **Paragraph comparison**. Inspect a marked span
+to read its count and counting rule.
+
+The composite is chapter-level; it is not a word-by-word showing/telling
+classification. It does not distinguish abstract adjectives from sensory verbs.
+A marked perception verb is a counted filter cue, not proof of telling or a
+request to remove it. Interpret the chapter contrast together with the scene's
+purpose and the [heuristic limits](STABILITY.md#linguistic-proxies-and-literary-interpretation).
 
 ### `lixity style`
 

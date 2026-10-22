@@ -239,9 +239,17 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--include-retracted", action="store_true")
         if name == "find-anchor":
             _add_manuscript_argument(command)
+            command.epilog = ((command.epilog or "") +
+                              " Example: lixity research find-anchor --project . "
+                              "--query '**reading room**' --query-format markdown. "
+                              "Inspect the returned quote and copy only its six selection fields "
+                              "before a separate, explicitly permitted link-manuscript write.")
             command.add_argument("--query", required=True,
-                                 help="Exact case-sensitive paragraph quote after supported emphasis cleanup; "
+                                 help="Exact case-sensitive paragraph quote (displayed text by default); "
                                       "link/code syntax remains and Unicode is not normalized")
+            command.add_argument("--query-format", choices=("display", "markdown"), default="display",
+                                 help="Use markdown for a quote copied with supported emphasis, comments or footnote anchors; "
+                                      "returns the exact displayed quote, never a heading")
             command.add_argument("--line", type=int,
                                  help="Restrict the search to the paragraph containing this source line")
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
@@ -1312,7 +1320,7 @@ def run(args: argparse.Namespace) -> int:
                 note=args.note, actor=args.actor, language=args.language)
         elif command == "find-anchor":
             result = api.resolve_manuscript_anchor(args.project, args.manuscript, query=args.query,
-                                                   line=args.line, language=args.language)
+                                                   query_format=args.query_format, line=args.line, language=args.language)
         elif command == "reconcile-manuscript":
             from ..io import FileUtils
             from .manuscript import _source_path

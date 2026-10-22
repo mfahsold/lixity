@@ -256,6 +256,11 @@ research. The compact measurement card scopes its sentence word count, paragraph
 value and chapter comparison separately; method/coverage is expandable.
 Separate visible Counted text and Paragraph comparison keys explain exact
 underlined spans versus blue/orange chapter-relative paragraph backgrounds.
+On current main, the metric selector is directly visible. Independent Counted
+text and Paragraph comparison switches retain their browser-local settings;
+violet underlines mark counted spans, while blue/orange values and direction
+arrows compare paragraphs without tinting the prose background. Focus temporarily
+hides these displays and restores the saved choices on exit.
 Ordinary research entry titles open the current version. Explicit Linked version
 actions retain their exact pins; the collapsed Versions list loads only on demand
 and does not change the displayed record. Text associations group exact quotes
@@ -273,6 +278,12 @@ viewers remain explicit. An empty summary means no saved links, not no facts.
 The presentation reads existing contracts and does not save, repin or infer links.
 Only profiled paragraphs have measurements and claim anchors. Plain reports
 keep their inspection layout; the bounded reader is not a Markdown editor.
+On current main, read-only `research find-anchor --query-format markdown` accepts
+copied inline emphasis using the shared displayed-text projection. Default
+queries and all write/re-pin selections remain literal. The returned quote,
+offsets and hash identify the actual paragraph; headings are outside this scope.
+The [Markdown-query workflow](https://mfahsold.github.io/lixity/research/USAGE.md#find-a-quote-copied-from-markdown)
+shows the six-field selection extraction and guarded follow-up write.
 Since v0.7.3, dossier departures also retain a guarded Back to dossier route;
 mobile return controls stay visible. Reading settings includes actual keyboard
 shortcuts, and action help works on focus as well as hover. Nested scroll areas
@@ -422,9 +433,8 @@ research/USAGE.md, ARCHITECTURE.md and AGENTS.md for contracts and limits.
 
 Exact reader evidence in v0.7.3 uses the same configured counters as profiles.
 First explicit Analysis On selects Sentence length unless a browser-local metric
-choice exists. The adjacent control names the metric and Highlights On/Off;
-open it to select a metric or change Mark counted passages. None and unchecked
-marks persist. Hover, touch or Inspect text evidence explains the exact span
+choice exists. None and disabled text marks persist. Hover, touch or explicit
+measurement inspection explains the exact span
 separately from its paragraph measurement. Explicit inspection also works from
 Analysis Off, enabling Analysis while preserving disabled paint. CLI opt-in
 `profile --layer KEY --evidence [--json]` uses `paragraph-layer-evidence/1` with
@@ -1090,6 +1100,22 @@ not replace Windows/macOS verification for platform-sensitive changes. See
 [contributor checks](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#development-setup)
 for the canonical paths and focused/manual-full platform options.
 
+## Read documentation offline
+
+Installed command help and schema discovery work without a network connection:
+use `lixity COMMAND --help`, `lixity research COMMAND --help`,
+`lixity about --json` and `lixity research schema`. They describe the code in
+that installation; they do not require the workspace service.
+
+For longer guides, retain a matching source checkout and open `docs/USAGE.md`,
+`docs/research/USAGE.md` or the generated `docs/llms-full.txt` in a local text or
+Markdown reader. The bundle combines the references; it is not a rendered
+documentation website. Package installations do not include these guides, and
+there is no `lixity docs --serve` command. Contributors can preview the approved
+Pages tree using the existing
+[documentation preview workflow](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#updating-documentation-and-pages).
+External links and public-site analytics remain separate from offline reading.
+
 ## Troubleshooting
 
 | Symptom | Action |
@@ -1301,7 +1327,8 @@ that version. Each export records the actual resolved version.
 The profile is a validated root-local `site_publications` project setting,
 separate from PDF imprint settings and accepted Research records. Save this TOML
 in the selected project's root `lixity.toml` (or prefix its tables with
-`tool.lixity.` in that root's `pyproject.toml`):
+`tool.lixity.` in that root's `pyproject.toml`). Profiles are not read from
+`.lixity/config.json`.
 
 ```toml
 [site_publications.readers]
@@ -1317,7 +1344,9 @@ include_citations = false
 include_geography = false
 ```
 
-Use a real dossier ID from your project. Citations and geography are off by
+Use a real dossier ID from your project. The entries form an explicit allowlist:
+reader and companion exports include only selected dossier bodies or sections.
+Leave internal dossiers out of that list. Citations and geography are off by
 default. If selected, these are the **whole pinned dossier's** citations or map;
 there is no inferred section-to-citation/map association. Review that content
 before including it. Publication modes do not automatically include claims,
@@ -1325,9 +1354,22 @@ internal decisions, reverse links, revision history, source context notes or
 complete extracted source text. `--include-research` is rejected for these
 formats; choose the curated profile instead. Selected retained media needs the
 separate source-file inclusion choice.
-`lixity about --section configuration` exposes
-`configuration.site_publications_schema` with all accepted profile/entry fields;
-unknown fields are rejected. Profiles do not inherit from user or ancestor settings.
+
+Inspect the installed profile JSON Schema without opening a project:
+
+```sh
+lixity about --section configuration |
+  python3 -c 'import json, sys; print(json.dumps(json.load(sys.stdin)["configuration"]["site_publications_schema"], indent=2))'
+```
+
+This JSON describes the TOML setting; it does not create a separate configuration
+file. Profiles accept `title`, `introduction` and `entries`. Each entry accepts
+`dossier_id`, `revision`, `section`, `reveal_after_chapter`, `title`,
+`include_citations` and `include_geography`; unknown fields are rejected.
+Theme settings, paths and exclusion lists are not profile fields. Choose the
+destination with `-o`; `--mode`, `--max-chapter` and the research/source-file
+inclusion flags belong to `export-site`. Profiles do not inherit from user or
+ancestor settings.
 
 Readers explicitly set the last chapter they have finished. Scrolling and
 chapter navigation do not count as reading. Later notes have no visible titles
@@ -2035,6 +2077,23 @@ app shows `–` and explains the missing support while retaining raw measurement
 For compatibility, JSON component z-scores fall back to zero with too few
 chapters; identical balances yield empty `most_telling`/`most_showing` ranks.
 Empty ranks mean no distinguishable ordering, not identical artistic effect.
+
+The native **Analysis overview → Narrative distance (show/tell)** panel already
+shows these chapter values and links back to the manuscript. Review-workspace
+website copies include that analysis; curated reader/companion copies exclude
+it. Bar length shows the magnitude of the balance; its signed number gives the
+direction: positive means more showing signals, negative more telling signals
+relative to this manuscript. For concrete wording, enable manuscript **Analysis**
+and choose a component such as **Perception filters**, **Modals**, **Nominal style** or
+**Passive**. On current main, **Counted text** marks the exact
+lexical cues independently of **Paragraph comparison**. Inspect a marked span
+to read its count and counting rule.
+
+The composite is chapter-level; it is not a word-by-word showing/telling
+classification. It does not distinguish abstract adjectives from sensory verbs.
+A marked perception verb is a counted filter cue, not proof of telling or a
+request to remove it. Interpret the chapter contrast together with the scene's
+purpose and the [heuristic limits](STABILITY.md#linguistic-proxies-and-literary-interpretation).
 
 ### `lixity style`
 
@@ -3040,8 +3099,16 @@ link and inline-code syntax remain as text. Soft-wrapped lines are joined and
 source line endings normalized, while the raw-source SHA-256 binds the original
 bytes. `find-anchor` matches the query exactly, case-sensitively, without fuzzy
 matching or Unicode normalization. Use `word` for `*word*`, but retain link/code
-syntax present in the paragraph text. On current main, overlapping matches also
-count as ambiguous: `ana` occurs twice in `banana`. Prose counting uses a separate projection
+syntax present in the paragraph text. On current main, an explicit
+`--query-format markdown` also accepts copied inline formatting: it applies the
+same supported emphasis/comment/footnote-anchor cleanup and trims outer
+whitespace before exact matching. The default remains `--query-format display`.
+This is not a general Markdown renderer: links, backticks and internal line
+structure remain; heading/list block markers are not removed. Headings are not
+paragraph anchors, so `# Chapter One` cannot select a chapter heading.
+The returned `quote`, offsets and paragraph hash always identify the actual
+displayed text. Overlapping matches also count as ambiguous: `ana` occurs twice
+in `banana`, including after explicit Markdown cleanup. Prose counting uses a separate projection
 that excludes destinations, images and code. Cross-paragraph, ambiguous or stale
 selections fail. Paths escaping the project, including through
 symlinks, are rejected. Source bytes are checked again before publication; this
@@ -3097,6 +3164,49 @@ lixity research review-manuscript --project ./novel novel.md
 lixity research reconcile-manuscript --project ./novel novel.md            # preview
 lixity research reconcile-manuscript --project ./novel novel.md --accept-moved
 ```
+
+#### Find a quote copied from Markdown
+
+On current main, use the explicit read-only query mode for a quote copied with
+inline emphasis. For example, a paragraph containing `The **reading room** was
+open.` can be located with:
+
+```sh
+lixity research find-anchor --project ./novel novel.md \
+  --query '**reading room**' --query-format markdown > anchor.json
+```
+
+The JSON response contains `"quote": "reading room"`, the exact paragraph lines,
+hash and Unicode-codepoint offsets, plus the project/snapshot envelope. Read the
+returned quote before retaining it. If more than one occurrence exists, the
+command fails; add `--line N` only after choosing the intended paragraph.
+Read-only lookup changes neither the manuscript nor the archive.
+
+For a subsequent association, `--selection` requires **only its six selection
+fields**, not the complete response envelope. Extract them, then use the
+reviewed archive snapshot as a write guard:
+
+```sh
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+anchor = json.loads(Path("anchor.json").read_text(encoding="utf-8"))
+fields = ("start_line", "end_line", "paragraph_sha256", "start", "end", "quote")
+selection = {key: anchor[key] for key in fields}
+Path("selection.json").write_text(json.dumps(selection, ensure_ascii=False), encoding="utf-8")
+PY
+# Inspect selection.json; replace CLAIM_ID, CLAIM_VERSION and SNAPSHOT below.
+lixity research link-manuscript --project ./novel novel.md \
+  --claim-id CLAIM_ID --claim-revision CLAIM_VERSION --selection selection.json \
+  --expected-snapshot SNAPSHOT --allow-retention
+```
+
+Use `snapshot` from `anchor.json` for `SNAPSHOT` and a reviewed current claim
+version. Re-run the lookup/review if the archive changed. `--allow-retention`
+confirms permission to retain the selected quote; it does not publish anything.
+Existing `link-manuscript --quote`, `--selection` and reconciliation
+`--new-quote` continue to require exact displayed text and unchanged write guards.
 
 The manuscript path is accepted positionally (like `analyze`, `scenes`, `showing`)
 or as `--manuscript PATH`; pass exactly one of the two forms. Since v0.7.2,
@@ -7529,8 +7639,20 @@ quotes are nonblank, at most 10,000 codepoints, and notes at most 2,000 characte
 The anchor projection removes supported emphasis, comments and footnote anchors,
 but retains link/code syntax. `find-anchor` matches a query exactly and
 case-sensitively without Unicode normalization; it does not use the separate
-prose-counting projection to identify quotes. On current main, overlapping
-literal matches also make a query ambiguous (`ana` occurs twice in `banana`).
+prose-counting projection to identify quotes. On current main,
+`resolve_manuscript_anchor(project, manuscript, *, query, query_format="display",
+line=None, language=None, project_config=None)` accepts an explicit
+`query_format="markdown"` (CLI: `find-anchor --query-format markdown`). This
+applies the same limited inline cleanup and boundary-whitespace trimming to the
+query before exact matching. It retains link/code syntax and internal line
+structure, never strips heading/list block markers or makes headings anchorable.
+Empty projected queries fail. Returned quote/offsets/hash refer to the actual
+displayed paragraph; the `research-anchor-local/1` response is unchanged.
+Default queries and all write/re-pin selections remain literal. Read and retain
+only the six selection fields from the response, not its project/snapshot envelope;
+the [Markdown-query workflow](research/USAGE.md#find-a-quote-copied-from-markdown)
+shows the guarded follow-up write. Overlapping matches, including after explicit
+cleanup, make a query ambiguous (`ana` occurs twice in `banana`).
 Manuscript paths must stay inside the explicit project, including symlink
 resolution. Expected project, snapshot, source bytes and current claim revision
 must match; save rejects withdrawn claims and stale or ambiguous selections.

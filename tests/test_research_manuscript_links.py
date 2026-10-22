@@ -495,6 +495,83 @@ def test_resolve_manuscript_anchor_reports_exact_fields(manuscript_archive):
     assert narrowed["start_line"] == 3
 
 
+@pytest.mark.parametrize("query,quote", [
+    ("**reading room**", "reading room"),
+    ("*reading* room", "reading room"),
+    ("___reading room___", "reading room"),
+    ("**read<!-- private comment -->ing room**[^note]", "reading room"),
+    ("**🦉 A visitor arrived.**", "🦉 A visitor arrived."),
+])
+def test_markdown_query_returns_the_exact_displayed_selection(manuscript_archive, query, quote):
+    project, manuscript, _, _ = manuscript_archive
+    before = accepted_bytes(project)
+    source = manuscript.read_bytes()
+    resolved = api.resolve_manuscript_anchor(
+        project, manuscript, query=query, query_format="markdown")
+    assert {key: resolved[key] for key in selection(quote)} == selection(quote)
+    assert accepted_bytes(project) == before
+    assert manuscript.read_bytes() == source
+
+
+@pytest.mark.parametrize("query", ["snake_case", "`data_key`", "[window](https://example.org/a_b)"])
+def test_markdown_query_preserves_link_code_and_literal_underscores(manuscript_archive, query):
+    project, manuscript, _, _ = manuscript_archive
+    paragraph = "A [window](https://example.org/a_b) beside `data_key` and snake_case."
+    manuscript.write_text(f"## One\n\n{paragraph}\n", encoding="utf-8")
+    result = api.resolve_manuscript_anchor(project, manuscript, query=query, query_format="markdown")
+    assert result["quote"] == query
+    assert (result["start"], result["end"]) == (paragraph.index(query), paragraph.index(query) + len(query))
+    assert result["paragraph_sha256"] == hashlib.sha256(paragraph.encode()).hexdigest()
+
+
+@pytest.mark.parametrize("query", ["**ana**", "*ana*"])
+def test_markdown_query_still_rejects_overlapping_matches(manuscript_archive, query):
+    project, manuscript, _, _ = manuscript_archive
+    manuscript.write_text("## Fruit\n\nbanana\n", encoding="utf-8")
+    with pytest.raises(ResearchError, match="ambiguous"):
+        api.resolve_manuscript_anchor(project, manuscript, query=query, query_format="markdown", line=3)
+
+
+@pytest.mark.parametrize("query", ["# Chapter One", "**READING ROOM**", "**reading room**\n\nA visitor"])
+def test_markdown_query_does_not_expand_anchor_scope_or_fold_case(manuscript_archive, query):
+    project, manuscript, _, _ = manuscript_archive
+    with pytest.raises(ResearchError, match="not found"):
+        api.resolve_manuscript_anchor(project, manuscript, query=query, query_format="markdown")
+
+
+@pytest.mark.parametrize("query", ["<!-- comment only -->", "[^note]"])
+def test_markdown_query_requires_visible_nonblank_text(manuscript_archive, query):
+    project, manuscript, _, _ = manuscript_archive
+    with pytest.raises(ResearchError, match="nonempty"):
+        api.resolve_manuscript_anchor(project, manuscript, query=query, query_format="markdown")
+
+
+def test_markdown_query_disambiguates_by_source_line(manuscript_archive):
+    project, manuscript, _, _ = manuscript_archive
+    manuscript.write_text("## One\n\nA **quiet room**.\n\nAnother *quiet room*.\n", encoding="utf-8")
+    with pytest.raises(ResearchError, match="ambiguous"):
+        api.resolve_manuscript_anchor(project, manuscript, query="**quiet room**", query_format="markdown")
+    result = api.resolve_manuscript_anchor(
+        project, manuscript, query="**quiet room**", query_format="markdown", line=5)
+    assert (result["start_line"], result["end_line"], result["start"], result["end"]) == (5, 5, 8, 18)
+    assert result["quote"] == "quiet room"
+
+
+def test_markdown_query_does_not_normalize_unicode(manuscript_archive):
+    project, manuscript, _, _ = manuscript_archive
+    manuscript.write_text("## One\n\nA café opens.\n", encoding="utf-8")
+    with pytest.raises(ResearchError, match="not found"):
+        api.resolve_manuscript_anchor(project, manuscript, query="*cafe\u0301*", query_format="markdown")
+    result = api.resolve_manuscript_anchor(project, manuscript, query="*café*", query_format="markdown")
+    assert (result["quote"], result["start"], result["end"]) == ("café", 2, 6)
+
+
+def test_anchor_query_format_rejects_unknown_modes(manuscript_archive):
+    project, manuscript, _, _ = manuscript_archive
+    with pytest.raises(ResearchError, match="query format"):
+        api.resolve_manuscript_anchor(project, manuscript, query="reading room", query_format="html")
+
+
 @pytest.mark.parametrize("text, quote", [("banana", "ana"), ("aaa", "aa"), ("Owl 🦉🦉🦉", "🦉🦉")])
 def test_resolve_manuscript_anchor_rejects_overlapping_occurrences(manuscript_archive, text, quote):
     project, manuscript, _, _ = manuscript_archive
@@ -660,6 +737,35 @@ def test_cli_find_anchor_and_quote_convenience(manuscript_archive, capsys):
     assert cli.run(link_args) == 0
     linked = json.loads(capsys.readouterr().out)
     assert linked["record"]["anchor"]["start_line"] == 3
+
+
+def test_cli_markdown_anchor_can_be_reviewed_and_saved_as_selection(manuscript_archive, capsys):
+    project, manuscript, claim, _ = manuscript_archive
+    parser = research_parser()
+    before = accepted_bytes(project)
+    source = manuscript.read_bytes()
+    args = parser.parse_args([
+        "find-anchor", "--project", str(project), "draft.md",
+        "--query", "**reading room**", "--query-format", "markdown"])
+    assert cli.run(args) == 0
+    output = capsys.readouterr()
+    assert not output.err
+    resolved = json.loads(output.out)
+    expected = selection("reading room")
+    reviewed = {key: resolved[key] for key in expected}
+    assert reviewed == expected
+    assert accepted_bytes(project) == before
+    selection_file = project / "selection.json"
+    selection_file.write_text(json.dumps(reviewed), encoding="utf-8")
+    args = parser.parse_args([
+        "link-manuscript", "--project", str(project), "draft.md",
+        "--claim-id", claim, "--claim-revision", "1", "--selection", str(selection_file),
+        "--expected-snapshot", resolved["snapshot"], "--allow-retention"])
+    assert cli.run(args) == 0
+    saved = json.loads(capsys.readouterr().out)
+    assert saved["record"]["anchor"]["quote"] == "reading room"
+    assert saved["record"]["anchor"]["source_sha256"] == digest(source)
+    assert api.review_manuscript_links(project, manuscript)["review_needed_count"] == 0
 
 
 @pytest.mark.parametrize("source_missing", [False, True], ids=["existing-source", "missing-source"])

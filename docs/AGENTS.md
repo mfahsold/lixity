@@ -694,8 +694,20 @@ quotes are nonblank, at most 10,000 codepoints, and notes at most 2,000 characte
 The anchor projection removes supported emphasis, comments and footnote anchors,
 but retains link/code syntax. `find-anchor` matches a query exactly and
 case-sensitively without Unicode normalization; it does not use the separate
-prose-counting projection to identify quotes. On current main, overlapping
-literal matches also make a query ambiguous (`ana` occurs twice in `banana`).
+prose-counting projection to identify quotes. On current main,
+`resolve_manuscript_anchor(project, manuscript, *, query, query_format="display",
+line=None, language=None, project_config=None)` accepts an explicit
+`query_format="markdown"` (CLI: `find-anchor --query-format markdown`). This
+applies the same limited inline cleanup and boundary-whitespace trimming to the
+query before exact matching. It retains link/code syntax and internal line
+structure, never strips heading/list block markers or makes headings anchorable.
+Empty projected queries fail. Returned quote/offsets/hash refer to the actual
+displayed paragraph; the `research-anchor-local/1` response is unchanged.
+Default queries and all write/re-pin selections remain literal. Read and retain
+only the six selection fields from the response, not its project/snapshot envelope;
+the [Markdown-query workflow](research/USAGE.md#find-a-quote-copied-from-markdown)
+shows the guarded follow-up write. Overlapping matches, including after explicit
+cleanup, make a query ambiguous (`ana` occurs twice in `banana`).
 Manuscript paths must stay inside the explicit project, including symlink
 resolution. Expected project, snapshot, source bytes and current claim revision
 must match; save rejects withdrawn claims and stale or ambiguous selections.

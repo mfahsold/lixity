@@ -201,8 +201,16 @@ link and inline-code syntax remain as text. Soft-wrapped lines are joined and
 source line endings normalized, while the raw-source SHA-256 binds the original
 bytes. `find-anchor` matches the query exactly, case-sensitively, without fuzzy
 matching or Unicode normalization. Use `word` for `*word*`, but retain link/code
-syntax present in the paragraph text. On current main, overlapping matches also
-count as ambiguous: `ana` occurs twice in `banana`. Prose counting uses a separate projection
+syntax present in the paragraph text. On current main, an explicit
+`--query-format markdown` also accepts copied inline formatting: it applies the
+same supported emphasis/comment/footnote-anchor cleanup and trims outer
+whitespace before exact matching. The default remains `--query-format display`.
+This is not a general Markdown renderer: links, backticks and internal line
+structure remain; heading/list block markers are not removed. Headings are not
+paragraph anchors, so `# Chapter One` cannot select a chapter heading.
+The returned `quote`, offsets and paragraph hash always identify the actual
+displayed text. Overlapping matches also count as ambiguous: `ana` occurs twice
+in `banana`, including after explicit Markdown cleanup. Prose counting uses a separate projection
 that excludes destinations, images and code. Cross-paragraph, ambiguous or stale
 selections fail. Paths escaping the project, including through
 symlinks, are rejected. Source bytes are checked again before publication; this
@@ -258,6 +266,49 @@ lixity research review-manuscript --project ./novel novel.md
 lixity research reconcile-manuscript --project ./novel novel.md            # preview
 lixity research reconcile-manuscript --project ./novel novel.md --accept-moved
 ```
+
+#### Find a quote copied from Markdown
+
+On current main, use the explicit read-only query mode for a quote copied with
+inline emphasis. For example, a paragraph containing `The **reading room** was
+open.` can be located with:
+
+```sh
+lixity research find-anchor --project ./novel novel.md \
+  --query '**reading room**' --query-format markdown > anchor.json
+```
+
+The JSON response contains `"quote": "reading room"`, the exact paragraph lines,
+hash and Unicode-codepoint offsets, plus the project/snapshot envelope. Read the
+returned quote before retaining it. If more than one occurrence exists, the
+command fails; add `--line N` only after choosing the intended paragraph.
+Read-only lookup changes neither the manuscript nor the archive.
+
+For a subsequent association, `--selection` requires **only its six selection
+fields**, not the complete response envelope. Extract them, then use the
+reviewed archive snapshot as a write guard:
+
+```sh
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+anchor = json.loads(Path("anchor.json").read_text(encoding="utf-8"))
+fields = ("start_line", "end_line", "paragraph_sha256", "start", "end", "quote")
+selection = {key: anchor[key] for key in fields}
+Path("selection.json").write_text(json.dumps(selection, ensure_ascii=False), encoding="utf-8")
+PY
+# Inspect selection.json; replace CLAIM_ID, CLAIM_VERSION and SNAPSHOT below.
+lixity research link-manuscript --project ./novel novel.md \
+  --claim-id CLAIM_ID --claim-revision CLAIM_VERSION --selection selection.json \
+  --expected-snapshot SNAPSHOT --allow-retention
+```
+
+Use `snapshot` from `anchor.json` for `SNAPSHOT` and a reviewed current claim
+version. Re-run the lookup/review if the archive changed. `--allow-retention`
+confirms permission to retain the selected quote; it does not publish anything.
+Existing `link-manuscript --quote`, `--selection` and reconciliation
+`--new-quote` continue to require exact displayed text and unchanged write guards.
 
 The manuscript path is accepted positionally (like `analyze`, `scenes`, `showing`)
 or as `--manuscript PATH`; pass exactly one of the two forms. Since v0.7.2,

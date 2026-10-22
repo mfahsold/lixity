@@ -88,6 +88,11 @@ research. The compact measurement card scopes its sentence word count, paragraph
 value and chapter comparison separately; method/coverage is expandable.
 Separate visible Counted text and Paragraph comparison keys explain exact
 underlined spans versus blue/orange chapter-relative paragraph backgrounds.
+On current main, the metric selector is directly visible. Independent Counted
+text and Paragraph comparison switches retain their browser-local settings;
+violet underlines mark counted spans, while blue/orange values and direction
+arrows compare paragraphs without tinting the prose background. Focus temporarily
+hides these displays and restores the saved choices on exit.
 Ordinary research entry titles open the current version. Explicit Linked version
 actions retain their exact pins; the collapsed Versions list loads only on demand
 and does not change the displayed record. Text associations group exact quotes
@@ -105,6 +110,12 @@ viewers remain explicit. An empty summary means no saved links, not no facts.
 The presentation reads existing contracts and does not save, repin or infer links.
 Only profiled paragraphs have measurements and claim anchors. Plain reports
 keep their inspection layout; the bounded reader is not a Markdown editor.
+On current main, read-only `research find-anchor --query-format markdown` accepts
+copied inline emphasis using the shared displayed-text projection. Default
+queries and all write/re-pin selections remain literal. The returned quote,
+offsets and hash identify the actual paragraph; headings are outside this scope.
+The [Markdown-query workflow](https://mfahsold.github.io/lixity/research/USAGE.md#find-a-quote-copied-from-markdown)
+shows the six-field selection extraction and guarded follow-up write.
 Since v0.7.3, dossier departures also retain a guarded Back to dossier route;
 mobile return controls stay visible. Reading settings includes actual keyboard
 shortcuts, and action help works on focus as well as hover. Nested scroll areas
@@ -254,9 +265,8 @@ research/USAGE.md, ARCHITECTURE.md and AGENTS.md for contracts and limits.
 
 Exact reader evidence in v0.7.3 uses the same configured counters as profiles.
 First explicit Analysis On selects Sentence length unless a browser-local metric
-choice exists. The adjacent control names the metric and Highlights On/Off;
-open it to select a metric or change Mark counted passages. None and unchecked
-marks persist. Hover, touch or Inspect text evidence explains the exact span
+choice exists. None and disabled text marks persist. Hover, touch or explicit
+measurement inspection explains the exact span
 separately from its paragraph measurement. Explicit inspection also works from
 Analysis Off, enabling Analysis while preserving disabled paint. CLI opt-in
 `profile --layer KEY --evidence [--json]` uses `paragraph-layer-evidence/1` with
