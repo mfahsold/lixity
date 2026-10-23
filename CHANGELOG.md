@@ -11,6 +11,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Reading-website export failures retain HTTP status codes and distinguish
   unreachable application, invalid ZIP response and browser download failures,
   including available technical details, without resetting export options.
+- Native website exports log preparation and transport outcomes at normal log
+  levels. Bounded, content-free browser receipts correlate response-read,
+  ZIP-check and download-start failures with a random export ID; interrupted
+  transfers are no longer described as invalid ZIP files.
 
 ### Changed
 - Heatmap cells, style-reference cutoff-hit counts and all style-space loadings

@@ -255,6 +255,15 @@ _ROWS = {
         'A resposta de exportação não pôde ser lida como um ZIP válido.',
         'Het exportantwoord kon niet als geldig ZIP-bestand worden gelezen.',
     ),
+    'site_export_transfer_error': (
+        'The browser could not finish reading the export response.',
+        'Der Browser konnte die Exportantwort nicht vollständig empfangen.',
+        'Le navigateur n’a pas pu terminer la lecture de la réponse d’export.',
+        'El navegador no pudo terminar de leer la respuesta de exportación.',
+        'Il browser non ha potuto completare la lettura della risposta di esportazione.',
+        'O navegador não conseguiu terminar a leitura da resposta de exportação.',
+        'De browser kon het exportantwoord niet volledig lezen.',
+    ),
     'site_export_download_error': (
         'The ZIP was received, but the browser could not start the download.',
         'Die ZIP-Datei wurde empfangen, aber der Browser konnte den Download nicht starten.',

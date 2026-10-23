@@ -758,6 +758,21 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
     status.className = "ctl-status " + (failed ? "err" : "ok");
     status.textContent = uiLabel(key) + (reason ? " " + reason : "");
   }
+  function reportExport(exportId, stage, error) {
+    var errorName = error ? (["AbortError", "NetworkError", "TypeError", "Error"].includes(error.name)
+      ? error.name : "Other") : null;
+    var receipt = {export_id:exportId, stage:stage, error_name:errorName};
+    if (error && window.LixityLog) window.LixityLog.error("Website export", receipt);
+    if (!/^[0-9a-f]{32}$/.test(exportId)) return;
+    fetch(API + "/site-export-report", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(receipt), keepalive:true,
+    }).then(function(response) {
+      if (!response.ok && window.LixityLog) window.LixityLog.warn("Export receipt rejected", response.status);
+    }).catch(function() {
+      if (window.LixityLog) window.LixityLog.warn("Export receipt could not reach the application");
+    });
+  }
   open.addEventListener("click", function() {
     if (open.disabled) return;
     mode.value = "review"; research.checked = sources.checked = false;
@@ -786,11 +801,13 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
     busy = true; sync(); message("site_export_busy");
     var reason = "";
     var failureKey = "site_export_network_error";
+    var exportId = "", stage = "response_read";
     try {
       var response = await fetch(API + "/site-export", {
         method: "POST", headers: {"Content-Type": "application/json"},
         body: JSON.stringify(payload),
       });
+      exportId = response.headers.get("X-Lixity-Export-ID") || "";
       if (!response.ok) {
         reason = "HTTP " + response.status;
         try {
@@ -806,20 +823,26 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
           (response.headers.get("Content-Type") || "\u2014") + ")";
         throw new Error("Expected a ZIP response");
       }
+      failureKey = "site_export_transfer_error";
       var blob = await response.blob();
+      stage = "zip_check";
+      failureKey = "site_export_response_error";
       var magic = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
       if (blob.size < 22 || magic[0] !== 0x50 || magic[1] !== 0x4b ||
           !((magic[2] === 3 && magic[3] === 4) || (magic[2] === 5 && magic[3] === 6))) {
         reason = uiLabel(failureKey);
         throw new Error("Invalid ZIP response");
       }
+      stage = "download_start";
       failureKey = "site_export_download_error";
       var url = URL.createObjectURL(blob), download = document.createElement("a");
       download.href = url; download.download = "lixity-reading-website.zip";
       document.body.appendChild(download); download.click(); download.remove();
       setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+      reportExport(exportId, "download_started");
       message("site_export_success");
     } catch (error) {
+      reportExport(exportId, stage, error);
       if (!reason) {
         reason = uiLabel(failureKey);
         if (error instanceof Error) reason += " (" + error.name + ": " + error.message + ")";

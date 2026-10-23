@@ -38,7 +38,7 @@ class ResponseMixin(WorkspaceState):
 
     def _send(
         self, code: int, body: bytes, content_type: str, *, headers: Mapping[str, str] | None = None
-    ) -> None:
+    ) -> bool:
         extra = dict(headers or {})
         self.send_response(code)
         self.send_header("Content-Type", content_type)
@@ -56,11 +56,13 @@ class ResponseMixin(WorkspaceState):
         try:
             self.end_headers()
             self.wfile.write(body)
+            return True
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             # A cancelled request cannot receive another response. Keep transport
             # errors out of route processing handlers, which might retry as 500.
             self.close_connection = True
-            self._debug_log(f"Client disconnected while sending HTTP {code} response")
+            self._log.warning("Client disconnected while sending HTTP %d response", code)
+            return False
 
     def _send_dashboard_shell(
         self, html: str, *, freshness: RefreshOutcome = RefreshOutcome.UNKNOWN, language: str = "en",

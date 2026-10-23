@@ -79,10 +79,9 @@ def test_response_preparation_failure_is_not_mistaken_for_client_abort():
         response._json({"ok": True})
 
 
-def test_abort_debug_message_is_generic_and_timestamped():
+def test_abort_warning_is_generic_and_timestamped_without_debug():
     response = ResponseHarness(DisconnectWriter(BrokenPipeError(), fail_at=2))
-    response.debug = True
-    log.configure(level="DEBUG", force=True)
+    log.configure(level="INFO", force=True)
     try:
         output = io.StringIO()
         with redirect_stderr(output):
@@ -90,7 +89,7 @@ def test_abort_debug_message_is_generic_and_timestamped():
     finally:
         log.configure(level="INFO", force=True)
     assert "HTTP 200" in output.getvalue()
-    assert "UTC DEBUG lixity.server" in output.getvalue()
+    assert "UTC WARNING lixity.server" in output.getvalue()
     assert "Synthetic private-looking content" not in output.getvalue()
 
 

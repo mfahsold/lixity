@@ -326,6 +326,19 @@ to `service-PORT.log.1` … `.3` (oldest dropped). Request logs never contain
 query strings, so context tokens and selectors stay out of the file; log
 records and runtime files never contain manuscript text.
 
+Reading-website exports log a random export ID, preparation size/time and socket
+write outcome at the default INFO level; disconnected clients produce a WARNING.
+The native browser reports response-read, ZIP-check or download-start failures
+back to the same local service, using only that ID, a fixed stage and an error
+class. Neither exception messages, filenames, project tokens nor document bytes
+are included in those receipts. A `body_written` line means the server wrote the
+response, not that the browser saved it; `download_started` is a browser receipt,
+not proof that a file was saved. If the service is unreachable, receipt delivery
+can also fail; the shared browser console logger records that failure.
+For `response_read`/`AbortError` after `body_written`, also check the browser's
+temporary storage and user quota: a quota can be exhausted despite free space
+reported by `df`. That observation alone does not prove an invalid ZIP.
+
 </details>
 
 For a foreground server, including development and embedding use, keep the

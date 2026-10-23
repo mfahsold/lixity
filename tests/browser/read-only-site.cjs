@@ -38,11 +38,19 @@ print(json.dumps(documents))
     for (const [locale, fixture] of Object.entries(fixtures)) for (const width of [1440, 320]) {
       const page = await browser.newPage({viewport: {width, height: 900}, reducedMotion: 'reduce'});
       page.on('pageerror', error => errors.push(error.message));
+      const consoleErrors = [];
+      page.on('console', message => {if (message.type() === 'error') consoleErrors.push(message.text());});
       const posts = [];
+      const receipts = [];
       let rejectNext = false;
       let failure = '';
       await page.route('http://lixity.test/**', async route => {
         const request = route.request();
+        if (request.url().endsWith('/api/site-export-report')) {
+          receipts.push(request.postDataJSON());
+          await route.fulfill({contentType:'application/json', body:'{"ok":true}'});
+          return;
+        }
         if (request.url().endsWith('/api/site-export')) {
           posts.push(request.postDataJSON());
           if (failure === 'network') return route.abort('failed');
@@ -54,7 +62,8 @@ print(json.dumps(documents))
             await route.fulfill({status:409, contentType:'application/json', body:JSON.stringify({message:'Synthetic context changed.'})});
             return;
           }
-          await route.fulfill({contentType: 'application/zip', body: Buffer.from('504b0506000000000000000000000000000000000000', 'hex')});
+          await route.fulfill({contentType: 'application/zip', headers:{'X-Lixity-Export-ID':'a'.repeat(32)},
+            body: Buffer.from('504b0506000000000000000000000000000000000000', 'hex')});
         } else await route.fulfill({contentType: 'text/html', body: fixture.live});
       });
       await page.goto('http://lixity.test/');
@@ -130,17 +139,37 @@ print(json.dumps(documents))
         }
         failure = '';
         await page.evaluate(() => {
+          window.lixityOriginalResponseBlob = Response.prototype.blob;
+          Response.prototype.blob = async () => {throw new DOMException('Synthetic private-looking detail', 'AbortError');};
+        });
+        await page.locator('#site-export-download').click();
+        await expect(page.locator('#site-export-status.err')).toContainText('AbortError');
+        await expect(page.locator('#site-export-status.err')).toContainText('could not finish reading');
+        await expect.poll(() => receipts.at(-1)).toEqual({
+          export_id:'a'.repeat(32), stage:'response_read', error_name:'AbortError',
+        });
+        await page.evaluate(() => {Response.prototype.blob = window.lixityOriginalResponseBlob;});
+        await page.evaluate(() => {
           window.lixityOriginalCreateObjectURL = URL.createObjectURL;
           URL.createObjectURL = () => {throw new TypeError('Synthetic download failure');};
         });
         await page.locator('#site-export-download').click();
         await expect(page.locator('#site-export-status.err')).toContainText('browser could not start the download');
         await expect(page.locator('#site-export-status.err')).toContainText('TypeError: Synthetic download failure');
+        await expect.poll(() => receipts.at(-1)).toEqual({
+          export_id:'a'.repeat(32), stage:'download_start', error_name:'TypeError',
+        });
         await page.evaluate(() => {URL.createObjectURL = window.lixityOriginalCreateObjectURL;});
         const recoveredDownload = page.waitForEvent('download');
         await page.locator('#site-export-download').click();
         await recoveredDownload;
         await expect(page.locator('#site-export-status.ok')).toBeVisible();
+        await expect.poll(() => receipts.at(-1)).toEqual({
+          export_id:'a'.repeat(32), stage:'download_started', error_name:null,
+        });
+        assert.ok(!JSON.stringify(receipts).includes('private-looking'));
+        assert.ok(consoleErrors.some(message => message.includes('response_read') && message.includes('AbortError')));
+        assert.ok(!consoleErrors.some(message => message.includes('Synthetic private-looking detail')));
       }
       const dialog = page.locator('#modal-site-export');
       assert.ok(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth + 1));

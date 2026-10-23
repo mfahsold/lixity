@@ -839,6 +839,15 @@ When running `lixity serve --port 8765`, local agents can trigger deterministic 
 
 Browser API diagnostics report request metadata without copying response bodies
 to the console.
+Native reading-website exports additionally write content-free lifecycle logs
+at the default INFO level. Their `X-Lixity-Export-ID` response header correlates
+server preparation/socket writes with browser receipts. `POST /api/site-export-report`
+accepts only `export_id` (32 lowercase hexadecimal characters), `stage`
+(`response_read`, `zip_check`, `download_start`, `download_started`) and nullable
+`error_name` (`AbortError`, `NetworkError`, `TypeError`, `Error`, `Other`).
+Extra fields are rejected. These same-origin receipts are browser observations,
+not proof of successful file saving. They contain no project token or content;
+see [service logging](INSTALLATION.md#logs).
 
 Overlapping automatic browser
 `GET /api/research/status` consumers share only a pending observation for the

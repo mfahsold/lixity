@@ -63,6 +63,14 @@ class SiteExportRequest(SiteExportOptions):
         return SiteExportOptions.model_validate(self.model_dump(exclude={"project_token"}))
 
 
+class SiteExportReport(_SiteModel):
+    """Content-free browser receipt, correlated with one native ZIP response."""
+
+    export_id: Annotated[str, Field(pattern=r"^[0-9a-f]{32}$")]
+    stage: Literal["response_read", "zip_check", "download_start", "download_started"]
+    error_name: Literal["AbortError", "NetworkError", "TypeError", "Error", "Other"] | None = None
+
+
 class SiteFile(_SiteModel):
     sha256: Digest
     byte_length: Annotated[int, Field(ge=0)]

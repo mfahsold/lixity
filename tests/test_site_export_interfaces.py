@@ -80,6 +80,7 @@ def test_native_site_download_contains_only_selected_project_without_writes(tmp_
         })
         assert response.status == 200, response.body.decode(errors="replace")[:300]
         assert response.headers["content-type"] == "application/zip"
+        assert len(response.headers["x-lixity-export-id"]) == 32
         assert response.headers["content-disposition"].endswith('reading-website.zip"')
         with zipfile.ZipFile(io.BytesIO(response.body)) as archive:
             assert "index.html" in archive.namelist()
@@ -95,6 +96,58 @@ def test_native_site_download_contains_only_selected_project_without_writes(tmp_
         }, headers={"Origin": "https://untrusted.example"})
         assert cross_origin.status == 403
     assert {p.name: p.read_bytes() for p in tmp_path.iterdir()} == before
+
+
+def test_export_logs_correlate_server_and_browser_without_content(tmp_path: Path):
+    import io
+
+    from lixity import log
+    from tests.support import LoopbackServer, make_handler, send
+
+    manuscript = tmp_path / "private-manuscript-name.md"
+    manuscript.write_text("## One\n\nPRIVATE_SYNTHETIC_PROSE remains private.\n")
+    handler = make_handler(tmp_path, source_input=manuscript)
+    token = manuscript_pdf_token(handler.source_input, project_root=handler.workspace_root,
+                                 language=handler.language, title=handler.title,
+                                 thresholds=handler.thresholds)
+    output = io.StringIO()
+    log.configure(level="INFO", stream=output, force=True)
+    try:
+        with LoopbackServer(handler) as server:
+            response = send(server.port, "/api/site-export", payload={
+                "project_token": token, "include_research": False, "include_source_files": False,
+            })
+            assert response.status == 200
+            export_id = response.headers["x-lixity-export-id"]
+            receipt = send(server.port, "/api/site-export-report", payload={
+                "export_id": export_id, "stage": "response_read", "error_name": "AbortError",
+            })
+            assert receipt.status == 200
+            cross_origin = send(server.port, "/api/site-export-report", payload={
+                "export_id": export_id, "stage": "response_read", "error_name": "AbortError",
+            }, headers={"Origin": "https://untrusted.example"})
+            assert cross_origin.status == 403
+    finally:
+        log.configure(level="INFO", force=True)
+    lines = output.getvalue()
+    for stage in ("request", "prepared", "body_written", "response_read"):
+        assert f"id={export_id} stage={stage}" in lines
+    assert "bytes=" in lines and "duration_ms=" in lines and "error=AbortError" in lines
+    for private in (token, str(tmp_path), manuscript.name, "PRIVATE_SYNTHETIC_PROSE"):
+        assert private not in lines
+
+
+@pytest.mark.parametrize("extra", [
+    {"export_id": "private text"}, {"stage": "private text"},
+    {"error_name": "private text"}, {"message": "private text"}, {"stage": "response_read\nforged"},
+])
+def test_export_receipts_reject_unbounded_diagnostics(tmp_path: Path, extra):
+    handler = recording_handler(tmp_path)
+    handler._handle_site_export_report({
+        "export_id": "a" * 32, "stage": "response_read", "error_name": "AbortError", **extra,
+    })
+    assert handler.response[0] == 400
+    assert handler.response[1]["message"] == "Invalid export receipt"
 
 
 def test_cli_site_export_uses_project_language_and_prints_manifest(tmp_path: Path, capsys):

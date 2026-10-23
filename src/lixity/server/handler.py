@@ -76,6 +76,7 @@ class LixityServerHandler(
         "nda-draft": "_handle_nda_draft",
         "manuscript-pdf": "_handle_manuscript_pdf",
         "site-export": "_handle_site_export",
+        "site-export-report": "_handle_site_export_report",
         "analyze": "_handle_refresh",
         "rebuild": "_handle_refresh",
         "marker-add": "_handle_marker_add",
