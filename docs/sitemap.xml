@@ -4,7 +4,7 @@
         xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
   <url>
     <loc>https://mfahsold.github.io/lixity/</loc>
-    <lastmod>2026-10-22</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <image:image>
       <image:loc>https://mfahsold.github.io/lixity/screenshots/dashboard-light.png</image:loc>
       <image:title>Lixity continuous manuscript reader with chapter navigation and contextual tools</image:title>
@@ -28,11 +28,15 @@
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/guides/first-look.html</loc>
-    <lastmod>2026-10-22</lastmod>
+    <lastmod>2026-10-23</lastmod>
+  </url>
+  <url>
+    <loc>https://mfahsold.github.io/lixity/guides/first-look-de.html</loc>
+    <lastmod>2026-10-23</lastmod>
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/demo/report.html</loc>
-    <lastmod>2026-10-22</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <image:image>
       <image:loc>https://mfahsold.github.io/lixity/assets/research/hamburg-free-port-1900.jpg</image:loc>
       <image:title>Historical Hamburg free-port plan by Richard Krause, circa 1900</image:title>
@@ -60,7 +64,7 @@
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/guides/installation.html</loc>
-    <lastmod>2026-10-22</lastmod>
+    <lastmod>2026-10-23</lastmod>
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/guides/interpretation.html</loc>
@@ -68,7 +72,7 @@
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/guides/manuscript-analysis-tools.html</loc>
-    <lastmod>2026-10-19</lastmod>
+    <lastmod>2026-10-23</lastmod>
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/guides/research-pdf.html</loc>

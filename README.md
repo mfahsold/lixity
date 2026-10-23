@@ -7,22 +7,28 @@
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
-**Your manuscript at the center. Analysis and research within reach.**
+**Find the passages worth a second look.**
 
 Lixity is a local workbench for authors and editors working with Markdown
-manuscripts. Read continuously, investigate a language pattern, or follow an
-exact quotation into its linked research, then return to the passage.
+manuscripts, especially a novel draft ready for revision. Why does a chapter
+sound different? Is that repetition deliberate? Which source supports a detail?
+Inspect the text behind a measurement or follow a quotation into its research.
 Measurements inform your judgment; they do not grade or rewrite your prose.
 
 [Open the example manuscript](https://mfahsold.github.io/lixity/demo/report.html) ·
 [Take the short tour](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Install Lixity](https://mfahsold.github.io/lixity/guides/installation.html)
 
+[Einstieg auf Deutsch](https://mfahsold.github.io/lixity/guides/first-look-de.html)
+
 <a href="https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png"><img src="https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png" width="560" alt="Lixity manuscript reader with continuous prose, chapter navigation and contextual tools"/></a>
 
 The read-only example follows a suspicious harbour delivery through six invented
 English chapters, linked case notes and credited research images. It needs no
 account or upload and cannot import, edit or save.
+Try one question first: **does chapter 2's shorter rhythm fit its action?**
+The demo's **Inspect chapter 2** action opens the actual manuscript with the
+shared sentence-length controls, not a separate presentation.
 [More views and image credits](https://mfahsold.github.io/lixity/screenshots/README.md).
 
 ## From a passage to the context behind it
@@ -30,6 +36,7 @@ account or upload and cannot import, edit or save.
 | When you want to… | Lixity helps you… |
 | :--- | :--- |
 | Understand a change in rhythm or voice | Compare chapters against your own manuscript's patterns, then inspect the counted text. |
+| Decide whether a repetition needs attention | Locate nearby phrase echoes, read their context and keep or revise them yourself. |
 | Revisit the research behind a line | Follow explicitly linked claims and dossiers to retained source passages, images and author decisions. |
 | Resume reading without losing context | Keep a dossier alongside the manuscript or return from a research entry to the original passage. |
 | Prepare a copy for someone else | Export a PDF, a read-only review workspace, or a reading website with selected companion notes. |

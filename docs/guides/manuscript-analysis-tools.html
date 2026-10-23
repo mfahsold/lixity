@@ -43,7 +43,7 @@
     "name": "Lixity",
     "url": "https://mfahsold.github.io/lixity/"
   },
-  "dateModified": "2026-10-19",
+  "dateModified": "2026-10-23",
   "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE",
   "mainEntityOfPage": "https://mfahsold.github.io/lixity/guides/manuscript-analysis-tools.html",
   "image": {
@@ -141,10 +141,10 @@
 <nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="../#guides">Guides</a></li><li><span aria-current="page">Compare tools</span></li></ol></nav>
 <h1>Which manuscript analysis tool fits your work?</h1>
 <p>Four families of tools answer different questions about a manuscript. This page compares them by workflow: what each is good at, what it does not do, and where Lixity fits. None of them replaces an editor, and none of the descriptions below rank the tools against each other.</p>
-<p class="updated">Updated <time datetime="2026-10-19">19 October 2026</time></p>
+<p class="updated">Updated <time datetime="2026-10-23">23 October 2026</time></p>
 
 <h2 id="families">The families at a glance</h2>
-<p><strong>Grammar and style checkers</strong> correct sentences and suggest phrasing. <strong>Corpus and concordance tools</strong> explore texts and collections quantitatively. <strong>Stylometry and NLP packages</strong> measure text through scripts. <strong>Story and structure tools</strong> work on plot, scenes and characters. Lixity adds a fifth job: comparing language patterns across one manuscript, with paragraph measurements linked to source lines.</p>
+<p><strong>Grammar and style checkers</strong> focus on sentences and phrasing. <strong>Corpus and concordance tools</strong> explore texts and collections quantitatively. <strong>Stylometry and NLP packages</strong> measure text through scripts. <strong>Story and structure tools</strong> focus on plot, scenes and characters. These categories overlap; they describe starting workflows, not exclusive feature lists. Lixity's focus is comparing language patterns within a manuscript and following their exact text and research context.</p>
 
 <div class="feature-table-wrapper" role="region" aria-label="Manuscript analysis tool families" tabindex="0">
 <table class="editorial-table">
@@ -165,13 +165,13 @@
 <p>…you want sentence-level corrections, readability scores and phrasing suggestions while you write. Established examples are <a href="https://languagetool.org/">LanguageTool</a>, <a href="https://prowritingaid.com/">ProWritingAid</a>, <a href="https://www.autocrit.com/">AutoCrit</a> and <a href="https://www.grammarly.com/">Grammarly</a>. They typically work through an account, and several offer manuscript-level reports in addition to in-line checking. Their suggestions are prescriptive by design: the tool proposes a change.</p>
 
 <h2 id="corpus">Choose a corpus or concordance tool if…</h2>
-<p>…your question is about collections of texts rather than one manuscript: word frequencies, collocations, keywords or parallel passages. <a href="https://www.laurenceanthony.net/software/antconc/">AntConc</a> and <a href="https://voyant-tools.org/">Voyant Tools</a> are widely used in teaching and research. They are strong at exploration; they do not model a book project, revision state or citation workflow.</p>
+<p>…your question is about collections of texts rather than one manuscript: word frequencies, collocations, keywords or parallel passages. <a href="https://www.laurenceanthony.net/software/antconc/">AntConc</a> and <a href="https://voyant-tools.org/">Voyant Tools</a> offer corpus exploration. Check the individual tool for the reading, project and citation workflow you need; the category alone does not establish those limits.</p>
 
 <h2 id="stylometry">Choose a stylometry or NLP package if…</h2>
-<p>…you are comfortable in a shell or notebook and need reproducible numbers for a study: authorship attribution, vocabulary measures or syntactic annotations. The R package <a href="https://cran.r-project.org/package=stylo">stylo</a>, <a href="https://spacy.io/">spaCy</a>, <a href="https://www.nltk.org/">NLTK</a> and statistical helpers such as textstat are the usual building blocks. They are scriptable and citable; they bring no reading interface, no project structure and no editorial workflow.</p>
+<p>…you are comfortable in a shell or notebook and need reproducible numbers for a study: authorship attribution, vocabulary measures or syntactic annotations. The R package <a href="https://cran.r-project.org/package=stylo">stylo</a>, <a href="https://spacy.io/">spaCy</a>, <a href="https://www.nltk.org/">NLTK</a> and statistical helpers such as textstat provide building blocks. A manuscript-reading and editorial workflow may require additional integration.</p>
 
 <h2 id="story">Choose a story or structure tool if…</h2>
-<p>…your next decision is about plot, pacing, scenes or character arcs rather than language. <a href="https://fictionary.co/">Fictionary</a> and <a href="https://www.literatureandlatte.com/scrivener/">Scrivener</a> with its ecosystem work at the story level. They help you plan and restructure; they do not measure sentence rhythm, dialogue share or tense patterns.</p>
+<p>…your next decision is about plot, scenes or character arcs. <a href="https://fictionary.co/">Fictionary</a> and <a href="https://www.literatureandlatte.com/scrivener/">Scrivener</a> offer story-development or writing workflows. Their language and pacing features can overlap with other categories. Compare the current product documentation and a concrete task rather than assuming that a story tool cannot measure language.</p>
 
 <h2 id="assistants">Or combine Lixity with an AI writing or editing assistant if…</h2>
 <p>…you want suggestions, rewrites or developmental feedback. Review the chosen service’s current features, costs and data-handling terms before supplying a manuscript. An assistant’s response depends on its model, instructions and the context you provide; read and assess its proposals yourself.</p>
@@ -184,10 +184,10 @@
 <h2 id="limits">Where Lixity does not fit</h2>
 <ul>
 <li><strong>Grammar and spelling correction:</strong> Lixity does not fix sentences or suggest phrasing; use a checker for that.</li>
-<li><strong>Plot and character development:</strong> no story structure, scene planning or character arcs.</li>
+<li><strong>Plot and character development:</strong> supplied scene groups and literal character names support inspection, not automatic plot advice, inferred character arcs or a developmental edit.</li>
 <li><strong>Fact checking:</strong> a retained quotation records what a source says; it does not verify a historical claim.</li>
 <li><strong>Collaborative editing:</strong> the workspace is single-user and local by design.</li>
-<li><strong>Publishing production:</strong> PDF export is fixed-layout (A4 report, A5 reading copy, A4 sheets); there is no EPUB or print preflight.</li>
+<li><strong>Publishing production:</strong> fixed-layout PDFs and reading websites provide review/reading copies, not EPUB production or print preflight.</li>
 </ul>
 
 <h2 id="faq">Frequently asked questions</h2>
@@ -197,7 +197,7 @@
 <details><summary>Which languages does Lixity support?</summary><p>German and English have the deepest linguistic resources; French, Spanish, Italian, Portuguese and Dutch have localized interfaces and analysis resources with narrower coverage. Mathematical identifiers stay language-neutral.</p></details>
 <details><summary>Does Lixity use AI to write or judge my text?</summary><p>No. Lixity computes deterministic statistics from your text and documents their limits. It generates no prose and produces no quality score; the author judges the text.</p></details>
 
-<p>Tool names and links point to the official pages of their projects and vendors. Descriptions here are based on the public documentation available in October 2026 and are not endorsements.</p>
+<p>Tool names link to official project/vendor pages. This is a workflow comparison, not a complete or continuously verified feature inventory, ranking or endorsement. Check current versions, platform support and data handling before choosing.</p>
 
 <footer class="site-footer"><nav aria-label="Project resources"><a href="../#guides">All guides</a><a href="../blog/index.html">Articles</a><a href="https://github.com/mfahsold/lixity">Source code</a><a href="../LICENSING.md">License</a><a href="../#website-measurement">Website measurement</a><a href="../#impressum">Legal notice</a></nav></footer>
 </main>

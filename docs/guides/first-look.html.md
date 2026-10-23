@@ -1,8 +1,10 @@
 # A three-minute first look
 
-Read one manuscript, inspect a passage, follow its research and choose a PDF copy.
+Start with one question: does chapter 2's shorter rhythm fit its action?
 
-Updated 22 October 2026
+[Kurze Einführung auf Deutsch](first-look-de.html)
+
+Updated 23 October 2026
 
 This walkthrough follows the generated demo. It uses the same reading website export available in **Project actions → Reading website**. Its manuscript, analysis and chosen Research are a fixed snapshot; importing and saving require a local project. See [how to make your own reading website](research-pdf.html#reading-website).
 
@@ -10,13 +12,27 @@ This walkthrough follows the generated demo. It uses the same reading website ex
 
 [Open the demo project](../demo/report.html)
 
-*The Crate at Warehouse 4* has six invented English chapters, one research archive and prepared PDF copies. Read chapter 1's setting and [chapter 2's action](../demo/report.html#ch-2). No installation, account or upload is needed. The read-only demo keeps reading and navigation; import, editing and project settings are available in the [local app](installation.html).
+*The Crate at Warehouse 4* has six invented English chapters. No installation, account or upload is needed. Choose **Inspect chapter 2** in the demo's opening task card. It uses the application's actual manuscript navigation and sentence-length controls; no changes can be saved.
 
 [Video walkthrough](../videos/analysis-review.mp4)
 
 *Warehouse 4: explore a passage and compare its chapter. Recorded with v0.7.5 using the same app controls as the demo.*
 
 ## 2. Inspect one difference
+
+A board moved. Mara turned. The crate tipped towards the drain.
+
+1. Read the first paragraph of **The Loose Board**. What is Mara doing, and where do you pause?
+
+2. Choose its **… → Explore passage → Explain measurement**. Inspect the actual sentences and their word counts. Turn on **Counted text** if you want marks in the prose.
+
+3. Read chapter 1's harbour description using the **opening chapter** link in the task card. Compare the reading experience, not just the averages.
+
+**A possible decision:** keep the short beats because they separate physical actions. Or, if the scene sounds mechanically chopped when read aloud, try joining an action to its consequence in your own draft. The measurement explains the difference; it cannot decide whether the rhythm works. These short synthetic chapters are not a calibration corpus.
+
+You have completed the first check when you can explain the contrast in the text. Stop there, or follow the research trail below. [Use the same workflow with your manuscript](installation.html).
+
+**More controls, marks and chapter comparisons**
 
 Choose a paragraph's **… → Explore passage** to open its right context. **Explain measurement** opens the counted text; **Research for this passage** follows the passage’s explicit links. The separate **Analysis** switch shows diagnostics across the manuscript; the **Passage** inspector works with Analysis On or Off. Use **Analysis overview** to compare sentence rhythm in the setting and action chapters, then **Back to passage** to resume reading.
 

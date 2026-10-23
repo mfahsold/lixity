@@ -16,7 +16,9 @@ if (!themes.includes(theme)) theme = 'auto';
 
 function applyTheme() {
   root.dataset.theme = theme;
-  if (themeButton) themeButton.textContent = `Theme: ${theme === 'auto' ? 'system' : theme}`;
+  if (themeButton) themeButton.textContent = root.lang === 'de'
+    ? `Darstellung: ${{auto: 'System', light: 'Hell', dark: 'Dunkel'}[theme]}`
+    : `Theme: ${theme === 'auto' ? 'system' : theme}`;
 }
 applyTheme();
 if (themeButton) themeButton.hidden = false;

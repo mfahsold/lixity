@@ -57,6 +57,22 @@ class PageHead(HTMLParser):
 
 
 class TestPagesStaging(unittest.TestCase):
+    def test_german_entry_is_published_linked_and_honest_about_demo_language(self):
+        docs = Path(__file__).resolve().parents[1] / "docs"
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "site"
+            stage(docs, output)
+            german = (output / "guides/first-look-de.html").read_text(encoding="utf-8")
+            english = (output / "guides/first-look.html").read_text(encoding="utf-8")
+            home = (output / "index.html").read_text(encoding="utf-8")
+            self.assertIn('<html lang="de"', german)
+            self.assertIn('href="guides/first-look-de.html" lang="de" hreflang="de"', home)
+            self.assertIn('hreflang="de" href="' + SITE + 'guides/first-look-de.html"', english)
+            self.assertIn('hreflang="en" href="' + SITE + 'guides/first-look.html"', german)
+            self.assertIn("erfundenes englisches Hafenmanuskript", german)
+            self.assertIn("nicht als klassischer Desktop-Installer", german)
+            self.assertTrue((output / "guides/first-look-de.html.md").is_file())
+
     def test_compact_demo_navigation_keeps_orientation_without_repeating_the_title(self):
         from scripts.build_examples import _site_navigation
 

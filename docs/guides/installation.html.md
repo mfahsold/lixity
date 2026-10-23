@@ -2,7 +2,7 @@
 
 Explore sentence rhythm, vocabulary and style patterns in your Markdown manuscript. Lixity runs its analysis on your computer and saves a dashboard you can open in a browser. No account or manuscript upload is required.
 
-Updated 22 October 2026
+Updated 23 October 2026
 
 **Version line:** The current release is **v0.7.5**, in the pre-1.0 **0.x** line. Historical **1.x** and **3.x** tags predate the numbering reset. A larger historical number does not mean a newer release; product and schema versions are independent.
 
@@ -40,7 +40,7 @@ The managed app opens `http://127.0.0.1:8765/`. Its default is an empty workspac
 
 1. Open your existing project or confirm an import preview, including the manuscript language.
 
-2. Read in **Manuscript**. Choose a paragraph's **… → Values** for its inspector. The separate **Analysis** switch shows diagnostics across the manuscript.
+2. Read in **Manuscript**. Choose a paragraph's **… → Explore passage** for its inspector. The separate **Analysis** switch shows diagnostics across the manuscript.
 
 3. Use **Analysis overview** for chapter comparisons, then **Back to passage** to return. **PDF export** offers editorial, reading, submission and report copies.
 

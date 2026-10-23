@@ -7,6 +7,10 @@
 
 The author-facing entrypoints are the [product introduction](https://mfahsold.github.io/lixity/)
 and [short tour](https://mfahsold.github.io/lixity/guides/first-look.html).
+The [German introduction](https://mfahsold.github.io/lixity/guides/first-look-de.html)
+explains the same first revision question; the fictional demo manuscript remains
+English. The compact demo task uses native chapter navigation and sentence
+counts, ending with an author's interpretation rather than a target score.
 One fictional project demonstrates the [read-only review workspace](https://mfahsold.github.io/lixity/demo/report.html),
 [novel with companion notes](https://mfahsold.github.io/lixity/demo/reader/index.html)
 and [standalone companion](https://mfahsold.github.io/lixity/demo/companion/index.html).

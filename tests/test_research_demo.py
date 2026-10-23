@@ -126,6 +126,20 @@ def test_research_fixture_connects_retained_evidence_to_an_authored_claim_and_ma
     assert api.audit(project)["ok"]
 
 
+def test_first_revision_question_matches_the_shared_manuscript_measurements():
+    from lixity.config import resolve_thresholds
+    from lixity.pipeline import analyze_document, resolve_document_config
+
+    text = (ROOT / "samples/first-look.md").read_text(encoding="utf-8")
+    config, _ = resolve_document_config(text, "en", project_config={})
+    measured = analyze_document(text, config, resolve_thresholds(project_config={}))
+    opening, action = measured.metrics.chapters[:2]
+    assert opening.title == "The Eastern Gate"
+    assert action.title == "The Loose Board"
+    assert action.asl < opening.asl
+    assert "A board moved. Mara turned." in text
+
+
 def test_demo_records_source_disagreement_and_preserves_the_earlier_interpretation(tmp_path, research_fixture):
     project = tmp_path / "research-demo"
     claims = api.list_claims(project)["claims"]
@@ -206,6 +220,12 @@ def test_public_demo_externalizes_image_bytes_and_preserves_source_records(tmp_p
     assert "Zotero normally owns bibliography, reading and source notes" in document
     assert "no live Zotero connection" in document
     assert "exact manuscript quotations" in document
+    assert 'href="#ch-2" data-jump="#ch-2" data-layer="asl">Inspect chapter 2</a>' in document
+    assert 'id="demo-task-guide"' in document
+    assert "No score tells you whether to rewrite" in document
+    assert 'href="#ch-1" data-jump="#ch-1" data-layer="asl"' in document
+    assert "The result is a reason to read, not a correction." in document
+    assert "Neither shorter sentences nor matching the manuscript median is a goal." in document
     assert "All PDFs use the same fictional manuscript" in document
     assert len(re.findall(r'<section class="chapter(?: [^\"]*)?" id="ch-\d+"', document)) == 6
     assert 'data-manuscript-links="read"' in document

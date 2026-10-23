@@ -162,7 +162,7 @@ def build_research_demo(root: Path, project: Path) -> Path:
     page_title = "Lixity project demo — " + title
     document = _replace_title(document, page_title)
     head = _head_metadata(canonical=f"{SITE}/demo/report.html", title=page_title,
-                          description="Explore one fictional harbour project: compare six manuscript chapters, then follow a dossier through retained evidence to an authored claim and the same manuscript passage.",
+                          description="Does chapter 2's shorter rhythm fit its action? Read a passage, inspect the counted sentences and make your own judgment in this fictional, read-only project.",
                           language="en", preview_image=("screenshots/dashboard-dossier-image.png",
                               "Historical Hamburg map retained with source provenance in a research dossier"))
     policy = (
@@ -177,7 +177,7 @@ def build_research_demo(root: Path, project: Path) -> Path:
         '.demo-quick-start-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); flex-shrink: 0; }'
         '@media (max-width: 600px) { .demo-quick-start { align-items: stretch; flex-direction: column; '
         'gap: var(--space-2); padding: var(--space-2); } '
-        '.demo-quick-start-actions { flex-wrap: nowrap; gap: var(--space-1); } '
+        '.demo-quick-start-actions { flex-wrap: wrap; gap: var(--space-1); } '
         '.demo-quick-start-actions > .ctl { width: auto; min-height: 2rem; padding: .25rem .45rem; '
         'font-size: var(--text-small); } }'
         '</style>'
@@ -234,10 +234,20 @@ def build_research_demo(root: Path, project: Path) -> Path:
     document = _insert_notice(document, fallback)
     quick_start = (
         '<section class="panel demo-quick-start" id="demo-quick-start" aria-labelledby="demo-quick-start-title">'
-        '<div class="demo-quick-start-copy"><h2 id="demo-quick-start-title">Explore this project</h2>'
-        '<p>Read the manuscript, then explore its linked research.</p></div>'
+        '<div class="demo-quick-start-copy"><h2 id="demo-quick-start-title">Why the short sentences?</h2>'
+        '<details id="demo-task-guide"><summary>Try one reading check</summary>'
+        '<p>Does its shorter rhythm fit the action? No score tells you whether to rewrite.</p>'
+        '<ol><li>Choose <strong>Inspect chapter 2</strong>. Read “A board moved. Mara turned.”</li>'
+        '<li>Use the paragraph’s <strong>… → Explore passage → Explain measurement</strong> to inspect the sentence counts. '
+        'If marks are hidden, turn on <strong>Counted text</strong>.</li>'
+        '<li>Compare the <a href="#ch-1" data-jump="#ch-1" data-layer="asl">opening chapter</a>. '
+        'Short beats accompany moving the crate; longer sentences establish the harbour. '
+        'You may keep that contrast, or reread it for an unintended choppy effect.</li></ol>'
+        '<p>The result is a reason to read, not a correction. '
+        '<a href="../guides/installation.html">Try the same question with your own manuscript</a>.</p>'
+        '</details></div>'
         '<div class="demo-quick-start-actions">'
-        '<button class="ctl" type="button" data-switch-view="analysis">Read the manuscript</button>'
+        '<a class="ctl primary" href="#ch-2" data-jump="#ch-2" data-layer="asl">Inspect chapter 2</a>'
         '<button class="ctl" type="button" data-switch-view="research">Explore research</button>'
         '</div></section>'
     )
@@ -538,6 +548,13 @@ The watchman saw the two figures leave towards the basin. Mara saw a launch ligh
         "## Scene Planning\n\nUse the long harbour sentences before the short rescue beats. "
         "Keep Ivo’s movements visible without supplying his thoughts. Mara tries the label against her receipt; "
         "the edges do not fit. The later ledger discrepancy must therefore remain a question, not a solved identification.\n\n"
+        "## Revision question\n\n"
+        "Does chapter 2's shorter rhythm fit the action? Compare “A board moved. Mara turned.” with "
+        "chapter 1's harbour description. Short sentences separate the physical actions; the longer opening "
+        "lets Mara notice the quay before she has to act. This is an authored contrast, not a model's finding of good pace.\n\n"
+        "A useful review can end with keeping those beats. If the passage feels mechanically chopped when read aloud, "
+        "try joining an action to its consequence and compare the reading again. Neither shorter sentences nor "
+        "matching the manuscript median is a goal. The measurement identifies what was counted; the author decides what works.\n\n"
         "## Reference boundaries\n\nThe historical map and harbour image establish their own dated visual context. "
         "The approximate walking and driving sketches are author-entered examples, not calculated routes or sightlines.\n\n"
         "## Next research questions\n\nWhich details of customs procedure need historical checking before a longer novel uses them? "

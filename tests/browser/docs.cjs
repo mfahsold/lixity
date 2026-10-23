@@ -25,7 +25,7 @@ const routes = htmlRoutes(root).filter(route => route !== 'demo/research.html').
 const publicationRoutes = new Set(['demo/reader/index.html', 'demo/companion/index.html']);
 for (const route of publicationRoutes) assert.ok(routes.includes(route), `Missing curated public example: ${route}`);
 // Every content page gets all widths. Shared surface types cover theme/JS variants.
-const fullMatrixRoutes = new Set(['', 'guides/first-look.html', 'guides/interpretation.html', 'guides/research-pdf.html', 'demo/report.html',
+const fullMatrixRoutes = new Set(['', 'guides/first-look.html', 'guides/first-look-de.html', 'guides/interpretation.html', 'guides/research-pdf.html', 'demo/report.html',
   'examples/effi-briest.html', 'blog/index.html', 'blog/whats-new-lixity.html', 'blog/manuscript-reading-workbench.html', ...publicationRoutes]);
 const returnJourneyRoutes = new Set(['', 'guides/first-look.html', 'blog/index.html',
   'blog/whats-new-lixity.html', 'demo/report.html', 'examples/effi-briest.html', ...publicationRoutes]);
@@ -138,8 +138,9 @@ async function checkReturnNavigation(page, route, exercise) {
       await expect(demo).not.toHaveAttribute('aria-current', /.+/);
     } else {
       await expect(page.locator('.site-header .brand')).toHaveAttribute('href', '../');
-      await expect(navigation.getByRole('link', {name: 'Guides', exact: true})).toHaveAttribute('href', '../#guides');
-      await expect(navigation.getByRole('link', {name: 'Install', exact: true})).toHaveAttribute('href', route.startsWith('blog/') ? '../guides/installation.html' : 'installation.html');
+      const german = route === 'guides/first-look-de.html';
+      await expect(navigation.getByRole('link', {name: german ? 'Anleitungen' : 'Guides', exact: true})).toHaveAttribute('href', '../#guides');
+      await expect(navigation.getByRole('link', {name: german ? 'Installieren' : 'Install', exact: true})).toHaveAttribute('href', route.startsWith('blog/') ? '../guides/installation.html' : 'installation.html');
       await expect(navigation.getByRole('link', {name: 'Demo', exact: true})).toHaveCount(0);
       await expect(page.locator('.guide-nav')).toHaveCount(0);
     }
@@ -876,9 +877,18 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   await expect(page.locator('body')).toHaveAttribute('data-manuscript-links', 'read');
   const quickStart = page.locator('#demo-quick-start');
   await expect(quickStart).toBeVisible();
-  await quickStart.getByRole('button', {name: 'Read the manuscript'}).click();
+  await expect(quickStart.locator('#demo-task-guide')).not.toHaveAttribute('open', '');
+  await quickStart.getByRole('link', {name: 'Inspect chapter 2', exact: true}).click();
   await expect(page.locator('#tab-view-analysis')).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#view-pane-analysis')).toBeVisible();
+  await expect(page.locator('#manuscript-analysis-toggle')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#style-layer')).toHaveValue('asl');
+  await expect(page.locator('#ch-2')).toContainText('A board moved. Mara turned.');
+  await quickStart.locator('#demo-task-guide > summary').click();
+  await expect(quickStart.locator('#demo-task-guide')).toContainText('The result is a reason to read, not a correction.');
+  await quickStart.getByRole('link', {name: 'opening chapter', exact: true}).click();
+  await expect(page.locator('#style-layer')).toHaveValue('asl');
+  await quickStart.locator('#demo-task-guide > summary').click();
   await quickStart.getByRole('button', {name: 'Explore research'}).click();
   await expect(page.locator('#tab-view-research')).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#view-pane-research')).toBeVisible();
@@ -1088,6 +1098,20 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
             const themeControl = page.locator('#themeToggle');
             if (javaScriptEnabled) await expect(themeControl).toBeVisible();
             else await expect(themeControl).toBeHidden();
+            if (route === 'guides/first-look-de.html') {
+              await expect(page.locator('html')).toHaveAttribute('lang', 'de');
+              await expect(page.locator('main')).toContainText('erfundenes englisches Hafenmanuskript');
+              await expect(themeControl).toContainText('Darstellung:');
+              await expect(page.locator('a[hreflang=en]').first()).toHaveAttribute('href', 'first-look.html');
+              if (javaScriptEnabled) {
+                const initialTheme = await page.locator('html').getAttribute('data-theme');
+                for (let index = 0; index < 3; index++) {
+                  await themeControl.click();
+                  await expect(themeControl).toHaveText(/Darstellung: (Hell|Dunkel|System)/);
+                }
+                await expect(page.locator('html')).toHaveAttribute('data-theme', initialTheme);
+              }
+            }
           }
           if (dashboard) {
             assert.ok(await page.locator('.chapter').count() > 0, `${route} renders chapters`);
@@ -1101,7 +1125,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
           await checkReturnNavigation(page, route,
             colorScheme === 'light' && width !== 390 && returnJourneyRoutes.has(route));
           if (javaScriptEnabled && colorScheme === 'light' && width !== 390 &&
-              (route === '' || route === 'guides/first-look.html' || (route === 'demo/report.html' && width === 320))) {
+              (route === '' || route === 'guides/first-look.html' || route === 'guides/first-look-de.html' || (route === 'demo/report.html' && width === 320))) {
             await page.screenshot({path: path.join(artifacts, `navigation-${route ? path.basename(route, '.html') : 'home'}-${width}-light.png`)});
           }
           if (width === 320 && ['guides/interpretation.html', 'guides/research-pdf.html', 'guides/manuscript-analysis-tools.html'].includes(route)) {
@@ -1136,8 +1160,8 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
               });
               assert.ok(columns.copyRight < columns.imageLeft, 'Desktop introduction and preview share one row');
             }
-            await expect(page.locator('.hero-cta a.primary[href="demo/report.html"]')).toHaveAccessibleName('Open the example manuscript');
-            await expect(page.locator('.hero-cta a[href="guides/first-look.html"]')).toHaveAccessibleName('Take the short tour');
+            await expect(page.locator('.hero-cta a.primary[href="demo/report.html"]')).toHaveAccessibleName('Try one revision question');
+            await expect(page.locator('.hero-cta a[href="guides/first-look.html"]')).toHaveAccessibleName('Follow the short tour');
             await expect(page.locator('.site-header a[href="#installation"]')).toBeVisible();
             const commandLink = page.locator('.site-header a[href="#command-line"]');
             await expect(commandLink).toBeVisible();

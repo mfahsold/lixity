@@ -39,6 +39,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   invalid and unsaved configuration without logging project identifiers.
 
 ### Changed
+- Public introduction and first-look guide lead with one revision question
+  rather than a feature inventory. The demo's chapter-2 task uses native
+  sentence-length navigation and explanation controls, with a compact optional
+  reading path and an explicit human decision. A linked German introduction
+  identifies the English demo and explains local setup without promising a
+  desktop installer. Tool comparisons avoid unsupported category-wide exclusions.
 - Heatmap cells, style-reference cutoff-hit counts and all style-space loadings
   share a read-only chapter measurement dialog. It retains chapter context and
   shows definitions, units, sample size, manuscript medians and z* for the
