@@ -115,10 +115,12 @@ server.serve_forever()
       await summary.click();
       const detail = page.locator('.research-details-body').filter({has: page.locator(`[data-dossier-claim="${fixture.dossier}"]`)});
       const linked = detail.locator('.research-dossier-claims');
+      const actions = detail.locator('.research-dossier-actions');
+      assert.equal(await actions.evaluate(node => node.open), false, 'Dossier reading starts with secondary actions closed');
       await expect(detail.locator('.research-folder-notes')).toContainText('Revised synthetic dossier notes.');
       await expect(detail.locator('.research-folder-citations')).toBeVisible();
-      await expect(detail.locator('[data-research-global=claims]')).toBeVisible();
-      await expect(detail.locator('[data-research-global=decisions]')).toBeVisible();
+      await expect(detail.locator('[data-research-global=claims]')).not.toBeVisible();
+      await expect(detail.locator('[data-research-global=decisions]')).not.toBeVisible();
       await expect(linked).toContainText('Current linked <img src=x onerror=window.claimInjected=true> title');
       await expect(linked.locator('li')).toHaveCount(1);
       await expect(linked).not.toContainText('Original linked title');
@@ -152,12 +154,21 @@ server.serve_forever()
       await detail.scrollIntoViewIfNeeded();
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'Dossier list fits the viewport');
       if (locale === 'de') await detail.screenshot({path: path.join(artifacts, `dossier-${width}.png`)});
+      const recordBeforeActions = await (await page.request.get(fixture.url + '/api/research/record?kind=dossier&id=' + fixture.dossier)).json();
+      await actions.locator(':scope > summary').click();
+      await expect(detail.locator('[data-research-global=claims]')).toBeVisible();
+      await expect(detail.locator('[data-research-global=decisions]')).toBeVisible();
+      await expect(detail.locator('.research-folder-notes')).toContainText('Revised synthetic dossier notes.');
+      assert.deepEqual(await (await page.request.get(fixture.url + '/api/research/record?kind=dossier&id=' + fixture.dossier)).json(), recordBeforeActions,
+        'Opening dossier actions preserves the accepted source record and snapshot');
+      assert.deepEqual(writes, [], 'Reading and opening dossier actions do not publish changes');
       await detail.locator('[data-research-global=claims]').click();
       await expect(page.locator('#rtab-claims')).toBeVisible();
       await expect(page.locator('#research-claims-list')).toContainText('Unlinked claim');
       await expect(page.locator('#r-claim-title')).toHaveValue('Retained unsubmitted draft');
       await page.locator('[data-rtab=dossiers]').click();
       if (!await summary.evaluate(button => button.parentElement.open)) await summary.click();
+      if (!await actions.evaluate(node => node.open)) await actions.locator(':scope > summary').click();
       await detail.locator('[data-research-global=decisions]').click();
       await expect(page.locator('#rtab-decisions[role=tabpanel]')).toBeVisible();
       await expect(page.locator('[data-rtab=decisions]')).toHaveAttribute('aria-selected', 'true');

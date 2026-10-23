@@ -55,6 +55,10 @@ async function wideOutline(page, host) {
  const contents=host.locator('[data-section-contents]'), notes=host.locator('.research-folder-notes');
  await notes.evaluate(node=>node.scrollIntoView());
  await settle(page);
+ // The source document now starts before the supplemental actions. Cross the
+ // sticky threshold before measuring a pinned navigation position.
+ await page.evaluate(()=>scrollBy(0,80));
+ await settle(page);
  const before=await host.evaluate(node=>({
   contents:node.querySelector('[data-section-contents]').getBoundingClientRect().toJSON(),
   document:node.querySelector('.research-folder-notes').getBoundingClientRect().toJSON(),
@@ -72,7 +76,8 @@ async function wideOutline(page, host) {
   document:node.querySelector('.research-folder-notes').getBoundingClientRect().toJSON(),scroll:scrollY
  }));
  assert.ok(after.scroll-before.scroll>=299,'The middle document actually scrolls');
- assert.ok(Math.abs(after.contents.y-before.contents.y)<2,'The right tree stays sticky while the middle document scrolls');
+ assert.ok(Math.abs(after.contents.y-before.contents.y)<2,
+  `The right tree stays sticky while the middle document scrolls: ${JSON.stringify({before,after})}`);
  assert.ok(before.document.y-after.document.y>=299,'The document moves independently of its right tree');
  await page.screenshot({path:path.join(artifacts,`right-outline-${await page.locator('html').getAttribute('lang')}-${await page.evaluate(()=>innerWidth)}.png`)});
  await expect(host.locator('[data-section-location]')).not.toBeVisible();
@@ -103,21 +108,20 @@ async function mappedLifecycle(page, detail) {
  await page.evaluate(detail=>{
   const host=document.getElementById('synthetic-full-dossier');
   window.syntheticOldNav=host.querySelector('[data-section-nav]');
-  const mapped={...detail,section_map:{'First <script>': '# Repeated\n\n'+ 'Map notes. '.repeat(200),
-    'Second': '# Repeated\n\nMore notes.'}};
+  const mapped={...detail,body:'## First <script>\n\n# Repeated\n\n' + 'Map notes. '.repeat(200) +
+    '\n\n## Second\n\n# Repeated\n\nMore notes.',
+    section_map:{'Not a reading source':'Ignored lookup projection'}};
   host.innerHTML=researchDossierDetailHtml(mapped);enhanceResearchDossierClaims(host,mapped);
  },detail);
  const host=page.locator('#synthetic-full-dossier'), nav=host.locator('[data-section-nav]');
  await expect.poll(()=>page.evaluate(()=>!!window.syntheticOldNav._sectionNavigation)).toBe(false);
  await expect(nav.locator('[data-section-indicator]')).toHaveCount(1);
- const block=host.locator('.research-dossier-section-block').first();
- const summaryId=await block.locator('summary').getAttribute('id');
- await block.locator('summary').click();
- await expect(block).not.toHaveAttribute('open','');
- await nav.locator(`[data-section-link="${summaryId}"]`).click();
- await expect(block).toHaveAttribute('open','');
+ const section=host.locator('.research-dossier-body-rendered h2').first();
+ const sectionId=await section.getAttribute('id');
+ await nav.locator(`[data-section-link="${sectionId}"]`).click();
+ await expect(section).toBeInViewport();
  await indicatorAtCurrent(nav);
- await expect(block.locator('summary')).toHaveClass(/\bflash\b/);
+ await expect(section).toHaveClass(/\bflash\b/);
  await page.emulateMedia({reducedMotion:'no-preference'});
  // Manual root scrolling exercises current-state changes without a second navigation owner.
  await host.locator('.research-folder-citations').evaluate(node=>node.scrollIntoView());

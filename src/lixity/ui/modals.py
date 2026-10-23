@@ -43,8 +43,10 @@ def render_project_modals(
     parts.append(checkbox_field('<input type="checkbox" id="site-export-research"/>', L("site_export_research")))
     parts.append('</div>')
     parts.append(checkbox_field('<input type="checkbox" id="site-export-sources" disabled/>', L("site_export_sources")))
+    parts.append('<div id="site-export-preflight" role="status" aria-live="polite" hidden></div>')
     parts.append('<p class="ctl-status" id="site-export-status" role="status" aria-live="polite"></p>')
     parts.append(f'<div class="modal-footer"><button type="button" class="ctl" data-close-modal>{L("modal_cancel")}</button>')
+    parts.append(f'<button type="submit" class="ctl" id="site-export-check">{L("site_export_check")}</button>')
     parts.append(f'<button type="submit" class="ctl primary" id="site-export-download">{L("site_export_download")}</button></div></form></div></dialog>')
 
     # Modal: New Project (with Import & From-Scratch Tabs)

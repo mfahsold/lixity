@@ -14,8 +14,10 @@ MAX_ARTIFACT_BYTES = 200 * 1024 * 1024  # 200 MB
 # Native UI capabilities, also used by synthetic documentation captures.
 NATIVE_UI_ACTIONS = (
     "site-export",
+    "site-preflight",
     "analyze", "nda-draft", "manuscript-pdf", "research-reader", "research-image-ingest", "research-dossier-image",
     "research-media-ingest", "research-dossier-media",
+    "analysis-review",
     "research-manuscript-link",
     "research-manuscript-reanchor",
 )

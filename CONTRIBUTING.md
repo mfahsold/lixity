@@ -390,6 +390,47 @@ Publish the same verified workflow in README, the relevant Pages guide and the
 generated demo. Check labels, screenshots, capability limits and release versus
 current-main claims together; defer descriptions of a candidate UI until it exists.
 
+## Release migrations and the current product path
+
+Maintain one current product and UI path. Existing projects move forward at
+releases through explicit, reviewed migrations when conversion is needed; do not
+add legacy UI modes or parallel compatibility branches for an older presentation.
+A presentation-only change does not require rewriting project data. Discuss
+concrete unresolved data or workflow conflicts before implementing a migration.
+
+For changes that require conversion, document the affected versions, exact scope,
+implemented procedure, validation and recovery in the release notes and relevant
+usage guide. Test on a synthetic project and a restored copy before applying to
+the original. Preserve retained source bytes, immutable revisions, provenance and
+evidence links. Do not relabel schema versions, rewrite accepted history or delete
+old records merely to make a project open in the new UI. Version intentional
+public JSON contract changes explicitly.
+
+The current research backup workflow is `lixity research export --project
+PROJECT --output BACKUP`, followed by `lixity research restore --from BACKUP --to
+NEW_PROJECT`, `lixity research audit --project NEW_PROJECT` and `lixity research
+reindex --project NEW_PROJECT`. Restore requires a new or empty destination.
+These commands back up and validate the research archive; they are not a general
+release migration command. **Current main** implements the specific plaintext-to-gzip
+manifest conversion as `lixity research migrate-storage --project PATH --backup
+PATH [--expected-snapshot HASH]`. Normal application reads require the current
+storage marker; run this explicit migration for an older plaintext store. The
+command preserves canonical hashes, HEAD, immutable revisions and source bytes.
+It verifies a non-overwriting portable backup and a restored copy before the
+writer-locked conversion; changed HEAD aborts the conversion. Test this path on
+synthetic data and a restored copy, including staging interruption, post-marker
+cleanup retry, rejected stale snapshots and unchanged evidence links. Validate
+the migrated store with audit, restore its portable backup and check affected
+analysis, citation, import and publication workflows before resuming services.
+Compression retains full snapshots and the bounded 100,000-entry limit; it is
+not a delta-storage migration. Manuscripts, Zotero data and application profiles need
+their own backup scope; see [export and restoration](docs/research/USAGE.md#export-and-restoration)
+and [paired Zotero backup](docs/research/USAGE.md#paired-zoteroresearch-backup-and-restore).
+Keep the pre-migration backup until recovery and the affected workflows have
+been verified. A required migration is release work to implement and validate,
+not an automatic capability to promise before it exists. Source edits alone do
+not authorize migration of a user's project, a release or a service restart.
+
 ## Pull requests
 
 1. Branch from `main`.
@@ -400,10 +441,11 @@ current-main claims together; defer descriptions of a candidate UI until it exis
    `docs/STABILITY.md`.
 5. Report degraded behavior. If a measurement cannot be determined, return
    unknown rather than guessing. Distinguish unreadable, invalid and absent data.
-6. A deprecated parameter keeps working but warns, states the version it will
-   be removed in, and gets a test that pins both the warning and the silence of
-   the current call path. The suite runs under `-W error`, so a warning that
-   fires during normal use fails the build.
+6. Replace obsolete interfaces through an explicit release transition rather than
+   adding compatibility branches by default. Document the replacement and any
+   required project migration; test the current path and migration behavior.
+   If a transition warning is deliberately retained, state its removal version
+   and test that ordinary current usage remains warning-free under `-W error`.
 7. All tests, mypy and ruff must pass.
 
 ## Reporting bugs

@@ -208,6 +208,25 @@ selects rows after full references/counts are computed, without renumbering.
 Without `--json`, the selected-layer CLI prints a source-anchored human report.
 Chapter/FDR thresholds are different policies and are not changed by this view.
 
+**Current main, unreleased author triage:** `analysis-review --project PATH
+[--json]` / `lixity.analysis_review.review_analysis(project, manuscript=None,
+language=None, thresholds=None)` returns `lixity-analysis-review/1` with source,
+resolved-analysis and review-state SHA-256 identities. `observations` are only
+the existing tense flags, with exact paragraph identity, lines, chapter, severity,
+present/past hits, mixed/switch booleans and status. Status is `unreviewed`,
+`kept`, `changed`, `later` or `stale`; `previous_status` preserves the matching
+prior assertion. `completed` counts current kept/changed decisions. It is not a
+quality measure, verified edit count or research review status.
+
+`record_analysis_review(project, observation_id, status, *,
+expected_source_sha256, expected_analysis_sha256, expected_review_sha256, ...)`
+accepts `kept|changed|later` only and requires all reviewed identities.
+Source/configuration/threshold changes conservatively invalidate earlier
+matching decisions. Missing state is distinct from corrupt/unreadable state;
+unmatched earlier observations are retained and counted separately. Reads
+write nothing; saved state contains identities and author assertions, not prose.
+See the [review workflow and storage limits](USAGE.md#reading-paragraphs).
+
 `profile --layer KEY --evidence --json` adds a separate opt-in
 `meta.schema_version: "paragraph-layer-evidence/1"`. Its selected rows add
 `evidence` with `schema_version: "paragraph-evidence/1"`,
@@ -367,6 +386,9 @@ Analysis Off and Focus hide both displays without resetting their preferences.
 | `#manuscript-pdf-layout` / `#manuscript-pdf-download` / `#manuscript-pdf-status` | layout selector, download button and live status region; native PDF menu starts collapsed |
 | `#workspace-reader-toggle` / `#workspace-reader-panel` | opt-in **Dossier alongside** view; closing it preserves the existing manuscript DOM/state |
 | `#workspace-reader-dossier` / `#workspace-reader-refresh` / `#workspace-reader-status` / `#workspace-reader-body` | selected dossier, explicit refresh, live status and read-only rendered body |
+| `.research-dossier-body-rendered [data-dossier-heading]` | source-order authored headings; repeated titles retain distinct local navigation targets |
+| `.research-section-actions [data-dossier-section]` | edit the exact unambiguous authored section at its displayed heading |
+| `.research-dossier-actions > summary` | open supplemental dossier creation and project-wide record navigation below the reading content |
 | `data-action="<name>"` + `data-payload="<form-id>"` | control-server action |
 | `data-marker-kind="<kind>"` / `data-marker-resolve="<id>"` | set/resolve a work marker (inline note field); **never scrolls** – marker controls are excluded from jump activation |
 | `role="button" tabindex="0"` | every clickable non-native target (KPI tile, band row, loading bar, table row, heatmap cell) |
@@ -837,6 +859,17 @@ locks. Local metadata can change after an observation.
 
 When running `lixity serve --port 8765`, local agents can trigger deterministic workspace actions over HTTP:
 
+**Current-main analysis review endpoints:** `GET /api/analysis-review?project_token=...`
+reads the selected displayed analysis's review state. `POST /api/analysis-review`
+accepts only `project_token`, `observation_id`, `status`,
+`expected_source_sha256`, `expected_analysis_sha256`, `expected_review_sha256`.
+The token is `body[data-manuscript-project-token]`, shared with manuscript export
+selection. Same-origin/host rules and the workspace lock apply; obsolete source,
+settings or review state returns 409, invalid input 400. Unreadable state never
+becomes an empty success. Writes change only project-local author review state,
+never manuscript text or Research records. `enabled_actions=["analysis-review"]`
+is an explicit native save capability; static reading sites omit private state.
+
 Browser API diagnostics report request metadata without copying response bodies
 to the console.
 Native reading-website exports additionally write content-free lifecycle logs
@@ -1059,7 +1092,7 @@ entries have no image URL. Historical reads resolve the pinned image version,
 not the latest source. Record/history dossier envelopes include both arrays.
 Current-main summaries resolve those references from the entire selected body,
 not only its display excerpt. Python `list_dossier_images(project,
-dossier_id=None, limit=100, offset=0)` and CLI `research dossier-images` return
+dossier_id=None, limit=100, offset=0, missing_provenance=False)` and CLI `research dossier-images` return
 `research-dossier-images-local/1`: `project_id`, `snapshot`, `images`, `total`,
 `offset`, `limit`, `has_more`. Entries identify current active dossier/revision,
 nearest heading, exact marker/codepoint offsets and retained source/version,
@@ -1074,7 +1107,7 @@ Human section reads preserve that level. CLI `--section HEADING --format text
 --body-only` emits only the selected `content` as UTF-8, without a display wrapper,
 selected heading or appended newline. Existing surrounding CR/LF trimming and
 descendant headings are retained. Use an actual unique `editable_sections` target
-for updates; an implicit preamble is only a read selection. Redirect source
+for section updates; explicit `--preamble` reads/edits the prefix before the first actual heading. Redirect source
 containing terminal controls or Unicode formatting to a file; raw unsafe terminal
 output is refused. See the [section roundtrip](research/USAGE.md#work-on-one-dossier-section).
 
@@ -1389,3 +1422,35 @@ Native routes use the selected research root:
 
 Browsing/capture authorizes no manuscript or Zotero-library writes. Retention
 permission does not authorize redistribution.
+
+
+Current-main `update_dossier_media_context(project, dossier_id, source_id,
+source_version_id, expected_snapshot=..., expected_revision=..., context=...,
+reason=..., actor="local-author", dry_run=False)` and CLI `research media-context`
+correct only `origin_url`/`provenance_note`. They reuse retained bytes/source
+identity and repin matching occurrences in one dossier atomically. Extracted
+media is refused to preserve text lineage. Receipts use
+`research-media-context-local/1` or `research-media-context-preview-local/1`.
+`get_dossier(..., preamble=True)` returns the source prefix in `content`;
+`revise_record(..., changes={"preamble": text})` uses ordinary guarded revision
+semantics. It cannot combine with a body/section replacement.
+
+
+Current-main native `POST /api/site-preflight` accepts the same strict
+`SiteExportRequest` as `/api/site-export`, including the selected project token
+and explicit research/source-file choices. It returns `{ok:true, preflight:...}`
+with `lixity-site-preflight/1`, measuring the actual prepared HTML/ZIP/files and
+media packaging/attribution-presence counts. No download or source writes occur;
+selection/context conflicts fail as for export. No mobile or rights verification
+is inferred. CLI `export-site --preflight [--json]` requires no output destination;
+`--output` is refused in this mode. See [export checks](USAGE.md#check-a-reading-website-before-exporting).
+
+Current manifest storage uses `research/storage.json` (`research-storage-local/1`,
+`manifest_encoding: gzip`) and digest-named `.json.gz` files. Digests are still
+SHA-256 of canonical uncompressed JSON. `Repository.read_manifest` is the bounded
+verified read owner. CLI `research migrate-storage --project PATH --backup PATH
+[--expected-snapshot HASH]` returns `research-storage-migration-local/1`; it verifies
+backup restoration before switching accepted manifest storage, preserves HEAD and
+source/revision bytes, and supports interrupted-cleanup retry. Normal old-layout
+access fails with a migration requirement. Portable exports remain canonical
+`.json` transport and restore converts staging before publication.

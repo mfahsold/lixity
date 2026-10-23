@@ -17,7 +17,7 @@ import stat
 import sys
 import tempfile
 import zipfile
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from importlib import metadata
 from pathlib import Path, PurePosixPath
@@ -72,6 +72,7 @@ from .site_contracts import (
     SiteManifest,
     SiteMode,
 )
+from .site_preflight import media_summary, preflight_report
 from .site_publications import resolve_site_publication
 from .style_fingerprint import FingerprintThresholds
 from .ui import render_analysis
@@ -101,6 +102,11 @@ class SiteBundle:
 
     files: dict[str, bytes]
     manifest: dict[str, Any]
+    media_summary: dict[str, int] = field(default_factory=dict)
+
+    def preflight(self) -> dict[str, Any]:
+        """Report actual package sizes without writing or downloading files."""
+        return preflight_report(self)
 
     def _validate(self) -> None:
         SiteManifest.model_validate(self.manifest)
@@ -155,8 +161,7 @@ def _config_state(repository: Repository) -> dict[str, str | None]:
 def _snapshot(repository: Repository, *, include_history: bool) -> Snapshot:
     """Bound retained input bytes and the authored history actually being exported."""
     head = Head.model_validate_json(repository.read(repository.data / "HEAD.json", maximum=4096))
-    manifest = Manifest.model_validate_json(repository.verified(
-        repository.data / "manifests" / f"{head.sha256}.json", head.sha256))
+    manifest = Manifest.model_validate_json(repository.read_manifest(head.sha256))
     if include_history:
         authored_revisions = sum(entry.kind in KINDS for entry in manifest.entries)
         if authored_revisions > MAX_SITE_REVISIONS:
@@ -514,7 +519,9 @@ def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
             "Saved prose and source URLs can contain personal information; review before sharing."],
         "files": {name: {"sha256": _checksum(content), "byte_length": len(content)} for name, content in sorted(files.items())}}
     files["manifest.json"] = _json(manifest)
-    bundle = SiteBundle(files, manifest)
+    bodies = ([entry["body"] for entry in publication["entries"]] if publication else
+              [record.body for record in snapshot.revisions.values() if isinstance(record, Dossier)] if snapshot else [])
+    bundle = SiteBundle(files, manifest, media_summary(snapshot, bodies, resources))
     bundle._validate()
     return bundle
 

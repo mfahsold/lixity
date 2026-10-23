@@ -571,7 +571,7 @@ class Manifest(StrictModel):
     project_id: Identifier
     generation: Annotated[int, Field(ge=1)]
     parent: Digest | None
-    entries: Annotated[list[Entry], Field(min_length=1, max_length=25000)]
+    entries: Annotated[list[Entry], Field(min_length=1, max_length=100000)]
 
 
 class Head(StrictModel):

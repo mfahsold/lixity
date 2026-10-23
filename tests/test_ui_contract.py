@@ -192,6 +192,9 @@ class TestJsDomContract(unittest.TestCase):
         )
         html = render_dashboard(chapters, paragraphs)
         review = html.split('id="analysis-review"', 1)[1].split("</section>", 1)[0]
+        self.assertIn('aria-describedby="review-passage-reason"', review)
+        self.assertIn('id="review-passage-reason"', review)
+        self.assertIn("No tense flags at the selected threshold.", review)
         for target in re.findall(r'href="#([^"]+)"', review):
             self.assertTrue(f'id="{target}"' in html, f"Review route has no target: {target}")
 
@@ -212,6 +215,7 @@ class TestJsDomContract(unittest.TestCase):
         html = render_dashboard(chapters, paragraphs)
         review = html.split('id="analysis-review"', 1)[1].split("</section>", 1)[0]
         self.assertIn('data-target="p-0"', review)
+        self.assertIn("Start with a tense-pattern flag and read its context.", review)
 
     def test_analysis_section_nav_only_links_existing_panels(self):
         """The sticky section nav never offers a panel this document lacks."""
@@ -393,6 +397,7 @@ class TestJsDomContract(unittest.TestCase):
         html = (
             _full_dashboard()
             + _full_dashboard(("manuscript-pdf", "research-reader"))
+            + _full_dashboard(("analysis-review",))
             + render_dashboard([], [], controls=True)
             + render_dashboard([], [], controls=True, enabled_actions=("analyze", "rebuild"))
             + render_dashboard([], [], controls=True, enabled_actions=("nda-draft",))

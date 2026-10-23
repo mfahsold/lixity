@@ -472,6 +472,53 @@ for text size (16–28 nominal pixels), narrow/standard/wide text and
 compact/standard/relaxed line spacing. Appearance and the desktop split are local
 browser preferences; display changes do not edit the source.
 
+**Current main, unreleased:** **? → Help with your first analysis** is a voluntary
+panel in the reader toolbar. It explains the current Analysis Off /
+no selected measure / selected measure state and a read–count–compare workflow.
+It does not enable diagnostics, reset preferences, create a task or change
+measurements. It is hidden in Focus reading and the overview; returning to
+the manuscript restores it. The overview's opening-passage action now visibly
+explains its existing tense-flag/opening-paragraph selection, not a quality rank.
+CLI `profile --help` gives the same source-lines → counted-text workflow;
+default outputs and JSON contracts are unchanged.
+
+**Current main review decisions:** the overview's flagged list contains tense
+heuristics, not all chapter or paragraph metrics. **Why here?** reports actual
+configured present/past marker counts and mixed/switch criteria. **Read passage**
+is primary; a diagnostic no longer directly proposes a To-do. Author work markers
+remain available from the manuscript's paragraph menu.
+
+The native host advertises `analysis-review` to permit project-local decisions.
+Chapter, stage and decision filters limit the visible list; **Read next visible
+passage** follows that selection without saving anything. Choose **Deliberately
+kept**, **Changed by me** or **Review later**, then save explicitly. Completed
+counts include only current kept/changed decisions, not deferred or stale ones.
+No automatic manuscript change, task, source capture or research decision occurs.
+
+For the same observation/state model from the CLI:
+
+```sh
+lixity analysis-review --project ./novel --json
+lixity analysis-review --project ./novel --observation ID --status kept \
+  --expected-source-sha256 SOURCE --expected-analysis-sha256 ANALYSIS \
+  --expected-review-sha256 REVIEW --json
+```
+
+Use exact identities from the current read. A stale tab/writer/settings/source
+returns an error; read again before deciding. **Changed by me** is explicitly
+self-reported. State lives in `.lixity/analysis-review.json` with schema
+`lixity-analysis-review-state/1`, bounded to 10,000 decisions and 4 MiB.
+Reads create no files. Writes reuse the project writer lock and atomic file
+writer; no research archive is initialized. Back up this local project state
+separately from the Research archive if those decisions matter.
+
+The entire source digest and resolved configuration/threshold signature bind
+a decision. Even an unrelated text edit makes an earlier matching decision
+stale; edited/moved paragraphs can instead appear as new observations, while the
+prior decision is retained but unmatched. This is a conservative review boundary,
+not semantic change detection or a “since last session” diff. Reading exports
+do not serialize decisions or allow saves. No review data is sent to analytics.
+
 **Since v0.7.3:** **Reading settings → Keyboard shortcuts**
 lists the passage menu, search and close keys. Hovering or focusing key controls
 also gives a short explanation; Escape dismisses a tooltip. Essential actions
@@ -1786,3 +1833,40 @@ for checkout setup, supported checks, browser suites and documentation generatio
 
 GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later) – see [`LICENSE`](https://github.com/mfahsold/lixity/blob/main/LICENSE).
 Commercial licensing on request: mfahsold@googlemail.com.
+
+
+### Check a reading website before exporting
+
+**Current main, unreleased:** prepare and inspect the actual package without
+writing an output directory:
+
+```sh
+lixity export-site --project ./novel --preflight --json
+lixity export-site --project ./novel --mode reader --publication-profile readers --preflight
+```
+
+Do not supply `--output` with `--preflight`. The native **Reading website** dialog
+has the same explicit **Check export** action. It neither downloads nor publishes;
+changing the selection clears the displayed result. Preparation uses the same
+scope, project guards and limits as export and can take comparable time/memory.
+An invalid selection or an unreadable selected asset fails explicitly rather
+than returning an invented size.
+
+`lixity-site-preflight/1` measures actual `html_bytes`, `total_bytes`, `zip_bytes`,
+`source_file_bytes` and `file_count` for the prepared candidate. Counts cover
+exactly the exported dossier revisions (including earlier revisions in review
+mode), or selected publication entries after the chapter cap. Available retained
+media without copied source files is reported as `not_packaged`, separately from
+unavailable pins. Ordinary Markdown image destinations are counted as unchecked;
+no loose file or external URL is opened. Attribution checks only the presence of
+`origin_url` and `provenance_note` in retained source metadata, not license validity
+or whether a reader-visible credit appears in the exported page. External link auditing
+and mobile rendering are not performed: `mobile_layout_check` is `not_run` and
+`rights_check` is `not_performed`.
+
+Warnings advise on HTML over 10 MiB or ZIP over 20 MiB; these are disclosed
+practical thresholds, not performance guarantees. The result describes this
+candidate, not a reserved later export. Curated reader/companion modes often
+avoid exporting internal review history; choose the appropriate saved profile
+and retained-file options deliberately. No automatic image recompression or
+promise of a package under 20 MiB is introduced here.

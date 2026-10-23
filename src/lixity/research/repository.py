@@ -1,11 +1,14 @@
 """Immutable local objects and snapshots with a single atomic publication point."""
 
 import errno
+import gzip
 import hashlib
+import io
 import json
 import os
 import sys
 import tempfile
+import zlib
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
@@ -43,6 +46,8 @@ from .models import (
     Tombstone,
     reference,
 )
+
+STORAGE_MARKER = b'{"manifest_encoding":"gzip","schema_version":"research-storage-local/1"}\n'
 
 
 class ResearchError(ValueError):
@@ -290,6 +295,60 @@ class Repository:
             raise ResearchStorageError("Research object checksum mismatch")
         return content
 
+    def require_storage(self) -> None:
+        """Require the current explicit physical layout before normal access."""
+        try:
+            marker = self.read(self.data / "storage.json", maximum=4096)
+        except FileNotFoundError as exc:
+            if not self.safe(self.data / "HEAD.json").exists():
+                raise ResearchStorageError("Research store is missing or incomplete; initialize or restore it") from exc
+            raise ResearchStorageError("Research manifest storage requires explicit migration to compressed storage") from exc
+        try:
+            fields = json.loads(marker)
+        except (ValueError, UnicodeError) as exc:
+            raise ResearchStorageError("Invalid research storage layout") from exc
+        if fields != json.loads(STORAGE_MARKER):
+            raise ResearchStorageError("Unsupported research storage layout")
+
+    def manifest_path(self, checksum: str) -> Path:
+        """Resolve a canonical JSON content hash into the current physical layout."""
+        return self.safe(self._manifest_path(checksum))
+
+    def _manifest_path(self, checksum: str) -> Path:
+        """Construct a manifest path; its I/O owner must still check containment."""
+        if len(checksum) != 64 or any(character not in "0123456789abcdef" for character in checksum):
+            raise ResearchStorageError("Invalid manifest content digest")
+        return self.data / "manifests" / f"{checksum}.json.gz"
+
+    def read_manifest(self, checksum: str) -> bytes:
+        """Bound decompression and verify the exact original JSON content hash."""
+        self.require_storage()
+        return self._read_compressed_manifest(checksum)
+
+    def _read_compressed_manifest(self, checksum: str) -> bytes:
+        """Verify a staged gzip object before a migration publishes its marker."""
+        compressed = self.read(self._manifest_path(checksum), maximum=MAX_RESEARCH_OBJECT_BYTES + 65536)
+        try:
+            with gzip.GzipFile(fileobj=io.BytesIO(compressed), mode="rb") as stream:
+                content = stream.read(MAX_RESEARCH_OBJECT_BYTES + 1)
+        except (OSError, EOFError, zlib.error) as exc:
+            raise ResearchStorageError("Invalid or truncated compressed research manifest") from exc
+        if len(content) > MAX_RESEARCH_OBJECT_BYTES:
+            raise ResearchStorageError("Research object exceeds the supported size")
+        if digest(content) != checksum:
+            raise ResearchStorageError("Research object checksum mismatch")
+        return content
+
+    def write_manifest(self, checksum: str, content: bytes) -> None:
+        """Publish deterministic gzip without changing canonical JSON bytes."""
+        if len(content) > MAX_RESEARCH_OBJECT_BYTES or digest(content) != checksum:
+            raise ResearchStorageError("Invalid research manifest content")
+        if self.manifest_path(checksum).exists():
+            if self._read_compressed_manifest(checksum) != content:
+                raise ResearchStorageError("Immutable compressed manifest conflict")
+            return
+        publish(self.manifest_path(checksum), gzip.compress(content, compresslevel=6, mtime=0))
+
     def record_path(self, entry: Entry) -> Path:
         return self.safe(self._record_path(entry))
 
@@ -311,9 +370,10 @@ class Repository:
             if kinds is None:
                 cached = self._snapshot
                 if cached is not None and cached.digest == head.sha256:
+                    self.require_storage()
                     return cached
             wanted = None if kinds is None else kinds | {"project", "tombstone"}
-            manifest = Manifest.model_validate_json(self.verified(self.data / "manifests" / f"{head.sha256}.json", head.sha256))
+            manifest = Manifest.model_validate_json(self.read_manifest(head.sha256))
             records: dict[str, Entity] = {}
             revisions: dict[tuple[str, int], Entity] = {}
             for entry in manifest.entries:
@@ -674,7 +734,9 @@ class Repository:
                     publish(path, encode(record))
 
                 publish(self.safe(self.data / "project.json"), encode(project))
-                publish(self.safe(self.data / "manifests" / f"{candidate.digest}.json"), manifest_bytes)
+                if current is None:
+                    publish(self.safe(self.data / "storage.json"), STORAGE_MARKER)
+                self.write_manifest(candidate.digest, manifest_bytes)
                 replace_head(self.safe(self.data / "HEAD.json"), encode(Head(sha256=candidate.digest)))
             except (OSError, ResearchError) as error:
                 # Only clean this attempt's authored revision files when HEAD
@@ -730,3 +792,20 @@ class Repository:
             "context": version.context.model_dump(), "context_status": "user_supplied_unverified",
             "availability": "withdrawn" if withdrawn else "available",
         }
+
+
+class _PlainManifestRepository(Repository):
+    """Former physical layout, restricted to explicit migration and portable restore.
+
+    Normal application reads and writes always use ``Repository``. This transport
+    never selects a format per file and never writes new accepted revisions.
+    """
+
+    def require_storage(self) -> None:
+        pass
+
+    def manifest_path(self, checksum: str) -> Path:
+        return super().manifest_path(checksum).with_suffix("")
+
+    def read_manifest(self, checksum: str) -> bytes:
+        return self.verified(self.manifest_path(checksum), checksum)

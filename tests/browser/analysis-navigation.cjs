@@ -293,10 +293,11 @@ async function finish(page, errors, writes) {
         try {
           await openOverview(page);
           const flag = page.locator('#flags .flag-row').first(), paragraph = await flag.getAttribute('data-target');
-          await flag.focus(); await flag.press('Enter'); await settle(page);
+          const read = flag.locator('.triage-read-cell button');
+          await read.focus(); await read.press('Enter'); await settle(page);
           assert.equal(await page.locator('#' + paragraph).isVisible(), true);
           assert.equal(await page.evaluate(() => document.activeElement.id), paragraph,
-            'A keyboard flag drill moves focus from its hidden row to the revealed paragraph');
+            'The explicit keyboard reading action focuses the revealed paragraph');
           await openOverview(page);
           const chapter = page.locator('#matrix tbody [data-jump]').last(), target = await chapter.getAttribute('data-jump');
           await chapter.focus(); await chapter.press('Enter'); await settle(page);
@@ -396,7 +397,61 @@ async function finish(page, errors, writes) {
       await check('localized navigation spacing ' + locale + ' ' + width, async () => {
         const {page, errors, writes} = await createPage(browser, locale, width);
         try {
+          const guide = page.locator('#reader-analysis-guide');
+          assert.equal(await guide.isVisible(), true);
+          assert.equal(await guide.evaluate(node => node.open), false, 'Guidance is voluntary, not an opening overlay');
+          const before = await page.evaluate(() => JSON.stringify(LixityWorkbench.state()));
+          await guide.locator('summary').click();
+          assert.equal(await page.evaluate(() => JSON.stringify(LixityWorkbench.state())), before,
+            'Opening guidance changes no analysis state');
+          const off = await page.locator('#reader-analysis-guide-state').textContent();
+          assert.ok(off && !off.includes('analysis_guide_'), 'The inactive explanation is localized');
+          const guideBody = guide.locator('.reader-settings-body');
+          assert.equal(await guideBody.isVisible(), true);
+          assert.equal(await guideBody.locator('[data-analysis-guide-action]').count(), 3,
+            'First-analysis guidance offers three direct actions through existing reader controls');
+          assert.ok(await guideBody.evaluate(node => node.scrollWidth <= node.clientWidth),
+            'Help retains readable, bounded horizontal layout');
+          await guideBody.screenshot({path: path.join(artifacts, `guide-${locale}-${width}.png`)});
+          await page.keyboard.press('Escape');
+          assert.equal(await guide.evaluate(node => node.open), false);
+          assert.equal(await guide.locator('summary').evaluate(node => node === document.activeElement), true);
           await page.locator('#manuscript-analysis-toggle').click();
+          await page.locator('#style-layer').selectOption('');
+          const none = await page.locator('#reader-analysis-guide-state').textContent();
+          assert.notEqual(none, off, 'Analysis on without a metric is distinct from Analysis off');
+          await page.locator('#style-layer').selectOption('asl');
+          const selected = await page.locator('#reader-analysis-guide-state').textContent();
+          assert.notEqual(selected, none);
+          assert.ok(selected.includes(await page.locator('#style-layer option:checked').textContent()));
+          await guide.locator('summary').click();
+          await guide.locator('[data-analysis-guide-action="choose"]').click();
+          assert.equal(await guide.evaluate(node => node.open), false);
+          assert.equal(await page.locator('#style-layer').evaluate(node => node === document.activeElement), true);
+          assert.equal(await page.locator('#style-layer').inputValue(), 'asl', 'Choosing a measure starts at the existing selection');
+          await guide.locator('summary').click();
+          await guide.locator('[data-analysis-guide-action="explore"]').click();
+          await settle(page);
+          assert.equal(await page.locator('#reader-inspector').isVisible(), true);
+          assert.equal(await page.locator('#reader-inspector-close').evaluate(node => node === document.activeElement), true);
+          await page.keyboard.press('Escape');
+          await settle(page);
+          assert.equal(await page.locator('#reader-inspector').isVisible(), false);
+          await guide.locator('summary').click();
+          assert.equal(await guide.locator('[data-analysis-guide-action="example"]').isEnabled(), true);
+          await guide.locator('[data-analysis-guide-action="example"]').click();
+          await settle(page);
+          await page.waitForFunction(() => !document.getElementById('analysis-evidence-card').hidden);
+          assert.equal(await page.locator('#style-layer').inputValue(), 'asl');
+          await page.keyboard.press('Escape');
+          await settle(page);
+          await page.locator('#analysis-evidence-enabled').uncheck();
+          await page.locator('#reader-focus').click();
+          assert.equal(await guide.isVisible(), false, 'Focus reading hides optional guidance');
+          await page.locator('#reader-focus').click();
+          assert.equal(await guide.isVisible(), true);
+          assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false);
+          await page.locator('#analysis-evidence-enabled').check();
           if (width === 320) await page.setViewportSize({width, height: 480});
           await page.locator('#manuscript-reader-controls').evaluate(node => { node.scrollTop = 0; });
           await settle(page);
@@ -414,6 +469,10 @@ async function finish(page, errors, writes) {
           if (width === 320) await page.setViewportSize({width, height: 900});
           await page.locator('#manuscript-analysis-toggle').click();
           await openOverview(page);
+          assert.equal(await guide.isVisible(), false, 'Reader guidance does not compete with the overview');
+          const reason = page.locator('#review-passage-reason');
+          assert.equal(await reason.isVisible(), true);
+          assert.equal(await page.locator('[data-review-passage]').getAttribute('aria-describedby'), 'review-passage-reason');
           const links = await page.locator('#analysis-sections a').evaluateAll(nodes => nodes.map(node => ({
             box: node.getBoundingClientRect().toJSON(), targetExists: !!document.getElementById(node.dataset.sectionLink),
           })));

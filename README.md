@@ -29,7 +29,6 @@ account or upload and cannot import, edit or save.
 Try one question first: **does chapter 2's shorter rhythm fit its action?**
 The demo's **Inspect chapter 2** action opens the actual manuscript with the
 shared sentence-length controls, not a separate presentation.
-[More views and image credits](https://mfahsold.github.io/lixity/screenshots/README.md).
 
 ## From a passage to the context behind it
 
@@ -117,6 +116,12 @@ chapter measurements: meaning, units, manuscript reference and the other
 metrics of the same chapter. Reading the text is an explicit next action;
 chapter-only measurements do not invent word-level highlights.
 
+Current-main `export-site --preflight` and the native **Check export** action
+measure the prepared package before writing/downloading, including media not
+packaged and missing attribution fields. Existing research projects require the
+[explicit manifest-storage migration](https://mfahsold.github.io/lixity/research/USAGE.md#migrate-manifest-storage)
+before using the current compressed layout.
+
 Current main also shares versioned image, PDF and MP4/WebM attachments across
 dossiers and reading copies, with explicit retention and source-file export
 choices. [Media workflow and compatibility](https://mfahsold.github.io/lixity/research/USAGE.md#retain-a-pdf-or-video-in-a-dossier).
@@ -124,7 +129,9 @@ choices. [Media workflow and compatibility](https://mfahsold.github.io/lixity/re
 A passage's research associations open its claims and dossier beside the
 manuscript, with a return to the passage. Current entries and exact linked earlier
 versions remain distinct. Dossier editing offers `--body-only` section drafts and
-`--compact` update receipts; see the
+`--compact` update receipts. Current-main `--preamble` targets the opening text,
+`research media-context` corrects retained-media attribution without copying bytes,
+and `dossier-images --missing-provenance` finds absent attribution fields; see the
 [section-editing workflow](https://mfahsold.github.io/lixity/research/USAGE.md#work-on-one-dossier-section).
 The native **Project overview** and `lixity project --project PATH` also separate
 sources, existing outputs and read-only structure findings. They neither move
@@ -144,6 +151,8 @@ coverage. [Language support](https://mfahsold.github.io/lixity/LOCALIZATION.md) 
 explain coverage, short-sample limits and unavailable measurements.
 
 ## Documentation map
+
+[Additional screenshots and image credits](https://mfahsold.github.io/lixity/screenshots/README.md).
 
 | Looking for | Start here |
 | :--- | :--- |

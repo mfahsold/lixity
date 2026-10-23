@@ -291,8 +291,7 @@ def _recover(store: _Store, state: _State, snapshot: Snapshot) -> _State:
         expected = state.expected_snapshot
         if snapshot.manifest.parent == item.prepared.expected_snapshot:
             base_digest = item.prepared.expected_snapshot
-            base = Manifest.model_validate_json(store.repository.verified(
-                store.repository.data / "manifests" / f"{base_digest}.json", base_digest))
+            base = Manifest.model_validate_json(store.repository.read_manifest(base_digest))
             tail = snapshot.manifest.entries[len(base.entries):]
             if (snapshot.manifest.entries[:len(base.entries)] == base.entries and len(tail) == len(records)
                     and all(entry.ref.id == record.id and entry.sha256 == digest(encode(record))

@@ -109,18 +109,16 @@ async function pinnedIdentity(page, panel, cellIndex) {
       assert.ok(await flags.getAttribute('aria-label'));
       assert.equal(await page.locator('#flags tbody tr').count(), fixtures.flags);
       assert.equal(Number(await page.locator('#flags h2 .badge').textContent()), fixtures.flags);
-      const marker = page.locator('#flags tbody tr:first-child [data-marker-kind]');
-      assert.ok(await marker.isVisible(), 'The flag row retains its visible marker action');
+      assert.equal(await page.locator('#flags [data-marker-kind]').count(), 0,
+        'Observations do not directly generate manuscript tasks');
+      const reason = page.locator('#flags tbody tr:first-child .triage-reason');
       const openedPassages = await page.locator('#chapters .ptext.open').count();
-      await marker.click();
-      const markerDraft = page.locator('#flags tbody tr:first-child [data-marker-editor]');
-      assert.ok(await markerDraft.locator('.marker-note').isVisible());
+      await reason.locator('summary').click();
+      assert.ok(await reason.locator('p').isVisible());
       assert.equal(await page.locator('#chapters .ptext.open').count(), openedPassages,
-        'Opening a marker draft must not also follow the flag row');
-      await markerDraft.locator('.marker-note').fill('Synthetic local draft');
-      await markerDraft.locator('[data-marker-cancel]').click();
-      assert.equal(await markerDraft.count(), 0);
-      assert.ok(await page.locator('#workbench-overview-back').isVisible(), 'Cancel retains the overview');
+        'Explaining an observation must not also follow the flag row');
+      await reason.locator('summary').click();
+      assert.ok(await page.locator('#workbench-overview-back').isVisible(), 'Inspection retains the overview');
       await flags.scrollIntoViewIfNeeded();
       assert.equal(await textLines(page.locator('#flags tbody tr:first-child .badge')), 1,
         `${locale} at ${width}: severity must remain readable on one line`);

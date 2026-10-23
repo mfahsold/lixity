@@ -26,6 +26,19 @@ reapply the intended edit surgically. Prefer exact patches for large files.
 Read only the relevant symbols and search references before removing code.
 Do not repeat large file or tool output when a targeted query answers the question.
 
+## Evolve one current product path
+
+Implement the agreed current behavior; do not add legacy UI modes or parallel
+compatibility branches to preserve an obsolete presentation. Identify concrete
+data or workflow conflicts and discuss unresolved choices before implementing
+them. Existing authorization for a change does not require another design gate.
+
+When existing projects need conversion, provide an explicit, reviewed migration
+with backup, validation and recovery instructions through the release workflow
+in [CONTRIBUTING.md](CONTRIBUTING.md). Preserve retained source bytes, immutable
+revisions and evidence references. Removing an old UI does not authorize deleting
+history, rewriting accepted records or inventing an automatic migration command.
+
 ## Fail explicitly when an answer is unknown
 
 Undeterminable is different from absent. A failed measurement must return an

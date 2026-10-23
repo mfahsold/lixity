@@ -18,12 +18,14 @@ from pydantic import ValidationError
 
 from . import catalogue, editorial
 from .acknowledgements import latest_acknowledgements
+from .archive import _manifest_history
 from .archive import (
     export_archive as export_archive,
 )
 from .archive import (
     restore_archive as restore_archive,
 )
+from .attachments import ImageBatchItem, attachment_markup, place_attachment
 from .dossier_edit import (
     export_dossier_edit as export_dossier_edit,
 )
@@ -74,6 +76,7 @@ from .manuscript import (
     review_manuscript_links as review_manuscript_links,
 )
 from .media import MEDIA_TYPES, VIDEO_TYPES, validate_media
+from .media_metadata import update_dossier_media_context as update_dossier_media_context
 from .models import (
     CLAIM_CONFIDENCES,
     ENTITY,
@@ -93,6 +96,7 @@ from .models import (
     EvidenceRelation,
     Extraction,
     Language,
+    Manifest,
     Passage,
     Project,
     Reference,
@@ -165,6 +169,7 @@ from .sections import (
 from .sections import (
     extract_sections as extract_sections,
 )
+from .sections import preamble_text
 from .sections import (
     update_section as update_section,
 )
@@ -438,10 +443,13 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
 
 
 def list_dossier_images(project: str | Path, *, dossier_id: str | None = None,
-                        limit: int = 100, offset: int = 0) -> dict[str, Any]:
+                        limit: int = 100, offset: int = 0,
+                        missing_provenance: bool = False) -> dict[str, Any]:
     """List active dossier image occurrences without reading files or resolving URLs."""
     if type(limit) is not int or not 1 <= limit <= 200 or type(offset) is not int or offset < 0:
         raise ResearchError("Image overview requires limit 1..200 and a nonnegative offset")
+    if type(missing_provenance) is not bool:
+        raise ResearchError("missing_provenance must be a boolean")
     repository = Repository(project)
     snapshot = repository.snapshot()
     if dossier_id is not None:
@@ -462,9 +470,6 @@ def list_dossier_images(project: str | Path, *, dossier_id: str | None = None,
             while heading_index < len(spans) and spans[heading_index].start < marker.start:
                 heading = spans[heading_index].title
                 heading_index += 1
-            total += 1
-            if total <= offset or len(images) >= limit:
-                continue
             if refs:
                 item = resolve_image_reference(snapshot, refs[0])
                 version = snapshot.records.get(refs[0].source_version_id)
@@ -472,7 +477,14 @@ def list_dossier_images(project: str | Path, *, dossier_id: str | None = None,
                                   and item["availability"] in ("available", "withdrawn") else None)
             else:
                 item = {"availability": "unretained", "destination": marker.destination}
-            images.append({**item, "dossier_id": record.id, "dossier_revision": record.revision,
+            context = item.get("context") or {}
+            missing = [field for field in ("origin_url", "provenance_note") if not context.get(field)]
+            if missing_provenance and not missing:
+                continue
+            total += 1
+            if total <= offset or len(images) >= limit:
+                continue
+            images.append({**item, "provenance_missing": missing, "dossier_id": record.id, "dossier_revision": record.revision,
                            "dossier_title": record.title, "section": heading,
                            "reference": marker.marker, "start": marker.start, "end": marker.end})
     return {"schema_version": "research-dossier-images-local/1", "project_id": snapshot.project.id,
@@ -573,16 +585,6 @@ def attach_dossier_media(project: str | Path, dossier_id: str, content: bytes, *
         raise ResearchError("Image attachment requires a dossier")
     if snapshot.digest != expected_snapshot or previous.revision != expected_revision:
         raise ResearchConflictError("Research snapshot or dossier revision changed; reload and retry attachment")
-    replacement = None
-    if replace_reference is not None:
-        if not isinstance(replace_reference, str) or not replace_reference or section is not None:
-            raise ResearchError("Image replacement requires one exact ordinary Markdown image reference")
-        matches = [reference for reference in extract_markdown_image_references(previous.body)
-                   if reference.marker == replace_reference
-                   and not re.match(r"<?lixity:", reference.destination, re.IGNORECASE)]
-        if previous.body.count(replace_reference) != 1 or len(matches) != 1:
-            raise ResearchError("Image replacement reference must occur exactly once outside Markdown code")
-        replacement = matches[0]
     is_image = Path(filename).suffix.lower() in IMAGE_SUFFIXES
     if is_image:
         validate_image(content, filename=filename)
@@ -593,28 +595,9 @@ def attach_dossier_media(project: str | Path, dossier_id: str, content: bytes, *
         path.write_bytes(content)
         prepared = _prepare_ingest(repository, snapshot, path, title=title or Path(filename).name,
                                    context=context, origin_url=origin_url, actor=actor, retain_only=True)
-    escaped_alt = alt.replace("\\", "\\\\").replace("[", "\\[").replace("]", "\\]")
     namespace = "image" if is_image else "media"
-    markup = f"![{escaped_alt}](lixity:{namespace}/{prepared.source_id}/{prepared.result['source_version_id']})"
-    if caption:
-        markup += "\n\n" + caption
-    if replacement is not None:
-        body = previous.body[:replacement.start] + markup + previous.body[replacement.end:]
-    elif section is None:
-        line_break = re.search(r"\r\n|\r|\n", previous.body)
-        newline = line_break.group() if line_break else "\n"
-        prefix = "" if not previous.body or previous.body.endswith(newline * 2) else newline if previous.body.endswith(newline) else newline * 2
-        body = previous.body + prefix + markup.replace("\r\n", "\n").replace("\r", "\n").replace("\n", newline) + newline
-    else:
-        if not isinstance(section, str):
-            raise ResearchError("Image section must identify an existing unique dossier heading")
-        spans = _section_spans(previous.body)
-        section_matches = [span for span in spans if span.title.casefold() == section.strip().casefold()]
-        if len(section_matches) != 1:
-            raise ResearchError("Image section must identify an existing unique dossier heading")
-        selected = section_matches[0]
-        existing = previous.body[selected.content_start:_section_subtree_end(spans, selected, len(previous.body))]
-        body = update_section(previous.body, section, existing.rstrip() + "\n\n" + markup)
+    markup = attachment_markup(alt, namespace, prepared.source_id, prepared.result["source_version_id"], caption)
+    body = place_attachment(previous.body, markup, section=section, replace_reference=replace_reference)
     if not any(ref.source_id == prepared.source_id and ref.source_version_id == prepared.result["source_version_id"]
                for ref in extract_image_references(body, media=not is_image)):
         raise ResearchError("Attachment location is inside Markdown code; close it or choose another section")
@@ -622,6 +605,71 @@ def attach_dossier_media(project: str | Path, dossier_id: str, content: bytes, *
                              reason=reason if reason is not None else f"Attached {namespace} {prepared.title}.", actor=actor)
     accepted = repository.commit([*prepared.records, revised], prepared.blobs, snapshot)
     return {**_view(repository, accepted, revised), "capture": {**prepared.result, "snapshot": accepted.digest}}
+
+
+def attach_dossier_images(project: str | Path, dossier_id: str, items: Sequence[Mapping[str, Any]], *,
+                          expected_snapshot: str, expected_revision: int, allow_retention: bool = False,
+                          dry_run: bool = False, reason: str = "Attach reviewed image batch.",
+                          actor: str = "local-author") -> dict[str, Any]:
+    """Validate a bounded explicit batch; publish every capture and one revision or none."""
+    from .images import validate_image_changes
+    from .revisions import _apply_changes, _record, _view
+
+    if allow_retention is not True:
+        raise ResearchError("Explicit local retention permission is required (allow_retention: true)")
+    if (type(dry_run) is not bool or type(expected_revision) is not int or expected_revision < 1
+            or not isinstance(expected_snapshot, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_snapshot)):
+        raise ResearchError("Batch requires a boolean dry_run and exact snapshot/positive dossier revision")
+    if not 1 <= len(items) <= 100:
+        raise ResearchError("Image batch must contain between 1 and 100 explicit items")
+    selected = [ImageBatchItem.model_validate(dict(item)) for item in items]
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    previous = _record(snapshot, "dossier", dossier_id)
+    if not isinstance(previous, Dossier):
+        raise ResearchError("Image batch requires an active dossier")
+    if snapshot.digest != expected_snapshot or previous.revision != expected_revision:
+        raise ResearchConflictError("Research snapshot or dossier revision changed; reload and retry batch")
+    body, total = previous.body, 0
+    records: list[Entity] = []
+    blobs: dict[str, bytes] = {}
+    captures: list[dict[str, Any]] = []
+    placements: list[dict[str, Any]] = []
+    for item in selected:
+        path = Path(item.file).expanduser()
+        if path.suffix.lower() not in IMAGE_SUFFIXES:
+            raise ResearchError("Image batches accept only explicit local PNG/JPEG files")
+        prepared = _prepare_ingest(repository, snapshot, path, title=item.title,
+                                   context=item.context.model_dump() if item.context else None,
+                                   origin_url=item.origin_url, actor=actor)
+        checksum = next(iter(prepared.blobs))
+        if item.sha256 is not None and item.sha256 != checksum:
+            raise ResearchConflictError("Batch image bytes changed since the reviewed SHA-256")
+        total += sum(len(content) for content in prepared.blobs.values())
+        if total > 128 * 1024 * 1024:
+            raise ResearchError("Image batch source bytes exceed the 128 MiB limit")
+        markup = attachment_markup(item.alt, "image", prepared.source_id,
+                                   prepared.result["source_version_id"], item.caption)
+        body = place_attachment(body, markup, section=item.section, replace_reference=item.replace_reference)
+        if not any(ref.source_id == prepared.source_id for ref in extract_image_references(body)):
+            raise ResearchError("Attachment location is inside Markdown code; close it or choose another section")
+        records.extend(prepared.records)
+        blobs.update(prepared.blobs)
+        captures.append(prepared.result)
+        placements.append({"filename": path.name, "sha256": checksum,
+                           "section": item.section, "replace_reference": item.replace_reference})
+    candidate = Snapshot(snapshot.digest, snapshot.manifest,
+                         {**snapshot.records, **{record.id: record for record in records}})
+    validate_image_changes(candidate, body, previous.body)
+    revised = _apply_changes(snapshot, previous, {"body": body}, change_kind="supersession", reason=reason, actor=actor)
+    if dry_run:
+        return {"schema_version": "research-dossier-images-preview-local/1", "project_id": snapshot.project.id,
+                "snapshot": snapshot.digest, "dossier_id": dossier_id, "base_revision": previous.revision,
+                "candidate_revision": revised.revision, "attachment_count": len(selected),
+                "source_bytes": total, "placements": placements, "dry_run": True, "ready": True}
+    accepted = repository.commit([*records, revised], blobs, snapshot)
+    return {**_view(repository, accepted, revised),
+            "captures": [{**capture, "snapshot": accepted.digest} for capture in captures]}
 
 
 def ingest_checkpoint(project: str | Path, files: Sequence[str | Path] | None = None, *,
@@ -675,19 +723,35 @@ def cite(project: str | Path, passage_id: str) -> dict[str, Any]:
 
 
 def audit(project: str | Path) -> dict[str, Any]:
-    """Check that retained blobs match their descriptors and references resolve.
+    """Check accepted manifest ancestry, retained bytes and pinned references.
 
     Returns ``research-audit-local/1`` with ``ok`` and the collected error
-    strings; warnings remain advisory.
+    strings; capacity warnings remain advisory. ``records`` counts accepted
+    revision objects, including historical revisions, rather than identities.
     """
     repository = Repository(project)
     errors: list[str] = []
+    capacity_warnings: list[str] = []
+    maximum = next(constraint.max_length for constraint in Manifest.model_fields["entries"].metadata
+                   if getattr(constraint, "max_length", None) is not None)
+    capacity: dict[str, int | None] = {
+        "entries_used": None, "entries_max": maximum, "entries_remaining": None,
+    }
+    history_checked: int | None = None
     count = 0
     head: str | None = None
     try:
         snapshot = repository.snapshot()
         count = len(snapshot.revisions)
         head = snapshot.digest
+        used = len(snapshot.manifest.entries)
+        capacity.update(entries_used=used, entries_remaining=maximum - used)
+        if used * 10 >= maximum * 9:
+            capacity_warnings.append(
+                f"Manifest capacity: {used} of {maximum} revision entries used; {maximum - used} remaining. "
+                "Historical authored revisions consume entries as well as current records."
+            )
+        history_checked = len(_manifest_history(repository, snapshot))
         checked: set[str] = set()
         for record in snapshot.records.values():
             if isinstance(record, SourceVersion) and record.blob.sha256 not in checked:
@@ -721,7 +785,9 @@ def audit(project: str | Path) -> dict[str, Any]:
         errors.append(f"Research integrity check failed: {msg}" if msg else "Research integrity check failed: missing, invalid or modified records/bytes")
     return {"schema_version": "research-audit-local/1", "ok": not errors,
             "snapshot": head, "records": count, "errors": errors,
-            "scope": "retained source records, citations and dossier image pins; not factual accuracy, full image decoding or index freshness"}
+            "warnings": capacity_warnings, "manifest_capacity": capacity,
+            "manifest_history_checked": history_checked,
+            "scope": "accepted revision objects, retained blobs, citations, dossier media pins and complete manifest ancestry; not factual accuracy, full media decoding or index freshness"}
 
 
 def schema() -> dict[str, Any]:
@@ -1334,23 +1400,26 @@ def _resolve_evidence_citation(repository: Repository, snapshot: Any, ref: Refer
 
 def get_dossier(project: str | Path, dossier_id: str, *,
                 section: str | None = None,
+                preamble: bool = False,
                 revision: int | None = None,
                 summary: bool = False,
                 include_citations: bool = True) -> dict[str, Any]:
     """Retrieve details of a specific dossier with optional section or summary bounding."""
     repository = Repository(project)
     snapshot = repository.snapshot()
-    return _get_dossier(repository, snapshot, dossier_id, section=section, revision=revision,
+    return _get_dossier(repository, snapshot, dossier_id, section=section, preamble=preamble, revision=revision,
                         summary=summary, include_citations=include_citations)
 
 
 def _get_dossier(repository: Repository, snapshot: Snapshot, dossier_id: str, *,
                  section: str | None = None, revision: int | None = None,
-                 summary: bool = False, include_citations: bool = True) -> dict[str, Any]:
+                 summary: bool = False, include_citations: bool = True, preamble: bool = False) -> dict[str, Any]:
     """Build native dossier detail against one accepted snapshot."""
 
     if revision is not None and (type(revision) is not int or revision < 1):
         raise ResearchError("Revision must be a positive integer")
+    if type(preamble) is not bool or (preamble and (section is not None or summary)):
+        raise ResearchError("Choose a preamble, section or summary read")
     dossier = (snapshot.latest(dossier_id, Dossier) if revision is None
                else snapshot.get(Reference(id=dossier_id, revision=revision), Dossier))
     availability = dossier_withdrawal(snapshot, dossier.id)
@@ -1368,6 +1437,13 @@ def _get_dossier(repository: Repository, snapshot: Snapshot, dossier_id: str, *,
     spans = _section_spans(dossier.body)
     sections = _extract_sections(dossier.body, spans)
     editable_sections = [] if availability else _editable_section_titles(spans)
+    if preamble:
+        content = preamble_text(dossier.body)
+        return {"id": dossier.id, **availability, "project_id": snapshot.project.id,
+                "snapshot": snapshot.digest, "title": dossier.title, "revision": dossier.revision,
+                "preamble": True, "section": None, "section_level": None, "content": content,
+                "images": resolve_dossier_images(snapshot, content),
+                "media": resolve_dossier_media(snapshot, content), "editable_sections": editable_sections}
     if summary:
         reader = EvidenceCitationReader(repository, snapshot)
         resolved_citations = [reader.read(ref) for ref in dossier.evidence_refs] if include_citations else []

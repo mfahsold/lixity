@@ -60,6 +60,16 @@ continue and initialize Research if it is still absent.
 
 ### Read and explore
 
+**Current main, unreleased:** the **?** control (**Help with your first analysis**)
+in the reading toolbar opens an optional, initially closed guide. It stays with the manuscript,
+not the overview or Focus reading. Opening it changes no analysis setting.
+It distinguishes Analysis Off, no selected measure, and the selected measure
+with its units. Three direct actions focus the existing measure selector,
+open a counted-text example for the selected measure, or explore the current
+passage. The example action requires a selected measure. These actions reuse
+the reader's existing controls and inspectors; merely opening help is inert.
+It reuses the reading-settings panel's bounded scrolling, Escape and focus return.
+
 Start in **Manuscript** and read a passage. Turn **Analysis**
 On to show diagnostics in place; this does not open a tool or narrow the prose.
 Choose a paragraph's **… → Explore passage** for measurement explanations or
@@ -74,6 +84,11 @@ analysis and optional research together, choose **Project actions → Reading
 website**. The ZIP copy opens in a browser without a running Lixity server;
 project writes and new PDF generation require the local app. See
 [reading websites](USAGE.md#export-a-reading-website) and [PDF layouts](USAGE.md#lixity-pdf).
+
+The overview's **Open passage** route identifies its selection reason visibly:
+the first tense-pattern flag in source order, or the opening paragraph when
+there are no tense flags at the chosen threshold. This is not a general ranking
+of all metrics or proof that other patterns need no review.
 
 ### Choose a view
 
@@ -101,6 +116,23 @@ Tile requests send the viewed area and client IP to the provider and stop when
 the map context is hidden.
 
 ## Work through review notes
+
+**Current main, unreleased:** **Analysis overview → Flagged passages** is
+specifically a heuristic tense-pattern list, not a combined ranking of all
+analysis metrics. Its strongest stage is called a **strong difference**, not a
+defect. Filter by chapter/stage, inspect **Why here?**, and choose **Read passage**
+or **Read next visible passage**. Marker counts, mixed-tense classification and
+switch-from-prior-paragraph explain this list; sentence-length baselines do not.
+
+The native app can save **Deliberately kept**, **Changed by me** or **Review later**
+as explicit decisions in the selected project. Choosing an option alone saves
+nothing; **Save decision** is required. “Changed by me” is the author's
+assessment, not verified editing. Deferred entries remain open. The state is
+separate from manuscript markers and research decisions; after text or analysis
+changes, an earlier matching decision is marked stale rather than silently
+counted as complete. Use the status filter to revisit unreviewed, stale or
+deferred entries. A failed state read is unavailable, never “everything unreviewed.”
+Reading exports permit inspection/filtering but do not include this private state.
 
 Read a passage before adding a marker. **Save marker** explicitly writes a
 Markdown comment; cancelling writes nothing. Dashboards include marker notes,

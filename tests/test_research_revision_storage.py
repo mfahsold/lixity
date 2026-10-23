@@ -153,7 +153,7 @@ class TestResearchRevisionStorage(unittest.TestCase):
                             generation=before.manifest.generation + 1, parent=before.digest,
                             entries=[*before.manifest.entries, entry])
         manifest_content = encode(manifest)
-        (self.project / "research" / "manifests" / f"{digest(manifest_content)}.json").write_bytes(manifest_content)
+        self.repository.write_manifest(digest(manifest_content), manifest_content)
         replacement = self.revision(self.original, title="Reviewed replacement")
         self.repository.commit([replacement], {}, before)
         self.assertEqual(self.repository.snapshot().latest(self.original.id, Dossier), replacement)

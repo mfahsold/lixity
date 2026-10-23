@@ -27,6 +27,7 @@ from .constants import (
 )
 from .discovery import api_index
 from .pdf_context import project_settings_token
+from .routes_analysis_review import AnalysisReviewRoutesMixin
 from .routes_manuscript_research import ManuscriptResearchRoutesMixin
 from .routes_markers import MarkerRoutesMixin
 from .routes_nda import NdaRoutesMixin
@@ -36,6 +37,7 @@ from .routes_site import SiteExportRoutesMixin
 
 
 class LixityServerHandler(
+    AnalysisReviewRoutesMixin,
     ProjectRoutesMixin,
     MarkerRoutesMixin,
     ManuscriptResearchRoutesMixin,
@@ -53,6 +55,7 @@ class LixityServerHandler(
         "/api/": "_handle_api_index",
         "/api/project-structure": "_handle_project_structure",
         "/api/project-paths": "_handle_project_paths",
+        "/api/analysis-review": "_handle_analysis_review",
         "/api/research/status": "_handle_research_status",
         "/api/research/sources": "_handle_research_sources",
         "/api/research/image": "_handle_research_image",
@@ -78,7 +81,9 @@ class LixityServerHandler(
         "nda-draft": "_handle_nda_draft",
         "manuscript-pdf": "_handle_manuscript_pdf",
         "site-export": "_handle_site_export",
+        "site-preflight": "_handle_site_preflight",
         "site-export-report": "_handle_site_export_report",
+        "analysis-review": "_handle_analysis_review_save",
         "analyze": "_handle_refresh",
         "rebuild": "_handle_refresh",
         "marker-add": "_handle_marker_add",

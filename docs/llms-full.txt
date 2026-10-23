@@ -47,7 +47,6 @@ account or upload and cannot import, edit or save.
 Try one question first: **does chapter 2's shorter rhythm fit its action?**
 The demo's **Inspect chapter 2** action opens the actual manuscript with the
 shared sentence-length controls, not a separate presentation.
-[More views and image credits](https://mfahsold.github.io/lixity/screenshots/README.md).
 
 ## From a passage to the context behind it
 
@@ -135,6 +134,12 @@ chapter measurements: meaning, units, manuscript reference and the other
 metrics of the same chapter. Reading the text is an explicit next action;
 chapter-only measurements do not invent word-level highlights.
 
+Current-main `export-site --preflight` and the native **Check export** action
+measure the prepared package before writing/downloading, including media not
+packaged and missing attribution fields. Existing research projects require the
+[explicit manifest-storage migration](https://mfahsold.github.io/lixity/research/USAGE.md#migrate-manifest-storage)
+before using the current compressed layout.
+
 Current main also shares versioned image, PDF and MP4/WebM attachments across
 dossiers and reading copies, with explicit retention and source-file export
 choices. [Media workflow and compatibility](https://mfahsold.github.io/lixity/research/USAGE.md#retain-a-pdf-or-video-in-a-dossier).
@@ -142,7 +147,9 @@ choices. [Media workflow and compatibility](https://mfahsold.github.io/lixity/re
 A passage's research associations open its claims and dossier beside the
 manuscript, with a return to the passage. Current entries and exact linked earlier
 versions remain distinct. Dossier editing offers `--body-only` section drafts and
-`--compact` update receipts; see the
+`--compact` update receipts. Current-main `--preamble` targets the opening text,
+`research media-context` corrects retained-media attribution without copying bytes,
+and `dossier-images --missing-provenance` finds absent attribution fields; see the
 [section-editing workflow](https://mfahsold.github.io/lixity/research/USAGE.md#work-on-one-dossier-section).
 The native **Project overview** and `lixity project --project PATH` also separate
 sources, existing outputs and read-only structure findings. They neither move
@@ -162,6 +169,8 @@ coverage. [Language support](https://mfahsold.github.io/lixity/LOCALIZATION.md) 
 explain coverage, short-sample limits and unavailable measurements.
 
 ## Documentation map
+
+[Additional screenshots and image credits](https://mfahsold.github.io/lixity/screenshots/README.md).
 
 | Looking for | Start here |
 | :--- | :--- |
@@ -591,6 +600,16 @@ continue and initialize Research if it is still absent.
 
 ### Read and explore
 
+**Current main, unreleased:** the **?** control (**Help with your first analysis**)
+in the reading toolbar opens an optional, initially closed guide. It stays with the manuscript,
+not the overview or Focus reading. Opening it changes no analysis setting.
+It distinguishes Analysis Off, no selected measure, and the selected measure
+with its units. Three direct actions focus the existing measure selector,
+open a counted-text example for the selected measure, or explore the current
+passage. The example action requires a selected measure. These actions reuse
+the reader's existing controls and inspectors; merely opening help is inert.
+It reuses the reading-settings panel's bounded scrolling, Escape and focus return.
+
 Start in **Manuscript** and read a passage. Turn **Analysis**
 On to show diagnostics in place; this does not open a tool or narrow the prose.
 Choose a paragraph's **… → Explore passage** for measurement explanations or
@@ -605,6 +624,11 @@ analysis and optional research together, choose **Project actions → Reading
 website**. The ZIP copy opens in a browser without a running Lixity server;
 project writes and new PDF generation require the local app. See
 [reading websites](USAGE.md#export-a-reading-website) and [PDF layouts](USAGE.md#lixity-pdf).
+
+The overview's **Open passage** route identifies its selection reason visibly:
+the first tense-pattern flag in source order, or the opening paragraph when
+there are no tense flags at the chosen threshold. This is not a general ranking
+of all metrics or proof that other patterns need no review.
 
 ### Choose a view
 
@@ -632,6 +656,23 @@ Tile requests send the viewed area and client IP to the provider and stop when
 the map context is hidden.
 
 ## Work through review notes
+
+**Current main, unreleased:** **Analysis overview → Flagged passages** is
+specifically a heuristic tense-pattern list, not a combined ranking of all
+analysis metrics. Its strongest stage is called a **strong difference**, not a
+defect. Filter by chapter/stage, inspect **Why here?**, and choose **Read passage**
+or **Read next visible passage**. Marker counts, mixed-tense classification and
+switch-from-prior-paragraph explain this list; sentence-length baselines do not.
+
+The native app can save **Deliberately kept**, **Changed by me** or **Review later**
+as explicit decisions in the selected project. Choosing an option alone saves
+nothing; **Save decision** is required. “Changed by me” is the author's
+assessment, not verified editing. Deferred entries remain open. The state is
+separate from manuscript markers and research decisions; after text or analysis
+changes, an earlier matching decision is marked stale rather than silently
+counted as complete. Use the status filter to revisit unreviewed, stale or
+deferred entries. A failed state read is unavailable, never “everything unreviewed.”
+Reading exports permit inspection/filtering but do not include this private state.
 
 Read a passage before adding a marker. **Save marker** explicitly writes a
 Markdown comment; cancelling writes nothing. Dashboards include marker notes,
@@ -1754,6 +1795,53 @@ Choose a chapter in the reader toolbar. **Reading settings** groups **A−**/**A
 for text size (16–28 nominal pixels), narrow/standard/wide text and
 compact/standard/relaxed line spacing. Appearance and the desktop split are local
 browser preferences; display changes do not edit the source.
+
+**Current main, unreleased:** **? → Help with your first analysis** is a voluntary
+panel in the reader toolbar. It explains the current Analysis Off /
+no selected measure / selected measure state and a read–count–compare workflow.
+It does not enable diagnostics, reset preferences, create a task or change
+measurements. It is hidden in Focus reading and the overview; returning to
+the manuscript restores it. The overview's opening-passage action now visibly
+explains its existing tense-flag/opening-paragraph selection, not a quality rank.
+CLI `profile --help` gives the same source-lines → counted-text workflow;
+default outputs and JSON contracts are unchanged.
+
+**Current main review decisions:** the overview's flagged list contains tense
+heuristics, not all chapter or paragraph metrics. **Why here?** reports actual
+configured present/past marker counts and mixed/switch criteria. **Read passage**
+is primary; a diagnostic no longer directly proposes a To-do. Author work markers
+remain available from the manuscript's paragraph menu.
+
+The native host advertises `analysis-review` to permit project-local decisions.
+Chapter, stage and decision filters limit the visible list; **Read next visible
+passage** follows that selection without saving anything. Choose **Deliberately
+kept**, **Changed by me** or **Review later**, then save explicitly. Completed
+counts include only current kept/changed decisions, not deferred or stale ones.
+No automatic manuscript change, task, source capture or research decision occurs.
+
+For the same observation/state model from the CLI:
+
+```sh
+lixity analysis-review --project ./novel --json
+lixity analysis-review --project ./novel --observation ID --status kept \
+  --expected-source-sha256 SOURCE --expected-analysis-sha256 ANALYSIS \
+  --expected-review-sha256 REVIEW --json
+```
+
+Use exact identities from the current read. A stale tab/writer/settings/source
+returns an error; read again before deciding. **Changed by me** is explicitly
+self-reported. State lives in `.lixity/analysis-review.json` with schema
+`lixity-analysis-review-state/1`, bounded to 10,000 decisions and 4 MiB.
+Reads create no files. Writes reuse the project writer lock and atomic file
+writer; no research archive is initialized. Back up this local project state
+separately from the Research archive if those decisions matter.
+
+The entire source digest and resolved configuration/threshold signature bind
+a decision. Even an unrelated text edit makes an earlier matching decision
+stale; edited/moved paragraphs can instead appear as new observations, while the
+prior decision is retained but unmatched. This is a conservative review boundary,
+not semantic change detection or a “since last session” diff. Reading exports
+do not serialize decisions or allow saves. No review data is sent to analytics.
 
 **Since v0.7.3:** **Reading settings → Keyboard shortcuts**
 lists the passage menu, search and close keys. Hovering or focusing key controls
@@ -3070,6 +3158,43 @@ for checkout setup, supported checks, browser suites and documentation generatio
 GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later) – see [`LICENSE`](https://github.com/mfahsold/lixity/blob/main/LICENSE).
 Commercial licensing on request: mfahsold@googlemail.com.
 
+
+### Check a reading website before exporting
+
+**Current main, unreleased:** prepare and inspect the actual package without
+writing an output directory:
+
+```sh
+lixity export-site --project ./novel --preflight --json
+lixity export-site --project ./novel --mode reader --publication-profile readers --preflight
+```
+
+Do not supply `--output` with `--preflight`. The native **Reading website** dialog
+has the same explicit **Check export** action. It neither downloads nor publishes;
+changing the selection clears the displayed result. Preparation uses the same
+scope, project guards and limits as export and can take comparable time/memory.
+An invalid selection or an unreadable selected asset fails explicitly rather
+than returning an invented size.
+
+`lixity-site-preflight/1` measures actual `html_bytes`, `total_bytes`, `zip_bytes`,
+`source_file_bytes` and `file_count` for the prepared candidate. Counts cover
+exactly the exported dossier revisions (including earlier revisions in review
+mode), or selected publication entries after the chapter cap. Available retained
+media without copied source files is reported as `not_packaged`, separately from
+unavailable pins. Ordinary Markdown image destinations are counted as unchecked;
+no loose file or external URL is opened. Attribution checks only the presence of
+`origin_url` and `provenance_note` in retained source metadata, not license validity
+or whether a reader-visible credit appears in the exported page. External link auditing
+and mobile rendering are not performed: `mobile_layout_check` is `not_run` and
+`rights_check` is `not_performed`.
+
+Warnings advise on HTML over 10 MiB or ZIP over 20 MiB; these are disclosed
+practical thresholds, not performance guarantees. The result describes this
+candidate, not a reserved later export. Curated reader/companion modes often
+avoid exporting internal review history; choose the appropriate saved profile
+and retained-file options deliberately. No automatic image recompression or
+promise of a package under 20 MiB is introduced here.
+
 ===============================================================================
 ## docs/research/USAGE.md
 
@@ -3496,8 +3621,16 @@ matching headings are ambiguous and require reading the full dossier. Direct ID,
 ### Claims linked to a dossier
 
 The dossier detail groups **Dossier notes**, **Linked claims** and
-**Source quotations** in one place. **All project records → Claims** or **Decisions**
-opens the corresponding project-wide list. Local creation actions prepare the
+**Source quotations** in one place. **Current main, unreleased:** its reading
+surface preserves the original heading order and nesting, including repeated
+headings. The section lookup does not reorder or replace the document. Unique
+editable sections have an editing action beside their heading; repeated names
+remain readable without an ambiguous section-editing action. Images, documents
+and geography use the same reader when opened in an embedded or record view.
+
+Open **Dossier actions** below the reading area to create a claim or decision,
+or choose **All project records → Claims** or **Decisions** to open the
+corresponding project-wide list. Local creation actions prepare the
 existing claim/decision forms; choosing a view does not save or retain anything.
 
 Both the research dossier reader and **Dossier alongside** show the current
@@ -3677,6 +3810,19 @@ lixity research review --project ./novel --json
 Human reports bound long lists/findings; request JSON for the complete payload.
 `audit --format text` provides a human integrity report with scope, record totals
 and bounded findings; audit remains read-only.
+
+**Current main:** audit also verifies the complete accepted manifest ancestry.
+Missing, modified, foreign-project or non-contiguous ancestor manifests fail
+integrity. Its `records` count refers to accepted revision objects, including
+historical authored revisions, rather than current identities or source files.
+`manifest_history_checked` counts verified manifests including HEAD, or is `null`
+if ancestry verification did not complete. `manifest_capacity` reports
+`entries_used`, `entries_max` and `entries_remaining`; used and remaining are
+`null` when the current snapshot is unavailable. At 90% of the 100,000-entry
+limit, `warnings` contains an advisory capacity warning without failing integrity.
+The audit checks accepted revision objects, retained source/text bytes, citations
+and dossier media pins; it does not establish factual accuracy, fully decode
+media or check search-index freshness.
 Output formats/defaults are command-specific: inspect `--help` or
 `lixity about --json`. `--pager` requires explicit use with a human format and
 interactive input/output; pipes never start one. Progress phases use stderr,
@@ -3789,6 +3935,12 @@ including nested headings, without the dossier title, version or selected headin
 It adds no final newline. The ordinary human display is not a replacement file:
 copying its title/version/heading into `--file` would store that display metadata
 as section content. JSON remains the default and keeps its existing fields.
+
+**Current main, unreleased:** omit `--section` from a selected dossier
+`--format text --body-only` read to export its entire authored body with the same
+exact UTF-8 bytes and no added newline. Redirect output to a file when the source
+contains terminal controls or Unicode formatting. `--title` also accepts a
+replacement dossier title with `--update` through the ordinary revision guards.
 
 In a dossier, choose **Edit section** beside an unambiguous heading. The existing
 revision editor opens that section's content, including its subsections. It keeps
@@ -4029,6 +4181,12 @@ lixity research dossier-images --project ./novel --limit 100 --offset 0
 lixity research dossier-images --project ./novel --dossier-id ID --limit 100
 ```
 
+**Current main, unreleased:** `dossier-images --json` explicitly selects its JSON
+output. `dossier-image --compact` and `dossier-media --compact` return the existing
+`research-revision-write-summary-local/1` receipt after saving, without copying
+the dossier body. Image batch saves accept the same flag; batch `--dry-run`
+continues to return its bounded `research-dossier-images-preview-local/1` receipt.
+
 `research-dossier-images-local/1` reports exact dossier/source revisions,
 the nearest real heading, source context, availability and retained SHA-256.
 Ordinary Markdown image references are marked `unretained`; their destinations
@@ -4057,6 +4215,42 @@ Storage-full/user-quota CLI failures additionally identify temporary storage
 (`TMPDIR`, `TEMP`, `TMP`) as a possible cause. Free filesystem space alone does
 not establish remaining user quota. Check both the project and temporary
 filesystems; the diagnostic does not authorize deletion or automatic repair.
+
+**Current main, unreleased batch attachment:** `dossier-image --batch FILE`
+accepts an explicit `research-dossier-image-batch/1` JSON manifest with an
+`items` array. Each item contains `file` and optional `alt`, `caption`, `title`,
+`context`, `origin_url`, `section` or `replace_reference`. Section and replacement
+are mutually exclusive. Relative file paths resolve beside the manifest, not the
+project or terminal directory. This is not automatic Markdown scanning or
+semantic assignment of an image to a dossier.
+
+```json
+{
+  "schema_version": "research-dossier-image-batch/1",
+  "items": [
+    {"file": "plan.png", "alt": "Synthetic plan", "section": "Location"},
+    {"file": "detail.jpg", "alt": "Synthetic detail", "section": "Evidence"}
+  ]
+}
+```
+
+```sh
+lixity research dossier-image --project ./novel --dossier-id ID \
+  --batch ./photos/batch.json --expected-snapshot DIGEST --expected-revision N \
+  --allow-retention --dry-run
+```
+
+Preview validates every file and placement but publishes nothing. Its
+`research-dossier-images-preview-local/1` receipt reports planned count, byte
+total, hashes and candidate revision, not accepted source identities. Omit
+`--dry-run` to apply against the same reviewed snapshot/revision. All captures
+and **one** dossier revision commit together or none do; another writer rejects
+the entire batch. An optional per-item `sha256` binds the previewed image bytes
+when applying. Without it, application reads the currently selected file bytes.
+Limits are 100 PNG/JPEG items, 128 MiB aggregate source bytes, 16 MiB per image
+and a 1 MiB manifest. Source identities remain distinct for distinct provenance;
+hash-addressed blobs deduplicate identical bytes. This batch is for one dossier;
+multi-dossier operations and an interactive batch gallery are not implemented.
 
 ### Retain a PDF or video in a dossier
 
@@ -4088,6 +4282,10 @@ with extracted passages; the earlier dossier pin remains unchanged.
 Python `ingest_media` retains an unattached file; `attach_dossier_media` accepts
 the same snapshot/revision guards and placement fields as `attach_dossier_image`.
 `read_media` requires explicit project, source and version identities.
+CLI `research dossier-media --file note.pdf` (also MP4/WebM) accepts the same
+explicit project, retention, snapshot/revision, description and placement flags
+as a single image attachment, including exact ordinary-marker replacement.
+It does not extract PDF text or transcribe video; there is no media batch flag.
 PDF/video pins use ordinary Markdown image syntax with destination
 `lixity:media/SOURCE_ID/VERSION_ID`;
 PNG/JPEG pins and their existing API keep `lixity:image/...`. Dossier read
@@ -4133,7 +4331,8 @@ Long dossiers have a **Sections** list generated from their actual rendered
 headings, Notes, linked Claims and Citations. Close/reopen the native list; a
 compact current-heading link remains within the dossier while scrolling and
 returns to that list. Heading links use the existing scroll/reveal behavior,
-including collapsed section maps. Local heading IDs last for that accepted
+including an active source-text preview. Places and routes have their own
+destination in the contents. Local heading IDs last for that accepted
 rendering; saved record/revision references are unchanged.
 
 For a human-readable daily manuscript check, use the existing explicit format:
@@ -4216,6 +4415,22 @@ The [harbour example](examples/harbour-geography.json) contains deliberately
 fictional positions and journeys. Field help, `research dossier --help` and
 `research schema` describe the supported inputs; ordinary revisions and backups
 retain them with the dossier.
+
+To enter a route in the native UI:
+
+1. Open the dossier's edit dialog, expand **Places and routes**, and choose
+   **Add place or route**. Name the journey and select **Route (line)**.
+2. Enter one longitude/latitude pair per line, in travel order. Use decimal
+   points, for example `11.10, 46.70` followed on the next line by
+   `11.12, 46.71`. These are illustrative coordinates, not a verified route.
+3. In the optional details, enter waypoint names in the same order, one per
+   coordinate, and optionally add transport, people and period. Save the dossier.
+4. Select the route on the dossier map or in its numbered list. Frame the
+   selection to see the whole line; **Details** opens its geographic entry.
+
+The line joins the supplied coordinates. It does not snap to roads. There is
+currently no click-to-draw editor, route playback or animated journey. A map
+feature's name is not an automatic link to a matching prose heading.
 
 Coordinates are finite WGS84 longitude/latitude pairs. **Since v0.7.1:** the
 numbered sketch and interactive Leaflet vectors work offline. Maps open with OpenStreetMap. Turn off the background or choose the sketch for
@@ -4544,7 +4759,8 @@ entire archive at an earlier date.
 - `research/project.json`: immutable initial project configuration.
 - `research/revisions/`: immutable, schema-checked records.
 - `research/blobs/`: SHA-256-addressed original source bytes and extracted text; originals are not normalized.
-- `research/manifests/`: complete snapshots; `research/HEAD.json` selects one.
+- `research/manifests/`: complete, gzip-compressed snapshots; `research/HEAD.json` selects one.
+- `research/storage.json`: physical storage layout marker; canonical JSON hashes remain unchanged.
 - `.lixity/research/`: disposable catalogue and writer lock.
 
 ### Withdrawal vs. purge
@@ -4930,8 +5146,14 @@ Rollback requires the complete pre-upgrade backup, never editing HEAD, schema
 labels or provenance by hand. Source identity metadata cannot be edited in place;
 refresh creates a new capture.
 
-The 25,000-entry snapshot limit includes retained revisions. Status counts show
+The 100,000-entry snapshot limit includes retained revisions. Status counts show
 current logical records; the audit's `records` count includes their history.
+Each accepted write retains a complete manifest of accepted revision entries,
+so manifest storage can grow faster than the newly added record bytes. Unchanged
+authored edits create no snapshot; batch operations reduce the number of complete
+manifests compared with separate writes. Keep old manifests: backup verifies their
+complete parent chain. Portable exports already use gzip compression; live-store
+compaction is not implemented.
 
 Text inputs are at most 2 MiB and must be valid UTF-8 without NUL bytes.
 PDF inputs are at most 50 MiB. Both routes allow at most 5,000 nonempty extracted
@@ -4956,6 +5178,97 @@ longer resolves. The web panel displays those evidence states for linked
 passages.
 The [licensing rules](../LICENSING.md) still apply; imported sources keep
 their own rights.
+
+
+### Correct retained media provenance without reattaching
+
+**Current main, unreleased:** `research media-context` corrects `origin_url`
+and/or `provenance_note` for a selected retained image, video or retained-only PDF.
+Use the exact source/version identifiers from the selected dossier and preview
+before saving:
+
+```sh
+lixity research media-context --project ./novel --dossier-id DOSSIER_ID \
+  --source-id SOURCE_ID --source-version-id VERSION_ID \
+  --expected-snapshot SNAPSHOT --expected-revision 3 \
+  --context '{"origin_url":"https://example.org/source","provenance_note":"Credit and license supplied by the source; verify rights separately."}' \
+  --reason 'Correct attribution' --dry-run
+```
+
+Remove `--dry-run` to accept the reviewed correction. The bounded JSON receipt
+reports old/new source-version pins, context and the number of matching
+occurrences. A new context version shares the same source identity and retained
+blob; it does not duplicate media bytes. All active occurrences of the selected
+pin in this dossier change atomically. Other dossiers, captions and alternative
+text remain unchanged. Snapshot/revision guards reject stale writes. Repeating
+an unchanged correction creates no revision. JSON `null` clears a supplied field;
+other context fields are preserved. There is no separate verified-license field:
+license/credit statements belong in `provenance_note` and remain author evidence.
+PDFs with extracted text require their text-provenance workflow and are refused
+here rather than losing extraction lineage.
+
+`dossier-images --missing-provenance --json` filters image occurrences missing
+`origin_url` or `provenance_note` before pagination. Each entry lists absent fields
+in `provenance_missing`. This is a presence check, not license validation; it
+includes ordinary/unavailable image references and does not audit PDF/video credits.
+
+### Edit the dossier preamble explicitly
+
+**Current main, unreleased:** `dossier ID --preamble` selects the exact source
+before the first actual ATX heading. It does not invent an `Overview` heading or
+match a real section with that name. In a heading-free body, it selects the entire
+body. Read a draft with `--format text --body-only`; update with `--file` or
+`--body` and the ordinary `--update`, revision/snapshot guards, reason and change
+kind. `--dry-run`, `--compact` and draft `--diff` remain available. Replacement
+preserves the existing heading and all following bytes, using the body's newline
+style and a blank line before the first heading. An empty replacement clears the
+preamble. Whole-dossier `--body-only` requires no section selector. Human dossier
+output labels authored states as revisions. Missing attachment/section targets
+now list actual heading candidates; selection remains exact and unambiguous.
+
+
+### Migrate manifest storage
+
+**Current main, unreleased:** new archives use compressed manifest storage.
+Existing uncompressed projects require an explicit migration before normal use:
+
+```sh
+lixity research migrate-storage --project ./novel \
+  --backup ./backups/novel-before-manifest-compression.tar.gz --json
+```
+
+Stop every service/writer using that project first. The backup must be outside
+`research/` and `.lixity/research/`; an existing backup is never overwritten.
+An optional `--expected-snapshot HASH` binds the migration to the reviewed HEAD.
+The migration verifies a restored backup, rechecks HEAD under the writer lock,
+stages and verifies all accepted compressed manifests, then atomically publishes
+the layout marker. Only verified accepted plaintext duplicates are removed.
+HEAD, canonical manifest hashes, authored revisions, media and retained source
+bytes stay unchanged. Interrupted staging leaves plaintext authoritative;
+interrupted cleanup leaves a valid compressed store and can be retried using
+the same verified backup. Unrelated recovery objects are not deleted.
+
+Keep enough free space for the backup, its temporary restored copy and compressed
+manifests before plaintext is reclaimed. The receipt reports original/compressed
+manifest bytes and unchanged snapshot. Portable backups retain the existing
+`research-export-local/1` transport with canonical `.json` members; restore
+converts unpublished staging into current compressed storage before publication.
+This reduces manifest bytes but does not introduce deltas or remove the 100,000
+revision-entry ceiling. Old program versions cannot open the new physical layout;
+rollback requires stopping writers and restoring the complete pre-migration
+backup with the intended program version. Restart with the current installation
+and audit after migration. There is one current storage/UI path, no compatibility
+mode to select.
+
+
+The current manifest `entries.maxItems` contract is deliberately relaxed from
+25,000 to 100,000. This changes admission capacity only: no accepted manifest is
+rewritten and no revision is removed. The independent 32 MiB canonical JSON
+limit and bounded gzip decompression remain enforced. A manifest with 100,000
+longest-kind entries and six-digit revision references fits that byte limit;
+actual input must still pass record/reference/history validation. Extremely
+large numeric values or other oversized serialized input remain bounded by the
+byte limit. Capacity warnings begin at 90% of the current entry limit.
 
 ===============================================================================
 ## docs/research/DATA_MODEL.md
@@ -6337,8 +6650,53 @@ in `research.archive`: bounded, checksum-verified objects must satisfy the
 versioned manifest model, project identity, consecutive generations and root
 termination. Invalid or incomplete history fails before output replacement or
 restored-store publication. Inventory paths use the repository's existing
-containment/symlink boundary, which also rejects parent components. This is
-validation of the existing format, with no schema migration or alternate store.
+containment/symlink boundary, which also rejects parent components. Record and
+manifest schemas describe canonical JSON independently of its physical encoding.
+
+**Current main:** `research/storage.json` explicitly selects the current gzip
+manifest layout (`research-storage-local/1`, `manifest_encoding: gzip`). New
+projects store manifests as `research/manifests/HASH.json.gz`. The shared
+repository accessor bounds both compressed input and decompressed JSON, checks
+gzip integrity and verifies SHA-256 over the exact original JSON bytes. HEAD,
+parent hashes, revision records and retained source bytes keep their identities.
+Normal reads require the current marker; plaintext archives need the explicit
+`research migrate-storage` command. The old plaintext transport is restricted to
+migration and portable restore, rather than silently selected per file.
+
+Migration validates the accepted ancestry and creates or verifies a
+non-overwriting portable backup outside research storage and its cache. It
+restores and audits that backup before taking the final writer lock and comparing
+HEAD. All accepted gzip objects are staged, flushed and verified before atomic
+marker publication. Only then are their matching plaintext copies removed;
+unpublished recovery files remain untouched. Interrupted staging keeps the
+plaintext layout authoritative. Interrupted cleanup leaves valid compressed
+storage and can be retried with the verified backup. Temporary backup verification
+requires room for a restored copy as well as both physical manifest encodings.
+
+**Current main:** explicit research audit reuses this manifest-chain validator.
+Its `records` count describes accepted revision objects, including historical
+authored revisions, rather than current identities or source files. Additive
+`manifest_history_checked` and `manifest_capacity` fields distinguish verified
+ancestry from entry usage; incomplete checks and unavailable capacity remain
+unknown. The capacity ceiling comes from the existing manifest model, with an
+advisory warning at 90% usage.
+
+Each accepted write retains a complete compact JSON manifest of accepted revision
+entries, compressed as an individual gzip object. Sources and blobs are referenced
+by hash, while authored record files retain complete immutable revisions.
+Consequently, many small edits can make
+manifest storage grow faster than new record bytes. Unchanged authored edits
+create no snapshot, and grouped transactions reduce the number of full manifests.
+Old manifests remain necessary for accepted ancestry verification. Compression
+reduces their byte size; it does not introduce delta manifests, change full-snapshot
+growth or remove the 100,000-entry ceiling, which includes historical revisions.
+
+Portable exports retain `research-export-local/1` and canonical uncompressed
+`research/manifests/HASH.json` members inside the gzip-compressed tar container.
+The physical storage marker is omitted. Inventory checksums still describe those
+canonical bytes, not compressed-object hashes. Restore validates the portable
+envelope and complete ancestry, then converts manifests in its private staging
+directory to the current gzip layout before validating and publishing the store.
 
 **Since v0.7.3:** export owns the repository writer lock from
 accepted-snapshot selection until its compressed candidate is self-contained.
@@ -7218,6 +7576,18 @@ calibration, navigability or historical accuracy.
 
 ## Shared document orientation and metric presentation
 
+**Current main, unreleased:** `research-content.js` owns one dossier reading
+presentation. It renders the canonical body in source order; `section_map` is
+a grouped lookup projection, never a reading source. Repeated headings and
+their original levels remain in place. Exact unambiguous section-edit actions
+are attached to their authored headings. Record inspection adapts its envelope
+to the same reader, gating authoring by capability and keeping exact source
+versions. The inspection context does not query current linked claims for an
+older record. Prose uses the shared reading measure; maps, media and tables can
+use the available document width. Supplemental dossier/global actions follow
+the reading content. No project data conversion or compatibility UI is needed
+for this presentation change.
+
 The section-navigation helper added in v0.7.3 decorates existing semantic links in
 analysis and accepted dossier renderings. One instance per connected host resolves
 the actual scroll root, coalesces reads/paint by animation frame and disposes
@@ -7484,6 +7854,25 @@ selects rows after full references/counts are computed, without renumbering.
 Without `--json`, the selected-layer CLI prints a source-anchored human report.
 Chapter/FDR thresholds are different policies and are not changed by this view.
 
+**Current main, unreleased author triage:** `analysis-review --project PATH
+[--json]` / `lixity.analysis_review.review_analysis(project, manuscript=None,
+language=None, thresholds=None)` returns `lixity-analysis-review/1` with source,
+resolved-analysis and review-state SHA-256 identities. `observations` are only
+the existing tense flags, with exact paragraph identity, lines, chapter, severity,
+present/past hits, mixed/switch booleans and status. Status is `unreviewed`,
+`kept`, `changed`, `later` or `stale`; `previous_status` preserves the matching
+prior assertion. `completed` counts current kept/changed decisions. It is not a
+quality measure, verified edit count or research review status.
+
+`record_analysis_review(project, observation_id, status, *,
+expected_source_sha256, expected_analysis_sha256, expected_review_sha256, ...)`
+accepts `kept|changed|later` only and requires all reviewed identities.
+Source/configuration/threshold changes conservatively invalidate earlier
+matching decisions. Missing state is distinct from corrupt/unreadable state;
+unmatched earlier observations are retained and counted separately. Reads
+write nothing; saved state contains identities and author assertions, not prose.
+See the [review workflow and storage limits](USAGE.md#reading-paragraphs).
+
 `profile --layer KEY --evidence --json` adds a separate opt-in
 `meta.schema_version: "paragraph-layer-evidence/1"`. Its selected rows add
 `evidence` with `schema_version: "paragraph-evidence/1"`,
@@ -7643,6 +8032,9 @@ Analysis Off and Focus hide both displays without resetting their preferences.
 | `#manuscript-pdf-layout` / `#manuscript-pdf-download` / `#manuscript-pdf-status` | layout selector, download button and live status region; native PDF menu starts collapsed |
 | `#workspace-reader-toggle` / `#workspace-reader-panel` | opt-in **Dossier alongside** view; closing it preserves the existing manuscript DOM/state |
 | `#workspace-reader-dossier` / `#workspace-reader-refresh` / `#workspace-reader-status` / `#workspace-reader-body` | selected dossier, explicit refresh, live status and read-only rendered body |
+| `.research-dossier-body-rendered [data-dossier-heading]` | source-order authored headings; repeated titles retain distinct local navigation targets |
+| `.research-section-actions [data-dossier-section]` | edit the exact unambiguous authored section at its displayed heading |
+| `.research-dossier-actions > summary` | open supplemental dossier creation and project-wide record navigation below the reading content |
 | `data-action="<name>"` + `data-payload="<form-id>"` | control-server action |
 | `data-marker-kind="<kind>"` / `data-marker-resolve="<id>"` | set/resolve a work marker (inline note field); **never scrolls** – marker controls are excluded from jump activation |
 | `role="button" tabindex="0"` | every clickable non-native target (KPI tile, band row, loading bar, table row, heatmap cell) |
@@ -8113,6 +8505,17 @@ locks. Local metadata can change after an observation.
 
 When running `lixity serve --port 8765`, local agents can trigger deterministic workspace actions over HTTP:
 
+**Current-main analysis review endpoints:** `GET /api/analysis-review?project_token=...`
+reads the selected displayed analysis's review state. `POST /api/analysis-review`
+accepts only `project_token`, `observation_id`, `status`,
+`expected_source_sha256`, `expected_analysis_sha256`, `expected_review_sha256`.
+The token is `body[data-manuscript-project-token]`, shared with manuscript export
+selection. Same-origin/host rules and the workspace lock apply; obsolete source,
+settings or review state returns 409, invalid input 400. Unreadable state never
+becomes an empty success. Writes change only project-local author review state,
+never manuscript text or Research records. `enabled_actions=["analysis-review"]`
+is an explicit native save capability; static reading sites omit private state.
+
 Browser API diagnostics report request metadata without copying response bodies
 to the console.
 Native reading-website exports additionally write content-free lifecycle logs
@@ -8335,7 +8738,7 @@ entries have no image URL. Historical reads resolve the pinned image version,
 not the latest source. Record/history dossier envelopes include both arrays.
 Current-main summaries resolve those references from the entire selected body,
 not only its display excerpt. Python `list_dossier_images(project,
-dossier_id=None, limit=100, offset=0)` and CLI `research dossier-images` return
+dossier_id=None, limit=100, offset=0, missing_provenance=False)` and CLI `research dossier-images` return
 `research-dossier-images-local/1`: `project_id`, `snapshot`, `images`, `total`,
 `offset`, `limit`, `has_more`. Entries identify current active dossier/revision,
 nearest heading, exact marker/codepoint offsets and retained source/version,
@@ -8350,7 +8753,7 @@ Human section reads preserve that level. CLI `--section HEADING --format text
 --body-only` emits only the selected `content` as UTF-8, without a display wrapper,
 selected heading or appended newline. Existing surrounding CR/LF trimming and
 descendant headings are retained. Use an actual unique `editable_sections` target
-for updates; an implicit preamble is only a read selection. Redirect source
+for section updates; explicit `--preamble` reads/edits the prefix before the first actual heading. Redirect source
 containing terminal controls or Unicode formatting to a file; raw unsafe terminal
 output is refused. See the [section roundtrip](research/USAGE.md#work-on-one-dossier-section).
 
@@ -8665,6 +9068,38 @@ Native routes use the selected research root:
 
 Browsing/capture authorizes no manuscript or Zotero-library writes. Retention
 permission does not authorize redistribution.
+
+
+Current-main `update_dossier_media_context(project, dossier_id, source_id,
+source_version_id, expected_snapshot=..., expected_revision=..., context=...,
+reason=..., actor="local-author", dry_run=False)` and CLI `research media-context`
+correct only `origin_url`/`provenance_note`. They reuse retained bytes/source
+identity and repin matching occurrences in one dossier atomically. Extracted
+media is refused to preserve text lineage. Receipts use
+`research-media-context-local/1` or `research-media-context-preview-local/1`.
+`get_dossier(..., preamble=True)` returns the source prefix in `content`;
+`revise_record(..., changes={"preamble": text})` uses ordinary guarded revision
+semantics. It cannot combine with a body/section replacement.
+
+
+Current-main native `POST /api/site-preflight` accepts the same strict
+`SiteExportRequest` as `/api/site-export`, including the selected project token
+and explicit research/source-file choices. It returns `{ok:true, preflight:...}`
+with `lixity-site-preflight/1`, measuring the actual prepared HTML/ZIP/files and
+media packaging/attribution-presence counts. No download or source writes occur;
+selection/context conflicts fail as for export. No mobile or rights verification
+is inferred. CLI `export-site --preflight [--json]` requires no output destination;
+`--output` is refused in this mode. See [export checks](USAGE.md#check-a-reading-website-before-exporting).
+
+Current manifest storage uses `research/storage.json` (`research-storage-local/1`,
+`manifest_encoding: gzip`) and digest-named `.json.gz` files. Digests are still
+SHA-256 of canonical uncompressed JSON. `Repository.read_manifest` is the bounded
+verified read owner. CLI `research migrate-storage --project PATH --backup PATH
+[--expected-snapshot HASH]` returns `research-storage-migration-local/1`; it verifies
+backup restoration before switching accepted manifest storage, preserves HEAD and
+source/revision bytes, and supports interrupted-cleanup retry. Normal old-layout
+access fails with a migration requirement. Portable exports remain canonical
+`.json` transport and restore converts staging before publication.
 
 ===============================================================================
 ## docs/LICENSING.md

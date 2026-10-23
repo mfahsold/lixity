@@ -126,18 +126,49 @@ function renderSafeMarkdown(rawText, dossierContext) {
   var imageRender = window.LixityDossierImages && dossierContext ? window.LixityDossierImages.prepareMarkdown(rawText, dossierContext) : null;
   var text = escapeHtml(imageRender ? imageRender.text : rawText);
 
-  var codeBlocks = [];
-  text = text.replace(/```([a-zA-Z0-9_\-]*)\n([\s\S]*?)```/g, function(match, lang, code) {
-    var placeholder = "@@@CODE_BLOCK_" + codeBlocks.length + "@@@";
-    if (lang && lang.toLowerCase() === "mermaid") {
-      codeBlocks.push(renderMermaidSvg(code));
-    } else {
-      codeBlocks.push('<pre><code' + (lang ? ' class="language-' + lang + '"' : '') + '>' + code.trim() + '</code></pre>');
-    }
-    return placeholder;
-  });
+  var codeBlocks = [], codeToken = "LIXITYCODEBLOCKTOKEN";
+  while (text.includes(codeToken)) codeToken += "X";
+  function protectCode(code, lang) {
+    var placeholder = codeToken + codeBlocks.length + "END";
+    var language = /^[a-zA-Z0-9_-]+$/.test(lang || "") ? lang : "";
+    codeBlocks.push(language.toLowerCase() === "mermaid" ? renderMermaidSvg(code) :
+      '<pre><code' + (language ? ' class="language-' + language + '"' : '') + '>' + code + '</code></pre>');
+    return "\n\n" + placeholder + "\n\n";
+  }
+  var codeLines = text.replace(/\r\n?/g, "\n").split("\n"), protectedLines = [];
+  // Match the backend's literal-block boundaries before looking for headings:
+  // tilde/backtick fences of any supported length and indented code are data.
+  for (var lineIndex = 0; lineIndex < codeLines.length; lineIndex++) {
+    var line = codeLines[lineIndex], fence = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
+    if (fence && (fence[1][0] !== "`" || !fence[2].includes("`"))) {
+      var literal = [], language = fence[2].trim().split(/\s+/)[0];
+      for (lineIndex++; lineIndex < codeLines.length; lineIndex++) {
+        var close = codeLines[lineIndex].match(/^ {0,3}(`{3,}|~{3,})\s*$/);
+        if (close && close[1][0] === fence[1][0] && close[1].length >= fence[1].length) break;
+        literal.push(codeLines[lineIndex]);
+      }
+      protectedLines.push(protectCode(literal.join("\n"), language));
+    } else if (/^(    |\t)/.test(line)) {
+      var indented = [];
+      while (lineIndex < codeLines.length && (/^(    |\t)/.test(codeLines[lineIndex]) || !codeLines[lineIndex].trim())) {
+        indented.push(codeLines[lineIndex].replace(/^(    |\t)/, "")); lineIndex++;
+      }
+      lineIndex--;
+      protectedLines.push(protectCode(indented.join("\n").replace(/\n+$/, ""), ""));
+    } else protectedLines.push(line);
+  }
+  text = protectedLines.join("\n");
 
-  var blocks = text.split(/\n\s*\n/);
+  // Headings are block boundaries even without surrounding blank lines. Fenced
+  // code was replaced above, so literal headings there remain untouched.
+  var blocks = [], pendingLines = [];
+  function flushLines() { if (pendingLines.length) blocks.push(pendingLines.join("\n")); pendingLines = []; }
+  text.replace(/\r\n?/g, "\n").split("\n").forEach(function(line) {
+    if (/^ {0,3}#{1,6}[ \t]+\S/.test(line)) { flushLines(); blocks.push(line.trimStart()); }
+    else if (!line.trim()) flushLines();
+    else pendingLines.push(line);
+  });
+  flushLines();
   var htmlBlocks = [];
 
   function parseInline(str, noLinks) {
@@ -203,7 +234,8 @@ function renderSafeMarkdown(rawText, dossierContext) {
     var headingMatch = block.match(/^(#{1,6})\s+(.*)$/);
     if (headingMatch && !headingMatch[2].includes("\n")) {
       var level = headingMatch[1].length;
-      htmlBlocks.push('<h' + level + '>' + parseInline(headingMatch[2]) + '</h' + level + '>');
+      var headingTitle = headingMatch[2].replace(/[ \t]+#+[ \t]*$/, "").trim();
+      htmlBlocks.push('<h' + level + ' data-dossier-heading="' + headingTitle.replace(/"/g, "&quot;") + '">' + parseInline(headingTitle) + '</h' + level + '>');
       continue;
     }
 
@@ -290,7 +322,9 @@ function renderSafeMarkdown(rawText, dossierContext) {
 
   var resultHtml = htmlBlocks.join("\n");
   codeBlocks.forEach(function(cbHtml, i) {
-    resultHtml = resultHtml.replace("@@@CODE_BLOCK_" + i + "@@@", cbHtml);
+    var token = codeToken + i + "END";
+    resultHtml = resultHtml.replace("<p>" + token + "</p>", function() {return cbHtml;})
+      .replace(token, function() {return cbHtml;});
   });
 
   return imageRender ? window.LixityDossierImages.restoreMarkdown(resultHtml, imageRender) : resultHtml;
@@ -299,6 +333,14 @@ function renderSafeMarkdown(rawText, dossierContext) {
 function researchDossierBodyHtml(bodyText, dossierContext, actions) {
   var escapedRaw = escapeHtml(bodyText || "");
   var rendered = renderSafeMarkdown(bodyText || "", dossierContext);
+  if (dossierContext && dossierContext.image_editable && (dossierContext.editable_sections || []).length) {
+    var template = document.createElement("template"); template.innerHTML = rendered;
+    template.content.querySelectorAll("[data-dossier-heading]").forEach(function(heading) {
+      var action = researchDossierSectionAction(dossierContext, heading.dataset.dossierHeading);
+      if (action) heading.insertAdjacentHTML("afterend", action);
+    });
+    rendered = template.innerHTML;
+  }
   return '<div class="research-dossier-body-wrap">' +
     '<div class="research-prose-bar">' +
       (actions || "") +
@@ -309,9 +351,10 @@ function researchDossierBodyHtml(bodyText, dossierContext, actions) {
   '</div>';
 }
 
-function researchDossierDetailHtml(detail, readOnly) {
+function researchDossierDetailHtml(detail, readOnly, options) {
+  options = options || {};
   readOnly = readOnly || window.LixitySite.readOnly;
-  var imageContext = Object.assign({}, detail, {image_editable: !readOnly});
+  var imageContext = Object.assign({}, detail, {image_editable: !readOnly && !detail.availability});
   var reviewAlert = "";
   if (detail.review_needed && detail.decision_reviews && detail.decision_reviews.length) {
     var needed = detail.decision_reviews.filter(function(r) { return r.status === "review_needed"; });
@@ -322,45 +365,31 @@ function researchDossierDetailHtml(detail, readOnly) {
         '</div>';
     }
   }
-  var bodyHtml = "";
-  if (detail.section_map && Object.keys(detail.section_map).length > 1) {
-    var secKeys = Object.keys(detail.section_map);
-    var secBlocks = secKeys.map(function(k) {
-      return '<details class="research-dossier-section-block" open>' +
-        '<summary><span>' + escapeHtml(k) + '</span></summary>' +
-        (readOnly ? "" : researchDossierSectionAction(detail, k)) +
-        '<div class="research-prose markdown-body">' + renderSafeMarkdown(detail.section_map[k], imageContext) + '</div>' +
-      '</details>';
-    }).join("");
-    bodyHtml = '<div class="research-dossier-body-wrap">' +
-      '<div class="research-prose-bar">' +
-        '<button type="button" class="ctl ctl-sm research-source-toggle" data-source-toggle>' + escapeHtml(uiLabel("research_show_source")) + '</button>' +
-      '</div>' +
-      '<div class="research-dossier-body-rendered">' + secBlocks + '</div>' +
-      '<pre class="research-dossier-body-source" hidden>' + escapeHtml(detail.body || "") + '</pre>' +
-    '</div>';
-  } else {
-    bodyHtml = (readOnly ? "" : (detail.editable_sections || []).map(function(section) { return researchDossierSectionAction(detail, section); }).join("")) +
-      researchDossierBodyHtml(detail.body, imageContext);
-  }
+  // The section map groups repeated titles for lookup. Reading always follows
+  // the original body, including repeated headings and their original levels.
+  var attachmentActions = imageContext.image_editable && window.LixityDossierImages ?
+    window.LixityDossierImages.actionsHtml(imageContext) : "";
+  var bodyHtml = researchDossierBodyHtml(detail.body, imageContext, attachmentActions);
   var markup = '<div class="research-dossier-folder">' + reviewAlert +
-    '<nav class="row" aria-label="' + escapeHtml(uiLabel("research_folder_global")) + '">' +
-    '<span class="ctl-note">' + escapeHtml(uiLabel("research_folder_global")) + '</span>' +
-    '<button type="button" class="ctl" data-research-global="claims">' + escapeHtml(uiLabel("research_tab_claims")) + '</button>' +
-    '<button type="button" class="ctl" data-research-global="decisions">' + escapeHtml(uiLabel("research_tab_decisions")) + '</button></nav>' +
-    (readOnly ? "" : '<div class="row"><button type="button" class="ctl" data-dossier-claim="' + escapeHtml(detail.id) + '">' + escapeHtml(uiLabel("research_claim_heading")) + '</button>' +
-    '<button type="button" class="ctl" data-dossier-decision="' + escapeHtml(detail.id) + '">' + escapeHtml(uiLabel("research_decision_heading")) + '</button></div>') +
     '<section class="research-folder-notes"><h4>' + escapeHtml(uiLabel("research_folder_notes")) + '</h4>' +
-    (!readOnly && window.LixityDossierImages ? window.LixityDossierImages.actionsHtml(detail) : "") + bodyHtml +
+    bodyHtml +
     (window.LixityDossierGeography ? window.LixityDossierGeography.html(detail.geography, detail.geography_summary) : "") + '</section>' +
-    (researchContextToken() ? '<section class="research-dossier-claims"><h4>' +
+    (!options.recordView && researchContextToken() ? '<section class="research-dossier-claims"><h4>' +
       escapeHtml(uiLabel("research_dossier_claims")) + '</h4><p class="ctl-note">' +
       escapeHtml(uiLabel("research_loading")) + '</p></section>' : '') +
     '<section class="research-folder-citations"><h4>' + escapeHtml(uiLabel("research_citations")) + '</h4>' +
     ((detail.citations || []).length ? detail.citations.map(function(citation) {
       return researchCitationHtml(citation, !readOnly);
     }).join("") : '<p class="ctl-note">' + escapeHtml(uiLabel("research_revision_no_citations")) + '</p>') +
-    '</section></div>';
+    '</section>' +
+    (options.recordView ? "" : '<details class="research-dossier-actions"><summary>' + escapeHtml(uiLabel("research_dossier_actions")) + '</summary>' +
+      (readOnly ? "" : '<div class="row"><button type="button" class="ctl" data-dossier-claim="' + escapeHtml(detail.id) + '">' + escapeHtml(uiLabel("research_claim_heading")) + '</button>' +
+      '<button type="button" class="ctl" data-dossier-decision="' + escapeHtml(detail.id) + '">' + escapeHtml(uiLabel("research_decision_heading")) + '</button></div>') +
+      '<nav class="row" aria-label="' + escapeHtml(uiLabel("research_folder_global")) + '">' +
+      '<span class="ctl-note">' + escapeHtml(uiLabel("research_folder_global")) + '</span>' +
+      '<button type="button" class="ctl" data-research-global="claims">' + escapeHtml(uiLabel("research_tab_claims")) + '</button>' +
+      '<button type="button" class="ctl" data-research-global="decisions">' + escapeHtml(uiLabel("research_tab_decisions")) + '</button></nav></details>') +
+    '</div>';
   return researchDossierContentsHtml(markup);
 }
 
@@ -377,19 +406,18 @@ function researchDossierContentsHtml(markup) {
   var nav = document.createElement("nav"); nav.className = "section-navigation";
   nav.dataset.sectionNav = "dossier"; nav.setAttribute("aria-label", uiLabel("research_sections"));
   var list = document.createElement("ul"); nav.appendChild(list); contents.append(summary, nav);
-  var levels = [], parents = [list], previous = null, mapDepth = 0, ordinal = 0;
-  var targets = folder.querySelectorAll(".research-folder-notes, .research-dossier-section-block > summary, " +
+  var levels = [], parents = [list], previous = null, ordinal = 0;
+  var targets = folder.querySelectorAll(".research-folder-notes, " +
     ".research-dossier-body-rendered h1, .research-dossier-body-rendered h2, .research-dossier-body-rendered h3, " +
     ".research-dossier-body-rendered h4, .research-dossier-body-rendered h5, .research-dossier-body-rendered h6, " +
-    ".research-dossier-claims, .research-folder-citations");
+    ".dossier-geography, .research-dossier-claims, .research-folder-citations");
   targets.forEach(function(target) {
     var depth = 0, text;
-    if (target.matches("section")) { levels = []; mapDepth = 0; text = target.querySelector("h4").textContent; }
-    else if (target.matches("summary")) { levels = []; mapDepth = 1; depth = 1; text = target.textContent; }
+    if (target.matches("section")) { levels = []; text = target.querySelector("h4").textContent; }
     else {
       var level = Number(target.tagName.slice(1));
       while (levels.length && levels[levels.length - 1] >= level) levels.pop();
-      levels.push(level); depth = mapDepth + levels.length; text = target.textContent;
+      levels.push(level); depth = levels.length; text = target.textContent;
     }
     target.id = prefix + (++ordinal); target.dataset.sectionTarget = "";
     while (parents.length > depth + 1) parents.pop();
@@ -524,7 +552,8 @@ async function enhanceResearchDossierClaims(host, detail, stillCurrent) {
 function researchDossierSectionAction(detail, section) {
   if (window.LixitySite.readOnly) return "";
   if (!(detail.editable_sections || []).includes(section)) return "";
-  return '<div class="row"><button type="button" class="ctl ctl-sm" data-research-revise="dossier" data-record-id="' +
+  return '<div class="row research-section-actions"><button type="button" class="ctl ctl-sm" aria-label="' +
+    escapeHtml(uiLabel("research_section_edit") + ': ' + section).replace(/"/g, "&quot;") + '" data-research-revise="dossier" data-record-id="' +
     escapeHtml(detail.id) + '" data-dossier-section="' + escapeHtml(section).replace(/"/g, "&quot;") +
     '" data-base-revision="' + Number(detail.revision) + '">' + escapeHtml(uiLabel("research_section_edit")) + '</button></div>';
 }

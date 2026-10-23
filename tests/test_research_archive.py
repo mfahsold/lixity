@@ -166,7 +166,7 @@ else:
             Path("research"),
             Path("research/HEAD.json"),
             Path("research/project.json"),
-            Path(f"research/manifests/{snapshot.digest}.json"),
+            original.manifest_path(snapshot.digest).relative_to(original.root),
             original.record_path(snapshot.manifest.entries[0]).relative_to(original.root),
             next((original.data / "blobs").iterdir()).relative_to(original.root),
             Path("research/new/nested/backup.tar.gz"),
@@ -498,16 +498,15 @@ else:
         """Keep the current snapshot valid while replacing its ancestor fixture."""
         repository = Repository(project)
         snapshot = repository.snapshot()
-        parent_path = repository.data / "manifests" / f"{snapshot.manifest.parent}.json"
-        parent = json.loads(parent_path.read_bytes())
+        parent = json.loads(repository.read_manifest(snapshot.manifest.parent))
         parent.update(changes)
         parent_bytes = json.dumps(parent).encode("utf-8")
         parent_digest = digest(parent_bytes)
-        (repository.data / "manifests" / f"{parent_digest}.json").write_bytes(parent_bytes)
+        repository.write_manifest(parent_digest, parent_bytes)
         current = snapshot.manifest.model_copy(update={"parent": parent_digest})
         current_bytes = encode(current)
         current_digest = digest(current_bytes)
-        (repository.data / "manifests" / f"{current_digest}.json").write_bytes(current_bytes)
+        repository.write_manifest(current_digest, current_bytes)
         (repository.data / "HEAD.json").write_bytes(encode(Head(sha256=current_digest)))
         self.assertEqual(Repository(project).snapshot().digest, current_digest)
 
@@ -537,11 +536,11 @@ else:
                 shutil.copytree(self.project, project)
                 repository = Repository(project)
                 snapshot = repository.snapshot()
-                ancestor = repository.data / "manifests" / f"{snapshot.manifest.parent}.json"
+                ancestor = repository.manifest_path(snapshot.manifest.parent)
                 if missing:
                     ancestor.unlink()
                 else:
-                    ancestor.write_bytes(ancestor.read_bytes() + b" ")
+                    ancestor.write_bytes(b"damaged compressed ancestor")
                 output = self.root / f"damaged-{missing}.tar.gz"
                 with self.assertRaises(ResearchError):
                     export_archive(project, output)
@@ -556,10 +555,14 @@ else:
             inventory = json.loads(member.read())
         self.replace_parent(self.project, {"parent": "../invalid-selector"})
         payloads = {}
+        repository = Repository(self.project)
         for path in (self.project / "research").rglob("*"):
             relative = path.relative_to(self.project).as_posix()
-            if path.is_file() and not relative.startswith("research/.cache/"):
-                payloads[relative] = path.read_bytes()
+            if path.is_file() and relative != "research/storage.json" and not relative.startswith("research/.cache/"):
+                if relative.startswith("research/manifests/") and relative.endswith(".json.gz"):
+                    payloads[relative.removesuffix(".gz")] = repository.read_manifest(path.name.removesuffix(".json.gz"))
+                else:
+                    payloads[relative] = path.read_bytes()
         inventory["snapshot"] = Repository(self.project).snapshot().digest
         inventory["files"] = {
             name: {"sha256": hashlib.sha256(content).hexdigest(), "byte_length": len(content)}
@@ -608,8 +611,13 @@ else:
         self.assertEqual(restore_meta["snapshot"], export_meta["snapshot"])
         self.assertFalse((target_dir / "research" / ".cache").exists())
         for relative in manifest_json["files"]:
-            self.assertEqual((target_dir / relative).read_bytes(),
-                             (self.project / relative).read_bytes())
+            if relative.startswith("research/manifests/"):
+                checksum = Path(relative).stem
+                self.assertEqual(Repository(target_dir).read_manifest(checksum),
+                                 Repository(self.project).read_manifest(checksum))
+            else:
+                self.assertEqual((target_dir / relative).read_bytes(),
+                                 (self.project / relative).read_bytes())
 
         # Audit restored archive
         audit = api.audit(target_dir)

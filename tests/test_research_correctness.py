@@ -7,7 +7,7 @@ These tests guard the specific invariants fixed or identified during the
    deleted only after HEAD is atomically rotated to the new snapshot.
 2. Evidence-ID deduplication: create_dossier silently deduplicates passage
    IDs, matching revise_record behaviour.
-3. Snapshot entry limit: Manifest rejects more than 25,000 entries at both
+3. Snapshot entry limit: Manifest rejects more than 100,000 entries at both
    commit time (ValidationError → ResearchError) and read time.
 """
 
@@ -149,9 +149,9 @@ class TestEvidenceIdDeduplication(unittest.TestCase):
 
 
 class TestSnapshotEntryLimit(unittest.TestCase):
-    """The Manifest model enforces a max of 25,000 entries at both commit and read time."""
+    """The Manifest model enforces a max of 100,000 entries at both commit and read time."""
 
-    def test_manifest_rejects_over_25000_entries_at_validation(self) -> None:
+    def test_manifest_rejects_over_100000_entries_at_validation(self) -> None:
         entry = Entry(
             kind="project",
             ref=Reference(id="urn:uuid:00000000-0000-4000-8000-000000000001"),
@@ -163,10 +163,10 @@ class TestSnapshotEntryLimit(unittest.TestCase):
                 project_id="urn:uuid:00000000-0000-4000-8000-000000000001",
                 generation=1,
                 parent=None,
-                entries=[entry] * 25001,
+                entries=[entry] * 100001,
             )
 
-    def test_manifest_accepts_exactly_25000_entries(self) -> None:
+    def test_manifest_accepts_exactly_100000_entries(self) -> None:
         entry = Entry(
             kind="project",
             ref=Reference(id="urn:uuid:00000000-0000-4000-8000-000000000001"),
@@ -177,9 +177,9 @@ class TestSnapshotEntryLimit(unittest.TestCase):
             project_id="urn:uuid:00000000-0000-4000-8000-000000000001",
             generation=1,
             parent=None,
-            entries=[entry] * 25000,
+            entries=[entry] * 100000,
         )
-        self.assertEqual(len(manifest.entries), 25000)
+        self.assertEqual(len(manifest.entries), 100000)
 
     def test_manifest_rejects_zero_entries(self) -> None:
         with self.assertRaises(ValidationError):

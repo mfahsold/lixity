@@ -58,7 +58,12 @@ server.serve_forever()
       // clicking blindly would toggle the preserved detail shut.
       if (await details.evaluate(node => node.parentElement.open)) await details.click();
       await details.click();
-      await expect(page.locator(`[data-dossier-claim="${fixture.dossier}"]`)).toBeVisible();
+      await expect(details.locator('..').locator('.research-dossier-actions > summary')).toBeVisible();
+    }
+    async function openActions() {
+      const actions = details.locator('..').locator('.research-dossier-actions');
+      if (!await actions.evaluate(node => node.open)) await actions.locator(':scope > summary').click();
+      await expect(actions.locator(`[data-dossier-claim="${fixture.dossier}"]`)).toBeVisible();
     }
     async function reviseRecord(transform) {
       const current = await (await page.request.get(fixture.url + '/api/research/record?kind=dossier&id=' + fixture.dossier)).json();
@@ -76,6 +81,13 @@ server.serve_forever()
     await page.goto(fixture.url);
     await page.locator('#tab-view-research').click();
     await openDetails();
+    const initialActions = details.locator('..').locator('.research-dossier-actions');
+    assert.equal(await initialActions.evaluate(node => node.open), false, 'Dossier reading starts with secondary actions closed');
+    await expect(page.locator(`[data-dossier-claim="${fixture.dossier}"]`)).not.toBeVisible();
+    const recordBeforeActions = await (await page.request.get(fixture.url + '/api/research/record?kind=dossier&id=' + fixture.dossier)).json();
+    await openActions();
+    assert.deepEqual(await (await page.request.get(fixture.url + '/api/research/record?kind=dossier&id=' + fixture.dossier)).json(), recordBeforeActions,
+      'Opening dossier actions preserves the accepted source record and snapshot');
     await page.evaluate(() => {
       document.getElementById('r-claim-title').value = 'Preserved contextual claim';
       document.getElementById('r-claim-statement').value = 'A synthetic contextual statement.';
@@ -90,6 +102,7 @@ server.serve_forever()
     const claims = await (await page.request.get(fixture.url + '/api/research/claims')).json();
     assert.equal(claims.claims[0].dossier_id, fixture.dossier);
     await openDetails();
+    await openActions();
     await page.evaluate(() => {
       document.getElementById('r-decision-title').value = 'Preserved contextual decision';
       document.getElementById('r-decision-rationale').value = 'A synthetic contextual rationale.';
@@ -166,6 +179,7 @@ server.serve_forever()
     // The same shared Apply guard also protects ordinary record edits and a
     // snapshot-only change where this record's own revision has not advanced.
     await openDetails();
+    await openActions();
     await page.locator(`[data-research-revise=dossier][data-record-id="${fixture.dossier}"]:not([data-dossier-section])`).click();
     await expect(page.locator('#research-revision-field-title')).toHaveValue('Current synthetic dossier');
     await page.locator('#research-revision-field-title').fill('My reviewed general title');

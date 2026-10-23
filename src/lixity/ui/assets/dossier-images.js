@@ -207,8 +207,7 @@
     var heading = "";
     body.querySelectorAll("h1, h2, h3, h4, h5, h6, .dossier-image").forEach(function(node) {
       if (!node.matches(".dossier-image")) { heading = node.textContent; return; }
-      var section = node.closest(".research-dossier-section-block");
-      var location = section ? section.querySelector("summary").textContent : heading;
+      var location = heading;
       var image = node.querySelector("img"), caption = node.querySelector("figcaption");
       var name = image && image.alt || caption && caption.firstChild.textContent || label("attachment");
       node.id = "dossier-media-" + (++mediaSequence); node.tabIndex = -1;

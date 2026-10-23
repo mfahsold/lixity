@@ -49,7 +49,7 @@ def test_section_text_reads_include_only_selected_subtree(project, selector):
     status, output, errors = read(project, "dossier", *selected, "--section", " target ", "--format", "text")
     assert status == 0 and errors == ""
     assert "TARGET_BODY." in output and "CHILD_BODY." in output
-    assert "Target" in output and "Version 1" in output
+    assert "Target" in output and "Revision 1" in output
     assert "BEFORE_ONLY" not in output and "AFTER_ONLY" not in output
     status, raw, errors = read(project, "dossier", *selected, "--section", "Target", "--json")
     assert status == 0 and errors == ""

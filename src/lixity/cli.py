@@ -332,6 +332,7 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("service", "Manage an owned local dashboard process"),
     ("analyze", "Corpus metrics (text/JSON, self-describing meta block)"),
     ("profile", "Paragraph tense/style estimates (JSON; --layer text/JSON)"),
+    ("analysis-review", "Review tense observations and save explicit project-local author decisions"),
     ("dialogue", "Dialogue turn structure (text/JSON)"),
     ("characters", "Curated name mentions and declared POV across chapters (text/JSON)"),
     ("pacing", "Scene structure, pacing and chapter hooks (text/JSON)"),
@@ -438,6 +439,10 @@ _lixity_complete() {
         COMPREPLY+=( $(compgen -d -- "$cur") )
         return 0
     fi
+    if [[ ${COMP_WORDS[1]} == analysis-review ]]; then
+        COMPREPLY=( $(compgen -W "--help --project --manuscript --language --json --observation --status --expected-source-sha256 --expected-analysis-sha256 --expected-review-sha256" -- "$cur") )
+        return 0
+    fi
     if [[ ${COMP_WORDS[1]} == scenes ]]; then
         COMPREPLY=( $(compgen -W "--help --project --language --json --chapter --scene --latest" -- "$cur") )
         COMPREPLY+=( $(compgen -f -- "$cur") )
@@ -512,6 +517,19 @@ __LIXITY_ZSH_COMMANDS__
         project)
           _arguments '1:project directory:_files -/' \\
             '--project[Explicit project root]:directory:_files -/' '--json[JSON inspection]' '--help[Help]'
+          ;;
+        analysis-review)
+          _arguments \
+            '--project[Explicit project root]:directory:_files -/' \
+            '--manuscript[Selected manuscript]:file:_files' \
+            '--language[Analysis language]:language:(en de fr es it pt nl generic auto)' \
+            '--json[Versioned observations and state]' \
+            '--observation[Reviewed observation identity]:sha256:' \
+            '--status[Author assertion]:status:(kept changed later)' \
+            '--expected-source-sha256[Reviewed manuscript digest]:sha256:' \
+            '--expected-analysis-sha256[Reviewed analysis digest]:sha256:' \
+            '--expected-review-sha256[Reviewed decision digest]:sha256:' \
+            '--help[Help]'
           ;;
         doctor)
           _arguments '--json[JSON diagnostics]' '--port[Service port]:port:' '--help[Help]'
@@ -1361,6 +1379,19 @@ def main(argv: list[str] | None = None) -> int:
             configure_service(sub.add_parser(name, help=help_text))
             continue
         p = sub.add_parser(name, help=help_text, description=help_text)
+        if name == "analysis-review":
+            p.add_argument("--project", required=True, help="Explicit project root")
+            p.add_argument("--manuscript", help="Manuscript within project (default: configured manuscript)")
+            p.add_argument("--language", default=None, help="Explicit analysis language; default: project setting or en")
+            p.add_argument("--json", action="store_true", help="Complete versioned observation and review identities")
+            p.add_argument("--observation", help="Exact observation ID from a current read")
+            p.add_argument("--status", choices=("kept", "changed", "later"), help="Your decision, never a verified text edit")
+            for name_part in ("source", "analysis", "review"):
+                p.add_argument("--expected-" + name_part + "-sha256", help="Reviewed exact identity required for saving")
+            p.epilog = ("Reads write nothing. To save, supply --observation, --status and all three reviewed "
+                        "--expected-*-sha256 values. Decisions live in .lixity/analysis-review.json, not manuscript prose. "
+                        "Changed text or analysis makes prior decisions stale; deferred items stay open.")
+            continue
         if name == "project":
             selector = p.add_mutually_exclusive_group()
             selector.add_argument("project_path", nargs="?", default=argparse.SUPPRESS,
@@ -1382,7 +1413,8 @@ def main(argv: list[str] | None = None) -> int:
 
             p.add_argument("file", nargs="?", help="Manuscript inside the selected project (default: project manuscript)")
             p.add_argument("--project", required=True, metavar="PATH", help="Explicit project root")
-            p.add_argument("-o", "--output", required=True, help="A new directory for the reading website; existing paths are never overwritten")
+            p.add_argument("-o", "--output", help="A new directory for the reading website; existing paths are never overwritten")
+            p.add_argument("--preflight", action="store_true", help="Measure the prepared package without writing it; omit --output")
             p.add_argument("--language", default=None, help="Analysis language (default: project language or en)")
             p.add_argument("--include-research", action="store_true", help="Include authored research, revision history, cited excerpts and manuscript links")
             p.add_argument("--include-source-files", action="store_true", help="Include selected source files with redistribution permission; review mode also requires --include-research")
@@ -1558,6 +1590,18 @@ def main(argv: list[str] | None = None) -> int:
             "--json", action="store_true", help=argparse.SUPPRESS if name == "pdf" else "JSON output"
         )
         if name == "profile":
+            p.formatter_class = argparse.RawDescriptionHelpFormatter
+            p.epilog = (
+                "Start with one question, such as sentence rhythm:\n"
+                "  lixity profile manuscript.md --language en --layer asl --only-notable\n"
+                "Then inspect the counted text:\n"
+                "  lixity profile manuscript.md --language en --layer asl --only-notable --evidence\n\n"
+                "ASL means words per sentence. Read the reported source lines before deciding.\n"
+                "Paragraph comparisons use the same chapter, not the manuscript-wide chapter baseline.\n"
+                "Notable means a descriptive difference, not an error or quality verdict.\n"
+                "Unavailable comparison is not a measured zero. English is the default;\n"
+                "choose the manuscript language explicitly. Add --json for structured output."
+            )
             p.add_argument(
                 "--layer", choices=tuple(LAYER_FEATURES),
                 help="Inspect one paragraph metric and its within-chapter comparison (text; --json for paragraph-layer/1)",
@@ -1610,6 +1654,37 @@ def main(argv: list[str] | None = None) -> int:
                 "--sans-bold-font", default=None, help="TrueType file for report headings"
             )
     args = parser.parse_args(argv)
+    if args.command == "analysis-review":
+        from .analysis_review import record_analysis_review, review_analysis
+        from .format import safe_text
+
+        fields = (args.observation, args.status, args.expected_source_sha256,
+                  args.expected_analysis_sha256, args.expected_review_sha256)
+        if any(value is not None for value in fields) and not all(value is not None for value in fields):
+            parser.error("Saving requires --observation, --status and all three --expected-*-sha256 values")
+        try:
+            if args.status:
+                triage_report = record_analysis_review(args.project, args.observation, args.status,
+                    manuscript=args.manuscript, language=args.language,
+                    expected_source_sha256=args.expected_source_sha256,
+                    expected_analysis_sha256=args.expected_analysis_sha256,
+                    expected_review_sha256=args.expected_review_sha256)
+            else:
+                triage_report = review_analysis(args.project, manuscript=args.manuscript, language=args.language)
+            if args.json:
+                print(orjson.dumps(triage_report, option=orjson.OPT_INDENT_2).decode())
+            else:
+                print(f"Tense-pattern review: {triage_report['completed']} / {triage_report['total']} decisions completed.")
+                print("Differences are not errors; changed is your assertion, and later remains open.")
+                for observation in triage_report["observations"][:20]:
+                    print(safe_text(f"{triage_report['source_path']}:{observation['start_line']}-{observation['end_line']} · "
+                        f"{observation['status']} · present {observation['present_hits']} / past {observation['past_hits']} · {observation['id']}"))
+                if triage_report["total"] > 20:
+                    print("First 20 observations shown; use --json for the complete guarded report.")
+            return EXIT_OK
+        except (OSError, ValueError, RuntimeError) as error:
+            print(f"{_m('err_prefix')} {safe_text(str(error))}", file=sys.stderr)
+            return EXIT_ERROR
     if args.command == "project":
         return _cmd_project(args)
     if args.command == "service":
@@ -1663,13 +1738,33 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_ERROR
     if args.command == "export-site":
         from .site_contracts import SiteExportOptions
-        from .site_export import export_site
+        from .site_export import export_site, prepare_site
 
+        if args.preflight and args.output:
+            parser.error("--preflight does not write an output directory; omit --output")
+        if not args.preflight and not args.output:
+            parser.error("export-site requires --output, or --preflight to check without writing")
         try:
             options = SiteExportOptions(include_research=args.include_research,
                                         include_source_files=args.include_source_files,
                                         mode=args.mode, publication_profile=args.publication_profile,
                                         max_chapter=args.max_chapter)
+            if args.preflight:
+                report = prepare_site(args.project, manuscript=args.file, language=args.language,
+                                      **options.model_dump(exclude_defaults=True)).preflight()
+                if args.json:
+                    print(_json(report, indent=True))
+                else:
+                    sizes, media = report["sizes"], report["media"]
+                    print(f"HTML: {sizes['html_bytes']:,} bytes; ZIP: {sizes['zip_bytes']:,} bytes; "
+                          f"all files: {sizes['total_bytes']:,} bytes ({sizes['file_count']} files)")
+                    print(f"Media references: {media['references']}; unavailable: {media['unavailable']}; "
+                          f"not packaged: {media['not_packaged']}; attribution incomplete: {media['missing_attribution']}; "
+                          f"ordinary images unchecked: {media['ordinary_image_references']}")
+                    print("Mobile layout: not checked. Rights: not verified. No output written.")
+                    if report["warnings"]:
+                        print("Warnings: " + ", ".join(report["warnings"]))
+                return EXIT_OK
             manifest = export_site(
                 args.project, args.output, manuscript=args.file, language=args.language,
                 **options.model_dump(exclude_defaults=True),

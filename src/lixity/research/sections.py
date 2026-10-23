@@ -53,6 +53,35 @@ def _editable_section_titles(spans: list[_Section]) -> list[str]:
     return [span.title for span in spans if counts[span.title.casefold()] == 1]
 
 
+def _section_candidates(spans: list[_Section]) -> str:
+    titles = list(dict.fromkeys(span.title for span in spans))
+    shown = ", ".join(repr(title) for title in titles[:20]) or "none"
+    return shown + (f"; {len(titles) - 20} more in the full dossier" if len(titles) > 20 else "")
+
+
+def preamble_text(body: str) -> str:
+    """Return the exact prefix before the first real ATX heading, if present."""
+    spans = _section_spans(body)
+    return body[:spans[0].start] if spans else body
+
+
+def update_preamble(body: str, content: str) -> str:
+    """Replace only the prefix; retain all heading and section bytes unchanged."""
+    if not isinstance(content, str):
+        raise ResearchError("Preamble content must be text")
+    spans = _section_spans(body)
+    prefix_end = spans[0].start if spans else len(body)
+    if content == body[:prefix_end]:
+        return body
+    line_break = re.search(r"\r\n|\r|\n", body)
+    newline = line_break.group() if line_break else "\n"
+    replacement = content.replace("\r\n", "\n").replace("\r", "\n").replace("\n", newline)
+    if not spans:
+        return replacement
+    replacement = replacement.strip("\r\n")
+    return (replacement + newline * 2 if replacement else "") + body[spans[0].start:]
+
+
 def extract_sections(body: str) -> dict[str, str]:
     """Map ATX titles to direct content; retain all repeated-title fragments."""
     return _extract_sections(body, _section_spans(body))

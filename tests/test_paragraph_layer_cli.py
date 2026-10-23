@@ -40,6 +40,16 @@ def run(capsys, *arguments):
     return status, output.out, output.err
 
 
+def test_help_offers_a_read_count_compare_path_without_changing_defaults(capsys):
+    status, output, errors = run(capsys, "--help")
+    assert status == 0 and not errors
+    assert "--language en --layer asl --only-notable" in output
+    assert "Then inspect the counted text:" in output
+    assert "ASL means words per sentence" in output
+    assert "same chapter, not the manuscript-wide chapter baseline" in output
+    assert "Unavailable comparison is not a measured zero" in output
+
+
 @pytest.mark.parametrize("arguments", [(), ("--json",)])
 def test_default_profile_stays_byte_identical_to_v2_api(manuscript, capsys, arguments):
     status, output, errors = run(capsys, manuscript, *arguments)

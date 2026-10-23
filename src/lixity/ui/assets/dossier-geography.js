@@ -179,6 +179,13 @@
           (geometry ? '<details><summary>' + safe(label("coordinates")) + '</summary><p class="ctl-note">' + safe(label("coordinate_order")) + '</p><pre>' + safe(coordinateText(geometry)) + '</pre></details>' : '') + '</li>';
       }).join("") + '</ol></section>';
   }
+  function showFeatureDetails(entry) {
+    entry.querySelector("button[data-geo-select]").focus({preventScroll: true});
+    // Arrive at the entry, not only its title at the viewport edge. Reuse the
+    // dossier navigation margin so sticky reading controls cannot cover it.
+    if (typeof scrollAndFlash === "function") scrollAndFlash(entry, {behavior: "auto"});
+    else entry.scrollIntoView({block: "start"});
+  }
   function selectFeature(control, keyboardActivation) {
     var root = control.closest(".dossier-geography");
     if (!root) return;
@@ -212,10 +219,7 @@
     if (coordinates) coordinates.open = true;
     // Browser focus can also follow a pointer click. Only explicit keyboard
     // activation moves into the list; pointer selection keeps the map in view.
-    if (keyboardActivation) {
-      entry.querySelector("button[data-geo-select]").focus({preventScroll: true});
-      entry.scrollIntoView({block: "nearest"});
-    }
+    if (keyboardActivation) showFeatureDetails(entry);
   }
   function clearSelection(root) {
     root.querySelectorAll(".is-selected").forEach(function(node) { node.classList.remove("is-selected"); });
@@ -352,7 +356,7 @@
       if (action.hasAttribute("data-geo-clear")) { clearSelection(owner); return; }
       if (!selected) return;
       if (action.hasAttribute("data-geo-details")) {
-        selected.focus({preventScroll: true}); selected.scrollIntoView({block: "nearest"});
+        showFeatureDetails(selected.closest("li[data-geo-feature-index]"));
       } else {
         preference(owner).map = true;
         if (!maps.has(owner)) startMap(owner);
@@ -456,6 +460,7 @@
     var root = document.createElement("details"); root.id = identifier + "-editor"; root.className = "geography-editor research-details";
     var summary = document.createElement("summary"); summary.textContent = label("title"); root.appendChild(summary);
     var hint = document.createElement("p"); hint.className = "ctl-note"; hint.textContent = label("edit_hint"); root.appendChild(hint);
+    var routeHelp = document.createElement("p"); routeHelp.className = "ctl-note geography-route-help"; routeHelp.textContent = label("route_help"); root.appendChild(routeHelp);
     var input = document.createElement("input"); input.type = "hidden"; input.id = identifier; root.appendChild(input);
     var list = document.createElement("div"); list.className = "geography-editor-features"; root.appendChild(list);
     var actions = document.createElement("div"); actions.className = "row";

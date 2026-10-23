@@ -20,7 +20,10 @@ from .pdf_context import manuscript_pdf_token
 class SiteExportRoutesMixin(ResponseMixin):
     """Assemble an in-memory ZIP without publishing or changing project files."""
 
-    def _handle_site_export(self, payload: dict[str, Any]) -> None:
+    def _handle_site_preflight(self, payload: dict[str, Any]) -> None:
+        self._handle_site_export(payload, preflight=True)
+
+    def _handle_site_export(self, payload: dict[str, Any], *, preflight: bool = False) -> None:
         export_id = token_hex(16)
         started = perf_counter()
         self._log.info("Website export id=%s stage=request", export_id)
@@ -63,8 +66,9 @@ class SiteExportRoutesMixin(ResponseMixin):
             )
             self._log.info("Website export id=%s stage=zip_preparation duration_ms=%d",
                            export_id, round((perf_counter() - started) * 1000))
-            content = bundle.to_zip()
-            if len(content) > MAX_ARTIFACT_BYTES:
+            report = bundle.preflight() if preflight else None
+            content = b"" if preflight else bundle.to_zip()
+            if (report["sizes"]["zip_bytes"] if report is not None else len(content)) > MAX_ARTIFACT_BYTES:
                 self._log.warning("Website export id=%s stage=download_limit", export_id)
                 self._json({"ok": False, "message": "Website ZIP exceeds the download limit; use export-site to a local directory"}, 413)
                 return
@@ -80,6 +84,10 @@ class SiteExportRoutesMixin(ResponseMixin):
             if current != token or info is not self.dashboard_info:
                 self._log.warning("Website export id=%s stage=context_changed", export_id)
                 self._json({"ok": False, "message": "The selected project changed; reload before downloading"}, 409)
+                return
+            if preflight:
+                self._log.info("Website export id=%s stage=preflight_prepared", export_id)
+                self._json({"ok": True, "preflight": report})
                 return
             filename = slugify(bundle.manifest["project"]["title"]) + "-reading-website.zip"
             self._log.info("Website export id=%s stage=prepared bytes=%d duration_ms=%d",

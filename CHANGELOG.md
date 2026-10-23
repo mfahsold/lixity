@@ -8,6 +8,27 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Explicit website preflight in CLI and native UI measures prepared HTML/ZIP/file
+  sizes and reports unavailable, unpackaged and unattributed dossier media without
+  writing or downloading. Mobile rendering and rights verification remain explicit
+  unchecked boundaries.
+- Manifest capacity increases to 100,000 entries while retaining the 32 MiB
+  canonical-object limit; capacity warnings follow the current limit.
+- Compressed manifest storage with explicit verified-backup migration, atomic
+  layout switch and retryable cleanup. Canonical hashes, HEAD, source bytes and
+  accepted revisions remain unchanged; portable backup transport stays stable.
+- Guarded `research media-context` corrects retained-media attribution without
+  duplicating source identities or media bytes; explicit dossier `--preamble`
+  reads/edits and image `--missing-provenance` filtering reduce repair work.
+- Explicit project-local tense review decisions shared by native UI, CLI and
+  backend: kept/changed-by-author/deferred, guarded by source, analysis and review
+  identities; stale decisions do not count as completed. Filters and next-visible
+  passage support reading without automatic tasks. Private review state stays
+  out of manuscript prose, research records and reading exports.
+- `dossier-image --batch` previews a bounded explicit image manifest and applies
+  all captures with one dossier revision or none. Optional item hashes bind
+  reviewed bytes; relative paths resolve beside the manifest. `dossier-media`
+  exposes the existing PDF/MP4/WebM attachment transaction from CLI.
 - Versioned PDF/MP4/WebM dossier attachments reuse the image capture dialog,
   immutable source/context records and guarded dossier revision transaction.
   Shared full/section/history/source and reading-site views show document
@@ -18,6 +39,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   unchanged; attachments do not manufacture extraction or linguistic scores.
 
 ### Fixed
+- Research audit verifies the complete accepted manifest ancestry and reports
+  revision-entry capacity, with an advisory warning at 90% of the existing
+  25,000-entry limit. Missing or damaged ancestors fail integrity checks.
 - Dossier summaries resolve image/media references across the complete selected
   revision, not just the first 500 characters. A read-only paginated
   `research dossier-images` inventory shows current dossier/section placement,
@@ -46,6 +70,27 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   invalid and unsaved configuration without logging project identifiers.
 
 ### Changed
+- First-analysis help uses three direct actions: choose a measure, inspect a
+  counted-text example, and explore the current passage. Opening help remains
+  inert; the shorter panel reuses existing reader controls and focus handling.
+- Dossiers share a source-order reading surface across research and record
+  inspection. Repeated/nested headings retain their order and levels; unique
+  section edits stay at the heading. Maps join the contents, media use the
+  shared toolbar, and supplemental dossier actions follow the reading content.
+- Contributor guidance uses one current product path with reviewed release
+  migrations instead of permanent legacy UI modes or compatibility branches.
+- Map detail navigation brings the selected geographic entry and its context
+  into view, including later entries with repeated names on mobile. The shared
+  dossier editor explains route coordinates, saving and playback limitations.
+- The strongest tense stage is neutrally labelled “strong difference” instead
+  of “strong friction”. Flag rows explain their real tense markers/switch
+  criteria and prioritize reading instead of directly generating To-dos.
+- Reader-first analysis adds voluntary, initially closed guidance with
+  Analysis Off / no metric / selected metric states, shared localized action
+  names and explicit paragraph-versus-chapter comparison scope. Focus and overview
+  hide it without resetting display choices. Overview passage selection exposes
+  its existing tense-flag/opening fallback reason. `profile --help` adds a short
+  source-line/counting workflow without changing metrics, thresholds or JSON.
 - Public introduction and first-look guide lead with one revision question
   rather than a feature inventory. The demo's chapter-2 task uses native
   sentence-length navigation and explanation controls, with a compact optional

@@ -388,6 +388,12 @@ def about() -> dict[str, Any]:
                 "output": "text|json", "schema_version": 1,
             },
             {
+                "name": "analysis-review",
+                "purpose": "project-local author decisions over exact tense observations; no manuscript edits",
+                "output": "text|json",
+                "schema_version": "lixity-analysis-review/1",
+            },
+            {
                 "name": "analyze",
                 "purpose": "corpus metrics and per-chapter style features",
                 "output": "text|json",
@@ -457,6 +463,7 @@ def about() -> dict[str, Any]:
                 "purpose": "static read-only project website with explicitly included research and source files",
                 "output": "directory|json",
                 "schema_version": SITE_SCHEMA,
+                "preflight_schema_version": "lixity-site-preflight/1",
                 "data_schema_version": DATA_SCHEMA,
                 "scope_schema": SiteExportOptions.model_json_schema(),
             },

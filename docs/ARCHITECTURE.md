@@ -116,8 +116,53 @@ in `research.archive`: bounded, checksum-verified objects must satisfy the
 versioned manifest model, project identity, consecutive generations and root
 termination. Invalid or incomplete history fails before output replacement or
 restored-store publication. Inventory paths use the repository's existing
-containment/symlink boundary, which also rejects parent components. This is
-validation of the existing format, with no schema migration or alternate store.
+containment/symlink boundary, which also rejects parent components. Record and
+manifest schemas describe canonical JSON independently of its physical encoding.
+
+**Current main:** `research/storage.json` explicitly selects the current gzip
+manifest layout (`research-storage-local/1`, `manifest_encoding: gzip`). New
+projects store manifests as `research/manifests/HASH.json.gz`. The shared
+repository accessor bounds both compressed input and decompressed JSON, checks
+gzip integrity and verifies SHA-256 over the exact original JSON bytes. HEAD,
+parent hashes, revision records and retained source bytes keep their identities.
+Normal reads require the current marker; plaintext archives need the explicit
+`research migrate-storage` command. The old plaintext transport is restricted to
+migration and portable restore, rather than silently selected per file.
+
+Migration validates the accepted ancestry and creates or verifies a
+non-overwriting portable backup outside research storage and its cache. It
+restores and audits that backup before taking the final writer lock and comparing
+HEAD. All accepted gzip objects are staged, flushed and verified before atomic
+marker publication. Only then are their matching plaintext copies removed;
+unpublished recovery files remain untouched. Interrupted staging keeps the
+plaintext layout authoritative. Interrupted cleanup leaves valid compressed
+storage and can be retried with the verified backup. Temporary backup verification
+requires room for a restored copy as well as both physical manifest encodings.
+
+**Current main:** explicit research audit reuses this manifest-chain validator.
+Its `records` count describes accepted revision objects, including historical
+authored revisions, rather than current identities or source files. Additive
+`manifest_history_checked` and `manifest_capacity` fields distinguish verified
+ancestry from entry usage; incomplete checks and unavailable capacity remain
+unknown. The capacity ceiling comes from the existing manifest model, with an
+advisory warning at 90% usage.
+
+Each accepted write retains a complete compact JSON manifest of accepted revision
+entries, compressed as an individual gzip object. Sources and blobs are referenced
+by hash, while authored record files retain complete immutable revisions.
+Consequently, many small edits can make
+manifest storage grow faster than new record bytes. Unchanged authored edits
+create no snapshot, and grouped transactions reduce the number of full manifests.
+Old manifests remain necessary for accepted ancestry verification. Compression
+reduces their byte size; it does not introduce delta manifests, change full-snapshot
+growth or remove the 100,000-entry ceiling, which includes historical revisions.
+
+Portable exports retain `research-export-local/1` and canonical uncompressed
+`research/manifests/HASH.json` members inside the gzip-compressed tar container.
+The physical storage marker is omitted. Inventory checksums still describe those
+canonical bytes, not compressed-object hashes. Restore validates the portable
+envelope and complete ancestry, then converts manifests in its private staging
+directory to the current gzip layout before validating and publishing the store.
 
 **Since v0.7.3:** export owns the repository writer lock from
 accepted-snapshot selection until its compressed candidate is self-contained.
@@ -996,6 +1041,18 @@ calibration, navigability or historical accuracy.
 <a id="shared-document-orientation-and-metric-presentation-current-main"></a>
 
 ## Shared document orientation and metric presentation
+
+**Current main, unreleased:** `research-content.js` owns one dossier reading
+presentation. It renders the canonical body in source order; `section_map` is
+a grouped lookup projection, never a reading source. Repeated headings and
+their original levels remain in place. Exact unambiguous section-edit actions
+are attached to their authored headings. Record inspection adapts its envelope
+to the same reader, gating authoring by capability and keeping exact source
+versions. The inspection context does not query current linked claims for an
+older record. Prose uses the shared reading measure; maps, media and tables can
+use the available document width. Supplemental dossier/global actions follow
+the reading content. No project data conversion or compatibility UI is needed
+for this presentation change.
 
 The section-navigation helper added in v0.7.3 decorates existing semantic links in
 analysis and accepted dossier renderings. One instance per connected host resolves

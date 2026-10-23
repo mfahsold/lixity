@@ -86,6 +86,11 @@ async function assertReturnAvailable(page) {
   }), {message: 'The dossier return is immediately inside the destination viewport'}).toBe(true);
 }
 async function depart(page, control, tab) {
+  // Supplemental dossier actions require an explicit native disclosure click.
+  const actions = control.locator('xpath=ancestor::details[contains(@class,"research-dossier-actions")]');
+  if (await actions.count() && await actions.getAttribute('open') === null) {
+    await actions.locator(':scope > summary').click();
+  }
   await control.scrollIntoViewIfNeeded();
   await control.focus();
   // Hover can change click actionability even after a trial. Capture the real
@@ -220,6 +225,8 @@ async function depart(page, control, tab) {
             await page.locator('#workbench-return').click();
             await assertReturned(page, openClaim, beforeClaim, 'Claim viewer handoff retains its initial dossier origin');
           }
+          const actions = detail.locator('.research-dossier-actions');
+          if (await actions.getAttribute('open') === null) await actions.locator(':scope > summary').click();
           await depart(page, detail.locator('[data-research-global=claims]'), 'claims');
           await depart(page, detail.locator('[data-research-global=decisions]'), 'decisions');
           await expect(page.locator('#r-claim-title')).toHaveValue('Unsubmitted claim draft');
@@ -267,6 +274,7 @@ async function depart(page, control, tab) {
             await page.locator('#workspace-reader-toggle').click();
             await expect(companion.locator('.research-dossier-claims-list li')).toHaveCount(1);
             // A replaced accepted root must never restore a disconnected control.
+            await companion.locator('.research-dossier-actions > summary').click();
             await companion.locator('[data-research-global=decisions]').click();
             await expect(page.locator('#workbench-return')).toHaveText('Back to dossier');
             await assertReturnAvailable(page);

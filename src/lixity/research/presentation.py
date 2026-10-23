@@ -189,16 +189,26 @@ def source_report(result: dict[str, Any], *, markdown: bool, limit: int, offset:
 
 
 def audit_report(result: dict[str, Any], *, markdown: bool) -> str:
-    """Show audit scope, totals and bounded failures without changing the result."""
+    """Show audit scope, capacity and bounded findings without changing status."""
     status = "PASSED" if result["ok"] else "FAILED"
     heading = f"Research integrity audit: {status}"
     lines = [f"## {heading}" if markdown else heading, ""]
     errors = result.get("errors", [])
+    warnings = result.get("warnings", [])
+    capacity = result.get("manifest_capacity", {})
+    used, maximum, remaining = (
+        capacity.get(key) if capacity.get(key) is not None else "Unavailable"
+        for key in ("entries_used", "entries_max", "entries_remaining")
+    )
+    checked_manifests = result.get("manifest_history_checked")
     for label, value in (
-        ("Checked records", result["records"]),
+        ("Checked revision objects", result["records"]),
+        ("Manifest entries", f"{used} / {maximum} used; {remaining} remaining"),
+        ("Checked manifests", checked_manifests if checked_manifests is not None else "Unavailable"),
         ("Snapshot", result.get("snapshot") or "Unavailable"),
         ("Scope", result["scope"]),
         ("Findings", len(errors)),
+        ("Warnings", len(warnings)),
     ):
         lines.append(f"{'- ' if markdown else ''}{label}: {_safe(value, markdown=markdown)}")
     if errors:
@@ -214,6 +224,15 @@ def audit_report(result: dict[str, Any], *, markdown: bool) -> str:
             "", "Next: check the reported record or path and its permissions. Restore missing or modified bytes from a verified backup, then repeat the audit.",
             "Do not edit archive records to silence an integrity failure.",
         ])
+    if warnings:
+        lines.extend(["", "### Advisory warnings" if markdown else "Advisory warnings", ""])
+        for index, warning in enumerate(warnings[:20], 1):
+            message = str(warning)
+            if len(message) > 1000:
+                message = message[:1000] + "… (truncated; use --format json for full details)"
+            lines.append(f"{index}. {_safe(message, markdown=markdown)}")
+        if len(warnings) > 20:
+            lines.append(f"{len(warnings) - 20} further warnings omitted; use --format json for full details.")
     return "\n".join(lines) + "\n"
 
 

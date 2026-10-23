@@ -122,18 +122,21 @@ def test_body_only_empty_section_has_no_synthetic_newline(archive):
     assert read_section(archive, identifier, "Empty", "--format", "text", "--body-only") == (0, "", "")
 
 
-def test_body_only_redirect_preserves_utf8_crlf_and_control_bytes(archive, tmp_path):
+@pytest.mark.parametrize("section", (None, "Selected"))
+def test_body_only_redirect_preserves_utf8_crlf_and_control_bytes(archive, tmp_path, section):
     content = "Café.\r\n\r\n### Child\r\n\tData \x1b[2J \u202e."
-    identifier = api.create_dossier(archive, "Notebook", "## Selected\r\n\r\n" + content + "\r\n")["dossier_id"]
+    body = "## Selected\r\n\r\n" + content + "\r\n"
+    identifier = api.create_dossier(archive, "Notebook", body)["dossier_id"]
     destination = tmp_path / "selected.md"
+    selector = ["--section", section] if section else []
 
     with destination.open("wb") as output:
         result = subprocess.run([sys.executable, "-m", "lixity", "research", "dossier", identifier,  # noqa: S603 - synthetic local archive
-                                 "--project", str(archive), "--section", "Selected", "--format", "text", "--body-only"],
+                                 "--project", str(archive), *selector, "--format", "text", "--body-only"],
                                 stdout=output, stderr=subprocess.PIPE, check=False)
 
     assert (result.returncode, result.stderr) == (0, b"")
-    assert destination.read_bytes() == content.encode("utf-8")
+    assert destination.read_bytes() == (content if section else body).encode("utf-8")
 
 
 @pytest.mark.parametrize("control", ("\x1b[2J", "\x07", "\u202e", "\u2066", "\r"))
@@ -216,14 +219,14 @@ def test_body_only_requires_a_selected_section_read(archive, selector):
     assert retained_files(archive) == before
 
 
-def test_body_only_requires_section_even_with_a_selected_id(archive):
-    identifier = api.create_dossier(archive, "Notebook", "## Selected\n\nOriginal.")["dossier_id"]
+def test_body_only_without_section_returns_entire_source(archive):
+    body = "Preamble.\r\n\r\n## Selected\r\n\r\nCafé.\tOriginal.\r\n"
+    identifier = api.create_dossier(archive, "Notebook", body)["dossier_id"]
 
     status, output, errors = capture_research("dossier", identifier, "--project", str(archive),
                                              "--format", "text", "--body-only")
 
-    assert status == 1 and output == ""
-    assert "--body-only" in errors and "--section" in errors
+    assert (status, output, errors) == (0, body, "")
 
 
 def test_section_level_and_body_output_use_one_archive_observation(archive, monkeypatch):

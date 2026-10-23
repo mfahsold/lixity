@@ -28,6 +28,7 @@ from .repository import (
     ResearchError,
     ResearchStorageError,
     Snapshot,
+    _PlainManifestRepository,
     encode,
     sync_directory,
 )
@@ -62,9 +63,9 @@ def _manifest_history(repository: Repository, snapshot: Snapshot) -> list[tuple[
         if checksum in seen:
             raise ResearchError("Repeated manifest in research history")
         seen.add(checksum)
-        path = repository.safe(repository.data / "manifests" / f"{checksum}.json")
+        path = repository.manifest_path(checksum)
         try:
-            manifest = Manifest.model_validate_json(repository.verified(path, checksum))
+            manifest = Manifest.model_validate_json(repository.read_manifest(checksum))
         except (OSError, ValidationError) as exc:
             raise ResearchError("Missing, damaged or unsupported manifest history") from exc
         if manifest.project_id != snapshot.manifest.project_id:
@@ -106,7 +107,11 @@ def export_archive(project: str | Path, output: str | Path) -> dict[str, Any]:
     Writers receive the usual busy error until the self-contained compressed
     candidate is complete. Disposable caches and locks are excluded.
     """
-    repository = Repository(project)
+    return _export_archive(Repository(project), output)
+
+
+def _export_archive(repository: Repository, output: str | Path, *, overwrite: bool = True) -> dict[str, Any]:
+    """Share portable canonical-byte export with explicit old-layout migration."""
     if not repository.safe(repository.data / "HEAD.json").exists():
         raise ResearchError("Research store does not exist; cannot export")
 
@@ -130,8 +135,7 @@ def export_archive(project: str | Path, output: str | Path) -> dict[str, Any]:
             }
 
             # Active manifest and any ancestor manifests in the chain
-            for manifest_digest, m_path in _manifest_history(repository, snapshot):
-                files_to_pack[f"research/manifests/{manifest_digest}.json"] = (m_path, manifest_digest)
+            manifest_checksums = [checksum for checksum, _ in _manifest_history(repository, snapshot)]
 
             # 2. Record revision files
             for entry in snapshot.manifest.entries:
@@ -160,6 +164,11 @@ def export_archive(project: str | Path, output: str | Path) -> dict[str, Any]:
                 name: {"sha256": hashlib.sha256(content).hexdigest(), "byte_length": len(content)}
                 for name, content in root_bytes.items()
             }
+            for checksum in manifest_checksums:
+                content = repository.read_manifest(checksum)
+                file_manifest[f"research/manifests/{checksum}.json"] = {
+                    "sha256": checksum, "byte_length": len(content),
+                }
             for rel_path, (abs_path, expected_digest) in files_to_pack.items():
                 sha256, size = _file_digest_and_size(abs_path)
                 if sha256 != expected_digest:
@@ -196,6 +205,12 @@ def export_archive(project: str | Path, output: str | Path) -> dict[str, Any]:
                 _add_bytes(tar, "EXPORT_MANIFEST.json", manifest_bytes)
                 for name, content in root_bytes.items():
                     _add_bytes(tar, name, content)
+                for checksum in manifest_checksums:
+                    content = repository.read_manifest(checksum)
+                    name = f"research/manifests/{checksum}.json"
+                    if len(content) != file_manifest[name]["byte_length"]:
+                        raise ResearchStorageError("Research manifest changed during export")
+                    _add_bytes(tar, name, content)
                 for name, (path, _) in files_to_pack.items():
                     with repository.safe(path).open("rb") as stream:
                         member = tar.gettarinfo(fileobj=stream, arcname=name)
@@ -209,7 +224,13 @@ def export_archive(project: str | Path, output: str | Path) -> dict[str, Any]:
         # The candidate no longer depends on repository files; release writers.
         with temp_tar.open("r+b") as stream:
             os.fsync(stream.fileno())
-        os.replace(temp_tar, out_path)
+        if overwrite:
+            os.replace(temp_tar, out_path)
+        else:
+            try:
+                os.link(temp_tar, out_path)
+            except FileExistsError as exc:
+                raise ResearchStorageError("Migration backup already exists; refusing to overwrite it") from exc
         try:
             sync_directory(out_path.parent)
         except OSError as exc:
@@ -345,13 +366,20 @@ def restore_archive(archive_path: str | Path, target_dir: str | Path) -> dict[st
         if not staged_research.is_dir():
             raise ResearchError("Archive did not extract a valid research directory")
 
-        snapshot = staged_repo.snapshot()
+        portable_repo = _PlainManifestRepository(temp_stage)
+        snapshot = portable_repo.snapshot()
 
         if snapshot.digest != manifest_data.get("snapshot"):
             raise ResearchError("Restored snapshot digest does not match export manifest")
         if snapshot.project.id != manifest_data.get("project_id"):
             raise ResearchError("Restored project ID does not match export manifest")
-        _manifest_history(staged_repo, snapshot)
+        _manifest_history(portable_repo, snapshot)
+
+        # The portable envelope remains canonical JSON; publish only the current
+        # compressed physical layout after verifying that complete envelope.
+        from .storage import _convert_manifests
+        _convert_manifests(portable_repo, snapshot)
+        staged_repo.snapshot()
 
         # 5. Atomically move staged research directory to target
         os.replace(staged_research, target_research)

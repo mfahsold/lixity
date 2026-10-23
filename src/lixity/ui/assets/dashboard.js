@@ -642,6 +642,23 @@ function uiCountFormat(key, count, values) {
   if (!Object.prototype.hasOwnProperty.call(payload, "count")) payload.count = count;
   return uiFormat(chosen, payload);
 }
+document.addEventListener("lixity:reader-ready", function initAnalysisGuide() {
+  var guide = document.getElementById("reader-analysis-guide");
+  var status = document.getElementById("reader-analysis-guide-state");
+  var metric = document.getElementById("style-layer");
+  if (!guide || !status || !metric || !window.LixityWorkbench) return;
+  function update() {
+    var state = LixityWorkbench.state();
+    guide.hidden = state.surface !== "document" || state.focus;
+    var key = !state.analysisVisible ? "analysis_guide_off" :
+      !metric.value ? "analysis_guide_none" : "analysis_guide_selected";
+    var option = metric.options[metric.selectedIndex];
+    status.textContent = uiFormat(key, {metric:option.textContent, unit:option.dataset.unit || ""});
+  }
+  document.addEventListener("lixity:workbench-change", update);
+  document.addEventListener("lixity:analysis-layer-change", update);
+  update();
+}, {once:true});
 var welcomeHero = document.getElementById("welcome-hero");
 var welcomeDismiss = document.getElementById("welcome-dismiss");
 var welcomeShow = document.getElementById("welcome-show");
@@ -739,6 +756,13 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
   var editProfiles = document.getElementById("site-export-edit-profiles");
   var cap = document.getElementById("site-export-max-chapter");
   var downloadButton = document.getElementById("site-export-download");
+  var checkButton = document.getElementById("site-export-check");
+  var preflightResult = document.getElementById("site-export-preflight");
+  var selectionSerial = 0;
+  function invalidatePreflight() {
+    selectionSerial++; preflightResult.hidden = true; preflightResult.replaceChildren();
+  }
+  form.addEventListener("change", invalidatePreflight);
   var status = document.getElementById("site-export-status");
   var token = document.body.dataset.manuscriptProjectToken;
   var busy = false;
@@ -777,6 +801,7 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
     editProfiles.textContent = uiLabel(!count ? "publication_export_create_profile" : "publication_export_edit_profiles");
     research.disabled = busy || !token || curated;
     downloadButton.disabled = busy || !token || (curated && !selected);
+    checkButton.disabled = downloadButton.disabled;
     sources.disabled = busy || (curated ? !selected : !research.checked);
     if (!curated && !research.checked) sources.checked = false;
     document.getElementById("site-export-publication-options").hidden = !curated;
@@ -802,13 +827,14 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
   }
   open.addEventListener("click", function() {
     if (open.disabled) return;
+    invalidatePreflight();
     mode.value = "review"; research.checked = sources.checked = false;
     profile.value = cap.value = ""; status.textContent = ""; status.className = "ctl-status";
     updateProfiles(); dialog.showModal();
   });
   mode.addEventListener("change", function() { research.checked = sources.checked = false; sync(); reportProfiles(); });
   profile.addEventListener("change", sync);
-  document.addEventListener("lixity:site-publications-saved", updateProfiles);
+  document.addEventListener("lixity:site-publications-saved", function() { invalidatePreflight(); updateProfiles(); });
   editProfiles.addEventListener("click", function() {
     dialog.close(); switchActiveView("project");
     var editor = document.getElementById("settings-site-publications");
@@ -831,12 +857,15 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
       payload.mode = mode.value; payload.publication_profile = profile.value;
       payload.max_chapter = cap.value === "" ? null : Number(cap.value);
     }
+    var checking = event.submitter === checkButton;
+    var selectedSerial = selectionSerial;
+    invalidatePreflight(); selectedSerial = selectionSerial;
     busy = true; sync(); message("site_export_busy");
     var reason = "";
     var failureKey = "site_export_network_error";
     var exportId = "", stage = "response_read";
     try {
-      var response = await fetch(API + "/site-export", {
+      var response = await fetch(API + (checking ? "/site-preflight" : "/site-export"), {
         method: "POST", headers: {"Content-Type": "application/json"},
         body: JSON.stringify(payload),
       });
@@ -849,6 +878,22 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
         }
         catch (_) { /* Preserve the HTTP status for non-JSON errors. */ }
         throw new Error("Website export unavailable");
+      }
+      if (checking) {
+        var checked = await response.json(), report = checked && checked.preflight;
+        if (!checked.ok || !report || report.schema_version !== "lixity-site-preflight/1" ||
+            !report.sizes || !report.media || !Array.isArray(report.warnings)) throw new Error("Invalid export check");
+        if (selectedSerial !== selectionSerial) return;
+        function line(text) {
+          var p = document.createElement("p"); p.className = "ctl-note"; p.textContent = text; preflightResult.appendChild(p);
+        }
+        function size(bytes) { return (bytes / (1024 * 1024)).toFixed(2) + " MiB"; }
+        line(uiFormat("site_preflight_sizes", {html:size(report.sizes.html_bytes), zip:size(report.sizes.zip_bytes), total:size(report.sizes.total_bytes)}));
+        line(uiFormat("site_preflight_media", {references:report.media.references, unavailable:report.media.unavailable,
+          omitted:report.media.not_packaged, credits:report.media.missing_attribution, ordinary:report.media.ordinary_image_references}));
+        if (report.warnings.includes("large_html") || report.warnings.includes("large_zip")) line(uiLabel("site_preflight_large"));
+        line(uiLabel("site_preflight_note")); preflightResult.hidden = false; status.textContent = "";
+        return;
       }
       failureKey = "site_export_response_error";
       if ((response.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase() !== "application/zip") {
@@ -882,7 +927,11 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
       }
       message("site_export_error", true, reason);
     }
-    finally { busy = false; sync(); }
+    finally {
+      busy = false; sync();
+      if (checking && selectedSerial === selectionSerial && dialog.open &&
+          (document.activeElement === document.body || document.activeElement === dialog)) checkButton.focus();
+    }
   });
   updateProfiles();
 })();

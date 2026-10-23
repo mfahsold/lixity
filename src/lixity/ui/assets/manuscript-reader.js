@@ -185,7 +185,8 @@
   var inspectorBody = document.getElementById("reader-inspector-body");
   var focus = document.getElementById("reader-focus");
   var settings = document.getElementById("reader-settings");
-  var settingsPanels = [settings].filter(Boolean);
+  var settingsPanels = [settings, document.getElementById("reader-analysis-guide")].filter(Boolean);
+  var analysisGuide = document.getElementById("reader-analysis-guide");
   var metric = document.getElementById("style-layer"), evidenceToggle = document.getElementById("analysis-evidence-enabled");
   var comparisonToggle = document.getElementById("analysis-comparison-enabled");
   var width = document.getElementById("reader-width");
@@ -242,6 +243,46 @@
     var prose = panel.querySelector(".ptext-inner > p");
     if (prose) anchor.proseOffset = prose.getBoundingClientRect().top - anchor.top;
     return anchor;
+  }
+  function updateGuideActions() {
+    if (!analysisGuide) return;
+    var example = analysisGuide.querySelector('[data-analysis-guide-action="example"]');
+    example.disabled = !panels.length || !metric || !metric.value || !window.LixityAnalysisEvidence || !LixityAnalysisEvidence.available();
+    analysisGuide.querySelector('[data-analysis-guide-action="explore"]').disabled = !panels.length;
+  }
+  if (analysisGuide) {
+    analysisGuide.addEventListener("toggle", updateGuideActions);
+    document.addEventListener("lixity:analysis-layer-change", updateGuideActions);
+    document.addEventListener("lixity:workbench-change", updateGuideActions);
+    analysisGuide.addEventListener("click", async function(event) {
+      var action = event.target.closest("[data-analysis-guide-action]");
+      if (!action || action.disabled) return;
+      var anchor = capture();
+      analysisGuide.open = false;
+      if (action.dataset.analysisGuideAction === "choose") {
+        retain(function() {workbench.dispatch({type:"analysis", value:true});});
+        if (metric) metric.focus({preventScroll:true});
+        return;
+      }
+      var panel = anchor && anchor.panel.matches(".ptext") ? anchor.panel : panels.find(function(item) {
+        var rect = item.getBoundingClientRect();
+        return rect.height > 0 && rect.bottom > controls.getBoundingClientRect().bottom && rect.top < innerHeight;
+      }) || panels.find(function(item) {return item.getClientRects().length;});
+      if (!panel) return;
+      if (action.dataset.analysisGuideAction === "example") {
+        var rect = panel.getBoundingClientRect();
+        if (rect.bottom <= controls.getBoundingClientRect().bottom || rect.top >= innerHeight) {
+          scrollAndFlash(panel, {behavior:"auto"});
+          await new Promise(function(resolve) {requestAnimationFrame(function() {requestAnimationFrame(resolve);});});
+        }
+        if (panel.isConnected) LixityAnalysisEvidence.inspect(panel, panel.querySelector(".reader-paragraph-actions") || panel);
+      }
+      else {
+        current = panel; savedRange = null; evidencePoint = null; returnTarget = action;
+        run("values");
+      }
+    });
+    updateGuideActions();
   }
   function restore(anchor, arrival) {
     if (!anchor) return;

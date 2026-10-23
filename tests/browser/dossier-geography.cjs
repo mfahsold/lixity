@@ -373,6 +373,7 @@ server.serve_forever()
     await expect(geography.locator('.geography-selected')).toContainText('Latitude');
     await geography.locator('[data-geo-details]').click();
     await expect(listButton(0)).toBeFocused();
+    await expect(geography.locator('li').nth(0).locator('.geography-feature-context')).toBeInViewport({ratio: 1});
     await geography.locator('svg [data-geo-select="1"]').focus();
     assert.notEqual(await geography.locator('svg [data-geo-select="1"]').evaluate(node => getComputedStyle(node).outlineStyle), 'none',
       'Keyboard focus on a route remains visible');
@@ -431,6 +432,32 @@ server.serve_forever()
     assert.equal(requests.length, requestCount, 'Feature navigation and rerendering never request data');
     assert.equal(writes.length, writeCount, 'Feature navigation never writes');
     assert.equal((await (await page.request.get(recordURL)).json()).snapshot, saved.snapshot, 'Feature selection is not stored');
+    // A later entry must arrive with its metadata, rather than just its title
+    // at the viewport edge. Duplicate labels cannot identify the destination.
+    await page.evaluate(value => {
+      const copy = document.getElementById('geo-navigation-copy');
+      const features = structuredClone(value.features);
+      features[0].properties.description = 'Earlier entry context. '.repeat(100);
+      features[1].properties.label = features[0].properties.label;
+      copy.innerHTML = window.LixityDossierGeography.html({type: 'FeatureCollection', features});
+      const space = document.createElement('div'); space.style.height = '100vh'; copy.appendChild(space);
+    }, saved.record.geography);
+    for (const width of [1440, 320]) {
+      await page.setViewportSize({width, height: 1000});
+      await secondGeography.locator('h4').scrollIntoViewIfNeeded();
+      await expect(secondGeography.locator('.geography-map')).toBeVisible();
+      await secondGeography.locator('.geography-map').scrollIntoViewIfNeeded();
+      await secondGeography.locator('.geography-map-number button[data-geo-select="1"]').click();
+      await expect(secondGeography.locator('li').nth(1)).toHaveClass(/is-selected/);
+      await secondGeography.locator('[data-geo-details]').click();
+      await expect(secondGeography.locator('.geography-feature-list button[data-geo-select="1"]')).toBeFocused();
+      await expect(secondGeography.locator('li').nth(1).locator('.geography-feature-context')).toBeInViewport({ratio: 1});
+      await page.screenshot({path: path.join(artifacts, `map-details-arrival-${width}.png`)});
+      await secondGeography.locator('.geography-map svg [data-geo-select="1"]').focus();
+      await page.keyboard.press('Enter');
+      await expect(secondGeography.locator('li').nth(1).locator('.geography-feature-context')).toBeInViewport({ratio: 1});
+    }
+    await page.setViewportSize({width: 1440, height: 1000});
     await page.locator('#geo-navigation-copy').evaluate(node => node.remove());
     await page.evaluate(() => {
       const host = document.createElement('div'); host.id = 'geo-polar-copy';

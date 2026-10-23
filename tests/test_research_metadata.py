@@ -171,7 +171,7 @@ class TestResearchMetadataRefresh(unittest.TestCase):
         manifest = self.initial.manifest.model_copy(update={"entries": entries})
         manifest_bytes = encode(manifest)
         checksum = digest(manifest_bytes)
-        (self.repository.data / "manifests" / f"{checksum}.json").write_bytes(manifest_bytes)
+        self.repository.write_manifest(checksum, manifest_bytes)
         (self.repository.data / "HEAD.json").write_bytes(encode(Head(sha256=checksum)))
         self.assert_corruption_stops_refresh("Retained PDF extraction does not match its passages")
 

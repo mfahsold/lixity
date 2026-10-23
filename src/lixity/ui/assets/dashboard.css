@@ -619,7 +619,7 @@ td.flag-excerpt {
     grid-area: 2 / 1 / auto / -1; min-width: 0; color: var(--muted); font-size: var(--text-note);
   }
   .flags-wrap td.flag-excerpt { grid-area: 3 / 1 / auto / -1; min-width: 0; white-space: normal; }
-  .flags-wrap td:last-child:not(.flag-excerpt) { grid-area: 4 / 1 / auto / -1; }
+  .flags-wrap td:last-child:not(.flag-excerpt, .triage-decision-cell) { grid-area: 4 / 1 / auto / -1; }
 }
 /* --- Style dimensions (3D trajectory & layout) ------------------------- */
 .dim-guide { max-width: 85ch; margin: .5rem 0; }
@@ -1057,7 +1057,6 @@ mark.search-hit {
   padding: 0.05em 0.2em;
   border-radius: var(--radius-xs);
 }
-.research-dossier-body { white-space: pre-wrap; margin-block: .5rem; }
 .research-details { margin-top: .6rem; font-size: var(--text-control); }
 .research-details summary { cursor: pointer; color: var(--accent); }
 .research-details-body { margin-top: .5rem; }
@@ -1072,7 +1071,6 @@ mark.search-hit {
 #r-init-title { min-width: 200px; }
 #r-search-query { flex: 1; min-width: 240px; }
 #r-link-relation { min-width: 140px; }
-.research-dossier-outline { margin: .4rem 0 .8rem; padding: .3rem .6rem; background: var(--bg-subtle, rgba(0, 0, 0, 0.03)); border-radius: var(--radius-xs); font-size: var(--text-small); }
 .research-excerpt { margin: .3rem 0; color: var(--fg); }
 .research-claim-scope { margin-bottom: .3rem; font-size: var(--text-note); }
 .research-subpanel { margin-top: .6rem; padding-top: .4rem; border-top: 1px dashed var(--line); }
@@ -1394,14 +1392,23 @@ mark.search-hit {
 .research-revision-readonly dt { font-weight: var(--weight-semibold); color: var(--muted); }
 .research-revision-readonly dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
 .research-revision-history-detail { overflow-wrap: anywhere; }
+.triage-controls { align-items: end; margin-block: var(--space-3); }
+.triage-controls label { display: grid; gap: var(--space-1); min-width: 0; }
+.triage-controls select { max-width: min(100%, 22rem); }
+.triage-reason { margin-top: var(--space-2); }
+.triage-reason summary { color: var(--accent); cursor: pointer; min-height: 2.75rem; align-content: center; }
+.triage-reason p { white-space: normal; line-height: var(--line-reading); }
+.flag-row .triage-choice { width: 100%; min-width: 12rem; margin-block: var(--space-2); }
+.triage-saved-state { display: block; white-space: normal; }
+@media (max-width: 600px) {
+  .flags-wrap td.triage-read-cell { grid-area: 4 / 1 / auto / -1; }
+  .flags-wrap td.triage-decision-cell { grid-area: 5 / 1 / auto / -1; }
+  .flag-row .triage-choice { min-width: 0; }
+}
 #modal-research-revision { width: min(94vw, 58rem); max-width: 58rem; }
-.research-revision-dossier { max-width: 72ch; margin-inline: auto; min-width: 0; }
-.research-revision-dossier-detail { max-width: 72ch; margin-inline: auto; }
+.research-revision-dossier { min-width: 0; }
+.research-revision-dossier-detail { min-width: 0; }
 .research-revision-dossier-title { margin: 0 0 var(--space-4); font-size: 1.35rem; line-height: var(--line-compact); }
-.research-revision-dossier .research-prose { white-space: normal; }
-.research-revision-dossier .research-dossier-body-source { white-space: pre-wrap; }
-.research-revision-dossier .research-prose-bar { gap: var(--space-2); align-items: center; flex-wrap: wrap; }
-.research-revision-dossier .dossier-image-actions { margin: 0; margin-inline-end: auto; }
 @media (max-width: 540px) {
   .research-revision-readonly { grid-template-columns: minmax(0, 1fr); gap: .1rem; }
   .research-revision-readonly dd { margin-bottom: .55rem; }
@@ -1628,9 +1635,19 @@ body.only-flags:not(.text-search-active) .chip:not(.sev-2):not(.sev-3) { display
 
 }
 
-/* Safe Markdown Prose Rendering in Dossiers & History */
+/* Shared dossier document typography. */
 .research-dossier-body-wrap { margin: 0.5rem 0 1rem; }
-.research-prose-bar { display: flex; justify-content: flex-end; margin-bottom: 0.35rem; }
+.research-prose-bar { display: flex; justify-content: flex-end; margin-bottom: 0.35rem; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
+.research-prose-bar .dossier-image-actions { margin: 0; margin-inline-end: auto; }
+.research-dossier-actions { padding-block: var(--space-3); border-block-start: 1px solid var(--line); }
+.research-dossier-actions > summary { cursor: pointer; min-height: 2.75rem; align-content: center; color: var(--muted); }
+.research-dossier-actions[open] > summary { margin-block-end: var(--space-3); }
+.research-dossier-actions .row { flex-wrap: wrap; }
+.research-section-actions { margin-block: 0 var(--space-3); }
+.research-section-actions .ctl { background: transparent; border-color: transparent; color: var(--muted); }
+.research-section-actions .ctl:hover, .research-section-actions .ctl:focus-visible { color: var(--accent); border-color: var(--line); }
+.research-dossier-document .research-prose > :is(h1, h2, h3, h4, h5, h6, p, ul, ol, blockquote) { max-inline-size: 72ch; }
+.research-dossier-document .research-prose > :first-child { margin-block-start: 0; }
 .research-dossier-body-source {
   white-space: pre-wrap;
   word-break: break-word;
@@ -1641,24 +1658,6 @@ body.only-flags:not(.text-search-active) .chip:not(.sev-2):not(.sev-3) { display
   font-size: var(--text-small);
   max-height: 25rem;
   overflow-y: auto;
-}
-.research-dossier-section-block {
-  margin-bottom: 0.6rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 0.4rem 0.65rem;
-  background: var(--bg);
-}
-.research-dossier-section-block > summary {
-  cursor: pointer;
-  font-weight: var(--weight-semibold);
-  padding: 0.2rem 0;
-  user-select: none;
-  color: var(--fg);
-}
-.research-dossier-section-block[open] > summary {
-  border-bottom: 1px solid var(--line);
-  margin-bottom: 0.5rem;
 }
 .research-dossier-sections {
   margin: 0.35rem 0;
@@ -2046,8 +2045,6 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
 .research-card:focus-within { border-color: var(--line-strong); }
 .research-card-header { gap: var(--space-2) var(--space-3); }
 .research-card-title { flex: 1 1 16rem; }
-.research-dossier-section-block { background: var(--surface); }
-.research-dossier-section-block > summary,
 .settings-advanced > summary, .research-details > summary {
   min-height: 2.5rem;
   align-content: center;

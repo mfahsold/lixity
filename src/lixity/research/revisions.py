@@ -25,7 +25,13 @@ from .models import (
     reference,
 )
 from .repository import Repository, ResearchConflictError, ResearchError, Snapshot, encode
-from .sections import _section_spans, _section_subtree_end, update_section
+from .sections import (
+    _section_candidates,
+    _section_spans,
+    _section_subtree_end,
+    update_preamble,
+    update_section,
+)
 from .timeline import period_warnings
 
 Authored = Dossier | Claim | ClaimRelation | EvidenceLink | ManuscriptClaimLink | Decision
@@ -384,7 +390,7 @@ def _section_text(body: str, section: str) -> str:
     spans = _section_spans(body)
     matches = [span for span in spans if span.title.casefold() == section.strip().casefold()]
     if not matches:
-        raise ResearchError(f"Section '{section}' not found")
+        raise ResearchError(f"Section '{section}' not found; available: {_section_candidates(spans)}")
     if len(matches) != 1:
         raise ResearchError(f"Section '{section}' is ambiguous")
     selected = matches[0]
@@ -394,6 +400,13 @@ def _section_text(body: str, section: str) -> str:
 
 def _section_changes(record: Authored, changes: Mapping[str, Any], section: str | None) -> Mapping[str, Any]:
     """Resolve a section draft against its observed dossier, keeping other fields."""
+    if isinstance(changes, Mapping) and "preamble" in changes:
+        if not isinstance(record, Dossier) or "body" in changes or section is not None:
+            raise ResearchError("Choose a dossier preamble, section or full body replacement, not both")
+        updated = dict(changes)
+        content = updated.pop("preamble")
+        updated["body"] = update_preamble(record.body, content)
+        changes = updated
     if section is None:
         return changes
     if not isinstance(record, Dossier):
@@ -410,11 +423,12 @@ def _apply_changes(
 ) -> Authored:
     """Build a validated record without publishing it."""
     kind = previous.kind
+    changes = _section_changes(previous, changes, None)
     if set(changes) - FIELDS[kind]:
         raise ResearchError("The change contains unknown or immutable fields")
     values = previous.model_dump(mode="json")
     direct = {k: v for k, v in changes.items() if k not in
-              {"evidence_ids", "dossier_id", "claim_id", "claim_revision", "dossier_revision", "passage_id", "time_period", "place", "actors", "dossier_ids", "dossier_revisions", "from_claim_id", "from_claim_revision", "to_claim_id", "to_claim_revision"}}
+              {"preamble", "evidence_ids", "dossier_id", "claim_id", "claim_revision", "dossier_revision", "passage_id", "time_period", "place", "actors", "dossier_ids", "dossier_revisions", "from_claim_id", "from_claim_revision", "to_claim_id", "to_claim_revision"}}
     for name in ("title", "statement", "rationale", "reviewer", "impact_on_plot"):
         if isinstance(direct.get(name), str):
             direct[name] = direct[name].strip()

@@ -28,7 +28,7 @@ async function checkDiagramReadability(page) {
     const host = document.createElement('section'); host.id = 'diagram-readability';
     host.innerHTML = diagrams.map(([name, source]) => '<div data-diagram-fixture="' + name + '">' +
       renderSafeMarkdown('```mermaid\n' + source + '\n```') + '</div>').join('');
-    document.querySelector('.research-dossier-body-rendered .research-prose').appendChild(host);
+    document.querySelector('.research-dossier-body-rendered').appendChild(host);
   }, diagrams);
   for (const width of [320, 1440]) {
     await page.setViewportSize({width, height: 1000});
@@ -578,8 +578,8 @@ server.serve_forever()
     await page.locator('#tab-view-research').click();
     await page.locator('[data-rtab=dossiers]').click();
     await page.locator(`[data-research-detail=dossier][data-record-id="${fixture.other_dossier}"]`).click();
-    const missing = page.locator('.research-dossier-folder .research-dossier-body-rendered .dossier-image-unretained');
     const otherCard = page.locator('.research-card').filter({has: page.locator(`[data-research-detail=dossier][data-record-id="${fixture.other_dossier}"]`)});
+    const missing = otherCard.locator('.research-dossier-folder .research-dossier-body-rendered .dossier-image-unretained');
     await expect(otherCard.locator('.research-excerpt')).not.toContainText('Image not retained');
     await expect(missing).toContainText('Local plan');
     await expect(missing.locator('.dossier-image-reference')).not.toHaveAttribute('open', '');
@@ -590,6 +590,9 @@ server.serve_forever()
     await page.locator(`[data-research-history=dossier][data-record-id="${fixture.other_dossier}"]`).click();
     const recordDialog = page.locator('#modal-research-revision');
     const recordBody = recordDialog.locator('.research-revision-dossier');
+    await expect(recordBody.locator('.research-dossier-folder')).toHaveCount(1);
+    await expect(recordBody.locator('[data-section-nav]')).toHaveCount(1);
+    await expect(recordBody.locator('.research-dossier-actions, .research-dossier-claims')).toHaveCount(0);
     await expect(recordBody.locator('[data-dossier-replace-image]')).toBeVisible();
     assert.equal(await recordBody.locator('dt, dd').count(), 0, 'Dossier prose is not squeezed into metadata columns');
     for (const width of [1440, 320]) {
@@ -605,13 +608,13 @@ server.serve_forever()
     await page.keyboard.press('Escape');
     await expect(recordDialog).toBeVisible();
     await page.keyboard.press('Escape');
-    const overview = page.locator('.dossier-media-overview');
+    const overview = otherCard.locator('.dossier-media-overview');
     await expect(overview.locator('summary')).toContainText('1');
     await overview.locator('summary').click();
     await expect(overview.locator('a')).toHaveCount(1);
     await expect(overview).toContainText('Visual notes');
-    const section = missing.locator('xpath=ancestor::details[1]');
-    await section.locator('summary').first().click();
+    await otherCard.locator('[data-source-toggle]').click();
+    await expect(missing).toBeHidden();
     await overview.locator('a').click();
     await expect(missing).toBeVisible();
     await expect(missing).toBeFocused();

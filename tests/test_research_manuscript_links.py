@@ -133,7 +133,7 @@ def test_reads_and_review_do_not_upgrade_supported_archives(manuscript_archive, 
                         project_id=old.project.id, generation=old.manifest.generation + 1,
                         parent=old.digest, entries=old.manifest.entries)
     content = encode(manifest)
-    (repository.data / "manifests" / f"{digest(content)}.json").write_bytes(content)
+    repository.write_manifest(digest(content), content)
     (repository.data / "HEAD.json").write_bytes(encode(Head(sha256=digest(content))))
     before = accepted_bytes(project)
     assert api.list_manuscript_links(project)["links"] == []

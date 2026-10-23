@@ -23,6 +23,10 @@ localization and UI components over parallel implementations.
   a substitute for reviewing staged changes.
 - Preserve versioned JSON contracts; document intentional compatibility changes.
   Use explicit project settings for multi-project integrations.
+- Maintain one current product and UI path. Move existing projects forward with
+  explicit, reviewed release migrations rather than legacy UI modes or parallel
+  compatibility branches. Preserve retained sources, immutable revisions and
+  evidence links; follow the migration guidance in `CONTRIBUTING.md`.
 - Validate the affected behavior and report what was actually tested. For UI
   changes, inspect rendered desktop and mobile states, not just HTML strings.
 

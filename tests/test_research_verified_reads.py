@@ -41,9 +41,11 @@ def test_snapshot_checks_each_revision_path_once(archive, monkeypatch):
 
     assert snapshot.project.title == "Synthetic archive"
     assert len(snapshot.revisions) == 2
-    # Each path has five internal components; HEAD, manifest and project.json
-    # together contribute seven more checks for this two-record archive.
-    assert sum(checks.values()) <= 17
+    # Each revision path has five internal components; HEAD, compressed manifest,
+    # layout marker and project.json contribute nine more checks in this archive.
+    assert sum(checks.values()) <= 19
+    for entry in snapshot.manifest.entries:
+        assert checks[os.fspath(repository._record_path(entry))] == 1
 
 
 def test_small_object_read_avoids_requesting_the_entire_byte_ceiling(archive, monkeypatch):

@@ -7,6 +7,13 @@
 }
 .manuscript-reader-controls[hidden] { display: none; }
 .reader-secondary-controls { display: none; }
+.reader-analysis-guide > summary { width: 2.75rem; min-height: 2.75rem; justify-content: center; padding: .4rem; }
+.reader-analysis-guide > summary::after { display: none; }
+.reader-analysis-guide .reader-settings-body { font-size: var(--text-small); }
+.reader-analysis-guide p, .reader-analysis-guide li { line-height: var(--line-reading); }
+.reader-analysis-guide ol { display: grid; gap: var(--space-2); margin-block: var(--space-3); padding-inline-start: 1.5rem; }
+.reader-analysis-guide li .ctl { width: 100%; white-space: normal; text-align: start; }
+.reader-analysis-guide[hidden], .reader-focus .reader-analysis-guide { display: none; }
 .manuscript-reading.workbench-analysis:not(.reader-focus) .reader-secondary-controls { display: flex; flex-wrap: wrap; gap: .5rem; padding-block: .5rem; }
 .reader-focus .reader-secondary-controls { display: none !important; }
 .reader-mode-label { color: var(--muted); font-size: var(--text-small); }

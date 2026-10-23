@@ -22,6 +22,9 @@ OUTPUT_FORMATS: dict[str, tuple[tuple[str, ...], str]] = {
     "matrix": (("md", "csv", "json"), "md"),
     "timeline": (("text", "md", "json"), "json"),
     "dossier": (("json", "table", "text"), "json"),
+    "dossier-images": (("json",), "json"),
+    "media-context": (("json",), "json"),
+    "migrate-storage": (("json",), "json"),
     "claim": (("json", "table", "text"), "json"),
     "decision": (("json", "table", "text"), "json"),
     "review-manuscript": (("json", "table", "text"), "json"),
@@ -67,6 +70,8 @@ COMMAND_DEFINITIONS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
     ('ingest', 'Archive local UTF-8 text, PDF, PNG or JPEG; PDF scans require configured local OCR', 'Sources and captures', ()),
     ('dossier', 'Create, list or inspect research dossiers', 'Dossiers, claims and decisions', ('dossiers',)),
     ('dossier-image', 'Capture a local PNG/JPEG and attach it to a dossier atomically', 'Dossiers, claims and decisions', ()),
+    ('dossier-media', 'Capture a local PDF, MP4 or WebM and attach it to a dossier atomically', 'Dossiers, claims and decisions', ()),
+    ('media-context', 'Correct retained media provenance and repin one dossier atomically', 'Dossiers, claims and decisions', ()),
     ('dossier-images', 'List retained and ordinary image references across active dossiers; read-only JSON', 'Dossiers, claims and decisions', ()),
     ('claim', 'Create, list or revise research claims and hypotheses', 'Dossiers, claims and decisions', ('claims',)),
     ('decision', 'Create, list or revise author decisions and fact deviations', 'Dossiers, claims and decisions', ('decisions',)),
@@ -95,6 +100,7 @@ COMMAND_DEFINITIONS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
     ('reindex', 'Rebuild the disposable SQLite/FTS5 search index', 'Archive and maintenance', ()),
     ('withdraw', 'Withdraw a source/version or retire a reviewed dossier without deleting retained bytes', 'Archive and maintenance', ()),
     ('purge', 'Physically delete archived source records, passages, and unshared blobs', 'Archive and maintenance', ()),
+    ('migrate-storage', 'Verify a portable backup, then migrate manifest storage without changing snapshots', 'Archive maintenance', ()),
     ('export', 'Export research store to verified archive (.tar.gz)', 'Archive and maintenance', ()),
     ('restore', 'Restore research store from verified archive (.tar.gz)', 'Archive and maintenance', ()),
     ('zotero-backup', 'Back up research and a closed Zotero data directory together', 'Archive and maintenance', ()),
@@ -150,7 +156,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
                                  help="Page text/Markdown only when input and output are interactive terminals")
         if name not in ("restore", "ocr-status", "zotero-restore"):
             command.add_argument(
-                "--project", required=name == "init",
+                "--project", required=name in ("init", "migrate-storage"),
                 help="Explicit project directory" if name == "init" else
                 "Project directory (default: current directory, only with a valid initialized research archive)",
             )
@@ -353,7 +359,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 "--body-only writes the selected content as UTF-8 without display headings or an added newline.\n"
                 "Redirect it to a file for source text containing terminal controls or bidi formatting.\n"
                 "Only actual, unique headings listed in editable_sections are section-edit targets;\n"
-                "implicit preambles are read-only selections. A selected heading includes all descendants.\n\n"
+                "use --preamble to select content before the first heading. A selected heading includes all descendants.\n\n"
                 "Inspect an ID with --format text to read recorded places, route context and approximate\n"
                 "distances; --summary keeps the body excerpt short. JSON geography_summary describes the\n"
                 "selected version without changing stored records. Distances join supplied coordinates\n"
@@ -361,7 +367,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 "not road routing, elevation or travel time; coordinate digits do not establish accuracy."
             )
             command.add_argument("--dossier-id", help="Dossier UUID to inspect")
-            command.add_argument("--title", help="Title for new dossier")
+            command.add_argument("--title", help="Title for a new dossier or replacement title with --update")
             content = command.add_mutually_exclusive_group()
             content.add_argument("--file", help="Existing readable UTF-8 Markdown file; use --body for literal text")
             content.add_argument("--body", help="Literal authored Markdown body (alternative to --file PATH)")
@@ -379,19 +385,35 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--summary", action="store_true",
                                  help="Return metadata, complete image/media references, geography coverage and route distances, section outline, "
                                       "and body excerpt without full text; distances are not road routing or travel time")
-            command.add_argument("--section", help="Inspect or replace the named heading's content and all descendants; "
+            selection = command.add_mutually_exclusive_group()
+            selection.add_argument("--preamble", action="store_true", help="Inspect or replace content before the first actual heading")
+            selection.add_argument("--section", help="Inspect or replace the named heading's content and all descendants; "
                                  "an H1 can select nearly the entire dossier (preview with --diff)")
             command.add_argument("--body-only", action="store_true",
-                                 help="With a selected --section --format text read, emit only its source content; "
+                                 help="With a selected dossier --format text read, emit its source body (or --section content); "
                                       "redirect to a file for an editable draft (no added newline)")
             command.add_argument("--omit-citations", action="store_true", help="Omit resolved citations from output")
+        elif name == "media-context":
+            for field in ("dossier-id", "source-id", "source-version-id", "expected-snapshot", "reason"):
+                command.add_argument("--" + field, required=True)
+            command.add_argument("--expected-revision", required=True, type=int)
+            command.add_argument("--context", required=True, help="JSON object or file; only origin_url and provenance_note; null clears a field")
+            command.add_argument("--dry-run", action="store_true")
+            command.add_argument("--actor", default="local-author")
         elif name == "dossier-images":
             command.add_argument("--dossier-id", help="Limit to one active dossier")
+            command.add_argument("--missing-provenance", action="store_true", help="Only image references missing origin_url or provenance_note; presence check, not rights validation")
             command.add_argument("--limit", type=int, default=100, help="References per page (1..200; default: 100)")
             command.add_argument("--offset", type=int, default=0, help="Zero-based reference offset")
-        elif name == "dossier-image":
+        elif name in ("dossier-image", "dossier-media"):
             command.add_argument("--dossier-id", required=True, help="Dossier UUID to revise")
-            command.add_argument("--file", required=True, help="Path to a local PNG or JPEG image")
+            command.add_argument("--compact", action="store_true",
+                                 help="Return a short revision receipt without the record body; batch previews remain bounded JSON")
+            files = command.add_mutually_exclusive_group(required=True)
+            files.add_argument("--file", help="Explicit local attachment file")
+            if name == "dossier-image":
+                files.add_argument("--batch", help="Versioned JSON image batch manifest; relative files resolve beside it")
+                command.add_argument("--dry-run", action="store_true", help="With --batch, validate all files and placements without writing")
             command.add_argument("--expected-snapshot", required=True, help="Snapshot digest from the reviewed dossier")
             command.add_argument("--expected-revision", required=True, type=int, help="Reviewed dossier revision")
             command.add_argument("--allow-retention", action="store_true",
@@ -497,6 +519,9 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--actor", default="local-author")
             if name == "purge":
                 command.add_argument("--dry-run", action="store_true", help="Preview records, passages and blobs to be removed without deleting")
+        elif name == "migrate-storage":
+            command.add_argument("--backup", required=True, help="Non-overwriting .tar.gz backup outside research and its cache")
+            command.add_argument("--expected-snapshot", help="Reject a different current snapshot")
         elif name == "export":
             command.add_argument("--output", required=True, help="Destination .tar.gz archive path")
         elif name == "restore":
@@ -656,12 +681,12 @@ def _revision_changes(args: argparse.Namespace) -> dict[str, Any]:
     if kind == "dossier" and args.geography is not None:
         changes["geography"] = _geography(args.geography)
     if kind == "dossier" and (args.file is not None or args.body is not None):
-        changes["body"] = _dossier_content(file=args.file, body=args.body)
-    elif kind == "dossier" and getattr(args, "section", None) and any(
+        changes["preamble" if args.preamble else "body"] = _dossier_content(file=args.file, body=args.body)
+    elif kind == "dossier" and (getattr(args, "section", None) or args.preamble) and any(
         getattr(args, flag, False) for flag in ("update", "prepare", "diff")
     ):
         from .repository import ResearchError
-        raise ResearchError("Updating a dossier section requires --file PATH or --body TEXT with new content")
+        raise ResearchError("Updating a dossier section or preamble requires --file PATH or --body TEXT with new content")
     return changes
 
 
@@ -807,21 +832,23 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
                             "it does not apply to reads, diffs, preparation or export modes")
     if command == "dossier" and args.body_only:
         fields = (*_REVISION_FIELDS["dossier"], "export_edit", "edit_file", "output")
-        if (not record_id or args.section is None or args.format != "text"
+        if (not record_id or args.format != "text"
                 or getattr(args, "action", None) == "list"
                 or any((args.update, prepare, args.diff, args.history, args.summary, args.dry_run))
                 or any(getattr(args, field, None) is not None for field in fields)):
-            raise ResearchError("--body-only requires a selected dossier ID, --section and --format text; "
+            raise ResearchError("--body-only requires a selected dossier ID and --format text; "
                                 "it applies only to source body reads, without authored fields or write/history modes")
+    if command == "dossier" and args.preamble and (args.export_edit or args.edit_file):
+        raise ResearchError("--preamble does not select whole-dossier edit packets; use --file or --body")
     bounded_dossier = command == "dossier" and (
-        args.section is not None or args.summary or args.omit_citations)
+        args.section is not None or args.preamble or args.summary or args.omit_citations)
     if bounded_dossier:
         if not record_id:
-            raise ResearchError("Dossier --section, --summary and --omit-citations reads require a selected ID")
-        if args.section is not None and args.summary:
-            raise ResearchError("Choose --section or --summary for a bounded dossier read")
-        if args.section is not None and (args.history or (args.diff and args.from_revision is not None)):
-            raise ResearchError("--section selects dossier body reads or draft edits, not history or saved-revision comparisons")
+            raise ResearchError("Dossier --section, --preamble, --summary and --omit-citations reads require a selected ID")
+        if (args.section is not None or args.preamble) and args.summary:
+            raise ResearchError("Choose --section/--preamble or --summary for a bounded dossier read")
+        if (args.section is not None or args.preamble) and (args.history or (args.diff and args.from_revision is not None)):
+            raise ResearchError("--section/--preamble select dossier body reads or draft edits, not history or saved-revision comparisons")
         read_flags = [flag for flag, selected in (("--summary", args.summary),
                                                  ("--omit-citations", args.omit_citations)) if selected]
         if read_flags and any((args.update, prepare, args.diff, args.history)):
@@ -962,7 +989,7 @@ def _current_project() -> str:
     return str(root)
 
 
-def _record_text(result: dict[str, Any]) -> str:
+def _record_text(result: dict[str, Any], *, kind: str | None = None) -> str:
     """Render a record, immutable version history, or an explicit diff preview."""
     from .presentation import geography_report, safe_text
 
@@ -975,9 +1002,10 @@ def _record_text(result: dict[str, Any]) -> str:
         return str(result["diff"]).rstrip() + "\n"
     if result.get("schema_version") == "research-history-local/1":
         lines = [f"# {safe_text(result['kind'])} {safe_text(result['record_id'])} history", "",
-                 f"Latest version: {result['latest_revision']}"]
+                 f"Latest {'revision' if result['kind'] == 'dossier' else 'version'}: {result['latest_revision']}"]
         for revision in result["revisions"]:
-            lines.extend(["", f"Version {revision['revision']}",
+            label = "Revision" if result["kind"] == "dossier" else "Version"
+            lines.extend(["", f"{label} {revision['revision']}",
                           f"Created: {safe_text(revision['created_at'])}",
                           f"Actor: {safe_text(revision['created_by'])}"])
             change = revision.get("change")
@@ -989,7 +1017,8 @@ def _record_text(result: dict[str, Any]) -> str:
     revision = record.get("revision")
     lines = [f"# {safe_text(title)}", ""]
     if revision is not None:
-        lines.append(f"Version {revision}")
+        label = "Revision" if (kind or result.get("kind")) == "dossier" else "Version"
+        lines.append(f"{label} {revision}")
     if record.get("section"):
         level = record.get("section_level")
         heading = (f"{'#' * level} {safe_text(record['section'])}" if level is not None
@@ -1018,7 +1047,7 @@ def _normalize_cli_identifiers(args: argparse.Namespace) -> None:
             return "urn:uuid:" + value.lower()
         return value
 
-    for field in ("action", "record_id", "source_id", "version_id", "passage", "passage_id", "claim_id",
+    for field in ("action", "record_id", "source_id", "source_version_id", "version_id", "passage", "passage_id", "claim_id",
                   "dossier_id", "decision_id", "relation_id", "evidence_link_id", "link_id",
                   "from_claim_id", "to_claim_id"):
         value = getattr(args, field, None)
@@ -1137,17 +1166,61 @@ def run(args: argparse.Namespace) -> int:
                 expected_snapshot=args.expected_snapshot, expected_decision_revision=args.expected_decision_revision,
                 expected_dossier_revision=args.expected_dossier_revision,
                 status="applied" if command == "mark-applied" else "review_needed", note=args.note, actor=args.actor)
+        elif command == "media-context":
+            result = api.update_dossier_media_context(args.project, args.dossier_id, args.source_id, args.source_version_id,
+                expected_snapshot=args.expected_snapshot, expected_revision=args.expected_revision,
+                context=_source_context(args.context) or {}, reason=args.reason, actor=args.actor, dry_run=args.dry_run)
         elif command == "dossier-images":
             result = api.list_dossier_images(args.project, dossier_id=args.dossier_id,
-                                            limit=args.limit, offset=args.offset)
-        elif command == "dossier-image":
+                                            limit=args.limit, offset=args.offset, missing_provenance=args.missing_provenance)
+        elif command in ("dossier-image", "dossier-media"):
             if not args.allow_retention:
                 raise ResearchError("Explicit local retention permission is required (--allow-retention)")
+            if getattr(args, "batch", None):
+                from .attachments import ImageBatchItem
+
+                if (any(getattr(args, field, None) is not None
+                        for field in ("caption", "section", "replace_reference", "title", "context", "origin_url"))
+                        or args.alt or args.change_kind != "supersession"):
+                    raise ResearchError("Put per-image metadata and placement inside the batch manifest")
+                manifest = Path(args.batch).expanduser().resolve()
+                with manifest.open("rb") as stream:
+                    batch_bytes = stream.read(1024 * 1024 + 1)
+                if len(batch_bytes) > 1024 * 1024:
+                    raise ResearchError("Image batch manifest exceeds 1 MiB")
+                document = json.loads(batch_bytes)
+                if (not isinstance(document, dict) or set(document) != {"schema_version", "items"}
+                        or document["schema_version"] != "research-dossier-image-batch/1"
+                        or not isinstance(document["items"], list) or not 1 <= len(document["items"]) <= 100):
+                    raise ResearchError("Expected research-dossier-image-batch/1 with only schema_version and items")
+                batch_items = [ImageBatchItem.model_validate(item) for item in document["items"]]
+                batch_resolved = []
+                for batch_item in batch_items:
+                    batch_values = batch_item.model_dump()
+                    batch_path = Path(batch_item.file).expanduser()
+                    batch_values["file"] = str(batch_path if batch_path.is_absolute() else manifest.parent / batch_path)
+                    batch_resolved.append(batch_values)
+                result = api.attach_dossier_images(args.project, args.dossier_id, batch_resolved,
+                    expected_snapshot=args.expected_snapshot, expected_revision=args.expected_revision,
+                    allow_retention=True, dry_run=args.dry_run,
+                    reason=args.reason or "Attach reviewed image batch.", actor=args.actor)
+                if args.compact and not args.dry_run:
+                    from .presentation import revision_write_summary
+
+                    result = revision_write_summary(result, expected_revision=args.expected_revision)
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+                return 0
+            if getattr(args, "dry_run", False):
+                raise ResearchError("--dry-run currently requires an explicit --batch manifest")
             context = _source_context(args.context)
-            image_path = Path(args.file)
+            image_path = Path(args.file).expanduser()
             with image_path.open("rb") as image_file:
-                content = image_file.read(MAX_IMAGE_BYTES + 1)
-            result = api.attach_dossier_image(
+                content = image_file.read((MAX_IMAGE_BYTES if command == "dossier-image" else api.MAX_PDF_BYTES) + 1)
+            if command == "dossier-media":
+                from .media import validate_media
+                validate_media(content, filename=image_path.name)
+            attach = api.attach_dossier_image if command == "dossier-image" else api.attach_dossier_media
+            result = attach(
                 args.project, args.dossier_id, content, filename=image_path.name,
                 expected_snapshot=args.expected_snapshot, expected_revision=args.expected_revision,
                 allow_retention=args.allow_retention, alt=args.alt, caption=args.caption,
@@ -1155,6 +1228,10 @@ def run(args: argparse.Namespace) -> int:
                 title=args.title, context=context, origin_url=args.origin_url,
                 reason=args.reason, change_kind=args.change_kind, actor=args.actor,
             )
+            if args.compact:
+                from .presentation import revision_write_summary
+
+                result = revision_write_summary(result, expected_revision=args.expected_revision)
         elif command == "ingest":
             context = _source_context(getattr(args, "context", None))
             start_time = time.monotonic()
@@ -1523,6 +1600,7 @@ def run(args: argparse.Namespace) -> int:
                     args.project,
                     args.dossier_id,
                     section=getattr(args, "section", None),
+                    preamble=args.preamble,
                     revision=args.revision,
                     summary=getattr(args, "summary", False),
                     include_citations=not getattr(args, "omit_citations", False),
@@ -1632,6 +1710,10 @@ def run(args: argparse.Namespace) -> int:
         elif command == "purge":
             result = api.purge(args.project, args.source_id, version_id=args.version_id,
                                reason=args.reason, actor=args.actor, dry_run=args.dry_run)
+        elif command == "migrate-storage":
+            from .storage import migrate_storage
+
+            result = migrate_storage(args.project, args.backup, expected_snapshot=args.expected_snapshot)
         elif command == "export":
             result = api.export_archive(args.project, args.output)
         elif command == "restore":
@@ -1690,7 +1772,8 @@ def run(args: argparse.Namespace) -> int:
             if command == "dossier" and args.body_only:
                 from .presentation import safe_text
 
-                content = result["content"]
+                record = result.get("record", result)
+                content = record["content"] if args.section is not None or args.preamble else record["body"]
                 terminal_text = content.replace("\r\n", "\n").replace("\n", "").replace("\t", "")
                 if sys.stdout.isatty() and safe_text(terminal_text) != terminal_text:
                     raise ResearchError("--body-only source contains terminal controls or Unicode formatting; "
@@ -1709,7 +1792,7 @@ def run(args: argparse.Namespace) -> int:
                 if table is not None:
                     print(table)
                     return 0
-            print(_record_text(result))
+            print(_record_text(result, kind=command))
             return 0
         if command in ("dossier", "claim", "decision") and getattr(args, "format", "json") == "table":
             from .presentation import record_list_report

@@ -419,8 +419,16 @@ matching headings are ambiguous and require reading the full dossier. Direct ID,
 ### Claims linked to a dossier
 
 The dossier detail groups **Dossier notes**, **Linked claims** and
-**Source quotations** in one place. **All project records → Claims** or **Decisions**
-opens the corresponding project-wide list. Local creation actions prepare the
+**Source quotations** in one place. **Current main, unreleased:** its reading
+surface preserves the original heading order and nesting, including repeated
+headings. The section lookup does not reorder or replace the document. Unique
+editable sections have an editing action beside their heading; repeated names
+remain readable without an ambiguous section-editing action. Images, documents
+and geography use the same reader when opened in an embedded or record view.
+
+Open **Dossier actions** below the reading area to create a claim or decision,
+or choose **All project records → Claims** or **Decisions** to open the
+corresponding project-wide list. Local creation actions prepare the
 existing claim/decision forms; choosing a view does not save or retain anything.
 
 Both the research dossier reader and **Dossier alongside** show the current
@@ -600,6 +608,19 @@ lixity research review --project ./novel --json
 Human reports bound long lists/findings; request JSON for the complete payload.
 `audit --format text` provides a human integrity report with scope, record totals
 and bounded findings; audit remains read-only.
+
+**Current main:** audit also verifies the complete accepted manifest ancestry.
+Missing, modified, foreign-project or non-contiguous ancestor manifests fail
+integrity. Its `records` count refers to accepted revision objects, including
+historical authored revisions, rather than current identities or source files.
+`manifest_history_checked` counts verified manifests including HEAD, or is `null`
+if ancestry verification did not complete. `manifest_capacity` reports
+`entries_used`, `entries_max` and `entries_remaining`; used and remaining are
+`null` when the current snapshot is unavailable. At 90% of the 100,000-entry
+limit, `warnings` contains an advisory capacity warning without failing integrity.
+The audit checks accepted revision objects, retained source/text bytes, citations
+and dossier media pins; it does not establish factual accuracy, fully decode
+media or check search-index freshness.
 Output formats/defaults are command-specific: inspect `--help` or
 `lixity about --json`. `--pager` requires explicit use with a human format and
 interactive input/output; pipes never start one. Progress phases use stderr,
@@ -712,6 +733,12 @@ including nested headings, without the dossier title, version or selected headin
 It adds no final newline. The ordinary human display is not a replacement file:
 copying its title/version/heading into `--file` would store that display metadata
 as section content. JSON remains the default and keeps its existing fields.
+
+**Current main, unreleased:** omit `--section` from a selected dossier
+`--format text --body-only` read to export its entire authored body with the same
+exact UTF-8 bytes and no added newline. Redirect output to a file when the source
+contains terminal controls or Unicode formatting. `--title` also accepts a
+replacement dossier title with `--update` through the ordinary revision guards.
 
 In a dossier, choose **Edit section** beside an unambiguous heading. The existing
 revision editor opens that section's content, including its subsections. It keeps
@@ -952,6 +979,12 @@ lixity research dossier-images --project ./novel --limit 100 --offset 0
 lixity research dossier-images --project ./novel --dossier-id ID --limit 100
 ```
 
+**Current main, unreleased:** `dossier-images --json` explicitly selects its JSON
+output. `dossier-image --compact` and `dossier-media --compact` return the existing
+`research-revision-write-summary-local/1` receipt after saving, without copying
+the dossier body. Image batch saves accept the same flag; batch `--dry-run`
+continues to return its bounded `research-dossier-images-preview-local/1` receipt.
+
 `research-dossier-images-local/1` reports exact dossier/source revisions,
 the nearest real heading, source context, availability and retained SHA-256.
 Ordinary Markdown image references are marked `unretained`; their destinations
@@ -980,6 +1013,42 @@ Storage-full/user-quota CLI failures additionally identify temporary storage
 (`TMPDIR`, `TEMP`, `TMP`) as a possible cause. Free filesystem space alone does
 not establish remaining user quota. Check both the project and temporary
 filesystems; the diagnostic does not authorize deletion or automatic repair.
+
+**Current main, unreleased batch attachment:** `dossier-image --batch FILE`
+accepts an explicit `research-dossier-image-batch/1` JSON manifest with an
+`items` array. Each item contains `file` and optional `alt`, `caption`, `title`,
+`context`, `origin_url`, `section` or `replace_reference`. Section and replacement
+are mutually exclusive. Relative file paths resolve beside the manifest, not the
+project or terminal directory. This is not automatic Markdown scanning or
+semantic assignment of an image to a dossier.
+
+```json
+{
+  "schema_version": "research-dossier-image-batch/1",
+  "items": [
+    {"file": "plan.png", "alt": "Synthetic plan", "section": "Location"},
+    {"file": "detail.jpg", "alt": "Synthetic detail", "section": "Evidence"}
+  ]
+}
+```
+
+```sh
+lixity research dossier-image --project ./novel --dossier-id ID \
+  --batch ./photos/batch.json --expected-snapshot DIGEST --expected-revision N \
+  --allow-retention --dry-run
+```
+
+Preview validates every file and placement but publishes nothing. Its
+`research-dossier-images-preview-local/1` receipt reports planned count, byte
+total, hashes and candidate revision, not accepted source identities. Omit
+`--dry-run` to apply against the same reviewed snapshot/revision. All captures
+and **one** dossier revision commit together or none do; another writer rejects
+the entire batch. An optional per-item `sha256` binds the previewed image bytes
+when applying. Without it, application reads the currently selected file bytes.
+Limits are 100 PNG/JPEG items, 128 MiB aggregate source bytes, 16 MiB per image
+and a 1 MiB manifest. Source identities remain distinct for distinct provenance;
+hash-addressed blobs deduplicate identical bytes. This batch is for one dossier;
+multi-dossier operations and an interactive batch gallery are not implemented.
 
 ### Retain a PDF or video in a dossier
 
@@ -1011,6 +1080,10 @@ with extracted passages; the earlier dossier pin remains unchanged.
 Python `ingest_media` retains an unattached file; `attach_dossier_media` accepts
 the same snapshot/revision guards and placement fields as `attach_dossier_image`.
 `read_media` requires explicit project, source and version identities.
+CLI `research dossier-media --file note.pdf` (also MP4/WebM) accepts the same
+explicit project, retention, snapshot/revision, description and placement flags
+as a single image attachment, including exact ordinary-marker replacement.
+It does not extract PDF text or transcribe video; there is no media batch flag.
 PDF/video pins use ordinary Markdown image syntax with destination
 `lixity:media/SOURCE_ID/VERSION_ID`;
 PNG/JPEG pins and their existing API keep `lixity:image/...`. Dossier read
@@ -1056,7 +1129,8 @@ Long dossiers have a **Sections** list generated from their actual rendered
 headings, Notes, linked Claims and Citations. Close/reopen the native list; a
 compact current-heading link remains within the dossier while scrolling and
 returns to that list. Heading links use the existing scroll/reveal behavior,
-including collapsed section maps. Local heading IDs last for that accepted
+including an active source-text preview. Places and routes have their own
+destination in the contents. Local heading IDs last for that accepted
 rendering; saved record/revision references are unchanged.
 
 For a human-readable daily manuscript check, use the existing explicit format:
@@ -1139,6 +1213,22 @@ The [harbour example](examples/harbour-geography.json) contains deliberately
 fictional positions and journeys. Field help, `research dossier --help` and
 `research schema` describe the supported inputs; ordinary revisions and backups
 retain them with the dossier.
+
+To enter a route in the native UI:
+
+1. Open the dossier's edit dialog, expand **Places and routes**, and choose
+   **Add place or route**. Name the journey and select **Route (line)**.
+2. Enter one longitude/latitude pair per line, in travel order. Use decimal
+   points, for example `11.10, 46.70` followed on the next line by
+   `11.12, 46.71`. These are illustrative coordinates, not a verified route.
+3. In the optional details, enter waypoint names in the same order, one per
+   coordinate, and optionally add transport, people and period. Save the dossier.
+4. Select the route on the dossier map or in its numbered list. Frame the
+   selection to see the whole line; **Details** opens its geographic entry.
+
+The line joins the supplied coordinates. It does not snap to roads. There is
+currently no click-to-draw editor, route playback or animated journey. A map
+feature's name is not an automatic link to a matching prose heading.
 
 Coordinates are finite WGS84 longitude/latitude pairs. **Since v0.7.1:** the
 numbered sketch and interactive Leaflet vectors work offline. Maps open with OpenStreetMap. Turn off the background or choose the sketch for
@@ -1467,7 +1557,8 @@ entire archive at an earlier date.
 - `research/project.json`: immutable initial project configuration.
 - `research/revisions/`: immutable, schema-checked records.
 - `research/blobs/`: SHA-256-addressed original source bytes and extracted text; originals are not normalized.
-- `research/manifests/`: complete snapshots; `research/HEAD.json` selects one.
+- `research/manifests/`: complete, gzip-compressed snapshots; `research/HEAD.json` selects one.
+- `research/storage.json`: physical storage layout marker; canonical JSON hashes remain unchanged.
 - `.lixity/research/`: disposable catalogue and writer lock.
 
 ### Withdrawal vs. purge
@@ -1853,8 +1944,14 @@ Rollback requires the complete pre-upgrade backup, never editing HEAD, schema
 labels or provenance by hand. Source identity metadata cannot be edited in place;
 refresh creates a new capture.
 
-The 25,000-entry snapshot limit includes retained revisions. Status counts show
+The 100,000-entry snapshot limit includes retained revisions. Status counts show
 current logical records; the audit's `records` count includes their history.
+Each accepted write retains a complete manifest of accepted revision entries,
+so manifest storage can grow faster than the newly added record bytes. Unchanged
+authored edits create no snapshot; batch operations reduce the number of complete
+manifests compared with separate writes. Keep old manifests: backup verifies their
+complete parent chain. Portable exports already use gzip compression; live-store
+compaction is not implemented.
 
 Text inputs are at most 2 MiB and must be valid UTF-8 without NUL bytes.
 PDF inputs are at most 50 MiB. Both routes allow at most 5,000 nonempty extracted
@@ -1879,3 +1976,94 @@ longer resolves. The web panel displays those evidence states for linked
 passages.
 The [licensing rules](../LICENSING.md) still apply; imported sources keep
 their own rights.
+
+
+### Correct retained media provenance without reattaching
+
+**Current main, unreleased:** `research media-context` corrects `origin_url`
+and/or `provenance_note` for a selected retained image, video or retained-only PDF.
+Use the exact source/version identifiers from the selected dossier and preview
+before saving:
+
+```sh
+lixity research media-context --project ./novel --dossier-id DOSSIER_ID \
+  --source-id SOURCE_ID --source-version-id VERSION_ID \
+  --expected-snapshot SNAPSHOT --expected-revision 3 \
+  --context '{"origin_url":"https://example.org/source","provenance_note":"Credit and license supplied by the source; verify rights separately."}' \
+  --reason 'Correct attribution' --dry-run
+```
+
+Remove `--dry-run` to accept the reviewed correction. The bounded JSON receipt
+reports old/new source-version pins, context and the number of matching
+occurrences. A new context version shares the same source identity and retained
+blob; it does not duplicate media bytes. All active occurrences of the selected
+pin in this dossier change atomically. Other dossiers, captions and alternative
+text remain unchanged. Snapshot/revision guards reject stale writes. Repeating
+an unchanged correction creates no revision. JSON `null` clears a supplied field;
+other context fields are preserved. There is no separate verified-license field:
+license/credit statements belong in `provenance_note` and remain author evidence.
+PDFs with extracted text require their text-provenance workflow and are refused
+here rather than losing extraction lineage.
+
+`dossier-images --missing-provenance --json` filters image occurrences missing
+`origin_url` or `provenance_note` before pagination. Each entry lists absent fields
+in `provenance_missing`. This is a presence check, not license validation; it
+includes ordinary/unavailable image references and does not audit PDF/video credits.
+
+### Edit the dossier preamble explicitly
+
+**Current main, unreleased:** `dossier ID --preamble` selects the exact source
+before the first actual ATX heading. It does not invent an `Overview` heading or
+match a real section with that name. In a heading-free body, it selects the entire
+body. Read a draft with `--format text --body-only`; update with `--file` or
+`--body` and the ordinary `--update`, revision/snapshot guards, reason and change
+kind. `--dry-run`, `--compact` and draft `--diff` remain available. Replacement
+preserves the existing heading and all following bytes, using the body's newline
+style and a blank line before the first heading. An empty replacement clears the
+preamble. Whole-dossier `--body-only` requires no section selector. Human dossier
+output labels authored states as revisions. Missing attachment/section targets
+now list actual heading candidates; selection remains exact and unambiguous.
+
+
+### Migrate manifest storage
+
+**Current main, unreleased:** new archives use compressed manifest storage.
+Existing uncompressed projects require an explicit migration before normal use:
+
+```sh
+lixity research migrate-storage --project ./novel \
+  --backup ./backups/novel-before-manifest-compression.tar.gz --json
+```
+
+Stop every service/writer using that project first. The backup must be outside
+`research/` and `.lixity/research/`; an existing backup is never overwritten.
+An optional `--expected-snapshot HASH` binds the migration to the reviewed HEAD.
+The migration verifies a restored backup, rechecks HEAD under the writer lock,
+stages and verifies all accepted compressed manifests, then atomically publishes
+the layout marker. Only verified accepted plaintext duplicates are removed.
+HEAD, canonical manifest hashes, authored revisions, media and retained source
+bytes stay unchanged. Interrupted staging leaves plaintext authoritative;
+interrupted cleanup leaves a valid compressed store and can be retried using
+the same verified backup. Unrelated recovery objects are not deleted.
+
+Keep enough free space for the backup, its temporary restored copy and compressed
+manifests before plaintext is reclaimed. The receipt reports original/compressed
+manifest bytes and unchanged snapshot. Portable backups retain the existing
+`research-export-local/1` transport with canonical `.json` members; restore
+converts unpublished staging into current compressed storage before publication.
+This reduces manifest bytes but does not introduce deltas or remove the 100,000
+revision-entry ceiling. Old program versions cannot open the new physical layout;
+rollback requires stopping writers and restoring the complete pre-migration
+backup with the intended program version. Restart with the current installation
+and audit after migration. There is one current storage/UI path, no compatibility
+mode to select.
+
+
+The current manifest `entries.maxItems` contract is deliberately relaxed from
+25,000 to 100,000. This changes admission capacity only: no accepted manifest is
+rewritten and no revision is removed. The independent 32 MiB canonical JSON
+limit and bounded gzip decompression remain enforced. A manifest with 100,000
+longest-kind entries and six-digit revision references fits that byte limit;
+actual input must still pass record/reference/history validation. Extremely
+large numeric values or other oversized serialized input remain bounded by the
+byte limit. Capacity warnings begin at 90% of the current entry limit.

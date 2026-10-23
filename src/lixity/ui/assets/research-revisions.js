@@ -309,19 +309,13 @@ if (researchRevisionDialog) {
       image_editable: !window.LixitySite.readOnly && record.revision === envelope.latest_revision &&
         !revisionState.historyInitialRevision && !envelope.availability,
     }) : envelope;
-    var dossierBody = "";
+    var dossierBody = dossier ? researchDossierDetailHtml(imageContext, !imageContext.image_editable, {recordView:true}) : "";
     var rows = fields.map(function(spec) {
       // Reference IDs already include their exact pin in read-only mode.
       // Keep the separate numeric controls exclusively in the edit form.
       if (["dossier_revision", "claim_revision", "from_claim_revision", "to_claim_revision"].includes(spec.name)) return "";
       var value = revisionFieldValue(record, spec.name, true);
-      if (dossier && spec.name === "title") return "";
-      if (dossier && spec.name === "body") {
-        var actions = imageContext.image_editable && window.LixityDossierImages ?
-          window.LixityDossierImages.actionsHtml(imageContext) : "";
-        dossierBody = researchDossierBodyHtml(value, imageContext, actions);
-        return "";
-      }
+      if (dossier && ["title", "body", "geography"].includes(spec.name)) return "";
       if (!spec.required && (value === null || value === undefined ||
           typeof value === "string" && !value.trim() || Array.isArray(value) && !value.length)) return "";
       if (Array.isArray(value)) value = value.join(", ");
@@ -362,9 +356,9 @@ if (researchRevisionDialog) {
       (rows ? '<dl class="research-revision-readonly">' + rows + '</dl>' : "") +
       '<p class="ctl-note research-revision-provenance">' + provenance.join(" · ") + '</p>' +
       manuscriptRoute +
-      '<h4>' + escapeHtml(uiLabel("research_citations")) + '</h4>' +
+      (dossier ? "" : '<h4>' + escapeHtml(uiLabel("research_citations")) + '</h4>' +
       ((envelope.citations || []).length ? envelope.citations.map(function(cite) { return researchCitationHtml(cite, false); }).join("") :
-        '<p class="ctl-note">' + escapeHtml(uiLabel("research_revision_no_citations")) + '</p>') +
+        '<p class="ctl-note">' + escapeHtml(uiLabel("research_revision_no_citations")) + '</p>')) +
       '</div>';
   }
 
@@ -444,6 +438,11 @@ if (researchRevisionDialog) {
     revisionHistoryDetail.innerHTML = revisionReadOnly(data);
     revisionState.historyEnvelope = data;
     revisionState.historyView = revisionViewedRecord(data, true);
+    if (revisionState.kind === "dossier") {
+      enhanceResearchDossierClaims(revisionHistoryDetail, Object.assign({}, data, data.record), function() {
+        return revisionState.historyEnvelope === data && researchRevisionDialog.open;
+      });
+    }
     revisionHistoryList.querySelectorAll("button[data-research-revision]").forEach(function(button) {
       button.setAttribute("aria-current", String(Number(button.dataset.researchRevision) === data.record.revision));
     });

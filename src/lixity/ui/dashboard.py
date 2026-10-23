@@ -138,6 +138,7 @@ _JS_FILES = (
     "manuscript-links.js",
     "manuscript-reader.js",
     "analysis-evidence.js",
+    "analysis-review.js",
     "reader-publication.js",
 )
 
@@ -908,8 +909,10 @@ def render_dashboard(
             parts.append(
                 f'<article class="review-route"><a class="ctl primary" href="#p-{first_index}" '
                 f'data-help="{L(passage_hint)}" '
+                'aria-describedby="review-passage-reason" '
                 f'data-review-passage="1" data-line="{first.start_line}" data-target="p-{first_index}">'
-                f"{L('review_passage_action')}</a></article>"
+                f"{L('review_passage_action')}</a>"
+                f'<p class="ctl-note" id="review-passage-reason">{L(passage_hint)}</p></article>'
             )
         compare_target = (
             "heatmap"
@@ -1370,10 +1373,36 @@ def render_dashboard(
 
     # --- Flagged passages (list → paragraph → marker) ----------------------
     flagged = flagged_paragraphs(list(paragraphs), min_severity=flag_min_severity)
-    parts.append('<section class="panel" id="flags">')
+    review_capable = bool(controls and not read_only and allowed_actions is not None and action_enabled("analysis-review"))
+    parts.append(f'<section class="panel" id="flags" data-review-capable="{str(review_capable).lower()}">')
     parts.append(f"<h2>{help_term(labels, 'flagged', label(labels, 'panel_flags'))} "
                  f'<span class="badge">{N(len(flagged), 0)}</span></h2>')
+    parts.append(f'<p class="panel-guide">{L("triage_intro")}</p>')
     if flagged:
+        parts.append('<div class="row triage-controls">')
+        parts.append(f'<label>{L("chapter")} <select class="ctl" id="triage-chapter">'
+                     f'<option value="">{L("triage_all")}</option>')
+        flagged_chapters = {p.chapter_num for p in flagged}
+        parts.extend(f'<option value="{chapter.num}">{chapter.num}. {esc(chapter.title)}</option>'
+                     for chapter in chapters if chapter.num in flagged_chapters)
+        parts.append('</select></label>')
+        parts.append(f'<label>{L("flags_stage")} <select class="ctl" id="triage-severity">'
+                     f'<option value="">{L("triage_all")}</option>')
+        parts.extend(f'<option value="{severity}">{L(f"severity_{severity}")}</option>'
+                     for severity in sorted({p.severity for p in flagged}))
+        parts.append('</select></label>')
+        if review_capable:
+            parts.append(f'<label>{L("triage_status")} <select class="ctl" id="triage-status-filter">'
+                         f'<option value="">{L("triage_all")}</option>')
+            parts.extend(f'<option value="{status}">{L("triage_" + status)}</option>'
+                         for status in ("unreviewed", "stale", "later", "kept", "changed"))
+            parts.append('</select></label>')
+        parts.append(f'<button type="button" class="ctl" id="triage-next">{L("triage_next")}</button></div>')
+        parts.append('<p class="ctl-note" id="triage-progress" role="status" aria-live="polite"></p>')
+        if review_capable:
+            parts.append(f'<p class="ctl-note">{L("triage_storage")}</p>')
+            parts.append('<p class="ctl-status" id="triage-save-status" role="status" aria-live="polite"></p>')
+            parts.append(f'<button type="button" class="ctl" id="triage-reload" hidden>{L("triage_reload")}</button>')
         para_index = {id(p): i for i, p in enumerate(paragraphs)}
         parts.append('<div class="table-wrap flags-wrap" tabindex="0" role="region" '
                      f'aria-label="{L("panel_flags")}">')
@@ -1384,8 +1413,9 @@ def render_dashboard(
             f'<th scope="col" class="num">{L("line")}</th>'
             f'<th scope="col">{label(labels, "flags_excerpt")}</th>'
         )
-        if can_edit:
-            parts.append('<th scope="col"></th>')
+        parts.append(f'<th scope="col">{L("triage_read")}</th>')
+        if review_capable:
+            parts.append(f'<th scope="col">{L("triage_status")}</th>')
         parts.append("</tr></thead><tbody>")
         for p in flagged:
             idx = para_index[id(p)]
@@ -1399,23 +1429,29 @@ def render_dashboard(
             )
             parts.append(
                 f'<tr class="row-link flag-row" data-line="{p.start_line}" '
-                f'data-target="p-{idx}" data-flags="1" role="button" tabindex="0" '
+                f'data-target="p-{idx}" data-flags="1" '
+                f'data-triage-chapter="{p.chapter_num}" data-triage-severity="{p.severity}" '
+                f'data-review-sha="{paragraph_identity(p)["paragraph_sha256"]}" '
                 f'title="{esc(label(labels, "click_hint_para"), quote=True)}">'
                 f'<td><span class="badge sev-{p.severity}">'
                 f"{esc(label(labels, f'severity_{p.severity}'))}</span></td>"
                 f"<td>{chapter_cell}</td>"
                 f'<td class="num">{esc(line_label(labels, p))}</td>'
-                f'<td class="flag-excerpt">{esc(excerpt)}</td>'
+                f'<td class="flag-excerpt">{esc(excerpt)}'
+                f'<details class="triage-reason"><summary>{L("triage_why")}</summary>'
+                f'<p>{esc(label(labels, "triage_reason").format(present=p.present_hits, past=p.past_hits, mixed=L("research_value_yes" if p.mixed else "research_value_no"), switch=L("research_value_yes" if p.switch else "research_value_no")))}</p>'
+                '</details></td>'
             )
-            if can_edit:
+            parts.append(f'<td class="triage-read-cell"><button type="button" class="ctl" data-line="{p.start_line}" '
+                         f'data-target="p-{idx}" data-flags="1">{L("triage_read")}</button></td>')
+            if review_capable:
                 parts.append(
-                    f'<td><div class="row marker-row">'
-                    f'<button class="ctl" data-marker-kind="todo" '
-                    f'data-line="{p.start_line}">+ '
-                    f"{esc(label(labels, 'marker_todo'))}</button>"
-                    f'<span class="marker-note-slot" data-placeholder="'
-                    f'{esc(label(labels, "marker_note"), quote=True)}"></span>'
-                    f"</div></td>"
+                    f'<td class="triage-decision-cell"><span class="ctl-note triage-saved-state">{L("triage_loading")}</span>'
+                    f'<select class="ctl triage-choice" disabled aria-label="{L("triage_status")}">'
+                    f'<option value="">{L("triage_choose")}</option>'
+                    + "".join(f'<option value="{status}">{L("triage_" + status)}</option>'
+                              for status in ("kept", "changed", "later"))
+                    + f'</select><button type="button" class="ctl" data-triage-save disabled>{L("triage_save")}</button></td>'
                 )
             parts.append("</tr>")
         parts.append("</tbody></table></div>")
