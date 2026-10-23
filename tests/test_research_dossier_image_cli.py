@@ -108,6 +108,37 @@ class TestDossierImageCLI(unittest.TestCase):
         self.assertEqual(result["record"]["change"]["change_kind"], "supersession")
         self.assertIn("picture.png", result["record"]["change"]["reason"])
 
+    def test_exact_reference_replacement_preserves_placement_and_other_text(self):
+        marker = "![Synthetic specimen](images/specimen.png)"
+        loaded = api.get_record(self.project, "dossier", self.dossier)
+        api.revise_record(self.project, "dossier", self.dossier,
+                          changes={"body": self.body.replace("Existing figure note.", marker + "\n\nExisting figure note.")},
+                          expected_snapshot=loaded["snapshot"], expected_revision=1,
+                          change_kind="correction", reason="Prepare synthetic ordinary reference.")
+        before = api.get_record(self.project, "dossier", self.dossier)["record"]["body"]
+        status, output, error = self.invoke([*self.arguments(), "--allow-retention",
+                                           "--replace-reference", marker, "--alt", "Retained specimen"])
+        self.assertEqual(status, 0, error)
+        result = json.loads(output)
+        pin = f"![Retained specimen](lixity:image/{result['capture']['source_id']}/{result['capture']['source_version_id']})"
+        self.assertEqual(result["record"]["body"], before.replace(marker, pin))
+        self.assertEqual(len(api.list_sources(self.project)["sources"]), 1)
+        status, _, _ = self.invoke([*self.arguments(), "--allow-retention",
+                                   "--replace-reference", marker, "--section", "Figures"])
+        self.assertEqual(status, 2)
+
+    def test_storage_exhaustion_explains_temporary_storage_and_user_quotas(self):
+        import errno
+
+        for code in (errno.ENOSPC, getattr(errno, "EDQUOT", 122)):
+            with self.subTest(errno=code), patch("lixity.research.api.attach_dossier_image",
+                                                side_effect=OSError(code, "Synthetic storage failure")):
+                status, output, error = self.invoke([*self.arguments(), "--allow-retention"])
+                self.assertEqual(status, 1)
+                self.assertEqual(output, "")
+                self.assertIn("TMPDIR/TEMP/TMP", error)
+                self.assertIn("user quota", error)
+
     def test_stale_snapshot_and_revision_accept_neither_capture_nor_dossier_edit(self):
         loaded = api.get_record(self.project, "dossier", self.dossier)
         api.revise_record(self.project, "dossier", self.dossier, changes={"title": "Concurrent correction"},

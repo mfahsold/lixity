@@ -78,6 +78,58 @@ class TestResearchImages(unittest.TestCase):
         self.assertEqual(api.list_sources(self.project)["sources"][0]["media_type"], "image/png")
         self.assertTrue(api.audit(self.project)["ok"])
 
+    def test_summary_retains_all_image_references_beyond_the_excerpt(self):
+        loaded = api.get_record(self.project, "dossier", self.dossier)
+        api.revise_record(self.project, "dossier", self.dossier, changes={"body": "Synthetic text. " * 100},
+                          expected_revision=1, expected_snapshot=loaded["snapshot"],
+                          change_kind="correction", reason="Place image after a long introduction.")
+        attached = self.attach()
+        summary = api.get_dossier(self.project, self.dossier, summary=True)
+        self.assertNotIn("body", summary)
+        self.assertLessEqual(len(summary["excerpt"]), 503)
+        self.assertEqual(summary["images"], attached["images"])
+        with contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(main(["research", "dossier", self.dossier, "--project", str(self.project),
+                                   "--summary", "--format", "text"]), 0)
+        self.assertIn("Image references: 1", output.getvalue())
+
+    def test_project_image_overview_has_exact_sections_pagination_and_inert_references(self):
+        marker = "![Local plan](images/plan.png)"
+        loaded = api.get_record(self.project, "dossier", self.dossier)
+        api.revise_record(self.project, "dossier", self.dossier,
+                          changes={"body": marker + "\n\n## Figures\n\n" + marker +
+                                   "\n\n```\n![Code](never-read.png)\n```"},
+                          expected_revision=1, expected_snapshot=loaded["snapshot"],
+                          change_kind="correction", reason="Synthetic mixed image overview.")
+        attached = self.attach()
+        before = Repository(self.project).snapshot().digest
+        first = api.list_dossier_images(self.project, limit=2)
+        second = api.list_dossier_images(self.project, limit=2, offset=2)
+        self.assertEqual(first["schema_version"], "research-dossier-images-local/1")
+        self.assertEqual(first["total"], 3)
+        self.assertTrue(first["has_more"])
+        self.assertEqual([row["section"] for row in first["images"]], [None, "Figures"])
+        self.assertEqual([row["availability"] for row in first["images"]], ["unretained", "unretained"])
+        self.assertEqual(second["images"][0]["source_version_id"], attached["capture"]["source_version_id"])
+        self.assertEqual(second["images"][0]["section"], "Figures")
+        self.assertFalse(second["has_more"])
+        self.assertEqual(Repository(self.project).snapshot().digest, before)
+        self.assertEqual(api.list_dossier_images(self.project, dossier_id=self.dossier)["total"], 3)
+        for invalid in ({"limit": 0}, {"limit": True}, {"limit": 201}, {"offset": -1}, {"offset": False}):
+            with self.subTest(invalid=invalid), self.assertRaises(ResearchError):
+                api.list_dossier_images(self.project, **invalid)
+        with contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(main(["research", "dossier-images", "--project", str(self.project),
+                                   "--limit", "1", "--offset", "2"]), 0)
+        self.assertEqual(json.loads(output.getvalue())["images"], second["images"])
+        image = attached["images"][0]
+        api.withdraw(self.project, image["source_id"])
+        self.assertEqual(api.list_dossier_images(self.project, offset=2)["images"][0]["availability"], "withdrawn")
+        api.purge(self.project, image["source_id"])
+        purged = api.list_dossier_images(self.project, offset=2)["images"][0]
+        self.assertEqual(purged["availability"], "purged")
+        self.assertIsNone(purged["sha256"])
+
     def test_jpeg_capture_and_exact_reader(self):
         result = api.ingest_image(self.project, JPEG, filename="one.jpeg", allow_retention=True)
         image = api.read_image(self.project, project_id=self.project_id, source_id=result["source_id"],

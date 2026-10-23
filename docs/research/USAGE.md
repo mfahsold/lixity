@@ -941,6 +941,46 @@ exact dossier snapshot/revision guards. Canonical destinations are
 `lixity:image/SOURCE_ID/VERSION_ID` with UUID URNs. Purge identity metadata uses
 record schema v2; unprovable older image associations remain missing.
 
+**Current main, unreleased:** `dossier --summary` keeps its short body excerpt
+but reports image and media references from the entire selected dossier revision.
+It no longer misses attachments placed after the excerpt.
+
+For a paginated, read-only image inventory across active dossiers:
+
+```sh
+lixity research dossier-images --project ./novel --limit 100 --offset 0
+lixity research dossier-images --project ./novel --dossier-id ID --limit 100
+```
+
+`research-dossier-images-local/1` reports exact dossier/source revisions,
+the nearest real heading, source context, availability and retained SHA-256.
+Ordinary Markdown image references are marked `unretained`; their destinations
+are data, never loaded or imported. Code literals are excluded. `total` counts
+image occurrences, not distinct sources or files; use `has_more` and `offset`
+for remaining pages (maximum 200 per page). This is an accepted-record inventory,
+not a scan of loose project folders or a gallery of unattached sources.
+Original filenames are not reconstructed from source titles. License/credit
+notes appear only when supplied in source context; no rights are inferred.
+Identical retained bytes already share a hash-addressed blob. Distinct source
+identities can still record different provenance; the overview does not merge
+those identities merely because their bytes match.
+
+To replace a unique ordinary image marker exactly where it occurs, pass the
+overview entry's complete `reference` string as `dossier-image --replace-reference MARKER`
+instead of `--section` (quote the marker as one shell argument).
+Supply the selected file, explicit retention and reviewed
+snapshot/revision as above. The CLI reuses the same atomic backend operation
+as the image placeholder action. Ambiguous, missing or code-only markers fail
+without accepting a new source or dossier revision. Existing captions outside
+the marker are not deleted. Moving/removing retained pins can use the ordinary
+reviewed dossier/section edit or grouped revision workflow; do not ingest
+another copy merely to move an existing pin.
+
+Storage-full/user-quota CLI failures additionally identify temporary storage
+(`TMPDIR`, `TEMP`, `TMP`) as a possible cause. Free filesystem space alone does
+not establish remaining user quota. Check both the project and temporary
+filesystems; the diagnostic does not authorize deletion or automatic repair.
+
 ### Retain a PDF or video in a dossier
 
 **Current main, unreleased:** choose **Add PDF / video** in the same dossier

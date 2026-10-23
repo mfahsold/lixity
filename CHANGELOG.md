@@ -18,6 +18,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   unchanged; attachments do not manufacture extraction or linguistic scores.
 
 ### Fixed
+- Dossier summaries resolve image/media references across the complete selected
+  revision, not just the first 500 characters. A read-only paginated
+  `research dossier-images` inventory shows current dossier/section placement,
+  exact pins, retained hashes/context and unretained ordinary references without
+  scanning folders. `dossier-image --replace-reference` exposes the existing
+  atomic exact-marker replacement in CLI. Storage-full/quota CLI diagnostics
+  point to temporary storage as well as project storage.
 - Publication export distinguishes no saved profiles, malformed settings and
   unsaved edits, links directly to profile creation and disables dependent
   controls until a saved profile is selected. Failed dossier catalogues offer

@@ -83,7 +83,7 @@ server.serve_forever()
           button.textContent = 'Synthetic history entry'; document.body.appendChild(button);
         }, {kind, id, revision});
         await page.locator('#synthetic-history-entry').click();
-        await expect(detail.locator('dd').first()).toBeVisible();
+        await expect(detail.locator(kind === 'dossier' ? '.research-revision-dossier' : 'dd').first()).toBeVisible();
         return reads.slice(firstRead);
       }
       async function showVersions() {
@@ -106,7 +106,7 @@ server.serve_forever()
         assert.equal(await dialog.locator('[role=tab]').first().getAttribute('id'), 'research-revision-history-tab',
           'Reading is the primary entry mode');
         const order = await dialog.evaluate(node => ({
-          fields: node.querySelector('#research-revision-history-detail dl').getBoundingClientRect().top,
+          fields: node.querySelector('#research-revision-history-detail .research-revision-dossier, #research-revision-history-detail dl').getBoundingClientRect().top,
           provenance: node.querySelector('.research-revision-provenance').getBoundingClientRect().top,
           versions: node.querySelector('#research-revision-versions > summary').getBoundingClientRect().top,
           technical: node.querySelector('#research-revision-technical > summary').getBoundingClientRect().top,
@@ -134,10 +134,17 @@ server.serve_forever()
           assert.equal(await detail.locator('time').getAttribute('datetime'), await detail.locator('time').evaluate(node => node.parentElement.title));
           assert.equal(await page.locator('#research-revision-citations').isVisible(), false, 'The edit-only citation owner stays hidden in History');
           assert.equal(await dialog.locator('.research-passage-card:visible').count(), ['dossier', 'evidence_link', 'decision'].includes(kind) ? 1 : 0, 'Each active quotation is displayed once');
-          const shortFields = {dossier: ['notes'], evidence_link: ['passage', 'rationale'],
+          const shortFields = {evidence_link: ['passage', 'rationale'],
             claim_relation: ['rationale'], decision: ['title', 'rationale', 'plot_impact', 'dossiers']};
           const visibleFields = await detail.locator('dt').allTextContents();
           assert.ok((shortFields[kind] || []).every(key => visibleFields.includes(labels['research_read_' + key])), 'Prompt-shaped labels use localized reading nouns');
+          if (kind === 'dossier') {
+            const article = detail.locator('.research-revision-dossier');
+            await expect(article.locator('h2')).toHaveText('Synthetic dossier');
+            await expect(article.locator('.research-prose')).toContainText(currentText.dossier);
+            assert.equal(await article.locator('dt, dd').count(), 0,
+              'Dossier title and readable notes stay outside metadata columns');
+          }
           if (kind === 'claim') {
             await expect(detail).toContainText(labels.research_confidence_evidenced);
             const fields = await detail.locator('dt').allTextContents();

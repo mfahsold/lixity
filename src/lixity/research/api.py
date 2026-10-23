@@ -39,6 +39,7 @@ from .images import (
     image_descriptions,
     resolve_dossier_images,
     resolve_dossier_media,
+    resolve_image_reference,
     validate_image,
 )
 from .limits import MAX_IMAGE_ALT_CHARS, MAX_IMAGE_CAPTION_CHARS
@@ -434,6 +435,49 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
     if progress_callback:
         progress_callback("complete", f"Source '{prepared.title}' ingested ({result['passages']} passages).")
     return result
+
+
+def list_dossier_images(project: str | Path, *, dossier_id: str | None = None,
+                        limit: int = 100, offset: int = 0) -> dict[str, Any]:
+    """List active dossier image occurrences without reading files or resolving URLs."""
+    if type(limit) is not int or not 1 <= limit <= 200 or type(offset) is not int or offset < 0:
+        raise ResearchError("Image overview requires limit 1..200 and a nonnegative offset")
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    if dossier_id is not None:
+        snapshot.get(Reference(id=dossier_id), Dossier)
+    images: list[dict[str, Any]] = []
+    total = 0
+    for record in snapshot.records.values():
+        if (not isinstance(record, Dossier) or (dossier_id is not None and record.id != dossier_id)
+                or dossier_withdrawal(snapshot, record.id)):
+            continue
+        spans = _section_spans(record.body)
+        heading_index = 0
+        heading: str | None = None
+        for marker in extract_markdown_image_references(record.body):
+            refs = extract_image_references(marker.marker)
+            if not refs and re.match(r"<?lixity:", marker.destination, re.IGNORECASE):
+                continue
+            while heading_index < len(spans) and spans[heading_index].start < marker.start:
+                heading = spans[heading_index].title
+                heading_index += 1
+            total += 1
+            if total <= offset or len(images) >= limit:
+                continue
+            if refs:
+                item = resolve_image_reference(snapshot, refs[0])
+                version = snapshot.records.get(refs[0].source_version_id)
+                item["sha256"] = (version.blob.sha256 if isinstance(version, SourceVersion)
+                                  and item["availability"] in ("available", "withdrawn") else None)
+            else:
+                item = {"availability": "unretained", "destination": marker.destination}
+            images.append({**item, "dossier_id": record.id, "dossier_revision": record.revision,
+                           "dossier_title": record.title, "section": heading,
+                           "reference": marker.marker, "start": marker.start, "end": marker.end})
+    return {"schema_version": "research-dossier-images-local/1", "project_id": snapshot.project.id,
+            "snapshot": snapshot.digest, "images": images, "total": total, "offset": offset,
+            "limit": limit, "has_more": offset + len(images) < total}
 
 
 def ingest_image(project: str | Path, content: bytes, *, filename: str,
@@ -1331,8 +1375,8 @@ def _get_dossier(repository: Repository, snapshot: Snapshot, dossier_id: str, *,
             "id": dossier.id,
             **availability,
             "project_id": snapshot.project.id,
-            "images": resolve_dossier_images(snapshot, dossier.body[:500]),
-            "media": resolve_dossier_media(snapshot, dossier.body[:500]),
+            "images": resolve_dossier_images(snapshot, dossier.body),
+            "media": resolve_dossier_media(snapshot, dossier.body),
             "title": dossier.title,
             "language": dossier.language,
             "tags": dossier.tags,

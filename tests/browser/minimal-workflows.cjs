@@ -4,11 +4,11 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const {spawnSync} = require('node:child_process');
+const {pythonFixture} = require('./support/python-fixture.cjs');
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
 const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-minimal-workflows-'));
-const fixture = spawnSync(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-c', `
+const data = pythonFixture(`
 import json, tempfile
 from pathlib import Path
 from lixity.research import api
@@ -30,9 +30,7 @@ with tempfile.TemporaryDirectory() as directory:
     api.create_dossier(project, title='Synthetic dossier', body='Synthetic notes.')
     overview = api.project_overview(project)
     print(json.dumps({'fixtures':fixtures,'overview':overview,'claims':api.list_claims(project)}))
-`], {cwd:root,env:{...process.env,PYTHONPATH:[path.join(root,'src'),path.join(root,'tests')].join(path.delimiter)},encoding:'utf8',maxBuffer:32*1024*1024});
-assert.equal(fixture.status,0,fixture.stderr);
-const data = JSON.parse(fixture.stdout);
+`, {root});
 (async () => {
   const browser = await launchChromium();
   const errors = [];

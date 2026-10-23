@@ -1057,6 +1057,16 @@ Both resolver arrays identify exact
 source/version pins with `available|withdrawn|purged|missing` status; unavailable
 entries have no image URL. Historical reads resolve the pinned image version,
 not the latest source. Record/history dossier envelopes include both arrays.
+Current-main summaries resolve those references from the entire selected body,
+not only its display excerpt. Python `list_dossier_images(project,
+dossier_id=None, limit=100, offset=0)` and CLI `research dossier-images` return
+`research-dossier-images-local/1`: `project_id`, `snapshot`, `images`, `total`,
+`offset`, `limit`, `has_more`. Entries identify current active dossier/revision,
+nearest heading, exact marker/codepoint offsets and retained source/version,
+context, SHA-256 and availability; ordinary destinations are `unretained`.
+Counts are occurrences, not unique blobs. The limit is a strict integer 1–200;
+offset is a nonnegative strict integer. No file, URL or source bytes are read.
+See the [image inventory and replacement workflow](research/USAGE.md#keep-a-visual-reference-in-a-dossier).
 
 Selected dossier reads additionally report
 `section_level` (1–6 for an actual ATX heading, null for an implicit preamble).

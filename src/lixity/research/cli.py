@@ -67,6 +67,7 @@ COMMAND_DEFINITIONS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
     ('ingest', 'Archive local UTF-8 text, PDF, PNG or JPEG; PDF scans require configured local OCR', 'Sources and captures', ()),
     ('dossier', 'Create, list or inspect research dossiers', 'Dossiers, claims and decisions', ('dossiers',)),
     ('dossier-image', 'Capture a local PNG/JPEG and attach it to a dossier atomically', 'Dossiers, claims and decisions', ()),
+    ('dossier-images', 'List retained and ordinary image references across active dossiers; read-only JSON', 'Dossiers, claims and decisions', ()),
     ('claim', 'Create, list or revise research claims and hypotheses', 'Dossiers, claims and decisions', ('claims',)),
     ('decision', 'Create, list or revise author decisions and fact deviations', 'Dossiers, claims and decisions', ('decisions',)),
     ('relate', 'Record, inspect or revise an authored cause/effect assertion between claims', 'Dossiers, claims and decisions', ()),
@@ -376,7 +377,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
                                       "WGS84 [longitude, latitude], properties.label required; JSON null clears geography")
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
             command.add_argument("--summary", action="store_true",
-                                 help="Return metadata, geography coverage and route distances, section outline, "
+                                 help="Return metadata, complete image/media references, geography coverage and route distances, section outline, "
                                       "and body excerpt without full text; distances are not road routing or travel time")
             command.add_argument("--section", help="Inspect or replace the named heading's content and all descendants; "
                                  "an H1 can select nearly the entire dossier (preview with --diff)")
@@ -384,6 +385,10 @@ def configure(parser: argparse.ArgumentParser) -> None:
                                  help="With a selected --section --format text read, emit only its source content; "
                                       "redirect to a file for an editable draft (no added newline)")
             command.add_argument("--omit-citations", action="store_true", help="Omit resolved citations from output")
+        elif name == "dossier-images":
+            command.add_argument("--dossier-id", help="Limit to one active dossier")
+            command.add_argument("--limit", type=int, default=100, help="References per page (1..200; default: 100)")
+            command.add_argument("--offset", type=int, default=0, help="Zero-based reference offset")
         elif name == "dossier-image":
             command.add_argument("--dossier-id", required=True, help="Dossier UUID to revise")
             command.add_argument("--file", required=True, help="Path to a local PNG or JPEG image")
@@ -393,7 +398,10 @@ def configure(parser: argparse.ArgumentParser) -> None:
                                  help="Confirm permission to retain a local copy, not to redistribute it")
             command.add_argument("--alt", default="", help="One-line image alternative text")
             command.add_argument("--caption", help="Optional image caption")
-            command.add_argument("--section", help="Append inside an existing unique dossier heading")
+            placement = command.add_mutually_exclusive_group()
+            placement.add_argument("--section", help="Append inside an existing unique dossier heading")
+            placement.add_argument("--replace-reference", metavar="MARKDOWN",
+                                   help="Replace one exact ordinary Markdown image marker occurring once outside code; no other text changes")
             command.add_argument("--title", help="Title for the retained image source")
             command.add_argument("--context", help="Source criticism JSON object or path to its JSON file")
             command.add_argument("--origin-url", help="Original HTTP(S) source URL (metadata only; never fetched)")
@@ -994,6 +1002,9 @@ def _record_text(result: dict[str, Any]) -> str:
     impact = record.get("impact_on_plot")
     if impact:
         lines.extend(["", f"Impact on plot: {prose(impact)}"])
+    if "body_length" in record:
+        lines.extend(["", f"Image references: {len(result.get('images', []))}",
+                      f"PDF/video references: {len(result.get('media', []))}"])
     if isinstance(summary := result.get("geography_summary"), dict):
         lines.extend(["", geography_report(summary)])
     return "\n".join(lines).rstrip() + "\n"
@@ -1126,6 +1137,9 @@ def run(args: argparse.Namespace) -> int:
                 expected_snapshot=args.expected_snapshot, expected_decision_revision=args.expected_decision_revision,
                 expected_dossier_revision=args.expected_dossier_revision,
                 status="applied" if command == "mark-applied" else "review_needed", note=args.note, actor=args.actor)
+        elif command == "dossier-images":
+            result = api.list_dossier_images(args.project, dossier_id=args.dossier_id,
+                                            limit=args.limit, offset=args.offset)
         elif command == "dossier-image":
             if not args.allow_retention:
                 raise ResearchError("Explicit local retention permission is required (--allow-retention)")
@@ -1137,7 +1151,8 @@ def run(args: argparse.Namespace) -> int:
                 args.project, args.dossier_id, content, filename=image_path.name,
                 expected_snapshot=args.expected_snapshot, expected_revision=args.expected_revision,
                 allow_retention=args.allow_retention, alt=args.alt, caption=args.caption,
-                section=args.section, title=args.title, context=context, origin_url=args.origin_url,
+                section=args.section, replace_reference=args.replace_reference,
+                title=args.title, context=context, origin_url=args.origin_url,
                 reason=args.reason, change_kind=args.change_kind, actor=args.actor,
             )
         elif command == "ingest":
@@ -1717,7 +1732,12 @@ def run(args: argparse.Namespace) -> int:
         detail = f"{error.strerror or error}" if getattr(error, "strerror", None) else str(error)
         path_hint = f" ({error.filename})" if getattr(error, "filename", None) else ""
         print(f"[error] Research operation failed: {detail}{path_hint}", file=sys.stderr)
-        print("[error] Check paths, permissions, schema and storage integrity", file=sys.stderr)
+        import errno
+        if error.errno in (errno.ENOSPC, getattr(errno, "EDQUOT", 122)):
+            print("[error] Storage space or user quota exhausted. Check both the project filesystem "
+                  "and temporary storage (TMPDIR/TEMP/TMP); filesystem free space alone may hide a user quota.", file=sys.stderr)
+        else:
+            print("[error] Check paths, permissions, schema and storage integrity", file=sys.stderr)
     except (ValidationError, UnicodeError, sqlite3.Error, ValueError) as error:
         print(f"[error] Research operation failed: {error}", file=sys.stderr)
         print("[error] Check paths, permissions, schema and storage integrity", file=sys.stderr)

@@ -71,6 +71,8 @@ def test_shared_atomic_attachment_and_immutable_versions(project, media, tmp_pat
     assert retained["media_type"] == media[2]
     assert retained["context"]["provenance_note"].startswith("Synthetic specimen")
     assert api.get_dossier(project, dossier, section="Notes")["media"] == result["media"]
+    assert api.get_dossier(project, dossier, summary=True)["media"] == result["media"]
+    assert api.list_dossier_images(project)["total"] == 0
     assert api.get_record(project, "dossier", dossier, revision=1)["media"] == []
     assert api.record_history(project, "dossier", dossier)["revisions"][0]["media"] == result["media"]
     assert api.read_media(project, project_id=result["project_id"], source_id=retained["source_id"],
