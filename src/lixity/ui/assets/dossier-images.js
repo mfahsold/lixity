@@ -4,6 +4,8 @@
   "use strict";
   var uuid = "urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
   var target = new RegExp("^lixity:image/(" + uuid + ")/(" + uuid + ")$");
+  var mediaTarget = new RegExp("^lixity:media/(" + uuid + ")/(" + uuid + ")$");
+  var mediaTypes = ["application/pdf", "video/mp4", "video/webm"];
   var reads = new Map();
   var replacements = new WeakMap();
   var mediaSequence = 0;
@@ -17,10 +19,11 @@
   function limits() {
     try { return JSON.parse(document.body.dataset.imageLimits || "{}"); } catch (_) { return {}; }
   }
-  function capable() {
+  function capable(media) {
     var bounds = limits();
-    return document.body.dataset.dossierImageCapable === "true" &&
-      bounds.bytes > 0 && bounds.pixels > 0 && bounds.alt > 0 && bounds.caption > 0;
+    return (media ? document.body.dataset.dossierMediaCapable === "true" && bounds.media_bytes > 0 :
+      document.body.dataset.dossierImageCapable === "true" && bounds.bytes > 0 && bounds.pixels > 0) &&
+      bounds.alt > 0 && bounds.caption > 0;
   }
   function escaped(text, offset) {
     var start = offset - 1;
@@ -56,12 +59,12 @@
     }
     return chars.join("");
   }
-  function imageUrl(image, context) {
+  function imageUrl(image, context, media) {
     if (!image || image.project_id !== context.project_id || image.availability !== "available" ||
-        !["image/png", "image/jpeg"].includes(image.media_type)) return null;
+        !(media ? mediaTypes : ["image/png", "image/jpeg"]).includes(image.media_type)) return null;
     var pin = target.exec("lixity:image/" + image.source_id + "/" + image.source_version_id);
     if (!pin) return null;
-    var url = "/api/research/image?project_id=" + encodeURIComponent(context.project_id) +
+    var url = (media ? "/api/research/media?project_id=" : "/api/research/image?project_id=") + encodeURIComponent(context.project_id) +
       "&source_id=" + encodeURIComponent(pin[1]) + "&version_id=" + encodeURIComponent(pin[2]);
     return window.LixitySite.readOnly ? window.LixitySite.resourceUrl(url) : url;
   }
@@ -79,19 +82,30 @@
     return html && collapsed ? '<details class="dossier-image-source-context"><summary>' +
       safe(uiLabel("research_source_context")) + '</summary>' + html + '</details>' : html;
   }
-  function figure(alt, pin, context) {
-    var image = (context.images || []).find(function(item) {
+  function figure(alt, pin, context, media) {
+    var image = ((media ? context.media : context.images) || []).find(function(item) {
       return item.source_id === pin[1] && item.source_version_id === pin[2];
     });
-    var url = imageUrl(image, context);
+    var url = imageUrl(image, context, media);
     if (!url) {
       var status = image && image.project_id === context.project_id ? image.availability : "missing";
       if (!["withdrawn", "purged", "missing"].includes(status)) status = "unavailable";
       return '<figure class="dossier-image dossier-image-unavailable"><figcaption><strong>' + safe(alt || label("attachment")) +
-        '</strong><p>' + safe(label(status)) + '</p>' +
+        '</strong><p>' + safe(media ? uiLabel("media_" + (status === "unavailable" ? "missing" : status)) : label(status)) + '</p>' +
         (image && image.project_id === context.project_id && image.reason ? '<p class="ctl-note">' + safe(image.reason) + '</p>' : '') +
         (image && image.project_id === context.project_id ? sourceContextHtml(image) : '') +
         '</figcaption></figure>';
+    }
+    if (media) {
+      var video = image.media_type.startsWith("video/");
+      return '<figure class="dossier-image dossier-retained-media">' +
+        (video ? '<video controls preload="none" playsinline aria-label="' + safe(alt || image.title) +
+          '" src="' + safe(url) + '"></video>' : '<div class="dossier-document-type">PDF</div>') +
+        '<figcaption><strong>' + safe(image.title || alt || uiLabel("media_add")) +
+        '</strong><p class="ctl-note">' + safe(alt) + '</p><a class="ctl" download href="' + safe(url) +
+        '">' + safe(uiLabel("media_download")) + '</a>' +
+        (video ? '<p class="ctl-note">' + safe(uiLabel("media_playback")) + '</p>' : '') +
+        sourceContextHtml(image, true) + '</figcaption></figure>';
     }
     return '<figure class="dossier-image"><button type="button" class="dossier-image-enlarge" data-dossier-enlarge aria-label="' +
       safe(label("enlarge") + (alt ? ": " + alt : "")) + '"><img src="' + safe(url) + '" alt="' + safe(alt) +
@@ -99,12 +113,14 @@
       ' <span class="ctl-note">' + safe(label("retained")) + '</span>' + sourceContextHtml(image, true) + '</figcaption></figure>';
   }
   function sourcePreviewHtml(detail, projectId) {
-    if (!detail || !projectId || !["image/png", "image/jpeg"].includes(detail.media_type)) return "";
+    if (!detail || !projectId || !["image/png", "image/jpeg"].concat(mediaTypes).includes(detail.media_type)) return "";
+    var media = mediaTypes.includes(detail.media_type);
     var pin = target.exec("lixity:image/" + detail.id + "/" + detail.version_id);
     if (!pin) return "";
     var image = {project_id: projectId, source_id: detail.id, source_version_id: detail.version_id,
       availability: "available", media_type: detail.media_type, title: detail.title};
-    return figure(detail.title || label("attachment"), pin, {project_id: projectId, images: [image]});
+    image.context = detail.context;
+    return figure(detail.title || label("attachment"), pin, {project_id: projectId, images: [image], media: [image]}, media);
   }
   // Recognize bounded, single-line inline image syntax without resolving its
   // destination. The backend uses the same boundaries for explicit replacement.
@@ -148,10 +164,12 @@
       context.id && context.snapshot && context.revision && canReplace(context, reference.marker);
     return '<figure class="dossier-image dossier-image-unavailable dossier-image-unretained"><figcaption><strong>' +
       safe(reference.alt || label("attachment")) + '</strong><p>' + safe(label("not_retained")) +
-      '</p><code class="dossier-image-destination">' + safe(reference.destination) + '</code><p class="ctl-note">' +
-      safe(label("import_hint")) + '</p>' + (editable ? '<button type="button" class="ctl" data-dossier-replace-image="' +
+      '</p>' + (editable ? '<button type="button" class="ctl" data-dossier-replace-image="' +
       safe(context.id) + '" data-image-reference="' + safe(reference.marker) + '" data-image-alt="' + safe(reference.alt) + '">' +
-      safe(label("import")) + '</button>' : '') + '</figcaption></figure>';
+      safe(label("import")) + '</button>' : '') +
+      '<details class="dossier-image-reference"><summary>' + safe(label("reference_details")) +
+      '</summary><code class="dossier-image-destination">' + safe(reference.destination) + '</code><p class="ctl-note">' +
+      safe(label("import_hint")) + '</p></details></figcaption></figure>';
   }
   function prepareMarkdown(raw, context) {
     var text = String(raw || ""), html = [];
@@ -159,8 +177,9 @@
     var token = "LIXITYIMAGE" + Array.from(crypto.getRandomValues(new Uint32Array(4))).join("") + "TOKEN";
     var pieces = [], end = 0;
     inlineReferences(text).forEach(function(reference) {
-      var pin = target.exec(reference.rawDestination), rendered;
+      var pin = target.exec(reference.rawDestination), mediaPin = mediaTarget.exec(reference.rawDestination), rendered;
       if (pin && context && context.project_id && Array.isArray(context.images)) rendered = figure(reference.alt, pin, context);
+      else if (mediaPin && context && context.project_id && Array.isArray(context.media)) rendered = figure(reference.alt, mediaPin, context, true);
       else if (context && ordinary(reference)) rendered = unretainedFigure(reference, context);
       if (!rendered) return;
       pieces.push(text.slice(end, reference.start), token + html.length + "END");
@@ -210,10 +229,12 @@
     body.closest(".research-dossier-body-wrap").before(overview);
   }
   function actionsHtml(detail) {
-    if (!capable() || !detail || !detail.id || !detail.project_id || !detail.snapshot || !detail.revision) return "";
+    if ((!capable() && !capable(true)) || !detail || !detail.id || !detail.project_id || !detail.snapshot || !detail.revision) return "";
     reads.set(detail.id, detail);
-    return '<div class="row dossier-image-actions"><button type="button" class="ctl" data-dossier-add-image="' +
-      safe(detail.id) + '">' + safe(label("add")) + '</button></div>';
+    return '<div class="row dossier-image-actions">' + (capable() ? '<button type="button" class="ctl" data-dossier-add-image="' +
+      safe(detail.id) + '">' + safe(label("add")) + '</button>' : '') +
+      (capable(true) ? '<button type="button" class="ctl" data-dossier-add-media="' +
+      safe(detail.id) + '">' + safe(uiLabel("media_add")) + '</button>' : '') + '</div>';
   }
   function field(id) { return document.getElementById("dossier-image-" + id); }
   function status(message, error) {
@@ -291,10 +312,18 @@
     });
     if (Array.from(select.options).some(function(option) { return option.value === previous; })) select.value = previous;
   }
-  function openAttachment(detail, trigger, replacement) {
-    if (!capable() || state.pending || !detail || dialog && dialog.open) return;
+  function openAttachment(detail, trigger, replacement, media) {
+    if (!capable(media) || state.pending || !detail || dialog && dialog.open) return;
     makeDialog(); form.reset(); releasePreview(); state.generation++;
     state.current = detail; state.trigger = trigger || document.activeElement; state.review = null; state.conflict = false;
+    state.media = media === true && document.body.dataset.dossierMediaCapable === "true";
+    dialog.querySelector("#dossier-image-title").textContent = state.media ? uiLabel("media_add") : label("add");
+    field("file").accept = state.media ? "application/pdf,video/mp4,video/webm,.pdf,.mp4,.webm" : "image/png,image/jpeg,.png,.jpg,.jpeg";
+    dialog.querySelector('[for="dossier-image-file"]').textContent = state.media ? uiLabel("media_file") : label("file");
+    dialog.querySelector('[for="dossier-image-alt"]').textContent = state.media ? uiLabel("media_description") : label("alt");
+    field("save").textContent = state.media ? uiLabel("media_save") : label("save");
+    field("file").nextElementSibling.textContent = state.media ? uiLabel("media_limits") :
+      uiFormat("image_limits", {bytes: limits().bytes / 1048576, pixels: limits().pixels / 1000000});
     state.replaceReference = replacement && replacement.marker || null;
     field("replacement").hidden = !state.replaceReference;
     field("replacement").querySelector("code").textContent = state.replaceReference || "";
@@ -346,10 +375,28 @@
     var generation = ++state.generation, file = field("file").files[0];
     releasePreview(); status(""); updateSave();
     if (!file) return;
-    if (file.size > limits().bytes || !/\.(png|jpe?g)$/i.test(file.name)) { status(label("invalid"), true); return; }
+    if (!file.size || file.size > (state.media ? limits().media_bytes : limits().bytes) ||
+        !(state.media ? /\.(pdf|mp4|webm)$/i : /\.(png|jpe?g)$/i).test(file.name)) {
+      status(state.media ? uiLabel("media_invalid") : label("invalid"), true); return;
+    }
     try {
       var bytes = await file.arrayBuffer();
       if (generation !== state.generation || !dialog.open) return;
+      if (state.media) {
+        var type = /\.pdf$/i.test(file.name) ? "application/pdf" : /\.mp4$/i.test(file.name) ? "video/mp4" : "video/webm";
+        var mediaUrl = URL.createObjectURL(new Blob([bytes], {type: type}));
+        state.bytes = bytes; state.url = mediaUrl; state.file = file;
+        var note = document.createElement("p"); note.className = "ctl-note";
+        note.textContent = file.name + " · " + (file.size / 1048576).toFixed(2) + " MiB";
+        field("preview").replaceChildren(note);
+        if (type.startsWith("video/")) {
+          var preview = document.createElement("video");
+          preview.controls = true; preview.preload = "none"; preview.playsInline = true;
+          preview.setAttribute("aria-label", uiLabel("media_description")); preview.src = mediaUrl;
+          field("preview").prepend(preview);
+        }
+        updateSave(); return;
+      }
       var info = preflight(bytes, file.name), url = URL.createObjectURL(new Blob([bytes], {type: info.type}));
       var image = new Image(); image.alt = label("preview"); image.src = url;
       try { await image.decode(); } catch (_) { URL.revokeObjectURL(url); throw new Error(label("invalid")); }
@@ -383,9 +430,9 @@
     }
     if (state.replaceReference) payload.replace_reference = state.replaceReference;
     else if (field("section").value) payload.section = field("section").value;
-    setBusy(true); status(label("saving"));
+    setBusy(true); status(state.media ? uiLabel("form_saving") : label("saving"));
     var result;
-    try { result = await researchApiPost("research-dossier-image", payload); }
+    try { result = await researchApiPost(state.media ? "research-dossier-media" : "research-dossier-image", payload); }
     catch (_) { result = {ok: false, message: label("failed")}; }
     if (!result.ok) {
       state.conflict = result.http_status === 409;
@@ -430,6 +477,8 @@
   document.addEventListener("click", function(event) {
     var add = event.target.closest("[data-dossier-add-image]");
     if (add) openAttachment(reads.get(add.dataset.dossierAddImage), add);
+    var addMedia = event.target.closest("[data-dossier-add-media]");
+    if (addMedia) openAttachment(reads.get(addMedia.dataset.dossierAddMedia), addMedia, null, true);
     var replace = event.target.closest("[data-dossier-replace-image]");
     if (replace) openAttachment(reads.get(replace.dataset.dossierReplaceImage), replace,
       {marker: replace.dataset.imageReference, alt: replace.dataset.imageAlt});
@@ -448,6 +497,16 @@
   });
   document.addEventListener("error", function(event) {
     var image = event.target;
+    if (image instanceof HTMLVideoElement && image.closest(".dossier-retained-media")) {
+      var mediaFigure = image.closest(".dossier-retained-media");
+      if (!mediaFigure.querySelector("[data-media-error]")) {
+        var mediaError = document.createElement("p"); mediaError.className = "ctl-status err";
+        mediaError.dataset.mediaError = ""; mediaError.textContent = uiLabel("media_playback_failed");
+        mediaFigure.querySelector("figcaption").prepend(mediaError);
+        if (window.LixityLog) window.LixityLog.warn("Retained video playback failed", {code: image.error && image.error.code});
+      }
+      return;
+    }
     if (!(image instanceof HTMLImageElement) || !image.closest(".dossier-image")) return;
     var figureNode = image.closest(".dossier-image"), note = document.createElement("p");
     note.textContent = label("unavailable"); note.className = "ctl-note";

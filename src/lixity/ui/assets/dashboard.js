@@ -611,6 +611,21 @@ document.addEventListener("click", async function(event) {
     uiFormat("marker_save_failed", {reason: data.message || uiLabel("wizard_unknown_error")});
 });
 var API = document.body.dataset.api || "";
+function reportSiteExport(stage, details) {
+  details = details || {};
+  var receipt = {export_id:details.export_id || null, stage:stage, error_name:details.error_name || null};
+  if (details.profile_count != null) receipt.profile_count = details.profile_count;
+  if (details.http_status != null) receipt.http_status = details.http_status;
+  if (receipt.error_name && window.LixityLog) window.LixityLog.error("Website export", receipt);
+  fetch(API + "/site-export-report", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(receipt), keepalive:true,
+  }).then(function(response) {
+    if (!response.ok && window.LixityLog) window.LixityLog.warn("Export receipt rejected", response.status);
+  }).catch(function() {
+    if (window.LixityLog) window.LixityLog.warn("Export receipt could not reach the application");
+  });
+}
 var UI_LABELS = {};
 try { UI_LABELS = JSON.parse(document.body.dataset.uiLabels || "{}"); } catch (_) { UI_LABELS = {}; }
 function uiLabel(key) { return UI_LABELS[key] || key; }
@@ -719,6 +734,9 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
   var sources = document.getElementById("site-export-sources");
   var mode = document.getElementById("site-export-mode");
   var profile = document.getElementById("site-export-profile");
+  var profileState = document.getElementById("site-export-profile-state");
+  var profileDraft = document.getElementById("site-export-profile-draft");
+  var editProfiles = document.getElementById("site-export-edit-profiles");
   var cap = document.getElementById("site-export-max-chapter");
   var downloadButton = document.getElementById("site-export-download");
   var status = document.getElementById("site-export-status");
@@ -743,11 +761,23 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
   });
   function sync() {
     var curated = mode.value !== "review";
+    var saved = savedProfiles(), count = Object.keys(saved).length;
+    var editor = document.getElementById("site-publication-editor");
+    var state = window.LixityPublicationSettings ? window.LixityPublicationSettings.state() : {invalid:true};
+    var selected = Object.prototype.hasOwnProperty.call(saved, profile.value);
+    var key = state.invalid ? "publication_export_invalid_profiles" :
+      !count ? "publication_export_no_profiles" : selected ? "publication_export_profile_hint" : "publication_export_choose_profile";
+    profileState.textContent = uiLabel(key);
+    profileDraft.textContent = uiLabel("publication_export_unsaved_profiles");
+    profileDraft.hidden = !state.unsaved;
     mode.disabled = busy || !token;
-    profile.disabled = cap.disabled = busy || !token || !curated;
+    profile.disabled = busy || !token || !curated || !count || state.invalid;
+    cap.disabled = busy || !token || !curated || !selected;
+    editProfiles.disabled = busy || !editor || editor.disabled;
+    editProfiles.textContent = uiLabel(!count ? "publication_export_create_profile" : "publication_export_edit_profiles");
     research.disabled = busy || !token || curated;
-    downloadButton.disabled = busy || !token || (curated && !Object.prototype.hasOwnProperty.call(savedProfiles(), profile.value));
-    sources.disabled = busy || (!curated && !research.checked);
+    downloadButton.disabled = busy || !token || (curated && !selected);
+    sources.disabled = busy || (curated ? !selected : !research.checked);
     if (!curated && !research.checked) sources.checked = false;
     document.getElementById("site-export-publication-options").hidden = !curated;
     document.getElementById("site-export-research-option").hidden = curated;
@@ -761,30 +791,33 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
   function reportExport(exportId, stage, error) {
     var errorName = error ? (["AbortError", "NetworkError", "TypeError", "Error"].includes(error.name)
       ? error.name : "Other") : null;
-    var receipt = {export_id:exportId, stage:stage, error_name:errorName};
-    if (error && window.LixityLog) window.LixityLog.error("Website export", receipt);
-    if (!/^[0-9a-f]{32}$/.test(exportId)) return;
-    fetch(API + "/site-export-report", {
-      method:"POST", headers:{"Content-Type":"application/json"},
-      body:JSON.stringify(receipt), keepalive:true,
-    }).then(function(response) {
-      if (!response.ok && window.LixityLog) window.LixityLog.warn("Export receipt rejected", response.status);
-    }).catch(function() {
-      if (window.LixityLog) window.LixityLog.warn("Export receipt could not reach the application");
-    });
+    reportSiteExport(stage, {export_id:/^[0-9a-f]{32}$/.test(exportId) ? exportId : null, error_name:errorName});
+  }
+  function reportProfiles() {
+    if (mode.value === "review") return;
+    var state = window.LixityPublicationSettings ? window.LixityPublicationSettings.state() : {invalid:true};
+    var count = Object.keys(savedProfiles()).length;
+    reportSiteExport(state.invalid ? "profiles_invalid" : !count ? "profiles_empty" :
+      state.unsaved ? "profiles_unsaved" : "profiles_available", {profile_count:count});
   }
   open.addEventListener("click", function() {
     if (open.disabled) return;
     mode.value = "review"; research.checked = sources.checked = false;
-    profile.value = cap.value = ""; updateProfiles(); dialog.showModal();
+    profile.value = cap.value = ""; status.textContent = ""; status.className = "ctl-status";
+    updateProfiles(); dialog.showModal();
   });
-  mode.addEventListener("change", function() { research.checked = sources.checked = false; sync(); });
+  mode.addEventListener("change", function() { research.checked = sources.checked = false; sync(); reportProfiles(); });
   profile.addEventListener("change", sync);
   document.addEventListener("lixity:site-publications-saved", updateProfiles);
-  document.getElementById("site-export-edit-profiles").addEventListener("click", function() {
+  editProfiles.addEventListener("click", function() {
     dialog.close(); switchActiveView("project");
     var editor = document.getElementById("settings-site-publications");
-    if (editor) { editor.open = true; editor.querySelector("summary").focus(); }
+    if (editor) {
+      editor.open = true;
+      var target = Object.keys(savedProfiles()).length ? editor.querySelector("summary") :
+        editor.querySelector("[data-site-publication-add-profile]");
+      target.focus(); target.scrollIntoView({block:"nearest"});
+    }
   });
   research.addEventListener("change", sync);
   form.addEventListener("submit", async function(event) {
@@ -1029,6 +1062,9 @@ async function submitSettings() {
   if (window.LixityRegisterSettings) Object.assign(payload, window.LixityRegisterSettings.readChanges());
   if (window.LixityPublicationSettings) Object.assign(payload, window.LixityPublicationSettings.readChanges());
   if (!settings.checkValidity()) {
+    if (Object.prototype.hasOwnProperty.call(payload, "site_publications")) {
+      reportSiteExport("profiles_invalid", {error_name:"Error"});
+    }
     var invalid = settings.querySelector("input:invalid, select:invalid, textarea:invalid");
     for (var ancestor = invalid && invalid.parentElement; ancestor && ancestor !== settings; ancestor = ancestor.parentElement) {
       if (ancestor.tagName === "DETAILS") ancestor.open = true;

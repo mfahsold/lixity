@@ -60,7 +60,7 @@
       var article = document.createElement("article"), heading = document.createElement("h3");
       article.id = id; heading.textContent = entry.title; heading.tabIndex = -1;
       var body = document.createElement("div"); body.className = "research-prose markdown-body";
-      var context = {project_id:publication.project_id, images:entry.images || []};
+      var context = {project_id:publication.project_id, images:entry.images || [], media:entry.media || []};
       body.innerHTML = renderSafeMarkdown(entry.body, context) +
         (entry.citations || []).map(function(citation) { return researchCitationHtml(citation, false) + sourceLink(citation); }).join("") +
         (entry.geography && window.LixityDossierGeography ? window.LixityDossierGeography.html(entry.geography) : "");

@@ -210,6 +210,13 @@ style-space loading open shared read-only chapter measurements: definitions,
 units, sample counts, manuscript medians and z* from the existing fingerprint.
 Metric switches keep the chapter; Read chapter explicitly selects the supported
 paragraph layer or clears it. Axis loadings are not chapter contributions.
+Current main also adds versioned PDF/MP4/WebM dossier attachments through the
+existing capture, source-context, revision and export model. PNG/JPEG keeps its
+image contracts; PDF/video pins use lixity:media and additive media read arrays.
+Video/retained-only PDF records/manifests opt into v9, which older readers reject. Original
+files require explicit retention and separate export inclusion. PDFs use
+document/download cards; video controls do not autoplay. These are not OCR,
+codec verification or license determinations; see research/USAGE.md.
 Chapter values still cover profiled paragraphs/lists; corpus/style also includes
 blockquotes. Scores and public API formats are unchanged. Overview To-do drafts,
 focused keyboard drills and Back to passage reuse existing save and context-return

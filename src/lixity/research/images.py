@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any, NoReturn
 from urllib.parse import urlencode
 
 from .limits import MAX_IMAGE_BYTES, MAX_IMAGE_PIXELS
+from .media import MEDIA_TYPES, validate_media
 from .models import Reference, Source, SourceVersion
 
 if TYPE_CHECKING:
@@ -26,6 +27,8 @@ IMAGE_SUFFIXES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpe
 _UUID = r"urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
 _TARGET = re.compile(rf"lixity:image/({_UUID})/({_UUID})\Z")
 _IMAGE = re.compile(r"!\[((?:\\[^\r\n]|[^\]\\\r\n])*)\]\((lixity:image[^\r\n)]*)\)")
+_MEDIA_TARGET = re.compile(rf"lixity:media/({_UUID})/({_UUID})\Z")
+_MEDIA = re.compile(r"!\[((?:\\[^\r\n]|[^\]\\\r\n])*)\]\((lixity:media[^\r\n)]*)\)")
 
 
 def _error(message: str) -> NoReturn:
@@ -256,24 +259,25 @@ class ImageReference:
     alt: str
 
 
-def _image_tokens(body: str) -> list[re.Match[str]]:
-    if "lixity:image" not in body:
+def _image_tokens(body: str, *, media: bool = False) -> list[re.Match[str]]:
+    if ("lixity:media" if media else "lixity:image") not in body:
         return []
     masked = markdown_code_mask(body)
-    return [match for match in _IMAGE.finditer(body)
+    return [match for match in (_MEDIA if media else _IMAGE).finditer(body)
             if masked[match.start()] == "!" and not _escaped(body, match.start())]
 
 
-def extract_image_references(body: str, *, strict: bool = False, previous_body: str = "") -> list[ImageReference]:
+def extract_image_references(body: str, *, strict: bool = False, previous_body: str = "",
+                             media: bool = False) -> list[ImageReference]:
     """Extract exact pins; preserve former-release malformed body data as inert.
 
     Strict writes reject newly introduced malformed reserved tokens. Reads skip
     those tokens; audits can separately request strict inspection of their bytes.
     """
-    retained = Counter(match.group() for match in _image_tokens(previous_body)) if strict else Counter()
+    retained = Counter(match.group() for match in _image_tokens(previous_body, media=media)) if strict else Counter()
     refs = []
-    for match in _image_tokens(body):
-        target = _TARGET.fullmatch(match.group(2))
+    for match in _image_tokens(body, media=media):
+        target = (_MEDIA_TARGET if media else _TARGET).fullmatch(match.group(2))
         if target is None:
             if strict and not retained[match.group()]:
                 _error("Image reference requires canonical source and version UUID4 URNs")
@@ -292,8 +296,8 @@ def image_descriptions(body: str) -> str:
     """Replace canonical prose image tokens with alt text for display excerpts."""
     pieces: list[str] = []
     end = 0
-    for match in _image_tokens(body):
-        if _TARGET.fullmatch(match.group(2)) is None:
+    for match in sorted([*_image_tokens(body), *_image_tokens(body, media=True)], key=lambda item: item.start()):
+        if _TARGET.fullmatch(match.group(2)) is None and _MEDIA_TARGET.fullmatch(match.group(2)) is None:
             continue
         pieces.extend((body[end:match.start()], _alternative_text(match.group(1))))
         end = match.end()
@@ -301,7 +305,7 @@ def image_descriptions(body: str) -> str:
     return "".join(pieces)
 
 
-def resolve_image_reference(snapshot: Snapshot, ref: ImageReference) -> dict[str, Any]:
+def resolve_image_reference(snapshot: Snapshot, ref: ImageReference, *, media: bool = False) -> dict[str, Any]:
     """Resolve a pin in one explicit snapshot, retaining lifecycle context."""
     purged = snapshot.lifecycle.get(("purge", "source_version", ref.source_version_id))
     source = snapshot.records.get(ref.source_id)
@@ -318,11 +322,11 @@ def resolve_image_reference(snapshot: Snapshot, ref: ImageReference) -> dict[str
                 "media_type": None, "context": None, "title": None}
     if not isinstance(source, Source) or not isinstance(version, SourceVersion) or version.source_ref.id != ref.source_id:
         return missing
-    if version.blob.media_type not in IMAGE_TYPES:
+    if version.blob.media_type not in (MEDIA_TYPES if media else IMAGE_TYPES):
         return missing
     withdrawn = (snapshot.lifecycle.get(("withdraw", "source", source.id))
                  or snapshot.lifecycle.get(("withdraw", "source_version", version.id)))
-    url = "/api/research/image?" + urlencode({"project_id": snapshot.project.id,
+    url = ("/api/research/media?" if media else "/api/research/image?") + urlencode({"project_id": snapshot.project.id,
                                            "source_id": source.id, "version_id": version.id})
     return {**base, "availability": "withdrawn" if withdrawn else "available", "url": None if withdrawn else url,
             "reason": withdrawn.reason if withdrawn else None,
@@ -334,20 +338,30 @@ def resolve_dossier_images(snapshot: Snapshot, body: str) -> list[dict[str, Any]
     return [resolve_image_reference(snapshot, ref) for ref in extract_image_references(body)]
 
 
+def resolve_dossier_media(snapshot: Snapshot, body: str) -> list[dict[str, Any]]:
+    return [resolve_image_reference(snapshot, ref, media=True) for ref in extract_image_references(body, media=True)]
+
+
 def validate_image_changes(snapshot: Snapshot, body: str, previous_body: str = "") -> None:
     """Keep accepted unavailable pins, while refusing new purged/foreign pins."""
-    retained = {(ref.source_id, ref.source_version_id) for ref in extract_image_references(previous_body)}
-    for ref in extract_image_references(body, strict=True, previous_body=previous_body):
-        resolved = resolve_image_reference(snapshot, ref)
+    _validate_attachment_changes(snapshot, body, previous_body)
+    _validate_attachment_changes(snapshot, body, previous_body, media=True)
+
+
+def _validate_attachment_changes(snapshot: Snapshot, body: str, previous_body: str, *, media: bool = False) -> None:
+    retained = {(ref.source_id, ref.source_version_id) for ref in extract_image_references(previous_body, media=media)}
+    for ref in extract_image_references(body, strict=True, previous_body=previous_body, media=media):
+        resolved = resolve_image_reference(snapshot, ref, media=media)
         if (ref.source_id, ref.source_version_id) not in retained:
             if resolved["availability"] == "purged":
                 _error("New image references cannot identify a purged version")
             if resolved["availability"] == "missing":
-                _error("Image reference source and version do not match or are unavailable PNG/JPEG records")
+                _error("Attachment source and version do not match or are unavailable media records" if media else
+                       "Image reference source and version do not match or are unavailable PNG/JPEG records")
 
 
 def read_image(repository: Repository, snapshot: Snapshot, *, project_id: str,
-               source_id: str, version_id: str) -> dict[str, Any]:
+               source_id: str, version_id: str, media: bool = False) -> dict[str, Any]:
     if project_id != snapshot.project.id:
         _error("Image project does not match the selected research project")
     try:
@@ -357,10 +371,11 @@ def read_image(repository: Repository, snapshot: Snapshot, *, project_id: str,
         _error(str(exc))
     if version.source_ref.id != source.id:
         _error("Image source version does not belong to the requested source")
-    if version.blob.media_type not in IMAGE_TYPES:
-        _error("Requested source version is not a PNG/JPEG image")
+    if version.blob.media_type not in (MEDIA_TYPES if media else IMAGE_TYPES):
+        _error("Requested source version is not retained PDF/video media" if media else
+               "Requested source version is not a PNG/JPEG image")
     content = repository.read_blob(version.blob)
-    info = validate_image(content)
+    info = validate_media(content) if media else validate_image(content)
     if info["media_type"] != version.blob.media_type:
         _error("Retained image type does not match its blob descriptor")
     return {"content": content, **info}

@@ -191,6 +191,14 @@ after which it may appear. Chapter 0 means before the first chapter. A blank
 revision uses the current dossier when exporting; an explicit revision keeps
 that version. Each export records the actual resolved version.
 
+**Current main, unreleased:** export choices use only profiles saved with
+**Apply** in project settings. An empty selector explains that no saved profile
+exists and links directly to profile creation. Unsaved edits and malformed
+stored settings have distinct messages; they are not treated as selectable
+profiles. A failed dossier catalogue can be retried without discarding the
+profile draft. Select a saved profile before choosing its chapter cap or
+downloading a publication.
+
 The profile is a validated root-local `site_publications` project setting,
 separate from PDF imprint settings and accepted Research records. Save this TOML
 in the selected project's root `lixity.toml` (or prefix its tables with
@@ -221,6 +229,11 @@ internal decisions, reverse links, revision history, source context notes or
 complete extracted source text. `--include-research` is rejected for these
 formats; choose the curated profile instead. Selected retained media needs the
 separate source-file inclusion choice.
+
+Current-main PDF/video attachments use the same source-file choice and
+dossier/section scope as images. They remain unavailable placeholders when the
+original files are omitted. See the [shared media workflow](research/USAGE.md#retain-a-pdf-or-video-in-a-dossier)
+for file limits, version compatibility and public credit requirements.
 
 Inspect the installed profile JSON Schema without opening a project:
 

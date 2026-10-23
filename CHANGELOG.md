@@ -7,7 +7,27 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- Versioned PDF/MP4/WebM dossier attachments reuse the image capture dialog,
+  immutable source/context records and guarded dossier revision transaction.
+  Shared full/section/history/source and reading-site views show document
+  download cards and native video controls. Media is limited to 50 MiB, with
+  bounded container checks, single-range native reads and explicit original-file
+  inclusion in exports. Video/retained-only PDF opts into record/manifest v9; older readers reject
+  those archives. Existing PNG/JPEG interfaces and accepted record bytes remain
+  unchanged; attachments do not manufacture extraction or linguistic scores.
+
 ### Fixed
+- Publication export distinguishes no saved profiles, malformed settings and
+  unsaved edits, links directly to profile creation and disables dependent
+  controls until a saved profile is selected. Failed dossier catalogues offer
+  retry without discarding drafts. Profile-save and media-capture outcomes are
+  logged without titles, file paths, tokens or retained content.
+- Current dossier records use a full-width reading article rather than a narrow
+  metadata cell. Exact ordinary image references can be retained/replaced
+  atomically from that viewer; pinned/history/exported views remain read-only.
+- PDF source analysis/compare reads the verified text extraction, not binary
+  PDF bytes. Retained-only PDFs explicitly require extraction before analysis.
 - Reading-website export failures retain HTTP status codes and distinguish
   unreachable application, invalid ZIP response and browser download failures,
   including available technical details, without resetting export options.
@@ -15,6 +35,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   levels. Bounded, content-free browser receipts correlate response-read,
   ZIP-check and download-start failures with a random export ID; interrupted
   transfers are no longer described as invalid ZIP files.
+  Bounded pre-export profile/catalogue receipts additionally distinguish empty,
+  invalid and unsaved configuration without logging project identifiers.
 
 ### Changed
 - Heatmap cells, style-reference cutoff-hit counts and all style-space loadings

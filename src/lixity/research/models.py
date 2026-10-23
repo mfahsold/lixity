@@ -31,7 +31,7 @@ CLAIM_CONFIDENCES: tuple[ClaimConfidence, ...] = get_args(ClaimConfidence)
 # subclasses, and the runtime contract is the serialized literal).
 SchemaVersion = Literal[
     "research-local/1", "research-local/2", "research-local/3", "research-local/4",
-    "research-local/5", "research-local/6", "research-local/7", "research-local/8",
+    "research-local/5", "research-local/6", "research-local/7", "research-local/8", "research-local/9",
 ]
 Kind = Literal[
     "project",
@@ -63,7 +63,7 @@ class Reference(StrictModel):
 class Blob(StrictModel):
     sha256: Digest
     byte_length: Annotated[int, Field(ge=0, le=MAX_PDF_BYTES)]
-    media_type: Literal["text/plain", "application/pdf", "image/png", "image/jpeg"] = "text/plain"
+    media_type: Literal["text/plain", "application/pdf", "image/png", "image/jpeg", "video/mp4", "video/webm"] = "text/plain"
 
 
 class Record(StrictModel):
@@ -210,7 +210,9 @@ class SourceVersion(Record):
 
     @model_validator(mode="after")
     def valid_provenance_version(self) -> "SourceVersion":
-        if self.context.external_reference is not None and self.schema_version != "research-local/3":
+        if self.blob.media_type in {"video/mp4", "video/webm"} and self.schema_version != "research-local/9":
+            raise ValueError("Video requires source version schema research-local/9")
+        if self.context.external_reference is not None and self.schema_version not in {"research-local/3", "research-local/9"}:
             raise ValueError("External reference requires source version schema research-local/3")
         if self.context.origin_url is not None and self.schema_version == "research-local/1":
             raise ValueError("Origin URL requires source version schema research-local/2")
@@ -565,7 +567,7 @@ class Entry(StrictModel):
 
 
 class Manifest(StrictModel):
-    schema_version: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3", "research-manifest-local/4", "research-manifest-local/5", "research-manifest-local/6", "research-manifest-local/7", "research-manifest-local/8"] = "research-manifest-local/1"
+    schema_version: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3", "research-manifest-local/4", "research-manifest-local/5", "research-manifest-local/6", "research-manifest-local/7", "research-manifest-local/8", "research-manifest-local/9"] = "research-manifest-local/1"
     project_id: Identifier
     generation: Annotated[int, Field(ge=1)]
     parent: Digest | None

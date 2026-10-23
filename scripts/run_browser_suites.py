@@ -52,6 +52,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
 # to at least one area; tests/test_ci_selection.py verifies complete coverage.
 AREAS: dict[str, tuple[str, ...]] = {
     "sharing": (
+        "dossier-media.cjs",
         "read-only-site.cjs",
         "read-only-site-data.cjs",
         "reader-publication.cjs",

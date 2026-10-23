@@ -159,16 +159,25 @@ class ProjectRoutesMixin(ResponseMixin):
         })
 
     def _handle_settings(self, payload: dict[str, Any]) -> None:
+        publication_save = "site_publications" in payload
+        if publication_save:
+            self._log.info("Publication profiles stage=save_requested")
         save_defaults = payload.get("save_analysis_defaults", False)
         if not isinstance(save_defaults, bool):
+            if publication_save:
+                self._log.warning("Publication profiles stage=save_rejected reason=invalid_defaults")
             self._json({"ok": False, "message": "save_analysis_defaults must be a boolean"}, 400)
             return
         if save_defaults and "language" in payload and (
                 not isinstance(payload["language"], str) or not payload["language"].strip()):
+            if publication_save:
+                self._log.warning("Publication profiles stage=save_rejected reason=invalid_language")
             self._json({"ok": False, "message": "language must be a supported language code"}, 400)
             return
         lang = str(payload.get("language") or self.language).strip().lower()
         if lang not in LANGUAGE_CHOICES:
+            if publication_save:
+                self._log.warning("Publication profiles stage=save_rejected reason=invalid_language")
             self._json({"ok": False, "message": f"Unknown language: {lang}"}, 400)
             return
 
@@ -178,6 +187,8 @@ class ProjectRoutesMixin(ResponseMixin):
             if (save_defaults or any(key in payload for key in (
                     "publication", "register_profiles", "chapter_registers", "site_publications", "project_token"))) and (
                     not current_token or payload.get("project_token") != current_token):
+                if publication_save:
+                    self._log.warning("Publication profiles stage=save_rejected reason=context_changed")
                 self._json({"ok": False, "message": "The selected project or its settings changed; reload before saving"}, 409)
                 return
             title = validate_project_title(payload["title"]) or None if "title" in payload else self.title
@@ -191,6 +202,8 @@ class ProjectRoutesMixin(ResponseMixin):
                 changes.pop("title", None)
             prepared = prepare_project_settings(root, changes) if changes else None
             if "project_token" in payload and project_settings_token(root, self.source_input) != current_token:
+                if publication_save:
+                    self._log.warning("Publication profiles stage=save_rejected reason=context_changed")
                 self._json({"ok": False, "message": "Project settings changed while preparing; reload before saving"}, 409)
                 return
             with warnings.catch_warnings():
@@ -206,6 +219,9 @@ class ProjectRoutesMixin(ResponseMixin):
             if prepared:
                 prepared.commit()
         except (OSError, TypeError, ValueError, RuntimeError, UserWarning) as exc:
+            if publication_save:
+                self._log.warning("Publication profiles stage=save_failed error=%s errno=%s",
+                                  type(exc).__name__, exc.errno if isinstance(exc, OSError) else None)
             self._json({"ok": False, "message": str(exc)}, 400)
             return
 
@@ -214,6 +230,8 @@ class ProjectRoutesMixin(ResponseMixin):
         self.__class__.title_custom = title_custom
         self.__class__.thresholds = thresholds
         self.publish_dashboard(html, info)
+        if publication_save:
+            self._log.info("Publication profiles stage=saved profiles=%d", len(payload["site_publications"]))
         self._json({
             "ok": True,
             "message": f"Settings applied · Language: {lang} · z* ≥ {thresholds.z_mild:.1f} / {thresholds.z_strong:.1f}",

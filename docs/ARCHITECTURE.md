@@ -238,8 +238,8 @@ Reader and companion modes resolve a validated root `site_publications` profile
 against that snapshot. They select current or explicitly pinned dossier versions,
 unique heading subtrees, public titles and chapter release gates before rendering.
 They never serialize native Research responses or calculate manuscript analysis.
-Whole-dossier citations and geography require explicit profile fields; images and
-source bytes require a separate, one-export choice. Reverse associations, internal
+Whole-dossier citations and geography require explicit profile fields; original
+image, document and video bytes require a separate, one-export choice. Reverse associations, internal
 claims, decisions and history are not inferred publication selections.
 
 An export cap removes later entries and dependency assets before serialization;
@@ -403,6 +403,19 @@ pins, without inferring contradictions. Images reuse immutable source/version/bl
 records, never fabricated text passages; textual analysis rejects them. Attachment
 and dossier revision publish atomically. Purge retains identity for honest unavailable
 placeholders, not image bytes. Shared limits come from `research.limits`.
+
+**Current main, unreleased:** PDF/video attachments reuse that same capture,
+source context, CAS transaction, revision and lifecycle model. Separate
+`lixity:media/...` pins and additive `media` read arrays preserve the PNG/JPEG-only
+image interfaces. Videos and retained-only PDFs opt into record/manifest v9; earlier accepted records
+remain byte-identical and the manifest version never rolls back.
+PDF attachments retain bytes without extraction; the existing PDF ingest path
+still extracts text, and textual analysis reads its verified extraction rather
+than decoding a PDF container as UTF-8. Video container checks do not claim codec
+decodability or content safety. Native exact reads support bounded single ranges;
+the UI uses ordinary video controls and explicit PDF/download links, never active
+document embedding. Static exports reuse the same renderer and approved resource
+maps, with source files omitted unless explicitly selected.
 
 ## Presentation and trust boundaries
 

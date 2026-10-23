@@ -58,3 +58,32 @@ def test_profile_editor_asset_is_in_the_shared_native_bundle():
     assert "site-publication-settings.js" in _JS_FILES
     runtime = Path(__file__).parents[1] / "src/lixity/ui/assets/site-publication-settings.js"
     assert runtime.is_file()
+
+
+def test_profile_save_diagnostics_log_outcomes_without_profile_content(tmp_path):
+    import io
+
+    from lixity import log
+    from lixity.server.pdf_context import project_settings_token
+    from tests.support import recording_handler
+
+    manuscript = tmp_path / "private-synthetic-name.md"
+    manuscript.write_text("## One\n\nSynthetic manuscript.\n")
+    handler = recording_handler(tmp_path, source_input=manuscript)
+    token = project_settings_token(tmp_path, str(manuscript))
+    output = io.StringIO()
+    log.configure(level="INFO", stream=output, force=True)
+    try:
+        handler._handle_settings({"project_token": "stale", "site_publications": PROFILES})
+        assert handler.response[0] == 409
+        handler._handle_settings({"project_token": token, "site_publications": PROFILES})
+        assert handler.response[0] == 200
+    finally:
+        log.configure(level="INFO", force=True)
+    diagnostics = output.getvalue()
+    assert "stage=save_requested" in diagnostics
+    assert "stage=save_rejected reason=context_changed" in diagnostics
+    assert "stage=saved profiles=1" in diagnostics
+    for private in (token, str(tmp_path), manuscript.name, PROFILES["readers"]["title"],
+                    PROFILES["readers"]["entries"][0]["dossier_id"]):
+        assert private not in diagnostics

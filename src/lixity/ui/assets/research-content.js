@@ -296,11 +296,12 @@ function renderSafeMarkdown(rawText, dossierContext) {
   return imageRender ? window.LixityDossierImages.restoreMarkdown(resultHtml, imageRender) : resultHtml;
 }
 
-function researchDossierBodyHtml(bodyText, dossierContext) {
+function researchDossierBodyHtml(bodyText, dossierContext, actions) {
   var escapedRaw = escapeHtml(bodyText || "");
   var rendered = renderSafeMarkdown(bodyText || "", dossierContext);
   return '<div class="research-dossier-body-wrap">' +
     '<div class="research-prose-bar">' +
+      (actions || "") +
       '<button type="button" class="ctl ctl-sm research-source-toggle" data-source-toggle>' + escapeHtml(uiLabel("research_show_source")) + '</button>' +
     '</div>' +
     '<div class="research-prose markdown-body research-dossier-body-rendered">' + rendered + '</div>' +
@@ -559,11 +560,9 @@ document.addEventListener("lixity:dossier-image-saved", async function(event) {
   enhanceResearchDossierClaims(host, detail, function() { return summary.parentElement.open; });
   var add = host.querySelector("[data-dossier-add-image]");
   if (add && restoreFocus && (document.activeElement === previousFocus || document.activeElement === document.body)) add.focus();
-  researchStatus(uiLabel("image_saved"), true);
+  researchStatus(uiLabel(accepted.capture && ["application/pdf", "video/mp4", "video/webm"].includes(accepted.capture.media_type) ? "media_saved" : "image_saved"), true);
   } finally {
     document.removeEventListener("focusin", movedFocus);
     document.removeEventListener("pointerdown", movedPointer);
   }
 });
-
-

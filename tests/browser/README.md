@@ -417,6 +417,14 @@ withdrawal/purge placeholders, keyboard enlargement and inert hostile metadata.
 No external image is fetched and no running user project is selected. Screenshots
 remain temporary; these cases run in the existing single Chromium job.
 
+The dossier-media suite additionally needs `ffmpeg` with libx264/libvpx to create
+short synthetic MP4/WebM clips; it retains no third-party media fixtures.
+It checks the shared PDF/video attachment dialog, explicit consent/cancellation,
+exact downloaded PDF bytes, actual WebM playback, pinned-history immutability,
+source-file export scope, no remote requests and 1440/320-pixel native/companion
+layouts. Run with a canonical temporary directory when testing project paths:
+`TMPDIR="$PWD/.artifacts" PYTHONPATH=src node tests/browser/dossier-media.cjs`.
+
 The dossier-workflows suite exercises titled contextual claim/decision forms and
 the shared section editor against a disposable server: preserved drafts and pins,
 body-only preparation, unrelated concurrent-section preservation, explicit

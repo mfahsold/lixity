@@ -140,6 +140,7 @@ def test_export_logs_correlate_server_and_browser_without_content(tmp_path: Path
 @pytest.mark.parametrize("extra", [
     {"export_id": "private text"}, {"stage": "private text"},
     {"error_name": "private text"}, {"message": "private text"}, {"stage": "response_read\nforged"},
+    {"profile_count": 51}, {"profile_count": True}, {"http_status": 600},
 ])
 def test_export_receipts_reject_unbounded_diagnostics(tmp_path: Path, extra):
     handler = recording_handler(tmp_path)

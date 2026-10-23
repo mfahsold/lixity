@@ -842,9 +842,14 @@ to the console.
 Native reading-website exports additionally write content-free lifecycle logs
 at the default INFO level. Their `X-Lixity-Export-ID` response header correlates
 server preparation/socket writes with browser receipts. `POST /api/site-export-report`
-accepts only `export_id` (32 lowercase hexadecimal characters), `stage`
-(`response_read`, `zip_check`, `download_start`, `download_started`) and nullable
-`error_name` (`AbortError`, `NetworkError`, `TypeError`, `Error`, `Other`).
+accepts nullable `export_id` (32 lowercase hexadecimal characters), `stage`
+(`response_read`, `zip_check`, `download_start`, `download_started`,
+`profiles_invalid`, `profiles_empty`, `profiles_unsaved`, `profiles_available`,
+`catalogue_failed`), nullable `error_name`
+(`AbortError`, `NetworkError`, `TypeError`, `Error`, `Other`), nullable strict
+integer `profile_count` (0–50) and `http_status` (0–599). Pre-export profile
+observations have no export ID. These additive diagnostics are current-main,
+unreleased additions.
 Extra fields are rejected. These same-origin receipts are browser observations,
 not proof of successful file saving. They contain no project token or content;
 see [service logging](INSTALLATION.md#logs).
@@ -1046,10 +1051,12 @@ Calls without the parameter retain their existing behavior and JSON envelope.
 
 Dossier detail GET additionally accepts `section=Heading` and positive `revision=N`
 for a bounded exact-version read. Full/section/summary reads include `project_id`,
-`images` and canonical `editable_sections`. Image resolver entries identify exact
+`images` and canonical `editable_sections`. Current-main, unreleased reads also
+include a separate `media` array for PDF/MP4/WebM; `images` remains PNG/JPEG only.
+Both resolver arrays identify exact
 source/version pins with `available|withdrawn|purged|missing` status; unavailable
 entries have no image URL. Historical reads resolve the pinned image version,
-not the latest source. Record/history dossier envelopes also include `images`.
+not the latest source. Record/history dossier envelopes include both arrays.
 
 Selected dossier reads additionally report
 `section_level` (1–6 for an actual ATX heading, null for an implicit preamble).
@@ -1077,7 +1084,8 @@ Local image endpoints:
 CLI/Python attachment uses the same atomic API. See the [image workflow](research/USAGE.md#keep-a-visual-reference-in-a-dossier)
 for reviewed snapshot/revision tokens, context and local-file examples.
 
-Only these image POST bodies use 32 MiB; other JSON bodies remain limited to 5 MiB.
+Image POST bodies use 32 MiB; the media POST bodies below use 72 MiB.
+Other JSON bodies remain limited to 5 MiB.
 Raw images are limited to 16 MiB / 64 million pixels. Permission must be the JSON
 boolean `true`; source notes/URLs have 2,000-character bounds, alternative text
 1,000 and captions 10,000. Structural/header checks are not full pixel decoding.
@@ -1085,6 +1093,25 @@ Images contain no passages and cannot enter textual analysis/compare. No raster
 ingest path automatically retries an external conflict. Version-purge identity
 metadata uses `research-local/2` Tombstones; 2.0.0 readers reject those records.
 Existing v1 bytes stay unchanged. See [image workflow and limits](research/USAGE.md#keep-a-visual-reference-in-a-dossier).
+
+**Current main, unreleased local document/video endpoints:**
+
+- `POST /api/research-media-ingest` and `POST /api/research-dossier-media` reuse
+  the corresponding image payload and atomic transaction. They also accept
+  PDF/MP4/WebM up to 50 MiB. They retain files without text extraction.
+- `GET /api/research/media?project_id=...&source_id=...&version_id=...` reads the
+  exact retained PDF/video. Same-origin, identity, hash and bounded-container
+  checks apply. Single byte ranges return 206; malformed, multiple and
+  unsatisfiable ranges return 416. PDFs use attachment disposition and a
+  sandbox response policy; no arbitrary path or URL is accepted.
+- `capabilities.research_media` advertises the registered native write routes.
+  Python equivalents are `ingest_media`, `attach_dossier_media` and `read_media`.
+
+Video and retained-only PDF `SourceVersion` records use `research-local/9`; manifests opt into
+`research-manifest-local/9` without rewriting older records. Earlier clients
+reject archives using this new version. PDF/video pins use `lixity:media/...`
+with the same exact UUID identities as image pins. See the
+[media workflow and compatibility limits](research/USAGE.md#retain-a-pdf-or-video-in-a-dossier).
 
 Confidentiality-agreement generation:
 

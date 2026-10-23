@@ -32,6 +32,9 @@ class SiteExportRoutesMixin(ResponseMixin):
                                 for error in exc.errors(include_url=False, include_input=False))
             self._json({"ok": False, "message": message}, 400)
             return
+        self._log.info("Website export id=%s stage=validated mode=%s research=%s source_files=%s cap=%s",
+                       export_id, request.mode, request.include_research,
+                       request.include_source_files, request.max_chapter)
         expected = request.project_token
         try:
             with self._workspace_lock:
@@ -58,14 +61,16 @@ class SiteExportRoutesMixin(ResponseMixin):
                 root, manuscript=source, language=language, title=title, thresholds=thresholds,
                 **request.export_options().model_dump(exclude_defaults=True),
             )
+            self._log.info("Website export id=%s stage=zip_preparation duration_ms=%d",
+                           export_id, round((perf_counter() - started) * 1000))
             content = bundle.to_zip()
             if len(content) > MAX_ARTIFACT_BYTES:
                 self._log.warning("Website export id=%s stage=download_limit", export_id)
                 self._json({"ok": False, "message": "Website ZIP exceeds the download limit; use export-site to a local directory"}, 413)
                 return
         except (OSError, ValueError, RuntimeError) as exc:
-            self._log.warning("Website export id=%s stage=preparation_failed error=%s",
-                              export_id, type(exc).__name__)
+            self._log.warning("Website export id=%s stage=preparation_failed error=%s errno=%s",
+                              export_id, type(exc).__name__, exc.errno if isinstance(exc, OSError) else None)
             self._json({"ok": False, "message": str(exc)}, 400)
             return
         with self._workspace_lock:
@@ -91,7 +96,8 @@ class SiteExportRoutesMixin(ResponseMixin):
         except ValidationError:
             self._json({"ok": False, "message": "Invalid export receipt"}, 400)
             return
-        self._log.log(WARNING if report.error_name else INFO,
-                      "Website export browser receipt id=%s stage=%s error=%s",
-                      report.export_id, report.stage, report.error_name or "none")
+        self._log.log(WARNING if report.error_name or report.stage == "profiles_invalid" else INFO,
+                      "Website export browser receipt id=%s stage=%s error=%s profiles=%s http_status=%s",
+                      report.export_id or "none", report.stage, report.error_name or "none",
+                      report.profile_count, report.http_status)
         self._json({"ok": True})

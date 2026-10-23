@@ -38,6 +38,7 @@ from .images import (
     extract_markdown_image_references,
     image_descriptions,
     resolve_dossier_images,
+    resolve_dossier_media,
     validate_image,
 )
 from .limits import MAX_IMAGE_ALT_CHARS, MAX_IMAGE_CAPTION_CHARS
@@ -71,6 +72,7 @@ from .manuscript import (
 from .manuscript import (
     review_manuscript_links as review_manuscript_links,
 )
+from .media import MEDIA_TYPES, VIDEO_TYPES, validate_media
 from .models import (
     CLAIM_CONFIDENCES,
     ENTITY,
@@ -208,11 +210,13 @@ def _read_source_bytes(path: Path) -> bytes:
     is_image = path.suffix.lower() in IMAGE_SUFFIXES
     if not path.is_file():
         raise ResearchError("Source file is missing; supply a local PDF or UTF-8 text file")
-    maximum = MAX_PDF_BYTES if is_pdf else MAX_IMAGE_BYTES if is_image else MAX_SOURCE_BYTES
+    maximum = MAX_PDF_BYTES if is_pdf or path.suffix.lower() in {".mp4", ".webm"} else MAX_IMAGE_BYTES if is_image else MAX_SOURCE_BYTES
     with path.open("rb") as stream:
         content = stream.read(maximum + 1)
     if is_image:
         validate_image(content, filename=path.name)
+    elif path.suffix.lower() in {".mp4", ".webm"}:
+        validate_media(content, filename=path.name)
     elif is_pdf:
         if not content or len(content) > maximum:
             raise ResearchError("PDF source must be nonempty and at most 50 MiB")
@@ -227,10 +231,12 @@ def _prepare_ingest(repository: Repository, snapshot: Snapshot, file: str | Path
                     context: Mapping[str, Any] | None = None, origin_url: str | None = None,
                     allow_fallback: bool = False, planned_source_id: str | None = None,
                     expected_source_digest: str | None = None,
+                    retain_only: bool = False,
                     progress_callback: Callable[[str, str], None] | None = None) -> _PreparedCapture:
     path = Path(file).expanduser()
     is_pdf = path.suffix.lower() == ".pdf"
     is_image = path.suffix.lower() in IMAGE_SUFFIXES
+    is_video = path.suffix.lower() in {".mp4", ".webm"}
     if not path.is_file():
         raise ResearchError("Source must be a local UTF-8 text file" if not is_pdf else "Source must be a local PDF file")
 
@@ -241,7 +247,7 @@ def _prepare_ingest(repository: Repository, snapshot: Snapshot, file: str | Path
             raise ResearchError("Source refresh cannot change its title or language in this pilot")
     else:
         values = envelope(snapshot.project.id, actor)
-        values.update(title=title or path.name, language=language or ("generic" if is_image else snapshot.project.language))
+        values.update(title=title or path.name, language=language or ("generic" if is_image or is_video else snapshot.project.language))
         if planned_source_id is not None:
             values["id"] = planned_source_id
         source = Source.model_validate(values)
@@ -261,8 +267,9 @@ def _prepare_ingest(repository: Repository, snapshot: Snapshot, file: str | Path
     content = _read_source_bytes(path)
     if expected_source_digest is not None and digest(content) != expected_source_digest:
         raise ResearchError("Source file bytes changed since checkpoint creation")
-    if is_image:
-        image = validate_image(content, filename=path.name)
+    if is_image or is_video or (is_pdf and retain_only):
+        image = (validate_image(content, filename=path.name) if is_image
+                 else validate_media(content, filename=path.name))
         checksum = digest(content)
         if latest is not None and latest.blob.sha256 == checksum and latest.context == source_context:
             repository.read_blob(latest.blob)
@@ -271,7 +278,8 @@ def _prepare_ingest(repository: Repository, snapshot: Snapshot, file: str | Path
                       "dry_run": dry_run, "passages": 0, "warnings": [], "media_type": image["media_type"]}
             return _PreparedCapture([], {}, result, source.id, latest.id, source.title)
         version = SourceVersion(**envelope(snapshot.project.id, actor), source_ref=reference(source),
-                                schema_version=("research-local/3" if source_context.external_reference else
+                                schema_version=("research-local/9" if not is_image else
+                                                "research-local/3" if source_context.external_reference else
                                                 "research-local/2" if source_context.origin_url else "research-local/1"),
                                 sequence=latest.sequence + 1 if latest else 1,
                                 blob=Blob(sha256=checksum, byte_length=len(content), media_type=image["media_type"]),
@@ -284,13 +292,15 @@ def _prepare_ingest(repository: Repository, snapshot: Snapshot, file: str | Path
     blobs_to_commit: dict[str, bytes] = {}
     extraction_warnings: list[str] = []
     implementation: Literal["utf8-paragraphs/1", "baidu-unlimited-ocr/1", "tesseract-cli/1", "poppler-native/1"]
+    added_extraction = False
     if is_pdf:
-        if latest is not None and latest.blob.sha256 == digest(content):
+        prior = [record for record in snapshot.records.values() if isinstance(record, Extraction)
+                 and latest is not None and record.source_version_ref.id == latest.id]
+        retained_only = latest is not None and latest.schema_version == "research-local/9" and not prior
+        if latest is not None and latest.blob.sha256 == digest(content) and not retained_only:
             if progress_callback:
                 progress_callback("read", "Verifying retained PDF extraction...")
             repository.read_blob(latest.blob)
-            prior = [record for record in snapshot.records.values() if isinstance(record, Extraction)
-                     and record.source_version_ref.id == latest.id]
             if len(prior) != 1:
                 raise ResearchError("PDF refresh requires one verified retained extraction")
             text = repository.read_blob(prior[0].text_blob).decode("utf-8")
@@ -301,6 +311,7 @@ def _prepare_ingest(repository: Repository, snapshot: Snapshot, file: str | Path
             spans = [(passage.start, passage.end) for passage in passages]
             implementation = snapshot.get(prior[0].activity_ref, Activity).implementation
         else:
+            added_extraction = True
             if progress_callback:
                 progress_callback("ocr", "Rasterizing PDF pages and extracting text via OCR/poppler...")
             effective_fallback = allow_fallback or os.environ.get("LIXITY_OCR_FALLBACK", "").lower() in ("1", "true", "yes")
@@ -339,7 +350,8 @@ def _prepare_ingest(repository: Repository, snapshot: Snapshot, file: str | Path
         text_blob = source_blob
         blobs_to_commit[source_checksum] = content
 
-    if latest is not None and latest.blob.sha256 == source_checksum and latest.context == source_context:
+    if (latest is not None and latest.blob.sha256 == source_checksum and latest.context == source_context
+            and not added_extraction):
         repository.read_blob(latest.blob)
         result = {"schema_version": "research-ingest-local/1", "source_id": source.id,
                 "source_version_id": latest.id, "snapshot": snapshot.digest,
@@ -376,6 +388,7 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
            context: Mapping[str, Any] | None = None,
            origin_url: str | None = None, expected_snapshot: str | None = None,
            allow_fallback: bool = False,
+           retain_only: bool = False,
            progress_callback: Callable[[str, str], None] | None = None) -> dict[str, Any]:
     """Ingest one local file as a retained source and indexed passages.
 
@@ -394,6 +407,7 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
     prepared = _prepare_ingest(repository, snapshot, file, source_id=source_id, title=title,
                                language=language, actor=actor, dry_run=dry_run, context=context,
                                origin_url=origin_url, allow_fallback=allow_fallback,
+                               retain_only=retain_only,
                                progress_callback=progress_callback)
     result = prepared.result
     if result["unchanged"]:
@@ -408,7 +422,7 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
                 result["snapshot"] = repository.commit(prepared.records, prepared.blobs, snapshot).digest
                 break
             except ResearchConflictError as exc:
-                if expected_snapshot is not None or result.get("media_type") in IMAGE_TYPES:
+                if expected_snapshot is not None or result.get("media_type") in IMAGE_TYPES | MEDIA_TYPES:
                     raise
                 fresh = repository.snapshot()
                 if source_id:
@@ -431,13 +445,31 @@ def ingest_image(project: str | Path, content: bytes, *, filename: str,
     if allow_retention is not True:
         raise ResearchError("Explicit local retention permission is required (allow_retention: true)")
     validate_image(content, filename=filename)
+    return ingest_media(project, content, filename=filename, allow_retention=allow_retention,
+                        source_id=source_id, title=title, context=context, origin_url=origin_url,
+                        expected_snapshot=expected_snapshot, actor=actor)
+
+
+def ingest_media(project: str | Path, content: bytes, *, filename: str,
+                 allow_retention: bool = False, source_id: str | None = None,
+                 title: str | None = None, context: Mapping[str, Any] | None = None,
+                 origin_url: str | None = None, expected_snapshot: str | None = None,
+                 actor: str = "local-author") -> dict[str, Any]:
+    """Retain an explicitly selected document/video or image without extraction."""
+    if allow_retention is not True:
+        raise ResearchError("Explicit local retention permission is required (allow_retention: true)")
+    if Path(filename).suffix.lower() in IMAGE_SUFFIXES:
+        validate_image(content, filename=filename)
+    else:
+        validate_media(content, filename=filename)
     expected_snapshot = expected_snapshot if expected_snapshot is not None else Repository(project).snapshot().digest
     with tempfile.TemporaryDirectory(prefix="lixity-image-") as directory:
         path = Path(directory) / ("image" + Path(filename).suffix.lower())
         path.write_bytes(content)
         return ingest(project, path, allow_retention=True, source_id=source_id,
                       title=title if source_id else title or Path(filename).name,
-                      context=context, origin_url=origin_url, expected_snapshot=expected_snapshot, actor=actor)
+                      context=context, origin_url=origin_url, expected_snapshot=expected_snapshot,
+                      retain_only=True, actor=actor)
 
 
 def read_image(project: str | Path, *, project_id: str, source_id: str, version_id: str) -> dict[str, Any]:
@@ -448,6 +480,14 @@ def read_image(project: str | Path, *, project_id: str, source_id: str, version_
                                source_id=source_id, version_id=version_id)
 
 
+def read_media(project: str | Path, *, project_id: str, source_id: str, version_id: str) -> dict[str, Any]:
+    """Read a verified exact-version retained PDF/video, never a loose path."""
+    from .images import read_image as read_retained_image
+    repository = Repository(project)
+    return read_retained_image(repository, repository.snapshot(), project_id=project_id,
+                               source_id=source_id, version_id=version_id, media=True)
+
+
 def attach_dossier_image(project: str | Path, dossier_id: str, content: bytes, *, filename: str,
                          expected_snapshot: str, expected_revision: int, allow_retention: bool = False,
                          alt: str = "", caption: str | None = None, section: str | None = None,
@@ -455,7 +495,22 @@ def attach_dossier_image(project: str | Path, dossier_id: str, content: bytes, *
                          title: str | None = None, context: Mapping[str, Any] | None = None,
                          origin_url: str | None = None, reason: str | None = None,
                          change_kind: str = "supersession", actor: str = "local-author") -> dict[str, Any]:
-    """Publish one new image capture and dossier revision under exact CAS."""
+    """Preserve the PNG/JPEG-only attachment interface."""
+    validate_image(content, filename=filename)
+    return attach_dossier_media(project, dossier_id, content, filename=filename,
+        expected_snapshot=expected_snapshot, expected_revision=expected_revision, allow_retention=allow_retention,
+        alt=alt, caption=caption, section=section, replace_reference=replace_reference, title=title,
+        context=context, origin_url=origin_url, reason=reason, change_kind=change_kind, actor=actor)
+
+
+def attach_dossier_media(project: str | Path, dossier_id: str, content: bytes, *, filename: str,
+                         expected_snapshot: str, expected_revision: int, allow_retention: bool = False,
+                         alt: str = "", caption: str | None = None, section: str | None = None,
+                         replace_reference: str | None = None,
+                         title: str | None = None, context: Mapping[str, Any] | None = None,
+                         origin_url: str | None = None, reason: str | None = None,
+                         change_kind: str = "supersession", actor: str = "local-author") -> dict[str, Any]:
+    """Publish one new retained media capture and dossier revision under exact CAS."""
     from .revisions import _apply_changes, _record, _view
     if allow_retention is not True:
         raise ResearchError("Explicit local retention permission is required (allow_retention: true)")
@@ -484,14 +539,19 @@ def attach_dossier_image(project: str | Path, dossier_id: str, content: bytes, *
         if previous.body.count(replace_reference) != 1 or len(matches) != 1:
             raise ResearchError("Image replacement reference must occur exactly once outside Markdown code")
         replacement = matches[0]
-    validate_image(content, filename=filename)
+    is_image = Path(filename).suffix.lower() in IMAGE_SUFFIXES
+    if is_image:
+        validate_image(content, filename=filename)
+    else:
+        validate_media(content, filename=filename)
     with tempfile.TemporaryDirectory(prefix="lixity-image-") as directory:
         path = Path(directory) / ("image" + Path(filename).suffix.lower())
         path.write_bytes(content)
         prepared = _prepare_ingest(repository, snapshot, path, title=title or Path(filename).name,
-                                   context=context, origin_url=origin_url, actor=actor)
+                                   context=context, origin_url=origin_url, actor=actor, retain_only=True)
     escaped_alt = alt.replace("\\", "\\\\").replace("[", "\\[").replace("]", "\\]")
-    markup = f"![{escaped_alt}](lixity:image/{prepared.source_id}/{prepared.result['source_version_id']})"
+    namespace = "image" if is_image else "media"
+    markup = f"![{escaped_alt}](lixity:{namespace}/{prepared.source_id}/{prepared.result['source_version_id']})"
     if caption:
         markup += "\n\n" + caption
     if replacement is not None:
@@ -512,10 +572,10 @@ def attach_dossier_image(project: str | Path, dossier_id: str, content: bytes, *
         existing = previous.body[selected.content_start:_section_subtree_end(spans, selected, len(previous.body))]
         body = update_section(previous.body, section, existing.rstrip() + "\n\n" + markup)
     if not any(ref.source_id == prepared.source_id and ref.source_version_id == prepared.result["source_version_id"]
-               for ref in extract_image_references(body)):
+               for ref in extract_image_references(body, media=not is_image)):
         raise ResearchError("Attachment location is inside Markdown code; close it or choose another section")
     revised = _apply_changes(snapshot, previous, {"body": body}, change_kind=change_kind,
-                             reason=reason if reason is not None else f"Attached image {prepared.title}.", actor=actor)
+                             reason=reason if reason is not None else f"Attached {namespace} {prepared.title}.", actor=actor)
     accepted = repository.commit([*prepared.records, revised], prepared.blobs, snapshot)
     return {**_view(repository, accepted, revised), "capture": {**prepared.result, "snapshot": accepted.digest}}
 
@@ -592,6 +652,10 @@ def audit(project: str | Path) -> dict[str, Any]:
                     image = validate_image(content)
                     if image["media_type"] != record.blob.media_type:
                         raise ResearchError("Retained image type does not match its blob descriptor")
+                elif (record.blob.media_type in VIDEO_TYPES
+                      or (record.blob.media_type == "application/pdf" and record.schema_version == "research-local/9")):
+                    if validate_media(content)["media_type"] != record.blob.media_type:
+                        raise ResearchError("Retained media type does not match its blob descriptor")
                 checked.add(record.blob.sha256)
             elif isinstance(record, Extraction) and record.text_blob.sha256 not in checked:
                 repository.read_blob(record.text_blob)
@@ -600,10 +664,12 @@ def audit(project: str | Path) -> dict[str, Any]:
                 repository.quote(snapshot, record)
         for record in snapshot.revisions.values():
             if isinstance(record, Dossier):
-                if any(image["availability"] == "missing" for image in resolve_dossier_images(snapshot, record.body)):
+                if any(image["availability"] == "missing" for image in
+                       [*resolve_dossier_images(snapshot, record.body), *resolve_dossier_media(snapshot, record.body)]):
                     errors.append(f"Dossier {record.id} revision {record.revision} has an unavailable image pin")
                 try:
                     extract_image_references(record.body, strict=True)
+                    extract_image_references(record.body, strict=True, media=True)
                 except ResearchError:
                     errors.append(f"Dossier {record.id} revision {record.revision} has malformed reserved image data (kept inert)")
     except (OSError, ResearchError, ValidationError, UnicodeDecodeError) as exc:
@@ -904,7 +970,7 @@ def purge(
         version_tombstones = [Tombstone(**envelope(snapshot.project.id, actor), target_ref=reference(version),
                                         schema_version="research-local/2", source_ref=version.source_ref,
                                         target_kind="source_version", operation="purge", reason=reason)
-                              for version in versions_to_purge if purge_source_record and version.blob.media_type in IMAGE_TYPES]
+                              for version in versions_to_purge if purge_source_record and version.blob.media_type in IMAGE_TYPES | MEDIA_TYPES]
         from .checkpoints import purge_guard
 
         with purge_guard(repository, source.id) as discard_preparation:
@@ -1266,6 +1332,7 @@ def _get_dossier(repository: Repository, snapshot: Snapshot, dossier_id: str, *,
             **availability,
             "project_id": snapshot.project.id,
             "images": resolve_dossier_images(snapshot, dossier.body[:500]),
+            "media": resolve_dossier_media(snapshot, dossier.body[:500]),
             "title": dossier.title,
             "language": dossier.language,
             "tags": dossier.tags,
@@ -1300,6 +1367,7 @@ def _get_dossier(repository: Repository, snapshot: Snapshot, dossier_id: str, *,
             **availability,
             "project_id": snapshot.project.id,
             "images": resolve_dossier_images(snapshot, selected_content),
+            "media": resolve_dossier_media(snapshot, selected_content),
             "title": dossier.title,
             "revision": dossier.revision,
             "snapshot": snapshot.digest,
@@ -1319,6 +1387,7 @@ def _get_dossier(repository: Repository, snapshot: Snapshot, dossier_id: str, *,
         **availability,
         "project_id": snapshot.project.id,
         "images": resolve_dossier_images(snapshot, dossier.body),
+        "media": resolve_dossier_media(snapshot, dossier.body),
         "title": dossier.title,
         "language": dossier.language,
         "tags": dossier.tags,

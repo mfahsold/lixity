@@ -252,7 +252,7 @@ def site_publication_editor(
             "entries", "entry", "add_entry", "dossier", "choose_dossier", "revision", "current",
             "version", "section", "whole_body", "after", "after_hint", "override", "citations", "geography",
             "scope", "missing", "loading", "load_error", "invalid", "raw_error", "raw", "recover",
-            "move_up", "move_down")
+            "move_up", "move_down", "retry", "no_dossiers")
     terms = {"publication_editor_" + key: label(labels, "publication_editor_" + key) for key in keys}
     terms["remove_recent_project"] = label(labels, "remove_recent_project")
     return (
@@ -266,6 +266,7 @@ def site_publication_editor(
         f'{"" if editable else " disabled"}>'
         f'<legend>{esc(terms["publication_editor_title"])}</legend>'
         '<p class="ctl-status" data-site-publication-status role="status" aria-live="polite"></p>'
+        f'<button type="button" class="ctl" data-site-publication-retry hidden>{esc(terms["publication_editor_retry"])}</button>'
         '<div data-site-publication-profiles></div>'
         f'<button type="button" class="ctl" data-site-publication-add-profile>{esc(terms["publication_editor_add_profile"])}</button>'
         '</fieldset></details>'

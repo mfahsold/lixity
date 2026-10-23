@@ -210,7 +210,8 @@ def _read_prepared(store: _Store, state: _State, index: int) -> tuple[list[Entit
     sources = [record for record in records if isinstance(record, Source)]
     passages = [record for record in records if isinstance(record, Passage)]
     from .images import IMAGE_TYPES, validate_image
-    if len(versions) == 1 and versions[0].blob.media_type in IMAGE_TYPES:
+    from .media import VIDEO_TYPES, validate_media
+    if len(versions) == 1 and versions[0].blob.media_type in IMAGE_TYPES | VIDEO_TYPES:
         version = versions[0]
         if (extractions or activities or passages or len(sources) != (0 if state.options.source_id else 1)
                 or version.id != prepared.result.source_version_id or version.source_ref.id != item.source_id
@@ -218,10 +219,12 @@ def _read_prepared(store: _Store, state: _State, index: int) -> tuple[list[Entit
                 or version.blob.byte_length != item.byte_length or prepared.result.passages != 0
                 or (sources and sources[0].id != item.source_id) or prepared.blobs != [version.blob]):
             raise ResearchError("Invalid retained image capture structure or identity")
-        content = store.repository.read(store.blob_path(index, version.blob.sha256), maximum=api.MAX_IMAGE_BYTES)
+        maximum = api.MAX_IMAGE_BYTES if version.blob.media_type in IMAGE_TYPES else api.MAX_PDF_BYTES
+        content = store.repository.read(store.blob_path(index, version.blob.sha256), maximum=maximum)
         if digest(content) != version.blob.sha256 or len(content) != version.blob.byte_length:
             raise ResearchError("Retained image blob checksum or length mismatch")
-        if validate_image(content)["media_type"] != version.blob.media_type:
+        validate = validate_image if version.blob.media_type in IMAGE_TYPES else validate_media
+        if validate(content)["media_type"] != version.blob.media_type:
             raise ResearchError("Retained image bytes do not match their media type")
         return records, {version.blob.sha256: content}
     if (len(versions) != 1 or len(extractions) != 1 or len(activities) != 1 or not passages

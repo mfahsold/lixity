@@ -216,7 +216,7 @@ def _view(repository: Repository, snapshot: Snapshot, record: Authored) -> dict[
                                           "pinned_revision": endpoint["revision"],
                                           "latest_revision": endpoint["current_revision"], "role": role})
     latest = snapshot.latest(record.id, KINDS[record.kind])
-    from .images import resolve_dossier_images
+    from .images import resolve_dossier_images, resolve_dossier_media
     return {
         "schema_version": "research-record-local/1", "project_id": snapshot.project.id,
         "snapshot": snapshot.digest, "kind": record.kind, "record_id": record.id,
@@ -225,6 +225,7 @@ def _view(repository: Repository, snapshot: Snapshot, record: Authored) -> dict[
         "citations": citations, "citation_scope": citation_scope,
         "source_updates": source_updates(citations), "reference_updates": reference_updates,
         **({"images": resolve_dossier_images(snapshot, record.body),
+            "media": resolve_dossier_media(snapshot, record.body),
             "geography_summary": summarize_geography(record.geography)} if isinstance(record, Dossier) else {}),
         **(dossier_withdrawal(snapshot, record.id) if isinstance(record, Dossier) else {}),
         **({key: relation_view[key] for key in ("from_claim", "to_claim", "review_needed")} if relation_view else {}),
@@ -250,7 +251,7 @@ def _record_history(snapshot: Snapshot, kind: str, record_id: str) -> dict[str, 
     latest = _record(snapshot, kind, record_id, include_withdrawn=True)
     # Repository validation guarantees every accepted revision from 1 to latest.
     records = [cast(Authored, snapshot.revisions[(record_id, number)]) for number in range(latest.revision, 0, -1)]
-    from .images import resolve_dossier_images
+    from .images import resolve_dossier_images, resolve_dossier_media
     return {
         "schema_version": "research-history-local/1", "project_id": snapshot.project.id,
         "snapshot": snapshot.digest, "record_id": record_id, "kind": kind,
@@ -259,6 +260,7 @@ def _record_history(snapshot: Snapshot, kind: str, record_id: str) -> dict[str, 
         "revisions": [{"revision": r.revision, "created_at": r.created_at,
                        "created_by": r.created_by, "change": r.change.model_dump(mode="json") if r.change else None,
                        **({"images": resolve_dossier_images(snapshot, r.body),
+                           "media": resolve_dossier_media(snapshot, r.body),
                            "geography_feature_count": len(r.geography.features) if r.geography else 0}
                           if isinstance(r, Dossier) else {})}
                       for r in records],

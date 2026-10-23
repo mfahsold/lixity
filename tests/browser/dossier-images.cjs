@@ -332,7 +332,7 @@ server.serve_forever()
     const figure = page.locator('.research-dossier-body-rendered .dossier-image');
     await expect(page.locator('.research-dossier-body-rendered')).toContainText('A synthetic caption');
     const mediaOverview = page.locator('.dossier-media-overview');
-    await expect(mediaOverview.locator('summary')).toHaveText('Images (1)');
+    await expect(mediaOverview.locator('summary')).toHaveText('Media (1)');
     await mediaOverview.locator('summary').click();
     await expect(mediaOverview.locator('a')).toContainText('Synthetic [red]');
     await mediaOverview.locator('a').click();
@@ -578,12 +578,33 @@ server.serve_forever()
     await page.locator('#tab-view-research').click();
     await page.locator('[data-rtab=dossiers]').click();
     await page.locator(`[data-research-detail=dossier][data-record-id="${fixture.other_dossier}"]`).click();
-    const missing = page.locator('.research-dossier-body-rendered .dossier-image-unretained');
+    const missing = page.locator('.research-dossier-folder .research-dossier-body-rendered .dossier-image-unretained');
     const otherCard = page.locator('.research-card').filter({has: page.locator(`[data-research-detail=dossier][data-record-id="${fixture.other_dossier}"]`)});
     await expect(otherCard.locator('.research-excerpt')).not.toContainText('Image not retained');
     await expect(missing).toContainText('Local plan');
-    await expect(missing).toContainText('bilder/plan.jpg');
+    await expect(missing.locator('.dossier-image-reference')).not.toHaveAttribute('open', '');
+    await missing.locator('.dossier-image-reference > summary').click();
+    await expect(missing.locator('.dossier-image-destination')).toHaveText('bilder/plan.jpg');
+    await missing.locator('.dossier-image-reference > summary').click();
     await expect(missing.locator('img, a')).toHaveCount(0);
+    await page.locator(`[data-research-history=dossier][data-record-id="${fixture.other_dossier}"]`).click();
+    const recordDialog = page.locator('#modal-research-revision');
+    const recordBody = recordDialog.locator('.research-revision-dossier');
+    await expect(recordBody.locator('[data-dossier-replace-image]')).toBeVisible();
+    assert.equal(await recordBody.locator('dt, dd').count(), 0, 'Dossier prose is not squeezed into metadata columns');
+    for (const width of [1440, 320]) {
+      await page.setViewportSize({width, height:900});
+      await recordBody.locator('.dossier-image-unretained').scrollIntoViewIfNeeded();
+      assert.ok(await recordDialog.evaluate(node => node.scrollWidth <= node.clientWidth + 1));
+      await recordDialog.screenshot({path:path.join(artifacts, `record-reading-${width}.png`)});
+    }
+    await recordBody.locator('[data-dossier-replace-image]').click();
+    await expect(dialog).toBeVisible();
+    await expect(page.locator('#dossier-image-alt')).toHaveValue('Local plan');
+    await expect(page.locator('#dossier-image-retention')).not.toBeChecked();
+    await page.keyboard.press('Escape');
+    await expect(recordDialog).toBeVisible();
+    await page.keyboard.press('Escape');
     const overview = page.locator('.dossier-media-overview');
     await expect(overview.locator('summary')).toContainText('1');
     await overview.locator('summary').click();
@@ -643,6 +664,20 @@ server.serve_forever()
       assert.ok(await retained.evaluate(image => image.getBoundingClientRect().right <= innerWidth));
       await page.screenshot({path: path.join(artifacts, `replaced-${width}.png`)});
     }
+    await page.locator(`[data-research-history=dossier][data-record-id="${fixture.other_dossier}"]`).click();
+    await recordBody.locator('[data-dossier-add-image]').click();
+    await page.locator('#dossier-image-file').setInputFiles(file);
+    await page.locator('#dossier-image-alt').fill('Additional synthetic modal image');
+    await page.locator('#dossier-image-retention').check();
+    await page.locator('#dossier-image-save').click();
+    await expect(dialog).not.toBeVisible();
+    await expect(recordBody.locator('.dossier-image img')).toHaveCount(2);
+    await expect(recordBody.locator('img[alt="Additional synthetic modal image"]')).toBeVisible();
+    await page.locator('#research-revision-versions > summary').click();
+    await page.locator(`[data-research-revision="${replaced.revision}"]`).click();
+    await expect(recordBody.locator('.dossier-image img')).toHaveCount(1);
+    await expect(recordBody.locator('[data-dossier-add-image], [data-dossier-replace-image]')).toHaveCount(0);
+    await page.keyboard.press('Escape');
     assert.deepEqual(external, [], 'Images must not make external requests');
     assert.deepEqual(errors, []);
     console.log(`Dossier images: readable Mermaid viewport/keyboard enlargement at 1440/320 in light/dark; PNG/JPEG decoding; preview cancel/race/limits; atomic save busy/error/CAS recovery; exact old pins, full/section/history and lifecycle states; hostile data with no external requests; seven locales at 1440/390/320 passed. Screenshots: ${artifacts}`);

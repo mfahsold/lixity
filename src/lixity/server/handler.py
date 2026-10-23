@@ -21,6 +21,7 @@ from ._state import RefreshOutcome
 from .constants import (
     MAX_ARTIFACT_BYTES,
     MAX_IMAGE_PAYLOAD_BYTES,
+    MAX_MEDIA_PAYLOAD_BYTES,
     MAX_PAYLOAD_BYTES,
     MIME_TYPES,
 )
@@ -55,6 +56,7 @@ class LixityServerHandler(
         "/api/research/status": "_handle_research_status",
         "/api/research/sources": "_handle_research_sources",
         "/api/research/image": "_handle_research_image",
+        "/api/research/media": "_handle_research_media",
         "/api/research/dossiers": "_handle_research_dossiers",
         "/api/research/claims": "_handle_research_claims",
         "/api/research/timeline": "_handle_research_timeline",
@@ -91,6 +93,8 @@ class LixityServerHandler(
         "research-ingest": "_handle_research_ingest",
         "research-image-ingest": "_handle_research_image_ingest",
         "research-dossier-image": "_handle_research_dossier_image",
+        "research-media-ingest": "_handle_research_media_ingest",
+        "research-dossier-media": "_handle_research_dossier_media",
         "research-search": "_handle_research_search",
         "research-dossier": "_handle_research_dossier",
         "research-compare": "_handle_research_compare",
@@ -270,7 +274,9 @@ class LixityServerHandler(
             return
 
         action = path[len("/api/"):].strip("/")
-        maximum = MAX_IMAGE_PAYLOAD_BYTES if action in {"research-image-ingest", "research-dossier-image"} else MAX_PAYLOAD_BYTES
+        maximum = (MAX_MEDIA_PAYLOAD_BYTES if action in {"research-media-ingest", "research-dossier-media"}
+                   else MAX_IMAGE_PAYLOAD_BYTES if action in {"research-image-ingest", "research-dossier-image"}
+                   else MAX_PAYLOAD_BYTES)
         payload = self._read_json_body(maximum=maximum)
         if payload is None:
             return

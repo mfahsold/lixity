@@ -19,9 +19,22 @@ from ..style_fingerprint import FEATURES, FingerprintThresholds, dunning_g2
 from ..ui import render_analysis
 from ..ui.manuscript_document import reader_blocks
 from .models import Extraction, Passage, Reference, Source, SourceVersion, Tombstone
-from .repository import Repository, ResearchError
+from .repository import Repository, ResearchError, Snapshot
 
 _ALLOWED_THRESHOLDS = frozenset(THRESHOLD_KEYS)
+
+
+def _source_text(repository: Repository, snapshot: Snapshot, version: SourceVersion) -> str:
+    if version.blob.media_type not in ("text/plain", "application/pdf"):
+        raise ResearchError("Image/video sources are unavailable to textual analysis or comparison")
+    content = repository.read_blob(version.blob)
+    if version.blob.media_type == "application/pdf":
+        extraction = next((record for record in snapshot.records.values()
+                           if isinstance(record, Extraction) and record.source_version_ref.id == version.id), None)
+        if extraction is None:
+            raise ResearchError("Retained PDF has no extracted text; ingest with extraction before textual analysis")
+        content = repository.read_blob(extraction.text_blob)
+    return content.decode("utf-8")
 
 
 @dataclass(frozen=True)
@@ -89,10 +102,7 @@ def analyze(
     if version.id in withdrawn_or_purged:
         raise ResearchError("Source version has been withdrawn or purged; refusing analysis")
 
-    if version.blob.media_type not in ("text/plain", "application/pdf"):
-        raise ResearchError("Image sources are unavailable to textual analysis or comparison")
-    raw_bytes = repository.read_blob(version.blob)
-    text = raw_bytes.decode("utf-8")
+    text = _source_text(repository, snapshot, version)
 
     config = CorpusConfig(language=source.language)
     resolved = resolve_language(config, sample_text=text)
@@ -257,10 +267,7 @@ def compare_source_to_manuscript(
     if version.id in withdrawn_or_purged:
         raise ResearchError("Source version has been withdrawn or purged; refusing analysis")
 
-    if version.blob.media_type not in ("text/plain", "application/pdf"):
-        raise ResearchError("Image sources are unavailable to textual analysis or comparison")
-    raw_bytes = repository.read_blob(version.blob)
-    source_text = raw_bytes.decode("utf-8")
+    source_text = _source_text(repository, snapshot, version)
 
     # Load manuscript text
     ms_text: str

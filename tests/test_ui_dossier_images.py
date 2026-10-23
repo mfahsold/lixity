@@ -10,6 +10,7 @@ from lixity.research.limits import (
     MAX_IMAGE_BYTES,
     MAX_IMAGE_CAPTION_CHARS,
     MAX_IMAGE_PIXELS,
+    MAX_PDF_BYTES,
     MAX_SOURCE_CONTEXT_CHARS,
 )
 from lixity.ui.dashboard import render_dashboard
@@ -34,8 +35,20 @@ class TestDossierImageControls(unittest.TestCase):
         assert match is not None
         self.assertEqual(json.loads(html.unescape(match.group(1))), {
             "bytes": MAX_IMAGE_BYTES, "pixels": MAX_IMAGE_PIXELS,
+            "media_bytes": MAX_PDF_BYTES,
             "alt": MAX_IMAGE_ALT_CHARS, "caption": MAX_IMAGE_CAPTION_CHARS,
             "note": MAX_SOURCE_CONTEXT_CHARS, "url": MAX_SOURCE_CONTEXT_CHARS,
         })
         self.assertIn("window.LixityDossierImages", page)
         self.assertNotIn('<script src="', page, "The exported report remains self-contained")
+
+    def test_media_attachment_gate_is_independent_and_explicit(self):
+        for controls, actions, expected in (
+            (False, ("research-dossier-media",), "false"),
+            (True, None, "false"),
+            (True, ("research-dossier-image",), "false"),
+            (True, ("research-dossier-media",), "true"),
+        ):
+            with self.subTest(controls=controls, actions=actions):
+                page = render_dashboard([], [], controls=controls, enabled_actions=actions)
+                self.assertIn(f'data-dossier-media-capable="{expected}"', page)

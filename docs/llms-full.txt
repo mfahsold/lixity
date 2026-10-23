@@ -128,6 +128,10 @@ chapter measurements: meaning, units, manuscript reference and the other
 metrics of the same chapter. Reading the text is an explicit next action;
 chapter-only measurements do not invent word-level highlights.
 
+Current main also shares versioned image, PDF and MP4/WebM attachments across
+dossiers and reading copies, with explicit retention and source-file export
+choices. [Media workflow and compatibility](https://mfahsold.github.io/lixity/research/USAGE.md#retain-a-pdf-or-video-in-a-dossier).
+
 A passage's research associations open its claims and dossier beside the
 manuscript, with a return to the passage. Current entries and exact linked earlier
 versions remain distinct. Dossier editing offers `--body-only` section drafts and
@@ -413,6 +417,13 @@ style-space loading open shared read-only chapter measurements: definitions,
 units, sample counts, manuscript medians and z* from the existing fingerprint.
 Metric switches keep the chapter; Read chapter explicitly selects the supported
 paragraph layer or clears it. Axis loadings are not chapter contributions.
+Current main also adds versioned PDF/MP4/WebM dossier attachments through the
+existing capture, source-context, revision and export model. PNG/JPEG keeps its
+image contracts; PDF/video pins use lixity:media and additive media read arrays.
+Video/retained-only PDF records/manifests opt into v9, which older readers reject. Original
+files require explicit retention and separate export inclusion. PDFs use
+document/download cards; video controls do not autoplay. These are not OCR,
+codec verification or license determinations; see research/USAGE.md.
 Chapter values still cover profiled paragraphs/lists; corpus/style also includes
 blockquotes. Scores and public API formats are unchanged. Overview To-do drafts,
 focused keyboard drills and Back to passage reuse existing save and context-return
@@ -1447,6 +1458,14 @@ after which it may appear. Chapter 0 means before the first chapter. A blank
 revision uses the current dossier when exporting; an explicit revision keeps
 that version. Each export records the actual resolved version.
 
+**Current main, unreleased:** export choices use only profiles saved with
+**Apply** in project settings. An empty selector explains that no saved profile
+exists and links directly to profile creation. Unsaved edits and malformed
+stored settings have distinct messages; they are not treated as selectable
+profiles. A failed dossier catalogue can be retried without discarding the
+profile draft. Select a saved profile before choosing its chapter cap or
+downloading a publication.
+
 The profile is a validated root-local `site_publications` project setting,
 separate from PDF imprint settings and accepted Research records. Save this TOML
 in the selected project's root `lixity.toml` (or prefix its tables with
@@ -1477,6 +1496,11 @@ internal decisions, reverse links, revision history, source context notes or
 complete extracted source text. `--include-research` is rejected for these
 formats; choose the curated profile instead. Selected retained media needs the
 separate source-file inclusion choice.
+
+Current-main PDF/video attachments use the same source-file choice and
+dossier/section scope as images. They remain unavailable placeholders when the
+original files are omitted. See the [shared media workflow](research/USAGE.md#retain-a-pdf-or-video-in-a-dossier)
+for file limits, version compatibility and public credit requirements.
 
 Inspect the installed profile JSON Schema without opening a project:
 
@@ -3941,6 +3965,12 @@ Saving a UTF-8 dossier body does not ingest its images: ordinary relative,
 Use **Add image**/`dossier-image` to capture and attach a local image, or reference
 an already retained exact version with `lixity:image/SOURCE_ID/VERSION_ID`.
 
+**Current main, unreleased:** the current dossier record viewer also offers this
+action. Its notes occupy a full-width reading column rather than a metadata
+cell. An ordinary missing image reference offers **Choose image file**; saving
+replaces that exact, unique reference in one new revision, leaving other text
+untouched. Historical, explicitly pinned and exported views stay read-only.
+
 Earlier dossier revisions retain exact image versions. Withdrawn/purged/missing
 images show unavailable placeholders. Source-page URLs are metadata, never fetched.
 Click an image to enlarge it; Escape closes it. v0.7.1 uses a shared
@@ -3971,6 +4001,58 @@ attachment. Python `ingest_image` does the same; `attach_dossier_image` requires
 exact dossier snapshot/revision guards. Canonical destinations are
 `lixity:image/SOURCE_ID/VERSION_ID` with UUID URNs. Purge identity metadata uses
 record schema v2; unprovable older image associations remain missing.
+
+### Retain a PDF or video in a dossier
+
+**Current main, unreleased:** choose **Add PDF / video** in the same dossier
+toolbar. Select a local PDF, MP4 or WebM, provide an accessible description and
+confirm retention. Existing files in your project's folders can be selected
+directly; their original bytes and paths are not modified. Source title,
+provenance note, original-page URL, caption and destination section use the
+same controls as images. Capture and dossier revision remain one guarded
+transaction. Cancel retains nothing.
+
+PDFs appear as document cards with an explicit open/download action, not an
+embedded active document. Videos use native controls without autoplay or
+automatic preload, with an original-file download alongside. Playback depends
+on the browser's codecs; a container accepted for retention may still fail to
+play, in which case the UI reports that failure and keeps the download.
+These components are shared by dossier sections, exact historical versions,
+source details and reading-website exports.
+
+The file limit is 50 MiB; media-specific HTTP JSON has a 72 MiB transport ceiling.
+Checks cover PDF header/end markers, MP4 top-level boxes and WebM container
+structure. They do not establish document validity, codec decodability, safety,
+authenticity or redistribution rights. These attachments create no extracted
+passages, transcription, OCR or linguistic scores. Ordinary PDF `research ingest`
+still performs the existing extraction workflow.
+Refreshing a retained-only PDF through that workflow adds a new source version
+with extracted passages; the earlier dossier pin remains unchanged.
+
+Python `ingest_media` retains an unattached file; `attach_dossier_media` accepts
+the same snapshot/revision guards and placement fields as `attach_dossier_image`.
+`read_media` requires explicit project, source and version identities.
+PDF/video pins use ordinary Markdown image syntax with destination
+`lixity:media/SOURCE_ID/VERSION_ID`;
+PNG/JPEG pins and their existing API keep `lixity:image/...`. Dossier read
+envelopes add a separate `media` array without changing `images`.
+The ordinary CLI `research ingest --file clip.webm --allow-retention` can also
+retain local videos without fabricated text extraction.
+
+Video and retained-only PDF attachments opt into record/manifest schema v9.
+Older archives and accepted record bytes are not migrated; once an archive contains these, older clients
+that do not understand v9 reject it. Audit, backup/restore, withdrawal and purge
+use the existing source lifecycle. As with images, withdrawal hides display
+URLs but does not erase retained bytes: explicit exact-version reads remain
+available for local inspection until purge.
+
+Reading websites include original files only with the separate source-file
+choice. A publication profile selects which dossier/section is exposed; internal
+source-context notes are not publication content. Put required public image or
+video credits and license information in the selected caption/body before
+sharing. A Wikipedia/Wikimedia origin does not by itself remove attribution or
+share-alike conditions, and Lixity does not infer permission from that origin.
+No project folder is scanned and no URL is fetched automatically.
 
 ### Review decisions and save related revisions together
 
@@ -6321,8 +6403,8 @@ Reader and companion modes resolve a validated root `site_publications` profile
 against that snapshot. They select current or explicitly pinned dossier versions,
 unique heading subtrees, public titles and chapter release gates before rendering.
 They never serialize native Research responses or calculate manuscript analysis.
-Whole-dossier citations and geography require explicit profile fields; images and
-source bytes require a separate, one-export choice. Reverse associations, internal
+Whole-dossier citations and geography require explicit profile fields; original
+image, document and video bytes require a separate, one-export choice. Reverse associations, internal
 claims, decisions and history are not inferred publication selections.
 
 An export cap removes later entries and dependency assets before serialization;
@@ -6486,6 +6568,19 @@ pins, without inferring contradictions. Images reuse immutable source/version/bl
 records, never fabricated text passages; textual analysis rejects them. Attachment
 and dossier revision publish atomically. Purge retains identity for honest unavailable
 placeholders, not image bytes. Shared limits come from `research.limits`.
+
+**Current main, unreleased:** PDF/video attachments reuse that same capture,
+source context, CAS transaction, revision and lifecycle model. Separate
+`lixity:media/...` pins and additive `media` read arrays preserve the PNG/JPEG-only
+image interfaces. Videos and retained-only PDFs opt into record/manifest v9; earlier accepted records
+remain byte-identical and the manifest version never rolls back.
+PDF attachments retain bytes without extraction; the existing PDF ingest path
+still extracts text, and textual analysis reads its verified extraction rather
+than decoding a PDF container as UTF-8. Video container checks do not claim codec
+decodability or content safety. Native exact reads support bounded single ranges;
+the UI uses ordinary video controls and explicit PDF/download links, never active
+document embedding. Static exports reuse the same renderer and approved resource
+maps, with source files omitted unless explicitly selected.
 
 ## Presentation and trust boundaries
 
@@ -7967,9 +8062,14 @@ to the console.
 Native reading-website exports additionally write content-free lifecycle logs
 at the default INFO level. Their `X-Lixity-Export-ID` response header correlates
 server preparation/socket writes with browser receipts. `POST /api/site-export-report`
-accepts only `export_id` (32 lowercase hexadecimal characters), `stage`
-(`response_read`, `zip_check`, `download_start`, `download_started`) and nullable
-`error_name` (`AbortError`, `NetworkError`, `TypeError`, `Error`, `Other`).
+accepts nullable `export_id` (32 lowercase hexadecimal characters), `stage`
+(`response_read`, `zip_check`, `download_start`, `download_started`,
+`profiles_invalid`, `profiles_empty`, `profiles_unsaved`, `profiles_available`,
+`catalogue_failed`), nullable `error_name`
+(`AbortError`, `NetworkError`, `TypeError`, `Error`, `Other`), nullable strict
+integer `profile_count` (0–50) and `http_status` (0–599). Pre-export profile
+observations have no export ID. These additive diagnostics are current-main,
+unreleased additions.
 Extra fields are rejected. These same-origin receipts are browser observations,
 not proof of successful file saving. They contain no project token or content;
 see [service logging](INSTALLATION.md#logs).
@@ -8171,10 +8271,12 @@ Calls without the parameter retain their existing behavior and JSON envelope.
 
 Dossier detail GET additionally accepts `section=Heading` and positive `revision=N`
 for a bounded exact-version read. Full/section/summary reads include `project_id`,
-`images` and canonical `editable_sections`. Image resolver entries identify exact
+`images` and canonical `editable_sections`. Current-main, unreleased reads also
+include a separate `media` array for PDF/MP4/WebM; `images` remains PNG/JPEG only.
+Both resolver arrays identify exact
 source/version pins with `available|withdrawn|purged|missing` status; unavailable
 entries have no image URL. Historical reads resolve the pinned image version,
-not the latest source. Record/history dossier envelopes also include `images`.
+not the latest source. Record/history dossier envelopes include both arrays.
 
 Selected dossier reads additionally report
 `section_level` (1–6 for an actual ATX heading, null for an implicit preamble).
@@ -8202,7 +8304,8 @@ Local image endpoints:
 CLI/Python attachment uses the same atomic API. See the [image workflow](research/USAGE.md#keep-a-visual-reference-in-a-dossier)
 for reviewed snapshot/revision tokens, context and local-file examples.
 
-Only these image POST bodies use 32 MiB; other JSON bodies remain limited to 5 MiB.
+Image POST bodies use 32 MiB; the media POST bodies below use 72 MiB.
+Other JSON bodies remain limited to 5 MiB.
 Raw images are limited to 16 MiB / 64 million pixels. Permission must be the JSON
 boolean `true`; source notes/URLs have 2,000-character bounds, alternative text
 1,000 and captions 10,000. Structural/header checks are not full pixel decoding.
@@ -8210,6 +8313,25 @@ Images contain no passages and cannot enter textual analysis/compare. No raster
 ingest path automatically retries an external conflict. Version-purge identity
 metadata uses `research-local/2` Tombstones; 2.0.0 readers reject those records.
 Existing v1 bytes stay unchanged. See [image workflow and limits](research/USAGE.md#keep-a-visual-reference-in-a-dossier).
+
+**Current main, unreleased local document/video endpoints:**
+
+- `POST /api/research-media-ingest` and `POST /api/research-dossier-media` reuse
+  the corresponding image payload and atomic transaction. They also accept
+  PDF/MP4/WebM up to 50 MiB. They retain files without text extraction.
+- `GET /api/research/media?project_id=...&source_id=...&version_id=...` reads the
+  exact retained PDF/video. Same-origin, identity, hash and bounded-container
+  checks apply. Single byte ranges return 206; malformed, multiple and
+  unsatisfiable ranges return 416. PDFs use attachment disposition and a
+  sandbox response policy; no arbitrary path or URL is accepted.
+- `capabilities.research_media` advertises the registered native write routes.
+  Python equivalents are `ingest_media`, `attach_dossier_media` and `read_media`.
+
+Video and retained-only PDF `SourceVersion` records use `research-local/9`; manifests opt into
+`research-manifest-local/9` without rewriting older records. Earlier clients
+reject archives using this new version. PDF/video pins use `lixity:media/...`
+with the same exact UUID identities as image pins. See the
+[media workflow and compatibility limits](research/USAGE.md#retain-a-pdf-or-video-in-a-dossier).
 
 Confidentiality-agreement generation:
 

@@ -904,6 +904,12 @@ Saving a UTF-8 dossier body does not ingest its images: ordinary relative,
 Use **Add image**/`dossier-image` to capture and attach a local image, or reference
 an already retained exact version with `lixity:image/SOURCE_ID/VERSION_ID`.
 
+**Current main, unreleased:** the current dossier record viewer also offers this
+action. Its notes occupy a full-width reading column rather than a metadata
+cell. An ordinary missing image reference offers **Choose image file**; saving
+replaces that exact, unique reference in one new revision, leaving other text
+untouched. Historical, explicitly pinned and exported views stay read-only.
+
 Earlier dossier revisions retain exact image versions. Withdrawn/purged/missing
 images show unavailable placeholders. Source-page URLs are metadata, never fetched.
 Click an image to enlarge it; Escape closes it. v0.7.1 uses a shared
@@ -934,6 +940,58 @@ attachment. Python `ingest_image` does the same; `attach_dossier_image` requires
 exact dossier snapshot/revision guards. Canonical destinations are
 `lixity:image/SOURCE_ID/VERSION_ID` with UUID URNs. Purge identity metadata uses
 record schema v2; unprovable older image associations remain missing.
+
+### Retain a PDF or video in a dossier
+
+**Current main, unreleased:** choose **Add PDF / video** in the same dossier
+toolbar. Select a local PDF, MP4 or WebM, provide an accessible description and
+confirm retention. Existing files in your project's folders can be selected
+directly; their original bytes and paths are not modified. Source title,
+provenance note, original-page URL, caption and destination section use the
+same controls as images. Capture and dossier revision remain one guarded
+transaction. Cancel retains nothing.
+
+PDFs appear as document cards with an explicit open/download action, not an
+embedded active document. Videos use native controls without autoplay or
+automatic preload, with an original-file download alongside. Playback depends
+on the browser's codecs; a container accepted for retention may still fail to
+play, in which case the UI reports that failure and keeps the download.
+These components are shared by dossier sections, exact historical versions,
+source details and reading-website exports.
+
+The file limit is 50 MiB; media-specific HTTP JSON has a 72 MiB transport ceiling.
+Checks cover PDF header/end markers, MP4 top-level boxes and WebM container
+structure. They do not establish document validity, codec decodability, safety,
+authenticity or redistribution rights. These attachments create no extracted
+passages, transcription, OCR or linguistic scores. Ordinary PDF `research ingest`
+still performs the existing extraction workflow.
+Refreshing a retained-only PDF through that workflow adds a new source version
+with extracted passages; the earlier dossier pin remains unchanged.
+
+Python `ingest_media` retains an unattached file; `attach_dossier_media` accepts
+the same snapshot/revision guards and placement fields as `attach_dossier_image`.
+`read_media` requires explicit project, source and version identities.
+PDF/video pins use ordinary Markdown image syntax with destination
+`lixity:media/SOURCE_ID/VERSION_ID`;
+PNG/JPEG pins and their existing API keep `lixity:image/...`. Dossier read
+envelopes add a separate `media` array without changing `images`.
+The ordinary CLI `research ingest --file clip.webm --allow-retention` can also
+retain local videos without fabricated text extraction.
+
+Video and retained-only PDF attachments opt into record/manifest schema v9.
+Older archives and accepted record bytes are not migrated; once an archive contains these, older clients
+that do not understand v9 reject it. Audit, backup/restore, withdrawal and purge
+use the existing source lifecycle. As with images, withdrawal hides display
+URLs but does not erase retained bytes: explicit exact-version reads remain
+available for local inspection until purge.
+
+Reading websites include original files only with the separate source-file
+choice. A publication profile selects which dossier/section is exposed; internal
+source-context notes are not publication content. Put required public image or
+video credits and license information in the selected caption/body before
+sharing. A Wikipedia/Wikimedia origin does not by itself remove attribution or
+share-alike conditions, and Lixity does not infer permission from that origin.
+No project folder is scanned and no URL is fetched automatically.
 
 ### Review decisions and save related revisions together
 

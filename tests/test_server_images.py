@@ -76,3 +76,26 @@ def test_image_json_limits_are_route_specific(endpoint):
     assert request("/api/research-ingest", payload={}, headers={"Content-Length": str(5 * 1024 * 1024 + 1)})[0] == 413
     for route in ("research-image-ingest", "research-dossier-image"):
         assert request("/api/" + route, payload={}, headers={"Content-Length": str(32 * 1024 * 1024 + 1)})[0] == 413
+
+
+def test_image_write_logs_are_content_free_at_normal_level(endpoint):
+    import io
+
+    from lixity import log
+
+    _, project_id, _, request = endpoint
+    values = payload(project_id)
+    output = io.StringIO()
+    log.configure(level="INFO", stream=output, force=True)
+    try:
+        assert request("/api/research-image-ingest", payload={**values, "allow_retention": False})[0] == 400
+        assert request("/api/research-image-ingest", payload=values)[0] == 200
+    finally:
+        log.configure(level="INFO", force=True)
+    diagnostics = output.getvalue()
+    assert "Image capture stage=request" in diagnostics
+    assert "Image capture stage=failed" in diagnostics
+    assert f"Image capture stage=saved attach=False bytes={len(png())}" in diagnostics
+    for private in (project_id, values["filename"], values["content_base64"],
+                    values["context"]["provenance_note"]):
+        assert private not in diagnostics

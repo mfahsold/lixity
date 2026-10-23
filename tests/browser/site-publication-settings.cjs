@@ -60,8 +60,24 @@ server.serve_forever()
       await page.setViewportSize({width, height: 1000});
       await page.goto(fixture.url);
       await page.locator('#tab-view-project').click();
+      if (width === 1440) {
+        let failedCatalogue = false;
+        await page.route(fixture.url + '/api/research/dossiers?*', async route => {
+          if (!failedCatalogue && !new URL(route.request().url()).searchParams.has('id')) {
+            failedCatalogue = true;
+            await route.fulfill({json:{ok:false, message:'Synthetic dossier catalogue failure'}});
+          } else await route.continue();
+        });
+      }
       await page.locator('#settings-site-publications > summary').click();
       const editor = page.locator('#site-publication-editor');
+      if (width === 1440) {
+        await expect(editor.locator('[data-site-publication-retry]')).toBeVisible();
+        await editor.locator('[data-site-publication-retry]').click();
+        await expect(editor.locator('[data-site-publication-retry]')).toBeHidden();
+        await expect(editor.locator('[data-site-publication-status]')).toHaveText('');
+        await page.unroute(fixture.url + '/api/research/dossiers?*');
+      }
       const existing = editor.locator('[data-site-publication-profile]').filter({has: page.locator('[data-site-publication-field=id][value=existing]')});
       await expect(editor.locator('[data-site-publication-profile]')).toHaveCount(width === 1440 ? 1 : 2);
       // Unknown or withdrawn references stay selected until the author corrects them.
@@ -127,6 +143,14 @@ server.serve_forever()
           include_citations: false, include_geography: false});
         assert.equal(Object.hasOwn(payload, 'include_source_files'), false);
         assert.deepEqual(await page.evaluate(() => window.LixityPublicationSettings.savedProfiles()), payload.site_publications);
+        await page.locator('#project-actions').evaluate(element => {element.open = true;});
+        await page.locator('#btn-site-export').click();
+        await page.locator('#site-export-mode').selectOption('reader');
+        await expect(page.locator('#site-export-profile option[value=readers]')).toHaveText('Reader <img src=x onerror=alert(1)>');
+        await page.locator('#site-export-profile').selectOption('readers');
+        await expect(page.locator('#site-export-download')).toBeEnabled();
+        await expect(page.locator('#site-export-profile-draft')).toBeHidden();
+        await page.keyboard.press('Escape');
       }
       for (const locale of ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl']) {
         await page.locator('#set-language').selectOption(locale);
@@ -245,7 +269,10 @@ server.serve_forever()
       await page.unroute(recoveryUrl);
     }
     assert.deepEqual(fs.readFileSync(path.join(artifacts, 'manuscript.md')), manuscriptBefore);
-    assert.deepEqual(errors, []); assert.deepEqual(warnings, []);
+    assert.deepEqual(errors, []);
+    assert.ok(warnings.every(message => message.includes('Website export') &&
+      (message.includes('profiles_invalid') || message.includes('catalogue_failed'))),
+      'Only intentional profile-validation diagnostics are expected: ' + JSON.stringify(warnings));
     console.log('Publication settings passed: native saves, unresolved refs, unique pinned sections,7 locales, desktop/mobile/zoom, inert text and held drafts. Screenshots: ' + artifacts);
   } finally {
     if (release) release();

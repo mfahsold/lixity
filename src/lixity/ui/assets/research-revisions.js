@@ -304,11 +304,24 @@ if (researchRevisionDialog) {
   function revisionReadOnly(envelope) {
     var record = envelope.record || {};
     var fields = revisionSpecs[revisionState.kind] || [];
+    var dossier = revisionState.kind === "dossier";
+    var imageContext = dossier ? Object.assign({}, envelope, record, {
+      image_editable: !window.LixitySite.readOnly && record.revision === envelope.latest_revision &&
+        !revisionState.historyInitialRevision && !envelope.availability,
+    }) : envelope;
+    var dossierBody = "";
     var rows = fields.map(function(spec) {
       // Reference IDs already include their exact pin in read-only mode.
       // Keep the separate numeric controls exclusively in the edit form.
       if (["dossier_revision", "claim_revision", "from_claim_revision", "to_claim_revision"].includes(spec.name)) return "";
       var value = revisionFieldValue(record, spec.name, true);
+      if (dossier && spec.name === "title") return "";
+      if (dossier && spec.name === "body") {
+        var actions = imageContext.image_editable && window.LixityDossierImages ?
+          window.LixityDossierImages.actionsHtml(imageContext) : "";
+        dossierBody = researchDossierBodyHtml(value, imageContext, actions);
+        return "";
+      }
       if (!spec.required && (value === null || value === undefined ||
           typeof value === "string" && !value.trim() || Array.isArray(value) && !value.length)) return "";
       if (Array.isArray(value)) value = value.join(", ");
@@ -343,8 +356,10 @@ if (researchRevisionDialog) {
     var manuscriptRoute = revisionState.kind === "claim" && window.LixityManuscriptLinks && typeof window.LixityManuscriptLinks.review === "function" ?
       '<p><button type="button" class="ctl" data-manuscript-links-claim="' + escapeHtml(record.id) +
         '" data-record-revision="' + Number(record.revision) + '">' + escapeHtml(uiLabel("manuscript_link_review")) + '</button></p>' : '';
-    return '<div class="research-revision-history-detail">' +
-      '<dl class="research-revision-readonly">' + rows + '</dl>' +
+    return '<div class="research-revision-history-detail' + (dossier ? " research-revision-dossier-detail" : "") + '">' +
+      (dossier ? '<article class="research-revision-dossier"><h2 class="research-revision-dossier-title">' +
+        escapeHtml(record.title || "") + '</h2>' + dossierBody + '</article>' : "") +
+      (rows ? '<dl class="research-revision-readonly">' + rows + '</dl>' : "") +
       '<p class="ctl-note research-revision-provenance">' + provenance.join(" · ") + '</p>' +
       manuscriptRoute +
       '<h4>' + escapeHtml(uiLabel("research_citations")) + '</h4>' +
@@ -437,6 +452,25 @@ if (researchRevisionDialog) {
       revisionNotices(data);
       revisionShowCitations(data.citations);
     }
+
+    document.addEventListener("lixity:dossier-image-saved", async function(event) {
+      var accepted = event.detail;
+      if (!researchRevisionDialog.open || revisionState.kind !== "dossier" || revisionState.mode !== "history" ||
+          revisionState.historyInitialRevision || !accepted || !accepted.record ||
+          accepted.record.id !== revisionState.id) return;
+      var session = revisionState.session, request = ++revisionState.historyRequest;
+      var data = await researchApiGet("research/record?kind=dossier&id=" + encodeURIComponent(revisionState.id));
+      if (session !== revisionState.session || request !== revisionState.historyRequest ||
+          !researchRevisionDialog.open || revisionState.mode !== "history" || !revisionContextMatches(data)) return;
+      if (!data.ok || !data.record) {
+        revisionStatus(uiLabel("image_unavailable"), true);
+        return;
+      }
+      revisionShowReadOnly(data);
+      revisionState.historyLoaded = false;
+      revisionHistoryList.replaceChildren();
+      revisionHistoryTab.focus();
+    });
   }
 
   async function revisionLoadHistorical(number) {

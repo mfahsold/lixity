@@ -111,7 +111,10 @@ async function refreshResearchSources(overview, changedId, freshRead) {
   if (external && libraryInput && !zoteroSelection) libraryInput.value = external.context.external_reference.library;
   if (selectHost) {
     var selectedSource = selectHost.value;
-    var textSources = sources.filter(function(source) { return !["image/png", "image/jpeg"].includes(source.media_type); });
+    var textSources = sources.filter(function(source) {
+      return !["image/png", "image/jpeg", "video/mp4", "video/webm"].includes(source.media_type) &&
+        (source.media_type !== "application/pdf" || source.passages > 0);
+    });
     selectHost.innerHTML = '<option value="">' + escapeHtml(uiLabel("research_select_source")) + '</option>' +
       textSources.map(function(s) {
         return '<option value="' + escapeHtml(s.id) + '">' + escapeHtml(s.title) + ' (' + escapeHtml(uiCountFormat("research_passages_count", s.passages)) + ')</option>';
@@ -129,7 +132,7 @@ async function refreshResearchSources(overview, changedId, freshRead) {
       key: JSON.stringify(s),
       id: s.id,
       title: s.title,
-      metaRight: [(["image/png", "image/jpeg"].includes(s.media_type) ? s.media_type
+      metaRight: [(["image/png", "image/jpeg", "video/mp4", "video/webm"].includes(s.media_type) ? s.media_type
         : uiCountFormat("research_passages_count", s.passages)) + " · " + Math.round((s.byte_length || 0) / 1024) + " KB"],
       idLine: s.id,
       tags: s.tags || [],
@@ -531,4 +534,3 @@ async function refreshResearchDecisions(overview) {
     };
   })});
 }
-

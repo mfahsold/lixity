@@ -8,6 +8,7 @@ from ..research.limits import (
     MAX_IMAGE_BYTES,
     MAX_IMAGE_CAPTION_CHARS,
     MAX_IMAGE_PIXELS,
+    MAX_PDF_BYTES,
     MAX_SOURCE_CONTEXT_CHARS,
 )
 
@@ -17,6 +18,7 @@ def image_limits_attribute() -> str:
     return html.escape(json.dumps({
         "bytes": MAX_IMAGE_BYTES,
         "pixels": MAX_IMAGE_PIXELS,
+        "media_bytes": MAX_PDF_BYTES,
         "alt": MAX_IMAGE_ALT_CHARS,
         "caption": MAX_IMAGE_CAPTION_CHARS,
         "note": MAX_SOURCE_CONTEXT_CHARS,

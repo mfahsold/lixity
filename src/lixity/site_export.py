@@ -36,8 +36,9 @@ from .pacing import pacing_report
 from .pipeline import analyze_document, resolve_document_config
 from .project_identity import manuscript_identity_check, project_title
 from .research import api, editorial
-from .research.images import IMAGE_TYPES, read_image, resolve_dossier_images
+from .research.images import IMAGE_TYPES, read_image, resolve_dossier_images, resolve_dossier_media
 from .research.manuscript import manuscript_links_data, manuscript_review_data
+from .research.media import MEDIA_TYPES, VIDEO_TYPES
 from .research.models import (
     Dossier,
     EvidenceLink,
@@ -230,7 +231,7 @@ class _Reads:
 def _retain_source(repository: Repository, snapshot: Snapshot, version: SourceVersion,
                    files: dict[str, bytes], resources: dict[str, str]) -> None:
     """Copy one exact approved blob and register only its safe static mappings."""
-    extension = {"image/png": ".png", "image/jpeg": ".jpg", "application/pdf": ".pdf",
+    extension = {"image/png": ".png", "image/jpeg": ".jpg", "application/pdf": ".pdf", "video/mp4": ".mp4", "video/webm": ".webm",
                  "text/plain": ".txt"}.get(version.blob.media_type)
     if extension is None:
         raise ResearchError("Unsupported retained source media type for website export")
@@ -239,12 +240,15 @@ def _retain_source(repository: Repository, snapshot: Snapshot, version: SourceVe
         if sum(map(len, files.values())) + version.blob.byte_length > MAX_SITE_BYTES:
             raise ResearchError("Website source files exceed the 200 MiB bundle limit")
         files[path] = (read_image(repository, snapshot, project_id=snapshot.project.id,
-            source_id=version.source_ref.id, version_id=version.id)["content"]
-            if version.blob.media_type in IMAGE_TYPES else repository.read_blob(version.blob))
+            source_id=version.source_ref.id, version_id=version.id, media=version.blob.media_type in VIDEO_TYPES)["content"]
+            if version.blob.media_type in IMAGE_TYPES | VIDEO_TYPES else repository.read_blob(version.blob))
     resources["/api/site-resource?" + urlencode(sorted({
         "source_id": version.source_ref.id, "version_id": version.id}.items()))] = path
     if version.blob.media_type in IMAGE_TYPES:
         resources["/api/research/image?" + urlencode(sorted({"project_id": snapshot.project.id,
+            "source_id": version.source_ref.id, "version_id": version.id}.items()))] = path
+    elif version.blob.media_type in MEDIA_TYPES:
+        resources["/api/research/media?" + urlencode(sorted({"project_id": snapshot.project.id,
             "source_id": version.source_ref.id, "version_id": version.id}.items()))] = path
 
 
@@ -265,7 +269,7 @@ def _publication(repository: Repository, snapshot: Snapshot, text: str, config: 
         if not isinstance(dossier, Dossier):
             raise ResearchError("Publication selections must reference dossiers")
         body = _section_text(dossier.body, selected.section) if selected.section is not None else dossier.body
-        images = resolve_dossier_images(snapshot, body)
+        images = [*resolve_dossier_images(snapshot, body), *resolve_dossier_media(snapshot, body)]
         public_images = []
         for image in images:
             if image["availability"] != "available":
@@ -299,7 +303,8 @@ def _publication(repository: Repository, snapshot: Snapshot, text: str, config: 
             "revision": dossier.revision, "section": selected.section,
             "title": selected.title or selected.section or dossier.title, "body": body,
             "reveal_after_chapter": selected.reveal_after_chapter, "citations": citations,
-            "images": public_images,
+            "images": [item for item in public_images if item["media_type"] in IMAGE_TYPES],
+            "media": [item for item in public_images if item["media_type"] in MEDIA_TYPES],
             "geography": (dossier.geography.model_dump(mode="json")
                           if selected.include_geography and dossier.geography else None)}
         size += len(_json(entry))
@@ -474,7 +479,7 @@ def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
     document = document.replace('<script>', script + '<script>', 1)
     policy = ('<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; '
               'script-src \'self\' \'unsafe-inline\'; style-src \'unsafe-inline\'; '
-              'img-src \'self\' data: blob:; connect-src \'self\'; font-src data:; '
+              'img-src \'self\' data: blob:; media-src \'self\' blob:; connect-src \'self\'; font-src data:; '
               'base-uri \'none\'; form-action \'none\'"/>')
     document = document.replace("<head>", "<head>\n" + policy, 1)
     files["index.html"] = document.encode("utf-8")

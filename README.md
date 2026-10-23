@@ -110,6 +110,10 @@ chapter measurements: meaning, units, manuscript reference and the other
 metrics of the same chapter. Reading the text is an explicit next action;
 chapter-only measurements do not invent word-level highlights.
 
+Current main also shares versioned image, PDF and MP4/WebM attachments across
+dossiers and reading copies, with explicit retention and source-file export
+choices. [Media workflow and compatibility](https://mfahsold.github.io/lixity/research/USAGE.md#retain-a-pdf-or-video-in-a-dossier).
+
 A passage's research associations open its claims and dossier beside the
 manuscript, with a return to the passage. Current entries and exact linked earlier
 versions remain distinct. Dossier editing offers `--body-only` section drafts and

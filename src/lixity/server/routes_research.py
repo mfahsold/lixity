@@ -18,7 +18,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from ..research import api as research_api
-from ..research.limits import MAX_IMAGE_BYTES
+from ..research.limits import MAX_IMAGE_BYTES, MAX_PDF_BYTES
 from ..research.repository import ResearchConflictError, ResearchError
 from ._base import ResponseMixin
 from .pdf_context import manuscript_pdf_token, research_context_token
@@ -107,7 +107,10 @@ class ResearchRoutesMixin(ResponseMixin):
         except (ResearchError, OSError, ValueError, TypeError) as exc:
             self._research_error(exc)
 
-    def _handle_research_image(self) -> None:
+    def _handle_research_media(self) -> None:
+        self._handle_research_image(media=True)
+
+    def _handle_research_image(self, *, media: bool = False) -> None:
         if not self._same_origin() or self.headers.get("Sec-Fetch-Site") not in (None, "same-origin", "none"):
             self._json({"ok": False, "message": "Cross-origin image request forbidden"}, 403)
             return
@@ -120,11 +123,36 @@ class ResearchRoutesMixin(ResponseMixin):
             self._json({"ok": False, "message": "An explicit project, source and version are required"}, 400)
             return
         try:
-            result = research_api.read_image(root, project_id=query["project_id"][0],
+            read = research_api.read_media if media else research_api.read_image
+            result = read(root, project_id=query["project_id"][0],
                                               source_id=query["source_id"][0], version_id=query["version_id"][0])
-            self._send(200, result["content"], result["media_type"],
-                       headers={"Cross-Origin-Resource-Policy": "same-origin"})
+            content = result["content"]
+            headers = {"Cross-Origin-Resource-Policy": "same-origin"}
+            code = 200
+            if media:
+                headers["Accept-Ranges"] = "bytes"
+                if result["media_type"] == "application/pdf":
+                    headers["Content-Disposition"] = 'attachment; filename="document.pdf"'
+                    headers["Content-Security-Policy"] = "sandbox; default-src 'none'"
+                requested = self.headers.get("Range")
+                if requested:
+                    matched = re.fullmatch(r"bytes=(\d{0,12})-(\d{0,12})", requested)
+                    length = len(content)
+                    if not matched or not any(matched.groups()):
+                        self._send(416, b"", result["media_type"], headers={**headers, "Content-Range": f"bytes */{length}"})
+                        return
+                    first, last = matched.groups()
+                    start = int(first) if first else max(0, length - int(last))
+                    end = min(length - 1, int(last)) if first and last else length - 1
+                    if start >= length or start > end or (not first and int(last) == 0):
+                        self._send(416, b"", result["media_type"], headers={**headers, "Content-Range": f"bytes */{length}"})
+                        return
+                    headers["Content-Range"] = f"bytes {start}-{end}/{length}"
+                    content = content[start:end + 1]
+                    code = 206
+            self._send(code, content, result["media_type"], headers=headers)
         except (ResearchError, OSError, ValueError) as exc:
+            self._log.warning("Retained media read stage=failed error=%s", type(exc).__name__)
             self._json({"ok": False, "message": str(exc)}, 400)
 
     def _handle_research_image_ingest(self, payload: dict[str, Any]) -> None:
@@ -133,9 +161,18 @@ class ResearchRoutesMixin(ResponseMixin):
     def _handle_research_dossier_image(self, payload: dict[str, Any]) -> None:
         self._handle_research_image_write(payload, attach=True)
 
-    def _handle_research_image_write(self, payload: dict[str, Any], *, attach: bool) -> None:
+    def _handle_research_media_ingest(self, payload: dict[str, Any]) -> None:
+        self._handle_research_image_write(payload, attach=False, media=True)
+
+    def _handle_research_dossier_media(self, payload: dict[str, Any]) -> None:
+        self._handle_research_image_write(payload, attach=True, media=True)
+
+    def _handle_research_image_write(self, payload: dict[str, Any], *, attach: bool, media: bool = False) -> None:
+        category = "Media" if media else "Image"
+        self._log.info("%s capture stage=request attach=%s", category, attach)
         root = self.get_research_root()
         if not root or not (root / "research").is_dir():
+            self._log.warning("%s capture stage=rejected reason=research_unavailable", category)
             self._json({"ok": False, "message": "Research project not initialized"}, 404)
             return
         try:
@@ -149,9 +186,10 @@ class ResearchRoutesMixin(ResponseMixin):
             filename = payload.get("filename")
             if (not isinstance(filename, str) or not 1 <= len(filename) <= 255
                     or "/" in filename or "\\" in filename or any(ord(char) < 32 for char in filename)):
-                raise ResearchError("Image filename must be a local PNG/JPEG name without a path")
-            if not isinstance(encoded, str) or len(encoded) > 4 * ((MAX_IMAGE_BYTES + 2) // 3):
-                raise ResearchError("Image base64 content must encode at most 16 MiB")
+                raise ResearchError("Attachment filename must be a local name without a path")
+            maximum = MAX_PDF_BYTES if media else MAX_IMAGE_BYTES
+            if not isinstance(encoded, str) or len(encoded) > 4 * ((maximum + 2) // 3):
+                raise ResearchError(f"Attachment base64 content must encode at most {maximum // (1024 * 1024)} MiB")
             try:
                 content = base64.b64decode(encoded, validate=True)
             except (ValueError, binascii.Error):
@@ -167,19 +205,25 @@ class ResearchRoutesMixin(ResponseMixin):
                         or not isinstance(expected_snapshot, str) or not expected_snapshot.strip()
                         or type(expected_revision) is not int or expected_revision < 1):
                     raise ResearchError("Image attachment requires a dossier ID, expected snapshot and positive revision")
-                result = research_api.attach_dossier_image(
+                attach_file = research_api.attach_dossier_media if media else research_api.attach_dossier_image
+                result = attach_file(
                     root, dossier_id, content,
                     expected_snapshot=expected_snapshot, expected_revision=expected_revision,
                     alt=payload.get("alt", ""), caption=payload.get("caption"), section=payload.get("section"),
                     replace_reference=payload.get("replace_reference"),
                     reason=payload.get("reason"), change_kind=payload.get("change_kind", "supersession"), **common)
             else:
-                result = research_api.ingest_image(root, content, source_id=payload.get("source_id"),
+                ingest_file = research_api.ingest_media if media else research_api.ingest_image
+                result = ingest_file(root, content, source_id=payload.get("source_id"),
                                                    expected_snapshot=payload.get("expected_snapshot"), **common)
+            self._log.info("%s capture stage=saved attach=%s bytes=%d", category, attach, len(content))
             self._json({"ok": True, **result})
         except ResearchConflictError as exc:
+            self._log.warning("%s capture stage=conflict attach=%s", category, attach)
             self._json({"ok": False, "message": str(exc)}, 409)
         except (ResearchError, OSError, ValueError, TypeError) as exc:
+            self._log.warning("%s capture stage=failed attach=%s error=%s errno=%s",
+                              category, attach, type(exc).__name__, exc.errno if isinstance(exc, OSError) else None)
             self._research_error(exc)
 
     def _handle_zotero_status(self) -> None:

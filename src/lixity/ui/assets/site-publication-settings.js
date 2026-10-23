@@ -9,6 +9,7 @@
   var profiles = editor.querySelector("[data-site-publication-profiles]");
   var addProfile = editor.querySelector("[data-site-publication-add-profile]");
   var status = editor.querySelector("[data-site-publication-status]");
+  var retry = editor.querySelector("[data-site-publication-retry]");
   var catalogue = [], catalogueLoaded = false, cataloguePending = false, serial = 0, recovery;
   var contextToken = editor.dataset.contextToken;
   function text(key) { return labels["publication_editor_" + key]; }
@@ -130,7 +131,11 @@
     var query = {id: dossierId}; if (revision) query.revision = revision;
     var result = await getDossiers(query);
     if (!editor.isConnected || !entry.isConnected || request !== entry._sectionRequest || editor.dataset.contextToken !== contextToken) return;
-    if (!result.ok) { status.textContent = text("load_error"); return; }
+    if (!result.ok) {
+      status.textContent = text("load_error"); retry.hidden = false;
+      reportSiteExport("catalogue_failed", {http_status:result.http_status, error_name:"Error"});
+      return;
+    }
     var select = field(entry, "section"), value = select.value;
     // Native editable_sections contains only unique real headings, including
     // nested subtrees; merged duplicate labels are not publication choices.
@@ -138,11 +143,16 @@
   }
   async function loadCatalogue() {
     if (editor.disabled || !contextToken || cataloguePending || catalogueLoaded) return;
-    cataloguePending = true; status.textContent = text("loading");
+    cataloguePending = true; status.textContent = text("loading"); retry.hidden = true;
     var result = await getDossiers(); cataloguePending = false;
     if (!editor.isConnected || editor.dataset.contextToken !== contextToken) return;
-    if (!result.ok) { status.textContent = text("load_error"); return; }
-    catalogue = result.dossiers || []; catalogueLoaded = true; status.textContent = "";
+    if (!result.ok) {
+      status.textContent = text("load_error"); retry.hidden = false;
+      reportSiteExport("catalogue_failed", {http_status:result.http_status, error_name:"Error"});
+      return;
+    }
+    catalogue = result.dossiers || []; catalogueLoaded = true;
+    status.textContent = catalogue.length ? "" : text("no_dossiers");
     profiles.querySelectorAll("[data-site-publication-entry]").forEach(updateDossier);
   }
   function addEntry(profile, value, open) {
@@ -225,31 +235,33 @@
       show(candidate); profiles.querySelector("input, button")?.focus();
     });
   }
-  function read() {
-    clearValidity();
+  function read(validate) {
+    validate = validate !== false;
+    if (validate) clearValidity();
     if (recovery) {
       try {
         var candidate = JSON.parse(recovery.value);
         if (supported(candidate)) return normalized(candidate);
       } catch (_) { /* Failed recovery never becomes an empty profile map. */ }
-      recovery.setCustomValidity(text("raw_error")); return null;
+      if (validate) recovery.setCustomValidity(text("raw_error"));
+      return null;
     }
     var result = Object.create(null);
     profiles.querySelectorAll("[data-site-publication-profile]").forEach(function(profile) {
       var identifier = field(profile, "id"), name = identifier.value;
-      if (!/^[a-z][a-z0-9_-]{0,63}$/.test(name) || Object.hasOwn(result, name)) identifier.setCustomValidity(text("invalid"));
-      var title = field(profile, "title"); if (!title.value.trim()) title.setCustomValidity(text("invalid"));
+      if (validate && (!/^[a-z][a-z0-9_-]{0,63}$/.test(name) || Object.hasOwn(result, name))) identifier.setCustomValidity(text("invalid"));
+      var title = field(profile, "title"); if (validate && !title.value.trim()) title.setCustomValidity(text("invalid"));
       result[name] = {title: title.value.trim(), introduction: field(profile, "introduction").value.trim(), entries: []};
       profile.querySelectorAll("[data-site-publication-entry]").forEach(function(entry) {
         var dossier = field(entry, "dossier_id"), chapter = field(entry, "reveal_after_chapter");
-        if (!/^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(dossier.value)) dossier.setCustomValidity(text("invalid"));
-        if (!Number.isSafeInteger(chapter.valueAsNumber) || chapter.valueAsNumber < 0) chapter.setCustomValidity(text("invalid"));
+        if (validate && !/^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(dossier.value)) dossier.setCustomValidity(text("invalid"));
+        if (validate && (!Number.isSafeInteger(chapter.valueAsNumber) || chapter.valueAsNumber < 0)) chapter.setCustomValidity(text("invalid"));
         var item = {dossier_id: dossier.value, reveal_after_chapter: chapter.valueAsNumber,
           include_citations: field(entry, "include_citations").checked, include_geography: field(entry, "include_geography").checked};
         var revision = field(entry, "revision");
         if (revision.value) {
           item.revision = Number(revision.value);
-          if (!Number.isSafeInteger(item.revision) || item.revision < 1) revision.setCustomValidity(text("invalid"));
+          if (validate && (!Number.isSafeInteger(item.revision) || item.revision < 1)) revision.setCustomValidity(text("invalid"));
         }
         ["section", "title"].forEach(function(key) { var value = field(entry, key).value.trim(); if (value) item[key] = value; });
         result[name].entries.push(item);
@@ -260,6 +272,12 @@
   if (supported(initial)) show(initial);
   else showRecovery(editor.dataset.initial);
   addProfile.addEventListener("click", function() { field(add({}, "", true), "id").focus(); loadCatalogue(); });
+  retry.addEventListener("click", function() {
+    if (catalogueLoaded) {
+      retry.hidden = true; status.textContent = "";
+      profiles.querySelectorAll("[data-site-publication-entry]").forEach(loadSections);
+    } else loadCatalogue();
+  });
   editor.addEventListener("input", clearValidity);
   editor.closest("details").addEventListener("toggle", function() { if (this.open) loadCatalogue(); });
   window.LixityPublicationSettings = {
@@ -275,6 +293,11 @@
       saved = normalized(value); initialNormalized = JSON.stringify(saved);
       document.dispatchEvent(new CustomEvent("lixity:site-publications-saved"));
     },
-    savedProfiles: function() { return clone(saved); }
+    savedProfiles: function() { return clone(saved); },
+    state: function() {
+      return {invalid:initialNormalized === null,
+        unsaved:recovery && recovery.value === editor.dataset.initial ? false :
+          JSON.stringify(read(false)) !== initialNormalized};
+    }
   };
 })();

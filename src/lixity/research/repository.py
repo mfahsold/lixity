@@ -570,8 +570,10 @@ class Repository:
         project = next((record for record in records.values() if isinstance(record, Project)), None)
         if project is None:
             raise ResearchError("Project record required")
-        schema: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3", "research-manifest-local/4", "research-manifest-local/5", "research-manifest-local/6", "research-manifest-local/7", "research-manifest-local/8"]
-        schema = ("research-manifest-local/8" if any(record.schema_version == "research-local/8" for record in records.values())
+        schema: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3", "research-manifest-local/4", "research-manifest-local/5", "research-manifest-local/6", "research-manifest-local/7", "research-manifest-local/8", "research-manifest-local/9"]
+        schema = ("research-manifest-local/9" if any(record.schema_version == "research-local/9" for record in records.values())
+                  or (current and current.manifest.schema_version == "research-manifest-local/9")
+                  else "research-manifest-local/8" if any(record.schema_version == "research-local/8" for record in records.values())
                   or (current and current.manifest.schema_version == "research-manifest-local/8")
                   else "research-manifest-local/7" if any(record.schema_version == "research-local/7" for record in records.values())
                   or (current and current.manifest.schema_version == "research-manifest-local/7")
@@ -650,10 +652,15 @@ class Repository:
                 if isinstance(record, SourceVersion):
                     content = self.read_blob(record.blob)
                     from .images import IMAGE_TYPES, validate_image
+                    from .media import VIDEO_TYPES, validate_media
                     if record.blob.media_type in IMAGE_TYPES:
                         image = validate_image(content)
                         if image["media_type"] != record.blob.media_type:
                             raise ResearchError("Image bytes do not match their blob media type")
+                    elif (record.blob.media_type in VIDEO_TYPES
+                          or (record.blob.media_type == "application/pdf" and record.schema_version == "research-local/9")):
+                        if validate_media(content)["media_type"] != record.blob.media_type:
+                            raise ResearchError("Media bytes do not match their blob media type")
                 elif isinstance(record, Passage):
                     self.quote(candidate, record)
             created_paths: list[Path] = []

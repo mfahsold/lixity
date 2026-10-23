@@ -66,9 +66,13 @@ class SiteExportRequest(SiteExportOptions):
 class SiteExportReport(_SiteModel):
     """Content-free browser receipt, correlated with one native ZIP response."""
 
-    export_id: Annotated[str, Field(pattern=r"^[0-9a-f]{32}$")]
-    stage: Literal["response_read", "zip_check", "download_start", "download_started"]
+    export_id: Annotated[str, Field(pattern=r"^[0-9a-f]{32}$")] | None = None
+    stage: Literal["response_read", "zip_check", "download_start", "download_started",
+                   "profiles_invalid", "profiles_empty", "profiles_unsaved", "profiles_available",
+                   "catalogue_failed"]
     error_name: Literal["AbortError", "NetworkError", "TypeError", "Error", "Other"] | None = None
+    profile_count: Annotated[int, Field(ge=0, le=50)] | None = None
+    http_status: Annotated[int, Field(ge=0, le=599)] | None = None
 
 
 class SiteFile(_SiteModel):

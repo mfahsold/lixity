@@ -21,12 +21,16 @@ for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
     labels = get_language_profile(locale).labels
     options = dict(labels=labels, language_key=locale, controls=True, title='Synthetic website',
         enabled_actions=('site-export', 'research-reader', 'research-manuscript-review'),
+        author_setting_enabled=True, project_token='a'*64,
         manuscript_pdf_token='selected-manuscript-context', research_context_token='selected-research-context')
     options['site_publications']={'public':{'title':'Selected public context','introduction':'','entries':[]}}
     readonly = render_dashboard(analysis.chapters, analysis.paragraphs, paragraph_evidence=analysis.evidence, read_only=True, **options)
     data = {'schema_version':'lixity-read-only-site-data/1','responses':{},'resources':{}}
     readonly = readonly.replace('<script>', '<script type="application/json" id="lixity-site-data">' + _script_json(data) + '</script><script>', 1)
     documents[locale] = {'live': render_dashboard(analysis.chapters, analysis.paragraphs, **options), 'readonly': readonly,
+        'empty': render_dashboard(analysis.chapters, analysis.paragraphs, **{**options, 'site_publications': {}}),
+        'no_profiles': labels['publication_export_no_profiles'],
+        'unsaved_profiles': labels['publication_export_unsaved_profiles'],
         'notice': labels['site_read_only']}
 print(json.dumps(documents))
 `);
@@ -64,7 +68,8 @@ print(json.dumps(documents))
           }
           await route.fulfill({contentType: 'application/zip', headers:{'X-Lixity-Export-ID':'a'.repeat(32)},
             body: Buffer.from('504b0506000000000000000000000000000000000000', 'hex')});
-        } else await route.fulfill({contentType: 'text/html', body: fixture.live});
+        } else await route.fulfill({contentType: 'text/html',
+          body:request.url().endsWith('/empty') ? fixture.empty : fixture.live});
       });
       await page.goto('http://lixity.test/');
       await page.locator('#project-actions').evaluate(element => {element.open = true;});
@@ -175,6 +180,32 @@ print(json.dumps(documents))
       assert.ok(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth + 1));
       await page.keyboard.press('Escape');
       await expect(page.locator('#btn-site-export')).toBeFocused();
+      await page.goto('http://lixity.test/empty');
+      await page.locator('#project-actions').evaluate(element => {element.open = true;});
+      await page.locator('#btn-site-export').click();
+      await page.locator('#site-export-mode').selectOption('reader');
+      await expect(page.locator('#site-export-profile')).toBeDisabled();
+      await expect(page.locator('#site-export-profile-state')).toHaveText(fixture.no_profiles);
+      await expect(page.locator('#site-export-max-chapter')).toBeDisabled();
+      await expect(page.locator('#site-export-download')).toBeDisabled();
+      await expect(page.locator('#site-export-sources')).toBeDisabled();
+      if (['de', 'en'].includes(locale)) await page.locator('#modal-site-export').screenshot({
+        path:path.join(artifacts, `empty-profiles-${locale}-${width}.png`),
+      });
+      await page.locator('#site-export-edit-profiles').click();
+      await expect(page.locator('#modal-site-export')).not.toBeVisible();
+      await expect(page.locator('[data-site-publication-add-profile]')).toBeFocused();
+      await page.locator('[data-site-publication-add-profile]').click();
+      await page.locator('[data-site-publication-field=id]').fill('draft');
+      await page.locator('[data-site-publication-field=title]').fill('PRIVATE_SYNTHETIC_DRAFT');
+      await page.locator('#btn-site-export').click();
+      await page.locator('#site-export-mode').selectOption('reader');
+      await expect(page.locator('#site-export-profile-draft')).toHaveText(fixture.unsaved_profiles);
+      await expect(page.locator('#site-export-profile option')).toHaveCount(1);
+      await expect(page.locator('#site-export-download')).toBeDisabled();
+      await expect.poll(() => receipts.at(-1)?.stage).toBe('profiles_empty');
+      assert.ok(!JSON.stringify(receipts).includes('PRIVATE_SYNTHETIC_DRAFT'));
+      await page.keyboard.press('Escape');
       await page.route('http://lixity.test/**', route => route.fulfill({contentType: 'text/html', body: fixture.readonly}));
       const requests = [];
       page.on('request', request => requests.push(request.url()));

@@ -426,14 +426,18 @@ document.addEventListener("click", async function (event) {
         var value = typeof context[key] === "boolean" ? uiLabel(context[key] ? "ctx_yes" : "ctx_no") : context[key];
         return '<dt>' + escapeHtml(uiLabel("ctx_" + key)) + '</dt><dd>' + escapeHtml(value) + '</dd>';
       }).join("");
-      if (["image/png", "image/jpeg"].includes(detail.media_type)) {
+      var nontextMedia = ["application/pdf", "video/mp4", "video/webm"].includes(detail.media_type) && !detail.text && !(detail.passages || []).length;
+      if (["image/png", "image/jpeg"].includes(detail.media_type) || nontextMedia) {
         detailHost.innerHTML = captureContext + '<p class="ctl-note">' + escapeHtml(uiLabel("research_context_unverified")) + '</p>' +
           (window.LixityDossierImages ? window.LixityDossierImages.sourcePreviewHtml(detail, sourceSelectionProject) : '') +
-          '<p><strong>' + escapeHtml(detail.media_type) + '</strong> · ' + escapeHtml(uiLabel("image_text_unavailable")) + '</p>' +
+          '<p><strong>' + escapeHtml(detail.media_type) + '</strong> · ' + escapeHtml(uiLabel(nontextMedia ? "media_limits" : "image_text_unavailable")) + '</p>' +
           (contextRows ? '<h4>' + escapeHtml(uiLabel("research_source_context")) + '</h4><dl>' + contextRows + '</dl>' : '');
         return;
       }
       var fullDocText = detail.text || (detail.passages || []).map(function(p) { return p.verbatim; }).join("\n\n");
+      if (detail.media_type === "application/pdf" && window.LixityDossierImages) {
+        captureContext += window.LixityDossierImages.sourcePreviewHtml(detail, sourceSelectionProject);
+      }
       if (window.LixitySite.readOnly && !detail.text) captureContext += '<p class="ctl-note site-source-excerpts">' +
         escapeHtml(uiLabel("site_source_excerpts")) + '</p>';
       var docRendered = fullDocText ? renderSafeMarkdown(fullDocText) : '<p class="ctl-note">' + escapeHtml(uiLabel("research_no_records")) + '</p>';
@@ -1051,4 +1055,3 @@ function researchEvidencePanelHtml(evData, claimId) {
         '</div>';
       }).join("");
 }
-

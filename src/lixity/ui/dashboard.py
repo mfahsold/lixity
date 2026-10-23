@@ -404,6 +404,7 @@ def render_dashboard(
         f'data-manuscript-project-token="{esc(manuscript_pdf_token)}" '
         f'data-manuscript-links="{manuscript_links_mode}" '
         f'data-image-limits="{image_limits_attribute()}" '
+        f'data-dossier-media-capable="{str(controls and allowed_actions is not None and action_enabled("research-dossier-media")).lower()}" '
         f'data-dossier-image-capable="{str(controls and allowed_actions is not None and action_enabled("research-dossier-image")).lower()}">',
         f'<a class="skip-link" href="#chapters">{L("skip_main")}</a>',
         *((f'<p class="site-read-only-notice" role="note">{L("site_read_only")}</p>',) if read_only else ()),

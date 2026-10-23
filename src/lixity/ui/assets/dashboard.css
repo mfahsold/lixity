@@ -1394,6 +1394,14 @@ mark.search-hit {
 .research-revision-readonly dt { font-weight: var(--weight-semibold); color: var(--muted); }
 .research-revision-readonly dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
 .research-revision-history-detail { overflow-wrap: anywhere; }
+#modal-research-revision { width: min(94vw, 58rem); max-width: 58rem; }
+.research-revision-dossier { max-width: 72ch; margin-inline: auto; min-width: 0; }
+.research-revision-dossier-detail { max-width: 72ch; margin-inline: auto; }
+.research-revision-dossier-title { margin: 0 0 var(--space-4); font-size: 1.35rem; line-height: var(--line-compact); }
+.research-revision-dossier .research-prose { white-space: normal; }
+.research-revision-dossier .research-dossier-body-source { white-space: pre-wrap; }
+.research-revision-dossier .research-prose-bar { gap: var(--space-2); align-items: center; flex-wrap: wrap; }
+.research-revision-dossier .dossier-image-actions { margin: 0; margin-inline-end: auto; }
 @media (max-width: 540px) {
   .research-revision-readonly { grid-template-columns: minmax(0, 1fr); gap: .1rem; }
   .research-revision-readonly dd { margin-bottom: .55rem; }
