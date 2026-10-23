@@ -141,6 +141,15 @@ neither document, evidence links nor the statistical baseline. See
 [reader controls](../USAGE.md#reading-paragraphs) for display preferences,
 keyboard access, navigation and the desktop split.
 
+**Current main, unreleased:** exact saved manuscript associations appear as
+neutral dotted marks and a book-icon **Research** control with an association
+count. They stay distinct from metric colors and counted-text underlines, even
+with Analysis Off. Use the control or paragraph menu by keyboard; clicking an
+exact mark opens the same research context when no native selection is active.
+An association means the author saved that connection, not that a source is true
+or the passage is statistically unusual. Selection and reading create no records.
+See the [shared annotation contract](../ARCHITECTURE.md#annotation-semantics-and-visual-identity).
+
 To connect the manuscript to research, select a nonempty text range within one
 paragraph and choose **Link selection to claim** (or Alt+L). The
 selection toolbar offers the same action; the paragraph's **…**, right-click or

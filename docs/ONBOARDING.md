@@ -98,6 +98,13 @@ read on a wide screen. On mobile, use the same views above the workspace.
 alongside it when you need context, and use **Research** to work on the source
 archive. Analysis guides your attention; the manuscript remains the reference.
 
+Current-main research references use a neutral dotted line and an adjacent book
+icon labelled **Research** with the association count. These identify saved links
+to claims, dossiers and author decisions. Metric comparisons retain their color
+scale; solid analysis underlines identify counted text. Research references stay
+visible when analysis is switched off. Search highlighting can coexist with both;
+none of these display changes edits manuscript text.
+
 The [reader reference](USAGE.md#reading-paragraphs) explains display preferences,
 keyboard controls, companion sizing and coverage. Changing a view writes nothing.
 

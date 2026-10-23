@@ -174,6 +174,8 @@ server.serve_forever()
       await expect(paragraph.locator('mark.manuscript-claim-hit.text-hit')).toHaveText('selected sentence');
       assert.equal((await paragraph.locator('mark.manuscript-claim-hit').allTextContents()).join(''), selection.quote,
         'Source and search marks compose without changing the selected text');
+      await expect(panel.locator('[data-manuscript-links-paragraph]')).toContainText('Research');
+      await expect(panel.locator('[data-manuscript-links-paragraph] svg[aria-hidden=true]')).toHaveCount(1);
       await panel.locator('[data-manuscript-links-paragraph]').click();
       const context = page.locator('[data-passage-research]');
       await expect(context).toHaveAttribute('data-state', 'ready');
@@ -289,12 +291,31 @@ server.serve_forever()
       await page.locator('#manuscript-analysis-toggle').click();
       await page.locator('#manuscript-analysis-toggle').click();
       await expect(paragraph.locator('mark.manuscript-claim-hit')).toHaveText(selection.quote);
+      const researchStyle = await paragraph.locator('mark.manuscript-claim-hit').evaluate(node => {
+        const style = getComputedStyle(node);
+        return {background:style.backgroundColor, border:style.borderBottomStyle};
+      });
+      assert.equal(researchStyle.background, 'rgba(0, 0, 0, 0)', 'Research keeps prose free of analysis color fills');
+      assert.equal(researchStyle.border, 'dotted', 'Research has a distinct line pattern');
+      if (await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed') === 'false') {
+        await page.locator('#manuscript-analysis-toggle').click();
+      }
+      await page.locator('#style-layer').selectOption('asl');
+      await page.locator('#analysis-evidence-enabled').check();
+      await expect.poll(() => page.evaluate(() => CSS.highlights.get('lixity-analysis-evidence')?.size || 0)).toBeGreaterThan(0);
+      assert.equal(await paragraph.locator('mark.manuscript-claim-hit').evaluate(node => getComputedStyle(node).borderBottomStyle), 'dotted',
+        'Saved research stays distinct when counted-text analysis is enabled');
       assert.equal(await page.locator('#chapters img').count(), 0);
       assert.equal(await page.evaluate(() => Boolean(window.nativeLinkInjected)), false);
       assert.deepEqual(writes, ['/api/research-manuscript-link'], 'Only explicit Save publishes a write');
       assert.deepEqual(fs.readFileSync(fixture.manuscript), originalBytes, 'Native association never changes manuscript bytes');
       assert.equal(crypto.createHash('sha256').update(fs.readFileSync(fixture.manuscript)).digest('hex'), fixture.source_sha256);
       await panel.screenshot({path: path.join(artifacts, `resolved-${width}.png`)});
+      await page.emulateMedia({colorScheme:'dark'});
+      await panel.screenshot({path: path.join(artifacts, `resolved-dark-${width}.png`)});
+      await page.emulateMedia({forcedColors:'active'});
+      assert.equal(await paragraph.locator('mark.manuscript-claim-hit').evaluate(node => getComputedStyle(node).borderBottomStyle), 'dotted');
+      await panel.screenshot({path: path.join(artifacts, `resolved-contrast-${width}.png`)});
       assert.deepEqual(errors, []);
       await page.close();
     }

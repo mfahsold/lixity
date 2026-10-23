@@ -19,6 +19,10 @@ using bounded JSON pagination; it never scans or imports loose files.
 One fictional project demonstrates the [read-only review workspace](https://mfahsold.github.io/lixity/demo/report.html),
 [novel with companion notes](https://mfahsold.github.io/lixity/demo/reader/index.html)
 and [standalone companion](https://mfahsold.github.io/lixity/demo/companion/index.html).
+Current-main annotations distinguish solid counted-text underlines, quantitative
+paragraph comparisons and neutral dotted saved-research references. The
+[central visual contract](https://mfahsold.github.io/lixity/ARCHITECTURE.md#annotation-semantics-and-visual-identity)
+records their separate owners and shared source/selection boundaries.
 The workspace reuses the product interface and prepared reads; curated copies
 contain selected publication material, not raw research history. None can save.
 

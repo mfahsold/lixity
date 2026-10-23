@@ -26,11 +26,15 @@ Der erste Prüfschritt ist gelungen, wenn du den Unterschied am Text erklären k
 
 **Danach: die Quelle hinter einer Textstelle wiederfinden**
 
+**Aktueller main-Stand:** Neutrale punktierte Markierungen und der Knopf mit Buchsymbol **Research** kennzeichnen gespeicherte Recherchebezüge. Die durchgezogenen Analyse-Unterstreichungen zeigen dagegen gezählte Textstellen. Recherchebezüge bleiben auch bei ausgeschalteter Analyse sichtbar.
+
 Der Eröffnungsabsatz enthält eine gespeicherte Verbindung zur Recherche. Wähle **… → Explore passage → Research for this passage**. Öffne den verknüpften Eintrag oder seine **Linked version**; mit **Back to passage** kehrst du zum Text zurück.
 
 Quellenpassage, Behauptung und kreative Entscheidung sind getrennte Einträge. Im Beispiel widersprechen sich ein vorläufiger Bericht und seine Korrektur über den Ort einer Kistenöffnung. Die frühere Fassung bleibt nachvollziehbar. Das ist keine automatische Faktenprüfung; auch die historischen Bilder beweisen die erfundenen Ereignisse nicht.
 
 ## Dasselbe mit deinem Manuskript
+
+Der Manuskriptimport unterstützt Markdown (`.md`, `.markdown`) und reinen Text (`.txt`). Word/DOCX- oder Scrivener-Dokumente müssen vorher konvertiert werden. PDFs lassen sich getrennt als Recherchequellen aufnehmen.
 
 Lixity ist kostenlos und Open Source; auch ein kommerzielles Buchprojekt benötigt keine zusätzliche Erlaubnis. Besondere Bedingungen für Softwareintegrationen erläutert die [Lizenzübersicht](../LICENSING.md).
 

@@ -434,10 +434,23 @@ and its control. Desktop tools occupy adjacent space.
 The visible keys distinguish violet **Counted text** underlines from
 **Paragraph comparison**. Notable paragraphs have a raw-value marker with a
 down/up arrow and a blue/orange edge for below/above the chapter median; the prose
-background stays clear. Click the marker to inspect the measurement. **Read these
+background receives only a subtle edge wash. Click the marker to inspect the measurement. **Read these
 marks** keeps the comparison method and counting guidance collapsed until opened.
 A marked sentence's word count and its paragraph's average are different
 quantities.
+
+**Current main, unreleased:** saved research has a separate visual identity:
+neutral dotted marks and a book-icon **Research · … associations** control. They
+identify explicitly saved quotation links to claims, dossiers and decisions;
+they are not measurement deviations or automatic fact checks. The count is
+associations, not distinct sources or evidence strength. The control opens
+research context by keyboard or pointer; an exact inline mark also opens it on
+click when no text selection is active. Closing the context returns to the
+passage. Research references remain visible with Analysis Off and coexist with
+solid counted-text underlines and search backgrounds. There is currently no
+separate global Research-mark visibility switch. The
+[annotation design contract](ARCHITECTURE.md#annotation-semantics-and-visual-identity)
+explains the ownership and color roles.
 
 These routes share existing actions rather than creating separate records:
 

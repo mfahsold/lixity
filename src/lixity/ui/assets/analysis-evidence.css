@@ -1,4 +1,4 @@
-/* Native highlights leave prose, source anchors, selection and existing marks intact. */
+/* Native metric ranges coexist with neutral dotted research marks and selection. */
 ::highlight(lixity-analysis-evidence), .analysis-evidence-swatch {
   background-color: transparent;
   text-decoration: underline;

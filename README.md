@@ -2,18 +2,18 @@
 
 [![Checks: local-first](https://img.shields.io/badge/checks-local--first-blue)](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#development-setup)
 [![PyPI](https://img.shields.io/pypi/v/lixity)](https://pypi.org/project/lixity/)
-[![Downloads](https://img.shields.io/pypi/dm/lixity)](https://pypistats.org/packages/lixity)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23390297.svg)](https://doi.org/10.5281/zenodo.23390297)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
 **Find the passages worth a second look.**
 
-Lixity is a local workbench for authors and editors working with Markdown
-manuscripts, especially a novel draft ready for revision. Why does a chapter
-sound different? Is that repetition deliberate? Which source supports a detail?
-Inspect the text behind a measurement or follow a quotation into its research.
-Measurements inform your judgment; they do not grade or rewrite your prose.
+Lixity is a local research and revision workbench for authors and editors using
+Markdown or plain-text manuscripts. Why does a chapter sound different? Is that
+repetition deliberate? Which source supports a detail?
+Choose one question, inspect what was counted and read the passage before deciding
+what to keep or change. Saved research links lead separately to dossiers, source
+passages and author decisions. Lixity does not grade or rewrite your prose.
 
 [Open the example manuscript](https://mfahsold.github.io/lixity/demo/report.html) ·
 [Take the short tour](https://mfahsold.github.io/lixity/guides/first-look.html) ·
@@ -38,7 +38,7 @@ shared sentence-length controls, not a separate presentation.
 | Decide whether a repetition needs attention | Locate nearby phrase echoes, read their context and keep or revise them yourself. |
 | Revisit the research behind a line | Follow explicitly linked claims and dossiers to retained source passages, images and author decisions. |
 | Resume reading without losing context | Keep a dossier alongside the manuscript or return from a research entry to the original passage. |
-| Prepare a copy for someone else | Export a PDF, a read-only review workspace, or a reading website with selected companion notes. |
+| Prepare a copy for someone else | Choose a PDF, a review workspace, or a reading website with selected notes; check its scope and try it on the reader’s device. |
 
 Source evidence, authored claims and creative decisions stay distinct.
 Links can preserve exact earlier revisions; a newer record does not silently
@@ -63,6 +63,8 @@ lixity service start --open
 ```
 
 Choose **Open Project** or **Analyze a manuscript**, then confirm the language.
+Manuscript input supports `.md`, `.markdown` and `.txt`; convert Word/DOCX or
+Scrivener documents before import. Retaining a PDF as research is a separate action.
 English is the default; automatic detection is explicit. Built-in analysis works
 offline on your computer and does not grade or rewrite prose. Optional
 integrations have separate
@@ -118,7 +120,8 @@ chapter-only measurements do not invent word-level highlights.
 
 Current-main `export-site --preflight` and the native **Check export** action
 measure the prepared package before writing/downloading, including media not
-packaged and missing attribution fields. Existing research projects require the
+packaged and missing attribution fields. Reading website exports are beta and
+can be large; the check does not promise a package size or mobile performance. Existing research projects require the
 [explicit manifest-storage migration](https://mfahsold.github.io/lixity/research/USAGE.md#migrate-manifest-storage)
 before using the current compressed layout.
 

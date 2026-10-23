@@ -16,7 +16,7 @@ This walkthrough follows the generated demo. It uses the same reading website ex
 
 [Video walkthrough](../videos/analysis-review.mp4)
 
-*Warehouse 4: explore a passage and compare its chapter. Recorded with v0.7.5 using the same app controls as the demo.*
+*Warehouse 4: explore a passage and compare its chapter. Recorded with v0.7.5 using the same app controls as the demo; current-main annotation styling may differ.*
 
 ## 2. Inspect one difference
 
@@ -36,7 +36,9 @@ You have completed the first check when you can explain the contrast in the text
 
 Choose a paragraph's **… → Explore passage** to open its right context. **Explain measurement** opens the counted text; **Research for this passage** follows the passage’s explicit links. The separate **Analysis** switch shows diagnostics across the manuscript; the **Passage** inspector works with Analysis On or Off. Use **Analysis overview** to compare sentence rhythm in the setting and action chapters, then **Back to passage** to resume reading.
 
-**In the read-only demo:** turn **Analysis** on. The first switch-on selects **Sentence length** unless you already saved a metric choice. Choose the metric with the directly visible **Measure** selector; **Counted text** and **Paragraph comparison** are independent switches. Violet underlines identify counted spans. Blue/orange raw-value markers with down/up arrows compare notable paragraphs with their chapter, leaving the prose background clear. Hover or tap a mark for its explanation; the compact card puts the quotation/count before a separate paragraph comparison. **Read these marks** keeps the method collapsed until opened.
+**In the read-only demo:** turn **Analysis** on. The first switch-on selects **Sentence length** unless you already saved a metric choice. Choose the metric with the directly visible **Measure** selector; **Counted text** and **Paragraph comparison** are independent switches. Violet underlines identify counted spans. Blue/orange raw-value markers with down/up arrows compare notable paragraphs with their chapter, adding only a subtle paragraph-edge wash. Hover or tap a mark for its explanation; the compact card puts the quotation/count before a separate paragraph comparison. **Read these marks** keeps the method collapsed until opened.
+
+**Current main:** neutral dotted marks and a book-icon **Research** count identify saved research links. Their pattern stays distinct from solid counted-text underlines and the paragraph comparison colors, including with Analysis Off. Open the Research control to follow the exact saved connection; this is an author association, not an automatic fact check.
 
 **Explore passage → Explain measurement** also works by keyboard or right-click with Analysis Off; it enables Analysis while preserving both display-switch preferences. Escape closes the explanation. A sentence's word count and its paragraph's comparison are different measurements. Deliberate **None** and either disabled switch survive Off/On and reload. **Focus reading** hides both displays temporarily and restores the previous choices on exit.
 
@@ -69,6 +71,8 @@ People, events and journeys are fictional. The historical images do not verify t
 Use the direct PDF links below or in the demo page; the exported website does not generate new PDFs. Compare the same manuscript as an [editorial copy](../demo/warehouse-4-editor.pdf), [reading copy](../demo/warehouse-4-book.pdf), [submission sheets](../demo/warehouse-4-sheet.pdf) or [analysis report](../demo/warehouse-4-report.pdf). The [PDF guide](research-pdf.html#manuscript-export) explains their purposes and limits.
 
 ## Use your own project
+
+Manuscript input supports Markdown (`.md`, `.markdown`) and plain text (`.txt`). Convert Word/DOCX or Scrivener documents before import. PDFs can be retained separately as Research sources.
 
 [Install the local app](installation.html), then open your project or preview a manuscript import. Analysis runs on your computer. JavaScript enables the demo's interactive controls; manuscript text, tables, credits and PDF links remain readable without it.
 

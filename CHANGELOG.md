@@ -70,6 +70,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   invalid and unsaved configuration without logging project identifiers.
 
 ### Changed
+- Distinguish saved manuscript research references from metric overlays through
+  neutral dotted marks, explicit localized Research labels and book icons.
+  Research context keeps a neutral document identity alongside analysis colors.
 - First-analysis help uses three direct actions: choose a measure, inspect a
   counted-text example, and explore the current passage. Opening help remains
   inert; the shorter panel reuses existing reader controls and focus handling.

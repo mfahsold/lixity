@@ -51,3 +51,8 @@
 .passage-research blockquote { margin-inline: 0; padding-inline: var(--space-3); overflow-wrap: anywhere; }
 .passage-research-open .context-tool-tabs { flex-wrap: wrap; }
 .passage-research-open .context-tool-tabs .ctl { flex: 1 1 0; min-width: 0; overflow-wrap: normal; }
+
+/* Research context keeps a document identity beside statistical inspection. */
+.passage-research .workspace-reader-head h2 { display: flex; align-items: center; gap: var(--space-2); }
+.context-tool-tabs [data-context-tool="research"][aria-pressed="true"] { color: var(--fg); background: var(--surface); box-shadow: inset 0 -2px var(--fg-secondary); }
+.passage-research blockquote { border-inline-start-color: var(--line-strong); }

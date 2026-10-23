@@ -548,6 +548,49 @@ reparenting. App chrome uses interface typography; exported document headers kee
 their existing presentation. The shared collapse owner hides project context and
 actions while retaining product identity and all three destinations.
 
+### Annotation semantics and visual identity
+
+**Current main, unreleased:** manuscript annotations distinguish the assertion
+being made, using pattern, position and a visible label as well as color. This
+is the central design contract; exact token values and dimensions remain in CSS.
+
+| Layer | Meaning and visual role | Existing owner |
+| --- | --- | --- |
+| Counted text | Violet solid underlines identify mapped words, sentences or patterns counted by the selected metric. The inspected span can receive a temporary wash. | `analysis-evidence.js` and native CSS Highlight ranges |
+| Paragraph comparison | Blue/orange direction and raw-value markers compare a paragraph with its chapter reference; notable paragraphs have a subtle edge wash. A difference is not a quality verdict. | Shared paragraph profiles, `dashboard.js` and reader CSS |
+| Saved research | Neutral dotted inline borders identify exact saved quotation associations. A book icon and localized Research/count label open their context. Neither count nor line pattern establishes truth, confidence or statistical significance. | `research.manuscript`, `manuscript-links.js` and its stylesheet |
+| Search | The active query's background mark identifies literal matches. It can coexist with a research border or native analysis highlight. | `interactions.js` text renderer |
+| Work markers | Explicit author notes and tasks remain authored actions. A diagnostic never creates one automatically. | Existing marker API and controls |
+
+The same semantics apply in the native workspace and read-only review website.
+Curated reader/companion publications expose only their selected content and do
+not acquire analysis overlays or the private manuscript-review state.
+
+Research uses neutral foreground/surface/line tokens. Its icon is decorative;
+the visible localized label supplies the accessible meaning. The selected
+research context tab retains a navigation underline and surface, rather than
+borrowing the quantitative comparison scale. Dotted borders remain distinct from
+solid counted-text underlines in forced colors. Global focus/hover/selected
+feedback keeps its interaction role and does not become a new analytical result.
+
+The architecture keeps one source document and separate projections. The research
+owner resolves persisted codepoint anchors with project/source/version guards;
+`renderParagraphText` composes their DOM marks with search matches and preserves
+native selection. Analysis owns derived, verified UTF-16 ranges through CSS
+Highlights. It must invalidate those ranges after DOM-mark changes rather than
+replace research markup, count DOM decoration or infer source identity from a
+color. Opening either context neither retains new source bytes nor writes records.
+
+Each measurement explanation must identify the metric, unit, granularity,
+comparison reference and availability/support. The paragraph-layer selection and
+chapter metric dialog currently have separate view owners; their values and
+standardizations must not be treated as interchangeable. A future consolidated
+selector, distribution/trend strip or redesigned measurement dialog must reuse
+those measured projections and the existing workbench/return owners. Those
+specific presentation changes remain design proposals, not shipped controls or
+a new analysis engine. See [reader usage](USAGE.md#reading-paragraphs) and
+[automation hooks](AGENTS.md#34-dashboard-interaction-contract-for-embedding-and-ui-automation).
+
 ### Shared manuscript reader
 
 **Since v0.7.2:** `ui/manuscript_reader.py` emits the shared command

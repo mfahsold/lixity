@@ -337,10 +337,23 @@ navigation lists only rendered panels.
 PDF export, the read-only dossier companion and research saves use the explicit
 capability/context guards below. Selection drafts save nothing by themselves.
 
+**Current main, unreleased:** saved quotation links use neutral dotted
+`.manuscript-claim-hit` DOM marks and a book-icon paragraph control labelled
+**Research** plus its association count. The mark itself remains non-focusable;
+keyboard users use `[data-manuscript-links-paragraph]` or the paragraph menu.
+Clicking an exact mark opens its research context unless a native selection is
+active. `svg[aria-hidden=true]` contributes no accessible name. These are saved
+associations, not analysis scores; do not derive confidence or unique-source
+counts from their styling/count. Their display is independent of Analysis On/Off;
+no separate global research-mark switch is exposed. Prefer data hooks and roles
+to computed colors for automation. The central
+[visual contract](ARCHITECTURE.md#annotation-semantics-and-visual-identity) owns the
+meaning of research, analysis, search and work-marker presentation.
+
 The native metric selector is directly
 visible with independent, browser-persisted Counted text and Paragraph comparison
 switches. Counted text uses violet underlines; notable paragraph comparisons use
-blue/orange raw-value and direction markers with a clear prose background.
+blue/orange raw-value and direction markers with a subtle paragraph-edge wash.
 Analysis Off and Focus hide both displays without resetting their preferences.
 
 | Hook | Meaning |

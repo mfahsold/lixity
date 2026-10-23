@@ -233,6 +233,7 @@ footer nav { display: flex; flex-wrap: wrap; gap: 1rem; }
 .analysis-mark-key > div { padding-top: .85rem; border-top: 2px solid var(--line); }
 .analysis-mark-key h3 { margin: 0; font-size: 1rem; line-height: 1.7; font-weight: var(--weight-semibold); }
 .analysis-mark-key p { margin: .6rem 0 0; }
+.analysis-key-research { border-bottom: 1px dotted var(--fg-secondary); padding-block-end: .12em; }
 .analysis-key-counted { text-decoration: underline solid var(--analysis-evidence-color) 2px; text-underline-offset: .2em; }
 .analysis-key-direction { display: inline-block; padding-inline-start: .4rem; margin-inline-end: .4rem; border-inline-start: 3px solid var(--analysis-key-color); color: var(--analysis-key-color); }
 .analysis-key-lower { --analysis-key-color: var(--accent); }

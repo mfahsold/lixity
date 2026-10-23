@@ -21,6 +21,14 @@
     return node;
   }
   function label(key) { return bridge.label(key); }
+  function researchIcon() {
+    var icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    icon.setAttribute("viewBox", "0 0 24 24"); icon.setAttribute("aria-hidden", "true");
+    icon.setAttribute("focusable", "false"); icon.setAttribute("class", "manuscript-research-icon");
+    var path = document.createElementNS(icon.namespaceURI, "path");
+    path.setAttribute("d", "M12 8v13M3 4h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5v15h-5a4 4 0 0 0-4 2 4 4 0 0 0-4-2H3z");
+    icon.appendChild(path); return icon;
+  }
   function context() {
     return {research: bridge.contextToken(), project: projectToken(),
       source: document.body.dataset.manuscriptSourceSha256};
@@ -281,6 +289,7 @@
     if (!rows.length) fragment.appendChild(element("p", label("manuscript_link_review_empty"), "ctl-note"));
     return fragment;
   }
+  // Counts are saved associations, not distinct sources or analytical evidence.
   function paragraphLinksControl(panel) {
     var inner = panel.querySelector(".ptext-inner");
     if (!inner) return;
@@ -291,7 +300,7 @@
       button = element("button", "", "ctl manuscript-link-related"); button.type = "button";
       button.dataset.manuscriptLinksParagraph = panel.id; inner.appendChild(button);
     }
-    button.textContent = bridge.countFormat("manuscript_link_review_count", count);
+    button.replaceChildren(researchIcon(), element("span", bridge.countFormat("manuscript_link_research_count", count)));
   }
   function applyReview(report, value) {
     if (!live(value)) return;
@@ -463,6 +472,7 @@
   passageHost.setAttribute("aria-labelledby", "passage-research-title");
   var passageHead = element("div", "", "workspace-reader-head");
   var passageTitle = element("h2", label("passage_research")); passageTitle.id = "passage-research-title";
+  passageTitle.prepend(researchIcon());
   var passageClose = element("button", "✕", "ctl"); passageClose.type = "button";
   passageClose.dataset.passageResearchClose = ""; passageClose.setAttribute("aria-label", label("modal_close"));
   passageHead.append(passageTitle, passageClose);

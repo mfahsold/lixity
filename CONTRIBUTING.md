@@ -371,6 +371,16 @@ The visual-consistency browser check covers palette, contrast, focus and enlarge
 text spacing; it is not a full accessibility audit. Ground design claims in
 [documented evidence](docs/ARCHITECTURE.md#visual-consistency-and-evidence).
 
+Follow the [annotation semantics](docs/ARCHITECTURE.md#annotation-semantics-and-visual-identity)
+when changing manuscript presentation. Keep research association patterns,
+measured comparisons, counted spans, search and author tasks distinguishable
+without color. Exercise overlap, Analysis Off, keyboard context/return, selection,
+forced colors and both themes at desktop/mobile widths. Counts must retain their
+meaning (associations versus distinct sources; paragraph versus chapter values).
+Display changes use current owners and do not introduce record writes or source
+rewrites. Native/read-only review views share these semantics; curated publication
+scope remains separate.
+
 For shared interaction changes, define the user journey before choosing suites.
 Cover entry, visible state, action scope, dismissal and return to the same task.
 Exercise transitions between already working components: a correct inspector and

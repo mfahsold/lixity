@@ -2,7 +2,7 @@
 
 Lixity describes patterns in the manuscript you provide. Its style reference compares chapters with that manuscript's own baseline. A signal is a reason to inspect a passage in context; it is not an objective quality score or an instruction to rewrite it.
 
-Updated 22 October 2026
+Updated 23 October 2026
 
 ## Read the analysis marks
 
@@ -17,6 +17,8 @@ Violet underlines identify the exact words or sentences counted by the chosen me
 Blue/down and orange/up markers identify notable lower and higher paragraph values relative to the chapter. Their number is the paragraph's raw value. Color and direction describe a difference, not a quality grade.
 
 A selected sentence's word count and its paragraph's comparison have different scopes. The explanation card shows them separately; **Read these marks** opens the counting and method details. **Focus reading** temporarily hides both displays and restores your choices on exit. [Try the marks in the short tour](first-look.html#passage).
+
+**Current main:** Saved research uses neutral dotted marks and a book-icon **Research** control with its association count. It records an explicit connection to claims, dossiers and decisions. It stays visible with Analysis Off; counted-text marks and search backgrounds can appear on the same words. Use the Research control by keyboard or click an exact mark while no selection is active. A saved link does not establish factual truth or a statistical difference. [Visual roles and architecture](../ARCHITECTURE.md#annotation-semantics-and-visual-identity).
 
 ## What does consistency measure?
 

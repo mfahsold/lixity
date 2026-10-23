@@ -212,6 +212,7 @@ document.body.classList.add("has-js-paragraphs");
 
 // Search and explicit claim links share one renderer over the original text.
 // Interval boundaries are UTF-16 DOM offsets; persisted anchors use codepoints.
+// Search/research DOM marks coexist with separate native metric Highlight ranges.
 var manuscriptParagraphMarks = Object.create(null);
 function renderParagraphText(paragraph, query) {
   var panel = paragraph.closest(".ptext"), content = panel && paragraphContent[panel.id];

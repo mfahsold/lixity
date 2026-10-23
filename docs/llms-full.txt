@@ -20,18 +20,18 @@ Source: https://github.com/mfahsold/lixity/blob/main/README.md
 
 [![Checks: local-first](https://img.shields.io/badge/checks-local--first-blue)](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#development-setup)
 [![PyPI](https://img.shields.io/pypi/v/lixity)](https://pypi.org/project/lixity/)
-[![Downloads](https://img.shields.io/pypi/dm/lixity)](https://pypistats.org/packages/lixity)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23390297.svg)](https://doi.org/10.5281/zenodo.23390297)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
 **Find the passages worth a second look.**
 
-Lixity is a local workbench for authors and editors working with Markdown
-manuscripts, especially a novel draft ready for revision. Why does a chapter
-sound different? Is that repetition deliberate? Which source supports a detail?
-Inspect the text behind a measurement or follow a quotation into its research.
-Measurements inform your judgment; they do not grade or rewrite your prose.
+Lixity is a local research and revision workbench for authors and editors using
+Markdown or plain-text manuscripts. Why does a chapter sound different? Is that
+repetition deliberate? Which source supports a detail?
+Choose one question, inspect what was counted and read the passage before deciding
+what to keep or change. Saved research links lead separately to dossiers, source
+passages and author decisions. Lixity does not grade or rewrite your prose.
 
 [Open the example manuscript](https://mfahsold.github.io/lixity/demo/report.html) ·
 [Take the short tour](https://mfahsold.github.io/lixity/guides/first-look.html) ·
@@ -56,7 +56,7 @@ shared sentence-length controls, not a separate presentation.
 | Decide whether a repetition needs attention | Locate nearby phrase echoes, read their context and keep or revise them yourself. |
 | Revisit the research behind a line | Follow explicitly linked claims and dossiers to retained source passages, images and author decisions. |
 | Resume reading without losing context | Keep a dossier alongside the manuscript or return from a research entry to the original passage. |
-| Prepare a copy for someone else | Export a PDF, a read-only review workspace, or a reading website with selected companion notes. |
+| Prepare a copy for someone else | Choose a PDF, a review workspace, or a reading website with selected notes; check its scope and try it on the reader’s device. |
 
 Source evidence, authored claims and creative decisions stay distinct.
 Links can preserve exact earlier revisions; a newer record does not silently
@@ -81,6 +81,8 @@ lixity service start --open
 ```
 
 Choose **Open Project** or **Analyze a manuscript**, then confirm the language.
+Manuscript input supports `.md`, `.markdown` and `.txt`; convert Word/DOCX or
+Scrivener documents before import. Retaining a PDF as research is a separate action.
 English is the default; automatic detection is explicit. Built-in analysis works
 offline on your computer and does not grade or rewrite prose. Optional
 integrations have separate
@@ -136,7 +138,8 @@ chapter-only measurements do not invent word-level highlights.
 
 Current-main `export-site --preflight` and the native **Check export** action
 measure the prepared package before writing/downloading, including media not
-packaged and missing attribution fields. Existing research projects require the
+packaged and missing attribution fields. Reading website exports are beta and
+can be large; the check does not promise a package size or mobile performance. Existing research projects require the
 [explicit manifest-storage migration](https://mfahsold.github.io/lixity/research/USAGE.md#migrate-manifest-storage)
 before using the current compressed layout.
 
@@ -242,6 +245,10 @@ using bounded JSON pagination; it never scans or imports loose files.
 One fictional project demonstrates the [read-only review workspace](https://mfahsold.github.io/lixity/demo/report.html),
 [novel with companion notes](https://mfahsold.github.io/lixity/demo/reader/index.html)
 and [standalone companion](https://mfahsold.github.io/lixity/demo/companion/index.html).
+Current-main annotations distinguish solid counted-text underlines, quantitative
+paragraph comparisons and neutral dotted saved-research references. The
+[central visual contract](https://mfahsold.github.io/lixity/ARCHITECTURE.md#annotation-semantics-and-visual-identity)
+records their separate owners and shared source/selection boundaries.
 The workspace reuses the product interface and prepared reads; curated copies
 contain selected publication material, not raw research history. None can save.
 
@@ -637,6 +644,13 @@ read on a wide screen. On mobile, use the same views above the workspace.
 **Manuscript** is the starting point for your text; open a dossier
 alongside it when you need context, and use **Research** to work on the source
 archive. Analysis guides your attention; the manuscript remains the reference.
+
+Current-main research references use a neutral dotted line and an adjacent book
+icon labelled **Research** with the association count. These identify saved links
+to claims, dossiers and author decisions. Metric comparisons retain their color
+scale; solid analysis underlines identify counted text. Research references stay
+visible when analysis is switched off. Search highlighting can coexist with both;
+none of these display changes edits manuscript text.
 
 The [reader reference](USAGE.md#reading-paragraphs) explains display preferences,
 keyboard controls, companion sizing and coverage. Changing a view writes nothing.
@@ -1758,10 +1772,23 @@ and its control. Desktop tools occupy adjacent space.
 The visible keys distinguish violet **Counted text** underlines from
 **Paragraph comparison**. Notable paragraphs have a raw-value marker with a
 down/up arrow and a blue/orange edge for below/above the chapter median; the prose
-background stays clear. Click the marker to inspect the measurement. **Read these
+background receives only a subtle edge wash. Click the marker to inspect the measurement. **Read these
 marks** keeps the comparison method and counting guidance collapsed until opened.
 A marked sentence's word count and its paragraph's average are different
 quantities.
+
+**Current main, unreleased:** saved research has a separate visual identity:
+neutral dotted marks and a book-icon **Research · … associations** control. They
+identify explicitly saved quotation links to claims, dossiers and decisions;
+they are not measurement deviations or automatic fact checks. The count is
+associations, not distinct sources or evidence strength. The control opens
+research context by keyboard or pointer; an exact inline mark also opens it on
+click when no text selection is active. Closing the context returns to the
+passage. Research references remain visible with Analysis Off and coexist with
+solid counted-text underlines and search backgrounds. There is currently no
+separate global Research-mark visibility switch. The
+[annotation design contract](ARCHITECTURE.md#annotation-semantics-and-visual-identity)
+explains the ownership and color roles.
 
 These routes share existing actions rather than creating separate records:
 
@@ -3342,6 +3369,15 @@ alternative tools; the **Analysis** display is a separate choice. Reading change
 neither document, evidence links nor the statistical baseline. See
 [reader controls](../USAGE.md#reading-paragraphs) for display preferences,
 keyboard access, navigation and the desktop split.
+
+**Current main, unreleased:** exact saved manuscript associations appear as
+neutral dotted marks and a book-icon **Research** control with an association
+count. They stay distinct from metric colors and counted-text underlines, even
+with Analysis Off. Use the control or paragraph menu by keyboard; clicking an
+exact mark opens the same research context when no native selection is active.
+An association means the author saved that connection, not that a source is true
+or the passage is statistically unusual. Selection and reading create no records.
+See the [shared annotation contract](../ARCHITECTURE.md#annotation-semantics-and-visual-identity).
 
 To connect the manuscript to research, select a nonempty text range within one
 paragraph and choose **Link selection to claim** (or Alt+L). The
@@ -7082,6 +7118,49 @@ reparenting. App chrome uses interface typography; exported document headers kee
 their existing presentation. The shared collapse owner hides project context and
 actions while retaining product identity and all three destinations.
 
+### Annotation semantics and visual identity
+
+**Current main, unreleased:** manuscript annotations distinguish the assertion
+being made, using pattern, position and a visible label as well as color. This
+is the central design contract; exact token values and dimensions remain in CSS.
+
+| Layer | Meaning and visual role | Existing owner |
+| --- | --- | --- |
+| Counted text | Violet solid underlines identify mapped words, sentences or patterns counted by the selected metric. The inspected span can receive a temporary wash. | `analysis-evidence.js` and native CSS Highlight ranges |
+| Paragraph comparison | Blue/orange direction and raw-value markers compare a paragraph with its chapter reference; notable paragraphs have a subtle edge wash. A difference is not a quality verdict. | Shared paragraph profiles, `dashboard.js` and reader CSS |
+| Saved research | Neutral dotted inline borders identify exact saved quotation associations. A book icon and localized Research/count label open their context. Neither count nor line pattern establishes truth, confidence or statistical significance. | `research.manuscript`, `manuscript-links.js` and its stylesheet |
+| Search | The active query's background mark identifies literal matches. It can coexist with a research border or native analysis highlight. | `interactions.js` text renderer |
+| Work markers | Explicit author notes and tasks remain authored actions. A diagnostic never creates one automatically. | Existing marker API and controls |
+
+The same semantics apply in the native workspace and read-only review website.
+Curated reader/companion publications expose only their selected content and do
+not acquire analysis overlays or the private manuscript-review state.
+
+Research uses neutral foreground/surface/line tokens. Its icon is decorative;
+the visible localized label supplies the accessible meaning. The selected
+research context tab retains a navigation underline and surface, rather than
+borrowing the quantitative comparison scale. Dotted borders remain distinct from
+solid counted-text underlines in forced colors. Global focus/hover/selected
+feedback keeps its interaction role and does not become a new analytical result.
+
+The architecture keeps one source document and separate projections. The research
+owner resolves persisted codepoint anchors with project/source/version guards;
+`renderParagraphText` composes their DOM marks with search matches and preserves
+native selection. Analysis owns derived, verified UTF-16 ranges through CSS
+Highlights. It must invalidate those ranges after DOM-mark changes rather than
+replace research markup, count DOM decoration or infer source identity from a
+color. Opening either context neither retains new source bytes nor writes records.
+
+Each measurement explanation must identify the metric, unit, granularity,
+comparison reference and availability/support. The paragraph-layer selection and
+chapter metric dialog currently have separate view owners; their values and
+standardizations must not be treated as interchangeable. A future consolidated
+selector, distribution/trend strip or redesigned measurement dialog must reuse
+those measured projections and the existing workbench/return owners. Those
+specific presentation changes remain design proposals, not shipped controls or
+a new analysis engine. See [reader usage](USAGE.md#reading-paragraphs) and
+[automation hooks](AGENTS.md#34-dashboard-interaction-contract-for-embedding-and-ui-automation).
+
 ### Shared manuscript reader
 
 **Since v0.7.2:** `ui/manuscript_reader.py` emits the shared command
@@ -7983,10 +8062,23 @@ navigation lists only rendered panels.
 PDF export, the read-only dossier companion and research saves use the explicit
 capability/context guards below. Selection drafts save nothing by themselves.
 
+**Current main, unreleased:** saved quotation links use neutral dotted
+`.manuscript-claim-hit` DOM marks and a book-icon paragraph control labelled
+**Research** plus its association count. The mark itself remains non-focusable;
+keyboard users use `[data-manuscript-links-paragraph]` or the paragraph menu.
+Clicking an exact mark opens its research context unless a native selection is
+active. `svg[aria-hidden=true]` contributes no accessible name. These are saved
+associations, not analysis scores; do not derive confidence or unique-source
+counts from their styling/count. Their display is independent of Analysis On/Off;
+no separate global research-mark switch is exposed. Prefer data hooks and roles
+to computed colors for automation. The central
+[visual contract](ARCHITECTURE.md#annotation-semantics-and-visual-identity) owns the
+meaning of research, analysis, search and work-marker presentation.
+
 The native metric selector is directly
 visible with independent, browser-persisted Counted text and Paragraph comparison
 switches. Counted text uses violet underlines; notable paragraph comparisons use
-blue/orange raw-value and direction markers with a clear prose background.
+blue/orange raw-value and direction markers with a subtle paragraph-edge wash.
 Analysis Off and Focus hide both displays without resetting their preferences.
 
 | Hook | Meaning |
