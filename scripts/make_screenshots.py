@@ -1083,6 +1083,11 @@ def main() -> int:
     )
     dashboard_path = _write_html("dashboard.html", dashboard)
     _queue_capture(dashboard_path, OUT_DIR / "dashboard-light.png", 1480, 945)
+    # Dedicated editorial frames preserve readable native text at README width;
+    # the wider atlas screenshots remain available for complete workspace views.
+    for name in ("dashboard-reader-focus.png", "dashboard-reader-focus-dark.png",
+                 "dashboard-measurement-focus.png", "dashboard-measurement-focus-dark.png"):
+        _queue_capture(dashboard_path, OUT_DIR / name, 760, 820)
     for name, width, height in (
         ("dashboard-mobile.png", 390, 1028),
         ("dashboard-dimensions-mobile.png", 390, 1028),
@@ -1240,8 +1245,6 @@ def main() -> int:
     cite_res = research_api.cite(research_proj, passage_id)
     research_html = research_api.source_dashboard(research_proj, search_res["hits"][0]["source_id"])
     _queue_capture(_write_html("dashboard-research.html", research_html), OUT_DIR / "dashboard-research.png", 1480, 960)
-    build_research_demo(BASE_DIR, research_proj)
-    build_publication_examples(BASE_DIR, research_proj)
     _write_html("research-workspace-fixture.json", json.dumps(research_fixture, ensure_ascii=False))
     research_workspace = _write_html(
         "dashboard-research-workspace.html",
@@ -1318,9 +1321,13 @@ def main() -> int:
         raise SystemExit("Node.js is required for Playwright screenshot capture.")
     subprocess.run(  # noqa: S603
         [node, str(BASE_DIR / "scripts/capture_screenshots.cjs"), str(manifest)], check=True,
-        timeout=180,
+        timeout=420,
     )
 
+    # Social previews use the final capture dimensions. Build the publication
+    # and its checksums together, rather than mutating a checksummed HTML member.
+    build_research_demo(BASE_DIR, research_proj)
+    build_publication_examples(BASE_DIR, research_proj)
     corrected = sync_embedded_image_sizes()
     print(
         f"Done – {len(list(OUT_DIR.glob('*.png')))} screenshots in {OUT_DIR}"

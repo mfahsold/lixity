@@ -133,6 +133,7 @@ async function main() {
       await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     }
     async function open(source, width, height, colorScheme = 'light') {
+      if (page.url().startsWith(CAPTURE_ORIGIN)) await page.evaluate(() => localStorage.clear());
       await page.setViewportSize({width, height});
       await page.emulateMedia({colorScheme});
       await page.goto(CAPTURE_ORIGIN + '/' + path.basename(source));
@@ -247,7 +248,32 @@ async function main() {
         else if (/^dashboard-(editorial|layer)/.test(name)) await page.locator('#manuscript-analysis-toggle').click();
       }
       if (name.startsWith('dashboard-dimensions') || ['dashboard-light.png', 'dashboard-dark.png', 'dashboard-mobile.png', 'dashboard-reference.png', 'dashboard-heatmap.png', 'dashboard-layer.png'].includes(name)) await selectView('analysis');
-      if (name === 'dashboard-light.png' || name === 'dashboard-dark.png') {
+      if (name.startsWith('dashboard-reader-focus')) {
+        await selectView('analysis');
+        assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'false');
+        await page.locator('#reader-settings > summary').click();
+        await page.locator('#reader-text-larger').click();
+        await page.locator('#reader-settings > summary').click();
+        await captureThrough(capture, '#workspace-reader', page.locator('#ch-1 .ptext').first());
+        await save(capture.target, '#workspace-reader');
+      } else if (name.startsWith('dashboard-measurement-focus')) {
+        await selectView('analysis');
+        await page.locator('#manuscript-analysis-toggle').click();
+        await selectMetric(page, 'asl');
+        const paragraph = page.locator('#ch-2 .ptext').first();
+        await paragraph.scrollIntoViewIfNeeded();
+        await paragraph.locator('[data-reader-paragraph]').click();
+        await page.locator('[data-reader-action=values]').click();
+        await page.locator('#reader-inspector [data-reader-evidence-paragraph]').click();
+        await page.locator('#analysis-evidence-card').waitFor({state: 'visible'});
+        await settle();
+        await page.mouse.move(0, 0);
+        // Frame the complete native card; surrounding stacked controls obscure
+        // its quotation/count distinction when scaled for an editorial page.
+        await page.locator('#analysis-evidence-card').screenshot({path: capture.target, animations:'disabled'});
+        const bytes = fs.readFileSync(capture.target);
+        results.push({file:name,width:bytes.readUInt32BE(16),height:bytes.readUInt32BE(20)});
+      } else if (name === 'dashboard-light.png' || name === 'dashboard-dark.png') {
         // A complete opening chapter makes the entrance image a coherent
         // reading task. Use a real viewport; preserve the native shell.
         const bottom = await page.locator('#ch-1 .ptext').last().evaluate(node => node.getBoundingClientRect().bottom + scrollY);
@@ -460,9 +486,11 @@ async function main() {
           await save(capture.target, '#modal-dossier-image-enlarge');
         } else if (name.startsWith('dashboard-dossier-image') || name.startsWith('dashboard-dossier-photo')) {
           const alt = name.startsWith('dashboard-dossier-photo') ? "Hamburg's Hansahafen" : 'Historical coloured plan';
-          const section = card.locator('.research-dossier-section-block').filter({has: page.locator('.dossier-image img[alt*="' + alt + '"]')});
-          await section.scrollIntoViewIfNeeded();
-          await save(capture.target, '.research-dossier-section-block:has(.dossier-image img[alt*="' + alt + '"])');
+          const figure = card.locator('.dossier-image').filter({has: page.locator('img[alt*="' + alt + '"]')});
+          await figure.scrollIntoViewIfNeeded();
+          const provenance = figure.locator('.dossier-image-source-context');
+          if (await provenance.count()) await provenance.locator('summary').click();
+          await save(capture.target, '.dossier-image:has(img[alt*="' + alt + '"])');
         } else {
           if (!sources) await card.locator('[data-research-detail]').click();
           await captureThrough(capture, '#research-manager', sources ? card.locator('.research-source-view-bar') : card);

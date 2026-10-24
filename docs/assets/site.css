@@ -133,7 +133,7 @@ main { max-width: 76rem; margin: auto; padding: 0 1.5rem 3rem; }
   overflow: hidden;
 }
 .hero .frame { max-width: 40rem; justify-self: center; }
-.hero .frame-window img { display: block; width: auto; max-width: 100%; max-height: 22rem; margin-inline: auto; }
+.hero .frame-window img { display: block; width: auto; height: auto; max-width: 100%; max-height: min(28rem, 70vh); margin-inline: auto; object-fit: contain; }
 .frame figcaption { padding: .7rem .2rem 0; color: var(--muted); font-size: var(--text-small); }
 
 .showcase .hero-title { font-size: clamp(2.2rem, 4vw, 3.2rem); }

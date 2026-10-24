@@ -10,18 +10,20 @@ the same six-chapter manuscript, research records and project metadata.
 
 | Feature | Views |
 | --- | --- |
+| Focused reading excerpt | [Light](dashboard-reader-focus.png), [dark](dashboard-reader-focus-dark.png): native reader controls and the complete first paragraph, sized for a readable editorial preview |
+| Explain one measurement | [Light](dashboard-measurement-focus.png), [dark](dashboard-measurement-focus-dark.png): complete Sentence length card, with the selected sentence count separate from paragraph comparison |
 | Continuous manuscript reader | [Light](dashboard-light.png), [dark](dashboard-dark.png), [mobile](dashboard-mobile.png), [empty workspace](dashboard-welcome.png) |
 | Chapter comparisons | [Heatmap excerpt](dashboard-heatmap.png), [reference bands](dashboard-reference.png), [settings](dashboard-settings.png) |
 | Scene registers | [Scene excerpt](dashboard-scenes.png), [mobile](dashboard-scenes-mobile.png) |
 | Style and annotations | [Dimensions](dashboard-dimensions.png), [dark](dashboard-dimensions-dark.png), [mobile](dashboard-dimensions-mobile.png), [exact passage overlay excerpt](dashboard-layer.png), [work markers](dashboard-markers.png) |
-| Editorial loop | [Flag queue (empty in this sample)](dashboard-flags.png), [note written on a passage](dashboard-editorial.png) |
+| Analysis review | [Tense-review queue (empty in this sample)](dashboard-flags.png), [note written on a passage](dashboard-editorial.png) |
 | Project setup | [New project](dashboard-project-modal.png), [open project](dashboard-project-open.png), [mobile](dashboard-project-open-mobile.png) |
 | Manuscript import | [Preview and confirmation](dashboard-project-import.png), [mobile](dashboard-project-import-mobile.png) |
 | Project settings | [Project settings](dashboard-project-settings.png), [mobile](dashboard-project-settings-mobile.png), [expanded NDA panel](dashboard-nda.png), [mobile](dashboard-nda-mobile.png) |
 | Retained evidence | [Source report](dashboard-research.png), [capture list](dashboard-research-sources.png), [mobile](dashboard-research-sources-mobile.png) |
 | Research dossiers | [Filtered dossier overview](dashboard-research-dossiers.png), [mobile](dashboard-research-dossiers-mobile.png) |
 | Visual references | [Historical map](dashboard-dossier-image.png), [mobile map](dashboard-dossier-image-mobile.png), [photochrom](dashboard-dossier-photo.png), [mobile photochrom](dashboard-dossier-photo-mobile.png) |
-| Places and journeys | [Coordinate sketch](dashboard-dossier-geography.png), [mobile](dashboard-dossier-geography-mobile.png) |
+| Places and journeys | [Geography and map](dashboard-dossier-geography.png), [mobile](dashboard-dossier-geography-mobile.png) |
 | Research search | [Passage results](dashboard-research-search.png), [mobile](dashboard-research-search-mobile.png) |
 | Claims and decisions | [Claims](dashboard-research-claims.png), [mobile](dashboard-research-claims-mobile.png), [decisions](dashboard-research-decisions.png), [mobile](dashboard-research-decisions-mobile.png) |
 | Claim chronology | [Timeline with axis, badges and placement hint](dashboard-research-timeline.png), [mobile](dashboard-research-timeline-mobile.png) |
@@ -44,7 +46,13 @@ are authored demonstration data, not positions derived from those images or
 verified historical routes. These examples contain no private
 manuscripts, archives, credentials or running user projects.
 
-Desktop reader entrances end after the complete opening chapter. Mobile reader
+Focused reader excerpts end after the first complete paragraph and retain the
+native Analysis Off, chapter and reading controls. The larger text is selected
+through Reading settings, not applied as a screenshot-only style. Focused
+measurement images show the complete native explanation card: the three-word
+sentence “A board moved.”, the paragraph's 4.4 words per sentence and its separate
+chapter comparison. These are demonstration measurements, not writing targets.
+Full desktop reader entrances end after the complete opening chapter. Mobile reader
 overviews and the standalone source report show honest viewports, so reading
 continues below the image. Other captures frame complete widgets or end at an
 explicit task boundary: research lists show a complete matching dossier, claim or decision; source lists
@@ -53,13 +61,17 @@ and the editorial view ends after the selected paragraph and its note controls.
 Follow the full-size image links above to inspect the actual framing.
 The reader captures use **Analysis Off**; chapter comparisons and
 scenes open **Analysis overview**. Passage captures use the same native paragraph
-actions and optional **Analysis On** layer. These captures represent v0.7.3;
-older installed packages can show an earlier interface.
+actions and optional **Analysis On** layer. The stills were regenerated on
+24 October 2026 from current main after v0.7.5; that does not imply a new release.
+Older installed packages can show an earlier interface.
 Scene images show the first three scenes, with the first expanded. Their sample
 register is an illustrative assignment; its values come from the analysis.
 Dialog images show the native scrollable confirmation state, including the header,
 Close control and confirmation actions. Content above the current scroll position
 remains available in the application; the camera does not expand native dialogs.
+Dossier visual excerpts frame the complete native image figure, including its
+caption and available source context. Geography captures retain the native map
+and OpenStreetMap attribution; their positions and journeys are synthetic.
 Dossier list descriptions are bounded reading previews, not the full saved note;
 **View details** opens the complete content. Terminal images are report excerpts
 except for the complete synthetic research search/citation response.
@@ -90,7 +102,9 @@ projects or stored agreements. Captures use fixed widths and reduced motion and 
 on runtime errors, missing panels or mobile page overflow.
 
 Review the images before publishing. `.artifacts/screenshots/capture-results.json` records
-PNG dimensions; update the corresponding HTML image attributes if they change.
+PNG dimensions; the generator synchronizes corresponding HTML image dimensions.
+Each still starts with cleared capture-origin browser preferences, so one image's
+font or metric choice cannot change another image's initial state.
 Fonts and browser versions can affect pixel output. Use only reviewed synthetic
 or public-domain data for repository screenshots.
 
