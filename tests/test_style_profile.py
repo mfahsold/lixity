@@ -149,6 +149,7 @@ class TestParagraphProfiler(unittest.TestCase):
         # that happen to share a suffix must not count as additional cues.
         for language, text, function_words in (
             ("de", "Sie nutzt nur eine Statistik.", ("nur",)),
+            ("de", "Zur Untersuchung geht sie nur.", ("zur", "nur")),
             ("en", "Growth comes with fresh plans.", ("with",)),
             ("fr", "Leur gouvernement fonctionne vraiment simplement.", ("leur", "vraiment", "simplement")),
             ("it", "La speranza vive senza limiti.", ("senza",)),

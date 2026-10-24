@@ -11,6 +11,7 @@ from __future__ import annotations
 import html as html_mod
 import re
 from typing import TYPE_CHECKING, Any
+from unicodedata import normalize
 from urllib.parse import urlsplit
 
 if TYPE_CHECKING:
@@ -163,7 +164,7 @@ def _chapter_spans_uncached(text: str, config: CorpusConfig) -> list[tuple[int, 
         original_lines = text.splitlines(keepends=True)
         body = _trim_blank_lines("".join(original_lines[front_matter_end:]))
         prose = "\n\n".join(prose_paragraphs(body, _front_matter=False, _counting=False))
-        return [(1, title, body, 1)] if word_re.search(prose) else []
+        return [(1, title, body, 1)] if word_re.search(normalize("NFC", prose)) else []
     spans: list[tuple[int, int, int, str | None]] = []
     if first and not first.startswith("# "):
         original_lines = text.splitlines(keepends=True)
@@ -190,7 +191,7 @@ def _chapter_spans_uncached(text: str, config: CorpusConfig) -> list[tuple[int, 
         else:
             title = saved_title
         prose = "\n\n".join(prose_paragraphs(body, _front_matter=False, _counting=False))
-        if not word_re.search(prose):
+        if not word_re.search(normalize("NFC", prose)):
             continue
         chapters.append((len(chapters) + 1, title, body, line))
     return chapters
@@ -372,9 +373,10 @@ def counting_inline_text(text: str) -> str:
     closed inline code do not. Malformed syntax remains literal text. Recognition
     is shared with manuscript presentation but never interprets or rejects TeX.
     Iterative label traversal avoids a recursion limit or silently lost text.
+    Counts use canonical NFC; display text and manuscript anchors stay original.
     """
     if not any(marker in text for marker in ("\\", "`", "[")):
-        return strip_inline_markup(text)
+        return normalize("NFC", strip_inline_markup(text))
     text = _LINK_DEFINITION.sub(" ", text)
     delimiters = _InlineDelimiters(text)
     pending = [(0, len(text))]
@@ -405,7 +407,7 @@ def counting_inline_text(text: str) -> str:
                     break
             parts.append(char)
             index += 1
-    return strip_inline_markup("".join(parts))
+    return normalize("NFC", strip_inline_markup("".join(parts)))
 
 
 def parse_markdown_blocks(

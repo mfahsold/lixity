@@ -18,6 +18,7 @@ heuristic, not a parser – unknown abbreviations still split.
 from __future__ import annotations
 
 import re
+from unicodedata import category
 
 # Universal abbreviations (titles, Latin loans, common English forms).
 _ABBREVIATIONS_UNIVERSAL = frozenset(
@@ -108,6 +109,11 @@ _CLOSERS = "»«\"“”'’)]"
 _SPLIT_RE = re.compile(r"(?<=[.!?])([»«\"“”'’)\]]*)\s+")
 # Blank line between semantic blocks: a sentence boundary never crosses it.
 _BLOCK_BOUNDARY_RE = re.compile(r"\n[ \t]*\n+")
+# Pair direction comes from the unmatched opener, including reversed guillemets
+# and low opening quotes. This is bounded punctuation matching, not a parser.
+_QUOTE_PAIRS = {"«": "»", "»": "«", "“": "”", "„": "“”", "\u2018": "’",
+                "\u201a": "\u2018’", '"': '"', "'": "'", "(": ")", "[": "]"}
+_PAIR_MARK_RE = re.compile("[" + re.escape("".join(_QUOTE_PAIRS) + "”’)]") + "]")
 
 
 def _protect(text: str, language_key: str) -> str:
@@ -124,16 +130,54 @@ def _protect(text: str, language_key: str) -> str:
     return _ABBR_RE.sub(_abbr, text)
 
 
+def _matched_closer_positions(text: str) -> set[int]:
+    """Find paired closers without treating a new quotation as a closing mark."""
+    stack: list[str] = []
+    closers: set[int] = set()
+    previous = 0
+    for match in _PAIR_MARK_RE.finditer(text):
+        index, mark = match.start(), match.group()
+        if _BLOCK_BOUNDARY_RE.search(text, previous, index):
+            stack.clear()
+        previous = index + 1
+        # An apostrophe within a word is not a quotation delimiter. Combining
+        # marks count as word continuations for callers supplying raw NFD.
+        if mark in "'’" and 0 < index < len(text) - 1 and all(
+            char.isalnum() or category(char).startswith("M")
+            for char in (text[index - 1], text[index + 1])
+        ):
+            continue
+        if stack and mark in stack[-1]:
+            stack.pop()
+            closers.add(index)
+        elif mark in _QUOTE_PAIRS:
+            # A word-final possessive apostrophe may close an active quotation,
+            # but must not open one and capture a later sentence's opening quote.
+            if mark == "'" and index > 0 and (
+                text[index - 1].isalnum() or category(text[index - 1]).startswith("M")
+            ):
+                continue
+            stack.append(_QUOTE_PAIRS[mark])
+    return closers
+
+
 def _sentence_spans(protected: str) -> list[tuple[int, int]]:
     spans: list[tuple[int, int]] = []
+    matched_closers = _matched_closer_positions(protected)
     start = 0
     for boundary in _SPLIT_RE.finditer(protected):
         end = boundary.start() + len(boundary.group(1))
+        following = boundary.end()
+        while following in matched_closers:
+            end = following + 1
+            following = end
+            while following < len(protected) and protected[following].isspace():
+                following += 1
         while start < end and protected[start].isspace():
             start += 1
         if start < end:
             spans.append((start, end))
-        start = boundary.end()
+        start = following
     end = len(protected)
     while start < end and protected[start].isspace():
         start += 1

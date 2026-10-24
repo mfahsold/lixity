@@ -81,6 +81,20 @@ def test_source_settings_and_concurrent_decisions_invalidate_old_context(project
     assert settings["observations"][0]["status"] == "stale"
 
 
+def test_marker_policy_changes_invalidate_saved_decisions(project, monkeypatch):
+    import lixity.analysis_review as review_module
+
+    with monkeypatch.context() as previous_policy:
+        previous_policy.setattr(review_module, "_ANALYSIS_POLICY", "tense-review/1", raising=False)
+        previous = review_analysis(project)
+        save(project, previous)
+    current = review_analysis(project)
+    assert current["source_sha256"] == previous["source_sha256"]
+    assert current["analysis_sha256"] != previous["analysis_sha256"]
+    assert current["observations"][0]["status"] == "stale"
+    assert current["observations"][0]["previous_status"] == "kept"
+
+
 def test_corrupt_or_foreign_review_state_never_looks_unreviewed(project):
     report = review_analysis(project)
     with pytest.raises(ValueError):

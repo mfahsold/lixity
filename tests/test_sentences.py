@@ -15,7 +15,7 @@ if BASE_DIR not in sys.path:
 
 from lixity.analyzer import CorpusAnalyzer  # noqa: E402
 from lixity.models import CorpusConfig  # noqa: E402
-from lixity.sentences import split_sentences  # noqa: E402
+from lixity.sentences import split_sentence_spans, split_sentences  # noqa: E402
 
 
 class TestSentenceSplitter(unittest.TestCase):
@@ -44,6 +44,52 @@ class TestSentenceSplitter(unittest.TestCase):
 
     def test_closing_marks_stay_with_their_sentence(self):
         self.assertEqual(split_sentences("»Komm!« Er ging.", "de"), ["»Komm!«", "Er ging."])
+
+    def test_spaced_matching_closers_stay_with_their_sentence_and_exact_spans(self):
+        cases = (
+            ("« Bonjour. » Il partit.", ["« Bonjour. »", "Il partit."]),
+            ("« Bonjour.\u00a0» Il partit.", ["« Bonjour.\u00a0»", "Il partit."]),
+            ("„ Hallo. ” Hij vertrok.", ["„ Hallo. ”", "Hij vertrok."]),
+            ("“ Hello. ” She left.", ["“ Hello. ”", "She left."]),
+            ("« \u2018Hello.’ » She left.", ["« \u2018Hello.’ »", "She left."]),
+            ("\u2018It’s ready. ’ She left.", ["\u2018It’s ready. ’", "She left."]),
+            ("\u2018cafe\u0301’s ready. ’ She left.", ["\u2018cafe\u0301’s ready. ’", "She left."]),
+            ("« (Ready! ) » She left.", ["« (Ready! ) »", "She left."]),
+            ("« (Ready!) » She left.", ["« (Ready!) »", "She left."]),
+            ("(Ready. ) She left.", ["(Ready. )", "She left."]),
+        )
+        for text, expected in cases:
+            with self.subTest(text=text):
+                self.assertEqual(split_sentences(text), expected)
+                self.assertEqual([text[start:end] for start, end in split_sentence_spans(text)], expected)
+
+    def test_spaced_openers_and_closers_across_blank_blocks_are_not_consumed(self):
+        cases = (
+            ("Elle partit. « Bonjour. »", ["Elle partit.", "« Bonjour. »"]),
+            ("She left. “Next.”", ["She left.", "“Next.”"]),
+            ("She left. »Next.«", ["She left.", "»Next.«"]),
+            ("Bonjour. » Il partit.", ["Bonjour.", "» Il partit."]),
+            ("« Bonjour.\n\n» Il partit.", ["« Bonjour.", "» Il partit."]),
+        )
+        for text, expected in cases:
+            with self.subTest(text=text):
+                self.assertEqual(split_sentences(text), expected)
+                self.assertEqual([text[start:end] for start, end in split_sentence_spans(text)], expected)
+
+    def test_word_final_apostrophe_closes_a_quote_but_does_not_open_one(self):
+        cases = (
+            ("The authors' paper ended. 'Next.' She left.",
+             ["The authors' paper ended.", "'Next.'", "She left."]),
+            ("The cafe\u0301s' paper ended. 'Next.' She left.",
+             ["The cafe\u0301s' paper ended.", "'Next.'", "She left."]),
+            ("'Authors' wrote it. 'Next.' She left.",
+             ["'Authors' wrote it.", "'Next.'", "She left."]),
+            ("'Ready. ' She left.", ["'Ready. '", "She left."]),
+        )
+        for text, expected in cases:
+            with self.subTest(text=text):
+                self.assertEqual(split_sentences(text, "en"), expected)
+                self.assertEqual([text[start:end] for start, end in split_sentence_spans(text, "en")], expected)
 
     def test_ellipsis_without_space_does_not_split(self):
         self.assertEqual(len(split_sentences("Das war alles … dann kam sie.", "de")), 1)

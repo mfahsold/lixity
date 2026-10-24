@@ -581,6 +581,21 @@ Highlights. It must invalidate those ranges after DOM-mark changes rather than
 replace research markup, count DOM decoration or infer source identity from a
 color. Opening either context neither retains new source bytes nor writes records.
 
+The existing Markdown counting projection applies NFC before linguistic matching.
+`text_normalization.counting_view` supplies conservative inverse codepoint ranges
+for literal evidence without normalizing display text or manuscript bytes. The
+NFC identity path needs no offset table; changed canonical clusters map only at
+complete boundaries. Ambiguous cuts keep the measured count and report incomplete
+mapping. Original paragraph hashes, line anchors and research quotation identities
+remain authoritative. This is not a parallel parser or a full grapheme segmenter.
+
+`tense.TenseMatcher` is the shared lexical cue owner for corpus measurement
+units and paragraph profiling. Default finite-form precedence resolves a curated
+present-only form against a productive past guess; explicit pattern overrides
+keep independent matching. This owner does not resolve syntactic constructions.
+The project-local review policy includes a semantic identity so a counting-rule
+change invalidates saved decisions even when source and configuration are equal.
+
 Each measurement explanation must identify the metric, unit, granularity,
 comparison reference and availability/support. The paragraph-layer selection and
 chapter metric dialog currently have separate view owners; their values and
@@ -590,6 +605,14 @@ those measured projections and the existing workbench/return owners. Those
 specific presentation changes remain design proposals, not shipped controls or
 a new analysis engine. See [reader usage](USAGE.md#reading-paragraphs) and
 [automation hooks](AGENTS.md#34-dashboard-interaction-contract-for-embedding-and-ui-automation).
+
+The lightweight cue engine remains the default. Optional local grammatical
+models are a proposed extension, not a current dependency or a silent replacement
+for lexical counts. A future adapter must expose model/language/version and
+availability in its result identity, preserve exact source-offset mappings and
+keep grammatical predictions distinct from observed word-pattern evidence.
+Model downloads and remote manuscript processing are not implied by opening
+an analysis view. See [language validation](LOCALIZATION.md#direction-for-deeper-grammatical-analysis).
 
 ### Shared manuscript reader
 

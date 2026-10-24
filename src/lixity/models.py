@@ -183,7 +183,7 @@ class ChapterMetrics(BaseModel):
     )
     passive_density: float = Field(default=0.0, description="Passive-voice markers per 1,000 words.")
     nominalization_density: float = Field(
-        default=0.0, description="Nominalisations per 1,000 words."
+        default=0.0, description="Nominal suffix/pattern matches per 1,000 counted tokens; not grammatical classifications."
     )
     adjective_density: float = Field(
         default=0.0, description="Adjective suffix matches per 1,000 words."
@@ -267,7 +267,7 @@ class CorpusMetrics(BaseModel):
     first_person_start_rate: float = Field(default=0.0, description="Share of first-person sentence openings.")
     passive_density: float = Field(default=0.0, description="Passive-voice markers per 1,000 words.")
     nominalization_density: float = Field(
-        default=0.0, description="Nominalisations per 1,000 words."
+        default=0.0, description="Nominal suffix/pattern matches per 1,000 counted tokens; not grammatical classifications."
     )
     adjective_density: float = Field(
         default=0.0, description="Adjective suffix matches per 1,000 words."

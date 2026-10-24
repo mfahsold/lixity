@@ -22,6 +22,8 @@ from .workspace import resolve_manuscript_target
 
 ReviewStatus = Literal["kept", "changed", "later"]
 _MAX_STATE_BYTES = 4 * 1024 * 1024
+# Marker semantics are part of the review context, even with unchanged settings.
+_ANALYSIS_POLICY = "tense-review/2"
 
 
 class ReviewDecision(StrictModel):
@@ -74,7 +76,7 @@ def review_analysis(project: str | Path, *, manuscript: str | Path | None = None
     config, resolved = resolve_document_config(text, language or settings.get("language", "en"), project_config=settings)
     effective = thresholds or resolve_thresholds(project_config=settings)
     paragraphs, _chapters = profile_document(text, config, effective)
-    analysis_hash = _hash({"policy": "tense-review/1", "config": config.model_dump(mode="json"),
+    analysis_hash = _hash({"policy": _ANALYSIS_POLICY, "config": config.model_dump(mode="json"),
                            "thresholds": asdict(effective)})
     state, state_hash = _read(repository)
     saved = {item.observation_id: item for item in state.decisions if item.source_path == relative}

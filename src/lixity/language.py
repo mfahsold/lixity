@@ -7,6 +7,7 @@ lexicons, tense markers, and register signals via function-word distribution vec
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
+from unicodedata import normalize
 
 from .language_data import (
     GROUP_LABELS,
@@ -168,7 +169,7 @@ def detect_language(text: str, min_hits: int = 3) -> str:
     Returns: language key or ``generic`` if the signal is too weak or
     ambiguous (short texts, proper names, numbers).
     """
-    words = _WORD_CHAR_RE.findall(text.lower())
+    words = _WORD_CHAR_RE.findall(normalize("NFC", text).lower())
     if not words:
         return "generic"
 

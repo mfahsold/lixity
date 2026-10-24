@@ -45,6 +45,7 @@ from .sentences import (
 )
 from .style_profile import dominance_from_hits
 from .syllables import count_syllables as count_syllables_for
+from .tense import TenseMatcher
 
 _RE_HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 _RE_HEADING_LINE = re.compile(r"(?m)^#+.*$")
@@ -93,8 +94,7 @@ class CorpusAnalyzer:
         """
         self.config = config or CorpusConfig()
         self.lang = resolve_language(self.config, sample_text=sample_text)
-        self._praes_re = compile_pattern(self.lang.praesens_regex)
-        self._praet_re = compile_pattern(self.lang.praeteritum_regex)
+        self._tense = TenseMatcher(self.config, self.lang)
         self._filter_re = compile_pattern(self.lang.filter_verbs_regex)
         self._word_re = compile_word_pattern(self.lang.word_regex)
         self._dialogue_re = compile_pattern(self.lang.dialogue_regex)
@@ -329,9 +329,7 @@ class CorpusAnalyzer:
             for m_name, m_pat in self.config.motif_regexes.items()
         }
         c_fil = len(self._filter_re.findall(cl_b))
-        dominance = dominance_from_hits(
-            len(self._praes_re.findall(cl_b)), len(self._praet_re.findall(cl_b))
-        )
+        dominance = dominance_from_hits(*self._tense.count(cl_b))
 
         c_start_entropy, c_first_rate, c_entropy_se = self._starter_stats(c_sentences)
         c_passive_cnt = len(self._passive_re.findall(cl_b))

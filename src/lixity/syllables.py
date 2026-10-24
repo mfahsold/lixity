@@ -12,6 +12,7 @@ counting logic stays a pure function per language.
 from __future__ import annotations
 
 import re
+from unicodedata import normalize
 
 # --- Rule tables (data) -----------------------------------------------------
 
@@ -93,10 +94,14 @@ IT_VOWELS = "aeiouàèéìíòóùú"
 IT_WEAK = "iu"
 
 PT_CLEAN = re.compile(r"[^a-zàâãáéêíóôõúüç]")
-PT_VOWEL_GROUP = re.compile(r"[aeiouàâãáéêíóôõúü]+")
+# Accented closed vowels are separate nuclei, including both sides of baía.
+# Dictionary syllabification: https://dicionario.priberam.org/ba%C3%ADa
+PT_VOWEL_GROUP = re.compile(r"[aeiouàâãáéêóôõü]+|[íú]")
 
 NL_CLEAN = re.compile(r"[^a-záéíóúäëïöüâêîôû]")
-NL_VOWEL_GROUP = re.compile(r"[aeiouyáéíóúäëïöüâêîôûI]+")
+# A trema starts a new syllable; following unmarked vowels may still join it.
+# https://www.vlaanderen.be/team-taaladvies/taaladviezen/idee-ideeen-ideeen-ideen
+NL_VOWEL_GROUP = re.compile(r"[aeiouyáéíóúâêîôû]+|[äëïöü][aeiouyáéíóúâêîôû]*")
 
 GENERIC_VOWEL_GROUP = re.compile(r"[aeiouy]+")
 
@@ -106,14 +111,14 @@ GENERIC_VOWEL_GROUP = re.compile(r"[aeiouy]+")
 
 def count_de(word: str) -> int:
     """German: diphthongs and double vowels are one nucleus, vowel clusters count."""
-    w = DE_DIPHTHONG.sub("V", word.lower())
+    w = DE_DIPHTHONG.sub("V", normalize("NFC", word).lower())
     w = DE_VOWEL.sub("V", w)
     return max(1, w.count("V"))
 
 
 def count_en(word: str) -> int:
     """English: vowel groups plus silent-e / -ed / -es rules and a curated exception list."""
-    w = EN_CLEAN.sub("", word.lower())
+    w = EN_CLEAN.sub("", normalize("NFC", word).lower())
     if not w:
         return 0
     if w in EN_EXCEPTIONS:
@@ -137,7 +142,7 @@ def count_en(word: str) -> int:
 
 def count_fr(word: str) -> int:
     """French: vowel groups with mute final -e / -ent / -es."""
-    w = FR_CLEAN.sub("", word.lower())
+    w = FR_CLEAN.sub("", normalize("NFC", word).lower())
     if not w:
         return 0
     count = len(FR_VOWEL_GROUP.findall(w))
@@ -159,7 +164,7 @@ def count_es(word: str) -> int:
     outside this deterministic heuristic. See https://www.rae.es/dpd/diptongo,
     https://www.rae.es/dpd/hiato and https://www.rae.es/dpd/u.
     """
-    w = ES_CLEAN.sub("", word.lower())
+    w = ES_CLEAN.sub("", normalize("NFC", word).lower())
     if not w:
         return 0
     # Silent u is omitted in que/qui/gue/gui; ü remains a pronounced vowel.
@@ -171,7 +176,7 @@ def count_es(word: str) -> int:
 
 def count_it(word: str) -> int:
     """Italian: weak i/u join adjacent vowels into diphthongs."""
-    w = IT_CLEAN.sub("", word.lower())
+    w = IT_CLEAN.sub("", normalize("NFC", word).lower())
     if not w:
         return 0
     count = 0
@@ -189,25 +194,30 @@ def count_it(word: str) -> int:
 
 
 def count_pt(word: str) -> int:
-    """Portuguese: vowel groups including nasal vowels and diphthongs."""
-    w = PT_CLEAN.sub("", word.lower())
+    """Portuguese: vowel groups, with marked í/ú hiatus kept separate.
+
+    Unmarked hiatus and regional pronunciation remain heuristic.
+    """
+    w = PT_CLEAN.sub("", normalize("NFC", word).lower())
     if not w:
         return 0
     return max(1, len(PT_VOWEL_GROUP.findall(w)))
 
 
 def count_nl(word: str) -> int:
-    """Dutch: 'ij' is one nucleus, otherwise vowel groups count."""
-    w = NL_CLEAN.sub("", word.lower())
+    """Dutch: 'ij' stays separate from adjacent vowels; trema starts a nucleus."""
+    w = NL_CLEAN.sub("", normalize("NFC", word).lower())
     if not w:
         return 0
-    marked = w.replace("ij", "I").replace("IJ", "I")
-    return max(1, len(NL_VOWEL_GROUP.findall(marked)))
+    # ANW divides bij.en and bij.een: https://anw.ivdnt.org/article/bijeen
+    # A vowel placeholder would merge ij with the adjacent e/ee again.
+    parts = w.split("ij")
+    return max(1, len(parts) - 1 + sum(len(NL_VOWEL_GROUP.findall(part)) for part in parts))
 
 
 def count_generic(word: str) -> int:
     """Fallback: plain vowel-group counting."""
-    w = EN_CLEAN.sub("", word.lower())
+    w = EN_CLEAN.sub("", normalize("NFC", word).lower())
     if not w:
         return 0
     return max(1, len(GENERIC_VOWEL_GROUP.findall(w)))

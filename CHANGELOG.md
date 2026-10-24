@@ -39,6 +39,32 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   unchanged; attachments do not manufacture extraction or linguistic scores.
 
 ### Fixed
+- Shared chapter, scene and paragraph tense counting rejects productive past
+  guesses that contradict a curated present-only finite form, such as German
+  `halten` or Dutch `moeten`. Explicit pattern overrides retain their counting
+  contract; compound constructions remain heuristic. The analysis review-policy
+  identity changes so previous decisions are marked stale under the new counts.
+- Canonical-equivalent Unicode prose uses the same NFC counting projection across
+  measurements, CLI and UI evidence. Original manuscript bytes and hashes remain
+  unchanged; complete-cluster ranges map back to original source offsets.
+- Global UI word totals share corpus scope with sentence/ASL measurements, with
+  separate help for narrower paragraph views. Mobile counted-text navigation
+  returns each new explanation to its beginning so its count remains visible.
+- German `zur` is recognized as a function word, so the default nominal-suffix
+  heuristic no longer counts or highlights it as an `-ur` nominal cue. Shared
+  corpus, chapter, paragraph and evidence outputs use the same correction.
+- Nominal ending cues include listed plural forms in all seven languages.
+  Spanish, Italian and Portuguese passive cues include regular plural participles;
+  French includes `fut`/`furent`. These remain pattern cues, not grammatical parses.
+- Portuguese marked `í`/`ú` hiatus, Dutch diaeresis boundaries and `ij` beside
+  another vowel contribute separate syllable nuclei to readability estimates. Recompute affected reports
+  before comparing them with earlier outputs.
+- Matched quotation/bracket closers separated from terminal punctuation by
+  whitespace stay with their original sentence, without consuming a following
+  opening quotation or crossing a blank-line block boundary.
+- The adjusted deviation's norm avoids overflow/underflow at extreme finite
+  scales. ASL uncertainty documentation now identifies the implemented observed-
+  population plug-in, rather than calling it a sample standard error.
 - Research audit verifies the complete accepted manifest ancestry and reports
   revision-entry capacity, with an advisory warning at 90% of the existing
   25,000-entry limit. Missing or damaged ancestors fail integrity checks.

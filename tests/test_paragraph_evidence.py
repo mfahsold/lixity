@@ -97,14 +97,16 @@ def test_counted_word_capture_uses_the_capture_range_not_its_prefix():
 
 
 def test_default_nominal_exclusions_apply_to_literal_spans_too():
-    text = '## Beispiel\n\nNUR, nur. Kultur, Entscheidung.\n'
+    text = '## Beispiel\n\nZUR Untersuchung, zur Kultur. NUR, nur. Entscheidung.\n'
     config = CorpusConfig(language="de")
     paragraphs, _ = profile_document(text, config, FingerprintThresholds())
     module = importlib.import_module("lixity.paragraph_evidence")
     evidence = module.paragraph_evidence(text, config, paragraphs)
     assert slices(paragraphs[0], evidence[0]["layers"]["nominal"]) == [
-        ("Kultur", 1), ("Entscheidung", 1),
+        ("Untersuchung", 1), ("Kultur", 1), ("Entscheidung", 1),
     ]
+    assert ("ZUR", 1) in slices(paragraphs[0], evidence[0]["layers"]["function"])
+    assert ("zur", 1) in slices(paragraphs[0], evidence[0]["layers"]["function"])
 
 
 def test_all_zero_width_pattern_matches_are_unavailable_not_measured_zero():

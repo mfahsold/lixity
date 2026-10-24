@@ -333,7 +333,7 @@ def render_dashboard(
             ("generic", "generic"),
         ]
 
-    total_words = sum(c.words for c in chapters)
+    total_words = metrics.tokens if metrics is not None else sum(c.words for c in chapters)
     if flag_min_severity is None:
         flag_min_severity = (
             fingerprint.thresholds.flag_min_severity
@@ -1197,7 +1197,7 @@ def render_dashboard(
 
     # --- Key metrics (grouped for scanability) ----------------------------
     scope_tiles = [
-        kpi(N(total_words, 0), help_term(labels, "words", L("words_prose")), jump="#matrix"),
+        kpi(N(total_words, 0), help_term(labels, "corpus_words" if metrics is not None else "words", L("words_prose")), jump="#matrix"),
         kpi(str(len(chapters)), L("chapter"), jump="#matrix"),
         kpi(str(len(paragraphs)), L("paragraphs"), jump="#matrix"),
     ]

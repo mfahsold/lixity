@@ -93,6 +93,14 @@ The analysis-evidence suite additionally checks exact verified text ranges,
 hover, touch and keyboard inspection, Unicode offsets, asynchronous cancellation,
 search/research mark coexistence and explicit unavailable mappings. Its geometry
 check counts repeated rectangle reads rather than setting a wall-clock threshold.
+The linguistic-reference suite uses manually annotated original-language literary
+excerpts from `tests/fixtures/literary_reference.json`. It compares actual CLI,
+backend and displayed counts, units and source ranges in all seven languages,
+NFC/NFD forms and desktop/mobile viewports. It also checks distinct corpus/profile
+scopes and keeps a new mobile explanation's count visible after navigation.
+These are bounded counting and rendering regressions; scientific interpretation
+and unresolved linguistic limits stay centralized in
+[`docs/STABILITY.md`](../../docs/STABILITY.md#core-validation-status).
 The shared **Explore passage** entry opens the existing context inspector, with
 separate **Explain measurement** and **Research for this passage** actions. Native desktop
 and mobile checks cover localized sentence word counts, paragraph comparison

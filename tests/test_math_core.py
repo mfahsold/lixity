@@ -293,6 +293,30 @@ class TestRobustStatistics(unittest.TestCase):
         self.assertAlmostEqual(normal_tail_probability(2.575829), 0.01, places=5)
         self.assertLess(normal_tail_probability(3.5), normal_tail_probability(2.5))
 
+    def test_significance_z_preserves_scale_and_direction_at_finite_extremes(self):
+        # A 3-4-5 denominator gives |z*| = 2 regardless of the units.
+        # Squaring the scales directly overflows or underflows at these sizes.
+        for scale in (1.0, 1e200, 1e-200):
+            for direction in (-1, 1):
+                for sigma, se in ((3 * scale, 4 * scale), (5 * scale, 0.0),
+                                  (0.0, 5 * scale)):
+                    with self.subTest(scale=scale, direction=direction, sigma=sigma, se=se):
+                        self.assertAlmostEqual(
+                            significance_z(direction * 10 * scale, 0.0, sigma, se),
+                            direction * 2.0,
+                            places=14,
+                        )
+
+    def test_significance_z_keeps_zero_denominator_and_cutoff_boundaries(self):
+        self.assertEqual(significance_z(10.0, 0.0, 0.0, 0.0), 0.0)
+        self.assertEqual(significance_z(-10.0, 0.0, 0.0, 0.0), 0.0)
+        for cutoff in (2.5, 0.125):
+            numerator = cutoff * 5.0
+            with self.subTest(cutoff=cutoff):
+                self.assertEqual(significance_z(numerator, 0.0, 3.0, 4.0), cutoff)
+                self.assertLess(significance_z(math.nextafter(numerator, 0.0), 0.0, 3.0, 4.0), cutoff)
+                self.assertGreater(significance_z(math.nextafter(numerator, math.inf), 0.0, 3.0, 4.0), cutoff)
+
 
 class TestSharedPrimitives(unittest.TestCase):
     """lixity.math_core is the single source for the plug-in conventions."""

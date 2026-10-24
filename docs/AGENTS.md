@@ -246,6 +246,12 @@ explain unmapped contributions. When source profiles cannot be verified,
 The current inline-count/display
 projection may report `inline_mapping_unavailable`. Zero-width matches remain in
 the metric count but cannot form highlights. No prose is added to JSON.
+Current main counts NFC prose while keeping `ParagraphProfile.text` and its
+hash in the original representation. Canonical-cluster ranges map back to those
+original codepoints; `unicode_mapping_unavailable` preserves a count when an
+ambiguous inner-cluster cut cannot be mapped. Configured word/cue patterns use
+NFC counting text; document-boundary patterns still address the original source.
+These mappings do not make excluded inline-code regions drawable.
 `--evidence` requires `--layer`; default schema 2 and the existing
 `paragraph-layer/1` projection remain unchanged.
 

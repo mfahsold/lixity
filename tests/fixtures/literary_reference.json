@@ -1,0 +1,582 @@
+{
+  "schema_version": "literary-reference/1",
+  "purpose": "Small independently hand-annotated original-language literary regression excerpts; not a representative corpus, scientific validation set, quality norm or author ranking.",
+  "annotation_convention": "Sentence punctuation and lexical tokens manually transcribed, without engine-generated expected values. Follow docs/METHODS.md and docs/LOCALIZATION.md: punctuation excluded; internal apostrophes retained; hyphens split in fr/es/it/pt/nl. No grammatical clitic, syllable, readability, tense or passive gold labels are asserted.",
+  "fixtures": [
+    {
+      "language": "de",
+      "author": "Theodor Fontane",
+      "title": "Effi Briest",
+      "publication_year": 1895,
+      "source_url": "https://www.gutenberg.org/cache/epub/5323/pg5323.txt",
+      "catalog_url": "https://www.gutenberg.org/ebooks/5323",
+      "source_locator": "Chapter 1, paragraph beginning Effi trug",
+      "checked_on": "2026-10-24",
+      "public_domain_rationale": "Original-language prose published in 1895; author died in 1898. Project Gutenberg catalog marks the text public domain in the USA; the original author text is also beyond life plus 70 years. No modern introduction, translation, illustrations or editorial notes are included.",
+      "normalization": "Source line wrapping replaced with spaces; paragraph boundaries and source spelling/punctuation retained. Excerpt endpoints may fall inside a source paragraph.",
+      "paragraphs": [
+        {
+          "sentences": [
+            {
+              "text": "Effi trug ein blau und weiß gestreiftes, halb kittelartiges Leinwandkleid, dem erst ein fest zusammengezogener, bronzefarbener Ledergürtel die Taille gab; der Hals war frei, und über Schulter und Nacken fiel ein breiter Matrosenkragen.",
+              "tokens": [
+                "Effi",
+                "trug",
+                "ein",
+                "blau",
+                "und",
+                "weiß",
+                "gestreiftes",
+                "halb",
+                "kittelartiges",
+                "Leinwandkleid",
+                "dem",
+                "erst",
+                "ein",
+                "fest",
+                "zusammengezogener",
+                "bronzefarbener",
+                "Ledergürtel",
+                "die",
+                "Taille",
+                "gab",
+                "der",
+                "Hals",
+                "war",
+                "frei",
+                "und",
+                "über",
+                "Schulter",
+                "und",
+                "Nacken",
+                "fiel",
+                "ein",
+                "breiter",
+                "Matrosenkragen"
+              ]
+            },
+            {
+              "text": "In allem, was sie tat, paarten sich Übermut und Grazie, während ihre lachenden braunen Augen eine große, natürliche Klugheit und viel Lebenslust und Herzensgüte verrieten.",
+              "tokens": [
+                "In",
+                "allem",
+                "was",
+                "sie",
+                "tat",
+                "paarten",
+                "sich",
+                "Übermut",
+                "und",
+                "Grazie",
+                "während",
+                "ihre",
+                "lachenden",
+                "braunen",
+                "Augen",
+                "eine",
+                "große",
+                "natürliche",
+                "Klugheit",
+                "und",
+                "viel",
+                "Lebenslust",
+                "und",
+                "Herzensgüte",
+                "verrieten"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "language": "en",
+      "author": "Jane Austen",
+      "title": "Pride and Prejudice",
+      "publication_year": 1813,
+      "source_url": "https://www.gutenberg.org/cache/epub/1342/pg1342.txt",
+      "catalog_url": "https://www.gutenberg.org/ebooks/1342",
+      "source_locator": "Chapter I, first two paragraphs",
+      "checked_on": "2026-10-24",
+      "public_domain_rationale": "Original-language prose published in 1813; author died in 1817. Project Gutenberg catalog marks the text public domain in the USA; the original author text is also beyond life plus 70 years. No modern introduction, translation, illustrations or editorial notes are included.",
+      "normalization": "Source line wrapping replaced with spaces; paragraph boundaries and source spelling/punctuation retained. Excerpt endpoints may fall inside a source paragraph.",
+      "paragraphs": [
+        {
+          "sentences": [
+            {
+              "text": "It is a truth universally acknowledged, that a single man in possession of a good fortune must be in want of a wife.",
+              "tokens": [
+                "It",
+                "is",
+                "a",
+                "truth",
+                "universally",
+                "acknowledged",
+                "that",
+                "a",
+                "single",
+                "man",
+                "in",
+                "possession",
+                "of",
+                "a",
+                "good",
+                "fortune",
+                "must",
+                "be",
+                "in",
+                "want",
+                "of",
+                "a",
+                "wife"
+              ]
+            }
+          ]
+        },
+        {
+          "sentences": [
+            {
+              "text": "However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered as the rightful property of some one or other of their daughters.",
+              "tokens": [
+                "However",
+                "little",
+                "known",
+                "the",
+                "feelings",
+                "or",
+                "views",
+                "of",
+                "such",
+                "a",
+                "man",
+                "may",
+                "be",
+                "on",
+                "his",
+                "first",
+                "entering",
+                "a",
+                "neighbourhood",
+                "this",
+                "truth",
+                "is",
+                "so",
+                "well",
+                "fixed",
+                "in",
+                "the",
+                "minds",
+                "of",
+                "the",
+                "surrounding",
+                "families",
+                "that",
+                "he",
+                "is",
+                "considered",
+                "as",
+                "the",
+                "rightful",
+                "property",
+                "of",
+                "some",
+                "one",
+                "or",
+                "other",
+                "of",
+                "their",
+                "daughters"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "language": "fr",
+      "author": "Gustave Flaubert",
+      "title": "Madame Bovary",
+      "publication_year": 1857,
+      "source_url": "https://www.gutenberg.org/cache/epub/14155/pg14155.txt",
+      "catalog_url": "https://www.gutenberg.org/ebooks/14155",
+      "source_locator": "Première partie, I, first paragraph",
+      "checked_on": "2026-10-24",
+      "public_domain_rationale": "Original-language prose published in 1857; author died in 1880. Project Gutenberg catalog marks the text public domain in the USA; the original author text is also beyond life plus 70 years. No modern introduction, translation, illustrations or editorial notes are included.",
+      "normalization": "Source line wrapping replaced with spaces; paragraph boundaries and source spelling/punctuation retained. Excerpt endpoints may fall inside a source paragraph.",
+      "paragraphs": [
+        {
+          "sentences": [
+            {
+              "text": "Nous étions à l’Étude, quand le Proviseur entra, suivi d’un nouveau habillé en bourgeois et d’un garçon de classe qui portait un grand pupitre.",
+              "tokens": [
+                "Nous",
+                "étions",
+                "à",
+                "l’Étude",
+                "quand",
+                "le",
+                "Proviseur",
+                "entra",
+                "suivi",
+                "d’un",
+                "nouveau",
+                "habillé",
+                "en",
+                "bourgeois",
+                "et",
+                "d’un",
+                "garçon",
+                "de",
+                "classe",
+                "qui",
+                "portait",
+                "un",
+                "grand",
+                "pupitre"
+              ]
+            },
+            {
+              "text": "Ceux qui dormaient se réveillèrent, et chacun se leva comme surpris dans son travail.",
+              "tokens": [
+                "Ceux",
+                "qui",
+                "dormaient",
+                "se",
+                "réveillèrent",
+                "et",
+                "chacun",
+                "se",
+                "leva",
+                "comme",
+                "surpris",
+                "dans",
+                "son",
+                "travail"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "language": "es",
+      "author": "Miguel de Cervantes Saavedra",
+      "title": "Don Quijote",
+      "publication_year": 1605,
+      "source_url": "https://www.gutenberg.org/cache/epub/2000/pg2000.txt",
+      "catalog_url": "https://www.gutenberg.org/ebooks/2000",
+      "source_locator": "Primera parte, capítulo primero, first two sentences",
+      "checked_on": "2026-10-24",
+      "public_domain_rationale": "Original-language prose published in 1605; author died in 1616. Project Gutenberg catalog marks the text public domain in the USA; the original author text is also beyond life plus 70 years. No modern introduction, translation, illustrations or editorial notes are included.",
+      "normalization": "Source line wrapping replaced with spaces; paragraph boundaries and source spelling/punctuation retained. Excerpt endpoints may fall inside a source paragraph.",
+      "paragraphs": [
+        {
+          "sentences": [
+            {
+              "text": "En un lugar de la Mancha, de cuyo nombre no quiero acordarme, no ha mucho tiempo que vivía un hidalgo de los de lanza en astillero, adarga antigua, rocín flaco y galgo corredor.",
+              "tokens": [
+                "En",
+                "un",
+                "lugar",
+                "de",
+                "la",
+                "Mancha",
+                "de",
+                "cuyo",
+                "nombre",
+                "no",
+                "quiero",
+                "acordarme",
+                "no",
+                "ha",
+                "mucho",
+                "tiempo",
+                "que",
+                "vivía",
+                "un",
+                "hidalgo",
+                "de",
+                "los",
+                "de",
+                "lanza",
+                "en",
+                "astillero",
+                "adarga",
+                "antigua",
+                "rocín",
+                "flaco",
+                "y",
+                "galgo",
+                "corredor"
+              ]
+            },
+            {
+              "text": "Una olla de algo más vaca que carnero, salpicón las más noches, duelos y quebrantos los sábados, lantejas los viernes, algún palomino de añadidura los domingos, consumían las tres partes de su hacienda.",
+              "tokens": [
+                "Una",
+                "olla",
+                "de",
+                "algo",
+                "más",
+                "vaca",
+                "que",
+                "carnero",
+                "salpicón",
+                "las",
+                "más",
+                "noches",
+                "duelos",
+                "y",
+                "quebrantos",
+                "los",
+                "sábados",
+                "lantejas",
+                "los",
+                "viernes",
+                "algún",
+                "palomino",
+                "de",
+                "añadidura",
+                "los",
+                "domingos",
+                "consumían",
+                "las",
+                "tres",
+                "partes",
+                "de",
+                "su",
+                "hacienda"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "language": "it",
+      "author": "Carlo Collodi",
+      "title": "Le avventure di Pinocchio: Storia di un burattino",
+      "publication_year": 1883,
+      "source_url": "https://www.gutenberg.org/cache/epub/52484/pg52484.txt",
+      "catalog_url": "https://www.gutenberg.org/ebooks/52484",
+      "source_locator": "Chapter III, first two sentences",
+      "checked_on": "2026-10-24",
+      "public_domain_rationale": "Original-language prose published in 1883; author died in 1890. Project Gutenberg catalog marks the text public domain in the USA; the original author text is also beyond life plus 70 years. No modern introduction, translation, illustrations or editorial notes are included.",
+      "normalization": "Source line wrapping replaced with spaces; paragraph boundaries and source spelling/punctuation retained. Excerpt endpoints may fall inside a source paragraph.",
+      "paragraphs": [
+        {
+          "sentences": [
+            {
+              "text": "La casa di Geppetto era una stanzina terrena, che pigliava luce da un sottoscala.",
+              "tokens": [
+                "La",
+                "casa",
+                "di",
+                "Geppetto",
+                "era",
+                "una",
+                "stanzina",
+                "terrena",
+                "che",
+                "pigliava",
+                "luce",
+                "da",
+                "un",
+                "sottoscala"
+              ]
+            },
+            {
+              "text": "La mobilia non poteva esser più semplice: una seggiola cattiva, un letto poco buono e un tavolino tutto rovinato.",
+              "tokens": [
+                "La",
+                "mobilia",
+                "non",
+                "poteva",
+                "esser",
+                "più",
+                "semplice",
+                "una",
+                "seggiola",
+                "cattiva",
+                "un",
+                "letto",
+                "poco",
+                "buono",
+                "e",
+                "un",
+                "tavolino",
+                "tutto",
+                "rovinato"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "language": "pt",
+      "author": "Eça de Queirós",
+      "title": "Os Maias: episodios da vida romantica",
+      "publication_year": 1888,
+      "source_url": "https://www.gutenberg.org/cache/epub/40409/pg40409.txt",
+      "catalog_url": "https://www.gutenberg.org/ebooks/40409",
+      "source_locator": "Volume I, I, paragraph beginning Os Maias eram, first sentence",
+      "checked_on": "2026-10-24",
+      "public_domain_rationale": "Original-language prose published in 1888; author died in 1900. Project Gutenberg catalog marks the text public domain in the USA; the original author text is also beyond life plus 70 years. No modern introduction, translation, illustrations or editorial notes are included.",
+      "normalization": "Source line wrapping replaced with spaces; paragraph boundaries and source spelling/punctuation retained. Excerpt endpoints may fall inside a source paragraph.",
+      "paragraphs": [
+        {
+          "sentences": [
+            {
+              "text": "Os Maias eram uma antiga familia da Beira, sempre pouco numerosa, sem linhas collateraes, sem parentellas--e agora reduzida a dois varões, o senhor da casa, Affonso da Maia, um velho já, quasi um antepassado, mais edoso que o seculo, e seu neto Carlos que estudava medicina em Coimbra.",
+              "tokens": [
+                "Os",
+                "Maias",
+                "eram",
+                "uma",
+                "antiga",
+                "familia",
+                "da",
+                "Beira",
+                "sempre",
+                "pouco",
+                "numerosa",
+                "sem",
+                "linhas",
+                "collateraes",
+                "sem",
+                "parentellas",
+                "e",
+                "agora",
+                "reduzida",
+                "a",
+                "dois",
+                "varões",
+                "o",
+                "senhor",
+                "da",
+                "casa",
+                "Affonso",
+                "da",
+                "Maia",
+                "um",
+                "velho",
+                "já",
+                "quasi",
+                "um",
+                "antepassado",
+                "mais",
+                "edoso",
+                "que",
+                "o",
+                "seculo",
+                "e",
+                "seu",
+                "neto",
+                "Carlos",
+                "que",
+                "estudava",
+                "medicina",
+                "em",
+                "Coimbra"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "language": "nl",
+      "author": "Multatuli (Eduard Douwes Dekker)",
+      "title": "Max Havelaar",
+      "publication_year": 1860,
+      "source_url": "https://www.gutenberg.org/cache/epub/11024/pg11024.txt",
+      "catalog_url": "https://www.gutenberg.org/ebooks/11024",
+      "source_locator": "Eerste hoofdstuk, sentences beginning Ik pas er dus wel op through ondervinding heeft",
+      "checked_on": "2026-10-24",
+      "public_domain_rationale": "Original-language prose published in 1860; author died in 1887. Project Gutenberg catalog marks the text public domain in the USA; the original author text is also beyond life plus 70 years. No modern introduction, translation, illustrations or editorial notes are included.",
+      "normalization": "Source line wrapping replaced with spaces; paragraph boundaries and source spelling/punctuation retained. Excerpt endpoints may fall inside a source paragraph.",
+      "paragraphs": [
+        {
+          "sentences": [
+            {
+              "text": "Ik pas er dus wel op, dat ik geen romans schryf, of andere valsche opgaven doe.",
+              "tokens": [
+                "Ik",
+                "pas",
+                "er",
+                "dus",
+                "wel",
+                "op",
+                "dat",
+                "ik",
+                "geen",
+                "romans",
+                "schryf",
+                "of",
+                "andere",
+                "valsche",
+                "opgaven",
+                "doe"
+              ]
+            },
+            {
+              "text": "Ik heb dan ook altyd opgemerkt dat menschen die zich met zoo-iets inlaten, gewoonlyk slecht wegkomen.",
+              "tokens": [
+                "Ik",
+                "heb",
+                "dan",
+                "ook",
+                "altyd",
+                "opgemerkt",
+                "dat",
+                "menschen",
+                "die",
+                "zich",
+                "met",
+                "zoo",
+                "iets",
+                "inlaten",
+                "gewoonlyk",
+                "slecht",
+                "wegkomen"
+              ]
+            },
+            {
+              "text": "Ik ben drie en veertig jaren oud, bezoek sedert twintig jaren de beurs, en kan dus voor den dag treden, als men iemand roept die ondervinding heeft.",
+              "tokens": [
+                "Ik",
+                "ben",
+                "drie",
+                "en",
+                "veertig",
+                "jaren",
+                "oud",
+                "bezoek",
+                "sedert",
+                "twintig",
+                "jaren",
+                "de",
+                "beurs",
+                "en",
+                "kan",
+                "dus",
+                "voor",
+                "den",
+                "dag",
+                "treden",
+                "als",
+                "men",
+                "iemand",
+                "roept",
+                "die",
+                "ondervinding",
+                "heeft"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

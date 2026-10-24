@@ -54,6 +54,11 @@ comparison = analyze_document(comparison_text, CorpusConfig(language='en'), reso
 result['comparable'] = render_dashboard(comparison.chapters, comparison.paragraphs, metrics=comparison.metrics,
     fingerprint=comparison.fingerprint, paragraph_evidence=comparison.evidence, title='Comparable synthetic paragraphs', controls=True,
     labels={**get_language_profile('en').labels, **WORKSPACE_LABELS['en']}, language_key='en')
+german_text = '# Deutsche Nominalhinweise\\n\\nZUR Untersuchung geht sie nur.\\n\\nZur Tür geht sie nur.'
+german = analyze_document(german_text, CorpusConfig(language='de'), resolve_thresholds(project_config={}), include_evidence=True)
+result['german-nominal'] = render_dashboard(german.chapters, german.paragraphs, metrics=german.metrics,
+    fingerprint=german.fingerprint, paragraph_evidence=german.evidence, title='Deutsche Nominalhinweise', controls=True,
+    labels={**get_language_profile('de').labels, **WORKSPACE_LABELS['de']}, language_key='de')
 print(json.dumps(result))
 `, {root});
 
@@ -397,6 +402,23 @@ server.serve_forever()
 (async () => {
   const browser = await launchChromium();
   try {
+    for (const width of [1440, 320]) {
+      const page = await browser.newPage({viewport:{width,height:950}, reducedMotion:'reduce'});
+      try {
+        await page.route('**/*', route => route.fulfill({contentType:'text/html', body:fixtures['german-nominal']}));
+        await page.goto('http://localhost/');
+        await page.locator('#manuscript-analysis-toggle').click();
+        await selectMetric(page, 'nominal');
+        await page.locator('.ptext').first().scrollIntoViewIfNeeded();
+        await page.waitForFunction(() => [...(CSS.highlights?.get('lixity-analysis-evidence') || [])].some(range => range.toString() === 'Untersuchung'));
+        assert.deepEqual(await ranges(page), ['Untersuchung'], 'German contractions are excluded from actual nominal highlights');
+        await page.screenshot({path:path.join(artifacts, `german-nominal-${width}.png`)});
+        await selectMetric(page, 'function');
+        await page.waitForFunction(() => [...(CSS.highlights?.get('lixity-analysis-evidence') || [])].some(range => range.toString() === 'ZUR'));
+        const words = await ranges(page);
+        assert.ok(words.includes('ZUR') && words.includes('Zur'), 'The same contractions remain visible in the function-word measurement');
+      } finally {await page.close();}
+    }
     await nativeLegends(browser);
     if (process.env.LIXITY_LEGENDS_ONLY) return;
     await pendingInspectorCards(browser);

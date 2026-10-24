@@ -182,7 +182,7 @@ explain coverage, short-sample limits and unavailable measurements.
 | :--- | :--- |
 | Everyday use | [Usage and CLI reference](https://mfahsold.github.io/lixity/USAGE.md) · [Interpret results](https://mfahsold.github.io/lixity/guides/interpretation.html) |
 | Research | [Workflows and compatibility](https://mfahsold.github.io/lixity/research/USAGE.md) · [Data model](https://mfahsold.github.io/lixity/research/DATA_MODEL.md) |
-| Measurements | [Methods](https://mfahsold.github.io/lixity/METHODS.md) · [Validation](https://mfahsold.github.io/lixity/STABILITY.md) |
+| Measurements | [Methods](https://mfahsold.github.io/lixity/METHODS.md) · [Checks and limits](https://mfahsold.github.io/lixity/STABILITY.md#core-validation-status) |
 | Integrations | [API contracts](https://mfahsold.github.io/lixity/AGENTS.md) · [Architecture](https://mfahsold.github.io/lixity/ARCHITECTURE.md) · [Agent index](https://mfahsold.github.io/lixity/llms.txt) |
 | Contributing | [Contributor setup and checks](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md) · [Security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md) |
 
@@ -401,7 +401,7 @@ validates envelope shape. Existing JSON/archive versions remain unchanged.
 - [Implemented research](https://mfahsold.github.io/lixity/research/USAGE.md): retention, citations, claims, revisions, manuscript associations and recovery.
 - [Local data model](https://mfahsold.github.io/lixity/research/DATA_MODEL.md): authoritative records, reference and publication diagrams, schemas and the disposable SQLite index.
 - [Research and PDF guide](https://mfahsold.github.io/lixity/guides/research-pdf.html): source capture, OCR, Zotero and PDF workflows.
-- [Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) and [scientific limits](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md): formulas, estimator conventions and heuristic caveats.
+- [Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) and [core checks and limits](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md#core-validation-status): formulas, cross-surface evidence and unresolved linguistic/statistical limits.
 - [Architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md) and [localization](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md): integration boundaries and language coverage.
 - [Articles](https://mfahsold.github.io/lixity/blog/): interpretation examples, separate from API contracts.
 - [Manuscript reading workbench](https://mfahsold.github.io/lixity/blog/manuscript-reading-workbench.html): the Analysis On/Off, overview and manuscript–research workflow with explicit coverage limits.
@@ -5641,6 +5641,22 @@ semantic paragraph boundaries. Short-paragraph counting uses paragraph
 whitespace words and the inclusive configured threshold, including eight-word
 paragraphs. Legacy whitespace counts remain distinct from regex token counts.
 
+**Current main:** the shared Markdown counting projection uses Unicode NFC for
+token, vocabulary, cue and syllable measurements. Configured word/cue patterns
+operate on that canonical counting text; their flags are unchanged. Document
+boundary patterns and appendix markers still address the original source. Manuscript
+bytes, displayed quotations, line anchors and source hashes are not normalized.
+Literal evidence maps complete canonical clusters back to original codepoint
+ranges; ambiguous inner-cluster cuts retain counts with unavailable mapping.
+Legacy raw/clean character counts still describe original codepoints, not
+grapheme clusters. This is canonical equivalence, not general linguistic word
+segmentation; see [Unicode UAX #29](https://www.unicode.org/reports/tr29/).
+
+The global UI word count uses the corpus token measurement, matching its sentence
+and ASL values. Paragraph/chapter profile views remain narrower: pre-chapter
+prose and blockquotes can contribute to corpus counts without paragraph profiles.
+The two scope explanations are separate; a missing profile is not missing prose.
+
 v0.7.2 corrects internal straight (`'`) and curly (`’`) apostrophes in the French,
 Spanish, Italian, Portuguese and Dutch default word patterns. These orthographic
 tokens follow the existing profile convention, not grammatical clitic analysis.
@@ -5730,7 +5746,7 @@ Standard errors per feature (plug-in estimators, fixed constants, see
 | :--- | :--- |
 | Count densities (per 1 000 words) | Poisson plug-in: $\mathrm{SE} = 1000\sqrt{k}/W$, for observed count $k$ and $W$ tokens |
 | Shares (%) | binomial plug-in: $\mathrm{SE} = 100\sqrt{p(1-p)/N}$ percentage points, with $p$ on 0–1 |
-| ASL | sample standard error of the sentence lengths: $\mathrm{SE} = \sigma_s/\sqrt{N_s}$ |
+| ASL | observed-population plug-in: $\mathrm{SE} = \sigma_s/\sqrt{N_s}$, where $\sigma_s^2=\sum_i (l_i-\bar l)^2/N_s$ |
 | Sentence-length CV | delta method: $\mathrm{SE} = \frac{\mathrm{CV}}{\sqrt{2N_s}}\sqrt{1+2\,\mathrm{CV}^2}$ |
 | Start entropy | plug-in variance $(H_2 - H^2)/N$ with $H_2=\sum p\log_2^2 p$; negative values clamp to 0 |
 | Guiraud R | relative-error approximation $\mathrm{SE} = 0.5\,R/\sqrt{N}$ over $N$ content tokens |
@@ -5742,6 +5758,20 @@ measurement SE for this feature, **not** certainty about a larger population.
 These plug-ins do not establish independence of words/sentences or calibrated
 null probabilities for chapter features. Zero observed events can give zero
 plug-in error without establishing population certainty.
+
+The ASL plug-in uses the observed sentence population variance (divisor $N_s$),
+not the conventional sample variance (divisor $N_s-1$). For sentence lengths
+10, 10, 20, 30, 30, it returns 4.0 words; the conventional sample SEM is about
+4.4721 words. An empty or one-sentence unit currently has zero plug-in error,
+not evidence of certainty. The manuscript's sentences are not an IID sample;
+neither estimator alone establishes a confidence interval for narrative style.
+Changing the estimator or one-sentence availability policy is a separate model
+decision, not a correction to the descriptive sentence-length SD/CV.
+
+The $z^*$ denominator is evaluated with a scaled Euclidean norm (`math.hypot`)
+to avoid overflow and underflow from squaring extreme finite spread/SE values.
+This preserves the formula and zero-spread rule; it does not calibrate the
+underlying normal-tail probabilities.
 
 Since v0.7.2, the library's `StyleFingerprint.from_metrics` boundary rejects
 non-finite numeric feature values and supplied standard errors that are
@@ -6146,11 +6176,33 @@ restating formulas.
 | Tense mixed/switch | `mixed`: ≥ 2 present and ≥ 2 past markers and minority share ≥ 25 %; `switch`: the dominant tense changes between consecutive paragraphs (`style_profile.py`) | Whole-word stop lists and curated noun exclusions; German `-tet` intentionally omitted (present `arbeitet`, participle `abgewartet` vs rare past 2pl `machtet`); no productive present pattern |
 | Sentence splitter | Language abbreviation tables, digit and initial guards; utterance `no.`/`co.` split; prose splits keep blank-line block boundaries (`split_prose_sentences`) | Tables are curated and incomplete; tokenless fragments are not sentences; an unterminated block stays one fragment unit with its token length |
 | Severity | `classify_severity` truth table; defaults: 3 = switch + mixed + minority ≥ 3, 2 = (switch + minority ≥ 2) or (mixed + minority ≥ 3), 1 = either, 0 = neither | Only `flag_min_severity` reaches CLI/API/config; other `ProfileThresholds` fields need direct `ParagraphProfiler` construction |
-| Dominance | past when `past/(present+ε) > 1.5`, present when `< 0.67` (`style_profile.py`) | Ratio bands are conventions, not measured boundaries |
-| Nominal/adjective suffixes | Curated suffix cues minus curated function words (`language_data.py`) | Over-include (e.g. `month/health/truth`, `König/Saal`, `Musik/Natur`) |
+| Dominance | Neutral with at most one marker; otherwise present when `present/(past+ε) > 1.5`, past when `< 0.67`, mixed within the band; ε = 0.001 (`style_profile.py`) | Ratio bands are conventions, not measured boundaries |
+| Nominal/adjective suffixes | Curated suffix cues; default nominal cues exclude curated function words (`language_data.py`) | Over-include (e.g. `month/health/truth`, `König/Saal`, `Musik/Natur`); adjective cues have no equivalent function-word exclusion |
 | Modal lexicons | Curated forms per language | Unequal morphology coverage; not cross-language comparable |
 
+**Current main:** nominal ending lists include selected plural forms in each
+language, including `Entscheidungen`, `decisions`, `décisions`, `decisiones`,
+`decisioni`, `decisões` and `beslissingen`. German `zur` belongs to the curated
+function words and is excluded from default nominal matches. This corrects
+number-dependent undercounting and a suffix collision; it does not distinguish
+nouns from homographic verbs or establish nominal writing style. Explicit
+`nominal_regex` overrides still replace the default rule. Recompute affected
+densities and derived comparisons before comparing older reports.
+
 Configured cue patterns override the profile patterns for direct Python calls.
+**Current main:** `lixity.tense.TenseMatcher` owns tense counting for chapters,
+scenes and paragraph profiles. With default patterns, a standalone productive
+past candidate, or a pronoun-plus-finite candidate, is rejected when the finite
+word is explicitly listed as present and not past in the curated inventory.
+Auxiliary-plus-participle candidates are preserved, including participles that
+also occur as finite forms (`haben erzählt`, `a écrit`). This corrects collisions such as
+German `halten` and Dutch `Wij moeten`; it does not infer syntax from endings.
+Forms listed in both inventories retain both cues, and compound auxiliary
+overlap remains unresolved. Explicitly overriding either tense pattern preserves
+independent pattern counting, including empty patterns. The review-policy identity
+changes with these semantics, so saved decisions require renewed review rather
+than silently carrying over to a changed measurement.
+
 Cue patterns (including `dialogue_regex`) use the case-insensitive cue
 contract from §2 across the analysis core and the `dialogue`/`pacing` reports.
 - `python -W error` test run + `mypy --strict` + ruff gate every change.
@@ -6256,6 +6308,94 @@ These targeted checks do not establish full assistive-technology coverage.
 Engine tests use synthetic/public samples. Project adapters and optional local
 servers have separate trust boundaries and need their own tests; core test
 success is not a security certification for an arbitrary adapter.
+
+### Core validation status
+
+**Current main:** seven short original-language literary excerpts have manually
+transcribed sentence boundaries and orthographic tokens in
+[`tests/fixtures/literary_reference.json`](https://github.com/mfahsold/lixity/blob/main/tests/fixtures/literary_reference.json).
+They cover 375 tokens and 14 sentences, with edition URLs, extraction locators
+and public-domain provenance. The same expectations check corpus, chapter and
+paragraph counts and the real CLI. Native browser checks compare displayed
+sentence counts, paragraph means, localized units and exact highlights with the
+same annotations in all seven languages, NFC/NFD spellings and desktop/mobile.
+The expected tokens are not generated by the engine.
+
+| Measurement | Evidence so far | What it does not establish |
+| --- | --- | --- |
+| Words and sentences | Manual literary boundaries/tokens agree across backend, CLI and UI on the reference excerpts. | Representative per-language segmentation accuracy. |
+| Unicode and literal evidence | Canonical-equivalent counting, original hashes/offsets and complete-cluster mappings have positive and negative fixtures. | Full grapheme-aware tokenization or guessed mappings across excluded Markdown regions. |
+| Nominal, passive and other lexical cues | Controlled positive/negative examples check listed patterns, agreement variants and overrides. | Contextual part-of-speech, voice, tense or nominal-style classification. |
+| Syllables and readability | Selected dictionary divisions and named coefficient arithmetic are checked. | Language-wide pronunciation accuracy, comprehension or novel-quality prediction. |
+| Statistical comparisons | Controlled formula/edge cases check robust spread, adjusted deviations, lexical estimators and rank-space computations. | Calibrated chapter p-values, independent sentences or genre-wide inference. |
+| Presentation | Real localized values, units, source ranges, scope distinctions and mobile visibility are exercised. | A measured author/editor comprehension or usability-study result. |
+
+The works are Fontane's *Effi Briest*, Austen's *Pride and Prejudice*, Flaubert's
+*Madame Bovary*, Cervantes's *Don Quijote*, Collodi's *Pinocchio*, Queirós's
+*Os Maias* and Multatuli's *Max Havelaar*. Per-excerpt counts and provenance
+remain in the reference fixture, rather than being duplicated here.
+
+These are regression examples, not a representative literary corpus or a
+held-out evaluation of grammar, syllables, readability or literary quality.
+Historical spelling and deliberately short selections limit generalization.
+Passing them establishes the stated counting conventions on those passages.
+
+Reference units must agree before comparing systems. Lixity's orthographic
+tokens differ from UD's syntactic words: contractions and clitics can be one
+written token but several syntactic words. An annotated-corpus evaluation must
+reconstruct the surface tokens and compare character boundaries, rather than
+label every token-total difference a bug. See the
+[UD evaluation protocol](https://universaldependencies.org/conll18/evaluation.html)
+and [tokenization conventions](https://universaldependencies.org/u/overview/tokenization.html).
+Similarly, [UD tense features](https://universaldependencies.org/u/feat/Tense.html)
+describe words, which need not have the tense of an entire compound construction.
+
+External sentence-boundary audits must record the treebank release, test
+partition, source/license hashes, sample rule and reconstruction protocol.
+Exact sentence-end precision/recall can be measured against UD `# text` units
+without treating syntactic word counts as orthographic gold. Joining units into
+artificial paragraphs tests boundary stress cases, but loses natural paragraph
+context: unpunctuated headings and colon-separated units can then appear as
+missed boundaries. Such scores describe agreement under that protocol, not
+language-wide or novel-specific accuracy. Exclude forced batch-final boundaries
+from scoring and keep undefined rates unknown rather than reporting zero.
+
+Bounded corrections have separate positive and negative fixtures: regular
+plural passive participles in Spanish, Italian and Portuguese, French
+`fut`/`furent`, nominal ending number variants and German `zur`. The
+[Italian](https://universaldependencies.org/it/dep/aux-pass.html) and
+[French](https://universaldependencies.org/fr/dep/aux-pass.html) UD examples
+provide grammatical references, not measured precision/recall for these regexes.
+Portuguese marked hiatus is checked against dictionary syllabifications such as
+[saída](https://dicionario.priberam.org/sa%C3%ADda) and
+[saúde](https://dicionario.priberam.org/sa%C3%BAde); Dutch trema boundaries follow
+[official language advice](https://www.vlaanderen.be/team-taaladvies/taaladviezen/idee-ideeen-ideeen-ideen).
+Dutch `ij` is counted separately from adjacent vowels, following dictionary
+divisions such as [bij.en](https://anw.ivdnt.org/article/bij) and
+[bij.een](https://anw.ivdnt.org/article/bijeen). Paired closing quotation marks
+separated from terminal punctuation by spaces remain in their original sentence;
+negative fixtures distinguish a following opening quote and blank-line boundaries.
+Their effects reach syllables-per-word and the declared readability formula.
+
+The audit also reproduces unresolved weaknesses:
+
+| Area | Observed limitation and interpretation |
+| --- | --- |
+| Unicode | NFC equivalence is corrected, preserving source bytes and offsets. Combining sequences without a precomposed letter can still exceed the word patterns' coverage; the mapper does not claim full grapheme segmentation. See [Unicode UAX #29](https://www.unicode.org/reports/tr29/). |
+| Tense | Curated present-only forms no longer also count as productive past candidates, consistently across chapter, scene and paragraph analysis. Compound past phrases can still count present auxiliaries and past-pattern matches, producing a spurious mixed cue classification. A `mixed` result is not proof of a grammatical tense switch. Homographic forms such as English `read` and Portuguese `falamos` also require context. |
+| Dialogue | Quoted-segment patterns miss conventional dialogue dashes and some single-quote styles. Zero detected quotation words does not establish absence of speech. |
+| Syllables | Italian rising diphthongs such as `fiore`/`buono` remain overcounted. Broadly merging vowels would introduce other hiatus errors; this requires a separately verified rule or lexicon. The corrected Dutch `ij` rule is not a complete pronunciation model. |
+| Sentence spans | Sentence-final abbreviations can merge sentences. Paired spaced closers are corrected, but quotation pairing and abbreviation tables are incomplete; a matching total does not guarantee correct boundaries. |
+| Nominal/passive cues | Word endings and auxiliary patterns do not resolve lexical category, adjectival participles, irregular forms or syntactic voice. Inflection coverage is improved, not complete. |
+
+Readability research evaluates defined tasks and datasets, often combining
+lexical, syntactic and discourse features. It does not make a syllable/length
+formula a comprehension test for these novels; see
+[Lee et al. (2021)](https://aclanthology.org/2021.emnlp-main.834/).
+Future corpus evaluation must report per-language boundary precision/recall,
+cue precision/recall against appropriate annotations and the dataset/genre;
+arithmetic tests, UI localization and highlighted count agreement are separate
+checks. No empirical accuracy percentage is claimed here.
 
 ### Manual manuscript association limits
 
@@ -6491,6 +6631,9 @@ currently have the most extensive linguistic heuristics and language-specific
 fixtures. The other five profiles have localized presentation and linguistic
 resources with more limited coverage and validation. Equal interface coverage
 does not establish equal accuracy across languages or genres.
+The [core validation status](STABILITY.md#core-validation-status)
+separates manually annotated literary counting examples from unresolved grammar,
+Unicode, dialogue and syllable limitations.
 
 | Concern | What changes with the language |
 | --- | --- |
@@ -6519,9 +6662,13 @@ uses fallback coefficients, not a model calibrated for every language.
 Syllable counts, tense classification and stylistic patterns are deterministic
 heuristics, not a full grammatical parser. Dialect, historical spelling,
 code-switching and unusual vocabulary need separate evaluation.
-German and English default word patterns include precomposed accented words;
-they do not normalize Unicode or cover every combining-mark spelling. Explicit
-word patterns retain their own flags. Hyphenated compounds stay one token under
+The shared prose-counting projection normalizes to NFC, so canonically equivalent
+accent spellings have the same token, cue and syllable counts. Manuscript bytes,
+display text and anchor hashes retain their supplied representation; literal
+evidence maps back to original codepoint ranges. This is not full grapheme-aware
+word segmentation for every combining-mark sequence. Explicit word/cue patterns
+retain their flags and operate on the canonical counting text; document-boundary
+patterns address the original source. Hyphenated compounds stay one token under
 the German and English defaults and split under the other five profiles;
 apostrophes remain word-internal there. Syllable calculation reuses word
 frequencies within a request, preserving the same heuristic values without a
@@ -6565,6 +6712,17 @@ toolbars and reading controls at desktop and narrow widths. Full translated
 sentences are kept intact; technical key names and identifiers stay stable.
 These checks establish coverage and layout, not a professional translation review
 or equal linguistic-analysis accuracy across the seven languages.
+
+### Direction for deeper grammatical analysis
+
+The lightweight, transparent profile remains the default. Optional local
+grammatical models are an agreed direction, not an implemented capability.
+Such a model must identify its language, model/version, result provenance and
+availability separately from lexical cues; it must not silently replace counts,
+download itself or send manuscript text to a remote service. Existing exact
+source anchors and user decisions must survive switching the optional analysis.
+Precision/recall against appropriate per-language annotations is required before
+presenting model-based grammar as more accurate than the baseline.
 
 ===============================================================================
 ## docs/ARCHITECTURE.md
@@ -7154,6 +7312,21 @@ Highlights. It must invalidate those ranges after DOM-mark changes rather than
 replace research markup, count DOM decoration or infer source identity from a
 color. Opening either context neither retains new source bytes nor writes records.
 
+The existing Markdown counting projection applies NFC before linguistic matching.
+`text_normalization.counting_view` supplies conservative inverse codepoint ranges
+for literal evidence without normalizing display text or manuscript bytes. The
+NFC identity path needs no offset table; changed canonical clusters map only at
+complete boundaries. Ambiguous cuts keep the measured count and report incomplete
+mapping. Original paragraph hashes, line anchors and research quotation identities
+remain authoritative. This is not a parallel parser or a full grapheme segmenter.
+
+`tense.TenseMatcher` is the shared lexical cue owner for corpus measurement
+units and paragraph profiling. Default finite-form precedence resolves a curated
+present-only form against a productive past guess; explicit pattern overrides
+keep independent matching. This owner does not resolve syntactic constructions.
+The project-local review policy includes a semantic identity so a counting-rule
+change invalidates saved decisions even when source and configuration are equal.
+
 Each measurement explanation must identify the metric, unit, granularity,
 comparison reference and availability/support. The paragraph-layer selection and
 chapter metric dialog currently have separate view owners; their values and
@@ -7163,6 +7336,14 @@ those measured projections and the existing workbench/return owners. Those
 specific presentation changes remain design proposals, not shipped controls or
 a new analysis engine. See [reader usage](USAGE.md#reading-paragraphs) and
 [automation hooks](AGENTS.md#34-dashboard-interaction-contract-for-embedding-and-ui-automation).
+
+The lightweight cue engine remains the default. Optional local grammatical
+models are a proposed extension, not a current dependency or a silent replacement
+for lexical counts. A future adapter must expose model/language/version and
+availability in its result identity, preserve exact source-offset mappings and
+keep grammatical predictions distinct from observed word-pattern evidence.
+Model downloads and remote manuscript processing are not implied by opening
+an analysis view. See [language validation](LOCALIZATION.md#direction-for-deeper-grammatical-analysis).
 
 ### Shared manuscript reader
 
@@ -7974,6 +8155,12 @@ explain unmapped contributions. When source profiles cannot be verified,
 The current inline-count/display
 projection may report `inline_mapping_unavailable`. Zero-width matches remain in
 the metric count but cannot form highlights. No prose is added to JSON.
+Current main counts NFC prose while keeping `ParagraphProfile.text` and its
+hash in the original representation. Canonical-cluster ranges map back to those
+original codepoints; `unicode_mapping_unavailable` preserves a count when an
+ambiguous inner-cluster cut cannot be mapped. Configured word/cue patterns use
+NFC counting text; document-boundary patterns still address the original source.
+These mappings do not make excluded inline-code regions drawable.
 `--evidence` requires `--layer`; default schema 2 and the existing
 `paragraph-layer/1` projection remain unchanged.
 

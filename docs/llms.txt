@@ -172,7 +172,7 @@ validates envelope shape. Existing JSON/archive versions remain unchanged.
 - [Implemented research](https://mfahsold.github.io/lixity/research/USAGE.md): retention, citations, claims, revisions, manuscript associations and recovery.
 - [Local data model](https://mfahsold.github.io/lixity/research/DATA_MODEL.md): authoritative records, reference and publication diagrams, schemas and the disposable SQLite index.
 - [Research and PDF guide](https://mfahsold.github.io/lixity/guides/research-pdf.html): source capture, OCR, Zotero and PDF workflows.
-- [Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) and [scientific limits](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md): formulas, estimator conventions and heuristic caveats.
+- [Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) and [core checks and limits](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md#core-validation-status): formulas, cross-surface evidence and unresolved linguistic/statistical limits.
 - [Architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md) and [localization](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md): integration boundaries and language coverage.
 - [Articles](https://mfahsold.github.io/lixity/blog/): interpretation examples, separate from API contracts.
 - [Manuscript reading workbench](https://mfahsold.github.io/lixity/blog/manuscript-reading-workbench.html): the Analysis On/Off, overview and manuscript–research workflow with explicit coverage limits.

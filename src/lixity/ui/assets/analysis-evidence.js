@@ -206,6 +206,7 @@
     if (supported && span && enabled()) CSS.highlights.set("lixity-analysis-current", new Highlight(span.range));
     else if (supported) CSS.highlights.delete("lixity-analysis-current");
     position(card.rect);
+    host.scrollTop = 0;
   }
   function step(direction) {
     if (!card) return;

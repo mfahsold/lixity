@@ -8,6 +8,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from hashlib import sha256
 from typing import TYPE_CHECKING, Any, Literal, TypedDict
+from unicodedata import normalize
 
 from .language import (
     ResolvedLanguage,
@@ -19,6 +20,7 @@ from .language import (
 from .markdown_parser import counting_inline_text, parse_markdown_blocks, strip_inline_markup
 from .models import CorpusConfig
 from .sentences import split_sentence_spans, split_sentences
+from .text_normalization import counting_view
 
 if TYPE_CHECKING:
     from .style_profile import ParagraphProfile
@@ -110,7 +112,8 @@ class ParagraphMatcher:
         self.modals = frozenset(word.lower() for word in language.lexicon.get("modals", ()))
 
     def count(self, clean: str) -> ParagraphCounts:
-        """Preserve existing findall/token/capture semantics exactly."""
+        """Count canonical NFC prose with the configured token/capture rules."""
+        clean = normalize("NFC", clean)
         tokens = [token.lower() for token in self.word.findall(clean)]
         sentences = [sentence for sentence in split_sentences(clean, self.language.key)
                      if self.word.findall(sentence)]
@@ -126,7 +129,9 @@ class ParagraphMatcher:
 
     def evidence(self, clean: str, display: str, counts: ParagraphCounts) -> ParagraphEvidence:
         values = counts.layers()
-        if clean != display:
+        clean = normalize("NFC", clean)
+        view = counting_view(display)
+        if clean != view.text:
             # The parser's count projection may remove code or destinations
             # still present in ParagraphProfile.text. Do not relocate matches.
             layers = {key: _layer(_KINDS[key], count, [], reason="inline_mapping_unavailable")
@@ -161,8 +166,22 @@ class ParagraphMatcher:
             start, end = match.span(group)
             if count:
                 spans["dialogue"].append({"start": start, "end": end, "count": count})
-        return _envelope(display, {key: _layer(_KINDS[key], count, spans[key])
-                                   for key, count in values.items()})
+        unmapped: set[str] = set()
+        if view.text != display:
+            for key, matches in spans.items():
+                mapped: list[EvidenceSpan] = []
+                for span in matches:
+                    source = view.source_span(span["start"], span["end"])
+                    if source is None:
+                        unmapped.add(key)
+                        continue
+                    mapped.append({**span, "start": source[0], "end": source[1]})
+                spans[key] = mapped
+        return _envelope(display, {
+            key: _layer(_KINDS[key], count, spans[key],
+                        reason="unicode_mapping_unavailable" if key in unmapped else "zero_width_matches")
+            for key, count in values.items()
+        })
 
 
 def paragraph_evidence(text: str, config: CorpusConfig,

@@ -33,6 +33,9 @@ currently have the most extensive linguistic heuristics and language-specific
 fixtures. The other five profiles have localized presentation and linguistic
 resources with more limited coverage and validation. Equal interface coverage
 does not establish equal accuracy across languages or genres.
+The [core validation status](STABILITY.md#core-validation-status)
+separates manually annotated literary counting examples from unresolved grammar,
+Unicode, dialogue and syllable limitations.
 
 | Concern | What changes with the language |
 | --- | --- |
@@ -61,9 +64,13 @@ uses fallback coefficients, not a model calibrated for every language.
 Syllable counts, tense classification and stylistic patterns are deterministic
 heuristics, not a full grammatical parser. Dialect, historical spelling,
 code-switching and unusual vocabulary need separate evaluation.
-German and English default word patterns include precomposed accented words;
-they do not normalize Unicode or cover every combining-mark spelling. Explicit
-word patterns retain their own flags. Hyphenated compounds stay one token under
+The shared prose-counting projection normalizes to NFC, so canonically equivalent
+accent spellings have the same token, cue and syllable counts. Manuscript bytes,
+display text and anchor hashes retain their supplied representation; literal
+evidence maps back to original codepoint ranges. This is not full grapheme-aware
+word segmentation for every combining-mark sequence. Explicit word/cue patterns
+retain their flags and operate on the canonical counting text; document-boundary
+patterns address the original source. Hyphenated compounds stay one token under
 the German and English defaults and split under the other five profiles;
 apostrophes remain word-internal there. Syllable calculation reuses word
 frequencies within a request, preserving the same heuristic values without a
@@ -107,3 +114,14 @@ toolbars and reading controls at desktop and narrow widths. Full translated
 sentences are kept intact; technical key names and identifiers stay stable.
 These checks establish coverage and layout, not a professional translation review
 or equal linguistic-analysis accuracy across the seven languages.
+
+### Direction for deeper grammatical analysis
+
+The lightweight, transparent profile remains the default. Optional local
+grammatical models are an agreed direction, not an implemented capability.
+Such a model must identify its language, model/version, result provenance and
+availability separately from lexical cues; it must not silently replace counts,
+download itself or send manuscript text to a remote service. Existing exact
+source anchors and user decisions must survive switching the optional analysis.
+Precision/recall against appropriate per-language annotations is required before
+presenting model-based grammar as more accurate than the baseline.

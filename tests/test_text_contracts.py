@@ -166,12 +166,12 @@ class TestParagraphContract(unittest.TestCase):
 
 
 class TestProseScope(unittest.TestCase):
-    def test_inline_prose_preserves_unicode_and_literal_punctuation_around_markup(self):
+    def test_inline_counting_uses_nfc_and_preserves_literal_punctuation_around_markup(self):
         from lixity.markdown_parser import counting_inline_text
 
         cases = (
             ("  Café naïve façade — 😀.  ", "Café naïve façade — 😀."),
-            ("e\u0301lan 日本語 العربية", "e\u0301lan 日本語 العربية"),
+            ("e\u0301lan 日本語 العربية", "élan 日本語 العربية"),
             ("An (aside), a closing ] and ! remain.", "An (aside), a closing ] and ! remain."),
             ("snake_case and _bright_ **words**.", "snake_case and bright words."),
             ("Before <!-- hidden --> after.", "Before  after."),
@@ -187,6 +187,9 @@ class TestProseScope(unittest.TestCase):
         for text, expected in cases:
             with self.subTest(text=text):
                 self.assertEqual(counting_inline_text(text), expected)
+        from lixity.markdown_parser import strip_inline_markup
+
+        self.assertEqual(strip_inline_markup("e\u0301lan 日本語 العربية"), "e\u0301lan 日本語 العربية")
 
     def test_malformed_inline_syntax_has_bounded_scan_work_and_stays_literal(self):
         from lixity import markdown_parser

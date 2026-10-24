@@ -8,7 +8,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
 
-from .language import compile_pattern, resolve_language
+from .language import resolve_language
 from .markdown_parser import counting_inline_text, strip_inline_markup
 from .math_core import per_mille
 from .models import CorpusConfig
@@ -20,6 +20,7 @@ from .status import (
     TENSE_PAST,
     TENSE_PRESENT,
 )
+from .tense import TenseMatcher
 
 __all__ = [
     "FLAG_MIN_SEVERITY",
@@ -215,8 +216,7 @@ class ParagraphProfiler:
         self.config = config or CorpusConfig()
         self.thresholds = thresholds or ProfileThresholds()
         self.lang = resolve_language(self.config, sample_text=sample_text)
-        self._praes = compile_pattern(self.lang.praesens_regex)
-        self._praet = compile_pattern(self.lang.praeteritum_regex)
+        self._tense = TenseMatcher(self.config, self.lang)
         self._matcher = ParagraphMatcher(self.config, self.lang)
         self._appendix_title = self.config.appendix_marker.replace("##", "").strip()
 
@@ -311,8 +311,7 @@ class ParagraphProfiler:
             # not a sentence, and a resolved auto language picks its own
             # abbreviation table.
             sentences = counts.sentences
-            present = len(self._praes.findall(clean))
-            past = len(self._praet.findall(clean))
+            present, past = self._tense.count(clean)
             dominant = self._dominant(present, past)
 
             mixed, minority_ratio = mixed_tense(present, past, self.thresholds)

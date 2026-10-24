@@ -49,6 +49,22 @@ semantic paragraph boundaries. Short-paragraph counting uses paragraph
 whitespace words and the inclusive configured threshold, including eight-word
 paragraphs. Legacy whitespace counts remain distinct from regex token counts.
 
+**Current main:** the shared Markdown counting projection uses Unicode NFC for
+token, vocabulary, cue and syllable measurements. Configured word/cue patterns
+operate on that canonical counting text; their flags are unchanged. Document
+boundary patterns and appendix markers still address the original source. Manuscript
+bytes, displayed quotations, line anchors and source hashes are not normalized.
+Literal evidence maps complete canonical clusters back to original codepoint
+ranges; ambiguous inner-cluster cuts retain counts with unavailable mapping.
+Legacy raw/clean character counts still describe original codepoints, not
+grapheme clusters. This is canonical equivalence, not general linguistic word
+segmentation; see [Unicode UAX #29](https://www.unicode.org/reports/tr29/).
+
+The global UI word count uses the corpus token measurement, matching its sentence
+and ASL values. Paragraph/chapter profile views remain narrower: pre-chapter
+prose and blockquotes can contribute to corpus counts without paragraph profiles.
+The two scope explanations are separate; a missing profile is not missing prose.
+
 v0.7.2 corrects internal straight (`'`) and curly (`’`) apostrophes in the French,
 Spanish, Italian, Portuguese and Dutch default word patterns. These orthographic
 tokens follow the existing profile convention, not grammatical clitic analysis.
@@ -138,7 +154,7 @@ Standard errors per feature (plug-in estimators, fixed constants, see
 | :--- | :--- |
 | Count densities (per 1 000 words) | Poisson plug-in: $\mathrm{SE} = 1000\sqrt{k}/W$, for observed count $k$ and $W$ tokens |
 | Shares (%) | binomial plug-in: $\mathrm{SE} = 100\sqrt{p(1-p)/N}$ percentage points, with $p$ on 0–1 |
-| ASL | sample standard error of the sentence lengths: $\mathrm{SE} = \sigma_s/\sqrt{N_s}$ |
+| ASL | observed-population plug-in: $\mathrm{SE} = \sigma_s/\sqrt{N_s}$, where $\sigma_s^2=\sum_i (l_i-\bar l)^2/N_s$ |
 | Sentence-length CV | delta method: $\mathrm{SE} = \frac{\mathrm{CV}}{\sqrt{2N_s}}\sqrt{1+2\,\mathrm{CV}^2}$ |
 | Start entropy | plug-in variance $(H_2 - H^2)/N$ with $H_2=\sum p\log_2^2 p$; negative values clamp to 0 |
 | Guiraud R | relative-error approximation $\mathrm{SE} = 0.5\,R/\sqrt{N}$ over $N$ content tokens |
@@ -150,6 +166,20 @@ measurement SE for this feature, **not** certainty about a larger population.
 These plug-ins do not establish independence of words/sentences or calibrated
 null probabilities for chapter features. Zero observed events can give zero
 plug-in error without establishing population certainty.
+
+The ASL plug-in uses the observed sentence population variance (divisor $N_s$),
+not the conventional sample variance (divisor $N_s-1$). For sentence lengths
+10, 10, 20, 30, 30, it returns 4.0 words; the conventional sample SEM is about
+4.4721 words. An empty or one-sentence unit currently has zero plug-in error,
+not evidence of certainty. The manuscript's sentences are not an IID sample;
+neither estimator alone establishes a confidence interval for narrative style.
+Changing the estimator or one-sentence availability policy is a separate model
+decision, not a correction to the descriptive sentence-length SD/CV.
+
+The $z^*$ denominator is evaluated with a scaled Euclidean norm (`math.hypot`)
+to avoid overflow and underflow from squaring extreme finite spread/SE values.
+This preserves the formula and zero-spread rule; it does not calibrate the
+underlying normal-tail probabilities.
 
 Since v0.7.2, the library's `StyleFingerprint.from_metrics` boundary rejects
 non-finite numeric feature values and supplied standard errors that are
@@ -554,11 +584,33 @@ restating formulas.
 | Tense mixed/switch | `mixed`: ≥ 2 present and ≥ 2 past markers and minority share ≥ 25 %; `switch`: the dominant tense changes between consecutive paragraphs (`style_profile.py`) | Whole-word stop lists and curated noun exclusions; German `-tet` intentionally omitted (present `arbeitet`, participle `abgewartet` vs rare past 2pl `machtet`); no productive present pattern |
 | Sentence splitter | Language abbreviation tables, digit and initial guards; utterance `no.`/`co.` split; prose splits keep blank-line block boundaries (`split_prose_sentences`) | Tables are curated and incomplete; tokenless fragments are not sentences; an unterminated block stays one fragment unit with its token length |
 | Severity | `classify_severity` truth table; defaults: 3 = switch + mixed + minority ≥ 3, 2 = (switch + minority ≥ 2) or (mixed + minority ≥ 3), 1 = either, 0 = neither | Only `flag_min_severity` reaches CLI/API/config; other `ProfileThresholds` fields need direct `ParagraphProfiler` construction |
-| Dominance | past when `past/(present+ε) > 1.5`, present when `< 0.67` (`style_profile.py`) | Ratio bands are conventions, not measured boundaries |
-| Nominal/adjective suffixes | Curated suffix cues minus curated function words (`language_data.py`) | Over-include (e.g. `month/health/truth`, `König/Saal`, `Musik/Natur`) |
+| Dominance | Neutral with at most one marker; otherwise present when `present/(past+ε) > 1.5`, past when `< 0.67`, mixed within the band; ε = 0.001 (`style_profile.py`) | Ratio bands are conventions, not measured boundaries |
+| Nominal/adjective suffixes | Curated suffix cues; default nominal cues exclude curated function words (`language_data.py`) | Over-include (e.g. `month/health/truth`, `König/Saal`, `Musik/Natur`); adjective cues have no equivalent function-word exclusion |
 | Modal lexicons | Curated forms per language | Unequal morphology coverage; not cross-language comparable |
 
+**Current main:** nominal ending lists include selected plural forms in each
+language, including `Entscheidungen`, `decisions`, `décisions`, `decisiones`,
+`decisioni`, `decisões` and `beslissingen`. German `zur` belongs to the curated
+function words and is excluded from default nominal matches. This corrects
+number-dependent undercounting and a suffix collision; it does not distinguish
+nouns from homographic verbs or establish nominal writing style. Explicit
+`nominal_regex` overrides still replace the default rule. Recompute affected
+densities and derived comparisons before comparing older reports.
+
 Configured cue patterns override the profile patterns for direct Python calls.
+**Current main:** `lixity.tense.TenseMatcher` owns tense counting for chapters,
+scenes and paragraph profiles. With default patterns, a standalone productive
+past candidate, or a pronoun-plus-finite candidate, is rejected when the finite
+word is explicitly listed as present and not past in the curated inventory.
+Auxiliary-plus-participle candidates are preserved, including participles that
+also occur as finite forms (`haben erzählt`, `a écrit`). This corrects collisions such as
+German `halten` and Dutch `Wij moeten`; it does not infer syntax from endings.
+Forms listed in both inventories retain both cues, and compound auxiliary
+overlap remains unresolved. Explicitly overriding either tense pattern preserves
+independent pattern counting, including empty patterns. The review-policy identity
+changes with these semantics, so saved decisions require renewed review rather
+than silently carrying over to a changed measurement.
+
 Cue patterns (including `dialogue_regex`) use the case-insensitive cue
 contract from §2 across the analysis core and the `dialogue`/`pacing` reports.
 - `python -W error` test run + `mypy --strict` + ruff gate every change.

@@ -1623,6 +1623,7 @@ LEXICON: dict[str, dict[str, list[str]]] = {
             "durch",
             "von",
             "zu",
+            "zur",
             "nach",
             "bei",
             "aus",
@@ -3700,6 +3701,7 @@ METRIC_LABELS = {
 HELP_TEXTS = {
     "de": {
         "help_words": "Gezählte Wörter in den hier gezeigten Textabsätzen und Listen. Zitatblöcke gehören nicht zu dieser Absatzansicht, werden aber in der getrennten Korpusanalyse mitgezählt.",
+        "help_corpus_words": "Wörter der analysierten Prosa, einschließlich Vorspann, Listen und Zitatblöcken. Absatzprofile können weniger Text abdecken.",
         "help_chapter_row": "Kapitelnummer und Titel. Eine Zeile öffnet das Kapitel; bei auffälligen Zeilen wird zusätzlich der Absatzfilter aktiviert.",
         "help_chapter_tense": "Vorherrschendes Tempus aus sprachspezifischen Markern: Vergangenheit, Präsens, gemischt oder neutral. Eine Heuristik, kein grammatisches Urteil.",
         "help_chapter_flags": "Anzahl der Absätze ab der aktiven Schwereschwelle. Prüfhinweise, keine Fehlerzahl und keine FDR-Ergebnisse.",
@@ -3764,6 +3766,7 @@ HELP_TEXTS = {
     },
     "en": {
         "help_words": "Counted words in the body paragraphs and lists shown here. Blockquotes are outside this paragraph view, but included in the separate corpus analysis.",
+        "help_corpus_words": "Words in analyzed prose, including preamble, lists and blockquotes. Paragraph profiles can cover less text.",
         "help_chapter_row": "Chapter number and title. Select a row to open the chapter; flagged rows also enable the paragraph filter.",
         "help_chapter_tense": "Dominant tense inferred from language-specific markers: past, present, mixed or neutral. This is a heuristic, not a grammatical verdict.",
         "help_chapter_flags": "Number of paragraphs meeting the active severity threshold. These are review hints, not errors or FDR results.",
@@ -3828,6 +3831,7 @@ HELP_TEXTS = {
     },
     "fr": {
         "help_words": "Mots comptés dans les paragraphes et les listes affichés ici. Les blocs de citation ne font pas partie de cette vue des paragraphes, mais sont inclus dans l'analyse séparée du corpus.",
+        "help_corpus_words": "Mots de la prose analysée, préambule, listes et citations en bloc inclus. Les profils de paragraphes peuvent couvrir moins de texte.",
         "help_chapter_row": "Numéro et titre du chapitre. Sélectionner une ligne ouvre le chapitre ; les lignes signalées activent aussi le filtre des paragraphes.",
         "help_chapter_tense": "Temps dominant estimé à partir de marqueurs linguistiques : passé, présent, mixte ou neutre. Une heuristique, pas un verdict grammatical.",
         "help_chapter_flags": "Nombre de paragraphes atteignant le seuil de gravité actif. Des pistes de révision, ni erreurs ni résultats FDR.",
@@ -3892,6 +3896,7 @@ HELP_TEXTS = {
     },
     "es": {
         "help_words": "Palabras contadas en los párrafos y las listas que se muestran aquí. Los bloques de citas quedan fuera de esta vista de párrafos, pero se incluyen en el análisis separado del corpus.",
+        "help_corpus_words": "Palabras de la prosa analizada, incluidos preámbulo, listas y citas en bloque. Los perfiles de párrafo pueden abarcar menos texto.",
         "help_chapter_row": "Número y título del capítulo. Seleccionar una fila abre el capítulo; las filas marcadas también activan el filtro de párrafos.",
         "help_chapter_tense": "Tiempo dominante estimado mediante marcadores lingüísticos: pasado, presente, mixto o neutro. Una heurística, no un juicio gramatical.",
         "help_chapter_flags": "Número de párrafos que alcanzan el umbral de gravedad activo. Indicaciones de revisión, no errores ni resultados FDR.",
@@ -3956,6 +3961,7 @@ HELP_TEXTS = {
     },
     "it": {
         "help_words": "Parole contate nei paragrafi e negli elenchi mostrati qui. I blocchi di citazione non fanno parte di questa vista dei paragrafi, ma sono inclusi nell'analisi separata del corpus.",
+        "help_corpus_words": "Parole della prosa analizzata, inclusi preambolo, elenchi e citazioni in blocco. I profili dei paragrafi possono coprire meno testo.",
         "help_chapter_row": "Numero e titolo del capitolo. Selezionare una riga apre il capitolo; le righe segnalate attivano anche il filtro dei paragrafi.",
         "help_chapter_tense": "Tempo dominante stimato da marcatori linguistici: passato, presente, misto o neutro. Un’euristica, non un giudizio grammaticale.",
         "help_chapter_flags": "Numero di paragrafi che raggiungono la soglia di gravità attiva. Indicazioni di revisione, non errori né risultati FDR.",
@@ -4020,6 +4026,7 @@ HELP_TEXTS = {
     },
     "pt": {
         "help_words": "Palavras contadas nos parágrafos e nas listas mostrados aqui. Os blocos de citação ficam fora desta visão dos parágrafos, mas entram na análise separada do corpus.",
+        "help_corpus_words": "Palavras da prosa analisada, incluindo preâmbulo, listas e citações em bloco. Os perfis de parágrafo podem abranger menos texto.",
         "help_chapter_row": "Número e título do capítulo. Selecionar uma linha abre o capítulo; as linhas assinaladas também ativam o filtro de parágrafos.",
         "help_chapter_tense": "Tempo dominante estimado por marcadores linguísticos: passado, presente, misto ou neutro. Uma heurística, não um juízo gramatical.",
         "help_chapter_flags": "Número de parágrafos que atingem o limiar de gravidade ativo. Indicações de revisão, não erros nem resultados FDR.",
@@ -4084,6 +4091,7 @@ HELP_TEXTS = {
     },
     "nl": {
         "help_words": "Getelde woorden in de alinea's en lijsten die hier worden getoond. Citaatblokken vallen buiten deze alineaweergave, maar tellen mee in de aparte corpusanalyse.",
+        "help_corpus_words": "Woorden in het geanalyseerde proza, inclusief inleiding, lijsten en blokcitaten. Alineaprofielen kunnen minder tekst omvatten.",
         "help_chapter_row": "Hoofdstuknummer en titel. Selecteer een rij om het hoofdstuk te openen; gemarkeerde rijen activeren ook het alineafilter.",
         "help_chapter_tense": "Dominante tijd geschat met taalspecifieke markers: verleden, heden, gemengd of neutraal. Een heuristiek, geen grammaticaal oordeel.",
         "help_chapter_flags": "Aantal alinea’s dat de actieve ernstgrens bereikt. Revisieaanwijzingen, geen fouten of FDR-resultaten.",
@@ -4153,6 +4161,7 @@ HELP_TEXTS = {
 # All patterns are curated, transparent heuristics: markers/suffixes per language
 # are documented, comparable within one language only, and degrade gracefully
 # (empty for 'generic'). Not prescriptive – they describe, the author judges.
+# Nominal endings include listed number variants, not a lemmatizer or POS tagger.
 STYLE_DATA: dict[str, dict[str, Any]] = {
     "de": {
         "first_person_starters": ["ich"],
@@ -4172,6 +4181,9 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
             "ion",
             "ik",
             "ur",
+            "ungen", "heiten", "keiten", "nisse", "nissen", "schaften",
+            "tionen", "itäten", "täten", "ismen", "ereien", "linge", "lingen",
+            "ionen", "iken", "uren",
         ],
         "adjective_suffixes": [
             "lich",
@@ -4206,13 +4218,15 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
             "hood",
             "dom",
             "th",
+            "tions", "sions", "ments", "nesses", "ities", "isms", "ships",
+            "ances", "ences", "hoods", "doms", "ths",
         ],
         "adjective_suffixes": ["ous", "ful", "less", "able", "ible", "ive", "ish"],
     },
     "fr": {
         "first_person_starters": ["je", "j"],
         "passive_regex": (
-            r"\b(?:est|sont|était|étaient|été|sera|seront)\s+"
+            r"\b(?:est|sont|était|étaient|fut|furent|été|sera|seront)\s+"
             r"\w{3,}(?:é|ée|és|ées|i|is|it|u|us|ut)\b"
         ),
         "nominal_suffixes": [
@@ -4227,6 +4241,8 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
             "age",
             "eur",
             "esse",
+            "tions", "sions", "ments", "tés", "ités", "ismes", "ances",
+            "ences", "ages", "eurs", "esses",
         ],
         "adjective_suffixes": [
             "eux",
@@ -4245,7 +4261,7 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
         "first_person_starters": ["yo"],
         "passive_regex": (
             r"\b(?:es|son|era|eran|fue|fueron|será|serán|sido)\s+"
-            r"\w{3,}(?:ado|ido|ada|ida)\b"
+            r"\w{3,}(?:ado|ido|ada|ida)s?\b"
         ),
         "nominal_suffixes": [
             "ción",
@@ -4258,6 +4274,8 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
             "encia",
             "ura",
             "eza",
+            "ciones", "siones", "mientos", "dades", "tades", "ismos",
+            "ancias", "encias", "uras", "ezas",
         ],
         "adjective_suffixes": [
             "oso",
@@ -4276,7 +4294,7 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
         "first_person_starters": ["io"],
         "passive_regex": (
             r"\b(?:è|sono|era|erano|fu|furono|sarà|saranno|stato)\s+"
-            r"\w{3,}(?:ato|uto|ito|ata|uta|ita)\b"
+            r"\w{3,}(?:ato|uto|ito|ata|uta|ita|ati|uti|iti|ate|ute|ite)\b"
         ),
         "nominal_suffixes": [
             "zione",
@@ -4289,6 +4307,7 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
             "ura",
             "tà",
             "ezza",
+            "zioni", "sioni", "menti", "ismi", "anze", "enze", "ure", "ezze",
         ],
         "adjective_suffixes": [
             "oso",
@@ -4307,7 +4326,7 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
         "first_person_starters": ["eu"],
         "passive_regex": (
             r"\b(?:é|são|era|eram|foi|foram|será|serão|sido)\s+"
-            r"\w{3,}(?:ado|ido|ada|ida)\b"
+            r"\w{3,}(?:ado|ido|ada|ida)s?\b"
         ),
         "nominal_suffixes": [
             "ção",
@@ -4319,6 +4338,8 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
             "ência",
             "ura",
             "eza",
+            "ções", "sões", "mentos", "dades", "ismos", "âncias", "ências",
+            "uras", "ezas",
         ],
         "adjective_suffixes": [
             "oso",
@@ -4349,6 +4370,8 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
             "teit",
             "atie",
             "dom",
+            "heden", "ingen", "nissen", "schappen", "ismen", "ties", "tieën",
+            "teiten", "aties", "atieën", "dommen",
         ],
         "adjective_suffixes": ["lijk", "ig", "isch", "baar", "loos", "vol", "achtig"],
     },
@@ -4361,10 +4384,11 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
 }
 
 
-# Language-calibrated readability formulas (exact coefficients from the literature).
+# Named language-specific readability coefficient sets; arithmetic checks do not
+# validate reader comprehension or the original calibration (docs/STABILITY.md).
 # Flesch-type: score = constant - asl_coef * ASL - asw_coef * ASW (unclipped; higher = easier).
 class ReadabilityFormula(TypedDict):
-    """Coefficients of one language-calibrated Flesch-type formula."""
+    """Coefficients of one named Flesch-type adaptation."""
 
     variant: str
     name: str

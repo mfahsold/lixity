@@ -68,7 +68,7 @@ def robust_z(value: float, centre: float, spread: float) -> float:
 
 def significance_z(value: float, centre: float, sigma: float, se: float) -> float:
     """Deviation tested against house-style spread AND estimation noise."""
-    denominator = math.sqrt(sigma**2 + se**2)
+    denominator = math.hypot(sigma, se)
     return (value - centre) / denominator if denominator > 0.0 else 0.0
 
 
