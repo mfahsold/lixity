@@ -5,7 +5,7 @@ been incorporated. Historical pins may be intentional; every candidate needs
 human review. Build the association graph once for each loaded snapshot.
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -153,3 +153,135 @@ def editorial_review_data(snapshot: Snapshot, *, outline: Outline | None = None)
     return {"schema_version": "research-editorial-review-local/1", "snapshot": snapshot.digest,
             "decision_count": len(graph), "candidate_count": len(candidates), "candidates": candidates,
             "scope": SCOPE}
+
+
+def prepare_pin_review_batch(
+    project: str | Path,
+    actions: Sequence[Mapping[str, Any]],
+    *,
+    actor: str = "local-author",
+) -> dict[str, Any]:
+    """Prepare an atomic revision batch packet for explicit pin-review actions.
+
+    Supported action mappings:
+      1. {"action": "retarget_dossier", "decision_id": ..., "expected_decision_revision": ...,
+          "dossier_id": ..., "target_dossier_revision": ..., "reason": ...}
+      2. {"action": "retarget_claim", "decision_id": ..., "expected_decision_revision": ...,
+          "claim_id": ..., "target_claim_revision": ..., "reason": ...}
+      3. {"action": "acknowledge", "decision_id": ..., "expected_decision_revision": ...,
+          "dossier_id": ..., "expected_dossier_revision": ..., "status": "applied"|"review_needed",
+          "note": ...}
+      4. {"action": "keep_pin", ...} -> intentionally no-op / records kept in history
+
+    Returns a ready research-revision-batch-local/1 packet for revise-batch.
+    """
+    from .revisions import prepare_record_revisions
+
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+
+    decision_ops: dict[str, dict[str, Any]] = {}
+    ack_ops: list[dict[str, Any]] = []
+    skipped_noops: list[dict[str, Any]] = []
+
+    for item in actions:
+        action_kind = item.get("action")
+        if action_kind == "keep_pin":
+            skipped_noops.append(dict(item))
+            continue
+        if action_kind == "retarget_dossier":
+            dec_id = str(item["decision_id"])
+            expected_dec_rev = int(item["expected_decision_revision"])
+            dossier_id = str(item["dossier_id"])
+            target_rev = int(item["target_dossier_revision"])
+            reason = str(item.get("reason") or f"Retarget dossier {dossier_id} to revision {target_rev}")
+
+            if dec_id in decision_ops:
+                op = decision_ops[dec_id]
+                op["changes"]["dossier_revisions"][dossier_id] = target_rev
+                if dossier_id not in op["changes"]["dossier_ids"]:
+                    op["changes"]["dossier_ids"].append(dossier_id)
+                op["reason"] = f"{op['reason']}; {reason}"
+            else:
+                dec_rec = snapshot.latest(dec_id, Decision)
+                existing_pins = {ref.id: ref.revision for ref in dec_rec.dossier_refs}
+                existing_pins[dossier_id] = target_rev
+                dossier_ids = [ref.id for ref in dec_rec.dossier_refs]
+                if dossier_id not in dossier_ids:
+                    dossier_ids.append(dossier_id)
+
+                decision_ops[dec_id] = {
+                    "kind": "decision",
+                    "id": dec_id,
+                    "expected_revision": expected_dec_rev,
+                    "changes": {
+                        "dossier_ids": dossier_ids,
+                        "dossier_revisions": existing_pins,
+                    },
+                    "change_kind": "correction",
+                    "reason": reason,
+                }
+        elif action_kind == "retarget_claim":
+            dec_id = str(item["decision_id"])
+            expected_dec_rev = int(item["expected_decision_revision"])
+            claim_id = str(item["claim_id"])
+            target_rev = int(item["target_claim_revision"])
+            reason = str(item.get("reason") or f"Retarget claim {claim_id} to revision {target_rev}")
+
+            if dec_id in decision_ops:
+                op = decision_ops[dec_id]
+                op["changes"]["claim_id"] = claim_id
+                op["changes"]["claim_revision"] = target_rev
+                op["reason"] = f"{op['reason']}; {reason}"
+            else:
+                decision_ops[dec_id] = {
+                    "kind": "decision",
+                    "id": dec_id,
+                    "expected_revision": expected_dec_rev,
+                    "changes": {
+                        "claim_id": claim_id,
+                        "claim_revision": target_rev,
+                    },
+                    "change_kind": "correction",
+                    "reason": reason,
+                }
+        elif action_kind == "acknowledge":
+            dec_id = str(item["decision_id"])
+            dossier_id = str(item["dossier_id"])
+            expected_dec_rev = int(item["expected_decision_revision"])
+            expected_dos_rev = int(item["expected_dossier_revision"])
+            status = str(item.get("status", "applied"))
+            note = item.get("note")
+            ack_ops.append({
+                "kind": "decision_acknowledgement",
+                "decision_id": dec_id,
+                "dossier_id": dossier_id,
+                "expected_decision_revision": expected_dec_rev,
+                "expected_dossier_revision": expected_dos_rev,
+                "status": status,
+                "note": str(note) if note is not None else None,
+            })
+        else:
+            raise ResearchError(f"Unsupported pin-review action: {action_kind!r}")
+
+    operations: list[Mapping[str, Any]] = [*decision_ops.values(), *ack_ops]
+
+    packet = prepare_record_revisions(project, operations, actor=actor) if operations else {
+        "schema_version": "research-revision-batch-local/1",
+        "project_id": snapshot.project.id,
+        "snapshot": snapshot.digest,
+        "operations": [],
+        "ready": True,
+    }
+
+    return {
+        "schema_version": "research-pin-review-batch-local/1",
+        "project_id": snapshot.project.id,
+        "snapshot": snapshot.digest,
+        "action_count": len(actions),
+        "operation_count": len(operations),
+        "kept_pins_count": len(skipped_noops),
+        "kept_pins": skipped_noops,
+        "batch_packet": packet,
+    }
+

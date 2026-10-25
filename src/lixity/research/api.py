@@ -32,6 +32,9 @@ from .dossier_edit import (
 from .dossier_edit import (
     prepare_dossier_edit as prepare_dossier_edit,
 )
+from .dossier_edit import (
+    prepare_dossier_edits as prepare_dossier_edits,
+)
 from .geography import summarize_geography
 from .images import (
     IMAGE_SUFFIXES,
@@ -53,6 +56,9 @@ from .limits import (
 )
 from .limits import (
     MAX_SOURCE_BYTES as MAX_SOURCE_BYTES,
+)
+from .manuscript import (
+    dossier_manuscript_evidence as dossier_manuscript_evidence,
 )
 from .manuscript import (
     link_manuscript_claim as link_manuscript_claim,
@@ -1740,17 +1746,19 @@ def get_dossier(project: str | Path, dossier_id: str, *,
                 preamble: bool = False,
                 revision: int | None = None,
                 summary: bool = False,
-                include_citations: bool = True) -> dict[str, Any]:
+                include_citations: bool = True,
+                manuscript: str | Path | None = None) -> dict[str, Any]:
     """Retrieve details of a specific dossier with optional section or summary bounding."""
     repository = Repository(project)
     snapshot = repository.snapshot()
     return _get_dossier(repository, snapshot, dossier_id, section=section, preamble=preamble, revision=revision,
-                        summary=summary, include_citations=include_citations)
+                        summary=summary, include_citations=include_citations, manuscript=manuscript)
 
 
 def _get_dossier(repository: Repository, snapshot: Snapshot, dossier_id: str, *,
                  section: str | None = None, revision: int | None = None,
-                 summary: bool = False, include_citations: bool = True, preamble: bool = False) -> dict[str, Any]:
+                 summary: bool = False, include_citations: bool = True, preamble: bool = False,
+                 manuscript: str | Path | None = None) -> dict[str, Any]:
     """Build native dossier detail against one accepted snapshot."""
 
     if revision is not None and (type(revision) is not int or revision < 1):
@@ -1776,15 +1784,18 @@ def _get_dossier(repository: Repository, snapshot: Snapshot, dossier_id: str, *,
     editable_sections = [] if availability else _editable_section_titles(spans)
     if preamble:
         content = preamble_text(dossier.body)
-        return {"id": dossier.id, **availability, "project_id": snapshot.project.id,
-                "snapshot": snapshot.digest, "title": dossier.title, "revision": dossier.revision,
-                "preamble": True, "section": None, "section_level": None, "content": content,
-                "images": resolve_dossier_images(snapshot, content),
-                "media": resolve_dossier_media(snapshot, content), "editable_sections": editable_sections}
+        res = {"id": dossier.id, **availability, "project_id": snapshot.project.id,
+               "snapshot": snapshot.digest, "title": dossier.title, "revision": dossier.revision,
+               "preamble": True, "section": None, "section_level": None, "content": content,
+               "images": resolve_dossier_images(snapshot, content),
+               "media": resolve_dossier_media(snapshot, content), "editable_sections": editable_sections}
+        if manuscript is not None:
+            res["manuscript_evidence"] = dossier_manuscript_evidence(repository.root, dossier.id, manuscript=manuscript)
+        return res
     if summary:
         reader = EvidenceCitationReader(repository, snapshot)
         resolved_citations = [reader.read(ref) for ref in dossier.evidence_refs] if include_citations else []
-        return {
+        res = {
             "id": dossier.id,
             **availability,
             "project_id": snapshot.project.id,
@@ -1808,6 +1819,9 @@ def _get_dossier(repository: Repository, snapshot: Snapshot, dossier_id: str, *,
             "review_needed": any(r["status"] == "review_needed" for r in decision_reviews),
             "source_updates": source_updates(resolved_citations) if include_citations else [],
         }
+        if manuscript is not None:
+            res["manuscript_evidence"] = dossier_manuscript_evidence(repository.root, dossier.id, manuscript=manuscript)
+        return res
 
     if section is not None:
         matches = [span for span in spans if span.title.casefold() == section.strip().casefold()]
@@ -1819,7 +1833,7 @@ def _get_dossier(repository: Repository, snapshot: Snapshot, dossier_id: str, *,
         selected_content = (dossier.body[matches[0].content_start:
             _section_subtree_end(spans, matches[0], len(dossier.body))].strip("\r\n")
             if matches else sections[matched])
-        return {
+        res = {
             "id": dossier.id,
             **availability,
             "project_id": snapshot.project.id,
@@ -1835,11 +1849,14 @@ def _get_dossier(repository: Repository, snapshot: Snapshot, dossier_id: str, *,
             "decision_reviews": decision_reviews,
             "review_needed": any(r["status"] == "review_needed" for r in decision_reviews),
         }
+        if manuscript is not None:
+            res["manuscript_evidence"] = dossier_manuscript_evidence(repository.root, dossier.id, manuscript=manuscript)
+        return res
 
     reader = EvidenceCitationReader(repository, snapshot)
     resolved_citations = [reader.read(ref) for ref in dossier.evidence_refs] if include_citations else []
 
-    return {
+    res = {
         "id": dossier.id,
         **availability,
         "project_id": snapshot.project.id,
@@ -1863,6 +1880,9 @@ def _get_dossier(repository: Repository, snapshot: Snapshot, dossier_id: str, *,
         "decision_reviews": decision_reviews,
         "review_needed": any(r["status"] == "review_needed" for r in decision_reviews),
     }
+    if manuscript is not None:
+        res["manuscript_evidence"] = dossier_manuscript_evidence(repository.root, dossier.id, manuscript=manuscript)
+    return res
 
 
 def create_claim(
@@ -2275,6 +2295,16 @@ def decision_impact(project: str | Path, decision_id: str) -> dict[str, Any]:
 def editorial_review(project: str | Path) -> dict[str, Any]:
     """List structural review candidates, never semantic or quality verdicts."""
     return editorial.editorial_review(project, outline=lambda body: list(extract_sections(body)))
+
+
+def prepare_pin_review_batch(
+    project: str | Path,
+    actions: Sequence[Mapping[str, Any]],
+    *,
+    actor: str = "local-author",
+) -> dict[str, Any]:
+    """Prepare an atomic revision batch packet for explicit pin-review actions."""
+    return editorial.prepare_pin_review_batch(project, actions, actor=actor)
 
 
 def list_decisions(project: str | Path) -> dict[str, Any]:

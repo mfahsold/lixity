@@ -392,7 +392,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
             content = command.add_mutually_exclusive_group()
             content.add_argument("--file", help="Existing readable UTF-8 Markdown file; use --body for literal text")
             content.add_argument("--body", help="Literal authored Markdown body (alternative to --file PATH)")
-            content.add_argument("--edit-file", help="Exported dossier edit document to reconcile with --prepare")
+            content.add_argument("--edit-file", nargs="+", help="Exported dossier edit document(s) to reconcile with --prepare")
             command.add_argument("--export-edit", metavar="PATH", help="Export a selected version as an editable Markdown draft; never overwrites")
             command.add_argument("--output", metavar="PATH", help="With --prepare --edit-file, write a ready reviewed packet for revise-batch; never overwrites")
             command.add_argument("--tags", help="Comma-separated tags")
@@ -425,6 +425,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
                                  help="With a selected dossier --format text read, emit its source body (or --section content); "
                                       "redirect to a file for an editable draft (no added newline)")
             command.add_argument("--omit-citations", action="store_true", help="Omit resolved citations from output")
+            command.add_argument("--manuscript", help="Optional manuscript path to include read-only manuscript evidence projection")
         elif name == "media-context":
             for field in ("dossier-id", "source-id", "source-version-id", "expected-snapshot", "reason"):
                 command.add_argument("--" + field, required=True)
@@ -523,6 +524,13 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--impact-on-plot", help="Description of plot or worldbuilding impact")
         elif name == "decision-impact":
             command.add_argument("--decision-id", required=True, help="Decision UUID")
+        elif name == "review":
+            command.add_argument("--prepare-batch", metavar="FILE",
+                                 help="Prepare an atomic revise-batch packet from a JSON list of pin-review actions")
+            command.add_argument("--output", metavar="PATH",
+                                 help="With --prepare-batch, write the reviewed batch packet to PATH; never overwrites")
+            command.add_argument("--actor", default="local-author",
+                                 help="Author attribution for the prepared revisions (default: local-author)")
         elif name in ("mark-applied", "reopen"):
             command.add_argument("--decision-id", required=True)
             command.add_argument("--dossier-id", required=True)
@@ -755,6 +763,7 @@ def _dossier_edit_action(args: argparse.Namespace, record_id: str | None) -> dic
     from . import api
     from .dossier_edit import (
         decode_dossier_edit,
+        prepare_dossier_edits,
         read_dossier_edit,
         write_dossier_edit,
         write_research_draft_file,
@@ -763,6 +772,29 @@ def _dossier_edit_action(args: argparse.Namespace, record_id: str | None) -> dic
 
     if not any(value is not None for value in (args.export_edit, args.edit_file, args.output)):
         return None
+    edit_files = args.edit_file if isinstance(args.edit_file, list) else [args.edit_file] if args.edit_file else []
+    if len(edit_files) > 1 or (len(edit_files) == 1 and not record_id):
+        if not args.prepare:
+            raise ResearchError("Multi-file dossier reconciliation requires --prepare --edit-file PATH ...")
+        if any((args.update, args.diff, args.history, args.inspect, args.revision is not None, args.export_edit is not None)):
+            raise ResearchError("Multi-file dossier edit preparation requires --prepare without other revision modes")
+        batch_preview = prepare_dossier_edits(
+            args.project,
+            edit_files,
+            change_kind=args.change_kind or "correction",
+            reason=args.reason,
+            actor=args.actor,
+        )
+        if args.output is not None:
+            if not args.change_kind or not args.reason:
+                raise ResearchError("A reviewed output packet requires --change-kind and --reason")
+            packet = batch_preview.get("batch_packet")
+            if not isinstance(packet, dict) or not batch_preview["ready"]:
+                raise ResearchError("Cannot write revision packet: one or more dossier drafts have conflicts or no changes")
+            write_research_draft_file(args.project, args.output, json.dumps(packet, ensure_ascii=False, allow_nan=False, indent=2) + "\n")
+            return packet
+        return batch_preview
+
     if not record_id:
         raise ResearchError("A selected dossier ID is required for edit export or preparation")
     fields = ("title", "file", "body", "tags", "evidence", "geography", "language", "section")
@@ -775,11 +807,11 @@ def _dossier_edit_action(args: argparse.Namespace, record_id: str | None) -> dic
         write_dossier_edit(args.project, record_id, args.export_edit, revision=args.revision)
         return {"schema_version": "research-dossier-edit-export-local/1", "record_id": record_id,
                 "output": str(Path(args.export_edit).expanduser().absolute())}
-    if not args.prepare or args.edit_file is None:
+    if not args.prepare or not edit_files:
         raise ResearchError("--edit-file and --output require --prepare --edit-file PATH")
     if any((args.update, args.diff, args.history, args.inspect, args.revision is not None)):
         raise ResearchError("Edit documents require --prepare without other revision modes")
-    document = read_dossier_edit(args.edit_file)
+    document = read_dossier_edit(edit_files[0])
     if args.base_revision is not None and args.base_revision != decode_dossier_edit(document)["base_revision"]:
         raise ResearchError("--base-revision differs from the exported edit document")
     preview = api.prepare_dossier_edit(args.project, record_id, document,
@@ -834,7 +866,8 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
     if command == "dossier" and args.preamble and (args.export_edit or args.edit_file):
         raise ResearchError("--preamble does not select whole-dossier edit packets; use --file or --body")
     bounded_dossier = command == "dossier" and (
-        args.section is not None or args.preamble or args.summary or args.omit_citations)
+        args.section is not None or args.preamble or args.summary or args.omit_citations
+        or getattr(args, "manuscript", None) is not None)
     if bounded_dossier:
         if not record_id:
             raise ResearchError("Dossier --section, --preamble, --summary and --omit-citations reads require a selected ID")
@@ -1650,7 +1683,31 @@ def run(args: argparse.Namespace) -> int:
         elif command == "decision-impact":
             result = api.decision_impact(args.project, args.decision_id)
         elif command == "review":
-            result = api.editorial_review(args.project)
+            if getattr(args, "prepare_batch", None):
+                from .dossier_edit import write_research_draft_file
+
+                raw_actions = json.loads(Path(args.prepare_batch).read_text(encoding="utf-8"))
+                if isinstance(raw_actions, dict) and "actions" in raw_actions:
+                    actions = raw_actions["actions"]
+                elif isinstance(raw_actions, list):
+                    actions = raw_actions
+                else:
+                    raise ResearchError("Expected a JSON list of pin-review actions or an object with an 'actions' list")
+                batch_res = api.prepare_pin_review_batch(args.project, actions, actor=args.actor)
+                if args.output is not None:
+                    packet = batch_res.get("batch_packet")
+                    if not packet or not packet.get("ready"):
+                        raise ResearchError("Cannot write revision packet: one or more pin-review actions failed")
+                    write_research_draft_file(
+                        args.project,
+                        args.output,
+                        json.dumps(packet, ensure_ascii=False, allow_nan=False, indent=2) + "\n",
+                    )
+                    result = packet
+                else:
+                    result = batch_res
+            else:
+                result = api.editorial_review(args.project)
         elif command == "revise-batch":
             operations = json.loads(Path(args.file).read_text(encoding="utf-8"))
             if not isinstance(operations, (list, dict)):
@@ -1685,6 +1742,7 @@ def run(args: argparse.Namespace) -> int:
                     revision=args.revision,
                     summary=getattr(args, "summary", False),
                     include_citations=not getattr(args, "omit_citations", False),
+                    manuscript=getattr(args, "manuscript", None),
                 )
             elif getattr(args, "title", None) and (args.file is not None or args.body is not None):
                 body = _dossier_content(file=args.file, body=args.body)
@@ -1823,7 +1881,7 @@ def run(args: argparse.Namespace) -> int:
 
             print(manuscript_report(command, result, table=args.format == "table"), end="")
             return 0
-        if command in ("decision-impact", "review") and args.format != "json":
+        if command in ("decision-impact", "review") and args.format != "json" and not getattr(args, "prepare_batch", None):
             from .presentation import editorial_report, print_report
 
             print_report(editorial_report(result, markdown=args.format == "md"), pager=False)

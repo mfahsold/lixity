@@ -1139,3 +1139,48 @@ def test_reconcile_batch_parses_once_and_publishes_single_manifest_generation(ma
         assert record.revision == 2
         assert record.claim_ref.revision == 2
         assert record.anchor.start_line == 5
+
+
+def test_dossier_manuscript_evidence_projection(manuscript_archive, capsys):
+    project, manuscript, claim, _ = manuscript_archive
+    dossier_id = api.create_dossier(project, "Coffee and Reading", "Author notes about coffee.")["dossier_id"]
+    # Update claim to point to this dossier
+    revise(project, "claim", claim, {"dossier_id": dossier_id})
+    save_link(manuscript_archive, claim_revision=2)
+
+    # Configure a term linked to this dossier
+    config_file = project / "lixity.toml"
+    config_text = f"""
+[terms.Kaffee]
+dossier_id = "{dossier_id}"
+aliases = ["coffee"]
+"""
+    config_file.write_text(config_text, encoding="utf-8")
+
+    manuscript.write_text("## Chapter One\n\nThe **reading room** was open. 🦉 A visitor arrived. A cup of coffee sat on the desk.\n", encoding="utf-8")
+
+    evidence = api.dossier_manuscript_evidence(project, dossier_id, manuscript="draft.md")
+    assert evidence["schema_version"] == "research-dossier-manuscript-evidence-local/1"
+    assert evidence["dossier_id"] == dossier_id
+    assert evidence["manuscript_available"] is True
+    assert evidence["summary"]["quote_link_count"] == 1
+    assert evidence["summary"]["term_count"] == 1
+    assert evidence["summary"]["term_occurrence_count"] == 1
+    assert evidence["quote_links"][0]["claim_id"] == claim
+    assert evidence["terms"][0]["term"] == "Kaffee"
+    assert evidence["term_occurrences"][0]["matched_form"] == "coffee"
+
+    # Also check get_dossier integrates manuscript_evidence
+    dos = api.get_dossier(project, dossier_id, manuscript="draft.md")
+    assert "manuscript_evidence" in dos
+    assert dos["manuscript_evidence"]["summary"]["quote_link_count"] == 1
+
+    # Check CLI integration
+    parser = research_parser()
+    args = parser.parse_args(["dossier", dossier_id, "--project", str(project),
+                              "--manuscript", "draft.md", "--format", "json"])
+    assert cli.run(args) == 0
+    cli_out = json.loads(capsys.readouterr().out)
+    assert "manuscript_evidence" in cli_out
+    assert cli_out["manuscript_evidence"]["dossier_id"] == dossier_id
+

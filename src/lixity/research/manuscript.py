@@ -16,6 +16,7 @@ from ..status import ManuscriptFlag, ManuscriptState
 from ..style_profile import ParagraphProfile, ParagraphText
 from .models import (
     Claim,
+    Dossier,
     ManuscriptAnchor,
     ManuscriptClaimLink,
     Reference,
@@ -104,6 +105,8 @@ def manuscript_link_view(snapshot: Snapshot, record: ManuscriptClaimLink) -> dic
         "claim_withdrawn": withdrawn,
         "dossier_id": claim.dossier_ref.id if claim.dossier_ref else None,
         "dossier_revision": claim.dossier_ref.revision if claim.dossier_ref else None,
+        "current_dossier_id": current.dossier_ref.id if current.dossier_ref else None,
+        "current_dossier_revision": current.dossier_ref.revision if current.dossier_ref else None,
         "anchor": record.anchor.model_dump(mode="json"),
         "review_needed": changed or withdrawn,
         "note": record.note,
@@ -354,6 +357,151 @@ def review_manuscript_terms(
         source_state=state,
         selected_term=term,
     )
+
+
+def dossier_manuscript_evidence(
+    project: str | Path,
+    dossier_id: str,
+    *,
+    manuscript: str | Path | None = None,
+    expected_project_id: str | None = None,
+    language: str | None = None,
+    project_config: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Derive read-only manuscript quotations and configured term occurrences for a dossier.
+
+    Collects:
+      - Active manuscript quote links for claims associated with this dossier.
+      - Configured terms linked to this dossier (via term.dossier_id == dossier_id).
+      - If a manuscript file is provided or configured, resolves current occurrences and chapter anchors.
+
+    Never creates archive revisions, mutates authored body, or replaces accepted pins.
+    """
+    from ..terms import derive_manuscript_term_occurrences, parse_terms
+
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    if expected_project_id is not None and snapshot.project.id != expected_project_id:
+        raise ResearchConflictError("Research project changed; reopen the intended project")
+
+    try:
+        dossier = snapshot.latest(dossier_id, Dossier)
+    except (ValidationError, KeyError):
+        raise ResearchError(f"Dossier not found: {dossier_id}") from None
+
+    if manuscript is None:
+        try:
+            from ..workspace import configured_manuscript
+
+            manuscript = configured_manuscript(repository.root)
+        except (ResearchError, OSError, ValueError):
+            manuscript = None
+
+    relative_path: str | None = None
+    manuscript_available = False
+    source_sha256: str | None = None
+    paragraphs: Sequence[ParagraphProfile | ParagraphText] = []
+
+    if manuscript is not None:
+        try:
+            path, relative_path = _source_path(repository, manuscript)
+            text, source_sha256 = FileUtils.read_source_snapshot(str(path))
+            paragraphs = _paragraphs(text, repository, language, project_config)
+            manuscript_available = True
+        except (ResearchError, FileNotFoundError, OSError, UnicodeError):
+            manuscript_available = False
+
+    # 1. Resolve quote links for claims pointing to this dossier
+    if manuscript_available and relative_path is not None:
+        reviewed = manuscript_review_data(
+            snapshot,
+            source_path=relative_path,
+            source_sha256=source_sha256,
+            paragraphs=paragraphs,
+            source_state="available",
+        )
+        quote_links = [
+            link for link in reviewed["links"]
+            if link.get("dossier_id") == dossier.id or link.get("current_dossier_id") == dossier.id
+        ]
+    else:
+        all_links = manuscript_links_data(snapshot, include_retracted=False)["links"]
+        quote_links = [
+            link for link in all_links
+            if link.get("dossier_id") == dossier.id or link.get("current_dossier_id") == dossier.id
+        ]
+
+    # 2. Configured terms linked to this dossier
+    from ..config import read_explicit_project_config
+
+    try:
+        effective_config = (
+            dict(project_config)
+            if project_config is not None
+            else read_explicit_project_config(repository.root, maximum_bytes=65536)
+        )
+    except (ResearchError, OSError, ValueError):
+        effective_config = {}
+    terms_raw = effective_config.get("terms")
+    try:
+        parsed_terms = parse_terms(terms_raw)
+    except (ValidationError, ValueError):
+        parsed_terms = {}
+
+    dossier_terms = {
+        name: profile
+        for name, profile in parsed_terms.items()
+        if profile.dossier_id == dossier.id
+    }
+
+    if dossier_terms and manuscript_available and relative_path is not None:
+        terms_result = derive_manuscript_term_occurrences(
+            paragraphs,
+            dossier_terms,
+            source_path=relative_path,
+            source_sha256=source_sha256,
+            source_state="available",
+        )
+        term_occurrences = terms_result["occurrences"]
+        term_summaries = terms_result["terms"]
+    else:
+        term_occurrences = []
+        term_summaries = [
+            {
+                "term": name,
+                "aliases": list(profile.aliases),
+                "scoped_alternatives": [
+                    alt.model_dump(mode="json") for alt in profile.scoped_alternatives
+                ],
+                "case_sensitive": profile.case_sensitive,
+                "dossier_id": profile.dossier_id,
+                "claim_id": profile.claim_id,
+                "occurrence_count": 0,
+                "out_of_scope_count": 0,
+                "ambiguous_count": 0,
+                "chapters_present": [],
+            }
+            for name, profile in dossier_terms.items()
+        ]
+
+    return {
+        "schema_version": "research-dossier-manuscript-evidence-local/1",
+        "project_id": snapshot.project.id,
+        "snapshot": snapshot.digest,
+        "dossier_id": dossier.id,
+        "dossier_title": dossier.title,
+        "dossier_revision": dossier.revision,
+        "manuscript_path": relative_path if manuscript_available else None,
+        "manuscript_available": manuscript_available,
+        "quote_links": quote_links,
+        "terms": term_summaries,
+        "term_occurrences": term_occurrences,
+        "summary": {
+            "quote_link_count": len(quote_links),
+            "term_count": len(term_summaries),
+            "term_occurrence_count": len(term_occurrences),
+        },
+    }
 
 
 def _quote_occurrences(

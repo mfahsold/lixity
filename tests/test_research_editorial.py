@@ -94,6 +94,98 @@ class EditorialReviewTest(unittest.TestCase):
         with self.assertRaises(ResearchError):
             api.decision_impact(self.project, self.dossier)
 
+    def test_prepare_pin_review_batch_and_apply(self):
+        # Create revision 2 of dossier and claim (claim points to dossier rev 2)
+        self.revise("dossier", self.dossier, {"body": "## Updated\nNew body."})
+        self.revise("claim", self.claim, {"statement": "New statement.", "dossier_revision": 2})
+
+        # Decision still pins revision 1
+        impact_before = api.decision_impact(self.project, self.decision)
+        self.assertIn("stale_dossier_pin", impact_before["dossiers"][0]["flags"])
+
+        actions = [
+            {
+                "action": "retarget_dossier",
+                "decision_id": self.decision,
+                "expected_decision_revision": 1,
+                "dossier_id": self.dossier,
+                "target_dossier_revision": 2,
+                "reason": "Update to revised dossier",
+            },
+            {
+                "action": "retarget_claim",
+                "decision_id": self.decision,
+                "expected_decision_revision": 1,
+                "claim_id": self.claim,
+                "target_claim_revision": 2,
+                "reason": "Update to revised claim",
+            },
+            {
+                "action": "acknowledge",
+                "decision_id": self.decision,
+                "dossier_id": self.dossier,
+                "expected_decision_revision": 1,
+                "expected_dossier_revision": 2,
+                "status": "applied",
+                "note": "Author verified",
+            },
+            {
+                "action": "keep_pin",
+                "decision_id": self.decision,
+            },
+        ]
+
+        batch = api.prepare_pin_review_batch(self.project, actions)
+        self.assertEqual(batch["schema_version"], "research-pin-review-batch-local/1")
+        self.assertEqual(batch["action_count"], 4)
+        self.assertEqual(batch["kept_pins_count"], 1)
+        # Decision operations consolidated into 1 decision revision + 1 acknowledgement
+        self.assertEqual(batch["operation_count"], 2)
+        packet = batch["batch_packet"]
+        self.assertTrue(packet["ready"])
+
+        result = api.apply_record_revisions(self.project, packet, expected_snapshot=packet["snapshot"])
+        self.assertEqual(len(result["records"]), 2)
+
+        # After applying, decision impact shows no stale pins and acknowledgement is recorded
+        impact_after = api.decision_impact(self.project, self.decision)
+        self.assertEqual(impact_after["dossiers"][0]["current_revision"], 2)
+        self.assertEqual(impact_after["dossiers"][0]["pinned_revisions"], [2])
+        self.assertNotIn("stale_dossier_pin", impact_after["dossiers"][0]["flags"])
+        self.assertNotIn("stale_claim_pin", impact_after["dossiers"][0]["flags"])
+
+    def test_review_prepare_batch_cli(self):
+        import json
+        from io import StringIO
+
+        from lixity.research import cli
+        from tests.research_support import research_parser
+
+        actions_file = self.project / "actions.json"
+        actions_file.write_text(json.dumps([
+            {
+                "action": "acknowledge",
+                "decision_id": self.decision,
+                "dossier_id": self.dossier,
+                "expected_decision_revision": 1,
+                "expected_dossier_revision": 1,
+                "status": "applied",
+                "note": "Verified by author",
+            }
+        ]), encoding="utf-8")
+
+        parser = research_parser()
+        args = parser.parse_args(["review", "--project", str(self.project),
+                                  "--prepare-batch", str(actions_file), "--format", "json"])
+        with patch("sys.stdout", new_callable=StringIO) as out:
+            status = cli.run(args)
+            self.assertEqual(status, 0)
+            data = json.loads(out.getvalue())
+            self.assertEqual(data["schema_version"], "research-pin-review-batch-local/1")
+            self.assertEqual(data["action_count"], 1)
+            self.assertEqual(data["operation_count"], 1)
+            self.assertTrue(data["batch_packet"]["ready"])
+
 
 if __name__ == "__main__":
     unittest.main()

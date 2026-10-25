@@ -4,7 +4,7 @@ import json
 import math
 import os
 import tempfile
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from contextlib import suppress
 from pathlib import Path
 from typing import Annotated, Any, Literal
@@ -141,6 +141,97 @@ def prepare_dossier_edit(
     if preview["current"]["project_id"] != draft["project_id"]:
         raise ResearchError("Dossier edit belongs to a different project")
     return preview
+
+
+def prepare_dossier_edits(
+    project: str | Path,
+    paths: Sequence[str | Path],
+    *,
+    change_kind: Literal["correction", "supersession"] = "correction",
+    reason: str | None = None,
+    actor: str = "local-author",
+) -> dict[str, Any]:
+    """Reconcile multiple explicit external draft files against one current archive snapshot.
+
+    Reads each file, validates unique dossier IDs within the selected project,
+    computes per-file diff/reconciliation state, and prepares a ready
+    research-revision-batch-local/1 packet when all drafts are conflict-free.
+    """
+    if not paths:
+        raise ResearchError("Provide at least one dossier edit file to prepare")
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+
+    items: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    operations: list[Mapping[str, Any]] = []
+    all_ready = True
+    total_changed = 0
+
+    for p in paths:
+        path_obj = Path(p).expanduser().resolve()
+        doc = read_dossier_edit(path_obj)
+        draft = decode_dossier_edit(doc)
+        rec_id = draft["record_id"]
+        if rec_id in seen_ids:
+            raise ResearchError(f"Duplicate dossier edit draft for record {rec_id}")
+        seen_ids.add(rec_id)
+        if draft["project_id"] != snapshot.project.id:
+            raise ResearchError(f"Dossier edit file {path_obj.name} belongs to a different project")
+
+        preview = prepare_dossier_edit(project, rec_id, doc)
+        current = preview["current"]
+        is_ready = bool(preview["ready"])
+        has_changes = bool(preview["has_changes"])
+        if not is_ready:
+            all_ready = False
+        if has_changes:
+            total_changed += 1
+
+        changed_fields = sorted(preview.get("changes", {}).keys())
+        conflicting_fields = [c["field"] for c in preview.get("conflicts", [])]
+
+        items.append({
+            "path": str(path_obj),
+            "record_id": rec_id,
+            "title": draft["fields"].get("title") or current["record"].get("title", ""),
+            "base_revision": draft["base_revision"],
+            "current_revision": current["record"]["revision"],
+            "ready": is_ready,
+            "has_changes": has_changes,
+            "changed_fields": changed_fields,
+            "conflicts": preview.get("conflicts", []),
+            "conflicting_fields": conflicting_fields,
+        })
+
+        if is_ready and has_changes:
+            op_reason = reason.strip() if isinstance(reason, str) and reason.strip() else f"Reconcile dossier draft {path_obj.name}"
+            operations.append({
+                "kind": "dossier",
+                "id": rec_id,
+                "expected_revision": current["record"]["revision"],
+                "changes": preview["changes"],
+                "change_kind": change_kind,
+                "reason": op_reason,
+            })
+
+    packet: dict[str, Any] | None = None
+    if all_ready and operations:
+        from .revisions import prepare_record_revisions
+
+        packet = prepare_record_revisions(project, operations, actor=actor)
+
+    return {
+        "schema_version": "research-dossier-batch-preview-local/1",
+        "project_id": snapshot.project.id,
+        "snapshot": snapshot.digest,
+        "ready": all_ready,
+        "total_files": len(items),
+        "changed_files": total_changed,
+        "items": items,
+        "batch_packet": packet,
+    }
+
 
 
 def read_dossier_edit(path: str | Path) -> str:

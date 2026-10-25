@@ -307,8 +307,10 @@ class ResearchRoutesMixin(ResponseMixin):
                     if len(raw_revision) > 9 or not raw_revision.isdecimal() or int(raw_revision) < 1:
                         raise ResearchError("Revision must be a positive integer")
                     revision = int(raw_revision)
+                manuscript = query.get("manuscript", [None])[0]
                 data = research_api.get_dossier(root, dossier_id,
-                    section=query.get("section", [None])[0], revision=revision)
+                    section=query.get("section", [None])[0], revision=revision,
+                    manuscript=manuscript)
             else:
                 collection = query.get("collection", [None])[0]
                 data = research_api.list_dossiers(root, collection=collection)

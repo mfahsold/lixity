@@ -229,3 +229,69 @@ def test_edit_export_parent_replacement_cannot_redirect_into_archive(project, tm
     assert not (project / "research" / "draft.md").exists()
     assert list(moved.iterdir()) == []
     assert retained_files(project) == before
+
+
+def test_prepare_dossier_edits_multi_file_and_atomic_batch(project, tmp_path):
+    from lixity.research.dossier_edit import prepare_dossier_edits, write_dossier_edit
+
+    id1 = api.create_dossier(project, "Dossier 1", "Body 1.")["dossier_id"]
+    id2 = api.create_dossier(project, "Dossier 2", "Body 2.")["dossier_id"]
+
+    draft1 = tmp_path / "draft1.md"
+    draft2 = tmp_path / "draft2.md"
+    write_dossier_edit(project, id1, draft1)
+    write_dossier_edit(project, id2, draft2)
+
+    # Edit both files
+    draft1.write_text(draft1.read_text(encoding="utf-8").replace("Body 1.", "Updated 1."), encoding="utf-8")
+    draft2.write_text(draft2.read_text(encoding="utf-8").replace("Body 2.", "Updated 2."), encoding="utf-8")
+
+    batch_preview = prepare_dossier_edits(
+        project,
+        [draft1, draft2],
+        change_kind="correction",
+        reason="Atomic batch update",
+    )
+    assert batch_preview["ready"] is True
+    assert batch_preview["total_files"] == 2
+    assert batch_preview["changed_files"] == 2
+    assert batch_preview["batch_packet"] is not None
+
+    # Apply the batch packet
+    result = api.apply_record_revisions(
+        project,
+        batch_preview["batch_packet"],
+        expected_snapshot=batch_preview["batch_packet"]["snapshot"],
+    )
+    assert len(result["records"]) == 2
+
+    # Verify both dossiers were updated
+    doc1 = api.get_dossier(project, id1)
+    doc2 = api.get_dossier(project, id2)
+    assert doc1["revision"] == 2
+    assert doc1["body"] == "Updated 1."
+    assert doc2["revision"] == 2
+    assert doc2["body"] == "Updated 2."
+
+
+def test_prepare_dossier_edits_rejects_duplicate_and_foreign_files(project, tmp_path):
+    from lixity.research.dossier_edit import prepare_dossier_edits, write_dossier_edit
+
+    id1 = api.create_dossier(project, "Dossier 1", "Body 1.")["dossier_id"]
+    draft1 = tmp_path / "draft1.md"
+    write_dossier_edit(project, id1, draft1)
+
+    # Duplicate dossier ID in file list
+    with pytest.raises(ResearchError, match="Duplicate dossier edit draft"):
+        prepare_dossier_edits(project, [draft1, draft1])
+
+    # Other project
+    other = tmp_path / "other_proj"
+    api.init(other, title="Other", language="en")
+    other_draft = tmp_path / "other_draft.md"
+    id_other = api.create_dossier(other, "Other", "Other body.")["dossier_id"]
+    write_dossier_edit(other, id_other, other_draft)
+
+    with pytest.raises(ResearchError, match="different project"):
+        prepare_dossier_edits(project, [draft1, other_draft])
+

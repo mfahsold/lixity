@@ -7,6 +7,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.6] - 2026-10-25
+
 ### Added
 - Single-commit publication batching in `reconcile-manuscript` (parsing manuscript
   paragraphs once and committing all accepted link updates in one transaction) and
@@ -3015,7 +3017,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.7.5...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.7.6...HEAD
+[0.7.6]: https://github.com/mfahsold/lixity/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/mfahsold/lixity/compare/v0.7.4...v0.7.5
 [0.7.4]: https://github.com/mfahsold/lixity/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/mfahsold/lixity/compare/v0.7.2...v0.7.3
