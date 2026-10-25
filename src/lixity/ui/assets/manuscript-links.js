@@ -227,9 +227,15 @@
   }
   var reviewSection = document.getElementById("research-manuscript-review-section");
   var reviewTabHost = document.getElementById("research-manuscript-review");
+  var termsSection = document.getElementById("research-manuscript-terms-section");
+  var termsTabHost = document.getElementById("research-manuscript-terms");
+  var termsSerial = 0, termsReport = null, termsContext = null;
   if (reviewSection && reviewTabHost) {
     reviewSection.hidden = false;
     reviewTabHost.replaceChildren(element("p", label("research_loading"), "ctl-status loading"));
+  }
+  if (termsSection && termsTabHost) {
+    termsSection.hidden = false;
   }
   var reviewBox = element("details", "", "manuscript-link-review");
   reviewBox.appendChild(element("summary", label("manuscript_link_review")));
@@ -831,12 +837,150 @@
       var value = selection(); if (value) { event.preventDefault(); open(value); }
     }
   });
+  function matchesTermAnchor(occ, panel) {
+    var a = occ && occ.anchor;
+    if (!a || a.start_line !== Number(panel.dataset.start) || a.end_line !== Number(panel.dataset.end) ||
+        a.paragraph_sha256 !== panel.dataset.paragraphSha256) return false;
+    var points = Array.from(bridge.text(panel) || "");
+    return Number.isInteger(a.start) && Number.isInteger(a.end) && a.start >= 0 && a.end > a.start &&
+      a.end <= points.length && points.slice(a.start, a.end).join("") === a.quote;
+  }
+  function termPanel(occ) {
+    return Array.from(chapters.querySelectorAll(".ptext")).find(function(panel) { return matchesTermAnchor(occ, panel); });
+  }
+  function renderTermsReport(report) {
+    var fragment = document.createDocumentFragment();
+    var terms = Array.isArray(report.terms) ? report.terms : [];
+    var occurrences = Array.isArray(report.occurrences) ? report.occurrences : [];
+    if (!terms.length) {
+      fragment.appendChild(element("p", label("manuscript_terms_empty"), "ctl-note"));
+      return fragment;
+    }
+    fragment.appendChild(element("p", label(occurrences.length === 1 ? "manuscript_terms_count_one" : "manuscript_terms_count").replace("{count}", String(occurrences.length)), "ctl-note"));
+    if (!occurrences.length) {
+      fragment.appendChild(element("p", label("manuscript_terms_no_matches"), "ctl-note"));
+      return fragment;
+    }
+    var currentChapter = null;
+    occurrences.forEach(function(occ, idx) {
+      var number = Number.isInteger(occ.chapter_num) && occ.chapter_num > 0 ? occ.chapter_num : Infinity;
+      if (number !== currentChapter) {
+        currentChapter = number;
+        var title = number === Infinity ? label("manuscript_link_no_current_chapter") :
+          label("manuscript_link_current_chapter").replace("{number}", number).replace("{title}", function() { return occ.chapter_title || ""; });
+        var heading = element("h4", title);
+        heading.dataset.manuscriptTermsChapter = "";
+        fragment.appendChild(heading);
+      }
+      var item = element("div", "", "manuscript-link-review-item manuscript-term-occurrence-item");
+      var summary = occ.term + (occ.matched_form && occ.matched_form !== occ.term ? " (" + occ.matched_form + ")" : "");
+      item.appendChild(element("p", summary));
+      var flags = [label("manuscript_terms_variant_" + (occ.variant_kind || "preferred"))];
+      (occ.flags || []).forEach(function(flag) {
+        if (flag === "overlapping_term" || flag === "unicode_ambiguity") flags.push(label("manuscript_terms_flag_" + flag));
+      });
+      item.appendChild(element("p", flags.join(" · "), "ctl-note"));
+      if (occ.anchor && typeof occ.anchor.quote === "string") item.appendChild(element("blockquote", occ.anchor.quote));
+      if (termPanel(occ)) {
+        var jump = element("button", label("manuscript_link_open_passage"), "ctl");
+        jump.type = "button";
+        jump.dataset.manuscriptTermJump = String(idx);
+        item.appendChild(jump);
+      }
+      fragment.appendChild(item);
+    });
+    return fragment;
+  }
+  async function loadTerms() {
+    if (!termsSection || !termsTabHost) return;
+    var value = context(), request = ++termsSerial;
+    termsTabHost.replaceChildren(element("p", label("research_loading"), "ctl-status loading"));
+    var report = await bridge.read("research/manuscript-terms?project_token=" + encodeURIComponent(value.project));
+    if (request !== termsSerial || !live(value)) return;
+    if (!report || !report.ok || report.schema_version !== "research-manuscript-terms-local/1" ||
+        report.current_source_sha256 !== value.source || report.source_state !== "available") {
+      var stale = staleReport(report, value.source) || (report && report.code === "stale-context");
+      termsReport = null; termsContext = null;
+      termsTabHost.replaceChildren(reviewNote(stale ? label("manuscript_link_stale") : bridge.errorText(report), stale));
+      return;
+    }
+    termsReport = report; termsContext = value;
+    termsTabHost.replaceChildren(renderTermsReport(report));
+  }
+  if (termsSection) {
+    termsSection.addEventListener("toggle", function() {
+      if (termsSection.open) loadTerms();
+    });
+  }
+  document.addEventListener("click", async function(event) {
+    var termJump = event.target.closest("[data-manuscript-term-jump]");
+    if (termJump) {
+      if (!termsReport || !termsContext || !live(termsContext) || !Array.isArray(termsReport.occurrences)) return;
+      var occ = termsReport.occurrences[Number(termJump.dataset.manuscriptTermJump)];
+      var targetPanel = occ && termPanel(occ);
+      if (targetPanel) bridge.navigate(targetPanel);
+      return;
+    }
+    if (event.target.closest("#r-terms-refresh")) {
+      loadTerms();
+      return;
+    }
+    if (!canWrite) return;
+    var termAction = event.target.closest("#r-term-save-btn, #r-term-delete-btn");
+    if (termAction) {
+      var termInput = document.getElementById("r-term-name");
+      var termName = termInput ? termInput.value.trim() : "";
+      if (!termName) return;
+      var value = context();
+      if (!termsReport || !termsContext || !live(value)) await loadTerms();
+      var nextTerms = {};
+      ((termsReport && termsReport.terms) || []).forEach(function(item) {
+        nextTerms[item.term] = {
+          aliases: item.aliases || [],
+          scoped_alternatives: item.scoped_alternatives || [],
+          case_sensitive: Boolean(item.case_sensitive),
+          dossier_id: item.dossier_id || null,
+          claim_id: item.claim_id || null
+        };
+      });
+      if (termAction.id === "r-term-delete-btn") {
+        delete nextTerms[termName];
+      } else {
+        var aliasesRaw = (document.getElementById("r-term-aliases") || {}).value || "";
+        var scopedRaw = (document.getElementById("r-term-scoped") || {}).value || "";
+        var caseBox = document.getElementById("r-term-case");
+        var scopedList = scopedRaw.split(";").map(function(s) { return s.trim(); }).filter(Boolean).map(function(spec) {
+          var parts = spec.split(":");
+          var form = (parts[0] || "").trim();
+          var chaptersList = (parts[1] || "").split(",").map(function(c) { return Number(c.trim()); }).filter(function(n) { return Number.isInteger(n) && n > 0; });
+          return {term: form, chapters: chaptersList};
+        });
+        nextTerms[termName] = {
+          aliases: aliasesRaw.split(",").map(function(s) { return s.trim(); }).filter(Boolean),
+          scoped_alternatives: scopedList,
+          case_sensitive: Boolean(caseBox && caseBox.checked)
+        };
+      }
+      var res = await bridge.post("settings", {terms: nextTerms, project_token: value.project});
+      if (res && res.ok) {
+        if (res.project_token && tokenHost) {
+          if (tokenHost === document.body) tokenHost.dataset.manuscriptProjectToken = res.project_token;
+          else tokenHost.dataset.projectToken = res.project_token;
+        }
+        await loadTerms();
+      }
+    }
+  });
   document.addEventListener("click", function(event) {
     if (!openingRelated && event.target.closest("[data-rtab]")) stopRelatedDestination();
     if (event.target.closest('[data-rtab="review"]')) {
       if (!openingRelated) reviewFilter = null;
       loadReview();
-    } else if (event.target.closest("#r-review-refresh")) loadReview();
+      if (termsSection && termsSection.open) loadTerms();
+    } else if (event.target.closest("#r-review-refresh")) {
+      loadReview();
+      if (termsSection && termsSection.open) loadTerms();
+    }
   }, true);
   document.addEventListener("lixity:paragraph-rendered", function(event) { enhance(event.detail); });
   document.addEventListener("lixity:reader-ready", function() { if (reviewSerial === 0) loadReview(true); });

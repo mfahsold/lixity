@@ -823,6 +823,10 @@ def render_dashboard(
             f'<h2 id="workspace-reader-title">{L("reader_title")}</h2>'
             f'<button type="button" class="ctl" id="workspace-reader-close" aria-label="{esc(L("modal_close"), quote=True)}">✕</button>'
             "</div>"
+            '<div class="row workspace-reader-controls" id="workspace-reader-collection-field" hidden>'
+            '<div class="setting-field grow">'
+            f'<label for="workspace-reader-collection">{L("research_dossier_collection")}</label>'
+            f'<select class="ctl" id="workspace-reader-collection"><option value="all">{L("research_dossier_collection_all")}</option></select></div></div>'
             '<div class="row workspace-reader-controls">'
             '<div class="setting-field grow">'
             f'<label for="workspace-reader-dossier">{L("reader_choose")}</label>'

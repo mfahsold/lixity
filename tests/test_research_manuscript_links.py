@@ -1104,3 +1104,38 @@ def test_reconcile_strict_snapshot_allows_own_prior_commits(manuscript_archive, 
     assert result["skipped"] == []
     assert {row["link_id"] for row in result["accepted"]} == {first["link_id"], second["link_id"]}
     assert [row["revision"] for row in result["accepted"]] == [2, 2]
+
+
+def test_reconcile_batch_parses_once_and_publishes_single_manifest_generation(manuscript_archive, monkeypatch, capsys):
+    from lixity.research import manuscript as manuscript_module
+
+    project, manuscript, claim, _ = manuscript_archive
+    first = save_link(manuscript_archive)
+    second = save_link(manuscript_archive, selection=selection("reading room"))
+    revise(project, "claim", claim, {"statement": "The reading room was open until dusk."})
+    manuscript.write_text("Extra paragraph.\n\n" + manuscript.read_text(encoding="utf-8"), encoding="utf-8")
+    before = Repository(project).snapshot()
+    parse = manuscript_module._paragraphs
+    parse_calls = 0
+
+    def counted_paragraphs(*args, **kwargs):
+        nonlocal parse_calls
+        parse_calls += 1
+        return parse(*args, **kwargs)
+
+    monkeypatch.setattr(manuscript_module, "_paragraphs", counted_paragraphs)
+    parser = research_parser()
+    args = parser.parse_args(["reconcile-manuscript", "--project", str(project), "draft.md",
+                              "--accept-moved", "--accept-claim-updates"])
+    assert cli.run(args) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["skipped"] == []
+    assert {row["link_id"] for row in result["accepted"]} == {first["link_id"], second["link_id"]}
+    after = Repository(project).snapshot()
+    assert after.manifest.generation == before.manifest.generation + 1
+    assert parse_calls == 2  # Once for initial review-manuscript, once for the reconciliation batch.
+    for link_id in (first["link_id"], second["link_id"]):
+        record = after.records[link_id]
+        assert record.revision == 2
+        assert record.claim_ref.revision == 2
+        assert record.anchor.start_line == 5

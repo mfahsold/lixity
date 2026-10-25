@@ -33,6 +33,7 @@ OUTPUT_FORMATS: dict[str, tuple[tuple[str, ...], str]] = {
     "find-anchor": (("json", "table", "text"), "json"),
     "reconcile-manuscript": (("json", "table", "text"), "json"),
     "unlink-manuscript": (("json", "table", "text"), "json"),
+    "terms": (("json", "table", "text"), "json"),
 }
 
 _REVISION_FIELDS = {
@@ -85,6 +86,7 @@ COMMAND_DEFINITIONS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
     ('unlink-manuscript', 'Retract one saved manuscript association (history retained)', 'Manuscript associations', ()),
     ('find-anchor', 'Find the exact position of a displayed-text quote (read-only)', 'Manuscript associations', ()),
     ('reconcile-manuscript', 'Preview changed manuscript links; accept changes explicitly', 'Manuscript associations', ()),
+    ('terms', 'Review or configure author-chosen terms and props against the manuscript', 'Manuscript associations', ()),
     ('search', 'Search the latest source versions with literal words', 'Search and review', ()),
     ('cite', 'Resolve an immutable source passage', 'Search and review', ()),
     ('timeline', 'Read a conservative chronology from recorded claim periods', 'Search and review', ()),
@@ -222,6 +224,29 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
         if name == "review-manuscript":
             command.epilog = (command.epilog or "") + " Read-only: check current chapter locations and review needs. Flags do not prove contradictions."
+        if name == "terms":
+            _add_manuscript_argument(command)
+            command.epilog = (
+                (command.epilog or "")
+                + " Read-only occurrence lookup unless --set-term or --delete-term is supplied. "
+                "Candidate occurrences never create archive revisions or prove contradictions."
+            )
+            command.add_argument("--term", help="Filter manuscript occurrence review to one configured term")
+            term_edit = command.add_mutually_exclusive_group()
+            term_edit.add_argument("--set-term", metavar="TERM", help="Create or update one term/prop profile in lixity.toml")
+            term_edit.add_argument("--delete-term", metavar="TERM", help="Remove one term/prop profile from lixity.toml")
+            command.add_argument("--aliases", help="Comma-separated unscoped aliases for --set-term")
+            command.add_argument(
+                "--scoped-alternative",
+                action="append",
+                dest="scoped_alternatives",
+                metavar="FORM:CHAPTERS",
+                help="Chapter-scoped alternative for --set-term (e.g. 'Gaslamp:1,2'); repeat as needed",
+            )
+            command.add_argument("--case-sensitive", action="store_true", help="Match case-sensitively for --set-term")
+            command.add_argument("--dossier-id", help="Optional reference dossier UUID for --set-term")
+            command.add_argument("--claim-id", help="Optional reference claim UUID for --set-term")
+            command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
         if name == "link-manuscript":
             command.add_argument("--claim-id", required=True)
             command.add_argument("--claim-revision", type=int, required=True,
@@ -261,8 +286,8 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
         if name == "reconcile-manuscript":
             _add_manuscript_argument(command)
-            command.epilog = ((command.epilog or "") + " Preview by default. Acceptance writes one revision per link. "
-                              "Multi-link runs use separate commits and can partly succeed; inspect accepted/skipped, "
+            command.epilog = ((command.epilog or "") + " Preview by default. Acceptance writes one revision per link "
+                              "and commits accepted batch updates in one publication transaction; inspect accepted/skipped, "
                               "then run review-manuscript again.")
             command.add_argument("--link-id", help="Preview or update only this association")
             command.add_argument("--new-quote", "--quote",
@@ -373,6 +398,17 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--tags", help="Comma-separated tags")
             command.add_argument("--tag", action="append", dest="filter_tags",
                                  help="List-only exact stored tag filter (case-sensitive); repeat to require all tags")
+            command.add_argument("--collection",
+                                 help="List-only collection filter: a configured collection ID (in reading order), 'unassigned', or 'all'")
+            collection_edit = command.add_mutually_exclusive_group()
+            collection_edit.add_argument("--set-collection", metavar="COLLECTION_ID",
+                                         help="Create or update one named dossier collection in lixity.toml without revising dossiers")
+            collection_edit.add_argument("--delete-collection", metavar="COLLECTION_ID",
+                                         help="Delete one named dossier collection from lixity.toml without revising dossiers")
+            command.add_argument("--collection-name", metavar="NAME",
+                                 help="Human-readable collection name for --set-collection")
+            command.add_argument("--dossiers", metavar="UUIDS",
+                                 help="Comma-separated dossier UUIDs in explicit reading order for --set-collection")
             command.add_argument("--evidence", help="Comma-separated passage UUIDs")
             command.add_argument("--geography", metavar="JSON_OR_FILE",
                                  help="Dossier GeoJSON FeatureCollection: Point/LineString/Polygon or null geometry, "
@@ -543,45 +579,6 @@ def command_metadata() -> list[dict[str, Any]]:
              "json_flag": "--json" if "--json" in command._option_string_actions else None,
              "aliases": list(command.get_default("cli_aliases")), "group": command.get_default("cli_group")}
             for name, command in commands.choices.items() if name == command.get_default("research_command")]
-
-
-def _reconcile_outcome(project: str, manuscript: str, row: dict[str, Any], source_sha256: str,
-                       actor: str, language: str | None, *, accept_moved: bool,
-                       accept_claim_updates: bool, reason: str | None,
-                       expected_project_id: str | None = None,
-                       expected_snapshot: str | None = None) -> dict[str, Any]:
-    """Apply accepted changes once per row; storage failures abort the batch."""
-    from . import api
-    from .repository import Repository, ResearchConflictError, ResearchError, ResearchStorageError
-
-    try:
-        current = Repository(project).snapshot()
-        claim_revision = row["claim_current_revision"] if accept_claim_updates and row["claim_changed"] else None
-        values: dict[str, Any] = {"expected_project_id": expected_project_id or current.project.id,
-                                  "expected_snapshot": expected_snapshot or current.digest,
-                                  "expected_revision": row["revision"], "expected_source_sha256": source_sha256,
-                                  "actor": actor, "reason": reason}
-        if accept_moved and row["anchor_state"] in ("moved", "adjusted"):
-            single = api.reanchor_manuscript_link(
-                project, manuscript, row["link_id"], **values,
-                language=language, new_claim_revision=claim_revision)
-        else:
-            if claim_revision is None:
-                raise ResearchError("No accepted changes for this association")
-            single = api.reanchor_manuscript_claim_revision(
-                project, manuscript, row["link_id"], **values, new_claim_revision=claim_revision)
-    except (ResearchError, ResearchConflictError, ValueError) as error:
-        if expected_snapshot is not None and isinstance(error, ResearchConflictError):
-            raise
-        if isinstance(error.__cause__, OSError):
-            raise error.__cause__ from None
-        if isinstance(error, ResearchStorageError):
-            raise
-        return {"ok": False, "link_id": row["link_id"], "reason": str(error)}
-    # OSError / PermissionError / Read-only file system are hard system failures,
-    # not per-link skips: let them propagate so the command exits non-zero.
-    return {"ok": True, "link_id": single["link_id"], "revision": single["record"]["revision"],
-            "snapshot": single["snapshot"]}
 
 
 def _json_payload(value: str) -> Any:
@@ -955,9 +952,14 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
 
 def _resolve_manuscript_input(args: argparse.Namespace) -> None:
     """Default manuscript input only after validating the selected archive."""
+    if args.research_command == "terms" and (
+        getattr(args, "set_term", None) is not None
+        or getattr(args, "delete_term", None) is not None
+    ):
+        return
     if args.research_command not in (
         "review-manuscript", "find-anchor", "link-manuscript", "unlink-manuscript",
-        "reconcile-manuscript", "compare",
+        "reconcile-manuscript", "compare", "terms",
     ) or getattr(args, "manuscript", None) is not None:
         return
     from ..workspace import configured_manuscript
@@ -1113,6 +1115,32 @@ def run(args: argparse.Namespace) -> int:
                     raise ResearchError("Positional record ID conflicts with the named record ID")
                 setattr(args, flag, rid)
         dossier_tags: list[str] | None = None
+        if command == "dossier":
+            list_incompatible_fields = (*_REVISION_FIELDS["dossier"], "section", "revision", "export_edit", "edit_file", "output")
+            list_incompatible_modes = ("summary", "omit_citations", "update", "prepare", "diff", "history", "inspect", "preamble", "body_only")
+            if getattr(args, "set_collection", None) is not None or getattr(args, "delete_collection", None) is not None:
+                if (args.dossier_id or getattr(args, "action", None) is not None
+                        or getattr(args, "filter_tags", None) is not None
+                        or getattr(args, "collection", None) is not None
+                        or any(getattr(args, field, None) is not None for field in list_incompatible_fields)
+                        or any(getattr(args, mode, False) for mode in list_incompatible_modes)):
+                    raise ResearchError("--set-collection and --delete-collection cannot be combined with record selectors, filters or dossier revision fields")
+                if getattr(args, "set_collection", None) is not None and not getattr(args, "collection_name", None):
+                    raise ResearchError("--set-collection requires --collection-name NAME")
+                if getattr(args, "delete_collection", None) is not None and (
+                        getattr(args, "collection_name", None) is not None or getattr(args, "dossiers", None) is not None):
+                    raise ResearchError("--delete-collection takes no --collection-name or --dossiers")
+            elif getattr(args, "collection_name", None) is not None or getattr(args, "dossiers", None) is not None:
+                raise ResearchError("--collection-name and --dossiers require --set-collection COLLECTION_ID")
+            if (
+                getattr(args, "collection", None) is not None
+                and (
+                    args.dossier_id
+                    or any(getattr(args, field, None) is not None for field in list_incompatible_fields)
+                    or any(getattr(args, mode, False) for mode in list_incompatible_modes)
+                )
+            ):
+                raise ResearchError("--collection filters dossier lists only; do not combine it with a selected record or creation/revision fields")
         if command == "dossier" and (filter_tags := getattr(args, "filter_tags", None)) is not None:
             from pydantic import TypeAdapter
 
@@ -1364,6 +1392,58 @@ def run(args: argparse.Namespace) -> int:
                                                include_retracted=args.include_retracted)
         elif command == "review-manuscript":
             result = api.review_manuscript_links(args.project, args.manuscript, language=args.language)
+        elif command == "terms":
+            if getattr(args, "set_term", None) is not None:
+                if getattr(args, "term", None) is not None or getattr(args, "manuscript", None) is not None:
+                    raise ResearchError("--set-term cannot be combined with --term or a manuscript path")
+                raw_aliases = getattr(args, "aliases", "") or ""
+                aliases = [item.strip() for item in raw_aliases.split(",") if item.strip()]
+                scoped_list: list[dict[str, Any]] = []
+                for spec in getattr(args, "scoped_alternatives", None) or []:
+                    form_part, sep, ch_part = str(spec).rpartition(":")
+                    if not form_part.strip() or not sep or not ch_part.strip():
+                        raise ResearchError("Each --scoped-alternative must have format FORM:CH1,CH2")
+                    try:
+                        chapters = [int(ch.strip()) for ch in ch_part.split(",") if ch.strip()]
+                    except ValueError:
+                        raise ResearchError("Scoped alternative chapters must be positive integers") from None
+                    scoped_list.append({"term": form_part.strip(), "chapters": chapters})
+                result = api.save_term_profile(
+                    args.project,
+                    args.set_term,
+                    aliases=aliases,
+                    scoped_alternatives=scoped_list,
+                    case_sensitive=bool(getattr(args, "case_sensitive", False)),
+                    dossier_id=getattr(args, "dossier_id", None),
+                    claim_id=getattr(args, "claim_id", None),
+                )
+            elif getattr(args, "delete_term", None) is not None:
+                if (
+                    getattr(args, "term", None) is not None
+                    or getattr(args, "manuscript", None) is not None
+                    or getattr(args, "aliases", None) is not None
+                    or getattr(args, "scoped_alternatives", None) is not None
+                    or getattr(args, "case_sensitive", False)
+                    or getattr(args, "dossier_id", None) is not None
+                    or getattr(args, "claim_id", None) is not None
+                ):
+                    raise ResearchError("--delete-term takes no term profile fields, --term filter or manuscript path")
+                result = api.delete_term_profile(args.project, args.delete_term)
+            else:
+                if (
+                    getattr(args, "aliases", None) is not None
+                    or getattr(args, "scoped_alternatives", None) is not None
+                    or getattr(args, "case_sensitive", False)
+                    or getattr(args, "dossier_id", None) is not None
+                    or getattr(args, "claim_id", None) is not None
+                ):
+                    raise ResearchError("Term profile fields require --set-term TERM")
+                result = api.review_manuscript_terms(
+                    args.project,
+                    args.manuscript,
+                    term=getattr(args, "term", None),
+                    language=args.language,
+                )
         elif command == "unlink-manuscript":
             from .repository import ResearchConflictError
 
@@ -1476,26 +1556,20 @@ def run(args: argparse.Namespace) -> int:
                 candidates = [row for row in link_review["links"]
                               if (args.accept_moved and row["anchor_state"] in ("moved", "adjusted"))
                               or (args.accept_claim_updates and row["claim_changed"])]
-                accepted: list[dict[str, Any]] = []
-                skipped: list[dict[str, str]] = []
                 batch_snapshot = link_review["snapshot"] if args.expected_snapshot is not None else None
-                for row in candidates:
-                    outcome = _reconcile_outcome(args.project, args.manuscript, row, source_sha256,
-                                                 args.actor, args.language, accept_moved=args.accept_moved,
-                                                 accept_claim_updates=args.accept_claim_updates, reason=args.reason,
-                                                 expected_project_id=link_review["project_id"] if batch_snapshot else None,
-                                                 expected_snapshot=batch_snapshot)
-                    if outcome["ok"]:
-                        accepted.append({"link_id": outcome["link_id"], "revision": outcome["revision"]})
-                        if batch_snapshot is not None:
-                            batch_snapshot = outcome["snapshot"]
-                    else:
-                        skipped.append({"link_id": outcome["link_id"], "reason": outcome["reason"]})
-                result = {"schema_version": "research-manuscript-reconcile-local/1",
-                          "project_id": link_review["project_id"],
-                          "snapshot": Repository(args.project).snapshot().digest,
-                          "source_path": link_review["source_path"], "dry_run": False,
-                          "accepted": accepted, "skipped": skipped}
+                result = api.reconcile_manuscript_links(
+                    args.project,
+                    args.manuscript,
+                    candidates,
+                    expected_source_sha256=source_sha256,
+                    actor=args.actor,
+                    language=args.language,
+                    accept_moved=args.accept_moved,
+                    accept_claim_updates=args.accept_claim_updates,
+                    reason=args.reason,
+                    expected_project_id=link_review["project_id"] if batch_snapshot else None,
+                    expected_snapshot=batch_snapshot,
+                )
         elif command == "reindex":
             result = api.reindex(args.project)
         elif command == "search":
@@ -1591,7 +1665,18 @@ def run(args: argparse.Namespace) -> int:
         ) is not None:
             result = revision_result
         elif command == "dossier":
-            if getattr(args, "dossier_id", None):
+            if getattr(args, "set_collection", None) is not None:
+                raw_dossiers = getattr(args, "dossiers", "") or ""
+                dossier_ids = [item.strip() for item in raw_dossiers.split(",") if item.strip()]
+                result = api.save_dossier_collection(
+                    args.project,
+                    args.set_collection,
+                    name=args.collection_name,
+                    dossier_ids=dossier_ids,
+                )
+            elif getattr(args, "delete_collection", None) is not None:
+                result = api.delete_dossier_collection(args.project, args.delete_collection)
+            elif getattr(args, "dossier_id", None):
                 result = api.get_dossier(
                     args.project,
                     args.dossier_id,
@@ -1620,7 +1705,7 @@ def run(args: argparse.Namespace) -> int:
                     actor=args.actor,
                 )
             else:
-                result = api.list_dossiers(args.project)
+                result = api.list_dossiers(args.project, collection=getattr(args, "collection", None))
                 if dossier_tags is not None:
                     result["dossiers"] = [dossier for dossier in result["dossiers"]
                                           if all(tag in dossier["tags"] for tag in dossier_tags)]
@@ -1733,7 +1818,7 @@ def run(args: argparse.Namespace) -> int:
         else:
             result = api.audit(args.project)
         if command in ("find-anchor", "link-manuscript", "manuscript-links", "review-manuscript",
-                       "reconcile-manuscript", "unlink-manuscript") and args.format != "json":
+                       "reconcile-manuscript", "unlink-manuscript", "terms") and args.format != "json":
             from .presentation import manuscript_report
 
             print(manuscript_report(command, result, table=args.format == "table"), end="")

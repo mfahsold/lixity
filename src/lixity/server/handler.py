@@ -73,6 +73,7 @@ class LixityServerHandler(
         "/api/research/decision-impact": "_handle_research_decision_impact",
         "/api/research/review": "_handle_research_review",
         "/api/research/manuscript-review": "_handle_manuscript_claim_review",
+        "/api/research/manuscript-terms": "_handle_manuscript_terms_review",
         "/api/research/manuscript-links": "_handle_manuscript_claim_links",
     }
 

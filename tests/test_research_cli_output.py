@@ -29,7 +29,7 @@ class TestResearchCliOutput(unittest.TestCase):
         self.assertEqual(dossier["aliases"], ["dossiers"])
         commands = next(action for action in parser._actions if isinstance(action, argparse._SubParsersAction))
         reconcile_help = " ".join(commands.choices["reconcile-manuscript"].format_help().split())
-        for scope in ("unchanged quotes", "separate commits", "accepted", "skipped"):
+        for scope in ("unchanged quotes", "one publication transaction", "accepted", "skipped"):
             self.assertIn(scope, reconcile_help)
         anchor_help = " ".join(commands.choices["find-anchor"].format_help().split())
         self.assertIn("case-sensitive", anchor_help)

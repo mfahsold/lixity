@@ -310,7 +310,8 @@ class ResearchRoutesMixin(ResponseMixin):
                 data = research_api.get_dossier(root, dossier_id,
                     section=query.get("section", [None])[0], revision=revision)
             else:
-                data = research_api.list_dossiers(root)
+                collection = query.get("collection", [None])[0]
+                data = research_api.list_dossiers(root, collection=collection)
             self._json({"ok": True, **data})
         except (ResearchError, KeyError, ValueError) as exc:
             self._json({"ok": False, "message": str(exc)}, 400)
@@ -722,6 +723,31 @@ class ResearchRoutesMixin(ResponseMixin):
         root = self.get_research_root()
         if not root or not (root / "research").is_dir():
             self._json({"ok": False, "message": "Research project not initialized"}, 400)
+            return
+        action = payload.get("action")
+        if action in ("save_collection", "delete_collection", "set_collections"):
+            try:
+                if action == "save_collection":
+                    collection_id = str(payload.get("collection_id") or "").strip()
+                    name = str(payload.get("name") or "").strip()
+                    raw_ids = payload.get("dossier_ids")
+                    if isinstance(raw_ids, str):
+                        dossier_ids = [d.strip() for d in raw_ids.split(",") if d.strip()]
+                    elif isinstance(raw_ids, list):
+                        dossier_ids = [str(d).strip() for d in raw_ids if str(d).strip()]
+                    else:
+                        dossier_ids = []
+                    res = research_api.save_dossier_collection(root, collection_id, name=name, dossier_ids=dossier_ids)
+                    self._json({"ok": True, "message": f"Collection '{name}' saved", **res})
+                elif action == "delete_collection":
+                    collection_id = str(payload.get("collection_id") or "").strip()
+                    res = research_api.delete_dossier_collection(root, collection_id)
+                    self._json({"ok": True, "message": f"Collection '{collection_id}' deleted", **res})
+                else:
+                    res = research_api.set_dossier_collections(root, payload.get("collections"))
+                    self._json({"ok": True, "message": "Dossier collections updated", **res})
+            except (ResearchError, OSError, ValueError) as exc:
+                self._research_error(exc)
             return
         title = str(payload.get("title") or "").strip()
         body = str(payload.get("body") or "").strip()

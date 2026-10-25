@@ -8,14 +8,17 @@ from typing import Any, cast
 
 from pydantic import ValidationError
 
+from .acknowledgements import latest_acknowledgements
 from .geography import summarize_geography
 from .models import (
     Claim,
     ClaimRelation,
     ClaimScope,
     Decision,
+    DecisionAcknowledgement,
     Dossier,
     EvidenceLink,
+    ManuscriptAnchor,
     ManuscriptClaimLink,
     Passage,
     Reference,
@@ -35,6 +38,7 @@ from .sections import (
 from .timeline import period_warnings
 
 Authored = Dossier | Claim | ClaimRelation | EvidenceLink | ManuscriptClaimLink | Decision
+BatchRecord = Authored | DecisionAcknowledgement
 KINDS: dict[str, type[Authored]] = {
     "dossier": Dossier, "claim": Claim, "evidence_link": EvidenceLink, "decision": Decision,
     "claim_relation": ClaimRelation,
@@ -47,6 +51,16 @@ FIELDS = {
     "manuscript_claim_link": {"claim_id", "claim_revision", "state", "note"},
     "evidence_link": {"claim_id", "claim_revision", "passage_id", "relation", "rationale", "reviewer"},
     "decision": {"title", "rationale", "claim_id", "claim_revision", "deviation_from_fact", "impact_on_plot", "dossier_ids", "dossier_revisions"},
+}
+MANUSCRIPT_BATCH_ANCHOR_FIELDS = {
+    "expected_source_sha256",
+    "accept_moved",
+    "new_quote",
+    "quote",
+    "line",
+    "selection",
+    "manuscript",
+    "language",
 }
 
 
@@ -664,18 +678,285 @@ def prepare_dossier_section(
                                    section=section, changes={"body": content}, resolutions=resolutions)
 
 
+def _prepare_batch_anchor(
+    repository: Repository,
+    previous: ManuscriptClaimLink,
+    changes: Mapping[str, Any],
+    *,
+    source_cache: dict[Path, tuple[str, str]],
+    paragraph_cache: dict[tuple[str, str, str | None], Any],
+) -> tuple[ManuscriptAnchor, tuple[Path, str]]:
+    """Verify and resolve a source-bound manuscript anchor update inside a revision batch."""
+    from ..io import FileUtils
+    from ..pipeline import paragraph_identity
+    from .manuscript import _paragraphs, _quote_occurrences, _source_path
+
+    if previous.state != "active" or changes.get("state", previous.state) != "active":
+        raise ResearchError("Retracted associations cannot be re-pinned")
+    expected_source_sha256 = changes.get("expected_source_sha256")
+    if not isinstance(expected_source_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_source_sha256):
+        raise ResearchError("Anchor updates in a revision batch require expected_source_sha256")
+    manuscript_arg = changes.get("manuscript", previous.anchor.source_path)
+    if not isinstance(manuscript_arg, str) or not manuscript_arg.strip():
+        raise ResearchError("Invalid manuscript path")
+    path, relative = _source_path(repository, manuscript_arg)
+    if previous.anchor.source_path != relative:
+        raise ResearchError("The association belongs to a different manuscript path")
+    if path not in source_cache:
+        try:
+            source_cache[path] = FileUtils.read_source_snapshot(str(path))
+        except (OSError, UnicodeError) as exc:
+            raise ResearchError("Manuscript source is missing or unreadable") from exc
+    text, source_sha256 = source_cache[path]
+    if source_sha256 != expected_source_sha256:
+        raise ResearchConflictError(
+            "Manuscript source bytes changed; review the current text before saving"
+        )
+    language = changes.get("language")
+    if language is not None and not isinstance(language, str):
+        raise ResearchError("Language must be a string or null")
+    cache_key = (relative, source_sha256, language)
+    if cache_key not in paragraph_cache:
+        paragraph_cache[cache_key] = _paragraphs(text, repository, language, None)
+    paragraphs = paragraph_cache[cache_key]
+
+    selection = changes.get("selection")
+    has_quote = "new_quote" in changes or "quote" in changes
+    accept_moved = changes.get("accept_moved")
+    if accept_moved is not None and type(accept_moved) is not bool:
+        raise ResearchError("accept_moved must be a boolean")
+    if selection is not None:
+        if has_quote or accept_moved:
+            raise ResearchError("Choose selection or new_quote/accept_moved, not both")
+        required = {"start_line", "end_line", "paragraph_sha256", "start", "end", "quote"}
+        if not isinstance(selection, Mapping) or set(selection) != required:
+            raise ResearchError(
+                "Selection requires exact paragraph identity and Unicode codepoint offsets"
+            )
+        try:
+            updated_anchor = ManuscriptAnchor.model_validate(
+                {
+                    **selection,
+                    "source_path": relative,
+                    "source_sha256": source_sha256,
+                    "retention_confirmed": True,
+                }
+            )
+        except ValidationError:
+            raise ResearchError("Invalid manuscript selection fields or quote bounds") from None
+        identity = {k: selection[k] for k in ("start_line", "end_line", "paragraph_sha256")}
+        matches = [p for p in paragraphs if paragraph_identity(p) == identity]
+        if len(matches) != 1 or matches[0].text[updated_anchor.start : updated_anchor.end] != updated_anchor.quote:
+            raise ResearchError(
+                "Selection does not match one current displayed manuscript paragraph"
+            )
+        return updated_anchor, (path, source_sha256)
+
+    if "new_quote" in changes and "quote" in changes and changes["new_quote"] != changes["quote"]:
+        raise ResearchError("Conflicting quote and new_quote values")
+    new_quote = changes["new_quote"] if "new_quote" in changes else changes.get("quote")
+    line = changes.get("line")
+    if new_quote is not None:
+        if not isinstance(new_quote, str) or not new_quote.strip():
+            raise ResearchError("Provide a nonempty replacement quote to re-pin")
+        if line is not None and (type(line) is not int or line < 1):
+            raise ResearchError("Line must be a positive integer")
+        scoped = (
+            [p for p in paragraphs if p.start_line <= line <= p.end_line]
+            if line is not None
+            else paragraphs
+        )
+        occurrences = _quote_occurrences(scoped, new_quote)
+        if len(occurrences) == 0:
+            raise ResearchError("Replacement quote was not found in the displayed paragraphs")
+        if len(occurrences) > 1:
+            raise ResearchError("Replacement quote is ambiguous; add line to choose one")
+        quote_to_pin = new_quote
+    elif accept_moved is True:
+        if line is not None:
+            raise ResearchError("line applies only to replacement quotes")
+        occurrences = _quote_occurrences(paragraphs, previous.anchor.quote)
+        if len(occurrences) != 1:
+            raise ResearchError(
+                "Only a uniquely resolvable anchor can be re-pinned; review the manuscript first"
+            )
+        quote_to_pin = previous.anchor.quote
+    else:
+        raise ResearchError("Anchor updates require accept_moved, new_quote or selection")
+
+    target, start = occurrences[0]
+    end = start + len(quote_to_pin)
+    identity = paragraph_identity(target)
+    try:
+        updated_anchor = ManuscriptAnchor.model_validate(
+            {
+                **previous.anchor.model_dump(),
+                "source_path": relative,
+                "source_sha256": source_sha256,
+                "start_line": target.start_line,
+                "end_line": target.end_line,
+                "paragraph_sha256": identity["paragraph_sha256"],
+                "start": start,
+                "end": end,
+                "quote": quote_to_pin,
+            }
+        )
+    except ValidationError:
+        raise ResearchError("Invalid replacement quote or anchor bounds") from None
+    return updated_anchor, (path, source_sha256)
+
+
+def _prepare_batch_acknowledgement(
+    snapshot: Snapshot,
+    operation: Mapping[str, Any],
+    *,
+    actor: str,
+    identifiers: set[str],
+    ack_pairs: set[tuple[str, str]],
+    current_acknowledgements: Mapping[tuple[str, str], DecisionAcknowledgement],
+) -> tuple[DecisionAcknowledgement, dict[str, Any]]:
+    """Validate an explicit decision acknowledgement event inside a revision batch."""
+    from . import editorial
+    from .api import envelope
+
+    allowed = {
+        "kind",
+        "id",
+        "decision_id",
+        "dossier_id",
+        "expected_decision_revision",
+        "expected_dossier_revision",
+        "status",
+        "note",
+        "changes",
+        "expected_revision",
+        "change_kind",
+        "reason",
+    }
+    if set(operation) - allowed:
+        raise ResearchError("Invalid decision acknowledgement operation fields")
+    nested = operation.get("changes")
+    if nested is not None and (not isinstance(nested, Mapping) or set(nested) - {
+        "decision_id",
+        "dossier_id",
+        "expected_decision_revision",
+        "expected_dossier_revision",
+        "status",
+        "note",
+    }):
+        raise ResearchError("Invalid decision acknowledgement changes")
+    source = {**(nested or {}), **{k: v for k, v in operation.items() if k != "changes"}}
+    decision_id = source.get("decision_id")
+    dossier_id = source.get("dossier_id")
+    expected_decision_revision = source.get("expected_decision_revision")
+    expected_dossier_revision = source.get("expected_dossier_revision")
+    status = source.get("status")
+    note = source.get("note")
+    if not isinstance(decision_id, str) or not isinstance(dossier_id, str):
+        raise ResearchError("Decision acknowledgement requires decision_id and dossier_id")
+    if (
+        type(expected_decision_revision) is not int
+        or expected_decision_revision < 1
+        or type(expected_dossier_revision) is not int
+        or expected_dossier_revision < 1
+    ):
+        raise ResearchError("Exact positive decision and dossier revisions are required")
+    try:
+        Reference(id=decision_id)
+        Reference(id=dossier_id)
+        decision = snapshot.latest(decision_id, Decision)
+        dossier = snapshot.latest(dossier_id, Dossier)
+    except ValidationError:
+        raise ResearchError("Invalid decision or dossier identifier") from None
+    if decision.revision != expected_decision_revision or dossier.revision != expected_dossier_revision:
+        raise ResearchConflictError("Decision or dossier revision changed; reload before acknowledging")
+    require_active_dossier_association(snapshot, reference(dossier))
+    pair = (decision.id, dossier.id)
+    if pair in ack_pairs:
+        raise ResearchError("A decision/dossier acknowledgement pair may appear only once in a revision batch")
+    ack_pairs.add(pair)
+    impact = editorial.decision_graph(snapshot, decision_id=decision_id).get(decision_id)
+    if impact is None or dossier_id not in {entry["id"] for entry in impact["dossiers"]}:
+        raise ResearchError("Acknowledge only a dossier explicitly associated with this decision")
+    if (
+        not isinstance(status, str)
+        or status not in {"applied", "review_needed"}
+        or (note is not None and not isinstance(note, str))
+    ):
+        raise ResearchError("Acknowledgement requires an explicit valid status, actor and optional text note")
+    previous = current_acknowledgements.get(pair)
+    ack_values = envelope(snapshot.project.id, actor.strip())
+    explicit_id = operation.get("id")
+    if explicit_id is not None:
+        if not isinstance(explicit_id, str):
+            raise ResearchError("Invalid acknowledgement identifier")
+        try:
+            Reference(id=explicit_id)
+        except ValidationError:
+            raise ResearchError("Invalid acknowledgement identifier") from None
+        if explicit_id in snapshot.records or explicit_id in identifiers:
+            raise ResearchError("Acknowledgement identifier already exists")
+        ack_values["id"] = explicit_id
+    identifiers.add(ack_values["id"])
+    try:
+        acknowledgement = DecisionAcknowledgement(
+            **ack_values,
+            decision_ref=reference(decision),
+            dossier_ref=reference(dossier),
+            status="applied" if status == "applied" else "review_needed",
+            note=note.strip() or None if note is not None else None,
+            supersedes_ref=reference(previous) if previous else None,
+        )
+    except ValidationError:
+        raise ResearchError("Invalid acknowledgement fields; check actor and note size") from None
+    encode(acknowledgement)
+    prepared_op: dict[str, Any] = {
+        "kind": "decision_acknowledgement",
+        "id": acknowledgement.id,
+        "decision_id": decision.id,
+        "dossier_id": dossier.id,
+        "expected_decision_revision": decision.revision,
+        "expected_dossier_revision": dossier.revision,
+        "status": acknowledgement.status,
+        "note": acknowledgement.note,
+    }
+    return acknowledgement, prepared_op
+
+
 def _revision_batch(
-    snapshot: Snapshot, operations: list[Mapping[str, Any]], actor: str,
-) -> tuple[list[Authored], list[dict[str, Any]]]:
+    repository: Repository,
+    snapshot: Snapshot,
+    operations: list[Mapping[str, Any]],
+    actor: str,
+) -> tuple[list[BatchRecord], list[dict[str, Any]], list[tuple[Path, str]]]:
     if not isinstance(operations, list) or not 1 <= len(operations) <= 100:
         raise ResearchError("Provide between 1 and 100 revision operations")
     if not isinstance(actor, str) or not actor.strip():
         raise ResearchError("A revision actor is required")
-    revised: list[Authored] = []
+    revised: list[BatchRecord] = []
     prepared: list[dict[str, Any]] = []
+    verified_sources: list[tuple[Path, str]] = []
+    source_cache: dict[Path, tuple[str, str]] = {}
+    paragraph_cache: dict[tuple[str, str, str | None], Any] = {}
     identifiers: set[str] = set()
+    ack_pairs: set[tuple[str, str]] = set()
+    current_acknowledgements: dict[tuple[str, str], DecisionAcknowledgement] | None = None
     unavailable = {record.target_ref.id for record in snapshot.records.values() if isinstance(record, Tombstone)}
     for operation in operations:
+        if isinstance(operation, Mapping) and operation.get("kind") == "decision_acknowledgement":
+            if current_acknowledgements is None:
+                current_acknowledgements = latest_acknowledgements(snapshot.records.values())
+            acknowledgement, prepared_ack = _prepare_batch_acknowledgement(
+                snapshot,
+                operation,
+                actor=actor,
+                identifiers=identifiers,
+                ack_pairs=ack_pairs,
+                current_acknowledgements=current_acknowledgements,
+            )
+            revised.append(acknowledgement)
+            prepared.append(prepared_ack)
+            continue
         if not isinstance(operation, Mapping) or set(operation) != {
             "kind", "id", "expected_revision", "changes", "change_kind", "reason"
         }:
@@ -687,12 +968,51 @@ def _revision_batch(
         identifiers.add(identifier)
         expected_revision = operation["expected_revision"]
         changes, change_kind, reason = operation["changes"], operation["change_kind"], operation["reason"]
-        candidate = _revision_candidate(snapshot, previous, changes=changes, expected_revision=expected_revision,
+        if not isinstance(changes, Mapping) or not changes:
+            raise ResearchError("Provide at least one editable field")
+        updated_anchor: ManuscriptAnchor | None = None
+        record_changes: Mapping[str, Any] = changes
+        if isinstance(previous, ManuscriptClaimLink) and (set(changes) & MANUSCRIPT_BATCH_ANCHOR_FIELDS):
+            if set(changes) - (FIELDS["manuscript_claim_link"] | MANUSCRIPT_BATCH_ANCHOR_FIELDS):
+                raise ResearchError("The change contains unknown or immutable fields")
+            updated_anchor, verified_source = _prepare_batch_anchor(
+                repository,
+                previous,
+                changes,
+                source_cache=source_cache,
+                paragraph_cache=paragraph_cache,
+            )
+            verified_sources.append(verified_source)
+            record_changes = {k: v for k, v in changes.items() if k not in MANUSCRIPT_BATCH_ANCHOR_FIELDS}
+            if not record_changes:
+                record_changes = {"note": previous.note}
+        candidate = _revision_candidate(snapshot, previous, changes=record_changes, expected_revision=expected_revision,
                                         change_kind=change_kind, reason=reason, actor=actor.strip())
+        if updated_anchor is not None and isinstance(previous, ManuscriptClaimLink):
+            base_record = candidate if isinstance(candidate, ManuscriptClaimLink) and candidate is not previous else previous.model_copy(
+                update={
+                    "revision": previous.revision + 1,
+                    "created_by": actor.strip(),
+                    "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                    "change": {
+                        "change_kind": change_kind,
+                        "reason": reason.strip(),
+                        "previous_revision": previous.revision,
+                    },
+                }
+            )
+            candidate_with_anchor = base_record.model_copy(update={"anchor": updated_anchor})
+            metadata = {"schema_version", "revision", "created_at", "created_by", "change"}
+            candidate = (
+                previous
+                if previous.model_dump(exclude=metadata) == candidate_with_anchor.model_dump(exclude=metadata)
+                else candidate_with_anchor
+            )
+            encode(candidate)
         revised.append(candidate)
         prepared.append({"kind": kind, "id": identifier, "expected_revision": expected_revision,
                          "changes": dict(changes), "change_kind": change_kind, "reason": reason.strip()})
-    return revised, prepared
+    return revised, prepared, verified_sources
 
 
 def _batch_operations(
@@ -720,14 +1040,21 @@ def prepare_record_revisions(
     """Validate a read-only batch of existing records against one current snapshot.
 
     Every operation supplies kind/id, expected_revision, changes, change_kind
-    and reason. References must already exist; future revisions from other
-    operations are not implicitly pinned. Review the returned operations and
-    snapshot before explicitly calling ``apply_record_revisions``.
+    and reason (or an explicit ``decision_acknowledgement`` operation).
+    References must already exist; future revisions from other operations are
+    not implicitly pinned. Review the returned operations and snapshot before
+    explicitly calling ``apply_record_revisions``.
     """
     repository = Repository(project)
     snapshot = repository.snapshot()
-    records, prepared = _revision_batch(snapshot, _batch_operations(snapshot, operations), actor)
-    additions = [record for record in records if record.revision != snapshot.records[record.id].revision]
+    records, prepared, _verified_sources = _revision_batch(
+        repository, snapshot, _batch_operations(snapshot, operations), actor
+    )
+    additions = [
+        record
+        for record in records
+        if record.id not in snapshot.records or record.revision != snapshot.records[record.id].revision
+    ]
     if additions:
         repository.prepare_commit(list(additions), snapshot)
     return {"schema_version": "research-revision-batch-local/1", "project_id": snapshot.project.id,
@@ -739,14 +1066,25 @@ def apply_record_revisions(
     actor: str = "local-author",
 ) -> dict[str, Any]:
     """Append changed reviewed records atomically; unchanged records keep their revision."""
+    from ..io import FileUtils
+
     if not isinstance(expected_snapshot, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_snapshot):
         raise ResearchError("Expected snapshot must be a SHA-256 digest")
     repository = Repository(project)
     snapshot = repository.snapshot()
     if snapshot.digest != expected_snapshot:
         raise ResearchConflictError("Research snapshot changed; prepare the batch again before applying")
-    records, _prepared = _revision_batch(snapshot, _batch_operations(snapshot, operations), actor)
-    additions = [record for record in records if record.revision != snapshot.records[record.id].revision]
+    records, _prepared, verified_sources = _revision_batch(
+        repository, snapshot, _batch_operations(snapshot, operations), actor
+    )
+    additions = [
+        record
+        for record in records
+        if record.id not in snapshot.records or record.revision != snapshot.records[record.id].revision
+    ]
+    for path, expected_sha256 in dict(verified_sources).items():
+        if FileUtils.read_source_snapshot(str(path))[1] != expected_sha256:
+            raise ResearchConflictError("Manuscript source bytes changed before saving")
     accepted = repository.commit(list(additions), {}, snapshot)
     return {"schema_version": "research-revision-batch-local/1", "project_id": accepted.project.id,
             "snapshot": accepted.digest, "records": [

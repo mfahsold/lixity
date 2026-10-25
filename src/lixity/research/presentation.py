@@ -98,6 +98,49 @@ def manuscript_report(command: str, result: dict[str, Any], *, table: bool) -> s
         heading = f"Manuscript anchor: {result['source_path']}"
         headers = ("Line", "Quote")
         rows = [[result["start_line"], result["quote"]]]
+    elif command == "terms":
+        if result.get("schema_version") == "research-terms-config-local/1":
+            heading = "Configured manuscript terms"
+            headers = ("Term", "Aliases", "Scoped alternatives")
+            rows = [
+                [
+                    t["term"],
+                    ", ".join(t.get("aliases", [])) or "-",
+                    ", ".join(
+                        f"{alt['term']} (ch {','.join(map(str, alt['chapters']))})"
+                        for alt in t.get("scoped_alternatives", [])
+                    )
+                    or "-",
+                ]
+                for t in result.get("terms", [])
+            ]
+        else:
+            summary = result.get("summary") or {}
+            heading = (
+                f"Manuscript terms: {result['source_path']} "
+                f"({summary.get('occurrence_count', 0)} occurrences, "
+                f"{summary.get('out_of_scope_count', 0)} out of scope, "
+                f"{summary.get('ambiguous_count', 0)} ambiguous)"
+            )
+            headers = ("Term", "Form", "Kind", "Chapter", "Line", "Flags", "Quote")
+            rows = []
+            for occ in result.get("occurrences", []):
+                ch_num = occ.get("chapter")
+                chapter_str = f"{ch_num}: {occ.get('chapter_title') or ''}".strip(": ") if ch_num is not None else "-"
+                flags_list: list[str] = []
+                if not occ.get("expected_in_chapter", True):
+                    flags_list.append("out_of_scope")
+                if occ.get("ambiguous"):
+                    flags_list.extend(occ.get("ambiguity_reasons") or ["ambiguous"])
+                rows.append([
+                    occ["term"],
+                    occ["matched_form"],
+                    occ["variant_kind"],
+                    chapter_str,
+                    occ["start_line"],
+                    ", ".join(flags_list) or "-",
+                    occ["quote"],
+                ])
     elif command == "reconcile-manuscript" and "record" not in result:
         heading = "Manuscript reconciliation: " + ("preview" if result["dry_run"] else "applied")
         headers = ("Link ID", "Revision", "State", "Details")
@@ -402,5 +445,19 @@ def record_list_report(command: str, result: dict[str, Any], *, markdown: bool =
     lines.extend("  ".join(cell(row, field).ljust(width)
                            for (field, _), width in zip(_RECORD_COLUMNS, widths, strict=False)).rstrip()
                  for row in rows)
-    return "\n".join(lines) + f"\n{len(rows)} {caption}(s)."
+    footer = f"\n{len(rows)} {caption}(s)."
+    if command == "dossier":
+        selected_collection = result.get("selected_collection")
+        collections = result.get("collections")
+        if selected_collection:
+            footer += f" Collection: {safe_text(selected_collection)}."
+        elif isinstance(collections, list) and collections:
+            summary = ", ".join(
+                f"{safe_text(col['name'])} ({safe_text(col['id'])}: {col.get('available_count', 0)})"
+                for col in collections
+                if isinstance(col, dict) and "id" in col and "name" in col
+            )
+            if summary:
+                footer += f"\nCollections: {summary}"
+    return "\n".join(lines) + footer
 

@@ -40,8 +40,8 @@ DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
 
 UNINTERPRETED_KEYS = frozenset({"phrases", "capabilities"})
-PROJECT_ONLY_KEYS = ("author_name", "draft_notice", "publication", "site_publications", "register_profiles", "chapter_registers", "characters", "manuscript")
-PERSISTED_SETTINGS_KEYS = ("title", "author_name", "publication", "site_publications", "register_profiles", "chapter_registers")
+PROJECT_ONLY_KEYS = ("author_name", "draft_notice", "publication", "site_publications", "dossier_collections", "terms", "register_profiles", "chapter_registers", "characters", "manuscript")
+PERSISTED_SETTINGS_KEYS = ("title", "author_name", "publication", "site_publications", "dossier_collections", "terms", "register_profiles", "chapter_registers")
 
 # Keys that may appear in [tool.lixity] (documented schema).
 TOOL_KEYS = frozenset(
@@ -51,6 +51,8 @@ TOOL_KEYS = frozenset(
         "draft_notice",
         "publication",
         "site_publications",
+        "dossier_collections",
+        "terms",
         "z_mild",
         "z_strong",
         "fdr_q",
@@ -159,7 +161,9 @@ class PreparedProjectSettings:
 def _edit_project_setting(content: str, key: str, value: Any) -> str:
     settings = _parse_project_toml(content)
     expected = {**settings, key: value}
-    if key in settings and _same_toml(settings[key], value):
+    if key in settings and _same_toml(settings[key], value) and (
+        key != "dossier_collections" or list(settings[key].keys()) == list(value.keys())
+    ):
         return content
     newline = "\r\n" if "\r\n" in content else "\n"
     encoded = _toml_literal(value)
@@ -167,7 +171,10 @@ def _edit_project_setting(content: str, key: str, value: Any) -> str:
 
     def candidate(updated: str) -> None:
         try:
-            if _same_toml(expected, _parse_project_toml(updated)):
+            parsed = _parse_project_toml(updated)
+            if _same_toml(expected, parsed) and (
+                key != "dossier_collections" or list(parsed.get(key, {}).keys()) == list(value.keys())
+            ):
                 candidates.append(updated)
         except ValueError:
             pass
@@ -278,6 +285,16 @@ def prepare_project_settings(
             # JSON defaults when the owning model reads this table again.
             value = {name: profile.model_dump(exclude_none=True)
                      for name, profile in parse_site_publications(raw).items()}
+        elif key == "dossier_collections":
+            from .dossier_collections import parse_dossier_collections
+
+            value = {name: collection.model_dump(exclude_none=True)
+                     for name, collection in parse_dossier_collections(raw).items()}
+        elif key == "terms":
+            from .terms import parse_terms
+
+            value = {name: profile.model_dump(exclude_none=True)
+                     for name, profile in parse_terms(raw).items()}
         elif key == "language":
             value = raw
         elif key in THRESHOLD_KEYS:
@@ -497,8 +514,10 @@ def configuration_metadata() -> dict[str, Any]:
     not replace the existing validators or model the entire project file.
     """
     from .characters import character_configuration_schema
+    from .dossier_collections import dossier_collections_schema
     from .site_publications import site_publications_schema
     from .style_fingerprint import FingerprintThresholds
+    from .terms import terms_configuration_schema
 
     corpus_schema = CorpusConfig.model_json_schema()
     for key, value in CorpusConfig().model_dump().items():
@@ -534,6 +553,8 @@ def configuration_metadata() -> dict[str, Any]:
         "corpus_schema": corpus_schema,
         "publication_schema": publication_configuration_schema(),
         "site_publications_schema": site_publications_schema(),
+        "dossier_collections_schema": dossier_collections_schema(),
+        "terms_schema": terms_configuration_schema(),
         "characters_schema": character_configuration_schema(),
         "threshold_schema": {
             "type": "object", "properties": properties, "additionalProperties": False,

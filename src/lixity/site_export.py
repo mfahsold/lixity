@@ -37,7 +37,11 @@ from .pipeline import analyze_document, resolve_document_config
 from .project_identity import manuscript_identity_check, project_title
 from .research import api, editorial
 from .research.images import IMAGE_TYPES, read_image, resolve_dossier_images, resolve_dossier_media
-from .research.manuscript import manuscript_links_data, manuscript_review_data
+from .research.manuscript import (
+    manuscript_links_data,
+    manuscript_review_data,
+    manuscript_terms_data,
+)
 from .research.media import MEDIA_TYPES, VIDEO_TYPES
 from .research.models import (
     Dossier,
@@ -402,11 +406,11 @@ def _publication(repository: Repository, snapshot: Snapshot, text: str, config: 
 
 def _research(repository: Repository, snapshot: Snapshot, text: str, source: Path,
               source_hash: str, analysis: Any, token: str, include_files: bool,
-              files: dict[str, bytes]) -> tuple[dict[str, Any], dict[str, str]]:
+              files: dict[str, bytes], *, settings: dict[str, Any] | None = None) -> tuple[dict[str, Any], dict[str, str]]:
     reads = _Reads(token)
-    overview = api._project_overview(snapshot)
+    overview = api._project_overview(snapshot, root=repository.root)
     reads.add("status", {"ok": True, "initialized": True, **overview})
-    for route, value in (("sources", api._list_sources(snapshot)), ("dossiers", api._list_dossiers(snapshot)),
+    for route, value in (("sources", api._list_sources(snapshot)), ("dossiers", api._list_dossiers(snapshot, root=repository.root)),
                          ("claims", api._list_claims(snapshot)), ("decisions", api._list_decisions(snapshot))):
         reads.add(route, {"ok": True, **value}, companion=route == "dossiers")
     cited: set[str] = set()
@@ -453,6 +457,9 @@ def _research(repository: Repository, snapshot: Snapshot, text: str, source: Pat
     reads.add("manuscript-review", {"ok": True, **manuscript_review_data(snapshot,
         source_path=source.relative_to(repository.root).as_posix(), source_sha256=source_hash,
         paragraphs=analysis.paragraphs)}, companion=True)
+    reads.add("manuscript-terms", {"ok": True, **manuscript_terms_data(snapshot,
+        source_path=source.relative_to(repository.root).as_posix(), source_sha256=source_hash,
+        paragraphs=analysis.paragraphs, terms=(settings or {}).get("terms"))}, companion=True)
     reads.add("timeline", {"ok": True, **timeline_data(snapshot)})
     for include in (False, True):
         reads.add("claim-relations", {"ok": True, **api._list_claim_relations(snapshot, include_retracted=include)},
@@ -509,7 +516,7 @@ def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
     if mode == "review":
         analysis = analyze_document(text, config, effective_thresholds, include_evidence=True)
         responses, resources = (_research(repository, snapshot, text, source, source_hash, analysis, token,
-                                          include_source_files, files) if snapshot else ({}, {}))
+                                          include_source_files, files, settings=settings) if snapshot else ({}, {}))
         selection = resolve_character_settings(None, settings)
         author = validate_author_name(settings.get("author_name", ""))
         document = render_analysis(analysis, resolved, title=display_title,

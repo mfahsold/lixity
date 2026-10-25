@@ -461,3 +461,107 @@ class TestResearchRevisions(unittest.TestCase):
         with self.assertRaises(ResearchError):
             self.revise("dossier", empty, {"evidence_ids": [self.passage]})
         self.assertTrue(api.audit(self.project)["ok"])
+
+    def test_batch_revises_manuscript_link_with_source_verified_anchor_and_claim_pin(self):
+        from lixity.research.repository import digest
+
+        manuscript = self.project / "draft.md"
+        manuscript.write_bytes("## Chapter One\n\nThe **reading room** opened in 1924. 🦉 A visitor arrived.\n".encode())
+        anchor = api.resolve_manuscript_anchor(self.project, "draft.md", query="🦉 A visitor arrived.")
+        selection = {k: anchor[k] for k in ("start_line", "end_line", "paragraph_sha256", "start", "end", "quote")}
+        snapshot = Repository(self.project).snapshot()
+        linked = api.link_manuscript_claim(
+            self.project, "draft.md", self.claim, claim_revision=1, selection=selection,
+            expected_project_id=snapshot.project.id, expected_snapshot=snapshot.digest,
+            expected_source_sha256=digest(manuscript.read_bytes()), allow_retention=True,
+        )["link_id"]
+        self.revise("claim", self.claim, {"statement": "Opened in autumn 1924."})
+        manuscript.write_bytes(
+            "## Chapter One\n\nAn introductory note.\n\nThe **reading room** opened in autumn 1924. 🦉 A visitor arrived.\n".encode()
+        )
+        source_sha = digest(manuscript.read_bytes())
+        for bad_changes in (
+            {"anchor": {"quote": "Unverified"}},
+            {"accept_moved": True},
+            {"expected_source_sha256": "0" * 64, "accept_moved": True},
+            {"expected_source_sha256": source_sha, "new_quote": "Missing quote"},
+        ):
+            with self.subTest(bad_changes=bad_changes), self.assertRaises((ResearchError, ResearchConflictError)):
+                api.prepare_record_revisions(self.project, [{
+                    "kind": "manuscript_claim_link", "id": linked, "expected_revision": 1,
+                    "changes": bad_changes, "change_kind": "correction", "reason": "Invalid anchor batch",
+                }])
+        operations = [{
+            "kind": "manuscript_claim_link", "id": linked, "expected_revision": 1,
+            "changes": {
+                "expected_source_sha256": source_sha,
+                "new_quote": "reading room opened in autumn 1924",
+                "line": 5,
+                "claim_revision": 2,
+                "note": "Combined quote and claim pin update.",
+            },
+            "change_kind": "supersession",
+            "reason": "Update quote and claim pin together.",
+        }]
+        preview = api.prepare_record_revisions(self.project, operations)
+        self.assertTrue(preview["ready"])
+        manuscript.write_bytes(manuscript.read_bytes() + b"\nLate concurrent edit.\n")
+        with self.assertRaises(ResearchConflictError):
+            api.apply_record_revisions(self.project, preview, expected_snapshot=preview["snapshot"])
+        manuscript.write_bytes(
+            "## Chapter One\n\nAn introductory note.\n\nThe **reading room** opened in autumn 1924. 🦉 A visitor arrived.\n".encode()
+        )
+        applied = api.apply_record_revisions(self.project, preview, expected_snapshot=preview["snapshot"], actor="batch-author")
+        self.assertEqual(applied["records"], [{"kind": "manuscript_claim_link", "id": linked, "revision": 2}])
+        record = api.get_record(self.project, "manuscript_claim_link", linked)["record"]
+        self.assertEqual(record["revision"], 2)
+        self.assertEqual(record["claim_ref"], {"id": self.claim, "revision": 2})
+        self.assertEqual(record["anchor"]["quote"], "reading room opened in autumn 1924")
+        self.assertEqual(record["anchor"]["start_line"], 5)
+        self.assertEqual(record["note"], "Combined quote and claim pin update.")
+        self.assertTrue(api.audit(self.project)["ok"])
+
+    def test_batch_supports_decision_acknowledgement_events_and_supersedes_chains(self):
+        unlinked = api.create_dossier(self.project, "Unlinked dossier", "Not impacted.")["dossier_id"]
+        for bad_op in (
+            {"kind": "decision_acknowledgement", "decision_id": self.decision, "dossier_id": unlinked,
+             "expected_decision_revision": 1, "expected_dossier_revision": 1, "status": "applied"},
+            {"kind": "decision_acknowledgement", "decision_id": self.decision, "dossier_id": self.dossier,
+             "expected_decision_revision": 2, "expected_dossier_revision": 1, "status": "applied"},
+            {"kind": "decision_acknowledgement", "decision_id": self.decision, "dossier_id": self.dossier,
+             "expected_decision_revision": 1, "expected_dossier_revision": 1, "status": "invalid"},
+        ):
+            with self.subTest(bad_op=bad_op), self.assertRaises((ResearchError, ResearchConflictError)):
+                api.prepare_record_revisions(self.project, [bad_op])
+
+        operations = [
+            {"kind": "dossier", "id": self.dossier, "expected_revision": 1,
+             "changes": {"body": "Updated note reflecting the decision."},
+             "change_kind": "correction", "reason": "Apply decision to dossier."},
+            {"kind": "decision_acknowledgement", "decision_id": self.decision, "dossier_id": self.dossier,
+             "expected_decision_revision": 1, "expected_dossier_revision": 1,
+             "status": "applied", "note": "Reviewed in batch."},
+        ]
+        preview = api.prepare_record_revisions(self.project, operations, actor="batch-author")
+        self.assertTrue(preview["ready"])
+        generation = Repository(self.project).snapshot().manifest.generation
+        applied = api.apply_record_revisions(self.project, preview, expected_snapshot=preview["snapshot"], actor="batch-author")
+        self.assertEqual(Repository(self.project).snapshot().manifest.generation, generation + 1)
+        self.assertEqual(len(applied["records"]), 2)
+        first_ack_id = applied["records"][1]["id"]
+        reopen_ops = [
+            {"kind": "decision_acknowledgement", "decision_id": self.decision, "dossier_id": self.dossier,
+             "expected_decision_revision": 1, "expected_dossier_revision": 2,
+             "status": "review_needed", "note": "Reopened in batch."}
+        ]
+        reopen_preview = api.prepare_record_revisions(self.project, reopen_ops)
+        reopened = api.apply_record_revisions(self.project, reopen_preview, expected_snapshot=reopen_preview["snapshot"])
+        second_ack_id = reopened["records"][0]["id"]
+        self.assertNotEqual(first_ack_id, second_ack_id)
+        impact = api.decision_impact(self.project, self.decision)
+        dossier_entry = next(d for d in impact["dossiers"] if d["id"] == self.dossier)
+        self.assertEqual(dossier_entry["acknowledgement"]["id"], second_ack_id)
+        self.assertEqual(dossier_entry["acknowledgement"]["status"], "review_needed")
+        stored_ack = Repository(self.project).snapshot().records[second_ack_id]
+        self.assertEqual(stored_ack.supersedes_ref, Reference(id=first_ack_id, revision=1))
+        self.assertTrue(api.audit(self.project)["ok"])

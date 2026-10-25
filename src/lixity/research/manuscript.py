@@ -22,7 +22,13 @@ from .models import (
     RevisionChange,
     Tombstone,
 )
-from .repository import Repository, ResearchConflictError, ResearchError, Snapshot
+from .repository import (
+    Repository,
+    ResearchConflictError,
+    ResearchError,
+    ResearchStorageError,
+    Snapshot,
+)
 
 
 class ManuscriptLinkExistsError(ResearchConflictError):
@@ -272,6 +278,84 @@ def review_manuscript_links(
     )
 
 
+def manuscript_terms_data(
+    snapshot: Snapshot,
+    *,
+    source_path: str,
+    source_sha256: str | None,
+    paragraphs: Sequence[ParagraphProfile | ParagraphText],
+    terms: object = None,
+    source_state: str = "available",
+    selected_term: str | None = None,
+) -> dict[str, Any]:
+    """Derive source-bound term and prop occurrences from displayed paragraphs (read-only)."""
+    from ..terms import derive_manuscript_term_occurrences, parse_terms
+
+    try:
+        parsed_terms = parse_terms(terms)
+        derived = derive_manuscript_term_occurrences(
+            paragraphs,
+            parsed_terms,
+            source_path=source_path,
+            source_sha256=source_sha256,
+            source_state=source_state,
+            selected_term=selected_term,
+        )
+    except (ValidationError, ValueError) as exc:
+        raise ResearchError(f"Invalid term configuration: {exc}") from exc
+    return {
+        "schema_version": "research-manuscript-terms-local/1",
+        "project_id": snapshot.project.id,
+        "snapshot": snapshot.digest,
+        "archive_schema_version": snapshot.manifest.schema_version,
+        **derived,
+    }
+
+
+def review_manuscript_terms(
+    project: str | Path,
+    manuscript: str | Path,
+    *,
+    term: str | None = None,
+    expected_project_id: str | None = None,
+    language: str | None = None,
+    project_config: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Derive source-bound candidate occurrences of configured terms without writing."""
+    from ..config import read_explicit_project_config
+
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    if expected_project_id is not None and snapshot.project.id != expected_project_id:
+        raise ResearchConflictError("Research project changed; reopen the intended project")
+    try:
+        effective_config = (
+            dict(project_config)
+            if project_config is not None
+            else read_explicit_project_config(repository.root, maximum_bytes=65536)
+        )
+    except ValueError as exc:
+        raise ResearchError(f"Invalid project configuration: {exc}") from exc
+    path, relative = _source_path(repository, manuscript)
+    state, source_sha256, paragraphs = "available", None, []
+    try:
+        text, source_sha256 = FileUtils.read_source_snapshot(str(path))
+        paragraphs = _paragraphs(text, repository, language, effective_config)
+    except FileNotFoundError:
+        state = "missing"
+    except (OSError, UnicodeError):
+        state, source_sha256 = "unreadable", None
+    return manuscript_terms_data(
+        snapshot,
+        source_path=relative,
+        source_sha256=source_sha256,
+        paragraphs=paragraphs,
+        terms=effective_config.get("terms"),
+        source_state=state,
+        selected_term=term,
+    )
+
+
 def _quote_occurrences(
     paragraphs: Sequence[ParagraphProfile | ParagraphText], quote: str, *, limit: int | None = None,
 ) -> list[tuple[ParagraphProfile | ParagraphText, int]]:
@@ -366,38 +450,22 @@ def resolve_manuscript_anchor(
     }
 
 
-def reanchor_manuscript_link(
-    project: str | Path,
-    manuscript: str | Path,
+def _prepare_reanchored_link(
+    snapshot: Snapshot,
     link_id: str,
     *,
-    expected_project_id: str,
-    expected_snapshot: str,
+    relative: str,
+    source_sha256: str,
     expected_revision: int,
-    expected_source_sha256: str,
-    actor: str = "local-author",
-    language: str | None = None,
-    project_config: Mapping[str, Any] | None = None,
+    paragraphs: Sequence[ParagraphText] | None,
+    actor: str,
+    reason: str | None = None,
     new_quote: str | None = None,
     line: int | None = None,
-    reason: str | None = None,
     new_claim_revision: int | None = None,
-) -> dict[str, Any]:
-    """Re-pin one uniquely resolvable anchor; the earlier position stays in history.
-
-    Moved paragraphs keep their recorded quote; adjusted paragraphs were edited
-    outside the quote, so the re-pin also refreshes hash and offsets. When
-    ``new_quote`` is supplied explicitly, a ``changed`` anchor is re-pinned to
-    the revised displayed-text quote while the earlier quote remains in history.
-    ``new_claim_revision`` explicitly accepts the current claim revision in the
-    same association revision as the anchor update.
-    """
-    repository = Repository(project)
-    snapshot = repository.snapshot()
-    if expected_project_id != snapshot.project.id:
-        raise ResearchConflictError("Research project changed; reopen the intended project")
-    if expected_snapshot != snapshot.digest:
-        raise ResearchConflictError("Research snapshot changed; reload before saving")
+    accept_moved: bool = True,
+) -> tuple[ManuscriptClaimLink, Claim | None]:
+    """Build one validated re-anchored or claim-advanced ManuscriptClaimLink revision."""
     try:
         record = snapshot.latest(Reference(id=link_id).id, ManuscriptClaimLink)
     except ValidationError:
@@ -406,20 +474,38 @@ def reanchor_manuscript_link(
         raise ResearchError("Retracted associations cannot be re-pinned")
     if type(expected_revision) is not int or record.revision != expected_revision:
         raise ResearchConflictError("Manuscript link revision changed; review it before re-pinning")
-    claim = (_reviewed_claim_revision(snapshot, record, new_claim_revision)
-             if new_claim_revision is not None else None)
-    path, relative = _source_path(repository, manuscript)
     if record.anchor.source_path != relative:
         raise ResearchError("The association belongs to a different manuscript path")
-    try:
-        text, source_sha256 = FileUtils.read_source_snapshot(str(path))
-    except (OSError, UnicodeError) as exc:
-        raise ResearchError("Manuscript source is missing or unreadable") from exc
-    if source_sha256 != expected_source_sha256:
-        raise ResearchConflictError(
-            "Manuscript source bytes changed; review the current text before saving"
+    claim = (
+        _reviewed_claim_revision(snapshot, record, new_claim_revision)
+        if new_claim_revision is not None
+        else None
+    )
+    if not accept_moved and new_quote is None:
+        if claim is None:
+            raise ResearchError("No accepted changes for this association")
+        revision_reason = (
+            reason.strip()
+            if isinstance(reason, str) and reason.strip()
+            else "Accept current claim revision"
         )
-    paragraphs = _paragraphs(text, repository, language, project_config)
+        revised = record.model_copy(
+            update={
+                "revision": record.revision + 1,
+                "created_by": actor,
+                "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                "claim_ref": Reference(id=claim.id, revision=claim.revision),
+                "change": RevisionChange(
+                    change_kind="correction",
+                    reason=revision_reason,
+                    previous_revision=record.revision,
+                ),
+            }
+        )
+        return revised, claim
+
+    if paragraphs is None:
+        raise ResearchError("Manuscript paragraphs are required to re-pin an anchor")
     if new_quote is not None:
         if not isinstance(new_quote, str) or not new_quote.strip():
             raise ResearchError("Provide a nonempty replacement quote to re-pin")
@@ -461,13 +547,17 @@ def reanchor_manuscript_link(
     change_kind: Literal["correction", "supersession"] = (
         "supersession" if quote_changed else "correction"
     )
-    default_reason = "Accept current claim revision" if anchor_unchanged else (
-        "Update quote to the revised manuscript text"
-        if quote_changed
+    default_reason = (
+        "Accept current claim revision"
+        if anchor_unchanged
         else (
-            "Re-anchor to the uniquely moved paragraph"
-            if unchanged_identity
-            else "Re-anchor to the adjusted paragraph (quote unchanged)"
+            "Update quote to the revised manuscript text"
+            if quote_changed
+            else (
+                "Re-anchor to the uniquely moved paragraph"
+                if unchanged_identity
+                else "Re-anchor to the adjusted paragraph (quote unchanged)"
+            )
         )
     )
     revision_reason = (
@@ -503,6 +593,65 @@ def reanchor_manuscript_link(
             "claim_ref": Reference(id=claim.id, revision=claim.revision) if claim else record.claim_ref,
         }
     )
+    return revised, claim
+
+
+def reanchor_manuscript_link(
+    project: str | Path,
+    manuscript: str | Path,
+    link_id: str,
+    *,
+    expected_project_id: str,
+    expected_snapshot: str,
+    expected_revision: int,
+    expected_source_sha256: str,
+    actor: str = "local-author",
+    language: str | None = None,
+    project_config: Mapping[str, Any] | None = None,
+    new_quote: str | None = None,
+    line: int | None = None,
+    reason: str | None = None,
+    new_claim_revision: int | None = None,
+) -> dict[str, Any]:
+    """Re-pin one uniquely resolvable anchor; the earlier position stays in history.
+
+    Moved paragraphs keep their recorded quote; adjusted paragraphs were edited
+    outside the quote, so the re-pin also refreshes hash and offsets. When
+    ``new_quote`` is supplied explicitly, a ``changed`` anchor is re-pinned to
+    the revised displayed-text quote while the earlier quote remains in history.
+    ``new_claim_revision`` explicitly accepts the current claim revision in the
+    same association revision as the anchor update.
+    """
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    if expected_project_id != snapshot.project.id:
+        raise ResearchConflictError("Research project changed; reopen the intended project")
+    if expected_snapshot != snapshot.digest:
+        raise ResearchConflictError("Research snapshot changed; reload before saving")
+    path, relative = _source_path(repository, manuscript)
+    try:
+        text, source_sha256 = FileUtils.read_source_snapshot(str(path))
+    except (OSError, UnicodeError) as exc:
+        raise ResearchError("Manuscript source is missing or unreadable") from exc
+    if source_sha256 != expected_source_sha256:
+        raise ResearchConflictError(
+            "Manuscript source bytes changed; review the current text before saving"
+        )
+    paragraphs = _paragraphs(text, repository, language, project_config)
+    revised, _claim = _prepare_reanchored_link(
+        snapshot,
+        link_id,
+        relative=relative,
+        source_sha256=source_sha256,
+        expected_revision=expected_revision,
+        paragraphs=paragraphs,
+        actor=actor,
+        reason=reason,
+        new_quote=new_quote,
+        line=line,
+        new_claim_revision=new_claim_revision,
+        accept_moved=True,
+    )
     # Recheck bytes immediately before publication; this never writes the manuscript.
     if FileUtils.read_source_snapshot(str(path))[1] != source_sha256:
         raise ResearchConflictError("Manuscript source bytes changed before saving")
@@ -512,10 +661,109 @@ def reanchor_manuscript_link(
         "project_id": snapshot.project.id,
         "snapshot": accepted.digest,
         "archive_schema_version": accepted.manifest.schema_version,
-        "link_id": record.id,
-        "claim_id": record.claim_ref.id,
+        "link_id": revised.id,
+        "claim_id": revised.claim_ref.id,
         "claim_revision": revised.claim_ref.revision,
         "record": revised.model_dump(mode="json"),
+    }
+
+
+def reconcile_manuscript_links(
+    project: str | Path,
+    manuscript: str | Path,
+    candidates: Sequence[Mapping[str, Any]],
+    *,
+    expected_source_sha256: str,
+    actor: str = "local-author",
+    language: str | None = None,
+    accept_moved: bool = False,
+    accept_claim_updates: bool = False,
+    reason: str | None = None,
+    expected_project_id: str | None = None,
+    expected_snapshot: str | None = None,
+    project_config: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Reconcile multiple manuscript associations in one parsed pass and one commit."""
+    repository = Repository(project)
+    try:
+        snapshot = repository.snapshot()
+    except ResearchStorageError as error:
+        if isinstance(error.__cause__, OSError):
+            raise error.__cause__ from None
+        raise
+    if expected_project_id is not None and expected_project_id != snapshot.project.id:
+        raise ResearchConflictError("Research project changed; reopen the intended project")
+    if expected_snapshot is not None and expected_snapshot != snapshot.digest:
+        raise ResearchConflictError("Research snapshot changed; reload before saving")
+    path, relative = _source_path(repository, manuscript)
+    if not candidates:
+        return {
+            "schema_version": "research-manuscript-reconcile-local/1",
+            "project_id": snapshot.project.id,
+            "snapshot": snapshot.digest,
+            "source_path": relative,
+            "dry_run": False,
+            "accepted": [],
+            "skipped": [],
+        }
+    try:
+        text, source_sha256 = FileUtils.read_source_snapshot(str(path))
+    except UnicodeError as exc:
+        raise ResearchError("Manuscript source is missing or unreadable") from exc
+    paragraphs: Sequence[ParagraphText] | None = None
+    revised_records: list[ManuscriptClaimLink] = []
+    accepted: list[dict[str, Any]] = []
+    skipped: list[dict[str, str]] = []
+    for row in candidates:
+        link_id = str(row["link_id"])
+        try:
+            if source_sha256 != expected_source_sha256:
+                raise ResearchConflictError(
+                    "Manuscript source bytes changed; review the current text before saving"
+                )
+            move_this = bool(accept_moved and row.get("anchor_state") in ("moved", "adjusted"))
+            claim_revision = (
+                row["claim_current_revision"]
+                if accept_claim_updates and row.get("claim_changed")
+                else None
+            )
+            if move_this and paragraphs is None:
+                paragraphs = _paragraphs(text, repository, language, project_config)
+            revised, _claim = _prepare_reanchored_link(
+                snapshot,
+                link_id,
+                relative=relative,
+                source_sha256=source_sha256,
+                expected_revision=row["revision"],
+                paragraphs=paragraphs if move_this else None,
+                actor=actor,
+                reason=reason,
+                new_claim_revision=claim_revision,
+                accept_moved=move_this,
+            )
+            revised_records.append(revised)
+            accepted.append({"link_id": revised.id, "revision": revised.revision})
+        except (ResearchError, ResearchConflictError, ValueError) as error:
+            if expected_snapshot is not None and isinstance(error, ResearchConflictError):
+                raise
+            skipped.append({"link_id": link_id, "reason": str(error)})
+    if revised_records:
+        if FileUtils.read_source_snapshot(str(path))[1] != source_sha256:
+            raise ResearchConflictError("Manuscript source bytes changed before saving")
+        try:
+            snapshot = repository.commit(list(revised_records), {}, snapshot)
+        except ResearchStorageError as error:
+            if isinstance(error.__cause__, OSError):
+                raise error.__cause__ from None
+            raise
+    return {
+        "schema_version": "research-manuscript-reconcile-local/1",
+        "project_id": snapshot.project.id,
+        "snapshot": snapshot.digest,
+        "source_path": relative,
+        "dry_run": False,
+        "accepted": accepted,
+        "skipped": skipped,
     }
 
 

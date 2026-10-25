@@ -133,6 +133,17 @@ def _export_archive(repository: Repository, output: str | Path, *, overwrite: bo
                 "research/HEAD.json": encode(Head(sha256=snapshot.digest)),
                 "research/project.json": encode(snapshot.project),
             }
+            from ..config import project_config_snapshot, read_explicit_project_config
+
+            try:
+                config_identity, config_bytes = project_config_snapshot(
+                    repository.root / "lixity.toml", maximum_bytes=65536
+                )
+                if config_identity is not None:
+                    read_explicit_project_config(repository.root, maximum_bytes=65536)
+                    root_bytes["lixity.toml"] = config_bytes
+            except ValueError as exc:
+                raise ResearchError(f"Invalid project configuration during export: {exc}") from exc
 
             # Active manifest and any ancestor manifests in the chain
             manifest_checksums = [checksum for checksum, _ in _manifest_history(repository, snapshot)]
@@ -353,6 +364,8 @@ def restore_archive(archive_path: str | Path, target_dir: str | Path) -> dict[st
         staged_repo = Repository(temp_stage)
         for rel_path, expected in files_manifest.items():
             extracted_file = staged_repo.safe(temp_stage / rel_path)
+            if rel_path != "lixity.toml" and not rel_path.startswith("research/"):
+                raise ResearchError(f"Unsupported archive inventory path: {rel_path}")
             if not extracted_file.is_file():
                 raise ResearchError(f"Archive missing expected file: {rel_path}")
             actual_sha, actual_size = _file_digest_and_size(extracted_file)
@@ -360,6 +373,13 @@ def restore_archive(archive_path: str | Path, target_dir: str | Path) -> dict[st
                 raise ResearchError(f"Checksum mismatch for restored file {rel_path}")
             if "byte_length" in expected and actual_size != expected["byte_length"]:
                 raise ResearchError(f"Size mismatch for restored file {rel_path}")
+        if "lixity.toml" in files_manifest:
+            from ..config import read_explicit_project_config
+
+            try:
+                read_explicit_project_config(temp_stage, maximum_bytes=65536)
+            except ValueError as exc:
+                raise ResearchError(f"Invalid project configuration in archive: {exc}") from exc
 
         # 4. Open snapshot using repository validation
         staged_research = temp_stage / "research"
@@ -381,8 +401,10 @@ def restore_archive(archive_path: str | Path, target_dir: str | Path) -> dict[st
         _convert_manifests(portable_repo, snapshot)
         staged_repo.snapshot()
 
-        # 5. Atomically move staged research directory to target
+        # 5. Atomically move staged research directory (and optional project config) to target
         os.replace(staged_research, target_research)
+        if "lixity.toml" in files_manifest and (temp_stage / "lixity.toml").is_file():
+            os.replace(temp_stage / "lixity.toml", target / "lixity.toml")
         sync_directory(target)
 
         return {

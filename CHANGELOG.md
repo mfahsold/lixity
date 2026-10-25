@@ -8,6 +8,19 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Single-commit publication batching in `reconcile-manuscript` (parsing manuscript
+  paragraphs once and committing all accepted link updates in one transaction) and
+  extended `revise-batch` support for source-verified `manuscript_claim_link`
+  anchor updates and `decision_acknowledgement` operations.
+- Named dossier collections with explicit reading order (`[dossier_collections]`),
+  supporting multi-collection membership, unassigned/unavailable visibility,
+  portable archive round-trips, read-only website exports, CLI (`dossier --collection`,
+  `--set-collection`, `--delete-collection`) and native UI/companion filtering
+  without revising dossier records or invalidating pins.
+- Configured manuscript terms and props (`[terms]` and `lixity research terms`),
+  deriving read-only source-bound candidate occurrences for preferred forms,
+  aliases and chapter-scoped alternatives with explicit overlap, out-of-scope and
+  Unicode normalization/casefold ambiguity flags and guarded reader navigation.
 - `--quote` aliases for manuscript anchor lookup and explicit quote replacement.
 - Active manuscript-link duplicate protection across library, CLI and native UI,
   preserving distinct occurrences and reporting the existing association without

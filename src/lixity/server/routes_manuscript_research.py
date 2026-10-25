@@ -95,6 +95,28 @@ class ManuscriptResearchRoutesMixin(ResearchRoutesMixin):
             except (ResearchError, OSError, ValueError, TypeError, UserWarning) as exc:
                 self._json({"ok": False, "message": str(exc)}, 400)
 
+    def _handle_manuscript_terms_review(self) -> None:
+        query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+        if (set(query) - {"research_token", "project_token", "term"}
+                or any(len(query.get(key, [])) != 1 for key in ("research_token", "project_token"))
+                or len(query.get("term", [])) > 1):
+            self._json({"ok": False, "message": "Choose one selected manuscript and research context"}, 400)
+            return
+        with self._workspace_lock:
+            if not self._research_context_matches(query["research_token"][0]):
+                return
+            try:
+                root, source, settings = self._manuscript_context(query["project_token"][0])
+                selected_term = query.get("term", [None])[0]
+                result = research_api.review_manuscript_terms(
+                    root, source, term=selected_term, language=self.language, project_config=settings,
+                )
+                self._json({"ok": True, **result})
+            except ResearchConflictError as exc:
+                self._json({"ok": False, "code": "stale-context", "message": str(exc)}, 409)
+            except (ResearchError, OSError, ValueError, TypeError, UserWarning) as exc:
+                self._json({"ok": False, "message": str(exc)}, 400)
+
     def _handle_manuscript_claim_reanchor(self, payload: dict[str, Any]) -> None:
         allowed = {"project_id", "research_token", "project_token", "expected_snapshot",
                    "expected_revision", "expected_source_sha256", "link_id", "actor"}

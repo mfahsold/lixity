@@ -6,13 +6,15 @@
   var toggle = document.getElementById("workspace-reader-toggle");
   var panel = document.getElementById("workspace-reader-panel");
   var layout = document.getElementById("workspace-reader-layout");
+  var colField = document.getElementById("workspace-reader-collection-field");
+  var colSelect = document.getElementById("workspace-reader-collection");
   var select = document.getElementById("workspace-reader-dossier");
   var refresh = document.getElementById("workspace-reader-refresh");
   var close = document.getElementById("workspace-reader-close");
   var status = document.getElementById("workspace-reader-status");
   var body = document.getElementById("workspace-reader-body");
   if (!toggle) return;
-  var enabled = false, requestSerial = 0, projectId = null;
+  var enabled = false, requestSerial = 0, projectId = null, lastCatalogue = null;
   function current(serial, projectToken, researchToken) {
     return enabled && serial === requestSerial && projectToken === container.dataset.projectToken &&
       researchToken === bridge.contextToken();
@@ -23,7 +25,65 @@
   }
   function pending(value) {
     select.disabled = refresh.disabled = value;
+    if (colSelect) colSelect.disabled = value;
     panel.setAttribute("aria-busy", String(value));
+  }
+  function populateDossiers(result, selectedId) {
+    var dossiers = result.dossiers || [];
+    var collections = result.collections || result.dossier_collections || [];
+    var unassignedIds = result.unassigned_dossier_ids || [];
+    var selectedCol = colSelect ? (colSelect.value || "all") : "all";
+    if (colField && colSelect) {
+      colField.hidden = !collections.length;
+      colSelect.replaceChildren();
+      var allOpt = document.createElement("option");
+      allOpt.value = "all";
+      allOpt.textContent = bridge.label("research_dossier_collection_all");
+      colSelect.appendChild(allOpt);
+      collections.forEach(function(col) {
+        var opt = document.createElement("option");
+        opt.value = col.id;
+        opt.textContent = col.name + " (" + (col.available_count || 0) + ")";
+        colSelect.appendChild(opt);
+      });
+      var unassignedOpt = document.createElement("option");
+      unassignedOpt.value = "unassigned";
+      unassignedOpt.textContent = bridge.label("research_dossier_collection_unassigned") + " (" + unassignedIds.length + ")";
+      colSelect.appendChild(unassignedOpt);
+      if (selectedCol !== "all" && selectedCol !== "unassigned" && !collections.some(function(c) { return c.id === selectedCol; })) {
+        selectedCol = "all";
+      }
+      if (selectedId && selectedCol !== "all") {
+        var activeCheck = collections.find(function(c) { return c.id === selectedCol; });
+        var inSelection = activeCheck
+          ? (activeCheck.entries || []).some(function(e) { return e.status === "available" && e.dossier_id === selectedId; })
+          : unassignedIds.includes(selectedId);
+        if (!inSelection && dossiers.some(function(d) { return d.id === selectedId; })) {
+          selectedCol = "all";
+        }
+      }
+      colSelect.value = selectedCol;
+    }
+    var byId = Object.fromEntries(dossiers.map(function(d) { return [d.id, d]; }));
+    var activeCollection = collections.find(function(c) { return c.id === selectedCol; }) || null;
+    var visible = dossiers;
+    if (activeCollection) {
+      visible = (activeCollection.entries || []).filter(function(entry) { return entry.status === "available"; }).map(function(entry) { return byId[entry.dossier_id]; }).filter(Boolean);
+    } else if (selectedCol === "unassigned") {
+      var unassignedSet = new Set(unassignedIds);
+      visible = dossiers.filter(function(d) { return unassignedSet.has(d.id); });
+    }
+    var placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = bridge.label("reader_choose");
+    select.replaceChildren(placeholder);
+    visible.forEach(function(dossier) {
+      var option = document.createElement("option");
+      option.value = dossier.id;
+      option.textContent = dossier.title;
+      select.appendChild(option);
+    });
+    select.value = visible.some(function(d) { return d.id === selectedId; }) ? (selectedId || "") : "";
   }
   function query(id) {
     var params = new URLSearchParams();
@@ -65,18 +125,9 @@
     pending(false);
     if (!result.ok) { message(bridge.errorText(result, bridge.label("reader_error")), "err"); return; }
     projectId = result.project_id || null;
-    var placeholder = document.createElement("option");
-    placeholder.value = "";
-    placeholder.textContent = bridge.label("reader_choose");
-    select.replaceChildren(placeholder);
-    (result.dossiers || []).forEach(function(dossier) {
-      var option = document.createElement("option");
-      option.value = dossier.id;
-      option.textContent = dossier.title;
-      select.appendChild(option);
-    });
+    lastCatalogue = result;
+    populateDossiers(result, selectedId);
     if (!(result.dossiers || []).length) { message(bridge.label("research_no_dossiers")); return; }
-    select.value = selectedId || "";
     await loadDossier(select.value);
   }
   function setEnabled(value, selectedId) {
@@ -97,6 +148,12 @@
   toggle.disabled = false;
   toggle.addEventListener("click", function() { setEnabled(!enabled); });
   if (close) close.addEventListener("click", function() { setEnabled(false); toggle.focus(); });
+  if (colSelect) colSelect.addEventListener("change", function() {
+    if (!lastCatalogue) return;
+    var previousDossier = select.value;
+    populateDossiers(lastCatalogue, previousDossier);
+    if (select.value !== previousDossier || !select.value) loadDossier(select.value);
+  });
   select.addEventListener("change", function() { loadDossier(select.value); });
   refresh.addEventListener("click", function() { openDossiers(select.value); });
   panel.addEventListener("keydown", function(event) {

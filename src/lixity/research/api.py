@@ -61,10 +61,16 @@ from .manuscript import (
     list_manuscript_links as list_manuscript_links,
 )
 from .manuscript import (
+    manuscript_terms_data as manuscript_terms_data,
+)
+from .manuscript import (
     reanchor_manuscript_claim_revision as reanchor_manuscript_claim_revision,
 )
 from .manuscript import (
     reanchor_manuscript_link as reanchor_manuscript_link,
+)
+from .manuscript import (
+    reconcile_manuscript_links as reconcile_manuscript_links,
 )
 from .manuscript import (
     resolve_manuscript_anchor as resolve_manuscript_anchor,
@@ -74,6 +80,9 @@ from .manuscript import (
 )
 from .manuscript import (
     review_manuscript_links as review_manuscript_links,
+)
+from .manuscript import (
+    review_manuscript_terms as review_manuscript_terms,
 )
 from .media import MEDIA_TYPES, VIDEO_TYPES, validate_media
 from .media_metadata import update_dossier_media_context as update_dossier_media_context
@@ -1345,13 +1354,28 @@ def create_dossier(
     }
 
 
-def list_dossiers(project: str | Path) -> dict[str, Any]:
-    """List all active dossiers in the project."""
-    return _list_dossiers(Repository(project).snapshot(
-        kinds=frozenset({"dossier", "claim", "decision", "decision_acknowledgement"})))
+def list_dossiers(
+    project: str | Path,
+    *,
+    collection: str | None = None,
+) -> dict[str, Any]:
+    """List active dossiers and project-configured dossier collections."""
+    repository = Repository(project)
+    snapshot = repository.snapshot(
+        kinds=frozenset({"dossier", "claim", "decision", "decision_acknowledgement"})
+    )
+    return _list_dossiers(snapshot, root=repository.root, collection=collection)
 
 
-def _list_dossiers(snapshot: Snapshot) -> dict[str, Any]:
+def _list_dossiers(
+    snapshot: Snapshot,
+    *,
+    root: Path | None = None,
+    settings: Mapping[str, Any] | None = None,
+    collection: str | None = None,
+) -> dict[str, Any]:
+    from ..config import read_explicit_project_config
+    from ..dossier_collections import project_dossier_collections
 
     withdrawn_or_purged = {
         record.target_ref.id
@@ -1388,9 +1412,322 @@ def _list_dossiers(snapshot: Snapshot) -> dict[str, Any]:
     ]
 
     dossiers_list.sort(key=lambda d: str(d["created_at"]), reverse=True)
+    withdrawn_dossiers = {
+        record.id: {"title": record.title, "revision": record.revision}
+        for record in snapshot.records.values()
+        if isinstance(record, Dossier) and record.id in withdrawn_or_purged
+    }
+    try:
+        raw_collections = (
+            settings.get("dossier_collections")
+            if settings is not None
+            else read_explicit_project_config(root, maximum_bytes=65536).get("dossier_collections")
+            if root is not None
+            else None
+        )
+        collections, unassigned_ids, memberships = project_dossier_collections(
+            raw_collections, dossiers_list, withdrawn_dossiers=withdrawn_dossiers
+        )
+    except (ValidationError, ValueError) as error:
+        raise ResearchError(f"Invalid dossier collections configuration: {error}") from error
+
+    for item in dossiers_list:
+        item["collections"] = memberships.get(str(item["id"]), [])
+
+    if collection is not None:
+        selected = collection.strip()
+        if not selected:
+            raise ResearchError("Collection filter requires a nonblank collection ID")
+        if selected == "all":
+            pass
+        elif selected == "unassigned":
+            unassigned_set = set(unassigned_ids)
+            dossiers_list = [item for item in dossiers_list if item["id"] in unassigned_set]
+        else:
+            matched = next((entry for entry in collections if entry["id"] == selected), None)
+            if matched is None:
+                raise ResearchError(f"Unknown dossier collection: {selected!r}")
+            by_id = {str(item["id"]): item for item in dossiers_list}
+            dossiers_list = [by_id[did] for did in matched["dossier_ids"] if did in by_id]
+        return {
+            "schema_version": "research-dossiers-local/1",
+            "dossiers": dossiers_list,
+            "collections": collections,
+            "unassigned_dossier_ids": unassigned_ids,
+            "selected_collection": selected,
+        }
+
     return {
         "schema_version": "research-dossiers-local/1",
         "dossiers": dossiers_list,
+        "collections": collections,
+        "unassigned_dossier_ids": unassigned_ids,
+    }
+
+
+def save_dossier_collection(
+    project: str | Path,
+    collection_id: str,
+    *,
+    name: str,
+    dossier_ids: list[str] | tuple[str, ...],
+    expected_config_snapshot: tuple[tuple[int, ...] | None, bytes] | None = None,
+) -> dict[str, Any]:
+    """Create or update one named dossier collection in lixity.toml without revising dossiers."""
+    from ..config import (
+        prepare_project_settings,
+        project_config_snapshot,
+        read_explicit_project_config,
+    )
+    from ..dossier_collections import (
+        DossierCollection,
+        parse_dossier_collections,
+        validate_collection_key,
+    )
+
+    repository = Repository(project)
+    snapshot = repository.snapshot(
+        kinds=frozenset({"dossier", "claim", "decision", "decision_acknowledgement"})
+    )
+    try:
+        key = validate_collection_key(collection_id)
+        updated_collection = DossierCollection(name=name, dossier_ids=list(dossier_ids))
+        observed_config = project_config_snapshot(
+            repository.root / "lixity.toml", maximum_bytes=65536
+        )
+        if expected_config_snapshot is not None and observed_config != expected_config_snapshot:
+            raise ValueError("Project config changed while saving; nothing was overwritten")
+        current_settings = read_explicit_project_config(repository.root, maximum_bytes=65536)
+        collections = dict(parse_dossier_collections(current_settings.get("dossier_collections")))
+        collections[key] = updated_collection
+        serialized = {cid: item.model_dump() for cid, item in collections.items()}
+        prepared = prepare_project_settings(repository.root, {"dossier_collections": serialized})
+        if prepared.original != observed_config:
+            raise ValueError("Project config changed while saving; nothing was overwritten")
+        prepared.commit()
+    except (ValidationError, ValueError) as error:
+        raise ResearchError(f"Invalid dossier collection: {error}") from error
+    return _list_dossiers(snapshot, settings={"dossier_collections": serialized}, collection=key)
+
+
+def delete_dossier_collection(
+    project: str | Path,
+    collection_id: str,
+    *,
+    expected_config_snapshot: tuple[tuple[int, ...] | None, bytes] | None = None,
+) -> dict[str, Any]:
+    """Remove one named dossier collection from lixity.toml without revising dossiers."""
+    from ..config import (
+        prepare_project_settings,
+        project_config_snapshot,
+        read_explicit_project_config,
+    )
+    from ..dossier_collections import parse_dossier_collections, validate_collection_key
+
+    repository = Repository(project)
+    snapshot = repository.snapshot(
+        kinds=frozenset({"dossier", "claim", "decision", "decision_acknowledgement"})
+    )
+    try:
+        key = validate_collection_key(collection_id)
+        observed_config = project_config_snapshot(
+            repository.root / "lixity.toml", maximum_bytes=65536
+        )
+        if expected_config_snapshot is not None and observed_config != expected_config_snapshot:
+            raise ValueError("Project config changed while saving; nothing was overwritten")
+        current_settings = read_explicit_project_config(repository.root, maximum_bytes=65536)
+        collections = dict(parse_dossier_collections(current_settings.get("dossier_collections")))
+    except (ValidationError, ValueError) as error:
+        raise ResearchError(f"Invalid dossier collection: {error}") from error
+    if key not in collections:
+        raise ResearchError(f"Unknown dossier collection: {key!r}")
+    del collections[key]
+    serialized = {cid: item.model_dump() for cid, item in collections.items()}
+    try:
+        prepared = prepare_project_settings(repository.root, {"dossier_collections": serialized})
+        if prepared.original != observed_config:
+            raise ValueError("Project config changed while saving; nothing was overwritten")
+        prepared.commit()
+    except ValueError as error:
+        raise ResearchError(f"Could not update dossier collections: {error}") from error
+    return _list_dossiers(snapshot, settings={"dossier_collections": serialized})
+
+
+def set_dossier_collections(
+    project: str | Path,
+    collections: object,
+    *,
+    expected_config_snapshot: tuple[tuple[int, ...] | None, bytes] | None = None,
+) -> dict[str, Any]:
+    """Replace all configured dossier collections in lixity.toml without revising dossiers."""
+    from ..config import prepare_project_settings
+    from ..dossier_collections import parse_dossier_collections
+
+    repository = Repository(project)
+    snapshot = repository.snapshot(
+        kinds=frozenset({"dossier", "claim", "decision", "decision_acknowledgement"})
+    )
+    try:
+        parsed = parse_dossier_collections(collections)
+        serialized = {cid: item.model_dump() for cid, item in parsed.items()}
+        prepared = prepare_project_settings(repository.root, {"dossier_collections": serialized})
+        if expected_config_snapshot is not None and prepared.original != expected_config_snapshot:
+            raise ValueError("Project config changed while saving; nothing was overwritten")
+        prepared.commit()
+    except (ValidationError, ValueError) as error:
+        raise ResearchError(f"Invalid dossier collections: {error}") from error
+    return _list_dossiers(snapshot, settings={"dossier_collections": serialized})
+
+
+def save_term_profile(
+    project: str | Path,
+    term: str,
+    *,
+    aliases: list[str] | tuple[str, ...] = (),
+    scoped_alternatives: list[dict[str, Any]] | tuple[dict[str, Any], ...] = (),
+    case_sensitive: bool = False,
+    dossier_id: str | None = None,
+    claim_id: str | None = None,
+    expected_config_snapshot: tuple[tuple[int, ...] | None, bytes] | None = None,
+) -> dict[str, Any]:
+    """Create or update one author-chosen term/prop profile in lixity.toml without archive writes."""
+    from ..config import (
+        prepare_project_settings,
+        project_config_snapshot,
+        read_explicit_project_config,
+    )
+    from ..terms import parse_terms
+
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    try:
+        observed_config = project_config_snapshot(
+            repository.root / "lixity.toml", maximum_bytes=65536
+        )
+        if expected_config_snapshot is not None and observed_config != expected_config_snapshot:
+            raise ValueError("Project config changed while saving; nothing was overwritten")
+        current_settings = read_explicit_project_config(repository.root, maximum_bytes=65536)
+        terms_map = {
+            name: profile.model_dump(exclude_none=True)
+            for name, profile in parse_terms(current_settings.get("terms")).items()
+        }
+        candidate_entry: dict[str, Any] = {
+            "aliases": list(aliases),
+            "scoped_alternatives": list(scoped_alternatives),
+            "case_sensitive": case_sensitive,
+        }
+        if dossier_id:
+            candidate_entry["dossier_id"] = dossier_id
+        if claim_id:
+            candidate_entry["claim_id"] = claim_id
+        terms_map[term] = candidate_entry
+        validated = parse_terms(terms_map)
+        serialized = {
+            name: profile.model_dump(exclude_none=True)
+            for name, profile in validated.items()
+        }
+        prepared = prepare_project_settings(repository.root, {"terms": serialized})
+        if prepared.original != observed_config:
+            raise ValueError("Project config changed while saving; nothing was overwritten")
+        prepared.commit()
+    except (ValidationError, ValueError) as error:
+        raise ResearchError(f"Invalid term profile: {error}") from error
+    return {
+        "schema_version": "research-terms-config-local/1",
+        "project_id": snapshot.project.id,
+        "snapshot": snapshot.digest,
+        "term": term,
+        "terms": [
+            {"term": name, **profile.model_dump(mode="json")}
+            for name, profile in validated.items()
+        ],
+    }
+
+
+def delete_term_profile(
+    project: str | Path,
+    term: str,
+    *,
+    expected_config_snapshot: tuple[tuple[int, ...] | None, bytes] | None = None,
+) -> dict[str, Any]:
+    """Delete one configured term/prop profile from lixity.toml without archive writes."""
+    from ..config import (
+        prepare_project_settings,
+        project_config_snapshot,
+        read_explicit_project_config,
+    )
+    from ..terms import parse_terms
+
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    try:
+        observed_config = project_config_snapshot(
+            repository.root / "lixity.toml", maximum_bytes=65536
+        )
+        if expected_config_snapshot is not None and observed_config != expected_config_snapshot:
+            raise ValueError("Project config changed while saving; nothing was overwritten")
+        current_settings = read_explicit_project_config(repository.root, maximum_bytes=65536)
+        terms_map = dict(parse_terms(current_settings.get("terms")))
+    except (ValidationError, ValueError) as error:
+        raise ResearchError(f"Invalid term configuration: {error}") from error
+    if term not in terms_map:
+        raise ResearchError(f"Unknown configured term: {term!r}")
+    del terms_map[term]
+    serialized = {
+        name: profile.model_dump(exclude_none=True)
+        for name, profile in terms_map.items()
+    }
+    try:
+        prepared = prepare_project_settings(repository.root, {"terms": serialized})
+        if prepared.original != observed_config:
+            raise ValueError("Project config changed while saving; nothing was overwritten")
+        prepared.commit()
+    except ValueError as error:
+        raise ResearchError(f"Could not update term configuration: {error}") from error
+    return {
+        "schema_version": "research-terms-config-local/1",
+        "project_id": snapshot.project.id,
+        "snapshot": snapshot.digest,
+        "deleted_term": term,
+        "terms": [
+            {"term": name, **profile.model_dump(mode="json")}
+            for name, profile in terms_map.items()
+        ],
+    }
+
+
+def set_term_profiles(
+    project: str | Path,
+    terms: object,
+    *,
+    expected_config_snapshot: tuple[tuple[int, ...] | None, bytes] | None = None,
+) -> dict[str, Any]:
+    """Replace all configured term/prop profiles in lixity.toml without archive writes."""
+    from ..config import prepare_project_settings
+    from ..terms import parse_terms
+
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    try:
+        validated = parse_terms(terms)
+        serialized = {
+            name: profile.model_dump(exclude_none=True)
+            for name, profile in validated.items()
+        }
+        prepared = prepare_project_settings(repository.root, {"terms": serialized})
+        if expected_config_snapshot is not None and prepared.original != expected_config_snapshot:
+            raise ValueError("Project config changed while saving; nothing was overwritten")
+        prepared.commit()
+    except (ValidationError, ValueError) as error:
+        raise ResearchError(f"Invalid term configuration: {error}") from error
+    return {
+        "schema_version": "research-terms-config-local/1",
+        "project_id": snapshot.project.id,
+        "snapshot": snapshot.digest,
+        "terms": [
+            {"term": name, **profile.model_dump(mode="json")}
+            for name, profile in validated.items()
+        ],
     }
 
 
@@ -1980,20 +2317,29 @@ def _list_decisions(snapshot: Snapshot) -> dict[str, Any]:
 
 def project_overview(project: str | Path) -> dict[str, Any]:
     """Collect dashboard lists from one verified archive view, without caching."""
-    snapshot = Repository(project).snapshot()
-    return _project_overview(snapshot)
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    return _project_overview(snapshot, root=repository.root)
 
 
-def _project_overview(snapshot: Snapshot) -> dict[str, Any]:
+def _project_overview(
+    snapshot: Snapshot,
+    *,
+    root: Path | None = None,
+    settings: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     data: dict[str, Any] = {"project_id": snapshot.project.id,
                             "project_title": snapshot.project.title,
                             "project_language": snapshot.project.language}
+    dossiers_listing = _list_dossiers(snapshot, root=root, settings=settings)
     for key, listing in (("sources", _list_sources(snapshot)),
-                         ("dossiers", _list_dossiers(snapshot)),
+                         ("dossiers", dossiers_listing),
                          ("claims", _list_claims(snapshot)),
                          ("decisions", _list_decisions(snapshot))):
         data[key] = listing[key]
         data[key + "_count"] = len(listing[key])
+    data["dossier_collections"] = dossiers_listing["collections"]
+    data["unassigned_dossier_ids"] = dossiers_listing["unassigned_dossier_ids"]
     return data
 
 

@@ -145,40 +145,63 @@ async function refreshResearchSources(overview, changedId, freshRead) {
   filterResearchList("sources");
 }
 
-async function refreshResearchDossiers(overview, changedId, freshRead) {
+var researchDossiersPayload = null;
+
+function renderResearchDossiersView(data) {
   var listHost = document.getElementById("research-dossiers-list");
-  if (!listHost) return;
-  if (!listHost.children.length) LixityResearchCards.render(listHost, {loading: true});
-  var reading = await researchListRead("dossiers", overview, changedId, freshRead);
-  if (!acceptResearchList("dossiers", reading)) return;
-  var data = reading.data;
-  if (!data.ok || !Array.isArray(data.dossiers)) {
-    LixityResearchCards.render(listHost, {message: data.message || uiLabel("research_load_dossiers_failed")});
-    filterResearchList("dossiers");
-    return;
+  if (!listHost || !data) return;
+  var dossiers = data.dossiers || [];
+  var collections = data.collections || data.dossier_collections || [];
+  var unassignedIds = data.unassigned_dossier_ids || [];
+  var bar = document.getElementById("r-dos-collection-bar");
+  var colSelect = document.getElementById("r-dos-collection-select");
+  var colNote = document.getElementById("r-dos-collection-note");
+  var selectedCol = colSelect ? (colSelect.value || "all") : "all";
+  if (bar && colSelect) {
+    bar.hidden = !collections.length;
+    colSelect.innerHTML = '<option value="all">' + escapeHtml(uiLabel("research_dossier_collection_all")) + '</option>' +
+      collections.map(function(col) {
+        return '<option value="' + escapeHtml(col.id) + '">' + escapeHtml(col.name) + ' (' + (col.available_count || 0) + ')</option>';
+      }).join("") +
+      '<option value="unassigned">' + escapeHtml(uiLabel("research_dossier_collection_unassigned")) + ' (' + unassignedIds.length + ')</option>';
+    if (selectedCol !== "all" && selectedCol !== "unassigned" && !collections.some(function(c) { return c.id === selectedCol; })) {
+      selectedCol = "all";
+    }
+    colSelect.value = selectedCol;
   }
-  var dossiers = data.dossiers;
-  reading.state.count = dossiers.length;
-  ["r-claim-dossier-select", "r-decision-dossier-select"].forEach(function(selectId) {
-    var dossierSelect = document.getElementById(selectId);
-    if (!dossierSelect) return;
-    var selectedDossier = dossierSelect.value;
-    dossierSelect.innerHTML = '<option value="">' + escapeHtml(uiLabel("research_no_dossier")) + '</option>' + dossiers.map(function(d) {
-      return '<option value="' + escapeHtml(d.id) + '">' + escapeHtml(d.title) + '</option>';
-    }).join("");
-    if (dossiers.some(function(d) { return d.id === selectedDossier; })) dossierSelect.value = selectedDossier;
-  });
+  var byId = Object.fromEntries(dossiers.map(function(d) { return [d.id, d]; }));
+  var activeCollection = collections.find(function(c) { return c.id === selectedCol; }) || null;
+  var visibleDossiers = dossiers;
+  if (activeCollection) {
+    visibleDossiers = (activeCollection.entries || []).filter(function(entry) { return entry.status === "available"; }).map(function(entry) { return byId[entry.dossier_id]; }).filter(Boolean);
+  } else if (selectedCol === "unassigned") {
+    var unassignedSet = new Set(unassignedIds);
+    visibleDossiers = dossiers.filter(function(d) { return unassignedSet.has(d.id); });
+  }
+  if (colNote) {
+    var unavailableCount = activeCollection ? (activeCollection.unavailable_count || 0) : 0;
+    colNote.hidden = !unavailableCount;
+    colNote.textContent = unavailableCount ? uiCountFormat("research_dossier_collection_unavailable", unavailableCount) : "";
+  }
   if (!dossiers.length) {
     LixityResearchCards.render(listHost, {message: uiLabel("research_no_dossiers")});
     filterResearchList("dossiers");
     return;
   }
-  LixityResearchCards.render(listHost, {items: dossiers.map(function(d) {
+  if (!visibleDossiers.length) {
+    LixityResearchCards.render(listHost, {message: uiLabel("research_dossier_collection_empty")});
+    filterResearchList("dossiers");
+    return;
+  }
+  LixityResearchCards.render(listHost, {items: visibleDossiers.map(function(d) {
     var badges = d.review_needed
       ? [{label: uiLabel("research_review_needed"), cls: "badge-warning ml-2", title: uiLabel("research_review_needed_hint")}]
       : [];
     var metaRight = [uiCountFormat("research_evidence_count", d.evidence_count)];
     if (d.revision) metaRight.push(uiFormat("research_revision_number", { revision: d.revision }));
+    if (Array.isArray(d.collections) && d.collections.length) {
+      metaRight.push(d.collections.map(function(m) { return m.name + " #" + m.position; }).join(", "));
+    }
     return {
       key: JSON.stringify(d),
       id: d.id,
@@ -197,6 +220,89 @@ async function refreshResearchDossiers(overview, changedId, freshRead) {
   })});
   filterResearchList("dossiers");
 }
+
+async function refreshResearchDossiers(overview, changedId, freshRead) {
+  var listHost = document.getElementById("research-dossiers-list");
+  if (!listHost) return;
+  if (!listHost.children.length) LixityResearchCards.render(listHost, {loading: true});
+  var reading = await researchListRead("dossiers", overview, changedId, freshRead);
+  if (!acceptResearchList("dossiers", reading)) return;
+  var data = reading.data;
+  if (!data.ok || !Array.isArray(data.dossiers)) {
+    LixityResearchCards.render(listHost, {message: data.message || uiLabel("research_load_dossiers_failed")});
+    filterResearchList("dossiers");
+    return;
+  }
+  var dossiers = data.dossiers;
+  reading.state.count = dossiers.length;
+  researchDossiersPayload = data;
+  ["r-claim-dossier-select", "r-decision-dossier-select"].forEach(function(selectId) {
+    var dossierSelect = document.getElementById(selectId);
+    if (!dossierSelect) return;
+    var selectedDossier = dossierSelect.value;
+    dossierSelect.innerHTML = '<option value="">' + escapeHtml(uiLabel("research_no_dossier")) + '</option>' + dossiers.map(function(d) {
+      return '<option value="' + escapeHtml(d.id) + '">' + escapeHtml(d.title) + '</option>';
+    }).join("");
+    if (dossiers.some(function(d) { return d.id === selectedDossier; })) dossierSelect.value = selectedDossier;
+  });
+  renderResearchDossiersView(data);
+}
+
+document.addEventListener("change", function(event) {
+  if (event.target.id === "r-dos-collection-select" && researchDossiersPayload) {
+    var collections = researchDossiersPayload.collections || researchDossiersPayload.dossier_collections || [];
+    var chosen = collections.find(function(c) { return c.id === event.target.value; });
+    if (chosen) {
+      var idInput = document.getElementById("r-dos-col-id");
+      var nameInput = document.getElementById("r-dos-col-name");
+      var orderInput = document.getElementById("r-dos-col-dossiers");
+      if (idInput) idInput.value = chosen.id;
+      if (nameInput) nameInput.value = chosen.name;
+      if (orderInput) orderInput.value = (chosen.dossier_ids || []).join(", ");
+    }
+    renderResearchDossiersView(researchDossiersPayload);
+  }
+});
+
+document.addEventListener("click", async function(event) {
+  var saveColBtn = event.target.closest("#r-dos-col-save-btn");
+  if (saveColBtn) {
+    if (saveColBtn.dataset.pending === "true") return;
+    var colIdInput = document.getElementById("r-dos-col-id");
+    var colNameInput = document.getElementById("r-dos-col-name");
+    var colOrderInput = document.getElementById("r-dos-col-dossiers");
+    var colIdVal = colIdInput ? colIdInput.value.trim() : "";
+    var colNameVal = colNameInput ? colNameInput.value.trim() : "";
+    var colOrderArr = colOrderInput && colOrderInput.value
+      ? colOrderInput.value.split(",").map(function(s) { return s.trim(); }).filter(Boolean)
+      : [];
+    await submitResearchForm(
+      saveColBtn,
+      "research-dossier",
+      {action: "save_collection", collection_id: colIdVal, name: colNameVal, dossier_ids: colOrderArr},
+      ["r-dos-col-id", "r-dos-col-name", "r-dos-col-dossiers"],
+      [],
+      "research_dossier_complete",
+      function() { refreshResearchDossiers(null, null, true); }
+    );
+    return;
+  }
+  var delColBtn = event.target.closest("#r-dos-col-delete-btn");
+  if (delColBtn) {
+    if (delColBtn.dataset.pending === "true") return;
+    var delIdInput = document.getElementById("r-dos-col-id");
+    var delIdVal = delIdInput ? delIdInput.value.trim() : "";
+    await submitResearchForm(
+      delColBtn,
+      "research-dossier",
+      {action: "delete_collection", collection_id: delIdVal},
+      ["r-dos-col-id", "r-dos-col-name", "r-dos-col-dossiers"],
+      ["r-dos-col-id", "r-dos-col-name", "r-dos-col-dossiers"],
+      "research_dossier_complete",
+      function() { refreshResearchDossiers(null, null, true); }
+    );
+  }
+});
 
 function researchClaimChoiceLabel(claim) {
   function label(item) {

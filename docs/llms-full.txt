@@ -3368,9 +3368,10 @@ rewriting or automatic Zotero synchronization. Interface text supports seven
 languages; research CLI help/errors are English. Labels do not translate sources
 or extend language-specific linguistic validation.
 
-Dossier collections with reading order are an approved design direction, not
-an available feature. Current dossier lists remain ungrouped. Sorting into a
-collection will be separate from revising authored content and accepted pins;
+Dossier collections with explicit reading order (`[dossier_collections]`) and
+configured manuscript terms/props (`[terms]`) are stored in project configuration
+(`lixity.toml` / `pyproject.toml`), keeping reading organization and lexical
+candidate review separate from revising authored records or accepted pins;
 see the [architecture boundary](../ARCHITECTURE.md#passage-research-presentation).
 
 ## Find a task
@@ -3717,8 +3718,10 @@ changed, ambiguous or unavailable quotation. For an edited quote, use the
 explicit replacement below. `claim_changed` remains until that claim version is
 accepted or the association is superseded.
 
-Multi-link acceptance currently uses separate commits and may partly succeed.
-Inspect `accepted`/`skipped`, then review again. `unlink-manuscript` retracts one
+Multi-link acceptance parses the manuscript once and commits all accepted link
+updates in a single archive publication (`HEAD.json` + manifest), or commits
+nothing if no link updates are accepted. Inspect `accepted`/`skipped`, then
+review again. `unlink-manuscript` retracts one
 association while retaining history, even if its manuscript is unavailable.
 Optional snapshot/revision guards make retraction strict.
 
@@ -3782,8 +3785,12 @@ ellipsis. JSON keeps the same identifiers and response fields.
 ```sh
 lixity research dossier list --project ./novel --format table
 lixity research dossier list --project ./novel --tag history --tag harbour
+lixity research dossier --project ./novel --set-collection characters --collection-name "Characters" --collection-dossiers ID1,ID2
+lixity research dossier list --project ./novel --collection characters
 lixity research dossier DOSSIER_ID --project ./novel --section "Timeline" --format text
 lixity research dossier show DOSSIER_ID --project ./novel --section "Timeline" --revision 1 --format text
+lixity research terms --project ./novel --set-term "brass compass" --aliases "mariner's dial" --scoped-alternative "old pocket-watch:1"
+lixity research terms --project ./novel --manuscript novel.md --format table
 ```
 
 `--tag` is an exact, case-sensitive list filter; repeat it to require **all**
@@ -4582,7 +4589,11 @@ lixity research revise-batch --project ./novel --file preview.json \
 
 Input is an operations list or `research-revision-batch-local/1` preparation
 envelope; each operation has `kind`, `id`, `expected_revision`, `changes`,
-`change_kind` and `reason`. Preparation writes nothing. Apply validates all
+`change_kind` and `reason` (or `kind: "decision_acknowledgement"` with
+`decision_id`, `dossier_id`, `expected_decision_revision`,
+`expected_dossier_revision`, `status` and optional `note`; `manuscript_claim_link`
+also accepts source-verified combined `anchor` + `manuscript` updates).
+Preparation writes nothing. Apply validates all
 operations before one commit; invalid inputs/races accept none. Duplicate IDs
 and references to revisions created by that same batch fail. Existing evidence
 and explicitly pinned references stay intact. A versioned preparation envelope
