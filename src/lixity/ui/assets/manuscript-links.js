@@ -98,10 +98,10 @@
     var retention = element("label", "", "manuscript-link-retention");
     consent = element("input"); consent.type = "checkbox"; consent.id = "manuscript-link-retain";
     retention.append(consent, document.createTextNode(label("manuscript_link_retention"))); body.appendChild(retention);
-    var formatNote = element("details", "", "ctl-note manuscript-link-format");
-    formatNote.appendChild(element("summary", label("manuscript_link_format_7")));
-    formatNote.appendChild(element("p", label("manuscript_link_retention_format")));
-    body.appendChild(formatNote);
+    var storageNote = element("details", "", "ctl-note manuscript-link-storage");
+    storageNote.appendChild(element("summary", label("manuscript_link_storage_title")));
+    storageNote.appendChild(element("p", label("manuscript_link_storage_hint")));
+    body.appendChild(storageNote);
     status = element("p", "", "ctl-status"); status.id = "manuscript-link-status";
     status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite"); body.appendChild(status);
     card.appendChild(body);

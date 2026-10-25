@@ -595,7 +595,8 @@ async function selectText(page, text) {
         await page.locator('#manuscript-link-claim').selectOption('claim');
         await page.locator('#manuscript-link-retain').check();
         await page.locator('#manuscript-link-save').click();
-        await page.waitForFunction(() => document.querySelector('#manuscript-link-status').textContent.includes('already linked'));
+        await page.waitForFunction(() => document.querySelector('#manuscript-link-status').textContent ===
+          window.LixityManuscriptLinks.label('manuscript_link_duplicate'));
         await dialog.screenshot({path: `/tmp/lixity-manuscript-duplicate-${width}.png`});
         await page.setViewportSize({width:320, height:900});
         const duplicateBox = await dialog.boundingBox();

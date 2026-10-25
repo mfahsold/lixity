@@ -822,7 +822,18 @@ whose destination no longer matches the current URL, so an older queued passage
 jump cannot reverse a newer view choice. A later genuine fragment still navigates.
 
 Action explanations reuse `tooltips.js`, localized label packs and native
-controls. **Current main:** mouse hints use a 600 ms first dwell, an 80 ms
+controls. Help names the action or effect in one or two short sentences; it does
+not repeat the control name or front-load implementation details. Requirements
+and consequential limits remain visible at the relevant action. Detailed methods
+belong in disclosures and the existing command reference. German help avoids
+direct address; all seven locales retain the same meaning and placeholders.
+CLI help leads with purpose, default read/preview behavior and write flags, then
+one example. It must state partial-success boundaries for multi-link acceptance.
+Storage help describes retained data, not an unconditional historical format
+upgrade. Planned capabilities such as collections remain explicitly labelled as
+unimplemented in architecture documentation, not offered as available actions.
+
+**Current main:** mouse hints use a 600 ms first dwell, an 80 ms
 neighbor transition and a 1,000 ms warm window. These are interaction choices,
 not research-derived thresholds. One pending owner cancels on departure, scroll,
 activation, Escape, view changes or window blur; hovering the visible hint keeps

@@ -53,6 +53,11 @@ rewriting or automatic Zotero synchronization. Interface text supports seven
 languages; research CLI help/errors are English. Labels do not translate sources
 or extend language-specific linguistic validation.
 
+Dossier collections with reading order are an approved design direction, not
+an available feature. Current dossier lists remain ungrouped. Sorting into a
+collection will be separate from revising authored content and accepted pins;
+see the [architecture boundary](../ARCHITECTURE.md#passage-research-presentation).
+
 ## Find a task
 
 - [Read sources and connect claims](#reading-and-cli-workflows) — evidence, quotations and the manuscript companion.
@@ -380,21 +385,27 @@ See [default manuscript settings](../USAGE.md#default-manuscript).
 
 <a id="compact-manuscript-link-command-reference"></a>
 <a id="end-to-end-manuscript-link-lifecycle"></a>
-Use each command's `--help` for flags and output formats. After editing prose,
-run `review-manuscript`, preview `reconcile-manuscript`, then explicitly accept
-the reviewed change. `--accept-moved` accepts uniquely resolved moved/adjusted
-anchors. `--accept-claim-updates` independently re-pins newer claim versions;
-combine them to accept both in one revision **per association** when its quote
-resolves uniquely. Neither flag accepts the other kind of change. An ambiguous,
-changed or unavailable anchor is not repaired by accepting a claim revision;
-an edited quote needs the explicit replacement below. Without `--link-id`,
-eligible associations use separate commits, so a run can partially succeed.
-Inspect `accepted`/`skipped`, then run `review-manuscript` again; the command
-does not guarantee that every association is resolved. `claim_changed` remains
-until its claim pin is explicitly updated or the association is superseded.
-`unlink-manuscript` retracts an association while retaining history and works
-when the scoped manuscript is deleted or unreadable. Optional snapshot/revision
-guards make retraction strict.
+After editing prose: **review → preview → accept → review again**.
+Use each command's `--help` for flags and formats.
+
+| Task | Command or flag | Writes? |
+| --- | --- | --- |
+| Check current locations and claim versions | `review-manuscript` | No |
+| Preview moved/adjusted links | `reconcile-manuscript` | No |
+| Accept unique moved/adjusted passages | `reconcile-manuscript --accept-moved` | Yes |
+| Accept newer claim versions | `reconcile-manuscript --accept-claim-updates` | Yes; text anchors stay unchanged |
+| Limit the operation to one association | Add `--link-id ID` | Follows the chosen operation |
+
+Combining the two acceptance flags creates one revision **per association** when
+its quotation resolves uniquely. Claim acceptance alone does not repair a
+changed, ambiguous or unavailable quotation. For an edited quote, use the
+explicit replacement below. `claim_changed` remains until that claim version is
+accepted or the association is superseded.
+
+Multi-link acceptance currently uses separate commits and may partly succeed.
+Inspect `accepted`/`skipped`, then review again. `unlink-manuscript` retracts one
+association while retaining history, even if its manuscript is unavailable.
+Optional snapshot/revision guards make retraction strict.
 
 **Current main:** in **Research → Review**, **Inspect candidate passage** opens
 the current paragraph for a uniquely moved or adjusted saved quotation before
@@ -421,11 +432,12 @@ the [automation contract](../AGENTS.md#manual-manuscript-associations).
 The native **Review** tab lists associations, anchor states and flags without
 writing. Reading/listing/reviewing never opts into a newer storage schema.
 
-The first successful permitted save uses record/manifest v7. Historical v3.0.1
-cannot read v7; every reader/writer must explicitly support it. Audit, history
-and export/restore preserve accepted link records. Exported quotes remain
-private manuscript material; there is no full manuscript blob. Restored links
-remain unavailable until the manuscript exists at its saved project-relative path.
+Saving manuscript links requires archive support for v7 or later; it does not
+downgrade a newer archive. The dialog's **What gets stored** explains quote
+retention. Exported quotes remain private manuscript material; the full
+manuscript is not retained. Restored links need the manuscript at its saved
+project-relative path. Format details belong to the
+[archive contract](../ARCHITECTURE.md#manual-manuscript-associations).
 
 <a id="read-saved-versions-without-losing-context"></a>
 

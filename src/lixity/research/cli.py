@@ -54,12 +54,12 @@ def _non_negative(value: str) -> int:
 
 def _add_manuscript_argument(command: argparse.ArgumentParser) -> None:
     """Accept the manuscript path positionally (like analyze/scenes) or via --manuscript."""
-    command.epilog = "Omit the manuscript path only when the selected project's config sets manuscript."
+    command.epilog = "Omit PATH only when the selected project's config sets manuscript."
     selector = command.add_mutually_exclusive_group()
-    selector.add_argument("manuscript", nargs="?", default=argparse.SUPPRESS,
-                          help="Manuscript path inside the explicit project (default: root-local config manuscript)")
-    selector.add_argument("--manuscript", dest="manuscript",
-                          help="Manuscript path inside the explicit project (same as positional; default: root-local config manuscript)")
+    selector.add_argument("manuscript", nargs="?", metavar="PATH", default=argparse.SUPPRESS,
+                          help="Manuscript inside the project; defaults to its configured manuscript")
+    selector.add_argument("--manuscript", dest="manuscript", metavar="PATH",
+                          help="Same manuscript path as positional PATH")
 
 
 COMMAND_DEFINITIONS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
@@ -79,12 +79,12 @@ COMMAND_DEFINITIONS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
     ('link-evidence', 'Create, inspect or revise a passage-to-claim evidence link', 'Dossiers, claims and decisions', ()),
     ('link', 'Create an evidence link with positional PASSAGE_ID CLAIM_ID', 'Dossiers, claims and decisions', ()),
     ('revise-batch', 'Preview related authored-record revisions, then apply them together explicitly', 'Dossiers, claims and decisions', ()),
-    ('link-manuscript', 'Associate one reviewed manuscript quote with an exact claim revision (retention explicit)', 'Manuscript associations', ()),
+    ('link-manuscript', 'Link a quotation to a reviewed claim version (retention required)', 'Manuscript associations', ()),
     ('manuscript-links', 'List saved manuscript quote-claim associations (read-only)', 'Manuscript associations', ()),
     ('review-manuscript', 'Review saved associations against the current manuscript (read-only)', 'Manuscript associations', ()),
     ('unlink-manuscript', 'Retract one saved manuscript association (history retained)', 'Manuscript associations', ()),
-    ('find-anchor', 'Resolve one displayed-text quote to exact anchor fields (read-only)', 'Manuscript associations', ()),
-    ('reconcile-manuscript', 'Preview or write re-pins for uniquely moved or adjusted manuscript anchors', 'Manuscript associations', ()),
+    ('find-anchor', 'Find the exact position of a displayed-text quote (read-only)', 'Manuscript associations', ()),
+    ('reconcile-manuscript', 'Preview changed manuscript links; accept changes explicitly', 'Manuscript associations', ()),
     ('search', 'Search the latest source versions with literal words', 'Search and review', ()),
     ('cite', 'Resolve an immutable source passage', 'Search and review', ()),
     ('timeline', 'Read a conservative chronology from recorded claim periods', 'Search and review', ()),
@@ -220,6 +220,8 @@ def configure(parser: argparse.ArgumentParser) -> None:
         if name in ("link-manuscript", "review-manuscript"):
             _add_manuscript_argument(command)
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
+        if name == "review-manuscript":
+            command.epilog = (command.epilog or "") + " Read-only: check current chapter locations and review needs. Flags do not prove contradictions."
         if name == "link-manuscript":
             command.add_argument("--claim-id", required=True)
             command.add_argument("--claim-revision", type=int, required=True,
@@ -247,40 +249,34 @@ def configure(parser: argparse.ArgumentParser) -> None:
         if name == "find-anchor":
             _add_manuscript_argument(command)
             command.epilog = ((command.epilog or "") +
-                              " Example: lixity research find-anchor --project . "
-                              "--query '**reading room**' --query-format markdown. "
-                              "Inspect the returned quote and copy only its six selection fields "
-                              "before a separate, explicitly permitted link-manuscript write.")
+                              " Read-only lookup. Unicode is not normalized; link/code syntax remains. "
+                              "Example: lixity research find-anchor --project . "
+                              "draft.md --quote 'reading room'.")
             command.add_argument("--query", "--quote", required=True,
-                                 help="Exact case-sensitive paragraph quote (displayed text by default); "
-                                      "link/code syntax remains and Unicode is not normalized")
+                                 help="Exact, case-sensitive quote from one displayed paragraph")
             command.add_argument("--query-format", choices=("display", "markdown"), default="display",
-                                 help="Use markdown for a quote copied with supported emphasis, comments or footnote anchors; "
-                                      "returns the exact displayed quote, never a heading")
+                                 help="display: reader text; markdown: remove supported inline formatting from a copied quote")
             command.add_argument("--line", type=int,
-                                 help="Restrict the search to the paragraph containing this source line")
+                                 help="Search only the paragraph at this source line")
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
         if name == "reconcile-manuscript":
             _add_manuscript_argument(command)
-            command.epilog = ("Combined anchor and claim acceptance creates one revision per association. "
-                              "Multiple associations use separate commits and may partially succeed; inspect accepted/skipped "
-                              "and run review-manuscript again. Claim acceptance does not resolve changed, ambiguous or unavailable anchors.")
-            command.add_argument("--link-id", help="Limit preview or acceptance to this association; otherwise process eligible associations separately")
+            command.epilog = ((command.epilog or "") + " Preview by default. Acceptance writes one revision per link. "
+                              "Multi-link runs use separate commits and can partly succeed; inspect accepted/skipped, "
+                              "then run review-manuscript again.")
+            command.add_argument("--link-id", help="Preview or update only this association")
             command.add_argument("--new-quote", "--quote",
-                                 help="Explicitly replace a changed association's quote with the revised displayed-text quote (requires --link-id)")
+                                 help="Replacement quote from the current text; requires --link-id and --accept-moved to save")
             command.add_argument("--line", type=int,
-                                 help="Restrict --new-quote resolution to the paragraph containing this source line")
+                                 help="Resolve the replacement quote within this source line's paragraph")
             command.add_argument("--reason",
-                                 help="Optional revision reason when updating a quote")
+                                 help="Reason recorded with the revision")
             command.add_argument("--accept-moved", action="store_true",
-                                 help="Re-pin uniquely moved/adjusted anchors with unchanged quotes, or apply explicit --new-quote; "
-                                      "without an acceptance flag the command only previews")
+                                 help="Accept uniquely moved/adjusted passages with unchanged quotes, or the explicit replacement quote")
             command.add_argument("--accept-claim-updates", action="store_true",
-                                 help="Explicitly accept newer current claim revisions; preserve anchors unless "
-                                      "--accept-moved also resolves them")
+                                 help="Accept newer claim versions; text anchors stay unchanged unless combined with --accept-moved")
             command.add_argument("--update-sha", action="store_true",
-                                 help="Accepted for compatibility; anchor re-pins already refresh the source digest, "
-                                      "while claim-only updates preserve anchors")
+                                 help="No additional effect: accepting an anchor already refreshes its source hash")
             command.add_argument("--expected-snapshot",
                                  help="Optional strict archive digest for the initial review")
             command.add_argument("--expected-source-sha256",

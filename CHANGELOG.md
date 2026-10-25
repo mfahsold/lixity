@@ -172,6 +172,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   invalid and unsaved configuration without logging project identifiers.
 
 ### Changed
+- Shorter reading, analysis and manuscript-link help in all seven UI languages;
+  storage guidance names retained data instead of promising a format-7 upgrade.
+  Manuscript CLI help separates preview, acceptance flags and partial success.
 - Distinguish saved manuscript research references from metric overlays through
   neutral dotted marks, explicit localized Research labels and book icons.
   Research context keeps a neutral document identity alongside analysis colors.

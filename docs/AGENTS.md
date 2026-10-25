@@ -828,7 +828,11 @@ Native routes require explicit context guards:
 Successful native responses add `ok: true` to the corresponding envelope. Error responses on the manuscript-link routes add a stable `code`
 where the UI reacts: `stale-context` (selected manuscript or research context
 changed) and `stale-archive` (snapshot, revision or source conflict), both with
-HTTP 409; other failures remain `{ok: false, message}`.
+HTTP 409. **Current main:** creating an exact duplicate active association returns
+HTTP 409 with `code: "duplicate-link"` and the existing `link_id`; it does not
+change the archive. Occurrence identity includes the claim, source path,
+paragraph hash, line span and codepoint offsets. Other failures remain
+`{ok: false, message}`.
 The project token binds selected manuscript/settings; the research token binds
 selected archive root, including restored roots sharing an archive ID. Hash and
 snapshot guards bind reviewed bytes/records. Reads and selection previews write
