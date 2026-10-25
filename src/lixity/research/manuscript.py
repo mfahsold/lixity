@@ -215,6 +215,8 @@ def manuscript_review_data(
             resolved_end_line=resolved.end_line if resolved else None,
             resolved_start=resolved_start,
             resolved_end=resolved_end,
+            resolved_chapter_num=resolved.chapter_num if resolved else None,
+            resolved_chapter_title=resolved.chapter_title if resolved else None,
             candidate_lines=candidate_lines,
         )
         rows.append(row)

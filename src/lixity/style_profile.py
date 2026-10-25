@@ -160,6 +160,8 @@ class ParagraphText:
     start_line: int
     end_line: int
     text: str
+    chapter_num: int = 0
+    chapter_title: str = ""
 
 
 @dataclass
@@ -247,7 +249,8 @@ class ParagraphProfiler:
             if display_text:
                 chapter.end_line = block.get("end_line", chapter.end_line)
                 yield chapter, ParagraphText(block.get("start_line", 0),
-                                             block.get("end_line", 0), display_text), raw_text
+                                             block.get("end_line", 0), display_text,
+                                             chapter.num, chapter.title), raw_text
 
     def text_blocks(self, blocks: list[dict[str, Any]]) -> list[ParagraphText]:
         """Project the exact profile text/anchors without linguistic measurements."""

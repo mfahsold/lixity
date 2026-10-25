@@ -273,7 +273,24 @@
       var all = element("button", label("manuscript_link_review"), "ctl");
       all.type = "button"; all.dataset.manuscriptLinksAll = ""; fragment.appendChild(all);
     }
+    if (rows.length) fragment.appendChild(element("p", label("manuscript_link_chapter_hint"), "ctl-note"));
+    function chapterNumber(row) {
+      return Number.isInteger(row.resolved_chapter_num) && row.resolved_chapter_num > 0 ? row.resolved_chapter_num : Infinity;
+    }
+    rows = rows.slice().sort(function(a, b) {
+      return chapterNumber(a) - chapterNumber(b) ||
+        (a.resolved_start_line || Infinity) - (b.resolved_start_line || Infinity);
+    });
+    var currentChapter = null;
     rows.forEach(function(row) {
+      var number = chapterNumber(row);
+      if (number !== currentChapter) {
+        currentChapter = number;
+        var title = number === Infinity ? label("manuscript_link_no_current_chapter") :
+          label("manuscript_link_current_chapter").replace("{number}", number).replace("{title}", function() {return row.resolved_chapter_title || "";});
+        var heading = element("h4", title); heading.dataset.manuscriptCurrentChapter = "";
+        fragment.appendChild(heading);
+      }
       var item = element("div", "", "manuscript-link-review-item");
       item.appendChild(element("p", row.claim_title || row.claim_id));
       var state = ["resolved", "moved", "adjusted", "ambiguous", "changed"].includes(row.anchor_state) ? row.anchor_state : "unavailable_anchor";

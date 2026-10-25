@@ -60,6 +60,29 @@ def accepted_bytes(project):
             for path in (project / "research").rglob("*") if path.is_file()}
 
 
+def test_review_derives_current_chapter_without_revising_the_archive(manuscript_archive):
+    project, manuscript, _claim, _dossier = manuscript_archive
+    save_link(manuscript_archive)
+    before = accepted_bytes(project)
+    row = api.review_manuscript_links(project, manuscript)["links"][0]
+    assert (row["resolved_chapter_num"], row["resolved_chapter_title"]) == (1, "Chapter One")
+    from lixity.research.presentation import manuscript_report
+    rendered = manuscript_report("review-manuscript", api.review_manuscript_links(project, manuscript), table=False)
+    assert "Current chapter" in rendered and "Chapter One" in rendered
+    manuscript.write_text("## Chapter One\n\nAn empty room.\n\n## Chapter Two\n\n"
+                          "The **reading room** was open. 🦉 A visitor arrived.\n", encoding="utf-8")
+    row = api.review_manuscript_links(project, manuscript)["links"][0]
+    assert row["anchor_state"] == "moved"
+    assert (row["resolved_chapter_num"], row["resolved_chapter_title"]) == (2, "Chapter Two")
+    manuscript.write_text(manuscript.read_text(encoding="utf-8") +
+                          "\n## Chapter Three\n\nThe **reading room** was open. 🦉 A visitor arrived.\n",
+                          encoding="utf-8")
+    row = api.review_manuscript_links(project, manuscript)["links"][0]
+    assert row["anchor_state"] == "ambiguous"
+    assert row["resolved_chapter_num"] is None and row["resolved_chapter_title"] is None
+    assert accepted_bytes(project) == before
+
+
 @pytest.mark.parametrize("target_kind,expected", [("claim", True), ("source", False)])
 def test_manuscript_link_availability_uses_indexed_claim_lifecycle(manuscript_archive, target_kind, expected):
     project, _manuscript, claim, _dossier = manuscript_archive

@@ -253,6 +253,16 @@ re-pin. Ambiguous quotes are not re-pinned; an edited quote requires an explicit
 reviewed, uniquely resolvable replacement through `--new-quote`. These flags
 request a human review, not a semantic contradiction check or factual verdict.
 
+**Current main:** manuscript associations are grouped by their current chapter
+in the review view, also when opened from a dossier's quotation count. The CLI
+`review-manuscript --format text` or `--format table` shows the same current
+chapter; JSON adds `resolved_chapter_num` and `resolved_chapter_title` to each
+review row. These fields describe the uniquely located current passage. Moved
+and adjusted candidates still require review; ambiguous, missing or changed
+quotations have null chapter fields. Refreshing this view does not write dossier
+revisions, change accepted links or detect all mentions of an entity. It is an
+index of retained quotations, not a character-presence or scene matrix.
+
 **Since v0.7.3:** the paragraph menu's **Saved research**, its
 saved-association count and exact saved quotation marks open the existing right
 context tool. It shows up to five exact associations and their total, with pinned

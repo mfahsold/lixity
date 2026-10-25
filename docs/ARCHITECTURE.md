@@ -259,6 +259,23 @@ bridge opens the paragraph without a write; resolved-only inline markings and
 explicit re-pin acceptance remain separate. This adds no archive fields or
 semantic contradiction detector.
 
+**Current main:** the shared lightweight paragraph projection also retains the
+parser's chapter number and title. Manuscript review derives
+`resolved_chapter_num` and `resolved_chapter_title` from the unique current
+paragraph, including unaccepted moved/adjusted candidates. Missing, unreadable,
+changed or ambiguous passages return null chapter fields. These are additive
+fields in `research-manuscript-review-local/1`, not new archive data. Native and
+read-only review group retained quotations by current chapter; CLI review exposes
+the same location. This does not count character appearances or scene membership.
+
+Authored dossier content and derived manuscript views have different ownership:
+refreshing locations must not create dossier revisions or rewrite accepted pins.
+Future term discovery must distinguish a lexical mention from physical presence;
+consistency checks need explicit author-approved rules and contextual scope.
+Chronology conflicts require explicit time/place assertions, not inferred dates
+presented as facts. Dossier composition and semantic conflict detection are not
+implemented by this chapter view.
+
 **Since v0.7.3:** `manuscript-links.js` selects exact saved
 associations with the same resolved lines, paragraph hash, codepoint span and
 quotation matcher used for manuscript marks. Explicit paragraph activation

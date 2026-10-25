@@ -119,6 +119,8 @@ def manuscript_report(command: str, result: dict[str, Any], *, table: bool) -> s
         else:
             heading = "Manuscript associations"
         headers = ("Link ID", "Revision", "Line", "State", "Review", "Flags", "Claim", "Quote")
+        if command == "review-manuscript":
+            headers = (*headers[:3], "Current chapter", *headers[3:])
         rows = []
         for link in links:
             anchor = link.get("anchor") or {}
@@ -129,6 +131,10 @@ def manuscript_report(command: str, result: dict[str, Any], *, table: bool) -> s
                          "[COMPARE]" if link.get("review_needed") else "-",
                          ", ".join(link.get("flags") or []) or "-",
                          link.get("claim_title") or link.get("claim_id", "-"), anchor.get("quote", "")])
+            if command == "review-manuscript":
+                number = link.get("resolved_chapter_num")
+                chapter = f"{number}: {link.get('resolved_chapter_title') or ''}" if number is not None else "-"
+                rows[-1].insert(3, chapter)
     lines = [_safe(heading, markdown=False), ""]
     cells = [[_safe(getattr(value, "value", value), markdown=False) for value in row] for row in rows]
     if table:

@@ -44,6 +44,7 @@ def test_projection_preserves_literal_display_text_lines_and_hashes(text, settin
     assert [(p.start_line, p.end_line, p.text) for p in projected] == expected
     assert [paragraph_identity(p) for p in projected] == wanted
     assert [(p.start_line, p.end_line, p.text) for p in profiles] == expected
+    assert [(p.chapter_num, p.chapter_title) for p in projected] == [(p.chapter_num, p.chapter_title) for p in profiles]
     assert [paragraph_identity(p) for p in profiles] == wanted
 
 

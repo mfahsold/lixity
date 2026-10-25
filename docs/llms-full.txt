@@ -3568,6 +3568,16 @@ re-pin. Ambiguous quotes are not re-pinned; an edited quote requires an explicit
 reviewed, uniquely resolvable replacement through `--new-quote`. These flags
 request a human review, not a semantic contradiction check or factual verdict.
 
+**Current main:** manuscript associations are grouped by their current chapter
+in the review view, also when opened from a dossier's quotation count. The CLI
+`review-manuscript --format text` or `--format table` shows the same current
+chapter; JSON adds `resolved_chapter_num` and `resolved_chapter_title` to each
+review row. These fields describe the uniquely located current passage. Moved
+and adjusted candidates still require review; ambiguous, missing or changed
+quotations have null chapter fields. Refreshing this view does not write dossier
+revisions, change accepted links or detect all mentions of an entity. It is an
+index of retained quotations, not a character-presence or scene matrix.
+
 **Since v0.7.3:** the paragraph menu's **Saved research**, its
 saved-association count and exact saved quotation marks open the existing right
 context tool. It shows up to five exact associations and their total, with pinned
@@ -7317,6 +7327,23 @@ rechecks the displayed project/source context at activation. The existing naviga
 bridge opens the paragraph without a write; resolved-only inline markings and
 explicit re-pin acceptance remain separate. This adds no archive fields or
 semantic contradiction detector.
+
+**Current main:** the shared lightweight paragraph projection also retains the
+parser's chapter number and title. Manuscript review derives
+`resolved_chapter_num` and `resolved_chapter_title` from the unique current
+paragraph, including unaccepted moved/adjusted candidates. Missing, unreadable,
+changed or ambiguous passages return null chapter fields. These are additive
+fields in `research-manuscript-review-local/1`, not new archive data. Native and
+read-only review group retained quotations by current chapter; CLI review exposes
+the same location. This does not count character appearances or scene membership.
+
+Authored dossier content and derived manuscript views have different ownership:
+refreshing locations must not create dossier revisions or rewrite accepted pins.
+Future term discovery must distinguish a lexical mention from physical presence;
+consistency checks need explicit author-approved rules and contextual scope.
+Chronology conflicts require explicit time/place assertions, not inferred dates
+presented as facts. Dossier composition and semantic conflict detection are not
+implemented by this chapter view.
 
 **Since v0.7.3:** `manuscript-links.js` selects exact saved
 associations with the same resolved lines, paragraph hash, codepoint span and

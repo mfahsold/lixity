@@ -78,7 +78,9 @@ async function selectText(page, text) {
             paragraph_sha256: panel.dataset.paragraphSha256, start: 4, end: 17, quote: 'safe selected',
           }));
           const resolved = {resolved_start_line: anchor.start_line, resolved_end_line: anchor.end_line,
-            resolved_start:4, resolved_end:17};
+            resolved_start:4, resolved_end:17,
+            resolved_chapter_num: ['moved', 'adjusted', 'resolved'].includes(anchorState) ? 1 : null,
+            resolved_chapter_title: ['moved', 'adjusted', 'resolved'].includes(anchorState) ? 'Synthetic opening' : null};
           if (anchorState === 'adjusted') {
             anchor.start = 0; anchor.end = 13; anchor.paragraph_sha256 = 'b'.repeat(64);
           }
@@ -155,6 +157,7 @@ async function selectText(page, text) {
         await page.locator('#r-review-refresh').click();
         const candidate = page.locator('#research-manuscript-review [data-manuscript-link-candidate]');
         await candidate.waitFor();
+        assert.equal(await page.locator('#research-manuscript-review [data-manuscript-current-chapter]').textContent(), 'Current chapter 1: Synthetic opening');
         assert.equal(await candidate.textContent(), 'Inspect candidate passage');
         if (candidateState === 'adjusted') await page.locator('#research-manuscript-review').screenshot({
           path:`/tmp/lixity-manuscript-candidate-${width}.png`});

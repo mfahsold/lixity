@@ -8,6 +8,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Current-chapter locations for retained manuscript quotations in shared review,
+  CLI text/table/JSON and native/read-only UI. Locations follow uniquely moved
+  passages without modifying dossier bodies or accepting changed anchors.
 - Read-only **Inspect candidate passage** in manuscript review opens uniquely
   moved/adjusted quotations before accepting a re-pin, reusing existing resolved
   offsets and guarded source context without changing saved associations.
