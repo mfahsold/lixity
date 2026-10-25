@@ -537,7 +537,11 @@ do not serialize decisions or allow saves. No review data is sent to analytics.
 
 **Since v0.7.3:** **Reading settings → Keyboard shortcuts**
 lists the passage menu, search and close keys. Hovering or focusing key controls
-also gives a short explanation; Escape dismisses a tooltip. Essential actions
+also gives a short explanation; Escape dismisses a tooltip. **Current main:**
+mouse hints wait briefly for deliberate hovering, then switch faster between
+neighboring tools. They show the control name, its explanation and any declared
+shortcut. Moving away or starting an action cancels a pending hint. Keyboard
+focus and explicit touch explanations do not wait for mouse dwell. Essential actions
 remain labeled and work without hovering. In manuscript search, `Enter` selects
 the next match, `Shift+Enter` selects the previous match and Escape clears the
 query. These keys apply in the search field, not throughout the application.

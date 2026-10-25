@@ -1658,6 +1658,22 @@ footer {
   visibility: visible;
   pointer-events: auto;
 }
+.tooltip-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-1);
+  font-size: var(--text-body);
+  font-weight: 600;
+}
+.tooltip-heading[hidden] { display: none; }
+.tooltip-heading kbd {
+  flex-shrink: 0;
+  color: inherit;
+  font-size: var(--text-note);
+  font-weight: 400;
+}
 
 /* Fallback pure CSS tooltip when JS is disabled */
 body:not(.has-js-tooltips) .help:hover::after,
@@ -5299,6 +5315,12 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   tip.className = "tooltip-popup";
   tip.setAttribute("role", "tooltip");
   tip.setAttribute("aria-hidden", "true");
+  var heading = document.createElement("strong"), copy = document.createElement("div");
+  heading.className = "tooltip-heading";
+  // The control already supplies its accessible name; announce only new help.
+  heading.setAttribute("aria-hidden", "true");
+  copy.className = "tooltip-copy";
+  tip.append(heading, copy);
   document.body.appendChild(tip);
   document.body.classList.add("has-js-tooltips");
 
@@ -5309,18 +5331,45 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   var activatedHover = false;
   var pointerX = null, pointerY = null;
   var hideTimer = null;
+  var showTimer = null, pendingEl = null, warmUntil = 0;
   var textObserver = new MutationObserver(function() { if (activeEl) show(activeEl); });
 
-  function show(el) {
-    if (el === activatedEl || el.closest(".pswp")) return;
-    clearTimeout(hideTimer);
+  function cancelPending() {
+    clearTimeout(showTimer);
+    showTimer = null; pendingEl = null;
+  }
+
+  function helpText(el) {
     var text = el.getAttribute("data-help") || el.getAttribute("title") || el.getAttribute("data-tip");
+    // Suppress the browser's separate title bubble even during dwell.
+    if (text && el.hasAttribute("title")) {
+      el.setAttribute("data-tip", text); el.removeAttribute("title");
+    }
+    return text;
+  }
+
+  function hover(el) {
+    if (el === activeEl) { clearTimeout(hideTimer); return; }
+    if (el === pendingEl || el === activatedEl || el.closest(".pswp")) return;
+    if (activeEl) hide();
+    cancelPending();
+    var text = helpText(el);
+    if (!text || !text.trim()) return;
+    pendingEl = el;
+    // Deliberate first dwell, then quick inspection of neighboring tools.
+    showTimer = setTimeout(function() {
+      cancelPending();
+      if (el.isConnected && el.matches(":hover")) show(el);
+    }, Date.now() < warmUntil ? 80 : 600);
+  }
+
+  function show(el) {
+    cancelPending();
+    if (!el.isConnected || el === activatedEl || el.closest(".pswp")) return;
+    clearTimeout(hideTimer);
+    var text = helpText(el);
     if (!text || !text.trim()) { if (activeEl === el) hide(); return; }
     textObserver.disconnect();
-    if (el.hasAttribute("title")) {
-      el.setAttribute("data-tip", text);
-      el.removeAttribute("title");
-    }
     if (activeEl && activeEl !== el) hide();
     activeEl = el;
     // Keep help in the native dialog's top layer when its control is inside one.
@@ -5329,17 +5378,35 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
     var descriptions = (el.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean);
     if (descriptions.indexOf(tip.id) === -1) descriptions.push(tip.id);
     el.setAttribute("aria-describedby", descriptions.join(" "));
-    tip.textContent = text;
+    var name = el.getAttribute("aria-label") ||
+      (el.labels && el.labels.length ? el.labels[0].textContent :
+        el.matches("button, a, summary, .help") ? el.textContent : "");
+    name = (name || "").trim();
+    heading.replaceChildren();
+    heading.hidden = !name || name === text.trim() || name.length > 120;
+    if (!heading.hidden) {
+      heading.appendChild(document.createTextNode(name));
+      var shortcut = el.getAttribute("aria-keyshortcuts");
+      if (shortcut) {
+        var key = document.createElement("kbd"); key.textContent = shortcut;
+        heading.appendChild(key);
+      }
+    }
+    copy.textContent = text;
     tip.setAttribute("aria-hidden", "false");
     tip.classList.add("visible");
+    warmUntil = Date.now() + 1000;
     updatePos(el);
-    if (activeEl) textObserver.observe(el, {attributes: true, attributeFilter: ["title", "data-tip", "data-help"]});
+    if (activeEl) textObserver.observe(el, {attributes: true,
+      attributeFilter: ["title", "data-tip", "data-help", "aria-label", "aria-keyshortcuts"]});
   }
 
   function hide() {
+    cancelPending();
     clearTimeout(hideTimer);
     textObserver.disconnect();
     if (activeEl) {
+      warmUntil = Date.now() + 1000;
       var descriptions = (activeEl.getAttribute("aria-describedby") || "").split(/\s+/).filter(function(id) { return id && id !== tip.id; });
       if (descriptions.length) activeEl.setAttribute("aria-describedby", descriptions.join(" "));
       else activeEl.removeAttribute("aria-describedby");
@@ -5417,7 +5484,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
     // across the trigger (which also made touch dismissal unreachable).
     tip.style.maxHeight = available + "px";
     tipH = tip.offsetHeight;
-    var left = rect.left + (rect.width - tipW) / 2;
+    var left = rect.left;
     left = Math.max(visible.left, Math.min(visible.right - tipW, left));
     var top = useBelow ? anchorBottom + 8 : anchorTop - tipH - 8;
     tip.style.left = left + "px";
@@ -5426,7 +5493,8 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 
   document.addEventListener("mouseout", function (e) {
     if (Date.now() < touchUntil) return;
-    var el = e.target.closest("[data-help], [data-tip]");
+    var el = e.target.closest("[data-help], [data-tip], [title]");
+    if (el && el === pendingEl && !el.contains(e.relatedTarget)) cancelPending();
     if (el && el === activeEl && !el.contains(e.relatedTarget) && !tip.contains(e.relatedTarget)) {
       // Reflow can emit departures from inactive help. One owned timer must
       // never outlive a later explicit touch or keyboard explanation.
@@ -5457,7 +5525,8 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
         activatedEl && activatedHover && activatedEl.contains(e.target)) return;
     activatedEl = null;
     var el = e.target.closest("[data-help], [data-tip], [title]");
-    if (el && el !== activeEl && !el.closest(".tooltip-popup")) show(el);
+    if (el && !el.closest(".tooltip-popup")) hover(el);
+    else if (!el && !tip.contains(e.target)) cancelPending();
   }, {passive: true});
 
   function dismissAction(target) {
@@ -5471,6 +5540,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   }
 
   document.addEventListener("pointerdown", function(e) {
+    cancelPending();
     pointerX = e.clientX; pointerY = e.clientY;
     if (activatedEl && !activatedEl.contains(e.target)) activatedEl = null;
     dismissAction(e.target);
@@ -5514,17 +5584,19 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   }
 
   document.addEventListener("scroll", function(event) {
-    if (event.target !== tip && !tip.contains(event.target)) scheduleUpdatePos();
+    if (event.target !== tip && !tip.contains(event.target)) { cancelPending(); scheduleUpdatePos(); }
   }, { passive: true, capture: true });
-  window.addEventListener("resize", scheduleUpdatePos, { passive: true });
+  window.addEventListener("resize", function() { cancelPending(); scheduleUpdatePos(); }, { passive: true });
+  window.addEventListener("blur", hide);
 
   // Handle help before the reader's capture-phase Escape shortcuts.
   document.addEventListener("keydown", function (e) {
     if (e.key === "Enter" || e.key === " ") dismissAction(e.target);
-    if (e.key === "Escape" && activeEl) {
-      e.preventDefault();
+    if (e.key === "Escape" && (activeEl || pendingEl)) {
+      var visibleHelp = Boolean(activeEl);
+      if (visibleHelp) e.preventDefault();
       // Help is the innermost layer; manuscript search still clears its query.
-      if (e.target.id !== "text-search") e.stopImmediatePropagation();
+      if (visibleHelp && e.target.id !== "text-search") e.stopImmediatePropagation();
       hide();
     } else if ((e.key === "Enter" || e.key === " ") &&
         e.target.matches(".help[data-help]") && !e.target.closest("button, a")) {

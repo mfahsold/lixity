@@ -39,6 +39,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   unchanged; attachments do not manufacture extraction or linguistic scores.
 
 ### Fixed
+- Shared hover help waits for deliberate dwell and switches quickly between
+  neighboring controls, with canceled pending hints after navigation or actions.
+  Structured tool names, descriptions and declared shortcuts reuse localized
+  resources; keyboard and explicit touch help remain immediate.
 - Localized paragraph action menus stay anchored clear of their own trigger,
   choose available vertical space and retain scrolling for longer translations.
   Shared reading-dropdown height limits remain owned by their existing layout.

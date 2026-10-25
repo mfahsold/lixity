@@ -74,7 +74,7 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
       await sentenceHelp.evaluate(element => element.setAttribute('aria-describedby', 'microhint'));
       await sentenceHelp.focus();
       await page.waitForFunction(() => document.querySelector('#lixity-tooltip').classList.contains('visible'));
-      assert.equal(await page.locator('#lixity-tooltip').textContent(), await sentenceHelp.getAttribute('data-help'));
+      assert.equal(await page.locator('#lixity-tooltip .tooltip-copy').textContent(), await sentenceHelp.getAttribute('data-help'));
       assert.equal(await sentenceHelp.getAttribute('aria-describedby'), 'microhint lixity-tooltip');
       await page.keyboard.press('Escape');
       assert.equal(await page.locator('#lixity-tooltip').getAttribute('aria-hidden'), 'true');
@@ -119,7 +119,7 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
       assert.equal(await paragraphHelp.evaluate(element => element === document.activeElement && element.matches(':focus-visible')), true,
         'Keyboard traversal returns to the same help term with visible focus');
       await page.waitForFunction(() => document.querySelector('#lixity-tooltip').classList.contains('visible'));
-      assert.equal(await page.locator('#lixity-tooltip').textContent(), await paragraphHelp.getAttribute('data-help'));
+      assert.equal(await page.locator('#lixity-tooltip .tooltip-copy').textContent(), await paragraphHelp.getAttribute('data-help'));
       await page.keyboard.press('Escape');
       assert.equal(await page.locator('#ch-1 .ptext.open').count(), 1, 'Dismissing help must not close an unrelated paragraph');
       for (const selector of ['#flags', '#dist', '#dialogue', '#characters', '#pacing', '#motifs', '#showing', '#heatmap', '#bands', '#dimensions', '#markers', '#matrix', '#controls', '#ch-1']) {

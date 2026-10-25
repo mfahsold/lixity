@@ -977,6 +977,22 @@ footer {
   visibility: visible;
   pointer-events: auto;
 }
+.tooltip-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-1);
+  font-size: var(--text-body);
+  font-weight: 600;
+}
+.tooltip-heading[hidden] { display: none; }
+.tooltip-heading kbd {
+  flex-shrink: 0;
+  color: inherit;
+  font-size: var(--text-note);
+  font-weight: 400;
+}
 
 /* Fallback pure CSS tooltip when JS is disabled */
 body:not(.has-js-tooltips) .help:hover::after,

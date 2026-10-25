@@ -41,8 +41,9 @@ LICENSE_URL = "https://github.com/mfahsold/lixity/blob/main/LICENSE"
 #: A published example stays a quick page load; past this size the excerpt is
 #: cut further instead of shipping a multi-megabyte HTML document. The shared
 #: chapter inspection, media, export, review, literal-code handling, research
-#: identity, terminology and localized diagnostics add a bounded 80 kB allowance.
-MAX_PAGE_BYTES = 1_580_000
+#: identity, terminology, localized diagnostics and contextual hints add a bounded
+#: 84 kB allowance.
+MAX_PAGE_BYTES = 1_584_000
 
 
 @dataclass(frozen=True)

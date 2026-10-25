@@ -1910,7 +1910,11 @@ do not serialize decisions or allow saves. No review data is sent to analytics.
 
 **Since v0.7.3:** **Reading settings → Keyboard shortcuts**
 lists the passage menu, search and close keys. Hovering or focusing key controls
-also gives a short explanation; Escape dismisses a tooltip. Essential actions
+also gives a short explanation; Escape dismisses a tooltip. **Current main:**
+mouse hints wait briefly for deliberate hovering, then switch faster between
+neighboring tools. They show the control name, its explanation and any declared
+shortcut. Moving away or starting an action cancels a pending hint. Keyboard
+focus and explicit touch explanations do not wait for mouse dwell. Essential actions
 remain labeled and work without hovering. In manuscript search, `Enter` selects
 the next match, `Shift+Enter` selects the previous match and Escape clears the
 query. These keys apply in the search field, not throughout the application.
@@ -7812,8 +7816,15 @@ whose destination no longer matches the current URL, so an older queued passage
 jump cannot reverse a newer view choice. A later genuine fragment still navigates.
 
 Action explanations reuse `tooltips.js`, localized label packs and native
-controls. Hover and keyboard focus expose supplemental text; the tooltip does
-not contain actions or take focus. Actual shortcut bindings also have a visible
+controls. **Current main:** mouse hints use a 600 ms first dwell, an 80 ms
+neighbor transition and a 1,000 ms warm window. These are interaction choices,
+not research-derived thresholds. One pending owner cancels on departure, scroll,
+activation, Escape, view changes or window blur; hovering the visible hint keeps
+it readable. Keyboard focus and explicit touch help remain immediate. A hint
+groups the existing control name, explanation and declared `aria-keyshortcuts`;
+the visual heading is excluded from its accessible description to avoid repeating
+the control name. No new copy registry or tooltip dependency is introduced.
+The tooltip does not contain actions or take focus. Actual shortcut bindings also have a visible
 reference under Reading settings. Important workflow information stays in labels,
 state and empty-state actions. Placement clears the complete owning toolbar,
 including wrapped adjacent controls. Action activation dismisses help until fresh
@@ -7822,6 +7833,24 @@ and keyboard behavior. The [WAI-ARIA tooltip pattern](https://www.w3.org/WAI/ARI
 and [WCAG hover/focus guidance](https://www.w3.org/WAI/WCAG22/Understanding/content-on-hover-or-focus)
 inform dismissibility, hover persistence and accessible descriptions. These are
 targeted checks, not a claim of application-wide accessibility conformance.
+
+[Adobe Spectrum's tooltip guidance](https://spectrum.adobe.com/web/swc/components/tooltip)
+informs dwell, warmup/cooldown and concise non-interactive hints.
+[Photoshop's tooltip documentation](https://helpx.adobe.com/photoshop/desktop/get-started/set-up-toolbars-panels/show-or-hide-tool-tips.html)
+distinguishes tool identification from richer demonstrations. Longer task help
+remains in explicit reader guidance and measurement inspection, rather than an
+interactive tooltip. Grossman and Fitzmaurice's
+[ToolClips study (CHI 2010)](https://www.research.autodesk.com/app/uploads/2023/03/toolclips-an-investigation-of.pdf_recbnW20cbxDanglq.pdf)
+supports investigating contextual, segmented learning assistance; its tested
+video tasks do not establish a benefit for Lixity, justify automatic video or
+replace a comprehension study. Adobe's guidance is a design reference, not
+independent experimental validation of this implementation.
+
+Nielsen Norman Group's [tooltip guidelines](https://www.nngroup.com/articles/tooltip-guidelines/)
+and [contextual onboarding guidance](https://www.nngroup.com/articles/onboarding-tutorials/)
+inform the content boundary: short supplemental hints at the control, task
+guidance at the relevant step, and required information visible without help.
+Clear labels and visible state remain the first remedy for confusing controls.
 
 The companion's desktop `separator` supports pointer dragging and keyboard
 adjustment over a bounded manuscript-width share. The split is a local display

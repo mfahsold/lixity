@@ -95,7 +95,7 @@ async function helpControls(page, labels, locale, width) {
     await control.scrollIntoViewIfNeeded();
     await control.focus();
     await expect(tip).toHaveAttribute('aria-hidden', 'false');
-    await expect(tip).toHaveText(labels[help]);
+    await expect(tip.locator('.tooltip-copy')).toHaveText(labels[help]);
     await expect(control).toHaveAccessibleName(labels[name]);
     await expect(control).toHaveAccessibleDescription(labels[help]);
     assert.equal(await tip.locator('a, button, input, select, textarea, [tabindex]').count(), 0,
@@ -114,7 +114,7 @@ async function helpControls(page, labels, locale, width) {
     if (width === 1440) {
       await control.hover();
       await expect(tip).toHaveAttribute('aria-hidden', 'false');
-      await expect(tip).toHaveText(labels[help]);
+      await expect(tip.locator('.tooltip-copy')).toHaveText(labels[help]);
       await page.mouse.move(0, 0);
       await page.keyboard.press('Escape');
       await expect(tip).toHaveAttribute('aria-hidden', 'true');
@@ -169,6 +169,55 @@ async function keyboardActions(page) {
   assert.equal(await page.locator('body').evaluate(node => node.classList.contains('text-search-active')), false);
 }
 
+async function hoverTiming(browser) {
+  const state = await createPage(browser, fixtures.en, 1440), {page} = state;
+  try {
+    const focus = page.locator('#reader-focus'), analysis = page.locator('#manuscript-analysis-toggle');
+    await focus.scrollIntoViewIfNeeded();
+    await page.evaluate(() => document.activeElement.blur());
+    await page.mouse.move(0, 0);
+    const now = new Date('2026-10-25T15:00:00Z');
+    await page.clock.install({time: now}); await page.clock.pauseAt(now);
+    const tip = page.locator('#lixity-tooltip');
+    await focus.hover();
+    assert.equal(await tip.getAttribute('aria-hidden'), 'true', 'Passing over a tool does not immediately open help');
+    assert.equal(await focus.getAttribute('title'), null, 'Only the shared hint owns the dwell, without a second native title popup');
+    assert.equal(await focus.getAttribute('data-tip'), fixtures.en.labels.reading_help_focus);
+    await page.clock.runFor(590);
+    assert.equal(await tip.getAttribute('aria-hidden'), 'true', 'The first hint waits for deliberate dwell');
+    await page.clock.runFor(20);
+    await expect(tip).toHaveAttribute('aria-hidden', 'false');
+    await expect(tip.locator('.tooltip-heading')).toHaveText(fixtures.en.labels.reading_focus);
+    await expect(tip.locator('.tooltip-copy')).toHaveText(fixtures.en.labels.reading_help_focus);
+    await expect(focus).toHaveAccessibleDescription(fixtures.en.labels.reading_help_focus);
+    const focusBox = await focus.boundingBox(), hintBox = await tip.boundingBox();
+    const expectedLeft = Math.max(10, Math.min(focusBox.x, 1440 - 10 - hintBox.width));
+    assert.ok(Math.abs(hintBox.x - expectedLeft) <= 1, 'The hint starts at its tool, constrained by the viewport');
+    await page.mouse.move(0, 0); await page.clock.runFor(100);
+    await focus.hover(); await page.clock.runFor(200);
+    await expect(tip).toHaveAttribute('aria-hidden', 'false');
+    await analysis.hover();
+    await page.clock.runFor(90);
+    await expect(tip.locator('.tooltip-copy')).toHaveText(fixtures.en.labels.reading_help_analysis);
+    await page.mouse.move(0, 0); await page.clock.runFor(1200);
+    await focus.hover(); await page.clock.runFor(100); await page.mouse.move(0, 0);
+    await page.clock.runFor(700);
+    await expect(tip).toHaveAttribute('aria-hidden', 'true');
+    await focus.hover(); await page.keyboard.press('Escape'); await page.clock.runFor(700);
+    await expect(tip).toHaveAttribute('aria-hidden', 'true');
+    await analysis.hover(); await analysis.click(); await page.clock.runFor(700);
+    await expect(tip).toHaveAttribute('aria-hidden', 'true');
+    await expect(analysis).toHaveAttribute('aria-pressed', 'true');
+    const passage = page.locator('#chapters [data-reader-paragraph]').first();
+    await passage.focus();
+    await expect(tip.locator('.tooltip-heading kbd')).toHaveText('Shift+F10');
+    await expect(passage).toHaveAccessibleDescription(fixtures.en.labels.reading_help_actions);
+    assert.equal(await tip.locator('a, button, input, select, [tabindex]').count(), 0);
+    assert.deepEqual(state.errors, []); assert.deepEqual(state.writes, []);
+    assert.deepEqual(await manuscript(page), state.source);
+  } finally { await page.close(); }
+}
+
 async function hoverIntent(page) {
   const y = page.viewportSize().height - 80;
   await page.evaluate(top => {
@@ -189,7 +238,7 @@ async function hoverIntent(page) {
     await expect(tip).toHaveAttribute('aria-hidden', 'true');
     await page.mouse.move(31, y + 20);
     await expect(tip).toHaveAttribute('aria-hidden', 'false');
-    await expect(tip).toHaveText('Synthetic exact timestamp');
+    await expect(tip.locator('.tooltip-copy')).toHaveText('Synthetic exact timestamp');
     await page.keyboard.press('Escape');
     await expect(tip).toHaveAttribute('aria-hidden', 'true');
   } finally {
@@ -246,6 +295,7 @@ async function touchAfterHoverDeparture(browser) {
     await expect(tip).toHaveAttribute('aria-hidden', 'true');
     await page.clock.runFor(1100);
     await page.mouse.move(40, 190);
+    await page.clock.runFor(610);
     await expect(tip).toHaveAttribute('aria-hidden', 'false');
     await page.mouse.move(280, 190);
     await page.clock.runFor(200);
@@ -481,7 +531,7 @@ async function nativeControls(page, width, labels) {
       await expect(overview).toBeFocused();
       assert.equal(await overview.evaluate(node => node.matches(':focus-visible')), true);
       await expect(tip).toHaveAttribute('aria-hidden', 'false');
-      await expect(tip).toHaveText(labels.reading_help_overview);
+      await expect(tip.locator('.tooltip-copy')).toHaveText(labels.reading_help_overview);
       await expect(overview).toHaveAccessibleDescription(labels.reading_help_overview);
       await page.keyboard.press('Escape');
       await expect(tip).toHaveAttribute('aria-hidden', 'true');
@@ -506,6 +556,7 @@ async function nativeControls(page, width, labels) {
     catch (error) { failures.push(new Error(name + ': ' + error.message, {cause: error})); }
   }
   try {
+    if (!settingsOnly && !touchOnly) await hoverTiming(browser);
     if (!settingsOnly) await touchAfterHoverDeparture(browser);
     for (const [locale, fixture] of touchOnly ? [] : Object.entries(fixtures)) for (const width of [1440, 320]) {
       const state = await createPage(browser, fixture, width), {page} = state;

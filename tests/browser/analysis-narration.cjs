@@ -80,7 +80,7 @@ print(json.dumps(documents))
         const hook = pacing.locator('.kpi [data-help]');
         assert.equal(await hook.getAttribute('data-help'), fixture.hook_help);
         await hook.focus();
-        await page.waitForFunction(text => document.querySelector('#lixity-tooltip')?.textContent === text, fixture.hook_help);
+        await page.waitForFunction(text => document.querySelector('#lixity-tooltip .tooltip-copy')?.textContent === text, fixture.hook_help);
         assert.equal(await page.locator('#lixity-tooltip').getAttribute('aria-hidden'), 'false');
         await page.keyboard.press('Escape');
         assert.equal(await page.locator('#lixity-tooltip').getAttribute('aria-hidden'), 'true');
