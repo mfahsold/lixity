@@ -482,8 +482,8 @@ api.create_dossier(p, title='Gamma dossier', body='A newly retained dossier.')
       nl: ['Bronnen filteren…', 'Dossiers filteren…', 'Geen resultaten'],
     };
     const captureLabels = {
-      en: ['Evidence captures', 'Capture from Zotero', 'Alternative: import a local source'],
-      de: ['Belegkopien', 'Aus Zotero übernehmen', 'Alternative: lokale Quelle importieren'],
+      en: ['Source copies', 'Capture from Zotero', 'Alternative: import a local source'],
+      de: ['Quellenkopien', 'Aus Zotero übernehmen', 'Alternative: lokale Quelle importieren'],
       fr: ['Sources conservées', 'Conserver depuis Zotero', 'Alternative : importer une source locale'],
       es: ['Fuentes conservadas', 'Conservar desde Zotero', 'Alternativa: importar una fuente local'],
       it: ['Fonti conservate', 'Acquisisci da Zotero', 'Alternativa: importa una fonte locale'],

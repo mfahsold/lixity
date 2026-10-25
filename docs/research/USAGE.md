@@ -26,6 +26,25 @@ Use `lixity research --help` to discover implemented commands and
 `lixity research schema` exports the entity JSON schema. This guide covers
 workflows, retained data and semantics that command help cannot establish.
 
+### Output destinations at a glance
+
+These commands have different output objects; their options name that object.
+Research human output uses English, while stored titles and content remain unchanged.
+
+| Command | Destination option | What is written |
+| --- | --- | --- |
+| `research matrix`, `research compare` | `--output PATH` (optional) | Report file; otherwise stdout |
+| `research export` | `--output PATH` (required) | Restorable `.tar.gz` research archive |
+| `research dossier ID --export-edit PATH` | `--export-edit PATH` | Non-overwriting editable Markdown draft |
+| `research dossier ID --prepare --edit-file PATH` | `--output PATH` (optional) | Reviewed packet for `revise-batch`, not an accepted revision |
+| `research zotero-export` | `--output DIR` (required) | New RIS/files/provenance directory |
+| `research restore` | `--from ARCHIVE --to DIR` | Restored research project at the explicit target |
+
+`--format` selects a report format where supported; it is not a destination.
+Use `lixity research COMMAND --help` for exact formats and write guards. Main
+analysis reports use [`-o` / `--output`](../USAGE.md#command-reference);
+research commands above currently use their listed long options.
+
 The implementation provides local captures, lexical search, exact citations,
 versioned dossiers/claims/decisions, explicit manuscript associations, review,
 OCR integration and verified backup/restore. It does not provide remote web
@@ -618,6 +637,14 @@ Human reports bound long lists/findings; request JSON for the complete payload.
 `audit --format text` provides a human integrity report with scope, record totals
 and bounded findings; audit remains read-only.
 
+An audit describes one observed snapshot. Saving its exact live record/manifest
+counts back into a mirrored dossier creates another revision and changes those
+counts again. Keep the generated audit report outside the retained research
+archive and cite its observation date/snapshot in project notes instead of
+continually synchronizing live totals. A successful integrity audit checks stored
+objects and references, not the truth of their content. There is no separate
+"stable audit" mode that hides newly accepted revisions.
+
 **Current main:** audit also verifies the complete accepted manifest ancestry.
 Missing, modified, foreign-project or non-contiguous ancestor manifests fail
 integrity. Its `records` count refers to accepted revision objects, including
@@ -816,7 +843,7 @@ The first command prints:
 ```text
 # Harbour notes
 
-Version 1
+Revision 1
 
 ## Timeline
 
@@ -858,11 +885,11 @@ Exit 0 validates this request without writing. The compact preview prints the
 following, with your full ID in place of `DOSSIER_ID`:
 
 ```text
-Preview ready · would create version 2 · DOSSIER_ID
+Preview ready · would create revision 2 · DOSSIER_ID
 Changed fields: body
 ```
 
-Version 2 is a candidate; a dry-run does not reserve revision 1. To save the same
+Revision 2 is a candidate; a dry-run does not reserve revision 1. To save the same
 reviewed request:
 
 ```sh
@@ -874,8 +901,8 @@ lixity research dossier DOSSIER_ID --project ./section-demo --section Characters
 cmp characters.before.md characters.after.md
 ```
 
-The write prints `Saved version 2 · DOSSIER_ID`; it does not echo the dossier body.
-The section read shows `Version 2`, the noon departure and three-hour crossing.
+The write prints `Saved revision 2 · DOSSIER_ID`; it does not echo the dossier body.
+The section read shows `Revision 2`, the noon departure and three-hour crossing.
 `cmp` exits 0 without output: the sibling still contains exactly
 `Mira keeps the blue notebook.`. Revision 1 remains readable with `--revision 1`.
 

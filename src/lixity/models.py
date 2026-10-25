@@ -170,7 +170,7 @@ class ChapterMetrics(BaseModel):
         default=0.0, description="Percentage of very short sentences (≤ 6 words)."
     )
     kaskade_pct: float = Field(
-        default=0.0, description="Percentage of complex sentences (> 25 words)."
+        default=0.0, description="Percentage of sentences longer than 25 words; length does not measure syntactic complexity."
     )
     sentence_cv: float = Field(
         default=0.0, description="Coefficient of variation of sentence lengths (std / mean)."
@@ -261,7 +261,7 @@ class CorpusMetrics(BaseModel):
     chapters: list[ChapterMetrics] = Field(description="Detailed metrics of all individual chapters.")
     # --- Self-calibrating style features (house-style fingerprint, corpus level) ---
     staccato_pct: float = Field(default=0.0, description="Percentage of short sentences (≤ 6 words).")
-    kaskade_pct: float = Field(default=0.0, description="Percentage of complex sentences (> 25 words).")
+    kaskade_pct: float = Field(default=0.0, description="Percentage of sentences longer than 25 words; length does not measure syntactic complexity.")
     sentence_cv: float = Field(default=0.0, description="Coefficient of variation of sentence lengths.")
     start_entropy: float = Field(default=0.0, description="Shannon entropy of sentence starters.")
     first_person_start_rate: float = Field(default=0.0, description="Share of first-person sentence openings.")

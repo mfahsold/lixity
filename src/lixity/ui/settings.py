@@ -111,7 +111,7 @@ def settings_form(
         '<fieldset class="settings-section" id="settings-analysis">',
         f'<legend>{translated("settings_analysis")}</legend>',
         '<div class="settings-grid">',
-        f'<div class="setting-field"><label for="set-language">{help_term(labels, "language", translated("language"))}</label>',
+        f'<div class="setting-field"><label for="set-language">{help_term(labels, "language", translated("settings_language"))}</label>',
         '<select class="ctl" id="set-language" aria-describedby="set-language-help settings-scope-help">',
     ])
     for code, name in language_options:

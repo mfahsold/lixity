@@ -102,11 +102,19 @@
 <div class="notice-box"><strong>License:</strong> Lixity is open source under AGPL-3.0-or-later; every writing purpose is covered, including self-publishing. A separate written commercial license exists only for closed-source integrations. Read the <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">licensing guide</a>.</div>
 
 <h2 id="install">Install Lixity</h2>
+<details><summary>uv is not installed yet</summary>
+<p>First check <code>uv --version</code>. Windows with WinGet:</p>
+<pre><code>winget install --id=astral-sh.uv -e</code></pre>
+<p>macOS with Homebrew already installed:</p>
+<pre><code>brew install uv</code></pre>
+<p>For Linux or other setups, follow the <a href="https://docs.astral.sh/uv/getting-started/installation/">official uv installation instructions</a>. Open a new terminal and check <code>uv --version</code>. This installs uv; the next step installs Lixity.</p></details>
 <pre><code>uv tool install --python 3.12 --managed-python lixity
 uv tool update-shell</code></pre>
 <p>Open a new terminal, then verify and start the app:</p>
 <pre><code>lixity --version
+lixity doctor
 lixity service start --open</code></pre>
+<p>If <code>lixity</code> is not found, check <code>uv tool list</code>, run <code>uv tool update-shell</code> and open a new terminal. <code>uv tool dir --bin</code> shows the executable directory. The health check reports installation/service issues, not linguistic validity.</p>
 <p>This installs the current release, <strong>v0.7.5</strong>, from PyPI in uv's <a href="https://docs.astral.sh/uv/concepts/tools/">isolated tool environment</a>. Shell integration applies to new terminals. See the <a href="../releases/v0.7.5.md">release notes</a> for changes and compatibility.</p>
 
 <h2 id="first-dashboard">Start the workspace</h2>

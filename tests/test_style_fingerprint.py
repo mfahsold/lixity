@@ -126,13 +126,13 @@ class TestRobustStatistics(unittest.TestCase):
                 self.assertEqual(fp.measured_cells, 0)
                 self.assertEqual(fp.passport()["measured_cells"], 0)
                 self.assertIsInstance(fp.passport()["consistency"], float)
-                self.assertIn("Consistency: –", fp.passport_text())
+                self.assertIn("Comparisons within the limit: –", fp.passport_text())
 
     def test_measured_consistency_and_custom_minimum(self):
         metrics = CorpusAnalyzer(CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")).analyze_text(SAMPLE)
         fp = StyleFingerprint.from_metrics(metrics)
         self.assertGreater(fp.measured_cells, 0)
-        self.assertNotIn("Consistency: –", fp.passport_text())
+        self.assertNotIn("Comparisons within the limit: –", fp.passport_text())
         below = StyleFingerprint.from_metrics(metrics, FingerprintThresholds(min_chapters=3))
         self.assertEqual(below.measured_cells, 0)
 
@@ -472,7 +472,7 @@ class TestFingerprintDashboard(unittest.TestCase):
         self.assertIn("data-layers=", html)
         self.assertIn("layer-legend", html)
         self.assertIn("z-gradient", html)
-        self.assertIn("Consistency", html)
+        self.assertIn("Comparisons within the limit", html)
 
     def test_dashboard_without_fingerprint_still_works(self):
         config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")

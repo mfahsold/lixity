@@ -141,7 +141,7 @@ body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: 
   box-shadow: var(--shadow-modal); padding: var(--space-2); max-width: calc(100vw - 1rem);
   max-height: calc(100dvh - 1rem); overflow: auto;
 }
-.manuscript-context-menu { display: grid; min-width: 13rem; }
+.manuscript-context-menu { display: grid; min-width: min(13rem, calc(100vw - 1rem)); }
 .manuscript-context-menu .ctl { width: 100%; text-align: left; border-color: transparent; white-space: normal; justify-content: flex-start; }
 .manuscript-context-menu .ctl:hover { background: var(--accent-light); }
 .manuscript-selection-tools { display: flex; flex-wrap: wrap; gap: .35rem; }

@@ -101,12 +101,18 @@ class SiteExportLimitError(ResearchError):
 
     def __init__(self, category: str, observed: int, limit: int, *, unit: str = "bytes",
                  context: dict[str, Any] | None = None) -> None:
-        suggestions = ["Omit --include-research for a manuscript-only review copy."]
+        suggestions = ([] if category == "publication_bytes" else [
+            "Use --mode review without --include-research for a manuscript-only copy."])
         if category != "research_record_bytes":
-            suggestions += [
-                "Use --mode reader or companion with a smaller --publication-profile NAME for selected dossier content.",
-                "Omit --include-source-files if retained source text and original assets are not needed.",
-            ]
+            suggestions.append(
+                "Use --mode reader or --mode companion with --publication-profile NAME to select fewer or "
+                "smaller dossier entries for the reading copy.")
+        # Prepared responses include records and authored history even without
+        # original assets. Only the separate bundle budget warrants this hint.
+        if category == "bundle_bytes":
+            suggestions.append(
+                "If --include-source-files is enabled, omit it when original source assets are not needed; "
+                "the remaining HTML and selected content must still fit the bundle limit.")
         location = ""
         if context:
             if context.get("response_route"):

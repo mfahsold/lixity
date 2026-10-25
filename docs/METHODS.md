@@ -124,12 +124,27 @@ Per feature $f$ over $n$ measurable chapters with values $x_1,\dots,x_n$:
 | Spread | $\mathrm{MAD} = \mathrm{median}(\lvert x_i - \tilde{x}\rvert)$ | 0 for $n < 2$ |
 | Sigma | $\sigma = 1.4826 \cdot \mathrm{MAD}$ | rounded normal-consistency factor $1/\Phi^{-1}(0.75)$; not a finite-sample correction |
 
+The shared median sorts once and retains the ordinary midpoint arithmetic. If
+two finite middle values overflow their floating sum, the midpoint uses the
+standard library's exact-ratio mean instead. The shared mean applies the same
+fallback only when a finite input sequence overflows its ordinary sum; this
+also preserves cancellation residuals that could disappear if each observation
+were scaled first. MAD reuses the shared median. Ordinary finite rounding,
+signed-zero and empty-input conventions are unchanged; this is not a claim of
+exact arithmetic throughout every downstream statistic.
+
 A chapter–feature cell is **measurable** when the feature has at least
 `FingerprintThresholds.min_chapters` observations (default 2). Below this floor,
 the baseline is zeroed and no cells are scored. Constant features can still
 produce measured zero deviations; derived dimensions and spread-based
 diagnostics require positive $\sigma$. Availability and informative variation
 are different conditions.
+
+Text passports show insufficient reference support as unavailable with the
+observed/required chapter count, rather than presenting the zero-filled baseline
+as a measured median. A zero MAD alone does not establish constancy: tied values
+can have zero MAD while other chapter values differ. Only equal observations are
+described as constant; other zero-MAD references have no nonzero robust band.
 
 ## 2. Noise-adjusted deviation (z*)
 
@@ -178,6 +193,9 @@ decision, not a correction to the descriptive sentence-length SD/CV.
 
 The $z^*$ denominator is evaluated with a scaled Euclidean norm (`math.hypot`)
 to avoid overflow and underflow from squaring extreme finite spread/SE values.
+Finite operands whose difference overflows are divided before subtraction;
+overflowing finite spread/SE norms are evaluated in normalized units. Ordinary
+finite arithmetic and cutoff-neighbor behavior retain their existing path.
 This preserves the formula and zero-spread rule; it does not calibrate the
 underlying normal-tail probabilities.
 
@@ -525,6 +543,12 @@ Types absent from the chapter contribute half their rest-corpus probability
 times $\ln 2$; their total probability is calculated from the observed rest
 distribution. No square root or base-2 rescaling is applied.
 
+The interface names the observable **Word distribution (JSD)** and explains the
+divergence. It does not label this number a mathematical distance: the
+[Jensen–Shannon distance](https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.jensenshannon.html)
+is its square root. Topics and proper names can change word distributions without
+establishing a change of writing style.
+
 **Since v0.7.2:** absent-type mass is computed from remaining
 integer token counts, and contributions are accumulated with `math.fsum`.
 Near equal probabilities, the same per-type contribution is evaluated as
@@ -552,10 +576,12 @@ that chapter’s paragraph median/MAD ($n \ge 3$ measurable paragraphs, else
 skipped). Layer fill uses the absolute value span (min–max per dimension);
 the ring marks $\lvert z \rvert \ge 1.5$ (unusual **for this chapter**).
 
-The separate showing/telling composite standardizes each raw signal against
-the manuscript's chapter median/MAD, then averages each group with equal
-feature weights (four telling and two showing signals); zero spread uses the
-population standard deviation when available.
+The **Signal-group comparison** (command `showing`) standardizes each raw signal
+against the manuscript's chapter median/MAD, then averages each group with equal
+feature weights: four word-pattern cues versus quoted-word and short-sentence
+shares. The displayed difference is second group minus first. Zero spread uses
+the population standard deviation when available. The `tell_z`/`show_z` names are
+machine identities, not evidence for a validated narrative-distance construct.
 Fewer than three chapters or zero spread produce zero component scores.
 `most_telling` and `most_showing` are empty when all balances are identical,
 including this insufficient-data fallback; chapter-order ties are not evidence
@@ -597,6 +623,21 @@ nouns from homographic verbs or establish nominal writing style. Explicit
 `nominal_regex` overrides still replace the default rule. Recompute affected
 densities and derived comparisons before comparing older reports.
 
+The UI calls this measurement **Noun endings**, rather than claiming to measure
+nominal style. Nominal style can express an action as a noun phrase ("the
+examination" rather than "we examine"); a suffix counter cannot establish that
+syntactic choice. Localized examples explain the distinction before the
+counted-text and statistical comparison instructions. Counts and numeric keys
+are unchanged by this presentation.
+
+The analogous **Adjective endings** measurement counts selected suffix matches,
+not grammatical adjective tokens or attributive syntax. Untagged word patterns
+can both miss adjectives and match other word classes. Participle-shaped words
+also need context: the [Universal Dependencies annotation guidance](https://universaldependencies.org/u/dep/aux-pass.html)
+explicitly distinguishes passive auxiliaries from copular uses of participles.
+The lightweight passive measurement therefore remains a cue count; a match does
+not resolve whether an ambiguous participle is adjectival or verbal.
+
 Configured cue patterns override the profile patterns for direct Python calls.
 **Current main:** `lixity.tense.TenseMatcher` owns tense counting for chapters,
 scenes and paragraph profiles. With default patterns, a standalone productive
@@ -608,6 +649,19 @@ German `halten` and Dutch `Wij moeten`; it does not infer syntax from endings.
 In German, listed auxiliary/participle pairs additionally form one past cue;
 their contained lexical matches are consumed, so three recognized perfect
 constructions give three past cues and no present-auxiliary double count.
+Productive lowercase `ge-…-t/-en` and `-iert` candidates can additionally resolve
+with a form of `haben` at a bounded punctuation/end-of-text predicate-head edge.
+Weak `ge-…-t` stems require at least two letters (`geübt`, `geölt`); strong
+`ge-…-en` and `-iert` stems require at least three. A bounded inventory of
+separable preverbs also admits forms such as `eingekauft`, `aufgeräumt` and
+`abgeholt`. Curated finite forms and function words remain excluded. This covers `habe geschlafen/getroffen/gehabt`
+without expanding the participle inventory. An immediately following `worden`
+also licenses the passive perfect with `sein`, including `ist renoviert worden`.
+An unlisted `sein` + participle without `worden` remains unresolved. This is
+incomplete morphology: unlisted/combined preverbs and inseparable-prefix forms
+such as `wiedergutgemacht` and `vorbereitet` remain outside the new productive rule.
+No new `sein` licensing is inferred from a recognized prefix. Nominal/adjectival continuations
+are not resolved merely because a word has a matching ending.
 The German display label is therefore `Vergangenheit`, not the narrower
 grammatical form `Präteritum`.
 Up to three intervening words are allowed in a bounded word window. Punctuation, blank

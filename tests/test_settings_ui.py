@@ -21,6 +21,12 @@ def settings_markup(locale="en", **options):
 
 
 class TestSettingsUi(unittest.TestCase):
+    def test_analysis_language_control_names_its_manuscript_scope(self):
+        rendered = settings_markup()
+        control_label = rendered.split('<label for="set-language">', 1)[1].split('</label>', 1)[0]
+        self.assertIn("Manuscript language", control_label)
+        self.assertIn("interface language", rendered.split('id="set-language-help">', 1)[1].split('</p>', 1)[0])
+
     def test_project_details_and_analysis_controls_have_separate_accessible_groups(self):
         rendered = settings_markup(author_setting_enabled=True, project_token="a" * 64)
         controls = HtmlControls(rendered)

@@ -130,6 +130,10 @@ async function keyboardActions(page) {
   const menu = page.locator('#manuscript-context-menu');
   await expect(menu).toBeVisible();
   assert.equal(await menu.locator('[data-reader-action]').first().evaluate(node => node === document.activeElement), true);
+  const triggerBox = await action.boundingBox(), menuBox = await menu.boundingBox();
+  assert(menuBox.x + menuBox.width <= triggerBox.x || menuBox.x >= triggerBox.x + triggerBox.width ||
+    menuBox.y + menuBox.height <= triggerBox.y || menuBox.y >= triggerBox.y + triggerBox.height,
+    'Keyboard tools must leave their trigger exposed even with long translated action names');
   await action.hover();
   await expect(page.locator('#lixity-tooltip')).toHaveAttribute('aria-hidden', 'false');
   await page.keyboard.press('Escape');

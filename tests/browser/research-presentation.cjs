@@ -71,6 +71,14 @@ server.serve_forever()
       await page.locator('#tab-view-research').click();
       await page.waitForFunction(() => Boolean(researchSelectionProjectId));
       const labels = server.fixture.labels[locale];
+      const warning = await page.evaluate(() => researchDossierDetailHtml({
+        id:'synthetic-warning-dossier', title:'Synthetic context', revision:1,
+        body:'## Context\n\nSynthetic dossier text.', citations:[], sections:['Context'],
+        review_needed:true, decision_reviews:[{status:'review_needed', title:'Synthetic choice',
+          reason:'English backend reason', flags:['decision_after_dossier']}]
+      }, true));
+      assert(warning.includes(labels.research_editorial_decision_after_dossier));
+      assert(!warning.includes('English backend reason'), 'Known review flags use the shared localized reason owner');
       const dialog = page.locator('#modal-research-revision');
       const detail = page.locator('#research-revision-history-detail');
       async function open(kind, id, revision) {

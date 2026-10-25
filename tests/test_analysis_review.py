@@ -81,7 +81,7 @@ def test_source_settings_and_concurrent_decisions_invalidate_old_context(project
     assert settings["observations"][0]["status"] == "stale"
 
 
-@pytest.mark.parametrize("previous_version", ["tense-review/1", "tense-review/2"])
+@pytest.mark.parametrize("previous_version", ["tense-review/1", "tense-review/2", "tense-review/3", "tense-review/4"])
 def test_marker_policy_changes_invalidate_saved_decisions(project, monkeypatch, previous_version):
     import lixity.analysis_review as review_module
 

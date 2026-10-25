@@ -125,7 +125,47 @@ def test_cli_byte_limit_reports_a_lower_bound_instead_of_fake_package_totals(tmp
     assert report["limit_bytes"] == cap
     assert report["observed_bytes"] == report["accepted_bytes"] + report["response_bytes"]
     assert report["measurement"] == "first_limit_crossing" and report["complete"] is False
+    # This request already excludes source files. The response budget is not
+    # the asset bundle, so repeating that option is not actionable recovery.
+    assert all("--include-source-files" not in suggestion for suggestion in report["suggestions"])
     assert "sizes" not in report and file_bytes(tmp_path) == before
+
+
+@pytest.mark.parametrize("category", ["research_response_bytes", "research_response_count",
+                                      "research_authored_revision_count", "prepared_data_bytes"])
+def test_prepared_research_limits_recommend_scope_changes_not_asset_omission(category):
+    from lixity.site_export import SiteExportLimitError
+
+    report = SiteExportLimitError(category, 2, 1).diagnostic
+    suggestions = " ".join(report["suggestions"])
+    assert "--mode review" in suggestions and "--include-research" in suggestions
+    assert "--publication-profile" in suggestions
+    assert "--include-source-files" not in suggestions
+
+
+def test_record_input_budget_does_not_suggest_a_profile_that_loads_same_archive():
+    from lixity.site_export import SiteExportLimitError
+
+    suggestions = " ".join(SiteExportLimitError("research_record_bytes", 2, 1).diagnostic["suggestions"])
+    assert "--mode review" in suggestions and "--include-research" in suggestions
+    assert "--publication-profile" not in suggestions
+    assert "--include-source-files" not in suggestions
+
+
+def test_publication_budget_recommends_fewer_selected_entries_not_assets():
+    from lixity.site_export import SiteExportLimitError
+
+    suggestions = " ".join(SiteExportLimitError("publication_bytes", 2, 1).diagnostic["suggestions"])
+    assert "--publication-profile" in suggestions and "fewer" in suggestions
+    assert "--include-source-files" not in suggestions
+
+
+def test_bundle_budget_explains_conditional_asset_omission_and_remaining_content():
+    from lixity.site_export import SiteExportLimitError
+
+    suggestions = " ".join(SiteExportLimitError("bundle_bytes", 2, 1).diagnostic["suggestions"])
+    assert "If --include-source-files is enabled" in suggestions
+    assert "remaining HTML" in suggestions
 
 
 def test_bundle_limit_is_reported_separately_from_research_limits(tmp_path, monkeypatch):

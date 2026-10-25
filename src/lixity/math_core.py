@@ -41,15 +41,27 @@ CLIFF_BANDS = (0.147, 0.33, 0.474)
 
 
 def median(values: Sequence[float]) -> float:
-    """Sample median (``statistics.median``; raises for an empty sample)."""
-    return statistics.median(values)
+    """Sample median; avoid an overflowing sum of two finite central values."""
+    ordered = sorted(values)
+    size = len(ordered)
+    if not size:
+        raise statistics.StatisticsError("no median for empty data")
+    middle = size // 2
+    if size % 2:
+        return ordered[middle]
+    left, right = ordered[middle - 1:middle + 1]
+    result = (left + right) / 2
+    if (isinstance(result, float) and not math.isfinite(result)
+            and all(isinstance(value, int) or math.isfinite(value) for value in ordered)):
+        return statistics.mean((left, right))
+    return result
 
 
 def mad(values: Sequence[float], centre: float) -> float:
     """Median absolute deviation; 0.0 for fewer than two observations."""
     if len(values) < 2:
         return 0.0
-    return statistics.median([abs(value - centre) for value in values])
+    return median([abs(value - centre) for value in values])
 
 
 def robust_scale(values: Sequence[float], centre: float | None = None) -> float:
@@ -59,17 +71,30 @@ def robust_scale(values: Sequence[float], centre: float | None = None) -> float:
     return MAD_TO_SIGMA * mad(values, centre)
 
 
+def _standardized_difference(
+    value: float, centre: float, denominator: float, factor: float = 1.0,
+) -> float:
+    """Divide before subtraction only when finite operands overflow their difference."""
+    difference = value - centre
+    if math.isinf(difference) and math.isfinite(value) and math.isfinite(centre):
+        return factor * value / denominator - factor * centre / denominator
+    return factor * difference / denominator
+
+
 def robust_z(value: float, centre: float, spread: float) -> float:
     """Robust z-score: 0.6745 scales MAD to normal-consistency sigma."""
     if spread == 0.0:
         return 0.0
-    return MAD_TO_SIGMA_INVERSE * (value - centre) / spread
+    return _standardized_difference(value, centre, spread, MAD_TO_SIGMA_INVERSE)
 
 
 def significance_z(value: float, centre: float, sigma: float, se: float) -> float:
     """Deviation tested against house-style spread AND estimation noise."""
     denominator = math.hypot(sigma, se)
-    return (value - centre) / denominator if denominator > 0.0 else 0.0
+    if math.isinf(denominator) and math.isfinite(sigma) and math.isfinite(se):
+        scale = max(abs(sigma), abs(se))
+        return _standardized_difference(value, centre, scale) / math.hypot(sigma / scale, se / scale)
+    return _standardized_difference(value, centre, denominator) if denominator > 0.0 else 0.0
 
 
 def normal_two_sided_p(z: float) -> float:
@@ -94,7 +119,15 @@ def per_mille(matches: float, words: float) -> float:
 
 def mean_or_zero(values: Sequence[float]) -> float:
     """Arithmetic mean; 0.0 for an empty sample (unavailable, not zero evidence)."""
-    return (sum(values) / len(values)) if values else 0.0
+    if not values:
+        return 0.0
+    total = sum(values)
+    if (isinstance(total, float) and not math.isfinite(total)
+            and all(isinstance(value, int) or math.isfinite(value) for value in values)):
+        # Exact-ratio accumulation retains cancellation and subnormal residuals;
+        # scaling every observation first could lose those contributions.
+        return statistics.mean(values)
+    return total / len(values)
 
 
 def binomial_se_percent(pct: float, n: int) -> float:

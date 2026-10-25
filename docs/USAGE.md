@@ -53,9 +53,9 @@ or a different output.
 | How does each chapter differ from this manuscript's reference? | `lixity style` | median/MAD bands, z\*, FDR set, style dimensions |
 | How is the dialogue structured? | `lixity dialogue` | turns, turn lengths, turns per 1,000 words, dialogue paragraphs |
 | Who appears where — and when not? | `lixity characters` | mentions, chapters present, span, longest gap |
-| Where are the scenes and hooks? | `lixity pacing` | scenes, scene length, ASL curve, hook score 0–3 |
+| Where do scene lengths and endings differ? | `lixity pacing` | scenes, scene length, ASL curve, ending-cue count 0–3 |
 | What repeats itself? | `lixity motifs` | motif presence, top content words, repeated n-grams |
-| How do showing/telling proxy signals vary across chapters? | `lixity showing` | language-pattern z and balance per chapter; not a narrative classification |
+| How do word-pattern and quotation/short-sentence cues vary? | `lixity showing` | standardized signal groups and their difference; not a narrative classification |
 | I want to browse the available analysis panels | `lixity dashboard` | self-contained HTML; research and writes require the local app |
 | I want a foreground server for development or integration | `lixity serve` | loopback HTTP server, live settings, manuscript upload, research panel |
 | I want to start or manage the installed app | `lixity service` | managed start, stop, restart and status without a source checkout |
@@ -157,8 +157,8 @@ Later project changes require a new export.
 | Format | Included content | Intended use |
 | --- | --- | --- |
 | Review workspace | Manuscript and analysis; optionally internal research and history | Author/editor review |
-| Novel and companion | Reading text plus explicitly curated background notes | Read the story with chapter-dependent context |
-| Companion only | Curated notes without the novel or analysis | A separate companion for someone reading elsewhere |
+| Manuscript + selected background | Reading text plus explicitly curated background notes | Read the story with chapter-dependent context |
+| Selected background only | Curated notes without the novel or analysis | Background for someone reading elsewhere |
 
 ```bash
 lixity export-site --project . -o manuscript-copy
@@ -665,6 +665,11 @@ the form. Invalid numbers and a strong cutoff below the noticeable cutoff fail
 validation. [Configuration](#configuration-corpusconfig) explains persistent
 project metadata and session settings.
 
+**Manuscript language (analysis)** selects the language profile for counting and
+also sets the generated interface language. English is the default; `auto`
+requests explicit function-word-based detection. This control is not an
+independent interface-language preference, especially for mixed-language texts.
+
 The matrix color scale stays fixed at z* = −2.5 to +2.5. A **●** marks an
 FDR-selected cell; color alone is not a significance decision. Cell details
 include raw values, z*, standardized effect and Cliff's δ. The style reference
@@ -744,6 +749,18 @@ commands, formats, feature identifiers, languages and thresholds. `lixity schema
 emits the same capability metadata, not a JSON Schema for every result.
 [Automation contracts](AGENTS.md) describe versioned output envelopes and exit
 codes; a running server advertises registered operations at `GET /api`.
+
+**Current main:** `analyze`, `profile`, `style`, `dialogue`, `pacing` and `showing`
+accept `-o PATH` / `--output PATH` for their text or JSON report. Without it,
+report data goes to stdout. With it, a successful result is written atomically
+and stdout stays empty; diagnostics remain on stderr. A failed report/write
+preserves an existing destination. The manuscript and its aliases cannot be
+used as the report destination. PDF and dashboard keep their own file formats.
+
+```bash
+lixity analyze manuscript.md --language en --json -o analysis.json
+lixity profile manuscript.md --language en --layer asl -o paragraph-review.txt
+```
 
 `dialogue`, `pacing`, `motifs` and `showing` use the same guarded manuscript
 reader as `analyze`: invalid UTF-8 or a special file node returns processing
@@ -872,6 +889,11 @@ placeholders and give no independent pacing evidence. Tempo proxies are sentence
 length, staccato share, dialogue share and scene length. The hook score (0–3)
 adds one for each closing cue: at most eight words, terminal `?`/`!`/`…`, and
 closing dialogue. It measures these cues, not suspense or reader response.
+
+**Current main:** text summaries identify the chapters with the shortest and
+longest mean sentence length. The historical JSON keys `fastest_chapter` and
+`slowest_chapter` retain their ASL-based meaning; they do not measure narrative
+speed or reading time.
 
 **Since v0.7.3:** the pacing panel labels average sentence length
 as **ASL**, gives its words-per-sentence unit and explains that bars are scaled
@@ -1026,11 +1048,12 @@ Compare a heuristic chapter balance against this manuscript's own baseline:
 lixity showing manuscript.md
 ```
 
-Telling signals are perception filters, modals, passive constructions and
-nominalizations per 1,000 words; showing signals are dialogue and staccato
-percentages. Robust chapter z-scores yield `balance = show_z − tell_z`.
-A positive balance means more showing signals than usual for this manuscript;
-it does not establish a better scene. Zero MAD falls back to standard deviation.
+The word-pattern group combines perception/thought, modal, passive and noun-ending
+cues per 1,000 words. The second group combines quoted-word and short-sentence
+shares. The equally weighted group means yield `balance = show_z − tell_z`:
+positive means the second group is higher relative to this manuscript's baseline,
+negative means the first is higher. This does not classify narrative distance,
+showing/telling or scene quality. Zero MAD falls back to standard deviation.
 
 Comparison needs at least three chapters with differing signals. Otherwise the
 app shows `–` and explains the missing support while retaining raw measurements.
@@ -1038,14 +1061,13 @@ For compatibility, JSON component z-scores fall back to zero with too few
 chapters; identical balances yield empty `most_telling`/`most_showing` ranks.
 Empty ranks mean no distinguishable ordering, not identical artistic effect.
 
-The native **Analysis overview → Narrative distance (show/tell)** panel already
+The native **Analysis overview → Signal-group comparison** panel
 shows these chapter values and links back to the manuscript. Review-workspace
 website copies include that analysis; curated reader/companion copies exclude
 it. Bar length shows the magnitude of the balance; its signed number gives the
-direction: positive means more showing signals, negative more telling signals
-relative to this manuscript. For concrete wording, enable manuscript **Analysis**
-and choose a component such as **Perception filters**, **Modals**, **Nominal style** or
-**Passive**. **Counted text** marks the exact
+direction between the two groups relative to this manuscript. For concrete wording, enable manuscript **Analysis**
+and choose a component such as **Perception filters**, **Modals**, **Noun endings** or
+**Passive patterns**. **Counted text** marks the exact
 lexical cues independently of **Paragraph comparison**. Inspect a marked span
 to read its count and counting rule.
 
@@ -1351,7 +1373,7 @@ immersion or a writing defect. There is no automatic narrator-voice assessment.
 | **Maas a²** | (log₁₀ N − log₁₀ V) / (log₁₀ N)² | requires ≥ 100 tokens; lower means more types at the same N, not better prose |
 | **Flesch** | language-calibrated Flesch family (Amstad for German) | formula output is not clipped to 0–100; not reader comprehension |
 | **LIX** | ASL + share of long words (Björnsson: more than six characters, all languages) | a surface-structure estimate, not a universal difficulty or quality threshold |
-| **Dialogue ratio** | share of configured word tokens inside detected quotations | quotation and token regexes affect counts; no speaker attribution |
+| **Quoted words** | share of configured word tokens inside detected quotations | quotation and token regexes affect counts; neither speaker attribution nor dialogue classification |
 | **Function words** | share of articles, pronouns, prepositions, conjunctions, particles, auxiliaries, modals | language-profile counts describe grammatical patterns, not artistic value |
 | **Perception filters** | curated word-pattern matches (e.g. German "hörte", "roch", "fühlte") | lexical cues include environmental descriptions and idioms; they do not classify narrator mediation or narrative distance |
 | **Sentence classes** | staccato ≤ 6, medium 7–15, long 16–25, very long > 25 words | length bins; the legacy `complex_*` keys do not establish syntactic nesting |
@@ -1895,5 +1917,8 @@ Response-budget failures identify the route and affected record parameters, with
 accepted bytes grouped by route; operational tokens and source prose are omitted.
 This is the first limit crossing, not a full package-size estimate: `complete`
 is false and no output is written. The 64 MiB data and 200 MiB bundle limits
-remain in force. Follow the reported scope/source-file suggestions rather than
-deleting project records to make an export fit.
+remain in force. Suggestions follow the limiting category: prepared research
+responses can exceed their budget without original source files. Omitting
+`--include-source-files` is relevant to the separate bundle budget, not a general
+repair for large record/history responses. Select a narrower publication scope
+rather than deleting project records to make an export fit.

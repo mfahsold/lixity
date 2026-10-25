@@ -489,9 +489,17 @@
     if (!paragraph || !paragraph.contains(range.startContainer) || !paragraph.contains(range.endContainer) || !selection.toString().trim()) return null;
     return range.cloneRange();
   }
-  function place(node, x, y) {
+  function place(node, x, y, anchor) {
     node.hidden = false; node.style.left = "0px"; node.style.top = "0px";
     var rect = node.getBoundingClientRect();
+    if (anchor) {
+      var trigger = anchor.getBoundingClientRect();
+      var below = Math.max(0, innerHeight - trigger.bottom - 12), above = Math.max(0, trigger.top - 12);
+      var useBelow = below >= rect.height || below >= above;
+      node.style.maxHeight = (useBelow ? below : above) + "px";
+      rect = node.getBoundingClientRect();
+      x = trigger.left; y = useBelow ? trigger.bottom + 4 : trigger.top - rect.height - 4;
+    }
     node.style.left = Math.max(8, Math.min(x, innerWidth - rect.width - 8)) + "px";
     node.style.top = Math.max(8, Math.min(y, innerHeight - rect.height - 8)) + "px";
     node._readerScroll = [window.scrollX, window.scrollY];
@@ -515,7 +523,7 @@
     if (panel.dataset.markers === "1") {
       (compact ? ["pruefen"] : ["pruefen", "sachcheck", "todo", "achtung"]).forEach(function(kind) {
         var marker = panel.querySelector('[data-marker-kind="' + kind + '"]');
-        if (marker && !marker.disabled && marker.getAttribute("aria-disabled") !== "true") fragment.appendChild(actionButton(kind, "marker_" + kind, !compact));
+        if (marker && !marker.disabled && marker.getAttribute("aria-disabled") !== "true") fragment.appendChild(actionButton(kind, "marker_action_" + kind, !compact));
       });
     }
     var companion = document.getElementById("workspace-reader-toggle");
@@ -527,7 +535,9 @@
     current = panel; savedRange = rangeFor(panel); evidencePoint = point || null;
     returnTarget = trigger || panel.querySelector(".reader-paragraph-actions") || panel;
     menu.replaceChildren(actions(panel, false));
-    place(menu, x, y); returnTarget.setAttribute("aria-expanded", "true");
+    menu.style.maxHeight = "";
+    place(menu, x, y, trigger && trigger.closest("[data-reader-paragraph]"));
+    returnTarget.setAttribute("aria-expanded", "true");
     var first = menu.querySelector("button"); if (first) { first.tabIndex = 0; first.focus({preventScroll: true}); }
   }
   function run(action) {

@@ -62,7 +62,8 @@ def test_cli_human_output_names_sources_and_unknown_output_origin(project, capsy
     text = capsys.readouterr().out
     assert "draft.md" in text and "synthetic_report.html" in text
     assert "lixity-project-structure/1" not in text
-    assert "unknown" in text.lower() if locale == "en" else "unbekannt" in text.lower()
+    assert "no recorded generation history" in text if locale == "en" else "kein Erzeugungsverlauf erfasst" in text
+    assert "research-source attribution" in text if locale == "en" else "Herkunftsangaben der Recherchequellen" in text
 
 
 def test_project_command_is_discoverable_with_its_own_contract():

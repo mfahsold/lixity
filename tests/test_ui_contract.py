@@ -421,6 +421,31 @@ class TestJsDomContract(unittest.TestCase):
         missing = sorted(dom_id for dom_id in ids if f'id="{dom_id}"' not in html)
         self.assertEqual(missing, [], f"dashboard.js looks up missing ids: {missing}")
 
+    def test_readability_caption_uses_measured_variant_not_interface_language(self):
+        text = "## Synthetic\n\nEin Vogel wartet am Fluss. Der Regen fällt leise.\n"
+        config = CorpusConfig(language="de")
+        paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text))
+        metrics = CorpusAnalyzer(config).analyze_text(text)
+        self.assertEqual(metrics.flesch_variant, "Flesch Reading Ease (Amstad)")
+        rendered = render_dashboard(chapters, paragraphs, metrics=metrics,
+                                    labels=get_language_profile("en").labels, language_key="en")
+        self.assertTrue('>Flesch Reading Ease (Amstad)</span>' in rendered,
+                        "The visible caption must use the measured formula identity")
+
+    def test_marker_actions_are_distinct_from_stored_marker_categories(self):
+        paragraphs, chapters = ParagraphProfiler(CorpusConfig(language="en")).profile_blocks(
+            parse_markdown_blocks("## Synthetic\n\nA bird waits beside the river.\n")
+        )
+        for locale in ("en", "de", "fr", "es", "it", "pt", "nl"):
+            labels = get_language_profile(locale).labels
+            rendered = render_dashboard(chapters, paragraphs, controls=True, labels=labels, language_key=locale)
+            for kind in ("pruefen", "sachcheck", "todo", "achtung"):
+                with self.subTest(locale=locale, kind=kind):
+                    button = re.search(r'data-marker-kind="' + kind + r'"[^>]*>([^<]+)</button>', rendered)
+                    self.assertIsNotNone(button)
+                    self.assertEqual(unescape(button.group(1)), labels["marker_action_" + kind])
+                    self.assertNotEqual(labels["marker_action_" + kind], labels["marker_" + kind])
+
     def test_interaction_hooks_are_rendered(self):
         html = _full_dashboard()
         for hook in (

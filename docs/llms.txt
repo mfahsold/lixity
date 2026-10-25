@@ -216,7 +216,7 @@ Manuscript measurements while keeping review routes, navigation and flags visibl
 Scene rows reveal grouped, reversible measurement details. Long flags/scene lists
 support keyboard scrolling; wide comparisons retain row identity. Dialogue charts
 include every measured chapter in manuscript order, including zero turns; pacing
-labels explain ASL units, relative bars and the existing Hook heuristic. The chapter
+labels explain ASL units, relative bars and the existing ending-cue heuristic. The chapter
 matrix distinguishes measured zero cutoff crossings from unavailable comparisons.
 Current main (unreleased): heatmap cells, style-reference cutoff counts and every
 style-space loading open shared read-only chapter measurements: definitions,

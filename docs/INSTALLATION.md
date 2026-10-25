@@ -29,6 +29,25 @@ neither Git nor a separate Python installation is needed for this route.
 The engine supports Python 3.10 or newer. Python API and editable developer
 environments are [separate advanced routes](#python-api-project-environment).
 
+### Install uv if it is not available
+
+Check `uv --version` first. On Windows with WinGet, run in PowerShell:
+
+```powershell
+winget install --id=astral-sh.uv -e
+```
+
+On macOS with Homebrew already installed:
+
+```sh
+brew install uv
+```
+
+For Linux, macOS without Homebrew, or Windows without WinGet, use the
+[official uv installation instructions](https://docs.astral.sh/uv/getting-started/installation/).
+Open a new terminal after installation and check `uv --version` before continuing.
+These install uv, not Lixity; the next command installs the application.
+
 ## CLI: current release
 
 These commands work in a terminal, including Windows PowerShell:
@@ -49,6 +68,12 @@ lixity service start --open
 See the [release notes](releases/v0.7.5.md)
 for changes and compatibility. `uv tool update-shell` configures new terminals;
 it does not change the terminal already open.
+
+If `lixity` is not found, run `uv tool list` to confirm that Lixity is installed,
+then `uv tool update-shell` and open a new terminal. `uv tool dir --bin` reports
+the executable directory. Reinstalling the app does not repair an old terminal's
+PATH. Once the command resolves, `lixity doctor` checks the installation/service;
+it does not certify linguistic accuracy or source truth.
 
 ## First useful result
 

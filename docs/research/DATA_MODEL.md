@@ -6,6 +6,21 @@ not the broader interchange proposal. Inspect installed entity definitions with
 `lixity research schema` and supported contracts with `lixity about --json`.
 Product, entity, manifest and response versions are separate.
 
+## Display vocabulary and state boundaries
+
+The [central vocabulary](../LOCALIZATION.md#product-vocabulary-and-ownership)
+distinguishes source copies, excerpts, claims, evidence links, dossiers and
+authored decisions. Retention and byte integrity do not verify a source's content.
+The source-content badge describes that system boundary, not an unfinished
+human-review task or a claim about whether the author has read the source.
+
+A passage action fills an existing draft; only explicit submission creates a
+saved relation or dossier revision. Research comparison prompts follow recorded
+associations, dates, versions and author acknowledgements. A pending comparison
+does not establish a semantic contradiction or require a new source pin.
+Existing accepted references remain pinned until an explicit guarded update.
+These names and explanations change no stored enum or record identity.
+
 ## Reading website projection
 
 Since v0.7.4, `lixity.site_export` produces a static publication projection of
@@ -51,6 +66,12 @@ the publication. Omitted section explicitly selects the entire dossier body.
 Citations and geography belong to the whole selected dossier revision, not an
 inferred section. Both fields default to false. Source redistribution consent
 is a per-export choice and is never stored in the profile.
+
+The chapter display gate shows an entry once chapter N is marked finished;
+zero makes it visible from the beginning. This is a presentation preference,
+not access control: a later entry may already be present in the package.
+The separate maximum-chapter selection physically omits later entries and their
+unshared associated resources. A display-name change does not alter either rule.
 
 The `lixity-reader-publication/1` projection contains only curated entries,
 resolved versions, canonical chapter numbers, release gates and selected media.

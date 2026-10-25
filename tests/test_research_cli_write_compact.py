@@ -78,7 +78,7 @@ def test_compact_human_result_is_short_and_keeps_warning_and_control_boundaries(
     status, output, errors = update(project, identifier, "--body", "Revised notes.",
                                    "--compact", "--format", "text")
     assert (status, errors) == (0, "")
-    assert "Saved version 2" in output and identifier in output
+    assert "Saved revision 2" in output and identifier in output
     assert "Revised notes." not in output
     assert len(output.splitlines()) <= 4
     status, output, errors = update(project, identifier, "--body", "Revised notes.",

@@ -157,7 +157,7 @@ def render_dialogue_panel(
     labels: Mapping[str, str] | None = None,
     language_key: str = "generic",
 ) -> str:
-    """Renders the dialogue turns and scenic ratio panel."""
+    """Render recognized quoted spans and their manuscript word shares."""
     if not dialogue:
         return ""
 
@@ -183,6 +183,8 @@ def render_dialogue_panel(
         parts.append('<div class="dist scrollable">')
         for chapter in dialogue_chapters:
             num = int(chapter.get("chapter_num", 0))
+            turns = int(chapter.get("turns", 0))
+            turns_label = L("dlg_turns_one" if turns == 1 else "dlg_turns")
             share = float(chapter.get("dialogue_pct", 0.0))
             title_attr = esc(chapter.get("title", ""))
             parts.append(
@@ -190,7 +192,7 @@ def render_dialogue_panel(
                 f'title="{title_attr}">'
                 f'<span class="label">{L("chapter")} {num} · {esc(chapter.get("title", ""))}</span>'
                 f'<span class="bar"><i style="width:{min(100.0, share):.1f}%"></i></span>'
-                f'<span class="val">{P(share)} · {int(chapter.get("turns", 0))} {esc(label(labels, "dlg_turns"))}</span>'
+                f'<span class="val">{P(share)} · {turns} {turns_label}</span>'
                 f"</div>"
             )
         parts.append("</div>")
@@ -389,7 +391,7 @@ def render_showing_panel(
     labels: Mapping[str, str] | None = None,
     language_key: str = "generic",
 ) -> str:
-    """Renders the showing vs. telling panel."""
+    """Render the manuscript-relative signal groups without a narrative verdict."""
     if not (showing and showing.get("chapter_list")):
         return ""
 

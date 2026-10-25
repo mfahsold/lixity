@@ -409,6 +409,13 @@ server.serve_forever()
         await page.goto('http://localhost/');
         await page.locator('#manuscript-analysis-toggle').click();
         await selectMetric(page, 'nominal');
+        assert.equal(await page.locator('#style-layer option:checked').textContent(), 'Nomen-Endungen');
+        await page.locator('.layer-comparison-note > summary').click();
+        assert.match(await page.locator('#layer-comparison-hint').textContent(), /Die Prüfung des Antrags erfolgt/);
+        assert.match(await page.locator('#layer-comparison-hint').textContent(), /Gezählt werden nur/);
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+        await page.screenshot({path:path.join(artifacts, `german-nominal-guide-${width}.png`)});
+        await page.locator('.layer-comparison-note > summary').click();
         await page.locator('.ptext').first().scrollIntoViewIfNeeded();
         await page.waitForFunction(() => [...(CSS.highlights?.get('lixity-analysis-evidence') || [])].some(range => range.toString() === 'Untersuchung'));
         assert.deepEqual(await ranges(page), ['Untersuchung'], 'German contractions are excluded from actual nominal highlights');

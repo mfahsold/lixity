@@ -39,11 +39,47 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   unchanged; attachments do not manufacture extraction or linguistic scores.
 
 ### Fixed
-- German listed perfect/pluperfect constructions count once across chapter,
+- Localized paragraph action menus stay anchored clear of their own trigger,
+  choose available vertical space and retain scrolling for longer translations.
+  Shared reading-dropdown height limits remain owned by their existing layout.
+- Text-report `-o`/`--output` now writes the accepted analysis, profile, style,
+  quotation, pacing and signal-group reports instead of silently printing to
+  stdout. A shared atomic writer preserves failed destinations and rejects
+  manuscript path, symlink and hardlink aliases; no duplicate stdout data is emitted.
+- Shared mean and median recover finite results when floating intermediate sums
+  overflow, using exact-ratio standard-library accumulation only on that path.
+  MAD now reuses the same median. German productive perfect cues also cover
+  short weak stems and common separable preverbs within existing clause/head
+  safeguards; new `sein` licensing and full grammatical classification are not
+  inferred from a suffix or prefix.
+- Product vocabulary now separates quoted text, signal-group comparisons and
+  ending cues from dialogue, narrative distance and suspense interpretations.
+  Source-copy badges describe Lixity's verification boundary; passage actions
+  name their draft effect. Manual marker actions differ from saved categories,
+  research comparison prompts reuse localized reason flags, and publication
+  controls distinguish completed-chapter display gates from package selection.
+  Known structured export limits receive localized recovery summaries with safe
+  expandable technical details. Formula captions use the measured readability
+  variant. The central terminology contract lives in `docs/LOCALIZATION.md`.
+- Text style passports distinguish insufficient chapter support, zero MAD with
+  varying values and genuinely constant observations. Shared standardized
+  differences avoid overflow for the newly covered extreme finite inputs while
+  preserving ordinary calculations and cutoff boundaries.
+- Analysis names distinguish measured noun/adjective endings and word-distribution
+  divergence from inferred style. Pacing summaries name mean sentence length;
+  language settings explain their analysis/interface scope. Seven-locale search
+  and structural help use one authoritative definition, and website receipts
+  report download initiation rather than an unverified completed download.
+- The nominal-cue measurement is labeled "Noun endings" and explained with
+  localized verb/noun examples before comparison mathematics. Suffix matches
+  no longer appear to certify a passage's nominal style; counts are unchanged.
+- German listed and bounded productive perfect/pluperfect constructions count once across chapter,
   scene and paragraph analysis, including bounded intervening words; `arbeite`
   and its present paradigm no longer trigger the weak-past suffix rule. Review
   decisions are invalidated by the changed analysis policy. Unresolved verb
   constructions remain heuristic cues rather than grammatical verdicts.
+  Productive auxiliary/head rules cover unlisted `geschlafen`, `getroffen`,
+  `gehabt` and passive-perfect `gebaut/renoviert worden` without list additions.
 - German single quotation closers (`‚…‘`) preserve sentence boundaries and exact
   evidence ranges. The sentence regex now derives from one closing-mark list.
 - Analysis review actions retain readable dimensions; the passage component

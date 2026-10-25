@@ -158,6 +158,10 @@ before applying comparability floors. `None` features stay unavailable and
 absent/`None` SEs retain the zero fallback.
 JSD uses natural-log units `[0, ln(2)]` against the rest of the corpus; driver
 words explain divergence without establishing its artistic value.
+Localized names identify counted suffix patterns rather than a grammatical
+classification. Text style passports display insufficient reference support as
+unavailable; a zero MAD is called constant only when observations are equal.
+These presentation corrections do not rename JSON keys or change their units.
 
 Comparability floors (METHODS.md §2): the fingerprint withholds every feature of
 chapters below 100 words and sentence-distribution features below five

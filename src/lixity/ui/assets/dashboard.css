@@ -10,6 +10,12 @@ body {
 /* Native controls otherwise use the browser's unrelated default font. */
 button, input, select, textarea { font: inherit; }
 code, pre { font-family: var(--font-mono); }
+#site-export-preflight pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 12rem;
+  overflow: auto;
+}
 .page { max-width: 72rem; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-4); }
 .page > * { min-width: 0; margin-block: 0; }
 .workspace-shell { display: grid; gap: var(--space-3); min-width: 0; }

@@ -361,7 +361,12 @@ function researchDossierDetailHtml(detail, readOnly, options) {
     if (needed.length) {
       reviewAlert = '<div class="research-warning-box">' +
         '<strong>⚠️ ' + escapeHtml(uiLabel("research_review_needed")) + ':</strong> ' +
-        needed.map(function(n) { return escapeHtml(n.reason || n.title); }).join(" · ") +
+        needed.map(function(n) {
+          var flags = Array.isArray(n.flags) ? n.flags : [];
+          return '<div><strong>' + escapeHtml(n.title || uiLabel("research_revision_kind_decision")) + '</strong>' +
+            (flags.length ? researchEditorialFlags(flags) :
+              '<p>' + escapeHtml(n.reason || uiLabel("research_review_needed_hint")) + '</p>') + '</div>';
+        }).join("") +
         '</div>';
     }
   }

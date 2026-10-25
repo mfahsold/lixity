@@ -550,6 +550,14 @@ actions while retaining product identity and all three destinations.
 
 ### Annotation semantics and visual identity
 
+**Current main, unreleased:** [the central product vocabulary](LOCALIZATION.md#product-vocabulary-and-ownership)
+distinguishes counted observations, interpretations, actions and saved state.
+The existing resource packs own labels; each resolved key has one definition.
+Presentation names describe actual measurements and effects while public
+numeric identifiers remain language-neutral. The localization contract also
+defines action/category distinctions, German voice and the native language
+setting's existing analysis/interface coupling.
+
 **Current main, unreleased:** manuscript annotations distinguish the assertion
 being made, using pattern, position and a visible label as well as color. This
 is the central design contract; exact token values and dimensions remain in CSS.

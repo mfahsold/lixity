@@ -5,6 +5,8 @@ import os
 import re
 import sys
 from collections.abc import Callable, Mapping
+from contextlib import redirect_stdout
+from io import StringIO
 from typing import Any
 
 import orjson
@@ -23,7 +25,8 @@ from .config import (
 )
 from .formatters import ReportFormatter
 from .io import FileUtils
-from .models import SCHEMA_VERSION
+from .language import ResolvedLanguage
+from .models import SCHEMA_VERSION, CorpusConfig
 from .paragraph_evidence import ParagraphEvidence
 from .pipeline import (
     analyze_document,
@@ -130,15 +133,15 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "pdf_written": "PDF written: {output}",
         "pdf_unchanged": "PDF unchanged: {output}",
         "err_no_names": "No figure names selected (use --name, --names or project characters settings).",
-        "dlg_metric": "Dialogue metric",
+        "dlg_metric": "Quotation measurement",
         "dlg_value": "Value",
-        "dlg_turns": "Turns (quoted segments)",
-        "dlg_dialogue_pct": "Dialogue share",
-        "dlg_avg_turn": "Average turn (words)",
-        "dlg_median_turn": "Median turn (words)",
-        "dlg_longest_turn": "Longest turn (words)",
-        "dlg_turns_per_1000": "Turns per 1,000 words",
-        "dlg_paragraph_pct": "Dialogue paragraphs",
+        "dlg_turns": "Quoted spans",
+        "dlg_dialogue_pct": "Quoted-word share",
+        "dlg_avg_turn": "Mean quoted-span length (words)",
+        "dlg_median_turn": "Median quoted-span length (words)",
+        "dlg_longest_turn": "Longest quoted span (words)",
+        "dlg_turns_per_1000": "Quoted spans per 1,000 words",
+        "dlg_paragraph_pct": "Paragraphs with quoted text",
         "dlg_chapter": "Ch.",
         "dlg_title": "Title",
         "chr_name": "Figure",
@@ -153,13 +156,13 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "pac_chapters": "Chapters",
         "pac_scenes": "Scenes",
         "pac_avg_scene": "Average scene (words)",
-        "pac_hook_mean": "Hook score (mean)",
-        "pac_fastest": "Fastest chapter",
-        "pac_slowest": "Slowest chapter",
+        "pac_hook_mean": "Mean ending-cue count",
+        "pac_fastest": "Chapter with shortest sentences (mean)",
+        "pac_slowest": "Chapter with longest sentences (mean)",
         "pac_chapter": "Ch.",
         "pac_title": "Title",
         "pac_asl": "ASL",
-        "pac_dialogue": "Dialogue",
+        "pac_dialogue": "Quoted words",
         "pac_hook": "Hook",
         "pac_no_breaks": (
             "No explicit scene dividers found — scenes = chapters "
@@ -175,14 +178,14 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "mot_phrase": "Repeated phrase",
         "mot_count": "Count",
         "mot_chapters": "Chapters",
-        "show_metric": "Narrative distance",
+        "show_metric": "Signal-group comparison",
         "show_value": "Value",
         "show_chapters": "Chapters",
-        "show_tell_z": "Telling (mean z)",
-        "show_show_z": "Showing (mean z)",
-        "show_balance": "Balance (show - tell)",
-        "show_most_telling": "Most telling chapters",
-        "show_most_showing": "Most showing chapters",
+        "show_tell_z": "Word-pattern cues (mean z)",
+        "show_show_z": "Quotes / short sentences (mean z)",
+        "show_balance": "Difference (second - first)",
+        "show_most_telling": "Lowest difference: chapters",
+        "show_most_showing": "Highest difference: chapters",
         "show_chapter": "Ch.",
         "show_title": "Title",
     },
@@ -232,15 +235,15 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "pdf_written": "PDF geschrieben: {output}",
         "pdf_unchanged": "PDF unverändert: {output}",
         "err_no_names": "Keine Figurennamen ausgewählt (--name, --names oder characters in der Projektkonfiguration).",
-        "dlg_metric": "Dialogmetrik",
+        "dlg_metric": "Text in Anführungszeichen",
         "dlg_value": "Wert",
-        "dlg_turns": "Turns (Redeabschnitte)",
-        "dlg_dialogue_pct": "Dialoganteil",
-        "dlg_avg_turn": "Ø Turn (Wörter)",
-        "dlg_median_turn": "Median Turn (Wörter)",
-        "dlg_longest_turn": "Längster Turn (Wörter)",
-        "dlg_turns_per_1000": "Turns je 1.000 Wörter",
-        "dlg_paragraph_pct": "Dialogabsätze",
+        "dlg_turns": "Zitatabschnitte",
+        "dlg_dialogue_pct": "Anteil zitierter Wörter",
+        "dlg_avg_turn": "Mittlere Zitatlänge (Wörter)",
+        "dlg_median_turn": "Mediane Zitatlänge (Wörter)",
+        "dlg_longest_turn": "Längster Zitatabschnitt (Wörter)",
+        "dlg_turns_per_1000": "Zitatabschnitte je 1.000 Wörter",
+        "dlg_paragraph_pct": "Absätze mit zitiertem Text",
         "dlg_chapter": "Kap.",
         "dlg_title": "Titel",
         "chr_name": "Figur",
@@ -255,13 +258,13 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "pac_chapters": "Kapitel",
         "pac_scenes": "Szenen",
         "pac_avg_scene": "Ø Szene (Wörter)",
-        "pac_hook_mean": "Haken-Ø",
-        "pac_fastest": "Schnellstes Kapitel",
-        "pac_slowest": "Langsamstes Kapitel",
+        "pac_hook_mean": "Mittlere Zahl der Schlussmerkmale",
+        "pac_fastest": "Kapitel mit kürzesten Sätzen (Mittelwert)",
+        "pac_slowest": "Kapitel mit längsten Sätzen (Mittelwert)",
         "pac_chapter": "Kap.",
         "pac_title": "Titel",
         "pac_asl": "ASL",
-        "pac_dialogue": "Dialog",
+        "pac_dialogue": "Zitierte Wörter",
         "pac_hook": "Haken",
         "pac_no_breaks": (
             "Keine expliziten Szenentrenner gefunden — Szenen = Kapitel "
@@ -277,14 +280,14 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "mot_phrase": "Wiederholte Phrase",
         "mot_count": "Anzahl",
         "mot_chapters": "Kapitel",
-        "show_metric": "Erzähldistanz",
+        "show_metric": "Signalgruppen im Vergleich",
         "show_value": "Wert",
         "show_chapters": "Kapitel",
-        "show_tell_z": "Telling (Ø z)",
-        "show_show_z": "Showing (Ø z)",
-        "show_balance": "Balance (Show - Tell)",
-        "show_most_telling": "Telling-lastigste Kapitel",
-        "show_most_showing": "Showing-lastigste Kapitel",
+        "show_tell_z": "Wortmuster (Ø z)",
+        "show_show_z": "Zitate / kurze Sätze (Ø z)",
+        "show_balance": "Differenz (zweite - erste Gruppe)",
+        "show_most_telling": "Niedrigste Differenz: Kapitel",
+        "show_most_showing": "Höchste Differenz: Kapitel",
         "show_chapter": "Kap.",
         "show_title": "Titel",
     },
@@ -333,12 +336,12 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("analyze", "Corpus metrics (text/JSON, self-describing meta block)"),
     ("profile", "Paragraph tense/style estimates (JSON; --layer text/JSON)"),
     ("analysis-review", "Review tense observations and save explicit project-local author decisions"),
-    ("dialogue", "Dialogue turn structure (text/JSON)"),
+    ("dialogue", "Recognized quoted passages and word shares (text/JSON)"),
     ("characters", "Curated name mentions and declared POV across chapters (text/JSON)"),
     ("pacing", "Scene structure, pacing and chapter hooks (text/JSON)"),
     ("scenes", "Scene features, register references and author targets (text/JSON)"),
     ("motifs", "Motif tracking, repetition and local phrase echoes (text/JSON)"),
-    ("showing", "Showing vs. telling balance (text/JSON)"),
+    ("showing", "Compare word-pattern and quotation/short-sentence signals (text/JSON)"),
     ("style", "Self-calibrated style reference of the manuscript (text/JSON, schema v4)"),
     ("dashboard", "Generate a single-file HTML dashboard"),
     ("export-site", "Export a static read-only project website"),
@@ -1012,7 +1015,7 @@ def _cmd_motifs(args: argparse.Namespace) -> int:
 
 
 def _cmd_showing(args: argparse.Namespace) -> int:
-    """Showing vs. telling balance (Rich table or JSON)."""
+    """Compare measured cue groups (Rich table or stable showing JSON)."""
     try:
         text = FileUtils.read_file(args.file)
     except OSError as exc:
@@ -1350,6 +1353,137 @@ def _add_threshold_arguments(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def _run_text_report(args: argparse.Namespace, render: Callable[[], int]) -> int:
+    """Write successful report data atomically, leaving diagnostics on stderr."""
+    output = getattr(args, "output", None)
+    if output is None:
+        return render()
+    try:
+        FileUtils.require_distinct_output(args.file, output)
+        with StringIO() as captured, redirect_stdout(captured):
+            status = render()
+            content = captured.getvalue()
+        if status != EXIT_OK:
+            return status
+        FileUtils.atomic_write_if_changed(
+            output, content,
+            before_replace=lambda: FileUtils.require_distinct_output(args.file, output),
+        )
+    except (OSError, ValueError) as exc:
+        print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+        return EXIT_ERROR
+    return EXIT_OK
+
+
+def _cmd_analysis_report(
+    args: argparse.Namespace, text: str, config: CorpusConfig, resolved: ResolvedLanguage,
+) -> int:
+    """Render the shared document analysis reports without choosing a destination."""
+    if args.command == "scenes":
+        from .api import scenes
+
+        try:
+            report = scenes(text, resolved.key, project_config=args._project_config)
+            report["scenes"] = _select_scenes(report["scenes"], args)
+        except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return EXIT_ERROR
+        if args.json:
+            print(_json(report, indent=True))
+        else:
+            from .diversity import MIN_TOKENS_LD
+            from .format import num, safe_text
+            from .style_fingerprint import FEATURE_UNITS, FEATURES
+
+            labels = resolved.labels
+            units = FEATURE_UNITS.get(resolved.key, {})
+
+            for item in report["scenes"]["items"]:
+                group = item["group"] or labels["scene_unassigned"]
+                print(safe_text(f"{item['id']} · {item['chapter_title']} · {group}"))
+                print(
+                    f"  {num(item['words'], resolved.key, 0)} {labels['words']} · "
+                    f"{num(item['sentences'], resolved.key, 0)} {labels['sentences']}"
+                )
+                for field, label_key, unit in FEATURES:
+                    value = item["features"][field]
+                    target = item["targets"].get(field)
+                    detail = ""
+                    if target:
+                        lower = (
+                            "…"
+                            if target["lower"] is None
+                            else num(target["lower"], resolved.key, 2)
+                        )
+                        upper = (
+                            "…"
+                            if target["upper"] is None
+                            else num(target["upper"], resolved.key, 2)
+                        )
+                        detail = f" · {labels['scene_' + target['position']]} [{lower} – {upper}]"
+                    rendered = "—" if value is None else num(value, resolved.key, 2)
+                    print(
+                        f"  {labels.get(label_key, field)}: {rendered} {units.get(field, unit)}{detail}"
+                    )
+            planned_items = report["scenes"].get("planned_items", [])
+            if planned_items:
+                print(labels["scene_planned"])
+                for item in planned_items:
+                    print(safe_text(f"  {item['id']} · {item['group']}"))
+                print(labels["scene_planned_note"])
+            print(labels["scene_guidance"])
+            print(labels["scene_support"].replace("{min_tokens}", str(MIN_TOKENS_LD)))
+        return EXIT_OK
+
+    if args.command == "analyze":
+        metrics = CorpusAnalyzer(config, sample_text=text).analyze_text(text)
+        if args.json:
+            payload = _meta_payload(resolved.key, metrics=metrics.model_dump())
+            print(_json(payload))
+        else:
+            ReportFormatter.print_rich_report(metrics, language_key=resolved.key)
+        return EXIT_OK
+
+    if args.command == "profile":
+        fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
+        evidence: dict[int, ParagraphEvidence] | None = {} if args.evidence else None
+        paragraphs, chapters = profile_document(text, config, fp_thresholds, evidence=evidence)
+        if args.layer is not None:
+            payload = _meta_payload(
+                resolved.key,
+                **paragraph_layer_projection(paragraphs, args.layer, only_notable=args.only_notable),
+            )
+            payload["meta"]["schema_version"] = "paragraph-layer/1"
+            if evidence is not None:
+                payload["meta"]["schema_version"] = "paragraph-layer-evidence/1"
+                for row in payload["paragraphs"]:
+                    row["evidence"] = evidence[row["index"]]
+            if args.json:
+                print(_json(payload, indent=True))
+            else:
+                _print_paragraph_layer(payload, args.file, resolved.key, resolved.labels,
+                                       paragraphs=paragraphs if evidence is not None else None)
+            return EXIT_OK
+        payload = _meta_payload(
+            resolved.key,
+            chapters=[c.__dict__ for c in chapters],
+            paragraphs=[{k: v for k, v in p.__dict__.items() if k != "text"} for p in paragraphs],
+        )
+        print(_json(payload, indent=True))
+        return EXIT_OK
+
+    if args.command == "style":
+        fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
+        fingerprint = fingerprint_document(text, config, fp_thresholds)
+        if args.json:
+            print(_json(fingerprint.passport(), indent=True))
+        else:
+            print(fingerprint.passport_text(labels=resolved.labels, language_key=resolved.key))
+        return EXIT_OK
+
+    raise ValueError("Unknown textual analysis report")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="lixity",
@@ -1614,7 +1748,7 @@ def main(argv: list[str] | None = None) -> int:
                 "--evidence", action="store_true",
                 help="With --layer, include literal counted spans (JSON: paragraph-layer-evidence/1)",
             )
-        p.add_argument("-o", "--output", help="Target file (dashboard, pdf)")
+        p.add_argument("-o", "--output", help="PDF target file" if name == "pdf" else "Write report text or JSON to a file instead of stdout")
         if name == "pdf":
             from .pdf_export import PDF_LAYOUTS
 
@@ -1878,19 +2012,19 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_build(args)
 
     if args.command == "dialogue":
-        return _cmd_dialogue(args)
+        return _run_text_report(args, lambda: _cmd_dialogue(args))
 
     if args.command == "characters":
         return _cmd_characters(args)
 
     if args.command == "pacing":
-        return _cmd_pacing(args)
+        return _run_text_report(args, lambda: _cmd_pacing(args))
 
     if args.command == "motifs":
         return _cmd_motifs(args)
 
     if args.command == "showing":
-        return _cmd_showing(args)
+        return _run_text_report(args, lambda: _cmd_showing(args))
 
     try:
         text = FileUtils.read_file(args.file)
@@ -1902,107 +2036,8 @@ def main(argv: list[str] | None = None) -> int:
         text, args.language, project_config=args._project_config
     )
 
-    if args.command == "scenes":
-        from .api import scenes
-
-        try:
-            report = scenes(text, resolved.key, project_config=project_config)
-            report["scenes"] = _select_scenes(report["scenes"], args)
-        except ValueError as exc:
-            print(f"Error: {exc}", file=sys.stderr)
-            return EXIT_ERROR
-        if args.json:
-            print(_json(report, indent=True))
-        else:
-            from .diversity import MIN_TOKENS_LD
-            from .format import num, safe_text
-            from .style_fingerprint import FEATURE_UNITS, FEATURES
-
-            labels = resolved.labels
-            units = FEATURE_UNITS.get(resolved.key, {})
-
-            for item in report["scenes"]["items"]:
-                group = item["group"] or labels["scene_unassigned"]
-                print(safe_text(f"{item['id']} · {item['chapter_title']} · {group}"))
-                print(
-                    f"  {num(item['words'], resolved.key, 0)} {labels['words']} · "
-                    f"{num(item['sentences'], resolved.key, 0)} {labels['sentences']}"
-                )
-                for field, label_key, unit in FEATURES:
-                    value = item["features"][field]
-                    target = item["targets"].get(field)
-                    detail = ""
-                    if target:
-                        lower = (
-                            "…"
-                            if target["lower"] is None
-                            else num(target["lower"], resolved.key, 2)
-                        )
-                        upper = (
-                            "…"
-                            if target["upper"] is None
-                            else num(target["upper"], resolved.key, 2)
-                        )
-                        detail = f" · {labels['scene_' + target['position']]} [{lower} – {upper}]"
-                    rendered = "—" if value is None else num(value, resolved.key, 2)
-                    print(
-                        f"  {labels.get(label_key, field)}: {rendered} {units.get(field, unit)}{detail}"
-                    )
-            planned_items = report["scenes"].get("planned_items", [])
-            if planned_items:
-                print(labels["scene_planned"])
-                for item in planned_items:
-                    print(safe_text(f"  {item['id']} · {item['group']}"))
-                print(labels["scene_planned_note"])
-            print(labels["scene_guidance"])
-            print(labels["scene_support"].replace("{min_tokens}", str(MIN_TOKENS_LD)))
-        return EXIT_OK
-
-    if args.command == "analyze":
-        metrics = CorpusAnalyzer(config, sample_text=text).analyze_text(text)
-        if args.json:
-            payload = _meta_payload(resolved.key, metrics=metrics.model_dump())
-            print(_json(payload))
-        else:
-            ReportFormatter.print_rich_report(metrics, language_key=resolved.key)
-        return EXIT_OK
-
-    if args.command == "profile":
-        fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
-        evidence: dict[int, ParagraphEvidence] | None = {} if args.evidence else None
-        paragraphs, chapters = profile_document(text, config, fp_thresholds, evidence=evidence)
-        if args.layer is not None:
-            payload = _meta_payload(
-                resolved.key,
-                **paragraph_layer_projection(paragraphs, args.layer, only_notable=args.only_notable),
-            )
-            payload["meta"]["schema_version"] = "paragraph-layer/1"
-            if evidence is not None:
-                payload["meta"]["schema_version"] = "paragraph-layer-evidence/1"
-                for row in payload["paragraphs"]:
-                    row["evidence"] = evidence[row["index"]]
-            if args.json:
-                print(_json(payload, indent=True))
-            else:
-                _print_paragraph_layer(payload, args.file, resolved.key, resolved.labels,
-                                       paragraphs=paragraphs if evidence is not None else None)
-            return EXIT_OK
-        payload = _meta_payload(
-            resolved.key,
-            chapters=[c.__dict__ for c in chapters],
-            paragraphs=[{k: v for k, v in p.__dict__.items() if k != "text"} for p in paragraphs],
-        )
-        print(_json(payload, indent=True))
-        return EXIT_OK
-
-    if args.command == "style":
-        fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
-        fingerprint = fingerprint_document(text, config, fp_thresholds)
-        if args.json:
-            print(_json(fingerprint.passport(), indent=True))
-        else:
-            print(fingerprint.passport_text(labels=resolved.labels, language_key=resolved.key))
-        return EXIT_OK
+    if args.command in ("scenes", "analyze", "profile", "style"):
+        return _run_text_report(args, lambda: _cmd_analysis_report(args, text, config, resolved))
 
     fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
     analysis = analyze_document(text, config, fp_thresholds)

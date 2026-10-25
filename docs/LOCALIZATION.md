@@ -6,14 +6,15 @@ Documentation, comments and docstrings are English. Localized resources,
 quoted material and linguistic examples retain their intended language.
 Machine-readable keys and mathematical identifiers remain language-neutral.
 
-Analysis language and report language are separate settings:
+CLI analysis language and CLI report language can be selected independently.
+The native dashboard currently follows its analysis profile:
 
 | Setting | Purpose |
 | --- | --- |
 | `--language de`, `--language en`, or another supported code | Selects the manuscript's linguistic profile. An explicit CLI flag overrides project settings; English is the default. API callers use the `language` argument. |
 | `--language auto` | Requests detection explicitly. Weak or ambiguous evidence resolves to `generic`. |
 | `LIXITY_LANG` | Selects CLI/report presentation independently of analysis. Message packs currently cover German and English. |
-| Dashboard language | Uses resources for all seven supported languages, including workspace and research controls. |
+| Dashboard language | Follows the manuscript's resolved analysis profile, using all seven UI resource packs. The native language control is not an independent interface-language preference. |
 
 Detection uses the text the caller supplies: `pipeline.resolve_document_config`
 resolves `auto` before analysis. Low-level `CorpusAnalyzer`/`ParagraphProfiler`
@@ -23,7 +24,70 @@ calls resolve `auto` without a sample and fall back to `generic`, so resolve
 Research CLI help and errors are English; JSON keys are language-neutral.
 Sources, quotations, filenames, external metadata, claim titles and author
 decisions are preserved as entered. Localization does not translate or verify
-research content. Some backend errors may still appear in English in the browser.
+research content. Known structured export-limit failures receive localized
+summaries and recovery guidance. Exact technical diagnostics remain available in
+English; unknown backend failures are not guessed or presented as known cases.
+
+## Product vocabulary and ownership
+
+This is the central terminology contract. [Methods](METHODS.md) owns formulas,
+counting rules and limitations; [Research data model](research/DATA_MODEL.md)
+owns retained records and relations. The existing language resource packs own
+translations, not a second glossary service or a separate runtime term registry.
+
+The interface distinguishes **observation**, **interpretation**, **action** and
+**saved state**. A short familiar name is paired with an explanation of what is
+counted or changed, its scope/reference, and what cannot be inferred. Technical
+terms and stable command/JSON identifiers stay available for reproducibility.
+
+| Concept | DE / EN display direction | Meaning and excluded inference |
+| --- | --- | --- |
+| Counted pattern | Nomen-Endungen / Noun endings | Selected ending matches, not a grammatical noun classification or a nominal-style verdict. |
+| Quoted-text measurement | Text in Anführungszeichen / Quoted words | Recognized quoted spans in the manuscript; neither proof of dialogue nor research-source citations. |
+| Statistical comparison | Vergleiche innerhalb der Schwelle / Comparisons within the limit | Measurable chapter/feature cells inside the selected bound, not plot coherence or quality. Unavailable is not zero. |
+| Composite comparison | Signalgruppen im Vergleich / Signal-group comparison | Word-pattern cues versus quotation/short-sentence shares; not validated narrative distance or show/tell classification. |
+| Ending cues | Schlussmerkmale / Ending cues | Three closing-pattern checks, not suspense or chapter effectiveness. |
+| Manual marker action | Zur Sachprüfung markieren / Mark for fact-check | Opens an editable marker draft; no fact check or saved write occurs before explicit save. Marker-category names remain distinct. |
+| Analysis review decision | Bewusst gelassen / Kept intentionally | An explicit author decision about an exact analysis observation; not proof of a repaired manuscript or a research assessment. |
+| Source copy | Quellenkopie / Source copy | Retained bytes/context at a version; not an accepted claim or Lixity-verified source content. Byte integrity and content truth are separate. |
+| Source excerpt | Quellenausschnitt / Source excerpt | A retained passage or selected source text; extraction and OCR can be imperfect. |
+| Claim and evidence link | These und Belegverknüpfung / Claim and evidence link | An authored assertion and an explicit relation to a source passage. Confidence is an author assessment, not system probability. |
+| Dossier | Dossier / Dossier | Curated research text, media and references; copying a passage into its draft is not a saved link. |
+| Research change prompt | Abgleich offen / Comparison pending | Recorded versions, dates or an author request justify comparison; they do not establish contradiction or required rewriting. |
+| Output generation history | Erzeugungsverlauf der Ausgabedatei / Output generation history | Details recorded for generated output files; an unknown history says nothing about research-source attribution. |
+| Publication selection | Ausgewähltes Begleitmaterial / Selected background | Explicit dossier entries in a reading package; no generated synopsis or publication action is implied. |
+| Chapter display gate | Anzeigen nach abgeschlossenem Kapitel / Show after completing chapter | Display after chapter N is marked finished; zero means from the start. This is not access control or physical exclusion from the files. The separate export chapter cap controls package selection. |
+| Operation receipt | Download gestartet / Download started | A download was initiated; the application cannot establish that the recipient saved the file. |
+
+### Resource boundaries and editorial style
+
+Each resolved key has one authoritative definition. Analysis measurement names
+and help stay in `language_data.py`; workspace actions, source states, publication
+controls and structural help stay in `workspace_labels.py`. Search controls also
+belong to the workspace pack. `language.py` composes these packs; it must not
+silently overwrite competing definitions. `tests/test_interpretation_labels.py`
+checks that invariant, while existing localization tests check completeness and
+placeholders. Separate action keys are appropriate when a stored category and an
+action have different meanings; they do not create new stored marker kinds.
+
+German app-owned copy avoids direct address where possible: `Quelle öffnen`,
+`Dossier gespeichert`, `Vergleich nicht verfügbar`. Keep sentences concrete and
+short rather than replacing address with bureaucratic passive phrasing. Preserve
+first-person examples, consent assertions, quoted text and authored content.
+Other languages use coherent local phrasing; German syntax is not a translation
+template. The `pt` and `es` packs still require native editorial review before
+claiming a consistent regional voice. No regional compatibility modes are implied.
+
+### Review in context
+
+Review a complete interaction: visible name, explanation, empty/error state,
+accessible name, resulting object, persistence and return path. Ask authors or
+editors to predict the effect before clicking and to explain what is known,
+unknown or saved afterwards. A preference for a term is not evidence that it is
+understood. Compare alternatives with the same underlying data and include
+unavailable results, non-text sources, unsaved drafts and failed operations.
+Resource parity and desktop/mobile browser checks establish coverage and layout;
+they do not replace native-language review or author comprehension studies.
 
 ## Localization below the interface
 

@@ -813,6 +813,29 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
     status.className = "ctl-status " + (failed ? "err" : "ok");
     status.textContent = uiLabel(key) + (reason ? " " + reason : "");
   }
+  function localizedLimitFailure(body) {
+    var report = body && body.preflight;
+    var categories = {
+      research_record_bytes:"research", research_authored_revision_count:"research",
+      research_response_count:"research", research_response_bytes:"research",
+      prepared_data_bytes:"research", publication_bytes:"publication", bundle_bytes:"bundle"
+    };
+    if (!report || report.schema_version !== "lixity-site-preflight-error/1" ||
+        report.ok !== false || report.complete !== false || report.files_written !== false ||
+        !Object.prototype.hasOwnProperty.call(categories, report.limit)) return "";
+    var category = categories[report.limit];
+    var recovery = report.limit === "research_record_bytes" ? "site_export_limit_record_scope" :
+      category === "research" ? "site_export_limit_scope" : "site_export_limit_" + category + "_scope";
+    var details = document.createElement("details"), summary = document.createElement("summary");
+    summary.textContent = uiLabel("site_export_limit_details");
+    var diagnostic = document.createElement("pre");
+    diagnostic.textContent = JSON.stringify(Object.assign({}, report, {
+      message:typeof body.message === "string" ? body.message : report.message
+    }), null, 2);
+    details.append(summary, diagnostic);
+    preflightResult.replaceChildren(details); preflightResult.hidden = false;
+    return uiLabel("site_export_limit_" + category) + " " + uiLabel(recovery) + " " + uiLabel("site_export_limit_incomplete");
+  }
   function reportExport(exportId, stage, error) {
     var errorName = error ? (["AbortError", "NetworkError", "TypeError", "Error"].includes(error.name)
       ? error.name : "Other") : null;
@@ -875,6 +898,7 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
         try {
           var body = await response.json();
           if (body && typeof body.message === "string" && body.message.trim()) reason = body.message;
+          reason = localizedLimitFailure(body) || reason;
         }
         catch (_) { /* Preserve the HTTP status for non-JSON errors. */ }
         throw new Error("Website export unavailable");

@@ -23,7 +23,7 @@ from .workspace import resolve_manuscript_target
 ReviewStatus = Literal["kept", "changed", "later"]
 _MAX_STATE_BYTES = 4 * 1024 * 1024
 # Marker semantics are part of the review context, even with unchanged settings.
-_ANALYSIS_POLICY = "tense-review/3"
+_ANALYSIS_POLICY = "tense-review/5"
 
 
 class ReviewDecision(StrictModel):

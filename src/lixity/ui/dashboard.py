@@ -1017,7 +1017,7 @@ def render_dashboard(
         parts.append(layer_navigation)
     parts.append('</div>')
     parts.append(f'<details class="layer-comparison-note"><summary>{L("analysis_marks_help")}</summary>'
-                 '<p id="layer-evidence-hint"></p><p id="layer-comparison-hint"></p>'
+                 '<p id="layer-comparison-hint"></p><p id="layer-evidence-hint"></p>'
                  f'<p class="ctl-note">{L("layer_comparison_help")}</p>'
                  f'<button class="ctl" id="layer-clear" type="button">{L("layer_clear")}</button></details>')
     parts.append("</div>")
@@ -1147,7 +1147,7 @@ def render_dashboard(
                 if can_edit:
                     buttons = " ".join(
                         f'<button class="ctl" data-marker-kind="{esc(kind, quote=True)}" '
-                        f'data-line="{p.start_line}">+ {esc(label(labels, "marker_" + kind))}</button>'
+                        f'data-line="{p.start_line}">{esc(label(labels, "marker_action_" + kind))}</button>'
                         for kind in ("pruefen", "sachcheck", "todo", "achtung")
                     )
                     parts.append(
@@ -1235,7 +1235,7 @@ def render_dashboard(
         language_tiles.append(
             kpi(
                 N(metrics.flesch_de, 1) if has_tokens else "–",
-                help_term(labels, "flesch", "Flesch"),
+                help_term(labels, "flesch", esc(metrics.flesch_variant or "Flesch")),
                 jump="#bands",
             )
         )

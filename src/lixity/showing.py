@@ -1,19 +1,11 @@
-"""lixity.showing – showing vs. telling signals (narrative distance).
+"""Heuristic comparison of two equally weighted, manuscript-relative cue groups.
 
-A **heuristic composite**, documented and self-calibrating like the style
-reference: the manuscript's own chapter medians are the reference, so the
-report says "this chapter tells more than this book usually does", not "this
-chapter is bad".
-
-Telling signals (per 1,000 words): perception filters (see/hear/feel/notice/
-think), modals (hedging), passive constructions, nominalisations.
-Showing signals (shares in %): dialogue, staccato sentences.
-
-For each chapter the report computes robust z-scores (median/MAD, scaled) for
-the mean of the telling and showing signals and the balance
-``show_z − tell_z``. Positive balance = more showing than telling *relative to
-this manuscript*; negative = more telling. Deliberate telling is a stylistic
-device — the report ranks and locates, it does not judge.
+The word-pattern group averages perception/thought, modal, passive and nominal
+suffix cues; the other group averages quoted-word and short-sentence shares.
+Chapter values are standardized against this manuscript before group averaging.
+The difference is second group minus first. These observable pattern contrasts
+are not a validated narrative-distance or showing/telling classification.
+The public showing command and tell_z/show_z JSON keys retain their identities.
 """
 
 from __future__ import annotations

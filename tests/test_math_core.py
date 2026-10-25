@@ -317,6 +317,19 @@ class TestRobustStatistics(unittest.TestCase):
                 self.assertLess(significance_z(math.nextafter(numerator, 0.0), 0.0, 3.0, 4.0), cutoff)
                 self.assertGreater(significance_z(math.nextafter(numerator, math.inf), 0.0, 3.0, 4.0), cutoff)
 
+    def test_finite_standardized_difference_survives_overflowing_subtraction(self):
+        for direction in (-1, 1):
+            with self.subTest(direction=direction):
+                value, centre = direction * 1e308, -direction * 1e308
+                self.assertAlmostEqual(significance_z(value, centre, 1e308, 0.0), direction * 2.0)
+                self.assertAlmostEqual(robust_z(value, centre, 1e308), direction * 2.0 / 1.4826)
+                self.assertTrue(math.isclose(robust_z(value, centre, 1.0),
+                                             direction * (2.0 / 1.4826) * 1e308))
+
+    def test_finite_significance_survives_overflowing_hypotenuse(self):
+        self.assertAlmostEqual(significance_z(1e308, -1e308, 1.7e308, 1.7e308),
+                               2.0 / (1.7 * math.sqrt(2.0)))
+
 
 class TestSharedPrimitives(unittest.TestCase):
     """lixity.math_core is the single source for the plug-in conventions."""

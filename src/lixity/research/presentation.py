@@ -33,13 +33,14 @@ def revision_write_summary(result: dict[str, Any], *, expected_revision: int) ->
 
 
 def revision_write_report(result: dict[str, Any]) -> str:
-    """Describe a compact result without treating a preview as an accepted version."""
+    """Describe a compact result without treating a preview as an accepted record."""
+    unit = "revision" if result["kind"] == "dossier" else "version"
     if not result["changed"]:
-        status = f"No changes · version {result.get('candidate_revision', result.get('revision'))}"
+        status = f"No changes · {unit} {result.get('candidate_revision', result.get('revision'))}"
     elif result["dry_run"]:
-        status = f"Preview ready · would create version {result['candidate_revision']}"
+        status = f"Preview ready · would create {unit} {result['candidate_revision']}"
     else:
-        status = f"Saved version {result['revision']}"
+        status = f"Saved {unit} {result['revision']}"
     lines = [f"{status} · {safe_text(result['record_id'])}"]
     if result.get("changed_fields"):
         lines.append("Changed fields: " + ", ".join(safe_text(field) for field in result["changed_fields"]))
@@ -114,7 +115,7 @@ def manuscript_report(command: str, result: dict[str, Any], *, table: bool) -> s
         else:
             links = result["links"]
         if command == "review-manuscript":
-            heading = f"Manuscript review: {result['source_path']} ({result['review_needed_count']} review-needed)"
+            heading = f"Manuscript comparison: {result['source_path']} ({result['review_needed_count']} candidates)"
         else:
             heading = "Manuscript associations"
         headers = ("Link ID", "Revision", "Line", "State", "Review", "Flags", "Claim", "Quote")
@@ -125,7 +126,7 @@ def manuscript_report(command: str, result: dict[str, Any], *, table: bool) -> s
             rows.append([link["link_id"], link["revision"],
                          link.get("resolved_start_line") or anchor.get("start_line", "-"),
                          getattr(state, "value", state),
-                         "[REVIEW NEEDED]" if link.get("review_needed") else "-",
+                         "[COMPARE]" if link.get("review_needed") else "-",
                          ", ".join(link.get("flags") or []) or "-",
                          link.get("claim_title") or link.get("claim_id", "-"), anchor.get("quote", "")])
     lines = [_safe(heading, markdown=False), ""]

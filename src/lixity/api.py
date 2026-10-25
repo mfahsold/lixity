@@ -265,11 +265,11 @@ def motifs(
 
 def showing(text: str, language: str = "en", **config_overrides: Any) -> dict[str, Any]:
     """
-    Showing vs. telling balance (heuristic, self-calibrating): robust z-scores
-    of the telling signals (perception filters, modals, passive,
-    nominalisations) and the showing signals (dialogue, staccato) against the
-    manuscript's own chapter medians, plus the balance ``show_z − tell_z`` and
-    the most telling/showing chapters.
+    Compare manuscript-relative cue groups: perception/thought, modal, passive
+    and noun-ending patterns versus quoted-word and short-sentence shares.
+    ``tell_z`` and ``show_z`` retain their public identities; the difference is
+    ``show_z − tell_z``. Rankings order that difference, not validated narrative
+    distance or showing/telling. See METHODS.md for scaling and support limits.
 
     Returns ``{"meta": {...}, "showing": {...}}``.
     """
@@ -428,7 +428,7 @@ def about() -> dict[str, Any]:
             },
             {
                 "name": "pacing",
-                "purpose": "scene structure, pacing signals, chapter hook score",
+                "purpose": "scene structure, sentence-length signals and chapter-ending cues",
                 "output": "text|json",
                 "schema_version": SCHEMA_VERSION,
             },
@@ -440,7 +440,7 @@ def about() -> dict[str, Any]:
             },
             {
                 "name": "showing",
-                "purpose": "showing vs. telling balance (self-calibrating)",
+                "purpose": "word-pattern versus quotation/short-sentence signal groups (self-calibrating)",
                 "output": "text|json",
                 "schema_version": SCHEMA_VERSION,
             },

@@ -1028,7 +1028,9 @@ PASSPORT_TEXTS: dict[str, dict[str, str]] = {
         "median": "median",
         "band": "band",
         "constant": "constant",
-        "consistency": "Consistency",
+        "zero_mad": "zero MAD; chapter values vary",
+        "reference_unavailable": "reference unavailable: {measured}/{required} measurable chapters",
+        "consistency": "Comparisons within the limit",
         "cells_in_band": "of cells within the band",
         "multiplicity": "Multiplicity",
         "expected_hits": "normal-model reference hits",
@@ -1054,7 +1056,9 @@ PASSPORT_TEXTS: dict[str, dict[str, str]] = {
         "median": "Median",
         "band": "Korridor",
         "constant": "konstant",
-        "consistency": "Konsistenz",
+        "zero_mad": "MAD = 0; Kapitelwerte unterscheiden sich",
+        "reference_unavailable": "Referenz nicht verfügbar: {measured}/{required} messbare Kapitel",
+        "consistency": "Vergleiche innerhalb der Schwelle",
         "cells_in_band": "der Zellen im Korridor",
         "multiplicity": "Multiplizität",
         "expected_hits": "Treffer als Referenz des Normalmodells",
@@ -1594,9 +1598,15 @@ class StyleFingerprint:
             base = self.baseline.get(field_name, {})
             if not base.get("n"):
                 continue
+            label = labels.get(label_key, field_name)
+            if int(base["n"]) < self.thresholds.min_chapters:
+                support = t("reference_unavailable").format(
+                    measured=int(base["n"]), required=self.thresholds.min_chapters
+                )
+                lines.append(f"{label:<22} –   ({support})   [{unit}]")
+                continue
             centre = float(base["median"])
             sigma = float(base["sigma"])
-            label = labels.get(label_key, field_name)
             if sigma > 0.0:
                 lines.append(
                     f"{label:<22} {t('median')} {format_num(centre, language_key, 2):>9}   "
@@ -1605,9 +1615,11 @@ class StyleFingerprint:
                     f"{format_num(centre + 2 * sigma, language_key, 2):>7}   [{unit}]"
                 )
             else:
+                observations = [value for value in self.values.get(field_name, {}).values() if value is not None]
+                constant = bool(observations) and all(value == centre for value in observations)
                 lines.append(
                     f"{label:<22} {t('median')} {format_num(centre, language_key, 2):>9}   "
-                    f"({t('constant')})   [{unit}]"
+                    f"({t('constant' if constant else 'zero_mad')})   [{unit}]"
                 )
         lines.append("=" * 72)
         consistency_text = (

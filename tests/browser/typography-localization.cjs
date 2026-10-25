@@ -195,13 +195,13 @@ async function textRole(locator) {
       });
       await page.goto('http://lixity.test/site/guides/installation.html');
       await check(`Pages-${width} guide code size`, async () => {
-        const pre = await textRole(page.locator('pre').first());
-        const code = await textRole(page.locator('pre code').first());
+        const pre = await textRole(page.locator('pre:visible').first());
+        const code = await textRole(page.locator('pre:visible code').first());
         assert.equal(code.size, pre.size, 'Guide commands inherit their pre size');
         assert.equal(code.family, pre.family);
         assert.notEqual(code.family, (await textRole(page.locator('body'))).family);
       });
-      await page.locator('pre').first().screenshot({path: path.join(artifacts, `guide-code-${width}.png`)});
+      await page.locator('pre:visible').first().screenshot({path: path.join(artifacts, `guide-code-${width}.png`)});
       await page.goto('http://lixity.test/app/en');
       await page.locator('#tab-view-analysis').click();
       await page.locator('#workbench-overview-open').click();

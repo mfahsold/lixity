@@ -3,11 +3,43 @@
 import unittest
 
 from lixity.language import LANGUAGE_PROFILES
+from lixity.language_data import (
+    GROUP_LABELS,
+    GUIDANCE_LABELS,
+    HELP_TEXTS,
+    IDENTITY_LABELS,
+    LABELS,
+    LAYER_LABELS,
+    METRIC_LABELS,
+    SCENE_LABELS,
+    UI_LABELS,
+)
 from lixity.workspace_labels import WORKSPACE_LABELS
 from tests.support import LOCALES
 
 
 class TestInterpretationLabels(unittest.TestCase):
+    def test_resolved_labels_have_one_authoritative_definition(self):
+        packs = (GUIDANCE_LABELS, SCENE_LABELS, IDENTITY_LABELS, LABELS,
+                 METRIC_LABELS, HELP_TEXTS, GROUP_LABELS, LAYER_LABELS,
+                 UI_LABELS, WORKSPACE_LABELS)
+        for language in LOCALES:
+            with self.subTest(language=language):
+                owners = set()
+                for pack in packs:
+                    labels = pack.get(language, pack.get("en", {}))
+                    self.assertFalse(owners.intersection(labels),
+                                     f"Shadowed explanations in {language}: {owners.intersection(labels)}")
+                    owners.update(labels)
+
+    def test_jsd_names_divergence_rather_than_its_square_root(self):
+        stems = {"en": "divergence", "de": "Divergenz", "fr": "divergence",
+                 "es": "divergencia", "it": "divergenza", "pt": "divergência",
+                 "nl": "divergentie"}
+        for language, stem in stems.items():
+            with self.subTest(language=language):
+                self.assertIn(stem, LANGUAGE_PROFILES[language].labels["help_jsd"])
+
     def test_style_axes_declare_rank_space_complete_rows_and_omissions(self):
         terms = {
             "en": ("rank", "complete", "variance", "omitted"),

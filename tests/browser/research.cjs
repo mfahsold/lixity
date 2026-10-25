@@ -217,7 +217,7 @@ server.serve_forever()
     await Promise.all([page.waitForNavigation(), page.locator('#btn-submit-open-project').click()]);
     await expect(page.locator('#r-active-root')).toHaveAttribute('title', fixture.project);
     await page.locator('#tab-view-analysis').click();
-    const consistencyTile = page.locator('.kpi').filter({has: page.locator('[data-help]')}).filter({hasText: 'Consistency'}).first();
+    const consistencyTile = page.locator('.kpi').filter({has: page.locator('[data-help]')}).filter({hasText: 'Comparisons within the limit'}).first();
     await expect(consistencyTile).toContainText('–');
     assert.equal(await consistencyTile.locator('.kpi-bar').count(), 0);
     await page.locator('#tab-view-research').click();
@@ -973,7 +973,7 @@ server.serve_forever()
       }
     }
     // Presentation language changes labels, not archive identity or stored text.
-    const sourceTabs = {en: 'Evidence captures', de: 'Belegkopien', fr: 'Sources conservées', es: 'Fuentes conservadas', it: 'Fonti conservate', pt: 'Fontes preservadas', nl: 'Bewaarde bronnen'};
+    const sourceTabs = {en: 'Source copies', de: 'Quellenkopien', fr: 'Sources conservées', es: 'Fuentes conservadas', it: 'Fonti conservate', pt: 'Fontes preservadas', nl: 'Bewaarde bronnen'};
     for (const [language, sourcesLabel] of Object.entries(sourceTabs)) {
       const response = await page.request.post(fixture.url + '/api/settings', {data: {language}});
       assert.equal((await response.json()).ok, true);

@@ -63,7 +63,8 @@ def test_dialogue_keeps_every_chapter_in_manuscript_order_including_zero_turns(c
     chart = panel.find("./div[@class='dist scrollable']")
     assert chart is not None, "Complete chapter coverage uses the existing bounded chart"
     assert [row.attrib["data-jump"] for row in chart] == [f"#ch-{number}" for number in range(1, count + 1)]
-    assert chart[-1].findtext("./span[@class='val']") == "0.0% · 0 Turns"
+    assert chart[0].findtext("./span[@class='val']").endswith(" · 1 Quoted span")
+    assert chart[-1].findtext("./span[@class='val']") == "0.0% · 0 Quoted spans"
 
 
 @pytest.mark.parametrize("locale", LOCALES)

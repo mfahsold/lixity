@@ -445,7 +445,7 @@ Manuscript measurements while keeping review routes, navigation and flags visibl
 Scene rows reveal grouped, reversible measurement details. Long flags/scene lists
 support keyboard scrolling; wide comparisons retain row identity. Dialogue charts
 include every measured chapter in manuscript order, including zero turns; pacing
-labels explain ASL units, relative bars and the existing Hook heuristic. The chapter
+labels explain ASL units, relative bars and the existing ending-cue heuristic. The chapter
 matrix distinguishes measured zero cutoff crossings from unavailable comparisons.
 Current main (unreleased): heatmap cells, style-reference cutoff counts and every
 style-space loading open shared read-only chapter measurements: definitions,
@@ -774,6 +774,25 @@ neither Git nor a separate Python installation is needed for this route.
 The engine supports Python 3.10 or newer. Python API and editable developer
 environments are [separate advanced routes](#python-api-project-environment).
 
+### Install uv if it is not available
+
+Check `uv --version` first. On Windows with WinGet, run in PowerShell:
+
+```powershell
+winget install --id=astral-sh.uv -e
+```
+
+On macOS with Homebrew already installed:
+
+```sh
+brew install uv
+```
+
+For Linux, macOS without Homebrew, or Windows without WinGet, use the
+[official uv installation instructions](https://docs.astral.sh/uv/getting-started/installation/).
+Open a new terminal after installation and check `uv --version` before continuing.
+These install uv, not Lixity; the next command installs the application.
+
 ## CLI: current release
 
 These commands work in a terminal, including Windows PowerShell:
@@ -794,6 +813,12 @@ lixity service start --open
 See the [release notes](releases/v0.7.5.md)
 for changes and compatibility. `uv tool update-shell` configures new terminals;
 it does not change the terminal already open.
+
+If `lixity` is not found, run `uv tool list` to confirm that Lixity is installed,
+then `uv tool update-shell` and open a new terminal. `uv tool dir --bin` reports
+the executable directory. Reinstalling the app does not repair an old terminal's
+PATH. Once the command resolves, `lixity doctor` checks the installation/service;
+it does not certify linguistic accuracy or source truth.
 
 ## First useful result
 
@@ -1394,9 +1419,9 @@ or a different output.
 | How does each chapter differ from this manuscript's reference? | `lixity style` | median/MAD bands, z\*, FDR set, style dimensions |
 | How is the dialogue structured? | `lixity dialogue` | turns, turn lengths, turns per 1,000 words, dialogue paragraphs |
 | Who appears where — and when not? | `lixity characters` | mentions, chapters present, span, longest gap |
-| Where are the scenes and hooks? | `lixity pacing` | scenes, scene length, ASL curve, hook score 0–3 |
+| Where do scene lengths and endings differ? | `lixity pacing` | scenes, scene length, ASL curve, ending-cue count 0–3 |
 | What repeats itself? | `lixity motifs` | motif presence, top content words, repeated n-grams |
-| How do showing/telling proxy signals vary across chapters? | `lixity showing` | language-pattern z and balance per chapter; not a narrative classification |
+| How do word-pattern and quotation/short-sentence cues vary? | `lixity showing` | standardized signal groups and their difference; not a narrative classification |
 | I want to browse the available analysis panels | `lixity dashboard` | self-contained HTML; research and writes require the local app |
 | I want a foreground server for development or integration | `lixity serve` | loopback HTTP server, live settings, manuscript upload, research panel |
 | I want to start or manage the installed app | `lixity service` | managed start, stop, restart and status without a source checkout |
@@ -1498,8 +1523,8 @@ Later project changes require a new export.
 | Format | Included content | Intended use |
 | --- | --- | --- |
 | Review workspace | Manuscript and analysis; optionally internal research and history | Author/editor review |
-| Novel and companion | Reading text plus explicitly curated background notes | Read the story with chapter-dependent context |
-| Companion only | Curated notes without the novel or analysis | A separate companion for someone reading elsewhere |
+| Manuscript + selected background | Reading text plus explicitly curated background notes | Read the story with chapter-dependent context |
+| Selected background only | Curated notes without the novel or analysis | Background for someone reading elsewhere |
 
 ```bash
 lixity export-site --project . -o manuscript-copy
@@ -2006,6 +2031,11 @@ the form. Invalid numbers and a strong cutoff below the noticeable cutoff fail
 validation. [Configuration](#configuration-corpusconfig) explains persistent
 project metadata and session settings.
 
+**Manuscript language (analysis)** selects the language profile for counting and
+also sets the generated interface language. English is the default; `auto`
+requests explicit function-word-based detection. This control is not an
+independent interface-language preference, especially for mixed-language texts.
+
 The matrix color scale stays fixed at z* = −2.5 to +2.5. A **●** marks an
 FDR-selected cell; color alone is not a significance decision. Cell details
 include raw values, z*, standardized effect and Cliff's δ. The style reference
@@ -2085,6 +2115,18 @@ commands, formats, feature identifiers, languages and thresholds. `lixity schema
 emits the same capability metadata, not a JSON Schema for every result.
 [Automation contracts](AGENTS.md) describe versioned output envelopes and exit
 codes; a running server advertises registered operations at `GET /api`.
+
+**Current main:** `analyze`, `profile`, `style`, `dialogue`, `pacing` and `showing`
+accept `-o PATH` / `--output PATH` for their text or JSON report. Without it,
+report data goes to stdout. With it, a successful result is written atomically
+and stdout stays empty; diagnostics remain on stderr. A failed report/write
+preserves an existing destination. The manuscript and its aliases cannot be
+used as the report destination. PDF and dashboard keep their own file formats.
+
+```bash
+lixity analyze manuscript.md --language en --json -o analysis.json
+lixity profile manuscript.md --language en --layer asl -o paragraph-review.txt
+```
 
 `dialogue`, `pacing`, `motifs` and `showing` use the same guarded manuscript
 reader as `analyze`: invalid UTF-8 or a special file node returns processing
@@ -2213,6 +2255,11 @@ placeholders and give no independent pacing evidence. Tempo proxies are sentence
 length, staccato share, dialogue share and scene length. The hook score (0–3)
 adds one for each closing cue: at most eight words, terminal `?`/`!`/`…`, and
 closing dialogue. It measures these cues, not suspense or reader response.
+
+**Current main:** text summaries identify the chapters with the shortest and
+longest mean sentence length. The historical JSON keys `fastest_chapter` and
+`slowest_chapter` retain their ASL-based meaning; they do not measure narrative
+speed or reading time.
 
 **Since v0.7.3:** the pacing panel labels average sentence length
 as **ASL**, gives its words-per-sentence unit and explains that bars are scaled
@@ -2367,11 +2414,12 @@ Compare a heuristic chapter balance against this manuscript's own baseline:
 lixity showing manuscript.md
 ```
 
-Telling signals are perception filters, modals, passive constructions and
-nominalizations per 1,000 words; showing signals are dialogue and staccato
-percentages. Robust chapter z-scores yield `balance = show_z − tell_z`.
-A positive balance means more showing signals than usual for this manuscript;
-it does not establish a better scene. Zero MAD falls back to standard deviation.
+The word-pattern group combines perception/thought, modal, passive and noun-ending
+cues per 1,000 words. The second group combines quoted-word and short-sentence
+shares. The equally weighted group means yield `balance = show_z − tell_z`:
+positive means the second group is higher relative to this manuscript's baseline,
+negative means the first is higher. This does not classify narrative distance,
+showing/telling or scene quality. Zero MAD falls back to standard deviation.
 
 Comparison needs at least three chapters with differing signals. Otherwise the
 app shows `–` and explains the missing support while retaining raw measurements.
@@ -2379,14 +2427,13 @@ For compatibility, JSON component z-scores fall back to zero with too few
 chapters; identical balances yield empty `most_telling`/`most_showing` ranks.
 Empty ranks mean no distinguishable ordering, not identical artistic effect.
 
-The native **Analysis overview → Narrative distance (show/tell)** panel already
+The native **Analysis overview → Signal-group comparison** panel
 shows these chapter values and links back to the manuscript. Review-workspace
 website copies include that analysis; curated reader/companion copies exclude
 it. Bar length shows the magnitude of the balance; its signed number gives the
-direction: positive means more showing signals, negative more telling signals
-relative to this manuscript. For concrete wording, enable manuscript **Analysis**
-and choose a component such as **Perception filters**, **Modals**, **Nominal style** or
-**Passive**. **Counted text** marks the exact
+direction between the two groups relative to this manuscript. For concrete wording, enable manuscript **Analysis**
+and choose a component such as **Perception filters**, **Modals**, **Noun endings** or
+**Passive patterns**. **Counted text** marks the exact
 lexical cues independently of **Paragraph comparison**. Inspect a marked span
 to read its count and counting rule.
 
@@ -2692,7 +2739,7 @@ immersion or a writing defect. There is no automatic narrator-voice assessment.
 | **Maas a²** | (log₁₀ N − log₁₀ V) / (log₁₀ N)² | requires ≥ 100 tokens; lower means more types at the same N, not better prose |
 | **Flesch** | language-calibrated Flesch family (Amstad for German) | formula output is not clipped to 0–100; not reader comprehension |
 | **LIX** | ASL + share of long words (Björnsson: more than six characters, all languages) | a surface-structure estimate, not a universal difficulty or quality threshold |
-| **Dialogue ratio** | share of configured word tokens inside detected quotations | quotation and token regexes affect counts; no speaker attribution |
+| **Quoted words** | share of configured word tokens inside detected quotations | quotation and token regexes affect counts; neither speaker attribution nor dialogue classification |
 | **Function words** | share of articles, pronouns, prepositions, conjunctions, particles, auxiliaries, modals | language-profile counts describe grammatical patterns, not artistic value |
 | **Perception filters** | curated word-pattern matches (e.g. German "hörte", "roch", "fühlte") | lexical cues include environmental descriptions and idioms; they do not classify narrator mediation or narrative distance |
 | **Sentence classes** | staccato ≤ 6, medium 7–15, long 16–25, very long > 25 words | length bins; the legacy `complex_*` keys do not establish syntactic nesting |
@@ -3236,8 +3283,11 @@ Response-budget failures identify the route and affected record parameters, with
 accepted bytes grouped by route; operational tokens and source prose are omitted.
 This is the first limit crossing, not a full package-size estimate: `complete`
 is false and no output is written. The 64 MiB data and 200 MiB bundle limits
-remain in force. Follow the reported scope/source-file suggestions rather than
-deleting project records to make an export fit.
+remain in force. Suggestions follow the limiting category: prepared research
+responses can exceed their budget without original source files. Omitting
+`--include-source-files` is relevant to the separate bundle budget, not a general
+repair for large record/history responses. Select a narrower publication scope
+rather than deleting project records to make an export fit.
 
 ===============================================================================
 ## docs/research/USAGE.md
@@ -3271,6 +3321,25 @@ Use `lixity research --help` to discover implemented commands and
 `lixity about --json` reports supported schema versions and command metadata;
 `lixity research schema` exports the entity JSON schema. This guide covers
 workflows, retained data and semantics that command help cannot establish.
+
+### Output destinations at a glance
+
+These commands have different output objects; their options name that object.
+Research human output uses English, while stored titles and content remain unchanged.
+
+| Command | Destination option | What is written |
+| --- | --- | --- |
+| `research matrix`, `research compare` | `--output PATH` (optional) | Report file; otherwise stdout |
+| `research export` | `--output PATH` (required) | Restorable `.tar.gz` research archive |
+| `research dossier ID --export-edit PATH` | `--export-edit PATH` | Non-overwriting editable Markdown draft |
+| `research dossier ID --prepare --edit-file PATH` | `--output PATH` (optional) | Reviewed packet for `revise-batch`, not an accepted revision |
+| `research zotero-export` | `--output DIR` (required) | New RIS/files/provenance directory |
+| `research restore` | `--from ARCHIVE --to DIR` | Restored research project at the explicit target |
+
+`--format` selects a report format where supported; it is not a destination.
+Use `lixity research COMMAND --help` for exact formats and write guards. Main
+analysis reports use [`-o` / `--output`](../USAGE.md#command-reference);
+research commands above currently use their listed long options.
 
 The implementation provides local captures, lexical search, exact citations,
 versioned dossiers/claims/decisions, explicit manuscript associations, review,
@@ -3864,6 +3933,14 @@ Human reports bound long lists/findings; request JSON for the complete payload.
 `audit --format text` provides a human integrity report with scope, record totals
 and bounded findings; audit remains read-only.
 
+An audit describes one observed snapshot. Saving its exact live record/manifest
+counts back into a mirrored dossier creates another revision and changes those
+counts again. Keep the generated audit report outside the retained research
+archive and cite its observation date/snapshot in project notes instead of
+continually synchronizing live totals. A successful integrity audit checks stored
+objects and references, not the truth of their content. There is no separate
+"stable audit" mode that hides newly accepted revisions.
+
 **Current main:** audit also verifies the complete accepted manifest ancestry.
 Missing, modified, foreign-project or non-contiguous ancestor manifests fail
 integrity. Its `records` count refers to accepted revision objects, including
@@ -4062,7 +4139,7 @@ The first command prints:
 ```text
 # Harbour notes
 
-Version 1
+Revision 1
 
 ## Timeline
 
@@ -4104,11 +4181,11 @@ Exit 0 validates this request without writing. The compact preview prints the
 following, with your full ID in place of `DOSSIER_ID`:
 
 ```text
-Preview ready · would create version 2 · DOSSIER_ID
+Preview ready · would create revision 2 · DOSSIER_ID
 Changed fields: body
 ```
 
-Version 2 is a candidate; a dry-run does not reserve revision 1. To save the same
+Revision 2 is a candidate; a dry-run does not reserve revision 1. To save the same
 reviewed request:
 
 ```sh
@@ -4120,8 +4197,8 @@ lixity research dossier DOSSIER_ID --project ./section-demo --section Characters
 cmp characters.before.md characters.after.md
 ```
 
-The write prints `Saved version 2 · DOSSIER_ID`; it does not echo the dossier body.
-The section read shows `Version 2`, the noon departure and three-hour crossing.
+The write prints `Saved revision 2 · DOSSIER_ID`; it does not echo the dossier body.
+The section read shows `Revision 2`, the noon departure and three-hour crossing.
 `cmp` exits 0 without output: the sibling still contains exactly
 `Mira keeps the blue notebook.`. Revision 1 remains readable with `--revision 1`.
 
@@ -5343,6 +5420,21 @@ not the broader interchange proposal. Inspect installed entity definitions with
 `lixity research schema` and supported contracts with `lixity about --json`.
 Product, entity, manifest and response versions are separate.
 
+## Display vocabulary and state boundaries
+
+The [central vocabulary](../LOCALIZATION.md#product-vocabulary-and-ownership)
+distinguishes source copies, excerpts, claims, evidence links, dossiers and
+authored decisions. Retention and byte integrity do not verify a source's content.
+The source-content badge describes that system boundary, not an unfinished
+human-review task or a claim about whether the author has read the source.
+
+A passage action fills an existing draft; only explicit submission creates a
+saved relation or dossier revision. Research comparison prompts follow recorded
+associations, dates, versions and author acknowledgements. A pending comparison
+does not establish a semantic contradiction or require a new source pin.
+Existing accepted references remain pinned until an explicit guarded update.
+These names and explanations change no stored enum or record identity.
+
 ## Reading website projection
 
 Since v0.7.4, `lixity.site_export` produces a static publication projection of
@@ -5388,6 +5480,12 @@ the publication. Omitted section explicitly selects the entire dossier body.
 Citations and geography belong to the whole selected dossier revision, not an
 inferred section. Both fields default to false. Source redistribution consent
 is a per-export choice and is never stored in the profile.
+
+The chapter display gate shows an entry once chapter N is marked finished;
+zero makes it visible from the beginning. This is a presentation preference,
+not access control: a later entry may already be present in the package.
+The separate maximum-chapter selection physically omits later entries and their
+unshared associated resources. A display-name change does not alter either rule.
 
 The `lixity-reader-publication/1` projection contains only curated entries,
 resolved versions, canonical chapter numbers, release gates and selected media.
@@ -5737,12 +5835,27 @@ Per feature $f$ over $n$ measurable chapters with values $x_1,\dots,x_n$:
 | Spread | $\mathrm{MAD} = \mathrm{median}(\lvert x_i - \tilde{x}\rvert)$ | 0 for $n < 2$ |
 | Sigma | $\sigma = 1.4826 \cdot \mathrm{MAD}$ | rounded normal-consistency factor $1/\Phi^{-1}(0.75)$; not a finite-sample correction |
 
+The shared median sorts once and retains the ordinary midpoint arithmetic. If
+two finite middle values overflow their floating sum, the midpoint uses the
+standard library's exact-ratio mean instead. The shared mean applies the same
+fallback only when a finite input sequence overflows its ordinary sum; this
+also preserves cancellation residuals that could disappear if each observation
+were scaled first. MAD reuses the shared median. Ordinary finite rounding,
+signed-zero and empty-input conventions are unchanged; this is not a claim of
+exact arithmetic throughout every downstream statistic.
+
 A chapter–feature cell is **measurable** when the feature has at least
 `FingerprintThresholds.min_chapters` observations (default 2). Below this floor,
 the baseline is zeroed and no cells are scored. Constant features can still
 produce measured zero deviations; derived dimensions and spread-based
 diagnostics require positive $\sigma$. Availability and informative variation
 are different conditions.
+
+Text passports show insufficient reference support as unavailable with the
+observed/required chapter count, rather than presenting the zero-filled baseline
+as a measured median. A zero MAD alone does not establish constancy: tied values
+can have zero MAD while other chapter values differ. Only equal observations are
+described as constant; other zero-MAD references have no nonzero robust band.
 
 ## 2. Noise-adjusted deviation (z*)
 
@@ -5791,6 +5904,9 @@ decision, not a correction to the descriptive sentence-length SD/CV.
 
 The $z^*$ denominator is evaluated with a scaled Euclidean norm (`math.hypot`)
 to avoid overflow and underflow from squaring extreme finite spread/SE values.
+Finite operands whose difference overflows are divided before subtraction;
+overflowing finite spread/SE norms are evaluated in normalized units. Ordinary
+finite arithmetic and cutoff-neighbor behavior retain their existing path.
 This preserves the formula and zero-spread rule; it does not calibrate the
 underlying normal-tail probabilities.
 
@@ -6138,6 +6254,12 @@ Types absent from the chapter contribute half their rest-corpus probability
 times $\ln 2$; their total probability is calculated from the observed rest
 distribution. No square root or base-2 rescaling is applied.
 
+The interface names the observable **Word distribution (JSD)** and explains the
+divergence. It does not label this number a mathematical distance: the
+[Jensen–Shannon distance](https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.jensenshannon.html)
+is its square root. Topics and proper names can change word distributions without
+establishing a change of writing style.
+
 **Since v0.7.2:** absent-type mass is computed from remaining
 integer token counts, and contributions are accumulated with `math.fsum`.
 Near equal probabilities, the same per-type contribution is evaluated as
@@ -6165,10 +6287,12 @@ that chapter’s paragraph median/MAD ($n \ge 3$ measurable paragraphs, else
 skipped). Layer fill uses the absolute value span (min–max per dimension);
 the ring marks $\lvert z \rvert \ge 1.5$ (unusual **for this chapter**).
 
-The separate showing/telling composite standardizes each raw signal against
-the manuscript's chapter median/MAD, then averages each group with equal
-feature weights (four telling and two showing signals); zero spread uses the
-population standard deviation when available.
+The **Signal-group comparison** (command `showing`) standardizes each raw signal
+against the manuscript's chapter median/MAD, then averages each group with equal
+feature weights: four word-pattern cues versus quoted-word and short-sentence
+shares. The displayed difference is second group minus first. Zero spread uses
+the population standard deviation when available. The `tell_z`/`show_z` names are
+machine identities, not evidence for a validated narrative-distance construct.
 Fewer than three chapters or zero spread produce zero component scores.
 `most_telling` and `most_showing` are empty when all balances are identical,
 including this insufficient-data fallback; chapter-order ties are not evidence
@@ -6210,6 +6334,21 @@ nouns from homographic verbs or establish nominal writing style. Explicit
 `nominal_regex` overrides still replace the default rule. Recompute affected
 densities and derived comparisons before comparing older reports.
 
+The UI calls this measurement **Noun endings**, rather than claiming to measure
+nominal style. Nominal style can express an action as a noun phrase ("the
+examination" rather than "we examine"); a suffix counter cannot establish that
+syntactic choice. Localized examples explain the distinction before the
+counted-text and statistical comparison instructions. Counts and numeric keys
+are unchanged by this presentation.
+
+The analogous **Adjective endings** measurement counts selected suffix matches,
+not grammatical adjective tokens or attributive syntax. Untagged word patterns
+can both miss adjectives and match other word classes. Participle-shaped words
+also need context: the [Universal Dependencies annotation guidance](https://universaldependencies.org/u/dep/aux-pass.html)
+explicitly distinguishes passive auxiliaries from copular uses of participles.
+The lightweight passive measurement therefore remains a cue count; a match does
+not resolve whether an ambiguous participle is adjectival or verbal.
+
 Configured cue patterns override the profile patterns for direct Python calls.
 **Current main:** `lixity.tense.TenseMatcher` owns tense counting for chapters,
 scenes and paragraph profiles. With default patterns, a standalone productive
@@ -6221,6 +6360,19 @@ German `halten` and Dutch `Wij moeten`; it does not infer syntax from endings.
 In German, listed auxiliary/participle pairs additionally form one past cue;
 their contained lexical matches are consumed, so three recognized perfect
 constructions give three past cues and no present-auxiliary double count.
+Productive lowercase `ge-…-t/-en` and `-iert` candidates can additionally resolve
+with a form of `haben` at a bounded punctuation/end-of-text predicate-head edge.
+Weak `ge-…-t` stems require at least two letters (`geübt`, `geölt`); strong
+`ge-…-en` and `-iert` stems require at least three. A bounded inventory of
+separable preverbs also admits forms such as `eingekauft`, `aufgeräumt` and
+`abgeholt`. Curated finite forms and function words remain excluded. This covers `habe geschlafen/getroffen/gehabt`
+without expanding the participle inventory. An immediately following `worden`
+also licenses the passive perfect with `sein`, including `ist renoviert worden`.
+An unlisted `sein` + participle without `worden` remains unresolved. This is
+incomplete morphology: unlisted/combined preverbs and inseparable-prefix forms
+such as `wiedergutgemacht` and `vorbereitet` remain outside the new productive rule.
+No new `sein` licensing is inferred from a recognized prefix. Nominal/adjectival continuations
+are not resolved merely because a word has a matching ending.
 The German display label is therefore `Vergangenheit`, not the narrower
 grammatical form `Präteritum`.
 Up to three intervening words are allowed in a bounded word window. Punctuation, blank
@@ -6656,14 +6808,15 @@ Documentation, comments and docstrings are English. Localized resources,
 quoted material and linguistic examples retain their intended language.
 Machine-readable keys and mathematical identifiers remain language-neutral.
 
-Analysis language and report language are separate settings:
+CLI analysis language and CLI report language can be selected independently.
+The native dashboard currently follows its analysis profile:
 
 | Setting | Purpose |
 | --- | --- |
 | `--language de`, `--language en`, or another supported code | Selects the manuscript's linguistic profile. An explicit CLI flag overrides project settings; English is the default. API callers use the `language` argument. |
 | `--language auto` | Requests detection explicitly. Weak or ambiguous evidence resolves to `generic`. |
 | `LIXITY_LANG` | Selects CLI/report presentation independently of analysis. Message packs currently cover German and English. |
-| Dashboard language | Uses resources for all seven supported languages, including workspace and research controls. |
+| Dashboard language | Follows the manuscript's resolved analysis profile, using all seven UI resource packs. The native language control is not an independent interface-language preference. |
 
 Detection uses the text the caller supplies: `pipeline.resolve_document_config`
 resolves `auto` before analysis. Low-level `CorpusAnalyzer`/`ParagraphProfiler`
@@ -6673,7 +6826,70 @@ calls resolve `auto` without a sample and fall back to `generic`, so resolve
 Research CLI help and errors are English; JSON keys are language-neutral.
 Sources, quotations, filenames, external metadata, claim titles and author
 decisions are preserved as entered. Localization does not translate or verify
-research content. Some backend errors may still appear in English in the browser.
+research content. Known structured export-limit failures receive localized
+summaries and recovery guidance. Exact technical diagnostics remain available in
+English; unknown backend failures are not guessed or presented as known cases.
+
+## Product vocabulary and ownership
+
+This is the central terminology contract. [Methods](METHODS.md) owns formulas,
+counting rules and limitations; [Research data model](research/DATA_MODEL.md)
+owns retained records and relations. The existing language resource packs own
+translations, not a second glossary service or a separate runtime term registry.
+
+The interface distinguishes **observation**, **interpretation**, **action** and
+**saved state**. A short familiar name is paired with an explanation of what is
+counted or changed, its scope/reference, and what cannot be inferred. Technical
+terms and stable command/JSON identifiers stay available for reproducibility.
+
+| Concept | DE / EN display direction | Meaning and excluded inference |
+| --- | --- | --- |
+| Counted pattern | Nomen-Endungen / Noun endings | Selected ending matches, not a grammatical noun classification or a nominal-style verdict. |
+| Quoted-text measurement | Text in Anführungszeichen / Quoted words | Recognized quoted spans in the manuscript; neither proof of dialogue nor research-source citations. |
+| Statistical comparison | Vergleiche innerhalb der Schwelle / Comparisons within the limit | Measurable chapter/feature cells inside the selected bound, not plot coherence or quality. Unavailable is not zero. |
+| Composite comparison | Signalgruppen im Vergleich / Signal-group comparison | Word-pattern cues versus quotation/short-sentence shares; not validated narrative distance or show/tell classification. |
+| Ending cues | Schlussmerkmale / Ending cues | Three closing-pattern checks, not suspense or chapter effectiveness. |
+| Manual marker action | Zur Sachprüfung markieren / Mark for fact-check | Opens an editable marker draft; no fact check or saved write occurs before explicit save. Marker-category names remain distinct. |
+| Analysis review decision | Bewusst gelassen / Kept intentionally | An explicit author decision about an exact analysis observation; not proof of a repaired manuscript or a research assessment. |
+| Source copy | Quellenkopie / Source copy | Retained bytes/context at a version; not an accepted claim or Lixity-verified source content. Byte integrity and content truth are separate. |
+| Source excerpt | Quellenausschnitt / Source excerpt | A retained passage or selected source text; extraction and OCR can be imperfect. |
+| Claim and evidence link | These und Belegverknüpfung / Claim and evidence link | An authored assertion and an explicit relation to a source passage. Confidence is an author assessment, not system probability. |
+| Dossier | Dossier / Dossier | Curated research text, media and references; copying a passage into its draft is not a saved link. |
+| Research change prompt | Abgleich offen / Comparison pending | Recorded versions, dates or an author request justify comparison; they do not establish contradiction or required rewriting. |
+| Output generation history | Erzeugungsverlauf der Ausgabedatei / Output generation history | Details recorded for generated output files; an unknown history says nothing about research-source attribution. |
+| Publication selection | Ausgewähltes Begleitmaterial / Selected background | Explicit dossier entries in a reading package; no generated synopsis or publication action is implied. |
+| Chapter display gate | Anzeigen nach abgeschlossenem Kapitel / Show after completing chapter | Display after chapter N is marked finished; zero means from the start. This is not access control or physical exclusion from the files. The separate export chapter cap controls package selection. |
+| Operation receipt | Download gestartet / Download started | A download was initiated; the application cannot establish that the recipient saved the file. |
+
+### Resource boundaries and editorial style
+
+Each resolved key has one authoritative definition. Analysis measurement names
+and help stay in `language_data.py`; workspace actions, source states, publication
+controls and structural help stay in `workspace_labels.py`. Search controls also
+belong to the workspace pack. `language.py` composes these packs; it must not
+silently overwrite competing definitions. `tests/test_interpretation_labels.py`
+checks that invariant, while existing localization tests check completeness and
+placeholders. Separate action keys are appropriate when a stored category and an
+action have different meanings; they do not create new stored marker kinds.
+
+German app-owned copy avoids direct address where possible: `Quelle öffnen`,
+`Dossier gespeichert`, `Vergleich nicht verfügbar`. Keep sentences concrete and
+short rather than replacing address with bureaucratic passive phrasing. Preserve
+first-person examples, consent assertions, quoted text and authored content.
+Other languages use coherent local phrasing; German syntax is not a translation
+template. The `pt` and `es` packs still require native editorial review before
+claiming a consistent regional voice. No regional compatibility modes are implied.
+
+### Review in context
+
+Review a complete interaction: visible name, explanation, empty/error state,
+accessible name, resulting object, persistence and return path. Ask authors or
+editors to predict the effect before clicking and to explain what is known,
+unknown or saved afterwards. A preference for a term is not evidence that it is
+understood. Compare alternatives with the same underlying data and include
+unavailable results, non-text sources, unsaved drafts and failed operations.
+Resource parity and desktop/mobile browser checks establish coverage and layout;
+they do not replace native-language review or author comprehension studies.
 
 ## Localization below the interface
 
@@ -7332,6 +7548,14 @@ their existing presentation. The shared collapse owner hides project context and
 actions while retaining product identity and all three destinations.
 
 ### Annotation semantics and visual identity
+
+**Current main, unreleased:** [the central product vocabulary](LOCALIZATION.md#product-vocabulary-and-ownership)
+distinguishes counted observations, interpretations, actions and saved state.
+The existing resource packs own labels; each resolved key has one definition.
+Presentation names describe actual measurements and effects while public
+numeric identifiers remain language-neutral. The localization contract also
+defines action/category distinctions, German voice and the native language
+setting's existing analysis/interface coupling.
 
 **Current main, unreleased:** manuscript annotations distinguish the assertion
 being made, using pattern, position and a visible label as well as color. This
@@ -8123,6 +8347,10 @@ before applying comparability floors. `None` features stay unavailable and
 absent/`None` SEs retain the zero fallback.
 JSD uses natural-log units `[0, ln(2)]` against the rest of the corpus; driver
 words explain divergence without establishing its artistic value.
+Localized names identify counted suffix patterns rather than a grammatical
+classification. Text style passports display insufficient reference support as
+unavailable; a zero MAD is called constant only when observations are equal.
+These presentation corrections do not rename JSON keys or change their units.
 
 Comparability floors (METHODS.md §2): the fingerprint withholds every feature of
 chapters below 100 words and sentence-distribution features below five

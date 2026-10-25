@@ -1,21 +1,28 @@
 """Shared lexical tense counting with curated finite-form precedence.
 
 Productive endings may collide with explicitly listed present forms. This
-matcher rejects those contradictory past candidates. Listed German perfect
-constructions own their auxiliary and participle instead of double counting;
-other compound ambiguities remain lexical cues.
+matcher rejects those contradictory past candidates. German perfect constructions
+own their auxiliary and participle instead of double counting: listed pairs or
+productive candidates in a bounded head context. Other compound ambiguities
+remain lexical cues.
 """
 
 import re
 from bisect import bisect_right
 
 from .language import ResolvedLanguage, compile_pattern
-from .language_data import GERMAN_PERFECT_FORMS, GERMAN_PERFECT_PARTICIPLES, PROFILE_DATA
+from .language_data import (
+    GERMAN_PERFECT_FORMS,
+    GERMAN_PERFECT_PARTICIPLES,
+    GERMAN_PRODUCTIVE_PARTICIPLE,
+    PROFILE_DATA,
+)
 from .models import CorpusConfig
 
 _WORD = re.compile(r"\w+")
 _BLANK_LINE = re.compile(r"\n\s*\n")
 _PERFECT_MAX_GAP_WORDS = 3
+_CLAUSE_END = re.compile(r"[.!?,;:]")
 
 
 class TenseMatcher:
@@ -38,6 +45,8 @@ class TenseMatcher:
             for family, forms in GERMAN_PERFECT_FORMS.items() for form in forms
         }
         self._known_participles = frozenset().union(*GERMAN_PERFECT_PARTICIPLES.values())
+        self._productive_participle = compile_pattern(GERMAN_PRODUCTIVE_PARTICIPLE)
+        self._function_words = language.function_words
         self._conjunctions = frozenset(word.lower() for word in language.lexicon.get("conjunctions", ()))
 
     def _german_perfect_spans(self, text: str) -> list[tuple[int, int, bool]]:
@@ -57,8 +66,14 @@ class TenseMatcher:
                 if not separator.isspace() or _BLANK_LINE.search(separator):
                     break
                 word = candidate.group().lower()
+                productive = (
+                    candidate.group().islower() and word not in self._function_words
+                    and self._productive_participle.fullmatch(word) is not None
+                    and self._curated_present.fullmatch(word) is None
+                    and self._curated_past.fullmatch(word) is None
+                )
                 if (auxiliary.group().lower() in GERMAN_PERFECT_FORMS["sein"]
-                        and word in self._known_participles and position + 1 < len(words)):
+                        and (word in self._known_participles or productive) and position + 1 < len(words)):
                     following = words[position + 1]
                     gap = text[candidate.end():following.start()]
                     # Passive perfect has a second, distinct participial marker.
@@ -66,6 +81,17 @@ class TenseMatcher:
                     if following.group().lower() == "worden" and gap.isspace() and not _BLANK_LINE.search(gap):
                         best = (auxiliary.start(), following.end(), True)
                         break
+                # Unknown ge-/-iert words can also be attributive adjectives.
+                # Resolve the have-perfect only at a bounded clause/head edge,
+                # never merely because an ending occurs before another word.
+                head_edge = position + 1 == len(words) or bool(_CLAUSE_END.search(
+                    text[candidate.end():words[position + 1].start()]
+                ))
+                if (productive and head_edge
+                        and auxiliary.group().lower() in GERMAN_PERFECT_FORMS["haben"]):
+                    best = (auxiliary.start(), candidate.end(), True)
+                    previous_end = candidate.end()
+                    continue
                 if word in self._known_participles:
                     # Auxiliary choice depends on regional usage, transitivity
                     # and meaning. Missing licensing is not a negative verdict.

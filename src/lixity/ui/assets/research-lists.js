@@ -175,7 +175,7 @@ async function refreshResearchDossiers(overview, changedId, freshRead) {
   }
   LixityResearchCards.render(listHost, {items: dossiers.map(function(d) {
     var badges = d.review_needed
-      ? [{label: uiLabel("research_review_needed"), cls: "badge-warning ml-2", title: uiLabel("research_review_needed")}]
+      ? [{label: uiLabel("research_review_needed"), cls: "badge-warning ml-2", title: uiLabel("research_review_needed_hint")}]
       : [];
     var metaRight = [uiCountFormat("research_evidence_count", d.evidence_count)];
     if (d.revision) metaRight.push(uiFormat("research_revision_number", { revision: d.revision }));
