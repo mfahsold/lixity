@@ -80,7 +80,7 @@
   var pointerX = null, pointerY = null;
   var hideTimer = null;
   var showTimer = null, pendingEl = null, warmUntil = 0;
-  var pointerHelp = false, pointerOffsetX = 0;
+  var pointerHelp = false, pointerOffsetX = 0, pointerOffsetY = 0;
   var textObserver = new MutationObserver(function() { if (activeEl) show(activeEl, pointerHelp); });
 
   function cancelPending() {
@@ -120,6 +120,7 @@
     var rect = el.getBoundingClientRect();
     pointerHelp = true;
     pointerOffsetX = Math.max(0, Math.min(rect.width, (pointerX === null ? rect.left : pointerX) - rect.left));
+    pointerOffsetY = Math.max(0, Math.min(rect.height, (pointerY === null ? rect.top : pointerY) - rect.top));
   }
 
   function show(el, fromPointer) {
@@ -211,6 +212,11 @@
       }
     }
     var anchorTop = rect.top, anchorBottom = rect.bottom;
+    if (pointerHelp) {
+      // Mouse help belongs beside the dwell point, even on a tall control.
+      anchorTop = rect.top + pointerOffsetY - 4;
+      anchorBottom = rect.top + pointerOffsetY + 4;
+    }
     var toolbarSelector = ".manuscript-reader-controls, .toolbar, .selection-toolbar, [role=toolbar]";
     var toolbar = el.closest(toolbarSelector);
     if (toolbar && !pointerHelp) {

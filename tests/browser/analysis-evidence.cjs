@@ -402,6 +402,24 @@ server.serve_forever()
 (async () => {
   const browser = await launchChromium();
   try {
+    const proximity = await browser.newPage({viewport:{width:1440,height:950}, reducedMotion:'reduce'});
+    await proximity.route('**/*', route => route.fulfill({contentType:'text/html',body:fixtures.native}));
+    await proximity.goto('http://localhost/');
+    await proximity.locator('#manuscript-analysis-toggle').click();
+    await selected(proximity, 'asl');
+    const cursor = await proximity.evaluate(() => {
+      const boxes = [...CSS.highlights.get('lixity-analysis-evidence')].flatMap(range => [...range.getClientRects()]);
+      const rect = boxes.sort((a,b) => b.width - a.width)[0];
+      return {x:rect.right - 3, y:rect.top + rect.height / 2};
+    });
+    await proximity.mouse.move(cursor.x, cursor.y);
+    const floating = proximity.locator('#analysis-evidence-card');
+    await floating.waitFor({state:'visible'});
+    const floatingBox = await floating.boundingBox();
+    assert.ok(Math.abs(floatingBox.x - Math.max(8, Math.min(cursor.x + 12, 1440 - floatingBox.width - 8))) <= 1,
+      'Sentence evidence opens beside the hovered words, rather than at the start of the line');
+    await proximity.screenshot({path:path.join(artifacts, 'sentence-pointer-distance-1440.png')});
+    await proximity.close();
     for (const width of [1440, 320]) {
       const page = await browser.newPage({viewport:{width,height:950}, reducedMotion:'reduce'});
       try {

@@ -596,6 +596,11 @@ native selection. Analysis owns derived, verified UTF-16 ranges through CSS
 Highlights. It must invalidate those ranges after DOM-mark changes rather than
 replace research markup, count DOM decoration or infer source identity from a
 color. Opening either context neither retains new source bytes nor writes records.
+Pointer evidence cards anchor beside the hovered words on their actual rendered
+line, rather than at the start of a potentially long sentence. The initial
+horizontal pointer offset remains stable while reading; moving to another line
+of the same span reanchors the card. Explicit next/previous navigation returns
+to the selected range anchor, independently of the old pointer position.
 
 The existing Markdown counting projection applies NFC before linguistic matching.
 `text_normalization.counting_view` supplies conservative inverse codepoint ranges
@@ -793,8 +798,8 @@ the visual heading is excluded from its accessible description to avoid repeatin
 the control name. No new copy registry or tooltip dependency is introduced.
 The tooltip does not contain actions or take focus. Actual shortcut bindings also have a visible
 reference under Reading settings. Important workflow information stays in labels,
-state and empty-state actions. Pointer-triggered hints use the hovered control's
-edge with an 8 px vertical gap and a 12 px horizontal cursor offset, clamped to
+state and empty-state actions. Pointer-triggered hints use the dwell point with
+a 12 px cursor offset on both axes, clamped to
 the viewport and scrollport. Their initial pointer offset stays stable while
 reading. Focus/touch hints clear the complete owning toolbar, including wrapped
 adjacent controls; a mouse handoff reanchors an already visible focus hint.

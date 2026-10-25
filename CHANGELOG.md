@@ -52,6 +52,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   resources; keyboard and explicit touch help remain immediate. Pointer hints
   stay near the cursor instead of clearing the complete toolbar; focus/touch
   retain toolbar clearance.
+  Pointer hints now anchor vertically at the dwell point, and sentence evidence
+  cards open beside the hovered words instead of the start of the text line.
 - Localized paragraph action menus stay anchored clear of their own trigger,
   choose available vertical space and retain scrolling for longer translations.
   Shared reading-dropdown height limits remain owned by their existing layout.

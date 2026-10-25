@@ -140,7 +140,8 @@
     var bounds = host.getBoundingClientRect();
     var below = innerHeight - rect.bottom - 12, above = rect.top - 12;
     var top = below >= bounds.height || below >= above ? rect.bottom + 8 : rect.top - bounds.height - 8;
-    host.style.left = Math.max(8, Math.min(innerWidth - bounds.width - 8, rect.left)) + "px";
+    var left = card && card.pointerX !== undefined ? card.pointerX + 12 : rect.left;
+    host.style.left = Math.max(8, Math.min(innerWidth - bounds.width - 8, left)) + "px";
     host.style.top = Math.max(8, Math.min(innerHeight - bounds.height - 8, top)) + "px";
   }
   function scrollPosition(containers, trigger) {
@@ -212,6 +213,7 @@
     if (!card) return;
     var spans = card.record.layers[select.value].spans;
     card.index = (card.index + direction + spans.length) % spans.length; card.pinned = true;
+    delete card.pointerX;
     var range = spans[card.index].range, panel = card.record.panel;
     var containers = passageScrollContainers(panel);
     setPassageScrollMargin(panel);
@@ -288,7 +290,7 @@
       if (!boxes) {boxes = Array.from(range.getClientRects()); record.rects.set(range, boxes);}
       for (var rect of boxes) {
         if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
-          return {record:record, index:index, rect:rect};
+          return {record:record, index:index, rect:rect, pointerX:event.clientX};
         }
       }
     }
@@ -305,7 +307,9 @@
     clearTimeout(dismissTimer);
     if (card && card.record === match.record && card.index === match.index && !pinned) {
       clearTimeout(hoverTimer); candidate = null;
-      if (card.rect.top !== match.rect.top || card.rect.left !== match.rect.left) {card.rect = match.rect; position(card.rect);}
+      if (card.rect.top !== match.rect.top || card.rect.left !== match.rect.left) {
+        card.rect = match.rect; card.pointerX = match.pointerX; position(card.rect);
+      }
       return;
     }
     function show() {
@@ -318,6 +322,9 @@
     if (pinned) {clearTimeout(hoverTimer); show();}
     else if (!candidate || candidate.record !== match.record || candidate.index !== match.index) {
       clearTimeout(hoverTimer); candidate = match; hoverTimer = setTimeout(show, 100);
+    } else {
+      // The dwell may finish on a later line of the same sentence.
+      candidate.rect = match.rect; candidate.pointerX = match.pointerX;
     }
   }
   chapters.addEventListener("pointermove", function(event) {

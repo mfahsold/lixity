@@ -5367,7 +5367,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   var pointerX = null, pointerY = null;
   var hideTimer = null;
   var showTimer = null, pendingEl = null, warmUntil = 0;
-  var pointerHelp = false, pointerOffsetX = 0;
+  var pointerHelp = false, pointerOffsetX = 0, pointerOffsetY = 0;
   var textObserver = new MutationObserver(function() { if (activeEl) show(activeEl, pointerHelp); });
 
   function cancelPending() {
@@ -5407,6 +5407,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
     var rect = el.getBoundingClientRect();
     pointerHelp = true;
     pointerOffsetX = Math.max(0, Math.min(rect.width, (pointerX === null ? rect.left : pointerX) - rect.left));
+    pointerOffsetY = Math.max(0, Math.min(rect.height, (pointerY === null ? rect.top : pointerY) - rect.top));
   }
 
   function show(el, fromPointer) {
@@ -5498,6 +5499,11 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
       }
     }
     var anchorTop = rect.top, anchorBottom = rect.bottom;
+    if (pointerHelp) {
+      // Mouse help belongs beside the dwell point, even on a tall control.
+      anchorTop = rect.top + pointerOffsetY - 4;
+      anchorBottom = rect.top + pointerOffsetY + 4;
+    }
     var toolbarSelector = ".manuscript-reader-controls, .toolbar, .selection-toolbar, [role=toolbar]";
     var toolbar = el.closest(toolbarSelector);
     if (toolbar && !pointerHelp) {
@@ -17446,7 +17452,8 @@ window.LixityManuscriptLinks = {
     var bounds = host.getBoundingClientRect();
     var below = innerHeight - rect.bottom - 12, above = rect.top - 12;
     var top = below >= bounds.height || below >= above ? rect.bottom + 8 : rect.top - bounds.height - 8;
-    host.style.left = Math.max(8, Math.min(innerWidth - bounds.width - 8, rect.left)) + "px";
+    var left = card && card.pointerX !== undefined ? card.pointerX + 12 : rect.left;
+    host.style.left = Math.max(8, Math.min(innerWidth - bounds.width - 8, left)) + "px";
     host.style.top = Math.max(8, Math.min(innerHeight - bounds.height - 8, top)) + "px";
   }
   function scrollPosition(containers, trigger) {
@@ -17518,6 +17525,7 @@ window.LixityManuscriptLinks = {
     if (!card) return;
     var spans = card.record.layers[select.value].spans;
     card.index = (card.index + direction + spans.length) % spans.length; card.pinned = true;
+    delete card.pointerX;
     var range = spans[card.index].range, panel = card.record.panel;
     var containers = passageScrollContainers(panel);
     setPassageScrollMargin(panel);
@@ -17594,7 +17602,7 @@ window.LixityManuscriptLinks = {
       if (!boxes) {boxes = Array.from(range.getClientRects()); record.rects.set(range, boxes);}
       for (var rect of boxes) {
         if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
-          return {record:record, index:index, rect:rect};
+          return {record:record, index:index, rect:rect, pointerX:event.clientX};
         }
       }
     }
@@ -17611,7 +17619,9 @@ window.LixityManuscriptLinks = {
     clearTimeout(dismissTimer);
     if (card && card.record === match.record && card.index === match.index && !pinned) {
       clearTimeout(hoverTimer); candidate = null;
-      if (card.rect.top !== match.rect.top || card.rect.left !== match.rect.left) {card.rect = match.rect; position(card.rect);}
+      if (card.rect.top !== match.rect.top || card.rect.left !== match.rect.left) {
+        card.rect = match.rect; card.pointerX = match.pointerX; position(card.rect);
+      }
       return;
     }
     function show() {
@@ -17624,6 +17634,9 @@ window.LixityManuscriptLinks = {
     if (pinned) {clearTimeout(hoverTimer); show();}
     else if (!candidate || candidate.record !== match.record || candidate.index !== match.index) {
       clearTimeout(hoverTimer); candidate = match; hoverTimer = setTimeout(show, 100);
+    } else {
+      // The dwell may finish on a later line of the same sentence.
+      candidate.rect = match.rect; candidate.pointerX = match.pointerX;
     }
   }
   chapters.addEventListener("pointermove", function(event) {
