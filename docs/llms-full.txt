@@ -51,6 +51,12 @@ Try one question first: **does chapter 2's shorter rhythm fit its action?**
 The demo's **Inspect chapter 2** action opens the actual manuscript with the
 shared sentence-length controls, not a separate presentation.
 
+**One question, one dossier, back to the scene.** A preliminary log puts a crate's
+opening on the quay; its correction moves it to the customs station. The fictional
+demo keeps both source passages beside an explicit author decision: leave the
+crate closed until dawn. [Follow the research decision in German](https://mfahsold.github.io/lixity/guides/first-look-de.html#recherche)
+or [take the English walkthrough](https://mfahsold.github.io/lixity/guides/first-look.html#decision).
+
 ## From a passage to the context behind it
 
 | When you want to… | Lixity helps you… |
@@ -237,7 +243,8 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/llms.txt
 The author-facing entrypoints are the [product introduction](https://mfahsold.github.io/lixity/)
 and [short tour](https://mfahsold.github.io/lixity/guides/first-look.html).
 The [German introduction](https://mfahsold.github.io/lixity/guides/first-look-de.html)
-explains the same first revision question; the fictional demo manuscript remains
+traces a conflicting source account through a dossier to an explicit author
+decision, alongside the first analysis question; the fictional manuscript remains
 English. The compact demo task uses native chapter navigation and sentence
 counts, ending with an author's interpretation rather than a target score.
 Current-main CLI `research dossier-images` lists current active dossier image

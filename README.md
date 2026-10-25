@@ -33,6 +33,12 @@ Try one question first: **does chapter 2's shorter rhythm fit its action?**
 The demo's **Inspect chapter 2** action opens the actual manuscript with the
 shared sentence-length controls, not a separate presentation.
 
+**One question, one dossier, back to the scene.** A preliminary log puts a crate's
+opening on the quay; its correction moves it to the customs station. The fictional
+demo keeps both source passages beside an explicit author decision: leave the
+crate closed until dawn. [Follow the research decision in German](https://mfahsold.github.io/lixity/guides/first-look-de.html#recherche)
+or [take the English walkthrough](https://mfahsold.github.io/lixity/guides/first-look.html#decision).
+
 ## From a passage to the context behind it
 
 | When you want to… | Lixity helps you… |
