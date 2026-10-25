@@ -500,6 +500,9 @@ heuristics, not all chapter or paragraph metrics. **Why here?** reports actual
 configured present/past marker counts and mixed/switch criteria. **Read passage**
 is primary; a diagnostic no longer directly proposes a To-do. Author work markers
 remain available from the manuscript's paragraph menu.
+The passage list switches from columns to the same compact records when its
+available pane becomes too narrow. Reading and decision controls remain visible
+beside the sidebar as well as on smaller screens.
 
 The native host advertises `analysis-review` to permit project-local decisions.
 Chapter, stage and decision filters limit the visible list; **Read next visible
@@ -1883,3 +1886,14 @@ candidate, not a reserved later export. Curated reader/companion modes often
 avoid exporting internal review history; choose the appropriate saved profile
 and retained-file options deliberately. No automatic image recompression or
 promise of a package under 20 MiB is introduced here.
+
+**Current main:** export data, revision-count and bundle limits stop the check
+with exit code 1. With
+`--json`, stdout still contains a parseable `lixity-site-preflight-error/1`
+report identifying the limit, observed bytes/count, allowed amount and overflow.
+Response-budget failures identify the route and affected record parameters, with
+accepted bytes grouped by route; operational tokens and source prose are omitted.
+This is the first limit crossing, not a full package-size estimate: `complete`
+is false and no output is written. The 64 MiB data and 200 MiB bundle limits
+remain in force. Follow the reported scope/source-file suggestions rather than
+deleting project records to make an export fit.

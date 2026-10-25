@@ -592,7 +592,11 @@ remain authoritative. This is not a parallel parser or a full grapheme segmenter
 `tense.TenseMatcher` is the shared lexical cue owner for corpus measurement
 units and paragraph profiling. Default finite-form precedence resolves a curated
 present-only form against a productive past guess; explicit pattern overrides
-keep independent matching. This owner does not resolve syntactic constructions.
+keep independent matching. This owner does not perform a full grammatical parse.
+Its bounded German construction pass owns recognized auxiliary/participle spans
+before counting remaining lexical cues. Positive and ambiguous candidates stay
+distinct internally; inventory absence must not imply grammatical certainty.
+The same result feeds corpus units, paragraph profiles and native review.
 The project-local review policy includes a semantic identity so a counting-rule
 change invalidates saved decisions even when source and configuration are equal.
 

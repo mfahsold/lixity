@@ -1430,6 +1430,13 @@ lixity research audit --project ./novel
 
 Replace `PASSAGE_ID` with a full returned ID. Open the project from the managed
 app, or run `lixity serve --research-project ./novel --no-project` in the foreground.
+
+**Current main:** a new dossier without `--language` inherits the explicit
+research project's language. An explicit language overrides it. Manuscript
+analysis settings do not silently replace the research language, and ordinary
+body updates preserve an existing dossier's language. The Python API and native
+dossier creation use the same default.
+
 Commands do not switch a running server's project. [Project onboarding](../ONBOARDING.md)
 explains the existing-project and new-import paths.
 

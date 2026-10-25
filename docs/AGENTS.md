@@ -1464,6 +1464,16 @@ selection/context conflicts fail as for export. No mobile or rights verification
 is inferred. CLI `export-site --preflight [--json]` requires no output destination;
 `--output` is refused in this mode. See [export checks](USAGE.md#check-a-reading-website-before-exporting).
 
+Export data, revision-count and bundle-limit failures use
+`lixity-site-preflight-error/1`: `ok:false`,
+`complete:false`, `measurement:first_limit_crossing`, `files_written:false`,
+`limit`, and `limit_*`, `observed_*`, `overflow_*` quantities (`bytes` or `count`).
+`message` and `suggestions` explain the blocked scope; response failures include
+safe route/record parameters and accepted byte totals by route. These partial
+observations are not successful preflight totals. CLI `--json` emits the report
+on stdout with exit code 1; native HTTP 413 returns it as `preflight` alongside
+`ok:false` and `message`. Success retains `lixity-site-preflight/1`.
+
 Current manifest storage uses `research/storage.json` (`research-storage-local/1`,
 `manifest_encoding: gzip`) and digest-named `.json.gz` files. Digests are still
 SHA-256 of canonical uncompressed JSON. `Repository.read_manifest` is the bounded

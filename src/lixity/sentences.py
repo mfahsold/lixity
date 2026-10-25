@@ -105,8 +105,8 @@ _DIGIT_PERIOD_RE = re.compile(r"(?<=\d)\.(?=\d)")
 # Single-letter initial followed by space and another capital: "J. R. R. Tolkien"
 _INITIAL_RE = re.compile(r"(?<!\w)([A-ZÄÖÜ])\.(?=\s+[A-ZÄÖÜ])")
 # Closing marks that belong to the preceding sentence
-_CLOSERS = "»«\"“”'’)]"
-_SPLIT_RE = re.compile(r"(?<=[.!?])([»«\"“”'’)\]]*)\s+")
+_CLOSERS = "»«\"“”'’\u2018)]"
+_SPLIT_RE = re.compile(r"(?<=[.!?])([" + re.escape(_CLOSERS) + r"]*)\s+")
 # Blank line between semantic blocks: a sentence boundary never crosses it.
 _BLOCK_BOUNDARY_RE = re.compile(r"\n[ \t]*\n+")
 # Pair direction comes from the unmatched opener, including reversed guillemets

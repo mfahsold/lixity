@@ -11,6 +11,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from ..site_contracts import SiteExportReport, SiteExportRequest
+from ..site_export import SiteExportLimitError
 from ..workspace import slugify
 from ._base import ResponseMixin
 from .constants import MAX_ARTIFACT_BYTES
@@ -72,6 +73,11 @@ class SiteExportRoutesMixin(ResponseMixin):
                 self._log.warning("Website export id=%s stage=download_limit", export_id)
                 self._json({"ok": False, "message": "Website ZIP exceeds the download limit; use export-site to a local directory"}, 413)
                 return
+        except SiteExportLimitError as exc:
+            self._log.warning("Website export id=%s stage=preparation_limit category=%s", export_id,
+                              exc.diagnostic["limit"])
+            self._json({"ok": False, "message": str(exc), "preflight": exc.diagnostic}, 413)
+            return
         except (OSError, ValueError, RuntimeError) as exc:
             self._log.warning("Website export id=%s stage=preparation_failed error=%s errno=%s",
                               export_id, type(exc).__name__, exc.errno if isinstance(exc, OSError) else None)

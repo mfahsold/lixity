@@ -45,6 +45,34 @@ class TestSentenceSplitter(unittest.TestCase):
     def test_closing_marks_stay_with_their_sentence(self):
         self.assertEqual(split_sentences("»Komm!« Er ging.", "de"), ["»Komm!«", "Er ging."])
 
+    def test_german_single_quote_direction_and_original_sentence_spans(self):
+        cases = (
+            ("Er fragte: \u201aKommst du?\u2018 Sie schwieg. Dann ging sie.",
+             ["Er fragte: \u201aKommst du?\u2018", "Sie schwieg.", "Dann ging sie."]),
+            ("Sie sagte: \u201aKomm.\u2018 Er ging.", ["Sie sagte: \u201aKomm.\u2018", "Er ging."]),
+            ("Sie rief: \u201aKomm!\u2018 Er ging.", ["Sie rief: \u201aKomm!\u2018", "Er ging."]),
+            ("Sie fragte: \u201aKommst du? \u2018 Er ging.", ["Sie fragte: \u201aKommst du? \u2018", "Er ging."]),
+            ("Er sagte. \u2018Komm.’ Sie ging.", ["Er sagte.", "\u2018Komm.’", "Sie ging."]),
+            ("„Sie sagte: \u201aKomm.\u2018“ Er ging.", ["„Sie sagte: \u201aKomm.\u2018“", "Er ging."]),
+        )
+        for text, expected in cases:
+            with self.subTest(text=text):
+                self.assertEqual(split_sentences(text, "de"), expected)
+                self.assertEqual([text[a:b] for a, b in split_sentence_spans(text, "de")], expected)
+
+    def test_german_single_quotes_reach_corpus_paragraph_and_literal_evidence(self):
+        from lixity.pipeline import analyze_document
+        from lixity.style_fingerprint import FingerprintThresholds
+
+        text = "Er fragte: \u201aKommst du?\u2018 Sie schwieg. Dann ging sie."
+        result = analyze_document("## Example\n\n" + text, CorpusConfig(language="de"),
+                                  FingerprintThresholds(), include_evidence=True)
+        self.assertEqual((result.metrics.tokens, result.metrics.total_sentences, result.metrics.asl), (9, 3, 3.0))
+        self.assertEqual((result.paragraphs[0].sentences, result.paragraphs[0].asl), (3, 3.0))
+        spans = result.evidence[0]["layers"]["asl"]["spans"]
+        self.assertEqual([text[s["start"]:s["end"]] for s in spans],
+                         ["Er fragte: \u201aKommst du?\u2018", "Sie schwieg.", "Dann ging sie."])
+
     def test_spaced_matching_closers_stay_with_their_sentence_and_exact_spans(self):
         cases = (
             ("« Bonjour. » Il partit.", ["« Bonjour. »", "Il partit."]),

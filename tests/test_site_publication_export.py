@@ -110,9 +110,10 @@ def test_all_research_reading_modes_keep_the_aggregate_record_input_limit(public
     monkeypatch.setattr(module, 'MAX_SITE_DATA_BYTES', total - 1)
     options = {'include_research': True} if mode == 'review' else {'publication_profile': 'readers'}
 
-    with pytest.raises(ResearchError, match='research records exceed'):
+    with pytest.raises(module.SiteExportLimitError) as caught:
         module.prepare_site(root, mode=mode, **options)
-
+    assert caught.value.diagnostic['limit'] == 'research_record_bytes'
+    assert caught.value.diagnostic['overflow_bytes'] == 1
     assert file_bytes(root) == before
 
 
@@ -285,8 +286,9 @@ def test_repeated_entries_stop_at_data_budget_before_resolving_all_selections(pu
         resolved.append(args[2])
         return original(*args, **kwargs)
     monkeypatch.setattr(module, '_record', counted)
-    with pytest.raises(ResearchError, match='data limit'):
+    with pytest.raises(module.SiteExportLimitError) as caught:
         prepare_site(root, mode='companion', publication_profile='readers', max_chapter=1)
+    assert caught.value.diagnostic['limit'] == 'publication_bytes'
     assert 0 < len(resolved) < 40
 
 
@@ -303,5 +305,7 @@ def test_total_prepared_envelope_includes_resource_mapping_in_data_budget(public
     complete_size = len(module._json(prepared))
     assert len(module._json(prepared['publication'])) < complete_size - 1
     monkeypatch.setattr(module, 'MAX_SITE_DATA_BYTES', complete_size - 1)
-    with pytest.raises(ResearchError, match='data limit'):
+    with pytest.raises(module.SiteExportLimitError) as caught:
         prepare_site(root, **options)
+    assert caught.value.diagnostic['limit'] == 'prepared_data_bytes'
+    assert caught.value.diagnostic['overflow_bytes'] == 1

@@ -464,6 +464,7 @@ def about() -> dict[str, Any]:
                 "output": "directory|json",
                 "schema_version": SITE_SCHEMA,
                 "preflight_schema_version": "lixity-site-preflight/1",
+                "preflight_error_schema_version": "lixity-site-preflight-error/1",
                 "data_schema_version": DATA_SCHEMA,
                 "scope_schema": SiteExportOptions.model_json_schema(),
             },

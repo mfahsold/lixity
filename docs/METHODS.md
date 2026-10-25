@@ -605,11 +605,42 @@ word is explicitly listed as present and not past in the curated inventory.
 Auxiliary-plus-participle candidates are preserved, including participles that
 also occur as finite forms (`haben erzählt`, `a écrit`). This corrects collisions such as
 German `halten` and Dutch `Wij moeten`; it does not infer syntax from endings.
-Forms listed in both inventories retain both cues, and compound auxiliary
-overlap remains unresolved. Explicitly overriding either tense pattern preserves
+In German, listed auxiliary/participle pairs additionally form one past cue;
+their contained lexical matches are consumed, so three recognized perfect
+constructions give three past cues and no present-auxiliary double count.
+The German display label is therefore `Vergangenheit`, not the narrower
+grammatical form `Präteritum`.
+Up to three intervening words are allowed in a bounded word window. Punctuation, blank
+lines, conjunctions and intervening listed finite verbs/auxiliaries stop the scan.
+The rightmost listed candidate within that window owns the span, so a preceding
+participial modifier does not create a second past cue (`geschlossen gehalten`).
+Listed `sein … worden` passive-perfect patterns follow the same span ownership.
+The auxiliary selection follows the distinction described by
+[IDS grammis](https://grammis.ids-mannheim.de/fragen/86), which also documents
+regional and object-dependent variants. Inventory absence is not proof of
+incompatibility: unresolved pairs retain lexical ambiguity, including state,
+regional and transitive readings. Unlisted compounds, longer gaps and other
+languages are not a complete grammatical tense analysis. German nominal
+capitalization rejects broad compound guesses such as `habe Bedenken`;
+it is a cue guard, not part-of-speech tagging.
+
+Explicitly overriding either tense pattern preserves
 independent pattern counting, including empty patterns. The review-policy identity
 changes with these semantics, so saved decisions require renewed review rather
 than silently carrying over to a changed measurement.
+
+Passive patterns retain auxiliary context while allowing shorter regular stems
+and selected irregular forms (`rotas`, `rotte`, `lette`, `lues`, `lidas`) and
+Spanish accented `leídas`. Irregulars need lexical coverage; lowering a stem
+length alone would not recognize them (see the
+[RAE participle reference](https://www.rae.es/gramática/morfología/verbos-irregulares-iv-pretéritos-fuertes-y-participios-irregulares)).
+Morphology-specific limits keep French `est ici` and `est plus grand` outside
+the expanded short accented-participle pattern. Italian `stato/stati` can be
+intermediate auxiliaries before a lexical participle, not passive heads by
+themselves. Negative examples such as `son vida`, `est si`, `are red` and
+`sono stati a casa` constrain broadening.
+German `sein + participle` state passive is not silently added to the event-
+passive metric. A zero remains zero detected cues, not proof of active voice.
 
 Cue patterns (including `dialogue_regex`) use the case-insensitive cue
 contract from §2 across the analysis core and the `dialogue`/`pacing` reports.

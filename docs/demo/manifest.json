@@ -18,7 +18,7 @@
     "research": true,
     "source_files": true
   },
-  "created_at": "2026-10-24T23:13:22.471262+00:00",
+  "created_at": "2026-10-25T10:15:46.166721+00:00",
   "disclosures": [
     "Contains manuscript prose, analysis and work-marker notes.",
     "Contains accessible authored research history, notes, source metadata and cited excerpts; local Zotero identities are omitted.",
@@ -70,8 +70,8 @@
       "sha256": "1fe6958409c8c257a70c587a18b6f7f412b179b456630790d30b2ec9a8e4b7d4"
     },
     "report.html": {
-      "byte_length": 5782203,
-      "sha256": "6f974ed66509c35445ce857be3ed9044fdb38e3ccaf10cdde0029275131f6edb"
+      "byte_length": 5782550,
+      "sha256": "a8ff33135aaee11961481882b62796e9f957b9d72560f2de0854584905f70140"
     },
     "research.html": {
       "byte_length": 490,
@@ -105,14 +105,14 @@
   "mode": "review",
   "product_version": "0.7.5",
   "project": {
-    "id": "urn:uuid:bf6dac31-87bd-491e-9f9d-ccf92af2cde8",
+    "id": "urn:uuid:72b4dfa3-dcde-43fa-a2b4-06ef40376e63",
     "language": "en",
     "title": "The Crate at Warehouse 4"
   },
   "research": {
     "included": true,
     "revision_count": 59,
-    "snapshot": "3629a4f0b753c0dfeee76f37fb5a471a2ab83da82bd856882234d55a964ac979"
+    "snapshot": "1c71284d2b0613ed8b5b89b5a7375b5fbf26c341fed86388d3eea6db4fb78d0c"
   },
   "schema_version": "lixity-read-only-site/1"
 }

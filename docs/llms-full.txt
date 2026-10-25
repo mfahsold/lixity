@@ -1841,6 +1841,9 @@ heuristics, not all chapter or paragraph metrics. **Why here?** reports actual
 configured present/past marker counts and mixed/switch criteria. **Read passage**
 is primary; a diagnostic no longer directly proposes a To-do. Author work markers
 remain available from the manuscript's paragraph menu.
+The passage list switches from columns to the same compact records when its
+available pane becomes too narrow. Reading and decision controls remain visible
+beside the sidebar as well as on smaller screens.
 
 The native host advertises `analysis-review` to permit project-local decisions.
 Chapter, stage and decision filters limit the visible list; **Read next visible
@@ -3224,6 +3227,17 @@ candidate, not a reserved later export. Curated reader/companion modes often
 avoid exporting internal review history; choose the appropriate saved profile
 and retained-file options deliberately. No automatic image recompression or
 promise of a package under 20 MiB is introduced here.
+
+**Current main:** export data, revision-count and bundle limits stop the check
+with exit code 1. With
+`--json`, stdout still contains a parseable `lixity-site-preflight-error/1`
+report identifying the limit, observed bytes/count, allowed amount and overflow.
+Response-budget failures identify the route and affected record parameters, with
+accepted bytes grouped by route; operational tokens and source prose are omitted.
+This is the first limit crossing, not a full package-size estimate: `complete`
+is false and no output is written. The 64 MiB data and 200 MiB bundle limits
+remain in force. Follow the reported scope/source-file suggestions rather than
+deleting project records to make an export fit.
 
 ===============================================================================
 ## docs/research/USAGE.md
@@ -4662,6 +4676,13 @@ lixity research audit --project ./novel
 
 Replace `PASSAGE_ID` with a full returned ID. Open the project from the managed
 app, or run `lixity serve --research-project ./novel --no-project` in the foreground.
+
+**Current main:** a new dossier without `--language` inherits the explicit
+research project's language. An explicit language overrides it. Manuscript
+analysis settings do not silently replace the research language, and ordinary
+body updates preserve an existing dossier's language. The Python API and native
+dossier creation use the same default.
+
 Commands do not switch a running server's project. [Project onboarding](../ONBOARDING.md)
 explains the existing-project and new-import paths.
 
@@ -6197,11 +6218,42 @@ word is explicitly listed as present and not past in the curated inventory.
 Auxiliary-plus-participle candidates are preserved, including participles that
 also occur as finite forms (`haben erzählt`, `a écrit`). This corrects collisions such as
 German `halten` and Dutch `Wij moeten`; it does not infer syntax from endings.
-Forms listed in both inventories retain both cues, and compound auxiliary
-overlap remains unresolved. Explicitly overriding either tense pattern preserves
+In German, listed auxiliary/participle pairs additionally form one past cue;
+their contained lexical matches are consumed, so three recognized perfect
+constructions give three past cues and no present-auxiliary double count.
+The German display label is therefore `Vergangenheit`, not the narrower
+grammatical form `Präteritum`.
+Up to three intervening words are allowed in a bounded word window. Punctuation, blank
+lines, conjunctions and intervening listed finite verbs/auxiliaries stop the scan.
+The rightmost listed candidate within that window owns the span, so a preceding
+participial modifier does not create a second past cue (`geschlossen gehalten`).
+Listed `sein … worden` passive-perfect patterns follow the same span ownership.
+The auxiliary selection follows the distinction described by
+[IDS grammis](https://grammis.ids-mannheim.de/fragen/86), which also documents
+regional and object-dependent variants. Inventory absence is not proof of
+incompatibility: unresolved pairs retain lexical ambiguity, including state,
+regional and transitive readings. Unlisted compounds, longer gaps and other
+languages are not a complete grammatical tense analysis. German nominal
+capitalization rejects broad compound guesses such as `habe Bedenken`;
+it is a cue guard, not part-of-speech tagging.
+
+Explicitly overriding either tense pattern preserves
 independent pattern counting, including empty patterns. The review-policy identity
 changes with these semantics, so saved decisions require renewed review rather
 than silently carrying over to a changed measurement.
+
+Passive patterns retain auxiliary context while allowing shorter regular stems
+and selected irregular forms (`rotas`, `rotte`, `lette`, `lues`, `lidas`) and
+Spanish accented `leídas`. Irregulars need lexical coverage; lowering a stem
+length alone would not recognize them (see the
+[RAE participle reference](https://www.rae.es/gramática/morfología/verbos-irregulares-iv-pretéritos-fuertes-y-participios-irregulares)).
+Morphology-specific limits keep French `est ici` and `est plus grand` outside
+the expanded short accented-participle pattern. Italian `stato/stati` can be
+intermediate auxiliaries before a lexical participle, not passive heads by
+themselves. Negative examples such as `son vida`, `est si`, `are red` and
+`sono stati a casa` constrain broadening.
+German `sein + participle` state passive is not silently added to the event-
+passive metric. A zero remains zero detected cues, not proof of active voice.
 
 Cue patterns (including `dialogue_regex`) use the case-insensitive cue
 contract from §2 across the analysis core and the `dialogue`/`pacing` reports.
@@ -6382,11 +6434,11 @@ The audit also reproduces unresolved weaknesses:
 | Area | Observed limitation and interpretation |
 | --- | --- |
 | Unicode | NFC equivalence is corrected, preserving source bytes and offsets. Combining sequences without a precomposed letter can still exceed the word patterns' coverage; the mapper does not claim full grapheme segmentation. See [Unicode UAX #29](https://www.unicode.org/reports/tr29/). |
-| Tense | Curated present-only forms no longer also count as productive past candidates, consistently across chapter, scene and paragraph analysis. Compound past phrases can still count present auxiliaries and past-pattern matches, producing a spurious mixed cue classification. A `mixed` result is not proof of a grammatical tense switch. Homographic forms such as English `read` and Portuguese `falamos` also require context. |
+| Tense | Curated present-only forms no longer also count as productive past candidates. Listed German perfect/pluperfect pairs count as one construction across chapter, scene and paragraph analysis, with bounded intervening words. Unlicensed auxiliary/participle combinations retain both cues; regional/transitive variants, unlisted forms and other languages can still produce spurious mixed classifications. A `mixed` result is not proof of a grammatical tense switch. English `read` and Portuguese `falamos` require context. |
 | Dialogue | Quoted-segment patterns miss conventional dialogue dashes and some single-quote styles. Zero detected quotation words does not establish absence of speech. |
 | Syllables | Italian rising diphthongs such as `fiore`/`buono` remain overcounted. Broadly merging vowels would introduce other hiatus errors; this requires a separately verified rule or lexicon. The corrected Dutch `ij` rule is not a complete pronunciation model. |
-| Sentence spans | Sentence-final abbreviations can merge sentences. Paired spaced closers are corrected, but quotation pairing and abbreviation tables are incomplete; a matching total does not guarantee correct boundaries. |
-| Nominal/passive cues | Word endings and auxiliary patterns do not resolve lexical category, adjectival participles, irregular forms or syntactic voice. Inflection coverage is improved, not complete. |
+| Sentence spans | Sentence-final abbreviations can merge sentences. Paired spaced closers and German single `‚…‘` closers have direct boundary/evidence controls, but quotation pairing and abbreviation tables are incomplete; a matching total does not guarantee correct boundaries. |
+| Nominal/passive cues | Word endings and auxiliary patterns do not resolve lexical category, adjectival participles or syntactic voice. Short regular and selected irregular passive forms have positive/negative controls; German `ist geöffnet` state passive remains outside the event-passive cue pattern. Coverage is improved, not complete. |
 
 Readability research evaluates defined tasks and datasets, often combining
 lexical, syntactic and discourse features. It does not make a syllable/length
@@ -7323,7 +7375,11 @@ remain authoritative. This is not a parallel parser or a full grapheme segmenter
 `tense.TenseMatcher` is the shared lexical cue owner for corpus measurement
 units and paragraph profiling. Default finite-form precedence resolves a curated
 present-only form against a productive past guess; explicit pattern overrides
-keep independent matching. This owner does not resolve syntactic constructions.
+keep independent matching. This owner does not perform a full grammatical parse.
+Its bounded German construction pass owns recognized auxiliary/participle spans
+before counting remaining lexical cues. Positive and ambiguous candidates stay
+distinct internally; inventory absence must not imply grammatical certainty.
+The same result feeds corpus units, paragraph profiles and native review.
 The project-local review policy includes a semantic identity so a counting-rule
 change invalidates saved decisions even when source and configuration are equal.
 
@@ -9372,6 +9428,16 @@ media packaging/attribution-presence counts. No download or source writes occur;
 selection/context conflicts fail as for export. No mobile or rights verification
 is inferred. CLI `export-site --preflight [--json]` requires no output destination;
 `--output` is refused in this mode. See [export checks](USAGE.md#check-a-reading-website-before-exporting).
+
+Export data, revision-count and bundle-limit failures use
+`lixity-site-preflight-error/1`: `ok:false`,
+`complete:false`, `measurement:first_limit_crossing`, `files_written:false`,
+`limit`, and `limit_*`, `observed_*`, `overflow_*` quantities (`bytes` or `count`).
+`message` and `suggestions` explain the blocked scope; response failures include
+safe route/record parameters and accepted byte totals by route. These partial
+observations are not successful preflight totals. CLI `--json` emits the report
+on stdout with exit code 1; native HTTP 413 returns it as `preflight` alongside
+`ok:false` and `message`. Success retains `lixity-site-preflight/1`.
 
 Current manifest storage uses `research/storage.json` (`research-storage-local/1`,
 `manifest_encoding: gzip`) and digest-named `.json.gz` files. Digests are still

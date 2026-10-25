@@ -1309,7 +1309,7 @@ def create_dossier(
     title: str,
     body: str,
     *,
-    language: str = "en",
+    language: str | None = None,
     tags: list[str] | None = None,
     evidence_ids: list[str] | None = None,
     geography: dict[str, Any] | None = None,
@@ -1322,7 +1322,7 @@ def create_dossier(
     title = title.strip()
     if not (1 <= len(title) <= 500):
         raise ResearchError("Dossier title must be between 1 and 500 characters")
-    language = supported_language(language)
+    language = supported_language(snapshot.project.language if language is None else language)
 
     evidence_refs = [Reference(id=eid) for eid in dict.fromkeys(evidence_ids or [])]
     for ref in evidence_refs:

@@ -1617,7 +1617,7 @@ def run(args: argparse.Namespace) -> int:
                     args.project,
                     args.title,
                     body,
-                    language=args.language or "en",
+                    language=args.language,
                     tags=tags,
                     evidence_ids=evidence,
                     geography=_geography(args.geography),

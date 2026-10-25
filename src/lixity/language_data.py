@@ -210,7 +210,7 @@ IDENTITY_LABELS = {
 DE_LABELS = {
     "app_suffix": "Stil- & Tempusanalyse",
     "present": "Präsens",
-    "past": "Präteritum",
+    "past": "Vergangenheit",
     "mixed": "Gemischt",
     "neutral": "Neutral",
     "severity_0": "unauffällig",
@@ -489,7 +489,8 @@ PROFILE_DATA: dict[str, dict[str, Any]] = {
             "erzähle|erzählst|erzählt|erzählen|spiele|spielst|spielt|spielen|"
             "lache|lachst|lacht|lachen|schaue|schaust|schaut|schauen|"
             "hole|holst|holt|holen|stelle|stellst|stellt|stellen|"
-            "packe|packst|packt|packen|drehe|drehst|dreht|drehen"
+            "packe|packst|packt|packen|drehe|drehst|dreht|drehen|"
+            "arbeite|arbeitest|arbeitet|arbeiten"
             r")\b"
         ),
         "praeteritum_regex": (
@@ -1443,7 +1444,35 @@ PROFILE_DATA: dict[str, dict[str, Any]] = {
     },
 }
 
-# Regular, high-precision tense patterns per language (complement to the curated forms).
+# Curated German perfect cues, separated by compatible auxiliary. Restricting
+# sein to listed motion/change forms avoids resolving a present state such as
+# "ist geöffnet" as perfect. Unlisted pairings keep ambiguous cues; auxiliary
+# variants depend on context. This inventory is not a participle/POS analyzer.
+# Auxiliary selection: https://grammis.ids-mannheim.de/fragen/86
+GERMAN_PERFECT_FORMS: dict[str, tuple[str, ...]] = {
+    "haben": ("habe", "hast", "hat", "haben", "habt", "hatte", "hattest", "hatten", "hattet"),
+    "sein": ("bin", "bist", "ist", "sind", "seid", "war", "warst", "waren", "wart"),
+}
+GERMAN_PERFECT_PARTICIPLES: dict[str, frozenset[str]] = {
+    "haben": frozenset({
+        "gearbeitet", "gemacht", "gesagt", "gefragt", "getrunken", "gegessen", "gesehen", "gehört",
+        "gefühlt", "gespürt", "gemerkt", "gedacht", "geglaubt", "gebraucht", "genommen", "gegeben",
+        "gefunden", "gehalten", "gezogen", "getan", "gelassen", "gerufen", "gekocht", "gesetzt",
+        "gelegt", "gewartet", "geredet", "erzählt", "gesprochen", "gespielt", "gelacht", "geschaut",
+        "geholt", "gestellt", "gepackt", "gedreht", "geschrieben", "gelesen", "gekannt", "gewusst",
+        "gewarnt", "geöffnet", "geschlossen", "verstanden", "vergessen", "verloren", "begonnen",
+        "entschieden", "versprochen", "genossen", "gebracht", "gesucht", "gelernt", "gelebt", "erklärt",
+        "berichtet", "geantwortet", "gelächelt", "geweint", "genickt", "gezuckt", "gezittert", "gekippt",
+        "getanzt", "geträumt", "gesessen", "gelegen", "gestanden", "geschwommen", "gefahren",
+    }),
+    "sein": frozenset({
+        "gegangen", "gekommen", "gefahren", "gelaufen", "geblieben", "geflogen", "gefallen", "gestiegen",
+        "gesprungen", "geworden", "gewesen", "eingeschlafen", "aufgewacht", "angekommen", "zurückgekehrt",
+        "eingetroffen", "geschwommen",
+    }),
+}
+
+# Regular tense candidates complement the curated forms; they remain heuristic.
 # Captures the productive endings/auxiliary constructions of the narrative tense,
 # protected against noun false positives by stop lists.
 LANGUAGE_PATTERNS = {
@@ -3716,8 +3745,8 @@ HELP_TEXTS = {
         "help_flagged": "Absätze mit Tempuswechsel oder -mischung – Kandidaten für einen Blick.",
         "help_severity": "0 = unauffällig, 1 = beobachten, 2 = auffällig, 3 = starke Abweichung (Wechsel und Mischung). Heuristik, kein Fehlerurteil.",
         "help_present": "Präsens: szenisch erzählte Gegenwart.",
-        "help_past": "Präteritum: episch erzählte Vergangenheit bzw. Rückschau.",
-        "help_mixed": "Gemischt: Absatz mit annähernd gleich vielen Präsens- und Präteritummarkern.",
+        "help_past": "Vergangenheitshinweise aus Präteritum und erkannten Perfekt-/Plusquamperfektmustern. Eine Heuristik, kein grammatisches Urteil.",
+        "help_mixed": "Gemischt: Absatz mit annähernd gleich vielen Präsens- und Vergangenheitshinweisen. Mehrdeutige Formen können beide Zählungen überlagern.",
         "help_neutral": "Neutral: zu wenige Tempusmarker für eine Aussage.",
         "help_line": "Zeilennummern im Manuskript – für präzise Rückmeldungen.",
         "help_filter": "Zeigt nur Kapitel und Absätze mit Auffälligkeiten.",
@@ -3745,7 +3774,7 @@ HELP_TEXTS = {
         "help_trends": "Kendalls Tau über die Kapitelreihenfolge (τ, −1 bis +1) mit p-Wert. Werte nahe 0 zeigen keine klare Richtung; ein starker Wert ist ein Hinweis, die Kapitelabfolge zu lesen, kein Beweis für Verschlechterung. Prüfen Sie, ob der Wechsel gewollt ist (z. B. eine neue Erzählstimme).",
         "help_distribution_shift": "Wasserstein- und KS-Abstand vergleichen die erste und zweite Hälfte der Kapitel. Ein größerer Wert bedeutet stärkere Unterschiede in diesem Merkmal; lesen Sie die betroffenen Kapitel, bevor Sie Schlüsse ziehen.",
         "help_markers": "Notizen direkt im Manuskript: unsichtbare Kommentare über dem Absatz, sichtbar im Editor, nie im Export.",
-        "help_passive": "Wortmuster für mögliche Passivkonstruktionen je 1.000 gezählte Wörter. Dieselben Wörter können andere Funktionen haben, etwa Zukunft oder Werden; den Satz vor einer Passivdeutung prüfen.",
+        "help_passive": "Wortmuster für mögliche Passivkonstruktionen je 1.000 gezählte Wörter. Dieselben Wörter können andere Funktionen haben, etwa Zukunft oder Werden; den Satz vor einer Passivdeutung prüfen. Nicht alle Passivformen werden erfasst, etwa das Zustandspassiv in »ist geöffnet«.",
         "help_nominal": "Treffer für Nominalisierungssuffixe je 1.000 gezählte Wörter. Ein höherer Wert bedeutet mehr solche Wortformen, nicht automatisch abstraktere oder schwächere Prosa; Suffixe sind nur Hinweise.",
         "help_modal": "Modalwort-Treffer je 1.000 gezählte Wörter. Sie können Möglichkeit oder Verpflichtung ausdrücken; die Zählung unterscheidet diese Bedeutungen nicht und misst keine Gewissheit.",
         "help_adjective": "Adjektiv-Suffix-Treffer je 1.000 Wörter – beschreibende, attributive Dichte.",
@@ -3785,7 +3814,7 @@ HELP_TEXTS = {
         "help_trends": "Kendall's tau over chapter order (τ, −1 to +1) with its p-value. Values near 0 mean no clear direction; a strong value is a prompt to read the chapter sequence, not proof of deterioration. Check whether the change is intentional (for example a new narrative voice).",
         "help_distribution_shift": "Wasserstein and KS distances compare the first and second half of the chapters. A larger value means the halves differ more in this feature; read the affected chapters before drawing conclusions.",
         "help_markers": "Notes inside the manuscript: invisible comments above the paragraph, visible in the editor, never in exports.",
-        "help_passive": "Word-pattern markers associated with passive constructions per 1,000 counted words. The same words can have other grammatical uses; check the sentence before calling it passive.",
+        "help_passive": "Word-pattern markers associated with passive constructions per 1,000 counted words. The same words can have other grammatical uses; check the sentence before calling it passive. Not all passive forms are detected.",
         "help_nominal": "Matches to nominalization suffixes per 1,000 counted words. A higher value means more such word forms, not necessarily more abstract or weaker writing; suffixes are only clues.",
         "help_modal": "Modal-word markers per 1,000 counted words. They can express possibility or obligation; this count does not distinguish those meanings or measure certainty.",
         "help_adjective": "Adjective suffix hits per 1,000 words – descriptive, attributive density.",
@@ -3864,7 +3893,7 @@ HELP_TEXTS = {
         "help_fingerprint": "Une référence construite à partir des tendances observées dans les chapitres de ce manuscrit. Pour chaque caractéristique, la médiane représente un chapitre typique ; un écart peut refléter un changement voulu de voix ou de registre.",
         "help_consistency": "Part des cases mesurées du tableau chapitres-caractéristiques qui respectent la limite choisie pour les écarts entre chapitres. Par exemple, 80 % signifie que 8 cases sur 10 respectent cette limite, pas une note de qualité du texte. Données insuffisantes : –.",
         "help_heatmap": "Compare chaque caractéristique d'un chapitre à la médiane du manuscrit (le chapitre typique), en tenant compte de la dispersion et de l'incertitude de mesure estimée. Bleu : en dessous ; orange : au-dessus. Cliquez pour expliquer la mesure dans le contexte du chapitre, puis choisissez de le lire. Les chapitres de moins de {min_words} mots et les caractéristiques de distribution de moins de {min_sentences} phrases ne reçoivent pas de valeurs de comparaison (–).",
-        "help_passive": "Marqueurs de motifs de mots associés aux constructions passives, pour 1 000 mots comptés. Les mêmes mots peuvent avoir d'autres fonctions grammaticales ; vérifiez la phrase avant de l'interpréter comme passive.",
+        "help_passive": "Marqueurs de motifs de mots associés aux constructions passives, pour 1 000 mots comptés. Les mêmes mots peuvent avoir d'autres fonctions grammaticales ; vérifiez la phrase avant de l'interpréter comme passive. Toutes les formes passives ne sont pas détectées.",
         "help_nominal": "Occurrences de suffixes de nominalisation pour 1 000 mots comptés. Une valeur plus élevée indique davantage de ces formes, pas forcément un texte plus abstrait ou plus faible ; les suffixes ne sont que des indices.",
         "help_modal": "Marqueurs de mots modaux pour 1 000 mots comptés. Ils peuvent exprimer une possibilité ou une obligation ; ce décompte ne distingue pas ces sens et ne mesure pas la certitude.",
         "help_perception": "Occurrences de la liste de verbes de perception et de filtrage du profil linguistique, pour 1 000 mots comptés. Une valeur plus élevée indique plus d'indices de cette liste, pas un texte moins évocateur ; lisez leur rôle dans le passage.",
@@ -3929,7 +3958,7 @@ HELP_TEXTS = {
         "help_fingerprint": "Una referencia basada en los patrones observados en los capítulos de este manuscrito. La mediana representa un capítulo típico para cada rasgo; una diferencia puede reflejar un cambio intencionado de voz o registro.",
         "help_consistency": "Proporción de celdas medidas de capítulo y rasgo dentro del límite elegido para las diferencias entre capítulos. Por ejemplo, 80 % significa que 8 de cada 10 celdas cumplen ese límite, no una nota de calidad del texto. Datos insuficientes: –.",
         "help_heatmap": "Compara cada rasgo de un capítulo con la mediana del manuscrito (el capítulo típico), ajustando por la dispersión y la incertidumbre de medición estimada. Azul: por debajo; naranja: por encima. Haga clic para explicar la medida en su contexto y después elija leer el capítulo. Los capítulos con menos de {min_words} palabras y las características de distribución con menos de {min_sentences} oraciones no reciben valores de comparación (–).",
-        "help_passive": "Marcadores de patrones de palabras asociados con construcciones pasivas por cada 1.000 palabras contadas. Las mismas palabras pueden tener otros usos gramaticales; revise la oración antes de interpretarla como pasiva.",
+        "help_passive": "Marcadores de patrones de palabras asociados con construcciones pasivas por cada 1.000 palabras contadas. Las mismas palabras pueden tener otros usos gramaticales; revise la oración antes de interpretarla como pasiva. No se detectan todas las formas pasivas.",
         "help_nominal": "Coincidencias con sufijos de nominalización por cada 1.000 palabras contadas. Un valor mayor indica más formas de este tipo, no necesariamente un texto más abstracto o más débil; los sufijos son solo pistas.",
         "help_modal": "Marcadores de palabras modales por cada 1.000 palabras contadas. Pueden expresar posibilidad u obligación; este recuento no distingue esos significados ni mide la certeza.",
         "help_perception": "Coincidencias con la lista de verbos de percepción y filtro del perfil lingüístico por cada 1.000 palabras contadas. Un valor mayor indica más pistas de la lista, no un texto menos vívido; lea cómo funcionan en el pasaje.",
@@ -3994,7 +4023,7 @@ HELP_TEXTS = {
         "help_fingerprint": "Un riferimento basato sugli schemi osservati nei capitoli di questo manoscritto. La mediana rappresenta un capitolo tipico per ogni caratteristica; una differenza può riflettere un cambio intenzionale di voce o registro.",
         "help_consistency": "Quota di celle misurate per capitolo e caratteristica entro il limite scelto per le differenze tra capitoli. Per esempio, 80% significa che 8 celle su 10 rispettano quel limite, non un voto sulla qualità del testo. Dati insufficienti: –.",
         "help_heatmap": "Confronta ogni caratteristica di un capitolo con la mediana del manoscritto (il capitolo tipico), tenendo conto della dispersione e dell'incertezza di misura stimata. Blu: sotto; arancione: sopra. Fai clic per spiegare la misura nel suo contesto, poi scegli di leggere il capitolo. I capitoli sotto {min_words} parole e le caratteristiche di distribuzione sotto {min_sentences} frasi non ricevono valori di confronto (–).",
-        "help_passive": "Marcatori di schemi di parole associati a costruzioni passive ogni 1.000 parole contate. Le stesse parole possono avere altri usi grammaticali; controlla la frase prima di interpretarla come passiva.",
+        "help_passive": "Marcatori di schemi di parole associati a costruzioni passive ogni 1.000 parole contate. Le stesse parole possono avere altri usi grammaticali; controlla la frase prima di interpretarla come passiva. Non tutte le forme passive vengono rilevate.",
         "help_nominal": "Corrispondenze con suffissi di nominalizzazione ogni 1.000 parole contate. Un valore più alto indica più forme di questo tipo, non necessariamente un testo più astratto o più debole; i suffissi sono solo indizi.",
         "help_modal": "Marcatori di parole modali ogni 1.000 parole contate. Possono esprimere possibilità o obbligo; il conteggio non distingue questi significati né misura la certezza.",
         "help_perception": "Corrispondenze con la lista di verbi di percezione e filtro del profilo linguistico ogni 1.000 parole contate. Un valore più alto indica più indizi della lista, non un testo meno vivido; leggi come funzionano nel passaggio.",
@@ -4059,7 +4088,7 @@ HELP_TEXTS = {
         "help_fingerprint": "Uma referência baseada nos padrões observados nos capítulos deste manuscrito. A mediana representa um capítulo típico para cada característica; uma diferença pode refletir uma mudança intencional de voz ou registro.",
         "help_consistency": "Proporção de células medidas de capítulo e característica dentro do limite escolhido para as diferenças entre capítulos. Por exemplo, 80% significa que 8 de 10 células atendem a esse limite, não uma nota de qualidade do texto. Dados insuficientes: –.",
         "help_heatmap": "Compara cada característica de um capítulo com a mediana do manuscrito (o capítulo típico), com ajuste pela dispersão e pela incerteza de medição estimada. Azul: abaixo; laranja: acima. Clique para explicar a medida no seu contexto e depois escolha ler o capítulo. Os capítulos com menos de {min_words} palavras e as características de distribuição com menos de {min_sentences} frases não recebem valores de comparação (–).",
-        "help_passive": "Marcadores de padrões de palavras associados a construções passivas por 1.000 palavras contadas. As mesmas palavras podem ter outros usos gramaticais; confira a frase antes de interpretá-la como passiva.",
+        "help_passive": "Marcadores de padrões de palavras associados a construções passivas por 1.000 palavras contadas. As mesmas palavras podem ter outros usos gramaticais; confira a frase antes de interpretá-la como passiva. Nem todas as formas passivas são detectadas.",
         "help_nominal": "Ocorrências de sufixos de nominalização por 1.000 palavras contadas. Um valor maior indica mais formas desse tipo, não necessariamente um texto mais abstrato ou mais fraco; os sufixos são apenas pistas.",
         "help_modal": "Marcadores de palavras modais por 1.000 palavras contadas. Podem expressar possibilidade ou obrigação; a contagem não distingue esses sentidos nem mede a certeza.",
         "help_perception": "Ocorrências da lista de verbos de percepção e filtro do perfil linguístico por 1.000 palavras contadas. Um valor maior indica mais pistas da lista, não um texto menos vívido; leia como funcionam na passagem.",
@@ -4124,7 +4153,7 @@ HELP_TEXTS = {
         "help_fingerprint": "Een referentie opgebouwd uit de waargenomen patronen in de hoofdstukken van dit manuscript. De mediaan staat per kenmerk voor een typisch hoofdstuk; een verschil kan voortkomen uit een bewuste verandering van stem of register.",
         "help_consistency": "Aandeel gemeten cellen voor hoofdstukken en kenmerken binnen de gekozen grens voor hoofdstukverschillen. Zo betekent 80% dat 8 van de 10 cellen aan die grens voldoen, geen cijfer voor schrijfkwaliteit. Onvoldoende gegevens: –.",
         "help_heatmap": "Vergelijkt elk kenmerk van een hoofdstuk met de mediaan van het manuscript (het typische hoofdstuk), aangepast voor spreiding en geschatte meetonzekerheid. Blauw is lager, oranje hoger; klik voor uitleg van de meting in hoofdstukcontext en kies daarna om te lezen. Hoofdstukken onder {min_words} woorden en zinsverdelingskenmerken onder {min_sentences} zinnen krijgen geen vergelijkingswaarden (–).",
-        "help_passive": "Markers van woordpatronen die met passieve constructies samenhangen, per 1.000 getelde woorden. Dezelfde woorden kunnen andere grammaticale functies hebben; controleer de zin voordat je die als passief leest.",
+        "help_passive": "Markers van woordpatronen die met passieve constructies samenhangen, per 1.000 getelde woorden. Dezelfde woorden kunnen andere grammaticale functies hebben; controleer de zin voordat je die als passief leest. Niet alle passieve vormen worden herkend.",
         "help_nominal": "Treffers voor nominalisatiesuffixen per 1.000 getelde woorden. Een hogere waarde betekent meer van zulke woordvormen, niet vanzelf abstracter of zwakker schrijven; suffixen zijn slechts aanwijzingen.",
         "help_modal": "Markers van modale woorden per 1.000 getelde woorden. Ze kunnen mogelijkheid of verplichting uitdrukken; deze telling onderscheidt die betekenissen niet en meet geen zekerheid.",
         "help_perception": "Treffers uit de lijst met waarnemings- en filterwerkwoorden van het taalprofiel, per 1.000 getelde woorden. Een hogere waarde betekent meer aanwijzingen uit die lijst, geen minder levendige tekst; lees hoe ze in de passage werken.",
@@ -4204,7 +4233,7 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
     },
     "en": {
         "first_person_starters": ["i"],
-        "passive_regex": r"\b(?:been|being)\b|\b(?:is|are|was|were|am|be)\s+\w{3,}ed\b",
+        "passive_regex": r"\b(?:been|being)\b|\b(?:is|are|was|were|am|be)\s+\w{2,}ed\b",
         "nominal_suffixes": [
             "tion",
             "sion",
@@ -4227,7 +4256,7 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
         "first_person_starters": ["je", "j"],
         "passive_regex": (
             r"\b(?:est|sont|était|étaient|fut|furent|été|sera|seront)\s+"
-            r"\w{3,}(?:é|ée|és|ées|i|is|it|u|us|ut)\b"
+            r"(?:\w{2,}(?:é|ée|és|ées)|\w{3,}(?:i|is|it|u|us|ut)|lu(?:e|es|s)?)\b"
         ),
         "nominal_suffixes": [
             "tion",
@@ -4261,7 +4290,7 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
         "first_person_starters": ["yo"],
         "passive_regex": (
             r"\b(?:es|son|era|eran|fue|fueron|será|serán|sido)\s+"
-            r"\w{3,}(?:ado|ido|ada|ida)s?\b"
+            r"(?:\w{2,}(?:ad[oa]|id[oa]|íd[oa])s?|rot[oa]s?)\b"
         ),
         "nominal_suffixes": [
             "ción",
@@ -4293,8 +4322,8 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
     "it": {
         "first_person_starters": ["io"],
         "passive_regex": (
-            r"\b(?:è|sono|era|erano|fu|furono|sarà|saranno|stato)\s+"
-            r"\w{3,}(?:ato|uto|ito|ata|uta|ita|ati|uti|iti|ate|ute|ite)\b"
+            r"\b(?:è|sono|era|erano|fu|furono|sarà|saranno|stat[oaie])\s+"
+            r"(?!stat[oaie]\b)(?:\w{2,}(?:at[oaie]|ut[oaie]|it[oaie])|(?:rott|lett)[oaie])\b"
         ),
         "nominal_suffixes": [
             "zione",
@@ -4326,7 +4355,7 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
         "first_person_starters": ["eu"],
         "passive_regex": (
             r"\b(?:é|são|era|eram|foi|foram|será|serão|sido)\s+"
-            r"\w{3,}(?:ado|ido|ada|ida)s?\b"
+            r"(?:\w{2,}(?:ad[oa]|id[oa])s?|(?:lid|rot)[oa]s?)\b"
         ),
         "nominal_suffixes": [
             "ção",

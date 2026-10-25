@@ -568,6 +568,7 @@ table.heatmap th.ch { z-index: 3; }
 
 /* --- Flagged passages list -------------------------------------------- */
 .flags-wrap {
+  container: flagged-passages / inline-size;
   max-height: 26rem;
   overflow-y: auto;
   border: 1px solid var(--line);
@@ -581,6 +582,7 @@ table.heatmap th.ch { z-index: 3; }
 }
 .flags-wrap td:first-child, .flags-wrap td:nth-child(3), .flags-wrap .badge { white-space: nowrap; }
 .flags-wrap td:nth-child(2) { min-width: 9rem; }
+.flags-wrap .triage-read-cell button { min-width: max-content; white-space: nowrap; }
 td.flag-excerpt {
   min-width: 16rem;
   max-width: 24rem;
@@ -601,6 +603,8 @@ td.flag-excerpt {
   #matrix :is(th, td):nth-child(2), #characters :is(th, td):first-child, .scene-overview th:first-child {
     width: 8.5rem; min-width: 8.5rem; max-width: 8.5rem;
   }
+}
+@container flagged-passages (max-width: 68rem) {
   /* Passage previews read as compact records rather than squeezed columns. */
   .flags-wrap table { display: block; min-width: 0; }
   .flags-wrap thead {
@@ -1400,7 +1404,7 @@ mark.search-hit {
 .triage-reason p { white-space: normal; line-height: var(--line-reading); }
 .flag-row .triage-choice { width: 100%; min-width: 12rem; margin-block: var(--space-2); }
 .triage-saved-state { display: block; white-space: normal; }
-@media (max-width: 600px) {
+@container flagged-passages (max-width: 68rem) {
   .flags-wrap td.triage-read-cell { grid-area: 4 / 1 / auto / -1; }
   .flags-wrap td.triage-decision-cell { grid-area: 5 / 1 / auto / -1; }
   .flag-row .triage-choice { min-width: 0; }

@@ -728,7 +728,7 @@ class ResearchRoutesMixin(ResponseMixin):
         if not title:
             self._json({"ok": False, "message": "Dossier title is required"}, 400)
             return
-        lang = str(payload.get("language") or "en").strip().lower()
+        lang = payload.get("language")
         raw_tags = payload.get("tags")
         tags: list[str] = []
         if isinstance(raw_tags, str):

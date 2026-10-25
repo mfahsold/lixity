@@ -96,6 +96,43 @@ def _safe_member(name: str) -> bool:
                 and path.as_posix() == name)
 
 
+class SiteExportLimitError(ResearchError):
+    """A first bounded preparation failure, not an estimate of a complete site."""
+
+    def __init__(self, category: str, observed: int, limit: int, *, unit: str = "bytes",
+                 context: dict[str, Any] | None = None) -> None:
+        suggestions = ["Omit --include-research for a manuscript-only review copy."]
+        if category != "research_record_bytes":
+            suggestions += [
+                "Use --mode reader or companion with a smaller --publication-profile NAME for selected dossier content.",
+                "Omit --include-source-files if retained source text and original assets are not needed.",
+            ]
+        location = ""
+        if context:
+            if context.get("response_route"):
+                location = f" Response: {context['response_route']}"
+                parameters = context.get("response_parameters", {})
+                if parameters:
+                    location += " (" + ", ".join(f"{key}={value}" for key, value in parameters.items()) + ")"
+                location += "."
+            elif context.get("asset"):
+                location = f" Asset: {context['asset']}."
+            elif context.get("record_id"):
+                location = f" Record: {context['record_kind']} {context['record_id']}."
+        message = (f"Website export limit {category}: observed {observed:,} {unit}; "
+                   f"limit {limit:,}; overflow {observed - limit:,}.{location} "
+                   "Preparation stopped at the first limit crossing; total package size is unknown; "
+                   "no output written. " + " ".join(suggestions))
+        self.diagnostic: dict[str, Any] = {
+            "schema_version": "lixity-site-preflight-error/1", "ok": False,
+            "complete": False, "measurement": "first_limit_crossing", "files_written": False,
+            "limit": category, f"limit_{unit}": limit, f"observed_{unit}": observed,
+            f"overflow_{unit}": observed - limit, "message": message,
+            "suggestions": suggestions, **(context or {}),
+        }
+        super().__init__(message)
+
+
 @dataclass(frozen=True)
 class SiteBundle:
     """A complete local candidate; names never address the source filesystem."""
@@ -110,9 +147,11 @@ class SiteBundle:
 
     def _validate(self) -> None:
         SiteManifest.model_validate(self.manifest)
-        if (any(not _safe_member(name) or not isinstance(content, bytes) for name, content in self.files.items())
-                or sum(len(content) for content in self.files.values()) > MAX_SITE_BYTES):
-            raise ResearchError("Website bundle has unsafe paths or exceeds the 200 MiB limit")
+        if any(not _safe_member(name) or not isinstance(content, bytes) for name, content in self.files.items()):
+            raise ResearchError("Website bundle has unsafe paths or non-byte file contents")
+        size = sum(len(content) for content in self.files.values())
+        if size > MAX_SITE_BYTES:
+            raise SiteExportLimitError("bundle_bytes", size, MAX_SITE_BYTES)
         if (self.files.get("manifest.json") != _json(self.manifest)
                 or set(self.files) != set(self.manifest["files"]) | {"manifest.json"}):
             raise ResearchError("Website manifest or file inventory changed after preparation")
@@ -165,9 +204,8 @@ def _snapshot(repository: Repository, *, include_history: bool) -> Snapshot:
     if include_history:
         authored_revisions = sum(entry.kind in KINDS for entry in manifest.entries)
         if authored_revisions > MAX_SITE_REVISIONS:
-            raise ResearchError(f"Website research history contains {authored_revisions:,} authored revisions; "
-                                f"the export limit is {MAX_SITE_REVISIONS:,}. Export without research or "
-                                "choose a curated reader/companion publication profile")
+            raise SiteExportLimitError("research_authored_revision_count", authored_revisions,
+                                       MAX_SITE_REVISIONS, unit="count")
     total = 0
     for entry in manifest.entries:
         path = repository.record_path(entry)
@@ -176,7 +214,9 @@ def _snapshot(repository: Repository, *, include_history: bool) -> Snapshot:
             raise ResearchError("Research export requires regular record files")
         total += info.st_size
         if total > MAX_SITE_DATA_BYTES:
-            raise ResearchError("Website research records exceed the 64 MiB data limit")
+            raise SiteExportLimitError("research_record_bytes", total, MAX_SITE_DATA_BYTES,
+                                       context={"record_kind": entry.kind, "record_id": entry.ref.id,
+                                                "record_revision": entry.ref.revision})
     snapshot = repository.snapshot()
     if snapshot.digest != head.sha256:
         raise ResearchConflictError("Research changed during website preparation; retry the export")
@@ -213,6 +253,7 @@ class _Reads:
         self.token = token
         self.responses: dict[str, Any] = {}
         self.size = 0
+        self.bytes_by_route: dict[str, int] = {}
 
     def add(self, route: str, payload: Any, *, companion: bool = False, **query: Any) -> None:
         public = _public_data(payload)
@@ -221,15 +262,27 @@ class _Reads:
         if companion:
             variants += [{**parameters, "project_token": self.token},
                          {**parameters, "project_token": self.token, "research_token": self.token}]
+        payload_size = len(_json(public))
         for values in variants:
             path = "/api/research/" + route
             if values:
                 path += "?" + urlencode(sorted(values.items()))
             if path in self.responses:
                 continue
-            self.size += len(_json(public)) + len(path)
-            if len(self.responses) >= MAX_SITE_RESPONSES or self.size > MAX_SITE_DATA_BYTES:
-                raise ResearchError("Website research responses exceed the bounded export data limit")
+            response_bytes = payload_size + len(path)
+            attempted = self.size + response_bytes
+            context = {"response_route": "/api/research/" + route,
+                       "response_parameters": {key: value for key, value in parameters.items()
+                                               if key in {"id", "kind", "revision", "dossier_id", "claim_id"}},
+                       "accepted_responses": len(self.responses), "accepted_bytes": self.size,
+                       "response_bytes": response_bytes, "accepted_by_route_bytes": dict(self.bytes_by_route)}
+            if len(self.responses) >= MAX_SITE_RESPONSES:
+                raise SiteExportLimitError("research_response_count", len(self.responses) + 1,
+                                           MAX_SITE_RESPONSES, unit="count", context=context)
+            if attempted > MAX_SITE_DATA_BYTES:
+                raise SiteExportLimitError("research_response_bytes", attempted, MAX_SITE_DATA_BYTES, context=context)
+            self.size = attempted
+            self.bytes_by_route[route] = self.bytes_by_route.get(route, 0) + response_bytes
             self.responses[path] = public
 
 
@@ -243,7 +296,8 @@ def _retain_source(repository: Repository, snapshot: Snapshot, version: SourceVe
     path = "assets/sources/" + version.blob.sha256 + extension
     if path not in files:
         if sum(map(len, files.values())) + version.blob.byte_length > MAX_SITE_BYTES:
-            raise ResearchError("Website source files exceed the 200 MiB bundle limit")
+            raise SiteExportLimitError("bundle_bytes", sum(map(len, files.values())) + version.blob.byte_length,
+                                       MAX_SITE_BYTES, context={"asset": path})
         files[path] = (read_image(repository, snapshot, project_id=snapshot.project.id,
             source_id=version.source_ref.id, version_id=version.id, media=version.blob.media_type in VIDEO_TYPES)["content"]
             if version.blob.media_type in IMAGE_TYPES | VIDEO_TYPES else repository.read_blob(version.blob))
@@ -314,7 +368,8 @@ def _publication(repository: Repository, snapshot: Snapshot, text: str, config: 
                           if selected.include_geography and dossier.geography else None)}
         size += len(_json(entry))
         if size > MAX_SITE_DATA_BYTES:
-            raise ResearchError("Publication content exceeds the bounded website data limit")
+            raise SiteExportLimitError("publication_bytes", size, MAX_SITE_DATA_BYTES,
+                                       context={"publication_entry": entry["id"]})
         entries.append(entry)
     data: dict[str, Any] = {"schema_version": "lixity-reader-publication/1", "mode": options.mode,
         "profile": options.publication_profile, "project_id": snapshot.project.id,
@@ -322,8 +377,9 @@ def _publication(repository: Repository, snapshot: Snapshot, text: str, config: 
         "max_chapter": cap, "chapters": [{"number": number} for number, _title, _body in chapters[:cap]],
         "entries": entries}
     data["identity"] = _checksum(_json(data))
-    if len(_json(data)) > MAX_SITE_DATA_BYTES:
-        raise ResearchError("Publication content exceeds the bounded website data limit")
+    data_size = len(_json(data))
+    if data_size > MAX_SITE_DATA_BYTES:
+        raise SiteExportLimitError("publication_bytes", data_size, MAX_SITE_DATA_BYTES)
     document: list[ReaderBlock] | None = None
     if options.mode == "reader":
         document = []
@@ -476,8 +532,9 @@ def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
                                       language_key=resolved.key, resources=resources)
     envelope = {"schema_version": DATA_SCHEMA, "responses": responses, "resources": resources,
                 **({"publication": publication} if publication is not None else {})}
-    if len(_json(envelope)) > MAX_SITE_DATA_BYTES:
-        raise ResearchError("Prepared website content exceeds the bounded data limit")
+    envelope_size = len(_json(envelope))
+    if envelope_size > MAX_SITE_DATA_BYTES:
+        raise SiteExportLimitError("prepared_data_bytes", envelope_size, MAX_SITE_DATA_BYTES)
     SiteData.model_validate(envelope)
     script = '<script type="application/json" id="lixity-site-data">' + _script_json(envelope) + '</script>\n'
     # The provider is the first bundled asset and must see its data at load time.

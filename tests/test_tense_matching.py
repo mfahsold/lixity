@@ -1,7 +1,7 @@
 """Curated finite forms take precedence over contradictory suffix guesses.
 
 These fixtures test lexical cue consistency, not grammatical tense tagging.
-Compound auxiliary overlap and genuine homographs remain unresolved.
+Unlisted compound auxiliary overlap and genuine homographs remain unresolved.
 """
 
 import pytest
@@ -48,7 +48,7 @@ def test_known_present_only_forms_are_not_also_productive_past(language, sentenc
     ("fr", "Je connaissais ce livre.", 0, 2),
     ("nl", "Wij moesten vertrekken.", 0, 2),
     ("nl", "Wij praatten zacht.", 0, 2),
-    ("de", "Wir haben gesprochen.", 2, 2),
+    ("de", "Wir haben gesprochen.", 0, 2),
     ("fr", "Nous avons parlé.", 2, 2),
     ("it", "Noi abbiamo parlato.", 2, 2),
     ("es", "Nosotros hemos hablado.", 2, 2),

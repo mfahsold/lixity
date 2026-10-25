@@ -1738,7 +1738,7 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_ERROR
     if args.command == "export-site":
         from .site_contracts import SiteExportOptions
-        from .site_export import export_site, prepare_site
+        from .site_export import SiteExportLimitError, export_site, prepare_site
 
         if args.preflight and args.output:
             parser.error("--preflight does not write an output directory; omit --output")
@@ -1769,6 +1769,11 @@ def main(argv: list[str] | None = None) -> int:
                 args.project, args.output, manuscript=args.file, language=args.language,
                 **options.model_dump(exclude_defaults=True),
             )
+        except SiteExportLimitError as exc:
+            if args.json:
+                print(_json(exc.diagnostic, indent=True))
+            print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+            return EXIT_ERROR
         except (OSError, ValueError, RuntimeError) as exc:
             print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
             return EXIT_ERROR

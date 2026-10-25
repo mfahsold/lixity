@@ -39,6 +39,24 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   unchanged; attachments do not manufacture extraction or linguistic scores.
 
 ### Fixed
+- German listed perfect/pluperfect constructions count once across chapter,
+  scene and paragraph analysis, including bounded intervening words; `arbeite`
+  and its present paradigm no longer trigger the weak-past suffix rule. Review
+  decisions are invalidated by the changed analysis policy. Unresolved verb
+  constructions remain heuristic cues rather than grammatical verdicts.
+- German single quotation closers (`‚…‘`) preserve sentence boundaries and exact
+  evidence ranges. The sentence regex now derives from one closing-mark list.
+- Analysis review actions retain readable dimensions; the passage component
+  switches to its existing cards according to available pane width.
+- Export data/revision/bundle-limit failures provide structured JSON and actionable native
+  messages identifying the first byte/count limit crossing. Bounds remain
+  unchanged and partial failures do not invent completed package sizes.
+- Passive cues include short regular and selected irregular participles in
+  English, French, Spanish, Italian and Portuguese. German state passive remains
+  distinct from the existing event-passive cue count.
+- New dossiers inherit the research project's language through API, CLI and
+  native creation; explicit language overrides and existing dossier languages
+  remain authoritative.
 - Shared chapter, scene and paragraph tense counting rejects productive past
   guesses that contradict a curated present-only finite form, such as German
   `halten` or Dutch `moeten`. Explicit pattern overrides retain their counting
