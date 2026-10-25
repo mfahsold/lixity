@@ -8,6 +8,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- `--quote` aliases for manuscript anchor lookup and explicit quote replacement.
+- Active manuscript-link duplicate protection across library, CLI and native UI,
+  preserving distinct occurrences and reporting the existing association without
+  rewriting retained links or confusing duplicates with stale archive state.
 - Current-chapter locations for retained manuscript quotations in shared review,
   CLI text/table/JSON and native/read-only UI. Locations follow uniquely moved
   passages without modifying dossier bodies or accepting changed anchors.

@@ -14,6 +14,17 @@ from lixity.style_fingerprint import FingerprintThresholds
 from tests.support import LoopbackServer, make_handler
 
 
+def test_duplicate_selection_is_distinct_from_stale_archive(workspace):
+    project, _manuscript, _handler, body, request = workspace
+    status, saved = request("/api/research-manuscript-link", body)
+    assert status == 200
+    body["expected_snapshot"] = saved["snapshot"]
+    status, duplicate = request("/api/research-manuscript-link", body)
+    assert status == 409 and duplicate["code"] == "duplicate-link"
+    assert duplicate["link_id"] == saved["link_id"]
+    assert Repository(project).snapshot().digest == saved["snapshot"]
+
+
 @pytest.fixture
 def workspace(tmp_path):
     project = tmp_path / "synthetic-project"

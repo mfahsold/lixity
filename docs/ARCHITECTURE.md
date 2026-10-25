@@ -276,6 +276,23 @@ Chronology conflicts require explicit time/place assertions, not inferred dates
 presented as facts. Dossier composition and semantic conflict detection are not
 implemented by this chapter view.
 
+**Current main:** creation rejects an active association for the same claim and
+exact source-path/paragraph/line/offset occurrence. The current source and claim
+guards still apply; a different occurrence is not deduplicated merely because
+its wording matches. `ManuscriptLinkExistsError` carries the existing link ID;
+the native route reports `duplicate-link`, distinct from stale-context/archive
+errors. Native selection keeps the existing association and prevents repeated
+submission for that claim. Existing stored duplicates are not automatically
+merged, withdrawn or re-pinned.
+
+**Approved design direction, not implemented:** dossier navigation will use
+named collections with an explicit reading order and multiple membership.
+Presentation order belongs to project navigation, independently of authored
+record revisions and accepted evidence pins. A dossier title does not encode its
+collection or role; a single parent tree or fixed category vocabulary would
+unnecessarily restrict cross-cutting collections. Unassigned dossiers must remain
+discoverable. This direction does not yet add configuration keys or commands.
+
 **Since v0.7.3:** `manuscript-links.js` selects exact saved
 associations with the same resolved lines, paragraph hash, codepoint span and
 quotation matcher used for manuscript marks. Explicit paragraph activation

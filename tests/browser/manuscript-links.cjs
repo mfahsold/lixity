@@ -447,6 +447,7 @@ async function selectText(page, text) {
           if (mode === 'heldsave') { heldSave = true; await new Promise(resolve => { releaseSave = resolve; }); }
           if (mode === 'malformed-save') return route.fulfill({json: {ok: true, project_id: 'project'}});
           if (mode === 'archivedrift') return route.fulfill({status: 409, json: {ok: false, code: 'stale-archive', message: 'Synthetic drift'}});
+          if (mode === 'duplicate') return route.fulfill({status: 409, json: {ok: false, code: 'duplicate-link', link_id: 'link'}});
           if (mode === 'savefail') return route.fulfill({status: 409, json: {ok: false, message: 'Claim changed'}});
           anchor = data.selection;
           links = [{link_id: 'link', revision: 1, state: 'active', claim_id: 'claim', claim_revision: 2,
@@ -588,6 +589,24 @@ async function selectText(page, text) {
         await page.locator('#manuscript-link-save').click();
         await page.waitForFunction(() => document.querySelector('#manuscript-link-status').textContent.includes('archive changed while this dialog was open'));
         assert.equal(await dialog.isVisible(), true, 'An archive conflict keeps the reviewed quote visible');
+        await dialog.locator('.modal-footer button').first().click();
+        mode = 'duplicate';
+        await selectText(page, 'safe selected'); await page.keyboard.press('Alt+l');
+        await page.locator('#manuscript-link-claim').selectOption('claim');
+        await page.locator('#manuscript-link-retain').check();
+        await page.locator('#manuscript-link-save').click();
+        await page.waitForFunction(() => document.querySelector('#manuscript-link-status').textContent.includes('already linked'));
+        await dialog.screenshot({path: `/tmp/lixity-manuscript-duplicate-${width}.png`});
+        await page.setViewportSize({width:320, height:900});
+        const duplicateBox = await dialog.boundingBox();
+        assert.ok(duplicateBox.x >= 0 && duplicateBox.x + duplicateBox.width <= 320,
+          'The duplicate explanation stays within the mobile dialog');
+        await dialog.screenshot({path: '/tmp/lixity-manuscript-duplicate-320.png'});
+        await page.setViewportSize({width, height:900});
+        assert.equal(await page.locator('#manuscript-link-save').isEnabled(), false,
+          'An existing association blocks repeated submission without claiming the archive is stale');
+        await page.locator('#manuscript-link-retain').uncheck(); await page.locator('#manuscript-link-retain').check();
+        assert.equal(await page.locator('#manuscript-link-save').isEnabled(), false);
         await dialog.locator('.modal-footer button').first().click();
         mode = 'normal';
         for (const anchorState of ['moved', 'adjusted', 'ambiguous', 'changed', 'unavailable']) {

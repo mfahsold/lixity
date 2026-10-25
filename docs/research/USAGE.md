@@ -244,6 +244,17 @@ selections fail. Paths escaping the project, including through
 symlinks, are rejected. Source bytes are checked again before publication; this
 optimistic guard does not lock an external editor.
 
+**Current main:** `find-anchor --quote` aliases `--query`; in
+`reconcile-manuscript`, `--quote` aliases `--new-quote` and retains its explicit
+replacement semantics and `--link-id` requirement. Original flags remain valid.
+Saving an already active link for the same claim and exact manuscript occurrence
+is rejected without a write. The check includes the project-relative source path,
+paragraph hash, line range and codepoint offsets; identical wording at another
+position or in another manuscript remains independently linkable. A changed
+whole-file digest alone does not authorize a duplicate. The existing link ID is
+reported for review or revision; native HTTP returns `duplicate-link`, separately
+from a stale archive. No existing duplicates are merged or retracted automatically.
+
 Saved quotes mark only exact resolved anchors in the shared reader, in the same canonical manuscript DOM. Displaying analysis or an overview preserves
 the same text and anchor model. Manuscript search still checks complete text. Review reports
 changed source bytes, newer/withdrawn claims, unique moved paragraphs, adjusted

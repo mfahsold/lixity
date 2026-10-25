@@ -251,7 +251,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
                               "--query '**reading room**' --query-format markdown. "
                               "Inspect the returned quote and copy only its six selection fields "
                               "before a separate, explicitly permitted link-manuscript write.")
-            command.add_argument("--query", required=True,
+            command.add_argument("--query", "--quote", required=True,
                                  help="Exact case-sensitive paragraph quote (displayed text by default); "
                                       "link/code syntax remains and Unicode is not normalized")
             command.add_argument("--query-format", choices=("display", "markdown"), default="display",
@@ -266,7 +266,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
                               "Multiple associations use separate commits and may partially succeed; inspect accepted/skipped "
                               "and run review-manuscript again. Claim acceptance does not resolve changed, ambiguous or unavailable anchors.")
             command.add_argument("--link-id", help="Limit preview or acceptance to this association; otherwise process eligible associations separately")
-            command.add_argument("--new-quote",
+            command.add_argument("--new-quote", "--quote",
                                  help="Explicitly replace a changed association's quote with the revised displayed-text quote (requires --link-id)")
             command.add_argument("--line", type=int,
                                  help="Restrict --new-quote resolution to the paragraph containing this source line")

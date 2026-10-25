@@ -76,6 +76,7 @@
     picker.disabled = !ready || writing;
     consent.disabled = !ready || writing;
     save.disabled = !ready || !picker.value || !consent.checked || !live(draft.context) || writing;
+    if (draft && draft.duplicateClaimId === picker.value) save.disabled = true;
   }
   function createDialog() {
     if (dialog) return;
@@ -112,6 +113,7 @@
     picker.addEventListener("change", function() {
       var claim = draft && draft.claims && draft.claims.find(function(c) { return c.id === picker.value; });
       statement.textContent = claim ? claim.statement || "" : ""; updateSave();
+      if (draft && draft.duplicateClaimId) status.textContent = label(draft.duplicateClaimId === picker.value ? "manuscript_link_duplicate" : "manuscript_link_hint");
     });
     consent.addEventListener("change", updateSave);
     dialog.addEventListener("close", function() {
@@ -199,6 +201,10 @@
     if (!live(submitted.context)) { if (request === serial) { unavailable(); updateSave(); } return; }
     if (request !== serial || draft !== submitted || !dialog.open) return;
     updateSave();
+    if (response && response.ok === false && response.code === "duplicate-link") {
+      submitted.duplicateClaimId = claim.id; updateSave();
+      status.textContent = label("manuscript_link_duplicate"); return;
+    }
     if (response && response.ok === false && response.code === "stale-context") {
       unavailable(label("manuscript_link_stale"), true); return;
     }

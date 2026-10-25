@@ -60,6 +60,37 @@ def accepted_bytes(project):
             for path in (project / "research").rglob("*") if path.is_file()}
 
 
+def test_identical_active_link_is_rejected_without_an_archive_write(manuscript_archive):
+    project, _manuscript, _claim, _dossier = manuscript_archive
+    original = save_link(manuscript_archive)
+    before = accepted_bytes(project)
+    with pytest.raises(ResearchConflictError, match=r"already.*active") as error:
+        save_link(manuscript_archive)
+    assert original["link_id"] in str(error.value)
+    assert accepted_bytes(project) == before
+
+
+def test_quote_aliases_share_the_existing_cli_destinations():
+    parser = research_parser()
+    assert parser.parse_args(["find-anchor", "--project", ".", "draft.md", "--quote", "Room"]).query == "Room"
+    assert parser.parse_args(["reconcile-manuscript", "--project", ".", "draft.md", "--quote", "Room"]).new_quote == "Room"
+
+
+@pytest.mark.parametrize("location", ["other-file", "other-paragraph"])
+def test_identical_wording_in_distinct_occurrences_can_be_linked(manuscript_archive, location):
+    project, manuscript, claim, dossier = manuscript_archive
+    first = save_link(manuscript_archive)
+    if location == "other-file":
+        other = project / "second.md"
+        other.write_bytes(manuscript.read_bytes())
+        second = save_link((project, other, claim, dossier))
+    else:
+        manuscript.write_bytes(manuscript.read_bytes() + b"\nThe **reading room** was open. " +
+                               "🦉 A visitor arrived.\n".encode())
+        second = save_link(manuscript_archive, selection={**selection(), "start_line": 5, "end_line": 5})
+    assert first["link_id"] != second["link_id"]
+
+
 def test_review_derives_current_chapter_without_revising_the_archive(manuscript_archive):
     project, manuscript, _claim, _dossier = manuscript_archive
     save_link(manuscript_archive)

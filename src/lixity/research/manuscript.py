@@ -25,6 +25,15 @@ from .models import (
 from .repository import Repository, ResearchConflictError, ResearchError, Snapshot
 
 
+class ManuscriptLinkExistsError(ResearchConflictError):
+    """An active association already owns this exact claim selection."""
+
+    def __init__(self, link_id: str) -> None:
+        self.link_id = link_id
+        super().__init__(f"This claim selection already has an active association: {link_id}; "
+                         "review or revise that association instead of creating a duplicate")
+
+
 def _source_path(repository: Repository, manuscript: str | Path) -> tuple[Path, str]:
     """Resolve inside the explicit project; traversal and escaping symlinks fail."""
     supplied = Path(manuscript).expanduser()
@@ -740,6 +749,17 @@ def link_manuscript_claim(
             "Selection does not match one current displayed manuscript paragraph; "
             "offsets and quotes refer to the displayed text with inline Markdown markers removed"
         )
+    # Repeated wording in other files or paragraphs is a distinct occurrence.
+    # A changed file digest alone does not make the same selection a new link.
+    for existing in snapshot.records.values():
+        if (isinstance(existing, ManuscriptClaimLink) and existing.state == "active"
+                and existing.claim_ref.id == claim.id
+                and existing.anchor.source_path == relative
+                and existing.anchor.start_line == anchor.start_line
+                and existing.anchor.end_line == anchor.end_line
+                and existing.anchor.paragraph_sha256 == anchor.paragraph_sha256
+                and existing.anchor.start == anchor.start and existing.anchor.end == anchor.end):
+            raise ManuscriptLinkExistsError(existing.id)
     from .api import envelope
 
     try:

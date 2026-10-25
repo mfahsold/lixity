@@ -10,6 +10,7 @@ from urllib.parse import parse_qs, urlparse
 
 from ..config import load_project_config
 from ..research import api as research_api
+from ..research.manuscript import ManuscriptLinkExistsError
 from ..research.repository import ResearchConflictError, ResearchError
 from .pdf_context import manuscript_pdf_token
 from .routes_research import ResearchRoutesMixin
@@ -68,6 +69,9 @@ class ManuscriptResearchRoutesMixin(ResearchRoutesMixin):
                     note=payload.get("note"), language=self.language, project_config=settings,
                 )
                 self._json({"ok": True, **result})
+            except ManuscriptLinkExistsError as exc:
+                self._json({"ok": False, "code": "duplicate-link", "link_id": exc.link_id,
+                            "message": str(exc)}, 409)
             except ResearchConflictError as exc:
                 self._json({"ok": False, "code": "stale-archive", "message": str(exc)}, 409)
             except (ResearchError, OSError, ValueError, TypeError, UserWarning) as exc:
