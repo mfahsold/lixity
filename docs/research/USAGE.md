@@ -642,7 +642,9 @@ counts back into a mirrored dossier creates another revision and changes those
 counts again. Keep the generated audit report outside the retained research
 archive and cite its observation date/snapshot in project notes instead of
 continually synchronizing live totals. A successful integrity audit checks stored
-objects and references, not the truth of their content. There is no separate
+objects and references, not the truth of their content or equality with Markdown
+reading copies. Use the [explicit body comparison](#compare-a-markdown-reading-copy)
+for that separate question. There is no separate
 "stable audit" mode that hides newly accepted revisions.
 
 **Current main:** audit also verifies the complete accepted manifest ancestry.
@@ -913,6 +915,27 @@ and validation with the resulting reviewed revision. Other dossier revisions can
 advance independently when `--expected-snapshot` is omitted. Adding that snapshot
 also rejects unrelated archive changes.
 
+### Compare a Markdown reading copy
+
+Before updating a dossier from an ordinary Markdown reading copy, inspect the
+body difference without changing the archive:
+
+```sh
+lixity research dossier ID --project ./novel --file notes.md --diff --format text
+```
+
+This compares the file's literal UTF-8 body with the current dossier body. It
+does not infer equivalence from matching titles, tags or a successful audit.
+The report identifies the compared dossier revision; exit 0 means the comparison
+completed, not that the bodies are equal. Front matter, headings and whitespace
+are part of that body, so deliberate differences remain visible. The command
+does not synchronize files or update title/tag metadata.
+
+For the exact body without display headings or an added newline, use
+`dossier ID --project ./novel --format text --body-only`. To accept a reviewed
+change, use the existing guarded update or the exported-draft workflow below.
+There is no directory mirror, background watcher or deletion synchronization.
+
 ### Edit an exported Markdown dossier
 
 **Since v0.7.1:** the archive remains authoritative. Export an
@@ -1150,6 +1173,14 @@ links, section outlines and pinned/current revisions. CLI equivalents are
 `research decision-impact --decision-id ID` and `research review`.
 These reports do not find every affected passage, infer contradictions, verify
 history or rewrite documents. Old pins may be intentional; audit is separate.
+
+`stale_dossier_pin` means that a saved association names an earlier dossier
+revision. It does not mean that its decision is wrong or that an update was
+approved. Inspect the link's direct or claim-based origin and the two revisions
+before preparing an explicit pin change in the owning decision or claim.
+**Mark as applied** records an assessment; it does not retarget those links.
+Atomic change sets can save reviewed revisions together, but a guided bulk-pin
+review or `review --resolve-all` is not implemented.
 
 **Since v0.7.3:** **Read decision with dossier** opens a
 reversible comparison inside **Review** or **Affected dossiers**. It reads the
