@@ -8,6 +8,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Read-only **Inspect candidate passage** in manuscript review opens uniquely
+  moved/adjusted quotations before accepting a re-pin, reusing existing resolved
+  offsets and guarded source context without changing saved associations.
 - Explicit website preflight in CLI and native UI measures prepared HTML/ZIP/file
   sizes and reports unavailable, unpackaged and unattributed dossier media without
   writing or downloading. Mobile rendering and rights verification remain explicit
@@ -39,10 +42,16 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   unchanged; attachments do not manufacture extraction or linguistic scores.
 
 ### Fixed
+- Analysis overview navigation uses one wrapping contents list in the existing
+  reader header, with a current-section underline instead of a progress track.
+  Later sections remain visible on narrow screens; short viewports keep the
+  header in document flow and dossier outlines retain their existing indicator.
 - Shared hover help waits for deliberate dwell and switches quickly between
   neighboring controls, with canceled pending hints after navigation or actions.
   Structured tool names, descriptions and declared shortcuts reuse localized
-  resources; keyboard and explicit touch help remain immediate.
+  resources; keyboard and explicit touch help remain immediate. Pointer hints
+  stay near the cursor instead of clearing the complete toolbar; focus/touch
+  retain toolbar clearance.
 - Localized paragraph action menus stay anchored clear of their own trigger,
   choose available vertical space and retain scrolling for longer translations.
   Shared reading-dropdown height limits remain owned by their existing layout.

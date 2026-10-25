@@ -45,10 +45,14 @@
       return {link: link, target: document.getElementById(link.dataset.sectionLink)};
     }).filter(function(entry) { return entry.target && host.contains(entry.target); });
     if (!entries.length) return null;
-    var svg = svgNode("svg", {"aria-hidden": "true", focusable: "false", "data-section-track": ""});
-    var track = svgNode("path", {"class": "section-track"}), progress = svgNode("path", {"class": "section-progress", pathLength: "1"});
-    var dot = svgNode("circle", {r: "3", "data-section-indicator": "", "class": "section-dot"});
-    svg.append(track, progress, dot); nav.prepend(svg);
+    var svg = null, track, progress, dot;
+    if (!horizontal) {
+      svg = svgNode("svg", {"aria-hidden": "true", focusable: "false", "data-section-track": ""});
+      track = svgNode("path", {"class": "section-track"});
+      progress = svgNode("path", {"class": "section-progress", pathLength: "1"});
+      dot = svgNode("circle", {r: "3", "data-section-indicator": "", "class": "section-dot"});
+      svg.append(track, progress, dot); nav.prepend(svg);
+    }
     var frame = 0, disposed = false, current = null, geometry = "", observing = false, observedRoot = null;
     var resize = typeof ResizeObserver === "function" ? new ResizeObserver(schedule) : null;
     function schedule() { if (!disposed && !frame) frame = requestAnimationFrame(update); }
@@ -74,6 +78,9 @@
       else if (link.bottom > bounds.bottom) nav.scrollTop += Math.ceil(link.bottom - bounds.bottom);
     }
     function paint(entry, changedCurrent) {
+      // Analysis is a wrapping list of section links, not a progress timeline.
+      // Its current link remains owned by the same scroll observation below.
+      if (horizontal) return;
       if (!visible(nav)) {
         dot.style.transition = progress.style.transition = "none";
         svg.style.display = "none"; geometry = ""; return;
@@ -170,7 +177,8 @@
       if (options.onCurrent) options.onCurrent(null);
       var contents = nav.closest("[data-section-contents]");
       if (contents) contents.style.removeProperty("--outline-available-height");
-      svg.remove(); delete nav._sectionNavigation; instances.delete(instance); unlisten();
+      if (svg) svg.remove();
+      delete nav._sectionNavigation; instances.delete(instance); unlisten();
     }
     var instance = {refresh: schedule, dispose: dispose};
     nav._sectionNavigation = instance; nav.addEventListener("keydown", keyboard); nav.addEventListener("click", schedule);

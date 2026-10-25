@@ -12,6 +12,8 @@ const fixtures = pythonFixture(`
 import json
 from lixity.language import get_language_profile
 from lixity.workspace_labels import WORKSPACE_LABELS
+from lixity.models import CorpusConfig
+from lixity.scenes import scene_report_for_display
 from dashboard_fixtures import full_dashboard as render
 original = render.__globals__['render_dashboard']
 fixtures = {}
@@ -20,6 +22,7 @@ for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
     def localized(*args, **kwargs):
         return original(*args, **{**kwargs, 'labels': labels, 'language_key': locale,
           'enabled_actions': ['analyze', 'manuscript-pdf', 'research-reader'],
+          'scenes': scene_report_for_display(render.__globals__['SAMPLE'], CorpusConfig(language='de'), None),
           'manuscript_pdf_token': 'synthetic-manuscript', 'research_context_token': 'synthetic-root'})
     render.__globals__['render_dashboard'] = localized
     fixtures[locale] = render()
@@ -309,11 +312,12 @@ async function companionOverviewReturn(browser, motion) {
    await page.evaluate(dark=>document.documentElement.dataset.theme=dark?'dark':'light',width===1024||motion==='no-preference');
    await page.locator('#workbench-overview-open').click();
    const analysis=page.locator('#analysis-sections');
-   await expect(analysis.locator('[data-section-indicator]')).toHaveCount(1);
+   await expect(analysis.locator('[data-section-link]')).toHaveCount(6);
+   await expect(analysis.locator('[data-section-indicator]')).toHaveCount(0);
    await analysis.locator('[data-section-link=matrix]').click();
 
    await expect(analysis.locator('[aria-current=true]')).toHaveAttribute('data-section-link','matrix');
-   await expect(analysis.locator('[data-section-indicator]')).toBeVisible();
+   await expect(analysis.locator('[aria-current=true]')).toHaveCSS('text-decoration-line','underline');
    await page.locator('#workbench-overview-back').click();
    await page.locator('#workspace-reader-toggle').click();
    await expect(page.locator('#workspace-reader-dossier')).toBeEnabled();

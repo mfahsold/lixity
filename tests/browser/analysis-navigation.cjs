@@ -273,13 +273,10 @@ async function finish(page, errors, writes) {
           assert.equal(await page.locator('#matrix').isVisible(), true);
           assert.equal(await page.locator('#analysis-sections [aria-current=true]').getAttribute('data-section-link'),
             'matrix', 'The final chapter matrix remains current at the bottom of the page');
-          const alignment = await page.locator('#analysis-sections').evaluate(nav => {
-            const link = nav.querySelector('[aria-current=true]').getBoundingClientRect();
-            const dot = nav.querySelector('[data-section-indicator]').getBoundingClientRect();
-            return Math.max(Math.abs(dot.x + dot.width / 2 - (link.x + link.width / 2)),
-              Math.abs(dot.y + dot.height / 2 - (link.bottom - 2)));
-          });
-          assert.ok(alignment < 1, 'The measured indicator belongs to the current horizontal link');
+          assert.equal(await page.locator('#analysis-sections [data-section-indicator]').count(), 0,
+            'Overview section links do not imply measured progress');
+          assert.equal(await page.locator('#analysis-sections [aria-current=true]').evaluate(node => getComputedStyle(node).textDecorationLine),
+            'underline', 'The current section is underlined');
           await page.evaluate(() => { document.getElementById('matrix').hidden = true; dispatchEvent(new Event('resize')); });
           await settle(page);
           assert.notEqual(await page.locator('#analysis-sections [aria-current=true]').getAttribute('data-section-link'),
@@ -491,7 +488,7 @@ async function finish(page, errors, writes) {
             const last = await sections.last().boundingBox(), bounds = await navigation.boundingBox();
             assert.equal(await sections.last().evaluate(node => node === document.activeElement), true);
             assert.ok(last.x >= bounds.x - 1 && last.x + last.width <= bounds.x + bounds.width + 1,
-              'Arrow navigation makes the final overflowing section link horizontally reachable');
+              'The final wrapping section link remains wholly readable');
             const matrix = await page.locator('#matrix').boundingBox();
             assert.ok(matrix.y < 900 && matrix.y + matrix.height > 0,
               'Revealing the focused nav link does not scroll vertically back to the navigation');

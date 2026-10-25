@@ -878,6 +878,21 @@ def render_dashboard(
             )
             + "</select></label>"
         )
+    # Use one navigation in the measured reader header when available, with
+    # the same registry-backed anchors in static reports without reader controls.
+    available = {"flags"} if has_chapters else set()
+    if metrics is not None:
+        available.add("dist")
+    if scenes:
+        available.add("scenes")
+    if motifs:
+        available.add("motifs")
+    if has_house_style or (fingerprint is not None and metrics is not None and metrics.chapters):
+        available.add("style")
+    if chapters:
+        available.add("matrix")
+    overview_navigation = section_nav([entry for entry in ANALYSIS_SECTIONS if entry[0] in available], labels)
+
     if has_reading and controls:
         analysis_controls = (
             f'<div class="reader-analysis-controls" id="reader-analysis-settings" role="group" '
@@ -892,7 +907,9 @@ def render_dashboard(
             '</div></div>'
         ) if paragraphs else ""
         parts.append(reading_controls(chapters, labels, reader_document, companion_controls=reader_controls,
-                                      analysis_controls=analysis_controls))
+                                      analysis_controls=analysis_controls, overview_navigation=overview_navigation))
+    else:
+        parts.append(overview_navigation)
 
     if has_chapters:
         parts.append(f'<section class="panel" id="analysis-review"><h2>{L("review_title")}</h2>')
@@ -1024,23 +1041,6 @@ def render_dashboard(
 
     if not tense_available:
         parts.append(f'<p class="hint">{L("no_tense")}</p>')
-
-    # Section navigation: only panels this document actually renders, in the
-    # shared registry order (components.ANALYSIS_SECTIONS).
-    available = {"flags"} if has_chapters else set()
-    if metrics is not None:
-        available.add("dist")
-    if scenes:
-        available.add("scenes")
-    if motifs:
-        available.add("motifs")
-    if has_house_style or (fingerprint is not None and metrics is not None and metrics.chapters):
-        available.add("style")
-    if chapters:
-        available.add("matrix")
-    parts.append(
-        section_nav([entry for entry in ANALYSIS_SECTIONS if entry[0] in available], labels)
-    )
 
     # --- Chapter map ------------------------------------------------------
     by_chapter: dict[int, list[tuple[int, Any]]] = {}

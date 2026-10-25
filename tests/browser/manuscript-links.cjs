@@ -77,10 +77,15 @@ async function selectText(page, text) {
             start_line: Number(panel.dataset.start), end_line: Number(panel.dataset.end),
             paragraph_sha256: panel.dataset.paragraphSha256, start: 4, end: 17, quote: 'safe selected',
           }));
+          const resolved = {resolved_start_line: anchor.start_line, resolved_end_line: anchor.end_line,
+            resolved_start:4, resolved_end:17};
+          if (anchorState === 'adjusted') {
+            anchor.start = 0; anchor.end = 13; anchor.paragraph_sha256 = 'b'.repeat(64);
+          }
           return route.fulfill({json: {ok: true, schema_version: 'research-manuscript-review-local/1',
             project_id: 'project', snapshot: 'snapshot', current_source_sha256: 'a'.repeat(64), source_state: 'available',
             links: [{link_id: 'link', revision: 1, claim_id: 'claim', claim_revision: 1, claim_title: 'Synthetic claim',
-              anchor, anchor_state: anchorState, flags: [], resolved_start_line: anchor.start_line, resolved_end_line: anchor.end_line}]}});
+              anchor, anchor_state: anchorState, flags: [], ...resolved}]}});
         }
         if (url.pathname === '/api/research/history') {
           ++historyReads;
@@ -145,6 +150,52 @@ async function selectText(page, text) {
       assert.equal(await page.locator('#research-manuscript-review blockquote').textContent(), 'safe selected');
       assert.equal(await page.locator('[data-manuscript-link-accept]').count(), 0,
         'A moved anchor stays inspectable without offering a write action');
+      for (const candidateState of ['moved', 'adjusted']) {
+        anchorState = candidateState;
+        await page.locator('#r-review-refresh').click();
+        const candidate = page.locator('#research-manuscript-review [data-manuscript-link-candidate]');
+        await candidate.waitFor();
+        assert.equal(await candidate.textContent(), 'Inspect candidate passage');
+        if (candidateState === 'adjusted') await page.locator('#research-manuscript-review').screenshot({
+          path:`/tmp/lixity-manuscript-candidate-${width}.png`});
+        await candidate.focus(); await page.keyboard.press('Enter');
+        assert.equal(await page.locator('#view-pane-analysis').evaluate(node => node.classList.contains('active')), true);
+        assert.equal(await page.locator('#chapters mark.manuscript-claim-hit').count(), 0,
+          'Inspecting a candidate never accepts or marks its saved association');
+        assert.deepEqual(writes, [], 'Candidate inspection is read-only');
+        await page.locator('#tab-view-research').click();
+        await page.locator('[data-rtab=review]').click();
+      }
+      for (const unavailableState of ['ambiguous', 'changed', 'unavailable']) {
+        anchorState = unavailableState;
+        const refreshed = page.waitForResponse(response => response.url().includes('/api/research/manuscript-review'));
+        await page.locator('#r-review-refresh').click();
+        await refreshed;
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        assert.equal(await page.locator('[data-manuscript-link-candidate]').count(), 0);
+      }
+      anchorState = 'adjusted';
+      await page.locator('#r-review-refresh').click();
+      await page.locator('#research-manuscript-review [data-manuscript-link-candidate]').waitFor();
+      const guarded = await page.evaluate(() => {
+        const button = document.querySelector('#research-manuscript-review [data-manuscript-link-candidate]');
+        const panel = document.querySelector('#chapters .ptext'), original = paragraphContent[panel.id][0];
+        paragraphContent[panel.id][0] = 'Changed candidate text'; button.click();
+        paragraphContent[panel.id][0] = original;
+        return document.querySelector('#view-pane-research').classList.contains('active');
+      });
+      assert.equal(guarded, true, 'Changed candidate quote cannot navigate from a stale rendered action');
+      const contextGuarded = await page.evaluate(() => {
+        const button = document.querySelector('#research-manuscript-review [data-manuscript-link-candidate]');
+        const original = document.body.dataset.manuscriptSourceSha256;
+        document.body.dataset.manuscriptSourceSha256 = 'c'.repeat(64); button.click();
+        document.body.dataset.manuscriptSourceSha256 = original;
+        return document.querySelector('#view-pane-research').classList.contains('active');
+      });
+      assert.equal(contextGuarded, true, 'A changed manuscript context blocks candidate navigation');
+      anchorState = 'moved';
+      await page.locator('#r-review-refresh').click();
+      await page.locator('#research-manuscript-review [data-manuscript-link-candidate]').waitFor();
       await page.locator('#research-manuscript-review [data-research-history=claim]').click();
       const claimHistory = page.locator('#research-revision-history-detail');
       await claimHistory.getByText('Pinned original claim', {exact: true}).waitFor();

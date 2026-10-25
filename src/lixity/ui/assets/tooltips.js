@@ -80,7 +80,8 @@
   var pointerX = null, pointerY = null;
   var hideTimer = null;
   var showTimer = null, pendingEl = null, warmUntil = 0;
-  var textObserver = new MutationObserver(function() { if (activeEl) show(activeEl); });
+  var pointerHelp = false, pointerOffsetX = 0;
+  var textObserver = new MutationObserver(function() { if (activeEl) show(activeEl, pointerHelp); });
 
   function cancelPending() {
     clearTimeout(showTimer);
@@ -97,7 +98,11 @@
   }
 
   function hover(el) {
-    if (el === activeEl) { clearTimeout(hideTimer); return; }
+    if (el === activeEl) {
+      clearTimeout(hideTimer);
+      if (!pointerHelp) { pointerAnchor(el); updatePos(el); }
+      return;
+    }
     if (el === pendingEl || el === activatedEl || el.closest(".pswp")) return;
     if (activeEl) hide();
     cancelPending();
@@ -107,19 +112,28 @@
     // Deliberate first dwell, then quick inspection of neighboring tools.
     showTimer = setTimeout(function() {
       cancelPending();
-      if (el.isConnected && el.matches(":hover")) show(el);
+      if (el.isConnected && el.matches(":hover")) show(el, true);
     }, Date.now() < warmUntil ? 80 : 600);
   }
 
-  function show(el) {
+  function pointerAnchor(el) {
+    var rect = el.getBoundingClientRect();
+    pointerHelp = true;
+    pointerOffsetX = Math.max(0, Math.min(rect.width, (pointerX === null ? rect.left : pointerX) - rect.left));
+  }
+
+  function show(el, fromPointer) {
     cancelPending();
     if (!el.isConnected || el === activatedEl || el.closest(".pswp")) return;
     clearTimeout(hideTimer);
     var text = helpText(el);
     if (!text || !text.trim()) { if (activeEl === el) hide(); return; }
     textObserver.disconnect();
+    var samePointer = fromPointer && pointerHelp && activeEl === el;
     if (activeEl && activeEl !== el) hide();
     activeEl = el;
+    if (fromPointer) { if (!samePointer) pointerAnchor(el); }
+    else pointerHelp = false;
     // Keep help in the native dialog's top layer when its control is inside one.
     var host = el.closest("dialog[open]") || document.body;
     if (tip.parentElement !== host) host.appendChild(tip);
@@ -160,6 +174,7 @@
       else activeEl.removeAttribute("aria-describedby");
     }
     activeEl = null;
+    pointerHelp = false;
     tip.setAttribute("aria-hidden", "true");
     tip.classList.remove("visible");
   }
@@ -198,7 +213,7 @@
     var anchorTop = rect.top, anchorBottom = rect.bottom;
     var toolbarSelector = ".manuscript-reader-controls, .toolbar, .selection-toolbar, [role=toolbar]";
     var toolbar = el.closest(toolbarSelector);
-    if (toolbar) {
+    if (toolbar && !pointerHelp) {
       var bar = toolbar.getBoundingClientRect();
       anchorTop = bar.top; anchorBottom = bar.bottom;
       // Wrapped actions and their adjacent search row form one control area.
@@ -232,7 +247,7 @@
     // across the trigger (which also made touch dismissal unreachable).
     tip.style.maxHeight = available + "px";
     tipH = tip.offsetHeight;
-    var left = rect.left;
+    var left = rect.left + (pointerHelp ? pointerOffsetX + 12 : 0);
     left = Math.max(visible.left, Math.min(visible.right - tipW, left));
     var top = useBelow ? anchorBottom + 8 : anchorTop - tipH - 8;
     tip.style.left = left + "px";

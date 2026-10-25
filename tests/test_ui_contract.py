@@ -218,7 +218,7 @@ class TestJsDomContract(unittest.TestCase):
         self.assertIn("Start with a tense-pattern flag and read its context.", review)
 
     def test_analysis_section_nav_only_links_existing_panels(self):
-        """The sticky section nav never offers a panel this document lacks."""
+        """Section links retain real panel anchors without becoming tabs."""
         html = _full_dashboard()
         self.assertIn('id="analysis-sections"', html)
         nav = html.split('id="analysis-sections"', 1)[1].split("</nav>", 1)[0]
@@ -231,6 +231,13 @@ class TestJsDomContract(unittest.TestCase):
                              rf'data-section-link="{target}">[^<]+</a>')
         self.assertNotIn('role="tab', nav)
         self.assertIn('data-section-nav="analysis"', nav)
+
+    def test_analysis_navigation_precedes_review_and_search(self):
+        """Overview orientation follows the reader controls, before task details."""
+        html = _full_dashboard()
+        self.assertLess(html.index('id="manuscript-reader-controls"'), html.index('id="analysis-sections"'))
+        self.assertLess(html.index('id="analysis-sections"'), html.index('id="analysis-review"'))
+        self.assertLess(html.index('id="analysis-sections"'), html.index('id="text-search"'))
 
 
     def test_analysis_section_nav_follows_the_registry(self):

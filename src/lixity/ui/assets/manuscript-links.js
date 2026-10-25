@@ -242,6 +242,22 @@
   function linkedPanel(row) {
     return Array.from(chapters.querySelectorAll(".ptext")).find(function(panel) { return matchesPanel(row, panel); });
   }
+  function candidatePanel(row) {
+    if (!["moved", "adjusted"].includes(row.anchor_state) || !row.anchor ||
+        !Number.isInteger(row.resolved_start_line) || !Number.isInteger(row.resolved_end_line) ||
+        !Number.isInteger(row.resolved_start) || !Number.isInteger(row.resolved_end)) return null;
+    // Adjusted paragraphs retain the recorded quotation at new codepoint
+    // offsets; their former paragraph hash and offsets intentionally differ.
+    var candidates = Array.from(chapters.querySelectorAll(".ptext")).filter(function(panel) {
+      if (Number(panel.dataset.start) !== row.resolved_start_line ||
+          Number(panel.dataset.end) !== row.resolved_end_line) return false;
+      var points = Array.from(bridge.text(panel) || "");
+      return row.resolved_start >= 0 && row.resolved_end > row.resolved_start &&
+        row.resolved_end <= points.length &&
+        points.slice(row.resolved_start, row.resolved_end).join("") === row.anchor.quote;
+    });
+    return candidates.length === 1 ? candidates[0] : null;
+  }
   function renderReviewItems(report, filtered) {
     var rows = report.links || [];
     if (filtered && reviewFilter) rows = rows.filter(function(row) {
@@ -270,6 +286,10 @@
       if (linkedPanel(row)) {
         var jump = element("button", label("manuscript_link_open_passage"), "ctl"); jump.type = "button";
         jump.dataset.manuscriptLinkJump = row.link_id; item.appendChild(jump);
+      }
+      if (candidatePanel(row)) {
+        var inspect = element("button", label("manuscript_link_inspect_candidate"), "ctl"); inspect.type = "button";
+        inspect.dataset.manuscriptLinkCandidate = row.link_id; item.appendChild(inspect);
       }
       var history = element("button", label("research_revision_linked_version").replace("{revision}", row.claim_revision), "ctl"); history.type = "button";
       history.dataset.researchHistory = "claim"; history.dataset.recordId = row.claim_id;
@@ -737,6 +757,14 @@
       revision: Number.isInteger(pin) && pin > 0 ? pin : null});
   });
   document.addEventListener("click", async function(event) {
+    var candidate = event.target.closest("[data-manuscript-link-candidate]");
+    if (candidate) {
+      if (!review || !reviewContext || !live(reviewContext)) return;
+      var candidateRow = review.links.find(function(link) { return link.link_id === candidate.dataset.manuscriptLinkCandidate; });
+      var candidateTarget = candidateRow && candidatePanel(candidateRow);
+      if (candidateTarget) bridge.navigate(candidateTarget);
+      return;
+    }
     var jump = event.target.closest("[data-manuscript-link-jump]");
     if (jump) {
       if (!review || !reviewContext || !live(reviewContext)) return;

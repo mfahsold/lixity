@@ -191,14 +191,26 @@ async function hoverTiming(browser) {
     await expect(tip.locator('.tooltip-copy')).toHaveText(fixtures.en.labels.reading_help_focus);
     await expect(focus).toHaveAccessibleDescription(fixtures.en.labels.reading_help_focus);
     const focusBox = await focus.boundingBox(), hintBox = await tip.boundingBox();
-    const expectedLeft = Math.max(10, Math.min(focusBox.x, 1440 - 10 - hintBox.width));
-    assert.ok(Math.abs(hintBox.x - expectedLeft) <= 1, 'The hint starts at its tool, constrained by the viewport');
+    const gap = Math.min(Math.abs(hintBox.y - focusBox.y - focusBox.height),
+      Math.abs(focusBox.y - hintBox.y - hintBox.height));
+    assert.ok(gap <= 9, 'Pointer help stays beside its trigger instead of below the whole toolbar');
+    const expectedLeft = Math.max(10, Math.min(focusBox.x + focusBox.width / 2 + 12, 1440 - 10 - hintBox.width));
+    assert.ok(Math.abs(hintBox.x - expectedLeft) <= 1, 'Pointer help starts beside the cursor, constrained by the viewport');
+    await page.clock.runFor(180);
+    await page.screenshot({path: path.join(artifacts, 'pointer-help-distance-1440.png')});
     await page.mouse.move(0, 0); await page.clock.runFor(100);
     await focus.hover(); await page.clock.runFor(200);
     await expect(tip).toHaveAttribute('aria-hidden', 'false');
     await analysis.hover();
     await page.clock.runFor(90);
     await expect(tip.locator('.tooltip-copy')).toHaveText(fixtures.en.labels.reading_help_analysis);
+    const analysisBox = await analysis.boundingBox(), nextHint = await tip.boundingBox();
+    assert.ok(Math.abs(nextHint.x - (analysisBox.x + analysisBox.width / 2 + 12)) <= 1,
+      'A tool away from viewport edges keeps its hint beside the cursor');
+    assert.ok(Math.min(Math.abs(nextHint.y - analysisBox.y - analysisBox.height),
+      Math.abs(analysisBox.y - nextHint.y - nextHint.height)) <= 9);
+    await page.clock.runFor(180);
+    await page.screenshot({path: path.join(artifacts, 'pointer-analysis-distance-1440.png')});
     await page.mouse.move(0, 0); await page.clock.runFor(1200);
     await focus.hover(); await page.clock.runFor(100); await page.mouse.move(0, 0);
     await page.clock.runFor(700);

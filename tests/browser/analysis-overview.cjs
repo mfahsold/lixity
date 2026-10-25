@@ -14,7 +14,9 @@ from lixity.characters import presence_report
 from lixity.dialogue import dialogue_report
 from lixity.language import LANGUAGE_PROFILES
 from lixity.models import CorpusConfig
+from lixity.motifs import motif_report
 from lixity.pacing import pacing_report
+from lixity.scenes import scene_report_for_display
 from lixity.pipeline import analyze_document
 from lixity.style_fingerprint import FingerprintThresholds
 from lixity.ui import render_dashboard
@@ -33,6 +35,8 @@ text = "\\n\\n".join(chunks)
 config = CorpusConfig(language="en")
 analysis = analyze_document(text, config, FingerprintThresholds(z_mild=100, z_strong=100))
 reports = dict(dialogue=dialogue_report(text, config).to_dict(),
+               motifs=motif_report(text, {"Gate": r"\\bgate\\b"}, config).to_dict(),
+               scenes=scene_report_for_display(text, config, None),
                characters=presence_report(text, ["Mara", "Tomas", "Unmentioned name"], config),
                pacing=pacing_report(text, config).to_dict())
 def render(language, controls):
@@ -74,7 +78,8 @@ async function pinnedIdentity(page, panel, cellIndex) {
   const errors = [];
   let writes = 0;
   try {
-    for (const [locale, html] of Object.entries(fixtures.locales)) for (const width of [1440, 320]) {
+    for (const [locale, html] of Object.entries(fixtures.locales)) for (const width of
+      (locale === 'en' ? [1440,1280,1024,768,390,320] : [1440,320])) {
       const page = await browser.newPage({viewport: {width, height: 900}, hasTouch: true, reducedMotion: 'reduce'});
       page.on('pageerror', error => errors.push(error.message));
       await page.route('http://lixity.test/**', route => {
@@ -87,6 +92,32 @@ async function pinnedIdentity(page, panel, cellIndex) {
         (await page.locator('.workspace-shell .product-name').textContent()).trim(),
         'Browser history identifies the manuscript and product without repeating an analysis slogan');
       await page.locator('#workbench-overview-open').click();
+      const navigation = page.locator('#analysis-sections');
+      assert.deepEqual(await navigation.locator('[data-section-link]').evaluateAll(nodes => nodes.map(n => n.dataset.sectionLink)),
+        ['flags','dist','scenes','motifs','style','matrix']);
+      assert.equal(await navigation.locator('svg').count(), 0, 'Overview section links are not a progress timeline');
+      const orientation = await navigation.evaluate(nav => {
+        const bounds = nav.getBoundingClientRect();
+        return {before:!!(nav.compareDocumentPosition(document.getElementById('analysis-review')) & Node.DOCUMENT_POSITION_FOLLOWING),
+          bounds:bounds.toJSON(), width:nav.clientWidth, content:nav.scrollWidth,
+          links:[...nav.querySelectorAll('a')].map(a=>a.getBoundingClientRect().toJSON())};
+      });
+      assert.ok(orientation.before, 'Section choices precede the review callout');
+      assert.equal(await navigation.evaluate(nav=>nav.parentElement.id), 'manuscript-reader-controls',
+        'The same navigation shares the existing measured reader header');
+      assert.ok(orientation.content <= orientation.width + 1, 'All section choices fit without horizontal clipping');
+      assert.ok(orientation.links.every(rect=>rect.left>=orientation.bounds.left-1 && rect.right<=orientation.bounds.right+1),
+        'Every label is wholly visible inside the overview navigation');
+      if (width<=390) assert.ok(new Set(orientation.links.map(rect=>Math.round(rect.top))).size>1, 'Mobile section links wrap');
+      if (locale === 'en' || locale === 'de') await page.locator('#manuscript-reader-controls').screenshot({
+        path:path.join(artifacts, `navigation-${locale}-${width}.png`)});
+      for (const target of ['flags','dist','scenes','motifs','style','matrix']) {
+        await navigation.locator(`[data-section-link=${target}]`).click();
+        await page.waitForFunction(target=>document.querySelector('#analysis-sections [aria-current=true]')?.dataset.sectionLink===target,target);
+        assert.ok(await navigation.evaluate(nav=>nav.getBoundingClientRect().top>=-1 && nav.getBoundingClientRect().bottom<=innerHeight),
+          'Overview navigation remains reachable after a section jump');
+      }
+      await navigation.locator('[data-section-link=flags]').click();
       const measurements = page.locator('#analysis-measurements');
       assert.equal(await measurements.getAttribute('open'), null, 'Dense measurements initially stay folded');
       assert.equal(await measurements.locator('.kpi').first().isVisible(), false);
@@ -146,6 +177,19 @@ async function pinnedIdentity(page, panel, cellIndex) {
       await pinnedIdentity(page, 'characters', 0);
       if (locale === 'en' || locale === 'de') await page.locator('#characters').screenshot({path: path.join(artifacts, `characters-${locale}-${width}.png`)});
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${locale} at ${width}: no horizontal page overflow`);
+      if (width===320 && (locale==='en'||locale==='de')) {
+        await page.setViewportSize({width,height:480});
+        await page.evaluate(()=>document.documentElement.style.fontSize='200%');
+        await page.evaluate(()=>scrollTo(0,0));
+        assert.equal(await page.locator('#manuscript-reader-controls').evaluate(node=>getComputedStyle(node).position),'static',
+          'Short enlarged overview headers scroll naturally instead of covering the content');
+        assert.ok(await navigation.evaluate(nav=>nav.scrollWidth<=nav.clientWidth+1), 'Enlarged labels still wrap');
+        await navigation.locator('[data-section-link=matrix]').click();
+        assert.ok(await page.locator('#matrix').evaluate(node=>{
+          const rect=node.getBoundingClientRect(); return rect.top>=0 && rect.top<innerHeight;
+        }), 'A section arrival remains visible at480px height and200% text');
+        await page.screenshot({path:path.join(artifacts,`navigation-short-enlarged-${locale}.png`)});
+      }
       await page.close();
     }
     const report = await browser.newPage({viewport: {width: 320, height: 900}, javaScriptEnabled: false});
@@ -153,6 +197,8 @@ async function pinnedIdentity(page, panel, cellIndex) {
     await report.goto('http://lixity.test/');
     assert.equal(await report.locator('#analysis-measurements').getAttribute('open'), '');
     assert.ok(await report.locator('#analysis-measurements .kpi').first().isVisible(), 'Standalone reports retain visible measurements without JavaScript');
+    assert.equal(await report.locator('#analysis-sections a').count(),6);
+    assert.ok(await report.locator('#analysis-sections').isVisible(), 'Static reports retain the same real section links without JavaScript');
     await report.close();
     assert.deepEqual(errors, []);
     assert.equal(writes, 0, 'Overview browsing performs no writes');

@@ -485,6 +485,13 @@ for text size (16–28 nominal pixels), narrow/standard/wide text and
 compact/standard/relaxed line spacing. Appearance and the desktop split are local
 browser preferences; display changes do not edit the source.
 
+**Current main:** the analysis overview's section links sit in its existing
+header and wrap instead of hiding later sections beyond a horizontal scroll.
+They jump within the overview; the underlined link indicates the current
+section, not a completed review step. **Back to passage** remains the return to
+the manuscript. On short viewports the header scrolls with the content to leave
+room for the measurements.
+
 **Current main, unreleased:** **? → Help with your first analysis** is a voluntary
 panel in the reader toolbar. It explains the current Analysis Off /
 no selected measure / selected measure state and a read–count–compare workflow.
@@ -539,7 +546,8 @@ do not serialize decisions or allow saves. No review data is sent to analytics.
 lists the passage menu, search and close keys. Hovering or focusing key controls
 also gives a short explanation; Escape dismisses a tooltip. **Current main:**
 mouse hints wait briefly for deliberate hovering, then switch faster between
-neighboring tools. They show the control name, its explanation and any declared
+neighboring tools. They appear beside the hovered control near the pointer;
+keyboard and touch hints keep room for adjacent toolbar actions. They show the control name, its explanation and any declared
 shortcut. Moving away or starting an action cancels a pending hint. Keyboard
 focus and explicit touch explanations do not wait for mouse dwell. Essential actions
 remain labeled and work without hovering. In manuscript search, `Enter` selects

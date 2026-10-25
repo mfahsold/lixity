@@ -6,6 +6,12 @@
   background: var(--bg); border-bottom: 1px solid var(--line);
 }
 .manuscript-reader-controls[hidden] { display: none; }
+.manuscript-reader-controls > .toolbar-sections { flex-basis: 100%; min-width: 0; margin: 0; }
+@media (max-height: 600px) {
+  .manuscript-reading.workbench-overview .manuscript-reader-controls {
+    position: static; max-height: none; overflow: visible;
+  }
+}
 .reader-secondary-controls { display: none; }
 .reader-analysis-guide > summary { width: 2.75rem; min-height: 2.75rem; justify-content: center; padding: .4rem; }
 .reader-analysis-guide > summary::after { display: none; }

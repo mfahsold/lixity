@@ -14,6 +14,7 @@ def reading_controls(
     *,
     companion_controls: str = "",
     analysis_controls: str = "",
+    overview_navigation: str = "",
 ) -> str:
     """Render progressive-enhancement controls; no second manuscript copy."""
     def text(key: str) -> str:
@@ -91,6 +92,7 @@ def reading_controls(
         f'<strong class="workbench-surface-label" id="workbench-overview-label" hidden>{text("reading_overview")}</strong>'
         f'<button class="ctl" type="button" id="workbench-overview-back" hidden>{text("reading_back")}</button>'
         f'{analysis_controls}'
+        f'{overview_navigation}'
         '</div><div class="reader-secondary-controls">'
         f'<button class="ctl" type="button" id="workbench-return" hidden '
         f'data-help="{text("reading_help_return")}">{text("reading_back")}</button>'

@@ -251,6 +251,14 @@ distinguish contention, read-only/permission failures and other I/O errors.
 
 ### Passage research presentation
 
+**Current main:** manuscript review can inspect a unique moved/adjusted quotation
+before accepting its new anchor. `manuscript-links.js` reuses the report's current
+line span and resolved Unicode offsets, verifies its exact saved quotation and
+rechecks the displayed project/source context at activation. The existing navigation
+bridge opens the paragraph without a write; resolved-only inline markings and
+explicit re-pin acceptance remain separate. This adds no archive fields or
+semantic contradiction detector.
+
 **Since v0.7.3:** `manuscript-links.js` selects exact saved
 associations with the same resolved lines, paragraph hash, codepoint span and
 quotation matcher used for manuscript marks. Explicit paragraph activation
@@ -785,8 +793,12 @@ the visual heading is excluded from its accessible description to avoid repeatin
 the control name. No new copy registry or tooltip dependency is introduced.
 The tooltip does not contain actions or take focus. Actual shortcut bindings also have a visible
 reference under Reading settings. Important workflow information stays in labels,
-state and empty-state actions. Placement clears the complete owning toolbar,
-including wrapped adjacent controls. Action activation dismisses help until fresh
+state and empty-state actions. Pointer-triggered hints use the hovered control's
+edge with an 8 px vertical gap and a 12 px horizontal cursor offset, clamped to
+the viewport and scrollport. Their initial pointer offset stays stable while
+reading. Focus/touch hints clear the complete owning toolbar, including wrapped
+adjacent controls; a mouse handoff reanchors an already visible focus hint.
+Action activation dismisses help until fresh
 pointer/focus intent; vendor-owned PhotoSwipe controls retain their own titles
 and keyboard behavior. The [WAI-ARIA tooltip pattern](https://www.w3.org/WAI/ARIA/apg/patterns/tooltip/)
 and [WCAG hover/focus guidance](https://www.w3.org/WAI/WCAG22/Understanding/content-on-hover-or-focus)
@@ -839,9 +851,19 @@ Native disclosure state survives view changes without a new preference store.
 Bounded flags/scene regions support keyboard scrolling, and wide comparisons
 retain chapter, character or scene identity while scrolling horizontally.
 
-These presentation changes keep dialogue chapters in manuscript order,
+**Current main:** the overview's section links form one wrapping contents list
+inside the existing measured reader header, before review guidance and search.
+The current link uses an underline and `aria-current`; the horizontal list has
+no progress track because its sections are not completion steps or new tabs.
+The navigation shares the header's existing sticky and jump-clearance owner.
+At viewport heights of 600 px or less the overview header stays in normal flow,
+so a wrapped contents list cannot consume the reading viewport. Reports without
+reader controls retain one static instance of the same registry-backed links.
+Vertical dossier outlines keep their separate document-position indicator.
+
+These presentation changes keep quotation measurements in manuscript order,
 including measured zeros, and label pacing ASL units, bar scaling and the existing
-Hook heuristic. The chapter matrix renders `0` for an available comparison with
+ending-cue heuristic. The chapter matrix renders `0` for an available comparison with
 no cutoff crossings and `–` for unavailable comparisons. Its `ChapterProfile`
 values still cover profiled body paragraphs/lists; fingerprint measurements use
 `CorpusMetrics`, which also includes blockquotes. The new coverage note explains
@@ -1157,7 +1179,7 @@ use the available document width. Supplemental dossier/global actions follow
 the reading content. No project data conversion or compatibility UI is needed
 for this presentation change.
 
-The section-navigation helper added in v0.7.3 decorates existing semantic links in
+The section-navigation helper added in v0.7.3 tracks existing semantic links in
 analysis and accepted dossier renderings. One instance per connected host resolves
 the actual scroll root, coalesces reads/paint by animation frame and disposes
 observers when replaced. It delegates activation, disclosure reveal, sticky

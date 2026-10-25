@@ -375,6 +375,16 @@ until its claim pin is explicitly updated or the association is superseded.
 when the scoped manuscript is deleted or unreadable. Optional snapshot/revision
 guards make retraction strict.
 
+**Current main:** in **Research → Review**, **Inspect candidate passage** opens
+the current paragraph for a uniquely moved or adjusted saved quotation before
+acceptance. This also works in a read-only review website. From a dossier, its
+saved manuscript-quotation count opens the corresponding filtered review.
+The action checks the displayed source context, line span and exact quotation at the
+resolved Unicode offsets again when clicked. It changes no saved pin or review
+decision and adds no accepted inline mark. Ambiguous, changed or unavailable
+quotations have no candidate action. This inspects an existing association; it
+does not discover new entities or detect factual contradictions in prose.
+
 A changed source-file digest (`source_changed`, for example after an edit in an
 unrelated chapter) is informational and does not mark an association for review
 while its paragraph hash, line span and quote still match exactly. An edit inside
