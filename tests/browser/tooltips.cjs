@@ -52,19 +52,20 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
         <script>${script}</script></body></html>`);
       const help = page.locator('#help');
       const tip = page.locator('#lixity-tooltip');
+      const copy = tip.locator('.tooltip-copy');
 
       await page.locator('#scroll-help').focus();
-      await expect(tip).toHaveText('Nested scrolling help');
+      await expect(copy).toHaveText('Nested scrolling help');
       await page.locator('#scroll-panel').evaluate(el => { el.scrollTop = 100; });
       await expect(tip).toHaveAttribute('aria-hidden', 'true');
 
       await page.locator('#navigation').focus();
-      await expect(tip).toHaveText('Show sources');
+      await expect(copy).toHaveText('Show sources');
       await page.locator('#navigation').evaluate(el => { el.title = 'Hide sources'; });
-      await expect(tip).toHaveText('Hide sources');
+      await expect(copy).toHaveText('Hide sources');
       await page.mouse.move(0, 0);
       await page.locator('#navigation').hover();
-      await expect(tip).toHaveText('Hide sources');
+      await expect(copy).toHaveText('Hide sources');
       await page.locator('#navigation').evaluate(el => { el.removeAttribute('title'); el.removeAttribute('data-tip'); });
       await expect(tip).toHaveAttribute('aria-hidden', 'true');
 
@@ -76,7 +77,7 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
       assert.equal(await page.evaluate(() => window.navigationClicks), 1);
 
       await help.focus();
-      await expect(tip).toHaveText(explanation);
+      await expect(copy).toHaveText(explanation);
       assert.equal(await help.getAttribute('aria-describedby'), 'hint lixity-tooltip');
       await page.keyboard.press('Escape');
       await expect(tip).toHaveAttribute('aria-hidden', 'true');
@@ -126,25 +127,25 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
 
       await page.locator('#navigation').evaluate(el => { el.dataset.help = 'Native action explanation.'; el.blur(); });
       await page.locator('#navigation').focus();
-      await expect(tip).toHaveText('Native action explanation.');
+      await expect(copy).toHaveText('Native action explanation.');
       await page.locator('#navigation').click();
       await expect(tip).toHaveAttribute('aria-hidden', 'true');
       await page.locator('#navigation').focus();
       await expect(tip).toHaveAttribute('aria-hidden', 'true');
       await page.locator('#second-action').hover();
       await expect(tip).toHaveAttribute('aria-hidden', 'false');
-      await expect(tip).toHaveText('Second action explanation.');
+      await expect(copy).toHaveText('Second action explanation.');
       await page.locator('#second-action').evaluate(el => { el.removeAttribute('data-help'); });
       await help.focus();
       await page.locator('#navigation').focus();
-      await expect(tip).toHaveText('Native action explanation.');
+      await expect(copy).toHaveText('Native action explanation.');
       await page.keyboard.press('Escape');
       assert.equal(await page.locator('#navigation').evaluate(el => el.matches(':hover')), false);
       await page.locator('#navigation').press('Enter');
       await expect(tip).toHaveAttribute('aria-hidden', 'true');
       await page.locator('#navigation').hover();
       await expect(tip).toHaveAttribute('aria-hidden', 'false');
-      await expect(tip).toHaveText('Native action explanation.');
+      await expect(copy).toHaveText('Native action explanation.');
       await page.keyboard.press('Escape');
       await page.locator('#navigation').evaluate(el => { el.removeAttribute('data-help'); });
 
@@ -180,7 +181,7 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
 
       const nested = page.locator('#nested-help');
       await nested.focus();
-      await expect(tip).toHaveText('Nested term explanation.');
+      await expect(copy).toHaveText('Nested term explanation.');
       await nested.press('Enter');
       await expect(tip).toHaveAttribute('aria-hidden', 'true');
       await nested.press('Space');
@@ -198,7 +199,7 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
       await expect(tip).toHaveAttribute('aria-hidden', 'true');
       assert.equal(await page.locator('#modal').getAttribute('open'), '', 'Escape dismisses help before its modal');
       await page.locator('#modal-input').focus();
-      await expect(tip).toHaveText('Synthetic field guidance.');
+      await expect(copy).toHaveText('Synthetic field guidance.');
       await page.keyboard.press('Escape');
       await expect(tip).toHaveAttribute('aria-hidden', 'true');
       assert.equal(await page.locator('#modal').getAttribute('open'), '',
