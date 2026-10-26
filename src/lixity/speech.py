@@ -176,10 +176,11 @@ def extract_audio_cues(
                 if pending:
                     segments.append(pending)
             cue_kind = "dialogue" if content.startswith(("„", "»", '"', "“", "'")) else "narrative"
+            speaker_id = 4 if has_emotional_voice else None
             for index, segment in enumerate(segments):
                 cues.append(AudioCue(segment, cue_kind, number, 1 / base_speed,
                                      pause_after=.45 if index == len(segments) - 1 else 0,
-                                     speaker_id=4 if has_emotional_voice else None, join_before="" if cjk else " "))
+                                     speaker_id=speaker_id, join_before="" if cjk else " "))
     return cues
 
 
@@ -306,6 +307,7 @@ def render_speech_audio(
         except (KeyError, TypeError, json.JSONDecodeError) as exc:
             raise ValueError("Invalid Piper voice configuration") from exc
     cues = extract_audio_cues(source.read_text(encoding="utf-8"), language, chapter,
+                              has_emotional_voice="emotional" in (selected or ""),
                               skip_editorial_markers=skip_markers, base_speed=base_speed)
     if profile is not None:
         planned: list[AudioCue] = []
@@ -370,7 +372,8 @@ def render_speech_audio(
 
             for cue in cues:
                 _check_cancelled(cancelled)
-                cue.speaker_id = speaker
+                if cue.speaker_id is None:
+                    cue.speaker_id = speaker
                 if cue.kind == "scene_break":
                     write_frames(bytes(int(rate * cue.pause_after) * 2))
                     continue
@@ -383,7 +386,8 @@ def render_speech_audio(
                     _check_cancelled(cancelled)
                     write_frames(frames)
                 elif voice is not None:
-                    synthesis = SynthesisConfig(speaker_id=speaker, length_scale=cue.length_scale,
+                    synthesis = SynthesisConfig(speaker_id=cue.speaker_id if cue.speaker_id is not None else speaker,
+                                                length_scale=cue.length_scale,
                                                 noise_scale=cue.noise_scale, noise_w_scale=cue.noise_w_scale)
                     count = 0
                     for chunk in voice.synthesize(cue.text, synthesis):
