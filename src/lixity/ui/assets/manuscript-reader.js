@@ -236,7 +236,7 @@
     var boundary = controls.getBoundingClientRect().bottom;
     var panel = Array.from(chapters.querySelectorAll(".ptext, .reader-structural")).find(function(candidate) {
       var rect = candidate.getBoundingClientRect();
-      return rect.height > 0 && rect.bottom > boundary && rect.top < innerHeight;
+      return rect.height > 0 && rect.bottom > boundary + 8 && rect.top < innerHeight;
     });
     if (!panel) return null;
     var anchor = {panel: panel, top: panel.getBoundingClientRect().top};
