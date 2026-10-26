@@ -23,6 +23,7 @@ from ..config import (
     validate_author_name,
     validate_project_title,
 )
+from ..manuscript_import import convert_docx, preview_docx
 from ..project_structure import MAX_CONFIG_BYTES, inspect_project
 from ..research import api as research_api
 from ..research.repository import Repository, ResearchError
@@ -481,3 +482,27 @@ class ProjectRoutesMixin(ResponseMixin):
                 "reload": True,
             }
         )
+
+    def _handle_manuscript_import_preview(self, payload: dict[str, Any]) -> None:
+        source_path = payload.get("path")
+        if not source_path or not isinstance(source_path, str):
+            self._json({"ok": False, "message": "Source document path is required"}, 400)
+            return
+        try:
+            preview = preview_docx(source_path)
+            self._json({"ok": True, **preview.to_dict()})
+        except (ValueError, FileNotFoundError, OSError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_manuscript_import_convert(self, payload: dict[str, Any]) -> None:
+        source_path = payload.get("path")
+        output_path = payload.get("output_path")
+        overwrite = bool(payload.get("overwrite", False))
+        if not source_path or not isinstance(source_path, str):
+            self._json({"ok": False, "message": "Source document path is required"}, 400)
+            return
+        try:
+            preview = convert_docx(source_path, output_path, overwrite=overwrite)
+            self._json({"ok": True, **preview.to_dict()})
+        except (ValueError, FileNotFoundError, FileExistsError, OSError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)

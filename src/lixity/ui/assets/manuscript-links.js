@@ -443,6 +443,24 @@
     button.addEventListener("pointerdown", function() { var value = selection(); remembered = value && value.panel === panel ? value : null; });
     button.addEventListener("click", function() {
       var value = selection() || remembered;
+      if (!value || value.panel !== panel || !live(value.context)) {
+        var paragraph = panel.querySelector(".ptext-inner > p");
+        var text = bridge.text(panel);
+        if (paragraph && text && text.trim() && text.length <= 10000) {
+          value = {
+            panel: panel,
+            anchor: {
+              paragraph_sha256: panel.dataset.paragraphSha256,
+              start_line: Number(panel.dataset.start),
+              end_line: Number(panel.dataset.end),
+              start: 0,
+              end: Array.from(text).length,
+              quote: text
+            },
+            context: context()
+          };
+        }
+      }
       if (!value || value.panel !== panel || !live(value.context)) { feedback.textContent = label("manuscript_link_invalid"); return; }
       open(value);
     });
@@ -906,6 +924,73 @@
     }
     termsReport = report; termsContext = value;
     termsTabHost.replaceChildren(renderTermsReport(report));
+    var chipsContainer = document.getElementById("r-term-chips");
+    if (chipsContainer) {
+      chipsContainer.replaceChildren();
+      var newBtn = element("button", "+ " + label("manuscript_terms_new"), "ctl");
+      newBtn.type = "button";
+      newBtn.addEventListener("click", function() {
+        var n = document.getElementById("r-term-name"); if (n) n.value = "";
+        var a = document.getElementById("r-term-aliases"); if (a) a.value = "";
+        var s = document.getElementById("r-term-scoped"); if (s) s.value = "";
+        var c = document.getElementById("r-term-case"); if (c) c.checked = false;
+        var st = document.getElementById("r-term-strict"); if (st) st.checked = false;
+      });
+      chipsContainer.appendChild(newBtn);
+      ((termsReport && termsReport.terms) || []).forEach(function(item) {
+        var chip = element("button", item.term, "ctl");
+        chip.type = "button";
+        chip.title = (item.aliases || []).join(", ");
+        chip.addEventListener("click", function() {
+          var n = document.getElementById("r-term-name"); if (n) n.value = item.term;
+          var a = document.getElementById("r-term-aliases"); if (a) a.value = (item.aliases || []).join(", ");
+          var s = document.getElementById("r-term-scoped");
+          if (s) {
+            s.value = (item.scoped_alternatives || []).map(function(alt) {
+              return alt.term + ":" + (alt.chapters || []).join(",");
+            }).join("; ");
+          }
+          var c = document.getElementById("r-term-case"); if (c) c.checked = Boolean(item.case_sensitive);
+          var st = document.getElementById("r-term-strict");
+          if (st) st.checked = item.strict_boundaries === null ? Boolean(item.case_sensitive) : Boolean(item.strict_boundaries);
+        });
+        chipsContainer.appendChild(chip);
+      });
+    }
+    var chapterChips = document.getElementById("r-term-chapter-chips");
+    if (chapterChips && chapters) {
+      var existingHint = chapterChips.querySelector(".ctl-note");
+      chapterChips.replaceChildren();
+      if (existingHint) chapterChips.appendChild(existingHint);
+      var chapterNodes = Array.from(chapters.querySelectorAll("[data-chapter-number]"));
+      var seenChapters = new Set();
+      chapterNodes.forEach(function(node) {
+        var num = Number(node.dataset.chapterNumber);
+        if (Number.isInteger(num) && num > 0 && !seenChapters.has(num)) {
+          seenChapters.add(num);
+          var chBtn = element("button", String(num), "ctl");
+          chBtn.type = "button";
+          chBtn.style.padding = "0.15rem 0.4rem";
+          chBtn.style.fontSize = "0.75rem";
+          chBtn.addEventListener("click", function() {
+            var s = document.getElementById("r-term-scoped");
+            if (!s) return;
+            var current = s.value.trim();
+            if (!current) {
+              s.value = "Alternative:" + num;
+            } else if (current.endsWith(":") || current.endsWith(",")) {
+              s.value = current + num;
+            } else if (/:\d+(,\d+)*$/.test(current)) {
+              s.value = current + "," + num;
+            } else {
+              s.value = current + ":" + num;
+            }
+            s.focus();
+          });
+          chapterChips.appendChild(chBtn);
+        }
+      });
+    }
   }
   if (termsSection) {
     termsSection.addEventListener("toggle", function() {

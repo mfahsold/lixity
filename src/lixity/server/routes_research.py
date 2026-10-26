@@ -107,6 +107,32 @@ class ResearchRoutesMixin(ResponseMixin):
         except (ResearchError, OSError, ValueError, TypeError) as exc:
             self._research_error(exc)
 
+    def _handle_research_images(self) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+            return
+        query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+        dossier_id = query.get("dossier_id", [None])[0]
+        try:
+            limit = int(query.get("limit", ["100"])[0])
+            offset = int(query.get("offset", ["0"])[0])
+        except (ValueError, TypeError):
+            self._json({"ok": False, "message": "Invalid limit or offset"}, 400)
+            return
+        missing_provenance = query.get("missing_provenance", ["false"])[0].lower() in ("true", "1")
+        try:
+            result = research_api.list_dossier_images(
+                root,
+                dossier_id=dossier_id,
+                limit=limit,
+                offset=offset,
+                missing_provenance=missing_provenance,
+            )
+            self._json({"ok": True, **result})
+        except (ResearchError, OSError, ValueError, TypeError) as exc:
+            self._research_error(exc)
+
     def _handle_research_media(self) -> None:
         self._handle_research_image(media=True)
 

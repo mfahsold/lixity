@@ -643,6 +643,7 @@ def render_research_panel(
     parts.append(
         f'<summary>{L("manuscript_terms_manage")}</summary><div class="ctl-group research-composer-body">'
     )
+    parts.append('<div id="r-term-chips" class="row mb-2" style="flex-wrap:wrap;gap:0.35rem"></div>')
     parts.append('<div class="row mb-2">')
     parts.append(
         form_field(
@@ -678,6 +679,9 @@ def render_research_panel(
         )
     )
     parts.append("</div>")
+    parts.append(
+        f'<div id="r-term-chapter-chips" class="row mb-2" style="flex-wrap:wrap;gap:0.25rem;align-items:center"><span class="ctl-note">{L("manuscript_terms_chapters_hint")}</span></div>'
+    )
     parts.append('<div class="row">')
     parts.append(
         f'<button type="button" class="ctl primary" id="r-term-save-btn">{L("manuscript_terms_save")}</button>'

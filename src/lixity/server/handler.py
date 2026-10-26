@@ -59,6 +59,7 @@ class LixityServerHandler(
         "/api/research/status": "_handle_research_status",
         "/api/research/sources": "_handle_research_sources",
         "/api/research/image": "_handle_research_image",
+        "/api/research/images": "_handle_research_images",
         "/api/research/media": "_handle_research_media",
         "/api/research/dossiers": "_handle_research_dossiers",
         "/api/research/claims": "_handle_research_claims",
@@ -115,6 +116,8 @@ class LixityServerHandler(
         "research-record-prepare": "_handle_research_record_prepare",
         "research-revision-batch-prepare": "_handle_research_revision_batch_prepare",
         "research-revision-batch-apply": "_handle_research_revision_batch_apply",
+        "manuscript-import-preview": "_handle_manuscript_import_preview",
+        "manuscript-import-convert": "_handle_manuscript_import_convert",
     }
 
     #: Actions deliberately not implemented by the standalone server.

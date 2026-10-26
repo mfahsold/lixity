@@ -340,6 +340,40 @@ class TestLixityServer(unittest.TestCase):
         )
         self.assertEqual(status, 413)
 
+    def test_manuscript_docx_import_routes(self):
+        from tests.test_manuscript_import import _create_synthetic_docx_bytes
+
+        docx_bytes = _create_synthetic_docx_bytes()
+        docx_path = Path(self.temp_dir.name) / "test_book.docx"
+        docx_path.write_bytes(docx_bytes)
+        md_target = Path(self.temp_dir.name) / "converted_book.md"
+
+        status, body, _ = self.make_request(
+            "/api/manuscript-import-preview",
+            method="POST",
+            body=json.dumps({"path": str(docx_path)}),
+            headers={"Content-Type": "application/json"},
+        )
+        self.assertEqual(status, 200)
+        data = json.loads(body)
+        self.assertTrue(data["ok"])
+        self.assertEqual(data["schema_version"], "manuscript-import-preview-local/1")
+        self.assertIn("# The Mariner's Gate", data["markdown"])
+        self.assertGreater(len(data["headings"]), 0)
+        self.assertGreater(len(data["loss_report"]), 0)
+
+        status, body, _ = self.make_request(
+            "/api/manuscript-import-convert",
+            method="POST",
+            body=json.dumps({"path": str(docx_path), "output_path": str(md_target)}),
+            headers={"Content-Type": "application/json"},
+        )
+        self.assertEqual(status, 200)
+        conv_data = json.loads(body)
+        self.assertTrue(conv_data["ok"])
+        self.assertTrue(md_target.is_file())
+        self.assertEqual(md_target.read_text(encoding="utf-8"), conv_data["markdown"])
+
     def test_post_rebuild_success(self):
         status, body, _ = self.make_request(
             "/api/rebuild",
@@ -1036,12 +1070,18 @@ class TestLixityServer(unittest.TestCase):
                     )
                     self.assertEqual(status, 400, body)
 
-                # 8. List Dossiers
+                # 8. List Dossiers & Images
                 status, body, _ = self.make_request("/api/research/dossiers")
                 self.assertEqual(status, 200)
                 dos_data = json.loads(body)
                 self.assertEqual(len(dos_data["dossiers"]), 1)
                 self.assertEqual(dos_data["dossiers"][0]["evidence_count"], 1)
+
+                status, body, _ = self.make_request("/api/research/images")
+                self.assertEqual(status, 200)
+                img_data = json.loads(body)
+                self.assertTrue(img_data["ok"])
+                self.assertEqual(img_data["schema_version"], "research-dossier-images-local/1")
 
                 # 9. Compare source against manuscript
                 cmp_payload = json.dumps({"source_id": source_id})
