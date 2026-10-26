@@ -494,6 +494,53 @@ matching headings are ambiguous and require reading the full dossier. Direct ID,
 `show ID`, `inspect ID` and `--dossier-id ID` use the same section read. An explicit
 `--revision N` retains that version; opening text never re-pins or saves it.
 
+<a id="configured-terms-and-boundary-policies"></a>
+
+### Configured terms, props and boundary policies
+
+Configured terms (`[terms]` in `lixity.toml`) let authors track recurring terminology,
+props, characters and their chapter-scoped alternatives across a manuscript. Term
+definitions are project configuration settings; declaring or reviewing terms never
+revises the research archive or alters manuscript files.
+
+```sh
+# Declare a term with aliases and chapter-scoped alternatives
+lixity research terms --project ./novel --set-term "brass compass" \
+  --aliases "mariner's dial" \
+  --scoped-alternative "old pocket-watch:1,2"
+
+# Review occurrences against a manuscript
+lixity research terms --project ./novel --manuscript novel.md --format table
+```
+
+#### Word boundary policies and hyphen matching
+
+By default in standard Unicode/ICU text segmentation (UAX #29), hyphens (U+002D)
+are treated as punctuation/non-word characters. While appropriate for ordinary prose
+tokenization, this causes short abbreviations or identifiers (such as `"RM"`) to trigger
+false-positive matches inside composite hyphenated codes (such as `"RM-CURIA-084"`).
+
+To address this, term profiles support a tri-state boundary setting (`strict_boundaries: bool | None`):
+
+- **Automatic default (`strict_boundaries = None`, omitted from config):**
+  Follows `--case-sensitive`. Case-sensitive terms automatically treat hyphens as intra-word
+  characters (`[\w-]`), preventing partial hits in hyphenated codes (e.g. `"RM"` matches
+  standalone `"RM"`, but not `"RM-CURIA-084"`). Case-insensitive terms retain standard
+  Unicode word boundaries.
+- **Strict override (`--strict-boundaries`, `strict_boundaries = true`):**
+  Forces hyphens to be treated as intra-word characters even for case-insensitive terms.
+- **Legacy Unicode override (`--no-strict-boundaries`, `strict_boundaries = false`):**
+  Treats hyphens as word boundaries even for case-sensitive terms, for authors who
+  intentionally want to capture substrings inside composite codes.
+
+```sh
+# Require strict hyphen-aware boundaries for a case-insensitive prop code
+lixity research terms --project ./novel --set-term "prop-42" --strict-boundaries
+
+# Permit substring matching across hyphens even when case-sensitive
+lixity research terms --project ./novel --set-term "CURIA" --case-sensitive --no-strict-boundaries
+```
+
 ### Claims linked to a dossier
 
 The dossier detail groups **Dossier notes**, **Linked claims** and

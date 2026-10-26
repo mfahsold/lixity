@@ -613,8 +613,9 @@ def configure(parser: argparse.ArgumentParser) -> None:
             )
             command.add_argument(
                 "--strict-boundaries",
-                action="store_true",
-                help="Treat hyphens as word characters for --set-term, so terms do not match inside hyphenated codes (implied by --case-sensitive)",
+                action=argparse.BooleanOptionalAction,
+                default=None,
+                help="Treat hyphens as word characters for --set-term (implied by --case-sensitive; use --no-strict-boundaries to disable)",
             )
             command.add_argument(
                 "--dossier-id", help="Optional reference dossier UUID for --set-term"
@@ -2763,7 +2764,7 @@ def run(args: argparse.Namespace) -> int:
                     aliases=aliases,
                     scoped_alternatives=scoped_list,
                     case_sensitive=bool(getattr(args, "case_sensitive", False)),
-                    strict_boundaries=bool(getattr(args, "strict_boundaries", False)),
+                    strict_boundaries=getattr(args, "strict_boundaries", None),
                     dossier_id=getattr(args, "dossier_id", None),
                     claim_id=getattr(args, "claim_id", None),
                 )
@@ -2774,7 +2775,7 @@ def run(args: argparse.Namespace) -> int:
                     or getattr(args, "aliases", None) is not None
                     or getattr(args, "scoped_alternatives", None) is not None
                     or getattr(args, "case_sensitive", False)
-                    or getattr(args, "strict_boundaries", False)
+                    or getattr(args, "strict_boundaries", None) is not None
                     or getattr(args, "dossier_id", None) is not None
                     or getattr(args, "claim_id", None) is not None
                 ):
@@ -2787,7 +2788,7 @@ def run(args: argparse.Namespace) -> int:
                     getattr(args, "aliases", None) is not None
                     or getattr(args, "scoped_alternatives", None) is not None
                     or getattr(args, "case_sensitive", False)
-                    or getattr(args, "strict_boundaries", False)
+                    or getattr(args, "strict_boundaries", None) is not None
                     or getattr(args, "dossier_id", None) is not None
                     or getattr(args, "claim_id", None) is not None
                 ):

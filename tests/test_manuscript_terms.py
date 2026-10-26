@@ -171,6 +171,117 @@ class ManuscriptTermsTests(unittest.TestCase):
         site_html = bundle.files["index.html"].decode("utf-8")
         self.assertIn("/api/research/manuscript-terms", site_html)
 
+    def test_strict_word_boundaries_hyphen_matching(self) -> None:
+        manuscript = self.root / "hyphen_test.md"
+        manuscript.write_text(
+            "## Chapter 1: Codes\n\n"
+            "The agent RM entered RM-CURIA-084 into the registry.\n"
+            "Later, rm was seen near CURIA-RM-084.\n",
+            encoding="utf-8",
+        )
+
+        # 1. Default (strict_boundaries=None, case_sensitive=True) -> strict hyphen boundaries
+        api.save_term_profile(
+            self.root,
+            "RM",
+            case_sensitive=True,
+            strict_boundaries=None,
+        )
+        report = api.review_manuscript_terms(self.root, manuscript)
+        self.assertEqual(report["occurrence_count"], 1)
+        self.assertEqual(report["occurrences"][0]["matched_form"], "RM")
+
+        # 2. Legacy override (strict_boundaries=False, case_sensitive=True) -> hyphen is boundary
+        api.save_term_profile(
+            self.root,
+            "RM",
+            case_sensitive=True,
+            strict_boundaries=False,
+        )
+        report = api.review_manuscript_terms(self.root, manuscript)
+        self.assertEqual(report["occurrence_count"], 3)
+
+        # 3. Default case-insensitive (strict_boundaries=None, case_sensitive=False) -> legacy
+        api.save_term_profile(
+            self.root,
+            "RM",
+            case_sensitive=False,
+            strict_boundaries=None,
+        )
+        report = api.review_manuscript_terms(self.root, manuscript)
+        self.assertEqual(report["occurrence_count"], 4)
+
+        # 4. Strict override on case-insensitive (strict_boundaries=True, case_sensitive=False)
+        api.save_term_profile(
+            self.root,
+            "RM",
+            case_sensitive=False,
+            strict_boundaries=True,
+        )
+        report = api.review_manuscript_terms(self.root, manuscript)
+        self.assertEqual(report["occurrence_count"], 2)
+
+        # 5. CLI flag verification: BooleanOptionalAction
+        # --strict-boundaries sets true
+        cli_buf = io.StringIO()
+        with redirect_stdout(cli_buf):
+            code = cli_main(
+                [
+                    "research",
+                    "terms",
+                    "--project",
+                    str(self.root),
+                    "--set-term",
+                    "RM",
+                    "--case-sensitive",
+                    "--strict-boundaries",
+                    "--format",
+                    "json",
+                ]
+            )
+        self.assertEqual(code, 0)
+        cfg = read_explicit_project_config(self.root)
+        self.assertIs(cfg["terms"]["RM"]["strict_boundaries"], True)
+
+        # --no-strict-boundaries sets false
+        with redirect_stdout(cli_buf):
+            code = cli_main(
+                [
+                    "research",
+                    "terms",
+                    "--project",
+                    str(self.root),
+                    "--set-term",
+                    "RM",
+                    "--case-sensitive",
+                    "--no-strict-boundaries",
+                    "--format",
+                    "json",
+                ]
+            )
+        self.assertEqual(code, 0)
+        cfg = read_explicit_project_config(self.root)
+        self.assertIs(cfg["terms"]["RM"]["strict_boundaries"], False)
+
+        # omitting flag leaves strict_boundaries as None (omitted from config dump)
+        with redirect_stdout(cli_buf):
+            code = cli_main(
+                [
+                    "research",
+                    "terms",
+                    "--project",
+                    str(self.root),
+                    "--set-term",
+                    "RM",
+                    "--case-sensitive",
+                    "--format",
+                    "json",
+                ]
+            )
+        self.assertEqual(code, 0)
+        cfg = read_explicit_project_config(self.root)
+        self.assertNotIn("strict_boundaries", cfg["terms"]["RM"])
+
 
 if __name__ == "__main__":
     unittest.main()
