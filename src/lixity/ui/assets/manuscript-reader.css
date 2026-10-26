@@ -288,6 +288,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   background: var(--paragraph-layer-wash);
   border-radius: var(--radius-sm);
   padding: .35rem .75rem;
+  margin-block: -.35rem calc(1em - .35rem);
   margin-inline: -.75rem;
   transition: background .2s ease;
 }
@@ -315,9 +316,22 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   transform: translateY(-1px);
   box-shadow: 0 2px 4px color-mix(in srgb, var(--paragraph-layer-color) 15%, transparent);
 }
+.reader-comparison-value:focus-visible {
+  outline: 2px solid var(--paragraph-layer-color);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reader-comparison-value,
+  .reader-evidence-toggle,
+  .reader-comparison-toggle {
+    transition: none;
+    transform: none;
+  }
+}
 @media (forced-colors: active) {
   .reader-comparison-value { border-inline-start-color: CanvasText; }
   .manuscript-reading.workbench-analysis.comparison-on:not(.workbench-overview):not(.reader-focus) .ptext.metric-notable { background: none; }
+  .reader-evidence-toggle:has(input:checked), .reader-comparison-toggle:has(input:checked) { border-color: Highlight; }
   #chapters .ptext::before, #chapters .reader-return-target::after { background: CanvasText; }
 }
 

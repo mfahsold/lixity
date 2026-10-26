@@ -297,3 +297,21 @@ def test_count_labels_carry_singular_forms():
 def test_default_labels_cover_the_scene_pack():
     for key, value in language_data.SCENE_LABELS["en"].items():
         assert label(None, key) == value
+
+
+def test_style_layer_groups_are_localized_across_all_locales():
+    paragraphs, chapters = ParagraphProfiler(CorpusConfig(language="en")).profile_blocks(
+        parse_markdown_blocks("## Chapter 1\n\nThis is a test paragraph with several words.\n")
+    )
+    for language in LOCALES:
+        labels = LANGUAGE_PROFILES[language].labels
+        rhythm = language_data.METRIC_LABELS[language]["layer_group_rhythm"]
+        voice = language_data.METRIC_LABELS[language]["layer_group_voice"]
+        grammar = language_data.METRIC_LABELS[language]["layer_group_grammar"]
+        assert rhythm.strip()
+        assert voice.strip()
+        assert grammar.strip()
+        rendered = render_dashboard(chapters, paragraphs, controls=True, labels=labels, language_key=language)
+        assert f'<optgroup label="{escape(rhythm)}">' in rendered, f"Missing {rhythm} in {language}"
+        assert f'<optgroup label="{escape(voice)}">' in rendered, f"Missing {voice} in {language}"
+        assert f'<optgroup label="{escape(grammar)}">' in rendered, f"Missing {grammar} in {language}"

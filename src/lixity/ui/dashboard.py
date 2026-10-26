@@ -873,6 +873,7 @@ def render_dashboard(
             ("layer_group_voice", ("dialogue", "filter")),
             ("layer_group_grammar", ("passive", "modal", "nominal")),
         )
+        grouped_members = {m for _, members in layer_groups for m in members}
         grouped_layer_options = []
         for group_label_key, members in layer_groups:
             options_html = "".join(
@@ -886,6 +887,18 @@ def render_dashboard(
             )
             if options_html:
                 grouped_layer_options.append(f'<optgroup label="{L(group_label_key)}">{options_html}</optgroup>')
+
+        remaining_options = "".join(
+            f'<option value="{layer_key}" '
+            f'data-hint="{esc(label(labels, "layer_hint_" + layer_key), quote=True)}" '
+            f'data-unit="{esc(FEATURE_UNITS.get(language_key, FEATURE_UNITS["en"])[LAYER_FEATURES[layer_key]], quote=True)}" '
+            f'data-comparable="{len(layer_data.get(layer_key, {}))}">'
+            f"{esc(label(labels, 'layer_' + layer_key))}</option>"
+            for layer_key in LAYER_FEATURES
+            if layer_key not in grouped_members
+        )
+        if remaining_options:
+            grouped_layer_options.append(remaining_options)
 
         metric_control = (
             '<label class="metric-layer-control">'

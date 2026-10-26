@@ -85,6 +85,44 @@ class TestAnalysisOverview(unittest.TestCase):
         self.assertIn("What is counted", panel)
         self.assertIn("blockquotes", panel)
 
+    def test_style_layer_is_grouped_with_optgroups_and_preserves_attributes(self):
+        html = self.render()
+        match = re.search(r'<select class="ctl" id="style-layer">(.*?)</select>', html, re.DOTALL)
+        self.assertIsNotNone(match, "Expected #style-layer select element")
+        select_body = match.group(1)
+        # Check first top-level option is the empty/off value
+        first_option = re.search(r'^\s*<option value="">(.*?)</option>', select_body)
+        self.assertIsNotNone(first_option)
+        self.assertEqual(first_option.group(1), "None")
+
+        # Check optgroups
+        optgroups = re.findall(r'<optgroup label="([^"]+)">(.*?)</optgroup>', select_body, re.DOTALL)
+        self.assertEqual(len(optgroups), 3)
+        expected_groups = [
+            ("Sentence &amp; Rhythm", ("asl", "function")),
+            ("Voice &amp; Dialogue", ("dialogue", "filter")),
+            ("Grammar &amp; Style", ("passive", "modal", "nominal")),
+        ]
+        for (expected_label, expected_members), (actual_label, group_content) in zip(expected_groups, optgroups, strict=True):
+            self.assertEqual(actual_label, expected_label)
+            options = re.findall(r'<option value="([^"]+)" data-hint="([^"]*)" data-unit="([^"]*)" data-comparable="(\d+)">', group_content)
+            actual_keys = tuple(opt[0] for opt in options)
+            self.assertEqual(actual_keys, expected_members)
+            for key, hint, _unit, comparable in options:
+                self.assertTrue(len(hint) > 0, f"Hint should not be empty for {key}")
+                self.assertTrue(int(comparable) >= 0)
+
+    def test_reader_analysis_switches_render_pill_toggles_with_accessible_controls(self):
+        html = self.render()
+        self.assertIn('class="reader-analysis-switches"', html)
+        self.assertIn('class="reader-evidence-toggle"', html)
+        self.assertIn('id="analysis-evidence-enabled"', html)
+        self.assertIn('class="reader-comparison-toggle"', html)
+        self.assertIn('id="analysis-comparison-enabled"', html)
+        # Ensure toggles are checked by default
+        self.assertRegex(html, r'<input type="checkbox" id="analysis-evidence-enabled" checked\s*/?>')
+        self.assertRegex(html, r'<input type="checkbox" id="analysis-comparison-enabled" checked\s*/?>')
+
 
 if __name__ == "__main__":
     unittest.main()

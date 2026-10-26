@@ -128,8 +128,12 @@
       }
     });
     if (supported) {
-      var highlight = new Highlight(); ranges.forEach(function(range) {highlight.add(range);}); highlight.priority = -1;
-      CSS.highlights.set("lixity-analysis-evidence", highlight);
+      if (ranges.length > 0) {
+        var highlight = new Highlight(); ranges.forEach(function(range) {highlight.add(range);}); highlight.priority = -1;
+        CSS.highlights.set("lixity-analysis-evidence", highlight);
+      } else {
+        CSS.highlights.delete("lixity-analysis-evidence");
+      }
     }
     setStatus(!supported ? message("evidence_unsupported") : failures.includes("evidence_mismatch") ? message("evidence_mismatch") :
       failures.includes("evidence_verification_unavailable") ? message("evidence_verification_unavailable") :
@@ -155,7 +159,7 @@
     var record = card.record, layer = record.layers[select.value];
     var spans = layer ? layer.spans : [], span = spans[card.index];
     var chip = paragraphChips[record.panel.id], info = chip && chipLayers(chip)[select.value];
-    var option = select.options[select.selectedIndex];
+    var option = (select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null) || (select.value ? select.querySelector('option[value="' + select.value + '"]') : null) || {textContent: "", dataset: {}};
     var content = paragraphContent[record.panel.id], summaries = content[4];
     var summary = summaries && typeof summaries[select.value] === "string" ? summaries[select.value] : content[2];
     var warning = record.error || (!layer || layer.value.status === "unavailable" ? "evidence_unavailable" :
@@ -279,12 +283,14 @@
     var layer = record && record.layers[select.value];
     if (!layer || !shown(panel)) return null;
     // A thousand word spans otherwise require a thousand layout rectangle reads
-    // per pointer frame. Reuse only while actual prose geometry/type is unchanged;
-    // search/claim DOM replacement invalidates the entire record separately.
-    var bounds = record.prose.getBoundingClientRect(), style = getComputedStyle(record.prose);
-    var geometry = [bounds.left, bounds.top, bounds.width, bounds.height, style.font,
-      style.lineHeight, style.letterSpacing, style.wordSpacing].join("|");
-    if (record.geometry !== geometry) {record.geometry = geometry; record.rects = new Map();}
+    // per pointer frame. Reuse only while actual prose geometry is unchanged.
+    var bounds = record.prose.getBoundingClientRect();
+    if (record.boundsLeft !== bounds.left || record.boundsTop !== bounds.top ||
+        record.boundsWidth !== bounds.width || record.boundsHeight !== bounds.height) {
+      record.boundsLeft = bounds.left; record.boundsTop = bounds.top;
+      record.boundsWidth = bounds.width; record.boundsHeight = bounds.height;
+      record.rects = new Map();
+    }
     for (var index = 0; index < layer.spans.length; index++) {
       var range = layer.spans[index].range, boxes = record.rects.get(range);
       if (!boxes) {boxes = Array.from(range.getClientRects()); record.rects.set(range, boxes);}

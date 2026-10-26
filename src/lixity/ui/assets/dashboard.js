@@ -329,17 +329,26 @@ function stepOutlier(direction) {
 }
 
 function paintLayerAction(panel, info) {
-  var actions = panel.querySelector(".reader-paragraph-actions");
+  var actions = panel._paragraphActions || (panel._paragraphActions = panel.querySelector(".reader-paragraph-actions"));
   if (!actions) return;
   var shown = document.body.classList.contains("workbench-analysis") && !document.body.classList.contains("workbench-overview") &&
     !document.body.classList.contains("reader-focus") && (!comparisonToggle || comparisonToggle.checked);
   var notable = Boolean(shown && info && Math.abs(info[2]) >= layerCutoff);
   if (!actions._metricBase) actions._metricBase = {label: actions.getAttribute("aria-label"), help: actions.dataset.help};
-  actions.setAttribute("aria-label", notable ? info[1] + " · " + actions._metricBase.label : actions._metricBase.label);
-  actions.dataset.help = notable ? info[1] + " · " + actions._metricBase.help : actions._metricBase.help;
-  if (notable) actions.dataset.layerSymbol = info[2] < 0 ? "↓" : "↑";
-  else delete actions.dataset.layerSymbol;
-  var marker = panel.querySelector(":scope > .reader-comparison-value");
+  if (notable) {
+    var fullLabel = info[1] + " · " + actions._metricBase.label;
+    if (actions.getAttribute("aria-label") !== fullLabel) actions.setAttribute("aria-label", fullLabel);
+    actions.dataset.help = info[1] + " · " + actions._metricBase.help;
+    actions.dataset.layerSymbol = info[2] < 0 ? "↓" : "↑";
+  } else if (actions.dataset.layerSymbol) {
+    actions.setAttribute("aria-label", actions._metricBase.label);
+    actions.dataset.help = actions._metricBase.help;
+    delete actions.dataset.layerSymbol;
+  }
+  var marker = panel._comparisonMarker;
+  if (!marker && (notable || panel.querySelector(":scope > .reader-comparison-value"))) {
+    marker = panel._comparisonMarker = panel.querySelector(":scope > .reader-comparison-value");
+  }
   if (!marker && notable && info[3] !== undefined) {
     marker = document.createElement("button"); marker.type = "button";
     marker.className = "reader-comparison-value";
@@ -348,13 +357,16 @@ function paintLayerAction(panel, info) {
       else actions.click();
     });
     panel.prepend(marker);
+    panel._comparisonMarker = marker;
   }
   if (marker) {
     marker.hidden = !notable;
     if (notable) {
-      marker.textContent = actions.dataset.layerSymbol + " " + info[3];
-      marker.setAttribute("aria-label", info[1] + ". " + uiLabel("evidence_inspect"));
-      marker.title = info[1];
+      var text = actions.dataset.layerSymbol + " " + info[3];
+      if (marker.textContent !== text) marker.textContent = text;
+      var aria = info[1] + ". " + uiLabel("evidence_inspect");
+      if (marker.getAttribute("aria-label") !== aria) marker.setAttribute("aria-label", aria);
+      if (marker.title !== info[1]) marker.title = info[1];
     }
   }
 }
@@ -375,7 +387,7 @@ function applyLayer() {
   document.body.classList.toggle("comparison-on", comparing);
   document.querySelectorAll(".chip").forEach(function (chip) {
     var info = key ? chipLayers(chip)[key] : null;
-    var panel = document.getElementById(chip.dataset.target);
+    var panel = chip._panel || (chip._panel = document.getElementById(chip.dataset.target));
     var notable = Boolean(info && Math.abs(info[2]) >= layerCutoff);
     if (info && comparing) {
       chip.style.setProperty("--layer-color", info[0]);
@@ -403,27 +415,29 @@ function applyLayer() {
   if (layerLegend) {
     layerLegend.hidden = !key;
     if (key && layer) {
-      var option = layer.options[layer.selectedIndex];
-      var title = document.getElementById("layer-legend-title");
-      var hint = option.getAttribute("data-hint") || "";
-      if (title) {
-        title.textContent = option.dataset.unit ? option.textContent + " · " + option.dataset.unit : option.textContent;
-        if (hint) title.setAttribute("data-tip", hint);
-        else title.removeAttribute("data-tip");
+      var option = (layer.selectedIndex >= 0 ? layer.options[layer.selectedIndex] : null) || layer.querySelector('option[value="' + key + '"]');
+      if (option) {
+        var title = document.getElementById("layer-legend-title");
+        var hint = option.getAttribute("data-hint") || "";
+        if (title) {
+          title.textContent = option.dataset.unit ? option.textContent + " · " + option.dataset.unit : option.textContent;
+          if (hint) title.setAttribute("data-tip", hint);
+          else title.removeAttribute("data-tip");
+        }
+        var comparisonHint = document.getElementById("layer-comparison-hint");
+        if (comparisonHint) comparisonHint.textContent = hint;
+        var evidenceHint = document.getElementById("layer-evidence-hint");
+        if (evidenceHint) evidenceHint.textContent = uiFormat("legend_counted_text_hint", {metric: option.textContent});
+        var comparable = Number(option.dataset.comparable);
+        var count = outlierChips().length;
+        if (layerCount) {
+          layerCount.textContent = comparable ? uiFormat("layer_coverage", {
+            notable: count, comparable: comparable, total: layerLegend.dataset.profiled
+          }) : uiLabel("layer_unavailable");
+        }
+        if (layerOnly) layerOnly.disabled = comparable === 0 || !comparing;
+        if (comparable === 0 || !comparing) setFilter(layerOnly, "layer-only", false);
       }
-      var comparisonHint = document.getElementById("layer-comparison-hint");
-      if (comparisonHint) comparisonHint.textContent = hint;
-      var evidenceHint = document.getElementById("layer-evidence-hint");
-      if (evidenceHint) evidenceHint.textContent = uiFormat("legend_counted_text_hint", {metric: option.textContent});
-      var comparable = Number(option.dataset.comparable);
-      var count = outlierChips().length;
-      if (layerCount) {
-        layerCount.textContent = comparable ? uiFormat("layer_coverage", {
-          notable: count, comparable: comparable, total: layerLegend.dataset.profiled
-        }) : uiLabel("layer_unavailable");
-      }
-      if (layerOnly) layerOnly.disabled = comparable === 0 || !comparing;
-      if (comparable === 0 || !comparing) setFilter(layerOnly, "layer-only", false);
     }
   }
   syncOutlierNavigation();
@@ -652,8 +666,8 @@ document.addEventListener("lixity:reader-ready", function initAnalysisGuide() {
     guide.hidden = state.surface !== "document" || state.focus;
     var key = !state.analysisVisible ? "analysis_guide_off" :
       !metric.value ? "analysis_guide_none" : "analysis_guide_selected";
-    var option = metric.options[metric.selectedIndex];
-    status.textContent = uiFormat(key, {metric:option.textContent, unit:option.dataset.unit || ""});
+    var option = metric.selectedIndex >= 0 ? metric.options[metric.selectedIndex] : (metric.value ? metric.querySelector('option[value="' + metric.value + '"]') : null);
+    status.textContent = uiFormat(key, {metric: option ? option.textContent : "", unit: (option && option.dataset.unit) || ""});
   }
   document.addEventListener("lixity:workbench-change", update);
   document.addEventListener("lixity:analysis-layer-change", update);
