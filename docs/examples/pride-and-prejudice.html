@@ -4293,12 +4293,26 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .reader-analysis-controls .metric-layer-control { display: flex; align-items: center; gap: .5rem; min-width: 0; flex: 1 1 16rem; }
 .reader-analysis-controls .metric-layer-control > span { flex-shrink: 0; font-size: var(--text-note); color: var(--fg-secondary); }
 .reader-analysis-controls select { flex: 1 1 auto; width: 100%; min-width: 0; }
-.reader-analysis-switches { display: flex; grid-column: 1 / -1; flex-wrap: wrap; gap: .25rem .65rem; min-width: 0; }
-.reader-outlier-navigation { display: inline-flex; align-items: center; gap: var(--space-1); }
-.reader-outlier-navigation .ctl { min-width: 44px; min-height: 44px; padding: .4rem; }
-.reader-outlier-navigation output { min-width: 4.5ch; text-align: center; color: var(--fg-secondary); font: var(--text-note)/var(--line-control) var(--font); font-variant-numeric: tabular-nums; }
-.reader-evidence-toggle, .reader-comparison-toggle { display: flex; gap: .5rem; align-items: center; min-height: 44px; font-size: var(--text-note); }
-.reader-evidence-toggle input, .reader-comparison-toggle input { flex-shrink: 0; }
+.reader-analysis-switches { display: flex; grid-column: 1 / -1; flex-wrap: wrap; gap: .35rem .65rem; min-width: 0; align-items: center; margin-top: .15rem; }
+.reader-outlier-navigation { display: inline-flex; align-items: center; gap: .25rem; }
+.reader-outlier-navigation .ctl { min-width: 32px; min-height: 32px; padding: .25rem .5rem; border-radius: var(--radius-sm); }
+.reader-outlier-navigation output { min-width: 4.5ch; text-align: center; color: var(--fg-secondary); font: var(--text-note)/var(--line-control) var(--font); font-variant-numeric: tabular-nums; font-weight: 500; }
+.reader-evidence-toggle, .reader-comparison-toggle {
+  display: inline-flex; gap: .45rem; align-items: center; min-height: 32px;
+  padding: .2rem .65rem; border-radius: var(--radius-full, 9999px);
+  border: 1px solid var(--line); background: var(--surface);
+  font-size: var(--text-note); color: var(--fg-secondary);
+  cursor: pointer; user-select: none; transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+.reader-evidence-toggle:hover, .reader-comparison-toggle:hover {
+  border-color: var(--line-strong); color: var(--fg); background: var(--surface-raised, var(--surface));
+}
+.reader-evidence-toggle:has(input:checked), .reader-comparison-toggle:has(input:checked) {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+  color: var(--fg); font-weight: 500;
+}
+.reader-evidence-toggle input, .reader-comparison-toggle input { flex-shrink: 0; margin: 0; accent-color: var(--accent); }
 .analysis-evidence-key { text-decoration: underline; text-decoration-color: var(--analysis-evidence-color); text-decoration-thickness: 2px; text-underline-offset: .2em; }
 .analysis-comparison-key { border-inline-start: 3px solid var(--accent); padding-inline-start: .4rem; }
 #analysis-evidence-status:empty { display: none; }
@@ -4502,25 +4516,40 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 
 /* Comparison lives at the paragraph edge; the counted text has its own underline. */
 .manuscript-reading.workbench-analysis.comparison-on:not(.workbench-overview):not(.reader-focus) .ptext.metric-notable {
-  --paragraph-layer-wash: light-dark(color-mix(in srgb, var(--paragraph-layer-color) 6%, transparent), color-mix(in srgb, var(--paragraph-layer-color) 9%, transparent));
-  background-image: linear-gradient(to right, var(--paragraph-layer-wash), transparent 65%);
+  --paragraph-layer-wash: light-dark(color-mix(in srgb, var(--paragraph-layer-color) 4%, transparent), color-mix(in srgb, var(--paragraph-layer-color) 7%, transparent));
+  background: var(--paragraph-layer-wash);
+  border-radius: var(--radius-sm);
+  padding: .35rem .75rem;
+  margin-inline: -.75rem;
+  transition: background .2s ease;
 }
 .manuscript-reading.workbench-analysis.comparison-on:not(.workbench-overview):not(.reader-focus) .ptext.metric-notable:not(.reader-inspector-target)::before {
   background: var(--paragraph-layer-color); width: 3px;
 }
 .reader-comparison-value { display: none; }
 .manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus).comparison-on .reader-comparison-value:not([hidden]) {
-  display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; justify-self: start;
-  border: 0; border-inline-start: 3px solid var(--paragraph-layer-color); border-radius: 0;
-  background: transparent; color: var(--fg-secondary); padding: .1rem .55rem;
-  min-height: 44px; margin-block-end: .25rem; font: var(--text-note)/1.25 var(--font);
-  min-inline-size: 0; max-inline-size: 100%; overflow-wrap: anywhere; text-align: start;
+  display: inline-flex; flex-wrap: nowrap; align-items: center; justify-content: flex-start; justify-self: start; gap: .35rem;
+  border: 1px solid color-mix(in srgb, var(--paragraph-layer-color) 30%, transparent);
+  border-inline-start: 3px solid var(--paragraph-layer-color);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--paragraph-layer-color) 10%, var(--surface));
+  color: var(--fg); padding: .18rem .55rem;
+  min-height: 26px; margin-block-end: .35rem; font: var(--text-micro, 0.75rem)/1.2 var(--font-mono, monospace);
+  font-weight: 600; min-inline-size: 0; max-inline-size: 100%; overflow-wrap: anywhere; text-align: start;
   font-variant-numeric: tabular-nums; cursor: pointer;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--paragraph-layer-color) 10%, transparent);
+  transition: background .15s ease, border-color .15s ease, transform .1s ease, box-shadow .15s ease;
 }
-.reader-comparison-value:hover { text-decoration: underline; }
+.reader-comparison-value:hover {
+  background: color-mix(in srgb, var(--paragraph-layer-color) 18%, var(--surface));
+  border-color: var(--paragraph-layer-color);
+  text-decoration: none;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px color-mix(in srgb, var(--paragraph-layer-color) 15%, transparent);
+}
 @media (forced-colors: active) {
   .reader-comparison-value { border-inline-start-color: CanvasText; }
-  .manuscript-reading.workbench-analysis.comparison-on:not(.workbench-overview):not(.reader-focus) .ptext.metric-notable { background-image: none; }
+  .manuscript-reading.workbench-analysis.comparison-on:not(.workbench-overview):not(.reader-focus) .ptext.metric-notable { background: none; }
   #chapters .ptext::before, #chapters .reader-return-target::after { background: CanvasText; }
 }
 
@@ -4647,11 +4676,11 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 
 /* Native metric ranges coexist with neutral dotted research marks and selection. */
 ::highlight(lixity-analysis-evidence), .analysis-evidence-swatch {
-  background-color: transparent;
+  background-color: color-mix(in srgb, var(--analysis-evidence-color) 8%, transparent);
   text-decoration: underline;
   text-decoration-color: var(--analysis-evidence-color);
-  text-decoration-thickness: 2px;
-  text-underline-offset: .15em;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: .2em;
 }
 .analysis-evidence-swatch { padding: .15em .35em; color: var(--fg); }
 .layer-legend-group { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem 1rem; flex-basis: 100%; min-width: 0; }
@@ -4661,10 +4690,11 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 #layer-evidence-legend { padding-bottom: var(--space-3); border-bottom: 1px solid var(--line); }
 #analysis-evidence-status:not(:empty) { color: var(--fg); }
 ::highlight(lixity-analysis-current) {
-  background-color: color-mix(in srgb, var(--analysis-evidence-color) 16%, transparent);
+  background-color: color-mix(in srgb, var(--analysis-evidence-color) 20%, transparent);
   text-decoration: underline;
   text-decoration-color: var(--analysis-evidence-color);
   text-decoration-thickness: 2px;
+  text-underline-offset: .2em;
 }
 .analysis-evidence-card {
   position: fixed;
@@ -4676,17 +4706,18 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   overscroll-behavior: contain;
   padding: var(--space-3);
   border: 1px solid var(--line-strong);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md, 8px);
   background: var(--surface);
   color: var(--fg);
-  box-shadow: var(--shadow-lift);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
   font: var(--text-control)/var(--line-compact) var(--font);
   overflow-wrap: anywhere;
+  backdrop-filter: blur(8px);
 }
 .analysis-evidence-card[hidden] { display: none; }
 /* A quick explanation separates the counted span from its paragraph reference. */
 .analysis-evidence-heading, .analysis-evidence-actions { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
-.analysis-evidence-heading { position: sticky; top: 0; z-index: 1; margin: calc(-1 * var(--space-3)) calc(-1 * var(--space-3)) var(--space-1); padding: var(--space-1) var(--space-3); background: color-mix(in srgb, var(--analysis-evidence-color, var(--accent)) 10%, var(--surface)); border-bottom: 1px solid var(--line); }
+.analysis-evidence-heading { position: sticky; top: 0; z-index: 1; margin: calc(-1 * var(--space-3)) calc(-1 * var(--space-3)) var(--space-1); padding: var(--space-2) var(--space-3); background: color-mix(in srgb, var(--analysis-evidence-color, var(--accent)) 10%, var(--surface)); border-bottom: 1px solid var(--line); border-radius: var(--radius-md, 8px) var(--radius-md, 8px) 0 0; }
 .analysis-evidence-heading strong { min-width: 0; }
 .analysis-evidence-card p { margin: var(--space-2) 0; font: inherit; }
 .analysis-evidence-selection { padding-block: var(--space-1) var(--space-2); }
@@ -4904,7 +4935,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 </span>
 <label class="form-checkbox"><input type="checkbox" id="filter-flags"/> Flagged only</label>
 <button type="button" class="ctl" id="paragraph-filter-reset">Show all paragraphs</button>
-<label class="metric-layer-control"><span><span class="help" data-help="Colours every paragraph by how much of this dimension it carries: blue = little, orange = much. A ring marks paragraphs that are unusual for this chapter (|z| ≥ 1.5) – this is how you find the passages that fall out of rhythm." tabindex="0">Deviations</span></span> <select class="ctl" id="style-layer"><option value="">None</option><option value="asl" data-hint="Blue: shorter sentences; orange: longer, relative to this chapter’s median. Length alone does not establish pace." data-unit="words per sentence" data-comparable="82">Sentence length</option><option value="function" data-hint="Blue: lower function-word share; orange: higher, relative to this chapter’s median." data-unit="% of words" data-comparable="82">Function words</option><option value="dialogue" data-hint="Blue: lower quoted-word share; orange: higher, relative to this chapter’s median." data-unit="% of words" data-comparable="48">Quoted words</option><option value="filter" data-hint="Orange = more perception/filter-verb markers, blue = fewer. Read the passage before interpreting narrative distance." data-unit="per 1,000 words" data-comparable="0">Perception filters</option><option value="modal" data-hint="Blue: fewer modal-verb cues per 1,000 words; orange: more. Lexical patterns do not establish hedging or narrative distance." data-unit="per 1,000 words" data-comparable="21">Modals</option><option value="nominal" data-hint="&#x27;We examine the request&#x27; → &#x27;The examination of the request takes place&#x27;: an example of nominal style. Only noun endings such as -tion/-ment/-ness are counted. Orange = more matches, blue = fewer. Judge the wording in context." data-unit="per 1,000 words" data-comparable="21">Noun endings</option><option value="passive" data-hint="Blue: fewer passive-pattern cues per 1,000 words; orange: more. These are heuristic matches, not a grammatical parse or measure of directness." data-unit="per 1,000 words" data-comparable="21">Passive patterns</option></select></label>
+<label class="metric-layer-control"><span><span class="help" data-help="Colours every paragraph by how much of this dimension it carries: blue = little, orange = much. A ring marks paragraphs that are unusual for this chapter (|z| ≥ 1.5) – this is how you find the passages that fall out of rhythm." tabindex="0">Deviations</span></span> <select class="ctl" id="style-layer"><option value="">None</option><optgroup label="Sentence &amp; Rhythm"><option value="asl" data-hint="Blue: shorter sentences; orange: longer, relative to this chapter’s median. Length alone does not establish pace." data-unit="words per sentence" data-comparable="82">Sentence length</option><option value="function" data-hint="Blue: lower function-word share; orange: higher, relative to this chapter’s median." data-unit="% of words" data-comparable="82">Function words</option></optgroup><optgroup label="Voice &amp; Dialogue"><option value="dialogue" data-hint="Blue: lower quoted-word share; orange: higher, relative to this chapter’s median." data-unit="% of words" data-comparable="48">Quoted words</option><option value="filter" data-hint="Orange = more perception/filter-verb markers, blue = fewer. Read the passage before interpreting narrative distance." data-unit="per 1,000 words" data-comparable="0">Perception filters</option></optgroup><optgroup label="Grammar &amp; Style"><option value="passive" data-hint="Blue: fewer passive-pattern cues per 1,000 words; orange: more. These are heuristic matches, not a grammatical parse or measure of directness." data-unit="per 1,000 words" data-comparable="21">Passive patterns</option><option value="modal" data-hint="Blue: fewer modal-verb cues per 1,000 words; orange: more. Lexical patterns do not establish hedging or narrative distance." data-unit="per 1,000 words" data-comparable="21">Modals</option><option value="nominal" data-hint="&#x27;We examine the request&#x27; → &#x27;The examination of the request takes place&#x27;: an example of nominal style. Only noun endings such as -tion/-ment/-ness are counted. Orange = more matches, blue = fewer. Judge the wording in context." data-unit="per 1,000 words" data-comparable="21">Noun endings</option></optgroup></select></label>
 <span class="legend">
 <span><span class="swatch" style="background:var(--present)"></span>Present</span>
 <span><span class="swatch" style="background:var(--past)"></span>Past</span>

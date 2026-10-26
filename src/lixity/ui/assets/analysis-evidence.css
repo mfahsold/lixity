@@ -1,10 +1,10 @@
 /* Native metric ranges coexist with neutral dotted research marks and selection. */
 ::highlight(lixity-analysis-evidence), .analysis-evidence-swatch {
-  background-color: transparent;
+  background-color: color-mix(in srgb, var(--analysis-evidence-color) 8%, transparent);
   text-decoration: underline;
   text-decoration-color: var(--analysis-evidence-color);
-  text-decoration-thickness: 2px;
-  text-underline-offset: .15em;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: .2em;
 }
 .analysis-evidence-swatch { padding: .15em .35em; color: var(--fg); }
 .layer-legend-group { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem 1rem; flex-basis: 100%; min-width: 0; }
@@ -14,10 +14,11 @@
 #layer-evidence-legend { padding-bottom: var(--space-3); border-bottom: 1px solid var(--line); }
 #analysis-evidence-status:not(:empty) { color: var(--fg); }
 ::highlight(lixity-analysis-current) {
-  background-color: color-mix(in srgb, var(--analysis-evidence-color) 16%, transparent);
+  background-color: color-mix(in srgb, var(--analysis-evidence-color) 20%, transparent);
   text-decoration: underline;
   text-decoration-color: var(--analysis-evidence-color);
   text-decoration-thickness: 2px;
+  text-underline-offset: .2em;
 }
 .analysis-evidence-card {
   position: fixed;
@@ -29,17 +30,18 @@
   overscroll-behavior: contain;
   padding: var(--space-3);
   border: 1px solid var(--line-strong);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md, 8px);
   background: var(--surface);
   color: var(--fg);
-  box-shadow: var(--shadow-lift);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
   font: var(--text-control)/var(--line-compact) var(--font);
   overflow-wrap: anywhere;
+  backdrop-filter: blur(8px);
 }
 .analysis-evidence-card[hidden] { display: none; }
 /* A quick explanation separates the counted span from its paragraph reference. */
 .analysis-evidence-heading, .analysis-evidence-actions { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
-.analysis-evidence-heading { position: sticky; top: 0; z-index: 1; margin: calc(-1 * var(--space-3)) calc(-1 * var(--space-3)) var(--space-1); padding: var(--space-1) var(--space-3); background: color-mix(in srgb, var(--analysis-evidence-color, var(--accent)) 10%, var(--surface)); border-bottom: 1px solid var(--line); }
+.analysis-evidence-heading { position: sticky; top: 0; z-index: 1; margin: calc(-1 * var(--space-3)) calc(-1 * var(--space-3)) var(--space-1); padding: var(--space-2) var(--space-3); background: color-mix(in srgb, var(--analysis-evidence-color, var(--accent)) 10%, var(--surface)); border-bottom: 1px solid var(--line); border-radius: var(--radius-md, 8px) var(--radius-md, 8px) 0 0; }
 .analysis-evidence-heading strong { min-width: 0; }
 .analysis-evidence-card p { margin: var(--space-2) 0; font: inherit; }
 .analysis-evidence-selection { padding-block: var(--space-1) var(--space-2); }

@@ -868,19 +868,31 @@ def render_dashboard(
         f'aria-label="{L("layer_next")}" title="{L("layer_next")}">↓</button></div>'
     )
     if paragraphs:
+        layer_groups = (
+            ("layer_group_rhythm", ("asl", "function")),
+            ("layer_group_voice", ("dialogue", "filter")),
+            ("layer_group_grammar", ("passive", "modal", "nominal")),
+        )
+        grouped_layer_options = []
+        for group_label_key, members in layer_groups:
+            options_html = "".join(
+                f'<option value="{layer_key}" '
+                f'data-hint="{esc(label(labels, "layer_hint_" + layer_key), quote=True)}" '
+                f'data-unit="{esc(FEATURE_UNITS.get(language_key, FEATURE_UNITS["en"])[LAYER_FEATURES[layer_key]], quote=True)}" '
+                f'data-comparable="{len(layer_data.get(layer_key, {}))}">'
+                f"{esc(label(labels, 'layer_' + layer_key))}</option>"
+                for layer_key in members
+                if layer_key in LAYER_FEATURES
+            )
+            if options_html:
+                grouped_layer_options.append(f'<optgroup label="{L(group_label_key)}">{options_html}</optgroup>')
+
         metric_control = (
             '<label class="metric-layer-control">'
             f'<span>{L("analysis_measure") if controls else help_term(labels, "layer", L("style_layer"))}</span> '
             '<select class="ctl" id="style-layer">'
             f'<option value="">{L("layer_off")}</option>'
-            + "".join(
-                f'<option value="{layer_key}" '
-                f'data-hint="{esc(label(labels, "layer_hint_" + layer_key), quote=True)}" '
-                f'data-unit="{esc(FEATURE_UNITS.get(language_key, FEATURE_UNITS["en"])[LAYER_FEATURES[layer_key]], quote=True)}" '
-                f'data-comparable="{len(layer_data[layer_key])}">'
-                f"{esc(label(labels, 'layer_' + layer_key))}</option>"
-                for layer_key in LAYER_FEATURES
-            )
+            + "".join(grouped_layer_options)
             + "</select></label>"
         )
     # Use one navigation in the measured reader header when available, with
