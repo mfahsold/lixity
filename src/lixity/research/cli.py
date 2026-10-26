@@ -1067,6 +1067,22 @@ def _record_text(result: dict[str, Any], *, kind: str | None = None) -> str:
                       f"PDF/video references: {len(result.get('media', []))}"])
     if isinstance(summary := result.get("geography_summary"), dict):
         lines.extend(["", geography_report(summary)])
+    manuscript_evidence = result.get("manuscript_evidence")
+    if isinstance(manuscript_evidence, dict):
+        me_summary = manuscript_evidence.get("summary") or {}
+        quote_count = int(me_summary.get("quote_link_count", 0) or 0)
+        occurrence_count = int(me_summary.get("term_occurrence_count", 0) or 0)
+        term_items = manuscript_evidence.get("terms") or []
+        lines.extend(["", "## Manuscript evidence (read-only)"])
+        lines.append(f"Quote links: {quote_count}; term occurrences: {occurrence_count}")
+        for term in term_items:
+            if not isinstance(term, dict):
+                continue
+            term_name = safe_text(term.get("term") or "")
+            count = int(term.get("occurrence_count", 0) or 0)
+            chapters = term.get("chapters_present") or []
+            chapter_text = ", ".join(str(ch) for ch in chapters) if chapters else "-"
+            lines.append(f"- {term_name}: {count} occurrence(s) in chapters {chapter_text}")
     return "\n".join(lines).rstrip() + "\n"
 
 
