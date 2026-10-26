@@ -121,6 +121,26 @@ def test_research_export_preserves_current_and_exact_versions_but_only_cited_sou
     assert bundle.manifest['capabilities']['source_files'] is False
 
 
+def test_passage_context_export_matches_native_projection_without_writes(project, research):
+    manuscript = project / 'manuscript.md'
+    anchor = api.resolve_manuscript_anchor(project, manuscript, query='The eastern gate was open.')
+    api.link_manuscript_claim(project, manuscript, research['claim'], claim_revision=2,
+        selection={key: anchor[key] for key in ('start_line', 'end_line', 'paragraph_sha256', 'start', 'end', 'quote')},
+        expected_project_id=anchor['project_id'], expected_snapshot=anchor['snapshot'],
+        expected_source_sha256=hashlib.sha256(manuscript.read_bytes()).hexdigest(), allow_retention=True)
+    before = file_bytes(project)
+    native = api.review_manuscript_links(project, manuscript, language='en', include_context=True)
+    bundle = exporter().prepare_site(project, include_research=True)
+    frozen = next(value for key, value in site_data(bundle)['responses'].items()
+                  if key.startswith('/api/research/manuscript-review?'))
+    for key in ('snapshot', 'source_path', 'current_source_sha256', 'links', 'passage_context'):
+        assert frozen[key] == native[key]
+    claim = frozen['passage_context']['paragraphs'][0]['groups'][0]['claims'][0]
+    assert claim['versions'][0]['pinned']['revision'] == 2
+    assert claim['versions'][0]['associations'][0]['anchor']['quote'] == 'The eastern gate was open.'
+    assert file_bytes(project) == before
+
+
 def test_source_files_are_a_separate_explicit_disclosure_and_preserve_exact_bytes(project, research):
     module = exporter()
     with pytest.raises((ResearchError, ValueError), match='research'):

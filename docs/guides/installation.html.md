@@ -4,7 +4,7 @@ Explore sentence rhythm, vocabulary and style patterns in your Markdown manuscri
 
 Updated 23 October 2026
 
-**Version line:** The current release is **v0.7.6**, in the pre-1.0 **0.x** line. Historical **1.x** and **3.x** tags predate the numbering reset. A larger historical number does not mean a newer release; product and schema versions are independent.
+**Version line:** This source guide describes **v0.7.6 development**; check [published releases](https://github.com/mfahsold/lixity/releases/latest) for package availability, in the pre-1.0 **0.x** line. Historical **1.x** and **3.x** tags predate the numbering reset. A larger historical number does not mean a newer release; product and schema versions are independent.
 
 ## What do I need?
 
@@ -51,7 +51,7 @@ lixity service start --open
 
 If `lixity` is not found, check `uv tool list`, run `uv tool update-shell` and open a new terminal. `uv tool dir --bin` shows the executable directory. The health check reports installation/service issues, not linguistic validity.
 
-This installs the current release, **v0.7.6**, from PyPI in uv's [isolated tool environment](https://docs.astral.sh/uv/concepts/tools/). Shell integration applies to new terminals. See the [release notes](../releases/v0.7.6.md) for changes and compatibility.
+This installs the published package from PyPI in uv's [isolated tool environment](https://docs.astral.sh/uv/concepts/tools/). Shell integration applies to new terminals. The package observed on 26 October 2026 was 0.7.5; check [published release notes](https://github.com/mfahsold/lixity/releases/latest) for changes and compatibility. The [0.7.6 development notes](../releases/v0.7.6.md) describe prepared changes separately.
 
 ## Start the workspace
 
@@ -77,13 +77,13 @@ Open the project again, or provide its path when starting. `restart --open` rest
 
 **Pinned release wheel**
 
-For a reproducible setup, verify the release wheel against its `SHA256SUMS`, then install it instead:
+For a reproducible setup, download the wheel from a [published release](https://github.com/mfahsold/lixity/releases/latest) and verify it against that release's `SHA256SUMS`. Replace `VERSION` below with the downloaded file's version and use its actual local path:
 
 ```
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.7.6/lixity-0.7.6-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "./lixity-VERSION-py3-none-any.whl"
 ```
 
-A pinned wheel keeps its fixed source URL; replace it explicitly when updating. See the [installation reference](../INSTALLATION.md#updates-and-removal).
+A pinned wheel keeps its fixed source; replace it explicitly when updating. A prepared source version does not establish that a wheel has been published. See the [installation reference](../INSTALLATION.md#updates-and-removal).
 
 **Development builds instead**
 

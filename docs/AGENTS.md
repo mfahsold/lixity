@@ -765,7 +765,7 @@ No manuscript blob, source `Passage` or `EvidenceLink` is created.
 
 `list_manuscript_links(project, *, claim_id=None, include_retracted=False)` and
 `review_manuscript_links(project, manuscript, *, expected_project_id=None,
-language=None, project_config=None)` are read-only. Create/list/review envelopes
+language=None, project_config=None, include_context=False)` are read-only. Create/list/review envelopes
 are respectively `research-manuscript-link-local/1`,
 `research-manuscript-links-local/1`, `research-manuscript-review-local/1`.
 Stored `ManuscriptClaimLink` uses kind `manuscript_claim_link` and
@@ -807,6 +807,26 @@ semantic contradiction or factual proof. `source_changed` is informational (a di
 `lixity.research.manuscript.manuscript_review_data(Repository(project).snapshot(), source_path=...,
 source_sha256=..., paragraphs=..., source_state="available")` without another
 analysis pass; `source_state` also accepts `missing|unreadable`.
+
+**Current main (unreleased):** `include_context=True` adds `passage_context` with
+schema `research-passage-context-local/1`. The native manuscript-review route
+and offline exporter request this same projection. The existing review envelope,
+default library/CLI output and retained archive records remain unchanged.
+The sparse `paragraphs` list is keyed by `start_line`, `end_line` and
+`paragraph_sha256`; only exact `resolved` associations enter it. Each paragraph
+reports `state: ready|unavailable`, `total`, `shown` and `groups`. A group contains
+one dossier's current identity and distinct historical `pins`, grouped claims
+with one `current` identity and distinct `versions` containing pinned identities,
+retained association quotes and flags, each version's pinned `dossier_revision`,
+and the current dossier's decisions once.
+Records are summaries (`id`, `title`, `revision`), not full bodies or source reads.
+At most five associations per paragraph are projected; `total` preserves the
+complete count and the existing Review route exposes all associations. A withdrawn
+selected claim or dossier makes its paragraph `unavailable`, never empty.
+Absence from a valid sparse projection means no exact associations for that
+paragraph. A missing or malformed projection is unavailable to the UI. The
+projection and review rows use one verified snapshot; opening a context does
+not fetch or join separate record/dossier versions in the browser.
 
 Native routes require explicit context guards:
 

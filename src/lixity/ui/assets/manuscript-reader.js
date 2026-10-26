@@ -10,12 +10,11 @@
     button.type = "button"; button.className = "ctl";
     button.dataset.help = uiLabel("reading_help_return");
   }
-  var thread = document.createElement("aside"), originText = document.createElement("p"), recordText = document.createElement("p");
+  var thread = document.createElement("aside"), originText = document.createElement("p");
   thread.id = "workbench-thread"; thread.className = "workbench-thread";
   thread.setAttribute("aria-label", uiLabel("reading_thread"));
-  originText.className = recordText.className = "ctl-note";
-  recordText.setAttribute("aria-live", "polite");
-  thread.append(originText, recordText, button); shell.appendChild(thread);
+  originText.className = "ctl-note";
+  thread.append(originText, button); shell.appendChild(thread);
   var sidebar = window.matchMedia("(min-width: 1100px)");
   function threadHeight() {
     var height = !sidebar.matches && !thread.hidden ? thread.getBoundingClientRect().height : 0;
@@ -37,7 +36,7 @@
   sidebar.addEventListener("change", placeThread);
   if (typeof ResizeObserver === "function") new ResizeObserver(threadHeight).observe(thread);
   placeThread();
-  var passage = null, dossier = null, pendingDossier = null, viewed = null, returnSerial = 0;
+  var passage = null, dossier = null, pendingDossier = null, returnSerial = 0;
   function context() {
     var host = document.getElementById("manuscript-pdf-form") || document.getElementById("workspace-reader") || document.body;
     return [researchContextToken(), researchSelectionProjectId, host.dataset.projectToken,
@@ -55,10 +54,6 @@
     thread.hidden = button.hidden = !dossier && !passage;
     text(button, uiLabel(dossier ? "reading_back_dossier" : "reading_back"));
     text(originText, dossier ? uiFormat("reading_dossier_origin", {title: dossier.reading.title, revision: dossier.reading.revision}) : passage ? passage.description : "");
-    text(recordText, viewed && (dossier || passage) ? uiLabel("reading_reviewed") + ": " +
-      uiLabel("research_revision_kind_" + viewed.kind) + " · " + viewed.title + " · " +
-      uiFormat("research_revision_number", {revision: viewed.revision}) +
-      (viewed.pinned || viewed.current ? " · " + uiLabel(viewed.pinned ? "reading_pinned" : "research_revision_current") : "") : "");
     threadHeight();
   }
   function capture(reading, control) {
@@ -79,15 +74,14 @@
       // Native Close already returns from a record viewer. Keep its dossier
       // only as a candidate if that viewer subsequently leaves for Review.
       if (action.matches("[data-research-history=claim]")) { pendingDossier = value; return; }
-      dossier = value; viewed = null; ++returnSerial; update();
+      dossier = value; ++returnSerial; update();
     } else if (action.closest("#modal-research-revision") &&
         action.matches("[data-manuscript-links-claim]") && current(pendingDossier)) {
-      dossier = pendingDossier; viewed = null; ++returnSerial; update();
+      dossier = pendingDossier; ++returnSerial; update();
     }
   }, true);
   var dialog = document.getElementById("modal-research-revision");
   if (dialog) dialog.addEventListener("close", function() { if (!dialog.open) pendingDossier = null; });
-  document.addEventListener("lixity:research-record-view", function(event) { viewed = event.detail; update(); });
   document.addEventListener("lixity:workbench-change", update);
   new MutationObserver(update).observe(document.body, {subtree: true, childList: true, attributes: true,
     attributeFilter: ["data-project-token", "data-manuscript-project-token", "data-research-token", "data-manuscript-source-sha256", "data-dossier-reading", "open"]});
@@ -95,10 +89,10 @@
     update();
     if (!dossier) {
       if (!passage) return;
-      var previous = passage; passage = null; viewed = null; ++returnSerial; update(); previous.restore(); return;
+      var previous = passage; passage = null; ++returnSerial; update(); previous.restore(); return;
     }
     var value = dossier, serial = ++returnSerial;
-    dossier = pendingDossier = null; viewed = null; update();
+    dossier = pendingDossier = null; update();
     switchActiveView(value.state.view);
     if (value.tab) showResearchTab(value.tab);
     var state = workbench.state();
@@ -124,7 +118,7 @@
   window.LixityReadingThread = {
     hasDossier: function() { return current(dossier) || current(pendingDossier); },
     hasPassage: function() { return Boolean(passage && passage.valid()); },
-    rememberPassage: function(value) { passage = value; dossier = null; viewed = null; ++returnSerial; update(); }
+    rememberPassage: function(value) { passage = value; dossier = null; ++returnSerial; update(); }
   };
   update();
 })();
@@ -140,7 +134,7 @@
   var analysisToggle = document.getElementById("manuscript-analysis-toggle");
   var dock = document.getElementById("workspace-context-panel");
   var layout = document.getElementById("workspace-reader-layout");
-  var overviewAnchor = null, inspectorTarget = null, origin = null;
+  var overviewAnchor = null, inspectorTarget = null, contextPassage = null, inspectorTrigger = null, origin = null;
   var retainedAnchor = null, requestedAnchor = null, dockOrigin = null, arrangementRevision = 0;
   var pendingDockAnchor = null;
   var narrowContext = window.matchMedia("(max-width: 900px)");
@@ -333,6 +327,15 @@
     button.setAttribute("aria-haspopup", "menu"); button.setAttribute("aria-controls", menu.id);
     button.setAttribute("aria-expanded", "false");
     inner.appendChild(button);
+    if (panel.classList.contains("flagged")) {
+      var flag = document.createElement("button");
+      flag.type = "button"; flag.className = "ctl reader-review-flag";
+      flag.dataset.readerFlag = panel.id;
+      flag.textContent = uiLabel("reading_tense_flag");
+      flag.dataset.help = uiLabel("reading_tense_flag_help");
+      flag.setAttribute("aria-controls", "reader-inspector");
+      inner.appendChild(flag);
+    }
     panel.tabIndex = -1;
   }
   function closeMenu(restoreFocus) {
@@ -344,20 +347,37 @@
   function closeInspector(restoreFocus) {
     workbench.dispatch({type: "tool", value: "none"});
     if (restoreFocus && inspectorTarget && inspectorTarget.isConnected) {
-      var button = inspectorTarget.querySelector(".reader-paragraph-actions");
+      var button = inspectorTrigger && inspectorTrigger.isConnected ? inspectorTrigger : inspectorTarget.querySelector(".reader-paragraph-actions");
       if (button) button.focus({preventScroll: true});
     }
   }
-  function requestTool(value, panel) {
+  function requestTool(value, panel, trigger) {
+    contextPassage = panel;
+    if (inspectorTarget && inspectorTarget !== panel) {
+      inspectorTarget.classList.remove("reader-inspector-target");
+      inspectorTarget = inspectorTrigger = null; inspectorBody.replaceChildren();
+    }
     // Passage capture precedes the responsive return thread entering layout.
     // Its original position remains authoritative when opening research.
     requestedAnchor = value === "research" && validOrigin() && origin.anchor.panel === panel ?
       origin.anchor : {panel: panel, top: panel.getBoundingClientRect().top};
+    if (trigger && panel.contains(trigger)) requestedAnchor.trigger = trigger;
     if (workbench.state().contextTool === value) {
       dockOrigin = requestedAnchor; requestedAnchor = null;
       if (narrowContext.matches) dock.scrollIntoView({block: "start", behavior: "instant"});
       if (window.LixityMotion) window.LixityMotion.reveal(dock);
     } else retain(function() { workbench.dispatch({type: "tool", value: value}); });
+  }
+  function leavePassage(target) {
+    if (!target || !target.closest("#chapters")) return;
+    var owner = contextPassage || dockOrigin && dockOrigin.panel || inspectorTarget;
+    if (owner && (target === owner || owner.contains(target))) return;
+    // Explicit navigation owns the destination. Do not restore the old tool's
+    // scroll/focus origin when retiring its context, including on mobile.
+    dockOrigin = requestedAnchor = pendingDockAnchor = null;
+    if (inspectorTarget) inspectorTarget.classList.remove("reader-inspector-target");
+    contextPassage = inspectorTarget = inspectorTrigger = null; inspectorBody.replaceChildren();
+    if (workbench.state().contextTool !== "none") workbench.dispatch({type: "tool", value: "none"});
   }
   function setFocus(value) {
     retain(function() { workbench.dispatch({type: "focus", value: value}); });
@@ -385,13 +405,13 @@
     var location = document.createElement("p"); location.className = "ctl-note";
     location.textContent = passageContext(panel); context.appendChild(location);
     if (panel.dataset.severity && Number(panel.dataset.severity) >= 2) {
-      var flagCard = document.createElement("div"); flagCard.className = "reader-passage-flag";
+      var flagCard = document.createElement("div"); flagCard.className = "reader-passage-flag sev-" + panel.dataset.severity;
       var flagHeader = document.createElement("div"); flagHeader.className = "reader-passage-flag-header";
       var flagBadge = document.createElement("span");
       flagBadge.className = "badge sev-" + panel.dataset.severity;
       flagBadge.textContent = uiLabel("severity_" + panel.dataset.severity);
       var flagTitle = document.createElement("span"); flagTitle.className = "reader-passage-flag-title";
-      flagTitle.textContent = uiLabel("triage_why");
+      flagTitle.textContent = uiLabel("reading_tense_flag");
       flagHeader.appendChild(flagBadge); flagHeader.appendChild(flagTitle);
       var flagGuidance = document.createElement("p"); flagGuidance.className = "reader-passage-flag-guidance";
       flagGuidance.textContent = uiLabel("triage_author_guidance");
@@ -455,7 +475,8 @@
     inspector.hidden = state.contextTool !== "analysis" || state.surface !== "document";
     document.body.classList.toggle("reader-inspector-open", !inspector.hidden);
     if (!inspector.hidden && !inspectorBody.childElementCount) {
-      if (anchor && anchor.panel.matches(".ptext")) showValues(anchor.panel);
+      var selected = contextPassage || anchor && anchor.panel;
+      if (selected && selected.matches(".ptext")) showValues(selected);
       else inspectorBody.textContent = uiLabel(panels.length ? "reading_values_hint" : "reading_coverage");
     }
     document.querySelectorAll("[data-context-tool]").forEach(function(button) {
@@ -575,7 +596,8 @@
     if ((action === "values" || action === "companion") && document.body.classList.contains("reader-focus")) setFocus(false);
     if (action === "values") {
       showValues(panel, point);
-      requestTool("analysis", panel);
+      inspectorTrigger = returnTarget;
+      requestTool("analysis", panel, returnTarget);
       document.getElementById("reader-inspector-close").focus({preventScroll: true});
     } else if (action === "link") {
       if (!range) {
@@ -659,9 +681,24 @@
   });
   document.getElementById("reader-inspector-close").addEventListener("click", function() { retain(function() { closeInspector(true); }); });
   chapters.addEventListener("click", function(event) {
+    var flag = event.target.closest("[data-reader-flag]");
+    if (flag) {
+      current = document.getElementById(flag.dataset.readerFlag);
+      savedRange = null; evidencePoint = null; returnTarget = flag;
+      run("values"); return;
+    }
     var trigger = event.target.closest("[data-reader-paragraph]");
     if (!trigger) return;
     var rect = trigger.getBoundingClientRect(); openMenu(document.getElementById(trigger.dataset.readerParagraph), rect.left, rect.bottom + 4, trigger);
+  });
+  // Reading a different paragraph is an explicit context change; selecting text
+  // in the current paragraph or interacting inside the dock keeps its owner.
+  chapters.addEventListener("pointerdown", function(event) {
+    var panel = event.target.closest(".ptext");
+    if (panel && !event.target.closest("button, a, input, textarea, select")) {
+      var anchor = {panel: panel, top: panel.getBoundingClientRect().top};
+      leavePassage(panel); restore(anchor);
+    }
   });
   chapters.addEventListener("contextmenu", function(event) {
     var panel = event.target.closest(".ptext");
@@ -753,6 +790,27 @@
       }
     });
   }, {passive: true});
+  var readingScroll = false;
+  function readingInput(event) {
+    if (event.target.closest && event.target.closest("#chapters") &&
+        workbench.state().view === "analysis" && workbench.state().surface === "document") readingScroll = true;
+  }
+  window.addEventListener("wheel", readingInput, {passive: true});
+  window.addEventListener("touchmove", readingInput, {passive: true});
+  chapters.addEventListener("keydown", function(event) {
+    if (["PageDown", "PageUp", "Home", "End", "ArrowDown", "ArrowUp", " "].includes(event.key) &&
+        !event.target.closest("button, input, textarea, select, a")) readingInput(event);
+  });
+  window.addEventListener("scrollend", function() {
+    if (!readingScroll) return;
+    readingScroll = false;
+    var owner = contextPassage || dockOrigin && dockOrigin.panel;
+    if (!owner || workbench.state().contextTool === "none") return;
+    var bounds = owner.getBoundingClientRect(), boundary = controls.getBoundingClientRect().bottom;
+    if (bounds.bottom > boundary && bounds.top < innerHeight) return;
+    var anchor = capture();
+    if (anchor && anchor.panel !== owner) { leavePassage(anchor.panel); restore(anchor); }
+  }, {passive: true});
   window.addEventListener("resize", function() { closeMenu(false); selectionTools.hidden = true; placeSettings(); });
   document.addEventListener("scroll", function(event) {
     settingsPanels.forEach(function(panel) {
@@ -827,7 +885,7 @@
     origin = {anchor: anchor, offsets: offsets, state: workbench.state(), hash: anchor.panel.dataset.paragraphSha256, context: sourceContext()};
     readingThread.rememberPassage({description: passageContext(anchor.panel), valid: validOrigin, restore: returnToPassage});
   }
-  window.LixityReader = {fitContext: fitContextDock, requestTool: requestTool, capture: capture, restore: restore, retain: retain,
+  window.LixityReader = {fitContext: fitContextDock, requestTool: requestTool, leavePassage: leavePassage, capture: capture, restore: restore, retain: retain,
     enableEvidence: function() { retain(function() {defaultMetric(true); workbench.dispatch({type:"analysis", value:true});}); },
     inspect: function() { setMode("inspect", true); },
     inspectPassage: function(panel, point) {

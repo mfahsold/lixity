@@ -810,7 +810,7 @@ The watchman saw the two figures leave towards the basin. Mara saw a launch ligh
         "/api/research/review": {"ok": True, **research_api.editorial_review(research_proj)},
         "/api/research/manuscript-links": {"ok": True, **research_api.list_manuscript_links(research_proj)},
         "/api/research/manuscript-review?project_token=" + RESEARCH_DEMO_MANUSCRIPT_CONTEXT: {
-            "ok": True, **research_api.review_manuscript_links(research_proj, manuscript)},
+            "ok": True, **research_api.review_manuscript_links(research_proj, manuscript, include_context=True)},
         "/api/research/timeline": {"ok": True, **research_api.timeline(research_proj)},
         "/api/research/matrix?format=md": {
             "text": research_api.render_claim_matrix(research_api.claim_matrix_data(research_proj), format="md")},

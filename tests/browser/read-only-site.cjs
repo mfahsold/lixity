@@ -133,6 +133,26 @@ print(json.dumps(documents))
           ['zip', 'could not be read as a valid ZIP'],
         ]) {
           failure = kind;
+          if (kind === 'html') {
+            // Error text resizes the dialog while a pointer can remain at the
+            // control edge. Hover feedback must not move its own hit target.
+            for (const id of ['site-export-check', 'site-export-download']) {
+              await page.mouse.move(0, 0);
+              const button = page.locator('#' + id);
+              const box = await button.boundingBox();
+              await page.mouse.move(box.x + box.width / 2, box.y + box.height - .5);
+              const positions = await button.evaluate(async node => {
+                const result = [];
+                for (let frame = 0; frame < 8; frame++) {
+                  await new Promise(resolve => requestAnimationFrame(resolve));
+                  result.push(node.getBoundingClientRect().y);
+                }
+                return result;
+              });
+              assert.ok(Math.max(...positions) - Math.min(...positions) < .25,
+                `A stationary pointer at ${id}'s edge keeps a stable target: ${positions}`);
+            }
+          }
           await page.locator('#site-export-download').click();
           await expect(page.locator('#site-export-status.err')).toContainText(detail);
           await expect(page.locator('#site-export-download')).toBeEnabled();

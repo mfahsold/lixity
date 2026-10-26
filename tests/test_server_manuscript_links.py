@@ -65,12 +65,17 @@ def test_explicit_save_and_review_use_selected_manuscript(workspace):
     before = Repository(project).snapshot().digest
     status, reviewed = request(review_route(body))
     assert status == 200 and reviewed["ok"] and reviewed["links"] == []
+    assert reviewed["passage_context"] == {"schema_version": "research-passage-context-local/1", "paragraphs": []}
     assert Repository(project).snapshot().digest == before
     status, created = request("/api/research-manuscript-link", body)
     assert status == 200 and created["ok"] and created["claim_revision"] == 1
     status, reviewed = request(review_route(body))
     assert status == 200 and reviewed["links"][0]["anchor_state"] == "resolved"
     assert reviewed["links"][0]["anchor"]["quote"] == body["selection"]["quote"]
+    context = reviewed["passage_context"]["paragraphs"][0]
+    assert context["state"] == "ready" and context["shown"] == context["total"] == 1
+    assert context["groups"][0]["claims"][0]["versions"][0]["pinned"]["id"] == body["claim_id"]
+    assert context["groups"][0]["claims"][0]["versions"][0]["associations"][0]["link_id"] == created["link_id"]
     status, listed = request("/api/research/manuscript-links?research_token=" + body["research_token"])
     assert status == 200 and listed["schema_version"] == "research-manuscript-links-local/1"
     assert listed["links"][0]["link_id"] == created["link_id"]

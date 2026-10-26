@@ -293,12 +293,14 @@ async function selectText(page, text) {
         'The scoped quote destination remains visible after preceding editorial decisions finish rendering');
       await page.locator('#research-manuscript-review [data-research-history=claim]').click();
       await claimHistory.getByText('Pinned original claim', {exact: true}).waitFor();
-      assert.match(await thread.textContent(), /Pinned original claim.*Version 1.*Pinned version/i,
-        'The work thread reports the accepted pin rather than the newer current claim');
+      assert.doesNotMatch(await thread.textContent(), /Pinned original claim|Viewed record|Version 1/i,
+        'The return control does not duplicate the record viewer metadata');
+      assert.match(await page.locator('#research-revision-kind').textContent(), /Version 1/i);
       await page.locator('#research-revision-edit-tab').click();
       await page.waitForFunction(() => document.querySelector('#research-revision-field-title').value === 'Latest changed claim'
         && !document.querySelector('#research-revision-field-title').disabled);
-      assert.match(await thread.textContent(), /Latest changed claim.*Version 2.*current/i);
+      assert.doesNotMatch(await thread.textContent(), /Latest changed claim|Version 2/i);
+      assert.match(await page.locator('#research-revision-kind').textContent(), /Version 2/i);
       holdHistoryList = true;
       await page.locator('#research-revision-history-tab').click();
       await openVersions(page);
@@ -308,7 +310,7 @@ async function selectText(page, text) {
       const currentMeta = await page.locator('#research-revision-kind').textContent();
       const currentThread = await thread.textContent();
       assert.match(currentMeta, /Version 2/i);
-      assert.match(currentThread, /Latest changed claim.*Version 2.*current/i);
+      assert.doesNotMatch(currentThread, /Latest changed claim|Version 2/i);
       const readsBeforeHistoryList = recordReads.length;
       holdHistoryList = false; releaseHistoryList();
       await page.locator('#research-revision-history-list [data-research-revision="1"]').waitFor({state: 'attached'});
@@ -339,11 +341,13 @@ async function selectText(page, text) {
       await page.locator('#research-revision-history-tab').click();
       await claimHistory.getByText('Pinned original claim', {exact: true}).waitFor();
       assert.equal(recordReads.length, readsAfterHiddenHistory, 'Returning to History uses its completed hidden cache');
-      assert.match(await thread.textContent(), /Pinned original claim.*Version 1.*Pinned version/i,
-        'Returning from Edit to an already loaded historical view restores its viewed identity');
+      assert.doesNotMatch(await thread.textContent(), /Pinned original claim|Version 1/i,
+        'Switching record versions keeps navigation limited to its return destination');
+      assert.match(await page.locator('#research-revision-kind').textContent(), /Version 1/i);
       await page.locator('#research-revision-history-list [data-research-revision="2"]').click();
       await claimHistory.getByText('Latest changed claim', {exact: true}).waitFor();
-      assert.match(await thread.textContent(), /Latest changed claim.*Version 2.*current/i);
+      assert.doesNotMatch(await thread.textContent(), /Latest changed claim|Version 2/i);
+      assert.match(await page.locator('#research-revision-kind').textContent(), /Version 2/i);
       await page.keyboard.press('Escape');
       for (const colorScheme of ['light', 'dark']) {
         await page.emulateMedia({colorScheme});

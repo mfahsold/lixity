@@ -180,7 +180,7 @@ th {
 tbody tr {
   transition: background-color .15s cubic-bezier(0.16, 1, 0.3, 1);
 }
-tbody tr:hover { background: rgba(0, 0, 0, .025); }
+tbody tr:hover { background: var(--surface-hover); }
 tbody tr:last-child td { border-bottom: 0; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
@@ -199,13 +199,15 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   letter-spacing: normal;
   background: var(--neutral);
   color: var(--fg);
+
+  &.badge-success { background: var(--status-success-bg); color: var(--status-success-fg); border-color: var(--status-success-border); }
+  &.badge-warning, &.badge-warn { background: var(--status-warning-bg); color: var(--status-warning-fg); border-color: var(--status-warning-border); }
+  &.badge-neutral { background: var(--status-neutral-bg); color: var(--status-neutral-fg); border-color: var(--status-neutral-border); }
+  &.marker-pruefen { background: var(--marker-pruefen-bg); color: var(--marker-pruefen-fg); }
+  &.marker-sachcheck, &.sev-2 { background: var(--marker-sachcheck-bg); color: var(--marker-sachcheck-fg); }
+  &.marker-todo { background: var(--marker-todo-bg); color: var(--marker-todo-fg); }
+  &.marker-achtung, &.sev-3 { background: var(--marker-achtung-bg); color: var(--marker-achtung-fg); }
 }
-.badge.marker-pruefen { background: #e0f2fe; color: #0369a1; }
-.badge.marker-sachcheck { background: #fef3c7; color: #92400e; }
-.badge.marker-todo { background: #f3e8ff; color: #6b21a6; }
-.badge.marker-achtung { background: #fee2e2; color: #991b1b; }
-.badge.sev-2 { background: #fef3c7; color: #92400e; }
-.badge.sev-3 { background: #fee2e2; color: #991b1b; }
 
 /* --- Controls (local server mode) ------------------------------------- */
 .ctl-group { display: grid; gap: var(--space-3); padding: 0; min-width: 0; }
@@ -251,8 +253,7 @@ button.ctl, a.ctl, select.ctl, input.ctl, textarea.ctl {
   transition: color .18s cubic-bezier(0.16, 1, 0.3, 1),
               border-color .18s cubic-bezier(0.16, 1, 0.3, 1),
               background-color .18s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow .18s cubic-bezier(0.16, 1, 0.3, 1),
-              transform .18s cubic-bezier(0.16, 1, 0.3, 1);
+              box-shadow .18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 input.ctl, textarea.ctl { cursor: text; }
 textarea.ctl { resize: vertical; font-family: inherit; }
@@ -272,11 +273,12 @@ input.ctl-code { font-family: var(--font-mono); }
   border-color: var(--line);
 }
 button.ctl-link { background: none; border: none; color: var(--accent); text-decoration: underline; cursor: pointer; padding: 0; }
+/* Hover feedback keeps the hit target stable, including at its edges when a
+   dialog moves beneath a stationary pointer after showing a status message. */
 button.ctl:where(:enabled):hover, a.ctl:hover {
   border-color: var(--accent);
   color: var(--accent);
-  background: var(--surface-hover, light-dark(rgba(0, 0, 0, .03), rgba(255, 255, 255, .05)));
-  transform: translateY(-1px);
+  background: var(--surface-hover);
   box-shadow: 0 2px 6px rgba(0, 0, 0, .06);
 }
 select.ctl:where(:enabled):hover {
@@ -285,7 +287,6 @@ select.ctl:where(:enabled):hover {
 }
 button.ctl:where(:enabled):active, a.ctl:active {
   border-color: var(--accent);
-  transform: translateY(0);
   box-shadow: none;
 }
 /* One selected state for toggles and tabs (aria-pressed or .active). */
@@ -330,11 +331,9 @@ button.ctl.primary:enabled:hover, a.ctl.primary:hover {
   background: var(--action-hover);
   border-color: var(--action-hover);
   color: var(--on-action);
-  transform: translateY(-1px);
   box-shadow: 0 3px 10px rgba(0, 0, 0, .14);
 }
 button.ctl.primary:enabled:active, a.ctl.primary:active {
-  transform: translateY(0);
   box-shadow: none;
 }
 button.ctl.ctl-sm, a.ctl.ctl-sm, select.ctl.ctl-sm,

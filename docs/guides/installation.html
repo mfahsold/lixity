@@ -95,7 +95,7 @@
 <p>Explore sentence rhythm, vocabulary and style patterns in your Markdown manuscript. Lixity runs its analysis on your computer and saves a dashboard you can open in a browser. No account or manuscript upload is required.</p>
 <p class="updated">Updated <time datetime="2026-10-23">23 October 2026</time></p>
 
-<p class="notice-box"><strong>Version line:</strong> The current release is <strong>v0.7.6</strong>, in the pre-1.0 <strong>0.x</strong> line. Historical <strong>1.x</strong> and <strong>3.x</strong> tags predate the numbering reset. A larger historical number does not mean a newer release; product and schema versions are independent.</p>
+<p class="notice-box"><strong>Version line:</strong> This source guide describes <strong>v0.7.6 development</strong>; check <a href="https://github.com/mfahsold/lixity/releases/latest">published releases</a> for package availability, in the pre-1.0 <strong>0.x</strong> line. Historical <strong>1.x</strong> and <strong>3.x</strong> tags predate the numbering reset. A larger historical number does not mean a newer release; product and schema versions are independent.</p>
 
 <h2 id="requirements">What do I need?</h2>
 <p>Install <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a>. It installs the published package and supplies managed Python 3.12; no Git or separate Python install is needed. Lixity is on <a href="https://pypi.org/project/lixity/">PyPI</a>; every release also ships a pinned wheel with checksums on <a href="https://github.com/mfahsold/lixity/releases">GitHub Releases</a>, and released versions are archived on Zenodo for citation (concept DOI <a href="https://doi.org/10.5281/zenodo.23390297">10.5281/zenodo.23390297</a>). Installation needs an internet connection. Analysis runs offline afterward. PDF import has <a href="research-pdf.html#ocr">additional requirements</a>.</p>
@@ -115,7 +115,7 @@ uv tool update-shell</code></pre>
 lixity doctor
 lixity service start --open</code></pre>
 <p>If <code>lixity</code> is not found, check <code>uv tool list</code>, run <code>uv tool update-shell</code> and open a new terminal. <code>uv tool dir --bin</code> shows the executable directory. The health check reports installation/service issues, not linguistic validity.</p>
-<p>This installs the current release, <strong>v0.7.6</strong>, from PyPI in uv's <a href="https://docs.astral.sh/uv/concepts/tools/">isolated tool environment</a>. Shell integration applies to new terminals. See the <a href="../releases/v0.7.6.md">release notes</a> for changes and compatibility.</p>
+<p>This installs the published package from PyPI in uv's <a href="https://docs.astral.sh/uv/concepts/tools/">isolated tool environment</a>. Shell integration applies to new terminals. The package observed on 26 October 2026 was 0.7.5; check <a href="https://github.com/mfahsold/lixity/releases/latest">published release notes</a> for changes and compatibility. The <a href="../releases/v0.7.6.md">0.7.6 development notes</a> describe prepared changes separately.</p>
 
 <h2 id="first-dashboard">Start the workspace</h2>
 <p>The managed app opens <code>http://127.0.0.1:8765/</code>. Its default is an empty workspace; it does not search your terminal's current folder. Choose <strong>Open Project</strong> for an existing folder or <strong>Analyze a manuscript</strong> for an import preview. Confirm the language and read a passage before interpreting its measurements.</p>
@@ -132,9 +132,9 @@ lixity service start --open</code></pre>
 <p>Open the project again, or provide its path when starting. <code>restart --open</code> restores recorded launch settings, including the startup project; a later project choice in the browser is separate. <a href="#restart">Service lifecycle</a> explains the difference.</p>
 
 <details><summary>Pinned release wheel</summary>
-<p>For a reproducible setup, verify the release wheel against its <code>SHA256SUMS</code>, then install it instead:</p>
-<pre><code>uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.7.6/lixity-0.7.6-py3-none-any.whl"</code></pre>
-<p>A pinned wheel keeps its fixed source URL; replace it explicitly when updating. See the <a href="../INSTALLATION.md#updates-and-removal">installation reference</a>.</p>
+<p>For a reproducible setup, download the wheel from a <a href="https://github.com/mfahsold/lixity/releases/latest">published release</a> and verify it against that release's <code>SHA256SUMS</code>. Replace <code>VERSION</code> below with the downloaded file's version and use its actual local path:</p>
+<pre><code>uv tool install --python 3.12 --managed-python --reinstall-package lixity "./lixity-VERSION-py3-none-any.whl"</code></pre>
+<p>A pinned wheel keeps its fixed source; replace it explicitly when updating. A prepared source version does not establish that a wheel has been published. See the <a href="../INSTALLATION.md#updates-and-removal">installation reference</a>.</p>
 </details>
 <details id="development-builds"><summary>Development builds instead</summary>
 <p>To test unreleased changes, install Git, stop the managed service and replace the installation with:</p>

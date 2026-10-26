@@ -26,18 +26,35 @@ Source: https://github.com/mfahsold/lixity/blob/main/README.md
 
 **Find the passages worth a second look.**
 
-Lixity is a local research and revision workbench for authors and editors using
-Markdown or plain-text manuscripts. Why does a chapter sound different? Is that
-repetition deliberate? Which source supports a detail?
-Choose one question, inspect what was counted and read the passage before deciding
-what to keep or change. Saved research links lead separately to dossiers, source
-passages and author decisions. Lixity does not grade or rewrite your prose.
+Lixity brings **close reading, manuscript analysis and documented research** into
+one local workspace for authors, editors and manuscript reviewers. Find changes
+in rhythm or voice, inspect what a signal counted, and follow the sources and
+creative decisions behind a scene detail. The manuscript stays at the centre.
+
+**The reference is your own book. The editorial decision stays yours.**
+Lixity helps explain where a draft changes; it does not grade literary quality
+or automatically rewrite prose. Built-in analysis runs on your computer.
+Manuscript input is Markdown or plain text; Word/DOCX and Scrivener need conversion.
 
 [Open the example manuscript](https://mfahsold.github.io/lixity/demo/report.html) ·
 [Take the short tour](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Install Lixity](https://mfahsold.github.io/lixity/guides/installation.html)
 
 [Einstieg auf Deutsch](https://mfahsold.github.io/lixity/guides/first-look-de.html)
+
+## What changes in a revision session?
+
+| The question | The useful next step |
+| :--- | :--- |
+| Why does this chapter feel different? | Compare its rhythm, vocabulary and dialogue with the manuscript's own patterns, then read the counted text. |
+| Is this repetition doing useful work? | Locate nearby phrase echoes and inspect the surrounding passage before keeping or changing them. |
+| Why is this detail in the scene? | Follow a linked quotation to its dossier, retained source passages and explicit author decision. Exact earlier versions remain available. |
+| How can an editorial observation be explained? | Keep the manuscript in view while moving between the measurement explanation and linked research; prepare an editorial PDF or a fixed review copy for the discussion. |
+| What belongs in a reader's copy? | Choose a manuscript with selected companion notes, a standalone companion, a review workspace or a PDF, and check what the copy includes. |
+
+Source evidence, authored claims and creative decisions stay distinct. A saved
+source records the evidence used; it does not guarantee that a claim is true.
+Reading copies are fixed exports, not a live co-editing service.
 
 <a href="https://mfahsold.github.io/lixity/screenshots/dashboard-reader-focus.png"><img src="https://mfahsold.github.io/lixity/screenshots/dashboard-reader-focus.png" width="560" alt="Warehouse 4 reader excerpt with chapter navigation, reading settings and Analysis Off"/></a>
 
@@ -56,20 +73,6 @@ opening on the quay; its correction moves it to the customs station. The fiction
 demo keeps both source passages beside an explicit author decision: leave the
 crate closed until dawn. [Follow the research decision in German](https://mfahsold.github.io/lixity/guides/first-look-de.html#recherche)
 or [take the English walkthrough](https://mfahsold.github.io/lixity/guides/first-look.html#decision).
-
-## From a passage to the context behind it
-
-| When you want to… | Lixity helps you… |
-| :--- | :--- |
-| Understand a change in rhythm or voice | Compare chapters against your own manuscript's patterns, then inspect the counted text. |
-| Decide whether a repetition needs attention | Locate nearby phrase echoes, read their context and keep or revise them yourself. |
-| Revisit the research behind a line | Follow explicitly linked claims and dossiers to retained source passages, images and author decisions. |
-| Resume reading without losing context | Keep a dossier alongside the manuscript or return from a research entry to the original passage. |
-| Prepare a copy for someone else | Choose a PDF, a review workspace, or a reading website with selected notes; check its scope and try it on the reader’s device. |
-
-Source evidence, authored claims and creative decisions stay distinct.
-Links can preserve exact earlier revisions; a newer record does not silently
-replace the version used. A retained source is not a guarantee of factual truth.
 
 <a id="start-here"></a>
 
@@ -103,23 +106,21 @@ covers launchers, pinned wheels, service management and removal. After upgrading
 run `lixity service restart --open` and reload the browser; installing a package
 does not update an already running service.
 
-## What you can do
+## One project, from draft to reading copy
 
-- **Manuscript & Analysis.** Open paragraph values and work markers, or compare
-  chapters against the manuscript's own patterns and review local phrase echoes.
-  Analysis can be turned on and off.
-- **Research & Dossiers.** Link retained sources, authored claims and decisions
-  to exact manuscript quotations. Keep source images, maps and dated claims with
-  the dossier beside a passage; Zotero remains your collection tool. Retention is explicit,
-  and archive integrity does not establish factual truth.
-- **Project & exports.** Manage project metadata and create editorial, reading,
-  submission or analysis PDFs, terminal reports and versioned JSON. Export a
-  review website, a novel with curated companion material, or a standalone
-  companion. Reveal notes after a confirmed chapter, or omit later material
-  entirely for an excerpt.
-  NDA generation creates a draft without
-  recording consent or signatures; dossier Markdown edits require explicit preview
-  and apply. See [export and project limits](https://mfahsold.github.io/lixity/USAGE.md).
+Read continuous prose with analysis available on demand. Keep a dossier beside
+the passage, follow a source or an earlier linked version, then return to the
+text. For an editor, that gives a concrete starting point for an observation;
+for an author, it keeps the question and its supporting material together.
+
+**Development preview:** configured terms and props add another route into the
+manuscript. Declare a name, object or alternative term, inspect its occurrences
+and chapter scopes, and connect it to a dossier. Dossier manuscript evidence
+brings its linked quotations together; ordered collections organise related
+notes. These are declared lexical checks and explicit links, not automatic
+continuity checking or character understanding. See
+[terms and props](https://mfahsold.github.io/lixity/research/USAGE.md#configured-terms-props-and-boundary-policies)
+and the [development notes](https://mfahsold.github.io/lixity/releases/v0.7.6.md).
 
 The browser app, CLI and Python API share one analysis pipeline;
 `lixity --help` and `lixity about --json` describe installed capabilities.
@@ -131,7 +132,12 @@ These curated reading copies are different from the analysis/research workspace:
 they contain selected material, not the full archive.
 
 <details>
-<summary>Analysis controls, revision-aware research and project inspection</summary>
+<summary>Analysis controls, revision-aware research and other project tools</summary>
+
+**Version scope:** this source checkout and its prepared demo include unreleased
+changes. The published package is identified by [PyPI](https://pypi.org/project/lixity/)
+and the [GitHub releases](https://github.com/mfahsold/lixity/releases); a local
+version string is not proof that those changes have shipped.
 
 Turn **Analysis** on beside the text and choose the visible metric. Switch
 **Counted text** and **Paragraph comparison** independently. Violet underlines identify
@@ -168,6 +174,13 @@ sources, existing outputs and read-only structure findings. They neither move
 files nor establish that an output matches the current manuscript; see
 [project inspection](https://mfahsold.github.io/lixity/USAGE.md#inspect-project-structure).
 
+The early `lixity read-aloud` CLI can make a local Piper WAV listening copy of a
+manuscript or chapter. It requires cached voice models; audio quality and failure
+handling are still prototype-level. See the
+[read-aloud scope](https://mfahsold.github.io/lixity/USAGE.md#lixity-read-aloud)
+before relying on an export. NDA generation produces a draft, not consent or
+signatures. Dossier Markdown edits require explicit preview and apply.
+
 CLI workflows can reuse the project's configured manuscript;
 [default manuscript guidance](https://mfahsold.github.io/lixity/USAGE.md#default-manuscript)
 explains explicit project selection and settings scope.
@@ -202,7 +215,7 @@ their own projects.
 
 ## Release, citation and license
 
-> **Version line:** The current release is **v0.7.6**, in the pre-1.0 **0.x** line.
+> **Version line:** The documentation source version is **v0.7.6** (development preview), in the pre-1.0 **0.x** line.
 > Historical **1.x** and **3.x** tags predate the numbering reset; use the current
 > release rather than the numerically largest tag. Product, JSON response and
 > archive schema versions are independent.
@@ -262,7 +275,9 @@ records their separate owners and shared source/selection boundaries.
 The workspace reuses the product interface and prepared reads; curated copies
 contain selected publication material, not raw research history. None can save.
 
-Current release: 0.7.6; release tag: v0.7.6.
+Documentation source version: 0.7.6 (development preview). Published packages
+and tags are identified by [GitHub releases](https://github.com/mfahsold/lixity/releases)
+and [PyPI](https://pypi.org/project/lixity/); a source version is not publication evidence.
 The current 0.x product line follows a numbering reset; historical 1.x/3.x tags
 are older. Product, response and archive schema numbers are independent.
 
@@ -270,6 +285,14 @@ This discovery index links maintained references. The public demo follows curren
 main; published guides can describe newer behavior than an installed release.
 The [complete documentation bundle](https://mfahsold.github.io/lixity/llms-full.txt)
 is generated from those references for offline reading.
+
+The [reading, research and revision articles](https://mfahsold.github.io/lixity/blog/index.html)
+connect concrete author/editor questions to the tools. The development note
+[Why is this passage marked?](https://mfahsold.github.io/lixity/blog/why-this-passage.html)
+explains separate tense/measurement signals and current versus linked historical
+records. Its preview scope is explicit. `read-aloud` is an early local Piper CLI
+prototype; WAV output and its current completeness/conversion limits are documented
+in the [command reference](https://mfahsold.github.io/lixity/USAGE.md#lixity-read-aloud).
 
 ## Start with the installed interface
 
@@ -761,7 +784,10 @@ integrations. See [licensing](LICENSING.md) before installation.
 Analysis runs offline; downloading Python, the package and dependencies requires
 network access. No manuscript upload, account or API key is required.
 
-> **Version line:** The current release is **v0.7.6**, in the pre-1.0 **0.x** line.
+> **Version scope:** this source documentation describes the prepared **v0.7.6**
+> development build. The published package observed on 26 October 2026 was **0.7.5**;
+> check [GitHub releases](https://github.com/mfahsold/lixity/releases/latest) and
+> [PyPI](https://pypi.org/project/lixity/) for availability. The product uses the pre-1.0 **0.x** line.
 > Historical **1.x** and **3.x** tags predate the product-number reset; a larger
 > historical number does not mean a newer release. Product, JSON response and
 > archive schema versions are independent.
@@ -867,11 +893,14 @@ configuration and PDF behavior. Built-in analysis runs locally. Optional
 <details>
 <summary>Reproducible wheel installation and Python environments</summary>
 
-For a checksum-verified setup, install the pinned release wheel instead and
-verify it against `SHA256SUMS` on the release page:
+For a checksum-verified setup, download the wheel from the chosen
+[published release](https://github.com/mfahsold/lixity/releases/latest) and verify
+it against that release's `SHA256SUMS`. Then install the downloaded file, replacing
+`VERSION` below with its actual version and using the file's real local path.
+A prepared version in this checkout does not establish that a wheel is published:
 
 ```sh
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.7.6/lixity-0.7.6-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "./lixity-VERSION-py3-none-any.whl"
 ```
 
 `uv tool list` shows the installed source. This uses uv's
@@ -1231,13 +1260,14 @@ retained evidence stays readable while it is closed.
 
 ## Python API: project environment
 
-These advanced source installs require Git and an existing Python 3.10+.
+These advanced development installs follow `main` and require Git and an existing
+Python 3.10+. For a published version, use a tag that exists in GitHub releases.
 
 Linux/macOS:
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@v0.7.6"
+.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@main"
 .venv/bin/python -m pip check
 .venv/bin/python -c "import lixity; print(lixity.__version__)"
 ```
@@ -1246,7 +1276,7 @@ Windows PowerShell (no activation or execution-policy change needed):
 
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@v0.7.6"
+.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@main"
 .\.venv\Scripts\python.exe -m pip check
 .\.venv\Scripts\python.exe -c "import lixity; print(lixity.__version__)"
 ```
@@ -1436,6 +1466,7 @@ or a different output.
 | Which files are sources or outputs, and are their locations usable? | `lixity project --project PATH` | read-only roles, existing outputs and bounded structure findings |
 | I want to manage and cite research sources | `lixity research` | immutable archives, citations, dossiers, manuscript grounding |
 | I want a printable document, report or reading copy | `lixity pdf` | neutral/editorial A4, A4 report, A5 book, 30×60 sheet |
+| I want an experimental local listening copy | `lixity read-aloud` | Piper WAV output; cached voices required, prototype completeness/conversion limits below |
 | I want to share a browsable reading copy | `lixity export-site` | static website, optional research and original sources |
 | I want a reproducible artifact set | `lixity build` | `exports/`, archive rotation |
 | What can the engine do? | `lixity about --json` | languages, features, thresholds, commands |
@@ -2574,6 +2605,40 @@ These fixed-layout PDFs are for everyday documents, editing, analysis, reading a
 There is no EPUB/DOCX export, custom trim size, bleed/crop marks, print color management, printer preflight or
 PDF/UA/PDF/X certification. Searchable text, metadata and bookmarks alone do
 not establish accessibility or production compliance.
+
+### `lixity read-aloud`
+
+**Development prototype:** create a local listening copy with Piper TTS. This is
+a CLI workflow; it is not a browser audio player or a production audiobook pipeline.
+
+```bash
+lixity read-aloud manuscript.md --language en -o manuscript.wav
+lixity read-aloud manuscript.md --language de --chapter 2 --speed 1.1 -o chapter-2.wav
+lixity read-aloud --project ./novel --language de -o reading-copy.wav
+```
+
+`--chapter` selects a one-based chapter number. Without an explicit file, the
+command uses the selected project's configured manuscript or folder discovery.
+The CLI defaults to the project language, then English; pass `--language` explicitly
+for the intended voice. The prepared default voices are
+`de_DE-thorsten_emotional-medium` and `en_US-lessac-medium`. `--voice` currently
+accepts a cached model name, not an arbitrary ONNX path. A model needs both
+`~/.cache/piper-voices/NAME/NAME.onnx` and `NAME.onnx.json` beside it. Piper/ONNX
+dependencies and models are separate prerequisites; the command does not download
+them. Review each voice model's license before distribution.
+
+The prototype adds pauses for headings and scene breaks, and adjusts reading
+tempo using sentence-length heuristics. Its dialogue/emotion selection is coarse;
+it is not automatic character casting or an interpretation of the scene.
+`--speed 1.1` requests a faster reading. Recognised editorial markers are omitted
+by default; `--keep-markers` includes them. The manuscript is not edited.
+
+Use WAV while evaluating this prototype. MP3 conversion currently depends on
+FFmpeg and does not yet reliably reject missing/failed conversion. Failed external
+Piper segments can also be omitted, and WAV concatenation does not validate every
+segment's sample format. Compare the output with the source before relying on a
+complete listening copy. The prototype does not guarantee long-manuscript
+completeness or multilingual narration quality.
 
 ### `lixity service`
 
@@ -7356,9 +7421,10 @@ join saved manuscript associations by those references, independently of the
 dossier's derived current-claim list. Only existing exact anchor matches offer
 passage jumps. The document origin/return context is ephemeral and guarded by the
 current project/source/research context. Its compact work thread displays the
-original chapter/line span and the last accepted viewed record identity and saved
-revision, distinguishing an explicitly pinned version from a current or viewed
-version. Return or a changed project/source/research context clears the thread;
+return destination (chapter/line span or originating dossier) and one return action.
+Record identity and pinned/current revision metadata belong to the record viewer,
+where they can be inspected without repeating them in primary navigation.
+Return or a changed project/source/research context clears the thread;
 no archive/backend schema is introduced.
 Native selection uses ephemeral paragraph-local UTF-16 offsets and direction,
 rebuilt against exact paragraph text on return so annotation repaint cannot
@@ -8132,6 +8198,26 @@ close temporary menus/settings and suspend manuscript tools, so dormant views do
 not consume the active workspace's keys or restore focus. Browser appearance
 preferences are separate from ephemeral, project-bound passage/relation context.
 
+**Current main (unreleased):** chapter and passage jumps retire the previous
+passage context before aligning the new destination. Reading another paragraph,
+or deliberately scrolling the manuscript beyond the inspected passage, closes
+that context; scrolling within a dossier or inspector retains it. Tool switching
+uses the last explicitly requested passage, including when the previous tool
+cached another paragraph. Reading marks expose a labelled **Tense pattern · review**
+action that opens its heuristic explanation independently of the measurement
+layer. These signals invite contextual review; they do not diagnose an error.
+
+The research backend projects the paragraph context from the same verified
+snapshot as manuscript review. Native HTTP and the offline exporter share this
+projection: current/pinned record summaries, exact quotation associations,
+dossier groups and current dossier decisions. The browser validates the transport
+against the displayed source and renders it; it does not fetch separate record
+versions or reconstruct the dossier graph to populate this tool. Explicit record
+viewers still load their own full records. Missing projections remain unavailable,
+and sparse absence in a valid projection means no exact associations. Library
+callers opt in with `include_context=True`; default review/CLI contracts stay
+unchanged. No retained source, revision, pin or manuscript byte is rewritten.
+
 `workspace-motion.js` consumes committed display state; it does not own visibility,
 navigation, focus or data. Optional native opacity feedback covers at most eight
 modestly sized visible elements, and a gutter marker identifies a passage return.
@@ -8251,6 +8337,10 @@ Each tablist has an accessible name; project-dialog tabs explicitly name their
 panels. The shared keyboard controller keeps one tab stop, follows orientation
 and uses manual activation for research views that fetch data. Dialog switching
 is scoped to the containing dialog so it cannot reset another editor.
+
+Shared controls retain their geometry across hover and pressed states. Color,
+border, shadow and focus feedback identify the action without moving its hit
+target underneath a stationary pointer, including after dialog error messages.
 
 Native `<dialog>` supplies modality, Escape and focus restoration. The shared
 dialog frame keeps the title and close action above a scrolling form, uses
@@ -9202,7 +9292,7 @@ No manuscript blob, source `Passage` or `EvidenceLink` is created.
 
 `list_manuscript_links(project, *, claim_id=None, include_retracted=False)` and
 `review_manuscript_links(project, manuscript, *, expected_project_id=None,
-language=None, project_config=None)` are read-only. Create/list/review envelopes
+language=None, project_config=None, include_context=False)` are read-only. Create/list/review envelopes
 are respectively `research-manuscript-link-local/1`,
 `research-manuscript-links-local/1`, `research-manuscript-review-local/1`.
 Stored `ManuscriptClaimLink` uses kind `manuscript_claim_link` and
@@ -9244,6 +9334,26 @@ semantic contradiction or factual proof. `source_changed` is informational (a di
 `lixity.research.manuscript.manuscript_review_data(Repository(project).snapshot(), source_path=...,
 source_sha256=..., paragraphs=..., source_state="available")` without another
 analysis pass; `source_state` also accepts `missing|unreadable`.
+
+**Current main (unreleased):** `include_context=True` adds `passage_context` with
+schema `research-passage-context-local/1`. The native manuscript-review route
+and offline exporter request this same projection. The existing review envelope,
+default library/CLI output and retained archive records remain unchanged.
+The sparse `paragraphs` list is keyed by `start_line`, `end_line` and
+`paragraph_sha256`; only exact `resolved` associations enter it. Each paragraph
+reports `state: ready|unavailable`, `total`, `shown` and `groups`. A group contains
+one dossier's current identity and distinct historical `pins`, grouped claims
+with one `current` identity and distinct `versions` containing pinned identities,
+retained association quotes and flags, each version's pinned `dossier_revision`,
+and the current dossier's decisions once.
+Records are summaries (`id`, `title`, `revision`), not full bodies or source reads.
+At most five associations per paragraph are projected; `total` preserves the
+complete count and the existing Review route exposes all associations. A withdrawn
+selected claim or dossier makes its paragraph `unavailable`, never empty.
+Absence from a valid sparse projection means no exact associations for that
+paragraph. A missing or malformed projection is unavailable to the UI. The
+projection and review rows use one verified snapshot; opening a context does
+not fetch or join separate record/dossier versions in the browser.
 
 Native routes require explicit context guards:
 

@@ -35,12 +35,19 @@ def check_or_sync_files(version: str, *, check_only: bool = False) -> list[str]:
         r"https://github\.com/mfahsold/lixity/releases/download/v\d+\.\d+\.\d+/lixity-\d+\.\d+\.\d+-py3-none-any\.whl",
         f"https://github.com/mfahsold/lixity/releases/download/v{version}/lixity-{version}-py3-none-any.whl",
     )
+    source_pin = (
+        r"The documentation source version is \*\*v\d+\.\d+\.\d+\*\*",
+        f"The documentation source version is **v{version}**",
+    )
     # Rules: (file_path, list of (pattern, replacement))
     rules: list[tuple[Path, list[tuple[str, str]]]] = [
         (
             ROOT / "README.md",
             [
                 install_pin,
+                source_pin,
+                (r"\[development notes\]\(https://mfahsold\.github\.io/lixity/releases/v\d+\.\d+\.\d+\.md\)",
+                 f"[development notes](https://mfahsold.github.io/lixity/releases/v{version}.md)"),
                 (r"This installs \*\*v\d+\.\d+\.\d+\*\*",
                  f"This installs **v{version}**"),
                 (r"The current release is \*\*v\d+\.\d+\.\d+\*\*",
@@ -55,6 +62,8 @@ def check_or_sync_files(version: str, *, check_only: bool = False) -> list[str]:
             ROOT / "docs" / "INSTALLATION.md",
             [
                 install_pin,
+                (r"this source documentation describes the prepared \*\*v\d+\.\d+\.\d+\*\*",
+                 f"this source documentation describes the prepared **v{version}**"),
                 (r"The current release is \*\*v\d+\.\d+\.\d+\*\*",
                  f"The current release is **v{version}**"),
                 (r"\[release notes\]\(releases/v\d+\.\d+\.\d+\.md\)",
@@ -77,6 +86,8 @@ def check_or_sync_files(version: str, *, check_only: bool = False) -> list[str]:
                  f"replace `@v{version}` with `@main`"),
                 (r"Current release: \d+\.\d+\.\d+; release tag: v\d+\.\d+\.\d+",
                  f"Current release: {version}; release tag: v{version}"),
+                (r"Documentation source version: \d+\.\d+\.\d+",
+                 f"Documentation source version: {version}"),
                 (r"release history \(current: \d+\.\d+\.\d+\)",
                  f"release history (current: {version})"),
                 (r"\[Release notes\]\(https://mfahsold\.github\.io/lixity/releases/v\d+\.\d+\.\d+\.md\)",
@@ -115,6 +126,10 @@ def check_or_sync_files(version: str, *, check_only: bool = False) -> list[str]:
     for guide in sorted((ROOT / "docs" / "guides").glob("*.html")):
         pins = [install_pin]
         if guide.name == "installation.html":
+            pins.append((r'This source guide describes <strong>v\d+\.\d+\.\d+ development</strong>',
+                         f'This source guide describes <strong>v{version} development</strong>'))
+            pins.append((r'<a href="\.\./releases/v\d+\.\d+\.\d+\.md">\d+\.\d+\.\d+ development notes</a>',
+                         f'<a href="../releases/v{version}.md">{version} development notes</a>'))
             pins.append((r'The current release is <strong>v\d+\.\d+\.\d+</strong>',
                          f'The current release is <strong>v{version}</strong>'))
             pins.append((r'This installs the current release, <strong>v\d+\.\d+\.\d+</strong>',
@@ -157,6 +172,12 @@ def current_doc_files() -> list[Path]:
 # Broad matching would also catch 127.0.0.1 and third-party package versions.
 # Historical wording such as "since v1.20.0" remains valid.
 CURRENT_CLAIMS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("Markdown documentation source version",
+     re.compile(r"(?:The documentation source version is|this source documentation describes the prepared) \*\*v(\d+\.\d+\.\d+)\*\*")),
+    ("HTML documentation source version",
+     re.compile(r'This source guide describes <strong>v(\d+\.\d+\.\d+) development</strong>')),
+    ("documentation source version",
+     re.compile(r"Documentation source version:\s*(\d+\.\d+\.\d+)", re.I)),
     ("current release statement",
      re.compile(r"current release(?:\s+is)?[\s:*>]*\**v?(\d+\.\d+\.\d+)", re.I)),
     ("current HTML install statement",
@@ -199,7 +220,7 @@ CURRENT_NOTE_CLAIMS: dict[Path, tuple[tuple[str, re.Pattern[str]], ...]] = {
         ("current release-note label",
          re.compile(r"\[v(\d+\.\d+\.\d+) release notes\]\((?:docs/releases/|https://mfahsold\.github\.io/lixity/releases/)v\d+\.\d+\.\d+\.md\)")),
         ("current release-note target",
-         re.compile(r"\[(?:v\d+\.\d+\.\d+ release notes|Release notes)\]\((?:docs/releases/|https://mfahsold\.github\.io/lixity/releases/)v(\d+\.\d+\.\d+)\.md\)")),
+         re.compile(r"\[(?:v\d+\.\d+\.\d+ release notes|Release notes|development notes)\]\((?:docs/releases/|https://mfahsold\.github\.io/lixity/releases/)v(\d+\.\d+\.\d+)\.md\)")),
     ),
     Path("docs/index.html"): (
         ("current release-note target",
@@ -219,7 +240,7 @@ CURRENT_NOTE_CLAIMS: dict[Path, tuple[tuple[str, re.Pattern[str]], ...]] = {
     ),
     Path("docs/guides/installation.html"): (
         ("current release-note target",
-         re.compile(r'<a href="\.\./releases/v(\d+\.\d+\.\d+)\.md">release notes</a>')),
+         re.compile(r'<a href="\.\./releases/v(\d+\.\d+\.\d+)\.md">(?:release notes|\d+\.\d+\.\d+ development notes)</a>')),
     ),
 }
 

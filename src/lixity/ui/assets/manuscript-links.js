@@ -9,7 +9,7 @@
   if (!bridge || (!canWrite && document.body.dataset.manuscriptLinks !== "read") ||
       !projectToken() || !bridge.contextToken() || !document.body.dataset.manuscriptSourceSha256) return;
   var draft = null, serial = 0, reviewSerial = 0, review = null, reviewContext = null, remembered = null, reviewProjectId = null, reviewPending = null;
-  var passageOwner = null, passageReads = new Map(), reviewFailure = null;
+  var passageOwner = null, reviewFailure = null;
   var reviewFilter = null, renderedReviewFilter = null, openingRelated = false, relatedDestination = null;
   var pending = new Set(), dialog, picker, quotation, statement, consent, save, status, filterInput;
   var chapters = document.getElementById("chapters");
@@ -414,7 +414,9 @@
             (archive.project_id && report.project_id !== archive.project_id) ||
             report.current_source_sha256 !== value.source || report.source_state !== "available") {
           var stale = staleReport(report, value.source) || report.code === "stale-context";
-          clearReview(stale ? label("manuscript_link_stale") : bridge.errorText(report), stale); return;
+          clearReview(stale ? label("manuscript_link_stale") : bridge.errorText(report), stale);
+          if (!stale && report.ok === false) reviewFailure.state = "read-error";
+          return;
         }
         applyReview(report, value);
       } finally {
@@ -555,7 +557,7 @@
     contextHost.querySelector(".context-tool-tabs").appendChild(passageTab);
   }
   function resetPassage() {
-    passageOwner = null; passageReads.clear(); passageBody.replaceChildren();
+    passageOwner = null; passageBody.replaceChildren();
     passageHost.dataset.state = "closed"; passageTab.hidden = true; passageReview.hidden = true;
   }
   function invalidatePassage() {
@@ -646,16 +648,17 @@
     button.dataset.recordId = record.id;
     return button;
   }
-  function pinnedRecord(item, kind, result, current) {
+  function pinnedRecord(item, kind, current, pins) {
     var section = element("div", "", "passage-research-record");
     section.appendChild(element("p", label("research_revision_kind_" + kind), "ctl-note"));
-    section.appendChild(recordButton(kind, current.record));
-    if (!result.is_latest) {
-      var pin = element("button", label("research_revision_linked_version").replace("{revision}", result.record.revision), "ctl passage-record-pin");
+    section.appendChild(recordButton(kind, current));
+    pins.forEach(function(linked) {
+      if (linked.revision === current.revision) return;
+      var pin = element("button", label("research_revision_linked_version").replace("{revision}", linked.revision), "ctl passage-record-pin");
       pin.type = "button"; pin.dataset.researchHistory = kind;
-      pin.dataset.recordId = result.record.id; pin.dataset.recordRevision = String(result.record.revision);
+      pin.dataset.recordId = linked.id; pin.dataset.recordRevision = String(linked.revision);
       section.appendChild(pin);
-    }
+    });
     item.appendChild(section);
   }
   function passageDetails(title, attribute) {
@@ -663,33 +666,62 @@
     details.setAttribute(attribute, ""); details.appendChild(element("summary", title));
     return details;
   }
-  async function currentPassageRecord(owner, report, kind, result) {
-    if (result.is_latest) return result;
-    if (!Number.isInteger(result.latest_revision) || result.latest_revision <= result.record.revision) throw {state: "unavailable"};
-    return passageRead(owner, report, kind, result.record.id, result.latest_revision);
-  }
-  async function passageRead(owner, report, kind, id, revision) {
-    var key = JSON.stringify([owner.context, report.snapshot, kind, id, revision]);
-    if (!passageReads.has(key)) {
-      var params = new URLSearchParams({project_token: owner.context.project, id: id});
-      if (kind !== "context") { params.set("kind", kind); params.set("revision", revision); }
-      passageReads.set(key, bridge.read((kind === "context" ? "research/dossiers?" : "research/record?") + params.toString()));
+  function passageModel(report, panel) {
+    var projection = report.passage_context;
+    function record(value) {
+      return value && typeof value.id === "string" && value.id && typeof value.title === "string" &&
+        Number.isInteger(value.revision) && value.revision > 0;
     }
-    var result = await passageReads.get(key);
-    if (!passageCurrent(owner)) throw {state: "cancelled"};
-    if (owner.reviewSerial !== reviewSerial) throw {state: "stale", message: label("manuscript_link_archive_changed")};
-    if (!result.ok) throw {state: result.code === "stale-context" ? "stale" : "read-error", message: bridge.errorText(result, label("reader_error"))};
-    if (result.project_id !== report.project_id || result.snapshot !== report.snapshot) throw {state: "stale", message: label("manuscript_link_archive_changed")};
-    if (kind === "context") {
-      if (result.id !== id || !Array.isArray(result.decision_reviews)) throw {state: "unavailable"};
-    } else if (result.schema_version !== "research-record-local/1" || result.kind !== kind || result.record_id !== id ||
-        !result.record || result.record.id !== id || result.record.revision !== revision || typeof result.record.title !== "string") throw {state: "unavailable"};
-    return result;
+    if (!projection || projection.schema_version !== "research-passage-context-local/1" || !Array.isArray(projection.paragraphs)) throw {state:"unavailable"};
+    var matches = projection.paragraphs.filter(function(value) {
+      return value && value.start_line === Number(panel.dataset.start) && value.end_line === Number(panel.dataset.end) &&
+        value.paragraph_sha256 === panel.dataset.paragraphSha256;
+    });
+    // Verify transport completeness against the accepted review without
+    // rebuilding the backend's grouping, revision choice or decision graph.
+    var rows = passageResearchRows(report, panel);
+    if (!matches.length && !rows.length) return {state:"empty", total:0, shown:0, groups:[]};
+    if (matches.length !== 1) throw {state:"unavailable"};
+    var model = matches[0];
+    if (model.state === "unavailable") throw {state:"unavailable"};
+    if (model.state !== "ready" || !Number.isInteger(model.total) || model.total !== rows.length ||
+        !Number.isInteger(model.shown) || model.shown < 1 || model.shown > 5 || model.shown > model.total ||
+        !Array.isArray(model.groups)) throw {state:"unavailable"};
+    var shown = 0, seen = new Set();
+    model.groups.forEach(function(group) {
+      if (!group || !Array.isArray(group.claims) || !Array.isArray(group.decisions) || !group.decisions.every(record) ||
+          (group.dossier && (!record(group.dossier.current) || !Array.isArray(group.dossier.pins) || !group.dossier.pins.every(record)))) throw {state:"unavailable"};
+      if (group.dossier && group.dossier.pins.some(function(pin) {
+        return pin.id !== group.dossier.current.id || pin.revision >= group.dossier.current.revision;
+      })) throw {state:"unavailable"};
+      group.claims.forEach(function(claim) {
+        if (!claim || !record(claim.current) || !Array.isArray(claim.versions) || !claim.versions.length) throw {state:"unavailable"};
+        claim.versions.forEach(function(version) {
+          if (!version || !record(version.pinned) || claim.current.id !== version.pinned.id ||
+              typeof version.confidence !== "string" || !Array.isArray(version.associations) || !version.associations.length) throw {state:"unavailable"};
+          version.associations.forEach(function(association) {
+            var row = association && rows.find(function(value) {return value.link_id === association.link_id;});
+            if (!row || seen.has(row.link_id) || row.claim_id !== version.pinned.id || row.claim_revision !== version.pinned.revision ||
+                row.claim_current_revision !== claim.current.revision ||
+                (row.dossier_id ? !group.dossier || row.dossier_id !== group.dossier.current.id ||
+                  row.dossier_revision !== version.dossier_revision ||
+                  (row.dossier_revision !== group.dossier.current.revision && !group.dossier.pins.some(function(pin) {
+                    return pin.revision === row.dossier_revision;
+                  })) : group.dossier !== null || version.dossier_revision !== null) ||
+                !association.anchor || association.anchor.quote !== row.anchor.quote || !Array.isArray(association.flags)) throw {state:"unavailable"};
+            seen.add(row.link_id);
+            shown++;
+          });
+        });
+      });
+    });
+    if (shown !== model.shown) throw {state:"unavailable"};
+    return model;
   }
   async function openPassage(panel, retry) {
     if (!panel || !panel.isConnected || !contextHost || !window.LixityReader) return;
     var owner = {panel: panel, hash: panel.dataset.paragraphSha256, context: context()};
-    passageOwner = owner; passageReads.clear(); passageTab.hidden = false;
+    passageOwner = owner; passageTab.hidden = false;
     passageReview.dataset.manuscriptLinksParagraph = panel.id; passageReview.hidden = false;
     window.LixityReader.requestTool("research", panel);
     passageClose.focus({preventScroll: true});
@@ -701,79 +733,59 @@
         passageStatus(owner, (reviewFailure || {}).state || "unavailable", (reviewFailure || {}).message || label("manuscript_link_unavailable")); return;
       }
       var report = review; owner.reviewSerial = reviewSerial;
-      var rows = passageResearchRows(report, panel);
-      var composed = await Promise.all(rows.slice(0, 5).map(async function(row) {
-        var claim = await passageRead(owner, report, "claim", row.claim_id, row.claim_revision);
-        var currentClaim = await currentPassageRecord(owner, report, "claim", claim);
-        var ref = claim.record.dossier_ref, dossier = null, currentDossier = null, detail = null;
-        if (ref) {
-          var values = await Promise.all([passageRead(owner, report, "dossier", ref.id, ref.revision), passageRead(owner, report, "context", ref.id, null)]);
-          dossier = values[0]; detail = values[1];
-          currentDossier = await currentPassageRecord(owner, report, "dossier", dossier);
-        }
-        return {rows: [row], claim: claim, currentClaim: currentClaim, dossier: dossier, currentDossier: currentDossier, detail: detail};
-      }));
-      if (!passageCurrent(owner) || owner.reviewSerial !== reviewSerial) return;
+      var model = passageModel(report, panel);
       var fragment = document.createDocumentFragment();
-      fragment.appendChild(element("p", composed.length === rows.length ?
-        label(rows.length === 1 ? "manuscript_link_review_count_one" : "manuscript_link_review_count").replace("{count}", rows.length) :
-        label("passage_research_count").replace("{shown}", composed.length).replace("{total}", rows.length), "ctl-note"));
-      if (!rows.length) fragment.appendChild(element("p", label("passage_research_empty"), "ctl-note"));
-      // Repeated exact quotations of one pinned claim share a single context
-      // entry; the association count and every retained quotation stay intact.
-      var groups = new Map();
-      composed.forEach(function(value) {
-        var key = JSON.stringify([value.claim.record.id, value.claim.record.revision]);
-        if (groups.has(key)) groups.get(key).rows.push(value.rows[0]);
-        else groups.set(key, value);
-      });
-      groups.forEach(function(value) {
+      fragment.appendChild(element("p", model.shown === model.total ?
+        label(model.total === 1 ? "manuscript_link_review_count_one" : "manuscript_link_review_count").replace("{count}", model.total) :
+        label("passage_research_count").replace("{shown}", model.shown).replace("{total}", model.total), "ctl-note"));
+      if (!model.total) fragment.appendChild(element("p", label("passage_research_empty"), "ctl-note"));
+      model.groups.forEach(function(group) {
         var item = element("section", "", "passage-research-item");
-        pinnedRecord(item, "claim", value.claim, value.currentClaim);
-        var warnings = new Set();
-        value.rows.forEach(function(row) { row.flags.forEach(function(flag) {
-          if (["source_changed", "claim_withdrawn"].includes(flag)) warnings.add(label("manuscript_link_" + flag));
-        }); });
-        if (warnings.size) item.appendChild(element("p", Array.from(warnings).join(" · "), "ctl-note"));
-        if (value.dossier) {
-          pinnedRecord(item, "dossier", value.dossier, value.currentDossier);
-        }
-        var associations = passageDetails(value.rows.length === 1 ? label("passage_research_link_details") :
-          label("passage_research_link_details_count").replace("{count}", value.rows.length), "data-passage-research-associations");
-        associations.appendChild(element("p", label("research_revision_kind_claim") + " · " +
-          label("research_revision_number").replace("{revision}", value.claim.record.revision), "ctl-note"));
-        associations.appendChild(element("p", label("passage_research_confidence") + ": " + label("research_confidence_" + value.claim.record.confidence), "ctl-note"));
-        value.rows.forEach(function(row) {
-          associations.appendChild(element("blockquote", row.anchor.quote));
-          associations.appendChild(element("p", label("manuscript_link_resolved"), "ctl-note"));
+        if (group.dossier) pinnedRecord(item, "dossier", group.dossier.current, group.dossier.pins);
+        group.claims.forEach(function(claim) {
+          var claimItem = element("section", "", "passage-research-claim");
+          pinnedRecord(claimItem, "claim", claim.current, claim.versions.map(function(version) {return version.pinned;}));
+          claim.versions.forEach(function(version) {
+            var warnings = new Set();
+            version.associations.forEach(function(row) { row.flags.forEach(function(flag) {
+              if (["source_changed", "claim_withdrawn"].includes(flag)) warnings.add(label("manuscript_link_" + flag));
+            }); });
+            if (warnings.size) claimItem.appendChild(element("p", Array.from(warnings).join(" · "), "ctl-note"));
+            var associationTitle = version.associations.length === 1 ? label("passage_research_link_details") :
+              label("passage_research_link_details_count").replace("{count}", version.associations.length);
+            if (claim.versions.length > 1) associationTitle += " · " + label("research_revision_number").replace("{revision}", version.pinned.revision);
+            var associations = passageDetails(associationTitle, "data-passage-research-associations");
+            associations.appendChild(element("p", label("research_revision_kind_claim") + " · " +
+              label("research_revision_number").replace("{revision}", version.pinned.revision), "ctl-note"));
+            if (version.dossier_revision) associations.appendChild(element("p", label("research_revision_kind_dossier") + " · " +
+              label("research_revision_number").replace("{revision}", version.dossier_revision), "ctl-note"));
+            associations.appendChild(element("p", label("passage_research_confidence") + ": " + label("research_confidence_" + version.confidence), "ctl-note"));
+            version.associations.forEach(function(row) {
+              associations.appendChild(element("blockquote", row.anchor.quote));
+              associations.appendChild(element("p", label("manuscript_link_resolved"), "ctl-note"));
+            });
+            claimItem.appendChild(associations);
+          });
+          item.appendChild(claimItem);
         });
-        item.appendChild(associations);
-        if (value.dossier) {
-          if (value.detail.decision_reviews.length) {
-            var count = value.detail.decision_reviews.length;
-            var decisions = passageDetails(label(count === 1 ? "passage_research_decision_count_one" : "passage_research_decision_count")
-              .replace("{count}", count), "data-passage-research-decisions");
-            var more = count > 5 ? passageDetails(label(count === 6 ? "passage_research_more_decisions_one" : "passage_research_more_decisions")
-              .replace("{count}", count - 5), "data-passage-research-more-decisions") : null;
-            value.detail.decision_reviews.forEach(function(decision) {
-              if (typeof decision.title !== "string" || !decision.decision_id || !Number.isInteger(decision.revision)) throw {state: "unavailable"};
-            });
-            function appendDecision(host, decision) {
-              host.appendChild(recordButton("decision", {id: decision.decision_id, title: decision.title, revision: decision.revision}));
-            }
-            value.detail.decision_reviews.slice(0, 5).forEach(function(decision) { appendDecision(decisions, decision); });
-            if (more) more.addEventListener("toggle", function() {
-              if (!more.open || more.dataset.loaded || !passageCurrent(owner)) return;
-              value.detail.decision_reviews.slice(5).forEach(function(decision) { appendDecision(more, decision); });
-              more.dataset.loaded = "true";
-            });
-            if (more) decisions.appendChild(more);
-            item.appendChild(decisions);
-          }
+        if (group.decisions.length) {
+          var count = group.decisions.length;
+          var decisions = passageDetails(label(count === 1 ? "passage_research_decision_count_one" : "passage_research_decision_count")
+            .replace("{count}", count), "data-passage-research-decisions");
+          var more = count > 5 ? passageDetails(label(count === 6 ? "passage_research_more_decisions_one" : "passage_research_more_decisions")
+            .replace("{count}", count - 5), "data-passage-research-more-decisions") : null;
+          group.decisions.slice(0, 5).forEach(function(decision) { decisions.appendChild(recordButton("decision", decision)); });
+          if (more) more.addEventListener("toggle", function() {
+            if (!more.open || more.dataset.loaded || !passageCurrent(owner)) return;
+            group.decisions.slice(5).forEach(function(decision) { more.appendChild(recordButton("decision", decision)); });
+            more.dataset.loaded = "true";
+          });
+          if (more) decisions.appendChild(more);
+          item.appendChild(decisions);
         }
         fragment.appendChild(item);
       });
-      passageBody.replaceChildren(fragment); passageHost.dataset.state = rows.length ? "ready" : "empty";
+      passageBody.replaceChildren(fragment); passageHost.dataset.state = model.total ? "ready" : "empty";
     } catch (error) {
       if (error.state !== "cancelled") passageStatus(owner, error.state || "read-error", error.message || label("manuscript_link_unavailable"));
     }

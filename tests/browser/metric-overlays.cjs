@@ -99,24 +99,32 @@ async function verifyComparisonPaint(browser) {
           return {gradient: style.backgroundImage, opacity: style.opacity, inkOpacity: getComputedStyle(prose).opacity,
             ink: getComputedStyle(prose).color, hue: style.getPropertyValue('--paragraph-layer-color').trim()};
         });
-        assert.match(paint.gradient, /^linear-gradient\(/, 'Notable paragraphs have a restrained directional wash');
+        assert.equal(paint.gradient, 'none', 'Paragraph comparison uses a uniform wash distinct from the statistical scale');
         assert.equal(paint.opacity, '1'); assert.equal(paint.inkOpacity, '1');
         // Hide ink only for a paint sample: the browser must composite the real
-        // gradient over its actual reader surface, not merely report backgroundColor.
+        // wash over its actual reader surface, not merely report backgroundColor.
         await paragraph.evaluate(node => node.querySelectorAll(':scope > *').forEach(child => { child.style.visibility = 'hidden'; }));
         const samples = await paintedPixels(paragraph, [0, .325, .65, .95]);
-        await paragraph.evaluate(node => node.querySelectorAll(':scope > *').forEach(child => { child.style.removeProperty('visibility'); }));
-        const base = samples[3], hue = paint.hue.match(/\w\w/g).map(value => parseInt(value, 16));
-        const alpha = colorScheme === 'dark' ? .09 : .06;
-        for (const [index, weight] of [[0, 1], [1, .5], [2, 0]]) {
-          const expected = hue.map((channel, i) => Math.round(channel * alpha * weight + base[i] * (1 - alpha * weight)));
-          assert.ok(expected.every((channel, i) => Math.abs(channel - samples[index][i]) <= 2), JSON.stringify({width, colorScheme, index, expected, actual: samples[index]}));
+        await paragraph.evaluate(node => {node.style.background = 'transparent';});
+        const [base] = await paintedPixels(paragraph, [.325]);
+        await paragraph.evaluate(node => {
+          node.style.removeProperty('background');
+          node.querySelectorAll(':scope > *').forEach(child => { child.style.removeProperty('visibility'); });
+        });
+        const hue = paint.hue.match(/\w\w/g).map(value => parseInt(value, 16));
+        for (const sample of samples) {
+          assert.ok(sample.slice(0, 3).every((channel, i) => Math.abs(channel - samples[0][i]) <= 1),
+            'The comparison wash is uniform across the prose');
+          const distance = rgb => rgb.slice(0, 3).reduce((sum, channel, i) => sum + (channel - hue[i]) ** 2, 0);
+          assert.ok(distance(sample) < distance(base), 'The wash carries the direction color');
+          assert.ok(sample.slice(0, 3).every((channel, i) => Math.abs(channel - base[i]) < 32),
+            'The comparison tint stays restrained');
         }
         const ink = paint.ink.match(/[\d.]+/g).slice(0, 3).map(Number);
         function luminance(rgb) { return rgb.slice(0, 3).map(n => n / 255).map(n => n <= .04045 ? n / 12.92 : ((n + .055) / 1.055) ** 2.4).reduce((sum, n, i) => sum + n * [.2126, .7152, .0722][i], 0); }
         for (const sample of samples) {
           const values = [luminance(ink), luminance(sample)].sort((a, b) => a - b);
-          assert.ok((values[1] + .05) / (values[0] + .05) >= 4.5, 'Prose retains contrast over every sampled gradient stop');
+          assert.ok((values[1] + .05) / (values[0] + .05) >= 4.5, 'Prose retains contrast across the comparison wash');
         }
       }
       await target.scrollIntoViewIfNeeded(); await frames(page);
@@ -309,9 +317,10 @@ async function verifyComparisonRegressions(browser) {
           const bounds = await marker.evaluate(node => {
             const box = node.getBoundingClientRect(), panel = node.parentNode.getBoundingClientRect();
             return {inside: box.left >= panel.left - .5 && box.right <= panel.right + .5,
-              textFits: node.scrollWidth <= node.clientWidth, height: box.height};
+              textFits: node.scrollWidth <= node.clientWidth, height: box.height,
+              coarse: matchMedia('(pointer: coarse)').matches};
           });
-          assert.ok(bounds.inside && bounds.textFits && bounds.height >= 44,
+          assert.ok(bounds.inside && bounds.textFits && bounds.height >= (bounds.coarse ? 44 : 24),
             JSON.stringify({width, scale, inspector, bounds}));
           if (value.name === 'large-value' && width === 1100 && scale === 200 && inspector) {
             assert.ok(bounds.height > 44, 'The long value wraps within the enlarged split pane');
@@ -390,7 +399,7 @@ async function verifyComparisonRegressions(browser) {
           const foreground = [...ctx.getImageData(0, 0, 1, 1).data];
           function lum(rgb) { return rgb.slice(0, 3).map(n => n / 255).map(n => n <= .04045 ? n / 12.92 : ((n + .055) / 1.055) ** 2.4).reduce((sum, n, i) => sum + n * [.2126, .7152, .0722][i], 0); }
           const a = lum(background), b = lum(foreground);
-          return {background: css.backgroundColor, opacity: ink.opacity, contrast: (Math.max(a, b) + .05) / (Math.min(a, b) + .05)};
+          return {background: ink.backgroundColor, opacity: ink.opacity, contrast: (Math.max(a, b) + .05) / (Math.min(a, b) + .05)};
         });
         assert.equal(style.background, 'rgba(0, 0, 0, 0)', 'Paragraph comparison leaves the prose background clear');
         assert.equal(await painted.locator(':scope > .reader-comparison-value').isVisible(), true);

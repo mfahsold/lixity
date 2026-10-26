@@ -240,7 +240,7 @@ server.serve_forever()
       // Direct analysis controls support keyboard input without opening a popup.
       const metric = page.locator('#style-layer');
       await metric.focus(); await page.keyboard.press('End'); await page.keyboard.press('Enter');
-      assert.equal(await metric.inputValue(), 'passive', 'native keyboard input changes the selected metric');
+      assert.equal(await metric.inputValue(), 'nominal', 'End selects the final metric in the grouped selector');
       await page.keyboard.press('Home'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter');
       assert.equal(await metric.inputValue(), 'asl');
       assert.equal(await metric.evaluate(node => node === document.activeElement), true);
@@ -740,7 +740,10 @@ server.serve_forever()
       } else {
         if (fault === 'adjacent') await page.waitForFunction(() => CSS.highlights.get('lixity-analysis-evidence')?.size === 2);
         else if (['partial', 'forced-colors'].includes(fault)) await page.waitForFunction(() => CSS.highlights.get('lixity-analysis-evidence')?.size === 1);
-        else if (fault === 'zero') await page.waitForFunction(() => CSS.highlights.has('lixity-analysis-evidence') && CSS.highlights.get('lixity-analysis-evidence').size === 0);
+        else if (fault === 'zero') {
+          await settle(page);
+          assert.deepEqual(await ranges(page), [], 'A measured zero paints no ranges; an empty registry entry is optional');
+        }
         else {
           await page.waitForFunction(() => document.getElementById('analysis-evidence-status').textContent.length > 0);
           assert.deepEqual(await ranges(page), [], `${fault}: no invented highlight`);

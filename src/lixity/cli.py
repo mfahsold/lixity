@@ -1717,8 +1717,8 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("file", nargs="?", help="Markdown manuscript (default: configured manuscript or folder discovery)")
             p.add_argument("-o", "--output", help="Audio target file (WAV or MP3, default: <workspace-slug>.wav)")
             p.add_argument("--chapter", type=int, default=None, help="Synthesize only a specific 1-based chapter number")
-            p.add_argument("--language", default=None, help="Language code (de or en; default: project setting or de)")
-            p.add_argument("--voice", default=None, help="Piper ONNX voice model name or path (default: Thorsten emotional / Lessac)")
+            p.add_argument("--language", default=None, help="Language code (de or en; default: project setting or en)")
+            p.add_argument("--voice", default=None, help="Cached Piper voice model name (default: Thorsten emotional for de / Lessac for en)")
             p.add_argument("--speed", type=float, default=1.0, help="Overall reading speed factor (default: 1.0; 1.2 = 20%% faster)")
             p.add_argument("--keep-markers", action="store_true", help="Read editorial markers aloud instead of omitting them")
             continue

@@ -148,6 +148,7 @@ function rememberPassageLocation(target) {
 function scrollAndFlash(target, options) {
   if (!target) return;
   options = options || {};
+  if (window.LixityReader) window.LixityReader.leavePassage(target);
   var focused = document.activeElement;
   if (target.closest("#chapters") && target.closest(".text-miss")) {
     var clearSearch = document.getElementById("text-search-clear");

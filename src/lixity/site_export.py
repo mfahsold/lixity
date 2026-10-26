@@ -456,7 +456,7 @@ def _research(repository: Repository, snapshot: Snapshot, text: str, source: Pat
     reads.add("manuscript-links", {"ok": True, **manuscript_links_data(snapshot)})
     reads.add("manuscript-review", {"ok": True, **manuscript_review_data(snapshot,
         source_path=source.relative_to(repository.root).as_posix(), source_sha256=source_hash,
-        paragraphs=analysis.paragraphs)}, companion=True)
+        paragraphs=analysis.paragraphs, include_context=True)}, companion=True)
     reads.add("manuscript-terms", {"ok": True, **manuscript_terms_data(snapshot,
         source_path=source.relative_to(repository.root).as_posix(), source_sha256=source_hash,
         paragraphs=analysis.paragraphs, terms=(settings or {}).get("terms"))}, companion=True)

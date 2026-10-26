@@ -8,18 +8,35 @@
 
 **Find the passages worth a second look.**
 
-Lixity is a local research and revision workbench for authors and editors using
-Markdown or plain-text manuscripts. Why does a chapter sound different? Is that
-repetition deliberate? Which source supports a detail?
-Choose one question, inspect what was counted and read the passage before deciding
-what to keep or change. Saved research links lead separately to dossiers, source
-passages and author decisions. Lixity does not grade or rewrite your prose.
+Lixity brings **close reading, manuscript analysis and documented research** into
+one local workspace for authors, editors and manuscript reviewers. Find changes
+in rhythm or voice, inspect what a signal counted, and follow the sources and
+creative decisions behind a scene detail. The manuscript stays at the centre.
+
+**The reference is your own book. The editorial decision stays yours.**
+Lixity helps explain where a draft changes; it does not grade literary quality
+or automatically rewrite prose. Built-in analysis runs on your computer.
+Manuscript input is Markdown or plain text; Word/DOCX and Scrivener need conversion.
 
 [Open the example manuscript](https://mfahsold.github.io/lixity/demo/report.html) ·
 [Take the short tour](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Install Lixity](https://mfahsold.github.io/lixity/guides/installation.html)
 
 [Einstieg auf Deutsch](https://mfahsold.github.io/lixity/guides/first-look-de.html)
+
+## What changes in a revision session?
+
+| The question | The useful next step |
+| :--- | :--- |
+| Why does this chapter feel different? | Compare its rhythm, vocabulary and dialogue with the manuscript's own patterns, then read the counted text. |
+| Is this repetition doing useful work? | Locate nearby phrase echoes and inspect the surrounding passage before keeping or changing them. |
+| Why is this detail in the scene? | Follow a linked quotation to its dossier, retained source passages and explicit author decision. Exact earlier versions remain available. |
+| How can an editorial observation be explained? | Keep the manuscript in view while moving between the measurement explanation and linked research; prepare an editorial PDF or a fixed review copy for the discussion. |
+| What belongs in a reader's copy? | Choose a manuscript with selected companion notes, a standalone companion, a review workspace or a PDF, and check what the copy includes. |
+
+Source evidence, authored claims and creative decisions stay distinct. A saved
+source records the evidence used; it does not guarantee that a claim is true.
+Reading copies are fixed exports, not a live co-editing service.
 
 <a href="https://mfahsold.github.io/lixity/screenshots/dashboard-reader-focus.png"><img src="https://mfahsold.github.io/lixity/screenshots/dashboard-reader-focus.png" width="560" alt="Warehouse 4 reader excerpt with chapter navigation, reading settings and Analysis Off"/></a>
 
@@ -38,20 +55,6 @@ opening on the quay; its correction moves it to the customs station. The fiction
 demo keeps both source passages beside an explicit author decision: leave the
 crate closed until dawn. [Follow the research decision in German](https://mfahsold.github.io/lixity/guides/first-look-de.html#recherche)
 or [take the English walkthrough](https://mfahsold.github.io/lixity/guides/first-look.html#decision).
-
-## From a passage to the context behind it
-
-| When you want to… | Lixity helps you… |
-| :--- | :--- |
-| Understand a change in rhythm or voice | Compare chapters against your own manuscript's patterns, then inspect the counted text. |
-| Decide whether a repetition needs attention | Locate nearby phrase echoes, read their context and keep or revise them yourself. |
-| Revisit the research behind a line | Follow explicitly linked claims and dossiers to retained source passages, images and author decisions. |
-| Resume reading without losing context | Keep a dossier alongside the manuscript or return from a research entry to the original passage. |
-| Prepare a copy for someone else | Choose a PDF, a review workspace, or a reading website with selected notes; check its scope and try it on the reader’s device. |
-
-Source evidence, authored claims and creative decisions stay distinct.
-Links can preserve exact earlier revisions; a newer record does not silently
-replace the version used. A retained source is not a guarantee of factual truth.
 
 <a id="start-here"></a>
 
@@ -85,23 +88,21 @@ covers launchers, pinned wheels, service management and removal. After upgrading
 run `lixity service restart --open` and reload the browser; installing a package
 does not update an already running service.
 
-## What you can do
+## One project, from draft to reading copy
 
-- **Manuscript & Analysis.** Open paragraph values and work markers, or compare
-  chapters against the manuscript's own patterns and review local phrase echoes.
-  Analysis can be turned on and off.
-- **Research & Dossiers.** Link retained sources, authored claims and decisions
-  to exact manuscript quotations. Keep source images, maps and dated claims with
-  the dossier beside a passage; Zotero remains your collection tool. Retention is explicit,
-  and archive integrity does not establish factual truth.
-- **Project & exports.** Manage project metadata and create editorial, reading,
-  submission or analysis PDFs, terminal reports and versioned JSON. Export a
-  review website, a novel with curated companion material, or a standalone
-  companion. Reveal notes after a confirmed chapter, or omit later material
-  entirely for an excerpt.
-  NDA generation creates a draft without
-  recording consent or signatures; dossier Markdown edits require explicit preview
-  and apply. See [export and project limits](https://mfahsold.github.io/lixity/USAGE.md).
+Read continuous prose with analysis available on demand. Keep a dossier beside
+the passage, follow a source or an earlier linked version, then return to the
+text. For an editor, that gives a concrete starting point for an observation;
+for an author, it keeps the question and its supporting material together.
+
+**Development preview:** configured terms and props add another route into the
+manuscript. Declare a name, object or alternative term, inspect its occurrences
+and chapter scopes, and connect it to a dossier. Dossier manuscript evidence
+brings its linked quotations together; ordered collections organise related
+notes. These are declared lexical checks and explicit links, not automatic
+continuity checking or character understanding. See
+[terms and props](https://mfahsold.github.io/lixity/research/USAGE.md#configured-terms-props-and-boundary-policies)
+and the [development notes](https://mfahsold.github.io/lixity/releases/v0.7.6.md).
 
 The browser app, CLI and Python API share one analysis pipeline;
 `lixity --help` and `lixity about --json` describe installed capabilities.
@@ -113,7 +114,12 @@ These curated reading copies are different from the analysis/research workspace:
 they contain selected material, not the full archive.
 
 <details>
-<summary>Analysis controls, revision-aware research and project inspection</summary>
+<summary>Analysis controls, revision-aware research and other project tools</summary>
+
+**Version scope:** this source checkout and its prepared demo include unreleased
+changes. The published package is identified by [PyPI](https://pypi.org/project/lixity/)
+and the [GitHub releases](https://github.com/mfahsold/lixity/releases); a local
+version string is not proof that those changes have shipped.
 
 Turn **Analysis** on beside the text and choose the visible metric. Switch
 **Counted text** and **Paragraph comparison** independently. Violet underlines identify
@@ -150,6 +156,13 @@ sources, existing outputs and read-only structure findings. They neither move
 files nor establish that an output matches the current manuscript; see
 [project inspection](https://mfahsold.github.io/lixity/USAGE.md#inspect-project-structure).
 
+The early `lixity read-aloud` CLI can make a local Piper WAV listening copy of a
+manuscript or chapter. It requires cached voice models; audio quality and failure
+handling are still prototype-level. See the
+[read-aloud scope](https://mfahsold.github.io/lixity/USAGE.md#lixity-read-aloud)
+before relying on an export. NDA generation produces a draft, not consent or
+signatures. Dossier Markdown edits require explicit preview and apply.
+
 CLI workflows can reuse the project's configured manuscript;
 [default manuscript guidance](https://mfahsold.github.io/lixity/USAGE.md#default-manuscript)
 explains explicit project selection and settings scope.
@@ -184,7 +197,7 @@ their own projects.
 
 ## Release, citation and license
 
-> **Version line:** The current release is **v0.7.6**, in the pre-1.0 **0.x** line.
+> **Version line:** The documentation source version is **v0.7.6** (development preview), in the pre-1.0 **0.x** line.
 > Historical **1.x** and **3.x** tags predate the numbering reset; use the current
 > release rather than the numerically largest tag. Product, JSON response and
 > archive schema versions are independent.

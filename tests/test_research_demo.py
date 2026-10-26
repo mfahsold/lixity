@@ -119,6 +119,8 @@ def test_research_fixture_connects_retained_evidence_to_an_authored_claim_and_ma
     assert all(source["title"] != "harbour-manuscript.md" for source in api.list_sources(project)["sources"])
     review = research_fixture["/api/research/manuscript-review?project_token=synthetic-harbour-manuscript"]
     assert all(item["anchor_state"] == "resolved" for item in review["links"])
+    assert review["passage_context"]["schema_version"] == "research-passage-context-local/1"
+    assert sum(paragraph["total"] for paragraph in review["passage_context"]["paragraphs"]) == len(review["links"])
     assert review["review_needed_count"] == 2
     assert all(item["flags"] == ["claim_changed"] for item in review["links"]
                if item["review_needed"])

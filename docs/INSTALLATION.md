@@ -9,7 +9,10 @@ integrations. See [licensing](LICENSING.md) before installation.
 Analysis runs offline; downloading Python, the package and dependencies requires
 network access. No manuscript upload, account or API key is required.
 
-> **Version line:** The current release is **v0.7.6**, in the pre-1.0 **0.x** line.
+> **Version scope:** this source documentation describes the prepared **v0.7.6**
+> development build. The published package observed on 26 October 2026 was **0.7.5**;
+> check [GitHub releases](https://github.com/mfahsold/lixity/releases/latest) and
+> [PyPI](https://pypi.org/project/lixity/) for availability. The product uses the pre-1.0 **0.x** line.
 > Historical **1.x** and **3.x** tags predate the product-number reset; a larger
 > historical number does not mean a newer release. Product, JSON response and
 > archive schema versions are independent.
@@ -115,11 +118,14 @@ configuration and PDF behavior. Built-in analysis runs locally. Optional
 <details>
 <summary>Reproducible wheel installation and Python environments</summary>
 
-For a checksum-verified setup, install the pinned release wheel instead and
-verify it against `SHA256SUMS` on the release page:
+For a checksum-verified setup, download the wheel from the chosen
+[published release](https://github.com/mfahsold/lixity/releases/latest) and verify
+it against that release's `SHA256SUMS`. Then install the downloaded file, replacing
+`VERSION` below with its actual version and using the file's real local path.
+A prepared version in this checkout does not establish that a wheel is published:
 
 ```sh
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.7.6/lixity-0.7.6-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "./lixity-VERSION-py3-none-any.whl"
 ```
 
 `uv tool list` shows the installed source. This uses uv's
@@ -479,13 +485,14 @@ retained evidence stays readable while it is closed.
 
 ## Python API: project environment
 
-These advanced source installs require Git and an existing Python 3.10+.
+These advanced development installs follow `main` and require Git and an existing
+Python 3.10+. For a published version, use a tag that exists in GitHub releases.
 
 Linux/macOS:
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@v0.7.6"
+.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@main"
 .venv/bin/python -m pip check
 .venv/bin/python -c "import lixity; print(lixity.__version__)"
 ```
@@ -494,7 +501,7 @@ Windows PowerShell (no activation or execution-policy change needed):
 
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@v0.7.6"
+.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@main"
 .\.venv\Scripts\python.exe -m pip check
 .\.venv\Scripts\python.exe -c "import lixity; print(lixity.__version__)"
 ```

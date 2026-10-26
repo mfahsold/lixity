@@ -206,9 +206,10 @@ join saved manuscript associations by those references, independently of the
 dossier's derived current-claim list. Only existing exact anchor matches offer
 passage jumps. The document origin/return context is ephemeral and guarded by the
 current project/source/research context. Its compact work thread displays the
-original chapter/line span and the last accepted viewed record identity and saved
-revision, distinguishing an explicitly pinned version from a current or viewed
-version. Return or a changed project/source/research context clears the thread;
+return destination (chapter/line span or originating dossier) and one return action.
+Record identity and pinned/current revision metadata belong to the record viewer,
+where they can be inspected without repeating them in primary navigation.
+Return or a changed project/source/research context clears the thread;
 no archive/backend schema is introduced.
 Native selection uses ephemeral paragraph-local UTF-16 offsets and direction,
 rebuilt against exact paragraph text on return so annotation repaint cannot
@@ -982,6 +983,26 @@ close temporary menus/settings and suspend manuscript tools, so dormant views do
 not consume the active workspace's keys or restore focus. Browser appearance
 preferences are separate from ephemeral, project-bound passage/relation context.
 
+**Current main (unreleased):** chapter and passage jumps retire the previous
+passage context before aligning the new destination. Reading another paragraph,
+or deliberately scrolling the manuscript beyond the inspected passage, closes
+that context; scrolling within a dossier or inspector retains it. Tool switching
+uses the last explicitly requested passage, including when the previous tool
+cached another paragraph. Reading marks expose a labelled **Tense pattern · review**
+action that opens its heuristic explanation independently of the measurement
+layer. These signals invite contextual review; they do not diagnose an error.
+
+The research backend projects the paragraph context from the same verified
+snapshot as manuscript review. Native HTTP and the offline exporter share this
+projection: current/pinned record summaries, exact quotation associations,
+dossier groups and current dossier decisions. The browser validates the transport
+against the displayed source and renders it; it does not fetch separate record
+versions or reconstruct the dossier graph to populate this tool. Explicit record
+viewers still load their own full records. Missing projections remain unavailable,
+and sparse absence in a valid projection means no exact associations. Library
+callers opt in with `include_context=True`; default review/CLI contracts stay
+unchanged. No retained source, revision, pin or manuscript byte is rewritten.
+
 `workspace-motion.js` consumes committed display state; it does not own visibility,
 navigation, focus or data. Optional native opacity feedback covers at most eight
 modestly sized visible elements, and a gutter marker identifies a passage return.
@@ -1101,6 +1122,10 @@ Each tablist has an accessible name; project-dialog tabs explicitly name their
 panels. The shared keyboard controller keeps one tab stop, follows orientation
 and uses manual activation for research views that fetch data. Dialog switching
 is scoped to the containing dialog so it cannot reset another editor.
+
+Shared controls retain their geometry across hover and pressed states. Color,
+border, shadow and focus feedback identify the action without moving its hit
+target underneath a stationary pointer, including after dialog error messages.
 
 Native `<dialog>` supplies modality, Escape and focus restoration. The shared
 dialog frame keeps the title and close action above a scrolling form, uses

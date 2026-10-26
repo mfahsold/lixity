@@ -147,11 +147,28 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
       assert.equal(await paragraph.locator('p').textContent(), originalText);
       await page.locator('#tab-view-research').click();
       await page.locator('[data-rtab=dossiers]').click();
+      const catalogueDeparture = readerRequests.length;
       await page.locator('[data-workspace-dossier="synthetic-dossier"]').click();
       await body.locator('.research-dossier-body-rendered p').filter({hasText: 'Historical source notes.'}).waitFor();
+      const openedRequests = readerRequests.slice(catalogueDeparture);
+      assert.equal(openedRequests.filter(url => !url.searchParams.has('id')).length, 1,
+        'Opening a catalogue dossier starts one catalogue read, including when the companion was closed');
+      assert.equal(openedRequests.filter(url => url.searchParams.get('id') === dossier.id).length, 1,
+        'The requested dossier is loaded once after its catalogue is accepted');
       assert.equal(await page.locator('#tab-view-analysis').getAttribute('aria-selected'), 'true');
       assert.equal(await select.inputValue(), dossier.id);
       assert.equal(await paragraph.locator('p').textContent(), originalText);
+      if (locale === 'en') {
+        // Retarget an existing companion through the same catalogue action.
+        await page.locator('#tab-view-research').click();
+        await page.locator('[data-rtab=dossiers]').click();
+        const retargetDeparture = readerRequests.length;
+        await page.locator('[data-workspace-dossier="synthetic-dossier"]').click();
+        await body.locator('.research-dossier-body-rendered p').filter({hasText: 'Historical source notes.'}).waitFor();
+        assert.equal(readerRequests.slice(retargetDeparture).filter(url => !url.searchParams.has('id')).length, 1,
+          'An already-open companion accepts one explicit catalogue retarget request');
+        assert.equal(await select.inputValue(), dossier.id);
+      }
       conflict = true;
       await page.locator('#workspace-reader-refresh').click();
       await page.waitForFunction(() => document.querySelector('#workspace-reader-status').classList.contains('err'));
@@ -177,6 +194,19 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
         await page.setViewportSize({width,height:900});
         await page.locator('#workspace-reader-close').click();
         assert.equal(await navigation.isVisible(), true);
+      }
+      if (locale === 'en') {
+        await page.reload();
+        await page.locator('#tab-view-research').click();
+        await page.locator('[data-rtab=dossiers]').click();
+        assert.equal(await select.locator('option[value="synthetic-dossier"]').count(), 0,
+          'The first catalogue opening starts without a preloaded companion option');
+        const firstDeparture = readerRequests.length;
+        await page.locator('[data-workspace-dossier="synthetic-dossier"]').click();
+        await body.locator('.research-dossier-body-rendered p').filter({hasText: 'Historical source notes.'}).waitFor();
+        assert.equal(readerRequests.slice(firstDeparture).filter(url => !url.searchParams.has('id')).length, 1,
+          'The first catalogue opening also needs only one catalogue read');
+        assert.equal(await select.inputValue(), dossier.id, 'The explicit first dossier survives population of its options');
       }
       assert.deepEqual(writes, [], 'Reading beside the manuscript never writes or edits anything');
       assert.deepEqual(errors, []);

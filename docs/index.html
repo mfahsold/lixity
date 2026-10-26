@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Lixity — a local manuscript and research workbench</title>
-<meta name="description" content="Why does this chapter sound different? Inspect patterns and the research behind your manuscript. A local revision workbench, without automatic rewrites."/>
+<title>Lixity — local manuscript analysis and research for revision</title>
+<meta name="description" content="Find passages worth reviewing, inspect what was counted and follow the research behind a scene. A local workspace for authors and editors."/>
 <meta name="google-site-verification" content="dyCGbdIP0jwCou0a4L_1epggZFVtHKkGE3qQyP9gip0"/>
 <link rel="canonical" href="https://mfahsold.github.io/lixity/"/>
 <link rel="alternate" type="text/plain" href="llms.txt" title="Automation summary"/>
@@ -13,16 +13,16 @@
 <link rel="sitemap" type="application/xml" href="sitemap.xml"/>
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="Lixity"/>
-<meta property="og:title" content="Lixity — a local manuscript and research workbench"/>
-<meta property="og:description" content="Why does this chapter sound different? Inspect patterns and the research behind your manuscript. A local revision workbench, without automatic rewrites."/>
+<meta property="og:title" content="Lixity — local manuscript analysis and research for revision"/>
+<meta property="og:description" content="Find passages worth reviewing, inspect what was counted and follow the research behind a scene. A local workspace for authors and editors."/>
 <meta property="og:url" content="https://mfahsold.github.io/lixity/"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-reader-focus.png"/>
 <meta property="og:image:width" content="1424"/>
 <meta property="og:image:height" content="968"/>
 <meta property="og:image:alt" content="Warehouse 4 reader excerpt with chapter navigation, reading settings and Analysis Off"/>
 <meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:title" content="Lixity — a local manuscript and research workbench"/>
-<meta name="twitter:description" content="Why does this chapter sound different? Inspect patterns and the research behind your manuscript. A local revision workbench, without automatic rewrites."/>
+<meta name="twitter:title" content="Lixity — local manuscript analysis and research for revision"/>
+<meta name="twitter:description" content="Find passages worth reviewing, inspect what was counted and follow the research behind a scene. A local workspace for authors and editors."/>
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-reader-focus.png"/>
 <meta name="twitter:image:alt" content="Warehouse 4 reader excerpt with chapter navigation, reading settings and Analysis Off"/>
 <link rel="icon" href="assets/mark.svg" type="image/svg+xml"/>
@@ -40,7 +40,7 @@
   "applicationCategory": "WritingApplication",
   "operatingSystem": "Windows, macOS, Linux",
   "softwareVersion": "0.7.6",
-  "description": "Why does this chapter sound different? Inspect patterns and the research behind your manuscript. A local revision workbench, without automatic rewrites.",
+  "description": "Find passages worth reviewing, inspect what was counted and follow the research behind a scene. A local workspace for authors and editors.",
   "url": "https://mfahsold.github.io/lixity/",
   "downloadUrl": "https://pypi.org/project/lixity/",
   "releaseNotes": "https://github.com/mfahsold/lixity/releases/latest",
@@ -86,7 +86,7 @@
     "priceCurrency": "EUR",
     "description": "Open source under AGPL-3.0-or-later. A separate written commercial license is available for integrations that cannot meet the AGPL."
   },
-  "dateModified": "2026-10-25"
+  "dateModified": "2026-10-26"
 }
 </script>
 <script type="application/ld+json">
@@ -97,8 +97,8 @@
   "name": "Lixity",
   "url": "https://mfahsold.github.io/lixity/",
   "inLanguage": "en",
-  "description": "Why does this chapter sound different? Inspect patterns and the research behind your manuscript. A local revision workbench, without automatic rewrites.",
-  "dateModified": "2026-10-25"
+  "description": "Find passages worth reviewing, inspect what was counted and follow the research behind a scene. A local workspace for authors and editors.",
+  "dateModified": "2026-10-26"
 }
 </script>
 </head>
@@ -107,7 +107,7 @@
 <header class="site-header">
   <div class="header-inner">
     <a class="brand" href="./" aria-current="page"><span class="brand-name">Lixity</span></a>
-    <a href="releases/v0.7.6.md" id="current-release" title="Current release notes"><span class="brand-badge">v0.7.6</span></a>
+    <a href="releases/v0.7.6.md" id="current-release" title="Development notes; check GitHub releases for published packages"><span class="brand-badge">v0.7.6</span> preview</a>
     <nav class="site-return" aria-label="Lixity navigation">
       <a href="#guides">Guides</a>
       <a href="#installation">Install</a>
@@ -121,7 +121,7 @@
     <div class="hero-copy">
       <span id="origin"></span>
       <h1 class="hero-title" id="intro-title">Find the passages<br/>worth a second look.</h1>
-      <p class="hero-sub">A local research and revision workbench for authors and editors. Keep sources, scene details and decisions connected. Inspect the text behind a measurement, then decide what to keep or change. For Markdown and plain-text manuscripts.</p>
+      <p class="hero-sub">Read the manuscript, investigate its patterns and follow the research behind a scene — in one local workspace. For authors, editors and manuscript reviewers working with Markdown or plain text.</p>
       <div class="hero-cta">
         <a class="ctl primary" href="demo/report.html" id="examples">Try one revision question</a>
         <a href="guides/first-look.html">Follow the short tour</a>
@@ -139,7 +139,7 @@
 
   <section class="section" id="features" aria-labelledby="workflow-title">
     <span id="core-pillars"></span><span id="steps"></span>
-    <h2 id="workflow-title">Bring a question, not a target score.</h2>
+    <h2 id="workflow-title">A useful next step for the question in front of you.</h2>
     <div class="workflow-list">
       <article id="writing">
         <span id="editorial-matrix"></span><span id="chapters"></span>
@@ -149,14 +149,21 @@
         <p><a href="demo/report.html#p-0">Read the opening passage</a> in the invented example. Does the shorter rhythm in the next chapter suit its action? <a href="demo/report.html#matrix">Compare the chapters</a>, inspect what was counted and read the passage. A useful outcome is explaining the contrast, including deliberately keeping it.</p>
       </article>
       <article id="research-workspace">
-        <h3>Two sources disagree. What belongs in the scene?</h3>
+        <h3>Why does this detail belong in the scene?</h3>
         <p>In the fictional example, a preliminary log places the crate’s opening beside the quay gate; its correction moves it to the customs station. The author decides to keep the crate closed through the quay scenes and preserve both accounts. Follow the saved claim, its two source passages and that explicit decision. <a href="guides/first-look.html#decision">Follow the example connection</a> · <a href="guides/first-look-de.html#recherche" lang="de">Recherchebeispiel auf Deutsch</a>.</p>
+      </article>
+      <article id="editorial-review">
+        <h3>How can this editorial observation be explained?</h3>
+        <p>Move between the passage’s counted text and linked research while keeping the manuscript in view. An editor can investigate the basis for an observation; an author can weigh it against the scene's purpose. Prepare an editorial PDF or a fixed review website for the discussion. These exports are reading copies, not live collaborative editing.</p>
+        <p><a href="blog/why-this-passage.html">Why is this passage marked?</a> follows one review question from the signal back to the text, with the development changes clearly labelled.</p>
       </article>
       <article id="exports">
         <h3>What should my test reader see?</h3>
         <p>Choose a novel with selected background notes, a standalone companion, or a PDF for editorial notes. Reading websites are beta and can be large; try the exported copy on the intended device. Current main adds <strong>Check export</strong> to measure the actual package and report media not included. Your source project stays unchanged. <a href="guides/research-pdf.html#reading-website">Export a reading website</a> · <a href="guides/research-pdf.html#manuscript-export">Compare PDF copies</a>.</p>
       </article>
     </div>
+    <p class="section-note"><strong>The book is its own reference.</strong> Differences in rhythm or voice are compared with the manuscript's own patterns. A deliberate contrast can be the reason to keep a passage exactly as it is.</p>
+    <p class="section-note"><strong>Development preview:</strong> declared terms and props, chapter scopes, dossier manuscript evidence and ordered collections connect recurring details to the research behind them. They locate declared wording; they do not automatically verify continuity. <a href="research/USAGE.md#configured-terms-props-and-boundary-policies">Terms and props</a>.</p>
     <p class="section-note">Is a repeated phrase intentional? <a href="blog/local-word-echoes.html">Follow one nearby word echo</a>, then read its context before deciding. Measurements guide your reading; they do not grade or rewrite prose. A saved source preserves the evidence used, not a guarantee that the claim is true.</p>
   </section>
 
@@ -213,8 +220,15 @@
     <p class="section-note">Chapter progress is a reading aid, not access control. For an excerpt, an export cap omits later content before the copy is built. <a href="guides/research-pdf.html#reading-website">Choose what to include</a>.</p>
   </section>
 
+  <section class="section" id="latest-article" aria-labelledby="latest-article-title">
+    <h2 id="latest-article-title">A mark should lead to a reason.</h2>
+    <p>A paragraph can change tense on purpose. A linked source can support a detail without settling how it belongs in the story. The new article separates those questions and shows what a useful review path needs to reveal.</p>
+    <p><a class="ctl" href="blog/why-this-passage.html">Read: Why is this passage marked?</a> <a href="blog/index.html">More on reading, research and revision</a></p>
+  </section>
+
   <section class="section" id="installation" aria-labelledby="installation-title">
     <h2 id="installation-title">Try it with your own manuscript</h2>
+    <p class="section-note"><strong>Version scope:</strong> this documentation and prepared demo include development changes. The published package observed on 26 October 2026 was 0.7.5; check <a href="https://github.com/mfahsold/lixity/releases/latest">the published release</a> before expecting preview behaviour in an installation.</p>
     <p class="section-note" id="faq">Open a Markdown or plain-text manuscript in the local app; convert Word/DOCX or Scrivener documents first. Built-in analysis works offline on your computer; optional integrations have separate <a href="research/USAGE.md">data boundaries</a>.</p>
     <a class="ctl" href="guides/installation.html">Install Lixity</a>
   </section>

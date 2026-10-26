@@ -96,8 +96,13 @@ async function depart(page, control, tab) {
   // Hover can change click actionability even after a trial. Capture the real
   // native departure event, before navigation, rather than its earlier layout.
   await control.click({trial: true});
+  // A second locator.click can run another implicit ancestor scroll between
+  // actionability and pointerdown, leaving a sticky dock in a transient layout.
+  // Click the checked native target directly so departure reflects the visible UI.
+  const clickBox = await control.boundingBox();
+  assert.ok(clickBox);
   await positions(control, true);
-  await control.click();
+  await page.mouse.click(clickBox.x + clickBox.width / 2, clickBox.y + clickBox.height / 2);
   const captured = await control.evaluate(element => {
     const value = element._dossierDeparture;
     delete element._dossierDeparture;

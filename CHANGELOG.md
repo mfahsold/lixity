@@ -7,7 +7,22 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [0.7.6] - 2026-10-25
+### Changed
+- Native passage research and offline exports share a bounded backend context
+  projection from one archive snapshot, grouping dossier/claim pins and decisions
+  centrally. Opening a passage context no longer fetches separate record versions
+  or joins them in the browser; malformed/unavailable data remains explicit.
+- Shared control hover/pressed feedback keeps click targets stationary, fixing
+  a mobile export retry button that oscillated at the pointer edge.
+- Passage context closes on a different chapter/passage or deliberate reading
+  beyond the inspected paragraph. Tool switching uses the requested passage;
+  compact return navigation leaves record metadata in its viewer.
+- Heuristic tense marks expose a labelled, keyboard-accessible review action
+  independent of the selected measurement layer.
+- Consolidated shared document typography, status recipes and surface/marker
+  tokens while retaining token → component → view stylesheet ownership.
+
+## [0.7.6] - Unreleased
 
 ### Added
 - Single-commit publication batching in `reconcile-manuscript` (parsing manuscript

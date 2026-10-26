@@ -29,7 +29,7 @@ api.link_manuscript_claim(project, manuscript, claim['claim_id'], claim_revision
     selection={key: anchor[key] for key in ('start_line','end_line','paragraph_sha256','start','end','quote')},
     expected_project_id=anchor['project_id'], expected_snapshot=anchor['snapshot'],
     expected_source_sha256=hashlib.sha256(manuscript.read_bytes()).hexdigest(), allow_retention=True)
-# Distinct exact quotes share one historical record; summary reads must coalesce.
+# Distinct exact quotes share one historical record in the backend projection.
 text = '😀 A repeated quotation. A repeated quotation.'
 for start, end in [(2, 23), (24, 45), (2, 12), (4, 12), (0, 1)]:
     selection = {key: anchor[key] for key in ('start_line', 'end_line', 'paragraph_sha256')}
@@ -64,6 +64,95 @@ async function savedResearchAction(page) {
   const menu = page.locator('#manuscript-context-menu');
   if (await menu.isVisible()) await menu.locator('[data-reader-action="values"]').click();
   return page.locator('#reader-inspector-body [data-reader-action="research"]');
+}
+async function sharedDossierJourney(browser) {
+  const sharedSource = source.replace(
+    'for start, end in [(2, 23), (24, 45), (2, 12), (4, 12), (0, 1)]:',
+    'for start, end in []:').replace("copied = Path(sys.argv[1]) / 'restored-copy'", `
+second = api.create_claim(project, title='Another claim in the same dossier', statement='A distinct authored statement.', dossier_id=dossier['dossier_id'])
+anchor = api.resolve_manuscript_anchor(project, manuscript, query='😀 A repeated quotation.')
+api.link_manuscript_claim(project, manuscript, second['claim_id'], claim_revision=1,
+    selection={key: anchor[key] for key in ('start_line','end_line','paragraph_sha256','start','end','quote')},
+    expected_project_id=anchor['project_id'], expected_snapshot=anchor['snapshot'],
+    expected_source_sha256=hashlib.sha256(manuscript.read_bytes()).hexdigest(), allow_retention=True)
+current = api.get_record(project, 'claim', claim['claim_id'])
+selection = {key: anchor[key] for key in ('start_line','end_line','paragraph_sha256')}
+selection.update(start=2, end=23, quote=text[2:23])
+api.link_manuscript_claim(project, manuscript, claim['claim_id'], claim_revision=2, selection=selection,
+    expected_project_id=anchor['project_id'], expected_snapshot=current['snapshot'],
+    expected_source_sha256=hashlib.sha256(manuscript.read_bytes()).hexdigest(), allow_retention=True)
+current = api.get_record(project, 'claim', claim['claim_id'])
+api.revise_record(project, 'claim', claim['claim_id'], changes={'title': 'Newest shared claim'}, expected_snapshot=current['snapshot'], expected_revision=2, change_kind='correction', reason='Synthetic third claim revision')
+current = api.get_record(project, 'dossier', dossier['dossier_id'])
+api.revise_record(project, 'dossier', dossier['dossier_id'], changes={'title': 'Shared current dossier'}, expected_snapshot=current['snapshot'], expected_revision=2, change_kind='correction', reason='Synthetic third revision')
+copied = Path(sys.argv[1]) / 'restored-copy'`);
+  const server = await startNativeServer(sharedSource, fs.mkdtempSync(path.join(artifacts, 'shared-dossier-')));
+  try {
+    for (const width of [1440, 320]) {
+      const page = await browser.newPage({viewport: {width, height: 950}, reducedMotion: 'reduce'});
+      const errors = [], writes = [];
+      page.on('pageerror', error => errors.push(error.message));
+      page.on('request', request => { if (request.method() === 'POST') writes.push(request.url()); });
+      await page.goto(server.fixture.url);
+      const paragraph = page.locator('#chapters .ptext').first();
+      const original = await paragraph.locator('.ptext-inner > p').textContent();
+      await paragraph.locator('[data-reader-paragraph]').click();
+      await (await savedResearchAction(page)).click();
+      const context = page.locator('[data-passage-research]');
+      await expect(context).toHaveAttribute('data-state', 'ready');
+      await expect(context.locator('[data-research-history=claim]:not([data-record-revision])')).toHaveCount(2);
+      await expect(context.locator('[data-research-history=dossier]:not([data-record-revision])')).toHaveCount(1);
+      await expect(context.getByText('Shared current dossier', {exact: true})).toHaveCount(1);
+      await expect(context.locator('[data-passage-research-decisions]')).toHaveCount(1);
+      await expect(context.locator('[data-passage-research-associations] blockquote')).toHaveCount(3);
+      const claimSections = context.locator('.passage-research-claim');
+      for (const [index, title, dossierVersion] of [[0, 'Newest shared claim', 1], [1, 'Another claim in the same dossier', 2]]) {
+        const section = claimSections.nth(index);
+        await expect(section.locator('[data-research-history=claim]:not([data-record-revision])')).toHaveText(title);
+        for (const disclosure of await section.locator('[data-passage-research-associations]').all()) {
+          await expect(disclosure).toContainText('Dossier · Version ' + dossierVersion);
+        }
+      }
+      await expect(context.getByText('Newest shared claim', {exact: true})).toHaveCount(1);
+      const versions = claimSections.first().locator('[data-passage-research-associations]');
+      await expect(versions).toHaveCount(2);
+      for (const [index, revision, quote, confidence] of [[0, 1, '😀 A repeated quotation.', 'Disputed'], [1, 2, 'A repeated quotation.', 'With evidence']]) {
+        const version = versions.nth(index);
+        await expect(version.locator('summary')).toContainText('Version ' + revision);
+        await expect(version).toContainText('Claim · Version ' + revision);
+        await expect(version).toContainText(confidence);
+        await expect(version.locator('blockquote')).toHaveText(quote);
+        const pin = claimSections.first().locator(`[data-research-history=claim][data-record-revision="${revision}"]`);
+        await expect(pin).toHaveCount(1);
+        await pin.click();
+        await expect(page.locator('#research-revision-kind')).toContainText('Version ' + revision);
+        await expect(page.locator('#research-revision-history-detail')).toContainText(revision === 1 ? 'Synthetic saved claim <img src=x>' : 'Current claim title');
+        await page.keyboard.press('Escape');
+        await expect(pin).toBeFocused();
+      }
+      for (const revision of [1, 2]) {
+        const pin = context.locator(`[data-research-history=dossier][data-record-revision="${revision}"]`);
+        await expect(pin).toHaveCount(1);
+        await pin.click();
+        await expect(page.locator('#research-revision-kind')).toContainText('Version ' + revision);
+        await expect(page.locator('#research-revision-history-detail')).toContainText(revision === 1 ? 'Synthetic pinned dossier' : 'Current dossier title');
+        await page.keyboard.press('Escape');
+        await expect(pin).toBeFocused();
+      }
+      const decisions = context.locator('[data-passage-research-decisions]');
+      await decisions.locator('summary').first().click();
+      await expect(decisions.locator('[data-research-history=decision]')).toHaveCount(5);
+      await decisions.locator('details > summary').click();
+      await expect(decisions.locator('[data-research-history=decision]')).toHaveCount(7);
+      assert.equal(await paragraph.locator('.ptext-inner > p').textContent(), original);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      assert.deepEqual(errors, []); assert.deepEqual(writes, []);
+      await decisions.locator('summary').first().click();
+      await context.evaluate(node => node.scrollIntoView({block: 'start'}));
+      await page.screenshot({path: path.join(artifacts, `shared-dossier-${width}.png`)});
+      await page.close();
+    }
+  } finally { await server.close(); }
 }
 async function localeJourneys(browser) {
   for (const locale of ['de', 'fr', 'es', 'it', 'pt', 'nl']) {
@@ -196,13 +285,14 @@ async function suspensionJourneys(browser, server) {
       let release, held, completed;
       const waiting = new Promise(resolve => { held = resolve; });
       const finished = new Promise(resolve => { completed = resolve; });
-      const routePattern = '**/api/research/record?*';
+      const routePattern = '**/api/research/manuscript-review?*';
       await page.route(routePattern, async route => {
         const response = await route.fetch(); held();
         await new Promise(resolve => { release = resolve; });
         await route.fulfill({response}); completed();
       });
-      await open(); await waiting;
+      await page.evaluate(() => { LixityManuscriptLinks.passage(document.querySelector('#chapters .ptext'), true); });
+      await waiting;
       await suspend(kind); await resume(kind);
       await expect(context).toHaveAttribute('data-state', 'stale');
       await expect(context.locator('[data-passage-research-retry]')).toBeVisible();
@@ -238,7 +328,11 @@ async function guardJourneys(browser, server) {
   await page.goto(server.fixture.url);
   const paragraphs = page.locator('#chapters .ptext');
   const context = page.locator('[data-passage-research]');
-  async function open(index = 0) {
+  async function open(index = 0, refresh = false) {
+    if (refresh) {
+      await page.evaluate(index => { LixityManuscriptLinks.passage(document.querySelectorAll('#chapters .ptext')[index], true); }, index);
+      return;
+    }
     await paragraphs.nth(index).locator('[data-reader-paragraph]').click();
     await (await savedResearchAction(page)).click();
   }
@@ -249,13 +343,12 @@ async function guardJourneys(browser, server) {
   await page.keyboard.press('Escape');
   await expect(context).toBeHidden();
   await expect(paragraphs.nth(2).locator('[data-reader-paragraph]')).toBeFocused();
-  const recordRoute = '**/api/research/record?*';
   const reviewRoute = '**/api/research/manuscript-review?*';
-  await page.route(recordRoute, route => route.fulfill({status: 500, json: {ok: false, message: 'Synthetic record read failure'}}));
-  await open();
+  await page.route(reviewRoute, route => route.fulfill({status: 500, json: {ok: false, message: 'Synthetic context read failure'}}));
+  await open(0, true);
   await expect(context).toHaveAttribute('data-state', 'read-error');
-  await expect(context).toContainText('Synthetic record read failure');
-  await page.unroute(recordRoute);
+  await expect(context).toContainText('Synthetic context read failure');
+  await page.unroute(reviewRoute);
   await context.locator('[data-passage-research-retry]').click();
   await expect(context).toHaveAttribute('data-state', 'ready');
   await page.route(reviewRoute, async route => {
@@ -268,28 +361,46 @@ async function guardJourneys(browser, server) {
   await page.unroute(reviewRoute);
   await context.locator('[data-passage-research-retry]').click();
   await expect(context).toHaveAttribute('data-state', 'ready');
-  await page.route(recordRoute, async route => {
+  await page.route(reviewRoute, async route => {
     const response = await route.fetch(), data = await response.json();
-    await route.fulfill({response, json: {...data, snapshot: 'foreign-snapshot'}});
-  });
-  await open();
-  await expect(context).toHaveAttribute('data-state', 'stale');
-  assert.equal(await context.locator('[data-research-history]').count(), 0, 'Snapshot mismatch never renders a mixed summary');
-  await page.unroute(recordRoute);
-  await context.locator('[data-passage-research-retry]').click();
-  await expect(context).toHaveAttribute('data-state', 'ready');
-  await page.route(recordRoute, async route => {
-    const response = await route.fetch(), data = await response.json();
-    data.record.title = {invalid: 'not a title'};
+    data.passage_context.paragraphs[0].groups[0].claims[0].versions[0].pinned.id = server.fixture.other;
     await route.fulfill({response, json: data});
   });
-  await open();
+  await open(0, true);
   await expect(context).toHaveAttribute('data-state', 'unavailable');
-  await page.unroute(recordRoute);
+  assert.equal(await context.locator('[data-research-history]').count(), 0, 'A projection with a foreign claim identity never renders a mixed summary');
+  await page.unroute(reviewRoute);
+  await context.locator('[data-passage-research-retry]').click();
+  await expect(context).toHaveAttribute('data-state', 'ready');
+  await page.route(reviewRoute, async route => {
+    const response = await route.fetch(), data = await response.json();
+    data.passage_context.paragraphs[0].groups[0].claims[0].current.title = {invalid: 'not a title'};
+    await route.fulfill({response, json: data});
+  });
+  await open(0, true);
+  await expect(context).toHaveAttribute('data-state', 'unavailable');
+  await page.unroute(reviewRoute);
+  // Incomplete or internally mixed projections cannot become accepted context.
+  for (const fault of ['missing', 'duplicate', 'foreign-dossier', 'wrong-current-revision', 'unavailable']) {
+    await page.route(reviewRoute, async route => {
+      const response = await route.fetch(), data = await response.json();
+      if (fault === 'missing') delete data.passage_context;
+      else if (fault === 'duplicate') data.passage_context.paragraphs.push(data.passage_context.paragraphs[0]);
+      else if (fault === 'foreign-dossier') data.passage_context.paragraphs[0].groups[0].dossier.pins[0].id = server.fixture.other;
+      else if (fault === 'unavailable') Object.assign(data.passage_context.paragraphs[0], {state: 'unavailable', shown: 0, groups: []});
+      else data.passage_context.paragraphs[0].groups[0].claims[0].current.revision = 99;
+      await route.fulfill({response, json: data});
+    });
+    await open(0, true);
+    await expect(context).toHaveAttribute('data-state', 'unavailable');
+    await expect(context.locator('[data-research-history]')).toHaveCount(0);
+    await page.unroute(reviewRoute);
+  }
   // An exact quote with an unresolved review state never becomes resolved UI.
   await page.route(reviewRoute, async route => {
     const response = await route.fetch(), data = await response.json();
     data.links.forEach((row, i) => { row.anchor_state = ['moved', 'adjusted', 'ambiguous'][i % 3]; });
+    data.passage_context.paragraphs = [];
     await route.fulfill({response, json: data});
   });
   await page.evaluate(() => LixityManuscriptLinks.passage(document.querySelector('#chapters .ptext'), true));
@@ -303,14 +414,12 @@ async function guardJourneys(browser, server) {
     let release, held, completed;
     const finished = new Promise(resolve => { completed = resolve; });
     const waiting = new Promise(resolve => { held = resolve; });
-    await page.route(recordRoute, async route => {
+    await page.route(reviewRoute, async route => {
       const response = await route.fetch();
-      if (new URL(route.request().url()).searchParams.get('kind') === 'claim') {
-        held(); await new Promise(resolve => { release = resolve; });
-      }
+      held(); await new Promise(resolve => { release = resolve; });
       await route.fulfill({response}); completed();
     });
-    await open(); await waiting;
+    await open(0, true); await waiting;
     await expect(context).toHaveAttribute('data-state', 'pending');
     const originalToken = await page.locator('#research-manager').getAttribute('data-research-token');
     if (dimension === 'passage') await open(2);
@@ -330,9 +439,9 @@ async function guardJourneys(browser, server) {
       await page.locator('#research-manager').evaluate((node, token) => { node.dataset.researchToken = token; }, originalToken);
     }
     release(); await finished;
-    await page.unroute(recordRoute);
+    await page.unroute(reviewRoute);
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    assert.equal(await context.locator('[data-research-history]').count(), 0, dimension + ' invalidates a held record result');
+    assert.equal(await context.locator('[data-research-history]').count(), 0, dimension + ' invalidates a held context result');
     await expect(context).not.toHaveAttribute('data-state', 'pending');
     if (dimension === 'detached') await expect(page.locator('#workbench-return')).toBeHidden();
     await page.reload();
@@ -350,21 +459,23 @@ async function guardJourneys(browser, server) {
   const server = await startNativeServer(source, artifacts);
   const browser = await launchChromium();
   try {
+    await sharedDossierJourney(browser);
     await geometryJourneys(browser, server);
     for (const [width, height] of [[1440, 950], [390, 900], [320, 900], [320, 480]]) for (const reducedMotion of ['reduce', 'no-preference']) {
       const page = await browser.newPage({viewport: {width, height}, reducedMotion});
-      const writes = [], errors = [], reads = [];
+      const writes = [], errors = [], reads = [], dossierReads = [];
       page.on('pageerror', error => errors.push(error.message));
       page.on('request', request => {
         if (!['GET', 'HEAD'].includes(request.method())) writes.push(request.url());
         if (request.url().includes('/api/research/record?')) reads.push(new URL(request.url()));
+        if (request.url().includes('/api/research/dossiers?')) dossierReads.push(new URL(request.url()));
       });
       await page.goto(server.fixture.url);
       const paragraph = page.locator('#chapters .ptext').first();
       const prose = paragraph.locator('.ptext-inner > p');
       const node = await prose.elementHandle();
       const before = await prose.evaluate(el => ({text: el.textContent, hash: el.closest('.ptext').dataset.paragraphSha256}));
-      assert.deepEqual(reads, [], 'Pinned record composition is lazy');
+      assert.deepEqual(reads, [], 'Record viewers make no reads before an explicit request');
       await page.evaluate(() => {
         document.getElementById('r-claim-title').value = 'Unsubmitted claim draft';
         document.getElementById('r-decision-title').value = 'Unsubmitted decision draft';
@@ -402,8 +513,8 @@ async function guardJourneys(browser, server) {
       assert.equal(await context.locator('img').count(), 0);
       await expect(context).toContainText('Showing 5 of 6');
       await expect(page.locator('[data-context-tool="research"]')).toHaveAttribute('aria-pressed', 'true');
-      assert.equal(reads.filter(url => url.searchParams.get('kind') === 'claim').length, 2, 'Repeated links share pinned and current claim reads');
-      assert.equal(reads.filter(url => url.searchParams.get('kind') === 'dossier').length, 2, 'Repeated links share pinned and current dossier reads');
+      assert.deepEqual(reads, [], 'Passage summaries use the backend projection without per-record composition');
+      assert.deepEqual(dossierReads, [], 'Passage summaries do not fetch a dossier body to assemble decisions');
       await decisions.locator('summary').first().click();
       await expect(decisions.locator('[data-research-history=decision]')).toHaveCount(5);
       const more = decisions.locator('details');

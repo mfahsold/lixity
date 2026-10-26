@@ -63,6 +63,7 @@ or a different output.
 | Which files are sources or outputs, and are their locations usable? | `lixity project --project PATH` | read-only roles, existing outputs and bounded structure findings |
 | I want to manage and cite research sources | `lixity research` | immutable archives, citations, dossiers, manuscript grounding |
 | I want a printable document, report or reading copy | `lixity pdf` | neutral/editorial A4, A4 report, A5 book, 30×60 sheet |
+| I want an experimental local listening copy | `lixity read-aloud` | Piper WAV output; cached voices required, prototype completeness/conversion limits below |
 | I want to share a browsable reading copy | `lixity export-site` | static website, optional research and original sources |
 | I want a reproducible artifact set | `lixity build` | `exports/`, archive rotation |
 | What can the engine do? | `lixity about --json` | languages, features, thresholds, commands |
@@ -1201,6 +1202,40 @@ These fixed-layout PDFs are for everyday documents, editing, analysis, reading a
 There is no EPUB/DOCX export, custom trim size, bleed/crop marks, print color management, printer preflight or
 PDF/UA/PDF/X certification. Searchable text, metadata and bookmarks alone do
 not establish accessibility or production compliance.
+
+### `lixity read-aloud`
+
+**Development prototype:** create a local listening copy with Piper TTS. This is
+a CLI workflow; it is not a browser audio player or a production audiobook pipeline.
+
+```bash
+lixity read-aloud manuscript.md --language en -o manuscript.wav
+lixity read-aloud manuscript.md --language de --chapter 2 --speed 1.1 -o chapter-2.wav
+lixity read-aloud --project ./novel --language de -o reading-copy.wav
+```
+
+`--chapter` selects a one-based chapter number. Without an explicit file, the
+command uses the selected project's configured manuscript or folder discovery.
+The CLI defaults to the project language, then English; pass `--language` explicitly
+for the intended voice. The prepared default voices are
+`de_DE-thorsten_emotional-medium` and `en_US-lessac-medium`. `--voice` currently
+accepts a cached model name, not an arbitrary ONNX path. A model needs both
+`~/.cache/piper-voices/NAME/NAME.onnx` and `NAME.onnx.json` beside it. Piper/ONNX
+dependencies and models are separate prerequisites; the command does not download
+them. Review each voice model's license before distribution.
+
+The prototype adds pauses for headings and scene breaks, and adjusts reading
+tempo using sentence-length heuristics. Its dialogue/emotion selection is coarse;
+it is not automatic character casting or an interpretation of the scene.
+`--speed 1.1` requests a faster reading. Recognised editorial markers are omitted
+by default; `--keep-markers` includes them. The manuscript is not edited.
+
+Use WAV while evaluating this prototype. MP3 conversion currently depends on
+FFmpeg and does not yet reliably reject missing/failed conversion. Failed external
+Piper segments can also be omitted, and WAV concatenation does not validate every
+segment's sample format. Compare the output with the source before relying on a
+complete listening copy. The prototype does not guarantee long-manuscript
+completeness or multilingual narration quality.
 
 ### `lixity service`
 

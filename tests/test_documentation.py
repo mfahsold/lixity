@@ -114,6 +114,25 @@ class TestDocumentation(unittest.TestCase):
                 self.assertEqual(len(findings), 1)
                 self.assertIn("current release-note target", findings[0])
 
+    def test_source_documentation_pin_does_not_rewrite_dated_publication_observation(self):
+        import tempfile
+        from unittest.mock import patch
+
+        from sync_docs import check_or_sync_files, find_version_drift
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "docs").mkdir()
+            path = root / "docs" / "llms.txt"
+            observation = "Published package observed on 22 October 2026: 0.7.4.\n"
+            path.write_text("Documentation source version: 0.7.5 (development preview).\n" + observation)
+            with patch("sync_docs.ROOT", root):
+                self.assertEqual(check_or_sync_files("0.7.6", check_only=True), ["docs/llms.txt"])
+                self.assertTrue(find_version_drift("0.7.6"))
+                check_or_sync_files("0.7.6")
+                self.assertEqual(path.read_text(), "Documentation source version: 0.7.6 (development preview).\n" + observation)
+                self.assertEqual(find_version_drift("0.7.6"), [])
+
     def test_first_look_journey_and_relative_assets_exist_in_published_output(self):
         """The guide/report journey must survive Pages' explicit staging boundary."""
         import tempfile

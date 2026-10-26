@@ -89,6 +89,7 @@
 .analysis-comparison-key { border-inline-start: 3px solid var(--accent); padding-inline-start: .4rem; }
 #analysis-evidence-status:empty { display: none; }
 .reader-paragraph-actions { display: none; }
+.reader-review-flag { display: none; }
 .reader-passage-context { padding-block-end: var(--space-4); border-bottom: 1px solid var(--line); margin-block-end: var(--space-4); }
 .reader-passage-tools { display: grid; gap: var(--space-2); grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); }
 .reader-passage-tools .ctl { min-width: 0; min-height: 44px; text-align: start; white-space: normal; }
@@ -283,8 +284,11 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 .reader-passage-flag-title { font-size: var(--text-note); font-weight: 600; color: var(--fg); }
 .reader-passage-flag-guidance { margin: 0 0 var(--space-1); font-size: var(--text-small); line-height: var(--line-compact); color: var(--fg); font-weight: 500; }
 .reader-passage-flag-reason { margin: 0; font-size: var(--text-small); line-height: var(--line-tight, 1.4); color: var(--fg-secondary); }
-.manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .ptext.flagged::before { background: var(--flag); width: 3px; }
-.manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .ptext.flagged.sev-3::before { background: var(--flag-strong, #dc2626); width: 4px; }
+.manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .reader-review-flag {
+  display: inline-flex; margin-block-start: var(--space-2); min-height: 2.75rem;
+  font-size: var(--text-small); color: var(--flag); background: var(--flag-light);
+  border-color: currentColor; border-inline-start-width: 3px;
+}
 
 #chapters .reader-structural.text-miss, .text-search-active #chapters .reader-coverage { display: none; }
 

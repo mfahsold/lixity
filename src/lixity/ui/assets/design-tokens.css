@@ -67,6 +67,24 @@
 
   --bg-subtle: light-dark(#f1f3ee, #121620);
   --surface-raised: light-dark(#fafaf7, #202738);
+  --surface-hover: light-dark(rgba(0, 0, 0, 0.03), rgba(255, 255, 255, 0.05));
+  --surface-glass: light-dark(rgba(255, 255, 255, 0.88), rgba(24, 29, 41, 0.88));
+  --surface-glass-header: light-dark(rgba(250, 250, 247, 0.85), rgba(11, 13, 18, 0.85));
+  --surface-popover: light-dark(rgba(255, 255, 255, 0.94), rgba(20, 24, 34, 0.92));
+  --line-glass: light-dark(rgba(226, 229, 223, 0.75), rgba(40, 49, 68, 0.75));
+  --glass-blur: 12px;
+  --glass-blur-sm: 8px;
+
+  /* Editorial & status markers */
+  --marker-pruefen-bg: light-dark(#e0f2fe, #082f49);
+  --marker-pruefen-fg: light-dark(#0369a1, #7dd3fc);
+  --marker-sachcheck-bg: light-dark(#fef3c7, #451a03);
+  --marker-sachcheck-fg: light-dark(#92400e, #fde68a);
+  --marker-todo-bg: light-dark(#f3e8ff, #3b0764);
+  --marker-todo-fg: light-dark(#6b21a6, #d8b4fe);
+  --marker-achtung-bg: light-dark(#fee2e2, #450a0a);
+  --marker-achtung-fg: light-dark(#991b1b, #fca5a5);
+
   --fg-heading: light-dark(#242925, #ffffff);
   --status-success-fg: light-dark(#166534, #86efac);
   --status-success-bg: light-dark(#e6f4ea, #14532d);
@@ -74,6 +92,9 @@
   --status-warning-fg: light-dark(#854d0e, #fde68a);
   --status-warning-bg: light-dark(#fff7ed, #713f12);
   --status-warning-border: light-dark(#e6bc85, #92400e);
+  --status-neutral-fg: var(--muted);
+  --status-neutral-bg: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.06));
+  --status-neutral-border: var(--line);
 }
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }

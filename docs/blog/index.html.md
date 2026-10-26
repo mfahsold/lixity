@@ -1,6 +1,12 @@
-# Notes on measurable manuscript revision
+# Reading, research and revision
 
-Practical articles for reading a draft, checking its research and investigating a question: is this change of voice deliberate, is a phrase repeating too close by, or did the chapter's tense drift? Each article connects a tool to a reading decision. All examples use public-domain or synthetic texts.
+Practical articles for authors, editors and manuscript reviewers: investigate a passage, examine the research behind a scene detail and prepare the right reading copy. Each article connects a concrete question to a reading decision. All examples use public-domain or synthetic texts.
+
+## [Why is this passage marked?](why-this-passage.html)
+
+26 October 2026 · Development note · 5 minutes
+
+Inspect a tense signal, keep research attached to the chosen passage, and distinguish a current record from the exact version used. A practical review loop for authors and editors, with unreleased changes labelled explicitly.
 
 ## [What's new in Lixity 0.7.5: clearer marks and project structure](whats-new-lixity.html)
 

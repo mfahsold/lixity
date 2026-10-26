@@ -78,6 +78,10 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
 
       await help.focus();
       await expect(copy).toHaveText(explanation);
+      await expect(tip).toHaveCSS('backdrop-filter', 'blur(12px)');
+      await page.locator('html').evaluate(node => node.style.setProperty('--glass-blur', '4px'));
+      await expect(tip).toHaveCSS('backdrop-filter', 'blur(4px)');
+      await page.locator('html').evaluate(node => node.style.removeProperty('--glass-blur'));
       assert.equal(await help.getAttribute('aria-describedby'), 'hint lixity-tooltip');
       await page.keyboard.press('Escape');
       await expect(tip).toHaveAttribute('aria-hidden', 'true');

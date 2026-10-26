@@ -450,10 +450,18 @@ projects and unavailable/read-failed sources; moved and ambiguous anchors stay
 review hints. Held reads/writes verify context guards, pending deduplication and
 preservation of a newer draft. Screenshots remain under `/tmp`.
 
-The work thread shows originating manuscript lines and the accepted viewed
-record's pinned/current version. History/edit transitions update that identity;
-returning or changing source context clears it. These cases also inspect the
+The work thread shows the originating manuscript lines and one return action;
+record identity and pinned/current versions stay in the record viewer. History/edit
+transitions must not duplicate those details in navigation. Returning or changing
+source context clears the thread. These cases also inspect the
 thread in both themes and with desktop navigation collapsed.
+
+Passage research consumes the shared backend projection. Native browser checks
+assert no record/dossier reads for summary composition, then exercise explicit
+viewers, exact historical pins, mixed/missing/unavailable model failures and late
+responses after passage/source/project/navigation changes. Backend grouping,
+bounded association counts and one-snapshot/no-write behavior are tested in
+Python; export tests compare frozen context data with the same native projection.
 
 When a temporary-filesystem quota is exhausted, browser fixtures can fail before
 Chromium starts even when `df` reports free space. Keep evidence on local disk

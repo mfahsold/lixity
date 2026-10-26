@@ -27,7 +27,9 @@ records their separate owners and shared source/selection boundaries.
 The workspace reuses the product interface and prepared reads; curated copies
 contain selected publication material, not raw research history. None can save.
 
-Current release: 0.7.6; release tag: v0.7.6.
+Documentation source version: 0.7.6 (development preview). Published packages
+and tags are identified by [GitHub releases](https://github.com/mfahsold/lixity/releases)
+and [PyPI](https://pypi.org/project/lixity/); a source version is not publication evidence.
 The current 0.x product line follows a numbering reset; historical 1.x/3.x tags
 are older. Product, response and archive schema numbers are independent.
 
@@ -35,6 +37,14 @@ This discovery index links maintained references. The public demo follows curren
 main; published guides can describe newer behavior than an installed release.
 The [complete documentation bundle](https://mfahsold.github.io/lixity/llms-full.txt)
 is generated from those references for offline reading.
+
+The [reading, research and revision articles](https://mfahsold.github.io/lixity/blog/index.html)
+connect concrete author/editor questions to the tools. The development note
+[Why is this passage marked?](https://mfahsold.github.io/lixity/blog/why-this-passage.html)
+explains separate tense/measurement signals and current versus linked historical
+records. Its preview scope is explicit. `read-aloud` is an early local Piper CLI
+prototype; WAV output and its current completeness/conversion limits are documented
+in the [command reference](https://mfahsold.github.io/lixity/USAGE.md#lixity-read-aloud).
 
 ## Start with the installed interface
 

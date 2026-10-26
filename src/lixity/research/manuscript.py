@@ -154,6 +154,7 @@ def manuscript_review_data(
     source_sha256: str | None,
     paragraphs: Sequence[ParagraphProfile | ParagraphText],
     source_state: str = "available",
+    include_context: bool = False,
 ) -> dict[str, Any]:
     """Derive review flags only; resolving happens in an explicit re-pin."""
     identities = [(paragraph, paragraph_identity(paragraph)) for paragraph in paragraphs]
@@ -240,7 +241,7 @@ def manuscript_review_data(
             candidate_lines=candidate_lines,
         )
         rows.append(row)
-    return {
+    result = {
         "schema_version": "research-manuscript-review-local/1",
         "project_id": snapshot.project.id,
         "snapshot": snapshot.digest,
@@ -251,6 +252,85 @@ def manuscript_review_data(
         "links": rows,
         "review_needed_count": sum(row["review_needed"] for row in rows),
     }
+    if include_context:
+        result["passage_context"] = _passage_context_data(snapshot, rows)
+    return result
+
+
+def _passage_context_data(snapshot: Snapshot, rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    """Project bounded exact-passage summaries from the review's single snapshot.
+
+    The sparse paragraph list contains only exact resolved associations. An
+    unavailable record invalidates that paragraph's summary, never its review
+    rows. Full record bodies remain behind the existing explicit viewer reads.
+    """
+    from .editorial import dossier_reviews
+
+    def summary(record: Claim | Dossier) -> dict[str, Any]:
+        return {"id": record.id, "title": record.title, "revision": record.revision}
+
+    by_paragraph: dict[tuple[int, int, str], list[dict[str, Any]]] = {}
+    for row in rows:
+        if row["anchor_state"] == ManuscriptState.RESOLVED:
+            key = (row["resolved_start_line"], row["resolved_end_line"], row["anchor"]["paragraph_sha256"])
+            by_paragraph.setdefault(key, []).append(row)
+    unavailable = {(kind, identifier) for _operation, kind, identifier in snapshot.lifecycle}
+    decisions: dict[str, list[dict[str, Any]]] | None = None
+    paragraphs = []
+    for (start, end, paragraph_hash), associations in by_paragraph.items():
+        groups: dict[str, dict[str, Any]] = {}
+        claims: dict[tuple[str, str], dict[str, Any]] = {}
+        versions: dict[tuple[str, int], dict[str, Any]] = {}
+        state = "ready"
+        selected = associations[:5]
+        for row in selected:
+            if ("claim", row["claim_id"]) in unavailable or (
+                row["dossier_id"] and ("dossier", row["dossier_id"]) in unavailable
+            ):
+                state = "unavailable"
+                break
+            claim = snapshot.get(Reference(id=row["claim_id"], revision=row["claim_revision"]), Claim)
+            current_claim = snapshot.latest(claim.id, Claim)
+            dossier = snapshot.get(claim.dossier_ref, Dossier) if claim.dossier_ref else None
+            group_key = "dossier:" + dossier.id if dossier else "claim:" + claim.id
+            if group_key not in groups:
+                current_dossier = snapshot.latest(dossier.id, Dossier) if dossier else None
+                if dossier and decisions is None:
+                    decisions = dossier_reviews(snapshot)
+                groups[group_key] = {
+                    "dossier": {"current": summary(current_dossier), "pins": []} if current_dossier else None,
+                    "claims": [],
+                    "decisions": [{"id": item["decision_id"], "title": item["title"], "revision": item["revision"]}
+                                  for item in (decisions or {}).get(dossier.id, [])] if dossier else [],
+                }
+            group = groups[group_key]
+            if dossier:
+                pins = group["dossier"]["pins"]
+                if dossier.revision != group["dossier"]["current"]["revision"] and not any(
+                    pin["revision"] == dossier.revision for pin in pins
+                ):
+                    pins.append(summary(dossier))
+            claim_key = (group_key, claim.id)
+            if claim_key not in claims:
+                item: dict[str, Any] = {"current": summary(current_claim), "versions": []}
+                claims[claim_key] = item
+                group["claims"].append(item)
+            version_key = (claim.id, claim.revision)
+            if version_key not in versions:
+                version: dict[str, Any] = {"pinned": summary(claim), "confidence": claim.confidence,
+                                          "dossier_revision": dossier.revision if dossier else None,
+                                          "associations": []}
+                versions[version_key] = version
+                claims[claim_key]["versions"].append(version)
+            versions[version_key]["associations"].append({
+                "link_id": row["link_id"], "anchor": row["anchor"],
+                "flags": [flag for flag in row["flags"] if flag in {ManuscriptFlag.SOURCE_CHANGED, ManuscriptFlag.CLAIM_WITHDRAWN}],
+            })
+        paragraphs.append({"start_line": start, "end_line": end, "paragraph_sha256": paragraph_hash,
+                           "state": state, "total": len(associations),
+                           "shown": len(selected) if state == "ready" else 0,
+                           "groups": list(groups.values()) if state == "ready" else []})
+    return {"schema_version": "research-passage-context-local/1", "paragraphs": paragraphs}
 
 
 def review_manuscript_links(
@@ -260,6 +340,7 @@ def review_manuscript_links(
     expected_project_id: str | None = None,
     language: str | None = None,
     project_config: Mapping[str, Any] | None = None,
+    include_context: bool = False,
 ) -> dict[str, Any]:
     repository = Repository(project)
     snapshot = repository.snapshot()
@@ -280,6 +361,7 @@ def review_manuscript_links(
         source_sha256=source_sha256,
         paragraphs=paragraphs,
         source_state=state,
+        include_context=include_context,
     )
 
 

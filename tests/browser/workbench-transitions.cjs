@@ -124,8 +124,17 @@ async function assertToolbarDossierReturn(page, paragraph, width) {
   // Its passage position is retained, but the toolbar remains the focus origin.
   const dossierToggle = page.locator('#workspace-reader-toggle');
   for (const dismissal of ['Close', 'Escape']) {
-    const origin = {paragraph, top: await paragraph.evaluate(node => node.getBoundingClientRect().top)};
+    const origin = {paragraph};
+    // Locator actionability may scroll ancestors before delivering the input.
+    // Retain the native departure, rather than an earlier automation rectangle.
+    await dossierToggle.evaluate((node, id) => node.addEventListener('pointerdown', () => {
+      node._readingDeparture = document.getElementById(id).getBoundingClientRect().top;
+    }, {once: true, capture: true}), await paragraph.getAttribute('id'));
     await dossierToggle.click();
+    origin.top = await dossierToggle.evaluate(node => {
+      const top = node._readingDeparture; delete node._readingDeparture; return top;
+    });
+    assert.ok(Number.isFinite(origin.top), 'The native toolbar input retains a real passage origin');
     await settle(page);
     assert.equal(await page.locator('#workspace-reader-panel').isVisible(), true);
     if (dismissal === 'Escape') {
@@ -147,6 +156,52 @@ async function assertToolbarDossierReturn(page, paragraph, width) {
     for (const width of [390, 320, 1440]) {
       const {page, errors, writes} = await createPage(browser, width);
       const original = await documentState(page);
+      // A document destination must retire context belonging to another passage.
+      await openFromPassage(page, 'values');
+      const chapterId = await page.locator('#reader-chapter option').evaluateAll(options =>
+        options.find(option => option.value)?.value);
+      await page.locator('#reader-chapter').selectOption(chapterId);
+      await settle(page);
+      assert.equal(await page.locator('#workspace-context-panel').isVisible(), false,
+        'Choosing another chapter closes the previous passage inspector');
+      await openFromPassage(page, 'values');
+      const elsewhere = page.locator('#chapters .ptext').nth(28);
+      await elsewhere.locator('.ptext-inner > p').click();
+      await settle(page);
+      assert.equal(await page.locator('#workspace-context-panel').isVisible(), false,
+        'Reading another paragraph retires the old passage context');
+      await openFromPassage(page, 'values');
+      await page.locator('[data-context-tool="dossier"]').click();
+      await openFromPassage(page, 'companion', true, 28);
+      await page.locator('[data-context-tool="analysis"]').click();
+      assert.equal(await page.locator('#reader-inspector .reader-passage-context .ctl-note').first().textContent(),
+        await elsewhere.evaluate(panel => {
+          const heading = panel.closest('.chapter').querySelector('h2,h3');
+          return heading.textContent.trim() + ' · ' + uiFormat('reading_passage_lines', {start:panel.dataset.start, end:panel.dataset.end});
+        }), 'Switching tools explains the current requested passage, not a cached earlier paragraph');
+      await page.locator('#reader-inspector-close').click();
+      await openFromPassage(page, 'values');
+      const reading = page.locator('#chapters .ptext').nth(27);
+      // A real wheel journey leaves the inspected paragraph; tool scroll is separate.
+      await reading.hover();
+      await page.mouse.wheel(0, 1800);
+      await page.waitForFunction(() => LixityWorkbench.state().contextTool === 'none');
+      assert.equal(await page.locator('#workspace-context-panel').isVisible(), false,
+        'Continuing to read beyond the inspected passage closes its obsolete context');
+      await page.locator('#manuscript-analysis-toggle').click();
+      const flagged = page.locator('#chapters .ptext.flagged').first();
+      await flagged.scrollIntoViewIfNeeded();
+      const reason = flagged.locator('[data-reader-flag]');
+      assert.equal(await reason.isVisible(), true, 'A review flag has a visible labelled action');
+      assert.match(await reason.textContent(), /Tense/);
+      await reason.focus(); await page.keyboard.press('Enter');
+      await settle(page);
+      assert.equal(await page.locator('#reader-inspector .reader-passage-flag').isVisible(), true,
+        'Keyboard activation reveals the independent tense explanation');
+      assert.equal(await page.locator('#reader-inspector .reader-passage-flag').textContent().then(text => /Heuristic/.test(text)), true);
+      await page.screenshot({path: path.join(artifacts, `${width}-flag-explained.png`)});
+      await page.locator('#reader-inspector-close').click();
+      await page.locator('#manuscript-analysis-toggle').click();
       const valuesOrigin = await openFromPassage(page, 'values');
       if (width <= 900) {
         await page.screenshot({path: path.join(artifacts, `${width}-values-open.png`)});

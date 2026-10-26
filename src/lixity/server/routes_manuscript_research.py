@@ -88,7 +88,9 @@ class ManuscriptResearchRoutesMixin(ResearchRoutesMixin):
                 return
             try:
                 root, source, settings = self._manuscript_context(query["project_token"][0])
-                result = research_api.review_manuscript_links(root, source, language=self.language, project_config=settings)
+                result = research_api.review_manuscript_links(
+                    root, source, language=self.language, project_config=settings, include_context=True,
+                )
                 self._json({"ok": True, **result})
             except ResearchConflictError as exc:
                 self._json({"ok": False, "code": "stale-context", "message": str(exc)}, 409)

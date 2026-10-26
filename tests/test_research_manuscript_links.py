@@ -60,6 +60,112 @@ def accepted_bytes(project):
             for path in (project / "research").rglob("*") if path.is_file()}
 
 
+def test_passage_context_groups_current_records_and_preserves_each_historical_pin(manuscript_archive):
+    project, manuscript, claim, dossier = manuscript_archive
+    save_link(manuscript_archive)
+    revise(project, "dossier", dossier, changes={"title": "Second room"})
+    other = api.create_claim(project, title="Second claim", statement="Another reading.", dossier_id=dossier)["claim_id"]
+    save_link((project, manuscript, other, dossier))
+    revise(project, "dossier", dossier, changes={"title": "Current room"})
+    revise(project, "claim", claim, changes={"title": "Current claim"})
+    api.record_decision(project, title="Review the room", rationale="Synthetic choice.", dossier_ids=[dossier])
+    before = accepted_bytes(project)
+    report = api.review_manuscript_links(project, manuscript, include_context=True)
+    context = report["passage_context"]
+    assert context["schema_version"] == "research-passage-context-local/1"
+    paragraph = context["paragraphs"][0]
+    assert (paragraph["start_line"], paragraph["end_line"], paragraph["paragraph_sha256"]) == (
+        3, 3, selection()["paragraph_sha256"])
+    assert (paragraph["state"], paragraph["total"], paragraph["shown"]) == ("ready", 2, 2)
+    assert len(paragraph["groups"]) == 1
+    group = paragraph["groups"][0]
+    assert group["dossier"]["current"] == {"id": dossier, "title": "Current room", "revision": 3}
+    assert [pin["revision"] for pin in group["dossier"]["pins"]] == [1, 2]
+    assert [(item["versions"][0]["pinned"]["revision"], item["versions"][0]["dossier_revision"]) for item in group["claims"]] == [(1, 1), (1, 2)]
+    assert group["claims"][0]["current"]["title"] == "Current claim"
+    assert group["claims"][0]["versions"][0]["associations"][0]["anchor"]["quote"] == "🦉 A visitor arrived."
+    assert [decision["title"] for decision in group["decisions"]] == ["Review the room"]
+    assert "body" not in group["dossier"]["current"]
+    assert accepted_bytes(project) == before
+
+
+def test_passage_context_bounds_links_and_never_accepts_moved_anchors(manuscript_archive):
+    project, manuscript, claim, _dossier = manuscript_archive
+    for quote in ("The", "reading", "room", "was", "open", "🦉", "visitor"):
+        save_link(manuscript_archive, selection=selection(quote))
+    report = api.review_manuscript_links(project, manuscript, include_context=True)
+    paragraph = report["passage_context"]["paragraphs"][0]
+    assert (paragraph["total"], paragraph["shown"]) == (7, 5)
+    group = paragraph["groups"][0]
+    assert len(group["claims"]) == 1 and group["claims"][0]["versions"][0]["pinned"]["id"] == claim
+    assert len(group["claims"][0]["versions"][0]["associations"]) == 5
+    manuscript.write_bytes(b"\n\n" + manuscript.read_bytes())
+    moved = api.review_manuscript_links(project, manuscript, include_context=True)
+    assert moved["links"] and all(row["anchor_state"] == "moved" for row in moved["links"])
+    assert moved["passage_context"]["paragraphs"] == []
+
+
+def test_passage_context_is_opt_in_and_empty_or_missing_sources_are_explicit(manuscript_archive):
+    project, manuscript, _claim, _dossier = manuscript_archive
+    assert "passage_context" not in api.review_manuscript_links(project, manuscript)
+    assert api.review_manuscript_links(project, manuscript, include_context=True)["passage_context"]["paragraphs"] == []
+    save_link(manuscript_archive)
+    manuscript.unlink()
+    result = api.review_manuscript_links(project, manuscript, include_context=True)
+    assert result["source_state"] == "missing"
+    assert result["passage_context"]["paragraphs"] == []
+
+
+@pytest.mark.parametrize("kind", ["claim", "dossier"])
+def test_passage_context_withdrawal_is_unavailable_not_empty(manuscript_archive, kind):
+    project, manuscript, claim, dossier = manuscript_archive
+    save_link(manuscript_archive)
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    target = claim if kind == "claim" else dossier
+    withdrawn = Tombstone(**api.envelope(snapshot.project.id, "synthetic-author"),
+                          target_kind=kind, target_ref=Reference(id=target, revision=1),
+                          operation="withdraw", reason="Synthetic context withdrawal")
+    repository.commit([withdrawn], {}, snapshot)
+    before = accepted_bytes(project)
+    paragraph = api.review_manuscript_links(project, manuscript, include_context=True)["passage_context"]["paragraphs"][0]
+    assert paragraph["state"] == "unavailable" and paragraph["total"] == 1
+    assert paragraph["shown"] == 0 and paragraph["groups"] == []
+    assert accepted_bytes(project) == before
+
+
+def test_passage_context_uses_one_archive_snapshot(manuscript_archive, monkeypatch):
+    project, manuscript, _claim, _dossier = manuscript_archive
+    save_link(manuscript_archive)
+    original = Repository.snapshot
+    reads = 0
+
+    def observed(repository):
+        nonlocal reads
+        reads += 1
+        return original(repository)
+
+    monkeypatch.setattr(Repository, "snapshot", observed)
+    result = api.review_manuscript_links(project, manuscript, include_context=True)
+    assert reads == 1
+    assert result["passage_context"]["paragraphs"][0]["groups"][0]["claims"][0]["versions"][0]["pinned"]["title"] == "Room"
+
+
+def test_passage_context_shows_each_current_claim_once_for_distinct_historical_versions(manuscript_archive):
+    project, manuscript, claim, _dossier = manuscript_archive
+    save_link(manuscript_archive)
+    revise(project, "claim", claim, {"title": "Second claim version"})
+    save_link(manuscript_archive, claim_revision=2, selection=selection("reading room"))
+    revise(project, "claim", claim, {"title": "Current claim version"})
+    paragraph = api.review_manuscript_links(project, manuscript, include_context=True)["passage_context"]["paragraphs"][0]
+    claims = paragraph["groups"][0]["claims"]
+    assert len(claims) == 1
+    assert claims[0]["current"]["title"] == "Current claim version"
+    assert [version["pinned"]["revision"] for version in claims[0]["versions"]] == [1, 2]
+    assert [version["associations"][0]["anchor"]["quote"] for version in claims[0]["versions"]] == [
+        "🦉 A visitor arrived.", "reading room"]
+
+
 def test_identical_active_link_is_rejected_without_an_archive_write(manuscript_archive):
     project, _manuscript, _claim, _dossier = manuscript_archive
     original = save_link(manuscript_archive)

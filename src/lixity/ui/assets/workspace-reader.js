@@ -14,7 +14,7 @@
   var status = document.getElementById("workspace-reader-status");
   var body = document.getElementById("workspace-reader-body");
   if (!toggle) return;
-  var enabled = false, requestSerial = 0, projectId = null, lastCatalogue = null;
+  var enabled = false, requestSerial = 0, projectId = null, lastCatalogue = null, requestedDossier = null;
   function current(serial, projectToken, researchToken) {
     return enabled && serial === requestSerial && projectToken === container.dataset.projectToken &&
       researchToken === bridge.contextToken();
@@ -131,9 +131,13 @@
     await loadDossier(select.value);
   }
   function setEnabled(value, selectedId) {
-    if (value && selectedId) select.value = selectedId;
+    var alreadyOpen = enabled;
+    // The display subscriber opens a newly requested tool. Retain the explicit
+    // ID separately: its option may not exist until that catalogue arrives.
+    requestedDossier = value && selectedId ? selectedId : null;
     window.LixityWorkbench.dispatch({type: "tool", value: value ? "dossier" : "none"});
-    if (value && selectedId) openDossiers(selectedId);
+    if (value && selectedId && alreadyOpen) openDossiers(selectedId);
+    requestedDossier = null;
   }
   window.LixityWorkbench.subscribe(function(state, previous) {
     var active = state.contextTool === "dossier" && state.surface === "document";
@@ -141,7 +145,7 @@
     toggle.setAttribute("aria-expanded", String(active));
     if (active === enabled) return;
     enabled = active; ++requestSerial;
-    if (active) openDossiers(select.value);
+    if (active) openDossiers(requestedDossier || select.value);
     else pending(false);
     document.dispatchEvent(new CustomEvent("lixity:companion-change", {detail: active}));
   });
