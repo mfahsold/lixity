@@ -7423,6 +7423,15 @@ _ROWS = {
         "Limites de palavra estritos (os hífens fazem parte da palavra)",
         "Strikte woordgrenzen (koppeltekens horen bij het woord)",
     ),
+    "manuscript_terms_match_compounds": (
+        "Match compound words (e.g. Copper Compass for Compass)",
+        "Komposita einbeziehen (z. B. Kupferkompass für Kompass)",
+        "Inclure les mots composés (p. ex. boussole en cuivre)",
+        "Incluir palabras compuestas (p. ej. brújula de cobre)",
+        "Includi parole composte (es. bussola di rame)",
+        "Incluir palavras compostas (ex. bússola de cobre)",
+        "Samengestelde woorden meenemen (bijv. koperkompas voor kompas)",
+    ),
     "manuscript_terms_save": (
         "Save term",
         "Begriff speichern",

@@ -2149,6 +2149,7 @@ def save_term_profile(
     scoped_alternatives: list[dict[str, Any]] | tuple[dict[str, Any], ...] = (),
     case_sensitive: bool = False,
     strict_boundaries: bool | None = None,
+    match_compounds: bool = False,
     dossier_id: str | None = None,
     claim_id: str | None = None,
     expected_config_snapshot: tuple[tuple[int, ...] | None, bytes] | None = None,
@@ -2179,6 +2180,7 @@ def save_term_profile(
             "scoped_alternatives": list(scoped_alternatives),
             "case_sensitive": case_sensitive,
             "strict_boundaries": strict_boundaries,
+            "match_compounds": match_compounds,
         }
         if dossier_id:
             candidate_entry["dossier_id"] = dossier_id

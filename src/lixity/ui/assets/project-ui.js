@@ -791,8 +791,12 @@ window.LixityManuscriptLinks = {
 
 // Analysis uses the same active-section presentation as accepted dossier renders.
 (function initAnalysisSections() {
-  if (window.LixitySectionNavigation) window.LixitySectionNavigation.mount(
-    document.getElementById("analysis-sections"), {host: document.getElementById("view-pane-analysis") || document.body, horizontal: true});
+  if (!window.LixitySectionNavigation) return;
+  var host = document.getElementById("view-pane-analysis") || document.body;
+  var topNav = document.getElementById("analysis-sections");
+  if (topNav) window.LixitySectionNavigation.mount(topNav, {host: host, horizontal: true});
+  var outlineNav = document.getElementById("analysis-outline-nav");
+  if (outlineNav) window.LixitySectionNavigation.mount(outlineNav, {host: host, horizontal: false});
 })();
 
 // Share the desktop navigation toggle with companion reading. A temporary

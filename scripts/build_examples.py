@@ -43,7 +43,7 @@ LICENSE_URL = "https://github.com/mfahsold/lixity/blob/main/LICENSE"
 #: chapter inspection, media, export, review, literal-code handling, research
 #: identity, terminology, localized diagnostics, contextual hints, association
 #: review, dossier collections and terms review add a bounded 112 kB allowance.
-MAX_PAGE_BYTES = 1_612_000
+MAX_PAGE_BYTES = 1_625_000
 
 
 @dataclass(frozen=True)

@@ -477,6 +477,7 @@ def dossier_manuscript_evidence(
                 ],
                 "case_sensitive": profile.case_sensitive,
                 "strict_boundaries": profile.strict_boundaries,
+                "match_compounds": profile.match_compounds,
                 "dossier_id": profile.dossier_id,
                 "claim_id": profile.claim_id,
                 "occurrence_count": 0,

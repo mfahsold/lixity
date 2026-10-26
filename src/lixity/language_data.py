@@ -4149,7 +4149,11 @@ HELP_TEXTS = {
 STYLE_DATA: dict[str, dict[str, Any]] = {
     "de": {
         "first_person_starters": ["ich"],
-        "passive_regex": r"\b(?:wird|werden|wurde|wurden|worden)\b",
+        "passive_regex": (
+            r"\b(?:wird|werden|wurde|wurden|worden)\b"
+            r"|\b(?:ist|sind|war|waren)\s+(?:[a-zäöüß]+\s+){0,2}"
+            r"(?:ge[a-zäöüß]+(?:t|en)|[a-zäöüß]+(?:iert|t|en))\b"
+        ),
         "nominal_suffixes": [
             "ung",
             "heit",
@@ -4188,7 +4192,10 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
     },
     "en": {
         "first_person_starters": ["i"],
-        "passive_regex": r"\b(?:been|being)\b|\b(?:is|are|was|were|am|be)\s+\w{2,}ed\b",
+        "passive_regex": (
+            r"\b(?:been|being)\b|\b(?:is|are|was|were|am|be)\s+"
+            r"(?:\w+ly\s+)?(?:\w{2,}ed|written|seen|done|taken|broken|found|built|given|known|made|sent|lost|kept)\b"
+        ),
         "nominal_suffixes": [
             "tion",
             "sion",

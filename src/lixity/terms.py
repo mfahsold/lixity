@@ -86,6 +86,7 @@ class TermProfile(BaseModel):
     # value of case_sensitive for backwards-compatible strictness; authors can
     # override it independently in either direction.
     strict_boundaries: bool | None = None
+    match_compounds: bool = False
     dossier_id: Identifier | None = None
     claim_id: Identifier | None = None
 
@@ -203,6 +204,7 @@ def _find_variant_spans(
     *,
     case_sensitive: bool,
     strict: bool = False,
+    match_compounds: bool = False,
 ) -> list[tuple[int, int, list[str]]]:
     """Find token-bounded occurrences of `form` in `text`, noting Unicode ambiguities."""
     results: list[tuple[int, int, list[str]]] = []
@@ -218,6 +220,20 @@ def _find_variant_spans(
             reasons.append("unicode_casefold_length")
         seen_spans.add((start, end))
         results.append((start, end, reasons))
+
+    if match_compounds and len(form) >= 3:
+        # Match compound words where form is a head noun or modifier (e.g. Kupferkompass, Kompassnadel).
+        escaped = re.escape(form)
+        compound_re = re.compile(
+            rf"\b([a-zA-ZäöüÄÖÜß]+{escaped}|{escaped}[a-zA-ZäöüÄÖÜß]+)\b",
+            re.UNICODE | (0 if case_sensitive else re.IGNORECASE),
+        )
+        for match in compound_re.finditer(text):
+            c_start, c_end = match.span()
+            if any(s < c_end and c_start < e for s, e in seen_spans):
+                continue
+            seen_spans.add((c_start, c_end))
+            results.append((c_start, c_end, ["compound_match"]))
 
     # Check if decomposed/compatibility Unicode sequences in `text` would match under NFC/casefold
     # when raw regex missed them or shifted codepoint lengths.
@@ -292,6 +308,7 @@ def derive_manuscript_term_occurrences(
                     ],
                     "case_sensitive": profile.case_sensitive,
                     "strict_boundaries": profile.strict_boundaries,
+                    "match_compounds": profile.match_compounds,
                     "dossier_id": profile.dossier_id,
                     "claim_id": profile.claim_id,
                     "occurrence_count": 0,
@@ -343,6 +360,7 @@ def derive_manuscript_term_occurrences(
                         if profile.strict_boundaries is not None
                         else profile.case_sensitive
                     ),
+                    match_compounds=profile.match_compounds,
                 ):
                     overlapping_same = [
                         existing_form for s, e, existing_form in term_spans if start < e and end > s
@@ -367,6 +385,8 @@ def derive_manuscript_term_occurrences(
                         flags.append("out_of_scope_alternative")
                     if unicode_reasons:
                         flags.append("unicode_ambiguity")
+                    if "compound_match" in unicode_reasons:
+                        flags.append("compound_match")
                     if overlapping_same:
                         flags.append("overlapping_term")
                     quote_text = text[start:end]
@@ -453,6 +473,7 @@ def derive_manuscript_term_occurrences(
                 ],
                 "case_sensitive": profile.case_sensitive,
                 "strict_boundaries": profile.strict_boundaries,
+                "match_compounds": profile.match_compounds,
                 "dossier_id": profile.dossier_id,
                 "claim_id": profile.claim_id,
                 "occurrence_count": len(term_hits),

@@ -618,6 +618,12 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 help="Treat hyphens as word characters for --set-term (implied by --case-sensitive; use --no-strict-boundaries to disable)",
             )
             command.add_argument(
+                "--match-compounds",
+                action=argparse.BooleanOptionalAction,
+                default=None,
+                help="Match compound words where the term is head noun or modifier for --set-term",
+            )
+            command.add_argument(
                 "--dossier-id", help="Optional reference dossier UUID for --set-term"
             )
             command.add_argument("--claim-id", help="Optional reference claim UUID for --set-term")
@@ -2765,6 +2771,7 @@ def run(args: argparse.Namespace) -> int:
                     scoped_alternatives=scoped_list,
                     case_sensitive=bool(getattr(args, "case_sensitive", False)),
                     strict_boundaries=getattr(args, "strict_boundaries", None),
+                    match_compounds=bool(getattr(args, "match_compounds", False)),
                     dossier_id=getattr(args, "dossier_id", None),
                     claim_id=getattr(args, "claim_id", None),
                 )
@@ -2776,6 +2783,7 @@ def run(args: argparse.Namespace) -> int:
                     or getattr(args, "scoped_alternatives", None) is not None
                     or getattr(args, "case_sensitive", False)
                     or getattr(args, "strict_boundaries", None) is not None
+                    or getattr(args, "match_compounds", None) is not None
                     or getattr(args, "dossier_id", None) is not None
                     or getattr(args, "claim_id", None) is not None
                 ):
@@ -2789,6 +2797,7 @@ def run(args: argparse.Namespace) -> int:
                     or getattr(args, "scoped_alternatives", None) is not None
                     or getattr(args, "case_sensitive", False)
                     or getattr(args, "strict_boundaries", None) is not None
+                    or getattr(args, "match_compounds", None) is not None
                     or getattr(args, "dossier_id", None) is not None
                     or getattr(args, "claim_id", None) is not None
                 ):

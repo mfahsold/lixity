@@ -39,6 +39,7 @@ from ..style_profile import (
 from ..workspace_labels import WORKSPACE_LABELS
 from .components import (
     ANALYSIS_SECTIONS,
+    analysis_outline_nav,
     artifact_href,
     checkbox_field,
     help_term,
@@ -895,7 +896,10 @@ def render_dashboard(
         available.add("style")
     if chapters:
         available.add("matrix")
-    overview_navigation = section_nav([entry for entry in ANALYSIS_SECTIONS if entry[0] in available], labels)
+    active_sections = [entry for entry in ANALYSIS_SECTIONS if entry[0] in available]
+    overview_navigation = section_nav(active_sections, labels)
+    outline_sections = ([("analysis-review", "review_title")] if has_chapters else []) + active_sections
+    analysis_outline = analysis_outline_nav(outline_sections, labels)
 
     if has_reading and controls:
         analysis_controls = (
@@ -914,6 +918,10 @@ def render_dashboard(
                                       analysis_controls=analysis_controls, overview_navigation=overview_navigation))
     else:
         parts.append(overview_navigation)
+
+    parts.append('<div class="analysis-outline-folder">')
+    parts.append('<div class="analysis-outline-layout">')
+    parts.append('<div class="analysis-outline-document" id="analysis-outline-document">')
 
     if has_chapters:
         parts.append(f'<section class="panel" id="analysis-review"><h2>{L("review_title")}</h2>')
@@ -1586,6 +1594,9 @@ def render_dashboard(
             parts.append("</tr>")
         parts.append("</tbody></table></div></section>")
 
+    parts.append("</div>")
+    parts.append(analysis_outline)
+    parts.append("</div></div>")
     parts.append("</div>")
     if not has_reading:
         parts.append("</div>")

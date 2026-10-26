@@ -282,6 +282,48 @@ class ManuscriptTermsTests(unittest.TestCase):
         cfg = read_explicit_project_config(self.root)
         self.assertNotIn("strict_boundaries", cfg["terms"]["RM"])
 
+    def test_term_compound_matching(self) -> None:
+        compound_ms = self.root / "compounds.md"
+        compound_ms.write_text(
+            "## Chapter 1\n\n"
+            "Er fand den Kupferkompass und die Kompassnadel. Ein Kompass war nützlich.\n",
+            encoding="utf-8",
+        )
+        # Default: match_compounds is False -> only standalone "Kompass" matches
+        api.save_term_profile(self.root, "Kompass", match_compounds=False)
+        report_default = api.review_manuscript_terms(self.root, compound_ms)
+        self.assertEqual(report_default["occurrence_count"], 1)
+        self.assertEqual(report_default["occurrences"][0]["quote"], "Kompass")
+
+        # Enabled: match_compounds is True -> matches Kupferkompass, Kompassnadel, Kompass
+        api.save_term_profile(self.root, "Kompass", match_compounds=True)
+        report_compounds = api.review_manuscript_terms(self.root, compound_ms)
+        self.assertEqual(report_compounds["occurrence_count"], 3)
+        quotes = {occ["quote"] for occ in report_compounds["occurrences"]}
+        self.assertEqual(quotes, {"Kupferkompass", "Kompassnadel", "Kompass"})
+        compound_hits = [occ for occ in report_compounds["occurrences"] if "compound_match" in occ["flags"]]
+        self.assertEqual(len(compound_hits), 2)
+
+        # CLI flag --match-compounds sets it
+        cli_buf = io.StringIO()
+        with redirect_stdout(cli_buf):
+            code = cli_main(
+                [
+                    "research",
+                    "terms",
+                    "--project",
+                    str(self.root),
+                    "--set-term",
+                    "Kompass",
+                    "--match-compounds",
+                    "--format",
+                    "json",
+                ]
+            )
+        self.assertEqual(code, 0)
+        cfg = read_explicit_project_config(self.root)
+        self.assertIs(cfg["terms"]["Kompass"]["match_compounds"], True)
+
 
 if __name__ == "__main__":
     unittest.main()

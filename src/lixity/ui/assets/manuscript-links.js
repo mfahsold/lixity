@@ -953,6 +953,8 @@
           var c = document.getElementById("r-term-case"); if (c) c.checked = Boolean(item.case_sensitive);
           var st = document.getElementById("r-term-strict");
           if (st) st.checked = item.strict_boundaries === null ? Boolean(item.case_sensitive) : Boolean(item.strict_boundaries);
+          var cp = document.getElementById("r-term-compounds");
+          if (cp) cp.checked = Boolean(item.match_compounds);
         });
         chipsContainer.appendChild(chip);
       });
@@ -1025,6 +1027,7 @@
           scoped_alternatives: item.scoped_alternatives || [],
           case_sensitive: Boolean(item.case_sensitive),
           strict_boundaries: item.strict_boundaries === null ? Boolean(item.case_sensitive) : Boolean(item.strict_boundaries),
+          match_compounds: Boolean(item.match_compounds),
           dossier_id: item.dossier_id || null,
           claim_id: item.claim_id || null
         };
@@ -1036,6 +1039,7 @@
         var scopedRaw = (document.getElementById("r-term-scoped") || {}).value || "";
         var caseBox = document.getElementById("r-term-case");
         var strictBox = document.getElementById("r-term-strict");
+        var compoundsBox = document.getElementById("r-term-compounds");
         var scopedList = scopedRaw.split(";").map(function(s) { return s.trim(); }).filter(Boolean).map(function(spec) {
           var parts = spec.split(":");
           var form = (parts[0] || "").trim();
@@ -1046,7 +1050,8 @@
           aliases: aliasesRaw.split(",").map(function(s) { return s.trim(); }).filter(Boolean),
           scoped_alternatives: scopedList,
           case_sensitive: Boolean(caseBox && caseBox.checked),
-          strict_boundaries: Boolean(strictBox && strictBox.checked)
+          strict_boundaries: Boolean(strictBox && strictBox.checked),
+          match_compounds: Boolean(compoundsBox && compoundsBox.checked)
         };
       }
       var res = await bridge.post("settings", {terms: nextTerms, project_token: value.project});

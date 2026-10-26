@@ -228,6 +228,27 @@ def section_nav(links: Sequence[tuple[str, str]], labels: Mapping[str, str] | No
     return "".join(parts)
 
 
+def analysis_outline_nav(links: Sequence[tuple[str, str]], labels: Mapping[str, str] | None) -> str:
+    """Right-hand vertical outline navigation with the growing scroll indicator."""
+    if not links:
+        return ""
+    sections_label = esc(label(labels, "sections"))
+    parts = [
+        '<details class="analysis-outline-contents" data-section-contents="" open>',
+        f'<summary id="analysis-outline-summary">{sections_label}</summary>',
+        f'<nav class="section-navigation" id="analysis-outline-nav" data-section-nav="analysis-outline" '
+        f'aria-label="{sections_label}">',
+        "<ul>",
+    ]
+    for target, label_key in links:
+        parts.append(
+            f'<li><a href="#{esc(target)}" data-jump="#{esc(target)}" '
+            f'data-section-link="{esc(target)}">{esc(label(labels, label_key))}</a></li>'
+        )
+    parts.append("</ul></nav></details>")
+    return "".join(parts)
+
+
 def checkbox_field(input_html: str, text_html: str, *, extra_class: str = "") -> str:
     """One checkbox row of the shared ``form-checkbox`` component.
 
