@@ -186,7 +186,7 @@ class ProjectRoutesMixin(ResponseMixin):
             root = self.get_author_project_root()
             current_token = project_settings_token(root, self.source_input)
             if (save_defaults or any(key in payload for key in (
-                    "publication", "register_profiles", "chapter_registers", "site_publications", "dossier_collections", "terms", "project_token"))) and (
+                    "publication", "register_profiles", "chapter_registers", "site_publications", "dossier_collections", "terms", "audio", "project_token"))) and (
                     not current_token or payload.get("project_token") != current_token):
                 if publication_save:
                     self._log.warning("Publication profiles stage=save_rejected reason=context_changed")

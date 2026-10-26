@@ -156,9 +156,11 @@ sources, existing outputs and read-only structure findings. They neither move
 files nor establish that an output matches the current manuscript; see
 [project inspection](https://mfahsold.github.io/lixity/USAGE.md#inspect-project-structure).
 
-The early `lixity read-aloud` CLI can make a local Piper WAV listening copy of a
-manuscript or chapter. It requires cached voice models; audio quality and failure
-handling are still prototype-level. See the
+The development audio workflow shares saved project voice profiles between
+`lixity read-aloud` and the native preview/export dialog. Piper supports local CPU
+listening copies; optional Qwen3-TTS adds preset voices and explicit style
+instructions through a local worker. CPU generation is supported and can be slow;
+audio remains a prototype requiring listening review. See the
 [read-aloud scope](https://mfahsold.github.io/lixity/USAGE.md#lixity-read-aloud)
 before relying on an export. NDA generation produces a draft, not consent or
 signatures. Dossier Markdown edits require explicit preview and apply.

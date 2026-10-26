@@ -42,6 +42,7 @@ HANDLER_STATE = (
     "dashboard_info",
     "refresh_outcome",
     "_refresh_needs_validation",
+    "_speech_generation",
     "debug",
 )
 

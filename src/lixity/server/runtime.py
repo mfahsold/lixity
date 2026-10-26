@@ -20,6 +20,12 @@ from .handler import LixityServerHandler
 class _LoopbackHTTPServer(ThreadingHTTPServer):
     """Bind the validated local address without an unnecessary reverse-DNS lookup."""
 
+    def server_close(self) -> None:
+        manager = getattr(self, "speech_jobs", None)
+        if manager is not None:
+            manager.close()
+        super().server_close()
+
     def server_bind(self) -> None:
         host = self.server_address[0]
         TCPServer.server_bind(self)

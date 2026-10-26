@@ -1,0 +1,168 @@
+"""Native audio uses selected-source snapshots, not browser-provided prose."""
+
+import hashlib
+import json
+import time
+from pathlib import Path
+from urllib.parse import urlencode
+
+import pytest
+
+from lixity.server.pdf_context import project_settings_token
+from lixity.speech import generate_silence_wav
+from tests.support import LoopbackServer, make_handler, send
+
+
+@pytest.fixture
+def speech_server(tmp_path, monkeypatch):
+    import lixity.speech_jobs as jobs
+
+    source = tmp_path / "manuscript.md"
+    source.write_text(
+        "## First\n\nA bird crosses the garden.\n\n## Second\n\nThe second scene begins.\n"
+    )
+    (tmp_path / "lixity.toml").write_text('language = "en"\n')
+    observed = []
+
+    def render(source, output, **kw):
+        observed.append(Path(source).read_text())
+        kw["progress"](1, 1)
+        Path(output).write_bytes(generate_silence_wav(0.01))
+        return Path(output)
+
+    monkeypatch.setattr(jobs, "render_speech_audio", render)
+    handler = make_handler(tmp_path, source_input=source, language="en")
+    handler.refresh()
+    with LoopbackServer(handler) as server:
+        yield server.port, source, handler, observed
+
+
+def context(source, handler):
+    return {
+        "project_token": project_settings_token(handler.workspace_root, str(source)),
+        "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+    }
+
+
+def test_preview_and_download_are_bound_to_actual_source_without_writes(speech_server):
+    port, source, handler, observed = speech_server
+    before = source.read_bytes()
+    bound = context(source, handler)
+    response = send(port, "/api/speech?" + urlencode(bound))
+    assert response.status == 200, response.body
+    data = json.loads(response.body)
+    assert data["settings"]["selected"] == "narrator" and len(data["chapters"]) == 2
+    assert data["capabilities"]["qwen3"]["instructions"] is True
+    request = {
+        **bound,
+        "mode": "preview",
+        "chapter": 1,
+        "profile": data["settings"]["profiles"]["narrator"],
+    }
+    response = send(port, "/api/speech-render", payload=request)
+    assert response.status == 202, response.body
+    identifier = json.loads(response.body)["job"]["id"]
+    query = urlencode({**bound, "id": identifier})
+    for _ in range(100):
+        response = send(port, "/api/speech-job?" + query)
+        if json.loads(response.body)["job"]["state"] == "ready":
+            break
+        time.sleep(0.01)
+    audio = send(port, "/api/speech-audio?" + query)
+    assert audio.status == 200 and audio.body.startswith(b"RIFF")
+    assert audio.headers["content-type"] == "audio/wav"
+    assert observed == ["A bird crosses the garden."]
+    assert source.read_bytes() == before
+    source.write_text(source.read_text() + "Changed source.\n")
+    assert send(port, "/api/speech-audio?" + query).status == 409
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"text": "Browser manuscript"},
+        {"path": "../other.md"},
+        {"mode": "whole-book"},
+        {"chapter": 0},
+        {"chapter": True},
+    ],
+)
+def test_arbitrary_or_invalid_render_requests_fail(speech_server, change):
+    port, source, handler, observed = speech_server
+    response = send(
+        port,
+        "/api/speech-render",
+        payload={**context(source, handler), "mode": "preview", "chapter": 1, **change},
+    )
+    assert response.status == 400, response.body
+    assert observed == []
+
+
+def test_cross_origin_and_old_context_cannot_access_audio(speech_server):
+    port, source, handler, _observed = speech_server
+    query = urlencode(context(source, handler))
+    assert (
+        send(port, "/api/speech?" + query, headers={"Origin": "https://example.invalid"}).status
+        == 403
+    )
+    assert (
+        send(port, "/api/speech?" + query.replace("source_sha256=", "source_sha256=wrong")).status
+        == 409
+    )
+
+
+def test_observed_source_change_cancels_old_job_even_if_bytes_return(speech_server, monkeypatch):
+    import threading
+
+    import lixity.speech_jobs as jobs
+
+    port, source, handler, _observed = speech_server
+    original = source.read_bytes()
+    release = threading.Event()
+    entered = threading.Event()
+
+    def render(source, output, **kwargs):
+        entered.set()
+        release.wait(3)
+        Path(output).write_bytes(generate_silence_wav(0.01))
+
+    monkeypatch.setattr(jobs, "render_speech_audio", render)
+    bound = context(source, handler)
+    try:
+        created = send(
+            port, "/api/speech-render", payload={**bound, "mode": "preview", "chapter": 1}
+        )
+        identifier = json.loads(created.body)["job"]["id"]
+        assert entered.wait(1)
+        source.write_text(source.read_text() + "Changed.\n")
+        cancelled = send(port, "/api/speech-cancel", payload={**bound, "id": identifier})
+        assert cancelled.status == 409
+        source.write_bytes(original)
+        release.set()
+        query = urlencode({**bound, "id": identifier})
+        for _ in range(100):
+            state = json.loads(send(port, "/api/speech-job?" + query).body)["job"]["state"]
+            if state not in ("pending", "running"):
+                break
+            time.sleep(0.01)
+        assert state == "cancelled"
+        assert send(port, "/api/speech-audio?" + query).status == 400
+    finally:
+        release.set()
+
+
+def test_reselecting_same_project_cannot_revive_an_earlier_job(speech_server):
+    port, source, handler, _observed = speech_server
+    bound = context(source, handler)
+    created = send(port, "/api/speech-render", payload={**bound, "mode": "preview", "chapter": 1})
+    identifier = json.loads(created.body)["job"]["id"]
+    query = urlencode({**bound, "id": identifier})
+    for _ in range(100):
+        state = json.loads(send(port, "/api/speech-job?" + query).body)["job"]["state"]
+        if state == "ready":
+            break
+        time.sleep(0.01)
+    assert send(port, "/api/speech-audio?" + query).status == 200
+    handler.publish_dashboard(handler.dashboard_html, handler.dashboard_info)
+    handler.publish_dashboard(handler.dashboard_html, handler.dashboard_info)
+    assert send(port, "/api/speech-audio?" + query).status == 400

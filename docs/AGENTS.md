@@ -1511,3 +1511,37 @@ backup restoration before switching accepted manifest storage, preserves HEAD an
 source/revision bytes, and supports interrupted-cleanup retry. Normal old-layout
 access fails with a migration requirement. Portable exports remain canonical
 `.json` transport and restore converts staging before publication.
+
+## Native speech (current main, unreleased)
+
+`audio` is a project-only setting with schema `lixity-audio-settings/1`, selected
+profile ID and a bounded profile map. The installed configuration schema exposes
+its validation contract. `read-aloud --profile` and the native dialog share it;
+explicit CLI control overrides are per invocation, not project writes.
+
+All native speech reads require same-origin access and exactly one
+`project_token` plus `source_sha256`. Tokens guard context, not authentication.
+`GET /api/speech` returns `lixity-speech-local/1`, settings (or an explicit
+configuration error), backend capabilities and source chapter bounds.
+`POST /api/speech-render` accepts those context fields, `mode: preview|chapter`,
+a positive `chapter`, and either `profile_id` or a validated draft `profile`.
+Preview may include the exact displayed `paragraph` identity (`start_line`,
+`end_line`, `paragraph_sha256`). Browser-provided text, paths and unknown request
+fields are rejected. Preview uses the first bounded supported prose segment; its
+context reports the excerpt and whether more prose follows.
+
+Rendering returns HTTP 202 with `job` (`id`, `state`, `done`, `total`, `message`,
+`context`). `GET /api/speech-job` polls it with the same context and `id`. States
+are `pending|running|ready|cancelled|stale|error`; model segment cancellation may
+remain running until that call returns. `POST /api/speech-cancel` takes the same
+context and job ID. `GET /api/speech-audio` downloads only ready, still-current
+WAV bytes. At most one render is active; completed temporary jobs expire after
+30 minutes or bounded store eviction. Source/project/settings changes invalidate
+results, including an earlier selection revisited later. No manuscript bytes or
+research archive records are changed.
+
+The optional Qwen worker listens on 127.0.0.1:8769 only. It accepts bounded
+CustomVoice requests at `/v1/audio/speech`; the Lixity adapter checks model, voice,
+format and response size and rejects redirects. No external provider endpoint or
+automatic backend fallback is supported. Heavy model dependencies and weights
+are separately installed machine resources. See the read-aloud usage for setup.

@@ -7,7 +7,22 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- Project-only audio profiles shared by CLI and the native Audio & voices dialog,
+  with explicit narrator presets, supported delivery controls, pauses and literal
+  pronunciation settings. Draft previews, saved-profile selection and cancellable
+  chapter jobs use one validated backend path; read-only snapshots cannot render.
+- Optional offline Qwen3-TTS 1.7B CustomVoice worker with explicit CPU/CUDA modes,
+  bounded local transport and no automatic model download or backend fallback.
+
 ### Changed
+- Local read-aloud uses constant neutral delivery and explicit speed rather than
+  sentence-length pacing or inferred emotions. Shared Markdown prose includes
+  quoted blocks and list items; long inputs retain their text across bounded
+  segments. The default German voice is single-speaker Thorsten.
+- Audio generation rejects missing/failed segments, mismatched PCM, invalid
+  chapter/speed selection and unavailable MP3 conversion. Streamed atomic output
+  preserves an existing listening copy when synthesis or conversion fails.
 - Native passage research and offline exports share a bounded backend context
   projection from one archive snapshot, grouping dossier/claim pins and decisions
   centrally. Opening a passage context no longer fetches separate record versions

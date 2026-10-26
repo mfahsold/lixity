@@ -85,7 +85,8 @@ class TestLocalization(unittest.TestCase):
         for language in LOCALES:
             with self.subTest(language=language):
                 labels = LANGUAGE_PROFILES[language].labels
-                rendered = render_dashboard([], [], controls=True, labels=labels, language_key=language)
+                rendered = render_dashboard([], [], controls=True, labels=labels, language_key=language,
+                                            enabled_actions=("speech-render",))
                 parser = _DashboardBodyParser()
                 parser.feed(rendered)
                 self.assertEqual(

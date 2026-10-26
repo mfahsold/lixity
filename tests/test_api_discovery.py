@@ -209,10 +209,13 @@ def test_configuration_discovery_describes_installed_models_and_threshold_domain
     assert thresholds["fdr_method"]["enum"] == ["bh", "by"]
     assert settings["threshold_schema"]["additionalProperties"] is False
     assert "z_mild <= z_strong" in settings["threshold_schema"]["$comment"]
+    assert "audio" in settings["project_only_keys"]
+    assert settings["audio_schema"]["properties"]["schema_version"]["const"] == "lixity-audio-settings/1"
+    assert settings["audio_schema"]["additionalProperties"] is False
     assert "author_name" in settings["project_only_keys"]
     assert "title" not in settings["project_only_keys"]
     assert settings["native_settings"]["persisted_keys"] == [
-        "title", "author_name", "publication", "site_publications", "dossier_collections", "terms", "register_profiles", "chapter_registers",
+        "title", "author_name", "publication", "site_publications", "dossier_collections", "terms", "register_profiles", "chapter_registers", "audio",
     ]
     assert set(settings["native_settings"]["session_keys"]) == {
         "language", "z_mild", "z_strong", "fdr_q", "fdr_method", "min_chapters",

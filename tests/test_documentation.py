@@ -17,7 +17,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 class TestDocumentation(unittest.TestCase):
     def test_published_reports_bundle_the_current_packaged_interface(self):
-        """Demo/classic UI must not silently drift from the release's native UI."""
+        """Published reports share current assets; live-only audio is capability-gated."""
         from lixity.ui.dashboard import _CSS_FILES, _JS_FILES
 
         assets = ROOT / "src/lixity/ui/assets"

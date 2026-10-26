@@ -40,8 +40,8 @@ DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
 
 UNINTERPRETED_KEYS = frozenset({"phrases", "capabilities"})
-PROJECT_ONLY_KEYS = ("author_name", "draft_notice", "publication", "site_publications", "dossier_collections", "terms", "register_profiles", "chapter_registers", "characters", "manuscript")
-PERSISTED_SETTINGS_KEYS = ("title", "author_name", "publication", "site_publications", "dossier_collections", "terms", "register_profiles", "chapter_registers")
+PROJECT_ONLY_KEYS = ("author_name", "draft_notice", "publication", "site_publications", "dossier_collections", "terms", "register_profiles", "chapter_registers", "characters", "manuscript", "audio")
+PERSISTED_SETTINGS_KEYS = ("title", "author_name", "publication", "site_publications", "dossier_collections", "terms", "register_profiles", "chapter_registers", "audio")
 
 # Keys that may appear in [tool.lixity] (documented schema).
 TOOL_KEYS = frozenset(
@@ -53,6 +53,7 @@ TOOL_KEYS = frozenset(
         "site_publications",
         "dossier_collections",
         "terms",
+        "audio",
         "z_mild",
         "z_strong",
         "fdr_q",
@@ -295,6 +296,10 @@ def prepare_project_settings(
 
             value = {name: profile.model_dump(exclude_none=True)
                      for name, profile in parse_terms(raw).items()}
+        elif key == "audio":
+            from .speech_profiles import AudioSettings
+
+            value = AudioSettings.model_validate(raw).model_dump(by_alias=True)
         elif key == "language":
             value = raw
         elif key in THRESHOLD_KEYS:
@@ -516,6 +521,7 @@ def configuration_metadata() -> dict[str, Any]:
     from .characters import character_configuration_schema
     from .dossier_collections import dossier_collections_schema
     from .site_publications import site_publications_schema
+    from .speech_profiles import AudioSettings
     from .style_fingerprint import FingerprintThresholds
     from .terms import terms_configuration_schema
 
@@ -556,6 +562,7 @@ def configuration_metadata() -> dict[str, Any]:
         "dossier_collections_schema": dossier_collections_schema(),
         "terms_schema": terms_configuration_schema(),
         "characters_schema": character_configuration_schema(),
+        "audio_schema": AudioSettings.model_json_schema(by_alias=True),
         "threshold_schema": {
             "type": "object", "properties": properties, "additionalProperties": False,
             "$comment": (

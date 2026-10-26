@@ -1218,24 +1218,103 @@ lixity read-aloud --project ./novel --language de -o reading-copy.wav
 command uses the selected project's configured manuscript or folder discovery.
 The CLI defaults to the project language, then English; pass `--language` explicitly
 for the intended voice. The prepared default voices are
-`de_DE-thorsten_emotional-medium` and `en_US-lessac-medium`. `--voice` currently
+`de_DE-thorsten-medium` and `en_US-lessac-medium`. `--voice` currently
 accepts a cached model name, not an arbitrary ONNX path. A model needs both
 `~/.cache/piper-voices/NAME/NAME.onnx` and `NAME.onnx.json` beside it. Piper/ONNX
 dependencies and models are separate prerequisites; the command does not download
 them. Review each voice model's license before distribution.
 
-The prototype adds pauses for headings and scene breaks, and adjusts reading
-tempo using sentence-length heuristics. Its dialogue/emotion selection is coarse;
-it is not automatic character casting or an interpretation of the scene.
-`--speed 1.1` requests a faster reading. Recognised editorial markers are omitted
-by default; `--keep-markers` includes them. The manuscript is not edited.
+**Current main (unreleased):** saved project audio profiles are shared by the CLI
+and native **Audio & voices** dialog, reachable from Project settings and the
+manuscript controls. Choose or create a profile, audition the selected passage,
+then render a chapter. Draft previews do not save settings; **Save profiles**
+persists the selected profile and its controls through the normal atomic project
+settings path. Read-only exports do not offer synthesis or expose audio settings.
 
-Use WAV while evaluating this prototype. MP3 conversion currently depends on
-FFmpeg and does not yet reliably reject missing/failed conversion. Failed external
-Piper segments can also be omitted, and WAV concatenation does not validate every
-segment's sample format. Compare the output with the source before relying on a
-complete listening copy. The prototype does not guarantee long-manuscript
-completeness or multilingual narration quality.
+```bash
+lixity read-aloud --project ./novel --profile narrator -o reading-copy.wav
+lixity read-aloud --project ./novel --profile narrator --chapter 2 -o chapter-2.wav
+```
+
+The selected saved profile is used when `--profile` is omitted. Explicit `--voice`,
+`--language`, `--speed` and `--instructions` override that invocation without
+rewriting the saved profile. Unsupported combinations fail before rendering.
+For example, Qwen does not expose Piper's precise speed factor; use an explicit
+style instruction instead of assuming that an instruction guarantees an exact
+speaking rate.
+
+A root `lixity.toml` can contain:
+
+```toml
+[audio]
+schema_version = "lixity-audio-settings/1"
+selected = "narrator"
+
+[audio.profiles.narrator]
+name = "Narrator"
+engine = "qwen3"
+language = "de"
+voice = "Ryan"
+speed = 1.0
+instructions = "Read calmly and clearly, without whispering."
+paragraph_pause = 0.45
+scene_pause = 1.2
+```
+
+Profiles are project-only; user and ancestor configurations cannot supply them.
+They also accept a `pronunciations` table of literal term-to-spoken-form pairs.
+These substitutions affect synthesis text only. A voice profile does not infer
+character identities or turn words such as “quiet” into acting instructions.
+
+**Backends:** `piper` uses cached voices and supports explicit speed; its style
+instructions must be empty. `qwen3` uses the fixed
+`Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` checkpoint family, one of its nine presets,
+and explicit style instructions. This iteration does not implement Base voice
+cloning or VoiceDesign. Both backends support structural pauses and the shared
+pronunciation settings. Model capabilities determine the available UI controls;
+there is no silent backend fallback. A preset speaking German does not establish
+native pronunciation or audiobook quality.
+
+Qwen runs in an optional isolated Python 3.12 environment with `qwen-tts` and a
+hardware-appropriate PyTorch installation. Install the development checkout into
+that environment (`python -m pip install -e /path/to/lixity`) and obtain the
+complete local CustomVoice checkpoint, including its speech tokenizer, using the
+[upstream setup instructions](https://github.com/QwenLM/Qwen3-TTS). Choose the CPU
+build of PyTorch for CPU-only use. Neither opening Lixity nor starting the worker
+downloads weights or sends manuscript text to an inference provider.
+
+Start the worker explicitly from that environment:
+
+```bash
+python -m lixity.speech_qwen --model /path/to/CustomVoice --device cpu --threads 4
+```
+
+It binds only to `127.0.0.1:8769`, loads the local model once and serializes
+synthesis. CPU operation is supported; generation can be much slower than the
+result's duration, so use a short preview to choose the voice. GPU operation is
+optional via `--device cuda`, with an explicit error when unavailable. The native
+UI starts a background job and reports completed segments without keeping the
+initial HTTP request open. Cancellation waits for an in-flight model segment to
+return, then prevents publication. A slow segment is allowed up to one hour;
+that limit is not an estimate of chapter duration.
+
+Body paragraphs, quoted blocks and list prose use the shared Markdown text
+projection. Link labels are read; destinations, images, code, footnote definitions
+and YAML metadata are omitted. Long paragraphs use bounded sentence/word segments
+without inserting paragraph pauses between fragments. Recognised editorial
+markers are omitted unless `--keep-markers` is supplied. The manuscript is not
+edited. Unknown chapters and invalid speeds fail explicitly.
+
+WAV output needs no FFmpeg; MP3 requires it before synthesis. Missing, malformed,
+empty or mismatched PCM and failed conversion are errors. Streamed atomic output
+preserves an existing file on failure. Native audio is a temporary download:
+WAV output is capped at 200 MB during rendering, including inserted silence;
+results are bound to the selected source/settings and selection generation, with
+at most four retained jobs and a 30-minute retention window after completion.
+Save the download when needed. Project/source changes invalidate old results;
+returning to an earlier project cannot revive them. Model-generated omissions,
+repetitions, pronunciation and expressive reading still need human review.
+Successful encoding or an ASR transcript does not establish narration quality.
 
 ### `lixity service`
 

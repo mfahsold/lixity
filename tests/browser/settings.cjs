@@ -131,6 +131,136 @@ server.serve_forever()
   } finally {await server.close();}
 }
 
+async function verifyNativeSpeech(browser) {
+  const artifacts=fs.mkdtempSync('/tmp/lixity-speech-native-');
+  const server=await startNativeServer(`
+import json, sys, time
+from pathlib import Path
+from http.server import ThreadingHTTPServer
+from lixity.server import LixityServerHandler
+import lixity.speech_jobs as jobs
+from lixity.speech import generate_silence_wav
+base = Path(sys.argv[1])
+source = base / 'manuscript.md'
+source.write_text('# Synthetic audio project\\n\\n## One\\n\\nA bird crosses the quiet garden.\\n\\nA second bird follows.\\n\\n## Two\\n\\nThe garden is still.\\n', encoding='utf-8')
+config = base / 'lixity.toml'
+config.write_text('language = "en"\\n', encoding='utf-8')
+def fake_render(source, output, *, profile, progress, cancelled, **kwargs):
+    progress(0, 1)
+    time.sleep(.7)
+    Path(output).write_bytes(generate_silence_wav(.1))
+    progress(1, 1)
+    return Path(output)
+jobs.render_speech_audio = fake_render
+LixityServerHandler.workspace_root = str(base)
+LixityServerHandler.source_input = str(source)
+LixityServerHandler.exports_dir = str(base / 'exports')
+LixityServerHandler.refresh()
+server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
+print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'source':str(source), 'config':str(config)}), flush=True)
+server.serve_forever()
+`,artifacts);
+  try {
+    const original=fs.readFileSync(server.fixture.source);
+    for(const width of [1440,320]) {
+      const page=await browser.newPage({viewport:{width,height:1000}}), errors=[];
+      page.on('pageerror',error=>errors.push(error.message));
+      await page.goto(server.fixture.url);
+      await page.locator('#tab-view-project').click();
+      await page.locator('#settings-speech').click();
+      const dialog=page.locator('#modal-speech');
+      await page.waitForFunction(()=>document.querySelector('#speech-name')?.value==='Narrator');
+      assert.equal(await dialog.isVisible(),true);
+      assert.equal(await page.locator('#speech-instructions').isDisabled(),true);
+      assert.equal(await page.locator('#speech-speed').isDisabled(),false);
+      await page.locator('#speech-engine').selectOption('qwen3');
+      assert.equal(await page.locator('#speech-instructions').isDisabled(),false);
+      assert.equal(await page.locator('#speech-speed').isDisabled(),true);
+      assert.equal(await page.locator('#speech-speed').locator('..').isVisible(),false);
+      assert.equal(await page.locator('#speech-advanced_voice').locator('..').isVisible(),false);
+      assert.equal(await page.locator('#speech-instructions').isVisible(),true);
+      assert.equal(await page.locator('#speech-language option:checked').textContent(),'English');
+      assert.equal(await page.locator('#speech-runtime-hint').isVisible(),true);
+      assert.ok((await page.locator('#speech-runtime-hint').textContent()).includes('CPU rendering can be slow'));
+      await page.locator('#speech-instructions').fill('Read calmly.');
+      await page.locator('#speech-pronunciations').fill('Lixity=Lik-si-tee');
+      await page.locator('[data-speech-action=preview]').click();
+      await page.waitForFunction(()=>!document.querySelector('#modal-speech audio').hidden);
+      const audio=page.locator('#modal-speech audio');
+      const response=await page.request.get(new URL(await audio.getAttribute('src'),server.fixture.url).href);
+      assert.equal(response.status(),200);
+      assert.equal((await response.body()).subarray(0,4).toString(),'RIFF');
+      assert.ok((await page.locator('#modal-speech').textContent()).includes('first bounded paragraph'));
+      await page.locator('#speech-name').fill('Edited narrator');
+      assert.equal(await audio.isVisible(),false,'Profile edits remove completed audio');
+      await page.locator('[data-speech-action=preview]').click();
+      await page.waitForFunction(()=>!document.querySelector('[data-speech-action=cancel]').disabled);
+      await page.locator('[data-speech-action=cancel]').click();
+      await page.waitForFunction(()=>document.querySelector('#modal-speech [role=status]').textContent.includes('cancelled'));
+      assert.equal(await audio.isVisible(),false,'Cancelled inference cannot publish audio');
+      await page.locator('[data-speech-action=preview]').click();
+      await page.locator('#speech-name').fill('Newer draft');
+      await page.waitForTimeout(1000);
+      assert.equal(await audio.isVisible(),false,'Late results cannot attach after profile edits');
+      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      await dialog.locator('.modal-body').evaluate(el=>{el.scrollTop=0;});
+      await dialog.screenshot({path:path.join(artifacts,`audio-${width}.png`)});
+      await dialog.locator('.modal-body').evaluate(el=>{el.scrollTop=el.scrollHeight;});
+      await dialog.screenshot({path:path.join(artifacts,`audio-actions-${width}.png`)});
+      await page.keyboard.press('Escape');
+      assert.equal(await dialog.isVisible(),false);
+      await page.locator('#tab-view-analysis').click();
+      await page.locator('#reader-speech').click();
+      await page.waitForFunction(()=>!document.querySelector('#speech-name').disabled && document.querySelector('#speech-name').value==='Narrator');
+      assert.equal(await dialog.isVisible(),true,'Reader and settings use one dialog');
+      assert.equal(await page.locator('#modal-speech').count(),1);
+      await page.keyboard.press('Escape');
+      assert.equal(await page.locator('#reader-speech').evaluate(el=>el===document.activeElement),true,'Escape returns focus to the reader entry');
+      await page.evaluate(()=>{
+        const paragraph=document.querySelector('#chapters .ptext');
+        const range=document.createRange(); range.selectNodeContents(paragraph);
+        const selection=getSelection(); selection.removeAllRanges(); selection.addRange(range);
+      });
+      await page.locator('#reader-speech').click();
+      await page.waitForFunction(()=>document.querySelector('#speech-name').value==='Narrator');
+      const selectedRequest=page.waitForRequest(request=>request.url().endsWith('/api/speech-render'));
+      await page.locator('[data-speech-action=preview]').click();
+      const selectedPayload=(await selectedRequest).postDataJSON();
+      assert.ok(selectedPayload.paragraph?.paragraph_sha256,'Reader preview retains exact paragraph identity');
+      await page.waitForFunction(()=>!document.querySelector('#modal-speech audio').hidden);
+      assert.ok((await dialog.textContent()).includes('selected paragraph'));
+      await page.locator('[data-speech-action=preview]').click();
+      await page.waitForFunction(()=>!document.querySelector('[data-speech-action=cancel]').disabled);
+      await page.evaluate(()=>{document.body.dataset.manuscriptSourceSha256='f'.repeat(64);});
+      await page.waitForFunction(()=>!document.querySelector('#modal-speech').open);
+      await page.waitForTimeout(1000);
+      assert.equal(await audio.getAttribute('src'),null,'Source changes close the dialog and cannot resurrect audio');
+      assert.deepEqual(errors,[]);
+      await page.close();
+    }
+    assert.deepEqual(fs.readFileSync(server.fixture.source),original,'Preview never modifies source');
+    assert.equal(fs.readFileSync(server.fixture.config,'utf8'),'language = "en"\n','Draft previews never save settings');
+    const savedPage=await browser.newPage({viewport:{width:1440,height:1000}});
+    await savedPage.goto(server.fixture.url);
+    await savedPage.locator('#tab-view-project').click();
+    await savedPage.locator('#settings-speech').click();
+    await savedPage.waitForFunction(()=>document.querySelector('#speech-name').value==='Narrator');
+    await savedPage.locator('#speech-language').selectOption('de');
+    await savedPage.locator('[data-speech-action=create]').click();
+    assert.equal(await savedPage.locator('#speech-language').inputValue(),'de','New Qwen profiles retain the supported chosen language');
+    await savedPage.locator('#speech-name').fill('Saved synthetic narrator');
+    await Promise.all([savedPage.waitForNavigation(),savedPage.locator('[data-speech-action=save]').click()]);
+    await savedPage.locator('#tab-view-project').click();
+    await savedPage.locator('#settings-speech').click();
+    await savedPage.waitForFunction(()=>document.querySelector('#speech-name').value==='Saved synthetic narrator');
+    assert.equal(await savedPage.locator('#speech-engine').inputValue(),'qwen3');
+    assert.ok(fs.readFileSync(server.fixture.config,'utf8').includes('Saved synthetic narrator'));
+    assert.deepEqual(fs.readFileSync(server.fixture.source),original);
+    await savedPage.close();
+    console.log('Native audio: synthetic WAV, draft controls, cancellation, stale results, keyboard/Escape, unchanged sources at1440/320 passed. '+artifacts);
+  } finally {await server.close();}
+}
+
 (async () => {
   const browser = await launchChromium();
   try {
@@ -323,6 +453,7 @@ server.serve_forever()
     }
     assert.deepEqual(errors, []);
     await verifyNativeDefaults(browser);
+    await verifyNativeSpeech(browser);
     console.log('Settings guidance and project identity: seven desktop/mobile locales, accessible scope/default hints, inert data and failed primary saves; pending/capability cases at both widths passed. '+identityArtifacts);
     console.log('Settings: localized values, validation, keyboard submission, reset, payload, FDR filter and mobile layout passed');
   } finally {

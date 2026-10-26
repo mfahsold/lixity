@@ -1304,3 +1304,28 @@ request, project/root token, snapshot and record identity prevent late reads fro
 creating controls for another context. An author acknowledgement remains the
 existing explicit guarded mutation. No semantic diff, inferred affected passage,
 new archive schema or database authority is introduced.
+
+## Project audio profiles and rendering
+
+**Current main (unreleased):** `speech_profiles.py` owns strict project-only audio
+settings and engine capabilities. Existing root-only atomic settings updates
+persist `audio`; the CLI and native dialog resolve the same profiles. Piper and
+Qwen CustomVoice expose different controls rather than a fictitious common
+emotion/speed interface. Explicit pronunciation substitutions do not edit source
+bytes. Optional inference dependencies remain outside the core installation.
+
+`speech.py` owns bounded text planning, shared structural pauses, format checks
+and atomic output. `speech_qwen.py` is the fixed-loopback adapter and optional
+isolated model worker. It imports the heavy runtime lazily, loads a complete local
+checkpoint once, serializes synthesis and never downloads a model during use.
+CPU is a supported asynchronous rendering path; GPU availability is not presumed.
+
+Native `SpeechJobs` own temporary immutable source snapshots and WAV outputs, one
+active render per server, progress, cancellation and bounded result retention.
+Every read/download checks project settings and the source digest. A monotonic
+workspace generation prevents a return to an earlier selection from resurrecting
+an old job. Observed staleness persists as cancellation. A model call already in
+flight may finish, but cannot publish a cancelled/stale result. Retention starts
+after completion so a long CPU render cannot expire its own successful output.
+The dialog displays backend data and user choices; it neither assembles synthesis
+plans nor stores profile settings in browser storage.

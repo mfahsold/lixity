@@ -34,6 +34,7 @@ from .routes_nda import NdaRoutesMixin
 from .routes_pdf import ManuscriptPdfRoutesMixin
 from .routes_project import ProjectRoutesMixin
 from .routes_site import SiteExportRoutesMixin
+from .routes_speech import SpeechRoutesMixin
 
 
 class LixityServerHandler(
@@ -44,6 +45,7 @@ class LixityServerHandler(
     NdaRoutesMixin,
     ManuscriptPdfRoutesMixin,
     SiteExportRoutesMixin,
+    SpeechRoutesMixin,
     BaseHTTPRequestHandler,
 ):
     """Serves the dashboard and the workspace action endpoints."""
@@ -53,6 +55,9 @@ class LixityServerHandler(
     GET_ROUTES: ClassVar[dict[str, str]] = {
         "/api": "_handle_api_index",
         "/api/": "_handle_api_index",
+        "/api/speech": "_handle_speech",
+        "/api/speech-job": "_handle_speech_job",
+        "/api/speech-audio": "_handle_speech_audio",
         "/api/project-structure": "_handle_project_structure",
         "/api/project-paths": "_handle_project_paths",
         "/api/analysis-review": "_handle_analysis_review",
@@ -80,6 +85,8 @@ class LixityServerHandler(
 
     #: POST actions under /api/ : exact action -> handler method name.
     POST_ROUTES: ClassVar[dict[str, str]] = {
+        "speech-render": "_handle_speech_render",
+        "speech-cancel": "_handle_speech_cancel",
         "nda-draft": "_handle_nda_draft",
         "manuscript-pdf": "_handle_manuscript_pdf",
         "site-export": "_handle_site_export",

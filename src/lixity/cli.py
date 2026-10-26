@@ -348,7 +348,7 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("dashboard", "Generate a single-file HTML dashboard"),
     ("export-site", "Export a static read-only project website"),
     ("pdf", "Compose a PDF for editing, reading, submission or analysis"),
-    ("read-aloud", "Synthesize spoken audio from a manuscript or chapter with Lixity prosody"),
+    ("read-aloud", "Create a local listening copy with project voice profiles"),
     ("serve", "Run local HTTP development server and interactive dashboard"),
     ("build", "Idempotent workspace build of analysis exports and artifact archive"),
     ("doctor", "Inspect installed versions, module location and local service without changing them"),
@@ -1132,8 +1132,9 @@ def _cmd_pdf(args: argparse.Namespace) -> int:
 
 
 def _cmd_read_aloud(args: argparse.Namespace) -> int:
-    """Synthesize manuscript or chapter audio with Lixity prosody using local Piper TTS."""
+    """Create a local manuscript listening copy with a validated project profile."""
     from .speech import render_speech_audio
+    from .speech_profiles import AudioProfile, resolve_audio_profile
 
     workspace = args._workspace
     output = args.output or os.path.join(
@@ -1147,13 +1148,22 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
         return EXIT_ERROR
 
     try:
+        profile = resolve_audio_profile(args._project_config, args.profile, language=args.language)
+        changes = profile.model_dump()
+        for name, value in (("voice", args.voice), ("speed", args.speed),
+                            ("instructions", args.instructions),
+                            ("language", getattr(args, "_speech_explicit_language", None))):
+            if value is not None:
+                changes[name] = value
+        profile = AudioProfile.model_validate(changes)
         out_path = render_speech_audio(
             manuscript_path=workspace.manuscript,
             output_path=output,
-            voice_name=args.voice,
-            language=args.language,
+            voice_name=profile.voice,
+            language=profile.language,
             chapter=args.chapter,
-            base_speed=args.speed,
+            base_speed=profile.speed,
+            profile=profile,
             skip_markers=not args.keep_markers,
         )
     except (OSError, ValueError, RuntimeError, FileNotFoundError) as exc:
@@ -1709,17 +1719,18 @@ def main(argv: list[str] | None = None) -> int:
             continue
         if name == "read-aloud":
             p.epilog = (
-                "Renders speech audio locally using Piper neural TTS. "
-                "Prosody is shaped by Lixity metrics: dialogue is highlighted, scene breaks "
-                "receive pauses, and rhythm is calibrated by sentence length. "
-                "Requires piper-tts and onnxruntime in the Python environment."
+                "Renders local listening copies using saved project voice profiles. "
+                "Piper supports explicit speed; optional Qwen CustomVoice supports style instructions "
+                "through a local worker. Runtimes and voice models are installed separately."
             )
             p.add_argument("file", nargs="?", help="Markdown manuscript (default: configured manuscript or folder discovery)")
             p.add_argument("-o", "--output", help="Audio target file (WAV or MP3, default: <workspace-slug>.wav)")
             p.add_argument("--chapter", type=int, default=None, help="Synthesize only a specific 1-based chapter number")
             p.add_argument("--language", default=None, help="Language code (de or en; default: project setting or en)")
-            p.add_argument("--voice", default=None, help="Cached Piper voice model name (default: Thorsten emotional for de / Lessac for en)")
-            p.add_argument("--speed", type=float, default=1.0, help="Overall reading speed factor (default: 1.0; 1.2 = 20%% faster)")
+            p.add_argument("--profile", default=None, help="Saved project audio profile (default: selected project profile)")
+            p.add_argument("--instructions", default=None, help="Explicit Qwen style instructions (unsupported by Piper)")
+            p.add_argument("--voice", default=None, help="Override the selected profile voice; model-specific validation applies")
+            p.add_argument("--speed", type=float, default=None, help="Piper reading speed override (default: saved profile); Qwen requires 1.0")
             p.add_argument("--keep-markers", action="store_true", help="Read editorial markers aloud instead of omitting them")
             continue
         if name == "serve":
@@ -2006,6 +2017,8 @@ def main(argv: list[str] | None = None) -> int:
             return EXIT_ERROR
     args._project_config = project_config
     explicit_language = getattr(args, "language", None)
+    if args.command == "read-aloud":
+        args._speech_explicit_language = explicit_language
     if hasattr(args, "language") and args.language is None:
         args.language = project_config.get("language", "en")
 

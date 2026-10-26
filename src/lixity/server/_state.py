@@ -74,6 +74,7 @@ class WorkspaceState:
     dashboard_info: ClassVar[dict[str, Any]] = {}
     refresh_outcome: ClassVar[RefreshOutcome] = RefreshOutcome.UNKNOWN
     _refresh_needs_validation: ClassVar[bool] = False
+    _speech_generation: ClassVar[int] = 0
     debug: ClassVar[bool] = False
 
     @classmethod
@@ -94,6 +95,7 @@ class WorkspaceState:
     @classmethod
     def publish_dashboard(cls, html: str, info: dict[str, Any]) -> None:
         """Publish an already prepared view under the caller's workspace lock."""
+        cls._speech_generation += 1
         cls.dashboard_html, cls.dashboard_info = html, info
         cls.refresh_outcome = RefreshOutcome.REBUILT
         cls._refresh_needs_validation = False

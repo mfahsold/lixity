@@ -142,6 +142,7 @@ _JS_FILES = (
     "analysis-review.js",
     "reader-publication.js",
 )
+_NATIVE_JS_FILES = ("speech.js",)
 
 
 @lru_cache(maxsize=2)
@@ -268,6 +269,8 @@ def render_dashboard(
     def action_enabled(action: str) -> bool:
         return not read_only and (allowed_actions is None or action in allowed_actions)
 
+    speech_enabled = controls and allowed_actions is not None and action_enabled("speech-render")
+
     reader_enabled = (
         controls and allowed_actions is not None and "research-reader" in allowed_actions
     )
@@ -319,6 +322,7 @@ def render_dashboard(
                     "ctx_yes",
                     "ctx_no",
                 )
+                if speech_enabled or not key.startswith("speech_")
             },
             ensure_ascii=False,
         ),
@@ -407,6 +411,7 @@ def render_dashboard(
         "</head>",
         f'<body id="top" class="{body_class}" data-api="{esc(api_base)}" data-ui-labels="{workspace_labels_json}" '
         f'data-read-only="{str(read_only).lower()}" '
+        f'data-speech-capable="{str(speech_enabled).lower()}" '
         f'data-manuscript-source-sha256="{esc(manuscript_source_sha256)}" '
         f'data-manuscript-project-token="{esc(manuscript_pdf_token)}" '
         f'data-manuscript-links="{manuscript_links_mode}" '
@@ -1735,7 +1740,7 @@ def render_dashboard(
              f"<footer><span>{esc(engine_name)}</span> · <span>{esc(title)}</span></footer>"),
             ('<script type="application/json" id="research-diagram-library">'
              + _script_json(_bundle(("vendor/mermaid-tiny-12.2.0.min.js",))) + "</script>" if controls else ""),
-            f"<script>{_bundle(_JS_FILES)}</script>",
+            f"<script>{_bundle(_JS_FILES + (_NATIVE_JS_FILES if speech_enabled else ()))}</script>",
             "</body>",
             "</html>",
         ]

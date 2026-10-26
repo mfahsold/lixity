@@ -468,6 +468,8 @@ details.nda .row { margin-top: .5rem; }
   }
 }
 /* --- Native Modals & Template Cards ----------------------------------- */
+audio.media-player { width: 100%; max-width: 100%; }
+
 dialog.lixity-modal {
   position: fixed;
   inset: 0;
