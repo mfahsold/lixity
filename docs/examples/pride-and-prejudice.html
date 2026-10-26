@@ -1236,7 +1236,11 @@ body:not(.has-js-paragraphs) .ptext-inner { padding: .8rem 1rem; }
 
 /* --- Style heatmap ---------------------------------------------------- */
 .heatmap-wrap {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   margin: .65rem 0;
@@ -4670,8 +4674,9 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 
 /* Analysis outline uses the same progressive right-hand outline on wide displays. */
 .analysis-outline-folder { container: analysis-outline / inline-size; min-width: 0; width: 100%; }
-.analysis-outline-layout, .analysis-outline-document { min-width: 0; }
+.analysis-outline-layout, .analysis-outline-document, #manuscript-analysis-panels { min-width: 0; }
 .analysis-outline-document { display: grid; gap: var(--space-4); align-content: start; }
+.analysis-outline-document > * { min-width: 0; max-width: 100%; }
 @container analysis-outline (min-width: 52rem) {
   .analysis-outline-layout { display: grid; grid-template-columns: minmax(0, 1fr) 14rem; gap: var(--space-5); align-items: start; }
   .analysis-outline-document { grid-column: 1; grid-row: 1; }
@@ -5229,9 +5234,9 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 </tr>
 </tbody></table></div></section>
 </div>
+</div>
 <details class="analysis-outline-contents" data-section-contents="" open><summary id="analysis-outline-summary">Analysis</summary><nav class="section-navigation" id="analysis-outline-nav" data-section-nav="analysis-outline" aria-label="Analysis"><ul><li><a href="#analysis-review" data-jump="#analysis-review" data-section-link="analysis-review">Start your review</a></li><li><a href="#flags" data-jump="#flags" data-section-link="flags">Flagged passages</a></li><li><a href="#dist" data-jump="#dist" data-section-link="dist">Sentence lengths</a></li><li><a href="#scenes" data-jump="#scenes" data-section-link="scenes">Scenes &amp; style registers</a></li><li><a href="#style" data-jump="#style" data-section-link="style">Style</a></li><li><a href="#matrix" data-jump="#matrix" data-section-link="matrix">Chapter matrix</a></li></ul></nav></details>
 </div></div>
-</div>
 </div>
 <footer><span>Lixity</span> · <span>Pride and Prejudice</span></footer>
 

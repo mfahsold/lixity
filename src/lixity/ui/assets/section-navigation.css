@@ -63,8 +63,9 @@
 
 /* Analysis outline uses the same progressive right-hand outline on wide displays. */
 .analysis-outline-folder { container: analysis-outline / inline-size; min-width: 0; width: 100%; }
-.analysis-outline-layout, .analysis-outline-document { min-width: 0; }
+.analysis-outline-layout, .analysis-outline-document, #manuscript-analysis-panels { min-width: 0; }
 .analysis-outline-document { display: grid; gap: var(--space-4); align-content: start; }
+.analysis-outline-document > * { min-width: 0; max-width: 100%; }
 @container analysis-outline (min-width: 52rem) {
   .analysis-outline-layout { display: grid; grid-template-columns: minmax(0, 1fr) 14rem; gap: var(--space-5); align-items: start; }
   .analysis-outline-document { grid-column: 1; grid-row: 1; }

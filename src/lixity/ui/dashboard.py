@@ -1669,10 +1669,10 @@ def render_dashboard(
             parts.append("</tr>")
         parts.append("</tbody></table></div></section>")
 
-    parts.append("</div>")
+    parts.append("</div>")  # closes manuscript-analysis-panels
+    parts.append("</div>")  # closes analysis-outline-document
     parts.append(analysis_outline)
-    parts.append("</div></div>")
-    parts.append("</div>")
+    parts.append("</div></div>")  # closes analysis-outline-layout and analysis-outline-folder
     if not has_reading:
         parts.append("</div>")
 

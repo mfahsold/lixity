@@ -531,7 +531,11 @@ body:not(.has-js-paragraphs) .ptext-inner { padding: .8rem 1rem; }
 
 /* --- Style heatmap ---------------------------------------------------- */
 .heatmap-wrap {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   margin: .65rem 0;
