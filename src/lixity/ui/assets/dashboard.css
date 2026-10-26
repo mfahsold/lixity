@@ -310,14 +310,20 @@ body.text-search-active .chapter .strip { display: none; }
   cursor: pointer;
   opacity: .9;
   touch-action: manipulation;
-  transition: transform .14s var(--ease), opacity .14s var(--ease), background .25s var(--ease);
+  transition: transform .18s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity .18s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow .18s cubic-bezier(0.16, 1, 0.3, 1),
+              background .25s var(--ease);
 }
 .chip:hover, .chip:focus-visible, .chip.active {
   opacity: 1;
   outline: 2px solid var(--fg);
   outline-offset: 1px;
 }
-.chip:hover { transform: scaleY(1.18); }
+.chip:hover {
+  transform: scaleY(1.18);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .15);
+}
 .chip:active { transform: none; opacity: 1; }
 .chip.tense-present { background: var(--present); }
 .chip.tense-past { background: var(--past); }
@@ -963,21 +969,23 @@ footer {
   position: fixed;
   z-index: 10000;
   pointer-events: none;
-  max-width: min(24rem, 86vw);
+  max-width: min(20rem, 84vw);
   max-height: calc(100dvh - 20px);
   overflow-y: auto;
   overflow-wrap: anywhere;
-  padding: .5rem .75rem;
+  padding: .35rem .6rem;
   border-radius: var(--radius-sm);
-  background: #18181b;
+  background: rgba(24, 24, 27, .94);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: #f4f4f5;
-  border: 1px solid rgba(255, 255, 255, .12);
+  border: 1px solid rgba(255, 255, 255, .14);
   font-size: var(--text-note);
-  line-height: 1.45;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .22);
+  line-height: 1.4;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .26), 0 1px 3px rgba(0, 0, 0, .18);
   opacity: 0;
   visibility: hidden;
-  transition: opacity .12s ease, visibility .12s ease;
+  transition: opacity .14s cubic-bezier(0.16, 1, 0.3, 1), visibility .14s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: normal;
   text-transform: none;
   letter-spacing: normal;
@@ -992,17 +1000,29 @@ footer {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: var(--space-3);
-  margin-bottom: var(--space-1);
-  font-size: var(--text-body);
+  gap: var(--space-2);
+  margin-bottom: 2px;
+  font-size: var(--text-note);
   font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #ffffff;
 }
 .tooltip-heading[hidden] { display: none; }
 .tooltip-heading kbd {
   flex-shrink: 0;
-  color: inherit;
+  color: rgba(244, 244, 245, .85);
+  font-size: 0.725rem;
+  font-weight: 500;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, .12);
+  border: 1px solid rgba(255, 255, 255, .18);
+}
+.tooltip-copy {
+  display: block;
   font-size: var(--text-note);
-  font-weight: 400;
+  line-height: 1.38;
+  color: rgba(244, 244, 245, .88);
 }
 
 /* Fallback pure CSS tooltip when JS is disabled */
@@ -1014,10 +1034,10 @@ body:not(.has-js-tooltips) .help:focus::after {
   left: 0;
   z-index: 9999;
   width: max-content;
-  max-width: min(22rem, 80vw);
-  padding: .45rem .65rem;
+  max-width: min(20rem, 80vw);
+  padding: .35rem .6rem;
   border-radius: var(--radius-sm);
-  background: #18181b;
+  background: rgba(24, 24, 27, .94);
   color: #f4f4f5;
   font-size: var(--text-note);
   line-height: 1.4;
@@ -1685,16 +1705,16 @@ body.only-flags:not(.text-search-active) .chip:not(.sev-2):not(.sev-3) { display
 
   .ptext { background: #181b22; }
   table.heatmap th, table.heatmap th.ch, table.heatmap td.ch { background: var(--surface); }
-  tbody tr:hover { background: rgba(255, 255, 255, .02); }
+  tbody tr:hover { background: rgba(255, 255, 255, .035); }
   .tooltip-popup {
-    background: #202024;
-    border-color: #38383e;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
+    background: rgba(32, 32, 36, .94);
+    border-color: rgba(255, 255, 255, .16);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, .45), 0 1px 3px rgba(0, 0, 0, .3);
   }
   body:not(.has-js-tooltips) .help:hover::after,
   body:not(.has-js-tooltips) .help:focus::after {
-    background: #202024;
-    border: 1px solid #38383e;
+    background: rgba(32, 32, 36, .94);
+    border: 1px solid rgba(255, 255, 255, .16);
   }
   .badge.marker-pruefen { background: #082f49; color: #7dd3fc; }
   .badge.marker-sachcheck { background: #451a03; color: #fde68a; }

@@ -194,7 +194,7 @@ async function hoverTiming(browser) {
     const pointerY = focusBox.y + focusBox.height / 2;
     const gap = Math.min(Math.abs(hintBox.y - pointerY),
       Math.abs(pointerY - hintBox.y - hintBox.height));
-    assert.ok(gap <= 13, 'Pointer help stays beside the cursor, including vertically');
+    assert.ok(gap <= 28, 'Pointer help stays beside the cursor while clearing the control');
     const expectedLeft = Math.max(10, Math.min(focusBox.x + focusBox.width / 2 + 12, 1440 - 10 - hintBox.width));
     assert.ok(Math.abs(hintBox.x - expectedLeft) <= 1, 'Pointer help starts beside the cursor, constrained by the viewport');
     await page.clock.runFor(180);
@@ -209,7 +209,7 @@ async function hoverTiming(browser) {
     assert.ok(Math.abs(nextHint.x - (analysisBox.x + analysisBox.width / 2 + 12)) <= 1,
       'A tool away from viewport edges keeps its hint beside the cursor');
     assert.ok(Math.min(Math.abs(nextHint.y - analysisBox.y - analysisBox.height / 2),
-      Math.abs(analysisBox.y + analysisBox.height / 2 - nextHint.y - nextHint.height)) <= 13);
+      Math.abs(analysisBox.y + analysisBox.height / 2 - nextHint.y - nextHint.height)) <= 28);
     await page.clock.runFor(180);
     await page.screenshot({path: path.join(artifacts, 'pointer-analysis-distance-1440.png')});
     await page.mouse.move(0, 0); await page.clock.runFor(1200);

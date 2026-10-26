@@ -212,10 +212,10 @@
       }
     }
     var anchorTop = rect.top, anchorBottom = rect.bottom;
-    if (pointerHelp) {
-      // Mouse help belongs beside the dwell point, even on a tall control.
-      anchorTop = rect.top + pointerOffsetY - 4;
-      anchorBottom = rect.top + pointerOffsetY + 4;
+    if (pointerHelp && rect.height > 60) {
+      // For tall elements (paragraphs, full cards), stay beside the dwell point while clearing the line.
+      anchorTop = Math.max(rect.top, rect.top + pointerOffsetY - 14);
+      anchorBottom = Math.min(rect.bottom, rect.top + pointerOffsetY + 16);
     }
     var toolbarSelector = ".manuscript-reader-controls, .toolbar, .selection-toolbar, [role=toolbar]";
     var toolbar = el.closest(toolbarSelector);
@@ -255,7 +255,7 @@
     tipH = tip.offsetHeight;
     var left = rect.left + (pointerHelp ? pointerOffsetX + 12 : 0);
     left = Math.max(visible.left, Math.min(visible.right - tipW, left));
-    var top = useBelow ? anchorBottom + 8 : anchorTop - tipH - 8;
+    var top = useBelow ? anchorBottom + 6 : anchorTop - tipH - 6;
     tip.style.left = left + "px";
     tip.style.top = top + "px";
   }
