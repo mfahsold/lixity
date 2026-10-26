@@ -46,19 +46,18 @@ function jumpToLine(row) {
       if (line >= start && line <= end) { panel = panels[i]; break; }
     }
   }
-  var fromAnalysis = Boolean(
+  var fromFlag = Boolean(
     row.hasAttribute("data-flags") ||
-    row.hasAttribute("data-review-passage") ||
-    row.closest("#analysis-review, #flags, #manuscript-analysis-panels")
+    row.closest("#flags, [data-flags]")
   );
   if (panel) {
     var chip = document.querySelector('.chip[data-target="' + panel.id + '"]');
     if (chip) toggleParagraph(chip, true, true);
     scrollAndFlash(panel, {
-      analysisVisible: fromAnalysis ? true : undefined,
-      contextTool: fromAnalysis ? "analysis" : undefined
+      analysisVisible: fromFlag ? true : undefined,
+      contextTool: fromFlag ? "analysis" : undefined
     });
-    if (fromAnalysis && window.LixityReader && window.LixityReader.inspectPassage) {
+    if (fromFlag && window.LixityReader && window.LixityReader.inspectPassage) {
       window.LixityReader.inspectPassage(panel);
     }
     if (row.hasAttribute("data-review-passage")) {
@@ -73,8 +72,8 @@ function jumpToLine(row) {
     var cend = parseInt(chapters[j].getAttribute("data-end"), 10);
     if (line >= cstart && line <= cend) {
       scrollAndFlash(chapters[j], {
-        analysisVisible: fromAnalysis ? true : undefined,
-        contextTool: fromAnalysis ? "analysis" : undefined
+        analysisVisible: fromFlag ? true : undefined,
+        contextTool: fromFlag ? "analysis" : undefined
       });
       return;
     }

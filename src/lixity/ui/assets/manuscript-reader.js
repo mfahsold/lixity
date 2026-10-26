@@ -384,17 +384,22 @@
     var context = document.createElement("div"); context.className = "reader-passage-context";
     var location = document.createElement("p"); location.className = "ctl-note";
     location.textContent = passageContext(panel); context.appendChild(location);
-    if (panel.dataset.flagReason) {
+    if (panel.dataset.severity && Number(panel.dataset.severity) >= 2) {
       var flagCard = document.createElement("div"); flagCard.className = "reader-passage-flag";
       var flagHeader = document.createElement("div"); flagHeader.className = "reader-passage-flag-header";
       var flagBadge = document.createElement("span");
-      flagBadge.className = "badge sev-" + (panel.dataset.severity || "2");
-      flagBadge.textContent = panel.dataset.severityLabel || uiLabel("severity_" + (panel.dataset.severity || "2"));
+      flagBadge.className = "badge sev-" + panel.dataset.severity;
+      flagBadge.textContent = uiLabel("severity_" + panel.dataset.severity);
       var flagTitle = document.createElement("span"); flagTitle.className = "reader-passage-flag-title";
       flagTitle.textContent = uiLabel("triage_why");
       flagHeader.appendChild(flagBadge); flagHeader.appendChild(flagTitle);
       var flagBody = document.createElement("p"); flagBody.className = "reader-passage-flag-reason";
-      flagBody.textContent = panel.dataset.flagReason;
+      flagBody.textContent = uiFormat("triage_reason", {
+        present: panel.dataset.pre || "0",
+        past: panel.dataset.pas || "0",
+        mixed: uiLabel(panel.dataset.mix === "1" ? "research_value_yes" : "research_value_no"),
+        switch: uiLabel(panel.dataset.swi === "1" ? "research_value_yes" : "research_value_no")
+      });
       flagCard.appendChild(flagHeader); flagCard.appendChild(flagBody);
       context.appendChild(flagCard);
     }

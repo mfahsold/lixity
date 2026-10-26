@@ -300,7 +300,7 @@
         currentChapter = number;
         var title = number === Infinity ? label("manuscript_link_no_current_chapter") :
           label("manuscript_link_current_chapter").replace("{number}", number).replace("{title}", function() {return row.resolved_chapter_title || "";});
-        var heading = element("h4", title); heading.dataset.manuscriptCurrentChapter = "";
+        var heading = element("h3", title); heading.dataset.manuscriptCurrentChapter = "";
         fragment.appendChild(heading);
       }
       var item = element("div", "", "manuscript-link-review-item");

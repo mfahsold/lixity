@@ -46,6 +46,18 @@ Quellenpassage, Behauptung und kreative Entscheidung sind getrennte Einträge. E
 
 Der Prüfschritt ist gelungen, wenn sich der Unterschied am Text erklären lässt. Dafür sind weder alle Messgrößen noch eine „Korrektur“ nötig. Das kurze Beispiel demonstriert den Arbeitsgang, nicht die statistische Zuverlässigkeit für jedes Manuskript.
 
+## Das Studiomonitor-Prinzip: Warum Lixity deinen Text nicht glättet
+
+Lixity ist für Autorinnen, Autoren und Lektorat das Äquivalent zu einem **hochauflösenden Studiomonitor in der Tontechnik**:
+
+- Ein Studiomonitor lässt Musik nicht automatisch gefälliger klingen. Er deckt Phasenverschiebungen, Resonanzspitzen und Knackser unbestechlich auf – damit die Ohren entscheiden können, ob eine Verzerrung gewolltes Stilmittel (Röhrenwärme, Overdrive) oder ein handwerklicher Fehler ist.
+
+- **Gefahr der sterilen Glättung vermeiden:** Literatur lebt von gewollten Regelbrüchen, von gezielter Redundanz, von Stauungen und rhythmischen Stolpersteinen. Wer jede Markierung abarbeitet wie eine Checkliste im Flugzeugcockpit, glättet die eigene Erzählstimme tot. Lixity ist ein diagnostischer Spiegel, niemals eine Zensurbehörde.
+
+- **Wann Lixity hilft (und wann es ausgeschaltet bleibt):** Im ersten Rohentwurf bleibt die Analyse am besten ausgeschaltet (`Analyse Aus`). Der schöpferische Fluss braucht Rausch, Trance und Unvernunft. Seine volle Stärke entfaltet Lixity in der Überarbeitungsphase (zweite bis vierte Fassung), um unbewusste Wortechos, Tempussprünge und Registerbrüche aufzudecken.
+
+- **Figurenstimme vs. Erzählstimme:** Wenn eine Figur bildungsfern spricht, stottert, Dialekt verwendet oder in Rage gerät, schlagen Satzlängen- und Grammatikmetriken aus. Das ist kein Mangel, sondern Figurenzeichnung. Lixity isoliert Redespannen deshalb getrennt von der Erzählstimme.
+
 ## Mit einem eigenen Manuskript arbeiten
 
 Der Manuskriptimport unterstützt Markdown (`.md`, `.markdown`) und reinen Text (`.txt`). Word/DOCX- oder Scrivener-Dokumente müssen vorher konvertiert werden. PDFs lassen sich getrennt als Recherchequellen aufnehmen.

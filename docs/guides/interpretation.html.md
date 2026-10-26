@@ -72,6 +72,18 @@ For a scene or narrative-voice comparison, choose passages with comparable langu
 
 **Perception filters and dialogue:** `filter_density`, modal, passive and nominal densities count the whole text, including quoted speech. A character who says “I believe this sanatorium…” contributes the same filter marker as a narrating voice would. When one of these values stands out, read the passages and compare with the chapter’s dialogue share: a high value inside dialogue is characterisation, not narration. A narrative-only variant of these densities is a documented candidate, not part of the current contract.
 
+## The studio monitor principle: exposing friction without smoothing prose
+
+Lixity is built around the discipline of a **high-fidelity studio monitor in audio engineering**:
+
+- A studio monitor does not make a recording sound sweeter or warmer. It reproduces phase cancellations, resonance peaks and harsh clipping with ruthless transparency—so the mastering engineer and artist can decide whether distortion is intentional creative character (tape saturation, guitar fuzz) or an unwanted technical flaw.
+
+- **Avoiding sterile over-smoothing:** Literature lives from deliberate rule-breaking, calculated redundancy, syntactic pauses and syncopated cadence. Treating analysis signals as a checklist to clear homogenises prose into generic corporate copy. Lixity is a diagnostic mirror, never a censorship committee.
+
+- **When to use the tools:** Leave Analysis Off during initial drafting. Raw generation requires momentum, trance and freedom from premature editing. Lixity’s full power emerges in substantial revision passes (drafts two through four) to uncover unconscious word echoes, accidental tense drift and register collapse.
+
+- **Character voice vs. narrative register:** Dialect, staccato fragments, rhetorical questions and heavy perception markers in dialogue constitute characterisation, not stylistic defects. Never force dialogue toward an expository benchmark.
+
 ## Signals and questions for review
 
 Use this reference to connect a measurement with a question to investigate. None of these signals establishes a writing defect.

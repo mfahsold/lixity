@@ -1160,18 +1160,13 @@ def render_dashboard(
                 sev_label = label(labels, f"severity_{p.severity}")
                 flag_attrs = ""
                 flag_cls = ""
-                flag_reason_str = ""
                 if p.is_flagged:
-                    flag_reason_str = label(labels, "triage_reason").format(
-                        present=p.present_hits,
-                        past=p.past_hits,
-                        mixed=L("research_value_yes" if p.mixed else "research_value_no"),
-                        switch=L("research_value_yes" if p.switch else "research_value_no"),
-                    )
                     flag_attrs = (
                         f' data-severity="{p.severity}"'
-                        f' data-severity-label="{esc(sev_label, quote=True)}"'
-                        f' data-flag-reason="{esc(flag_reason_str, quote=True)}"'
+                        f' data-pre="{p.present_hits}"'
+                        f' data-pas="{p.past_hits}"'
+                        f' data-mix="{int(p.mixed)}"'
+                        f' data-swi="{int(p.switch)}"'
                     )
                     flag_cls = f" flagged sev-{p.severity}"
                 parts.append(
@@ -1197,16 +1192,10 @@ def render_dashboard(
                     })
                 # The fallback preserves the full offline report without JavaScript.
                 # JavaScript removes the inert fallback before lazy rendering.
-                flag_fallback = (
-                    f'<div class="flag-reason"><span class="badge sev-{p.severity}">{esc(sev_label)}</span> {esc(flag_reason_str)}</div>'
-                    if p.is_flagged
-                    else ""
-                )
                 parts.append(
                     f'<noscript><div class="ptext-inner"><p>{esc(p.text)}</p><details class="paragraph-values">'
                     f"<summary>{L('paragraph_values')}</summary>"
-                    f'<div class="anchor">{esc(anchor)}</div><div class="stats">{esc(stats)}</div>'
-                    f"{flag_fallback}</details>"
+                    f'<div class="anchor">{esc(anchor)}</div><div class="stats">{esc(stats)}</div></details>'
                 )
                 if can_edit:
                     buttons = " ".join(
