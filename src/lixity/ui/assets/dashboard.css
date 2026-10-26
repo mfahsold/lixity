@@ -115,6 +115,12 @@ h2, .section-heading, .settings-form h3 {
 /* --- Key figures (grouped KPI grid) ----------------------------------- */
 .kpis { display: grid; gap: var(--space-4); margin: 0; }
 .kpi-group { display: grid; gap: .4rem; }
+.kpi-header { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
+.kpi-narrative { font-size: var(--text-micro); color: var(--muted); font-variant-numeric: tabular-nums; }
+.kpi-drawer { margin-top: .25rem; border-top: 1px dashed var(--line); padding-top: .25rem; }
+.kpi-drawer-btn { background: transparent; border: 0; cursor: pointer; font-size: var(--text-micro); color: var(--accent); padding: .25rem 0; user-select: none; text-align: left; }
+.kpi-drawer-btn:hover { color: var(--fg); }
+.kpi-drawer-row { margin-top: .35rem; }
 
 .kpi-row {
   display: grid;
@@ -1573,6 +1579,35 @@ mark.search-hit {
 .fpc-loss ul {
   margin: .35rem 0 0;
   padding-left: 1.2rem;
+}
+.cockpit-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-2);
+}
+.cockpit-switch {
+  font-size: var(--text-small);
+  text-decoration: none;
+  font-weight: var(--weight-semibold);
+}
+.cohesion-summary-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: .35rem .75rem;
+  background: var(--bg-subtle);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-small);
+  margin-bottom: var(--space-2);
+}
+.style-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 .template-grid {
   display: grid;

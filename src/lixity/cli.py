@@ -132,6 +132,7 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "dashboard_unchanged": "Dashboard unchanged: {output}",
         "pdf_written": "PDF written: {output}",
         "pdf_unchanged": "PDF unchanged: {output}",
+        "speech_written": "Audio written: {output}",
         "err_no_names": "No figure names selected (use --name, --names or project characters settings).",
         "dlg_metric": "Quotation measurement",
         "dlg_value": "Value",
@@ -234,6 +235,7 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "dashboard_unchanged": "Dashboard unverändert: {output}",
         "pdf_written": "PDF geschrieben: {output}",
         "pdf_unchanged": "PDF unverändert: {output}",
+        "speech_written": "Audio geschrieben: {output}",
         "err_no_names": "Keine Figurennamen ausgewählt (--name, --names oder characters in der Projektkonfiguration).",
         "dlg_metric": "Text in Anführungszeichen",
         "dlg_value": "Wert",
@@ -346,6 +348,7 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("dashboard", "Generate a single-file HTML dashboard"),
     ("export-site", "Export a static read-only project website"),
     ("pdf", "Compose a PDF for editing, reading, submission or analysis"),
+    ("read-aloud", "Synthesize spoken audio from a manuscript or chapter with Lixity prosody"),
     ("serve", "Run local HTTP development server and interactive dashboard"),
     ("build", "Idempotent workspace build of analysis exports and artifact archive"),
     ("doctor", "Inspect installed versions, module location and local service without changing them"),
@@ -1128,6 +1131,39 @@ def _cmd_pdf(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _cmd_read_aloud(args: argparse.Namespace) -> int:
+    """Synthesize manuscript or chapter audio with Lixity prosody using local Piper TTS."""
+    from .speech import render_speech_audio
+
+    workspace = args._workspace
+    output = args.output or os.path.join(
+        workspace.root,
+        f"{workspace.slug}-chapter-{args.chapter}.wav" if args.chapter is not None else f"{workspace.slug}.wav",
+    )
+    try:
+        FileUtils.require_distinct_output(workspace.manuscript, output)
+    except (OSError, ValueError) as exc:
+        print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+        return EXIT_ERROR
+
+    try:
+        out_path = render_speech_audio(
+            manuscript_path=workspace.manuscript,
+            output_path=output,
+            voice_name=args.voice,
+            language=args.language,
+            chapter=args.chapter,
+            base_speed=args.speed,
+            skip_markers=not args.keep_markers,
+        )
+    except (OSError, ValueError, RuntimeError, FileNotFoundError) as exc:
+        print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+        return EXIT_ERROR
+
+    print(_m("speech_written", output=str(out_path)))
+    return EXIT_OK
+
+
 def _cmd_build(args: argparse.Namespace) -> int:
     """Idempotent workspace build: analyzes the manuscript and publishes artifacts."""
     from .motifs import motif_report
@@ -1613,7 +1649,7 @@ def main(argv: list[str] | None = None) -> int:
                 default=None,
                 help="Minimum chapters required for a style baseline (default: 2)",
             )
-        if name not in ("motifs", "characters"):
+        if name not in ("motifs", "characters", "read-aloud"):
             _add_threshold_arguments(p)
         if name == "build":
             p.epilog = (
@@ -1670,6 +1706,21 @@ def main(argv: list[str] | None = None) -> int:
             )
             p.add_argument("--names", help="Comma-separated figure names (character panel)")
             p.add_argument("-o", "--output", help="HTML target file (default: lixity-dashboard.html)")
+            continue
+        if name == "read-aloud":
+            p.epilog = (
+                "Renders speech audio locally using Piper neural TTS. "
+                "Prosody is shaped by Lixity metrics: dialogue is highlighted, scene breaks "
+                "receive pauses, and rhythm is calibrated by sentence length. "
+                "Requires piper-tts and onnxruntime in the Python environment."
+            )
+            p.add_argument("file", nargs="?", help="Markdown manuscript (default: configured manuscript or folder discovery)")
+            p.add_argument("-o", "--output", help="Audio target file (WAV or MP3, default: <workspace-slug>.wav)")
+            p.add_argument("--chapter", type=int, default=None, help="Synthesize only a specific 1-based chapter number")
+            p.add_argument("--language", default=None, help="Language code (de or en; default: project setting or de)")
+            p.add_argument("--voice", default=None, help="Piper ONNX voice model name or path (default: Thorsten emotional / Lessac)")
+            p.add_argument("--speed", type=float, default=1.0, help="Overall reading speed factor (default: 1.0; 1.2 = 20%% faster)")
+            p.add_argument("--keep-markers", action="store_true", help="Read editorial markers aloud instead of omitting them")
             continue
         if name == "serve":
             p.epilog = (
@@ -1936,14 +1987,14 @@ def main(argv: list[str] | None = None) -> int:
         try:
             workspace = resolve_manuscript_target(
                 explicit_file, project=args.project,
-                allow_discovery=args.command in ("scenes", "build"),
+                allow_discovery=args.command in ("scenes", "build", "read-aloud"),
             )
             args._workspace = workspace
             # Keep the legacy spelling for explicit files without --project.
             if explicit_file is None or args.project is not None:
                 args.file = workspace.manuscript
                 project_config = read_explicit_project_config(workspace.root)
-                if (args.project is None and args.command in ("scenes", "build")
+                if (args.project is None and args.command in ("scenes", "build", "read-aloud")
                         and "manuscript" not in project_config):
                     # Preserve conventional folder users' defaults, rooted at
                     # the selected workspace rather than an implicit cwd.
@@ -2007,6 +2058,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "pdf":
         return _cmd_pdf(args)
+
+    if args.command == "read-aloud":
+        return _cmd_read_aloud(args)
 
     if args.command == "build":
         return _cmd_build(args)

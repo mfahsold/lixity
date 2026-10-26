@@ -218,6 +218,15 @@ function processImportedFile(file) {
 }
 
 document.addEventListener("click", function (event) {
+  var kpiToggle = event.target.closest("[data-kpi-toggle]");
+  if (kpiToggle) {
+    var target = document.getElementById(kpiToggle.dataset.kpiToggle);
+    if (target) {
+      target.hidden = !target.hidden;
+      kpiToggle.setAttribute("aria-expanded", target.hidden ? "false" : "true");
+    }
+    return;
+  }
   var manuscriptDrop = event.target.closest("#manuscript-dropzone");
   if (manuscriptDrop && event.target !== manuscriptInput) {
     if (manuscriptInput) manuscriptInput.click();

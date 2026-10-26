@@ -212,7 +212,9 @@ def render_heatmap_panel(
     parts.append(f'<p class="panel-guide">{esc(reading)}</p>')
     fdr_only = checkbox_field('<input type="checkbox" id="heatmap-fdr-only"/>', L("matrix_fdr_only"))
     parts.append(
-        f'<div class="matrix-tools">{fdr_only}<span class="analysis-method">'
+        f'<div class="matrix-tools">{fdr_only}'
+        f'<a href="#matrix" class="ctl cockpit-switch" data-jump="#matrix">{L("cockpit_switch_matrix")} →</a>'
+        f'<span class="analysis-method">'
         f'{esc(fingerprint.thresholds.fdr_method.upper())} · q = {N(fingerprint.thresholds.fdr_q, 2)}'
         f' · |z*| ≥ {N(z_mild, 1)}</span></div>'
     )

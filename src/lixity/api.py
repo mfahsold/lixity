@@ -474,6 +474,11 @@ def about() -> dict[str, Any]:
                 "output": "pdf",
             },
             {
+                "name": "read-aloud",
+                "purpose": "synthesize spoken audio with Lixity-guided prosody using local Piper neural TTS",
+                "output": "audio",
+            },
+            {
                 "name": "serve",
                 "purpose": "local HTTP development server and interactive dashboard (127.0.0.1)",
                 "output": "server",

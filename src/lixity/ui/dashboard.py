@@ -1216,6 +1216,7 @@ def render_dashboard(
     rhythm_tiles: list[str] = []
     language_tiles: list[str] = []
     lexis_tiles: list[str] = []
+    lexis_secondary_tiles: list[str] = []
     style_tiles: list[str] = []
     if metrics is not None:
         has_tokens = bool(metrics.tokens)
@@ -1258,13 +1259,12 @@ def render_dashboard(
                 jump="#bands",
             )
         )
-        lexis_tiles.append(
-            kpi(
-                N(metrics.ttr, 4) if has_tokens else "–",
-                help_term(labels, "ttr", "TTR"),
-                jump="#bands",
-            )
+        mtld_value = (
+            N(metrics.mtld, 1)
+            if (has_tokens and getattr(metrics, "mtld", None) is not None)
+            else "–"
         )
+        lexis_tiles.append(kpi(mtld_value, help_term(labels, "mtld", "MTLD"), jump="#bands"))
         lexis_tiles.append(
             kpi(
                 N(metrics.guiraud_r, 2) if has_tokens else "–",
@@ -1272,7 +1272,14 @@ def render_dashboard(
                 jump="#bands",
             )
         )
-        lexis_tiles.append(
+        lexis_secondary_tiles.append(
+            kpi(
+                N(metrics.ttr, 4) if has_tokens else "–",
+                help_term(labels, "ttr", "TTR"),
+                jump="#bands",
+            )
+        )
+        lexis_secondary_tiles.append(
             kpi(
                 N(metrics.yules_k, 1) if has_tokens else "–",
                 help_term(labels, "yules", "Yule&#8217;s K"),
@@ -1284,25 +1291,19 @@ def render_dashboard(
             if (has_tokens and getattr(metrics, "hd_d", None) is not None)
             else "–"
         )
-        lexis_tiles.append(kpi(hd_d_value, help_term(labels, "hd_d", "HD-D"), jump="#bands"))
-        mtld_value = (
-            N(metrics.mtld, 1)
-            if (has_tokens and getattr(metrics, "mtld", None) is not None)
-            else "–"
-        )
-        lexis_tiles.append(kpi(mtld_value, help_term(labels, "mtld", "MTLD"), jump="#bands"))
+        lexis_secondary_tiles.append(kpi(hd_d_value, help_term(labels, "hd_d", "HD-D"), jump="#bands"))
         mattr_value = (
             N(metrics.mattr, 3)
             if (has_tokens and getattr(metrics, "mattr", None) is not None)
             else "–"
         )
-        lexis_tiles.append(kpi(mattr_value, help_term(labels, "mattr", "MATTR"), jump="#bands"))
+        lexis_secondary_tiles.append(kpi(mattr_value, help_term(labels, "mattr", "MATTR"), jump="#bands"))
         maas_value = (
             N(metrics.maas_a2, 3)
             if (has_tokens and getattr(metrics, "maas_a2", None) is not None)
             else "–"
         )
-        lexis_tiles.append(kpi(maas_value, help_term(labels, "maas", "Maas a²"), jump="#bands"))
+        lexis_secondary_tiles.append(kpi(maas_value, help_term(labels, "maas", "Maas a²"), jump="#bands"))
         language_tiles.append(
             kpi(
                 P(metrics.first_person_start_rate) if has_tokens else "–",
@@ -1360,6 +1361,29 @@ def render_dashboard(
         )
     )
 
+    p_unit = L("paragraphs_one") if len(paragraphs) == 1 else L("paragraphs")
+    scope_narrative = f"{N(total_words, 0)} {L('words_prose')} · {len(chapters)} {L('chapter')} · {len(paragraphs)} {p_unit}"
+    rhythm_narrative = (
+        f"Ø {N(metrics.asl, 1) if getattr(metrics, 'asl', None) is not None else '–'} {L('words')}/{L('sentence')} · {P(metrics.staccato_pct) if getattr(metrics, 'staccato_pct', None) is not None else '–'} {L('feat_staccato')}"
+        if (metrics is not None and metrics.tokens)
+        else ""
+    )
+    language_narrative = (
+        f"{P(metrics.dialog_ratio) if getattr(metrics, 'dialog_ratio', None) is not None else '–'} {L('dialogue')} · {esc(metrics.flesch_variant or 'Flesch')} {N(metrics.flesch_de, 1) if getattr(metrics, 'flesch_de', None) is not None else '–'} · LIX {N(metrics.lix, 1) if getattr(metrics, 'lix', None) is not None else '–'}"
+        if (metrics is not None and metrics.tokens)
+        else ""
+    )
+    lexis_narrative = (
+        f"MTLD {N(metrics.mtld, 1) if getattr(metrics, 'mtld', None) is not None else '–'} · Guiraud {N(metrics.guiraud_r, 2) if getattr(metrics, 'guiraud_r', None) is not None else '–'}"
+        if (metrics is not None and metrics.tokens)
+        else ""
+    )
+    style_narrative = (
+        f"{L('consistency')} {P(fingerprint.consistency * 100, 0)} · {total_flagged} {L('flagged')}"
+        if (fingerprint is not None and fingerprint.measured_cells)
+        else (f"{total_flagged} {L('flagged')}" if total_flagged else "")
+    )
+
     measurements_open = "" if controls else " open"
     parts.append(f'<details id="analysis-measurements"{measurements_open}>')
     parts.append(f'<summary>{L("analysis_measurements")}</summary>')
@@ -1367,20 +1391,33 @@ def render_dashboard(
     if has_chapters and metrics is not None and metrics.tokens < MIN_TOKENS_LD:
         support = esc(label(labels, "scene_support").replace("{min_tokens}", str(MIN_TOKENS_LD)))
         parts.append(f'<p class="hint" role="note">{support}</p>')
-    for caption_key, tiles in (
-        ("group_scope", scope_tiles),
-        ("group_rhythm", rhythm_tiles),
-        ("group_language", language_tiles),
-        ("group_lexis", lexis_tiles),
-        ("group_style", style_tiles),
+    for caption_key, tiles, narrative, *extra in (
+        ("group_scope", scope_tiles, scope_narrative),
+        ("group_rhythm", rhythm_tiles, rhythm_narrative),
+        ("group_language", language_tiles, language_narrative),
+        ("group_lexis", lexis_tiles, lexis_narrative, lexis_secondary_tiles),
+        ("group_style", style_tiles, style_narrative),
     ):
         if not tiles:
             continue
         parts.append('<div class="kpi-group">')
-        parts.append(f'<div class="kpi-caption">{L(caption_key)}</div>')
+        parts.append(
+            f'<div class="kpi-header"><span class="kpi-caption">{L(caption_key)}</span>'
+            + (f'<span class="kpi-narrative">{narrative}</span>' if narrative else '')
+            + '</div>'
+        )
         parts.append('<div class="kpi-row">')
         parts.extend(tiles)
-        parts.append("</div></div>")
+        parts.append("</div>")
+        if extra and extra[0]:
+            parts.append(
+                f'<div class="kpi-drawer" id="kpi-lexis-drawer">'
+                f'<button type="button" class="kpi-drawer-btn" data-kpi-toggle="kpi-lexis-secondary" aria-expanded="false">{L("kpi_lexis_more")}</button>'
+                '<div class="kpi-row kpi-drawer-row" id="kpi-lexis-secondary" hidden>'
+            )
+            parts.extend(extra[0])
+            parts.append("</div></div>")
+        parts.append("</div>")
     parts.append("</section></details>")
 
     # --- Flagged passages (list → paragraph → marker) ----------------------
@@ -1504,7 +1541,13 @@ def render_dashboard(
                 style_structural(chapters, fingerprint, labels, language_key),
             ),
         ]
-        parts.append(f'<section class="panel style-panel" id="style"><h2>{L("group_style")}</h2>')
+        parts.append(
+            f'<section class="panel style-panel" id="style">'
+            f'<div class="style-header"><h2>{L("group_style")}</h2>'
+            f'<div class="cohesion-summary-badge">'
+            f'<span>{L("cockpit_cohesion_summary")}: <strong>{P(fingerprint.consistency * 100, 0)}</strong></span>'
+            f'</div></div>'
+        )
         parts.append(
             f'<div class="style-tabs" id="style-tabs" role="tablist" aria-label="{L("group_style")}" hidden>'
         )
@@ -1540,6 +1583,13 @@ def render_dashboard(
     # --- Chapter matrix ---------------------------------------------------
     if chapters:
         parts.append(panel_start("matrix", labels, "chapter_table"))
+        if has_house_style and fingerprint is not None and metrics is not None and metrics.chapters:
+            parts.append(
+                f'<div class="cockpit-toolbar">'
+                f'<a href="#heatmap" class="ctl cockpit-switch" data-jump="#heatmap" '
+                f'title="{L("cockpit_switch_heatmap")}">{L("cockpit_switch_heatmap")} →</a>'
+                '</div>'
+            )
         parts.append('<details class="analysis-coverage">'
                      f'<summary>{L("analysis_coverage")}</summary>'
                      f'<p>{L("analysis_chapter_coverage")}</p></details>')
