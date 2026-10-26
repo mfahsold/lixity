@@ -939,6 +939,7 @@
           aliases: item.aliases || [],
           scoped_alternatives: item.scoped_alternatives || [],
           case_sensitive: Boolean(item.case_sensitive),
+          strict_boundaries: item.strict_boundaries === null ? Boolean(item.case_sensitive) : Boolean(item.strict_boundaries),
           dossier_id: item.dossier_id || null,
           claim_id: item.claim_id || null
         };
@@ -949,6 +950,7 @@
         var aliasesRaw = (document.getElementById("r-term-aliases") || {}).value || "";
         var scopedRaw = (document.getElementById("r-term-scoped") || {}).value || "";
         var caseBox = document.getElementById("r-term-case");
+        var strictBox = document.getElementById("r-term-strict");
         var scopedList = scopedRaw.split(";").map(function(s) { return s.trim(); }).filter(Boolean).map(function(spec) {
           var parts = spec.split(":");
           var form = (parts[0] || "").trim();
@@ -958,7 +960,8 @@
         nextTerms[termName] = {
           aliases: aliasesRaw.split(",").map(function(s) { return s.trim(); }).filter(Boolean),
           scoped_alternatives: scopedList,
-          case_sensitive: Boolean(caseBox && caseBox.checked)
+          case_sensitive: Boolean(caseBox && caseBox.checked),
+          strict_boundaries: Boolean(strictBox && strictBox.checked)
         };
       }
       var res = await bridge.post("settings", {terms: nextTerms, project_token: value.project});

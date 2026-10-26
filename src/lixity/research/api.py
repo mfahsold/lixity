@@ -193,11 +193,17 @@ from .timeline import period_warnings, timeline_data
 
 def envelope(project_id: str, actor: str) -> dict[str, Any]:
     """Build the shared creation envelope: random urn ID, project, actor and UTC time."""
-    return {"id": uuid4().urn, "project_id": project_id, "created_by": actor,
-            "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")}
+    return {
+        "id": uuid4().urn,
+        "project_id": project_id,
+        "created_by": actor,
+        "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+    }
 
 
-def init(project: str | Path, *, title: str, language: str = "en", actor: str = "local-author") -> dict[str, Any]:
+def init(
+    project: str | Path, *, title: str, language: str = "en", actor: str = "local-author"
+) -> dict[str, Any]:
     """Initialize a new local research archive for an explicit project directory.
 
     Refuses to overwrite an existing ``research/`` directory. Returns the
@@ -211,7 +217,11 @@ def init(project: str | Path, *, title: str, language: str = "en", actor: str = 
     values.update(id=identifier, title=title, language=language)
     record = Project.model_validate(values)
     snapshot = repository.commit([record], {}, None)
-    return {"schema_version": "research-init-local/1", "project_id": identifier, "snapshot": snapshot.digest}
+    return {
+        "schema_version": "research-init-local/1",
+        "project_id": identifier,
+        "snapshot": snapshot.digest,
+    }
 
 
 @dataclass
@@ -231,7 +241,13 @@ def _read_source_bytes(path: Path) -> bytes:
     is_image = path.suffix.lower() in IMAGE_SUFFIXES
     if not path.is_file():
         raise ResearchError("Source file is missing; supply a local PDF or UTF-8 text file")
-    maximum = MAX_PDF_BYTES if is_pdf or path.suffix.lower() in {".mp4", ".webm"} else MAX_IMAGE_BYTES if is_image else MAX_SOURCE_BYTES
+    maximum = (
+        MAX_PDF_BYTES
+        if is_pdf or path.suffix.lower() in {".mp4", ".webm"}
+        else MAX_IMAGE_BYTES
+        if is_image
+        else MAX_SOURCE_BYTES
+    )
     with path.open("rb") as stream:
         content = stream.read(maximum + 1)
     if is_image:
@@ -246,41 +262,70 @@ def _read_source_bytes(path: Path) -> bytes:
     return content
 
 
-def _prepare_ingest(repository: Repository, snapshot: Snapshot, file: str | Path, *,
-                    source_id: str | None = None, title: str | None = None,
-                    language: str | None = None, actor: str = "local-author", dry_run: bool = False,
-                    context: Mapping[str, Any] | None = None, origin_url: str | None = None,
-                    allow_fallback: bool = False, planned_source_id: str | None = None,
-                    expected_source_digest: str | None = None,
-                    retain_only: bool = False,
-                    progress_callback: Callable[[str, str], None] | None = None) -> _PreparedCapture:
+def _prepare_ingest(
+    repository: Repository,
+    snapshot: Snapshot,
+    file: str | Path,
+    *,
+    source_id: str | None = None,
+    title: str | None = None,
+    language: str | None = None,
+    actor: str = "local-author",
+    dry_run: bool = False,
+    context: Mapping[str, Any] | None = None,
+    origin_url: str | None = None,
+    allow_fallback: bool = False,
+    planned_source_id: str | None = None,
+    expected_source_digest: str | None = None,
+    retain_only: bool = False,
+    progress_callback: Callable[[str, str], None] | None = None,
+) -> _PreparedCapture:
     path = Path(file).expanduser()
     is_pdf = path.suffix.lower() == ".pdf"
     is_image = path.suffix.lower() in IMAGE_SUFFIXES
     is_video = path.suffix.lower() in {".mp4", ".webm"}
     if not path.is_file():
-        raise ResearchError("Source must be a local UTF-8 text file" if not is_pdf else "Source must be a local PDF file")
+        raise ResearchError(
+            "Source must be a local UTF-8 text file"
+            if not is_pdf
+            else "Source must be a local PDF file"
+        )
 
     records: list[Entity] = []
     if source_id:
         source = snapshot.get(Reference(id=source_id), Source)
-        if (title is not None and title != source.title) or (language is not None and language != source.language):
+        if (title is not None and title != source.title) or (
+            language is not None and language != source.language
+        ):
             raise ResearchError("Source refresh cannot change its title or language in this pilot")
     else:
         values = envelope(snapshot.project.id, actor)
-        values.update(title=title or path.name, language=language or ("generic" if is_image or is_video else snapshot.project.language))
+        values.update(
+            title=title or path.name,
+            language=language or ("generic" if is_image or is_video else snapshot.project.language),
+        )
         if planned_source_id is not None:
             values["id"] = planned_source_id
         source = Source.model_validate(values)
         records.append(source)
 
-    versions = [record for record in snapshot.records.values()
-                if isinstance(record, SourceVersion) and record.source_ref.id == source.id]
+    versions = [
+        record
+        for record in snapshot.records.values()
+        if isinstance(record, SourceVersion) and record.source_ref.id == source.id
+    ]
     latest = max(versions, key=lambda record: record.sequence) if versions else None
-    source_context = (SourceContext.model_validate(dict(context)) if context is not None
-                      else latest.context if latest else SourceContext())
+    source_context = (
+        SourceContext.model_validate(dict(context))
+        if context is not None
+        else latest.context
+        if latest
+        else SourceContext()
+    )
     if origin_url is not None:
-        source_context = SourceContext.model_validate({**source_context.model_dump(), "origin_url": origin_url})
+        source_context = SourceContext.model_validate(
+            {**source_context.model_dump(), "origin_url": origin_url}
+        )
 
     if progress_callback:
         progress_callback("read", f"Reading source file {path.name}...")
@@ -289,35 +334,83 @@ def _prepare_ingest(repository: Repository, snapshot: Snapshot, file: str | Path
     if expected_source_digest is not None and digest(content) != expected_source_digest:
         raise ResearchError("Source file bytes changed since checkpoint creation")
     if is_image or is_video or (is_pdf and retain_only):
-        image = (validate_image(content, filename=path.name) if is_image
-                 else validate_media(content, filename=path.name))
+        image = (
+            validate_image(content, filename=path.name)
+            if is_image
+            else validate_media(content, filename=path.name)
+        )
         checksum = digest(content)
-        if latest is not None and latest.blob.sha256 == checksum and latest.context == source_context:
+        if (
+            latest is not None
+            and latest.blob.sha256 == checksum
+            and latest.context == source_context
+        ):
             repository.read_blob(latest.blob)
-            result = {"schema_version": "research-ingest-local/1", "source_id": source.id,
-                      "source_version_id": latest.id, "snapshot": snapshot.digest, "unchanged": True,
-                      "dry_run": dry_run, "passages": 0, "warnings": [], "media_type": image["media_type"]}
+            result = {
+                "schema_version": "research-ingest-local/1",
+                "source_id": source.id,
+                "source_version_id": latest.id,
+                "snapshot": snapshot.digest,
+                "unchanged": True,
+                "dry_run": dry_run,
+                "passages": 0,
+                "warnings": [],
+                "media_type": image["media_type"],
+            }
             return _PreparedCapture([], {}, result, source.id, latest.id, source.title)
-        version = SourceVersion(**envelope(snapshot.project.id, actor), source_ref=reference(source),
-                                schema_version=("research-local/9" if not is_image else
-                                                "research-local/3" if source_context.external_reference else
-                                                "research-local/2" if source_context.origin_url else "research-local/1"),
-                                sequence=latest.sequence + 1 if latest else 1,
-                                blob=Blob(sha256=checksum, byte_length=len(content), media_type=image["media_type"]),
-                                retention_confirmed=True, context=source_context)
+        version = SourceVersion(
+            **envelope(snapshot.project.id, actor),
+            source_ref=reference(source),
+            schema_version=(
+                "research-local/9"
+                if not is_image
+                else "research-local/3"
+                if source_context.external_reference
+                else "research-local/2"
+                if source_context.origin_url
+                else "research-local/1"
+            ),
+            sequence=latest.sequence + 1 if latest else 1,
+            blob=Blob(sha256=checksum, byte_length=len(content), media_type=image["media_type"]),
+            retention_confirmed=True,
+            context=source_context,
+        )
         records.append(version)
-        result = {"schema_version": "research-ingest-local/1", "source_id": source.id,
-                  "source_version_id": version.id, "unchanged": False, "passages": 0,
-                  "dry_run": dry_run, "warnings": [], "media_type": image["media_type"]}
-        return _PreparedCapture(records, {checksum: content}, result, source.id, latest.id if latest else None, source.title)
+        result = {
+            "schema_version": "research-ingest-local/1",
+            "source_id": source.id,
+            "source_version_id": version.id,
+            "unchanged": False,
+            "passages": 0,
+            "dry_run": dry_run,
+            "warnings": [],
+            "media_type": image["media_type"],
+        }
+        return _PreparedCapture(
+            records,
+            {checksum: content},
+            result,
+            source.id,
+            latest.id if latest else None,
+            source.title,
+        )
     blobs_to_commit: dict[str, bytes] = {}
     extraction_warnings: list[str] = []
-    implementation: Literal["utf8-paragraphs/1", "baidu-unlimited-ocr/1", "tesseract-cli/1", "poppler-native/1"]
+    implementation: Literal[
+        "utf8-paragraphs/1", "baidu-unlimited-ocr/1", "tesseract-cli/1", "poppler-native/1"
+    ]
     added_extraction = False
     if is_pdf:
-        prior = [record for record in snapshot.records.values() if isinstance(record, Extraction)
-                 and latest is not None and record.source_version_ref.id == latest.id]
-        retained_only = latest is not None and latest.schema_version == "research-local/9" and not prior
+        prior = [
+            record
+            for record in snapshot.records.values()
+            if isinstance(record, Extraction)
+            and latest is not None
+            and record.source_version_ref.id == latest.id
+        ]
+        retained_only = (
+            latest is not None and latest.schema_version == "research-local/9" and not prior
+        )
         if latest is not None and latest.blob.sha256 == digest(content) and not retained_only:
             if progress_callback:
                 progress_callback("read", "Verifying retained PDF extraction...")
@@ -325,17 +418,27 @@ def _prepare_ingest(repository: Repository, snapshot: Snapshot, file: str | Path
             if len(prior) != 1:
                 raise ResearchError("PDF refresh requires one verified retained extraction")
             text = repository.read_blob(prior[0].text_blob).decode("utf-8")
-            passages = sorted((record for record in snapshot.records.values() if isinstance(record, Passage)
-                               and record.extraction_ref.id == prior[0].id), key=lambda record: record.start)
-            if any(text[passage.start:passage.end] != passage.verbatim for passage in passages):
+            passages = sorted(
+                (
+                    record
+                    for record in snapshot.records.values()
+                    if isinstance(record, Passage) and record.extraction_ref.id == prior[0].id
+                ),
+                key=lambda record: record.start,
+            )
+            if any(text[passage.start : passage.end] != passage.verbatim for passage in passages):
                 raise ResearchError("Retained PDF extraction does not match its passages")
             spans = [(passage.start, passage.end) for passage in passages]
             implementation = snapshot.get(prior[0].activity_ref, Activity).implementation
         else:
             added_extraction = True
             if progress_callback:
-                progress_callback("ocr", "Rasterizing PDF pages and extracting text via OCR/poppler...")
-            effective_fallback = allow_fallback or os.environ.get("LIXITY_OCR_FALLBACK", "").lower() in ("1", "true", "yes")
+                progress_callback(
+                    "ocr", "Rasterizing PDF pages and extracting text via OCR/poppler..."
+                )
+            effective_fallback = allow_fallback or os.environ.get(
+                "LIXITY_OCR_FALLBACK", ""
+            ).lower() in ("1", "true", "yes")
             # Extract the exact bytes retained below, even if the caller replaces its file.
             with tempfile.TemporaryDirectory(prefix="lixity-source-") as directory:
                 stable_path = Path(directory) / "source.pdf"
@@ -351,7 +454,9 @@ def _prepare_ingest(repository: Repository, snapshot: Snapshot, file: str | Path
         source_checksum = digest(content)
         text_bytes = text.encode("utf-8")
         text_checksum = digest(text_bytes)
-        source_blob = Blob(sha256=source_checksum, byte_length=len(content), media_type="application/pdf")
+        source_blob = Blob(
+            sha256=source_checksum, byte_length=len(content), media_type="application/pdf"
+        )
         text_blob = Blob(sha256=text_checksum, byte_length=len(text_bytes), media_type="text/plain")
         blobs_to_commit[source_checksum] = content
         blobs_to_commit[text_checksum] = text_bytes
@@ -359,58 +464,121 @@ def _prepare_ingest(repository: Repository, snapshot: Snapshot, file: str | Path
         try:
             text = content.decode("utf-8")
         except UnicodeDecodeError:
-            raise ResearchError("Text sources must be UTF-8; use a .pdf file for PDF extraction") from None
-        spans = [(match.start(), match.start() + len(match.group().rstrip()))
-                 for match in re.finditer(r"\S.*?(?=\n\s*\n|\Z)", text, re.DOTALL)]
+            raise ResearchError(
+                "Text sources must be UTF-8; use a .pdf file for PDF extraction"
+            ) from None
+        spans = [
+            (match.start(), match.start() + len(match.group().rstrip()))
+            for match in re.finditer(r"\S.*?(?=\n\s*\n|\Z)", text, re.DOTALL)
+        ]
         if not spans or len(spans) > 5000:
             raise ResearchError("Source must contain between 1 and 5000 nonempty paragraphs")
         operation = "extract_utf8"
         implementation = "utf8-paragraphs/1"
         source_checksum = digest(content)
-        source_blob = Blob(sha256=source_checksum, byte_length=len(content), media_type="text/plain")
+        source_blob = Blob(
+            sha256=source_checksum, byte_length=len(content), media_type="text/plain"
+        )
         text_blob = source_blob
         blobs_to_commit[source_checksum] = content
 
-    if (latest is not None and latest.blob.sha256 == source_checksum and latest.context == source_context
-            and not added_extraction):
+    if (
+        latest is not None
+        and latest.blob.sha256 == source_checksum
+        and latest.context == source_context
+        and not added_extraction
+    ):
         repository.read_blob(latest.blob)
-        result = {"schema_version": "research-ingest-local/1", "source_id": source.id,
-                "source_version_id": latest.id, "snapshot": snapshot.digest,
-                "unchanged": True, "dry_run": dry_run, "passages": len(spans),
-                "warnings": extraction_warnings}
+        result = {
+            "schema_version": "research-ingest-local/1",
+            "source_id": source.id,
+            "source_version_id": latest.id,
+            "snapshot": snapshot.digest,
+            "unchanged": True,
+            "dry_run": dry_run,
+            "passages": len(spans),
+            "warnings": extraction_warnings,
+        }
         return _PreparedCapture([], {}, result, source.id, latest.id, source.title)
 
-    version = SourceVersion(**envelope(snapshot.project.id, actor), source_ref=reference(source),
-                            schema_version=("research-local/3" if source_context.external_reference else
-                                            "research-local/2" if source_context.origin_url else "research-local/1"),
-                            sequence=latest.sequence + 1 if latest else 1, blob=source_blob,
-                            retention_confirmed=True, context=source_context)
-    activity = Activity(**envelope(snapshot.project.id, actor), source_version_ref=reference(version),
-                        schema_version=("research-local/4" if implementation in {"tesseract-cli/1", "poppler-native/1"}
-                                        else "research-local/1"),
-                        operation=operation, implementation=implementation, status="succeeded")
-    extraction = Extraction(**envelope(snapshot.project.id, actor), source_version_ref=reference(version),
-                            activity_ref=reference(activity), text_blob=text_blob)
+    version = SourceVersion(
+        **envelope(snapshot.project.id, actor),
+        source_ref=reference(source),
+        schema_version=(
+            "research-local/3"
+            if source_context.external_reference
+            else "research-local/2"
+            if source_context.origin_url
+            else "research-local/1"
+        ),
+        sequence=latest.sequence + 1 if latest else 1,
+        blob=source_blob,
+        retention_confirmed=True,
+        context=source_context,
+    )
+    activity = Activity(
+        **envelope(snapshot.project.id, actor),
+        source_version_ref=reference(version),
+        schema_version=(
+            "research-local/4"
+            if implementation in {"tesseract-cli/1", "poppler-native/1"}
+            else "research-local/1"
+        ),
+        operation=operation,
+        implementation=implementation,
+        status="succeeded",
+    )
+    extraction = Extraction(
+        **envelope(snapshot.project.id, actor),
+        source_version_ref=reference(version),
+        activity_ref=reference(activity),
+        text_blob=text_blob,
+    )
     records.extend([version, activity, extraction])
     if progress_callback:
         progress_callback("passages", f"Segmenting {len(spans)} verified passages...")
     for start, end in spans:
-        records.append(Passage(**envelope(snapshot.project.id, actor), extraction_ref=reference(extraction),
-                               start=start, end=end, verbatim=text[start:end], language=source.language))
-    result = {"schema_version": "research-ingest-local/1", "source_id": source.id,
-              "source_version_id": version.id, "unchanged": False,
-              "passages": len(spans), "dry_run": dry_run, "warnings": extraction_warnings}
-    return _PreparedCapture(records, blobs_to_commit, result, source.id, latest.id if latest else None, source.title)
+        records.append(
+            Passage(
+                **envelope(snapshot.project.id, actor),
+                extraction_ref=reference(extraction),
+                start=start,
+                end=end,
+                verbatim=text[start:end],
+                language=source.language,
+            )
+        )
+    result = {
+        "schema_version": "research-ingest-local/1",
+        "source_id": source.id,
+        "source_version_id": version.id,
+        "unchanged": False,
+        "passages": len(spans),
+        "dry_run": dry_run,
+        "warnings": extraction_warnings,
+    }
+    return _PreparedCapture(
+        records, blobs_to_commit, result, source.id, latest.id if latest else None, source.title
+    )
 
 
-def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = False,
-           source_id: str | None = None, title: str | None = None,
-           language: str | None = None, actor: str = "local-author", dry_run: bool = False,
-           context: Mapping[str, Any] | None = None,
-           origin_url: str | None = None, expected_snapshot: str | None = None,
-           allow_fallback: bool = False,
-           retain_only: bool = False,
-           progress_callback: Callable[[str, str], None] | None = None) -> dict[str, Any]:
+def ingest(
+    project: str | Path,
+    file: str | Path,
+    *,
+    allow_retention: bool = False,
+    source_id: str | None = None,
+    title: str | None = None,
+    language: str | None = None,
+    actor: str = "local-author",
+    dry_run: bool = False,
+    context: Mapping[str, Any] | None = None,
+    origin_url: str | None = None,
+    expected_snapshot: str | None = None,
+    allow_fallback: bool = False,
+    retain_only: bool = False,
+    progress_callback: Callable[[str, str], None] | None = None,
+) -> dict[str, Any]:
     """Ingest one local file as a retained source and indexed passages.
 
     Requires ``allow_retention=True``. ``source_id`` explicitly refreshes a
@@ -425,11 +593,21 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
     snapshot = repository.snapshot()
     if expected_snapshot is not None and snapshot.digest != expected_snapshot:
         raise ResearchConflictError("Research snapshot changed; reload and retry capture")
-    prepared = _prepare_ingest(repository, snapshot, file, source_id=source_id, title=title,
-                               language=language, actor=actor, dry_run=dry_run, context=context,
-                               origin_url=origin_url, allow_fallback=allow_fallback,
-                               retain_only=retain_only,
-                               progress_callback=progress_callback)
+    prepared = _prepare_ingest(
+        repository,
+        snapshot,
+        file,
+        source_id=source_id,
+        title=title,
+        language=language,
+        actor=actor,
+        dry_run=dry_run,
+        context=context,
+        origin_url=origin_url,
+        allow_fallback=allow_fallback,
+        retain_only=retain_only,
+        progress_callback=progress_callback,
+    )
     result = prepared.result
     if result["unchanged"]:
         return result
@@ -440,26 +618,50 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
     else:
         while True:
             try:
-                result["snapshot"] = repository.commit(prepared.records, prepared.blobs, snapshot).digest
+                result["snapshot"] = repository.commit(
+                    prepared.records, prepared.blobs, snapshot
+                ).digest
                 break
             except ResearchConflictError as exc:
-                if expected_snapshot is not None or result.get("media_type") in IMAGE_TYPES | MEDIA_TYPES:
+                if (
+                    expected_snapshot is not None
+                    or result.get("media_type") in IMAGE_TYPES | MEDIA_TYPES
+                ):
                     raise
                 fresh = repository.snapshot()
                 if source_id:
-                    fresh_versions = [r for r in fresh.records.values() if isinstance(r, SourceVersion) and r.source_ref.id == prepared.source_id]
-                    fresh_latest = max(fresh_versions, key=lambda r: r.sequence) if fresh_versions else None
-                    if (prepared.base_version_id is None and fresh_latest is not None) or (prepared.base_version_id and fresh_latest and prepared.base_version_id != fresh_latest.id):
-                        raise ResearchConflictError("Source was modified concurrently; reload and retry capture") from exc
+                    fresh_versions = [
+                        r
+                        for r in fresh.records.values()
+                        if isinstance(r, SourceVersion) and r.source_ref.id == prepared.source_id
+                    ]
+                    fresh_latest = (
+                        max(fresh_versions, key=lambda r: r.sequence) if fresh_versions else None
+                    )
+                    if (prepared.base_version_id is None and fresh_latest is not None) or (
+                        prepared.base_version_id
+                        and fresh_latest
+                        and prepared.base_version_id != fresh_latest.id
+                    ):
+                        raise ResearchConflictError(
+                            "Source was modified concurrently; reload and retry capture"
+                        ) from exc
                 snapshot = fresh
     if progress_callback:
-        progress_callback("complete", f"Source '{prepared.title}' ingested ({result['passages']} passages).")
+        progress_callback(
+            "complete", f"Source '{prepared.title}' ingested ({result['passages']} passages)."
+        )
     return result
 
 
-def list_dossier_images(project: str | Path, *, dossier_id: str | None = None,
-                        limit: int = 100, offset: int = 0,
-                        missing_provenance: bool = False) -> dict[str, Any]:
+def list_dossier_images(
+    project: str | Path,
+    *,
+    dossier_id: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
+    missing_provenance: bool = False,
+) -> dict[str, Any]:
     """List active dossier image occurrences without reading files or resolving URLs."""
     if type(limit) is not int or not 1 <= limit <= 200 or type(offset) is not int or offset < 0:
         raise ResearchError("Image overview requires limit 1..200 and a nonnegative offset")
@@ -472,8 +674,11 @@ def list_dossier_images(project: str | Path, *, dossier_id: str | None = None,
     images: list[dict[str, Any]] = []
     total = 0
     for record in snapshot.records.values():
-        if (not isinstance(record, Dossier) or (dossier_id is not None and record.id != dossier_id)
-                or dossier_withdrawal(snapshot, record.id)):
+        if (
+            not isinstance(record, Dossier)
+            or (dossier_id is not None and record.id != dossier_id)
+            or dossier_withdrawal(snapshot, record.id)
+        ):
             continue
         spans = _section_spans(record.body)
         heading_index = 0
@@ -488,110 +693,245 @@ def list_dossier_images(project: str | Path, *, dossier_id: str | None = None,
             if refs:
                 item = resolve_image_reference(snapshot, refs[0])
                 version = snapshot.records.get(refs[0].source_version_id)
-                item["sha256"] = (version.blob.sha256 if isinstance(version, SourceVersion)
-                                  and item["availability"] in ("available", "withdrawn") else None)
+                item["sha256"] = (
+                    version.blob.sha256
+                    if isinstance(version, SourceVersion)
+                    and item["availability"] in ("available", "withdrawn")
+                    else None
+                )
             else:
                 item = {"availability": "unretained", "destination": marker.destination}
             context = item.get("context") or {}
-            missing = [field for field in ("origin_url", "provenance_note") if not context.get(field)]
+            missing = [
+                field for field in ("origin_url", "provenance_note") if not context.get(field)
+            ]
             if missing_provenance and not missing:
                 continue
             total += 1
             if total <= offset or len(images) >= limit:
                 continue
-            images.append({**item, "provenance_missing": missing, "dossier_id": record.id, "dossier_revision": record.revision,
-                           "dossier_title": record.title, "section": heading,
-                           "reference": marker.marker, "start": marker.start, "end": marker.end})
-    return {"schema_version": "research-dossier-images-local/1", "project_id": snapshot.project.id,
-            "snapshot": snapshot.digest, "images": images, "total": total, "offset": offset,
-            "limit": limit, "has_more": offset + len(images) < total}
+            images.append(
+                {
+                    **item,
+                    "provenance_missing": missing,
+                    "dossier_id": record.id,
+                    "dossier_revision": record.revision,
+                    "dossier_title": record.title,
+                    "section": heading,
+                    "reference": marker.marker,
+                    "start": marker.start,
+                    "end": marker.end,
+                }
+            )
+    return {
+        "schema_version": "research-dossier-images-local/1",
+        "project_id": snapshot.project.id,
+        "snapshot": snapshot.digest,
+        "images": images,
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+        "has_more": offset + len(images) < total,
+    }
 
 
-def ingest_image(project: str | Path, content: bytes, *, filename: str,
-                 allow_retention: bool = False, source_id: str | None = None,
-                 title: str | None = None, context: Mapping[str, Any] | None = None,
-                 origin_url: str | None = None, expected_snapshot: str | None = None,
-                 actor: str = "local-author") -> dict[str, Any]:
+def ingest_image(
+    project: str | Path,
+    content: bytes,
+    *,
+    filename: str,
+    allow_retention: bool = False,
+    source_id: str | None = None,
+    title: str | None = None,
+    context: Mapping[str, Any] | None = None,
+    origin_url: str | None = None,
+    expected_snapshot: str | None = None,
+    actor: str = "local-author",
+) -> dict[str, Any]:
     """Capture explicitly authorized local raster bytes through ordinary ingest."""
     if allow_retention is not True:
-        raise ResearchError("Explicit local retention permission is required (allow_retention: true)")
+        raise ResearchError(
+            "Explicit local retention permission is required (allow_retention: true)"
+        )
     validate_image(content, filename=filename)
-    return ingest_media(project, content, filename=filename, allow_retention=allow_retention,
-                        source_id=source_id, title=title, context=context, origin_url=origin_url,
-                        expected_snapshot=expected_snapshot, actor=actor)
+    return ingest_media(
+        project,
+        content,
+        filename=filename,
+        allow_retention=allow_retention,
+        source_id=source_id,
+        title=title,
+        context=context,
+        origin_url=origin_url,
+        expected_snapshot=expected_snapshot,
+        actor=actor,
+    )
 
 
-def ingest_media(project: str | Path, content: bytes, *, filename: str,
-                 allow_retention: bool = False, source_id: str | None = None,
-                 title: str | None = None, context: Mapping[str, Any] | None = None,
-                 origin_url: str | None = None, expected_snapshot: str | None = None,
-                 actor: str = "local-author") -> dict[str, Any]:
+def ingest_media(
+    project: str | Path,
+    content: bytes,
+    *,
+    filename: str,
+    allow_retention: bool = False,
+    source_id: str | None = None,
+    title: str | None = None,
+    context: Mapping[str, Any] | None = None,
+    origin_url: str | None = None,
+    expected_snapshot: str | None = None,
+    actor: str = "local-author",
+) -> dict[str, Any]:
     """Retain an explicitly selected document/video or image without extraction."""
     if allow_retention is not True:
-        raise ResearchError("Explicit local retention permission is required (allow_retention: true)")
+        raise ResearchError(
+            "Explicit local retention permission is required (allow_retention: true)"
+        )
     if Path(filename).suffix.lower() in IMAGE_SUFFIXES:
         validate_image(content, filename=filename)
     else:
         validate_media(content, filename=filename)
-    expected_snapshot = expected_snapshot if expected_snapshot is not None else Repository(project).snapshot().digest
+    expected_snapshot = (
+        expected_snapshot
+        if expected_snapshot is not None
+        else Repository(project).snapshot().digest
+    )
     with tempfile.TemporaryDirectory(prefix="lixity-image-") as directory:
         path = Path(directory) / ("image" + Path(filename).suffix.lower())
         path.write_bytes(content)
-        return ingest(project, path, allow_retention=True, source_id=source_id,
-                      title=title if source_id else title or Path(filename).name,
-                      context=context, origin_url=origin_url, expected_snapshot=expected_snapshot,
-                      retain_only=True, actor=actor)
+        return ingest(
+            project,
+            path,
+            allow_retention=True,
+            source_id=source_id,
+            title=title if source_id else title or Path(filename).name,
+            context=context,
+            origin_url=origin_url,
+            expected_snapshot=expected_snapshot,
+            retain_only=True,
+            actor=actor,
+        )
 
 
-def read_image(project: str | Path, *, project_id: str, source_id: str, version_id: str) -> dict[str, Any]:
+def read_image(
+    project: str | Path, *, project_id: str, source_id: str, version_id: str
+) -> dict[str, Any]:
     """Return verified exact-version bytes for an explicitly identified project."""
     from .images import read_image as read_retained_image
+
     repository = Repository(project)
-    return read_retained_image(repository, repository.snapshot(), project_id=project_id,
-                               source_id=source_id, version_id=version_id)
+    return read_retained_image(
+        repository,
+        repository.snapshot(),
+        project_id=project_id,
+        source_id=source_id,
+        version_id=version_id,
+    )
 
 
-def read_media(project: str | Path, *, project_id: str, source_id: str, version_id: str) -> dict[str, Any]:
+def read_media(
+    project: str | Path, *, project_id: str, source_id: str, version_id: str
+) -> dict[str, Any]:
     """Read a verified exact-version retained PDF/video, never a loose path."""
     from .images import read_image as read_retained_image
+
     repository = Repository(project)
-    return read_retained_image(repository, repository.snapshot(), project_id=project_id,
-                               source_id=source_id, version_id=version_id, media=True)
+    return read_retained_image(
+        repository,
+        repository.snapshot(),
+        project_id=project_id,
+        source_id=source_id,
+        version_id=version_id,
+        media=True,
+    )
 
 
-def attach_dossier_image(project: str | Path, dossier_id: str, content: bytes, *, filename: str,
-                         expected_snapshot: str, expected_revision: int, allow_retention: bool = False,
-                         alt: str = "", caption: str | None = None, section: str | None = None,
-                         replace_reference: str | None = None,
-                         title: str | None = None, context: Mapping[str, Any] | None = None,
-                         origin_url: str | None = None, reason: str | None = None,
-                         change_kind: str = "supersession", actor: str = "local-author") -> dict[str, Any]:
+def attach_dossier_image(
+    project: str | Path,
+    dossier_id: str,
+    content: bytes,
+    *,
+    filename: str,
+    expected_snapshot: str,
+    expected_revision: int,
+    allow_retention: bool = False,
+    alt: str = "",
+    caption: str | None = None,
+    section: str | None = None,
+    replace_reference: str | None = None,
+    title: str | None = None,
+    context: Mapping[str, Any] | None = None,
+    origin_url: str | None = None,
+    reason: str | None = None,
+    change_kind: str = "supersession",
+    actor: str = "local-author",
+) -> dict[str, Any]:
     """Preserve the PNG/JPEG-only attachment interface."""
     validate_image(content, filename=filename)
-    return attach_dossier_media(project, dossier_id, content, filename=filename,
-        expected_snapshot=expected_snapshot, expected_revision=expected_revision, allow_retention=allow_retention,
-        alt=alt, caption=caption, section=section, replace_reference=replace_reference, title=title,
-        context=context, origin_url=origin_url, reason=reason, change_kind=change_kind, actor=actor)
+    return attach_dossier_media(
+        project,
+        dossier_id,
+        content,
+        filename=filename,
+        expected_snapshot=expected_snapshot,
+        expected_revision=expected_revision,
+        allow_retention=allow_retention,
+        alt=alt,
+        caption=caption,
+        section=section,
+        replace_reference=replace_reference,
+        title=title,
+        context=context,
+        origin_url=origin_url,
+        reason=reason,
+        change_kind=change_kind,
+        actor=actor,
+    )
 
 
-def attach_dossier_media(project: str | Path, dossier_id: str, content: bytes, *, filename: str,
-                         expected_snapshot: str, expected_revision: int, allow_retention: bool = False,
-                         alt: str = "", caption: str | None = None, section: str | None = None,
-                         replace_reference: str | None = None,
-                         title: str | None = None, context: Mapping[str, Any] | None = None,
-                         origin_url: str | None = None, reason: str | None = None,
-                         change_kind: str = "supersession", actor: str = "local-author") -> dict[str, Any]:
+def attach_dossier_media(
+    project: str | Path,
+    dossier_id: str,
+    content: bytes,
+    *,
+    filename: str,
+    expected_snapshot: str,
+    expected_revision: int,
+    allow_retention: bool = False,
+    alt: str = "",
+    caption: str | None = None,
+    section: str | None = None,
+    replace_reference: str | None = None,
+    title: str | None = None,
+    context: Mapping[str, Any] | None = None,
+    origin_url: str | None = None,
+    reason: str | None = None,
+    change_kind: str = "supersession",
+    actor: str = "local-author",
+) -> dict[str, Any]:
     """Publish one new retained media capture and dossier revision under exact CAS."""
     from .revisions import _apply_changes, _record, _view
+
     if allow_retention is not True:
-        raise ResearchError("Explicit local retention permission is required (allow_retention: true)")
+        raise ResearchError(
+            "Explicit local retention permission is required (allow_retention: true)"
+        )
     if not isinstance(alt, str) or len(alt) > MAX_IMAGE_ALT_CHARS or "\n" in alt or "\r" in alt:
         raise ResearchError("Image alternative text must be one line of at most 1000 characters")
-    if caption is not None and (not isinstance(caption, str) or len(caption) > MAX_IMAGE_CAPTION_CHARS):
+    if caption is not None and (
+        not isinstance(caption, str) or len(caption) > MAX_IMAGE_CAPTION_CHARS
+    ):
         raise ResearchError("Image caption must be text of at most 10000 characters")
-    if reason is not None and (not isinstance(reason, str) or not reason.strip() or len(reason) > 2000):
-        raise ResearchError("Image attachment reason must be nonblank text of at most 2000 characters")
-    if type(expected_revision) is not int or expected_revision < 1 or not isinstance(expected_snapshot, str):
+    if reason is not None and (
+        not isinstance(reason, str) or not reason.strip() or len(reason) > 2000
+    ):
+        raise ResearchError(
+            "Image attachment reason must be nonblank text of at most 2000 characters"
+        )
+    if (
+        type(expected_revision) is not int
+        or expected_revision < 1
+        or not isinstance(expected_snapshot, str)
+    ):
         raise ResearchError("Image attachment requires an expected snapshot and dossier revision")
     repository = Repository(project)
     snapshot = repository.snapshot()
@@ -599,7 +939,9 @@ def attach_dossier_media(project: str | Path, dossier_id: str, content: bytes, *
     if not isinstance(previous, Dossier):
         raise ResearchError("Image attachment requires a dossier")
     if snapshot.digest != expected_snapshot or previous.revision != expected_revision:
-        raise ResearchConflictError("Research snapshot or dossier revision changed; reload and retry attachment")
+        raise ResearchConflictError(
+            "Research snapshot or dossier revision changed; reload and retry attachment"
+        )
     is_image = Path(filename).suffix.lower() in IMAGE_SUFFIXES
     if is_image:
         validate_image(content, filename=filename)
@@ -608,33 +950,76 @@ def attach_dossier_media(project: str | Path, dossier_id: str, content: bytes, *
     with tempfile.TemporaryDirectory(prefix="lixity-image-") as directory:
         path = Path(directory) / ("image" + Path(filename).suffix.lower())
         path.write_bytes(content)
-        prepared = _prepare_ingest(repository, snapshot, path, title=title or Path(filename).name,
-                                   context=context, origin_url=origin_url, actor=actor, retain_only=True)
+        prepared = _prepare_ingest(
+            repository,
+            snapshot,
+            path,
+            title=title or Path(filename).name,
+            context=context,
+            origin_url=origin_url,
+            actor=actor,
+            retain_only=True,
+        )
     namespace = "image" if is_image else "media"
-    markup = attachment_markup(alt, namespace, prepared.source_id, prepared.result["source_version_id"], caption)
-    body = place_attachment(previous.body, markup, section=section, replace_reference=replace_reference)
-    if not any(ref.source_id == prepared.source_id and ref.source_version_id == prepared.result["source_version_id"]
-               for ref in extract_image_references(body, media=not is_image)):
-        raise ResearchError("Attachment location is inside Markdown code; close it or choose another section")
-    revised = _apply_changes(snapshot, previous, {"body": body}, change_kind=change_kind,
-                             reason=reason if reason is not None else f"Attached {namespace} {prepared.title}.", actor=actor)
+    markup = attachment_markup(
+        alt, namespace, prepared.source_id, prepared.result["source_version_id"], caption
+    )
+    body = place_attachment(
+        previous.body, markup, section=section, replace_reference=replace_reference
+    )
+    if not any(
+        ref.source_id == prepared.source_id
+        and ref.source_version_id == prepared.result["source_version_id"]
+        for ref in extract_image_references(body, media=not is_image)
+    ):
+        raise ResearchError(
+            "Attachment location is inside Markdown code; close it or choose another section"
+        )
+    revised = _apply_changes(
+        snapshot,
+        previous,
+        {"body": body},
+        change_kind=change_kind,
+        reason=reason if reason is not None else f"Attached {namespace} {prepared.title}.",
+        actor=actor,
+    )
     accepted = repository.commit([*prepared.records, revised], prepared.blobs, snapshot)
-    return {**_view(repository, accepted, revised), "capture": {**prepared.result, "snapshot": accepted.digest}}
+    return {
+        **_view(repository, accepted, revised),
+        "capture": {**prepared.result, "snapshot": accepted.digest},
+    }
 
 
-def attach_dossier_images(project: str | Path, dossier_id: str, items: Sequence[Mapping[str, Any]], *,
-                          expected_snapshot: str, expected_revision: int, allow_retention: bool = False,
-                          dry_run: bool = False, reason: str = "Attach reviewed image batch.",
-                          actor: str = "local-author") -> dict[str, Any]:
+def attach_dossier_images(
+    project: str | Path,
+    dossier_id: str,
+    items: Sequence[Mapping[str, Any]],
+    *,
+    expected_snapshot: str,
+    expected_revision: int,
+    allow_retention: bool = False,
+    dry_run: bool = False,
+    reason: str = "Attach reviewed image batch.",
+    actor: str = "local-author",
+) -> dict[str, Any]:
     """Validate a bounded explicit batch; publish every capture and one revision or none."""
     from .images import validate_image_changes
     from .revisions import _apply_changes, _record, _view
 
     if allow_retention is not True:
-        raise ResearchError("Explicit local retention permission is required (allow_retention: true)")
-    if (type(dry_run) is not bool or type(expected_revision) is not int or expected_revision < 1
-            or not isinstance(expected_snapshot, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_snapshot)):
-        raise ResearchError("Batch requires a boolean dry_run and exact snapshot/positive dossier revision")
+        raise ResearchError(
+            "Explicit local retention permission is required (allow_retention: true)"
+        )
+    if (
+        type(dry_run) is not bool
+        or type(expected_revision) is not int
+        or expected_revision < 1
+        or not isinstance(expected_snapshot, str)
+        or not re.fullmatch(r"[0-9a-f]{64}", expected_snapshot)
+    ):
+        raise ResearchError(
+            "Batch requires a boolean dry_run and exact snapshot/positive dossier revision"
+        )
     if not 1 <= len(items) <= 100:
         raise ResearchError("Image batch must contain between 1 and 100 explicit items")
     selected = [ImageBatchItem.model_validate(dict(item)) for item in items]
@@ -644,7 +1029,9 @@ def attach_dossier_images(project: str | Path, dossier_id: str, items: Sequence[
     if not isinstance(previous, Dossier):
         raise ResearchError("Image batch requires an active dossier")
     if snapshot.digest != expected_snapshot or previous.revision != expected_revision:
-        raise ResearchConflictError("Research snapshot or dossier revision changed; reload and retry batch")
+        raise ResearchConflictError(
+            "Research snapshot or dossier revision changed; reload and retry batch"
+        )
     body, total = previous.body, 0
     records: list[Entity] = []
     blobs: dict[str, bytes] = {}
@@ -654,55 +1041,114 @@ def attach_dossier_images(project: str | Path, dossier_id: str, items: Sequence[
         path = Path(item.file).expanduser()
         if path.suffix.lower() not in IMAGE_SUFFIXES:
             raise ResearchError("Image batches accept only explicit local PNG/JPEG files")
-        prepared = _prepare_ingest(repository, snapshot, path, title=item.title,
-                                   context=item.context.model_dump() if item.context else None,
-                                   origin_url=item.origin_url, actor=actor)
+        prepared = _prepare_ingest(
+            repository,
+            snapshot,
+            path,
+            title=item.title,
+            context=item.context.model_dump() if item.context else None,
+            origin_url=item.origin_url,
+            actor=actor,
+        )
         checksum = next(iter(prepared.blobs))
         if item.sha256 is not None and item.sha256 != checksum:
             raise ResearchConflictError("Batch image bytes changed since the reviewed SHA-256")
         total += sum(len(content) for content in prepared.blobs.values())
         if total > 128 * 1024 * 1024:
             raise ResearchError("Image batch source bytes exceed the 128 MiB limit")
-        markup = attachment_markup(item.alt, "image", prepared.source_id,
-                                   prepared.result["source_version_id"], item.caption)
-        body = place_attachment(body, markup, section=item.section, replace_reference=item.replace_reference)
+        markup = attachment_markup(
+            item.alt,
+            "image",
+            prepared.source_id,
+            prepared.result["source_version_id"],
+            item.caption,
+        )
+        body = place_attachment(
+            body, markup, section=item.section, replace_reference=item.replace_reference
+        )
         if not any(ref.source_id == prepared.source_id for ref in extract_image_references(body)):
-            raise ResearchError("Attachment location is inside Markdown code; close it or choose another section")
+            raise ResearchError(
+                "Attachment location is inside Markdown code; close it or choose another section"
+            )
         records.extend(prepared.records)
         blobs.update(prepared.blobs)
         captures.append(prepared.result)
-        placements.append({"filename": path.name, "sha256": checksum,
-                           "section": item.section, "replace_reference": item.replace_reference})
-    candidate = Snapshot(snapshot.digest, snapshot.manifest,
-                         {**snapshot.records, **{record.id: record for record in records}})
+        placements.append(
+            {
+                "filename": path.name,
+                "sha256": checksum,
+                "section": item.section,
+                "replace_reference": item.replace_reference,
+            }
+        )
+    candidate = Snapshot(
+        snapshot.digest,
+        snapshot.manifest,
+        {**snapshot.records, **{record.id: record for record in records}},
+    )
     validate_image_changes(candidate, body, previous.body)
-    revised = _apply_changes(snapshot, previous, {"body": body}, change_kind="supersession", reason=reason, actor=actor)
+    revised = _apply_changes(
+        snapshot, previous, {"body": body}, change_kind="supersession", reason=reason, actor=actor
+    )
     if dry_run:
-        return {"schema_version": "research-dossier-images-preview-local/1", "project_id": snapshot.project.id,
-                "snapshot": snapshot.digest, "dossier_id": dossier_id, "base_revision": previous.revision,
-                "candidate_revision": revised.revision, "attachment_count": len(selected),
-                "source_bytes": total, "placements": placements, "dry_run": True, "ready": True}
+        return {
+            "schema_version": "research-dossier-images-preview-local/1",
+            "project_id": snapshot.project.id,
+            "snapshot": snapshot.digest,
+            "dossier_id": dossier_id,
+            "base_revision": previous.revision,
+            "candidate_revision": revised.revision,
+            "attachment_count": len(selected),
+            "source_bytes": total,
+            "placements": placements,
+            "dry_run": True,
+            "ready": True,
+        }
     accepted = repository.commit([*records, revised], blobs, snapshot)
-    return {**_view(repository, accepted, revised),
-            "captures": [{**capture, "snapshot": accepted.digest} for capture in captures]}
+    return {
+        **_view(repository, accepted, revised),
+        "captures": [{**capture, "snapshot": accepted.digest} for capture in captures],
+    }
 
 
-def ingest_checkpoint(project: str | Path, files: Sequence[str | Path] | None = None, *,
-                      checkpoint: str | Path, resume: bool = False,
-                      allow_retention: bool = False, source_id: str | None = None,
-                      title: str | None = None, language: str | None = None,
-                      actor: str | None = None, dry_run: bool = False,
-                      context: Mapping[str, Any] | None = None, origin_url: str | None = None,
-                      expected_snapshot: str | None = None, allow_fallback: bool | None = None,
-                      progress_callback: Callable[[str, str], None] | None = None) -> dict[str, Any]:
+def ingest_checkpoint(
+    project: str | Path,
+    files: Sequence[str | Path] | None = None,
+    *,
+    checkpoint: str | Path,
+    resume: bool = False,
+    allow_retention: bool = False,
+    source_id: str | None = None,
+    title: str | None = None,
+    language: str | None = None,
+    actor: str | None = None,
+    dry_run: bool = False,
+    context: Mapping[str, Any] | None = None,
+    origin_url: str | None = None,
+    expected_snapshot: str | None = None,
+    allow_fallback: bool | None = None,
+    progress_callback: Callable[[str, str], None] | None = None,
+) -> dict[str, Any]:
     """Sequential opt-in capture with retained preparation and explicit resume checks."""
     from . import checkpoints
 
-    return checkpoints.ingest(project, files, checkpoint=checkpoint, resume=resume,
-                              allow_retention=allow_retention, source_id=source_id, title=title,
-                              language=language, actor=actor, dry_run=dry_run, context=context,
-                              origin_url=origin_url, expected_snapshot=expected_snapshot,
-                              allow_fallback=allow_fallback, progress_callback=progress_callback)
+    return checkpoints.ingest(
+        project,
+        files,
+        checkpoint=checkpoint,
+        resume=resume,
+        allow_retention=allow_retention,
+        source_id=source_id,
+        title=title,
+        language=language,
+        actor=actor,
+        dry_run=dry_run,
+        context=context,
+        origin_url=origin_url,
+        expected_snapshot=expected_snapshot,
+        allow_fallback=allow_fallback,
+        progress_callback=progress_callback,
+    )
 
 
 def discard_ingest_checkpoint(project: str | Path, *, checkpoint: str | Path) -> dict[str, Any]:
@@ -717,14 +1163,23 @@ def reindex(project: str | Path) -> dict[str, Any]:
     return catalogue.reindex(Repository(project))
 
 
-def search(project: str | Path, query: str, *, limit: int = 20, scope: str = "sources", ensure_fresh: bool = False) -> dict[str, Any]:
+def search(
+    project: str | Path,
+    query: str,
+    *,
+    limit: int = 20,
+    scope: str = "sources",
+    ensure_fresh: bool = False,
+) -> dict[str, Any]:
     """Search retained passages or authored records by words, limited by ``scope``.
 
     Sources use ``research-search-local/1``; ``dossiers``, ``claims``,
     ``decisions`` and ``all`` use ``research-search-local/2``, where hits
     carry a ``kind``.
     """
-    return catalogue.search(Repository(project), query, limit=limit, scope=scope, ensure_fresh=ensure_fresh)
+    return catalogue.search(
+        Repository(project), query, limit=limit, scope=scope, ensure_fresh=ensure_fresh
+    )
 
 
 def cite(project: str | Path, passage_id: str) -> dict[str, Any]:
@@ -747,10 +1202,15 @@ def audit(project: str | Path) -> dict[str, Any]:
     repository = Repository(project)
     errors: list[str] = []
     capacity_warnings: list[str] = []
-    maximum = next(constraint.max_length for constraint in Manifest.model_fields["entries"].metadata
-                   if getattr(constraint, "max_length", None) is not None)
+    maximum = next(
+        constraint.max_length
+        for constraint in Manifest.model_fields["entries"].metadata
+        if getattr(constraint, "max_length", None) is not None
+    )
     capacity: dict[str, int | None] = {
-        "entries_used": None, "entries_max": maximum, "entries_remaining": None,
+        "entries_used": None,
+        "entries_max": maximum,
+        "entries_remaining": None,
     }
     history_checked: int | None = None
     count = 0
@@ -774,11 +1234,17 @@ def audit(project: str | Path) -> dict[str, Any]:
                 if record.blob.media_type in IMAGE_TYPES:
                     image = validate_image(content)
                     if image["media_type"] != record.blob.media_type:
-                        raise ResearchError("Retained image type does not match its blob descriptor")
-                elif (record.blob.media_type in VIDEO_TYPES
-                      or (record.blob.media_type == "application/pdf" and record.schema_version == "research-local/9")):
+                        raise ResearchError(
+                            "Retained image type does not match its blob descriptor"
+                        )
+                elif record.blob.media_type in VIDEO_TYPES or (
+                    record.blob.media_type == "application/pdf"
+                    and record.schema_version == "research-local/9"
+                ):
                     if validate_media(content)["media_type"] != record.blob.media_type:
-                        raise ResearchError("Retained media type does not match its blob descriptor")
+                        raise ResearchError(
+                            "Retained media type does not match its blob descriptor"
+                        )
                 checked.add(record.blob.sha256)
             elif isinstance(record, Extraction) and record.text_blob.sha256 not in checked:
                 repository.read_blob(record.text_blob)
@@ -787,22 +1253,41 @@ def audit(project: str | Path) -> dict[str, Any]:
                 repository.quote(snapshot, record)
         for record in snapshot.revisions.values():
             if isinstance(record, Dossier):
-                if any(image["availability"] == "missing" for image in
-                       [*resolve_dossier_images(snapshot, record.body), *resolve_dossier_media(snapshot, record.body)]):
-                    errors.append(f"Dossier {record.id} revision {record.revision} has an unavailable image pin")
+                if any(
+                    image["availability"] == "missing"
+                    for image in [
+                        *resolve_dossier_images(snapshot, record.body),
+                        *resolve_dossier_media(snapshot, record.body),
+                    ]
+                ):
+                    errors.append(
+                        f"Dossier {record.id} revision {record.revision} has an unavailable image pin"
+                    )
                 try:
                     extract_image_references(record.body, strict=True)
                     extract_image_references(record.body, strict=True, media=True)
                 except ResearchError:
-                    errors.append(f"Dossier {record.id} revision {record.revision} has malformed reserved image data (kept inert)")
+                    errors.append(
+                        f"Dossier {record.id} revision {record.revision} has malformed reserved image data (kept inert)"
+                    )
     except (OSError, ResearchError, ValidationError, UnicodeDecodeError) as exc:
         msg = str(exc).strip()
-        errors.append(f"Research integrity check failed: {msg}" if msg else "Research integrity check failed: missing, invalid or modified records/bytes")
-    return {"schema_version": "research-audit-local/1", "ok": not errors,
-            "snapshot": head, "records": count, "errors": errors,
-            "warnings": capacity_warnings, "manifest_capacity": capacity,
-            "manifest_history_checked": history_checked,
-            "scope": "accepted revision objects, retained blobs, citations, dossier media pins and complete manifest ancestry; not factual accuracy, full media decoding or index freshness"}
+        errors.append(
+            f"Research integrity check failed: {msg}"
+            if msg
+            else "Research integrity check failed: missing, invalid or modified records/bytes"
+        )
+    return {
+        "schema_version": "research-audit-local/1",
+        "ok": not errors,
+        "snapshot": head,
+        "records": count,
+        "errors": errors,
+        "warnings": capacity_warnings,
+        "manifest_capacity": capacity,
+        "manifest_history_checked": history_checked,
+        "scope": "accepted revision objects, retained blobs, citations, dossier media pins and complete manifest ancestry; not factual accuracy, full media decoding or index freshness",
+    }
 
 
 def schema() -> dict[str, Any]:
@@ -815,16 +1300,26 @@ def ocr_status(worker_cmd: str | None = None, *, probe: bool = False) -> dict[st
     return get_ocr_diagnostics(worker_cmd=worker_cmd, probe=probe)
 
 
-def analyze_source(project: str | Path, source_id: str, *, version_id: str | None = None,
-                   thresholds: Mapping[str, Any] | None = None) -> dict[str, Any]:
+def analyze_source(
+    project: str | Path,
+    source_id: str,
+    *,
+    version_id: str | None = None,
+    thresholds: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     """Analyze verified archived text with explicit settings; never accept a claim."""
     from .analysis import analyze
 
     return analyze(project, source_id, version_id=version_id, thresholds=thresholds).report()
 
 
-def source_dashboard(project: str | Path, source_id: str, *, version_id: str | None = None,
-                     thresholds: Mapping[str, Any] | None = None) -> str:
+def source_dashboard(
+    project: str | Path,
+    source_id: str,
+    *,
+    version_id: str | None = None,
+    thresholds: Mapping[str, Any] | None = None,
+) -> str:
     """Render a local read-only source report; the HTML contains private source text."""
     from .analysis import analyze
 
@@ -911,12 +1406,16 @@ def withdraw(
     if dossier_id is not None:
         if version_id is not None:
             raise ResearchError("A source version cannot select a dossier withdrawal")
-        if not isinstance(expected_snapshot, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_snapshot):
+        if not isinstance(expected_snapshot, str) or not re.fullmatch(
+            r"[0-9a-f]{64}", expected_snapshot
+        ):
             raise ResearchError("Dossier withdrawal requires an expected snapshot SHA-256 digest")
         if type(expected_revision) is not int or expected_revision < 1:
             raise ResearchError("Dossier withdrawal requires an exact positive expected revision")
     elif expected_snapshot is not None or expected_revision is not None or dry_run:
-        raise ResearchError("Reviewed revision guards and withdrawal dry-run apply only to dossiers")
+        raise ResearchError(
+            "Reviewed revision guards and withdrawal dry-run apply only to dossiers"
+        )
     reason = reason.strip() if reason else "Withdrawn by user"
     if not (1 <= len(reason) <= 500):
         raise ResearchError("Withdrawal reason must be between 1 and 500 characters")
@@ -927,7 +1426,9 @@ def withdraw(
     target_kind: Literal["source", "source_version", "dossier"]
     if dossier_id is not None:
         if snapshot.digest != expected_snapshot:
-            raise ResearchConflictError("Research snapshot changed; review the dossier before withdrawal")
+            raise ResearchConflictError(
+                "Research snapshot changed; review the dossier before withdrawal"
+            )
         dossier = _record(snapshot, "dossier", dossier_id)
         if dossier.revision != expected_revision:
             raise ResearchConflictError("Dossier revision changed; review it before withdrawal")
@@ -947,7 +1448,8 @@ def withdraw(
         target_kind = "source"
 
     already_tombstoned = any(
-        isinstance(rec, Tombstone) and rec.target_ref.id in (target_ref.id, source.id if source else target_ref.id)
+        isinstance(rec, Tombstone)
+        and rec.target_ref.id in (target_ref.id, source.id if source else target_ref.id)
         for rec in snapshot.records.values()
     )
     if already_tombstoned:
@@ -962,14 +1464,28 @@ def withdraw(
     )
     if dossier_id is not None and dry_run:
         repository.prepare_commit([tombstone], snapshot)
-        return {"schema_version": "research-dossier-withdraw-preview-local/1", "operation": "withdraw",
-                "project_id": snapshot.project.id, "target_id": target_ref.id, "target_revision": target_ref.revision,
-                "snapshot": snapshot.digest, "reason": reason, "ready": True, "dry_run": True}
+        return {
+            "schema_version": "research-dossier-withdraw-preview-local/1",
+            "operation": "withdraw",
+            "project_id": snapshot.project.id,
+            "target_id": target_ref.id,
+            "target_revision": target_ref.revision,
+            "snapshot": snapshot.digest,
+            "reason": reason,
+            "ready": True,
+            "dry_run": True,
+        }
     new_snapshot = repository.commit([tombstone], {}, snapshot)
     if dossier_id is not None:
-        return {"schema_version": "research-dossier-withdraw-local/1", "operation": "withdraw",
-                "project_id": snapshot.project.id, "target_id": target_ref.id, "target_revision": target_ref.revision,
-                "snapshot": new_snapshot.digest, "reason": reason}
+        return {
+            "schema_version": "research-dossier-withdraw-local/1",
+            "operation": "withdraw",
+            "project_id": snapshot.project.id,
+            "target_id": target_ref.id,
+            "target_revision": target_ref.revision,
+            "snapshot": new_snapshot.digest,
+            "reason": reason,
+        }
     return {
         "schema_version": "research-withdraw-local/1",
         "operation": "withdraw",
@@ -1069,7 +1585,9 @@ def purge(
 
     tombstone = Tombstone(
         **envelope(snapshot.project.id, actor),
-        schema_version="research-local/2" if target_kind == "source_version" else "research-local/1",
+        schema_version="research-local/2"
+        if target_kind == "source_version"
+        else "research-local/1",
         target_ref=target_ref,
         source_ref=reference(source) if target_kind == "source_version" else None,
         target_kind=target_kind,
@@ -1092,10 +1610,19 @@ def purge(
         ]
         # Exact image pins must still resolve to an explicit placeholder after
         # source-level purge has removed the immutable version records.
-        version_tombstones = [Tombstone(**envelope(snapshot.project.id, actor), target_ref=reference(version),
-                                        schema_version="research-local/2", source_ref=version.source_ref,
-                                        target_kind="source_version", operation="purge", reason=reason)
-                              for version in versions_to_purge if purge_source_record and version.blob.media_type in IMAGE_TYPES | MEDIA_TYPES]
+        version_tombstones = [
+            Tombstone(
+                **envelope(snapshot.project.id, actor),
+                target_ref=reference(version),
+                schema_version="research-local/2",
+                source_ref=version.source_ref,
+                target_kind="source_version",
+                operation="purge",
+                reason=reason,
+            )
+            for version in versions_to_purge
+            if purge_source_record and version.blob.media_type in IMAGE_TYPES | MEDIA_TYPES
+        ]
         from .checkpoints import purge_guard
 
         with purge_guard(repository, source.id) as discard_preparation:
@@ -1116,7 +1643,9 @@ def purge(
             if cleanup_error is not None:
                 pending_paths.extend(cleanup_error.pending_paths)
             if pending_paths:
-                raise ResearchCleanupError(new_digest, pending_paths, project_root=repository.root) from cleanup_error
+                raise ResearchCleanupError(
+                    new_digest, pending_paths, project_root=repository.root
+                ) from cleanup_error
 
     return {
         "schema_version": "research-purge-local/1",
@@ -1140,7 +1669,6 @@ def list_sources(project: str | Path) -> dict[str, Any]:
 
 
 def _list_sources(snapshot: Snapshot) -> dict[str, Any]:
-
     withdrawn_or_purged = {
         record.target_ref.id
         for record in snapshot.records.values()
@@ -1204,9 +1732,15 @@ def get_source(project: str | Path, source_id: str) -> dict[str, Any]:
     return _get_source(repository, snapshot, source_id)
 
 
-def _get_source(repository: Repository, snapshot: Snapshot, source_id: str, *,
-                include_text: bool = True, passage_ids: set[str] | None = None,
-                strict_text: bool = False) -> dict[str, Any]:
+def _get_source(
+    repository: Repository,
+    snapshot: Snapshot,
+    source_id: str,
+    *,
+    include_text: bool = True,
+    passage_ids: set[str] | None = None,
+    strict_text: bool = False,
+) -> dict[str, Any]:
     """Read source details from one verified view; exports may bound disclosure."""
 
     source = snapshot.get(Reference(id=source_id), Source)
@@ -1222,7 +1756,9 @@ def _get_source(repository: Repository, snapshot: Snapshot, source_id: str, *,
     versions = [
         v
         for v in snapshot.records.values()
-        if isinstance(v, SourceVersion) and v.source_ref.id == source.id and v.id not in withdrawn_or_purged
+        if isinstance(v, SourceVersion)
+        and v.source_ref.id == source.id
+        and v.id not in withdrawn_or_purged
     ]
     if not versions:
         raise ResearchError("Source has no active versions")
@@ -1236,7 +1772,8 @@ def _get_source(repository: Repository, snapshot: Snapshot, source_id: str, *,
     passages = [
         rec
         for rec in snapshot.records.values()
-        if isinstance(rec, Passage) and rec.extraction_ref.id in extraction_ids
+        if isinstance(rec, Passage)
+        and rec.extraction_ref.id in extraction_ids
         and (passage_ids is None or rec.id in passage_ids)
     ]
     passages.sort(key=lambda p: (p.start, p.end))
@@ -1259,10 +1796,14 @@ def _get_source(repository: Repository, snapshot: Snapshot, source_id: str, *,
             try:
                 full_text = repository.read_blob(extractions[0].text_blob).decode("utf-8")
             except UnicodeError as exc:
-                raise ResearchError("Retained source text is not valid UTF-8; cannot export full text") from exc
+                raise ResearchError(
+                    "Retained source text is not valid UTF-8; cannot export full text"
+                ) from exc
         else:
             with contextlib.suppress(ResearchError, OSError):
-                full_text = repository.read_blob(extractions[0].text_blob).decode("utf-8", errors="replace")
+                full_text = repository.read_blob(extractions[0].text_blob).decode(
+                    "utf-8", errors="replace"
+                )
     if include_text and not full_text and passages:
         full_text = "\n\n".join(p.verbatim for p in passages if p.verbatim)
 
@@ -1307,7 +1848,9 @@ def evidence_relation(value: object) -> EvidenceRelation:
         for candidate in EVIDENCE_RELATIONS:
             if text == candidate:
                 return candidate
-    raise ResearchError("Evidence relation must be supports, contradicts, qualifies or contextualizes")
+    raise ResearchError(
+        "Evidence relation must be supports, contradicts, qualifies or contextualizes"
+    )
 
 
 def supported_language(value: object) -> Language:
@@ -1347,8 +1890,17 @@ def create_dossier(
     if geography is not None:
         values["schema_version"] = "research-local/8"
     try:
-        dossier = Dossier.model_validate({**values, "title": title, "language": language, "tags": tags or [],
-                                          "body": body, "evidence_refs": evidence_refs, "geography": geography})
+        dossier = Dossier.model_validate(
+            {
+                **values,
+                "title": title,
+                "language": language,
+                "tags": tags or [],
+                "body": body,
+                "evidence_refs": evidence_refs,
+                "geography": geography,
+            }
+        )
     except ValidationError as error:
         raise ResearchError(f"Invalid dossier fields: {error}") from None
     new_snapshot = repository.commit([dossier], {}, snapshot)
@@ -1406,12 +1958,16 @@ def _list_dossiers(
             "tags": record.tags,
             "revision": record.revision,
             "evidence_count": len(record.evidence_refs),
-            "unavailable_evidence_count": sum(ref in purged_passages for ref in record.evidence_refs),
+            "unavailable_evidence_count": sum(
+                ref in purged_passages for ref in record.evidence_refs
+            ),
             "created_at": record.created_at,
             "created_by": record.created_by,
             "excerpt": image_descriptions(record.body)[:300].strip(),
             "sections": list(extract_sections(record.body).keys()),
-            "review_needed": any(review["status"] == "review_needed" for review in dossier_reviews.get(record.id, [])),
+            "review_needed": any(
+                review["status"] == "review_needed" for review in dossier_reviews.get(record.id, [])
+            ),
         }
         for record in snapshot.records.values()
         if isinstance(record, Dossier) and record.id not in withdrawn_or_purged
@@ -1592,6 +2148,7 @@ def save_term_profile(
     aliases: list[str] | tuple[str, ...] = (),
     scoped_alternatives: list[dict[str, Any]] | tuple[dict[str, Any], ...] = (),
     case_sensitive: bool = False,
+    strict_boundaries: bool | None = None,
     dossier_id: str | None = None,
     claim_id: str | None = None,
     expected_config_snapshot: tuple[tuple[int, ...] | None, bytes] | None = None,
@@ -1621,6 +2178,7 @@ def save_term_profile(
             "aliases": list(aliases),
             "scoped_alternatives": list(scoped_alternatives),
             "case_sensitive": case_sensitive,
+            "strict_boundaries": strict_boundaries,
         }
         if dossier_id:
             candidate_entry["dossier_id"] = dossier_id
@@ -1629,8 +2187,7 @@ def save_term_profile(
         terms_map[term] = candidate_entry
         validated = parse_terms(terms_map)
         serialized = {
-            name: profile.model_dump(exclude_none=True)
-            for name, profile in validated.items()
+            name: profile.model_dump(exclude_none=True) for name, profile in validated.items()
         }
         prepared = prepare_project_settings(repository.root, {"terms": serialized})
         if prepared.original != observed_config:
@@ -1644,8 +2201,7 @@ def save_term_profile(
         "snapshot": snapshot.digest,
         "term": term,
         "terms": [
-            {"term": name, **profile.model_dump(mode="json")}
-            for name, profile in validated.items()
+            {"term": name, **profile.model_dump(mode="json")} for name, profile in validated.items()
         ],
     }
 
@@ -1680,8 +2236,7 @@ def delete_term_profile(
         raise ResearchError(f"Unknown configured term: {term!r}")
     del terms_map[term]
     serialized = {
-        name: profile.model_dump(exclude_none=True)
-        for name, profile in terms_map.items()
+        name: profile.model_dump(exclude_none=True) for name, profile in terms_map.items()
     }
     try:
         prepared = prepare_project_settings(repository.root, {"terms": serialized})
@@ -1696,8 +2251,7 @@ def delete_term_profile(
         "snapshot": snapshot.digest,
         "deleted_term": term,
         "terms": [
-            {"term": name, **profile.model_dump(mode="json")}
-            for name, profile in terms_map.items()
+            {"term": name, **profile.model_dump(mode="json")} for name, profile in terms_map.items()
         ],
     }
 
@@ -1717,8 +2271,7 @@ def set_term_profiles(
     try:
         validated = parse_terms(terms)
         serialized = {
-            name: profile.model_dump(exclude_none=True)
-            for name, profile in validated.items()
+            name: profile.model_dump(exclude_none=True) for name, profile in validated.items()
         }
         prepared = prepare_project_settings(repository.root, {"terms": serialized})
         if expected_config_snapshot is not None and prepared.original != expected_config_snapshot:
@@ -1731,42 +2284,67 @@ def set_term_profiles(
         "project_id": snapshot.project.id,
         "snapshot": snapshot.digest,
         "terms": [
-            {"term": name, **profile.model_dump(mode="json")}
-            for name, profile in validated.items()
+            {"term": name, **profile.model_dump(mode="json")} for name, profile in validated.items()
         ],
     }
 
 
-def _resolve_evidence_citation(repository: Repository, snapshot: Any, ref: Reference) -> dict[str, Any]:
+def _resolve_evidence_citation(
+    repository: Repository, snapshot: Any, ref: Reference
+) -> dict[str, Any]:
     return resolve_evidence_citation(repository, snapshot, ref)
 
 
-def get_dossier(project: str | Path, dossier_id: str, *,
-                section: str | None = None,
-                preamble: bool = False,
-                revision: int | None = None,
-                summary: bool = False,
-                include_citations: bool = True,
-                manuscript: str | Path | None = None) -> dict[str, Any]:
+def get_dossier(
+    project: str | Path,
+    dossier_id: str,
+    *,
+    section: str | None = None,
+    preamble: bool = False,
+    revision: int | None = None,
+    summary: bool = False,
+    include_citations: bool = True,
+    manuscript: str | Path | None = None,
+) -> dict[str, Any]:
     """Retrieve details of a specific dossier with optional section or summary bounding."""
     repository = Repository(project)
     snapshot = repository.snapshot()
-    return _get_dossier(repository, snapshot, dossier_id, section=section, preamble=preamble, revision=revision,
-                        summary=summary, include_citations=include_citations, manuscript=manuscript)
+    return _get_dossier(
+        repository,
+        snapshot,
+        dossier_id,
+        section=section,
+        preamble=preamble,
+        revision=revision,
+        summary=summary,
+        include_citations=include_citations,
+        manuscript=manuscript,
+    )
 
 
-def _get_dossier(repository: Repository, snapshot: Snapshot, dossier_id: str, *,
-                 section: str | None = None, revision: int | None = None,
-                 summary: bool = False, include_citations: bool = True, preamble: bool = False,
-                 manuscript: str | Path | None = None) -> dict[str, Any]:
+def _get_dossier(
+    repository: Repository,
+    snapshot: Snapshot,
+    dossier_id: str,
+    *,
+    section: str | None = None,
+    revision: int | None = None,
+    summary: bool = False,
+    include_citations: bool = True,
+    preamble: bool = False,
+    manuscript: str | Path | None = None,
+) -> dict[str, Any]:
     """Build native dossier detail against one accepted snapshot."""
 
     if revision is not None and (type(revision) is not int or revision < 1):
         raise ResearchError("Revision must be a positive integer")
     if type(preamble) is not bool or (preamble and (section is not None or summary)):
         raise ResearchError("Choose a preamble, section or summary read")
-    dossier = (snapshot.latest(dossier_id, Dossier) if revision is None
-               else snapshot.get(Reference(id=dossier_id, revision=revision), Dossier))
+    dossier = (
+        snapshot.latest(dossier_id, Dossier)
+        if revision is None
+        else snapshot.get(Reference(id=dossier_id, revision=revision), Dossier)
+    )
     availability = dossier_withdrawal(snapshot, dossier.id)
 
     withdrawn_or_purged = {
@@ -1784,17 +2362,31 @@ def _get_dossier(repository: Repository, snapshot: Snapshot, dossier_id: str, *,
     editable_sections = [] if availability else _editable_section_titles(spans)
     if preamble:
         content = preamble_text(dossier.body)
-        res = {"id": dossier.id, **availability, "project_id": snapshot.project.id,
-               "snapshot": snapshot.digest, "title": dossier.title, "revision": dossier.revision,
-               "preamble": True, "section": None, "section_level": None, "content": content,
-               "images": resolve_dossier_images(snapshot, content),
-               "media": resolve_dossier_media(snapshot, content), "editable_sections": editable_sections}
+        res = {
+            "id": dossier.id,
+            **availability,
+            "project_id": snapshot.project.id,
+            "snapshot": snapshot.digest,
+            "title": dossier.title,
+            "revision": dossier.revision,
+            "preamble": True,
+            "section": None,
+            "section_level": None,
+            "content": content,
+            "images": resolve_dossier_images(snapshot, content),
+            "media": resolve_dossier_media(snapshot, content),
+            "editable_sections": editable_sections,
+        }
         if manuscript is not None:
-            res["manuscript_evidence"] = dossier_manuscript_evidence(repository.root, dossier.id, manuscript=manuscript)
+            res["manuscript_evidence"] = dossier_manuscript_evidence(
+                repository.root, dossier.id, manuscript=manuscript
+            )
         return res
     if summary:
         reader = EvidenceCitationReader(repository, snapshot)
-        resolved_citations = [reader.read(ref) for ref in dossier.evidence_refs] if include_citations else []
+        resolved_citations = (
+            [reader.read(ref) for ref in dossier.evidence_refs] if include_citations else []
+        )
         res = {
             "id": dossier.id,
             **availability,
@@ -1820,19 +2412,31 @@ def _get_dossier(repository: Repository, snapshot: Snapshot, dossier_id: str, *,
             "source_updates": source_updates(resolved_citations) if include_citations else [],
         }
         if manuscript is not None:
-            res["manuscript_evidence"] = dossier_manuscript_evidence(repository.root, dossier.id, manuscript=manuscript)
+            res["manuscript_evidence"] = dossier_manuscript_evidence(
+                repository.root, dossier.id, manuscript=manuscript
+            )
         return res
 
     if section is not None:
         matches = [span for span in spans if span.title.casefold() == section.strip().casefold()]
         if len(matches) > 1:
-            raise ResearchError(f"Section '{section}' is ambiguous: {len(matches)} headings share this title; read the full dossier")
+            raise ResearchError(
+                f"Section '{section}' is ambiguous: {len(matches)} headings share this title; read the full dossier"
+            )
         matched = next((k for k in sections if k.casefold() == section.strip().casefold()), None)
         if matched is None:
-            raise ResearchError(f"Section '{section}' not found in dossier; available: {', '.join(sections.keys()) or 'none'}")
-        selected_content = (dossier.body[matches[0].content_start:
-            _section_subtree_end(spans, matches[0], len(dossier.body))].strip("\r\n")
-            if matches else sections[matched])
+            raise ResearchError(
+                f"Section '{section}' not found in dossier; available: {', '.join(sections.keys()) or 'none'}"
+            )
+        selected_content = (
+            dossier.body[
+                matches[0].content_start : _section_subtree_end(
+                    spans, matches[0], len(dossier.body)
+                )
+            ].strip("\r\n")
+            if matches
+            else sections[matched]
+        )
         res = {
             "id": dossier.id,
             **availability,
@@ -1850,11 +2454,15 @@ def _get_dossier(repository: Repository, snapshot: Snapshot, dossier_id: str, *,
             "review_needed": any(r["status"] == "review_needed" for r in decision_reviews),
         }
         if manuscript is not None:
-            res["manuscript_evidence"] = dossier_manuscript_evidence(repository.root, dossier.id, manuscript=manuscript)
+            res["manuscript_evidence"] = dossier_manuscript_evidence(
+                repository.root, dossier.id, manuscript=manuscript
+            )
         return res
 
     reader = EvidenceCitationReader(repository, snapshot)
-    resolved_citations = [reader.read(ref) for ref in dossier.evidence_refs] if include_citations else []
+    resolved_citations = (
+        [reader.read(ref) for ref in dossier.evidence_refs] if include_citations else []
+    )
 
     res = {
         "id": dossier.id,
@@ -1881,7 +2489,9 @@ def _get_dossier(repository: Repository, snapshot: Snapshot, dossier_id: str, *,
         "review_needed": any(r["status"] == "review_needed" for r in decision_reviews),
     }
     if manuscript is not None:
-        res["manuscript_evidence"] = dossier_manuscript_evidence(repository.root, dossier.id, manuscript=manuscript)
+        res["manuscript_evidence"] = dossier_manuscript_evidence(
+            repository.root, dossier.id, manuscript=manuscript
+        )
     return res
 
 
@@ -1945,11 +2555,12 @@ def create_claim(
 
 def list_claims(project: str | Path, *, dossier_id: str | None = None) -> dict[str, Any]:
     """Return claims and their selection context from one accepted snapshot."""
-    return _list_claims(Repository(project).snapshot(kinds=frozenset({"claim"})), dossier_id=dossier_id)
+    return _list_claims(
+        Repository(project).snapshot(kinds=frozenset({"claim"})), dossier_id=dossier_id
+    )
 
 
 def _list_claims(snapshot: Snapshot, *, dossier_id: str | None = None) -> dict[str, Any]:
-
     withdrawn_or_purged = {
         record.target_ref.id
         for record in snapshot.records.values()
@@ -1962,23 +2573,25 @@ def _list_claims(snapshot: Snapshot, *, dossier_id: str | None = None) -> dict[s
             continue
         if dossier_id and (record.dossier_ref is None or record.dossier_ref.id != dossier_id):
             continue
-        claims_list.append({
-            "id": record.id,
-            "revision": record.revision,
-            "title": record.title,
-            "statement": record.statement,
-            "confidence": record.confidence,
-            "scope": {
-                "time_period": record.scope.time_period,
-                "place": record.scope.place,
-                "actors": record.scope.actors,
-            },
-            "dossier_id": record.dossier_ref.id if record.dossier_ref else None,
-            "dossier_revision": record.dossier_ref.revision if record.dossier_ref else None,
-            "tags": record.tags,
-            "created_at": record.created_at,
-            "created_by": record.created_by,
-        })
+        claims_list.append(
+            {
+                "id": record.id,
+                "revision": record.revision,
+                "title": record.title,
+                "statement": record.statement,
+                "confidence": record.confidence,
+                "scope": {
+                    "time_period": record.scope.time_period,
+                    "place": record.scope.place,
+                    "actors": record.scope.actors,
+                },
+                "dossier_id": record.dossier_ref.id if record.dossier_ref else None,
+                "dossier_revision": record.dossier_ref.revision if record.dossier_ref else None,
+                "tags": record.tags,
+                "created_at": record.created_at,
+                "created_by": record.created_by,
+            }
+        )
 
     claims_list.sort(key=lambda c: str(c["created_at"]), reverse=True)
     return {
@@ -1991,29 +2604,44 @@ def _list_claims(snapshot: Snapshot, *, dossier_id: str | None = None) -> dict[s
 
 def timeline(project: str | Path, dossier_id: str | None = None) -> dict[str, Any]:
     """Read conservative chronology without modifying any authored period label."""
-    return timeline_data(Repository(project).snapshot(kinds=frozenset({"claim"})), dossier_id=dossier_id)
+    return timeline_data(
+        Repository(project).snapshot(kinds=frozenset({"claim"})), dossier_id=dossier_id
+    )
 
 
-def _reviewed_snapshot(snapshot: Snapshot, expected_snapshot: str | None,
-                       expected_project_id: str | None = None) -> None:
+def _reviewed_snapshot(
+    snapshot: Snapshot, expected_snapshot: str | None, expected_project_id: str | None = None
+) -> None:
     if expected_project_id is not None:
         try:
             Reference(id=expected_project_id)
         except ValidationError:
             raise ResearchError("Expected project ID must be a complete UUID URN") from None
         if snapshot.project.id != expected_project_id:
-            raise ResearchConflictError("Research project changed; review the selected project before saving")
+            raise ResearchConflictError(
+                "Research project changed; review the selected project before saving"
+            )
     if expected_snapshot is not None:
-        if not isinstance(expected_snapshot, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_snapshot):
+        if not isinstance(expected_snapshot, str) or not re.fullmatch(
+            r"[0-9a-f]{64}", expected_snapshot
+        ):
             raise ResearchError("Expected snapshot must be a SHA-256 digest")
         if snapshot.digest != expected_snapshot:
-            raise ResearchConflictError("Research snapshot changed; review the current context before saving")
+            raise ResearchConflictError(
+                "Research snapshot changed; review the current context before saving"
+            )
 
 
 def create_claim_relation(
-    project: str | Path, from_claim_id: str, to_claim_id: str, *, relation: str = "causes",
-    rationale: str | None = None, from_claim_revision: int | None = None,
-    to_claim_revision: int | None = None, expected_snapshot: str | None = None,
+    project: str | Path,
+    from_claim_id: str,
+    to_claim_id: str,
+    *,
+    relation: str = "causes",
+    rationale: str | None = None,
+    from_claim_revision: int | None = None,
+    to_claim_revision: int | None = None,
+    expected_snapshot: str | None = None,
     expected_project_id: str | None = None,
     actor: str = "local-author",
 ) -> dict[str, Any]:
@@ -2023,7 +2651,11 @@ def create_claim_relation(
     repository = Repository(project)
     snapshot = repository.snapshot()
     _reviewed_snapshot(snapshot, expected_snapshot, expected_project_id)
-    unavailable = {record.target_ref.id for record in snapshot.records.values() if isinstance(record, Tombstone)}
+    unavailable = {
+        record.target_ref.id
+        for record in snapshot.records.values()
+        if isinstance(record, Tombstone)
+    }
 
     def endpoint(identifier: str, revision: int | None) -> Claim:
         if not isinstance(identifier, str):
@@ -2033,26 +2665,47 @@ def create_claim_relation(
         if identifier in unavailable:
             raise ResearchError("Claim has been withdrawn or purged")
         try:
-            return (snapshot.latest(identifier, Claim) if revision is None else
-                    snapshot.get(Reference(id=identifier, revision=revision), Claim))
+            return (
+                snapshot.latest(identifier, Claim)
+                if revision is None
+                else snapshot.get(Reference(id=identifier, revision=revision), Claim)
+            )
         except ValidationError:
             raise ResearchError("Invalid claim reference") from None
 
-    first, second = endpoint(from_claim_id, from_claim_revision), endpoint(to_claim_id, to_claim_revision)
+    first, second = (
+        endpoint(from_claim_id, from_claim_revision),
+        endpoint(to_claim_id, to_claim_revision),
+    )
     try:
-        recorded = ClaimRelation(**envelope(snapshot.project.id, actor),
-                                 from_claim_ref=reference(first), to_claim_ref=reference(second),
-                                 relation=normalize_claim_relation(relation), rationale=rationale.strip() or None if rationale else None)
+        recorded = ClaimRelation(
+            **envelope(snapshot.project.id, actor),
+            from_claim_ref=reference(first),
+            to_claim_ref=reference(second),
+            relation=normalize_claim_relation(relation),
+            rationale=rationale.strip() or None if rationale else None,
+        )
     except (ValidationError, ValueError):
-        raise ResearchError("Invalid causal relation; choose causes/results_in, distinct claims and bounded rationale") from None
+        raise ResearchError(
+            "Invalid causal relation; choose causes/results_in, distinct claims and bounded rationale"
+        ) from None
     accepted = repository.commit([recorded], {}, snapshot)
-    return {"schema_version": "research-claim-relation-local/1", "relation_id": recorded.id,
-            "relation": recorded.relation, "from_claim_id": first.id, "from_claim_revision": first.revision,
-            "to_claim_id": second.id, "to_claim_revision": second.revision, "snapshot": accepted.digest}
+    return {
+        "schema_version": "research-claim-relation-local/1",
+        "relation_id": recorded.id,
+        "relation": recorded.relation,
+        "from_claim_id": first.id,
+        "from_claim_revision": first.revision,
+        "to_claim_id": second.id,
+        "to_claim_revision": second.revision,
+        "snapshot": accepted.digest,
+    }
 
 
 def list_claim_relations(
-    project: str | Path, claim_id: str | None = None, include_retracted: bool = False,
+    project: str | Path,
+    claim_id: str | None = None,
+    include_retracted: bool = False,
 ) -> dict[str, Any]:
     """Read recorded pins and flag newer endpoint revisions without retargeting."""
     if type(include_retracted) is not bool:
@@ -2061,16 +2714,30 @@ def list_claim_relations(
     return _list_claim_relations(snapshot, claim_id=claim_id, include_retracted=include_retracted)
 
 
-def _list_claim_relations(snapshot: Snapshot, *, claim_id: str | None = None,
-                          include_retracted: bool = False) -> dict[str, Any]:
-    unavailable = {record.target_ref.id for record in snapshot.records.values() if isinstance(record, Tombstone)}
-    selected = [record for record in snapshot.records.values() if isinstance(record, ClaimRelation)
-                and record.id not in unavailable and (include_retracted or record.state == "active")
-                and (claim_id is None or claim_id in (record.from_claim_ref.id, record.to_claim_ref.id))]
+def _list_claim_relations(
+    snapshot: Snapshot, *, claim_id: str | None = None, include_retracted: bool = False
+) -> dict[str, Any]:
+    unavailable = {
+        record.target_ref.id
+        for record in snapshot.records.values()
+        if isinstance(record, Tombstone)
+    }
+    selected = [
+        record
+        for record in snapshot.records.values()
+        if isinstance(record, ClaimRelation)
+        and record.id not in unavailable
+        and (include_retracted or record.state == "active")
+        and (claim_id is None or claim_id in (record.from_claim_ref.id, record.to_claim_ref.id))
+    ]
     selected.sort(key=lambda record: (record.created_at, record.id), reverse=True)
-    return {"schema_version": "research-claim-relations-local/1", "project_id": snapshot.project.id,
-            "snapshot": snapshot.digest, "archive_schema_version": snapshot.manifest.schema_version,
-            "relations": [claim_relation_view(snapshot, record) for record in selected]}
+    return {
+        "schema_version": "research-claim-relations-local/1",
+        "project_id": snapshot.project.id,
+        "snapshot": snapshot.digest,
+        "archive_schema_version": snapshot.manifest.schema_version,
+        "relations": [claim_relation_view(snapshot, record) for record in selected],
+    }
 
 
 def link_evidence(
@@ -2100,10 +2767,15 @@ def link_evidence(
         if type(expected_claim_revision) is not int or expected_claim_revision < 1:
             raise ResearchError("Expected claim revision must be a positive integer")
         if claim.revision != expected_claim_revision:
-            raise ResearchConflictError("Claim revision changed; review the current claim before saving")
+            raise ResearchConflictError(
+                "Claim revision changed; review the current claim before saving"
+            )
     passage = snapshot.get(Reference(id=passage_id), Passage)
-    if ((expected_snapshot is not None or expected_claim_revision is not None or expected_project_id is not None)
-            and repository.citation(snapshot, passage)["availability"] != "available"):
+    if (
+        expected_snapshot is not None
+        or expected_claim_revision is not None
+        or expected_project_id is not None
+    ) and repository.citation(snapshot, passage)["availability"] != "available":
         raise ResearchError("Selected evidence source has been withdrawn or purged")
 
     values = envelope(snapshot.project.id, actor)
@@ -2141,9 +2813,9 @@ def list_evidence_links(project: str | Path, *, claim_id: str | None = None) -> 
     return _list_evidence_links(repository, snapshot, claim_id=claim_id)
 
 
-def _list_evidence_links(repository: Repository, snapshot: Snapshot, *,
-                         claim_id: str | None = None) -> dict[str, Any]:
-
+def _list_evidence_links(
+    repository: Repository, snapshot: Snapshot, *, claim_id: str | None = None
+) -> dict[str, Any]:
     withdrawn_or_purged = {
         record.target_ref.id
         for record in snapshot.records.values()
@@ -2159,22 +2831,26 @@ def _list_evidence_links(repository: Repository, snapshot: Snapshot, *,
             continue
 
         claim_latest = snapshot.records.get(record.claim_ref.id)
-        claim_latest_revision = claim_latest.revision if isinstance(claim_latest, Claim) else record.claim_ref.revision
+        claim_latest_revision = (
+            claim_latest.revision if isinstance(claim_latest, Claim) else record.claim_ref.revision
+        )
         citation = reader.read(record.passage_ref)
-        links_list.append({
-            "id": record.id,
-            "revision": record.revision,
-            "claim_id": record.claim_ref.id,
-            "claim_revision": record.claim_ref.revision,
-            "claim_latest_revision": claim_latest_revision,
-            "passage_id": record.passage_ref.id,
-            "relation": record.relation,
-            "rationale": record.rationale,
-            "reviewer": record.reviewer,
-            "citation": citation,
-            "created_at": record.created_at,
-            "created_by": record.created_by,
-        })
+        links_list.append(
+            {
+                "id": record.id,
+                "revision": record.revision,
+                "claim_id": record.claim_ref.id,
+                "claim_revision": record.claim_ref.revision,
+                "claim_latest_revision": claim_latest_revision,
+                "passage_id": record.passage_ref.id,
+                "relation": record.relation,
+                "rationale": record.rationale,
+                "reviewer": record.reviewer,
+                "citation": citation,
+                "created_at": record.created_at,
+                "created_by": record.created_by,
+            }
+        )
 
     links_list.sort(key=lambda item: str(item["created_at"]), reverse=True)
     return {
@@ -2241,17 +2917,29 @@ def record_decision(
     }
 
 
-def acknowledge_decision(project: str | Path, decision_id: str, dossier_id: str, *,
-                         expected_snapshot: str, expected_decision_revision: int,
-                         expected_dossier_revision: int, status: Literal["applied", "review_needed"],
-                         note: str | None = None, actor: str = "local-author") -> dict[str, Any]:
+def acknowledge_decision(
+    project: str | Path,
+    decision_id: str,
+    dossier_id: str,
+    *,
+    expected_snapshot: str,
+    expected_decision_revision: int,
+    expected_dossier_revision: int,
+    status: Literal["applied", "review_needed"],
+    note: str | None = None,
+    actor: str = "local-author",
+) -> dict[str, Any]:
     """Append an explicit author's acknowledgement; never edit or verify their prose."""
     repository = Repository(project)
     snapshot = repository.snapshot()
     if snapshot.digest != expected_snapshot:
         raise ResearchConflictError("Research snapshot changed; reload before acknowledging")
-    if (type(expected_decision_revision) is not int or expected_decision_revision < 1
-            or type(expected_dossier_revision) is not int or expected_dossier_revision < 1):
+    if (
+        type(expected_decision_revision) is not int
+        or expected_decision_revision < 1
+        or type(expected_dossier_revision) is not int
+        or expected_dossier_revision < 1
+    ):
         raise ResearchError("Exact positive decision and dossier revisions are required")
     try:
         Reference(id=decision_id)
@@ -2260,36 +2948,62 @@ def acknowledge_decision(project: str | Path, decision_id: str, dossier_id: str,
         dossier = snapshot.latest(dossier_id, Dossier)
     except ValidationError:
         raise ResearchError("Invalid decision or dossier identifier") from None
-    if decision.revision != expected_decision_revision or dossier.revision != expected_dossier_revision:
-        raise ResearchConflictError("Decision or dossier revision changed; reload before acknowledging")
+    if (
+        decision.revision != expected_decision_revision
+        or dossier.revision != expected_dossier_revision
+    ):
+        raise ResearchConflictError(
+            "Decision or dossier revision changed; reload before acknowledging"
+        )
     require_active_dossier_association(snapshot, reference(dossier))
     impact = editorial.decision_graph(snapshot, decision_id=decision_id).get(decision_id)
     if impact is None or dossier_id not in {entry["id"] for entry in impact["dossiers"]}:
         raise ResearchError("Acknowledge only a dossier explicitly associated with this decision")
-    if (not isinstance(status, str) or status not in {"applied", "review_needed"}
-            or not isinstance(actor, str) or not actor.strip()
-            or (note is not None and not isinstance(note, str))):
-        raise ResearchError("Acknowledgement requires an explicit valid status, actor and optional text note")
+    if (
+        not isinstance(status, str)
+        or status not in {"applied", "review_needed"}
+        or not isinstance(actor, str)
+        or not actor.strip()
+        or (note is not None and not isinstance(note, str))
+    ):
+        raise ResearchError(
+            "Acknowledgement requires an explicit valid status, actor and optional text note"
+        )
     previous = latest_acknowledgements(snapshot.records.values()).get((decision_id, dossier_id))
     try:
-        acknowledgement = DecisionAcknowledgement(**envelope(snapshot.project.id, actor.strip()),
-            decision_ref=reference(decision), dossier_ref=reference(dossier), status=status,
+        acknowledgement = DecisionAcknowledgement(
+            **envelope(snapshot.project.id, actor.strip()),
+            decision_ref=reference(decision),
+            dossier_ref=reference(dossier),
+            status=status,
             note=note.strip() or None if note is not None else None,
-            supersedes_ref=reference(previous) if previous else None)
+            supersedes_ref=reference(previous) if previous else None,
+        )
     except ValidationError:
         raise ResearchError("Invalid acknowledgement fields; check actor and note size") from None
     committed = repository.commit([acknowledgement], {}, snapshot)
-    return {"schema_version": "research-decision-acknowledgement-local/1", "project_id": snapshot.project.id,
-            "acknowledgement_id": acknowledgement.id, "snapshot": committed.digest,
-            "decision_id": decision.id, "decision_revision": decision.revision,
-            "dossier_id": dossier.id, "dossier_revision": dossier.revision, "status": acknowledgement.status,
-            "note": acknowledgement.note, "actor": acknowledgement.created_by,
-            "created_at": acknowledgement.created_at, "supersedes_id": previous.id if previous else None}
+    return {
+        "schema_version": "research-decision-acknowledgement-local/1",
+        "project_id": snapshot.project.id,
+        "acknowledgement_id": acknowledgement.id,
+        "snapshot": committed.digest,
+        "decision_id": decision.id,
+        "decision_revision": decision.revision,
+        "dossier_id": dossier.id,
+        "dossier_revision": dossier.revision,
+        "status": acknowledgement.status,
+        "note": acknowledgement.note,
+        "actor": acknowledgement.created_by,
+        "created_at": acknowledgement.created_at,
+        "supersedes_id": previous.id if previous else None,
+    }
 
 
 def decision_impact(project: str | Path, decision_id: str) -> dict[str, Any]:
     """Inspect explicit affected dossiers and revision pins without writing."""
-    return editorial.decision_impact(project, decision_id, outline=lambda body: list(extract_sections(body)))
+    return editorial.decision_impact(
+        project, decision_id, outline=lambda body: list(extract_sections(body))
+    )
 
 
 def editorial_review(project: str | Path) -> dict[str, Any]:
@@ -2313,7 +3027,6 @@ def list_decisions(project: str | Path) -> dict[str, Any]:
 
 
 def _list_decisions(snapshot: Snapshot) -> dict[str, Any]:
-
     withdrawn_or_purged = {
         record.target_ref.id
         for record in snapshot.records.values()
@@ -2324,19 +3037,21 @@ def _list_decisions(snapshot: Snapshot) -> dict[str, Any]:
     for record in snapshot.records.values():
         if not isinstance(record, Decision) or record.id in withdrawn_or_purged:
             continue
-        decisions_list.append({
-            "id": record.id,
-            "revision": record.revision,
-            "title": record.title,
-            "rationale": record.rationale,
-            "claim_id": record.claim_ref.id if record.claim_ref else None,
-            "claim_revision": record.claim_ref.revision if record.claim_ref else None,
-            "dossier_ids": [ref.id for ref in record.dossier_refs],
-            "deviation_from_fact": record.deviation_from_fact,
-            "impact_on_plot": record.impact_on_plot,
-            "created_at": record.created_at,
-            "created_by": record.created_by,
-        })
+        decisions_list.append(
+            {
+                "id": record.id,
+                "revision": record.revision,
+                "title": record.title,
+                "rationale": record.rationale,
+                "claim_id": record.claim_ref.id if record.claim_ref else None,
+                "claim_revision": record.claim_ref.revision if record.claim_ref else None,
+                "dossier_ids": [ref.id for ref in record.dossier_refs],
+                "deviation_from_fact": record.deviation_from_fact,
+                "impact_on_plot": record.impact_on_plot,
+                "created_at": record.created_at,
+                "created_by": record.created_by,
+            }
+        )
 
     decisions_list.sort(key=lambda d: str(d["created_at"]), reverse=True)
     return {
@@ -2358,14 +3073,18 @@ def _project_overview(
     root: Path | None = None,
     settings: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    data: dict[str, Any] = {"project_id": snapshot.project.id,
-                            "project_title": snapshot.project.title,
-                            "project_language": snapshot.project.language}
+    data: dict[str, Any] = {
+        "project_id": snapshot.project.id,
+        "project_title": snapshot.project.title,
+        "project_language": snapshot.project.language,
+    }
     dossiers_listing = _list_dossiers(snapshot, root=root, settings=settings)
-    for key, listing in (("sources", _list_sources(snapshot)),
-                         ("dossiers", dossiers_listing),
-                         ("claims", _list_claims(snapshot)),
-                         ("decisions", _list_decisions(snapshot))):
+    for key, listing in (
+        ("sources", _list_sources(snapshot)),
+        ("dossiers", dossiers_listing),
+        ("claims", _list_claims(snapshot)),
+        ("decisions", _list_decisions(snapshot)),
+    ):
         data[key] = listing[key]
         data[key + "_count"] = len(listing[key])
     data["dossier_collections"] = dossiers_listing["collections"]
@@ -2420,7 +3139,6 @@ def claim_matrix_data(project: str | Path) -> dict[str, Any]:
 
 
 def _claim_matrix_data(repository: Repository, snapshot: Snapshot) -> dict[str, Any]:
-
     withdrawn_or_purged = {
         record.target_ref.id
         for record in snapshot.records.values()
@@ -2430,15 +3148,26 @@ def _claim_matrix_data(repository: Repository, snapshot: Snapshot) -> dict[str, 
     # Map dossiers by ID (latest revision)
     dossiers_by_id: dict[str, Dossier] = {}
     for record in snapshot.records.values():
-        if (isinstance(record, Dossier) and record.id not in withdrawn_or_purged
-                and (record.id not in dossiers_by_id or record.revision > dossiers_by_id[record.id].revision)):
+        if (
+            isinstance(record, Dossier)
+            and record.id not in withdrawn_or_purged
+            and (
+                record.id not in dossiers_by_id
+                or record.revision > dossiers_by_id[record.id].revision
+            )
+        ):
             dossiers_by_id[record.id] = record
 
     # Map claims by ID (latest revision)
     claims_by_id: dict[str, Claim] = {}
     for record in snapshot.records.values():
-        if (isinstance(record, Claim) and record.id not in withdrawn_or_purged
-                and (record.id not in claims_by_id or record.revision > claims_by_id[record.id].revision)):
+        if (
+            isinstance(record, Claim)
+            and record.id not in withdrawn_or_purged
+            and (
+                record.id not in claims_by_id or record.revision > claims_by_id[record.id].revision
+            )
+        ):
             claims_by_id[record.id] = record
 
     # Evidence links grouped by claim_id
@@ -2451,15 +3180,17 @@ def _claim_matrix_data(repository: Repository, snapshot: Snapshot) -> dict[str, 
             if cid not in evidence_by_claim:
                 evidence_by_claim[cid] = []
             citation = reader.read(record.passage_ref)
-            evidence_by_claim[cid].append({
-                "link_id": record.id,
-                "relation": record.relation,
-                "rationale": record.rationale,
-                "passage_id": record.passage_ref.id,
-                "source_title": citation.get("source_title", ""),
-                "verbatim": citation.get("verbatim", ""),
-                "citation": citation,
-            })
+            evidence_by_claim[cid].append(
+                {
+                    "link_id": record.id,
+                    "relation": record.relation,
+                    "rationale": record.rationale,
+                    "passage_id": record.passage_ref.id,
+                    "source_title": citation.get("source_title", ""),
+                    "verbatim": citation.get("verbatim", ""),
+                    "citation": citation,
+                }
+            )
             total_evidence_count += 1
 
     # Decisions grouped by claim_id
@@ -2522,26 +3253,28 @@ def _claim_matrix_data(repository: Repository, snapshot: Snapshot) -> dict[str, 
         if dossier_id and dossier_id in dossiers_by_id:
             dossier_title = dossiers_by_id[dossier_id].title
 
-        matrix_claims.append({
-            "claim_id": claim.id,
-            "revision": claim.revision,
-            "title": claim.title,
-            "statement": claim.statement,
-            "confidence": claim.confidence,
-            "scope": {
-                "time_period": claim.scope.time_period,
-                "place": claim.scope.place,
-                "actors": claim.scope.actors,
-            },
-            "dossier_id": dossier_id,
-            "dossier_title": dossier_title,
-            "status": status,
-            "has_deviation": has_deviation,
-            "evidence_counts": counts,
-            "evidence": c_evidence,
-            "decisions": c_decisions,
-            "created_at": claim.created_at,
-        })
+        matrix_claims.append(
+            {
+                "claim_id": claim.id,
+                "revision": claim.revision,
+                "title": claim.title,
+                "statement": claim.statement,
+                "confidence": claim.confidence,
+                "scope": {
+                    "time_period": claim.scope.time_period,
+                    "place": claim.scope.place,
+                    "actors": claim.scope.actors,
+                },
+                "dossier_id": dossier_id,
+                "dossier_title": dossier_title,
+                "status": status,
+                "has_deviation": has_deviation,
+                "evidence_counts": counts,
+                "evidence": c_evidence,
+                "decisions": c_decisions,
+                "created_at": claim.created_at,
+            }
+        )
 
     summary = {
         "total_claims": len(matrix_claims),
@@ -2563,9 +3296,7 @@ def _claim_matrix_data(repository: Repository, snapshot: Snapshot) -> dict[str, 
     }
 
 
-def render_claim_matrix(
-    data: dict[str, Any], *, format: Literal["md", "csv"] = "md"
-) -> str:
+def render_claim_matrix(data: dict[str, Any], *, format: Literal["md", "csv"] = "md") -> str:
     """Render a `claim_matrix` result as Markdown or CSV."""
     project_id = data.get("project_id", "")
     project_title = data.get("project_title", "")
@@ -2575,39 +3306,43 @@ def render_claim_matrix(
     if format == "csv":
         out = io.StringIO()
         writer = csv.writer(out)
-        writer.writerow([
-            "claim_id",
-            "title",
-            "confidence",
-            "status",
-            "has_deviation",
-            "dossier",
-            "statement",
-            "evidence_relation",
-            "source_title",
-            "passage_quote",
-            "decision_title",
-            "deviation_from_fact",
-        ])
+        writer.writerow(
+            [
+                "claim_id",
+                "title",
+                "confidence",
+                "status",
+                "has_deviation",
+                "dossier",
+                "statement",
+                "evidence_relation",
+                "source_title",
+                "passage_quote",
+                "decision_title",
+                "deviation_from_fact",
+            ]
+        )
         for c in matrix_claims:
             ev_list = c["evidence"] or [{}]
             dec_list = c["decisions"] or [{}]
             for ev in ev_list:
                 for dec in dec_list:
-                    writer.writerow([
-                        c["claim_id"],
-                        c["title"],
-                        c["confidence"],
-                        c["status"],
-                        "yes" if c["has_deviation"] else "no",
-                        c["dossier_title"] or "",
-                        c["statement"],
-                        ev.get("relation", ""),
-                        ev.get("source_title", ""),
-                        ev.get("verbatim", ""),
-                        dec.get("title", ""),
-                        "yes" if dec.get("deviation_from_fact") else ("no" if dec else ""),
-                    ])
+                    writer.writerow(
+                        [
+                            c["claim_id"],
+                            c["title"],
+                            c["confidence"],
+                            c["status"],
+                            "yes" if c["has_deviation"] else "no",
+                            c["dossier_title"] or "",
+                            c["statement"],
+                            ev.get("relation", ""),
+                            ev.get("source_title", ""),
+                            ev.get("verbatim", ""),
+                            dec.get("title", ""),
+                            "yes" if dec.get("deviation_from_fact") else ("no" if dec else ""),
+                        ]
+                    )
         return out.getvalue()
 
     lines = [
@@ -2628,10 +3363,13 @@ def render_claim_matrix(
         for c in matrix_claims:
             counts = c["evidence_counts"]
             ev_str = f"+{counts['supports']} / -{counts['contradicts']} (total: {counts['total']})"
-            dec_str = ", ".join(
-                f"{d['title']}{' [DEVIATION]' if d['deviation_from_fact'] else ''}"
-                for d in c["decisions"]
-            ) or "–"
+            dec_str = (
+                ", ".join(
+                    f"{d['title']}{' [DEVIATION]' if d['deviation_from_fact'] else ''}"
+                    for d in c["decisions"]
+                )
+                or "–"
+            )
             dossier_str = c["dossier_title"] or "–"
             dev_badge = " [DEVIATION]" if c["has_deviation"] else ""
             clean_stmt = c["statement"].replace("\n", " ").replace("|", "\\|")

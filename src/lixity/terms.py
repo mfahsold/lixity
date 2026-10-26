@@ -80,6 +80,12 @@ class TermProfile(BaseModel):
         description="Chapter-scoped alternative forms; hits outside their chapters are flagged for review.",
     )
     case_sensitive: bool = False
+    # When true, hyphens (and other intra-word connectors) are treated as part
+    # of a word for boundary checks, so a short term such as "RM" no longer
+    # matches inside a hyphenated code like "RM-CURIA-084". Defaults to the
+    # value of case_sensitive for backwards-compatible strictness; authors can
+    # override it independently in either direction.
+    strict_boundaries: bool | None = None
     dossier_id: Identifier | None = None
     claim_id: Identifier | None = None
 
@@ -106,13 +112,9 @@ class TermProfile(BaseModel):
         for alt in self.scoped_alternatives:
             key = alt.term if self.case_sensitive else alt.term.casefold()
             if key in seen:
-                raise ValueError(
-                    f"Scoped alternative {alt.term!r} duplicates an unscoped alias"
-                )
+                raise ValueError(f"Scoped alternative {alt.term!r} duplicates an unscoped alias")
             if key in scoped_seen:
-                raise ValueError(
-                    f"Scoped alternative {alt.term!r} is declared more than once"
-                )
+                raise ValueError(f"Scoped alternative {alt.term!r} is declared more than once")
             scoped_seen[key] = alt.term
         return self
 
@@ -130,18 +132,14 @@ def parse_terms(raw: object) -> dict[str, TermProfile]:
         converted: dict[str, Any] = {}
         for item in raw:
             if not isinstance(item, Mapping) or "term" not in item:
-                raise ValueError(
-                    "Term list entries must be objects with a 'term' key"
-                )
+                raise ValueError("Term list entries must be objects with a 'term' key")
             key = str(item["term"])
             if key in converted:
                 raise ValueError(f"Duplicate term profile: {key!r}")
             converted[key] = {k: v for k, v in item.items() if k != "term"}
         raw = converted
     if not isinstance(raw, Mapping) or len(raw) > 200:
-        raise ValueError(
-            "terms must be a table of at most 200 named term/prop profiles"
-        )
+        raise ValueError("terms must be a table of at most 200 named term/prop profiles")
     validated = _TERMS_MAP.validate_python(dict(raw))
     normalized: dict[str, TermProfile] = {}
     for label, profile in validated.items():
@@ -174,14 +172,27 @@ def terms_configuration_schema() -> dict[str, Any]:
     return schema
 
 
-def _is_word_char(ch: str) -> bool:
-    return ch.isalnum() or ch == "_"
+def _is_word_char(ch: str, *, strict: bool = False) -> bool:
+    # In strict mode, hyphens count as intra-word characters so that a term
+    # does not match as a prefix/suffix inside a hyphenated code such as
+    # "RM-CURIA-084".
+    if ch.isalnum() or ch == "_":
+        return True
+    return bool(strict and ch == "-")
 
 
-def _variant_pattern(form: str, *, case_sensitive: bool) -> re.Pattern[str]:
+def _boundary_class(strict: bool) -> str:
+    # Character class used for negative lookbehind/lookahead. Mirrors
+    # _is_word_char so regex boundaries stay consistent with the manual scan.
+    if strict:
+        return r"[\w-]"
+    return r"\w"
+
+
+def _variant_pattern(form: str, *, case_sensitive: bool, strict: bool = False) -> re.Pattern[str]:
     escaped = re.escape(form)
-    prefix = r"(?<!\w)" if _is_word_char(form[0]) else ""
-    suffix = r"(?!\w)" if _is_word_char(form[-1]) else ""
+    prefix = rf"(?<!{_boundary_class(strict)})" if _is_word_char(form[0], strict=strict) else ""
+    suffix = rf"(?!{_boundary_class(strict)})" if _is_word_char(form[-1], strict=strict) else ""
     flags = re.UNICODE | (0 if case_sensitive else re.IGNORECASE)
     return re.compile(f"{prefix}(?:{escaped}){suffix}", flags)
 
@@ -191,10 +202,11 @@ def _find_variant_spans(
     form: str,
     *,
     case_sensitive: bool,
+    strict: bool = False,
 ) -> list[tuple[int, int, list[str]]]:
     """Find token-bounded occurrences of `form` in `text`, noting Unicode ambiguities."""
     results: list[tuple[int, int, list[str]]] = []
-    pattern = _variant_pattern(form, case_sensitive=case_sensitive)
+    pattern = _variant_pattern(form, case_sensitive=case_sensitive, strict=strict)
     seen_spans: set[tuple[int, int]] = set()
     for match in pattern.finditer(text):
         start, end = match.span()
@@ -215,12 +227,20 @@ def _find_variant_spans(
         target = form if case_sensitive else form.casefold()
         n = len(text)
         for i in range(n):
-            if _is_word_char(form[0]) and i > 0 and _is_word_char(text[i - 1]):
+            if (
+                _is_word_char(form[0], strict=strict)
+                and i > 0
+                and _is_word_char(text[i - 1], strict=strict)
+            ):
                 continue
             for j in range(i + 1, min(n, i + len(form) * 2 + 4) + 1):
                 if (i, j) in seen_spans:
                     continue
-                if _is_word_char(form[-1]) and j < n and _is_word_char(text[j]):
+                if (
+                    _is_word_char(form[-1], strict=strict)
+                    and j < n
+                    and _is_word_char(text[j], strict=strict)
+                ):
                     continue
                 candidate = unicodedata.normalize("NFC", text[i:j])
                 comparable = candidate if case_sensitive else candidate.casefold()
@@ -268,10 +288,10 @@ def derive_manuscript_term_occurrences(
                     "term": term_name,
                     "aliases": list(profile.aliases),
                     "scoped_alternatives": [
-                        alt.model_dump(mode="json")
-                        for alt in profile.scoped_alternatives
+                        alt.model_dump(mode="json") for alt in profile.scoped_alternatives
                     ],
                     "case_sensitive": profile.case_sensitive,
+                    "strict_boundaries": profile.strict_boundaries,
                     "dossier_id": profile.dossier_id,
                     "claim_id": profile.claim_id,
                     "occurrence_count": 0,
@@ -315,16 +335,19 @@ def derive_manuscript_term_occurrences(
             term_spans: list[tuple[int, int, str]] = []
             for form, kind, scoped_chapters, scoped_note in variants:
                 for start, end, unicode_reasons in _find_variant_spans(
-                    text, form, case_sensitive=profile.case_sensitive
+                    text,
+                    form,
+                    case_sensitive=profile.case_sensitive,
+                    strict=(
+                        profile.strict_boundaries
+                        if profile.strict_boundaries is not None
+                        else profile.case_sensitive
+                    ),
                 ):
                     overlapping_same = [
-                        existing_form
-                        for s, e, existing_form in term_spans
-                        if start < e and end > s
+                        existing_form for s, e, existing_form in term_spans if start < e and end > s
                     ]
-                    if overlapping_same and any(
-                        s <= start and end <= e for s, e, _ in term_spans
-                    ):
+                    if overlapping_same and any(s <= start and end <= e for s, e, _ in term_spans):
                         # If enclosed in an already-matched longer variant of the same term, skip.
                         continue
                     term_spans.append((start, end, form))
@@ -338,9 +361,7 @@ def derive_manuscript_term_occurrences(
                         effective_kind = "out_of_scope_alternative"
                     reasons = list(unicode_reasons)
                     if overlapping_same:
-                        reasons.append(
-                            f"same_term_partial_overlap:{','.join(overlapping_same)}"
-                        )
+                        reasons.append(f"same_term_partial_overlap:{','.join(overlapping_same)}")
                     flags: list[str] = []
                     if not in_scope:
                         flags.append("out_of_scope_alternative")
@@ -421,27 +442,21 @@ def derive_manuscript_term_occurrences(
     for term_name, profile in active_terms.items():
         term_hits = [h for h in occurrences if h["term"] == term_name]
         chapters_present = sorted(
-            {
-                int(h["chapter"])
-                for h in term_hits
-                if isinstance(h["chapter"], int)
-            }
+            {int(h["chapter"]) for h in term_hits if isinstance(h["chapter"], int)}
         )
         term_summaries.append(
             {
                 "term": term_name,
                 "aliases": list(profile.aliases),
                 "scoped_alternatives": [
-                    alt.model_dump(mode="json")
-                    for alt in profile.scoped_alternatives
+                    alt.model_dump(mode="json") for alt in profile.scoped_alternatives
                 ],
                 "case_sensitive": profile.case_sensitive,
+                "strict_boundaries": profile.strict_boundaries,
                 "dossier_id": profile.dossier_id,
                 "claim_id": profile.claim_id,
                 "occurrence_count": len(term_hits),
-                "out_of_scope_count": sum(
-                    1 for h in term_hits if not h["expected_in_chapter"]
-                ),
+                "out_of_scope_count": sum(1 for h in term_hits if not h["expected_in_chapter"]),
                 "ambiguous_count": sum(1 for h in term_hits if h["ambiguous"]),
                 "chapters_present": chapters_present,
             }
@@ -460,9 +475,7 @@ def derive_manuscript_term_occurrences(
             chapter_groups[ch] = group
         group["occurrences"].append(hit)
 
-    out_of_scope_total = sum(
-        1 for h in occurrences if not h["expected_in_chapter"]
-    )
+    out_of_scope_total = sum(1 for h in occurrences if not h["expected_in_chapter"])
     ambiguous_total = sum(1 for h in occurrences if h["ambiguous"])
     return {
         "source_path": source_path,

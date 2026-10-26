@@ -38,11 +38,45 @@ OUTPUT_FORMATS: dict[str, tuple[tuple[str, ...], str]] = {
 
 _REVISION_FIELDS = {
     "dossier": ("title", "language", "tags", "evidence", "file", "body", "geography"),
-    "claim": ("title", "statement", "confidence", "time_period", "place", "actors", "dossier_id", "dossier_revision", "tags"),
-    "link-evidence": ("claim_id", "claim_revision", "passage_id", "relation", "rationale", "reviewer"),
-    "decision": ("title", "rationale", "claim_id", "claim_revision", "deviation_from_fact", "impact_on_plot",
-                 "dossier_id", "dossiers", "dossier_revisions"),
-    "relate": ("from_claim_id", "to_claim_id", "from_claim_revision", "to_claim_revision", "relation", "state", "rationale"),
+    "claim": (
+        "title",
+        "statement",
+        "confidence",
+        "time_period",
+        "place",
+        "actors",
+        "dossier_id",
+        "dossier_revision",
+        "tags",
+    ),
+    "link-evidence": (
+        "claim_id",
+        "claim_revision",
+        "passage_id",
+        "relation",
+        "rationale",
+        "reviewer",
+    ),
+    "decision": (
+        "title",
+        "rationale",
+        "claim_id",
+        "claim_revision",
+        "deviation_from_fact",
+        "impact_on_plot",
+        "dossier_id",
+        "dossiers",
+        "dossier_revisions",
+    ),
+    "relate": (
+        "from_claim_id",
+        "to_claim_id",
+        "from_claim_revision",
+        "to_claim_revision",
+        "relation",
+        "state",
+        "rationale",
+    ),
 }
 
 
@@ -57,59 +91,268 @@ def _add_manuscript_argument(command: argparse.ArgumentParser) -> None:
     """Accept the manuscript path positionally (like analyze/scenes) or via --manuscript."""
     command.epilog = "Omit PATH only when the selected project's config sets manuscript."
     selector = command.add_mutually_exclusive_group()
-    selector.add_argument("manuscript", nargs="?", metavar="PATH", default=argparse.SUPPRESS,
-                          help="Manuscript inside the project; defaults to its configured manuscript")
-    selector.add_argument("--manuscript", dest="manuscript", metavar="PATH",
-                          help="Same manuscript path as positional PATH")
+    selector.add_argument(
+        "manuscript",
+        nargs="?",
+        metavar="PATH",
+        default=argparse.SUPPRESS,
+        help="Manuscript inside the project; defaults to its configured manuscript",
+    )
+    selector.add_argument(
+        "--manuscript",
+        dest="manuscript",
+        metavar="PATH",
+        help="Same manuscript path as positional PATH",
+    )
 
 
 COMMAND_DEFINITIONS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
-    ('init', 'Create an explicit local research project', 'Sources and captures', ()),
-    ('sources', 'List active sources, versions, tags, and passage counts', 'Sources and captures', ('source',)),
-    ('zotero', 'Preview a local Zotero library or item attachments (read-only)', 'Sources and captures', ()),
-    ('zotero-ingest', 'Capture one selected local Zotero PDF/text attachment', 'Sources and captures', ()),
-    ('ingest', 'Archive local UTF-8 text, PDF, PNG or JPEG; PDF scans require configured local OCR', 'Sources and captures', ()),
-    ('dossier', 'Create, list or inspect research dossiers', 'Dossiers, claims and decisions', ('dossiers',)),
-    ('dossier-image', 'Capture a local PNG/JPEG and attach it to a dossier atomically', 'Dossiers, claims and decisions', ()),
-    ('dossier-media', 'Capture a local PDF, MP4 or WebM and attach it to a dossier atomically', 'Dossiers, claims and decisions', ()),
-    ('media-context', 'Correct retained media provenance and repin one dossier atomically', 'Dossiers, claims and decisions', ()),
-    ('dossier-images', 'List retained and ordinary image references across active dossiers; read-only JSON', 'Dossiers, claims and decisions', ()),
-    ('claim', 'Create, list or revise research claims and hypotheses', 'Dossiers, claims and decisions', ('claims',)),
-    ('decision', 'Create, list or revise author decisions and fact deviations', 'Dossiers, claims and decisions', ('decisions',)),
-    ('relate', 'Record, inspect or revise an authored cause/effect assertion between claims', 'Dossiers, claims and decisions', ()),
-    ('link-evidence', 'Create, inspect or revise a passage-to-claim evidence link', 'Dossiers, claims and decisions', ()),
-    ('link', 'Create an evidence link with positional PASSAGE_ID CLAIM_ID', 'Dossiers, claims and decisions', ()),
-    ('revise-batch', 'Preview related authored-record revisions, then apply them together explicitly', 'Dossiers, claims and decisions', ()),
-    ('link-manuscript', 'Link a quotation to a reviewed claim version (retention required)', 'Manuscript associations', ()),
-    ('manuscript-links', 'List saved manuscript quote-claim associations (read-only)', 'Manuscript associations', ()),
-    ('review-manuscript', 'Review saved associations against the current manuscript (read-only)', 'Manuscript associations', ()),
-    ('unlink-manuscript', 'Retract one saved manuscript association (history retained)', 'Manuscript associations', ()),
-    ('find-anchor', 'Find the exact position of a displayed-text quote (read-only)', 'Manuscript associations', ()),
-    ('reconcile-manuscript', 'Preview changed manuscript links; accept changes explicitly', 'Manuscript associations', ()),
-    ('terms', 'Review or configure author-chosen terms and props against the manuscript', 'Manuscript associations', ()),
-    ('search', 'Search the latest source versions with literal words', 'Search and review', ()),
-    ('cite', 'Resolve an immutable source passage', 'Search and review', ()),
-    ('timeline', 'Read a conservative chronology from recorded claim periods', 'Search and review', ()),
-    ('matrix', 'Export a structured claim-evidence-decision matrix (markdown, CSV, or JSON)', 'Search and review', ()),
-    ('review', 'List structural editorial review candidates; read-only, not semantic judgment', 'Search and review', ()),
-    ('decision-impact', 'Inspect dossiers explicitly linked to an author decision; read-only', 'Search and review', ()),
-    ('mark-applied', 'Record an author acknowledgement for exact decision and dossier revisions', 'Search and review', ()),
-    ('reopen', 'Explicitly reopen review of exact decision and dossier revisions', 'Search and review', ()),
-    ('analyze', 'Analyze verified source text and return metrics and style reference (JSON)', 'Source analysis', ()),
-    ('dashboard', 'Render local HTML source report', 'Source analysis', ()),
-    ('compare', 'Compare research source against manuscript (lexical overlap, keyness, register, chapter grounding)', 'Source analysis', ()),
-    ('audit', 'Check retained records, hashes and citation positions', 'Archive and maintenance', ()),
-    ('reindex', 'Rebuild the disposable SQLite/FTS5 search index', 'Archive and maintenance', ()),
-    ('withdraw', 'Withdraw a source/version or retire a reviewed dossier without deleting retained bytes', 'Archive and maintenance', ()),
-    ('purge', 'Physically delete archived source records, passages, and unshared blobs', 'Archive and maintenance', ()),
-    ('migrate-storage', 'Verify a portable backup, then migrate manifest storage without changing snapshots', 'Archive maintenance', ()),
-    ('export', 'Export research store to verified archive (.tar.gz)', 'Archive and maintenance', ()),
-    ('restore', 'Restore research store from verified archive (.tar.gz)', 'Archive and maintenance', ()),
-    ('zotero-backup', 'Back up research and a closed Zotero data directory together', 'Archive and maintenance', ()),
-    ('zotero-restore', 'Verify and restore a paired backup into a new directory', 'Archive and maintenance', ()),
-    ('zotero-export', 'Export active captures and provenance for additive Zotero import', 'Archive and maintenance', ()),
-    ('ocr-status', 'Inspect runtime diagnostic status for OCR and PDF extraction', 'Archive and maintenance', ()),
-    ('schema', 'Export the research entity JSON schema', 'Archive and maintenance', ()),
+    ("init", "Create an explicit local research project", "Sources and captures", ()),
+    (
+        "sources",
+        "List active sources, versions, tags, and passage counts",
+        "Sources and captures",
+        ("source",),
+    ),
+    (
+        "zotero",
+        "Preview a local Zotero library or item attachments (read-only)",
+        "Sources and captures",
+        (),
+    ),
+    (
+        "zotero-ingest",
+        "Capture one selected local Zotero PDF/text attachment",
+        "Sources and captures",
+        (),
+    ),
+    (
+        "ingest",
+        "Archive local UTF-8 text, PDF, PNG or JPEG; PDF scans require configured local OCR",
+        "Sources and captures",
+        (),
+    ),
+    (
+        "dossier",
+        "Create, list or inspect research dossiers",
+        "Dossiers, claims and decisions",
+        ("dossiers",),
+    ),
+    (
+        "dossier-image",
+        "Capture a local PNG/JPEG and attach it to a dossier atomically",
+        "Dossiers, claims and decisions",
+        (),
+    ),
+    (
+        "dossier-media",
+        "Capture a local PDF, MP4 or WebM and attach it to a dossier atomically",
+        "Dossiers, claims and decisions",
+        (),
+    ),
+    (
+        "media-context",
+        "Correct retained media provenance and repin one dossier atomically",
+        "Dossiers, claims and decisions",
+        (),
+    ),
+    (
+        "dossier-images",
+        "List retained and ordinary image references across active dossiers; read-only JSON",
+        "Dossiers, claims and decisions",
+        (),
+    ),
+    (
+        "claim",
+        "Create, list or revise research claims and hypotheses",
+        "Dossiers, claims and decisions",
+        ("claims",),
+    ),
+    (
+        "decision",
+        "Create, list or revise author decisions and fact deviations",
+        "Dossiers, claims and decisions",
+        ("decisions",),
+    ),
+    (
+        "relate",
+        "Record, inspect or revise an authored cause/effect assertion between claims",
+        "Dossiers, claims and decisions",
+        (),
+    ),
+    (
+        "link-evidence",
+        "Create, inspect or revise a passage-to-claim evidence link",
+        "Dossiers, claims and decisions",
+        (),
+    ),
+    (
+        "link",
+        "Create an evidence link with positional PASSAGE_ID CLAIM_ID",
+        "Dossiers, claims and decisions",
+        (),
+    ),
+    (
+        "revise-batch",
+        "Preview related authored-record revisions, then apply them together explicitly",
+        "Dossiers, claims and decisions",
+        (),
+    ),
+    (
+        "link-manuscript",
+        "Link a quotation to a reviewed claim version (retention required)",
+        "Manuscript associations",
+        (),
+    ),
+    (
+        "manuscript-links",
+        "List saved manuscript quote-claim associations (read-only)",
+        "Manuscript associations",
+        (),
+    ),
+    (
+        "review-manuscript",
+        "Review saved associations against the current manuscript (read-only)",
+        "Manuscript associations",
+        (),
+    ),
+    (
+        "unlink-manuscript",
+        "Retract one saved manuscript association (history retained)",
+        "Manuscript associations",
+        (),
+    ),
+    (
+        "find-anchor",
+        "Find the exact position of a displayed-text quote (read-only)",
+        "Manuscript associations",
+        (),
+    ),
+    (
+        "reconcile-manuscript",
+        "Preview changed manuscript links; accept changes explicitly",
+        "Manuscript associations",
+        (),
+    ),
+    (
+        "terms",
+        "Review or configure author-chosen terms and props against the manuscript",
+        "Manuscript associations",
+        (),
+    ),
+    ("search", "Search the latest source versions with literal words", "Search and review", ()),
+    ("cite", "Resolve an immutable source passage", "Search and review", ()),
+    (
+        "timeline",
+        "Read a conservative chronology from recorded claim periods",
+        "Search and review",
+        (),
+    ),
+    (
+        "matrix",
+        "Export a structured claim-evidence-decision matrix (markdown, CSV, or JSON)",
+        "Search and review",
+        (),
+    ),
+    (
+        "review",
+        "List structural editorial review candidates; read-only, not semantic judgment",
+        "Search and review",
+        (),
+    ),
+    (
+        "decision-impact",
+        "Inspect dossiers explicitly linked to an author decision; read-only",
+        "Search and review",
+        (),
+    ),
+    (
+        "mark-applied",
+        "Record an author acknowledgement for exact decision and dossier revisions",
+        "Search and review",
+        (),
+    ),
+    (
+        "reopen",
+        "Explicitly reopen review of exact decision and dossier revisions",
+        "Search and review",
+        (),
+    ),
+    (
+        "analyze",
+        "Analyze verified source text and return metrics and style reference (JSON)",
+        "Source analysis",
+        (),
+    ),
+    ("dashboard", "Render local HTML source report", "Source analysis", ()),
+    (
+        "compare",
+        "Compare research source against manuscript (lexical overlap, keyness, register, chapter grounding)",
+        "Source analysis",
+        (),
+    ),
+    (
+        "audit",
+        "Check retained records, hashes and citation positions",
+        "Archive and maintenance",
+        (),
+    ),
+    ("reindex", "Rebuild the disposable SQLite/FTS5 search index", "Archive and maintenance", ()),
+    (
+        "withdraw",
+        "Withdraw a source/version or retire a reviewed dossier without deleting retained bytes",
+        "Archive and maintenance",
+        (),
+    ),
+    (
+        "purge",
+        "Physically delete archived source records, passages, and unshared blobs",
+        "Archive and maintenance",
+        (),
+    ),
+    (
+        "migrate-storage",
+        "Verify a portable backup, then migrate manifest storage without changing snapshots",
+        "Archive maintenance",
+        (),
+    ),
+    (
+        "export",
+        "Export research store to verified archive (.tar.gz)",
+        "Archive and maintenance",
+        (),
+    ),
+    (
+        "restore",
+        "Restore research store from verified archive (.tar.gz)",
+        "Archive and maintenance",
+        (),
+    ),
+    (
+        "zotero-backup",
+        "Back up research and a closed Zotero data directory together",
+        "Archive and maintenance",
+        (),
+    ),
+    (
+        "zotero-restore",
+        "Verify and restore a paired backup into a new directory",
+        "Archive and maintenance",
+        (),
+    ),
+    (
+        "zotero-export",
+        "Export active captures and provenance for additive Zotero import",
+        "Archive and maintenance",
+        (),
+    ),
+    (
+        "ocr-status",
+        "Inspect runtime diagnostic status for OCR and PDF extraction",
+        "Archive and maintenance",
+        (),
+    ),
+    ("schema", "Export the research entity JSON schema", "Archive and maintenance", ()),
 )
 
 
@@ -138,34 +381,60 @@ def configure(parser: argparse.ArgumentParser) -> None:
     parser.formatter_class = _ResearchHelpFormatter
     commands = parser.add_subparsers(dest="research_command", required=True, metavar="COMMAND")
     for name, help_text, group, aliases in COMMAND_DEFINITIONS:
-        command = commands.add_parser(name, aliases=list(aliases), help=help_text, description=help_text)
+        command = commands.add_parser(
+            name, aliases=list(aliases), help=help_text, description=help_text
+        )
         command.set_defaults(research_command=name, cli_group=group, cli_aliases=aliases)
         if name == "schema":
-            command.set_defaults(cli_output_formats=("json",), cli_default_output="json", cli_purpose=help_text)
+            command.set_defaults(
+                cli_output_formats=("json",), cli_default_output="json", cli_purpose=help_text
+            )
             continue
-        formats, default_format = OUTPUT_FORMATS.get(name, (("html",), "html") if name == "dashboard"
-                                                    else (("json",), "json"))
-        command.set_defaults(cli_output_formats=formats, cli_default_output=default_format,
-                             cli_purpose=help_text)
+        formats, default_format = OUTPUT_FORMATS.get(
+            name, (("html",), "html") if name == "dashboard" else (("json",), "json")
+        )
+        command.set_defaults(
+            cli_output_formats=formats, cli_default_output=default_format, cli_purpose=help_text
+        )
         if name in OUTPUT_FORMATS:
             output_group = command.add_mutually_exclusive_group()
-            output_group.add_argument("--format", choices=formats, default=default_format,
-                                      help=f"Output format (default: {default_format})")
-            output_group.add_argument("--json", dest="format", action="store_const", const="json",
-                                      help="Complete JSON output (alias for --format json)")
+            output_group.add_argument(
+                "--format",
+                choices=formats,
+                default=default_format,
+                help=f"Output format (default: {default_format})",
+            )
+            output_group.add_argument(
+                "--json",
+                dest="format",
+                action="store_const",
+                const="json",
+                help="Complete JSON output (alias for --format json)",
+            )
         if name in ("sources", "audit"):
-            command.add_argument("--pager", action="store_true",
-                                 help="Page text/Markdown only when input and output are interactive terminals")
+            command.add_argument(
+                "--pager",
+                action="store_true",
+                help="Page text/Markdown only when input and output are interactive terminals",
+            )
         if name not in ("restore", "ocr-status", "zotero-restore"):
             command.add_argument(
-                "--project", required=name in ("init", "migrate-storage"),
-                help="Explicit project directory" if name == "init" else
-                "Project directory (default: current directory, only with a valid initialized research archive)",
+                "--project",
+                required=name in ("init", "migrate-storage"),
+                help="Explicit project directory"
+                if name == "init"
+                else "Project directory (default: current directory, only with a valid initialized research archive)",
             )
         elif name == "ocr-status":
             command.add_argument("--project", help="Optional project directory")
-            command.add_argument("--worker-cmd", help="Explicit OCR worker binary or command to inspect")
-            command.add_argument("--probe", action="store_true", help="Execute a live test probe against the configured OCR worker")
+            command.add_argument(
+                "--worker-cmd", help="Explicit OCR worker binary or command to inspect"
+            )
+            command.add_argument(
+                "--probe",
+                action="store_true",
+                help="Execute a live test probe against the configured OCR worker",
+            )
         if name == "zotero-backup":
             command.add_argument("--data-dir", required=True)
             command.add_argument("--output", required=True)
@@ -174,56 +443,138 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--from", dest="archive_source", required=True)
             command.add_argument("--to", dest="target_dir", required=True)
         if name == "zotero-export":
-            command.add_argument("--output", required=True, help="New directory for RIS, files and provenance manifest")
+            command.add_argument(
+                "--output",
+                required=True,
+                help="New directory for RIS, files and provenance manifest",
+            )
             command.add_argument("--allow-retention", action="store_true")
             command.add_argument("--dry-run", action="store_true")
         if name in ("zotero", "zotero-ingest"):
-            command.add_argument("--library", required=True, help="Explicit Zotero library: users/0 or groups/<id>")
+            command.add_argument(
+                "--library", required=True, help="Explicit Zotero library: users/0 or groups/<id>"
+            )
             if name == "zotero":
                 choice = command.add_mutually_exclusive_group()
                 choice.add_argument("--query", default="")
                 choice.add_argument("--item-key", help="Inspect an item and its attachments")
                 choice.add_argument("--collections", action="store_true", help="List collections")
-                command.add_argument("--collection-key", help="Restrict item search to this collection")
-                command.add_argument("--limit", type=int, choices=range(1, 101), default=20, metavar="1..100")
+                command.add_argument(
+                    "--collection-key", help="Restrict item search to this collection"
+                )
+                command.add_argument(
+                    "--limit", type=int, choices=range(1, 101), default=20, metavar="1..100"
+                )
                 command.add_argument("--start", type=int, default=0, help="Zero-based page offset")
             else:
                 key_group = command.add_mutually_exclusive_group(required=True)
-                key_group.add_argument("--attachment-key", nargs="+", help="One or more Zotero attachment keys")
-                key_group.add_argument("--item-key", help="Zotero parent item key to ingest all eligible attachments")
-                command.add_argument("--source-id", help="Explicitly refresh a matching prior capture (single attachment only)")
-                command.add_argument("--expected-server-id", help="Require the previewed Zotero instance")
-                command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
+                key_group.add_argument(
+                    "--attachment-key", nargs="+", help="One or more Zotero attachment keys"
+                )
+                key_group.add_argument(
+                    "--item-key", help="Zotero parent item key to ingest all eligible attachments"
+                )
+                command.add_argument(
+                    "--source-id",
+                    help="Explicitly refresh a matching prior capture (single attachment only)",
+                )
+                command.add_argument(
+                    "--expected-server-id", help="Require the previewed Zotero instance"
+                )
+                command.add_argument(
+                    "--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic")
+                )
                 command.add_argument("--allow-retention", action="store_true")
                 command.add_argument("--dry-run", action="store_true")
-                command.add_argument("--progress", action="store_true", help="Report real-time progress phases on stderr")
+                command.add_argument(
+                    "--progress",
+                    action="store_true",
+                    help="Report real-time progress phases on stderr",
+                )
         if name in ("dossier", "claim", "link-evidence", "decision", "relate"):
-            command.add_argument("--update", action="store_true", help="Update the record; accepted changes create an immutable version")
-            command.add_argument("--dry-run", action="store_true", help="Validate an --update exactly without writing or acquiring the writer lock")
-            command.add_argument("--compact", action="store_true", help="With --update [--dry-run], return a short receipt without the record body; default JSON stays complete")
-            command.add_argument("--prepare", action="store_true", help="Preview an unsaved draft against the current version; never changes the archive")
-            command.add_argument("--diff", action="store_true", help="Preview the change as a unified terminal diff; never writes")
-            command.add_argument("--from-revision", type=int, help="With --diff, compare this immutable version instead of a draft")
-            command.add_argument("--to-revision", type=int, help="Destination version for --diff --from-revision (default: HEAD)")
-            command.add_argument("--base-revision", type=int, help="Original version of the unsaved draft being prepared")
-            command.add_argument("--resolve", action="append", metavar="FIELD=current|mine",
-                                 help="Explicit field choice for a --prepare conflict; repeat for each field")
-            command.add_argument("--history", action="store_true", help="List immutable record versions")
+            command.add_argument(
+                "--update",
+                action="store_true",
+                help="Update the record; accepted changes create an immutable version",
+            )
+            command.add_argument(
+                "--dry-run",
+                action="store_true",
+                help="Validate an --update exactly without writing or acquiring the writer lock",
+            )
+            command.add_argument(
+                "--compact",
+                action="store_true",
+                help="With --update [--dry-run], return a short receipt without the record body; default JSON stays complete",
+            )
+            command.add_argument(
+                "--prepare",
+                action="store_true",
+                help="Preview an unsaved draft against the current version; never changes the archive",
+            )
+            command.add_argument(
+                "--diff",
+                action="store_true",
+                help="Preview the change as a unified terminal diff; never writes",
+            )
+            command.add_argument(
+                "--from-revision",
+                type=int,
+                help="With --diff, compare this immutable version instead of a draft",
+            )
+            command.add_argument(
+                "--to-revision",
+                type=int,
+                help="Destination version for --diff --from-revision (default: HEAD)",
+            )
+            command.add_argument(
+                "--base-revision",
+                type=int,
+                help="Original version of the unsaved draft being prepared",
+            )
+            command.add_argument(
+                "--resolve",
+                action="append",
+                metavar="FIELD=current|mine",
+                help="Explicit field choice for a --prepare conflict; repeat for each field",
+            )
+            command.add_argument(
+                "--history", action="store_true", help="List immutable record versions"
+            )
             command.add_argument("--inspect", action="store_true", help="Inspect the latest record")
             command.add_argument("--revision", type=int, help="Inspect one historical version")
-            command.add_argument("--expected-snapshot", help="Optional strict archive digest; if omitted, update checks --expected-revision against the current record")
-            command.add_argument("--expected-revision", type=int, help="Reviewed record version required for an update; changed associations need explicit pins when snapshot is omitted")
-            command.add_argument("--latest", action="store_true",
-                                 help="Use the current HEAD version of the record as --expected-revision "
-                                      "(single-author convenience; implies --expected-snapshot from the same read)")
-            command.add_argument("--change-kind", choices=("correction", "supersession"), help="Reason category required for --update or a reviewed --output packet")
+            command.add_argument(
+                "--expected-snapshot",
+                help="Optional strict archive digest; if omitted, update checks --expected-revision against the current record",
+            )
+            command.add_argument(
+                "--expected-revision",
+                type=int,
+                help="Reviewed record version required for an update; changed associations need explicit pins when snapshot is omitted",
+            )
+            command.add_argument(
+                "--latest",
+                action="store_true",
+                help="Use the current HEAD version of the record as --expected-revision "
+                "(single-author convenience; implies --expected-snapshot from the same read)",
+            )
+            command.add_argument(
+                "--change-kind",
+                choices=("correction", "supersession"),
+                help="Reason category required for --update or a reviewed --output packet",
+            )
             command.add_argument("--reason", help="Why this authored record is being revised")
             command.add_argument("--actor", default="local-author")
         if name in ("link-manuscript", "review-manuscript"):
             _add_manuscript_argument(command)
-            command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
+            command.add_argument(
+                "--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic")
+            )
         if name == "review-manuscript":
-            command.epilog = (command.epilog or "") + " Read-only: check current chapter locations and review needs. Flags do not prove contradictions."
+            command.epilog = (
+                (command.epilog or "")
+                + " Read-only: check current chapter locations and review needs. Flags do not prove contradictions."
+            )
         if name == "terms":
             _add_manuscript_argument(command)
             command.epilog = (
@@ -231,11 +582,23 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 + " Read-only occurrence lookup unless --set-term or --delete-term is supplied. "
                 "Candidate occurrences never create archive revisions or prove contradictions."
             )
-            command.add_argument("--term", help="Filter manuscript occurrence review to one configured term")
+            command.add_argument(
+                "--term", help="Filter manuscript occurrence review to one configured term"
+            )
             term_edit = command.add_mutually_exclusive_group()
-            term_edit.add_argument("--set-term", metavar="TERM", help="Create or update one term/prop profile in lixity.toml")
-            term_edit.add_argument("--delete-term", metavar="TERM", help="Remove one term/prop profile from lixity.toml")
-            command.add_argument("--aliases", help="Comma-separated unscoped aliases for --set-term")
+            term_edit.add_argument(
+                "--set-term",
+                metavar="TERM",
+                help="Create or update one term/prop profile in lixity.toml",
+            )
+            term_edit.add_argument(
+                "--delete-term",
+                metavar="TERM",
+                help="Remove one term/prop profile from lixity.toml",
+            )
+            command.add_argument(
+                "--aliases", help="Comma-separated unscoped aliases for --set-term"
+            )
             command.add_argument(
                 "--scoped-alternative",
                 action="append",
@@ -243,29 +606,60 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 metavar="FORM:CHAPTERS",
                 help="Chapter-scoped alternative for --set-term (e.g. 'Gaslamp:1,2'); repeat as needed",
             )
-            command.add_argument("--case-sensitive", action="store_true", help="Match case-sensitively for --set-term")
-            command.add_argument("--dossier-id", help="Optional reference dossier UUID for --set-term")
+            command.add_argument(
+                "--case-sensitive",
+                action="store_true",
+                help="Match case-sensitively for --set-term",
+            )
+            command.add_argument(
+                "--strict-boundaries",
+                action="store_true",
+                help="Treat hyphens as word characters for --set-term, so terms do not match inside hyphenated codes (implied by --case-sensitive)",
+            )
+            command.add_argument(
+                "--dossier-id", help="Optional reference dossier UUID for --set-term"
+            )
             command.add_argument("--claim-id", help="Optional reference claim UUID for --set-term")
-            command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
+            command.add_argument(
+                "--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic")
+            )
         if name == "link-manuscript":
             command.add_argument("--claim-id", required=True)
-            command.add_argument("--claim-revision", type=int, required=True,
-                                 help="Exact reviewed claim version to pin")
+            command.add_argument(
+                "--claim-revision",
+                type=int,
+                required=True,
+                help="Exact reviewed claim version to pin",
+            )
             source_group = command.add_mutually_exclusive_group(required=True)
-            source_group.add_argument("--selection",
-                                      help="Selection JSON object (literal or local file) with start_line, "
-                                           "end_line, paragraph_sha256, start, end, quote")
-            source_group.add_argument("--quote",
-                                      help="Displayed-text quote; resolved against the manuscript "
-                                           "(combine with --line when the quote is ambiguous)")
-            command.add_argument("--line", type=int,
-                                 help="Restrict a --quote resolution to the paragraph containing this source line")
-            command.add_argument("--expected-snapshot",
-                                 help="Optional strict archive digest; the current snapshot is used when omitted")
-            command.add_argument("--expected-source-sha256",
-                                 help="Optional strict source digest; the current file bytes are used when omitted")
-            command.add_argument("--allow-retention", action="store_true",
-                                 help="Confirm permission to retain the local quote (required)")
+            source_group.add_argument(
+                "--selection",
+                help="Selection JSON object (literal or local file) with start_line, "
+                "end_line, paragraph_sha256, start, end, quote",
+            )
+            source_group.add_argument(
+                "--quote",
+                help="Displayed-text quote; resolved against the manuscript "
+                "(combine with --line when the quote is ambiguous)",
+            )
+            command.add_argument(
+                "--line",
+                type=int,
+                help="Restrict a --quote resolution to the paragraph containing this source line",
+            )
+            command.add_argument(
+                "--expected-snapshot",
+                help="Optional strict archive digest; the current snapshot is used when omitted",
+            )
+            command.add_argument(
+                "--expected-source-sha256",
+                help="Optional strict source digest; the current file bytes are used when omitted",
+            )
+            command.add_argument(
+                "--allow-retention",
+                action="store_true",
+                help="Confirm permission to retain the local quote (required)",
+            )
             command.add_argument("--note")
             command.add_argument("--actor", default="local-author")
         if name == "manuscript-links":
@@ -273,97 +667,225 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--include-retracted", action="store_true")
         if name == "find-anchor":
             _add_manuscript_argument(command)
-            command.epilog = ((command.epilog or "") +
-                              " Read-only lookup. Unicode is not normalized; link/code syntax remains. "
-                              "Example: lixity research find-anchor --project . "
-                              "draft.md --quote 'reading room'.")
-            command.add_argument("--query", "--quote", required=True,
-                                 help="Exact, case-sensitive quote from one displayed paragraph")
-            command.add_argument("--query-format", choices=("display", "markdown"), default="display",
-                                 help="display: reader text; markdown: remove supported inline formatting from a copied quote")
-            command.add_argument("--line", type=int,
-                                 help="Search only the paragraph at this source line")
-            command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
+            command.epilog = (
+                (command.epilog or "")
+                + " Read-only lookup. Unicode is not normalized; link/code syntax remains. "
+                "Example: lixity research find-anchor --project . "
+                "draft.md --quote 'reading room'."
+            )
+            command.add_argument(
+                "--query",
+                "--quote",
+                required=True,
+                help="Exact, case-sensitive quote from one displayed paragraph",
+            )
+            command.add_argument(
+                "--query-format",
+                choices=("display", "markdown"),
+                default="display",
+                help="display: reader text; markdown: remove supported inline formatting from a copied quote",
+            )
+            command.add_argument(
+                "--line", type=int, help="Search only the paragraph at this source line"
+            )
+            command.add_argument(
+                "--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic")
+            )
         if name == "reconcile-manuscript":
             _add_manuscript_argument(command)
-            command.epilog = ((command.epilog or "") + " Preview by default. Acceptance writes one revision per link "
-                              "and commits accepted batch updates in one publication transaction; inspect accepted/skipped, "
-                              "then run review-manuscript again.")
+            command.epilog = (
+                (command.epilog or "")
+                + " Preview by default. Acceptance writes one revision per link "
+                "and commits accepted batch updates in one publication transaction; inspect accepted/skipped, "
+                "then run review-manuscript again."
+            )
             command.add_argument("--link-id", help="Preview or update only this association")
-            command.add_argument("--new-quote", "--quote",
-                                 help="Replacement quote from the current text; requires --link-id and --accept-moved to save")
-            command.add_argument("--line", type=int,
-                                 help="Resolve the replacement quote within this source line's paragraph")
-            command.add_argument("--reason",
-                                 help="Reason recorded with the revision")
-            command.add_argument("--accept-moved", action="store_true",
-                                 help="Accept uniquely moved/adjusted passages with unchanged quotes, or the explicit replacement quote")
-            command.add_argument("--accept-claim-updates", action="store_true",
-                                 help="Accept newer claim versions; text anchors stay unchanged unless combined with --accept-moved")
-            command.add_argument("--update-sha", action="store_true",
-                                 help="No additional effect: accepting an anchor already refreshes its source hash")
-            command.add_argument("--expected-snapshot",
-                                 help="Optional strict archive digest for the initial review")
-            command.add_argument("--expected-source-sha256",
-                                 help="Optional strict source digest; the current file bytes are used when omitted")
+            command.add_argument(
+                "--new-quote",
+                "--quote",
+                help="Replacement quote from the current text; requires --link-id and --accept-moved to save",
+            )
+            command.add_argument(
+                "--line",
+                type=int,
+                help="Resolve the replacement quote within this source line's paragraph",
+            )
+            command.add_argument("--reason", help="Reason recorded with the revision")
+            command.add_argument(
+                "--accept-moved",
+                action="store_true",
+                help="Accept uniquely moved/adjusted passages with unchanged quotes, or the explicit replacement quote",
+            )
+            command.add_argument(
+                "--accept-claim-updates",
+                action="store_true",
+                help="Accept newer claim versions; text anchors stay unchanged unless combined with --accept-moved",
+            )
+            command.add_argument(
+                "--update-sha",
+                action="store_true",
+                help="No additional effect: accepting an anchor already refreshes its source hash",
+            )
+            command.add_argument(
+                "--expected-snapshot", help="Optional strict archive digest for the initial review"
+            )
+            command.add_argument(
+                "--expected-source-sha256",
+                help="Optional strict source digest; the current file bytes are used when omitted",
+            )
             command.add_argument("--actor", default="local-author")
-            command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
+            command.add_argument(
+                "--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic")
+            )
         if name in ("dossier", "claim", "decision", "sources"):
-            command.add_argument("action", nargs="?", metavar="list|show|inspect|RECORD_ID",
-                                 help="list (default), show/inspect <ID>, or a record UUID to inspect")
-            command.add_argument("record_id", nargs="?", metavar="RECORD_ID",
-                                 help="Record UUID to show/inspect (alias for the command's named ID option)")
+            command.add_argument(
+                "action",
+                nargs="?",
+                metavar="list|show|inspect|RECORD_ID",
+                help="list (default), show/inspect <ID>, or a record UUID to inspect",
+            )
+            command.add_argument(
+                "record_id",
+                nargs="?",
+                metavar="RECORD_ID",
+                help="Record UUID to show/inspect (alias for the command's named ID option)",
+            )
         if name == "init":
             command.add_argument("--title", required=True)
-            command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"), default="en")
+            command.add_argument(
+                "--language",
+                choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"),
+                default="en",
+            )
             command.add_argument("--actor", default="local-author")
         elif name == "ingest":
-            command.add_argument("--file", nargs="+", help="Path(s) to local UTF-8 text, PDF, PNG or JPEG file(s); required unless resuming or discarding")
+            command.add_argument(
+                "--file",
+                nargs="+",
+                help="Path(s) to local UTF-8 text, PDF, PNG or JPEG file(s); required unless resuming or discarding",
+            )
             command.add_argument("--title")
-            command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
-            command.add_argument("--source-id", help="Refresh this source without invalidating old citations")
-            command.add_argument("--actor", help="Capture actor (default: local-author; resume retains the checkpoint actor)")
-            command.add_argument("--allow-retention", action="store_true", help="Confirm permission to retain a local copy, not to redistribute it")
-            command.add_argument("--dry-run", action="store_true", help="Validate and preview; do not write")
-            command.add_argument("--context", help="Source criticism JSON object or path to its JSON file")
-            command.add_argument("--origin-url", help="Original HTTP(S) source URL (metadata only; never fetched)")
-            command.add_argument("--progress", action="store_true", help="Report real-time progress phases on stderr")
-            command.add_argument("--fallback", "--allow-fallback", dest="fallback", action="store_true", help="Allow fallback to native PDF text layer if OCR worker fails or times out")
+            command.add_argument(
+                "--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic")
+            )
+            command.add_argument(
+                "--source-id", help="Refresh this source without invalidating old citations"
+            )
+            command.add_argument(
+                "--actor",
+                help="Capture actor (default: local-author; resume retains the checkpoint actor)",
+            )
+            command.add_argument(
+                "--allow-retention",
+                action="store_true",
+                help="Confirm permission to retain a local copy, not to redistribute it",
+            )
+            command.add_argument(
+                "--dry-run", action="store_true", help="Validate and preview; do not write"
+            )
+            command.add_argument(
+                "--context", help="Source criticism JSON object or path to its JSON file"
+            )
+            command.add_argument(
+                "--origin-url", help="Original HTTP(S) source URL (metadata only; never fetched)"
+            )
+            command.add_argument(
+                "--progress", action="store_true", help="Report real-time progress phases on stderr"
+            )
+            command.add_argument(
+                "--fallback",
+                "--allow-fallback",
+                dest="fallback",
+                action="store_true",
+                help="Allow fallback to native PDF text layer if OCR worker fails or times out",
+            )
             checkpoint_group = command.add_mutually_exclusive_group()
-            checkpoint_group.add_argument("--checkpoint", metavar="PATH", help="Opt-in .json checkpoint under the project's .lixity/research/imports directory")
-            checkpoint_group.add_argument("--discard-checkpoint", metavar="PATH", help="Remove checkpoint preparation without changing accepted research records")
-            command.add_argument("--resume", action="store_true", help="Resume the named checkpoint; files and omitted settings come from it")
-            command.add_argument("--expected-snapshot", help="Explicit current snapshot acknowledgement for a resumed checkpoint")
+            checkpoint_group.add_argument(
+                "--checkpoint",
+                metavar="PATH",
+                help="Opt-in .json checkpoint under the project's .lixity/research/imports directory",
+            )
+            checkpoint_group.add_argument(
+                "--discard-checkpoint",
+                metavar="PATH",
+                help="Remove checkpoint preparation without changing accepted research records",
+            )
+            command.add_argument(
+                "--resume",
+                action="store_true",
+                help="Resume the named checkpoint; files and omitted settings come from it",
+            )
+            command.add_argument(
+                "--expected-snapshot",
+                help="Explicit current snapshot acknowledgement for a resumed checkpoint",
+            )
         elif name == "search":
             command.add_argument("--query", required=True)
-            command.add_argument("--scope", choices=("sources", "dossiers", "claims", "decisions", "all"),
-                                 default="sources", help="Search sources (default) or current authored records")
-            command.add_argument("--limit", type=int, choices=range(1, 101), default=20, metavar="1..100")
-            command.add_argument("--strict", action="store_true", help="Fail if search index is stale instead of refreshing automatically")
+            command.add_argument(
+                "--scope",
+                choices=("sources", "dossiers", "claims", "decisions", "all"),
+                default="sources",
+                help="Search sources (default) or current authored records",
+            )
+            command.add_argument(
+                "--limit", type=int, choices=range(1, 101), default=20, metavar="1..100"
+            )
+            command.add_argument(
+                "--strict",
+                action="store_true",
+                help="Fail if search index is stale instead of refreshing automatically",
+            )
         elif name == "cite":
             selection = command.add_mutually_exclusive_group(required=True)
-            selection.add_argument("--passage", help="Exact retained passage UUID (historical citations supported)")
-            selection.add_argument("--query", help="Find a full source paragraph by literal keywords")
-            command.add_argument("--pick", type=int, help="Choose numbered query match; requires --expected-snapshot")
-            command.add_argument("--expected-snapshot", help="Snapshot displayed by citation search")
+            selection.add_argument(
+                "--passage", help="Exact retained passage UUID (historical citations supported)"
+            )
+            selection.add_argument(
+                "--query", help="Find a full source paragraph by literal keywords"
+            )
+            command.add_argument(
+                "--pick", type=int, help="Choose numbered query match; requires --expected-snapshot"
+            )
+            command.add_argument(
+                "--expected-snapshot", help="Snapshot displayed by citation search"
+            )
         elif name in ("analyze", "dashboard"):
             command.add_argument("--source-id", required=True, help="Source UUID")
             command.add_argument("--version-id", help="Explicit source version UUID")
-            command.add_argument("--thresholds", help="Path to JSON file or JSON string of analysis thresholds")
+            command.add_argument(
+                "--thresholds", help="Path to JSON file or JSON string of analysis thresholds"
+            )
         elif name == "compare":
             command.add_argument("--source-id", required=True, help="Source UUID")
-            command.add_argument("--manuscript", help="Path to manuscript file (default: selected project config manuscript)")
+            command.add_argument(
+                "--manuscript",
+                help="Path to manuscript file (default: selected project config manuscript)",
+            )
             command.add_argument("--version-id", help="Explicit source version UUID")
-            command.add_argument("--language", choices=LANGUAGE_CHOICES,
-                                 help="Manuscript language (default: selected project's root-local language, otherwise en; auto explicitly detects)")
-            command.add_argument("--top-n", type=int, default=20, help="Number of top terms to return (default: 20)")
+            command.add_argument(
+                "--language",
+                choices=LANGUAGE_CHOICES,
+                help="Manuscript language (default: selected project's root-local language, otherwise en; auto explicitly detects)",
+            )
+            command.add_argument(
+                "--top-n", type=int, default=20, help="Number of top terms to return (default: 20)"
+            )
             command.add_argument("--output", help="Optional output file destination")
         elif name == "sources":
             command.add_argument("--source-id", help="Optional source UUID to inspect passages")
-            command.add_argument("--limit", type=int, choices=range(1, 101), metavar="1..100",
-                                 help="Sources per human-output page (default: 50; JSON remains complete)")
-            command.add_argument("--offset", type=_non_negative, default=0,
-                                 help="Zero-based human-output page offset (default: 0)")
+            command.add_argument(
+                "--limit",
+                type=int,
+                choices=range(1, 101),
+                metavar="1..100",
+                help="Sources per human-output page (default: 50; JSON remains complete)",
+            )
+            command.add_argument(
+                "--offset",
+                type=_non_negative,
+                default=0,
+                help="Zero-based human-output page offset (default: 0)",
+            )
         elif name == "dossier":
             command.formatter_class = argparse.RawDescriptionHelpFormatter
             command.epilog = (
@@ -388,80 +910,189 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 "not road routing, elevation or travel time; coordinate digits do not establish accuracy."
             )
             command.add_argument("--dossier-id", help="Dossier UUID to inspect")
-            command.add_argument("--title", help="Title for a new dossier or replacement title with --update")
+            command.add_argument(
+                "--title", help="Title for a new dossier or replacement title with --update"
+            )
             content = command.add_mutually_exclusive_group()
-            content.add_argument("--file", help="Existing readable UTF-8 Markdown file; use --body for literal text")
-            content.add_argument("--body", help="Literal authored Markdown body (alternative to --file PATH)")
-            content.add_argument("--edit-file", nargs="+", help="Exported dossier edit document(s) to reconcile with --prepare")
-            command.add_argument("--export-edit", metavar="PATH", help="Export a selected version as an editable Markdown draft; never overwrites")
-            command.add_argument("--output", metavar="PATH", help="With --prepare --edit-file, write a ready reviewed packet for revise-batch; never overwrites")
+            content.add_argument(
+                "--file", help="Existing readable UTF-8 Markdown file; use --body for literal text"
+            )
+            content.add_argument(
+                "--body", help="Literal authored Markdown body (alternative to --file PATH)"
+            )
+            content.add_argument(
+                "--edit-file",
+                nargs="+",
+                help="Exported dossier edit document(s) to reconcile with --prepare",
+            )
+            command.add_argument(
+                "--export-edit",
+                metavar="PATH",
+                help="Export a selected version as an editable Markdown draft; never overwrites",
+            )
+            command.add_argument(
+                "--output",
+                metavar="PATH",
+                help="With --prepare --edit-file, write a ready reviewed packet for revise-batch; never overwrites",
+            )
             command.add_argument("--tags", help="Comma-separated tags")
-            command.add_argument("--tag", action="append", dest="filter_tags",
-                                 help="List-only exact stored tag filter (case-sensitive); repeat to require all tags")
-            command.add_argument("--collection",
-                                 help="List-only collection filter: a configured collection ID (in reading order), 'unassigned', or 'all'")
+            command.add_argument(
+                "--tag",
+                action="append",
+                dest="filter_tags",
+                help="List-only exact stored tag filter (case-sensitive); repeat to require all tags",
+            )
+            command.add_argument(
+                "--collection",
+                help="List-only collection filter: a configured collection ID (in reading order), 'unassigned', or 'all'",
+            )
             collection_edit = command.add_mutually_exclusive_group()
-            collection_edit.add_argument("--set-collection", metavar="COLLECTION_ID",
-                                         help="Create or update one named dossier collection in lixity.toml without revising dossiers")
-            collection_edit.add_argument("--delete-collection", metavar="COLLECTION_ID",
-                                         help="Delete one named dossier collection from lixity.toml without revising dossiers")
-            command.add_argument("--collection-name", metavar="NAME",
-                                 help="Human-readable collection name for --set-collection")
-            command.add_argument("--dossiers", metavar="UUIDS",
-                                 help="Comma-separated dossier UUIDs in explicit reading order for --set-collection")
+            collection_edit.add_argument(
+                "--set-collection",
+                metavar="COLLECTION_ID",
+                help="Create or update one named dossier collection in lixity.toml without revising dossiers",
+            )
+            collection_edit.add_argument(
+                "--delete-collection",
+                metavar="COLLECTION_ID",
+                help="Delete one named dossier collection from lixity.toml without revising dossiers",
+            )
+            command.add_argument(
+                "--collection-name",
+                metavar="NAME",
+                help="Human-readable collection name for --set-collection",
+            )
+            command.add_argument(
+                "--dossiers",
+                metavar="UUIDS",
+                help="Comma-separated dossier UUIDs in explicit reading order for --set-collection",
+            )
             command.add_argument("--evidence", help="Comma-separated passage UUIDs")
-            command.add_argument("--geography", metavar="JSON_OR_FILE",
-                                 help="Dossier GeoJSON FeatureCollection: Point/LineString/Polygon or null geometry, "
-                                      "WGS84 [longitude, latitude], properties.label required; JSON null clears geography")
-            command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
-            command.add_argument("--summary", action="store_true",
-                                 help="Return metadata, complete image/media references, geography coverage and route distances, section outline, "
-                                      "and body excerpt without full text; distances are not road routing or travel time")
+            command.add_argument(
+                "--geography",
+                metavar="JSON_OR_FILE",
+                help="Dossier GeoJSON FeatureCollection: Point/LineString/Polygon or null geometry, "
+                "WGS84 [longitude, latitude], properties.label required; JSON null clears geography",
+            )
+            command.add_argument(
+                "--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic")
+            )
+            command.add_argument(
+                "--summary",
+                action="store_true",
+                help="Return metadata, complete image/media references, geography coverage and route distances, section outline, "
+                "and body excerpt without full text; distances are not road routing or travel time",
+            )
             selection = command.add_mutually_exclusive_group()
-            selection.add_argument("--preamble", action="store_true", help="Inspect or replace content before the first actual heading")
-            selection.add_argument("--section", help="Inspect or replace the named heading's content and all descendants; "
-                                 "an H1 can select nearly the entire dossier (preview with --diff)")
-            command.add_argument("--body-only", action="store_true",
-                                 help="With a selected dossier --format text read, emit its source body (or --section content); "
-                                      "redirect to a file for an editable draft (no added newline)")
-            command.add_argument("--omit-citations", action="store_true", help="Omit resolved citations from output")
-            command.add_argument("--manuscript", help="Optional manuscript path to include read-only manuscript evidence projection")
+            selection.add_argument(
+                "--preamble",
+                action="store_true",
+                help="Inspect or replace content before the first actual heading",
+            )
+            selection.add_argument(
+                "--section",
+                help="Inspect or replace the named heading's content and all descendants; "
+                "an H1 can select nearly the entire dossier (preview with --diff)",
+            )
+            command.add_argument(
+                "--body-only",
+                action="store_true",
+                help="With a selected dossier --format text read, emit its source body (or --section content); "
+                "redirect to a file for an editable draft (no added newline)",
+            )
+            command.add_argument(
+                "--omit-citations", action="store_true", help="Omit resolved citations from output"
+            )
+            command.add_argument(
+                "--manuscript",
+                help="Optional manuscript path to include read-only manuscript evidence projection",
+            )
         elif name == "media-context":
-            for field in ("dossier-id", "source-id", "source-version-id", "expected-snapshot", "reason"):
+            for field in (
+                "dossier-id",
+                "source-id",
+                "source-version-id",
+                "expected-snapshot",
+                "reason",
+            ):
                 command.add_argument("--" + field, required=True)
             command.add_argument("--expected-revision", required=True, type=int)
-            command.add_argument("--context", required=True, help="JSON object or file; only origin_url and provenance_note; null clears a field")
+            command.add_argument(
+                "--context",
+                required=True,
+                help="JSON object or file; only origin_url and provenance_note; null clears a field",
+            )
             command.add_argument("--dry-run", action="store_true")
             command.add_argument("--actor", default="local-author")
         elif name == "dossier-images":
             command.add_argument("--dossier-id", help="Limit to one active dossier")
-            command.add_argument("--missing-provenance", action="store_true", help="Only image references missing origin_url or provenance_note; presence check, not rights validation")
-            command.add_argument("--limit", type=int, default=100, help="References per page (1..200; default: 100)")
-            command.add_argument("--offset", type=int, default=0, help="Zero-based reference offset")
+            command.add_argument(
+                "--missing-provenance",
+                action="store_true",
+                help="Only image references missing origin_url or provenance_note; presence check, not rights validation",
+            )
+            command.add_argument(
+                "--limit", type=int, default=100, help="References per page (1..200; default: 100)"
+            )
+            command.add_argument(
+                "--offset", type=int, default=0, help="Zero-based reference offset"
+            )
         elif name in ("dossier-image", "dossier-media"):
             command.add_argument("--dossier-id", required=True, help="Dossier UUID to revise")
-            command.add_argument("--compact", action="store_true",
-                                 help="Return a short revision receipt without the record body; batch previews remain bounded JSON")
+            command.add_argument(
+                "--compact",
+                action="store_true",
+                help="Return a short revision receipt without the record body; batch previews remain bounded JSON",
+            )
             files = command.add_mutually_exclusive_group(required=True)
             files.add_argument("--file", help="Explicit local attachment file")
             if name == "dossier-image":
-                files.add_argument("--batch", help="Versioned JSON image batch manifest; relative files resolve beside it")
-                command.add_argument("--dry-run", action="store_true", help="With --batch, validate all files and placements without writing")
-            command.add_argument("--expected-snapshot", required=True, help="Snapshot digest from the reviewed dossier")
-            command.add_argument("--expected-revision", required=True, type=int, help="Reviewed dossier revision")
-            command.add_argument("--allow-retention", action="store_true",
-                                 help="Confirm permission to retain a local copy, not to redistribute it")
+                files.add_argument(
+                    "--batch",
+                    help="Versioned JSON image batch manifest; relative files resolve beside it",
+                )
+                command.add_argument(
+                    "--dry-run",
+                    action="store_true",
+                    help="With --batch, validate all files and placements without writing",
+                )
+            command.add_argument(
+                "--expected-snapshot",
+                required=True,
+                help="Snapshot digest from the reviewed dossier",
+            )
+            command.add_argument(
+                "--expected-revision", required=True, type=int, help="Reviewed dossier revision"
+            )
+            command.add_argument(
+                "--allow-retention",
+                action="store_true",
+                help="Confirm permission to retain a local copy, not to redistribute it",
+            )
             command.add_argument("--alt", default="", help="One-line image alternative text")
             command.add_argument("--caption", help="Optional image caption")
             placement = command.add_mutually_exclusive_group()
-            placement.add_argument("--section", help="Append inside an existing unique dossier heading")
-            placement.add_argument("--replace-reference", metavar="MARKDOWN",
-                                   help="Replace one exact ordinary Markdown image marker occurring once outside code; no other text changes")
+            placement.add_argument(
+                "--section", help="Append inside an existing unique dossier heading"
+            )
+            placement.add_argument(
+                "--replace-reference",
+                metavar="MARKDOWN",
+                help="Replace one exact ordinary Markdown image marker occurring once outside code; no other text changes",
+            )
             command.add_argument("--title", help="Title for the retained image source")
-            command.add_argument("--context", help="Source criticism JSON object or path to its JSON file")
-            command.add_argument("--origin-url", help="Original HTTP(S) source URL (metadata only; never fetched)")
-            command.add_argument("--reason", help="Why the image is being attached (default: name the image)")
-            command.add_argument("--change-kind", choices=("correction", "supersession"), default="supersession")
+            command.add_argument(
+                "--context", help="Source criticism JSON object or path to its JSON file"
+            )
+            command.add_argument(
+                "--origin-url", help="Original HTTP(S) source URL (metadata only; never fetched)"
+            )
+            command.add_argument(
+                "--reason", help="Why the image is being attached (default: name the image)"
+            )
+            command.add_argument(
+                "--change-kind", choices=("correction", "supersession"), default="supersession"
+            )
             command.add_argument("--actor", default="local-author")
         elif name == "claim":
             command.add_argument("--claim-id", help="Claim UUID to inspect")
@@ -470,123 +1101,245 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--confidence", choices=("hypothetical", "evidenced", "disputed"))
             command.add_argument("--time-period", help="Temporal scope")
             command.add_argument("--place", help="Geographic scope")
-            command.add_argument("--actors", help="Comma-separated key historical actors or entities")
+            command.add_argument(
+                "--actors", help="Comma-separated key historical actors or entities"
+            )
             command.add_argument("--dossier-id", help="Optional associated dossier UUID")
-            command.add_argument("--dossier-revision", type=int, help="Explicit dossier revision to pin on update")
+            command.add_argument(
+                "--dossier-revision", type=int, help="Explicit dossier revision to pin on update"
+            )
             command.add_argument("--tags", help="Comma-separated tags")
         elif name == "timeline":
-            command.add_argument("--dossier-id", help="Limit chronology to claims associated with this dossier")
+            command.add_argument(
+                "--dossier-id", help="Limit chronology to claims associated with this dossier"
+            )
         elif name == "relate":
-            command.add_argument("from_claim_id", nargs="?", metavar="FROM_CLAIM", help="Cause claim UUID; omit both endpoints to list")
-            command.add_argument("to_claim_id", nargs="?", metavar="TO_CLAIM", help="Outcome claim UUID")
-            command.add_argument("--relation-id", help="Authored relationship UUID to inspect or revise")
+            command.add_argument(
+                "from_claim_id",
+                nargs="?",
+                metavar="FROM_CLAIM",
+                help="Cause claim UUID; omit both endpoints to list",
+            )
+            command.add_argument(
+                "to_claim_id", nargs="?", metavar="TO_CLAIM", help="Outcome claim UUID"
+            )
+            command.add_argument(
+                "--relation-id", help="Authored relationship UUID to inspect or revise"
+            )
             command.add_argument("--claim-id", help="List relationships touching this claim")
-            command.add_argument("--include-retracted", action="store_true", help="Include withdrawn author interpretations in the list")
-            command.add_argument("--from-claim-revision", type=int, help="Exact cause claim revision to pin")
-            command.add_argument("--to-claim-revision", type=int, help="Exact outcome claim revision to pin")
-            command.add_argument("--relation", choices=("causes", "results_in"), help="Author assertion; results_in is an alias for causes")
+            command.add_argument(
+                "--include-retracted",
+                action="store_true",
+                help="Include withdrawn author interpretations in the list",
+            )
+            command.add_argument(
+                "--from-claim-revision", type=int, help="Exact cause claim revision to pin"
+            )
+            command.add_argument(
+                "--to-claim-revision", type=int, help="Exact outcome claim revision to pin"
+            )
+            command.add_argument(
+                "--relation",
+                choices=("causes", "results_in"),
+                help="Author assertion; results_in is an alias for causes",
+            )
             command.add_argument("--rationale", help="Why the author proposes this connection")
-            command.add_argument("--state", choices=("active", "retracted"), help="Explicit state change on an authored revision")
+            command.add_argument(
+                "--state",
+                choices=("active", "retracted"),
+                help="Explicit state change on an authored revision",
+            )
         elif name == "link-evidence":
-            command.add_argument("--evidence-link-id", help="Evidence-link UUID to inspect or revise")
+            command.add_argument(
+                "--evidence-link-id", help="Evidence-link UUID to inspect or revise"
+            )
             command.add_argument("--claim-id", help="Claim UUID")
-            command.add_argument("--claim-revision", type=int, help="Explicit claim revision to pin on update")
+            command.add_argument(
+                "--claim-revision", type=int, help="Explicit claim revision to pin on update"
+            )
             command.add_argument("--passage-id", help="Passage citation UUID")
-            command.add_argument("--relation", choices=("supports", "contradicts", "qualifies", "contextualizes"))
+            command.add_argument(
+                "--relation", choices=("supports", "contradicts", "qualifies", "contextualizes")
+            )
             command.add_argument("--rationale", help="Reviewer rationale for link")
             command.add_argument("--reviewer", help="Reviewer identifier")
         elif name == "link":
-            command.add_argument("passage_id", metavar="PASSAGE_ID", help="Complete passage UUID URN from search or cite")
-            command.add_argument("claim_id", metavar="CLAIM_ID", help="Complete claim UUID URN from the claim list")
-            command.add_argument("--relation", choices=("supports", "contradicts", "qualifies", "contextualizes"),
-                                 help="Evidence relation (default: supports)")
+            command.add_argument(
+                "passage_id",
+                metavar="PASSAGE_ID",
+                help="Complete passage UUID URN from search or cite",
+            )
+            command.add_argument(
+                "claim_id", metavar="CLAIM_ID", help="Complete claim UUID URN from the claim list"
+            )
+            command.add_argument(
+                "--relation",
+                choices=("supports", "contradicts", "qualifies", "contextualizes"),
+                help="Evidence relation (default: supports)",
+            )
             command.add_argument("--rationale", help="Reviewer rationale for link")
             command.add_argument("--reviewer", help="Reviewer identifier (default: author)")
             command.add_argument("--actor", default="local-author")
         if name == "unlink-manuscript":
             _add_manuscript_argument(command)
             command.add_argument("--link-id", required=True, help="Association to retract")
-            command.add_argument("--reason", default="Withdrawn by user", help="Reason for retraction")
+            command.add_argument(
+                "--reason", default="Withdrawn by user", help="Reason for retraction"
+            )
             command.add_argument("--expected-snapshot", help="Optional strict archive digest")
-            command.add_argument("--expected-revision", type=int, help="Reviewed link revision required")
+            command.add_argument(
+                "--expected-revision", type=int, help="Reviewed link revision required"
+            )
             command.add_argument("--actor", default="local-author")
         elif name == "decision":
             command.add_argument("--decision-id", help="Decision UUID to inspect or revise")
             command.add_argument("--title", help="Title for new author decision")
             command.add_argument("--rationale", help="Artistic or historical rationale")
             command.add_argument("--claim-id", help="Optional claim UUID being decided upon")
-            command.add_argument("--claim-revision", type=int, help="Explicit claim revision to pin on update")
+            command.add_argument(
+                "--claim-revision", type=int, help="Explicit claim revision to pin on update"
+            )
             command.add_argument("--dossier-id", help="Associated dossier UUID")
-            command.add_argument("--dossiers", help="Comma-separated dossier UUIDs impacted by this decision")
-            command.add_argument("--dossier-revisions", help="JSON map of selected dossier UUIDs to explicit revisions on update or preview")
-            command.add_argument("--deviation-from-fact", action=argparse.BooleanOptionalAction,
-                                 default=None, help="Set or clear intentional deviation from historical evidence")
-            command.add_argument("--impact-on-plot", help="Description of plot or worldbuilding impact")
+            command.add_argument(
+                "--dossiers", help="Comma-separated dossier UUIDs impacted by this decision"
+            )
+            command.add_argument(
+                "--dossier-revisions",
+                help="JSON map of selected dossier UUIDs to explicit revisions on update or preview",
+            )
+            command.add_argument(
+                "--deviation-from-fact",
+                action=argparse.BooleanOptionalAction,
+                default=None,
+                help="Set or clear intentional deviation from historical evidence",
+            )
+            command.add_argument(
+                "--impact-on-plot", help="Description of plot or worldbuilding impact"
+            )
         elif name == "decision-impact":
             command.add_argument("--decision-id", required=True, help="Decision UUID")
         elif name == "review":
-            command.add_argument("--prepare-batch", metavar="FILE",
-                                 help="Prepare an atomic revise-batch packet from a JSON list of pin-review actions")
-            command.add_argument("--output", metavar="PATH",
-                                 help="With --prepare-batch, write the reviewed batch packet to PATH; never overwrites")
-            command.add_argument("--actor", default="local-author",
-                                 help="Author attribution for the prepared revisions (default: local-author)")
+            command.add_argument(
+                "--prepare-batch",
+                metavar="FILE",
+                help="Prepare an atomic revise-batch packet from a JSON list of pin-review actions",
+            )
+            command.add_argument(
+                "--output",
+                metavar="PATH",
+                help="With --prepare-batch, write the reviewed batch packet to PATH; never overwrites",
+            )
+            command.add_argument(
+                "--actor",
+                default="local-author",
+                help="Author attribution for the prepared revisions (default: local-author)",
+            )
         elif name in ("mark-applied", "reopen"):
             command.add_argument("--decision-id", required=True)
             command.add_argument("--dossier-id", required=True)
             command.add_argument("--expected-snapshot", required=True)
             command.add_argument("--expected-decision-revision", type=int, required=True)
             command.add_argument("--expected-dossier-revision", type=int, required=True)
-            command.add_argument("--note", help="Optional author note; not independent verification")
+            command.add_argument(
+                "--note", help="Optional author note; not independent verification"
+            )
             command.add_argument("--actor", default="local-author")
         elif name == "revise-batch":
-            command.add_argument("--file", required=True, help="UTF-8 JSON operations list or saved batch preview")
-            command.add_argument("--apply", action="store_true", help="Apply all reviewed revisions in one commit")
-            command.add_argument("--expected-snapshot", help="Snapshot digest from the preview, required with --apply")
+            command.add_argument(
+                "--file", required=True, help="UTF-8 JSON operations list or saved batch preview"
+            )
+            command.add_argument(
+                "--apply", action="store_true", help="Apply all reviewed revisions in one commit"
+            )
+            command.add_argument(
+                "--expected-snapshot",
+                help="Snapshot digest from the preview, required with --apply",
+            )
             command.add_argument("--actor", default="local-author")
         elif name in ("withdraw", "purge"):
             if name == "withdraw":
                 selection = command.add_mutually_exclusive_group(required=True)
                 selection.add_argument("--source-id", help="Source UUID")
-                selection.add_argument("--dossier-id", help="Dossier UUID to retire, preserving its history")
-                command.add_argument("--expected-snapshot", help="Reviewed archive SHA-256 digest; required for a dossier")
-                command.add_argument("--expected-revision", type=int, help="Reviewed current dossier revision; required for a dossier")
-                command.add_argument("--dry-run", action="store_true", help="Preview dossier withdrawal without locking or writing")
+                selection.add_argument(
+                    "--dossier-id", help="Dossier UUID to retire, preserving its history"
+                )
+                command.add_argument(
+                    "--expected-snapshot",
+                    help="Reviewed archive SHA-256 digest; required for a dossier",
+                )
+                command.add_argument(
+                    "--expected-revision",
+                    type=int,
+                    help="Reviewed current dossier revision; required for a dossier",
+                )
+                command.add_argument(
+                    "--dry-run",
+                    action="store_true",
+                    help="Preview dossier withdrawal without locking or writing",
+                )
             else:
                 command.add_argument("--source-id", required=True, help="Source UUID")
             command.add_argument("--version-id", help="Explicit source version UUID")
-            command.add_argument("--reason", default="Withdrawn by user" if name == "withdraw" else "Purged by user", help="Reason for action")
+            command.add_argument(
+                "--reason",
+                default="Withdrawn by user" if name == "withdraw" else "Purged by user",
+                help="Reason for action",
+            )
             command.add_argument("--actor", default="local-author")
             if name == "purge":
-                command.add_argument("--dry-run", action="store_true", help="Preview records, passages and blobs to be removed without deleting")
+                command.add_argument(
+                    "--dry-run",
+                    action="store_true",
+                    help="Preview records, passages and blobs to be removed without deleting",
+                )
         elif name == "migrate-storage":
-            command.add_argument("--backup", required=True, help="Non-overwriting .tar.gz backup outside research and its cache")
+            command.add_argument(
+                "--backup",
+                required=True,
+                help="Non-overwriting .tar.gz backup outside research and its cache",
+            )
             command.add_argument("--expected-snapshot", help="Reject a different current snapshot")
         elif name == "export":
             command.add_argument("--output", required=True, help="Destination .tar.gz archive path")
         elif name == "restore":
-            command.add_argument("--from", dest="archive_source", required=True, help="Source .tar.gz archive path")
-            command.add_argument("--to", dest="target_dir", required=True, help="Target project directory")
+            command.add_argument(
+                "--from", dest="archive_source", required=True, help="Source .tar.gz archive path"
+            )
+            command.add_argument(
+                "--to", dest="target_dir", required=True, help="Target project directory"
+            )
         elif name == "matrix":
             command.add_argument("--output", help="Optional output file destination")
         if name in _REVISION_FIELDS:
-            command.set_defaults(cli_draft_arguments=tuple(
-                " / ".join(action.option_strings) or action.metavar or action.dest.upper()
-                for action in command._actions if action.dest in _REVISION_FIELDS[name]
-            ))
+            command.set_defaults(
+                cli_draft_arguments=tuple(
+                    " / ".join(action.option_strings) or action.metavar or action.dest.upper()
+                    for action in command._actions
+                    if action.dest in _REVISION_FIELDS[name]
+                )
+            )
 
 
 def command_metadata() -> list[dict[str, Any]]:
     """Describe stdout formats and switches from the configured command parsers."""
     parser = argparse.ArgumentParser(add_help=False)
     configure(parser)
-    commands = next(action for action in parser._actions if isinstance(action, argparse._SubParsersAction))
-    return [{"name": name, "purpose": command.get_default("cli_purpose"),
-             "output_formats": list(command.get_default("cli_output_formats")),
-             "default_output": command.get_default("cli_default_output"),
-             "json_flag": "--json" if "--json" in command._option_string_actions else None,
-             "aliases": list(command.get_default("cli_aliases")), "group": command.get_default("cli_group")}
-            for name, command in commands.choices.items() if name == command.get_default("research_command")]
+    commands = next(
+        action for action in parser._actions if isinstance(action, argparse._SubParsersAction)
+    )
+    return [
+        {
+            "name": name,
+            "purpose": command.get_default("cli_purpose"),
+            "output_formats": list(command.get_default("cli_output_formats")),
+            "default_output": command.get_default("cli_default_output"),
+            "json_flag": "--json" if "--json" in command._option_string_actions else None,
+            "aliases": list(command.get_default("cli_aliases")),
+            "group": command.get_default("cli_group"),
+        }
+        for name, command in commands.choices.items()
+        if name == command.get_default("research_command")
+    ]
 
 
 def _json_payload(value: str) -> Any:
@@ -638,8 +1391,10 @@ def _dossier_content(*, file: str | None, body: str | None) -> str | None:
         with Path(file).open("rb") as stream:
             content = stream.read(MAX_RESEARCH_OBJECT_BYTES + 1)
     except OSError as error:
-        raise ResearchError(f"Cannot read --file {file!r}: {error.strerror or error}. "
-                            "Use --body TEXT for literal authored content") from error
+        raise ResearchError(
+            f"Cannot read --file {file!r}: {error.strerror or error}. "
+            "Use --body TEXT for literal authored content"
+        ) from error
     if len(content) > MAX_RESEARCH_OBJECT_BYTES:
         raise ResearchError("Dossier --file exceeds the supported byte size")
     try:
@@ -682,19 +1437,28 @@ def _revision_changes(args: argparse.Namespace) -> dict[str, Any]:
     if kind == "dossier" and args.geography is not None:
         changes["geography"] = _geography(args.geography)
     if kind == "dossier" and (args.file is not None or args.body is not None):
-        changes["preamble" if args.preamble else "body"] = _dossier_content(file=args.file, body=args.body)
-    elif kind == "dossier" and (getattr(args, "section", None) or args.preamble) and any(
-        getattr(args, flag, False) for flag in ("update", "prepare", "diff")
+        changes["preamble" if args.preamble else "body"] = _dossier_content(
+            file=args.file, body=args.body
+        )
+    elif (
+        kind == "dossier"
+        and (getattr(args, "section", None) or args.preamble)
+        and any(getattr(args, flag, False) for flag in ("update", "prepare", "diff"))
     ):
         from .repository import ResearchError
-        raise ResearchError("Updating a dossier section or preamble requires --file PATH or --body TEXT with new content")
+
+        raise ResearchError(
+            "Updating a dossier section or preamble requires --file PATH or --body TEXT with new content"
+        )
     return changes
 
 
 def _missing_draft_message(args: argparse.Namespace) -> str:
     """Derive actionable input names from the owning fields and actual parser."""
-    return (f"Supply at least one draft field for {args.research_command}: {', '.join(args.cli_draft_arguments)}. "
-            "Use --inspect to read the record or --history to list immutable versions")
+    return (
+        f"Supply at least one draft field for {args.research_command}: {', '.join(args.cli_draft_arguments)}. "
+        "Use --inspect to read the record or --history to list immutable versions"
+    )
 
 
 def _revision_diff_text(comparison: dict[str, Any], *, section: str | None = None) -> str:
@@ -704,8 +1468,13 @@ def _revision_diff_text(comparison: dict[str, Any], *, section: str | None = Non
     from .presentation import safe_text
 
     color = sys.stdout.isatty()
-    paints = (("+++", "\x1b[1m"), ("---", "\x1b[1m"), ("@@", "\x1b[36m"),
-              ("+", "\x1b[32m"), ("-", "\x1b[31m"))
+    paints = (
+        ("+++", "\x1b[1m"),
+        ("---", "\x1b[1m"),
+        ("@@", "\x1b[36m"),
+        ("+", "\x1b[32m"),
+        ("-", "\x1b[31m"),
+    )
 
     def paint(line: str) -> str:
         line = safe_text(line)
@@ -726,21 +1495,37 @@ def _revision_diff_text(comparison: dict[str, Any], *, section: str | None = Non
                 from .sections import _section_spans, _section_subtree_end
 
                 spans = _section_spans(str(before or ""))
-                selected = next((span for span in spans
-                                 if span.title.casefold() == section.strip().casefold()), None)
+                selected = next(
+                    (span for span in spans if span.title.casefold() == section.strip().casefold()),
+                    None,
+                )
                 if selected is not None:
                     end = _section_subtree_end(spans, selected, len(str(before or "")))
                     descendants = sum(selected.start < span.start < end for span in spans)
                     if descendants:
                         noun = "heading" if descendants == 1 else "headings"
-                        lines.append(f"Section scope: H{selected.level} '{selected.title}' includes "
-                                     f"{descendants} descendant {noun}; replacing this subtree also "
-                                     "replaces their content.")
-            lines.extend(difflib.unified_diff(str(before or "").splitlines(), str(after or "").splitlines(),
-                                            fromfile=f"{kind} r{first}", tofile=destination, lineterm=""))
+                        lines.append(
+                            f"Section scope: H{selected.level} '{selected.title}' includes "
+                            f"{descendants} descendant {noun}; replacing this subtree also "
+                            "replaces their content."
+                        )
+            lines.extend(
+                difflib.unified_diff(
+                    str(before or "").splitlines(),
+                    str(after or "").splitlines(),
+                    fromfile=f"{kind} r{first}",
+                    tofile=destination,
+                    lineterm="",
+                )
+            )
         else:
-            lines.extend([f"--- {name}", f"- {json.dumps(before, ensure_ascii=False, sort_keys=True)}",
-                          f"+ {json.dumps(after, ensure_ascii=False, sort_keys=True)}"])
+            lines.extend(
+                [
+                    f"--- {name}",
+                    f"- {json.dumps(before, ensure_ascii=False, sort_keys=True)}",
+                    f"+ {json.dumps(after, ensure_ascii=False, sort_keys=True)}",
+                ]
+            )
     if not comparison["fields"]:
         lines.append("(no changes)")
     return "\n".join(paint(line) for line in lines)
@@ -752,7 +1537,12 @@ def _revision_resolutions(choices: list[str] | None) -> dict[str, Literal["curre
     resolutions: dict[str, Literal["current", "mine"]] = {}
     for choice in choices or []:
         field, separator, selection = choice.partition("=")
-        if not field or not separator or selection not in ("current", "mine") or field in resolutions:
+        if (
+            not field
+            or not separator
+            or selection not in ("current", "mine")
+            or field in resolutions
+        ):
             raise ResearchError("Each --resolve must name one unique FIELD=current|mine choice")
         resolutions[field] = "current" if selection == "current" else "mine"
     return resolutions
@@ -772,12 +1562,31 @@ def _dossier_edit_action(args: argparse.Namespace, record_id: str | None) -> dic
 
     if not any(value is not None for value in (args.export_edit, args.edit_file, args.output)):
         return None
-    edit_files = args.edit_file if isinstance(args.edit_file, list) else [args.edit_file] if args.edit_file else []
+    edit_files = (
+        args.edit_file
+        if isinstance(args.edit_file, list)
+        else [args.edit_file]
+        if args.edit_file
+        else []
+    )
     if len(edit_files) > 1 or (len(edit_files) == 1 and not record_id):
         if not args.prepare:
-            raise ResearchError("Multi-file dossier reconciliation requires --prepare --edit-file PATH ...")
-        if any((args.update, args.diff, args.history, args.inspect, args.revision is not None, args.export_edit is not None)):
-            raise ResearchError("Multi-file dossier edit preparation requires --prepare without other revision modes")
+            raise ResearchError(
+                "Multi-file dossier reconciliation requires --prepare --edit-file PATH ..."
+            )
+        if any(
+            (
+                args.update,
+                args.diff,
+                args.history,
+                args.inspect,
+                args.revision is not None,
+                args.export_edit is not None,
+            )
+        ):
+            raise ResearchError(
+                "Multi-file dossier edit preparation requires --prepare without other revision modes"
+            )
         batch_preview = prepare_dossier_edits(
             args.project,
             edit_files,
@@ -790,35 +1599,65 @@ def _dossier_edit_action(args: argparse.Namespace, record_id: str | None) -> dic
                 raise ResearchError("A reviewed output packet requires --change-kind and --reason")
             packet = batch_preview.get("batch_packet")
             if not isinstance(packet, dict) or not batch_preview["ready"]:
-                raise ResearchError("Cannot write revision packet: one or more dossier drafts have conflicts or no changes")
-            write_research_draft_file(args.project, args.output, json.dumps(packet, ensure_ascii=False, allow_nan=False, indent=2) + "\n")
+                raise ResearchError(
+                    "Cannot write revision packet: one or more dossier drafts have conflicts or no changes"
+                )
+            write_research_draft_file(
+                args.project,
+                args.output,
+                json.dumps(packet, ensure_ascii=False, allow_nan=False, indent=2) + "\n",
+            )
             return packet
         return batch_preview
 
     if not record_id:
         raise ResearchError("A selected dossier ID is required for edit export or preparation")
     fields = ("title", "file", "body", "tags", "evidence", "geography", "language", "section")
-    if any(getattr(args, field, None) is not None for field in fields) or args.summary or args.omit_citations:
-        raise ResearchError("Edit documents cannot be combined with ordinary dossier fields or bounded reads")
+    if (
+        any(getattr(args, field, None) is not None for field in fields)
+        or args.summary
+        or args.omit_citations
+    ):
+        raise ResearchError(
+            "Edit documents cannot be combined with ordinary dossier fields or bounded reads"
+        )
     if args.export_edit is not None:
-        if any((args.update, args.prepare, args.diff, args.history, args.inspect,
-                args.edit_file is not None, args.output is not None)):
+        if any(
+            (
+                args.update,
+                args.prepare,
+                args.diff,
+                args.history,
+                args.inspect,
+                args.edit_file is not None,
+                args.output is not None,
+            )
+        ):
             raise ResearchError("--export-edit permits only a selected ID and optional --revision")
         write_dossier_edit(args.project, record_id, args.export_edit, revision=args.revision)
-        return {"schema_version": "research-dossier-edit-export-local/1", "record_id": record_id,
-                "output": str(Path(args.export_edit).expanduser().absolute())}
+        return {
+            "schema_version": "research-dossier-edit-export-local/1",
+            "record_id": record_id,
+            "output": str(Path(args.export_edit).expanduser().absolute()),
+        }
     if not args.prepare or not edit_files:
         raise ResearchError("--edit-file and --output require --prepare --edit-file PATH")
     if any((args.update, args.diff, args.history, args.inspect, args.revision is not None)):
         raise ResearchError("Edit documents require --prepare without other revision modes")
     document = read_dossier_edit(edit_files[0])
-    if args.base_revision is not None and args.base_revision != decode_dossier_edit(document)["base_revision"]:
+    if (
+        args.base_revision is not None
+        and args.base_revision != decode_dossier_edit(document)["base_revision"]
+    ):
         raise ResearchError("--base-revision differs from the exported edit document")
-    preview = api.prepare_dossier_edit(args.project, record_id, document,
-                                       resolutions=_revision_resolutions(args.resolve))
+    preview = api.prepare_dossier_edit(
+        args.project, record_id, document, resolutions=_revision_resolutions(args.resolve)
+    )
     if args.output is None:
         if args.change_kind is not None or args.reason is not None:
-            raise ResearchError("A revision reason and change kind accompany --output PATH for a reviewed packet")
+            raise ResearchError(
+                "A revision reason and change kind accompany --output PATH for a reviewed packet"
+            )
         return preview
     if not args.change_kind or not args.reason:
         raise ResearchError("A reviewed output packet requires --change-kind and --reason")
@@ -826,12 +1665,25 @@ def _dossier_edit_action(args: argparse.Namespace, record_id: str | None) -> dic
         return preview
     current = preview["current"]
     operations: list[Mapping[str, Any]] = [
-        {"kind": "dossier", "id": record_id, "expected_revision": current["record"]["revision"],
-         "changes": preview["changes"], "change_kind": args.change_kind, "reason": args.reason}]
+        {
+            "kind": "dossier",
+            "id": record_id,
+            "expected_revision": current["record"]["revision"],
+            "changes": preview["changes"],
+            "change_kind": args.change_kind,
+            "reason": args.reason,
+        }
+    ]
     packet = api.prepare_record_revisions(args.project, operations, actor=args.actor)
     if packet["snapshot"] != current["snapshot"]:
-        raise ResearchConflictError("Research snapshot changed between reconciliation and packet preparation; prepare again")
-    write_research_draft_file(args.project, args.output, json.dumps(packet, ensure_ascii=False, allow_nan=False, indent=2) + "\n")
+        raise ResearchConflictError(
+            "Research snapshot changed between reconciliation and packet preparation; prepare again"
+        )
+    write_research_draft_file(
+        args.project,
+        args.output,
+        json.dumps(packet, ensure_ascii=False, allow_nan=False, indent=2) + "\n",
+    )
     return packet
 
 
@@ -842,79 +1694,186 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
 
     command = args.research_command
     kind = {"link-evidence": "evidence_link", "relate": "claim_relation"}.get(command, command)
-    record_id = getattr(args, {
-        "dossier": "dossier_id", "claim": "claim_id",
-        "link-evidence": "evidence_link_id", "decision": "decision_id",
-        "relate": "relation_id",
-    }[command])
+    record_id = getattr(
+        args,
+        {
+            "dossier": "dossier_id",
+            "claim": "claim_id",
+            "link-evidence": "evidence_link_id",
+            "decision": "decision_id",
+            "relate": "relation_id",
+        }[command],
+    )
     prepare = getattr(args, "prepare", False)
-    if args.compact and (not args.update or prepare or args.diff or args.history or args.inspect
-                         or args.revision is not None or getattr(args, "format", "json") not in ("json", "text")
-                         or getattr(args, "action", None) == "list"
-                         or any(getattr(args, field, None) for field in
-                                ("body_only", "summary", "omit_citations", "export_edit", "edit_file", "output"))):
-        raise ResearchError("--compact requires --update [--dry-run] with JSON or text output; "
-                            "it does not apply to reads, diffs, preparation or export modes")
+    if args.compact and (
+        not args.update
+        or prepare
+        or args.diff
+        or args.history
+        or args.inspect
+        or args.revision is not None
+        or getattr(args, "format", "json") not in ("json", "text")
+        or getattr(args, "action", None) == "list"
+        or any(
+            getattr(args, field, None)
+            for field in (
+                "body_only",
+                "summary",
+                "omit_citations",
+                "export_edit",
+                "edit_file",
+                "output",
+            )
+        )
+    ):
+        raise ResearchError(
+            "--compact requires --update [--dry-run] with JSON or text output; "
+            "it does not apply to reads, diffs, preparation or export modes"
+        )
     if command == "dossier" and args.body_only:
         fields = (*_REVISION_FIELDS["dossier"], "export_edit", "edit_file", "output")
-        if (not record_id or args.format != "text"
-                or getattr(args, "action", None) == "list"
-                or any((args.update, prepare, args.diff, args.history, args.summary, args.dry_run))
-                or any(getattr(args, field, None) is not None for field in fields)):
-            raise ResearchError("--body-only requires a selected dossier ID and --format text; "
-                                "it applies only to source body reads, without authored fields or write/history modes")
+        if (
+            not record_id
+            or args.format != "text"
+            or getattr(args, "action", None) == "list"
+            or any((args.update, prepare, args.diff, args.history, args.summary, args.dry_run))
+            or any(getattr(args, field, None) is not None for field in fields)
+        ):
+            raise ResearchError(
+                "--body-only requires a selected dossier ID and --format text; "
+                "it applies only to source body reads, without authored fields or write/history modes"
+            )
     if command == "dossier" and args.preamble and (args.export_edit or args.edit_file):
-        raise ResearchError("--preamble does not select whole-dossier edit packets; use --file or --body")
+        raise ResearchError(
+            "--preamble does not select whole-dossier edit packets; use --file or --body"
+        )
     bounded_dossier = command == "dossier" and (
-        args.section is not None or args.preamble or args.summary or args.omit_citations
-        or getattr(args, "manuscript", None) is not None)
+        args.section is not None
+        or args.preamble
+        or args.summary
+        or args.omit_citations
+        or getattr(args, "manuscript", None) is not None
+    )
     if bounded_dossier:
         if not record_id:
-            raise ResearchError("Dossier --section, --preamble, --summary and --omit-citations reads require a selected ID")
+            raise ResearchError(
+                "Dossier --section, --preamble, --summary and --omit-citations reads require a selected ID"
+            )
         if (args.section is not None or args.preamble) and args.summary:
-            raise ResearchError("Choose --section/--preamble or --summary for a bounded dossier read")
-        if (args.section is not None or args.preamble) and (args.history or (args.diff and args.from_revision is not None)):
-            raise ResearchError("--section/--preamble select dossier body reads or draft edits, not history or saved-revision comparisons")
-        read_flags = [flag for flag, selected in (("--summary", args.summary),
-                                                 ("--omit-citations", args.omit_citations)) if selected]
+            raise ResearchError(
+                "Choose --section/--preamble or --summary for a bounded dossier read"
+            )
+        if (args.section is not None or args.preamble) and (
+            args.history or (args.diff and args.from_revision is not None)
+        ):
+            raise ResearchError(
+                "--section/--preamble select dossier body reads or draft edits, not history or saved-revision comparisons"
+            )
+        read_flags = [
+            flag
+            for flag, selected in (
+                ("--summary", args.summary),
+                ("--omit-citations", args.omit_citations),
+            )
+            if selected
+        ]
         if read_flags and any((args.update, prepare, args.diff, args.history)):
-            raise ResearchError(f"{' and '.join(read_flags)} apply only to dossier reads, not revision or history modes")
+            raise ResearchError(
+                f"{' and '.join(read_flags)} apply only to dossier reads, not revision or history modes"
+            )
     if args.dry_run and not args.update:
-        raise ResearchError("--dry-run requires --update; --prepare and --diff already leave the archive unchanged")
-    if ((args.from_revision is not None or args.to_revision is not None)
-            and (not args.diff or args.from_revision is None)):
-        raise ResearchError("Historical comparison requires --diff --from-revision N [--to-revision M]")
+        raise ResearchError(
+            "--dry-run requires --update; --prepare and --diff already leave the archive unchanged"
+        )
+    if (args.from_revision is not None or args.to_revision is not None) and (
+        not args.diff or args.from_revision is None
+    ):
+        raise ResearchError(
+            "Historical comparison requires --diff --from-revision N [--to-revision M]"
+        )
     if getattr(args, "latest", False):
         if not args.update:
-            raise ResearchError("--latest requires --update; --diff already previews the current record")
+            raise ResearchError(
+                "--latest requires --update; --diff already previews the current record"
+            )
         if args.expected_revision is not None:
             raise ResearchError("Choose --latest or --expected-revision, not both")
-    if not args.update and (args.expected_revision is not None or args.expected_snapshot is not None):
+    if not args.update and (
+        args.expected_revision is not None or args.expected_snapshot is not None
+    ):
         raise ResearchError("--expected-revision and --expected-snapshot require --update")
-    packet_requested = (command == "dossier" and prepare and getattr(args, "edit_file", None) is not None
-                        and getattr(args, "output", None) is not None)
-    if not (args.update or packet_requested) and (args.change_kind is not None or args.reason is not None):
-        raise ResearchError("--change-kind and --reason require --update or --prepare --edit-file PATH --output PATH")
-    if not prepare and (getattr(args, "base_revision", None) is not None or getattr(args, "resolve", None)):
+    packet_requested = (
+        command == "dossier"
+        and prepare
+        and getattr(args, "edit_file", None) is not None
+        and getattr(args, "output", None) is not None
+    )
+    if not (args.update or packet_requested) and (
+        args.change_kind is not None or args.reason is not None
+    ):
+        raise ResearchError(
+            "--change-kind and --reason require --update or --prepare --edit-file PATH --output PATH"
+        )
+    if not prepare and (
+        getattr(args, "base_revision", None) is not None or getattr(args, "resolve", None)
+    ):
         raise ResearchError("--base-revision and --resolve require --prepare")
-    association_revision = getattr(args, "dossier_revision", None) if command == "claim" else getattr(args, "claim_revision", None)
-    if (association_revision is not None or getattr(args, "dossier_revisions", None) is not None) and not (args.update or prepare or getattr(args, "diff", False)):
-        raise ResearchError("An explicit associated revision requires --update, --prepare or --diff; omit it to create a new record")
+    association_revision = (
+        getattr(args, "dossier_revision", None)
+        if command == "claim"
+        else getattr(args, "claim_revision", None)
+    )
+    if (
+        association_revision is not None or getattr(args, "dossier_revisions", None) is not None
+    ) and not (args.update or prepare or getattr(args, "diff", False)):
+        raise ResearchError(
+            "An explicit associated revision requires --update, --prepare or --diff; omit it to create a new record"
+        )
     if command == "dossier" and (edit_result := _dossier_edit_action(args, record_id)) is not None:
         return edit_result
     if getattr(args, "action", None) == "list":
-        if record_id or args.update or prepare or getattr(args, "diff", False) or args.history or args.inspect or args.revision is not None:
+        if (
+            record_id
+            or args.update
+            or prepare
+            or getattr(args, "diff", False)
+            or args.history
+            or args.inspect
+            or args.revision is not None
+        ):
             raise ResearchError("The list verb takes no record ID or revision flags")
         return None
-    requested = args.update or prepare or getattr(args, "diff", False) or args.history or args.inspect or args.revision is not None
+    requested = (
+        args.update
+        or prepare
+        or getattr(args, "diff", False)
+        or args.history
+        or args.inspect
+        or args.revision is not None
+    )
     if command in ("link-evidence", "decision", "relate") and record_id:
         requested = True
     if not requested:
         return None
     if not record_id:
         raise ResearchError(f"{kind} ID is required for revision, history or inspection")
-    if sum(bool(mode) for mode in (args.update, prepare, getattr(args, "diff", False), args.history, args.inspect, args.revision is not None)) > 1:
-        raise ResearchError("Choose one of --update, --prepare, --diff, --history, --inspect or --revision")
+    if (
+        sum(
+            bool(mode)
+            for mode in (
+                args.update,
+                prepare,
+                getattr(args, "diff", False),
+                args.history,
+                args.inspect,
+                args.revision is not None,
+            )
+        )
+        > 1
+    ):
+        raise ResearchError(
+            "Choose one of --update, --prepare, --diff, --history, --inspect or --revision"
+        )
     if prepare:
         if args.base_revision is None or args.base_revision < 1:
             raise ResearchError("--prepare requires a positive --base-revision")
@@ -922,23 +1881,46 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
         changes = _revision_changes(args)
         if not changes:
             raise ResearchError(_missing_draft_message(args))
-        return api.prepare_record_revision(args.project, kind, record_id,
-                                           base_revision=args.base_revision, changes=changes, resolutions=resolutions,
-                                           **({"section": args.section} if getattr(args, "section", None) else {}))
+        return api.prepare_record_revision(
+            args.project,
+            kind,
+            record_id,
+            base_revision=args.base_revision,
+            changes=changes,
+            resolutions=resolutions,
+            **({"section": args.section} if getattr(args, "section", None) else {}),
+        )
     if getattr(args, "diff", False):
         changes = _revision_changes(args)
         if args.from_revision is not None:
             if changes or getattr(args, "section", None):
-                raise ResearchError("Historical comparison takes no draft fields or section selector")
-            comparison = api.compare_record_revisions(args.project, kind, record_id,
-                                                       from_revision=args.from_revision, to_revision=args.to_revision)
+                raise ResearchError(
+                    "Historical comparison takes no draft fields or section selector"
+                )
+            comparison = api.compare_record_revisions(
+                args.project,
+                kind,
+                record_id,
+                from_revision=args.from_revision,
+                to_revision=args.to_revision,
+            )
         elif not changes:
             raise ResearchError(_missing_draft_message(args))
         else:
-            comparison = api.preview_record_changes(args.project, kind, record_id, changes=changes,
-                                                    **({"section": args.section} if getattr(args, "section", None) else {}))
-        return {"schema_version": "research-revision-diff-local/1", "diff": _revision_diff_text(
-            comparison, section=getattr(args, "section", None) if args.format == "text" else None)}
+            comparison = api.preview_record_changes(
+                args.project,
+                kind,
+                record_id,
+                changes=changes,
+                **({"section": args.section} if getattr(args, "section", None) else {}),
+            )
+        return {
+            "schema_version": "research-revision-diff-local/1",
+            "diff": _revision_diff_text(
+                comparison,
+                section=getattr(args, "section", None) if args.format == "text" else None,
+            ),
+        }
     if args.update:
         if getattr(args, "latest", False) and args.expected_revision is None:
             current = api.get_record(args.project, kind, record_id)
@@ -946,7 +1928,9 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
             if args.expected_snapshot is None:
                 args.expected_snapshot = current["snapshot"]
         if args.expected_revision is None or not args.change_kind or not args.reason:
-            raise ResearchError("Updates require --expected-revision (or --latest), --change-kind and --reason; run --inspect first to read the current revision")
+            raise ResearchError(
+                "Updates require --expected-revision (or --latest), --change-kind and --reason; run --inspect first to read the current revision"
+            )
         if args.expected_revision < 1:
             raise ResearchError("Expected revision must be positive")
         try:
@@ -959,10 +1943,15 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
             if args.dry_run:
                 options["dry_run"] = True
             result = api.revise_record(
-                args.project, kind, record_id, changes=changes,
+                args.project,
+                kind,
+                record_id,
+                changes=changes,
                 expected_snapshot=args.expected_snapshot,
                 expected_revision=args.expected_revision,
-                change_kind=args.change_kind, reason=args.reason, actor=args.actor,
+                change_kind=args.change_kind,
+                reason=args.reason,
+                actor=args.actor,
                 **options,
             )
             if args.compact:
@@ -971,8 +1960,10 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
                 return revision_write_summary(result, expected_revision=args.expected_revision)
             return result
         except ResearchConflictError as error:
-            raise ResearchConflictError(f"{error}. Use --prepare --base-revision {args.expected_revision} "
-                                        "with your draft fields to review current changes before saving") from None
+            raise ResearchConflictError(
+                f"{error}. Use --prepare --base-revision {args.expected_revision} "
+                "with your draft fields to review current changes before saving"
+            ) from None
     if args.history:
         return api.record_history(args.project, kind, record_id)
     if args.revision is not None and args.revision < 1:
@@ -990,10 +1981,19 @@ def _resolve_manuscript_input(args: argparse.Namespace) -> None:
         or getattr(args, "delete_term", None) is not None
     ):
         return
-    if args.research_command not in (
-        "review-manuscript", "find-anchor", "link-manuscript", "unlink-manuscript",
-        "reconcile-manuscript", "compare", "terms",
-    ) or getattr(args, "manuscript", None) is not None:
+    if (
+        args.research_command
+        not in (
+            "review-manuscript",
+            "find-anchor",
+            "link-manuscript",
+            "unlink-manuscript",
+            "reconcile-manuscript",
+            "compare",
+            "terms",
+        )
+        or getattr(args, "manuscript", None) is not None
+    ):
         return
     from ..workspace import configured_manuscript
     from .repository import Repository, ResearchError
@@ -1002,7 +2002,9 @@ def _resolve_manuscript_input(args: argparse.Namespace) -> None:
     repository.snapshot()
     args.manuscript = configured_manuscript(repository.root)
     if args.manuscript is None:
-        raise ResearchError("Supply a manuscript path or --manuscript PATH, or set manuscript in the selected project's root-local config")
+        raise ResearchError(
+            "Supply a manuscript path or --manuscript PATH, or set manuscript in the selected project's root-local config"
+        )
 
 
 def _current_project() -> str:
@@ -1032,13 +2034,21 @@ def _record_text(result: dict[str, Any], *, kind: str | None = None) -> str:
     if result.get("schema_version") == "research-revision-diff-local/1":
         return str(result["diff"]).rstrip() + "\n"
     if result.get("schema_version") == "research-history-local/1":
-        lines = [f"# {safe_text(result['kind'])} {safe_text(result['record_id'])} history", "",
-                 f"Latest {'revision' if result['kind'] == 'dossier' else 'version'}: {result['latest_revision']}"]
+        lines = [
+            f"# {safe_text(result['kind'])} {safe_text(result['record_id'])} history",
+            "",
+            f"Latest {'revision' if result['kind'] == 'dossier' else 'version'}: {result['latest_revision']}",
+        ]
         for revision in result["revisions"]:
             label = "Revision" if result["kind"] == "dossier" else "Version"
-            lines.extend(["", f"{label} {revision['revision']}",
-                          f"Created: {safe_text(revision['created_at'])}",
-                          f"Actor: {safe_text(revision['created_by'])}"])
+            lines.extend(
+                [
+                    "",
+                    f"{label} {revision['revision']}",
+                    f"Created: {safe_text(revision['created_at'])}",
+                    f"Actor: {safe_text(revision['created_by'])}",
+                ]
+            )
             change = revision.get("change")
             if change:
                 lines.append(f"{safe_text(change['change_kind'])}: {safe_text(change['reason'])}")
@@ -1052,19 +2062,35 @@ def _record_text(result: dict[str, Any], *, kind: str | None = None) -> str:
         lines.append(f"{label} {revision}")
     if record.get("section"):
         level = record.get("section_level")
-        heading = (f"{'#' * level} {safe_text(record['section'])}" if level is not None
-                   else f"Section: {safe_text(record['section'])} (implicit preamble)")
+        heading = (
+            f"{'#' * level} {safe_text(record['section'])}"
+            if level is not None
+            else f"Section: {safe_text(record['section'])} (implicit preamble)"
+        )
         lines.extend(["", heading])
-    body = record["content"] if "content" in record else (
-        record.get("body") or record.get("excerpt") or record.get("statement") or record.get("rationale"))
+    body = (
+        record["content"]
+        if "content" in record
+        else (
+            record.get("body")
+            or record.get("excerpt")
+            or record.get("statement")
+            or record.get("rationale")
+        )
+    )
     if body:
         lines.extend(["", prose(body)])
     impact = record.get("impact_on_plot")
     if impact:
         lines.extend(["", f"Impact on plot: {prose(impact)}"])
     if "body_length" in record:
-        lines.extend(["", f"Image references: {len(result.get('images', []))}",
-                      f"PDF/video references: {len(result.get('media', []))}"])
+        lines.extend(
+            [
+                "",
+                f"Image references: {len(result.get('images', []))}",
+                f"PDF/video references: {len(result.get('media', []))}",
+            ]
+        )
     if isinstance(summary := result.get("geography_summary"), dict):
         lines.extend(["", geography_report(summary)])
     manuscript_evidence = result.get("manuscript_evidence")
@@ -1088,15 +2114,33 @@ def _record_text(result: dict[str, Any], *, kind: str | None = None) -> str:
 
 def _normalize_cli_identifiers(args: argparse.Namespace) -> None:
     """Accept complete bare UUIDv4 selectors without loosening stored/HTTP IDs."""
+
     def identifier(value: str) -> str:
-        if re.fullmatch(r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}",
-                        value, flags=re.IGNORECASE):
+        if re.fullmatch(
+            r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}",
+            value,
+            flags=re.IGNORECASE,
+        ):
             return "urn:uuid:" + value.lower()
         return value
 
-    for field in ("action", "record_id", "source_id", "source_version_id", "version_id", "passage", "passage_id", "claim_id",
-                  "dossier_id", "decision_id", "relation_id", "evidence_link_id", "link_id",
-                  "from_claim_id", "to_claim_id"):
+    for field in (
+        "action",
+        "record_id",
+        "source_id",
+        "source_version_id",
+        "version_id",
+        "passage",
+        "passage_id",
+        "claim_id",
+        "dossier_id",
+        "decision_id",
+        "relation_id",
+        "evidence_link_id",
+        "link_id",
+        "from_claim_id",
+        "to_claim_id",
+    ):
         value = getattr(args, field, None)
         if isinstance(value, str):
             setattr(args, field, identifier(value))
@@ -1111,6 +2155,7 @@ def _normalize_cli_identifiers(args: argparse.Namespace) -> None:
             normalized = {identifier(key): revision for key, revision in value.items()}
             if len(normalized) != len(value):
                 from .repository import ResearchError
+
                 raise ResearchError("Dossier revision keys identify the same record more than once")
             args.dossier_revisions = json.dumps(normalized)
 
@@ -1128,19 +2173,35 @@ def run(args: argparse.Namespace) -> int:
         if section is not None and not section.strip():
             raise ResearchError("--section requires a nonblank heading")
         if getattr(args, "action", None) == "list":
-            creation = ("title", "statement", "rationale", "impact_on_plot", "file", "body", "geography")
+            creation = (
+                "title",
+                "statement",
+                "rationale",
+                "impact_on_plot",
+                "file",
+                "body",
+                "geography",
+            )
             if any(getattr(args, name, None) for name in creation):
-                raise ResearchError("The list verb does not create records; drop the list verb or the creation fields")
-        if (command not in ("schema", "init", "restore", "zotero-restore", "ocr-status")
-                and args.project is None):
+                raise ResearchError(
+                    "The list verb does not create records; drop the list verb or the creation fields"
+                )
+        if (
+            command not in ("schema", "init", "restore", "zotero-restore", "ocr-status")
+            and args.project is None
+        ):
             args.project = _current_project()
         _resolve_manuscript_input(args)
         # Normalize positional selectors without overriding an explicit revision mode.
         if command in ("dossier", "claim", "decision", "sources"):
             action = getattr(args, "action", None)
             rid = getattr(args, "record_id", None)
-            flag = {"dossier": "dossier_id", "claim": "claim_id",
-                    "decision": "decision_id", "sources": "source_id"}[command]
+            flag = {
+                "dossier": "dossier_id",
+                "claim": "claim_id",
+                "decision": "decision_id",
+                "sources": "source_id",
+            }[command]
             if action == "list" and (rid is not None or getattr(args, flag, None) is not None):
                 raise ResearchError("The list verb takes no record ID")
             # If action is a verb, keep it; if it looks like a record ID, shift.
@@ -1153,11 +2214,23 @@ def run(args: argparse.Namespace) -> int:
                     args.inspect = True
             elif action is not None and action != "list":
                 if rid is not None:
-                    raise ResearchError("Choose list, show/inspect RECORD_ID, or one positional record ID")
+                    raise ResearchError(
+                        "Choose list, show/inspect RECORD_ID, or one positional record ID"
+                    )
                 rid = action
                 args.action = None
-                if not any(getattr(args, mode, None) for mode in
-                           ("update", "prepare", "diff", "history", "inspect", "revision", "export_edit")):
+                if not any(
+                    getattr(args, mode, None)
+                    for mode in (
+                        "update",
+                        "prepare",
+                        "diff",
+                        "history",
+                        "inspect",
+                        "revision",
+                        "export_edit",
+                    )
+                ):
                     args.inspect = True
             if rid is not None:
                 if getattr(args, flag, None) not in (None, rid):
@@ -1165,122 +2238,258 @@ def run(args: argparse.Namespace) -> int:
                 setattr(args, flag, rid)
         dossier_tags: list[str] | None = None
         if command == "dossier":
-            list_incompatible_fields = (*_REVISION_FIELDS["dossier"], "section", "revision", "export_edit", "edit_file", "output")
-            list_incompatible_modes = ("summary", "omit_citations", "update", "prepare", "diff", "history", "inspect", "preamble", "body_only")
-            if getattr(args, "set_collection", None) is not None or getattr(args, "delete_collection", None) is not None:
-                if (args.dossier_id or getattr(args, "action", None) is not None
-                        or getattr(args, "filter_tags", None) is not None
-                        or getattr(args, "collection", None) is not None
-                        or any(getattr(args, field, None) is not None for field in list_incompatible_fields)
-                        or any(getattr(args, mode, False) for mode in list_incompatible_modes)):
-                    raise ResearchError("--set-collection and --delete-collection cannot be combined with record selectors, filters or dossier revision fields")
-                if getattr(args, "set_collection", None) is not None and not getattr(args, "collection_name", None):
+            list_incompatible_fields = (
+                *_REVISION_FIELDS["dossier"],
+                "section",
+                "revision",
+                "export_edit",
+                "edit_file",
+                "output",
+            )
+            list_incompatible_modes = (
+                "summary",
+                "omit_citations",
+                "update",
+                "prepare",
+                "diff",
+                "history",
+                "inspect",
+                "preamble",
+                "body_only",
+            )
+            if (
+                getattr(args, "set_collection", None) is not None
+                or getattr(args, "delete_collection", None) is not None
+            ):
+                if (
+                    args.dossier_id
+                    or getattr(args, "action", None) is not None
+                    or getattr(args, "filter_tags", None) is not None
+                    or getattr(args, "collection", None) is not None
+                    or any(
+                        getattr(args, field, None) is not None for field in list_incompatible_fields
+                    )
+                    or any(getattr(args, mode, False) for mode in list_incompatible_modes)
+                ):
+                    raise ResearchError(
+                        "--set-collection and --delete-collection cannot be combined with record selectors, filters or dossier revision fields"
+                    )
+                if getattr(args, "set_collection", None) is not None and not getattr(
+                    args, "collection_name", None
+                ):
                     raise ResearchError("--set-collection requires --collection-name NAME")
                 if getattr(args, "delete_collection", None) is not None and (
-                        getattr(args, "collection_name", None) is not None or getattr(args, "dossiers", None) is not None):
-                    raise ResearchError("--delete-collection takes no --collection-name or --dossiers")
-            elif getattr(args, "collection_name", None) is not None or getattr(args, "dossiers", None) is not None:
-                raise ResearchError("--collection-name and --dossiers require --set-collection COLLECTION_ID")
-            if (
-                getattr(args, "collection", None) is not None
-                and (
-                    args.dossier_id
-                    or any(getattr(args, field, None) is not None for field in list_incompatible_fields)
-                    or any(getattr(args, mode, False) for mode in list_incompatible_modes)
-                )
+                    getattr(args, "collection_name", None) is not None
+                    or getattr(args, "dossiers", None) is not None
+                ):
+                    raise ResearchError(
+                        "--delete-collection takes no --collection-name or --dossiers"
+                    )
+            elif (
+                getattr(args, "collection_name", None) is not None
+                or getattr(args, "dossiers", None) is not None
             ):
-                raise ResearchError("--collection filters dossier lists only; do not combine it with a selected record or creation/revision fields")
+                raise ResearchError(
+                    "--collection-name and --dossiers require --set-collection COLLECTION_ID"
+                )
+            if getattr(args, "collection", None) is not None and (
+                args.dossier_id
+                or any(getattr(args, field, None) is not None for field in list_incompatible_fields)
+                or any(getattr(args, mode, False) for mode in list_incompatible_modes)
+            ):
+                raise ResearchError(
+                    "--collection filters dossier lists only; do not combine it with a selected record or creation/revision fields"
+                )
         if command == "dossier" and (filter_tags := getattr(args, "filter_tags", None)) is not None:
             from pydantic import TypeAdapter
 
             from .models import Dossier
 
-            fields = (*_REVISION_FIELDS["dossier"], "section", "revision", "export_edit", "edit_file", "output")
+            fields = (
+                *_REVISION_FIELDS["dossier"],
+                "section",
+                "revision",
+                "export_edit",
+                "edit_file",
+                "output",
+            )
             modes = ("summary", "omit_citations", "update", "prepare", "diff", "history", "inspect")
-            if (args.dossier_id or any(getattr(args, field, None) is not None for field in fields)
-                    or any(getattr(args, mode, False) for mode in modes)):
-                raise ResearchError("--tag filters dossier lists only; do not combine it with a selected record or creation/revision fields")
+            if (
+                args.dossier_id
+                or any(getattr(args, field, None) is not None for field in fields)
+                or any(getattr(args, mode, False) for mode in modes)
+            ):
+                raise ResearchError(
+                    "--tag filters dossier lists only; do not combine it with a selected record or creation/revision fields"
+                )
             try:
-                dossier_tags = TypeAdapter(cast(Any, Dossier.model_fields["tags"].annotation)).validate_python(filter_tags, strict=True)
+                dossier_tags = TypeAdapter(
+                    cast(Any, Dossier.model_fields["tags"].annotation)
+                ).validate_python(filter_tags, strict=True)
             except ValidationError as error:
                 raise ResearchError(f"Invalid --tag filter: {error}") from None
             if any(not tag.strip() for tag in dossier_tags):
                 raise ResearchError("--tag requires a nonblank stored tag")
         if command == "ingest":
-            if (args.resume and not args.checkpoint) or (not args.file and not args.resume and not args.discard_checkpoint):
-                print("[error] Supply --file, or --checkpoint PATH --resume, or --discard-checkpoint PATH", file=sys.stderr)
+            if (args.resume and not args.checkpoint) or (
+                not args.file and not args.resume and not args.discard_checkpoint
+            ):
+                print(
+                    "[error] Supply --file, or --checkpoint PATH --resume, or --discard-checkpoint PATH",
+                    file=sys.stderr,
+                )
                 return 2
             if args.expected_snapshot and not args.checkpoint:
                 print("[error] --expected-snapshot requires --checkpoint", file=sys.stderr)
                 return 2
-            if args.discard_checkpoint and any((args.file, args.resume, args.dry_run, args.source_id, args.title,
-                                                 args.language, args.context, args.origin_url, args.actor, args.fallback)):
-                print("[error] --discard-checkpoint cannot be combined with capture or dry-run options", file=sys.stderr)
+            if args.discard_checkpoint and any(
+                (
+                    args.file,
+                    args.resume,
+                    args.dry_run,
+                    args.source_id,
+                    args.title,
+                    args.language,
+                    args.context,
+                    args.origin_url,
+                    args.actor,
+                    args.fallback,
+                )
+            ):
+                print(
+                    "[error] --discard-checkpoint cannot be combined with capture or dry-run options",
+                    file=sys.stderr,
+                )
                 return 2
         if command == "revise-batch" and bool(args.apply) != (args.expected_snapshot is not None):
-            print("[error] --apply and --expected-snapshot must be supplied together; omit both for a read-only preview", file=sys.stderr)
+            print(
+                "[error] --apply and --expected-snapshot must be supplied together; omit both for a read-only preview",
+                file=sys.stderr,
+            )
             return 2
         if command in ("sources", "audit"):
             human = getattr(args, "format", "json") != "json"
             paginated = getattr(args, "limit", None) is not None or getattr(args, "offset", 0) != 0
             if not human and (getattr(args, "pager", False) or paginated):
-                print("[error] --pager, --limit and --offset require --format text or md; JSON output remains complete", file=sys.stderr)
+                print(
+                    "[error] --pager, --limit and --offset require --format text or md; JSON output remains complete",
+                    file=sys.stderr,
+                )
                 return 2
             if paginated and getattr(args, "source_id", None):
-                print("[error] --limit and --offset apply to source lists, not --source-id details", file=sys.stderr)
+                print(
+                    "[error] --limit and --offset apply to source lists, not --source-id details",
+                    file=sys.stderr,
+                )
                 return 2
         result: dict[str, Any]
         if command == "schema":
             result = api.schema()
         elif command == "init":
-            result = api.init(args.project, title=args.title, language=args.language, actor=args.actor)
+            result = api.init(
+                args.project, title=args.title, language=args.language, actor=args.actor
+            )
         elif command in ("mark-applied", "reopen"):
-            result = api.acknowledge_decision(args.project, args.decision_id, args.dossier_id,
-                expected_snapshot=args.expected_snapshot, expected_decision_revision=args.expected_decision_revision,
+            result = api.acknowledge_decision(
+                args.project,
+                args.decision_id,
+                args.dossier_id,
+                expected_snapshot=args.expected_snapshot,
+                expected_decision_revision=args.expected_decision_revision,
                 expected_dossier_revision=args.expected_dossier_revision,
-                status="applied" if command == "mark-applied" else "review_needed", note=args.note, actor=args.actor)
+                status="applied" if command == "mark-applied" else "review_needed",
+                note=args.note,
+                actor=args.actor,
+            )
         elif command == "media-context":
-            result = api.update_dossier_media_context(args.project, args.dossier_id, args.source_id, args.source_version_id,
-                expected_snapshot=args.expected_snapshot, expected_revision=args.expected_revision,
-                context=_source_context(args.context) or {}, reason=args.reason, actor=args.actor, dry_run=args.dry_run)
+            result = api.update_dossier_media_context(
+                args.project,
+                args.dossier_id,
+                args.source_id,
+                args.source_version_id,
+                expected_snapshot=args.expected_snapshot,
+                expected_revision=args.expected_revision,
+                context=_source_context(args.context) or {},
+                reason=args.reason,
+                actor=args.actor,
+                dry_run=args.dry_run,
+            )
         elif command == "dossier-images":
-            result = api.list_dossier_images(args.project, dossier_id=args.dossier_id,
-                                            limit=args.limit, offset=args.offset, missing_provenance=args.missing_provenance)
+            result = api.list_dossier_images(
+                args.project,
+                dossier_id=args.dossier_id,
+                limit=args.limit,
+                offset=args.offset,
+                missing_provenance=args.missing_provenance,
+            )
         elif command in ("dossier-image", "dossier-media"):
             if not args.allow_retention:
-                raise ResearchError("Explicit local retention permission is required (--allow-retention)")
+                raise ResearchError(
+                    "Explicit local retention permission is required (--allow-retention)"
+                )
             if getattr(args, "batch", None):
                 from .attachments import ImageBatchItem
 
-                if (any(getattr(args, field, None) is not None
-                        for field in ("caption", "section", "replace_reference", "title", "context", "origin_url"))
-                        or args.alt or args.change_kind != "supersession"):
-                    raise ResearchError("Put per-image metadata and placement inside the batch manifest")
+                if (
+                    any(
+                        getattr(args, field, None) is not None
+                        for field in (
+                            "caption",
+                            "section",
+                            "replace_reference",
+                            "title",
+                            "context",
+                            "origin_url",
+                        )
+                    )
+                    or args.alt
+                    or args.change_kind != "supersession"
+                ):
+                    raise ResearchError(
+                        "Put per-image metadata and placement inside the batch manifest"
+                    )
                 manifest = Path(args.batch).expanduser().resolve()
                 with manifest.open("rb") as stream:
                     batch_bytes = stream.read(1024 * 1024 + 1)
                 if len(batch_bytes) > 1024 * 1024:
                     raise ResearchError("Image batch manifest exceeds 1 MiB")
                 document = json.loads(batch_bytes)
-                if (not isinstance(document, dict) or set(document) != {"schema_version", "items"}
-                        or document["schema_version"] != "research-dossier-image-batch/1"
-                        or not isinstance(document["items"], list) or not 1 <= len(document["items"]) <= 100):
-                    raise ResearchError("Expected research-dossier-image-batch/1 with only schema_version and items")
+                if (
+                    not isinstance(document, dict)
+                    or set(document) != {"schema_version", "items"}
+                    or document["schema_version"] != "research-dossier-image-batch/1"
+                    or not isinstance(document["items"], list)
+                    or not 1 <= len(document["items"]) <= 100
+                ):
+                    raise ResearchError(
+                        "Expected research-dossier-image-batch/1 with only schema_version and items"
+                    )
                 batch_items = [ImageBatchItem.model_validate(item) for item in document["items"]]
                 batch_resolved = []
                 for batch_item in batch_items:
                     batch_values = batch_item.model_dump()
                     batch_path = Path(batch_item.file).expanduser()
-                    batch_values["file"] = str(batch_path if batch_path.is_absolute() else manifest.parent / batch_path)
+                    batch_values["file"] = str(
+                        batch_path if batch_path.is_absolute() else manifest.parent / batch_path
+                    )
                     batch_resolved.append(batch_values)
-                result = api.attach_dossier_images(args.project, args.dossier_id, batch_resolved,
-                    expected_snapshot=args.expected_snapshot, expected_revision=args.expected_revision,
-                    allow_retention=True, dry_run=args.dry_run,
-                    reason=args.reason or "Attach reviewed image batch.", actor=args.actor)
+                result = api.attach_dossier_images(
+                    args.project,
+                    args.dossier_id,
+                    batch_resolved,
+                    expected_snapshot=args.expected_snapshot,
+                    expected_revision=args.expected_revision,
+                    allow_retention=True,
+                    dry_run=args.dry_run,
+                    reason=args.reason or "Attach reviewed image batch.",
+                    actor=args.actor,
+                )
                 if args.compact and not args.dry_run:
                     from .presentation import revision_write_summary
 
-                    result = revision_write_summary(result, expected_revision=args.expected_revision)
+                    result = revision_write_summary(
+                        result, expected_revision=args.expected_revision
+                    )
                 print(json.dumps(result, ensure_ascii=False, indent=2))
                 return 0
             if getattr(args, "dry_run", False):
@@ -1288,18 +2497,34 @@ def run(args: argparse.Namespace) -> int:
             context = _source_context(args.context)
             image_path = Path(args.file).expanduser()
             with image_path.open("rb") as image_file:
-                content = image_file.read((MAX_IMAGE_BYTES if command == "dossier-image" else api.MAX_PDF_BYTES) + 1)
+                content = image_file.read(
+                    (MAX_IMAGE_BYTES if command == "dossier-image" else api.MAX_PDF_BYTES) + 1
+                )
             if command == "dossier-media":
                 from .media import validate_media
+
                 validate_media(content, filename=image_path.name)
-            attach = api.attach_dossier_image if command == "dossier-image" else api.attach_dossier_media
+            attach = (
+                api.attach_dossier_image if command == "dossier-image" else api.attach_dossier_media
+            )
             result = attach(
-                args.project, args.dossier_id, content, filename=image_path.name,
-                expected_snapshot=args.expected_snapshot, expected_revision=args.expected_revision,
-                allow_retention=args.allow_retention, alt=args.alt, caption=args.caption,
-                section=args.section, replace_reference=args.replace_reference,
-                title=args.title, context=context, origin_url=args.origin_url,
-                reason=args.reason, change_kind=args.change_kind, actor=args.actor,
+                args.project,
+                args.dossier_id,
+                content,
+                filename=image_path.name,
+                expected_snapshot=args.expected_snapshot,
+                expected_revision=args.expected_revision,
+                allow_retention=args.allow_retention,
+                alt=args.alt,
+                caption=args.caption,
+                section=args.section,
+                replace_reference=args.replace_reference,
+                title=args.title,
+                context=context,
+                origin_url=args.origin_url,
+                reason=args.reason,
+                change_kind=args.change_kind,
+                actor=args.actor,
             )
             if args.compact:
                 from .presentation import revision_write_summary
@@ -1316,15 +2541,27 @@ def run(args: argparse.Namespace) -> int:
 
             files = args.file if isinstance(args.file, list) else [args.file] if args.file else None
             if args.discard_checkpoint:
-                result = api.discard_ingest_checkpoint(args.project, checkpoint=args.discard_checkpoint)
+                result = api.discard_ingest_checkpoint(
+                    args.project, checkpoint=args.discard_checkpoint
+                )
             elif args.checkpoint:
-                result = api.ingest_checkpoint(args.project, files, checkpoint=args.checkpoint, resume=args.resume,
-                                               allow_retention=args.allow_retention, source_id=args.source_id,
-                                               title=args.title, language=args.language, actor=args.actor,
-                                               dry_run=args.dry_run, context=context, origin_url=args.origin_url,
-                                               expected_snapshot=args.expected_snapshot,
-                                               allow_fallback=True if args.fallback else None,
-                                               progress_callback=_cli_progress)
+                result = api.ingest_checkpoint(
+                    args.project,
+                    files,
+                    checkpoint=args.checkpoint,
+                    resume=args.resume,
+                    allow_retention=args.allow_retention,
+                    source_id=args.source_id,
+                    title=args.title,
+                    language=args.language,
+                    actor=args.actor,
+                    dry_run=args.dry_run,
+                    context=context,
+                    origin_url=args.origin_url,
+                    expected_snapshot=args.expected_snapshot,
+                    allow_fallback=True if args.fallback else None,
+                    progress_callback=_cli_progress,
+                )
                 print(json.dumps(result, ensure_ascii=False, indent=2))
                 return 0 if result["complete"] else 1
             elif files is not None and len(files) > 1:
@@ -1333,15 +2570,31 @@ def run(args: argparse.Namespace) -> int:
                 items: list[dict[str, Any]] = []
                 succeeded = 0
                 failed = 0
+
                 def _ingest_one(file_item: Any) -> tuple[dict[str, Any], bool]:
                     try:
-                        res = api.ingest(args.project, file_item, allow_retention=args.allow_retention,
-                                         language=args.language, actor=args.actor or "local-author", dry_run=args.dry_run,
-                                         context=context, origin_url=args.origin_url,
-                                         allow_fallback=getattr(args, "fallback", False),
-                                         progress_callback=_cli_progress)
-                        return ({"file": str(file_item), "ok": True, "source_id": res["source_id"],
-                                 "passages": res["passages"], "warnings": res.get("warnings", [])}, True)
+                        res = api.ingest(
+                            args.project,
+                            file_item,
+                            allow_retention=args.allow_retention,
+                            language=args.language,
+                            actor=args.actor or "local-author",
+                            dry_run=args.dry_run,
+                            context=context,
+                            origin_url=args.origin_url,
+                            allow_fallback=getattr(args, "fallback", False),
+                            progress_callback=_cli_progress,
+                        )
+                        return (
+                            {
+                                "file": str(file_item),
+                                "ok": True,
+                                "source_id": res["source_id"],
+                                "passages": res["passages"],
+                                "warnings": res.get("warnings", []),
+                            },
+                            True,
+                        )
                     except (ResearchError, OSError, ValueError) as exc:
                         return ({"file": str(file_item), "ok": False, "error": str(exc)}, False)
 
@@ -1365,29 +2618,56 @@ def run(args: argparse.Namespace) -> int:
             else:
                 if files is None:
                     raise ResearchError("Source files are required")
-                result = api.ingest(args.project, files[0], allow_retention=args.allow_retention,
-                                    source_id=args.source_id, title=args.title, language=args.language,
-                                    actor=args.actor or "local-author", dry_run=args.dry_run, context=context, origin_url=args.origin_url,
-                                    allow_fallback=getattr(args, "fallback", False),
-                                    progress_callback=_cli_progress)
+                result = api.ingest(
+                    args.project,
+                    files[0],
+                    allow_retention=args.allow_retention,
+                    source_id=args.source_id,
+                    title=args.title,
+                    language=args.language,
+                    actor=args.actor or "local-author",
+                    dry_run=args.dry_run,
+                    context=context,
+                    origin_url=args.origin_url,
+                    allow_fallback=getattr(args, "fallback", False),
+                    progress_callback=_cli_progress,
+                )
         elif command in ("zotero-backup", "zotero-restore"):
             from . import zotero_backup
+
             if command == "zotero-backup":
-                result = zotero_backup.backup(args.project, args.data_dir, args.output,
-                                              confirm_closed=args.confirm_zotero_closed)
+                result = zotero_backup.backup(
+                    args.project,
+                    args.data_dir,
+                    args.output,
+                    confirm_closed=args.confirm_zotero_closed,
+                )
             else:
                 result = zotero_backup.restore(args.archive_source, args.target_dir)
         elif command == "zotero-export":
             from . import zotero
-            result = zotero.export_library(args.project, args.output, allow_retention=args.allow_retention,
-                                            dry_run=args.dry_run)
+
+            result = zotero.export_library(
+                args.project,
+                args.output,
+                allow_retention=args.allow_retention,
+                dry_run=args.dry_run,
+            )
         elif command in ("zotero", "zotero-ingest"):
             from . import zotero
+
             if command == "zotero" and args.collections:
                 result = zotero.collections(args.project, library=args.library, start=args.start)
             elif command == "zotero":
-                result = zotero.browse(args.project, library=args.library, query=args.query,
-                                       item_key=args.item_key, limit=args.limit, start=args.start, collection_key=args.collection_key)
+                result = zotero.browse(
+                    args.project,
+                    library=args.library,
+                    query=args.query,
+                    item_key=args.item_key,
+                    limit=args.limit,
+                    start=args.start,
+                    collection_key=args.collection_key,
+                )
             else:
                 start_time = time.monotonic()
 
@@ -1398,7 +2678,9 @@ def run(args: argparse.Namespace) -> int:
 
                 if getattr(args, "item_key", None):
                     if getattr(args, "source_id", None):
-                        raise ResearchError("--source-id cannot be used when ingesting an item with multiple attachments")
+                        raise ResearchError(
+                            "--source-id cannot be used when ingesting an item with multiple attachments"
+                        )
                     result = zotero.ingest_item(
                         args.project,
                         library=args.library,
@@ -1410,7 +2692,11 @@ def run(args: argparse.Namespace) -> int:
                         progress_callback=_zotero_progress,
                     )
                 else:
-                    att_keys = args.attachment_key if isinstance(args.attachment_key, list) else [args.attachment_key]
+                    att_keys = (
+                        args.attachment_key
+                        if isinstance(args.attachment_key, list)
+                        else [args.attachment_key]
+                    )
                     if len(att_keys) == 1:
                         result = zotero.ingest(
                             args.project,
@@ -1425,7 +2711,9 @@ def run(args: argparse.Namespace) -> int:
                         )
                     else:
                         if getattr(args, "source_id", None):
-                            raise ResearchError("--source-id cannot be used when ingesting multiple attachments")
+                            raise ResearchError(
+                                "--source-id cannot be used when ingesting multiple attachments"
+                            )
                         result = zotero.ingest_attachments(
                             args.project,
                             library=args.library,
@@ -1437,25 +2725,37 @@ def run(args: argparse.Namespace) -> int:
                             progress_callback=_zotero_progress,
                         )
         elif command == "manuscript-links":
-            result = api.list_manuscript_links(args.project, claim_id=args.claim_id,
-                                               include_retracted=args.include_retracted)
+            result = api.list_manuscript_links(
+                args.project, claim_id=args.claim_id, include_retracted=args.include_retracted
+            )
         elif command == "review-manuscript":
-            result = api.review_manuscript_links(args.project, args.manuscript, language=args.language)
+            result = api.review_manuscript_links(
+                args.project, args.manuscript, language=args.language
+            )
         elif command == "terms":
             if getattr(args, "set_term", None) is not None:
-                if getattr(args, "term", None) is not None or getattr(args, "manuscript", None) is not None:
-                    raise ResearchError("--set-term cannot be combined with --term or a manuscript path")
+                if (
+                    getattr(args, "term", None) is not None
+                    or getattr(args, "manuscript", None) is not None
+                ):
+                    raise ResearchError(
+                        "--set-term cannot be combined with --term or a manuscript path"
+                    )
                 raw_aliases = getattr(args, "aliases", "") or ""
                 aliases = [item.strip() for item in raw_aliases.split(",") if item.strip()]
                 scoped_list: list[dict[str, Any]] = []
                 for spec in getattr(args, "scoped_alternatives", None) or []:
                     form_part, sep, ch_part = str(spec).rpartition(":")
                     if not form_part.strip() or not sep or not ch_part.strip():
-                        raise ResearchError("Each --scoped-alternative must have format FORM:CH1,CH2")
+                        raise ResearchError(
+                            "Each --scoped-alternative must have format FORM:CH1,CH2"
+                        )
                     try:
                         chapters = [int(ch.strip()) for ch in ch_part.split(",") if ch.strip()]
                     except ValueError:
-                        raise ResearchError("Scoped alternative chapters must be positive integers") from None
+                        raise ResearchError(
+                            "Scoped alternative chapters must be positive integers"
+                        ) from None
                     scoped_list.append({"term": form_part.strip(), "chapters": chapters})
                 result = api.save_term_profile(
                     args.project,
@@ -1463,6 +2763,7 @@ def run(args: argparse.Namespace) -> int:
                     aliases=aliases,
                     scoped_alternatives=scoped_list,
                     case_sensitive=bool(getattr(args, "case_sensitive", False)),
+                    strict_boundaries=bool(getattr(args, "strict_boundaries", False)),
                     dossier_id=getattr(args, "dossier_id", None),
                     claim_id=getattr(args, "claim_id", None),
                 )
@@ -1473,16 +2774,20 @@ def run(args: argparse.Namespace) -> int:
                     or getattr(args, "aliases", None) is not None
                     or getattr(args, "scoped_alternatives", None) is not None
                     or getattr(args, "case_sensitive", False)
+                    or getattr(args, "strict_boundaries", False)
                     or getattr(args, "dossier_id", None) is not None
                     or getattr(args, "claim_id", None) is not None
                 ):
-                    raise ResearchError("--delete-term takes no term profile fields, --term filter or manuscript path")
+                    raise ResearchError(
+                        "--delete-term takes no term profile fields, --term filter or manuscript path"
+                    )
                 result = api.delete_term_profile(args.project, args.delete_term)
             else:
                 if (
                     getattr(args, "aliases", None) is not None
                     or getattr(args, "scoped_alternatives", None) is not None
                     or getattr(args, "case_sensitive", False)
+                    or getattr(args, "strict_boundaries", False)
                     or getattr(args, "dossier_id", None) is not None
                     or getattr(args, "claim_id", None) is not None
                 ):
@@ -1497,21 +2802,34 @@ def run(args: argparse.Namespace) -> int:
             from .repository import ResearchConflictError
 
             link_review = api.review_manuscript_links(args.project, args.manuscript)
-            if args.expected_snapshot is not None and link_review["snapshot"] != args.expected_snapshot:
+            if (
+                args.expected_snapshot is not None
+                and link_review["snapshot"] != args.expected_snapshot
+            ):
                 raise ResearchConflictError("Research snapshot changed; reload before retracting")
-            row = next((item for item in link_review["links"] if item["link_id"] == args.link_id), None)
+            row = next(
+                (item for item in link_review["links"] if item["link_id"] == args.link_id), None
+            )
             if row is None:
                 raise ResearchError("Unknown manuscript association for this manuscript")
-            expected_revision = args.expected_revision if args.expected_revision is not None else row["revision"]
+            expected_revision = (
+                args.expected_revision if args.expected_revision is not None else row["revision"]
+            )
             result = api.retract_manuscript_link(
-                args.project, args.manuscript, args.link_id,
+                args.project,
+                args.manuscript,
+                args.link_id,
                 expected_project_id=link_review["project_id"],
                 expected_snapshot=link_review["snapshot"],
                 expected_revision=expected_revision,
-                reason=args.reason, actor=args.actor)
+                reason=args.reason,
+                actor=args.actor,
+            )
         elif command == "link-manuscript":
             if not args.allow_retention:
-                raise ResearchError("Explicit local retention permission is required (--allow-retention)")
+                raise ResearchError(
+                    "Explicit local retention permission is required (--allow-retention)"
+                )
             from ..io import FileUtils
             from .manuscript import _source_path
             from .repository import Repository
@@ -1519,10 +2837,24 @@ def run(args: argparse.Namespace) -> int:
             if args.selection is not None:
                 selection_payload = _json_object(args.selection, "Selection")
             else:
-                resolved = api.resolve_manuscript_anchor(args.project, args.manuscript, query=args.quote,
-                                                         line=args.line, language=args.language)
-                selection_payload = {key: resolved[key] for key in
-                                     ("start_line", "end_line", "paragraph_sha256", "start", "end", "quote")}
+                resolved = api.resolve_manuscript_anchor(
+                    args.project,
+                    args.manuscript,
+                    query=args.quote,
+                    line=args.line,
+                    language=args.language,
+                )
+                selection_payload = {
+                    key: resolved[key]
+                    for key in (
+                        "start_line",
+                        "end_line",
+                        "paragraph_sha256",
+                        "start",
+                        "end",
+                        "quote",
+                    )
+                }
             repository = Repository(args.project)
             snapshot = repository.snapshot()
             source_path, _relative = _source_path(repository, args.manuscript)
@@ -1530,22 +2862,41 @@ def run(args: argparse.Namespace) -> int:
             if source_sha256 is None:
                 source_sha256 = FileUtils.read_source_snapshot(str(source_path))[1]
             result = api.link_manuscript_claim(
-                args.project, args.manuscript, args.claim_id, claim_revision=args.claim_revision,
-                selection=selection_payload, expected_project_id=snapshot.project.id,
+                args.project,
+                args.manuscript,
+                args.claim_id,
+                claim_revision=args.claim_revision,
+                selection=selection_payload,
+                expected_project_id=snapshot.project.id,
                 expected_snapshot=args.expected_snapshot or snapshot.digest,
-                expected_source_sha256=source_sha256, allow_retention=True,
-                note=args.note, actor=args.actor, language=args.language)
+                expected_source_sha256=source_sha256,
+                allow_retention=True,
+                note=args.note,
+                actor=args.actor,
+                language=args.language,
+            )
         elif command == "find-anchor":
-            result = api.resolve_manuscript_anchor(args.project, args.manuscript, query=args.query,
-                                                   query_format=args.query_format, line=args.line, language=args.language)
+            result = api.resolve_manuscript_anchor(
+                args.project,
+                args.manuscript,
+                query=args.query,
+                query_format=args.query_format,
+                line=args.line,
+                language=args.language,
+            )
         elif command == "reconcile-manuscript":
             from ..io import FileUtils
             from .manuscript import _source_path
             from .repository import Repository, ResearchConflictError
 
             repository = Repository(args.project)
-            link_review = api.review_manuscript_links(args.project, args.manuscript, language=args.language)
-            if args.expected_snapshot is not None and link_review["snapshot"] != args.expected_snapshot:
+            link_review = api.review_manuscript_links(
+                args.project, args.manuscript, language=args.language
+            )
+            if (
+                args.expected_snapshot is not None
+                and link_review["snapshot"] != args.expected_snapshot
+            ):
                 raise ResearchConflictError("Research snapshot changed; reload before reconciling")
             source_path, _relative = _source_path(repository, args.manuscript)
             source_sha256 = args.expected_source_sha256
@@ -1554,58 +2905,114 @@ def run(args: argparse.Namespace) -> int:
             if args.new_quote is not None and args.link_id is None:
                 raise ResearchError("--new-quote requires --link-id")
             if args.new_quote is not None and not args.accept_moved:
-                row = next((item for item in link_review["links"] if item["link_id"] == args.link_id), None)
+                row = next(
+                    (item for item in link_review["links"] if item["link_id"] == args.link_id), None
+                )
                 if row is None:
                     raise ResearchError("Unknown manuscript association for this manuscript")
                 resolved = api.resolve_manuscript_anchor(
-                    args.project, args.manuscript, query=args.new_quote,
-                    line=args.line, language=args.language)
-                result = {"schema_version": "research-manuscript-reconcile-local/1",
-                          "project_id": link_review["project_id"], "snapshot": link_review["snapshot"],
-                          "source_path": link_review["source_path"], "dry_run": True,
-                          "candidates": [{"link_id": row["link_id"], "revision": row["revision"],
-                                          "claim_title": row.get("claim_title"),
-                                          "anchor_state": row["anchor_state"],
-                                          "old_quote": row["anchor"]["quote"],
-                                          "new_quote": resolved["quote"],
-                                          "candidate_lines": [resolved["start_line"]]}]}
+                    args.project,
+                    args.manuscript,
+                    query=args.new_quote,
+                    line=args.line,
+                    language=args.language,
+                )
+                result = {
+                    "schema_version": "research-manuscript-reconcile-local/1",
+                    "project_id": link_review["project_id"],
+                    "snapshot": link_review["snapshot"],
+                    "source_path": link_review["source_path"],
+                    "dry_run": True,
+                    "candidates": [
+                        {
+                            "link_id": row["link_id"],
+                            "revision": row["revision"],
+                            "claim_title": row.get("claim_title"),
+                            "anchor_state": row["anchor_state"],
+                            "old_quote": row["anchor"]["quote"],
+                            "new_quote": resolved["quote"],
+                            "candidate_lines": [resolved["start_line"]],
+                        }
+                    ],
+                }
             elif not (args.accept_moved or args.accept_claim_updates):
-                movable = [row for row in link_review["links"]
-                           if row["anchor_state"] in ("moved", "adjusted")
-                           and (args.link_id is None or row["link_id"] == args.link_id)]
-                result = {"schema_version": "research-manuscript-reconcile-local/1",
-                          "project_id": link_review["project_id"], "snapshot": link_review["snapshot"],
-                          "source_path": link_review["source_path"], "dry_run": True,
-                          "candidates": [{"link_id": row["link_id"], "revision": row["revision"],
-                                          "claim_title": row.get("claim_title"),
-                                          "anchor_state": row["anchor_state"],
-                                          "candidate_lines": row["candidate_lines"]}
-                                         for row in movable]}
+                movable = [
+                    row
+                    for row in link_review["links"]
+                    if row["anchor_state"] in ("moved", "adjusted")
+                    and (args.link_id is None or row["link_id"] == args.link_id)
+                ]
+                result = {
+                    "schema_version": "research-manuscript-reconcile-local/1",
+                    "project_id": link_review["project_id"],
+                    "snapshot": link_review["snapshot"],
+                    "source_path": link_review["source_path"],
+                    "dry_run": True,
+                    "candidates": [
+                        {
+                            "link_id": row["link_id"],
+                            "revision": row["revision"],
+                            "claim_title": row.get("claim_title"),
+                            "anchor_state": row["anchor_state"],
+                            "candidate_lines": row["candidate_lines"],
+                        }
+                        for row in movable
+                    ],
+                }
             elif args.link_id is not None:
-                row = next((item for item in link_review["links"] if item["link_id"] == args.link_id), None)
+                row = next(
+                    (item for item in link_review["links"] if item["link_id"] == args.link_id), None
+                )
                 if row is None:
                     raise ResearchError("Unknown manuscript association for this manuscript")
-                claim_revision = row["claim_current_revision"] if args.accept_claim_updates and row["claim_changed"] else None
+                claim_revision = (
+                    row["claim_current_revision"]
+                    if args.accept_claim_updates and row["claim_changed"]
+                    else None
+                )
                 if args.accept_moved:
                     result = api.reanchor_manuscript_link(
-                        args.project, args.manuscript, args.link_id,
-                        expected_project_id=link_review["project_id"], expected_snapshot=link_review["snapshot"],
-                        expected_revision=row["revision"], expected_source_sha256=source_sha256,
-                        actor=args.actor, language=args.language, new_claim_revision=claim_revision,
-                        new_quote=args.new_quote, line=args.line, reason=args.reason)
+                        args.project,
+                        args.manuscript,
+                        args.link_id,
+                        expected_project_id=link_review["project_id"],
+                        expected_snapshot=link_review["snapshot"],
+                        expected_revision=row["revision"],
+                        expected_source_sha256=source_sha256,
+                        actor=args.actor,
+                        language=args.language,
+                        new_claim_revision=claim_revision,
+                        new_quote=args.new_quote,
+                        line=args.line,
+                        reason=args.reason,
+                    )
                 else:
                     if claim_revision is None:
-                        raise ResearchError("No changed claim revision to accept for this association")
+                        raise ResearchError(
+                            "No changed claim revision to accept for this association"
+                        )
                     result = api.reanchor_manuscript_claim_revision(
-                        args.project, args.manuscript, args.link_id,
-                        expected_project_id=link_review["project_id"], expected_snapshot=link_review["snapshot"],
-                        expected_revision=row["revision"], expected_source_sha256=source_sha256,
-                        new_claim_revision=claim_revision, actor=args.actor, reason=args.reason)
+                        args.project,
+                        args.manuscript,
+                        args.link_id,
+                        expected_project_id=link_review["project_id"],
+                        expected_snapshot=link_review["snapshot"],
+                        expected_revision=row["revision"],
+                        expected_source_sha256=source_sha256,
+                        new_claim_revision=claim_revision,
+                        actor=args.actor,
+                        reason=args.reason,
+                    )
             else:
-                candidates = [row for row in link_review["links"]
-                              if (args.accept_moved and row["anchor_state"] in ("moved", "adjusted"))
-                              or (args.accept_claim_updates and row["claim_changed"])]
-                batch_snapshot = link_review["snapshot"] if args.expected_snapshot is not None else None
+                candidates = [
+                    row
+                    for row in link_review["links"]
+                    if (args.accept_moved and row["anchor_state"] in ("moved", "adjusted"))
+                    or (args.accept_claim_updates and row["claim_changed"])
+                ]
+                batch_snapshot = (
+                    link_review["snapshot"] if args.expected_snapshot is not None else None
+                )
                 result = api.reconcile_manuscript_links(
                     args.project,
                     args.manuscript,
@@ -1622,9 +3029,18 @@ def run(args: argparse.Namespace) -> int:
         elif command == "reindex":
             result = api.reindex(args.project)
         elif command == "search":
-            result = api.search(args.project, args.query, limit=args.limit, scope=args.scope, ensure_fresh=not args.strict)
+            result = api.search(
+                args.project,
+                args.query,
+                limit=args.limit,
+                scope=args.scope,
+                ensure_fresh=not args.strict,
+            )
             if not args.strict and any("refreshed" in w for w in result.get("warnings", [])):
-                print("[search] Search index was refreshed to current snapshot (use --strict to require manual reindexing)", file=sys.stderr)
+                print(
+                    "[search] Search index was refreshed to current snapshot (use --strict to require manual reindexing)",
+                    file=sys.stderr,
+                )
         elif command == "cite":
             if args.passage:
                 if args.pick is not None or args.expected_snapshot is not None:
@@ -1633,8 +3049,12 @@ def run(args: argparse.Namespace) -> int:
             else:
                 from .citation_selection import resolve_query
 
-                result, selected = resolve_query(args.project, args.query, pick=args.pick,
-                                                  expected_snapshot=args.expected_snapshot)
+                result, selected = resolve_query(
+                    args.project,
+                    args.query,
+                    pick=args.pick,
+                    expected_snapshot=args.expected_snapshot,
+                )
                 if not selected:
                     print(json.dumps(result, ensure_ascii=False, indent=2))
                     return 1
@@ -1646,7 +3066,9 @@ def run(args: argparse.Namespace) -> int:
                     thresholds = json.loads(thresholds_path.read_text(encoding="utf-8"))
                 else:
                     thresholds = json.loads(args.thresholds)
-            result = api.analyze_source(args.project, args.source_id, version_id=args.version_id, thresholds=thresholds)
+            result = api.analyze_source(
+                args.project, args.source_id, version_id=args.version_id, thresholds=thresholds
+            )
         elif command == "dashboard":
             thresholds = None
             if getattr(args, "thresholds", None):
@@ -1655,7 +3077,9 @@ def run(args: argparse.Namespace) -> int:
                     thresholds = json.loads(thresholds_path.read_text(encoding="utf-8"))
                 else:
                     thresholds = json.loads(args.thresholds)
-            html = api.source_dashboard(args.project, args.source_id, version_id=args.version_id, thresholds=thresholds)
+            html = api.source_dashboard(
+                args.project, args.source_id, version_id=args.version_id, thresholds=thresholds
+            )
             sys.stdout.write(html)
             return 0
         elif command == "compare":
@@ -1665,10 +3089,14 @@ def run(args: argparse.Namespace) -> int:
                 from ..language import LANGUAGE_CHOICES
                 from .repository import Repository
 
-                language = read_explicit_project_config(Repository(args.project).root).get("language", "en")
+                language = read_explicit_project_config(Repository(args.project).root).get(
+                    "language", "en"
+                )
                 if not isinstance(language, str) or language not in LANGUAGE_CHOICES:
                     raise ResearchError(f"Unsupported project manuscript language: {language!r}")
-            format_choice: Literal["json", "md"] = "md" if getattr(args, "format", "json") == "md" else "json"
+            format_choice: Literal["json", "md"] = (
+                "md" if getattr(args, "format", "json") == "md" else "json"
+            )
             raw = api.compare_source(
                 args.project,
                 args.source_id,
@@ -1684,7 +3112,9 @@ def run(args: argparse.Namespace) -> int:
                 if isinstance(raw, str):
                     out_path.write_text(raw, encoding="utf-8")
                 else:
-                    out_path.write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
+                    out_path.write_text(
+                        json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8"
+                    )
                 result = {"ok": True, "output": str(out_path), "format": format_choice}
             else:
                 if isinstance(raw, str):
@@ -1708,12 +3138,16 @@ def run(args: argparse.Namespace) -> int:
                 elif isinstance(raw_actions, list):
                     actions = raw_actions
                 else:
-                    raise ResearchError("Expected a JSON list of pin-review actions or an object with an 'actions' list")
+                    raise ResearchError(
+                        "Expected a JSON list of pin-review actions or an object with an 'actions' list"
+                    )
                 batch_res = api.prepare_pin_review_batch(args.project, actions, actor=args.actor)
                 if args.output is not None:
                     packet = batch_res.get("batch_packet")
                     if not packet or not packet.get("ready"):
-                        raise ResearchError("Cannot write revision packet: one or more pin-review actions failed")
+                        raise ResearchError(
+                            "Cannot write revision packet: one or more pin-review actions failed"
+                        )
                     write_research_draft_file(
                         args.project,
                         args.output,
@@ -1727,15 +3161,22 @@ def run(args: argparse.Namespace) -> int:
         elif command == "revise-batch":
             operations = json.loads(Path(args.file).read_text(encoding="utf-8"))
             if not isinstance(operations, (list, dict)):
-                raise ResearchError("Batch file must contain a JSON operations list or a research-revision-batch-local/1 preview")
+                raise ResearchError(
+                    "Batch file must contain a JSON operations list or a research-revision-batch-local/1 preview"
+                )
             if args.apply:
-                result = api.apply_record_revisions(args.project, operations,
-                    expected_snapshot=args.expected_snapshot, actor=args.actor)
+                result = api.apply_record_revisions(
+                    args.project,
+                    operations,
+                    expected_snapshot=args.expected_snapshot,
+                    actor=args.actor,
+                )
             else:
                 result = api.prepare_record_revisions(args.project, operations, actor=args.actor)
-        elif command in ("dossier", "claim", "link-evidence", "decision", "relate") and (
-            revision_result := _revision_action(args)
-        ) is not None:
+        elif (
+            command in ("dossier", "claim", "link-evidence", "decision", "relate")
+            and (revision_result := _revision_action(args)) is not None
+        ):
             result = revision_result
         elif command == "dossier":
             if getattr(args, "set_collection", None) is not None:
@@ -1779,10 +3220,15 @@ def run(args: argparse.Namespace) -> int:
                     actor=args.actor,
                 )
             else:
-                result = api.list_dossiers(args.project, collection=getattr(args, "collection", None))
+                result = api.list_dossiers(
+                    args.project, collection=getattr(args, "collection", None)
+                )
                 if dossier_tags is not None:
-                    result["dossiers"] = [dossier for dossier in result["dossiers"]
-                                          if all(tag in dossier["tags"] for tag in dossier_tags)]
+                    result["dossiers"] = [
+                        dossier
+                        for dossier in result["dossiers"]
+                        if all(tag in dossier["tags"] for tag in dossier_tags)
+                    ]
         elif command == "claim":
             if getattr(args, "claim_id", None) and not getattr(args, "title", None):
                 result = api.list_evidence_links(args.project, claim_id=args.claim_id)
@@ -1809,25 +3255,51 @@ def run(args: argparse.Namespace) -> int:
             result = api.timeline(args.project, dossier_id=args.dossier_id)
         elif command == "relate":
             if bool(args.from_claim_id) != bool(args.to_claim_id):
-                raise ResearchError("Supply both FROM_CLAIM and TO_CLAIM, or omit both to list relationships")
+                raise ResearchError(
+                    "Supply both FROM_CLAIM and TO_CLAIM, or omit both to list relationships"
+                )
             if args.state is not None:
                 raise ResearchError("--state requires a reviewed --update or --prepare")
             if args.from_claim_id:
                 if args.claim_id or args.include_retracted:
-                    raise ResearchError("--claim-id and --include-retracted select lists, not new relationships")
-                result = api.create_claim_relation(args.project, args.from_claim_id, args.to_claim_id,
-                    relation=args.relation or "causes", rationale=args.rationale,
-                    from_claim_revision=args.from_claim_revision, to_claim_revision=args.to_claim_revision,
-                    expected_snapshot=args.expected_snapshot, actor=args.actor)
+                    raise ResearchError(
+                        "--claim-id and --include-retracted select lists, not new relationships"
+                    )
+                result = api.create_claim_relation(
+                    args.project,
+                    args.from_claim_id,
+                    args.to_claim_id,
+                    relation=args.relation or "causes",
+                    rationale=args.rationale,
+                    from_claim_revision=args.from_claim_revision,
+                    to_claim_revision=args.to_claim_revision,
+                    expected_snapshot=args.expected_snapshot,
+                    actor=args.actor,
+                )
             else:
-                if any(value is not None for value in (args.relation, args.rationale, args.from_claim_revision,
-                                                       args.to_claim_revision, args.expected_snapshot)):
-                    raise ResearchError("Relationship creation options require both claim endpoints")
-                result = api.list_claim_relations(args.project, claim_id=args.claim_id,
-                                                  include_retracted=args.include_retracted)
+                if any(
+                    value is not None
+                    for value in (
+                        args.relation,
+                        args.rationale,
+                        args.from_claim_revision,
+                        args.to_claim_revision,
+                        args.expected_snapshot,
+                    )
+                ):
+                    raise ResearchError(
+                        "Relationship creation options require both claim endpoints"
+                    )
+                result = api.list_claim_relations(
+                    args.project, claim_id=args.claim_id, include_retracted=args.include_retracted
+                )
         elif command in ("link-evidence", "link"):
             if not args.claim_id or not args.passage_id:
-                names = "PASSAGE_ID and CLAIM_ID" if command == "link" else "--claim-id and --passage-id"
+                names = (
+                    "PASSAGE_ID and CLAIM_ID"
+                    if command == "link"
+                    else "--claim-id and --passage-id"
+                )
                 raise ResearchError(f"{names} are required to create an evidence link")
             result = api.link_evidence(
                 args.project,
@@ -1858,27 +3330,52 @@ def run(args: argparse.Namespace) -> int:
             else:
                 result = api.list_decisions(args.project)
         elif command == "withdraw":
-            result = api.withdraw(args.project, args.source_id, version_id=args.version_id,
-                                  dossier_id=args.dossier_id, expected_snapshot=args.expected_snapshot,
-                                  expected_revision=args.expected_revision, dry_run=args.dry_run,
-                                  reason=args.reason, actor=args.actor)
+            result = api.withdraw(
+                args.project,
+                args.source_id,
+                version_id=args.version_id,
+                dossier_id=args.dossier_id,
+                expected_snapshot=args.expected_snapshot,
+                expected_revision=args.expected_revision,
+                dry_run=args.dry_run,
+                reason=args.reason,
+                actor=args.actor,
+            )
         elif command == "purge":
-            result = api.purge(args.project, args.source_id, version_id=args.version_id,
-                               reason=args.reason, actor=args.actor, dry_run=args.dry_run)
+            result = api.purge(
+                args.project,
+                args.source_id,
+                version_id=args.version_id,
+                reason=args.reason,
+                actor=args.actor,
+                dry_run=args.dry_run,
+            )
         elif command == "migrate-storage":
             from .storage import migrate_storage
 
-            result = migrate_storage(args.project, args.backup, expected_snapshot=args.expected_snapshot)
+            result = migrate_storage(
+                args.project, args.backup, expected_snapshot=args.expected_snapshot
+            )
         elif command == "export":
             result = api.export_archive(args.project, args.output)
         elif command == "restore":
             result = api.restore_archive(args.archive_source, args.target_dir)
         elif command == "ocr-status":
-            result = api.ocr_status(getattr(args, "worker_cmd", None), probe=getattr(args, "probe", False))
+            result = api.ocr_status(
+                getattr(args, "worker_cmd", None), probe=getattr(args, "probe", False)
+            )
         elif command == "matrix":
             matrix = api.claim_matrix_data(args.project)
-            rendered = None if args.format == "json" else api.render_claim_matrix(matrix, format=args.format)
-            payload_text = rendered if rendered is not None else json.dumps(matrix, ensure_ascii=False, indent=2)
+            rendered = (
+                None
+                if args.format == "json"
+                else api.render_claim_matrix(matrix, format=args.format)
+            )
+            payload_text = (
+                rendered
+                if rendered is not None
+                else json.dumps(matrix, ensure_ascii=False, indent=2)
+            )
             if getattr(args, "output", None):
                 out_path = Path(args.output).expanduser().resolve()
                 out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1891,13 +3388,28 @@ def run(args: argparse.Namespace) -> int:
                 result = matrix
         else:
             result = api.audit(args.project)
-        if command in ("find-anchor", "link-manuscript", "manuscript-links", "review-manuscript",
-                       "reconcile-manuscript", "unlink-manuscript", "terms") and args.format != "json":
+        if (
+            command
+            in (
+                "find-anchor",
+                "link-manuscript",
+                "manuscript-links",
+                "review-manuscript",
+                "reconcile-manuscript",
+                "unlink-manuscript",
+                "terms",
+            )
+            and args.format != "json"
+        ):
             from .presentation import manuscript_report
 
             print(manuscript_report(command, result, table=args.format == "table"), end="")
             return 0
-        if command in ("decision-impact", "review") and args.format != "json" and not getattr(args, "prepare_batch", None):
+        if (
+            command in ("decision-impact", "review")
+            and args.format != "json"
+            and not getattr(args, "prepare_batch", None)
+        ):
             from .presentation import editorial_report, print_report
 
             print_report(editorial_report(result, markdown=args.format == "md"), pager=False)
@@ -1912,27 +3424,40 @@ def run(args: argparse.Namespace) -> int:
 
             markdown = args.format == "md"
             if command == "sources":
-                report = source_report(result, markdown=markdown, limit=args.limit or 50, offset=args.offset)
+                report = source_report(
+                    result, markdown=markdown, limit=args.limit or 50, offset=args.offset
+                )
             else:
                 report = audit_report(result, markdown=markdown)
             print_report(report, pager=args.pager)
             return 1 if result.get("ok") is False else 0
-        if (result.get("schema_version") == "research-revision-write-summary-local/1"
-                and getattr(args, "format", "json") == "text"):
+        if (
+            result.get("schema_version") == "research-revision-write-summary-local/1"
+            and getattr(args, "format", "json") == "text"
+        ):
             from .presentation import revision_write_report
 
             print(revision_write_report(result), end="")
             return 0
-        if command in ("dossier", "claim", "decision") and getattr(args, "format", "json") == "text":
+        if (
+            command in ("dossier", "claim", "decision")
+            and getattr(args, "format", "json") == "text"
+        ):
             if command == "dossier" and args.body_only:
                 from .presentation import safe_text
 
                 record = result.get("record", result)
-                content = record["content"] if args.section is not None or args.preamble else record["body"]
+                content = (
+                    record["content"]
+                    if args.section is not None or args.preamble
+                    else record["body"]
+                )
                 terminal_text = content.replace("\r\n", "\n").replace("\n", "").replace("\t", "")
                 if sys.stdout.isatty() and safe_text(terminal_text) != terminal_text:
-                    raise ResearchError("--body-only source contains terminal controls or Unicode formatting; "
-                                        "redirect stdout to a file to retain the exact source content")
+                    raise ResearchError(
+                        "--body-only source contains terminal controls or Unicode formatting; "
+                        "redirect stdout to a file to retain the exact source content"
+                    )
                 # Binary output avoids newline translation and locale-dependent encodings.
                 if (buffer := getattr(sys.stdout, "buffer", None)) is not None:
                     buffer.write(content.encode("utf-8"))
@@ -1949,17 +3474,26 @@ def run(args: argparse.Namespace) -> int:
                     return 0
             print(_record_text(result, kind=command))
             return 0
-        if command in ("dossier", "claim", "decision") and getattr(args, "format", "json") == "table":
+        if (
+            command in ("dossier", "claim", "decision")
+            and getattr(args, "format", "json") == "table"
+        ):
             from .presentation import record_list_report
 
             table = record_list_report(command, result)
             if table is None:
-                print("[error] --format table renders the list view; omit record IDs "
-                      "and use --json for a single record", file=sys.stderr)
+                print(
+                    "[error] --format table renders the list view; omit record IDs "
+                    "and use --json for a single record",
+                    file=sys.stderr,
+                )
                 return 2
             print(table)
             return 0
-        if isinstance(result, dict) and result.get("schema_version") == "research-revision-diff-local/1":
+        if (
+            isinstance(result, dict)
+            and result.get("schema_version") == "research-revision-diff-local/1"
+        ):
             print(result["diff"])
             return 0
         print(json.dumps(result, ensure_ascii=False, indent=2))
@@ -1971,9 +3505,13 @@ def run(args: argparse.Namespace) -> int:
         path_hint = f" ({error.filename})" if getattr(error, "filename", None) else ""
         print(f"[error] Research operation failed: {detail}{path_hint}", file=sys.stderr)
         import errno
+
         if error.errno in (errno.ENOSPC, getattr(errno, "EDQUOT", 122)):
-            print("[error] Storage space or user quota exhausted. Check both the project filesystem "
-                  "and temporary storage (TMPDIR/TEMP/TMP); filesystem free space alone may hide a user quota.", file=sys.stderr)
+            print(
+                "[error] Storage space or user quota exhausted. Check both the project filesystem "
+                "and temporary storage (TMPDIR/TEMP/TMP); filesystem free space alone may hide a user quota.",
+                file=sys.stderr,
+            )
         else:
             print("[error] Check paths, permissions, schema and storage integrity", file=sys.stderr)
     except (ValidationError, UnicodeError, sqlite3.Error, ValueError) as error:

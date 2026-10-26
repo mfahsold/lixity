@@ -37,8 +37,10 @@ class ManuscriptLinkExistsError(ResearchConflictError):
 
     def __init__(self, link_id: str) -> None:
         self.link_id = link_id
-        super().__init__(f"This claim selection already has an active association: {link_id}; "
-                         "review or revise that association instead of creating a duplicate")
+        super().__init__(
+            f"This claim selection already has an active association: {link_id}; "
+            "review or revise that association instead of creating a duplicate"
+        )
 
 
 def _source_path(repository: Repository, manuscript: str | Path) -> tuple[Path, str]:
@@ -421,13 +423,15 @@ def dossier_manuscript_evidence(
             source_state="available",
         )
         quote_links = [
-            link for link in reviewed["links"]
+            link
+            for link in reviewed["links"]
             if link.get("dossier_id") == dossier.id or link.get("current_dossier_id") == dossier.id
         ]
     else:
         all_links = manuscript_links_data(snapshot, include_retracted=False)["links"]
         quote_links = [
-            link for link in all_links
+            link
+            for link in all_links
             if link.get("dossier_id") == dossier.id or link.get("current_dossier_id") == dossier.id
         ]
 
@@ -449,9 +453,7 @@ def dossier_manuscript_evidence(
         parsed_terms = {}
 
     dossier_terms = {
-        name: profile
-        for name, profile in parsed_terms.items()
-        if profile.dossier_id == dossier.id
+        name: profile for name, profile in parsed_terms.items() if profile.dossier_id == dossier.id
     }
 
     if dossier_terms and manuscript_available and relative_path is not None:
@@ -474,6 +476,7 @@ def dossier_manuscript_evidence(
                     alt.model_dump(mode="json") for alt in profile.scoped_alternatives
                 ],
                 "case_sensitive": profile.case_sensitive,
+                "strict_boundaries": profile.strict_boundaries,
                 "dossier_id": profile.dossier_id,
                 "claim_id": profile.claim_id,
                 "occurrence_count": 0,
@@ -505,7 +508,10 @@ def dossier_manuscript_evidence(
 
 
 def _quote_occurrences(
-    paragraphs: Sequence[ParagraphProfile | ParagraphText], quote: str, *, limit: int | None = None,
+    paragraphs: Sequence[ParagraphProfile | ParagraphText],
+    quote: str,
+    *,
+    limit: int | None = None,
 ) -> list[tuple[ParagraphProfile | ParagraphText, int]]:
     """Exact quote occurrences in displayed text, stopping at an optional limit.
 
@@ -570,8 +576,10 @@ def resolve_manuscript_anchor(
     if not occurrences:
         message = f"Quote was not found {scope}"
         if query_format == "display":
-            message += ("; inline Markdown markers are removed from the displayed text. "
-                        "For a copied Markdown quote, use find-anchor --query-format markdown")
+            message += (
+                "; inline Markdown markers are removed from the displayed text. "
+                "For a copied Markdown quote, use find-anchor --query-format markdown"
+            )
         else:
             message += " after supported inline Markdown cleanup"
         raise ResearchError(message + "; headings are outside paragraph anchors")
@@ -738,7 +746,9 @@ def _prepare_reanchored_link(
                 previous_revision=record.revision,
             ),
             "anchor": updated_anchor,
-            "claim_ref": Reference(id=claim.id, revision=claim.revision) if claim else record.claim_ref,
+            "claim_ref": Reference(id=claim.id, revision=claim.revision)
+            if claim
+            else record.claim_ref,
         }
     )
     return revised, claim
@@ -973,7 +983,9 @@ def retract_manuscript_link(
     }
 
 
-def _reviewed_claim_revision(snapshot: Snapshot, record: ManuscriptClaimLink, revision: int) -> Claim:
+def _reviewed_claim_revision(
+    snapshot: Snapshot, record: ManuscriptClaimLink, revision: int
+) -> Claim:
     """Require the reviewed, current claim revision to advance the saved pin."""
     try:
         Reference(id=record.claim_ref.id, revision=revision)
@@ -981,7 +993,9 @@ def _reviewed_claim_revision(snapshot: Snapshot, record: ManuscriptClaimLink, re
         raise ResearchError("Invalid claim identifier or revision") from None
     claim = snapshot.latest(record.claim_ref.id, Claim)
     if claim.revision != revision:
-        raise ResearchConflictError("Claim revision changed; review its current version before saving")
+        raise ResearchConflictError(
+            "Claim revision changed; review its current version before saving"
+        )
     if revision <= record.claim_ref.revision:
         raise ResearchError("The association already pins this claim revision")
     if any(
@@ -1038,7 +1052,9 @@ def reanchor_manuscript_claim_revision(
         )
     claim = _reviewed_claim_revision(snapshot, record, new_claim_revision)
     revision_reason = (
-        reason.strip() if isinstance(reason, str) and reason.strip() else "Accept current claim revision"
+        reason.strip()
+        if isinstance(reason, str) and reason.strip()
+        else "Accept current claim revision"
     )
     revised = record.model_copy(
         update={
@@ -1148,13 +1164,17 @@ def link_manuscript_claim(
     # Repeated wording in other files or paragraphs is a distinct occurrence.
     # A changed file digest alone does not make the same selection a new link.
     for existing in snapshot.records.values():
-        if (isinstance(existing, ManuscriptClaimLink) and existing.state == "active"
-                and existing.claim_ref.id == claim.id
-                and existing.anchor.source_path == relative
-                and existing.anchor.start_line == anchor.start_line
-                and existing.anchor.end_line == anchor.end_line
-                and existing.anchor.paragraph_sha256 == anchor.paragraph_sha256
-                and existing.anchor.start == anchor.start and existing.anchor.end == anchor.end):
+        if (
+            isinstance(existing, ManuscriptClaimLink)
+            and existing.state == "active"
+            and existing.claim_ref.id == claim.id
+            and existing.anchor.source_path == relative
+            and existing.anchor.start_line == anchor.start_line
+            and existing.anchor.end_line == anchor.end_line
+            and existing.anchor.paragraph_sha256 == anchor.paragraph_sha256
+            and existing.anchor.start == anchor.start
+            and existing.anchor.end == anchor.end
+        ):
             raise ManuscriptLinkExistsError(existing.id)
     from .api import envelope
 
