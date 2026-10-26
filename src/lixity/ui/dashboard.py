@@ -948,11 +948,16 @@ def render_dashboard(
     parts.append('<div class="analysis-outline-layout">')
     parts.append('<div class="analysis-outline-document" id="analysis-outline-document">')
 
+    flagged = (
+        flagged_paragraphs(list(paragraphs), min_severity=flag_min_severity)
+        if paragraphs
+        else []
+    )
     if has_chapters:
         parts.append(f'<section class="panel" id="analysis-review"><h2>{L("review_title")}</h2>')
         parts.append(f'<p class="panel-guide">{L("review_intro")}</p><div class="review-routes">')
         if paragraphs:
-            candidates = flagged_paragraphs(list(paragraphs), min_severity=flag_min_severity)
+            candidates = flagged
             first = (
                 min(candidates, key=lambda paragraph: paragraph.start_line)
                 if candidates
@@ -1153,10 +1158,26 @@ def render_dashboard(
                 paragraph_start = len(parts)
                 dom_label = tense_label(labels, p.dominant)
                 sev_label = label(labels, f"severity_{p.severity}")
+                flag_attrs = ""
+                flag_cls = ""
+                flag_reason_str = ""
+                if p.is_flagged:
+                    flag_reason_str = label(labels, "triage_reason").format(
+                        present=p.present_hits,
+                        past=p.past_hits,
+                        mixed=L("research_value_yes" if p.mixed else "research_value_no"),
+                        switch=L("research_value_yes" if p.switch else "research_value_no"),
+                    )
+                    flag_attrs = (
+                        f' data-severity="{p.severity}"'
+                        f' data-severity-label="{esc(sev_label, quote=True)}"'
+                        f' data-flag-reason="{esc(flag_reason_str, quote=True)}"'
+                    )
+                    flag_cls = f" flagged sev-{p.severity}"
                 parts.append(
-                    f'<div class="ptext" id="p-{idx}" data-start="{p.start_line}" '
+                    f'<div class="ptext{flag_cls}" id="p-{idx}" data-start="{p.start_line}" '
                     f'data-end="{p.end_line}" data-paragraph-sha256="{paragraph_identity(p)["paragraph_sha256"]}" '
-                    f'data-markers="{int(can_edit)}">'
+                    f'data-markers="{int(can_edit)}"{flag_attrs}>'
                 )
                 anchor = f"{line_label(labels, p)} · {dom_label} · {sev_label}"
                 stats = (
@@ -1176,10 +1197,16 @@ def render_dashboard(
                     })
                 # The fallback preserves the full offline report without JavaScript.
                 # JavaScript removes the inert fallback before lazy rendering.
+                flag_fallback = (
+                    f'<div class="flag-reason"><span class="badge sev-{p.severity}">{esc(sev_label)}</span> {esc(flag_reason_str)}</div>'
+                    if p.is_flagged
+                    else ""
+                )
                 parts.append(
                     f'<noscript><div class="ptext-inner"><p>{esc(p.text)}</p><details class="paragraph-values">'
                     f"<summary>{L('paragraph_values')}</summary>"
-                    f'<div class="anchor">{esc(anchor)}</div><div class="stats">{esc(stats)}</div></details>'
+                    f'<div class="anchor">{esc(anchor)}</div><div class="stats">{esc(stats)}</div>'
+                    f"{flag_fallback}</details>"
                 )
                 if can_edit:
                     buttons = " ".join(
@@ -1446,7 +1473,6 @@ def render_dashboard(
     parts.append("</section></details>")
 
     # --- Flagged passages (list → paragraph → marker) ----------------------
-    flagged = flagged_paragraphs(list(paragraphs), min_severity=flag_min_severity)
     review_capable = bool(controls and not read_only and allowed_actions is not None and action_enabled("analysis-review"))
     parts.append(f'<section class="panel" id="flags" data-review-capable="{str(review_capable).lower()}">')
     parts.append(f"<h2>{help_term(labels, 'flagged', label(labels, 'panel_flags'))} "

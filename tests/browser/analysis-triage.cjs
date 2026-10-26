@@ -50,7 +50,7 @@ server.serve_forever()
     assert.ok(await rows.count() >= 2);
     await expect(page.locator('#flags .flag-row[role="button"]')).toHaveCount(0);
     await expect(page.locator('#flags [data-marker-kind]')).toHaveCount(0);
-    await expect(page.locator('#flags')).toContainText('not errors or tasks');
+    await expect(page.locator('#flags')).toContainText('Review passages in context');
     await rows.first().locator('.triage-reason summary').click();
     await expect(rows.first().locator('.triage-reason')).toContainText('Present markers: 3; past markers: 3');
     await expect(page.locator('#manuscript-analysis-panels')).toBeVisible();

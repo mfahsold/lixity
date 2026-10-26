@@ -46,10 +46,21 @@ function jumpToLine(row) {
       if (line >= start && line <= end) { panel = panels[i]; break; }
     }
   }
+  var fromAnalysis = Boolean(
+    row.hasAttribute("data-flags") ||
+    row.hasAttribute("data-review-passage") ||
+    row.closest("#analysis-review, #flags, #manuscript-analysis-panels")
+  );
   if (panel) {
     var chip = document.querySelector('.chip[data-target="' + panel.id + '"]');
     if (chip) toggleParagraph(chip, true, true);
-    scrollAndFlash(panel);
+    scrollAndFlash(panel, {
+      analysisVisible: fromAnalysis ? true : undefined,
+      contextTool: fromAnalysis ? "analysis" : undefined
+    });
+    if (fromAnalysis && window.LixityReader && window.LixityReader.inspectPassage) {
+      window.LixityReader.inspectPassage(panel);
+    }
     if (row.hasAttribute("data-review-passage")) {
       panel.tabIndex = -1;
       panel.focus({preventScroll: true});
@@ -60,7 +71,13 @@ function jumpToLine(row) {
   for (var j = 0; j < chapters.length; j++) {
     var cstart = parseInt(chapters[j].getAttribute("data-start"), 10);
     var cend = parseInt(chapters[j].getAttribute("data-end"), 10);
-    if (line >= cstart && line <= cend) { scrollAndFlash(chapters[j]); return; }
+    if (line >= cstart && line <= cend) {
+      scrollAndFlash(chapters[j], {
+        analysisVisible: fromAnalysis ? true : undefined,
+        contextTool: fromAnalysis ? "analysis" : undefined
+      });
+      return;
+    }
   }
 }
 

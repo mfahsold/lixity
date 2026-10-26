@@ -164,8 +164,13 @@ function scrollAndFlash(target, options) {
   if (view && !view.classList.contains("active")) switchActiveView(view.dataset.viewPane);
   if (target.closest("#manuscript-analysis-panels") && window.LixityReader) window.LixityReader.inspect();
   if (target.closest("#chapters") && window.LixityWorkbench &&
-      (window.LixityWorkbench.state().surface !== "document" || options.analysisVisible !== undefined)) {
-    window.LixityWorkbench.dispatch({type: "surface", value: "document", analysisVisible: options.analysisVisible});
+      (window.LixityWorkbench.state().surface !== "document" || options.analysisVisible !== undefined || options.contextTool !== undefined)) {
+    window.LixityWorkbench.dispatch({
+      type: "surface",
+      value: "document",
+      analysisVisible: options.analysisVisible,
+      contextTool: options.contextTool
+    });
   }
   revealStyleTarget(target);
   revealDisclosures(target);

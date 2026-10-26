@@ -384,6 +384,20 @@
     var context = document.createElement("div"); context.className = "reader-passage-context";
     var location = document.createElement("p"); location.className = "ctl-note";
     location.textContent = passageContext(panel); context.appendChild(location);
+    if (panel.dataset.flagReason) {
+      var flagCard = document.createElement("div"); flagCard.className = "reader-passage-flag";
+      var flagHeader = document.createElement("div"); flagHeader.className = "reader-passage-flag-header";
+      var flagBadge = document.createElement("span");
+      flagBadge.className = "badge sev-" + (panel.dataset.severity || "2");
+      flagBadge.textContent = panel.dataset.severityLabel || uiLabel("severity_" + (panel.dataset.severity || "2"));
+      var flagTitle = document.createElement("span"); flagTitle.className = "reader-passage-flag-title";
+      flagTitle.textContent = uiLabel("triage_why");
+      flagHeader.appendChild(flagBadge); flagHeader.appendChild(flagTitle);
+      var flagBody = document.createElement("p"); flagBody.className = "reader-passage-flag-reason";
+      flagBody.textContent = panel.dataset.flagReason;
+      flagCard.appendChild(flagHeader); flagCard.appendChild(flagBody);
+      context.appendChild(flagCard);
+    }
     var tools = document.createElement("div"); tools.className = "reader-passage-tools";
     tools.setAttribute("role", "group"); tools.setAttribute("aria-label", uiLabel("reading_actions"));
     if (window.LixityAnalysisEvidence && window.LixityAnalysisEvidence.available()) {
@@ -442,6 +456,11 @@
     });
     analysisToggle.setAttribute("aria-pressed", String(state.analysisVisible));
     document.getElementById("manuscript-analysis-state").textContent = uiLabel(state.analysisVisible ? "reading_on" : "reading_off");
+    analysisToggle.hidden = state.surface === "overview";
+    var dossierToggle = document.getElementById("workspace-reader-toggle");
+    if (dossierToggle) dossierToggle.hidden = state.surface === "overview";
+    var guideToggle = document.getElementById("reader-analysis-guide");
+    if (guideToggle) guideToggle.hidden = state.surface === "overview" || !state.analysisVisible;
     mode.value = state.surface === "overview" ? "inspect" : "read";
     document.getElementById("workbench-overview-open").hidden = state.surface === "overview";
     document.getElementById("workbench-overview-back").hidden = state.surface !== "overview";
@@ -803,7 +822,15 @@
   }
   window.LixityReader = {fitContext: fitContextDock, requestTool: requestTool, capture: capture, restore: restore, retain: retain,
     enableEvidence: function() { retain(function() {defaultMetric(true); workbench.dispatch({type:"analysis", value:true});}); },
-    inspect: function() { setMode("inspect", true); }};
+    inspect: function() { setMode("inspect", true); },
+    inspectPassage: function(panel, point) {
+      if (!panel) return;
+      retain(function() {
+        workbench.dispatch({type: "analysis", value: true});
+        requestTool("analysis", panel);
+        showValues(panel, point);
+      });
+    }};
   document.body.classList.add("manuscript-reading");
   panels.forEach(enhanceText);
   document.dispatchEvent(new Event("lixity:reader-ready"));
