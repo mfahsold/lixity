@@ -517,8 +517,9 @@
     if (!compact) {
       fragment.appendChild(actionButton("values", "reading_explore_passage", true));
     }
-    if (panel.querySelector("[data-manuscript-link-selection]") && savedRange && Array.from(savedRange.toString()).length <= 10000) {
-      fragment.appendChild(actionButton("link", "manuscript_link_action", !compact));
+    if (panel.querySelector("[data-manuscript-link-selection]")) {
+      var hasSub = savedRange && Array.from(savedRange.toString()).length > 0 && Array.from(savedRange.toString()).length <= 10000;
+      fragment.appendChild(actionButton("link", hasSub ? "manuscript_link_action" : "manuscript_link_paragraph_action", !compact));
     }
     if (panel.dataset.markers === "1") {
       (compact ? ["pruefen"] : ["pruefen", "sachcheck", "todo", "achtung"]).forEach(function(kind) {
@@ -551,6 +552,13 @@
       requestTool("analysis", panel);
       document.getElementById("reader-inspector-close").focus({preventScroll: true});
     } else if (action === "link") {
+      if (!range) {
+        var pnode = panel.querySelector(".ptext-inner > p");
+        if (pnode) {
+          range = document.createRange();
+          range.selectNodeContents(pnode);
+        }
+      }
       if (!range) return;
       var selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
       var link = panel.querySelector("[data-manuscript-link-selection]"); if (link) link.click();

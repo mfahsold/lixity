@@ -362,6 +362,22 @@ class TestLixityServer(unittest.TestCase):
         self.assertGreater(len(data["headings"]), 0)
         self.assertGreater(len(data["loss_report"]), 0)
 
+        import base64
+        status, body, _ = self.make_request(
+            "/api/manuscript-import-preview",
+            method="POST",
+            body=json.dumps({
+                "content_base64": base64.b64encode(docx_bytes).decode("ascii"),
+                "filename": "uploaded.docx",
+            }),
+            headers={"Content-Type": "application/json"},
+        )
+        self.assertEqual(status, 200)
+        data_b64 = json.loads(body)
+        self.assertTrue(data_b64["ok"])
+        self.assertEqual(data_b64["source_filename"], "uploaded.docx")
+        self.assertIn("# The Mariner's Gate", data_b64["markdown"])
+
         status, body, _ = self.make_request(
             "/api/manuscript-import-convert",
             method="POST",

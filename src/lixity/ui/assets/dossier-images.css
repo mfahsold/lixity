@@ -19,12 +19,14 @@
 .dossier-media-overview { margin-block: var(--space-3); padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-subtle); }
 .dossier-media-overview > summary { min-height: 2.75rem; align-content: center; cursor: pointer; color: var(--fg); font-weight: var(--weight-semibold); }
 .dossier-media-overview ul { display: grid; gap: var(--space-2); margin: var(--space-3) 0 0; padding: 0; list-style: none; max-height: 15rem; overflow: auto; }
-.dossier-media-overview a { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-2) var(--space-4); min-height: 2.75rem; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); color: var(--fg); text-decoration: none; }
+.dossier-media-overview a { display: flex; align-items: center; gap: var(--space-2) var(--space-3); min-height: 2.75rem; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); color: var(--fg); text-decoration: none; }
 .dossier-media-overview a:hover { border-color: var(--accent); color: var(--accent); }
-.dossier-media-name { min-width: 0; overflow-wrap: anywhere; }
-.dossier-media-section { color: var(--muted); font-size: var(--text-note); text-align: end; }
+.dossier-media-thumb { width: 2.25rem; height: 2.25rem; object-fit: cover; border-radius: var(--radius-xs); border: 1px solid var(--line); flex-shrink: 0; }
+.dossier-media-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.dossier-media-section { color: var(--muted); font-size: var(--text-note); text-align: end; margin-left: auto; }
 .dossier-image-actions { margin: .5rem 0; }
 #modal-dossier-image .modal-body { overflow-y: auto; min-width: 0; overflow-wrap: anywhere; }
+#dossier-image-form.dragover { outline: 2px dashed var(--accent); outline-offset: -4px; }
 #modal-dossier-image .ctl:not(button), #modal-dossier-image .research-form-options { width: 100%; box-sizing: border-box; }
 #modal-dossier-image .form-label { margin-top: .8rem; }
 #modal-dossier-image .research-check { display: flex; align-items: flex-start; gap: .5rem; margin: 1rem 0; line-height: 1.5; }

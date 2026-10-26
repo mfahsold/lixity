@@ -66,12 +66,102 @@ function processImportedFile(file) {
   if (submitBtn) submitBtn.disabled = true;
   var previewBox = document.getElementById("import-preview-box");
   if (previewBox) previewBox.style.display = "none";
+  var lossEl = document.getElementById("import-fpc-loss");
+  if (lossEl) { lossEl.replaceChildren(); lossEl.hidden = true; }
+  var isDocx = /\.docx$/i.test(file.name);
   var feedback = document.getElementById("import-project-status");
   if (feedback) {
     feedback.className = "ctl-status project-form-status loading";
-    feedback.textContent = uiLabel("research_ingesting_reading");
+    feedback.textContent = uiLabel(isDocx ? "import_docx_converting" : "research_ingesting_reading");
     feedback.hidden = false;
   }
+
+  if (isDocx) {
+    var docxReader = new FileReader();
+    docxReader.onload = async function (e) {
+      if (read !== importedFileRead) return;
+      var dataUrl = String(e.target.result || "");
+      var base64Content = dataUrl.indexOf(",") !== -1 ? dataUrl.split(",")[1] : dataUrl;
+      try {
+        var apiUrl = (typeof API !== "undefined" ? API : (document.body.dataset.api || "")) + "/manuscript-import-preview";
+        var res = await fetch(apiUrl, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({filename: file.name, content_base64: base64Content})
+        });
+        var data = await res.json();
+        if (read !== importedFileRead) return;
+        if (!res.ok || !data.ok) {
+          throw new Error(data.message || uiLabel("manuscript_read_failed"));
+        }
+        importedFileContent = data.markdown || "";
+        var cleanStem = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]+/g, " ");
+        var detectedTitle = cleanStem;
+        var chapters = 0;
+        if (Array.isArray(data.headings)) {
+          var h1 = data.headings.find(function (h) { return h.level === 1; });
+          if (h1 && h1.text) detectedTitle = h1.text.trim();
+          chapters = data.headings.filter(function (h) { return h.level <= 2; }).length;
+        }
+        var words = Number(data.word_count) || (importedFileContent.trim().match(/\S+/g) || []).length;
+
+        var previewBox = document.getElementById("import-preview-box");
+        if (previewBox) previewBox.style.display = "flex";
+
+        var fNameEl = document.getElementById("import-fpc-filename");
+        if (fNameEl) fNameEl.textContent = file.name;
+
+        var statsEl = document.getElementById("import-fpc-stats");
+        if (statsEl) {
+          statsEl.textContent = uiFormat("wizard_preview_stats", {
+            words: words.toLocaleString(document.documentElement.lang || "en"),
+            chapters: chapters
+          });
+        }
+        updateImportLanguagePreview();
+
+        var titleInput = document.getElementById("import-proj-title");
+        if (titleInput) titleInput.value = detectedTitle;
+
+        if (Array.isArray(data.loss_report) && data.loss_report.length > 0 && lossEl) {
+          var titleSpan = document.createElement("div");
+          titleSpan.className = "fpc-loss-title";
+          titleSpan.textContent = uiFormat("import_loss_warning", {count: data.loss_report.length});
+          var list = document.createElement("ul");
+          data.loss_report.forEach(function (item) {
+            var li = document.createElement("li");
+            li.textContent = item.element + ": " + item.reason;
+            list.appendChild(li);
+          });
+          lossEl.append(titleSpan, list);
+          lossEl.hidden = false;
+        }
+
+        if (submitBtn && !submitBtn.hasAttribute("aria-busy")) {
+          submitBtn.disabled = false;
+        }
+        if (feedback) { feedback.textContent = ""; feedback.hidden = true; }
+      } catch (err) {
+        if (read !== importedFileRead) return;
+        if (feedback) {
+          feedback.className = "ctl-status project-form-status err";
+          feedback.textContent = err.message || uiLabel("manuscript_read_failed");
+          feedback.hidden = false;
+        }
+      }
+    };
+    docxReader.onerror = function () {
+      if (read !== importedFileRead) return;
+      if (feedback) {
+        feedback.className = "ctl-status project-form-status err";
+        feedback.textContent = uiLabel("manuscript_read_failed");
+        feedback.hidden = false;
+      }
+    };
+    docxReader.readAsDataURL(file);
+    return;
+  }
+
   var reader = new FileReader();
   reader.onload = function (e) {
     if (read !== importedFileRead) return;

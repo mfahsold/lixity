@@ -924,6 +924,28 @@
     }
     termsReport = report; termsContext = value;
     termsTabHost.replaceChildren(renderTermsReport(report));
+    function activeChaptersFromScoped(value) {
+      var active = new Set();
+      (value || "").split(/[;,]/).forEach(function(segment) {
+        var match = segment.match(/(\d+)/g);
+        if (match) {
+          match.forEach(function(n) { active.add(Number(n)); });
+        }
+      });
+      return active;
+    }
+    function updateChapterChipStates() {
+      var s = document.getElementById("r-term-scoped");
+      var active = activeChaptersFromScoped(s ? s.value : "");
+      var cc = document.getElementById("r-term-chapter-chips");
+      if (!cc) return;
+      cc.querySelectorAll(".r-chapter-chip").forEach(function(btn) {
+        var num = Number(btn.dataset.chapter);
+        var isAct = active.has(num);
+        btn.classList.toggle("active", isAct);
+        btn.setAttribute("aria-pressed", isAct ? "true" : "false");
+      });
+    }
     var chipsContainer = document.getElementById("r-term-chips");
     if (chipsContainer) {
       chipsContainer.replaceChildren();
@@ -935,6 +957,8 @@
         var s = document.getElementById("r-term-scoped"); if (s) s.value = "";
         var c = document.getElementById("r-term-case"); if (c) c.checked = false;
         var st = document.getElementById("r-term-strict"); if (st) st.checked = false;
+        var cp = document.getElementById("r-term-compounds"); if (cp) cp.checked = false;
+        updateChapterChipStates();
       });
       chipsContainer.appendChild(newBtn);
       ((termsReport && termsReport.terms) || []).forEach(function(item) {
@@ -955,6 +979,7 @@
           if (st) st.checked = item.strict_boundaries === null ? Boolean(item.case_sensitive) : Boolean(item.strict_boundaries);
           var cp = document.getElementById("r-term-compounds");
           if (cp) cp.checked = Boolean(item.match_compounds);
+          updateChapterChipStates();
         });
         chipsContainer.appendChild(chip);
       });
@@ -970,28 +995,40 @@
         var num = Number(node.dataset.chapterNumber);
         if (Number.isInteger(num) && num > 0 && !seenChapters.has(num)) {
           seenChapters.add(num);
-          var chBtn = element("button", String(num), "ctl");
+          var chBtn = element("button", String(num), "ctl r-chapter-chip");
           chBtn.type = "button";
-          chBtn.style.padding = "0.15rem 0.4rem";
-          chBtn.style.fontSize = "0.75rem";
+          chBtn.dataset.chapter = String(num);
+          chBtn.setAttribute("aria-pressed", "false");
           chBtn.addEventListener("click", function() {
             var s = document.getElementById("r-term-scoped");
             if (!s) return;
             var current = s.value.trim();
             if (!current) {
               s.value = "Alternative:" + num;
-            } else if (current.endsWith(":") || current.endsWith(",")) {
-              s.value = current + num;
-            } else if (/:\d+(,\d+)*$/.test(current)) {
-              s.value = current + "," + num;
             } else {
-              s.value = current + ":" + num;
+              var active = activeChaptersFromScoped(current);
+              var lastColon = current.lastIndexOf(":");
+              var prefix = lastColon !== -1 ? current.substring(0, lastColon + 1) : "Alternative:";
+              if (active.has(num)) {
+                active.delete(num);
+              } else {
+                active.add(num);
+              }
+              var sorted = Array.from(active).sort(function(a, b) { return a - b; });
+              s.value = sorted.length ? prefix + sorted.join(",") : "";
             }
+            updateChapterChipStates();
             s.focus();
           });
           chapterChips.appendChild(chBtn);
         }
       });
+      var scopedInput = document.getElementById("r-term-scoped");
+      if (scopedInput && !scopedInput._matrixBound) {
+        scopedInput._matrixBound = true;
+        scopedInput.addEventListener("input", updateChapterChipStates);
+      }
+      updateChapterChipStates();
     }
   }
   if (termsSection) {

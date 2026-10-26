@@ -135,6 +135,18 @@
 .site-publication-editor .ctl { max-width: 100%; }
 .site-publication-editor textarea { width: 100%; resize: vertical; }
 .r-term-chips, .r-term-chapter-chips { flex-wrap: wrap; gap: var(--space-1); align-items: center; }
+.r-chapter-chip {
+  padding: .15rem .45rem;
+  font-size: var(--text-micro);
+  border-radius: var(--radius-xs);
+  min-width: 1.8rem;
+  text-align: center;
+}
+.r-chapter-chip.active {
+  background: var(--accent);
+  color: var(--accent-contrast, #fff);
+  border-color: var(--accent);
+}
 
 /* --- Tables ----------------------------------------------------------- */
 .table-wrap {

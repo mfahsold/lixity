@@ -65,7 +65,7 @@ def render_project_modals(
     # Tab Pane 1: Import existing manuscript
     parts.append('    <div class="modal-tab-pane active" id="tab-pane-import" role="tabpanel" aria-labelledby="tab-btn-import">')
     parts.append('      <form id="form-project-import" class="modal-body" method="dialog">')
-    parts.append('        <input type="file" id="import-file-input" accept=".md,.markdown,.txt" hidden />')
+    parts.append('        <input type="file" id="import-file-input" accept=".md,.markdown,.txt,.docx" hidden />')
     parts.append(f'        <button type="button" class="file-dropzone" id="import-dropzone" autofocus aria-label="{L("wizard_drop_aria")}">')
     parts.append('          <span class="dropzone-icon">')
     parts.append('            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="12" y2="12"></line><line x1="15" y1="15" x2="12" y2="12"></line></svg>')
@@ -84,6 +84,7 @@ def render_project_modals(
     parts.append(f'            <div class="fpc-stat"><span class="fpc-label">{L("wizard_scope")}</span> <strong id="import-fpc-stats"></strong></div>')
     parts.append(f'            <div class="fpc-stat"><span class="fpc-label">{L("wizard_analysis_language")}</span> <span id="import-fpc-lang"></span></div>')
     parts.append('          </div>')
+    parts.append('          <div class="fpc-loss" id="import-fpc-loss" hidden></div>')
     parts.append('        </div>')
     parts.append('        <div class="project-structure-hint">')
     parts.append(f'          <span>{help_term(labels, "import_manuscript", L("wizard_import_layout"))}</span>')

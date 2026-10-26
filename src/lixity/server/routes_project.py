@@ -485,11 +485,21 @@ class ProjectRoutesMixin(ResponseMixin):
 
     def _handle_manuscript_import_preview(self, payload: dict[str, Any]) -> None:
         source_path = payload.get("path")
-        if not source_path or not isinstance(source_path, str):
-            self._json({"ok": False, "message": "Source document path is required"}, 400)
+        content_b64 = payload.get("content_base64")
+        filename = payload.get("filename", "manuscript.docx")
+        if not source_path and not content_b64:
+            self._json({"ok": False, "message": "Source document path or content_base64 is required"}, 400)
             return
         try:
-            preview = preview_docx(source_path)
+            if content_b64:
+                import base64
+                source_bytes = base64.b64decode(content_b64)
+                preview = preview_docx(source_bytes, filename=str(filename))
+            elif isinstance(source_path, str):
+                preview = preview_docx(source_path)
+            else:
+                self._json({"ok": False, "message": "Source document path must be a string"}, 400)
+                return
             self._json({"ok": True, **preview.to_dict()})
         except (ValueError, FileNotFoundError, OSError) as exc:
             self._json({"ok": False, "message": str(exc)}, 400)

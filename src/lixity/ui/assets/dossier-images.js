@@ -213,6 +213,13 @@
       node.id = "dossier-media-" + (++mediaSequence); node.tabIndex = -1;
       var item = document.createElement("li"), link = document.createElement("a");
       link.href = "#" + node.id; link.dataset.dossierMediaTarget = node.id;
+      if (image && image.src) {
+        var thumb = document.createElement("img");
+        thumb.src = image.src;
+        thumb.alt = "";
+        thumb.className = "dossier-media-thumb";
+        link.appendChild(thumb);
+      }
       var title = document.createElement("span");
       title.className = "dossier-media-name";
       title.textContent = name;
@@ -293,6 +300,21 @@
     });
     dialog.querySelectorAll("[data-image-close]").forEach(function(button) { button.addEventListener("click", function() { if (!state.pending) dialog.close(); }); });
     field("file").addEventListener("change", selectFile);
+    form.addEventListener("dragover", function(event) {
+      event.preventDefault();
+      form.classList.add("dragover");
+    });
+    form.addEventListener("dragleave", function(event) {
+      if (!form.contains(event.relatedTarget)) form.classList.remove("dragover");
+    });
+    form.addEventListener("drop", function(event) {
+      event.preventDefault();
+      form.classList.remove("dragover");
+      if (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files.length) {
+        field("file").files = event.dataTransfer.files;
+        selectFile();
+      }
+    });
     form.addEventListener("input", updateSave);
     form.addEventListener("submit", saveAttachment);
     field("review").addEventListener("click", reviewCurrent);

@@ -1557,6 +1557,23 @@ mark.search-hit {
 .fpc-label {
   color: var(--muted);
 }
+.fpc-loss {
+  margin-top: .35rem;
+  padding: .5rem .75rem;
+  background: var(--bg-subtle);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-small);
+  color: var(--muted);
+}
+.fpc-loss-title {
+  font-weight: var(--weight-semibold);
+  color: var(--fg);
+}
+.fpc-loss ul {
+  margin: .35rem 0 0;
+  padding-left: 1.2rem;
+}
 .template-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
