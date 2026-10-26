@@ -5136,6 +5136,15 @@ _ROWS = {
         "Sinais e contexto",
         "Signalen & context",
     ),
+    "triage_author_guidance": (
+        "Check whether this tense mix or switch is an intended stylistic choice (e.g. dialogue, scenic present, reflection) or an inadvertent shift in timeline.",
+        "Prüfe, ob dieser Tempuswechsel ein gewolltes Stilmittel ist (z. B. wörtliche Rede, szenisches Präsens, Reflexion) oder ein versehentlicher Zeitsprung im Text.",
+        "Vérifiez si ce changement de temps est un choix stylistique délibéré (dialogue, présent de narration, réflexion) ou un glissement temporel involontaire.",
+        "Compruebe si esta alternancia de tiempos es un recurso estilístico deliberado (diálogo, presente escénico, reflexión) o un desliz temporal involuntario.",
+        "Verifica se questa alternanza di tempi è una scelta stilistica voluta (dialogo, presente scenico, riflessione) o un involontario salto temporale.",
+        "Verifique se esta mudança de tempo é uma escolha estilística intencional (diálogo, presente cênico, reflexão) ou um salto temporal não intencional.",
+        "Controleer of deze tijdswisseling een bewuste stijlkeuze is (bijv. dialoog, historisch presens, reflectie) of een onbedoelde tijdsverschuiving in de tekst.",
+    ),
     "triage_reason": (
         "Present markers: {present}; past markers: {past}. Mixed: {mixed}; switch from prior paragraph: {switch}. Heuristic pattern detection.",
         "Präsensmarker: {present}; Vergangenheitsmarker: {past}. Gemischt: {mixed}; Wechsel zum vorigen Absatz: {switch}. Heuristische Signalerfassung.",

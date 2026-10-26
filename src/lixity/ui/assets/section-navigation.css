@@ -25,7 +25,15 @@
 }
 
 /* One bounded orientation link remains reachable after the full list scrolls away. */
-.research-dossier-location { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; height: 44px; min-width: 0; padding-inline: .5rem; background: var(--surface); border-block: 1px solid var(--line); color: var(--accent); font-size: var(--text-small); text-decoration: none; }
+.research-dossier-location {
+  position: sticky; top: 0; z-index: 2; display: flex; align-items: center;
+  height: 44px; min-width: 0; padding-inline: .5rem;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-block: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+  color: var(--accent); font-size: var(--text-small); text-decoration: none;
+}
 .research-dossier-location > :first-child { flex: 0 0 auto; white-space: pre; }
 .research-dossier-location [data-section-current] { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .research-dossier-location:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }

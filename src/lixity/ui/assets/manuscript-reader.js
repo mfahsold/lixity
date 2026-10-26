@@ -393,6 +393,8 @@
       var flagTitle = document.createElement("span"); flagTitle.className = "reader-passage-flag-title";
       flagTitle.textContent = uiLabel("triage_why");
       flagHeader.appendChild(flagBadge); flagHeader.appendChild(flagTitle);
+      var flagGuidance = document.createElement("p"); flagGuidance.className = "reader-passage-flag-guidance";
+      flagGuidance.textContent = uiLabel("triage_author_guidance");
       var flagBody = document.createElement("p"); flagBody.className = "reader-passage-flag-reason";
       flagBody.textContent = uiFormat("triage_reason", {
         present: panel.dataset.pre || "0",
@@ -400,7 +402,7 @@
         mixed: uiLabel(panel.dataset.mix === "1" ? "research_value_yes" : "research_value_no"),
         switch: uiLabel(panel.dataset.swi === "1" ? "research_value_yes" : "research_value_no")
       });
-      flagCard.appendChild(flagHeader); flagCard.appendChild(flagBody);
+      flagCard.appendChild(flagHeader); flagCard.appendChild(flagGuidance); flagCard.appendChild(flagBody);
       context.appendChild(flagCard);
     }
     var tools = document.createElement("div"); tools.className = "reader-passage-tools";

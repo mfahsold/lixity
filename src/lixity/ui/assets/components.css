@@ -275,7 +275,7 @@ button.ctl-link { background: none; border: none; color: var(--accent); text-dec
 button.ctl:where(:enabled):hover, a.ctl:hover {
   border-color: var(--accent);
   color: var(--accent);
-  background: var(--surface-hover, rgba(0, 0, 0, .02));
+  background: var(--surface-hover, light-dark(rgba(0, 0, 0, .03), rgba(255, 255, 255, .05)));
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(0, 0, 0, .06);
 }
@@ -475,7 +475,9 @@ dialog.lixity-modal {
   margin: auto;
   border: 1px solid var(--line);
   padding: 0;
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 97%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   color: var(--fg);
   max-width: 38rem;
   width: min(94vw, 38rem);
@@ -485,7 +487,9 @@ dialog.lixity-modal {
   overflow: hidden;
 }
 dialog.lixity-modal::backdrop {
-  background: rgba(15, 23, 42, 0.55);
+  background: color-mix(in srgb, #070a12 50%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 .modal-card {
   background: transparent;

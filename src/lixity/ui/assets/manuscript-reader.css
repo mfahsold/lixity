@@ -3,7 +3,8 @@
   position: sticky; top: 0; z-index: 12; display: flex; flex-wrap: wrap;
   align-items: center; gap: .5rem; padding: .5rem 0;
   max-height: 45dvh; overflow-y: auto; overscroll-behavior: contain;
-  background: var(--bg); border-bottom: 1px solid var(--line);
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
 }
 .manuscript-reader-controls[hidden] { display: none; }
 .manuscript-reader-controls > .toolbar-sections { flex-basis: 100%; min-width: 0; margin: 0; }
@@ -45,7 +46,10 @@
   position: fixed; z-index: 15;
   display: grid; gap: .55rem; width: 16rem; max-width: calc(100vw - 2rem);
   padding: 1rem; border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
-  background: var(--surface); box-shadow: var(--shadow-modal); font-size: var(--text-small);
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-modal); font-size: var(--text-small);
   max-height: calc(100dvh - 1rem); overflow: auto; overscroll-behavior: contain;
 }
 .reader-settings-body select { width: 100%; }
@@ -151,6 +155,7 @@ body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: 
   display: inline-flex; position: absolute; top: .1rem; right: calc(-1 * var(--reader-action-gutter));
   min-width: 2.5rem; padding: .2rem .45rem;
   color: var(--muted); background: var(--bg); border-color: transparent; opacity: .2;
+  transition: opacity .18s var(--ease), color .18s var(--ease);
 }
 .manuscript-reading .ptext:hover .reader-paragraph-actions,
 .manuscript-reading .ptext:focus-within .reader-paragraph-actions { opacity: 1; }
@@ -276,6 +281,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 .reader-passage-flag.sev-3 { background: color-mix(in srgb, var(--flag-strong, #dc2626) 8%, var(--surface)); border-color: color-mix(in srgb, var(--flag-strong, #dc2626) 30%, transparent); border-inline-start-color: var(--flag-strong, #dc2626); }
 .reader-passage-flag-header { display: flex; align-items: center; gap: var(--space-2); margin-block-end: var(--space-1); }
 .reader-passage-flag-title { font-size: var(--text-note); font-weight: 600; color: var(--fg); }
+.reader-passage-flag-guidance { margin: 0 0 var(--space-1); font-size: var(--text-small); line-height: var(--line-compact); color: var(--fg); font-weight: 500; }
 .reader-passage-flag-reason { margin: 0; font-size: var(--text-small); line-height: var(--line-tight, 1.4); color: var(--fg-secondary); }
 .manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .ptext.flagged::before { background: var(--flag); width: 3px; }
 .manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .ptext.flagged.sev-3::before { background: var(--flag-strong, #dc2626); width: 4px; }

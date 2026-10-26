@@ -216,10 +216,10 @@ h2, .section-heading, .settings-form h3 {
   align-items: center;
   margin: 0;
   padding: .6rem .25rem;
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
   font-size: var(--text-small);
 }
 .toolbar label { display: inline-flex; gap: .45rem; align-items: center; cursor: pointer; min-width: 0; }
@@ -552,7 +552,9 @@ table.heatmap th, table.heatmap td { border: 0; padding: .32rem .42rem; text-ali
 table.heatmap th {
   position: sticky;
   top: 0;
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 2;
   border-bottom: 1px solid var(--line);
   white-space: nowrap;
@@ -601,6 +603,9 @@ table.heatmap th.ch { z-index: 3; }
   position: sticky;
   top: 0;
   z-index: 2;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
 }
 .flags-wrap td:first-child, .flags-wrap td:nth-child(3), .flags-wrap .badge { white-space: nowrap; }
@@ -742,14 +747,16 @@ td.flag-excerpt {
   position: absolute;
   pointer-events: none;
   z-index: 10;
-  padding: .45rem .65rem;
+  padding: .4rem .6rem;
   border-radius: var(--radius-sm);
   font-size: var(--text-note);
-  line-height: 1.4;
-  background: var(--surface);
+  line-height: 1.35;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--line);
   color: var(--fg);
-  box-shadow: 0 4px 14px rgba(0,0,0,.12);
+  box-shadow: 0 4px 16px light-dark(rgba(0,0,0,.12), rgba(0,0,0,.45));
   transform: translate(-50%, -100%);
   margin-top: -10px;
   white-space: nowrap;
@@ -969,23 +976,24 @@ footer {
   position: fixed;
   z-index: 10000;
   pointer-events: none;
-  max-width: min(20rem, 84vw);
+  max-width: min(18rem, 84vw);
   max-height: calc(100dvh - 20px);
   overflow-y: auto;
   overflow-wrap: anywhere;
-  padding: .35rem .6rem;
+  padding: .32rem .58rem;
   border-radius: var(--radius-sm);
-  background: rgba(24, 24, 27, .94);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  color: #f4f4f5;
-  border: 1px solid rgba(255, 255, 255, .14);
+  background: light-dark(rgba(255, 255, 255, .94), rgba(20, 24, 34, .92));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--fg);
+  border: 1px solid light-dark(rgba(0, 0, 0, .09), rgba(255, 255, 255, .14));
   font-size: var(--text-note);
-  line-height: 1.4;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, .26), 0 1px 3px rgba(0, 0, 0, .18);
+  line-height: 1.35;
+  box-shadow: 0 4px 16px light-dark(rgba(0, 0, 0, .12), rgba(0, 0, 0, .45)), 0 1px 3px light-dark(rgba(0, 0, 0, .06), rgba(0, 0, 0, .2));
   opacity: 0;
+  transform: translateY(2px);
   visibility: hidden;
-  transition: opacity .14s cubic-bezier(0.16, 1, 0.3, 1), visibility .14s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity .15s cubic-bezier(0.16, 1, 0.3, 1), transform .15s cubic-bezier(0.16, 1, 0.3, 1), visibility .15s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: normal;
   text-transform: none;
   letter-spacing: normal;
@@ -993,6 +1001,7 @@ footer {
 }
 .tooltip-popup.visible {
   opacity: 1;
+  transform: translateY(0);
   visibility: visible;
   pointer-events: auto;
 }
@@ -1005,24 +1014,24 @@ footer {
   font-size: var(--text-note);
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: #ffffff;
+  color: var(--fg-heading);
 }
 .tooltip-heading[hidden] { display: none; }
 .tooltip-heading kbd {
   flex-shrink: 0;
-  color: rgba(244, 244, 245, .85);
-  font-size: 0.725rem;
+  color: var(--muted);
+  font-size: 0.7rem;
   font-weight: 500;
   padding: 1px 4px;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, .12);
-  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: var(--radius-xs);
+  background: light-dark(rgba(0, 0, 0, .05), rgba(255, 255, 255, .1));
+  border: 1px solid light-dark(rgba(0, 0, 0, .1), rgba(255, 255, 255, .15));
 }
 .tooltip-copy {
   display: block;
   font-size: var(--text-note);
-  line-height: 1.38;
-  color: rgba(244, 244, 245, .88);
+  line-height: 1.35;
+  color: var(--fg-secondary);
 }
 
 /* Fallback pure CSS tooltip when JS is disabled */
@@ -1034,14 +1043,17 @@ body:not(.has-js-tooltips) .help:focus::after {
   left: 0;
   z-index: 9999;
   width: max-content;
-  max-width: min(20rem, 80vw);
-  padding: .35rem .6rem;
+  max-width: min(18rem, 80vw);
+  padding: .32rem .58rem;
   border-radius: var(--radius-sm);
-  background: rgba(24, 24, 27, .94);
-  color: #f4f4f5;
+  background: light-dark(rgba(255, 255, 255, .94), rgba(20, 24, 34, .92));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--fg);
+  border: 1px solid light-dark(rgba(0, 0, 0, .09), rgba(255, 255, 255, .14));
   font-size: var(--text-note);
-  line-height: 1.4;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, .2);
+  line-height: 1.35;
+  box-shadow: 0 4px 16px light-dark(rgba(0, 0, 0, .12), rgba(0, 0, 0, .45));
   white-space: normal;
   text-transform: none;
   letter-spacing: 0;
@@ -1706,16 +1718,6 @@ body.only-flags:not(.text-search-active) .chip:not(.sev-2):not(.sev-3) { display
   .ptext { background: #181b22; }
   table.heatmap th, table.heatmap th.ch, table.heatmap td.ch { background: var(--surface); }
   tbody tr:hover { background: rgba(255, 255, 255, .035); }
-  .tooltip-popup {
-    background: rgba(32, 32, 36, .94);
-    border-color: rgba(255, 255, 255, .16);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, .45), 0 1px 3px rgba(0, 0, 0, .3);
-  }
-  body:not(.has-js-tooltips) .help:hover::after,
-  body:not(.has-js-tooltips) .help:focus::after {
-    background: rgba(32, 32, 36, .94);
-    border: 1px solid rgba(255, 255, 255, .16);
-  }
   .badge.marker-pruefen { background: #082f49; color: #7dd3fc; }
   .badge.marker-sachcheck { background: #451a03; color: #fde68a; }
   .badge.marker-todo { background: #3b0764; color: #d8b4fe; }

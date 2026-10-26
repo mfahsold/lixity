@@ -294,6 +294,11 @@ def render_dashboard(
                 key: label(labels, key)
                 for key in (
                     *WORKSPACE_LABELS["en"],
+                    "severity_0",
+                    "severity_1",
+                    "severity_2",
+                    "severity_3",
+                    "triage_author_guidance",
                     "marker_pruefen",
                     "marker_sachcheck",
                     "marker_todo",
