@@ -22,6 +22,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   bounded local transport and no automatic model download or backend fallback.
 
 ### Changed
+- Documentation disclosure styles no longer leak into embedded workspaces or
+  reports through the public Pages wrapper. Native reader controls retain the
+  same appearance; demo privacy guidance reflects optional remote processing.
 - Reduced the agent discovery index and generated operational reference bundle,
   linking setup, architecture and history instead of repeating them. Current
   audio guidance now describes shared CLI/native profiles and optional Qwen.

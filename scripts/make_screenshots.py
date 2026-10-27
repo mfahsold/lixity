@@ -271,7 +271,7 @@ def build_research_demo(root: Path, project: Path) -> Path:
         '<div class="demo-feature-hints">'
         '<div class="demo-feature-box"><strong>Studio monitor principle</strong><p>Lixity never flattens prose or writes generic AI text. It shows syntactic cadence, dialog ratio, and word echoes as neutral diagnostic signals.</p></div>'
         '<div class="demo-feature-box"><strong>Split research dossier</strong><p>Explore customs logs, historical map coordinates, and photos linked directly to exact manuscript sentences via <em>Dossier alongside</em>.</p></div>'
-        '<div class="demo-feature-box"><strong>100% private &amp; offline</strong><p>Your work never leaves your device. AGPL-3.0 licensed, running locally on your hardware with no tracking or cloud calls.</p></div>'
+        '<div class="demo-feature-box"><strong>Local work, explicit sharing</strong><p>No account or manuscript upload is needed for local analysis. You choose optional connections, remote audio processing and the contents of shared exports.</p></div>'
         '</div>'
         '</details></div>'
         '<div class="demo-quick-start-actions">'

@@ -34,6 +34,24 @@ const textRole = locator => locator.evaluate(element => {
   return {family: css.fontFamily, size: css.fontSize, weight: css.fontWeight,
     lineHeight: css.lineHeight, color: css.color};
 });
+async function checkWorkspacePublicationWrapper(page, label) {
+  const appearance = () => page.locator('.manuscript-reader-controls summary').evaluateAll(elements =>
+    elements.map(element => {
+      const css = getComputedStyle(element), marker = getComputedStyle(element, '::before');
+      return {display: css.display, color: css.color, weight: css.fontWeight,
+        padding: css.padding, height: element.getBoundingClientRect().height,
+        marker: marker.content, markerWidth: marker.width, markerBorder: marker.borderRightWidth};
+    }));
+  const native = await appearance();
+  assert.ok(native.length > 0, 'The parity check inspects actual reader disclosures');
+  await page.locator('body').evaluate(body => body.classList.add('site-page'));
+  try {
+    assert.deepEqual(await appearance(), native,
+      `${label}: the Pages wrapper must not restyle native workspace controls`);
+  } finally {
+    await page.locator('body').evaluate(body => body.classList.remove('site-page'));
+  }
+}
 async function checkSelectedHover(page, selector, label) {
   const control = page.locator(selector);
   await page.mouse.move(0, 0);
@@ -202,6 +220,7 @@ async function checkScale(page, label) {
           if (view === 'research') await app.locator('.view-navigation').screenshot({
             path: path.join(artifacts, `selected-hover-research-${theme}-${width}.png`)});
         }
+        await checkWorkspacePublicationWrapper(app, `${theme} ${width}px`);
         await checkTypography(app, `${theme} ${width}px`);
         await checkScale(app, `${theme} ${width}px app`);
         await checkScale(site, `${theme} ${width}px site`);
