@@ -16,15 +16,15 @@
 <meta property="og:title" content="Lixity — local manuscript analysis and research for revision"/>
 <meta property="og:description" content="Find passages worth reviewing, inspect what was counted and follow the research behind a scene. A local workspace for authors and editors."/>
 <meta property="og:url" content="https://mfahsold.github.io/lixity/"/>
-<meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-reader-focus.png"/>
-<meta property="og:image:width" content="1424"/>
-<meta property="og:image:height" content="968"/>
-<meta property="og:image:alt" content="Warehouse 4 reader excerpt with chapter navigation, reading settings and Analysis Off"/>
+<meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-measurement-focus.png"/>
+<meta property="og:image:width" content="800"/>
+<meta property="og:image:height" content="794"/>
+<meta property="og:image:alt" content="Sentence-length explanation for A board moved: three words, with the paragraph comparison shown separately"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Lixity — local manuscript analysis and research for revision"/>
 <meta name="twitter:description" content="Find passages worth reviewing, inspect what was counted and follow the research behind a scene. A local workspace for authors and editors."/>
-<meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-reader-focus.png"/>
-<meta name="twitter:image:alt" content="Warehouse 4 reader excerpt with chapter navigation, reading settings and Analysis Off"/>
+<meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-measurement-focus.png"/>
+<meta name="twitter:image:alt" content="Sentence-length explanation for A board moved: three words, with the paragraph comparison shown separately"/>
 <link rel="icon" href="assets/mark.svg" type="image/svg+xml"/>
 <link rel="stylesheet" href="assets/site.css"/>
 <script src="assets/site.js" defer></script>
@@ -64,8 +64,8 @@
     "CLI, Python API and HTTP interfaces for automation"
   ],
   "screenshot": [
-    "https://mfahsold.github.io/lixity/screenshots/dashboard-reader-focus.png",
-    "https://mfahsold.github.io/lixity/screenshots/dashboard-heatmap-dark.png"
+    "https://mfahsold.github.io/lixity/screenshots/dashboard-measurement-focus.png",
+    "https://mfahsold.github.io/lixity/screenshots/dashboard-heatmap.png"
   ],
   "sameAs": [
     "https://github.com/mfahsold/lixity"
@@ -86,7 +86,7 @@
     "priceCurrency": "EUR",
     "description": "Open source under AGPL-3.0-or-later. A separate written commercial license is available for integrations that cannot meet the AGPL."
   },
-  "dateModified": "2026-10-26"
+  "dateModified": "2026-10-27"
 }
 </script>
 <script type="application/ld+json">
@@ -98,7 +98,7 @@
   "url": "https://mfahsold.github.io/lixity/",
   "inLanguage": "en",
   "description": "Find passages worth reviewing, inspect what was counted and follow the research behind a scene. A local workspace for authors and editors.",
-  "dateModified": "2026-10-26"
+  "dateModified": "2026-10-27"
 }
 </script>
 </head>
@@ -122,6 +122,7 @@
       <span id="origin"></span>
       <h1 class="hero-title" id="intro-title">Find the passages<br/>worth a second look.</h1>
       <p class="hero-sub">Read the manuscript, investigate its patterns and follow the research behind a scene — in one local workspace. For authors, editors and manuscript reviewers working with Markdown or plain text.</p>
+      <p><strong>Why does chapter 2 feel faster?</strong> Read its short sentences, inspect what Lixity counted, then decide whether the rhythm fits the action.</p>
       <div class="hero-cta">
         <a class="ctl primary" href="demo/report.html" id="examples">Try one revision question</a>
         <a href="guides/first-look.html">Follow the short tour</a>
@@ -131,9 +132,9 @@
     </div>
     <figure class="frame">
       <div class="frame-window">
-        <a href="screenshots/dashboard-reader-focus.png"><img src="screenshots/dashboard-reader-focus.png" width="1424" height="968" alt="Warehouse 4 reader excerpt with chapter navigation, reading settings and Analysis Off" fetchpriority="high"/></a>
+        <a href="screenshots/dashboard-measurement-focus.png"><img src="screenshots/dashboard-measurement-focus.png" width="800" height="794" alt="Sentence-length explanation for A board moved: three words, with the paragraph comparison shown separately" fetchpriority="high"/></a>
       </div>
-      <figcaption><strong>Start with the passage.</strong> Native reader excerpt from current main, with analysis off. The invented example needs no account or upload. <a href="screenshots/dashboard-light.png">Complete workspace</a> · <a href="screenshots/README.md">Views and credits</a>.</figcaption>
+      <figcaption><strong>From a reading question to a concrete observation.</strong> With analysis on, the explanation shows three words in “A board moved.” and 4.4 words per sentence across its paragraph. These are different scopes. Read the scene before deciding whether to revise. <a href="screenshots/README.md">Views and credits</a>.</figcaption>
     </figure>
   </section>
 
@@ -169,16 +170,19 @@
 
   <section class="feature" id="measurement-context" aria-labelledby="measurement-context-title">
     <div>
-      <h2 id="measurement-context-title">See what was counted.</h2>
-      <p>“A board moved.” has three words. Its paragraph averages 4.4 words per sentence. The explanation keeps that literal count separate from the paragraph’s comparison with its chapter.</p>
-      <p>Move between counted sentences, check the comparison method, then return to reading. A difference gives you a question to investigate; it does not tell you to rewrite.</p>
+      <h2 id="measurement-context-title">Read. Inspect. Decide.</h2>
+      <ol>
+        <li><strong>Read the scene.</strong> Chapter 2 moves from setting to action. Does its shorter rhythm serve that change?</li>
+        <li><strong>Inspect the observation.</strong> Turn analysis on, choose Sentence length and open a sentence's explanation. Keep its literal word count separate from the paragraph's comparison.</li>
+        <li><strong>Make the editorial decision.</strong> Return to the surrounding prose. Keeping the short sentences can be the right choice.</li>
+      </ol>
       <p><a href="demo/report.html">Inspect chapter 2 in the demo</a> · <a href="guides/interpretation.html#analysis-marks">Understand the marks</a></p>
     </div>
     <figure class="frame">
       <div class="frame-window">
-        <a href="screenshots/dashboard-measurement-focus.png"><img src="screenshots/dashboard-measurement-focus.png" width="800" height="794" alt="Sentence length explanation: selected sentence has three words; paragraph averages 4.4 words per sentence, with a separate chapter comparison" loading="lazy"/></a>
+        <a href="screenshots/dashboard-reader-focus.png"><img src="screenshots/dashboard-reader-focus.png" width="1424" height="968" alt="Continuous manuscript reading with analysis switched off to read the scene in context" loading="lazy"/></a>
       </div>
-      <figcaption><strong>Understand one measurement.</strong> Complete native explanation card from current main, using the invented manuscript. These values are observations, not writing targets.</figcaption>
+      <figcaption><strong>Return to the prose.</strong> Analysis is deliberately off in this reading view. It shows the context for a decision; the explanation above shows the measurement.</figcaption>
     </figure>
   </section>
 

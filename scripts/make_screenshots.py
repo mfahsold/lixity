@@ -21,12 +21,14 @@ import shutil
 import struct
 import subprocess
 import sys
+import tempfile
 from hashlib import sha256
 from pathlib import Path
 from urllib.parse import quote, urlencode
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE_DIR / "src"))
+sys.path.insert(0, str(BASE_DIR))
 
 from rich.console import Console  # noqa: E402
 
@@ -44,6 +46,7 @@ from lixity.showing import showing_report  # noqa: E402
 from lixity.ui import render_dashboard  # noqa: E402
 from lixity.ui.dashboard import render_analysis  # noqa: E402
 from lixity.ui.manuscript_document import reader_blocks  # noqa: E402
+from scripts.stage_pages import screenshot_manifest  # noqa: E402
 
 CAPTURES: list[dict[str, str | int]] = []
 WORK_DIR = BASE_DIR / ".artifacts" / "screenshots"
@@ -899,7 +902,7 @@ def sync_embedded_image_sizes() -> int:
     them; without this step a re-render silently leaves stale attributes
     behind. Returns the number of corrected image references.
     """
-    from build_examples import SITE
+    from scripts.build_examples import SITE
 
     pattern = re.compile(r"<img\s+([^>]*?)/?>", re.DOTALL)
     meta_pattern = re.compile(r"<meta\s+([^>]*?)/?>", re.DOTALL)
@@ -1012,13 +1015,65 @@ def sync_embedded_image_sizes() -> int:
     return corrected
 
 
+def sync_screenshot_catalog() -> None:
+    """Render the public image table from the shared catalog, without a second list."""
+    images = screenshot_manifest(BASE_DIR / "docs")
+    path = OUT_DIR / "README.md"
+    text = path.read_text(encoding="utf-8")
+    start, end = "<!-- catalog:start -->", "<!-- catalog:end -->"
+    before, rest = text.split(start, 1)
+    _old, after = rest.split(end, 1)
+    rows = ["| Task | View | Role and scope |", "| --- | --- | --- |"]
+    rows.extend(f"| {item['question']} | [{item['file']}]({item['file']}) | {item['role']}: {item['caption']} |"
+                for item in images)
+    path.write_text(before + start + "\n\n" + "\n".join(rows) + "\n\n" + end + after, encoding="utf-8")
+
+
+def build_outreach_package(source: Path, output: Path) -> None:
+    """Prepare one unpublished asset handoff; never touch accounts or the send queue."""
+    if output.exists() or output.is_symlink():
+        raise FileExistsError(output)
+    images = [item for item in screenshot_manifest(source) if item["role"] in {"lead", "support"}]
+    git = shutil.which("git")
+    if git is None:
+        raise RuntimeError("Git is required to identify the package source revision")
+    commit = subprocess.check_output([git, "rev-parse", "HEAD"], cwd=BASE_DIR, text=True).strip()  # noqa: S603 -- resolved Git, fixed arguments
+    dirty = bool(subprocess.check_output([git, "status", "--porcelain", "--untracked-files=normal"],  # noqa: S603 -- fixed read-only arguments
+                                         cwd=BASE_DIR, text=True).strip())
+    manifest = {"schema_version": "lixity-outreach-assets/1", "state": "draft-unpublished",
+                "source_commit": commit, "source_dirty": dirty, "source_version": __version__,
+                "images": []}
+    lines = ["# Lixity outreach package", "", "Prepared assets only. No account, queue or publication changes.",
+             "Source commit: " + commit + (" (working tree has changes)." if dirty else "."), "",
+             "Choose one reader question and one matching image per post. Do not send every alternative.", ""]
+    with tempfile.TemporaryDirectory(prefix=".lixity-outreach-", dir=output.parent) as temporary:
+        prepared = Path(temporary) / "package"
+        (prepared / "images").mkdir(parents=True)
+        for item in images:
+            content = (source / "screenshots" / item["file"]).read_bytes()
+            (prepared / "images" / item["file"]).write_bytes(content)
+            manifest["images"].append({**item, "sha256": sha256(content).hexdigest(), "byte_length": len(content)})
+            lines.extend(["## " + item["question"], "", "Image: images/" + item["file"],
+                          "Alt: " + item["alt"], "Caption: " + item["caption"],
+                          "Destination: https://mfahsold.github.io/lixity/" + item["destination"], ""])
+        (prepared / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        (prepared / "README.md").write_text("\n".join(lines), encoding="utf-8")
+        prepared.rename(output)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Regenerate README screenshots.")
     parser.add_argument("--manuscript", default="samples/first-look.md",
                         help="Analysis screenshot manuscript override; research captures keep the canonical Warehouse 4 project.")
     parser.add_argument("--only", nargs="+", help="Capture only these screenshot filenames.")
     parser.add_argument("--video", action="store_true", help="Record the short guided walkthroughs instead of stills.")
+    parser.add_argument("--outreach-package", type=Path, help="Build one unpublished asset package in a new directory, without recapturing.")
     args = parser.parse_args()
+    if args.outreach_package:
+        if args.only or args.video or args.manuscript != "samples/first-look.md":
+            parser.error("Package preparation cannot be combined with capture options")
+        build_outreach_package(BASE_DIR / "docs", args.outreach_package)
+        return 0
     CAPTURES.clear()
 
     manuscript = (BASE_DIR / args.manuscript).resolve()
@@ -1330,7 +1385,13 @@ def main() -> int:
                 "videoTarget": str(video_dir / "editorial-loop.webm"),
             },
         ]
-    elif args.only:
+    else:
+        approved = {item["file"] for item in screenshot_manifest(BASE_DIR / "docs")}
+        available = {Path(str(capture["target"])).name for capture in CAPTURES}
+        if approved - available:
+            parser.error("Reviewed images lack capture definitions: " + ", ".join(sorted(approved - available)))
+        CAPTURES[:] = [capture for capture in CAPTURES if Path(str(capture["target"])).name in approved]
+    if args.only and not args.video:
         requested = set(args.only)
         available = {Path(str(capture["target"])).name for capture in CAPTURES}
         missing = requested - available
@@ -1353,6 +1414,7 @@ def main() -> int:
     # and its checksums together, rather than mutating a checksummed HTML member.
     build_research_demo(BASE_DIR, research_proj)
     build_publication_examples(BASE_DIR, research_proj)
+    sync_screenshot_catalog()
     corrected = sync_embedded_image_sizes()
     print(
         f"Done – {len(list(OUT_DIR.glob('*.png')))} screenshots in {OUT_DIR}"

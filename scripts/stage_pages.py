@@ -71,6 +71,40 @@ PUBLIC_TREES = {
 }
 
 
+def screenshot_manifest(source: Path) -> list[dict[str, str]]:
+    """Read the single reviewed image inventory used by capture and publication."""
+    if (source / "screenshots").is_symlink():
+        raise ValueError("Symlink in screenshot directory")
+    path = source / "screenshots/manifest.json"
+    if not path.exists():
+        if (source / "screenshots").exists():
+            raise ValueError("Screenshots require a reviewed manifest")
+        return []
+    if path.is_symlink():
+        raise ValueError("Symlink in screenshot manifest")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if (not isinstance(data, dict) or set(data) != {"schema_version", "images"}
+            or data["schema_version"] != "lixity-screenshot-catalog/1"
+            or not isinstance(data["images"], list) or not data["images"]):
+        raise ValueError("Invalid screenshot manifest")
+    names = set()
+    for item in data["images"]:
+        if (not isinstance(item, dict)
+                or set(item) != {"file", "role", "question", "alt", "caption", "destination"}
+                or any(not isinstance(value, str) or not value.strip() for value in item.values())
+                or not re.fullmatch(r"[a-z0-9-]+\.png", item["file"])
+                or item["file"] in names
+                or item["role"] not in {"lead", "support", "guide", "reference"}
+                or item["destination"].startswith(("/", "."))
+                or ":" in item["destination"] or ".." in item["destination"].split("/")):
+            raise ValueError("Invalid screenshot entry")
+        image = path.parent / item["file"]
+        if image.is_symlink() or not image.is_file():
+            raise ValueError("Missing reviewed screenshot")
+        names.add(item["file"])
+    return data["images"]
+
+
 def _demo_bundle_files(source: Path, *, directory: str = "demo", entrypoint: str = "report.html",
                        mode: str | None = None) -> set[str]:
     """Select the reviewed website inventory, never a whole demo subtree."""
@@ -119,6 +153,10 @@ def stage(source: Path, output: Path) -> int:
         raise ValueError("Documentation source directory is missing")
     if output.resolve().is_relative_to(source.resolve()):
         raise ValueError("Pages output must be outside the documentation source")
+    screenshots = screenshot_manifest(source)
+    screenshot_paths = {"screenshots/" + item["file"] for item in screenshots}
+    if screenshots:
+        screenshot_paths.update({"screenshots/README.md", "screenshots/manifest.json"})
     demo_files = _demo_bundle_files(source)
     # Only these two deliberately reviewed publication directories are added;
     # a sibling folder or even its own manifest never grants publication.
@@ -146,6 +184,8 @@ def stage(source: Path, output: Path) -> int:
             and (path.suffix in PUBLIC_TREES.get(relative.parts[0], set())
                  or (relative.parts[0] == "blog" and path.name.endswith(".html.md")))
         )
+        if relative.parts[0] == "screenshots":
+            approved = relative.as_posix() in screenshot_paths
         if demo_files and relative.parts[0] == "demo":
             approved = relative.as_posix() in demo_files
         if approved:

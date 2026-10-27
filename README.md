@@ -38,10 +38,12 @@ Source evidence, authored claims and creative decisions stay distinct. A saved
 source records the evidence used; it does not guarantee that a claim is true.
 Reading copies are fixed exports, not a live co-editing service.
 
-<a href="https://mfahsold.github.io/lixity/screenshots/dashboard-reader-focus.png"><img src="https://mfahsold.github.io/lixity/screenshots/dashboard-reader-focus.png" width="560" alt="Warehouse 4 reader excerpt with chapter navigation, reading settings and Analysis Off"/></a>
+<a href="https://mfahsold.github.io/lixity/screenshots/dashboard-measurement-focus.png"><img src="https://mfahsold.github.io/lixity/screenshots/dashboard-measurement-focus.png" width="560" alt="Sentence-length explanation: A board moved has three words; its paragraph averages 4.4 words per sentence, with a separate chapter comparison"/></a>
 
-Start with the passage. This current-main excerpt shows the native reader with
-analysis off; [open the complete workspace view](https://mfahsold.github.io/lixity/screenshots/dashboard-light.png).
+**Why does chapter 2 feel faster?** With analysis on, inspect one sentence and
+its paragraph's rhythm, then read the scene before deciding whether to revise.
+This current-main capture shows the actual explanation, not a writing target.
+[See the reading view](https://mfahsold.github.io/lixity/screenshots/dashboard-reader-focus.png).
 
 The read-only example follows a suspicious harbour delivery through six invented
 English chapters, linked case notes and credited research images. It needs no

@@ -1,123 +1,95 @@
 # Product screenshots
 
-Browser captures of the maintained dashboard. The
-[project page](https://mfahsold.github.io/lixity/) introduces the reader and
-links to the demo. Use the links below for related views and full-size images.
-All product captures follow [*The Crate at Warehouse 4*](../demo/report.html):
-the same six-chapter manuscript, research records and project metadata.
+One reviewed catalog serves the website, screenshot capture and outreach assets:
+[manifest.json](manifest.json). It contains each image's task, role, literal alt
+text, caption and destination. The product introduction uses the **lead** image;
+**support** images explain the next reading or research task. **Guide** and
+**reference** images belong in the relevant instructions, not in every post.
 
-## Browse by feature
+## Start with a question
 
-| Feature | Views |
-| --- | --- |
-| Focused reading excerpt | [Light](dashboard-reader-focus.png), [dark](dashboard-reader-focus-dark.png): native reader controls and the complete first paragraph, sized for a readable editorial preview |
-| Explain one measurement | [Light](dashboard-measurement-focus.png), [dark](dashboard-measurement-focus-dark.png): complete Sentence length card, with the selected sentence count separate from paragraph comparison |
-| Continuous manuscript reader | [Light](dashboard-light.png), [dark](dashboard-dark.png), [mobile](dashboard-mobile.png), [empty workspace](dashboard-welcome.png) |
-| Chapter comparisons | [Heatmap excerpt](dashboard-heatmap.png), [reference bands](dashboard-reference.png), [settings](dashboard-settings.png) |
-| Scene registers | [Scene excerpt](dashboard-scenes.png), [mobile](dashboard-scenes-mobile.png) |
-| Style and annotations | [Dimensions](dashboard-dimensions.png), [dark](dashboard-dimensions-dark.png), [mobile](dashboard-dimensions-mobile.png), [exact passage overlay excerpt](dashboard-layer.png), [work markers](dashboard-markers.png) |
-| Analysis review | [Tense-review queue (empty in this sample)](dashboard-flags.png), [note written on a passage](dashboard-editorial.png) |
-| Project setup | [New project](dashboard-project-modal.png), [open project](dashboard-project-open.png), [mobile](dashboard-project-open-mobile.png) |
-| Manuscript import | [Preview and confirmation](dashboard-project-import.png), [mobile](dashboard-project-import-mobile.png) |
-| Project settings | [Project settings](dashboard-project-settings.png), [mobile](dashboard-project-settings-mobile.png), [expanded NDA panel](dashboard-nda.png), [mobile](dashboard-nda-mobile.png) |
-| Retained evidence | [Source report](dashboard-research.png), [capture list](dashboard-research-sources.png), [mobile](dashboard-research-sources-mobile.png) |
-| Research dossiers | [Filtered dossier overview](dashboard-research-dossiers.png), [mobile](dashboard-research-dossiers-mobile.png) |
-| Visual references | [Historical map](dashboard-dossier-image.png), [mobile map](dashboard-dossier-image-mobile.png), [photochrom](dashboard-dossier-photo.png), [mobile photochrom](dashboard-dossier-photo-mobile.png) |
-| Places and journeys | [Geography and map](dashboard-dossier-geography.png), [mobile](dashboard-dossier-geography-mobile.png) |
-| Research search | [Passage results](dashboard-research-search.png), [mobile](dashboard-research-search-mobile.png) |
-| Claims and decisions | [Claims](dashboard-research-claims.png), [mobile](dashboard-research-claims-mobile.png), [decisions](dashboard-research-decisions.png), [mobile](dashboard-research-decisions-mobile.png) |
-| Claim chronology | [Timeline with axis, badges and placement hint](dashboard-research-timeline.png), [mobile](dashboard-research-timeline-mobile.png) |
-| Research review | [Saved manuscript quote and claim revision](dashboard-research-review.png), [mobile](dashboard-research-review-mobile.png) |
-| Related revisions | [Change set preview](dashboard-research-change-set.png), [mobile](dashboard-research-change-set-mobile.png) |
-| Terminal reports | [Analysis](cli-analyze.png), [style](cli-style.png), [research](cli-research.png) |
+The opening image shows the actual explanation of “A board moved.”: three words
+in the selected sentence, 4.4 words per sentence in its paragraph, and a separate
+chapter comparison. Read the scene before deciding whether to revise. The
+analysis-off reading view supplies context; it is not an analysis demonstration.
 
-## Data and capture scope
+Empty review queues cannot demonstrate a finding. Dark and mobile variants are
+layout examples rather than new benefits. Long timelines and research reviews
+need their full-size links. Retained historical visuals need a source and scene
+context; a map alone does not demonstrate a fact-checking workflow. The catalog
+keeps specific guide views and existing article images without publishing every
+capture variant.
 
-Analysis and research views use the synthetic
-[Warehouse 4 manuscript](../research/examples/harbour-manuscript.md), whose owning
-source is `samples/first-look.md`. Project paths, author settings, research prose,
-claims and decisions belong to the same invented project.
-Marker notes exist only in an in-memory copy. The NDA view previews a synthetic
-five-field draft without storing agreements or recipient records. Research visuals
-use a historical Hamburg map excerpt and a Photochrom Print Collection harbour
-view; [source metadata, credits and file hashes](../assets/research/sources.json)
-identify the reviewed public-domain originals. Geographic points and journeys
-are authored demonstration data, not positions derived from those images or
-verified historical routes. These examples contain no private
-manuscripts, archives, credentials or running user projects.
+## Catalog
 
-Focused reader excerpts end after the first complete paragraph and retain the
-native Analysis Off, chapter and reading controls. The larger text is selected
-through Reading settings, not applied as a screenshot-only style. Focused
-measurement images show the complete native explanation card: the three-word
-sentence “A board moved.”, the paragraph's 4.4 words per sentence and its separate
-chapter comparison. These are demonstration measurements, not writing targets.
-Full desktop reader entrances end after the complete opening chapter. Mobile reader
-overviews and the standalone source report show honest viewports, so reading
-continues below the image. Other captures frame complete widgets or end at an
-explicit task boundary: research lists show a complete matching dossier, claim or decision; source lists
-end after the complete source context and document controls,
-and the editorial view ends after the selected paragraph and its note controls.
-Follow the full-size image links above to inspect the actual framing.
-The reader captures use **Analysis Off**; chapter comparisons and
-scenes open **Analysis overview**. Passage captures use the same native paragraph
-actions and optional **Analysis On** layer. The stills were regenerated on
-24 October 2026 from current main after v0.7.5; that does not imply a new release.
-Older installed packages can show an earlier interface.
-Scene images show the first three scenes, with the first expanded. Their sample
-register is an illustrative assignment; its values come from the analysis.
-Dialog images show the native scrollable confirmation state, including the header,
-Close control and confirmation actions. Content above the current scroll position
-remains available in the application; the camera does not expand native dialogs.
-Dossier visual excerpts frame the complete native image figure, including its
-caption and available source context. Geography captures retain the native map
-and OpenStreetMap attribution; their positions and journeys are synthetic.
-Dossier list descriptions are bounded reading previews, not the full saved note;
-**View details** opens the complete content. Terminal images are report excerpts
-except for the complete synthetic research search/citation response.
+<!-- catalog:start -->
 
-Local source/dossier filters search loaded metadata. Research Search searches
-retained text separately. Selecting a manuscript does not submit it; confirming
-import creates a separate project. Source integrity and citations do not certify
-facts, and style measurements do not establish literary quality. Image sources
-contain no text passages or linguistic scores.
+| Task | View | Role and scope |
+| --- | --- | --- |
+| Why does this passage feel faster? | [dashboard-measurement-focus.png](dashboard-measurement-focus.png) | lead: Inspect the literal count and its separate paragraph comparison, then read the scene. |
+| Where should I look next? | [dashboard-heatmap.png](dashboard-heatmap.png) | support: Compare chapters within this invented manuscript; colors do not grade writing. |
+| What does the saved source say? | [dashboard-research-search.png](dashboard-research-search.png) | support: Read the retained source passage before following its claim and authored decision. |
+| What did the author decide? | [dashboard-research-decisions.png](dashboard-research-decisions.png) | support: An authored creative choice, not an automatically verified fact. |
+| Does the rhythm fit the scene? | [dashboard-reader-focus.png](dashboard-reader-focus.png) | support: Return to prose to make the editorial decision; this view does not demonstrate analysis. |
+| Where are the workspace tools? | [dashboard-light.png](dashboard-light.png) | reference: Orientation view; use the explanation card for a readable analysis preview. |
+| Can I read with a dark theme? | [dashboard-dark.png](dashboard-dark.png) | reference: Retained for published article links; a theme variant, not a separate product benefit. |
+| Can I read on a narrow screen? | [dashboard-mobile.png](dashboard-mobile.png) | reference: A responsive reading example; prose continues below the viewport. |
+| How do I leave an editorial note? | [dashboard-editorial.png](dashboard-editorial.png) | guide: The note is written by the user, not inferred by the analysis. |
+| How do I start with a manuscript? | [dashboard-project-import.png](dashboard-project-import.png) | guide: Previewing a file and creating a project are separate actions. |
+| Where do I configure chapter registers? | [dashboard-project-settings.png](dashboard-project-settings.png) | guide: Setup reference; a chapter label is not a literary judgment. |
+| Where does a scene keep its research? | [dashboard-research-dossiers.png](dashboard-research-dossiers.png) | guide: Dossier orientation; follow a concrete passage for the evidence workflow. |
+| How is a claim linked to evidence? | [dashboard-research-claims.png](dashboard-research-claims.png) | guide: A claim is an authored assertion, separate from its evidence. |
+| What changed after an edit? | [dashboard-research-review.png](dashboard-research-review.png) | reference: Detailed full-size reference, unsuitable as a small social card. |
+| When are the recorded events placed? | [dashboard-research-timeline.png](dashboard-research-timeline.png) | reference: Long full-size reference; a placed event is not a verified chronology. |
+| Which visual source was retained? | [dashboard-dossier-image.png](dashboard-dossier-image.png) | guide: A visual research source; the invented incident is not verified by this map. |
+| How does a retained map fit on mobile? | [dashboard-dossier-image-mobile.png](dashboard-dossier-image-mobile.png) | reference: A specific responsive visual-source reference, not another lead image. |
+| Can I inspect a source image closely? | [dashboard-dossier-image-zoom.png](dashboard-dossier-image-zoom.png) | guide: Shows the image viewer, not a manuscript fact-check. |
+| Can I retain a visual setting reference? | [dashboard-dossier-photo.png](dashboard-dossier-photo.png) | guide: Setting reference with provenance; not evidence for the fictional scene. |
+| How are evidence, claims and decisions related? | [dashboard-dossier-diagram.png](dashboard-dossier-diagram.png) | guide: An explanatory authored diagram, not an automatically inferred evidence chain. |
+| How do I inspect declared places and journeys? | [dashboard-dossier-geography.png](dashboard-dossier-geography.png) | guide: The demonstration positions and journeys are synthetic. |
+| Can I use Lixity from the terminal? | [cli-analyze.png](cli-analyze.png) | reference: Developer reference; not the lead image for an author-facing introduction. |
 
-## Regenerate
+<!-- catalog:end -->
 
-Install the Python development environment, Node.js and Playwright with Chromium,
-then run:
+## Data and limits
+
+All product captures use [The Crate at Warehouse 4](../demo/report.html), the
+six-chapter synthetic manuscript owned by `samples/first-look.md`. They were
+captured from current development on 24 October 2026; installed releases can
+show an earlier interface. A Fontane or Austen article must identify these as
+interface illustrations, not measurements of that literary work.
+
+Historical Hamburg map and photochrom references retain their
+[source credits and hashes](../assets/research/sources.json). People, events,
+positions and journeys are invented. Notes and decisions are authored examples.
+No private manuscript, archive or running user project is used. An intact source
+or a saved assertion is not a guarantee of factual correctness. Audio has no
+reviewed capture here and these images establish nothing about voice quality.
+
+Native controls and full component boundaries are preserved. The reading view
+uses Analysis Off; the explanation and overlay views use Analysis On. Dialogs
+retain their normal scrolling. Crops do not invent controls or results.
+
+## Maintain the one package
+
+From the repository root:
 
 ```sh
 .venv/bin/python scripts/make_screenshots.py
+.venv/bin/python scripts/make_screenshots.py --only dashboard-measurement-focus.png
+.venv/bin/python scripts/make_screenshots.py --outreach-package /tmp/lixity-outreach-package
 ```
 
-Playwright is optional capture/test tooling. If installed outside the checkout,
-set `PLAYWRIGHT_MODULE=/absolute/path/to/playwright`. To choose a browser, set
-`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/absolute/path/to/chromium`.
+Normal capture selects this manifest and updates the catalog table and embedded
+image dimensions. `--only` accepts reviewed names. Package preparation copies
+only lead/support images into a new directory, with questions, captions, alt
+text, destination URLs, source revision, working-tree status and byte hashes.
+It does not recapture images, send posts or alter an approval queue. Exact post
+copy and publication records belong in the separate outreach workspace; one
+current package there points to these assets rather than maintaining another
+screenshot selection. The package remains a draft until a separate publication.
 
-The generator reuses the analysis pipeline and research API with explicit default
-thresholds. Temporary HTML, synthetic responses and the capture manifest stay in
-ignored `.artifacts/screenshots/`; browser actions use those fixtures. It creates no user
-projects or stored agreements. Captures use fixed widths and reduced motion and fail
-on runtime errors, missing panels or mobile page overflow.
-
-Review the images before publishing. `.artifacts/screenshots/capture-results.json` records
-PNG dimensions; the generator synchronizes corresponding HTML image dimensions.
-Each still starts with cleared capture-origin browser preferences, so one image's
-font or metric choice cannot change another image's initial state.
-Fonts and browser versions can affect pixel output. Use only reviewed synthetic
-or public-domain data for repository screenshots.
-
-## Walkthrough videos
-
-[../videos/research-timeline.mp4](../videos/research-timeline.mp4) is a recorded
-walkthrough of the claims timeline with a synthetic cursor, published with a
-GIF and a poster. Regenerate both parts with `make videos`:
-
-1. `scripts/make_screenshots.py --video` replays the scripted flow against the
-   synthetic fixture and writes WebM recordings to `.artifacts/screenshots/videos/`.
-2. `scripts/make_videos.py` converts them with ffmpeg into `docs/videos/`
-   (MP4, GIF, poster) and enforces size limits.
-
-Flows are code in `scripts/capture_screenshots.cjs`; keep recordings short and
-free of private projects.
+Playwright with Chromium and the development Python environment are required
+for capture. Browser fixtures and diagnostic output stay in ignored
+`.artifacts/screenshots/`. Use synthetic or reviewed public-domain material only.
+Pages stages only manifest-listed images; adding a PNG alone never publishes it.

@@ -358,6 +358,16 @@ and CONTRIBUTING must be linked by their absolute GitHub URL: `../README.md`
 works in a checkout but breaks on Pages. The documentation tests validate links
 against the staged tree.
 
+Screenshot selection is maintained once in `docs/screenshots/manifest.json`.
+Normal capture, the generated catalog and Pages staging use that inventory;
+adding an image alone does not publish it. Prepare the reusable lead/support
+asset handoff with `scripts/make_screenshots.py --outreach-package NEW_DIRECTORY`.
+It records the source revision, working-tree status, exact image hashes, captions,
+alt text and destinations without sending or scheduling posts. Keep one current
+editorial package in the separate outreach workspace; old publication records
+remain history rather than additional active campaigns. See the
+[screenshot catalog](docs/screenshots/README.md).
+
 Review staged paths and content for private data, local reports and planning.
 After an authorized tagged release or manual Pages preview, verify the public
 deployment and any explicitly dispatched test workflows. Ordinary pushes do not

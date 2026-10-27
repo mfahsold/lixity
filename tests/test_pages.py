@@ -207,6 +207,13 @@ class TestPagesStaging(unittest.TestCase):
                 path = docs / name
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(b"synthetic fixture")
+            (docs / "screenshots/manifest.json").write_text(json.dumps({
+                "schema_version": "lixity-screenshot-catalog/1",
+                "images": [{"file": "public.png", "role": "reference", "question": "How?",
+                            "alt": "Synthetic", "caption": "Synthetic example.",
+                            "destination": "guides/install.html"}],
+            }))
+            public += ("screenshots/manifest.json",)
             output = root / "site"
             count = stage(docs, output)
             published = {str(path.relative_to(output)).replace("\\", "/")
@@ -218,6 +225,53 @@ class TestPagesStaging(unittest.TestCase):
             self.assertEqual(count, len(published))
             with self.assertRaises(FileExistsError):
                 stage(docs, output)
+
+    def test_screenshot_manifest_excludes_unreviewed_images(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            docs = root / "docs"
+            shots = docs / "screenshots"
+            shots.mkdir(parents=True)
+            (shots / "selected.png").write_bytes(b"reviewed synthetic image")
+            (shots / "unused.png").write_bytes(b"unreviewed synthetic image")
+            (shots / "manifest.json").write_text(json.dumps({
+                "schema_version": "lixity-screenshot-catalog/1",
+                "images": [{"file": "selected.png", "role": "lead", "question": "What was counted?",
+                            "alt": "Synthetic count", "caption": "Inspect the count.",
+                            "destination": "guides/first-look.html"}],
+            }))
+            stage(docs, root / "site")
+            self.assertTrue((root / "site/screenshots/selected.png").exists())
+            self.assertFalse((root / "site/screenshots/unused.png").exists())
+            self.assertTrue((root / "site/screenshots/manifest.json").exists())
+
+    def test_outreach_package_contains_only_selected_images_and_integrity_metadata(self):
+        from scripts.make_screenshots import build_outreach_package
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shots = root / "docs/screenshots"
+            shots.mkdir(parents=True)
+            entries = []
+            for name, role in (("lead.png", "lead"), ("reference.png", "reference")):
+                (shots / name).write_bytes(name.encode())
+                entries.append({"file": name, "role": role, "question": "What was counted?",
+                                "alt": "Synthetic count", "caption": "Inspect the count.",
+                                "destination": "guides/first-look.html"})
+            (shots / "manifest.json").write_text(json.dumps({
+                "schema_version": "lixity-screenshot-catalog/1", "images": entries,
+            }))
+            (shots / "private-note.txt").write_text("Not a publication input")
+            output = root / "package"
+            build_outreach_package(root / "docs", output)
+            self.assertTrue((output / "images/lead.png").is_file())
+            self.assertFalse((output / "images/reference.png").exists())
+            self.assertFalse((output / "private-note.txt").exists())
+            data = json.loads((output / "manifest.json").read_text())
+            self.assertEqual(data["state"], "draft-unpublished")
+            self.assertEqual(data["images"][0]["sha256"], hashlib.sha256(b"lead.png").hexdigest())
+            self.assertIn("What was counted?", (output / "README.md").read_text())
+            with self.assertRaises(FileExistsError):
+                build_outreach_package(root / "docs", output)
 
     def test_demo_publishes_only_verified_production_bundle_members(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -286,7 +286,7 @@ def render_speech_audio(
     ffmpeg = shutil.which("ffmpeg") if output.suffix.lower() == ".mp3" else None
     if output.suffix.lower() == ".mp3" and not ffmpeg:
         raise FileNotFoundError("FFmpeg is required for MP3 output; choose WAV instead")
-    rate, speaker = 24000, None
+    rate, speaker, selected = 24000, None, None
     model, configuration = Path(), Path()
     if not qwen:
         selected = voice_name or DEFAULT_VOICES.get(language)
