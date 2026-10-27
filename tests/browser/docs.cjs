@@ -1306,7 +1306,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
       }
       if (colorScheme === 'light') await checkLegacyResearchURL(page, javaScriptEnabled);
       assert.deepEqual(errors, []);
-      assert.ok(staticRequests.every(request => request.method === 'GET' && request.path.startsWith('/lixity/')),
+      assert.deepEqual(staticRequests.filter(request => request.method !== 'GET' || !request.path.startsWith('/lixity/')), [],
         'Native downloads use only the disposable local static server');
       await context.close();
     }

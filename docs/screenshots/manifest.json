@@ -1,0 +1,181 @@
+{
+  "schema_version": "lixity-screenshot-catalog/1",
+  "images": [
+    {
+      "file": "dashboard-measurement-focus.png",
+      "role": "lead",
+      "question": "Why does this passage feel faster?",
+      "alt": "Sentence-length explanation: A board moved has three words; its paragraph averages 4.4 words per sentence.",
+      "caption": "Inspect the literal count and its separate paragraph comparison, then read the scene.",
+      "destination": "guides/first-look.html#passage"
+    },
+    {
+      "file": "dashboard-heatmap.png",
+      "role": "support",
+      "question": "Where should I look next?",
+      "alt": "Warehouse 4 chapter comparison with measurements in their own units.",
+      "caption": "Compare chapters within this invented manuscript; colors do not grade writing.",
+      "destination": "guides/first-look.html"
+    },
+    {
+      "file": "dashboard-research-search.png",
+      "role": "support",
+      "question": "What does the saved source say?",
+      "alt": "A retained customs-log passage matching the research search.",
+      "caption": "Read the retained source passage before following its claim and authored decision.",
+      "destination": "guides/first-look.html#decision"
+    },
+    {
+      "file": "dashboard-research-decisions.png",
+      "role": "support",
+      "question": "What did the author decide?",
+      "alt": "An explicit decision to leave the receiving signature blank.",
+      "caption": "An authored creative choice, not an automatically verified fact.",
+      "destination": "guides/first-look.html#decision"
+    },
+    {
+      "file": "dashboard-reader-focus.png",
+      "role": "support",
+      "question": "Does the rhythm fit the scene?",
+      "alt": "Continuous Warehouse 4 prose with analysis deliberately switched off.",
+      "caption": "Return to prose to make the editorial decision; this view does not demonstrate analysis.",
+      "destination": "demo/report.html"
+    },
+    {
+      "file": "dashboard-light.png",
+      "role": "reference",
+      "question": "Where are the workspace tools?",
+      "alt": "Complete light-theme Warehouse 4 reading workspace.",
+      "caption": "Orientation view; use the explanation card for a readable analysis preview.",
+      "destination": "demo/report.html"
+    },
+    {
+      "file": "dashboard-dark.png",
+      "role": "reference",
+      "question": "Can I read with a dark theme?",
+      "alt": "Complete dark-theme Warehouse 4 reading workspace.",
+      "caption": "Retained for published article links; a theme variant, not a separate product benefit.",
+      "destination": "blog/manuscript-reading-workbench.html"
+    },
+    {
+      "file": "dashboard-mobile.png",
+      "role": "reference",
+      "question": "Can I read on a narrow screen?",
+      "alt": "Warehouse 4 manuscript in the mobile workspace.",
+      "caption": "A responsive reading example; prose continues below the viewport.",
+      "destination": "demo/report.html"
+    },
+    {
+      "file": "dashboard-editorial.png",
+      "role": "guide",
+      "question": "How do I leave an editorial note?",
+      "alt": "Selected manuscript paragraph and its note controls.",
+      "caption": "The note is written by the user, not inferred by the analysis.",
+      "destination": "guides/interpretation.html"
+    },
+    {
+      "file": "dashboard-project-import.png",
+      "role": "guide",
+      "question": "How do I start with a manuscript?",
+      "alt": "Synthetic manuscript import preview with an explicit confirmation button.",
+      "caption": "Previewing a file and creating a project are separate actions.",
+      "destination": "guides/installation.html"
+    },
+    {
+      "file": "dashboard-project-settings.png",
+      "role": "guide",
+      "question": "Where do I configure chapter registers?",
+      "alt": "Project settings including chapter registers and Apply.",
+      "caption": "Setup reference; a chapter label is not a literary judgment.",
+      "destination": "blog/intentional-registers.html"
+    },
+    {
+      "file": "dashboard-research-dossiers.png",
+      "role": "guide",
+      "question": "Where does a scene keep its research?",
+      "alt": "Filtered Warehouse 4 dossier with retained research actions.",
+      "caption": "Dossier orientation; follow a concrete passage for the evidence workflow.",
+      "destination": "guides/research-pdf.html"
+    },
+    {
+      "file": "dashboard-research-claims.png",
+      "role": "guide",
+      "question": "How is a claim linked to evidence?",
+      "alt": "Warehouse 4 claim with retained source and manuscript context.",
+      "caption": "A claim is an authored assertion, separate from its evidence.",
+      "destination": "guides/research-pdf.html"
+    },
+    {
+      "file": "dashboard-research-review.png",
+      "role": "reference",
+      "question": "What changed after an edit?",
+      "alt": "Research review showing a saved manuscript quote and revision context.",
+      "caption": "Detailed full-size reference, unsuitable as a small social card.",
+      "destination": "guides/research-pdf.html"
+    },
+    {
+      "file": "dashboard-research-timeline.png",
+      "role": "reference",
+      "question": "When are the recorded events placed?",
+      "alt": "Claim chronology with a shared axis and placement hints.",
+      "caption": "Long full-size reference; a placed event is not a verified chronology.",
+      "destination": "guides/research-pdf.html"
+    },
+    {
+      "file": "dashboard-dossier-image.png",
+      "role": "guide",
+      "question": "Which visual source was retained?",
+      "alt": "Historical Hamburg map with retained-source context and credits.",
+      "caption": "A visual research source; the invented incident is not verified by this map.",
+      "destination": "guides/research-pdf.html"
+    },
+    {
+      "file": "dashboard-dossier-image-mobile.png",
+      "role": "reference",
+      "question": "How does a retained map fit on mobile?",
+      "alt": "Narrow-screen map figure with source context.",
+      "caption": "A specific responsive visual-source reference, not another lead image.",
+      "destination": "guides/research-pdf.html"
+    },
+    {
+      "file": "dashboard-dossier-image-zoom.png",
+      "role": "guide",
+      "question": "Can I inspect a source image closely?",
+      "alt": "Native zoom viewer containing the retained historical map.",
+      "caption": "Shows the image viewer, not a manuscript fact-check.",
+      "destination": "guides/research-pdf.html"
+    },
+    {
+      "file": "dashboard-dossier-photo.png",
+      "role": "guide",
+      "question": "Can I retain a visual setting reference?",
+      "alt": "Historical Hamburg harbour photochrom with source credits.",
+      "caption": "Setting reference with provenance; not evidence for the fictional scene.",
+      "destination": "guides/research-pdf.html"
+    },
+    {
+      "file": "dashboard-dossier-diagram.png",
+      "role": "guide",
+      "question": "How are evidence, claims and decisions related?",
+      "alt": "Diagram separating retained evidence, authored claims, manuscript quotation and author decision.",
+      "caption": "An explanatory authored diagram, not an automatically inferred evidence chain.",
+      "destination": "guides/research-pdf.html"
+    },
+    {
+      "file": "dashboard-dossier-geography.png",
+      "role": "guide",
+      "question": "How do I inspect declared places and journeys?",
+      "alt": "Map with authored fictional harbour positions, journey and attribution.",
+      "caption": "The demonstration positions and journeys are synthetic.",
+      "destination": "guides/research-pdf.html"
+    },
+    {
+      "file": "cli-analyze.png",
+      "role": "reference",
+      "question": "Can I use Lixity from the terminal?",
+      "alt": "Terminal analysis report for the synthetic Warehouse 4 manuscript.",
+      "caption": "Developer reference; not the lead image for an author-facing introduction.",
+      "destination": "USAGE.md"
+    }
+  ]
+}
