@@ -8,6 +8,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Per-render local/Jetson Qwen selection in the CLI and native audio dialog,
+  using fixed loopback endpoints and an operator-configured SSH forward without
+  embedding machine addresses in portable project voice profiles.
 - Shared bounded Qwen segment reuse for retrying long CPU renders in the CLI and
   native chapter dialog, with explicit fresh-render controls. Completed segments
   survive failed/cancelled runs; previews remain fresh and final output stays atomic.

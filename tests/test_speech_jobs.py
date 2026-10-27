@@ -166,3 +166,25 @@ def test_long_running_success_gets_its_full_result_retention_window(monkeypatch)
         assert jobs.audio(job["id"], "context").startswith(b"RIFF")
     finally:
         jobs.close()
+
+
+@pytest.mark.parametrize("target", ["local", "jetson"])
+def test_job_dispatch_keeps_execution_target_outside_portable_profile(target):
+    observed = []
+    profile = AudioProfile(engine="qwen3", voice="Ryan")
+    original = profile.model_dump()
+
+    def render(source, output, **kwargs):
+        observed.append((kwargs["target"], kwargs["profile"].model_dump()))
+        Path(output).write_bytes(generate_silence_wav(0.01))
+
+    jobs = SpeechJobs(renderer=render)
+    try:
+        job = jobs.start("context", TEXT, profile, {"mode": "preview"}, lambda: True,
+                         target=target)
+        assert wait_for(jobs, job["id"])["state"] == "ready"
+        assert jobs.audio(job["id"], "context").startswith(b"RIFF")
+        assert observed == [(target, original)]
+        assert profile.model_dump() == original and "target" not in original
+    finally:
+        jobs.close()

@@ -4,6 +4,7 @@
   var body = document.body, settingsForm = document.getElementById("settings-form");
   if (body.dataset.speechCapable !== "true" || body.dataset.readOnly === "true" || !settingsForm) return;
   var dialog, fields = {}, settings, capabilities, generation = 0, job = null, timer, openedContext, paragraph;
+  var executionTarget = "local";
   function label(key) { return uiLabel("speech_" + key); }
   function languageName(code) {
     try { return new Intl.DisplayNames([document.documentElement.lang || "en"], {type: "language"}).of(code); }
@@ -67,6 +68,11 @@
     options(fields.voice, voices.map(function(pair) { return [pair[0], pair[1].name]; }), voice);
     fields.speed.disabled = !cap.speed.supported; fields.instructions.disabled = !cap.instructions;
     fields.advanced_voice.disabled = fields.engine.value !== "piper";
+    options(fields.target, cap.targets.map(function(value) { return [value, label("target_" + value)]; }),
+      cap.targets.includes(executionTarget) ? executionTarget : cap.targets[0]);
+    fields.target.disabled = cap.targets.length < 2;
+    fields.target.closest("label").hidden = fields.target.disabled;
+    fields.runtime_hint.textContent = label(fields.target.value === "jetson" ? "jetson_hint" : "runtime_hint");
     fields.runtime_hint.hidden = fields.engine.value !== "qwen3";
     fields.reuse.disabled = fields.engine.value !== "qwen3";
     fields.reuse.closest("label").hidden = fields.reuse.disabled;
@@ -144,10 +150,10 @@
       var profile = readProfile(); invalidate(); var serial = generation;
       fields.preview.disabled = fields.chapter_render.disabled = true;
       status(label("state_pending"));
-      var payload = Object.assign(tokens(), {mode: mode, chapter: Number(fields.chapter.value), profile: profile});
+      var payload = Object.assign(tokens(), {mode: mode, chapter: Number(fields.chapter.value), profile: profile, target: fields.target.value || "local"});
       if (mode === "preview" && paragraph) payload.paragraph = paragraph.identity;
       if (mode === "chapter" && profile.engine === "qwen3") payload.fresh_audio = !fields.reuse.checked;
-      fields.context.textContent = (mode === "preview" ? label(paragraph ? "paragraph_preview" : "first_preview") : label("chapter_render")) + " · " + fields.chapter.selectedOptions[0].textContent +
+      fields.context.textContent = label("target_" + payload.target) + " · " + (mode === "preview" ? label(paragraph ? "paragraph_preview" : "first_preview") : label("chapter_render")) + " · " + fields.chapter.selectedOptions[0].textContent +
         (mode === "preview" && paragraph ? " · " + paragraph.identity.start_line + "–" + paragraph.identity.end_line : "");
       var data = await request("speech-render", payload);
       if (!valid(serial)) { request("speech-cancel", Object.assign({}, {project_token: payload.project_token, source_sha256: payload.source_sha256}, {id: data.job.id})).catch(function() {}); return; }
@@ -188,6 +194,11 @@
     field(fields.editor, "instructions", "textarea").maxLength = 2000;
     field(fields.editor, "pronunciations", "textarea"); node("p", fields.editor, "ctl-note", label("pronunciation_hint"));
     field(content, "chapter", "select");
+    field(content, "target", "select"); fields.target.closest("label").hidden = true;
+    fields.target.addEventListener("change", function() {
+      executionTarget = fields.target.value; invalidate();
+      fields.runtime_hint.textContent = label(executionTarget === "jetson" ? "jetson_hint" : "runtime_hint");
+    });
     var reuse = node("label", content, "form-checkbox"); reuse.hidden = true;
     fields.reuse = node("input", reuse); fields.reuse.type = "checkbox"; fields.reuse.id = "speech-reuse"; fields.reuse.checked = true;
     node("span", reuse, "", label("reuse"));

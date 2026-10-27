@@ -54,7 +54,7 @@ def test_adapter_fixed_endpoint_and_validated_identity():
 def test_render_applies_profile_and_progress(tmp_path, monkeypatch):
     calls = []
     monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen",
-                        lambda text, selected: calls.append((text, selected)) or generate_silence_wav(.01, 24000))
+                        lambda text, selected, **_kwargs: calls.append((text, selected)) or generate_silence_wav(.01, 24000))
     source = tmp_path / "source.md"
     source.write_text("A word.\n\n---\n\nAnother word.")
     selected = profile(paragraph_pause=.2, scene_pause=.3, pronunciations={"word": "werd"})
@@ -74,7 +74,7 @@ def test_render_applies_profile_and_progress(tmp_path, monkeypatch):
 def test_cancellation_preserves_old_output(tmp_path, monkeypatch, when):
     state = [when == "before"]
 
-    def synthesize(_text, _profile):
+    def synthesize(_text, _profile, **_kwargs):
         if when == "inference":
             state[0] = True
         return generate_silence_wav(.01, 24000)
@@ -95,7 +95,7 @@ def test_cancellation_preserves_old_output(tmp_path, monkeypatch, when):
 
 
 def test_qwen_failure_does_not_fall_back(tmp_path, monkeypatch):
-    def fail(*_args):
+    def fail(*_args, **_kwargs):
         raise RuntimeError("Qwen unavailable")
 
     monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen", fail)
@@ -195,7 +195,7 @@ def test_pronunciation_phrase_crosses_transport_boundary(tmp_path, monkeypatch):
     phrase = original[0].text.split()[-1] + " " + original[1].text.split()[0]
     calls = []
     monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen",
-                        lambda text, _profile: calls.append(text) or generate_silence_wav(.01, 24000))
+                        lambda text, _profile, **_kwargs: calls.append(text) or generate_silence_wav(.01, 24000))
     source = tmp_path / "source.md"
     source.write_text(body)
     render_speech_audio(source, tmp_path / "out.wav", profile=profile(pronunciations={phrase: "boundary"}))
@@ -293,7 +293,7 @@ def test_cjk_profile_replanning_preserves_text(tmp_path, monkeypatch):
     body = "这是一个测试句子。" * 80
     calls = []
     monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen",
-                        lambda text, _profile: calls.append(text) or generate_silence_wav(.01, 24000))
+                        lambda text, _profile, **_kwargs: calls.append(text) or generate_silence_wav(.01, 24000))
     source = tmp_path / "source.md"
     source.write_text(body)
     selected = AudioProfile(engine="qwen3", language="zh", voice="Vivian", pronunciations={"测试": "合成"})
@@ -313,3 +313,27 @@ def test_adapter_closes_http_error_response(status):
     with pytest.raises(RuntimeError, match="worker"):
         synthesize_qwen("Synthetic text.", profile(), opener=SimpleNamespace(open=fail_request))
     assert response.closed
+
+
+@pytest.mark.parametrize("target,port", [("local", 8769), ("jetson", 8770)])
+def test_execution_target_uses_only_fixed_loopback_endpoints(target, port):
+    headers = Message()
+    headers["Content-Type"] = "audio/wav"
+    headers["X-Lixity-Model"] = QWEN_MODEL
+    headers["X-Lixity-Voice"] = "Ryan"
+    calls = []
+
+    class Response(io.BytesIO):
+        status = 200
+
+    def open_request(request, timeout):
+        calls.append(request)
+        result = Response(generate_silence_wav(.01, 24000))
+        result.headers = headers
+        return result
+
+    synthesize_qwen("Synthetic text.", profile(), target=target, opener=SimpleNamespace(open=open_request))
+    assert calls[0].full_url == f"http://127.0.0.1:{port}/v1/audio/speech"
+    assert "target" not in json.loads(calls[0].data)
+    with pytest.raises(ValueError, match="target"):
+        synthesize_qwen("Synthetic text.", profile(), target="https://example.test")

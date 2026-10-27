@@ -19,7 +19,7 @@ def test_failed_render_reuses_only_completed_exact_requests(tmp_path, monkeypatc
     cache = tmp_path / "segments"
     calls = []
 
-    def synthesize(text, profile):
+    def synthesize(text, profile, **_kwargs):
         calls.append((text, profile.instructions))
         if len(calls) == 2:
             raise RuntimeError("Synthetic interruption")
@@ -47,7 +47,7 @@ def test_cancelled_render_retains_completed_work_but_not_partial_output(tmp_path
     target, cache = tmp_path / "out.wav", tmp_path / "segments"
     cancelled = [False]
     calls = []
-    monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen", lambda text, _: calls.append(text) or generate_silence_wav(.01, 24000))
+    monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen", lambda text, _, **_kwargs: calls.append(text) or generate_silence_wav(.01, 24000))
 
     def progress(done, total):
         if done == 1:
@@ -66,7 +66,7 @@ def test_corrupted_segment_is_recomputed_and_symlink_cache_is_rejected(tmp_path,
     source.write_text("One sentence.")
     target, cache = tmp_path / "out.wav", tmp_path / "segments"
     calls = []
-    monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen", lambda text, _: calls.append(text) or generate_silence_wav(.01, 24000))
+    monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen", lambda text, _, **_kwargs: calls.append(text) or generate_silence_wav(.01, 24000))
     render_speech_audio(source, target, profile=narrator(), cache_dir=cache)
     next(cache.glob("*.wav")).write_bytes(b"damaged")
     render_speech_audio(source, target, profile=narrator(), cache_dir=cache)
@@ -101,7 +101,7 @@ def test_cli_reuses_project_segments_and_explicit_fresh_flag(tmp_path, monkeypat
     prepare_project_settings(tmp_path, {"audio": {"selected": "reader", "profiles": {"reader": narrator().model_dump()}}}).commit()
     config = (tmp_path / "lixity.toml").read_bytes()
     calls = []
-    monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen", lambda text, _: calls.append(text) or generate_silence_wav(.01, 24000))
+    monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen", lambda text, _, **_kwargs: calls.append(text) or generate_silence_wav(.01, 24000))
     args = ["read-aloud", "--project", str(tmp_path), "--profile", "reader", "-o", str(tmp_path / "out.wav")]
     assert main(args) == 0
     assert main(args) == 0 and len(calls) == 1
@@ -122,7 +122,7 @@ def test_read_only_project_with_external_output_and_cache_opt_out(tmp_path, monk
     prepare_project_settings(project, {"audio": {"selected": "reader", "profiles": {"reader": narrator().model_dump()}}}).commit()
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
     calls = []
-    monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen", lambda text, _: calls.append(text) or generate_silence_wav(.01, 24000))
+    monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen", lambda text, _, **_kwargs: calls.append(text) or generate_silence_wav(.01, 24000))
     args = ["read-aloud", "--project", str(project), "-o", str(tmp_path / "outside.wav")]
     project.chmod(0o555)
     try:
@@ -133,3 +133,52 @@ def test_read_only_project_with_external_output_and_cache_opt_out(tmp_path, monk
         assert sorted(p.name for p in project.iterdir()) == ["lixity.toml", "manuscript.md"]
     finally:
         project.chmod(0o755)
+
+
+@pytest.mark.parametrize("target", [None, "local", "jetson"])
+def test_cli_dispatches_execution_target_without_saving_it(tmp_path, monkeypatch, target):
+    from lixity.cli import main
+    from lixity.config import prepare_project_settings
+
+    source = tmp_path / "manuscript.md"
+    source.write_text("A synthetic target dispatch passage.")
+    config = tmp_path / "lixity.toml"
+    config.write_text('language="en"\nmanuscript="manuscript.md"\n')
+    prepare_project_settings(tmp_path, {"audio": {
+        "selected": "reader", "profiles": {"reader": narrator().model_dump()},
+    }}).commit()
+    original = config.read_bytes()
+    observed = []
+
+    def synthesize(text, profile, **kwargs):
+        observed.append((kwargs["target"], profile.model_dump()))
+        return generate_silence_wav(.01, 24000)
+
+    monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen", synthesize)
+    output = tmp_path / "result.wav"
+    args = ["read-aloud", "--project", str(tmp_path), "--no-audio-cache", "-o", str(output)]
+    if target is not None:
+        args.extend(["--speech-target", target])
+    assert main(args) == 0
+    assert output.read_bytes().startswith(b"RIFF")
+    assert observed == [(target or "local", narrator().model_dump())]
+    assert "target" not in observed[0][1]
+    assert config.read_bytes() == original
+    assert source.read_text() == "A synthetic target dispatch passage."
+
+
+def test_cli_rejects_jetson_for_piper_before_touching_output(tmp_path, monkeypatch, capsys):
+    from lixity.cli import main
+
+    source = tmp_path / "manuscript.md"
+    source.write_text("A synthetic Piper passage.")
+    (tmp_path / "lixity.toml").write_text('language="en"\nmanuscript="manuscript.md"\n')
+    output = tmp_path / "result.wav"
+    output.write_bytes(b"retained listening copy")
+    calls = []
+    monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen", lambda *args, **kwargs: calls.append(args))
+    assert main(["read-aloud", "--project", str(tmp_path), "--speech-target", "jetson",
+                 "-o", str(output)]) == 1
+    assert "Execution target is not supported" in capsys.readouterr().err
+    assert output.read_bytes() == b"retained listening copy"
+    assert calls == []

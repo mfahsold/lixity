@@ -1526,6 +1526,8 @@ configuration error), backend capabilities and source chapter bounds.
 `POST /api/speech-render` accepts those context fields, `mode: preview|chapter`,
 a positive `chapter`, and either `profile_id` or a validated draft `profile`.
 Optional `fresh_audio` is a strict boolean: true bypasses reuse for that render.
+Optional `target` is `local` (default) or `jetson`; Piper accepts only `local`.
+Execution location is per render and is not stored in `audio` voice profiles.
 Preview may include the exact displayed `paragraph` identity (`start_line`,
 `end_line`, `paragraph_sha256`). Browser-provided text, paths and unknown request
 fields are rejected. Preview uses the first bounded supported prose segment; its
@@ -1541,8 +1543,11 @@ WAV bytes. At most one render is active; completed temporary jobs expire after
 results, including an earlier selection revisited later. No manuscript bytes or
 research archive records are changed.
 
-The optional Qwen worker listens on 127.0.0.1:8769 only. It accepts bounded
-CustomVoice requests at `/v1/audio/speech`; the Lixity adapter checks model, voice,
+The optional Qwen worker listens on 127.0.0.1:8769 only. The adapter selects either
+that local worker or the fixed loopback port 8770 for an externally configured
+SSH forward to a Jetson worker. Browser payloads cannot set an endpoint URL.
+The worker accepts bounded CustomVoice requests at `/v1/audio/speech`;
+the Lixity adapter checks model, voice,
 format and response size and rejects redirects. No external provider endpoint or
 automatic backend fallback is supported. Heavy model dependencies and weights
 are separately installed machine resources. See the read-aloud usage for setup.

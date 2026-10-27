@@ -1319,6 +1319,10 @@ and atomic output. `speech_qwen.py` is the fixed-loopback adapter and optional
 isolated model worker. It imports the heavy runtime lazily, loads a complete local
 checkpoint once, serializes synthesis and never downloads a model during use.
 CPU is a supported asynchronous rendering path; GPU availability is not presumed.
+Per-render `local|jetson` selection chooses fixed loopback ports 8769 or 8770.
+The latter is an operator-configured authenticated SSH forward; the remote worker
+remains loopback-only. Location is not part of portable project voice settings,
+and neither browser input nor project configuration can supply an inference URL.
 
 Native `SpeechJobs` own temporary immutable source snapshots and WAV outputs, one
 active render per server, progress, cancellation and bounded result retention.

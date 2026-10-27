@@ -11318,6 +11318,28 @@ _ROWS["speech_runtime_hint"] = (
     "Qwen vereist de optionele lokale spraakdienst. Genereren op de CPU kan traag zijn; begin met een kort voorbeeld. Voltooide hoofdstuksegmenten blijven lokaal bewaard voor nieuwe pogingen; voorbeelden worden altijd opnieuw gegenereerd.",
 )
 
+_ROWS["speech_target"] = (
+    "Render on", "Berechnen auf", "Calculer sur", "Calcular en",
+    "Calcola su", "Calcular em", "Berekenen op",
+)
+_ROWS["speech_target_local"] = (
+    "This computer", "Diesem Computer", "Cet ordinateur", "Este ordenador",
+    "Questo computer", "Este computador", "Deze computer",
+)
+_ROWS["speech_target_jetson"] = (
+    "Configured Jetson", "Konfiguriertem Jetson", "Jetson configuré", "Jetson configurado",
+    "Jetson configurato", "Jetson configurado", "Ingestelde Jetson",
+)
+_ROWS["speech_jetson_hint"] = (
+    "The selected text is processed on the configured Jetson through its SSH connection. Its worker must be connected before rendering. Completed segments can be reused; previews are always fresh.",
+    "Der ausgewählte Text wird über die SSH-Verbindung auf dem konfigurierten Jetson verarbeitet. Dessen Sprachdienst muss vor der Berechnung verbunden sein. Fertige Abschnitte können wiederverwendet werden; Vorschauen werden immer neu erzeugt.",
+    "Le texte sélectionné est traité sur le Jetson configuré via sa connexion SSH. Son service vocal doit être connecté avant le calcul. Les segments terminés peuvent être réutilisés ; les aperçus sont toujours régénérés.",
+    "El texto seleccionado se procesa en el Jetson configurado mediante su conexión SSH. Su servicio debe estar conectado antes del cálculo. Se pueden reutilizar segmentos completados; las vistas previas siempre son nuevas.",
+    "Il testo selezionato viene elaborato sul Jetson configurato tramite la connessione SSH. Il servizio deve essere connesso prima del calcolo. I segmenti completati possono essere riutilizzati; le anteprime sono sempre nuove.",
+    "O texto selecionado é processado no Jetson configurado através da ligação SSH. O serviço deve estar ligado antes do cálculo. Os segmentos concluídos podem ser reutilizados; as prévias são sempre novas.",
+    "De geselecteerde tekst wordt via de SSH-verbinding op de ingestelde Jetson verwerkt. De spraakdienst moet verbonden zijn voordat de berekening begint. Voltooide segmenten kunnen worden hergebruikt; voorbeelden worden altijd opnieuw gegenereerd.",
+)
+
 _ROWS["speech_reuse"] = (
     "Reuse completed chapter segments", "Fertige Kapitelabschnitte wiederverwenden",
     "Réutiliser les segments de chapitre terminés", "Reutilizar los segmentos de capítulo completados",

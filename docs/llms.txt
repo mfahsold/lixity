@@ -82,7 +82,8 @@ exports and curated reader/companion publications have different disclosure
 scopes. Original sources require separate inclusion consent. Exports cannot save
 project changes or synthesize speech. Current-main audio shares project voice
 profiles between the CLI and native preview/chapter dialog: Piper or an optional
-local Qwen3-TTS CustomVoice worker, with no silent backend fallback. CPU generation
+Qwen3-TTS CustomVoice worker on this computer or a configured Jetson over SSH,
+selected per render, with no silent backend fallback. CPU generation
 can be slow; verified Qwen chapter segments can be reused. Audio remains a
 prototype requiring listening review; see Usage for setup, privacy and limits.
 

@@ -158,3 +158,12 @@ def test_static_reports_do_not_ship_inactive_native_audio_assets():
         assert '&quot;speech_title&quot;' not in document
     native = render_dashboard([], [], controls=True, enabled_actions=('speech-render',))
     assert marker in native and '&quot;speech_title&quot;' in native
+
+
+@pytest.mark.parametrize("engine,voice", [("piper", "en_US-lessac-medium"), ("qwen3", "Ryan")])
+def test_execution_target_is_not_portable_profile_configuration(engine, voice):
+    profile = AudioProfile(engine=engine, voice=voice).model_dump()
+    for target in ("local", "jetson"):
+        with pytest.raises(ValueError, match="Extra inputs"):
+            AudioProfile.model_validate({**profile, "target": target})
+    assert audio_capabilities()[engine]["targets"] == (["local"] if engine == "piper" else ["local", "jetson"])

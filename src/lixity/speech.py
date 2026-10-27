@@ -268,6 +268,7 @@ def render_speech_audio(
     max_audio_bytes: int | None = None,
     cache_dir: str | Path | None = None,
     fresh_audio: bool = False,
+    target: str = "local",
 ) -> Path:
     """Stream a consistent selected delivery into an atomic WAV or MP3 copy."""
     _check_cancelled(cancelled)
@@ -277,6 +278,8 @@ def render_speech_audio(
         profile = AudioProfile.model_validate(profile.model_dump())
         language, voice_name, base_speed = profile.language, profile.voice, profile.speed
     qwen = profile is not None and profile.engine == "qwen3"
+    if target not in ("local", "jetson") or (not qwen and target != "local"):
+        raise ValueError("Execution target is not supported by this speech engine")
     source = Path(manuscript_path).expanduser().resolve()
     output = Path(output_path).expanduser().resolve()
     if not source.is_file():
@@ -389,7 +392,7 @@ def render_speech_audio(
 
                     data = None if fresh_audio or segment_cache is None else segment_cache.get(cue.text, profile)
                     if data is None:
-                        data = synthesize_qwen(cue.text, profile)
+                        data = synthesize_qwen(cue.text, profile, target=target)
                         params, frames = _read_pcm(data)
                         if params != (1, 2, rate):
                             raise ValueError("Unexpected Qwen audio format")

@@ -180,7 +180,7 @@ def test_qwen_chapters_reuse_completed_segments_but_previews_stay_fresh(speech_s
     calls = []
     monkeypatch.setattr(jobs, "render_speech_audio", render_speech_audio)
     monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen",
-                        lambda text, profile: calls.append(text) or generate_silence_wav(.01, 24000))
+                        lambda text, profile, **_kwargs: calls.append(text) or generate_silence_wav(.01, 24000))
     bound = context(source, handler)
     profile = AudioProfile(engine="qwen3", language="en", voice="Ryan").model_dump()
 
@@ -207,4 +207,59 @@ def test_qwen_chapters_reuse_completed_segments_but_previews_stay_fresh(speech_s
     render("preview")
     render("preview")
     assert len(calls) == count * 2 + 2
+    assert source.read_bytes() == before
+
+
+@pytest.mark.parametrize("target", [None, "local", "jetson"])
+def test_api_dispatches_target_without_mutating_saved_profiles(speech_server, monkeypatch, target):
+    import lixity.speech_jobs as jobs
+    from lixity.speech_profiles import AudioProfile
+
+    port, source, handler, _observed = speech_server
+    received = []
+    original_config = (source.parent / "lixity.toml").read_bytes()
+    original_source = source.read_bytes()
+    profile = AudioProfile(engine="qwen3", voice="Ryan").model_dump()
+
+    def render(source, output, **kwargs):
+        received.append((kwargs["target"], kwargs["profile"].model_dump()))
+        Path(output).write_bytes(generate_silence_wav(.01))
+
+    monkeypatch.setattr(jobs, "render_speech_audio", render)
+    bound = context(source, handler)
+    payload = {**bound, "mode": "preview", "chapter": 1, "profile": profile}
+    if target is not None:
+        payload["target"] = target
+    response = send(port, "/api/speech-render", payload=payload)
+    assert response.status == 202, response.body
+    identifier = json.loads(response.body)["job"]["id"]
+    query = urlencode({**bound, "id": identifier})
+    for _ in range(100):
+        status = json.loads(send(port, "/api/speech-job?" + query).body)["job"]
+        if status["state"] not in ("pending", "running"):
+            break
+        time.sleep(.01)
+    assert status["state"] == "ready", status
+    assert send(port, "/api/speech-audio?" + query).status == 200
+    assert received == [(target or "local", profile)]
+    assert "target" not in received[0][1]
+    assert (source.parent / "lixity.toml").read_bytes() == original_config
+    assert source.read_bytes() == original_source
+
+
+@pytest.mark.parametrize("change", [
+    {"target": "jetson"},
+    {"target": "remote"},
+    {"target": "http://127.0.0.1:8770"},
+    {"target": None},
+    {"target": {"host": "jetson"}},
+])
+def test_api_rejects_piper_or_untrusted_execution_targets(speech_server, change):
+    port, source, handler, observed = speech_server
+    before = source.read_bytes()
+    response = send(port, "/api/speech-render", payload={
+        **context(source, handler), "mode": "preview", "chapter": 1, **change,
+    })
+    assert response.status == 400, response.body
+    assert observed == []
     assert source.read_bytes() == before

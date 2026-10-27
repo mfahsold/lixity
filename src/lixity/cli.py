@@ -1168,6 +1168,7 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
             skip_markers=not args.keep_markers,
             cache_dir=project_audio_cache(workspace.root) if profile.engine == "qwen3" and not args.no_audio_cache else None,
             fresh_audio=args.fresh_audio,
+            target=args.speech_target,
         )
     except (OSError, ValueError, RuntimeError, FileNotFoundError) as exc:
         print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
@@ -1724,7 +1725,7 @@ def main(argv: list[str] | None = None) -> int:
             p.epilog = (
                 "Renders local listening copies using saved project voice profiles. "
                 "Piper supports explicit speed; optional Qwen CustomVoice supports style instructions "
-                "through a local worker. Runtimes and voice models are installed separately."
+                "on this computer or a configured Jetson. Runtimes and voice models are installed separately."
             )
             p.add_argument("file", nargs="?", help="Markdown manuscript (default: configured manuscript or folder discovery)")
             p.add_argument("-o", "--output", help="Audio target file (WAV or MP3, default: <workspace-slug>.wav)")
@@ -1734,6 +1735,7 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--instructions", default=None, help="Explicit Qwen style instructions (unsupported by Piper)")
             p.add_argument("--voice", default=None, help="Override the selected profile voice; model-specific validation applies")
             p.add_argument("--speed", type=float, default=None, help="Piper reading speed override (default: saved profile); Qwen requires 1.0")
+            p.add_argument("--speech-target", choices=("local", "jetson"), default="local", help="Execution target for this run (default: local); Jetson requires its configured SSH forward")
             p.add_argument("--no-audio-cache", action="store_true", help="Render without reading or retaining reusable audio segments")
             p.add_argument("--fresh-audio", action="store_true", help="Recompute Qwen segments instead of reusing completed project audio")
             p.add_argument("--keep-markers", action="store_true", help="Read editorial markers aloud instead of omitting them")

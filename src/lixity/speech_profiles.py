@@ -130,7 +130,7 @@ def audio_capabilities() -> dict[str, Any]:
     """
     return {
         "piper": {
-            "name": "Piper", "languages": list(PIPER_DEFAULT_VOICES),
+            "name": "Piper", "targets": ["local"], "languages": list(PIPER_DEFAULT_VOICES),
             "voices": {
                 **{voice: {"name": voice, "languages": [language]}
                    for language, voice in PIPER_DEFAULT_VOICES.items()},
@@ -142,7 +142,7 @@ def audio_capabilities() -> dict[str, Any]:
             "speed": {"supported": True, "minimum": 0.2, "maximum": 3.0, "default": 1.0},
         },
         "qwen3": {
-            "name": "Qwen3-TTS 1.7B CustomVoice", "languages": list(QWEN_LANGUAGES),
+            "name": "Qwen3-TTS 1.7B CustomVoice", "targets": ["local", "jetson"], "languages": list(QWEN_LANGUAGES),
             "voices": {voice: {"name": voice, "languages": list(QWEN_LANGUAGES)} for voice in QWEN_VOICES},
             "instructions": True,
             "speed": {"supported": False, "minimum": 1.0, "maximum": 1.0, "default": 1.0},

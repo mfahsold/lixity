@@ -161,7 +161,8 @@ files nor establish that an output matches the current manuscript; see
 The development audio workflow shares saved project voice profiles between
 `lixity read-aloud` and the native preview/export dialog. Piper supports local CPU
 listening copies; optional Qwen3-TTS adds preset voices and explicit style
-instructions through a local worker. CPU generation is supported and can be slow;
+instructions through a local worker or a configured Jetson over SSH. Select the
+execution target per render in the CLI or dialog. CPU generation can be slow;
 completed Qwen segments can be reused when retrying long renders. Audio remains
 a prototype requiring listening review. See the
 [read-aloud scope](https://mfahsold.github.io/lixity/USAGE.md#lixity-read-aloud)

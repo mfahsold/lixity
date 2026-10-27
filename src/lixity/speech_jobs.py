@@ -82,6 +82,7 @@ class _Job:
     valid: Callable[[], bool]
     cache_dir: Path | None = None
     fresh_audio: bool = False
+    target: str = "local"
     state: str = "pending"
     done: int = 0
     total: int = 0
@@ -119,6 +120,7 @@ class SpeechJobs:
         *,
         cache_dir: Path | None = None,
         fresh_audio: bool = False,
+        target: str = "local",
     ) -> dict[str, Any]:
         profile = AudioProfile.model_validate(profile.model_dump())
         self.cancel_stale()
@@ -136,7 +138,7 @@ class SpeechJobs:
                 raise RuntimeError("A speech job is already active; cancel it or wait")
             self._prune()
             storage = tempfile.TemporaryDirectory(prefix="lixity-speech-job-")
-            job = _Job(token_hex(16), context_key, dict(context), storage, valid, cache_dir, fresh_audio)
+            job = _Job(token_hex(16), context_key, dict(context), storage, valid, cache_dir, fresh_audio, target)
             self._jobs[job.identifier] = job
             source = Path(storage.name) / "source.md"
             try:
@@ -164,7 +166,7 @@ class SpeechJobs:
                 return
             options: dict[str, Any] = {
                 "profile": profile, "progress": progress, "cancelled": job.cancel.is_set,
-                "max_audio_bytes": MAX_AUDIO_BYTES,
+                "max_audio_bytes": MAX_AUDIO_BYTES, "target": job.target,
             }
             if job.cache_dir is not None:
                 options["cache_dir"] = job.cache_dir

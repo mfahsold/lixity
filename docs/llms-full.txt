@@ -104,7 +104,8 @@ exports and curated reader/companion publications have different disclosure
 scopes. Original sources require separate inclusion consent. Exports cannot save
 project changes or synthesize speech. Current-main audio shares project voice
 profiles between the CLI and native preview/chapter dialog: Piper or an optional
-local Qwen3-TTS CustomVoice worker, with no silent backend fallback. CPU generation
+Qwen3-TTS CustomVoice worker on this computer or a configured Jetson over SSH,
+selected per render, with no silent backend fallback. CPU generation
 can be slow; verified Qwen chapter segments can be reused. Audio remains a
 prototype requiring listening review; see Usage for setup, privacy and limits.
 
@@ -1388,6 +1389,33 @@ lixity read-aloud --project ./novel --profile narrator -o reading-copy.wav
 lixity read-aloud --project ./novel --profile narrator --chapter 2 -o chapter-2.wav
 ```
 
+For Qwen, choose **Render on → This computer / Configured Jetson** in the dialog,
+or pass `--speech-target local|jetson` to the CLI. This choice applies to that
+render; it is not part of a saved voice profile. Piper supports local execution
+only. The default remains local, and an unavailable target fails explicitly.
+Jetson sends the selected synthesis text to your configured machine through SSH;
+it does not use a hosted inference provider.
+
+```bash
+lixity read-aloud --project ./novel --profile narrator --speech-target jetson --chapter 2 -o chapter-2.wav
+```
+
+Machine setup is explicit: run the same Qwen worker on the Jetson with its
+supported CUDA environment and complete local checkpoint. Keep that worker on
+`127.0.0.1:8769` there, and forward laptop port `8770` over authenticated SSH:
+
+```bash
+ssh -N -T -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 \
+  -o ServerAliveCountMax=3 -L 127.0.0.1:8770:127.0.0.1:8769 USER@JETSON
+```
+
+Use your normal verified SSH host key and account. The local CPU worker continues
+to use port `8769`; selecting Jetson uses only the fixed loopback forward `8770`.
+The browser cannot supply a host address or arbitrary inference URL. Lixity does
+not install or start the remote worker or SSH connection. GPU compatibility and
+available shared memory must be checked on the actual device; 8 GB does not
+guarantee that every input fits.
+
 Long CPU renders can be retried without recomputing every completed segment.
 Qwen chapter jobs in the native UI and CLI renders retain verified segments in
 `$XDG_CACHE_HOME/lixity/speech/<project-hash>/` (default
@@ -1409,7 +1437,9 @@ lixity read-aloud --project ./novel --profile narrator --chapter 2 --fresh-audio
 `--no-audio-cache` renders without reading or retaining segments.
 Previews are always fresh; Piper does not use this cache. The Python renderer
 opts in with `cache_dir=...`, and accepts `fresh_audio=True` to recompute while
-refreshing retained segments. Cache metadata stores request/audio hashes rather
+refreshing retained segments. Matching segments can be reused across execution
+targets; request fresh audio when comparing CPU and GPU delivery.
+Cache metadata stores request/audio hashes rather
 than raw manuscript text, but the WAV files contain spoken project content and
 must be treated as private. Missing, corrupt or evicted entries are recomputed.
 The cache is not a saved job ledger: after restarting the app, start a new chapter
@@ -7305,6 +7335,8 @@ configuration error), backend capabilities and source chapter bounds.
 `POST /api/speech-render` accepts those context fields, `mode: preview|chapter`,
 a positive `chapter`, and either `profile_id` or a validated draft `profile`.
 Optional `fresh_audio` is a strict boolean: true bypasses reuse for that render.
+Optional `target` is `local` (default) or `jetson`; Piper accepts only `local`.
+Execution location is per render and is not stored in `audio` voice profiles.
 Preview may include the exact displayed `paragraph` identity (`start_line`,
 `end_line`, `paragraph_sha256`). Browser-provided text, paths and unknown request
 fields are rejected. Preview uses the first bounded supported prose segment; its
@@ -7320,8 +7352,11 @@ WAV bytes. At most one render is active; completed temporary jobs expire after
 results, including an earlier selection revisited later. No manuscript bytes or
 research archive records are changed.
 
-The optional Qwen worker listens on 127.0.0.1:8769 only. It accepts bounded
-CustomVoice requests at `/v1/audio/speech`; the Lixity adapter checks model, voice,
+The optional Qwen worker listens on 127.0.0.1:8769 only. The adapter selects either
+that local worker or the fixed loopback port 8770 for an externally configured
+SSH forward to a Jetson worker. Browser payloads cannot set an endpoint URL.
+The worker accepts bounded CustomVoice requests at `/v1/audio/speech`;
+the Lixity adapter checks model, voice,
 format and response size and rejects redirects. No external provider endpoint or
 automatic backend fallback is supported. Heavy model dependencies and weights
 are separately installed machine resources. See the read-aloud usage for setup.

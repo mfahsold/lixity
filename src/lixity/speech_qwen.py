@@ -27,6 +27,7 @@ from .speech_profiles import (
 )
 
 ENDPOINT = "http://127.0.0.1:8769/v1/audio/speech"
+TARGET_ENDPOINTS = {"local": ENDPOINT, "jetson": "http://127.0.0.1:8770/v1/audio/speech"}
 MAX_REQUEST_BYTES = 16384
 MAX_RESPONSE_BYTES = 32 * 1024 * 1024
 SAMPLE_RATE = 24000
@@ -40,11 +41,13 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
-def synthesize_qwen(text: str, profile: AudioProfile, *, opener: Any = None) -> bytes:
-    """Request bounded PCM WAV from the fixed local worker, without fallback."""
+def synthesize_qwen(text: str, profile: AudioProfile, *, target: str = "local", opener: Any = None) -> bytes:
+    """Request bounded PCM WAV through a fixed loopback target, without fallback."""
     from .speech import MAX_SEGMENT_CHARS, _read_pcm
 
     profile = AudioProfile.model_validate(profile.model_dump())
+    if target not in TARGET_ENDPOINTS:
+        raise ValueError("Unknown Qwen execution target")
     if profile.engine != "qwen3" or not text.strip() or len(text) > MAX_SEGMENT_CHARS:
         raise ValueError("Invalid Qwen synthesis request")
     payload = json.dumps({"model": QWEN_MODEL, "input": text, "voice": profile.voice,
@@ -52,7 +55,7 @@ def synthesize_qwen(text: str, profile: AudioProfile, *, opener: Any = None) -> 
                           "response_format": "wav"}).encode("utf-8")
     if len(payload) > MAX_REQUEST_BYTES:
         raise ValueError("Qwen synthesis request is too large")
-    request = urllib.request.Request(ENDPOINT, data=payload,
+    request = urllib.request.Request(TARGET_ENDPOINTS[target], data=payload,  # noqa: S310 - fixed loopback allowlist
                                      headers={"Content-Type": "application/json"})
     # Ignore proxy environment variables, even for localhost.
     client = opener or urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
@@ -70,9 +73,9 @@ def synthesize_qwen(text: str, profile: AudioProfile, *, opener: Any = None) -> 
         # HTTPError owns a response stream even though open() raised before
         # entering the response context manager.
         exc.close()
-        raise RuntimeError("Local Qwen worker is unavailable or failed") from exc
+        raise RuntimeError(f"Qwen worker ({target}) is unavailable or failed") from exc
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        raise RuntimeError("Local Qwen worker is unavailable or failed") from exc
+        raise RuntimeError(f"Qwen worker ({target}) is unavailable or failed") from exc
     if not isinstance(data, bytes):
         raise ValueError("Qwen worker returned invalid audio bytes")
     if len(data) > MAX_RESPONSE_BYTES:

@@ -132,6 +132,7 @@ class SpeechRoutesMixin(ResponseMixin):
                 "profile",
                 "profile_id",
                 "fresh_audio",
+                "target",
                 "paragraph",
             }
             if set(payload) - allowed or not {
@@ -141,6 +142,8 @@ class SpeechRoutesMixin(ResponseMixin):
                 "chapter",
             } <= set(payload):
                 raise ValueError("Supply selected audio scope, not browser text or paths")
+            if payload.get("target", "local") not in ("local", "jetson"):
+                raise ValueError("Unknown speech execution target")
             if type(payload.get("fresh_audio", False)) is not bool:
                 raise ValueError("Fresh audio must be a boolean")
             if "profile" in payload and "profile_id" in payload:
@@ -154,6 +157,8 @@ class SpeechRoutesMixin(ResponseMixin):
                         settings, payload.get("profile_id"), language=self.language
                     )
                 )
+                if profile.engine == "piper" and payload.get("target", "local") != "local":
+                    raise ValueError("Piper supports only local execution")
                 if payload.get("paragraph") is not None and not isinstance(
                     payload["paragraph"], dict
                 ):
@@ -194,7 +199,8 @@ class SpeechRoutesMixin(ResponseMixin):
                 cache_dir = (project_audio_cache(root) if root is not None and
                              profile.engine == "qwen3" and payload["mode"] == "chapter" else None)
                 job = self._speech_manager().start(key, prepared, profile, context, valid, cache_dir=cache_dir,
-                                                   fresh_audio=payload.get("fresh_audio", False))
+                                                   fresh_audio=payload.get("fresh_audio", False),
+                                                   target=payload.get("target", "local"))
                 self._json({"ok": True, "job": job}, 202)
         except (OSError, TypeError, ValueError, RuntimeError, UserWarning) as exc:
             self._speech_error(exc)
