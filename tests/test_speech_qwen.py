@@ -8,6 +8,7 @@ import urllib.error
 import urllib.request
 import wave
 from email.message import Message
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -337,3 +338,90 @@ def test_execution_target_uses_only_fixed_loopback_endpoints(target, port):
     assert "target" not in json.loads(calls[0].data)
     with pytest.raises(ValueError, match="target"):
         synthesize_qwen("Synthetic text.", profile(), target="https://example.test")
+
+
+@pytest.mark.parametrize("device,codec_device,move_codec", [
+    ("cuda", "cpu", True),
+    ("cuda", "model", False),
+    ("cpu", "cpu", False),
+    ("cpu", "model", False),
+])
+def test_worker_explicit_codec_placement(tmp_path, monkeypatch, device, codec_device, move_codec):
+    import gc
+
+    from lixity.speech_profiles import QWEN_LANGUAGES, QWEN_VOICES
+    from lixity.speech_qwen import load_local_model
+
+    (tmp_path / "config.json").write_text(json.dumps({
+        "tts_model_type": "custom_voice", "tts_model_size": "1b7", "tokenizer_type": "qwen3_tts_tokenizer_12hz",
+    }))
+    events = []
+    codec = SimpleNamespace(device="original", model=SimpleNamespace(
+        to=lambda **kwargs: events.append(("codec", kwargs))))
+    model = SimpleNamespace(model=SimpleNamespace(speech_tokenizer=codec),
+                            get_supported_speakers=lambda: list(QWEN_VOICES),
+                            get_supported_languages=lambda: list(QWEN_LANGUAGES.values()))
+
+    def from_pretrained(_path, **kwargs):
+        events.append(("load", kwargs))
+        return model
+
+    fake_torch = SimpleNamespace(set_num_threads=lambda _count: None,
+                                 device=lambda name: "torch-device:" + name,
+                                 float32="float32", float16="float16", bfloat16="bfloat16",
+                                 cuda=SimpleNamespace(is_available=lambda: True,
+                                                      is_bf16_supported=lambda **_kw: True,
+                                                      empty_cache=lambda: events.append(("empty_cache", None))))
+    fake_qwen = SimpleNamespace(Qwen3TTSModel=SimpleNamespace(from_pretrained=from_pretrained))
+    monkeypatch.setenv("HF_HUB_OFFLINE", "1")
+    monkeypatch.setenv("TRANSFORMERS_OFFLINE", "1")
+    monkeypatch.setattr("lixity.speech_qwen.importlib.import_module",
+                        lambda name: {"torch": fake_torch, "qwen_tts": fake_qwen}[name])
+    monkeypatch.setattr(gc, "collect", lambda: events.append(("collect", None)))
+    assert callable(load_local_model(tmp_path, device=device, codec_device=codec_device))
+    assert events[0] == ("load", {"device_map": "cuda:0" if device == "cuda" else "cpu",
+                                  "dtype": "bfloat16" if device == "cuda" else "float32",
+                                  "attn_implementation": "sdpa" if device == "cuda" else "eager",
+                                  "local_files_only": True})
+    if move_codec:
+        assert events[1:] == [("codec", {"device": "cpu", "dtype": "float32"}),
+                              ("collect", None), ("empty_cache", None)]
+        assert codec.device == "torch-device:cpu"
+    else:
+        assert events[1:] == []
+        assert codec.device == "original"
+
+
+def test_worker_unknown_codec_device_fails_before_imports(tmp_path, monkeypatch):
+    from lixity.speech_qwen import load_local_model
+
+    def unexpected_import(_name):
+        pytest.fail("Invalid codec placement must fail before optional imports")
+
+    monkeypatch.setattr("lixity.speech_qwen.importlib.import_module", unexpected_import)
+    with pytest.raises(ValueError, match="codec"):
+        load_local_model(tmp_path / "missing", codec_device="remote")
+
+
+def test_worker_cli_forwards_codec_device(monkeypatch):
+    import sys
+
+    import lixity.speech_qwen as worker
+
+    calls = []
+
+    def load(path, **kwargs):
+        calls.append((path, kwargs))
+        return "synthetic renderer"
+
+    def serve():
+        raise KeyboardInterrupt
+
+    server = SimpleNamespace(serve_forever=serve, server_close=lambda: calls.append("closed"))
+    monkeypatch.setattr(worker, "load_local_model", load)
+    monkeypatch.setattr(worker, "worker_server", lambda render, port: server)
+    monkeypatch.setattr(sys, "argv", ["speech_qwen", "--model", "/synthetic/model", "--device", "cuda",
+                                      "--codec-device", "cpu"])
+    worker.main()
+    assert calls == [(Path("/synthetic/model"), {"device": "cuda", "codec_device": "cpu", "threads": 4}),
+                     "closed"]

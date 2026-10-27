@@ -1319,6 +1319,11 @@ and atomic output. `speech_qwen.py` is the fixed-loopback adapter and optional
 isolated model worker. It imports the heavy runtime lazily, loads a complete local
 checkpoint once, serializes synthesis and never downloads a model during use.
 CPU is a supported asynchronous rendering path; GPU availability is not presumed.
+Optional operator selection `--device cuda --codec-device cpu` keeps the talker
+on CUDA while placing the existing audio decoder on CPU float32. Default decoder
+placement follows the main device. This changes resource placement, not the
+checkpoint family or portable voice-profile contract; memory sufficiency still
+requires a real synthesis test.
 Per-render `local|jetson` selection chooses fixed loopback ports 8769 or 8770.
 The latter is an operator-configured authenticated SSH forward; the remote worker
 remains loopback-only. Location is not part of portable project voice settings,

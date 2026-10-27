@@ -1551,6 +1551,9 @@ the Lixity adapter checks model, voice,
 format and response size and rejects redirects. No external provider endpoint or
 automatic backend fallback is supported. Heavy model dependencies and weights
 are separately installed machine resources. See the read-aloud usage for setup.
+Worker-only `--codec-device cpu` explicitly places decoding on CPU while a CUDA
+talker remains on GPU. Its default `model` follows `--device`; browser payloads
+and portable voice profiles cannot change this machine configuration.
 
 Qwen chapter jobs retain verified derived PCM in a private project-keyed user
 cache (`$XDG_CACHE_HOME/lixity/speech/<project-hash>/`, default `~/.cache`,

@@ -1513,6 +1513,20 @@ initial HTTP request open. Cancellation waits for an in-flight model segment to
 return, then prevents publication. A slow segment is allowed up to one hour;
 that limit is not an estimate of chapter duration.
 
+On a memory-constrained CUDA machine, an operator can explicitly keep the
+talker on the GPU and run audio decoding on the CPU with the same checkpoint:
+
+```bash
+python -m lixity.speech_qwen --model /path/to/CustomVoice --device cuda --codec-device cpu --threads 4
+```
+
+The default `--codec-device model` keeps the decoder on the selected main device.
+CPU decoding uses float32 and trades GPU allocations for CPU work; this is an
+explicit machine setting, not a voice profile or an automatic fallback. Shared
+RAM remains finite. Suitable SSD-backed swap is a separate operating-system
+decision; see [NVIDIA's Jetson memory guidance](https://www.jetson-ai-lab.com/tutorials/ram-optimization/).
+Validate actual synthesis and memory headroom before scheduling long jobs.
+
 Body paragraphs, quoted blocks and list prose use the shared Markdown text
 projection. Link labels are read; destinations, images, code, footnote definitions
 and YAML metadata are omitted. Long paragraphs use bounded sentence/word segments
@@ -7360,6 +7374,9 @@ the Lixity adapter checks model, voice,
 format and response size and rejects redirects. No external provider endpoint or
 automatic backend fallback is supported. Heavy model dependencies and weights
 are separately installed machine resources. See the read-aloud usage for setup.
+Worker-only `--codec-device cpu` explicitly places decoding on CPU while a CUDA
+talker remains on GPU. Its default `model` follows `--device`; browser payloads
+and portable voice profiles cannot change this machine configuration.
 
 Qwen chapter jobs retain verified derived PCM in a private project-keyed user
 cache (`$XDG_CACHE_HOME/lixity/speech/<project-hash>/`, default `~/.cache`,

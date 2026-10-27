@@ -6,6 +6,7 @@ requires a complete local model directory and disables Hugging Face networking.
 from __future__ import annotations
 
 import argparse
+import gc
 import importlib
 import io
 import json
@@ -171,11 +172,13 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
 
 
 def load_local_model(
-    model_path: Path, *, device: str = "cpu", threads: int = 4,
+    model_path: Path, *, device: str = "cpu", threads: int = 4, codec_device: str = "model",
 ) -> Callable[[dict[str, Any]], bytes]:
     """Load only the pinned CustomVoice architecture from local files, once."""
     if device not in ("cpu", "cuda"):
         raise ValueError("Qwen device must be cpu or cuda")
+    if codec_device not in ("cpu", "model"):
+        raise ValueError("Qwen codec device must be cpu or model")
     if type(threads) is not int or not 1 <= threads <= 64:
         raise ValueError("Qwen threads must be an integer between 1 and 64")
     model_path = model_path.expanduser().resolve()
@@ -198,6 +201,13 @@ def load_local_model(
 
     model = qwen_tts.Qwen3TTSModel.from_pretrained(str(model_path), device_map=device_map, dtype=dtype,
                                                  attn_implementation=attention, local_files_only=True)
+    if device == "cuda" and codec_device == "cpu":
+        # Keep the talker on CUDA while moving only audio decoding to CPU.
+        codec = model.model.speech_tokenizer
+        codec.model.to(device="cpu", dtype=torch.float32)
+        codec.device = torch.device("cpu")
+        gc.collect()
+        torch.cuda.empty_cache()
     speakers = {value.lower() for value in model.get_supported_speakers()}
     languages = {value.lower() for value in model.get_supported_languages()}
     if (not {value.lower() for value in QWEN_VOICES}.issubset(speakers) or
@@ -225,11 +235,14 @@ def main() -> None:
     parser.add_argument("--model", required=True, type=Path, help="Complete local CustomVoice model directory")
     parser.add_argument("--device", choices=["cpu", "cuda"], default="cpu",
                         help="Explicit inference device; unavailable CUDA fails without fallback")
+    parser.add_argument("--codec-device", choices=["cpu", "model"], default="model",
+                        help="Audio decoder placement; model follows --device (default)")
     parser.add_argument("--threads", type=int, default=4, choices=range(1, 65), metavar="N",
                         help="Torch CPU threads (1..64; default 4)")
     parser.add_argument("--port", type=int, default=8769, choices=[8769])
     args = parser.parse_args()
-    server = worker_server(load_local_model(args.model, device=args.device, threads=args.threads), port=args.port)
+    renderer = load_local_model(args.model, device=args.device, threads=args.threads, codec_device=args.codec_device)
+    server = worker_server(renderer, port=args.port)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

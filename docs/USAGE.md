@@ -1362,6 +1362,20 @@ initial HTTP request open. Cancellation waits for an in-flight model segment to
 return, then prevents publication. A slow segment is allowed up to one hour;
 that limit is not an estimate of chapter duration.
 
+On a memory-constrained CUDA machine, an operator can explicitly keep the
+talker on the GPU and run audio decoding on the CPU with the same checkpoint:
+
+```bash
+python -m lixity.speech_qwen --model /path/to/CustomVoice --device cuda --codec-device cpu --threads 4
+```
+
+The default `--codec-device model` keeps the decoder on the selected main device.
+CPU decoding uses float32 and trades GPU allocations for CPU work; this is an
+explicit machine setting, not a voice profile or an automatic fallback. Shared
+RAM remains finite. Suitable SSD-backed swap is a separate operating-system
+decision; see [NVIDIA's Jetson memory guidance](https://www.jetson-ai-lab.com/tutorials/ram-optimization/).
+Validate actual synthesis and memory headroom before scheduling long jobs.
+
 Body paragraphs, quoted blocks and list prose use the shared Markdown text
 projection. Link labels are read; destinations, images, code, footnote definitions
 and YAML metadata are omitted. Long paragraphs use bounded sentence/word segments

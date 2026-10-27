@@ -8,6 +8,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Explicit worker-only CPU decoder placement for CUDA Qwen inference, retaining
+  the same 1.7B checkpoint and portable voice profiles without automatic fallback.
 - Per-render local/Jetson Qwen selection in the CLI and native audio dialog,
   using fixed loopback endpoints and an operator-configured SSH forward without
   embedding machine addresses in portable project voice profiles.
