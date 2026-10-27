@@ -4224,9 +4224,13 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 .reader-passage-flag-title { font-size: var(--text-note); font-weight: 600; color: var(--fg); }
 .reader-passage-flag-guidance { margin: 0 0 var(--space-1); font-size: var(--text-small); line-height: var(--line-compact); color: var(--fg); font-weight: 500; }
 .reader-passage-flag-reason { margin: 0; font-size: var(--text-small); line-height: var(--line-tight, 1.4); color: var(--fg-secondary); }
+.manuscript-reading :is(.reader-review-flag, .manuscript-link-related) {
+  vertical-align: top; min-height: 2.75rem; font-size: var(--text-control);
+  margin-block: var(--space-2) 0; margin-inline: 0 var(--space-2);
+  max-inline-size: calc(100% - var(--space-2)); white-space: normal;
+}
 .manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .reader-review-flag {
-  display: inline-flex; margin-block-start: var(--space-2); min-height: 2.75rem;
-  font-size: var(--text-small); color: var(--flag); background: var(--flag-light);
+  display: inline-flex; color: var(--flag); background: var(--flag-light);
   border-color: currentColor; border-inline-start-width: 3px;
 }
 

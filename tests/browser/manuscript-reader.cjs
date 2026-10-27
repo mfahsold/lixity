@@ -252,6 +252,34 @@ async function settleGeometry(page) {
       assert.equal(await analysis.getAttribute('aria-pressed'), 'false', 'Closing local values preserves global Analysis Off');
       await analysis.click();
       assert.equal(await analysis.getAttribute('aria-label'), analysisName, 'Analysis keeps its accessible name when active');
+      const flagged = page.locator('#chapters .ptext.flagged').first();
+      await flagged.scrollIntoViewIfNeeded();
+      await flagged.locator('.reader-review-flag').waitFor({state: 'visible'});
+      // A saved-association control exercises the same adjacent layout without
+      // requiring an archive write in this synthetic reading fixture.
+      await flagged.locator('.ptext-inner').evaluate(inner => {
+        const related = document.createElement('button'); related.type = 'button';
+        related.className = 'ctl manuscript-link-related'; related.dataset.layoutProbe = 'true';
+        related.textContent = uiCountFormat('manuscript_link_research_count', 2); inner.appendChild(related);
+      });
+      const actionGeometry = await flagged.evaluate(panel => {
+        const inner = panel.querySelector('.ptext-inner').getBoundingClientRect();
+        const flag = panel.querySelector('.reader-review-flag').getBoundingClientRect();
+        const related = panel.querySelector('[data-layout-probe]').getBoundingClientRect();
+        return {inner: {left: inner.left, right: inner.right},
+          flag: {top: flag.top, right: flag.right, left: flag.left},
+          related: {top: related.top, left: related.left, right: related.right}};
+      });
+      assert.ok(actionGeometry.flag.left >= actionGeometry.inner.left - 1 &&
+        actionGeometry.related.right <= actionGeometry.inner.right + 1, 'Paragraph actions remain within the prose column');
+      if (width === 1440) {
+        assert.ok(Math.abs(actionGeometry.flag.top - actionGeometry.related.top) < 1,
+          `Adjacent paragraph actions align: ${JSON.stringify(actionGeometry)}`);
+        assert.ok(actionGeometry.related.left - actionGeometry.flag.right >= 7,
+          'Adjacent paragraph actions have a visible gap');
+      }
+      if (locale === 'de') await flagged.screenshot({path: path.join(artifacts, `paragraph-actions-${width}.png`)});
+      await flagged.locator('[data-layout-probe]').evaluate(button => button.remove());
       assert.equal(await page.locator('#chapters .strip').first().isVisible(), true,
         'Analysis exposes restrained paragraph diagnostics alongside the same prose');
       await page.locator('#filter-flags').check();

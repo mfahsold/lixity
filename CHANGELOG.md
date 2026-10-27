@@ -116,6 +116,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   unchanged; attachments do not manufacture extraction or linguistic scores.
 
 ### Fixed
+- Align adjacent paragraph review and research buttons with consistent sizing
+  and spacing, allowing them to wrap within narrow reading columns.
 - Analysis overview navigation uses one wrapping contents list in the existing
   reader header, with a current-section underline instead of a progress track.
   Later sections remain visible on narrow screens; short viewports keep the
