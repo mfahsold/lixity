@@ -2,11 +2,10 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const {spawnSync} = require('node:child_process');
+const {pythonFixture} = require('./support/python-fixture.cjs');
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
-const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-project-history-'));
-const fixture = spawnSync(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-c', `
+const data = pythonFixture(`
 import json
 import tempfile
 from pathlib import Path
@@ -25,9 +24,7 @@ with tempfile.TemporaryDirectory() as directory:
         fixtures[language] = {'html': html, 'labels': WORKSPACE_LABELS[language]}
     print(json.dumps({'fixtures': fixtures, 'record': record,
                      'decisions': api.list_decisions(p), 'dossiers': api.list_dossiers(p)}))
-`], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024});
-assert.equal(fixture.status, 0, fixture.stderr);
-const data = JSON.parse(fixture.stdout);
+`);
 const recentKey = 'lixity:recent-projects';
 const hostile = '/synthetic/<img src=x onerror=alert(1)>/manuscript.md';
 const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wrong'}, hostile,

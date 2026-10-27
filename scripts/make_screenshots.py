@@ -1110,17 +1110,7 @@ def main() -> int:
         840,
     )
 
-    # 2. CLI: style passport ----------------------------------------------
-    passport = html.escape(fingerprint.passport_text(labels=resolved.labels, language_key=resolved.key))
-    _terminal_shot(
-        f"lixity style {args.manuscript}",
-        f'<pre style="white-space:pre-wrap;overflow-wrap:anywhere">{passport}</pre>',
-        OUT_DIR / "cli-style.png",
-        1320,
-        860,
-    )
-
-    # 3. Dashboard (light, top area) --------------------------------------
+    # Dashboard reading and analysis views.
     status = [
         {"key": "exports", "state": "ok", "detail": "none generated" if is_en else "keine erzeugt"},
         {"key": "markers", "state": "ok", "detail": "no open markers" if is_en else "keine offenen"},
@@ -1163,68 +1153,15 @@ def main() -> int:
     )
     dashboard_path = _write_html("dashboard.html", dashboard)
     _queue_capture(dashboard_path, OUT_DIR / "dashboard-light.png", 1480, 945)
-    # Dedicated editorial frames preserve readable native text at README width;
-    # the wider atlas screenshots remain available for complete workspace views.
-    for name in ("dashboard-reader-focus.png", "dashboard-reader-focus-dark.png",
-                 "dashboard-measurement-focus.png", "dashboard-measurement-focus-dark.png"):
+    for name in ("dashboard-reader-focus.png", "dashboard-measurement-focus.png"):
         _queue_capture(dashboard_path, OUT_DIR / name, 760, 820)
-    for name, width, height in (
-        ("dashboard-mobile.png", 390, 1028),
-        ("dashboard-dimensions-mobile.png", 390, 1028),
-        ("dashboard-dimensions-dark.png", 1600, 1050),
-        ("dashboard-reference.png", 1600, 1050),
-        ("dashboard-settings.png", 1600, 1050),
-    ):
-        _queue_capture(dashboard_path, OUT_DIR / name, width, height)
-    for view in ("project-settings", "project-import", "nda", "scenes"):
-        for suffix, width in (("", 1480), ("-mobile", 390)):
-            _queue_capture(
-                dashboard_path,
-                OUT_DIR / f"dashboard-{view}{suffix}.png",
-                width,
-                1050,
-            )
+    _queue_capture(dashboard_path, OUT_DIR / "dashboard-mobile.png", 390, 1028)
+    for view in ("project-settings", "project-import"):
+        _queue_capture(dashboard_path, OUT_DIR / f"dashboard-{view}.png", 1480, 1050)
+    _queue_capture(dashboard_path, OUT_DIR / "dashboard-dark.png", 1480, 945)
+    _queue_capture(dashboard_path, OUT_DIR / "dashboard-heatmap.png", 1750, 1000)
 
-    # 4. Dashboard (dark) --------------------------------------------------
-    _queue_capture(
-        dashboard_path,
-        OUT_DIR / "dashboard-dark.png",
-        1480,
-        945,
-    )
-
-    # 4b. Dark surface variants for the marketing shots. The staged site leads
-    # with the dark surface; light variants stay available in the captions.
-    for name, width, height in (
-        ("dashboard-mobile-dark.png", 390, 1028),
-        ("dashboard-heatmap-dark.png", 1750, 1000),
-        ("dashboard-dimensions-dark.png", 1600, 1050),
-        ("dashboard-research-timeline-dark.png", 1110, 1036),
-        ("dashboard-research-claims-dark.png", 1152, 1101),
-        ("dashboard-research-dossiers-dark.png", 1152, 1101),
-        ("dashboard-project-settings-dark.png", 1152, 1005),
-        ("dashboard-dossier-image-dark.png", 1082, 481),
-        ("dashboard-dossier-photo-dark.png", 1480, 1000),
-        ("dashboard-dossier-geography-dark.png", 1480, 1000),
-        ("dashboard-scenes-dark.png", 1152, 1101),
-    ):
-        _queue_capture(dashboard_path, OUT_DIR / name, width, height)
-
-    # 5. Dashboard sections ------------------------------------------------
-    _queue_capture(
-        dashboard_path,
-        OUT_DIR / "dashboard-heatmap.png",
-        1750,
-        1000,
-    )
-    _queue_capture(
-        dashboard_path,
-        OUT_DIR / "dashboard-dimensions.png",
-        1600,
-        580,
-    )
-
-    # 6. Work markers (temporary copy with representative editorial markers)
+    # Editorial still and walkthrough share one marked manuscript.
     marked = text
     marker_reviews = (
         (0, "pruefen", "Check the gate observation against the retained log"),
@@ -1244,28 +1181,6 @@ def main() -> int:
     marked_paragraphs, marked_chapters = marked_analysis.paragraphs, marked_analysis.chapters
     from lixity.markers import list_markers
 
-    marked_dashboard = render_dashboard(
-        marked_chapters,
-        marked_paragraphs,
-        metrics=marked_metrics,
-        reader_document=reader_blocks(marked, config, marked_paragraphs),
-        fingerprint=marked_analysis.fingerprint,
-        paragraph_evidence=marked_analysis.evidence,
-        title=title,
-        labels=resolved.labels,
-        language_name=resolved.name,
-        language_key=resolved.key,
-        markers=list_markers(marked),
-    )
-    _queue_capture(
-        _write_html("dashboard-markers.html", marked_dashboard),
-        OUT_DIR / "dashboard-markers.png",
-        1440,
-        380,
-    )
-
-    # 6b. Editorial loop: the same marked manuscript with the native controls,
-    # so flags, paragraph values and the inline marker note appear together.
     editorial_dashboard = render_dashboard(
         marked_chapters,
         marked_paragraphs,
@@ -1282,49 +1197,10 @@ def main() -> int:
         enabled_actions=NATIVE_UI_ACTIONS,
     )
     editorial_path = _write_html("dashboard-editorial.html", editorial_dashboard)
-    _queue_capture(editorial_path, OUT_DIR / "dashboard-flags.png", 1480, 560)
-    _queue_capture(editorial_path, OUT_DIR / "dashboard-flags-dark.png", 1152, 501)
     _queue_capture(editorial_path, OUT_DIR / "dashboard-editorial.png", 1480, 760)
 
-    # 7. Style layer (opening chapter with sentence-length emphasis) ------
-    _queue_capture(
-        dashboard_path,
-        OUT_DIR / "dashboard-layer.png",
-        1600,
-        900,
-    )
-
-    # 8. Welcome Hero & Project Creation Modal (empty state) ---------------
-    welcome_dashboard = render_dashboard(
-        [], [], title="Lixity", controls=True, language_name=resolved.name,
-        language_key=resolved.key, current_language=resolved.key,
-        labels=resolved.labels, enabled_actions=NATIVE_UI_ACTIONS,
-    )
-    welcome_path = _write_html("dashboard-welcome.html", welcome_dashboard)
-    _queue_capture(
-        welcome_path,
-        OUT_DIR / "dashboard-welcome.png",
-        1440,
-        930,
-    )
-    _queue_capture(
-        welcome_path,
-        OUT_DIR / "dashboard-project-modal.png",
-        1440,
-        720,
-    )
-    for suffix, width in (("", 1440), ("-mobile", 390)):
-        _queue_capture(welcome_path, OUT_DIR / f"dashboard-project-open{suffix}.png", width, 1000)
-
-    # 9. Research Source Dashboard & CLI Citation (Research Pilot) ---------
     research_fixture = build_research_fixture(WORK_DIR, language=resolved.key, nda_project_name=title)
-    from lixity.research import api as research_api
     research_proj = WORK_DIR / "research-demo"
-    search_res = research_api.search(research_proj, "warehouse customs", limit=1)
-    passage_id = search_res["hits"][0]["passage_id"]
-    cite_res = research_api.cite(research_proj, passage_id)
-    research_html = research_api.source_dashboard(research_proj, search_res["hits"][0]["source_id"])
-    _queue_capture(_write_html("dashboard-research.html", research_html), OUT_DIR / "dashboard-research.png", 1480, 960)
     _write_html("research-workspace-fixture.json", json.dumps(research_fixture, ensure_ascii=False))
     research_workspace = _write_html(
         "dashboard-research-workspace.html",
@@ -1336,31 +1212,11 @@ def main() -> int:
                 manuscript_title(DEMO_MANUSCRIPT.read_text(encoding="utf-8")), "Example Author"),
         ),
     )
-    for view in ("sources", "dossiers", "search", "claims", "timeline", "decisions", "review", "change-set"):
-        for suffix, width, height in (("", 1480, 1000), ("-mobile", 390, 1000)):
-            _queue_capture(
-                research_workspace,
-                OUT_DIR / f"dashboard-research-{view}{suffix}.png",
-                width,
-                height,
-            )
-    for suffix, width in (("", 1480), ("-mobile", 390)):
-        for visual in ("image", "photo", "geography", "diagram", "image-zoom"):
-            _queue_capture(research_workspace, OUT_DIR / f"dashboard-dossier-{visual}{suffix}.png", width, 1000)
-
-    cli_research_text = (
-        f"$ lixity research search --project ./warehouse-4 --query \"warehouse customs\" --limit 1\n"
-        f"{json.dumps(search_res, indent=2)}\n\n"
-        f"$ lixity research cite --project ./warehouse-4 --passage {passage_id}\n"
-        f"{json.dumps(cite_res, indent=2)}"
-    )
-    _terminal_shot(
-        "lixity research search & cite",
-        f'<pre style="white-space:pre-wrap;overflow-wrap:anywhere">{html.escape(cli_research_text)}</pre>',
-        OUT_DIR / "cli-research.png",
-        1320,
-        780,
-    )
+    for view in ("dossiers", "search", "claims", "timeline", "decisions", "review"):
+        _queue_capture(research_workspace, OUT_DIR / f"dashboard-research-{view}.png", 1480, 1000)
+    for visual in ("image", "photo", "geography", "diagram", "image-zoom"):
+        _queue_capture(research_workspace, OUT_DIR / f"dashboard-dossier-{visual}.png", 1480, 1000)
+    _queue_capture(research_workspace, OUT_DIR / "dashboard-dossier-image-mobile.png", 390, 1000)
 
     if args.video:
         video_dir = WORK_DIR / "videos"

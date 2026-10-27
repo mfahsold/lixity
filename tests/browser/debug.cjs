@@ -2,21 +2,18 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const {spawnSync} = require('node:child_process');
+const {pythonFixture} = require('./support/python-fixture.cjs');
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
 
-const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-debug-ui-'));
-const fixture = spawnSync(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-c', `
+const rendered = pythonFixture(`
 import json
 from lixity.server import build_server_dashboard
 from lixity.research import api
 html, _ = build_server_dashboard(None, language="en", title="Synthetic debug regression", debug=True)
 print(json.dumps({"html": html, "status": {"ok": True, "initialized": False,
                  "project_root": "/tmp/synthetic-debug-project", "ocr": api.ocr_status()}}))
-`], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024});
-assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.stderr);
-const rendered = JSON.parse(fixture.stdout);
+`);
 
 (async () => {
   const browser = await launchChromium();

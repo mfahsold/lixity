@@ -2,11 +2,10 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const {spawnSync} = require('node:child_process');
+const {pythonFixture} = require('./support/python-fixture.cjs');
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
-const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-setup-guide-'));
-const fixture = spawnSync(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-c', `
+const fixtures = pythonFixture(`
 import json
 from lixity.ui import render_dashboard
 from lixity.language import get_language_profile
@@ -18,9 +17,7 @@ for language in ('en','de','fr','es','it','pt','nl'):
         [], [], labels=labels, language_key=language, controls=True,
         enabled_actions=['analyze','rebuild','nda-draft'])}
 print(json.dumps(fixtures))
-`], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024});
-assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.stderr);
-const fixtures = JSON.parse(fixture.stdout);
+`);
 (async () => {
   const browser = await launchChromium();
   try {

@@ -19,6 +19,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   bounded local transport and no automatic model download or backend fallback.
 
 ### Changed
+- Reduced the agent discovery index and generated operational reference bundle,
+  linking setup, architecture and history instead of repeating them. Current
+  audio guidance now describes shared CLI/native profiles and optional Qwen.
+- Removed retired screenshot capture paths and reused the existing Python fixture
+  runner in five browser suites; the reviewed screenshot catalogue stays canonical.
 - Local read-aloud uses constant neutral delivery and explicit speed rather than
   sentence-length pacing or inferred emotions. Shared Markdown prose includes
   quoted blocks and list items; long inputs retain their text across bounded

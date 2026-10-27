@@ -63,7 +63,7 @@ or a different output.
 | Which files are sources or outputs, and are their locations usable? | `lixity project --project PATH` | read-only roles, existing outputs and bounded structure findings |
 | I want to manage and cite research sources | `lixity research` | immutable archives, citations, dossiers, manuscript grounding |
 | I want a printable document, report or reading copy | `lixity pdf` | neutral/editorial A4, A4 report, A5 book, 30×60 sheet |
-| I want an experimental local listening copy | `lixity read-aloud` | Piper WAV output; cached voices required, prototype completeness/conversion limits below |
+| I want an experimental local listening copy | `lixity read-aloud` | project voice profiles, Piper or local Qwen3-TTS; prototype setup and limits below |
 | I want to share a browsable reading copy | `lixity export-site` | static website, optional research and original sources |
 | I want a reproducible artifact set | `lixity build` | `exports/`, archive rotation |
 | What can the engine do? | `lixity about --json` | languages, features, thresholds, commands |
@@ -1205,8 +1205,10 @@ not establish accessibility or production compliance.
 
 ### `lixity read-aloud`
 
-**Development prototype:** create a local listening copy with Piper TTS. This is
-a CLI workflow; it is not a browser audio player or a production audiobook pipeline.
+**Development prototype:** create a local listening copy. The CLI and, on
+current main, native preview/chapter dialog share project voice profiles with
+Piper or an optional local Qwen3-TTS worker. This is not a production audiobook
+pipeline. Setup and output limits are described below.
 
 ```bash
 lixity read-aloud manuscript.md --language en -o manuscript.wav

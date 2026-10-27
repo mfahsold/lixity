@@ -1,8 +1,9 @@
 """Build the agent-facing full-text bundle ``docs/llms-full.txt``.
 
-The bundle concatenates the maintained English documentation in reading order,
-so AI agents and offline readers can ingest the complete documentation in one
-plain-text file. ``llms.txt`` remains the concise index that links here.
+The bundle concatenates current operational references in reading order for
+AI agents and offline readers. ``llms.txt`` indexes the complete documentation;
+setup, architecture, storage internals and history stay linked rather than
+duplicated here. Keep full reference text so contracts and caveats remain intact.
 
 Run this script after changing any bundled document; ``make docs-check`` and
 ``tests/test_documentation.py`` fail while the committed bundle is outdated.
@@ -18,21 +19,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "docs" / "llms-full.txt"
 
-#: Reading order: overview, agent index, then user guides before reference.
+#: Task index, operational guides, interpretation and coverage, then contracts.
 SOURCES: tuple[Path, ...] = (
-    Path("README.md"),
     Path("docs/llms.txt"),
-    Path("docs/ONBOARDING.md"),
-    Path("docs/INSTALLATION.md"),
     Path("docs/USAGE.md"),
     Path("docs/research/USAGE.md"),
-    Path("docs/research/DATA_MODEL.md"),
     Path("docs/METHODS.md"),
     Path("docs/STABILITY.md"),
     Path("docs/LOCALIZATION.md"),
-    Path("docs/ARCHITECTURE.md"),
     Path("docs/AGENTS.md"),
-    Path("docs/LICENSING.md"),
 )
 
 SEPARATOR = "\n" + "=" * 79 + "\n"
@@ -50,7 +45,7 @@ def get_version() -> str:
 def build_bundle() -> str:
     """Return the deterministic bundle text for the current source tree."""
     header = (
-        "# Lixity - complete documentation bundle\n"
+        "# Lixity - operational reference bundle\n"
         "\n"
         "> Generated file for AI agents and offline reading. Do not edit it by hand:\n"
         "> run `python scripts/build_llms_full.py` after changing a bundled document.\n"
@@ -59,6 +54,10 @@ def build_bundle() -> str:
         "Lixity is open source under AGPL-3.0-or-later; writing for any purpose is\n"
         "covered. A separate written commercial license exists only for closed-source\n"
         "integrations that cannot meet the AGPL.\n"
+        "\n"
+        "Scope: current usage, research, automation contracts, methods, stability and\n"
+        "localization. See the llms.txt index for setup, architecture, storage internals\n"
+        "and design history. These linked references are not bundled here.\n"
         "\n"
         "Links inside a section are relative to that file's directory in the repository;\n"
         "use the source URL printed above each section to resolve them.\n"

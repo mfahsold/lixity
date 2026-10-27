@@ -172,8 +172,9 @@ evidence. The public demo lets you explore saved records without writing them.
 Enable Zotero's local API and download the needed attachments. **Since v0.7.1:**
 choose **Research → Evidence captures → Capture from Zotero**,
 then preview a library, collection and attachment before permitting retention.
-PDF/text and PNG/JPEG captures are supported; audio/video remain in Zotero. Scans
-need an OCR backend. The [Zotero reference](research/USAGE.md#zotero-desktop-bridge-since-v1190)
+The Zotero bridge captures PDF/text and PNG/JPEG; it does not capture audio or
+video. Current main separately supports [local PDF/video dossier attachments](research/USAGE.md#retain-a-pdf-or-video-in-a-dossier).
+Scanned text needs an OCR backend. The [Zotero reference](research/USAGE.md#zotero-desktop-bridge-since-v1190)
 owns setup, refresh, migration and paired backup. Capture enables no background sync.
 
 ## Check your first session and return later

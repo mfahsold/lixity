@@ -51,7 +51,7 @@ async function main() {
         if (!Object.prototype.hasOwnProperty.call(fixture, url)) {
           throw new Error('Missing screenshot API fixture: ' + url);
         }
-        if (method !== 'GET' && !['/api/nda-draft', '/api/research-search', '/api/research-record-prepare', '/api/research-revision-batch-prepare'].includes(url)) {
+        if (method !== 'GET' && url !== '/api/research-search') {
           throw new Error('Screenshot capture cannot mutate a project: ' + method + ' ' + url);
         }
         if (url === '/api/research-search') {
@@ -60,29 +60,7 @@ async function main() {
             throw new Error('Screenshot search must match the generated API result');
           }
         }
-        let result = fixture[url];
-        if (url === '/api/nda-draft') {
-          const draft = JSON.parse(options.body);
-          if (draft.format !== 'text' || Object.keys(draft).length !== 6 ||
-              Object.keys(result.fields).some(key => draft[key] !== result.fields[key])) {
-            throw new Error('NDA capture must match the generated synthetic agreement');
-          }
-          return Promise.resolve(new Response(result.text, {
-            status: 200, headers: {'Content-Type': 'text/plain; charset=utf-8'},
-          }));
-        }
-        if (url === '/api/research-record-prepare') {
-          const draft = JSON.parse(options.body);
-          result = fixture[url][draft.id];
-          if (draft.kind !== 'dossier' || !result || JSON.stringify(draft.changes) !== JSON.stringify(result.changes)) {
-            throw new Error('Revision capture must match the generated draft');
-          }
-        } else if (url === '/api/research-revision-batch-prepare') {
-          const draft = JSON.parse(options.body);
-          if (JSON.stringify(draft.operations) !== JSON.stringify(result.operations)) {
-            throw new Error('Grouped revision capture must match the generated operations');
-          }
-        }
+        const result = fixture[url];
         return Promise.resolve(new Response(JSON.stringify(result), {
           status: 200,
           headers: {'Content-Type': 'application/json'},
@@ -189,11 +167,6 @@ async function main() {
         });
       } else await page.evaluate(() => window.scrollTo({top: 0, behavior: 'instant'}));
       await settle();
-      if (path.basename(target) === 'dashboard-layer.png') {
-        await page.waitForFunction(() =>
-          CSS.highlights?.get('lixity-analysis-evidence')?.size > 0 &&
-          document.getElementById('analysis-evidence-status')?.textContent === '');
-      }
       const job = captures.find(item => item.target === target) || {};
       const options = {path: target, animations: 'disabled'};
       if (selector) {
@@ -244,10 +217,9 @@ async function main() {
       await open(capture.source, capture.width, capture.height, name.includes('dark') ? 'dark' : 'light');
       if (await page.locator('#manuscript-analysis-toggle').count()) {
         await selectView('analysis');
-        if (/^dashboard-(dimensions|reference|markers|flags|heatmap|scenes)/.test(name)) await page.locator('#workbench-overview-open').click();
-        else if (/^dashboard-(editorial|layer)/.test(name)) await page.locator('#manuscript-analysis-toggle').click();
+        if (name === 'dashboard-heatmap.png') await page.locator('#workbench-overview-open').click();
+        else if (name === 'dashboard-editorial.png') await page.locator('#manuscript-analysis-toggle').click();
       }
-      if (name.startsWith('dashboard-dimensions') || ['dashboard-light.png', 'dashboard-dark.png', 'dashboard-mobile.png', 'dashboard-reference.png', 'dashboard-heatmap.png', 'dashboard-layer.png'].includes(name)) await selectView('analysis');
       if (name.startsWith('dashboard-reader-focus')) {
         await selectView('analysis');
         assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'false');
@@ -280,28 +252,6 @@ async function main() {
         assert.ok(bottom < 1400, 'Reader entrance must remain a compact opening chapter');
         await page.setViewportSize({width: capture.width, height: Math.ceil(bottom + 32)});
         await save(capture.target);
-      } else if (name.startsWith('dashboard-dimensions')) {
-        await page.locator('#style-tab-dimensions').click();
-        const before = await page.evaluate(() => captureRequests.length);
-        await page.locator('#dim-chapter-select').selectOption('2');
-        assert.equal(await page.locator('#dim-selection').getAttribute('data-chapter'), '2');
-        if (name.includes('mobile')) await page.locator('#dim-projection').selectOption('d1-d2');
-        assert.equal(await page.evaluate(() => captureRequests.length), before,
-          'Chapter selection and planar projection use the existing local analysis');
-        await captureThrough(capture, '#dimensions', '.dim-layout');
-        await save(capture.target, '#dimensions');
-      } else if (name === 'dashboard-reference.png') {
-        await page.locator('#style-tab-bands').click();
-        await save(capture.target, '#bands');
-      } else if (name === 'dashboard-settings.png') {
-        await selectView('project');
-        await page.locator('#settings-thresholds > summary').click();
-        await save(capture.target, '#settings-form');
-      } else if (name === 'dashboard-markers.png') {
-        await save(capture.target, '#markers');
-      } else if (name.startsWith('dashboard-flags')) {
-        await selectView('analysis');
-        await save(capture.target, '#flags');
       } else if (name === 'dashboard-editorial.png') {
         await selectView('analysis');
         const paragraph = page.locator('#ch-1 .ptext').first();
@@ -318,25 +268,6 @@ async function main() {
           for (let i = 20; i < rows.length; i++) rows[i].remove();
         });
         await save(capture.target, '#heatmap');
-      } else if (name === 'dashboard-layer.png') {
-        await selectMetric(page, 'asl');
-        assert.equal(await page.locator('#layer-legend').isVisible(), true);
-        assert.ok(await page.locator('#ch-1 .ptext.metric-notable').count() > 0);
-        // Frame a complete passage excerpt, not offscreen prose whose lazy
-        // evidence correctly waits until it enters the reading viewport.
-        const passages = page.locator('#ch-1 .ptext');
-        await captureThrough(capture, '#workspace-reader-layout',
-          passages.nth(Math.min(2, await passages.count() - 1)));
-        await save(capture.target, '#workspace-reader-layout');
-      } else if (name === 'dashboard-welcome.png') {
-        await selectView('research');
-        await save(capture.target);
-      } else if (name === 'dashboard-project-modal.png') {
-        await openProjectActions();
-        await page.locator('#btn-modal-new-project').click();
-        await page.locator('#tab-btn-scratch').click();
-        await page.locator('#new-proj-title').fill('Harbour story');
-        await saveDialog(capture.target, '#modal-project-create');
       } else if (name.startsWith('dashboard-project-settings')) {
         await selectView('project');
         await selectManuscript();
@@ -352,67 +283,17 @@ async function main() {
         await page.locator('#import-preview-box').waitFor({state: 'visible'});
         assert.equal(await page.locator('#btn-submit-import-project').isEnabled(), true);
         await saveDialog(capture.target, '#modal-project-create');
-      } else if (name.startsWith('dashboard-nda')) {
-        await selectView('project');
-        const fields = researchFixture['/api/nda-draft'].fields;
-        for (const [key, value] of Object.entries(fields)) {
-          await page.locator(`#nda-draft-form [name="${key}"]`).fill(value);
-        }
-        await page.locator('#nda-preview-btn').click();
-        await page.locator('#nda-preview-wrap').waitFor({state: 'visible'});
-        assert.equal(await page.locator('#nda-draft-preview').textContent(), researchFixture['/api/nda-draft'].text);
-        await save(capture.target, '#nda-draft');
-      } else if (name.startsWith('dashboard-project-open')) {
-        await openProjectActions();
-        await page.locator('#btn-modal-open-project').click();
-        await page.locator('#open-proj-choose').click();
-        await page.locator('#open-project-chooser-list button').first().waitFor();
-        assert.ok(await page.locator('#modal-project-open').evaluate(element => element.scrollWidth <= element.clientWidth));
-        await saveDialog(capture.target, '#modal-project-open');
-      } else if (name.startsWith('dashboard-scenes')) {
-        await selectView('analysis');
-        await page.locator('#scenes summary').first().click();
-        // Show a readable excerpt; the full sample contains many chapters.
-        await page.evaluate(() => {
-          document.querySelectorAll('#scenes .scene-overview tbody tr').forEach((row, index) => {
-            if (index >= 3) row.remove();
-          });
-          document.querySelectorAll('#scenes .scene-detail').forEach((detail, index) => {
-            if (index >= 3) detail.remove();
-          });
-        });
-        await save(capture.target, '#scenes');
       } else if (name.startsWith('dashboard-research-review')) {
         await selectView('research');
         await page.locator('[data-rtab="review"]').click();
         await page.locator('#research-editorial-review .research-card').first().waitFor();
         await page.locator('#research-manuscript-review .manuscript-link-review-item').first().waitFor();
         await save(capture.target, '#research-manuscript-review-section');
-      } else if (name.startsWith('dashboard-research-change-set')) {
-        await selectView('research');
-        await page.locator('[data-rtab="dossiers"]').click();
-        await page.locator('#research-dossiers-list .research-card').first().waitFor();
-        const operations = researchFixture['/api/research-revision-batch-prepare'].operations;
-        for (const operation of operations) {
-          await page.locator(`[data-research-revise="dossier"][data-record-id="${operation.id}"]`).click();
-          await page.locator('#research-revision-field-title').fill(operation.changes.title);
-          await page.locator('[name="research_revision_change_kind"][value="correction"]').check();
-          await page.locator('#research-revision-reason').fill(operation.reason);
-          await page.locator('#research-revision-batch-add').click();
-          await page.locator('#research-revision-status').filter({hasText: 'nothing saved'}).waitFor();
-          await page.keyboard.press('Escape');
-        }
-        await page.locator('#research-revision-batch-review').click();
-        await page.locator('#research-revision-batch-apply:enabled').waitFor();
-        await saveDialog(capture.target, '#modal-research-revision-batch');
       } else if (name.startsWith('dashboard-research-timeline')) {
         await selectView('research');
         await page.locator('[data-rtab="claims"]').click();
         await page.locator('#r-open-timeline').click();
         await page.waitForFunction(() => document.querySelector('#research-claims-timeline .research-timeline-strip-row'));
-        if (name.includes('mobile')) {
-          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-        }
         await save(capture.target, '#research-claims-timeline');
       } else if (name.startsWith('dashboard-research-claims')) {
         await selectView('research');
@@ -420,42 +301,28 @@ async function main() {
         await page.locator('#research-claims-list .research-card').first().waitFor();
         await page.locator('[data-load-evidence]').first().click();
         await page.locator('.claim-evidence-subpanel .research-passage-quote').first().waitFor();
-        if (name.includes('mobile')) {
-          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-        }
         await captureThrough(capture, '#research-manager', '#research-claims-list .research-card:first-child');
         await save(capture.target, '#research-manager');
       } else if (name.startsWith('dashboard-research-decisions')) {
         await selectView('research');
         await page.locator('[data-rtab="decisions"]').click();
         await page.locator('#research-decisions-list .research-card').first().waitFor();
-        if (name.includes('mobile')) {
-          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-        }
         await captureThrough(capture, '#research-manager', '#research-decisions-list .research-card:first-child');
         await save(capture.target, '#research-manager');
-      } else if (name.startsWith('dashboard-research-sources') || name.startsWith('dashboard-research-dossiers') || name.startsWith('dashboard-dossier-')) {
+      } else if (name.startsWith('dashboard-research-dossiers') || name.startsWith('dashboard-dossier-')) {
         await selectView('research');
-        const sources = name.startsWith('dashboard-research-sources');
-        const kind = sources ? 'sources' : 'dossiers';
-        await page.locator(`[data-rtab="${kind}"]`).click();
-        if (sources) {
-          assert.equal(await page.locator('#zotero-box').getAttribute('open'), null, 'Zotero capture stays optional until opened');
-          assert.equal(await page.locator('#r-local-import').getAttribute('open'), null, 'Local import stays optional until opened');
-        }
-        await page.locator(`#research-${kind}-list .research-card`).first().waitFor();
+        await page.locator('[data-rtab="dossiers"]').click();
+        await page.locator('#research-dossiers-list .research-card').first().waitFor();
         await settle();
         const before = await page.evaluate(() => captureRequests.length);
-        await page.locator(`#r-filter-${kind}`).fill(sources ? 'customs' : 'warehouse');
+        await page.locator('#r-filter-dossiers').fill('warehouse');
         assert.equal(await page.evaluate(() => captureRequests.length), before, 'List filtering is local');
-        const card = page.locator(`#research-${kind}-list .research-card:visible`).first();
+        const card = page.locator('#research-dossiers-list .research-card:visible').first();
         await card.locator('[data-research-detail]').click();
         await card.locator('.research-details-body .research-prose').first().waitFor();
-        if (!sources) {
-          for (const image of await card.locator('.dossier-image img').all()) {
-            await image.scrollIntoViewIfNeeded();
-            await image.evaluate(element => element.decode());
-          }
+        for (const image of await card.locator('.dossier-image img').all()) {
+          await image.scrollIntoViewIfNeeded();
+          await image.evaluate(element => element.decode());
         }
         if (name.startsWith('dashboard-dossier-geography')) {
           const map = card.locator('.geography-map.leaflet-container');
@@ -492,8 +359,8 @@ async function main() {
           if (await provenance.count()) await provenance.locator('summary').click();
           await save(capture.target, '.dossier-image:has(img[alt*="' + alt + '"])');
         } else {
-          if (!sources) await card.locator('[data-research-detail]').click();
-          await captureThrough(capture, '#research-manager', sources ? card.locator('.research-source-view-bar') : card);
+          await card.locator('[data-research-detail]').click();
+          await captureThrough(capture, '#research-manager', card);
           await save(capture.target, '#research-manager');
         }
       } else if (name.startsWith('dashboard-research-search')) {
@@ -504,8 +371,6 @@ async function main() {
         await page.locator('#r-search-btn').click();
         await page.locator('#research-search-results .research-passage-card').first().waitFor();
         await save(capture.target, '#research-manager');
-      } else if (name === 'cli-research.png' || name === 'cli-style.png') {
-        await save(capture.target, '.win');
       } else {
         await save(capture.target);
       }

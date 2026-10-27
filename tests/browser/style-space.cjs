@@ -3,11 +3,9 @@ const {launchChromium} = require('../../scripts/browser_tools.cjs');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const os = require('node:os');
-const { spawnSync } = require('node:child_process');
-const root = path.resolve(__dirname, '../..');
+const {pythonFixture} = require('./support/python-fixture.cjs');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-ui-'));
-const python = process.env.PYTHON_BIN || path.join(root, '.venv/bin/python');
-const fixture = spawnSync(python, ['-c', `
+const locales = pythonFixture(`
 from lixity.api import dashboard
 import json
 # Three varying chapters above the diversity floor expose optional style axes.
@@ -25,8 +23,7 @@ text += "\\n\\nI walk home." * 100
 text = text.replace("First chapter", '<img src=x onerror="window.tooltipInjected=true">', 1)
 print(json.dumps({language: dashboard(text, language=language, title="Browser regression")
                   for language in ("en", "de", "fr", "es", "it", "pt", "nl")}))
-`], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, encoding:'utf8',maxBuffer:32*1024*1024});
-assert.equal(fixture.status,0,fixture.stderr);
+`);
 
 (async () => {
   const browser = await launchChromium();
@@ -35,7 +32,6 @@ assert.equal(fixture.status,0,fixture.stderr);
   const errors = [];
   const results = [];
   page.on('pageerror', error => errors.push(error.message));
-  const locales = JSON.parse(fixture.stdout);
   const original = locales.en;
   const payload = {threshold:2.5,axes:[{idx:1},{idx:2},{idx:3}],labels:{status_flagged:'flagged',not_flagged:'Not flagged'},points:[{ch:1,title:'<img src=x onerror="window.tooltipInjected=true">',x:0,y:0,z:0,flagged:false},{ch:2,title:'Second chapter',x:3,y:0,z:0,flagged:true}]};
   const encoded = JSON.stringify(payload).replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;').replaceAll('>','&gt;');
