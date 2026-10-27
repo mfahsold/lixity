@@ -702,11 +702,11 @@ canonical manuscript DOM; changing tools or analysis visibility does not replace
 its source text or create a hidden duplicate reading tree. Loaded-project chrome
 uses a class emitted by the renderer; it does not use a body-level `:has` query
 over the mutable prose tree, which would broaden annotation/style invalidation.
-When the leading authored level-one heading exactly matches the project title,
-the reading surface suppresses only the generated sidebar title. The original
-source heading stays intact, and Project, Research and the analysis overview keep
-the generated project context. The existing workbench owner publishes the view
-attribute; no prose observer or second navigation state is introduced.
+Project identity remains visible in the workspace shell independently of authored
+document headings. Reading hides the analysis overview's navigation and releases
+its reserved column; the overview retains its own destinations. The original
+source heading stays intact. The existing workbench owner controls this state;
+no prose observer or second navigation state is introduced.
 
 Exact analysis evidence in v0.7.3 is a separate optional projection, collected
 inside the existing paragraph-profile pass. `ParagraphMatcher` owns the same

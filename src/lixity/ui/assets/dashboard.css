@@ -1821,11 +1821,6 @@ button.research-tag {
 /* Public demo builders insert reviewed credits at this retained footer hook. */
 footer:empty { display: none; }
 
-/* Authored document headings stay intact; suppress only matching generated chrome. */
-.manuscript-reading.has-source-title[data-workspace-view="analysis"]:not(.workbench-overview) .workspace-shell .project-header h1 {
-  position: absolute; width: 1px; height: 1px; margin: 0; padding: 0; border: 0;
-  overflow: hidden; clip-path: inset(50%); white-space: nowrap;
-}
 /* Snapshot capabilities belong to the shared workspace, including lazy panes. */
 body[data-read-only="true"] [data-requires-write],
 body[data-read-only="true"] [data-requires-live] { display: none !important; }

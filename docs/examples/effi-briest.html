@@ -2581,11 +2581,6 @@ button.research-tag {
 /* Public demo builders insert reviewed credits at this retained footer hook. */
 footer:empty { display: none; }
 
-/* Authored document headings stay intact; suppress only matching generated chrome. */
-.manuscript-reading.has-source-title[data-workspace-view="analysis"]:not(.workbench-overview) .workspace-shell .project-header h1 {
-  position: absolute; width: 1px; height: 1px; margin: 0; padding: 0; border: 0;
-  overflow: hidden; clip-path: inset(50%); white-space: nowrap;
-}
 /* Snapshot capabilities belong to the shared workspace, including lazy panes. */
 body[data-read-only="true"] [data-requires-write],
 body[data-read-only="true"] [data-requires-live] { display: none !important; }
@@ -4037,6 +4032,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .manuscript-reading .manuscript-reader-controls { position: sticky; }
 body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: block; }
 .manuscript-reading:not(.workbench-overview) #analysis-review,
+.manuscript-reading:not(.workbench-overview) .analysis-outline-contents,
 .manuscript-reading #microhint,
 .manuscript-reading:not(.workbench-overview) #manuscript-analysis-panels,
 .manuscript-reading .toolbar-sections,
@@ -4046,6 +4042,7 @@ body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: 
 .manuscript-reading .toolbar > #paragraph-filter-reset,
 .manuscript-reading .toolbar > .toolbar-note,
 .manuscript-reading .reader-controls .ctl-note { display: none !important; }
+.manuscript-reading:not(.workbench-overview) .analysis-outline-layout { display: block; }
 .manuscript-reading .toolbar {
   position: static; padding: .5rem 0; gap: .5rem 1rem;
   background: transparent; border: 0; backdrop-filter: none; -webkit-backdrop-filter: none;

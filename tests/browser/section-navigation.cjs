@@ -261,7 +261,8 @@ async function companionOverviewReturn(browser, motion) {
   await page.locator('#workbench-overview-open').click();
   await page.locator('#analysis-sections [data-section-link]').last().click();
   const held=new Promise(resolve=>{notifyHeld=resolve;hold=true;});
-  await page.locator(action==='back'?'#workbench-overview-back':'#manuscript-analysis-toggle').click();
+  await page.locator('#workbench-overview-back').click();
+  if(action==='off') await page.locator('#manuscript-analysis-toggle').click();
   await held;
   await settle(page);
   const top=()=>page.locator('#'+origin.id).evaluate(node=>node.getBoundingClientRect().top);

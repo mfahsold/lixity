@@ -116,6 +116,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   unchanged; attachments do not manufacture extraction or linguistic scores.
 
 ### Fixed
+- Keep workspace project identity visible even when the manuscript repeats its
+  title, and show analysis navigation only within the analysis overview.
 - Align adjacent paragraph review and research buttons with consistent sizing
   and spacing, allowing them to wrap within narrow reading columns.
 - Analysis overview navigation uses one wrapping contents list in the existing

@@ -403,10 +403,6 @@ def render_dashboard(
     body_class = "lixity-workspace" if controls else "lixity-report"
     if controls and has_reading:
         body_class += " has-reading"
-    if (controls and reader_document and reader_document[0].kind == "heading"
-            and reader_document[0].level == 1 and reader_document[0].text == title):
-        body_class += " has-source-title"
-
     parts = [
         "<!DOCTYPE html>",
         f'<html lang="{html_lang}">',

@@ -187,11 +187,7 @@ async function checkReturnNavigation(page, route, exercise) {
   // Expanded native controls can move the authored heading below the fold.
   // Check the normal document after restoring the original disclosure state.
   const headingView = await page.locator('h1').evaluate(generated => {
-    let heading = generated;
-    if (document.body.matches('.has-source-title.manuscript-reading[data-workspace-view="analysis"]:not(.workbench-overview)')) {
-      heading = document.querySelector('.reader-preface > .reader-heading');
-      if (!heading) throw new Error('The matching authored reader heading is missing');
-    }
+    const heading = generated;
     const box = heading.getBoundingClientRect();
     const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
     const shell = heading.closest('.workspace-shell');

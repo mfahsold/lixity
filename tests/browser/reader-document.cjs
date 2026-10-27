@@ -55,10 +55,14 @@ print(json.dumps(full_dashboard()))
       const generatedTitle = page.locator('.workspace-shell .project-header h1');
       assert.equal(await sourceTitle.isVisible(), true, 'Authored manuscript title remains in the original reading tree');
       assert.equal(await page.getByRole('heading', {level:1, name:'A voyage', exact:true}).count(), 1,
-        'The visual cleanup preserves the accessible document heading');
+        'Project identity remains the accessible top-level heading');
       const chromeBox = await generatedTitle.boundingBox();
-      assert.ok(chromeBox && chromeBox.width <= 1 && chromeBox.height <= 1,
-        'Reading visually suppresses only the generated duplicate title');
+      assert.ok(chromeBox && chromeBox.width > 1 && chromeBox.height > 1,
+        'Project identity remains visible when the authored heading matches it');
+      assert.equal(await page.locator('.analysis-outline-contents').isVisible(), false,
+        'Analysis destinations do not occupy the reading column');
+      assert.equal(await page.locator('.analysis-outline-layout').evaluate(node => getComputedStyle(node).display), 'block',
+        'Reading reserves no empty column for hidden analysis destinations');
       await sourceTitle.evaluate(node => window.retainedSourceTitle = node);
       await page.locator('#tab-view-project').click();
       assert.equal(await generatedTitle.isVisible(), true, 'Project identity remains available outside the manuscript');
@@ -67,9 +71,12 @@ print(json.dumps(full_dashboard()))
       await page.locator('#tab-view-analysis').click();
       await page.locator('#workbench-overview-open').click();
       assert.equal(await generatedTitle.isVisible(), true, 'Overview retains project context');
+      if (width === 1440) assert.equal(await page.locator('.analysis-outline-contents').isVisible(), true,
+        'Analysis overview retains its desktop navigation');
       await page.locator('#workbench-overview-back').click();
       const returnedBox = await generatedTitle.boundingBox();
-      assert.ok(returnedBox && returnedBox.width <= 1 && returnedBox.height <= 1);
+      assert.ok(returnedBox && returnedBox.width > 1 && returnedBox.height > 1);
+      assert.equal(await page.locator('.analysis-outline-contents').isVisible(), false);
       assert.equal(await sourceTitle.evaluate(node => node === window.retainedSourceTitle), true);
 
       assert.match(await main.innerText(), /Preface unique/);

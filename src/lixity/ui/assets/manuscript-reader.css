@@ -97,6 +97,7 @@
 .manuscript-reading .manuscript-reader-controls { position: sticky; }
 body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: block; }
 .manuscript-reading:not(.workbench-overview) #analysis-review,
+.manuscript-reading:not(.workbench-overview) .analysis-outline-contents,
 .manuscript-reading #microhint,
 .manuscript-reading:not(.workbench-overview) #manuscript-analysis-panels,
 .manuscript-reading .toolbar-sections,
@@ -106,6 +107,7 @@ body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: 
 .manuscript-reading .toolbar > #paragraph-filter-reset,
 .manuscript-reading .toolbar > .toolbar-note,
 .manuscript-reading .reader-controls .ctl-note { display: none !important; }
+.manuscript-reading:not(.workbench-overview) .analysis-outline-layout { display: block; }
 .manuscript-reading .toolbar {
   position: static; padding: .5rem 0; gap: .5rem 1rem;
   background: transparent; border: 0; backdrop-filter: none; -webkit-backdrop-filter: none;
