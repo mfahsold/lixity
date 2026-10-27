@@ -39,3 +39,58 @@ def test_curated_publication_has_explicit_progress_without_analysis_or_admin(mod
     else:
         assert 'Synthetic novel text' not in page
         assert 'id="chapters"' not in page
+
+
+@pytest.mark.parametrize('mode', ('reader', 'companion'))
+def test_publications_omit_inactive_native_controllers_without_mutating_content(mode):
+    import copy
+    import re
+
+    from lixity.ui.dashboard import _ASSET_DIR, _JS_FILES, _bundle, render_dashboard
+
+    publication = {'mode': mode, 'title': 'Synthetic publication', 'max_chapter': 3,
+                   'introduction': 'A safe introduction.', 'entries': [
+                       {'body': 'An ordinary later passage.', 'reveal_after_chapter': 3}]}
+    original = copy.deepcopy(publication)
+    page = renderer()(publication)
+    inactive = ('register-settings.js', 'site-publication-settings.js', 'analysis-scope.js',
+                'project-overview.js', 'style-space.js', 'metric-context.js', 'workspace-reader.js',
+                'manuscript-reader.js', 'manuscript-links.js', 'analysis-evidence.js', 'analysis-review.js')
+    for name in inactive:
+        assert (_ASSET_DIR / name).read_text() not in page, name
+    script = re.search(r'<script>(.*?)</script>', page, re.S)[1]
+    assert script.startswith((_ASSET_DIR / 'read-only-site.js').read_text())
+    assert len(script.encode()) < len(_bundle(_JS_FILES).encode()) - 200_000
+    for name in ('reader-publication.js', 'research-content.js', 'research-evidence.js',
+                 'dossier-images.js', 'dossier-geography.js', 'research-media.js'):
+        assert (_ASSET_DIR / name).read_text() in script
+    assert _bundle(_JS_FILES) in render_dashboard([], [], controls=True)
+    assert publication == original
+
+
+@pytest.mark.parametrize('mode', ('reader', 'companion'))
+def test_publications_without_diagram_keywords_omit_the_diagram_library(mode):
+    page = renderer()({'mode': mode, 'title': 'Synthetic publication', 'max_chapter': 3,
+                       'introduction': 'A safe introduction.', 'entries': [
+                           {'body': 'An ordinary hidden passage.', 'reveal_after_chapter': 3}]})
+    assert 'id="research-diagram-library"' not in page
+    assert len(page.encode()) < 1_500_000
+
+
+@pytest.mark.parametrize('location', ('introduction', 'visible_entry', 'hidden_entry'))
+@pytest.mark.parametrize('keyword', ('mermaid', 'MeRmAiD'))
+def test_any_prepared_diagram_keyword_keeps_the_offline_library(location, keyword):
+    import copy
+
+    publication = {'mode': 'companion', 'title': 'Synthetic diagrams', 'max_chapter': 3,
+                   'introduction': '', 'entries': [
+                       {'body': 'An ordinary passage.', 'reveal_after_chapter': 0},
+                       {'body': 'An ordinary hidden passage.', 'reveal_after_chapter': 3}]}
+    text = f'~~~{keyword}\nflowchart LR\nA --> B\n~~~'
+    if location == 'introduction':
+        publication['introduction'] = text
+    else:
+        publication['entries'][location == 'hidden_entry']['body'] = text
+    original = copy.deepcopy(publication)
+    assert 'id="research-diagram-library"' in renderer()(publication)
+    assert publication == original

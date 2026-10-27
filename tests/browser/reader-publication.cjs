@@ -40,6 +40,12 @@ for locale in ('en','de','fr','es','it','pt','nl'):
             envelope={**envelope,'publication':value}
             html=html.replace('<script>','<script type="application/json" id="lixity-site-data">'+_script_json(envelope)+'</script><script>',1)
             modes[mode+'_empty']=html
+            value={**value,'entries':[dict(entry) for entry in value['entries']]}
+            value['entries'][-1]['body']='~~~MeRmAiD\nflowchart LR\nA[Arrival] --> B[Return]\n~~~'
+            html=render_publication(value,reader_document=blocks if mode=='reader' else None,labels=labels,language_key=locale)
+            envelope={**envelope,'publication':value}
+            html=html.replace('<script>','<script type="application/json" id="lixity-site-data">'+_script_json(envelope)+'</script><script>',1)
+            modes[mode+'_diagram']=html
     documents[locale]=modes
 print(json.dumps(documents))
 `);
@@ -57,6 +63,8 @@ print(json.dumps(documents))
       await page.goto('http://publication.test/');
       const entries=page.locator('#publication-entries');
       await expect(entries.locator('article')).toHaveCount(1);
+      await expect(page.locator('#research-diagram-library')).toHaveCount(0);
+      assert.equal(await page.evaluate(()=>typeof window.mermaid),'undefined');
       await expect(entries).toContainText('Before reading');
       await expect(page.locator('#publication-context #publication-progress-form')).toHaveCount(1);
       if(locale==='en') await page.screenshot({path:path.join(artifacts,`reader-initial-${width}.png`)});
@@ -133,6 +141,32 @@ print(json.dumps(documents))
       await page.goto('http://publication.test/');
       await expect(page.locator('.publication-introduction')).toHaveCount(0);
       await expect(page.locator('#publication-entries article')).toHaveCount(1);
+      await page.close();
+    }
+    for (const mode of ['reader','companion']) for (const width of [1440,320]) {
+      const page=await browser.newPage({viewport:{width,height:900},reducedMotion:'reduce'});
+      const requests=[];
+      page.on('pageerror',e=>errors.push(e.message));
+      page.on('request',request=>requests.push({url:request.url(),method:request.method()}));
+      await page.route('http://publication.test/**',route=>route.fulfill({contentType:'text/html',body:fixtures.en[mode+'_diagram']}));
+      await page.goto('http://publication.test/');
+      const original=await page.evaluate(()=>JSON.stringify(window.LixitySite.publication));
+      await expect(page.locator('#research-diagram-library')).toHaveCount(1);
+      await expect(page.locator('[data-research-diagram]')).toHaveCount(0);
+      assert.equal(await page.evaluate(()=>typeof window.mermaid),'undefined','Hidden diagrams must not initialize the renderer');
+      await page.locator('#publication-progress').selectOption('3');
+      await page.locator('#publication-progress-apply').click();
+      const diagram=page.locator('[data-research-diagram]');
+      await diagram.scrollIntoViewIfNeeded();
+      await expect(diagram).toHaveAttribute('data-diagram-state','ready');
+      await expect(diagram.locator('svg.research-diagram')).toHaveCount(1);
+      assert.equal(await page.evaluate(()=>JSON.stringify(window.LixitySite.publication)),original,'Rendering never mutates the prepared publication');
+      assert.equal(await page.evaluate(async()=>{
+        try {await fetch('/api/settings',{method:'POST',body:'{}'});return false;} catch (_) {return true;}
+      }),true,'Static publications reject write requests before network access');
+      assert.deepEqual(requests,[{url:'http://publication.test/',method:'GET'}],'Diagrams render from retained inline assets with no external requests');
+      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+      await diagram.screenshot({path:path.join(artifacts,`${mode}-later-diagram-${width}.png`)});
       await page.close();
     }
     const blocked=await browser.newPage();

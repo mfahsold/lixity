@@ -354,7 +354,7 @@ def public_publications(tmp_path, research_fixture):
 
 def test_public_reader_and_companion_use_the_production_scope_and_assets(tmp_path, public_publications):
     from lixity.site_export import prepare_site
-    from lixity.ui.dashboard import _CSS_FILES, _JS_FILES
+    from lixity.ui.dashboard import _CSS_FILES, _JS_FILES, _PUBLICATION_JS_FILES
 
     project = tmp_path / 'research-demo'
     for mode, target in public_publications.items():
@@ -370,8 +370,10 @@ def test_public_reader_and_companion_use_the_production_scope_and_assets(tmp_pat
         assert 'href="../../guides/first-look.html"' in page
         assert 'href="../../assets/research/sources.json"' in page
         assert site_data(page)['responses'] == {}
-        for asset in (*_CSS_FILES, *_JS_FILES):
+        for asset in (*_CSS_FILES, *_PUBLICATION_JS_FILES):
             assert page.count((ROOT / 'src/lixity/ui/assets' / asset).read_text().strip()) == 1, asset
+        for asset in set(_JS_FILES) - set(_PUBLICATION_JS_FILES):
+            assert (ROOT / 'src/lixity/ui/assets' / asset).read_text().strip() not in page, asset
         manifest = json.loads(target.with_name('manifest.json').read_text())
         assert manifest['mode'] == mode
         assert manifest['capabilities']['automatic_external_requests'] is False

@@ -144,6 +144,15 @@ _JS_FILES = (
 )
 _NATIVE_JS_FILES = ("speech.js",)
 
+# Curated publications reuse the shared renderers without dormant workspace controls.
+_PUBLICATION_JS_FILES = tuple(
+    name for name in _JS_FILES if name not in {
+        "register-settings.js", "site-publication-settings.js", "analysis-scope.js",
+        "project-overview.js", "style-space.js", "metric-context.js", "workspace-reader.js",
+        "manuscript-reader.js", "manuscript-links.js", "analysis-evidence.js", "analysis-review.js",
+    }
+)
+
 
 @lru_cache(maxsize=2)
 def _bundle(files: tuple[str, ...]) -> str:

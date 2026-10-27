@@ -6,11 +6,15 @@ from hashlib import sha256
 from typing import Any
 
 from .analyzer import CorpusAnalyzer
+from .dialogue import dialogue_report
 from .language import ResolvedLanguage, resolve_language
 from .markdown_parser import parse_markdown_blocks
 from .models import CorpusConfig, CorpusMetrics
-from .motifs import resolve_motif_settings
+from .motifs import motif_report, resolve_motif_settings
+from .pacing import pacing_report
 from .paragraph_evidence import ParagraphEvidence
+from .scenes import scene_report_for_display
+from .showing import showing_report
 from .style_fingerprint import (
     FingerprintThresholds,
     StyleFingerprint,
@@ -92,3 +96,23 @@ def analyze_document(
     paragraphs, chapters = profile_document(text, config, thresholds, evidence=evidence)
     fingerprint = fingerprint_document(text, config, thresholds, metrics)
     return DocumentAnalysis(metrics, paragraphs, chapters, fingerprint, evidence)
+
+
+def supplementary_reports(
+    text: str, config: CorpusConfig, analysis: DocumentAnalysis, *,
+    scene_settings: Any = None,
+) -> dict[str, Any]:
+    """Prepare the full workspace's optional reports from the same manuscript.
+
+    Reuse measurements from exactly this text/config; explicitly split scenes
+    still require their own measurements. Character error policies and reader
+    document construction remain with the caller. No project settings are read.
+    """
+    return {
+        "dialogue": dialogue_report(text, config).to_dict(),
+        "pacing": pacing_report(text, config).to_dict(),
+        "motifs": motif_report(text, config=config).to_dict(),
+        "showing": showing_report(text, config, metrics=analysis.metrics).to_dict(),
+        "scenes": scene_report_for_display(
+            text, config, scene_settings, premeasured_chapters=analysis.metrics.chapters),
+    }

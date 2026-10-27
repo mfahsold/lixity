@@ -19,16 +19,11 @@ from ..config import (
     resolve_thresholds,
     validate_author_name,
 )
-from ..dialogue import dialogue_report
 from ..io import FileUtils
 from ..markers import list_markers
-from ..motifs import motif_report
-from ..pacing import pacing_report
-from ..pipeline import analyze_document, resolve_document_config
+from ..pipeline import analyze_document, resolve_document_config, supplementary_reports
 from ..project_identity import manuscript_identity_check, project_title
 from ..publication import load_publication
-from ..scenes import scene_report_for_display
-from ..showing import showing_report
 from ..style_fingerprint import FingerprintThresholds
 from ..ui import render_analysis
 from ..ui.manuscript_document import reader_blocks
@@ -168,7 +163,6 @@ def build_server_dashboard(
 
     analysis = analyze_document(text, config, resolved_thresholds, include_evidence=True)
     paragraphs, chapters = analysis.paragraphs, analysis.chapters
-    metrics = analysis.metrics
     markers = list_markers(text) if text else []
 
     artifacts = collect_artifacts(exports_dir) if exports_dir else []
@@ -209,13 +203,8 @@ def build_server_dashboard(
         title=doc_title,
         flag_min_severity=resolved_thresholds.flag_min_severity,
         status=status_items,
-        dialogue=dialogue_report(text, config).to_dict(),
         characters=character_report,
-        pacing=pacing_report(text, config).to_dict(),
-        motifs=motif_report(text, config=config).to_dict(),
-        showing=showing_report(text, config, metrics=metrics).to_dict(),
-        scenes=scene_report_for_display(text, config, settings.get("scene_analysis"),
-                                        premeasured_chapters=metrics.chapters),
+        **supplementary_reports(text, config, analysis, scene_settings=settings.get("scene_analysis")),
         markers=markers,
         artifacts=artifacts,
         tense_available=bool(resolved.praesens_regex and resolved.praeteritum_regex),

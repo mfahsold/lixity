@@ -127,6 +127,8 @@ for name, include in [('with-files', True), ('without-files', False)]:
     for (const width of [1440, 320]) {
       await page.setViewportSize({width, height: 1000});
       await page.goto(fixture.static + '/with-files/index.html');
+      await expect(page.locator('#research-diagram-library')).toHaveCount(0);
+      assert.equal(await page.evaluate(()=>typeof window.mermaid),'undefined','Ordinary media exports do not ship the diagram runtime');
       await expect(page.locator('.dossier-retained-media')).toHaveCount(3);
       await expect(page.locator('video')).toHaveCount(2);
       await expect(page.locator('[data-dossier-add-media]')).toHaveCount(0);

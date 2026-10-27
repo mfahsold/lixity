@@ -471,3 +471,45 @@ def test_manifest_scope_cannot_claim_research_that_was_not_exported(project):
         separators=(',', ':'), sort_keys=True) + '\n').encode()
     with pytest.raises(ValueError, match='scope'):
         bundle.to_zip()
+
+
+def test_review_export_and_native_workspace_share_configured_supplementary_reports(project, monkeypatch):
+    from lixity.server import views
+
+    module = exporter()
+    config = project / 'lixity.toml'
+    config.write_text(config.read_text() + '\n[motifs]\nWeather = "rain"\n'
+                      '\n[scene_analysis.assignments]\n"1:1" = "quiet"\n'
+                      '\n[scene_analysis.groups.quiet.targets]\nasl = [2, 8]\n')
+    before = file_bytes(project)
+    projections = []
+    for adapter in (views, module):
+        render = adapter.render_analysis
+        def observed(*args, _render=render, **kwargs):
+            projections.append({key: kwargs[key] for key in
+                                ('dialogue', 'pacing', 'motifs', 'showing', 'scenes')})
+            return _render(*args, **kwargs)
+        monkeypatch.setattr(adapter, 'render_analysis', observed)
+    native, _ = views.build_server_dashboard(str(project / 'manuscript.md'), project_root=project)
+    bundle = module.prepare_site(project)
+    assert projections[0] == projections[1]
+    assert projections[0]['motifs']['motifs'][0]['name'] == 'Weather'
+    assert projections[0]['scenes']['items'][0]['group'] == 'quiet'
+    assert 'The eastern gate was open.' in native
+    assert 'The eastern gate was open.' in bundle.files['index.html'].decode()
+    assert file_bytes(project) == before
+
+
+@pytest.mark.parametrize(('characters', 'author', 'message'), [
+    ('characters = []', 'author_name = 17', 'characters must be a table'),
+    ('[characters.Mara]\npov_in_chapters = [3]', 'author_name = 17', 'Author name must be a string'),
+    ('[characters.Mara]\npov_in_chapters = [3]', 'author_name = "Synthetic Author"',
+     'Declared POV chapters no longer match'),
+])
+def test_review_export_preserves_character_and_author_error_precedence(project, characters, author, message):
+    config = project / 'lixity.toml'
+    config.write_text(config.read_text() + '\n' + author + '\n' + characters + '\n')
+    before = file_bytes(project)
+    with pytest.raises(ValueError, match=message):
+        exporter().prepare_site(project)
+    assert file_bytes(project) == before

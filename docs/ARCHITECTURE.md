@@ -72,8 +72,12 @@ workspace. Valid directories without a unique manuscript can still open as empty
 workspaces; `--no-project` explicitly starts without project selection.
 
 `DocumentAnalysis` reuses corpus/chapter measurements for the fingerprint and
-renderers. Narrower profile/fingerprint requests use the same pipeline. Dashboard
-refresh validates manuscript bytes before serving cached measurements and rebuilds
+renderers. Narrower profile/fingerprint requests use the same pipeline. Native
+and review-site adapters obtain dialogue, pacing, motifs, showing and scenes from
+`pipeline.supplementary_reports`, reusing the supplied analysis measurements.
+Character error policy and reader construction remain at the adapter boundary;
+smaller CLI/API projections do not acquire additional panels.
+Dashboard refresh validates manuscript bytes before serving cached measurements and rebuilds
 when a readable changed source can be rendered. **Since v0.7.2:**
 `RefreshOutcome` distinguishes unchanged/rebuilt, missing, unreadable and failed
 refreshes. Missing/unreadable sources and config/render failures retain the last
@@ -338,6 +342,15 @@ Markdown, diagram, image and geographic components. Browser-local progress is an
 explicit reading aid, scoped to publication identity, source hash and cap. It does
 not establish access rights: included later bytes remain inspectable. Invalid or
 unavailable storage starts at chapter zero, and preview never advances progress.
+
+Curated publications use a subset of the existing dashboard script recipe,
+omitting controllers whose workspace/editor DOM is absent. Shared Markdown,
+citations, media, navigation and the static read provider remain the same code.
+The offline Mermaid library is included only when the introduction or any prepared
+entry contains its case-insensitive keyword, including entries revealed later.
+This deliberately conservative test can retain unnecessary bytes; it does not
+introduce another Markdown parser or fetch a missing library from a CDN. Native
+workspaces retain their complete script recipe for interactive content changes.
 
 The embedded `lixity-read-only-site-data/1` response table contains enumerated
 prepared reads. The first-loaded static transport returns these reads without

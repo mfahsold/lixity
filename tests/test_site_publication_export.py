@@ -309,3 +309,25 @@ def test_total_prepared_envelope_includes_resource_mapping_in_data_budget(public
         prepare_site(root, **options)
     assert caught.value.diagnostic['limit'] == 'prepared_data_bytes'
     assert caught.value.diagnostic['overflow_bytes'] == 1
+
+
+@pytest.mark.parametrize('mode', ('reader', 'companion'))
+def test_reduced_publication_assets_keep_measured_bundle_limits(publication_project, monkeypatch, mode):
+    import lixity.site_export as module
+
+    root, *_ = publication_project
+    before = file_bytes(root)
+    bundle = prepare_site(root, mode=mode, publication_profile='readers', max_chapter=1)
+    html = bundle.files['index.html']
+    assert b'id="research-diagram-library"' not in html
+    assert len(html) < 1_500_000
+    report = bundle.preflight()
+    total = sum(map(len, bundle.files.values()))
+    assert report['sizes']['html_bytes'] == len(html)
+    assert report['sizes']['total_bytes'] == total
+    monkeypatch.setattr(module, 'MAX_SITE_BYTES', total - 1)
+    with pytest.raises(module.SiteExportLimitError) as caught:
+        bundle.to_zip()
+    assert caught.value.diagnostic['limit'] == 'bundle_bytes'
+    assert caught.value.diagnostic['overflow_bytes'] == 1
+    assert file_bytes(root) == before

@@ -5,7 +5,7 @@ from typing import Any
 
 from ..workspace_labels import WORKSPACE_LABELS
 from .components import esc, label, product_details
-from .dashboard import _CSS_FILES, _JS_FILES, _bundle, _script_json
+from .dashboard import _CSS_FILES, _PUBLICATION_JS_FILES, _bundle, _script_json
 from .manuscript_document import ReaderBlock, reader_block_html
 
 
@@ -36,6 +36,12 @@ def render_publication(
     language = language_key if language_key not in {"generic", "auto"} else "en"
     title = esc(publication["title"])
     ui_labels = {**WORKSPACE_LABELS.get(language, WORKSPACE_LABELS["en"]), **(labels or {})}
+    # A keyword is deliberately conservative: false positives retain the library.
+    # Inspect every prepared entry, including content revealed after later chapters.
+    has_diagrams = any("mermaid" in text.casefold() for text in (
+        publication.get("introduction", ""),
+        *(entry["body"] for entry in publication.get("entries", ())),
+    ))
     progress = [
         '<section class="publication-progress-controls" aria-labelledby="publication-progress-title">',
         f'<h2 id="publication-progress-title">{L("publication_progress")}</h2>',
@@ -103,8 +109,9 @@ def render_publication(
         '<div id="publication-entries"></div>',
         f'<noscript><p>{L("publication_javascript")}</p></noscript></aside></div>',
         '<footer>' + product_details(labels) + '</footer></div>',
-        '<script type="application/json" id="research-diagram-library">' +
-        _script_json(_bundle(("vendor/mermaid-tiny-12.2.0.min.js",))) + '</script>',
-        '<script>' + _bundle(_JS_FILES) + '</script></body></html>',
+        *(('<script type="application/json" id="research-diagram-library">' +
+           _script_json(_bundle(("vendor/mermaid-tiny-12.2.0.min.js",))) + '</script>',)
+          if has_diagrams else ()),
+        '<script>' + _bundle(_PUBLICATION_JS_FILES) + '</script></body></html>',
     ])
     return '\n'.join(parts) + '\n'

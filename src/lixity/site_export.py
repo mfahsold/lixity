@@ -27,13 +27,10 @@ from urllib.parse import urlencode
 from ._version import __version__
 from .characters import presence_report, resolve_character_settings
 from .config import read_explicit_project_config, resolve_thresholds, validate_author_name
-from .dialogue import dialogue_report
 from .io import FileUtils
 from .markdown_parser import split_chapters
 from .markers import list_markers
-from .motifs import motif_report
-from .pacing import pacing_report
-from .pipeline import analyze_document, resolve_document_config
+from .pipeline import analyze_document, resolve_document_config, supplementary_reports
 from .project_identity import manuscript_identity_check, project_title
 from .research import api, editorial
 from .research.images import IMAGE_TYPES, read_image, resolve_dossier_images, resolve_dossier_media
@@ -62,8 +59,6 @@ from .research.revisions import (
     dossier_withdrawal,
 )
 from .research.timeline import timeline_data
-from .scenes import scene_report_for_display
-from .showing import showing_report
 from .site_contracts import (
     DATA_SCHEMA,
     MAX_SITE_BYTES,
@@ -527,11 +522,8 @@ def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
             enabled_actions=["research-reader", "research-manuscript-review"] if snapshot else [],
             research_context_token=token if snapshot else "", manuscript_pdf_token=token,
             manuscript_source_sha256=source_hash, project_token=token,
-            scenes=scene_report_for_display(text, config, settings.get("scene_analysis"), premeasured_chapters=analysis.metrics.chapters),
-            dialogue=dialogue_report(text, config).to_dict(),
             characters=presence_report(text, selection.names, config, declared_pov=selection.declared_pov) if selection.names else None,
-            pacing=pacing_report(text, config).to_dict(), motifs=motif_report(text, None, config).to_dict(),
-            showing=showing_report(text, config, metrics=analysis.metrics).to_dict())
+            **supplementary_reports(text, config, analysis, scene_settings=settings.get("scene_analysis")))
     else:
         from .ui.publication import render_publication
 

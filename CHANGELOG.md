@@ -24,6 +24,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   bounded local transport and no automatic model download or backend fallback.
 
 ### Changed
+- Curated reader/companion exports omit inactive workspace controllers and omit
+  the offline diagram library when their prepared content cannot request it.
+  Later-revealed diagrams retain the library; media, citations and offline reads
+  continue through the shared components.
+- Native and review-site adapters share supplementary report assembly while
+  retaining their character-validation policies and existing public results.
 - Documentation disclosure styles no longer leak into embedded workspaces or
   reports through the public Pages wrapper. Native reader controls retain the
   same appearance; demo privacy guidance reflects optional remote processing.
