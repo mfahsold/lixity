@@ -166,6 +166,8 @@ def build_server_dashboard(
     markers = list_markers(text) if text else []
 
     artifacts = collect_artifacts(exports_dir) if exports_dir else []
+    for artifact in artifacts:
+        artifact["href"] = api_base.removesuffix("/api") + artifact["href"]
     try:
         selection = resolve_character_settings(None, settings)
         character_report = (presence_report(text, selection.names, config, declared_pov=selection.declared_pov)

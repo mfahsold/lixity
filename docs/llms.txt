@@ -64,6 +64,10 @@ mentions, motifs, pacing, paragraph tense heuristics and manuscript-relative
 style comparisons. Heuristic cutoff hits, FDR-selected cells and tense flags are
 different result sets. Source analysis never changes the manuscript baseline.
 
+Current-main native project views share one app origin; use each view's `data-api`
+prefix. **App and audio** reports open views, actual worker health and the bounded
+shared audio queue. View URLs expire on app restart; reopen from home.
+
 The native workspace starts in Manuscript with Analysis Off. Counted text,
 paragraph comparisons and saved research associations have separate meanings;
 inspection does not save a link or rewrite text. Current entries and explicitly

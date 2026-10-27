@@ -90,7 +90,7 @@ class ResponseMixin(WorkspaceState):
                 f'data-dashboard-freshness="{freshness.value}" role="status" aria-live="polite">',
                 1,
             )
-            retry = f'<a class="ctl" href="/">{escape(labels["status_retry_refresh"])}</a>'
+            retry = f'<a class="ctl" href="{escape(self.api_base.removesuffix("/api") + "/")}">{escape(labels["status_retry_refresh"])}</a>'
             notice = notice.removesuffix("</div>") + retry + "</div>"
             html = html.replace("<!--dashboard-freshness-->", notice, 1)
         nonce = secrets.token_urlsafe(16)
@@ -121,6 +121,10 @@ class ResponseMixin(WorkspaceState):
         )
 
     def _json(self, payload: Mapping[str, Any], code: int = 200) -> None:
+        if getattr(self, "_workspace_selection", False) and code < 300 and payload.get("ok"):
+            self.server.workspaces.publish(type(self))
+            self._workspace_selection_ok = True
+            payload = {**payload, "workspace_url": self.api_base.removesuffix("/api") + "/"}
         if self.debug and code >= 400:
             msg = payload.get("message", "")
             # Log the route without its query string: context tokens and other

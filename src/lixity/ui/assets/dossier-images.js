@@ -66,7 +66,7 @@
     if (!pin) return null;
     var url = (media ? "/api/research/media?project_id=" : "/api/research/image?project_id=") + encodeURIComponent(context.project_id) +
       "&source_id=" + encodeURIComponent(pin[1]) + "&version_id=" + encodeURIComponent(pin[2]);
-    return window.LixitySite.readOnly ? window.LixitySite.resourceUrl(url) : url;
+    return window.LixitySite.readOnly ? window.LixitySite.resourceUrl(url) : (document.body.dataset.api || "/api").replace(/\/api$/, "") + url;
   }
   function sourceContextHtml(image, collapsed) {
     if (!image || !image.context) return "";

@@ -1350,7 +1350,11 @@ remains loopback-only. Location is not part of portable project voice settings,
 and neither browser input nor project configuration can supply an inference URL.
 
 Native `SpeechJobs` own temporary immutable source snapshots and WAV outputs, one
-active render per server, progress, cancellation and bounded result retention.
+active render plus at most three FIFO waiters per app, progress, cancellation
+and bounded completed-result retention. Pending work never evicts a just-completed
+result merely because the active queue is full. Global validity sweeps run outside
+individual workspace locks; the scheduler never holds its lock while invoking
+project validity callbacks.
 Every read/download checks project settings and the source digest. A monotonic
 workspace generation prevents a return to an earlier selection from resurrecting
 an old job. Observed staleness persists as cancellation. A model call already in
@@ -1369,3 +1373,13 @@ independent atomic output. Source/context guards still govern downloads. Cache
 eviction or corruption causes recomputation, not publication of partial audio.
 The model identity is the named family, so local weight changes require a fresh
 render or cache removal. This derived cache does not persist native job state.
+
+Current-main native workspace routing uses one bounded `WorkspaceRegistry` per
+HTTP server. A project view owns independent handler state, cached HTML and an
+RLock. The request adapter reuses the parsed HTTP transport and existing route
+mixins; it opens no extra listener and does not swap process-global selection.
+Project changes prepare a candidate view before publishing its URL. All scoped
+API, artifact and native dossier-image links retain the prefix. The shared
+`SpeechJobs` scheduler belongs to the HTTP server, not any selected view.
+Job ownership includes the view API prefix, so two views of the same project
+cannot read, cancel or download one another's jobs.

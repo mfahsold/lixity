@@ -493,6 +493,8 @@ def render_dashboard(
                 )
             )
         parts.append("</nav></details>")
+        if not read_only:
+            parts.append(f'<button type="button" class="ctl" id="runtime-open">{L("runtime_title")}</button>')
         parts.append('<p class="workspace-product-details">' + product_details(labels) + '</p>')
         parts.append("</div></div>")
 

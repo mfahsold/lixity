@@ -425,3 +425,24 @@ def test_worker_cli_forwards_codec_device(monkeypatch):
     worker.main()
     assert calls == [(Path("/synthetic/model"), {"device": "cuda", "codec_device": "cpu", "threads": 4}),
                      "closed"]
+
+
+def test_worker_health_verifies_model_and_never_uses_proxy_or_redirects():
+    from lixity.speech_qwen import worker_health
+
+    class Reply:
+        def __enter__(self):
+            return self
+        def __exit__(self, *_args):
+            pass
+        def read(self, limit):
+            assert limit == 4097
+            return json.dumps({'ready': True, 'model': QWEN_MODEL}).encode()
+    class Opener:
+        def open(self, request, *, timeout):
+            assert request.full_url == 'http://127.0.0.1:8770/health'
+            assert timeout <= 2
+            return Reply()
+    assert worker_health('jetson', opener=Opener())['state'] == 'ready'
+    with pytest.raises(ValueError):
+        worker_health('external')

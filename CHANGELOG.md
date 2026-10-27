@@ -8,6 +8,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- One-origin native project views with independent tab contexts, scoped API and
+  artifact routes, explicit expired-view handling and a bounded shared audio FIFO.
+- Native app/audio operational overview with actual local/Jetson model health
+  probes, open views and content-free queue states.
 - Passage-specific tense review with exact counted cue ranges from the shared
   backend, keyboard-accessible cue navigation and explicit unavailable mappings.
   Mixed/switch triggers precede collapsed counts, help and other paragraph values.

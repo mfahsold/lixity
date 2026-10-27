@@ -131,6 +131,7 @@
       var result = data.job;
       fields.progress.max = result.total || 1; fields.progress.value = result.done || 0;
       status(label(active.cancelling && ["pending", "running"].includes(result.state) ? "cancelling" : "state_" + ({ready: "completed", error: "failed", stale: "failed"}[result.state] || result.state)) + (result.message ? ": " + result.message : ""));
+      if (result.state === "pending" && !active.cancelling && result.queue_position) status(uiFormat("runtime_queued", {position: result.queue_position}));
       if (result.state === "ready" && active.cancelling) {
         status(label("cancelling")); timer = setTimeout(function() { poll(serial, active); }, 500); return;
       }

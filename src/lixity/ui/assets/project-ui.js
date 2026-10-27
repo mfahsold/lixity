@@ -949,3 +949,62 @@ window.LixityManuscriptLinks = {
   };
   update();
 })();
+
+// One native operational view; project content stays in its own scoped routes.
+(function() {
+  var open = document.getElementById("runtime-open"), modal = document.getElementById("modal-runtime");
+  if (!open || !modal || !API) return;
+  var content = document.getElementById("runtime-content"), status = document.getElementById("runtime-status"), revision = 0;
+  function heading(key) {var node = document.createElement("h4"); node.textContent = uiLabel(key); content.appendChild(node);}
+  async function refresh() {
+    var serial = ++revision; status.textContent = "…";
+    try {
+      var response = await fetch(API + "/runtime"), data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.message || uiLabel("runtime_unavailable"));
+      if (serial !== revision || !modal.open) return;
+      content.replaceChildren(); status.textContent = uiLabel("runtime_ready");
+      var modelTitle = document.createElement("h4"); modelTitle.textContent = "Qwen3-TTS"; content.appendChild(modelTitle);
+      var targets = document.createElement("dl");
+      data.audio.targets.forEach(function(target) {
+        var title = document.createElement("dt"), value = document.createElement("dd");
+        title.textContent = uiLabel("speech_target_" + target.target);
+        value.textContent = uiLabel("runtime_" + target.state); targets.append(title, value);
+      }); content.appendChild(targets);
+      heading("runtime_jobs");
+      var jobs = document.createElement("ul");
+      data.audio.jobs.forEach(function(job) {
+        var item = document.createElement("li");
+        item.textContent = uiLabel("speech_target_" + job.target) + " · " +
+          (job.state === "pending" ? uiFormat("runtime_queued", {position: job.queue_position}) :
+           uiLabel("speech_state_" + ({ready:"completed", error:"failed", stale:"failed"}[job.state] || job.state)));
+        jobs.appendChild(item);
+      });
+      if (!jobs.children.length) {var empty = document.createElement("li"); empty.textContent = uiLabel("runtime_empty"); jobs.appendChild(empty);}
+      content.appendChild(jobs); heading("runtime_workspaces");
+      var projects = document.createElement("ul");
+      data.workspaces.forEach(function(project) {
+        if (!/^\/w\/[a-f0-9]{32}\/$/.test(project.url)) return;
+        var item = document.createElement("li"), link = document.createElement("a");
+        link.href = project.url; link.textContent = project.title;
+        if (location.pathname === project.url) link.setAttribute("aria-current", "page");
+        var controls = document.createElement("div"); controls.className = "row"; controls.appendChild(link); item.appendChild(controls);
+        if (project.closable) {
+          var close = document.createElement("button"); close.type = "button"; close.className = "ctl";
+          close.textContent = uiLabel("modal_close"); close.setAttribute("aria-label", close.textContent + " · " + project.title);
+          close.addEventListener("click", async function() {
+            close.disabled = true;
+            try {
+              var result = await fetch(API + "/workspace-close", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({id:project.id})});
+              var value = await result.json(); if (!result.ok || !value.ok) throw new Error(value.message);
+              if (location.pathname === project.url) location.assign("/"); else refresh();
+            } catch (error) {status.textContent = error.message; close.disabled = false;}
+          }); controls.appendChild(close);
+        }
+        projects.appendChild(item);
+      }); content.appendChild(projects);
+    } catch (error) {if (serial === revision && modal.open) status.textContent = error.message;}
+  }
+  open.addEventListener("click", function() {modal.showModal(); refresh();});
+  document.getElementById("runtime-refresh").addEventListener("click", refresh);
+  modal.addEventListener("close", function() {revision++;});
+})();

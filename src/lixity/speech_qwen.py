@@ -42,6 +42,26 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+def worker_health(target: str, *, opener: Any = None) -> dict[str, Any]:
+    """Probe the actual allowlisted model worker, never merely an open tunnel."""
+    if target not in TARGET_ENDPOINTS:
+        raise ValueError("Unknown Qwen execution target")
+    request = urllib.request.Request(TARGET_ENDPOINTS[target].replace("/v1/audio/speech", "/health"))  # noqa: S310 - fixed loopback allowlist
+    client = opener or urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
+    try:
+        with client.open(request, timeout=1.5) as response:
+            raw = response.read(4097)
+        if len(raw) > 4096:
+            raise ValueError("Oversized health response")
+        value = json.loads(raw)
+        if not isinstance(value, dict) or value.get("model") != QWEN_MODEL or type(value.get("ready")) is not bool:
+            raise ValueError("Unexpected worker identity")
+        state = "ready" if value["ready"] else "starting"
+    except (OSError, ValueError, urllib.error.URLError):
+        state = "unavailable"
+    return {"target": target, "state": state, "transport": "loopback" if target == "local" else "ssh"}
+
+
 def synthesize_qwen(text: str, profile: AudioProfile, *, target: str = "local", opener: Any = None) -> bytes:
     """Request bounded PCM WAV through a fixed loopback target, without fallback."""
     from .speech import MAX_SEGMENT_CHARS, _read_pcm

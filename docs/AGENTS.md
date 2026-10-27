@@ -915,6 +915,23 @@ locks. Local metadata can change after an observation.
 
 When running `lixity serve --port 8765`, local agents can trigger deterministic workspace actions over HTTP:
 
+**Current main, unreleased:** `GET /` redirects to a retained `/w/<id>/` view.
+Successful project-open/create/load responses add `workspace_url`; follow that
+URL instead of assuming the root selection changed. Each view exposes its
+`data-api` prefix and `GET <prefix>` advertises `api_base`; append action names
+to that prefix. Existing canonical `/api` requests address the startup view.
+All existing project/source/settings tokens remain required; a token from one
+project cannot authorize a request in another view. View IDs are process-lifetime
+identifiers, not authentication credentials. Expired scopes return 410.
+
+`GET <prefix>/runtime` uses `lixity-runtime-local/1` with `app`, `workspaces` and
+`audio` (`targets`, content-free `jobs`). Same-origin/host guards apply. Target
+health checks are bounded, use fixed loopback endpoints, ignore proxies, disallow
+redirects and verify the expected model identity. Failed model health never
+claims tunnel or GPU readiness. `POST <prefix>/workspace-close` accepts only
+`id`; it forgets an idle non-startup view without changing project files.
+
+
 **Current-main analysis review endpoints:** `GET /api/analysis-review?project_token=...`
 reads the selected displayed analysis's review state. `POST /api/analysis-review`
 accepts only `project_token`, `observation_id`, `status`,
@@ -1543,7 +1560,7 @@ fields are rejected. Preview uses the first bounded supported prose segment; its
 context reports the excerpt and whether more prose follows.
 
 Rendering returns HTTP 202 with `job` (`id`, `state`, `done`, `total`, `message`,
-`context`). `GET /api/speech-job` polls it with the same context and `id`. States
+`context`, plus optional `queue_position`). `GET /api/speech-job` polls it with the same context and `id`. States
 are `pending|running|ready|cancelled|stale|error`; model segment cancellation may
 remain running until that call returns. `POST /api/speech-cancel` takes the same
 context and job ID. `GET /api/speech-audio` downloads only ready, still-current

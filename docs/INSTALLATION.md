@@ -80,6 +80,12 @@ it does not certify linguistic accuracy or source truth.
 
 ## First useful result
 
+**Current main, unreleased:** use one regular app address. Opening a project
+creates an independent view under that same address; existing tabs keep their
+project. **App and audio** lists open views and verifies each actual audio worker.
+A view URL is valid only while this server runs; after restart, reopen the project
+from the app home. Custom ports remain available for explicit development instances.
+
 The app opens `http://127.0.0.1:8765/` with an empty workspace; it does not
 search your terminal's current folder. Choose **Open Project** for an existing
 folder or **Analyze a manuscript** to preview a copy into a new project.

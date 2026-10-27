@@ -19,6 +19,15 @@ def render_project_modals(
         return esc(label(labels, key))
 
     parts: list[str] = []
+    parts.append('<dialog class="lixity-modal" id="modal-runtime" closedby="any" aria-labelledby="runtime-title">'
+                 '<div class="modal-card"><div class="modal-header">'
+                 f'<h3 id="runtime-title">{L("runtime_title")}</h3>'
+                 f'<button type="button" class="modal-close" data-close-modal aria-label="{L("modal_close")}">✕</button></div>'
+                 '<div class="modal-body"><p id="runtime-status" role="status" aria-live="polite"></p>'
+                 '<div id="runtime-content"></div>'
+                 f'<p class="ctl-note">{L("runtime_scope_note")}</p></div><div class="modal-footer">'
+                 f'<button type="button" class="ctl" id="runtime-refresh">{L("runtime_refresh")}</button>'
+                 '</div></div></dialog>')
 
     parts.append('<dialog class="lixity-modal" id="modal-site-export" data-requires-write closedby="any" aria-labelledby="site-export-title">')
     parts.append('<div class="modal-card"><div class="modal-header">')

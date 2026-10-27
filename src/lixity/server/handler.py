@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import stat
+from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Any, ClassVar
@@ -16,6 +17,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from ..project_structure import MAX_CONFIG_BYTES, project_artifact_path
 from ..research import api as research_api
+from ..speech_qwen import worker_health
 from ..workspace_labels import WORKSPACE_LABELS
 from ._state import RefreshOutcome
 from .constants import (
@@ -55,6 +57,7 @@ class LixityServerHandler(
     GET_ROUTES: ClassVar[dict[str, str]] = {
         "/api": "_handle_api_index",
         "/api/": "_handle_api_index",
+        "/api/runtime": "_handle_runtime",
         "/api/speech": "_handle_speech",
         "/api/speech-job": "_handle_speech_job",
         "/api/speech-audio": "_handle_speech_audio",
@@ -85,6 +88,7 @@ class LixityServerHandler(
 
     #: POST actions under /api/ : exact action -> handler method name.
     POST_ROUTES: ClassVar[dict[str, str]] = {
+        "workspace-close": "_handle_workspace_close",
         "speech-render": "_handle_speech_render",
         "speech-cancel": "_handle_speech_cancel",
         "nda-draft": "_handle_nda_draft",
@@ -144,6 +148,9 @@ class LixityServerHandler(
             self._reject_untrusted_host()
             return
 
+        registry = getattr(self.server, "workspaces", None)
+        if registry is not None and not getattr(self, "_workspace_dispatched", False) and registry.dispatch(self, "GET"):
+            return
         path = self.path.split("?", 1)[0]
         if path in ("/", "/index.html"):
             with self._workspace_lock:
@@ -178,13 +185,42 @@ class LixityServerHandler(
 
         self._json({"ok": False, "message": "Not found"}, 404)
 
+    def _handle_workspace_close(self, payload: dict[str, Any]) -> None:
+        registry = getattr(self.server, "workspaces", None)
+        if registry is None or set(payload) != {"id"} or not isinstance(payload["id"], str):
+            self._json({"ok": False, "message": "Choose an open workspace"}, 400)
+            return
+        if any(job["state"] in ("pending", "running") for job in self._speech_manager().overview()):
+            self._json({"ok": False, "message": "Wait for audio jobs before closing workspaces"}, 409)
+            return
+        try:
+            registry.close(payload["id"])
+        except ValueError as exc:
+            self._json({"ok": False, "message": str(exc)}, 409)
+            return
+        self._json({"ok": True})
+
+    def _handle_runtime(self) -> None:
+        """Observe the app and actual audio workers without exposing manuscript bindings."""
+        if not self._same_origin():
+            self._json({"ok": False, "message": "Cross-origin request forbidden"}, 403)
+            return
+        registry = getattr(self.server, "workspaces", None)
+        manager = self._speech_manager()
+        manager.cancel_stale()
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            targets = list(pool.map(worker_health, ("local", "jetson")))
+        self._json({"ok": True, "schema_version": "lixity-runtime-local/1",
+                    "app": {"state": "ready"}, "workspaces": registry.items() if registry else [],
+                    "audio": {"targets": targets, "jobs": manager.overview()}})
+
     def _handle_api_index(self) -> None:
         root = self.get_research_root()
-        self._json(api_index(self.GET_ROUTES, self.POST_ROUTES,
+        self._json({**api_index(self.GET_ROUTES, self.POST_ROUTES,
                              manuscript_loaded=self.source_input is not None,
                              research_configured=root is not None,
                              research_store_present=bool(root and (root / "research").is_dir()),
-                             language=self.language))
+                             language=self.language), "api_base": self.api_base})
 
     def _handle_research_ocr_status(self) -> None:
         probe = parse_qs(urlparse(self.path).query).get("probe", ["0"])[0] in ("1", "true")
@@ -278,6 +314,13 @@ class LixityServerHandler(
         self._send(200, content, ctype)
 
     def do_POST(self) -> None:
+        registry = getattr(self.server, "workspaces", None)
+        if registry is not None and not getattr(self, "_workspace_dispatched", False):
+            if not self._trusted_host() or not self._same_origin():
+                self._json({"ok": False, "message": "Untrusted request"}, 403)
+                return
+            if registry.dispatch(self, "POST"):
+                return
         path = self.path.split("?", 1)[0]
         if not path.startswith("/api/"):
             self._json({"ok": False, "message": "Not found"}, 404)

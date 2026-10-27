@@ -32,6 +32,88 @@ const syntheticContent = '## Synthetic chapter\r\n\r\nThe rain stopped.\r\nA caf
 const hostileFilename = 'chapter-<img onerror=alert(1)>.markdown';
 const readStateOnly = process.argv.includes('--read-state-only');
 
+async function checkProjectNavigationOrder(browser) {
+  const page = await browser.newPage();
+  const first = '/w/' + 'a'.repeat(32) + '/', latest = '/w/' + 'b'.repeat(32) + '/';
+  const arrivals = [];
+  page.on('request', request => {if (request.isNavigationRequest() && new URL(request.url()).pathname.startsWith('/w/')) arrivals.push(new URL(request.url()).pathname);});
+  try {
+    await page.route('http://localhost/**', async route => {
+      if (route.request().method() === 'POST') {
+        const value = route.request().postDataJSON();
+        if (value.path === 'latest') await new Promise(resolve => setTimeout(resolve, 100));
+        return route.fulfill({json:{ok:true,reload:true,workspace_url:value.path === 'latest' ? latest : first}});
+      }
+      return route.fulfill({contentType:'text/html',body:fixtures.en.html});
+    });
+    await page.goto('http://localhost/');
+    await page.evaluate(async () => {await Promise.all([
+      runAction('project-open', {path:'first'}), runAction('project-open', {path:'latest'})
+    ]);});
+    await page.waitForURL(url => url.pathname === latest, {timeout:5000});
+    assert.equal(new URL(page.url()).pathname, latest, 'Only the latest explicit project selection may navigate');
+    assert.deepEqual(arrivals, [latest], 'An older selection must not trigger an intermediate navigation');
+  } finally {await page.close();}
+}
+
+async function checkNativeWorkspaceTabs(browser) {
+  const {startNativeServer} = require('./support/native-server.cjs');
+  const directory = fs.mkdtempSync('/tmp/lixity-workspace-tabs-');
+  const source = String.raw`
+import json, sys
+from pathlib import Path
+from threading import RLock
+from lixity.server import LixityServerHandler
+from lixity.server.runtime import _LoopbackHTTPServer
+from lixity.server.workspaces import WorkspaceRegistry
+import lixity.server.handler as module
+root = Path(sys.argv[1])
+paths = []
+for name, language in [('First', 'en'), ('Second', 'de')]:
+    project = root / name
+    project.mkdir()
+    (project / 'lixity.toml').write_text(f'title = "{name}"\nlanguage = "{language}"\n')
+    source = project / 'manuscript.md'
+    source.write_text(f'## {name} chapter\n\nA synthetic bird watches the {name.lower()} courtyard.\n')
+    paths.append(str(source))
+Handler = type('SyntheticApp', (LixityServerHandler,), {'_workspace_lock': RLock(),
+    'workspace_root': str(root), 'exports_dir': str(root / 'exports'), 'source_input': None})
+Handler.refresh()
+server = _LoopbackHTTPServer(('127.0.0.1', 0), Handler)
+server.workspaces = WorkspaceRegistry(Handler)
+module.worker_health = lambda target: {'target': target, 'state': 'ready' if target == 'local' else 'unavailable', 'transport': 'loopback' if target == 'local' else 'ssh'}
+print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'paths': paths}), flush=True)
+server.serve_forever()
+`;
+  const server = await startNativeServer(source, directory);
+  try {
+    for (const width of [1440, 320]) {
+      const context = await browser.newContext({viewport:{width,height:900},hasTouch:width===320,reducedMotion:'reduce'});
+      try {
+        const first = await context.newPage(); await first.goto(server.fixture.url);
+        const opened = await first.request.post(server.fixture.url + '/api/project-open', {data:{path:server.fixture.paths[0]}});
+        const firstUrl = (await opened.json()).workspace_url;
+        await first.goto(server.fixture.url + firstUrl);
+        const sourceText = await first.locator('#chapters').textContent();
+        const second = await context.newPage(); await second.goto(server.fixture.url + firstUrl);
+        await openProjectActions(second); await second.locator('#btn-modal-open-project').click();
+        await second.locator('#open-proj-path').fill(server.fixture.paths[1]);
+        await second.locator('#form-project-open button[type=submit]').click();
+        await second.waitForURL(url => url.pathname !== firstUrl && /^\/w\/[a-f0-9]{32}\/$/.test(url.pathname));
+        assert.equal(await first.locator('#chapters').textContent(), sourceText, 'Opening another project cannot replace an existing tab');
+        await first.reload(); assert.equal(await first.locator('#chapters').textContent(), sourceText);
+        await second.locator('#runtime-open').click();
+        await second.waitForFunction(() => document.querySelector('#runtime-content a'));
+        assert.ok(await second.locator('#runtime-content').textContent().then(text => text.includes('First') && text.includes('Second')));
+        assert.equal(await second.locator('#modal-runtime').evaluate(modal => modal.scrollWidth <= modal.clientWidth), true);
+        await second.locator('#modal-runtime').screenshot({path:path.join(screenshotDir, `runtime-${width}.png`)});
+        await second.keyboard.press('Escape');
+        assert.equal(await second.locator('#runtime-open').evaluate(button => button === document.activeElement), true);
+      } finally {await context.close();}
+    }
+  } finally {await server.close();}
+}
+
 // Synthetic drag data exercises the real DOM listeners; all HTTP stays intercepted.
 async function openImportDialog(page) {
   if (!(await page.locator('#import-dropzone').isVisible())) {
@@ -409,5 +491,6 @@ async function restoreFileReads(page) {
     console.log(readStateOnly
       ? 'Project controls: pending reads/imports, latest-selection protection, read-error recovery and modal file-picker keyboard access passed'
       : `Project controls: explicit selection/drop/load, keyboard access, pending reads/imports, retry, NDA capability gating and seven mobile locales passed; screenshots: ${screenshotDir}`);
+    if (!readStateOnly) {await checkProjectNavigationOrder(browser); await checkNativeWorkspaceTabs(browser);}
   } finally { await browser.close(); }
 })().catch(error => {console.error(error); process.exitCode = 1;});

@@ -18,6 +18,7 @@ from .speech_profiles import AudioProfile
 
 MAX_AUDIO_BYTES = 200 * 1024 * 1024
 MAX_RETAINED_JOBS = 4
+MAX_PENDING_JOBS = 3
 JOB_TTL_SECONDS = 1800
 
 
@@ -93,20 +94,24 @@ class _Job:
 
 
 class SpeechJobs:
-    """One active render per server; completed temporary files expire on access."""
+    """One bounded FIFO per app; projects share a single active renderer."""
 
     def __init__(self, *, renderer: Callable[..., Any] | None = None) -> None:
         self._render = renderer or render_speech_audio
         self._lock = threading.RLock()
         self._jobs: dict[str, _Job] = {}
+        self._condition = threading.Condition(self._lock)
+        self._pending: list[str] = []
+        self._active: str | None = None
         self._closed = False
 
     def _prune(self) -> None:
         completed = [job for job in self._jobs.values() if job.state not in ("pending", "running")]
-        for job in completed:
+        excess = max(0, len(completed) - MAX_RETAINED_JOBS)
+        for index, job in enumerate(completed):
             if (
                 job.finished is not None and time.monotonic() - job.finished > JOB_TTL_SECONDS
-            ) or len(self._jobs) >= MAX_RETAINED_JOBS:
+            ) or index < excess:
                 self._jobs.pop(job.identifier)
                 job.storage.cleanup()
 
@@ -127,15 +132,11 @@ class SpeechJobs:
         with self._lock:
             if self._closed:
                 raise RuntimeError("Speech service is closed")
-            if any(job.state in ("pending", "running") for job in self._jobs.values()):
-                if any(
-                    job.cancel.is_set() and job.state in ("pending", "running")
-                    for job in self._jobs.values()
-                ):
-                    raise RuntimeError(
-                        "A cancelled speech segment is still finishing; wait before starting another"
-                    )
-                raise RuntimeError("A speech job is already active; cancel it or wait")
+            active = [job for job in self._jobs.values() if job.state in ("pending", "running")]
+            if any(job.context_key == context_key for job in active):
+                raise RuntimeError("A speech job is already active for this project; cancel it or wait")
+            if len(active) >= MAX_PENDING_JOBS + 1:
+                raise RuntimeError("The audio queue is full; wait before submitting another job")
             self._prune()
             storage = tempfile.TemporaryDirectory(prefix="lixity-speech-job-")
             job = _Job(token_hex(16), context_key, dict(context), storage, valid, cache_dir, fresh_audio, target)
@@ -147,6 +148,7 @@ class SpeechJobs:
                 self._jobs.pop(job.identifier)
                 storage.cleanup()
                 raise
+            self._pending.append(job.identifier)
             threading.Thread(target=self._run, args=(job, source, profile), daemon=True).start()
             return self._report(job)
 
@@ -158,7 +160,13 @@ class SpeechJobs:
                 job.done, job.total = done, total
 
         try:
-            with self._lock:
+            with self._condition:
+                self._condition.wait_for(lambda: job.cancel.is_set() or self._closed or
+                                         (self._active is None and self._pending[0] == job.identifier))
+                if job.cancel.is_set() or self._closed:
+                    raise SpeechCancelled()
+                self._pending.remove(job.identifier)
+                self._active = job.identifier
                 job.state = "running"
             if not job.valid():
                 with self._lock:
@@ -185,8 +193,18 @@ class SpeechJobs:
                 job.state = "cancelled" if job.cancel.is_set() else "error"
                 job.message = str(exc)[:500]
         finally:
-            source.unlink(missing_ok=True)
+            try:
+                source.unlink(missing_ok=True)
+            except OSError:
+                with self._lock:
+                    job.state = "error"
+                    job.message = "Could not remove the temporary speech source"
             with self._lock:
+                if job.identifier in self._pending:
+                    self._pending.remove(job.identifier)
+                if self._active == job.identifier:
+                    self._active = None
+                self._condition.notify_all()
                 job.finished = time.monotonic()
                 if job.state != "ready" or self._closed:
                     job.storage.cleanup()
@@ -198,10 +216,10 @@ class SpeechJobs:
             raise ValueError("Speech job is unavailable in the selected context")
         return job
 
-    @staticmethod
-    def _report(job: _Job) -> dict[str, Any]:
+    def _report(self, job: _Job) -> dict[str, Any]:
         return {
             "id": job.identifier,
+            "queue_position": self._pending.index(job.identifier) + 1 if job.identifier in self._pending else 0,
             "state": job.state,
             "done": job.done,
             "total": job.total,
@@ -217,6 +235,7 @@ class SpeechJobs:
         with self._lock:
             job = self._find(identifier, context_key)
             job.cancel.set()
+            self._condition.notify_all()
             if job.state == "ready":
                 job.state = "cancelled"
                 job.storage.cleanup()
@@ -229,6 +248,7 @@ class SpeechJobs:
             if not job.valid():
                 with self._lock:
                     job.cancel.set()
+                    self._condition.notify_all()
                     if job.state not in ("pending", "running"):
                         job.state = "stale"
                         job.storage.cleanup()
@@ -248,7 +268,17 @@ class SpeechJobs:
     def close(self) -> None:
         with self._lock:
             self._closed = True
+            self._condition.notify_all()
             for job in self._jobs.values():
                 job.cancel.set()
                 if job.state not in ("pending", "running"):
                     job.storage.cleanup()
+
+    def overview(self) -> list[dict[str, Any]]:
+        """Content-free operational observations, never manuscript/job bindings."""
+        with self._lock:
+            self._prune()
+            return [{"state": job.state, "target": job.target,
+                     "done": job.done, "total": job.total,
+                     "queue_position": self._report(job)["queue_position"]}
+                    for job in self._jobs.values()]

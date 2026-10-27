@@ -91,7 +91,7 @@
     var name = artifact.name;
     if (artifact.downloadable && name && name !== "." && name !== ".." && !/[\\/\u0000-\u001f\u007f]/.test(name) && artifact.path === "exports/" + name) {
       var link = node("a", "ctl", text("project_structure_open_output"));
-      link.href = "/artifact/" + encodeURIComponent(name) + "?project_token=" + encodeURIComponent(token);
+      link.href = API.replace(/\/api$/, "") + "/artifact/" + encodeURIComponent(name) + "?project_token=" + encodeURIComponent(token);
       link.target = "_blank"; link.rel = "noopener";
       row.append(link);
     }

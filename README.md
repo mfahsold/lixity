@@ -34,6 +34,11 @@ Manuscript input is Markdown or plain text; Word/DOCX and Scrivener need convers
 | How can an editorial observation be explained? | Keep the manuscript in view while moving between the measurement explanation and linked research; prepare an editorial PDF or a fixed review copy for the discussion. |
 | What belongs in a reader's copy? | Choose a manuscript with selected companion notes, a standalone companion, a review workspace or a PDF, and check what the copy includes. |
 
+**Current main, unreleased:** one local app address now retains independent
+project views in multiple tabs. **App and audio** shows open views, actual
+local/Jetson model readiness and a shared bounded audio queue. View URLs expire
+when the app restarts; reopen projects from the app home.
+
 **Current main, unreleased:** tense review cards show the original counted forms
 and their exact manuscript locations before optional counts and heuristic help.
 These cues explain a mark; they do not establish an author error.

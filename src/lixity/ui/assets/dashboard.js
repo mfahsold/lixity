@@ -1107,7 +1107,9 @@ if (fdrFilter) {
     document.getElementById("heatmap-empty").hidden = visible > 0;
   });
 }
+var projectSelectionRevision = 0;
 async function runAction(action, payload, button, canReload, acceptResponse) {
+  var selectionRevision = ["project-open", "project-create", "load"].includes(action) ? ++projectSelectionRevision : null;
   var status = document.getElementById("ctl-status");
   if (status) {
     status.className = "ctl-status";
@@ -1131,7 +1133,12 @@ async function runAction(action, payload, button, canReload, acceptResponse) {
       status.textContent = (data.ok ? "✓ " : "✗ ") + (data.message || "");
     }
     if (data.ok && data.reload) {
-      setTimeout(function () { if (!canReload || canReload()) location.reload(); }, 1200);
+      setTimeout(function () { if (!canReload || canReload()) {
+        if (typeof data.workspace_url === "string" && /^\/w\/[a-f0-9]{32}\/$/.test(data.workspace_url)) {
+          if (selectionRevision === projectSelectionRevision) location.assign(data.workspace_url);
+        }
+        else location.reload();
+      } }, 1200);
     }
     return data;
   } catch (err) {

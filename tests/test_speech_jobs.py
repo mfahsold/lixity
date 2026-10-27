@@ -188,3 +188,101 @@ def test_job_dispatch_keeps_execution_target_outside_portable_profile(target):
         assert profile.model_dump() == original and "target" not in original
     finally:
         jobs.close()
+
+
+def test_different_project_jobs_queue_without_overlapping_and_pending_cancel_never_renders():
+    entered = threading.Event()
+    release = threading.Event()
+    rendered = []
+
+    def render(source, output, **kwargs):
+        rendered.append(Path(source).read_text())
+        entered.set()
+        release.wait(2)
+        Path(output).write_bytes(generate_silence_wav(0.01))
+
+    jobs = SpeechJobs(renderer=render)
+    try:
+        first = jobs.start('context', 'First project.', AudioProfile(), {}, lambda: True)
+        assert entered.wait(1)
+        second = jobs.start('other', 'Second project.', AudioProfile(), {}, lambda: True)
+        assert jobs.status(second['id'], 'other')['queue_position'] == 1
+        third = jobs.start('third', 'Cancelled project.', AudioProfile(), {}, lambda: True)
+        jobs.cancel(third['id'], 'third')
+        assert rendered == ['First project.']
+        release.set()
+        assert wait_for(jobs, first['id'])['state'] == 'ready'
+        for _ in range(200):
+            if jobs.status(second['id'], 'other')['state'] == 'ready':
+                break
+            time.sleep(0.005)
+        assert rendered == ['First project.', 'Second project.']
+        assert jobs.status(third['id'], 'third')['state'] == 'cancelled'
+    finally:
+        release.set()
+        jobs.close()
+
+
+def test_queue_is_bounded_and_stale_pending_sources_never_reach_renderer():
+    from lixity.speech_jobs import MAX_PENDING_JOBS
+
+    entered, release = threading.Event(), threading.Event()
+    valid = [True]
+    rendered = []
+    def render(source, output, **kwargs):
+        rendered.append(Path(source).read_text())
+        entered.set()
+        release.wait(2)
+        Path(output).write_bytes(generate_silence_wav(0.01))
+    jobs = SpeechJobs(renderer=render)
+    try:
+        first = jobs.start('context', 'First', AudioProfile(), {}, lambda: True)
+        assert entered.wait(1)
+        pending = jobs.start('stale', 'Stale', AudioProfile(), {}, lambda: valid[0])
+        for index in range(MAX_PENDING_JOBS - 1):
+            jobs.start(str(index), 'Other', AudioProfile(), {}, lambda: True)
+        with pytest.raises(RuntimeError, match='queue is full'):
+            jobs.start('overflow', 'Never stored', AudioProfile(), {}, lambda: True)
+        valid[0] = False
+        jobs.cancel_stale()
+        release.set()
+        assert wait_for(jobs, first['id'])['state'] == 'ready'
+        for _ in range(200):
+            if jobs.status(pending['id'], 'stale')['state'] == 'cancelled':
+                break
+            time.sleep(0.005)
+        assert 'Stale' not in rendered and 'Never stored' not in rendered
+    finally:
+        release.set()
+        jobs.close()
+
+
+def test_source_cleanup_failure_does_not_block_the_queue(monkeypatch):
+    entered, release = threading.Event(), threading.Event()
+    unlink = Path.unlink
+    failed = []
+    def failing_unlink(path, *args, **kwargs):
+        if path.name == 'source.md' and not failed:
+            failed.append(True)
+            raise PermissionError('Synthetic cleanup failure')
+        return unlink(path, *args, **kwargs)
+    monkeypatch.setattr(Path, 'unlink', failing_unlink)
+    def render(source, output, **kwargs):
+        entered.set()
+        release.wait(2)
+        Path(output).write_bytes(generate_silence_wav(0.01))
+    jobs = SpeechJobs(renderer=render)
+    try:
+        first = jobs.start('context', 'First', AudioProfile(), {}, lambda: True)
+        assert entered.wait(1)
+        second = jobs.start('second', 'Second', AudioProfile(), {}, lambda: True)
+        release.set()
+        for _ in range(200):
+            if jobs.status(second['id'], 'second')['state'] == 'ready':
+                break
+            time.sleep(0.005)
+        assert jobs.status(second['id'], 'second')['state'] == 'ready'
+        assert jobs.status(first['id'], 'context')['state'] == 'error'
+    finally:
+        release.set()
+        jobs.close()

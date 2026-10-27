@@ -1406,6 +1406,25 @@ Successful encoding or an ASR transcript does not establish narration quality.
 
 ### `lixity service`
 
+**Current main, unreleased:** one regular app instance supports independent
+project views in multiple tabs. Project selection returns a scoped view URL
+under the same origin instead of replacing every tab's selection. Use **App and
+audio** to revisit open views, close an idle view or refresh worker/queue status.
+The startup view stays available. At most 16 views are retained; their URLs
+expire on server restart and return HTTP 410 instead of selecting another project.
+Reopen the project from the home address after restarting. Additional ports are
+for explicitly separate development instances, not ordinary project selection.
+Launch overrides belong to the startup view; newly opened projects use their
+own configuration instead of inheriting another book's analysis language or thresholds.
+
+Audio jobs share one FIFO in that app: one render plus at most three waiting
+jobs from other contexts. The dialog reports a waiting position. Cancellation
+and stale-source checks apply before queued work starts; completed outputs retain
+their own bounded retention window. **Ready** for a target means its expected
+model answered the health probe, not merely that the tunnel port accepted TCP.
+The existing external worker and SSH-forward lifecycle remains separate; status
+does not install models, start a tunnel or establish that GPU acceleration works.
+
 Start the installed workspace without keeping a terminal open:
 
 ```sh

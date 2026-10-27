@@ -211,7 +211,7 @@ class ProjectRoutesMixin(ResponseMixin):
                 warnings.filterwarnings("error", category=UserWarning, module=r"lixity\.config")
                 html, info = build_server_dashboard(
                     self.source_input, language=lang, title=title, thresholds=thresholds,
-                    controls=True, api_base="/api", exports_dir=self.exports_dir, debug=self.debug,
+                    controls=True, api_base=self.api_base, exports_dir=self.exports_dir, debug=self.debug,
                     project_root=root, research_root=self.get_research_root(),
                     identity_settings_override=changes,
                     project_config_bytes=prepared.content if prepared else None,
@@ -444,7 +444,7 @@ class ProjectRoutesMixin(ResponseMixin):
                 title=title,
                 thresholds=thresholds,
                 controls=True,
-                api_base="/api",
+                api_base=self.api_base,
                 exports_dir=exports_dir,
                 project_root=ws_root,
                 research_root=ws_root,

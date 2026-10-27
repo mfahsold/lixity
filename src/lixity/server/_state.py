@@ -60,7 +60,12 @@ class WorkspaceState:
         def end_headers(self) -> None: ...
         def address_string(self) -> str: ...
 
+    _workspace_dispatched: bool = False
+    _workspace_selection: bool = False
+    _workspace_selection_ok: bool = False
+
     _workspace_lock: ClassVar[RLock] = RLock()
+    api_base: ClassVar[str] = "/api"
     source_input: ClassVar[str | None] = None
     workspace_root: ClassVar[str] = os.getcwd()
     exports_dir: ClassVar[str] = os.path.join(workspace_root, "exports")
@@ -127,7 +132,7 @@ class WorkspaceState:
                         title=cls.title,
                         thresholds=cls.thresholds,
                         controls=True,
-                        api_base="/api",
+                        api_base=cls.api_base,
                         exports_dir=cls.exports_dir,
                         debug=cls.debug,
                         project_root=cls.get_author_project_root(),

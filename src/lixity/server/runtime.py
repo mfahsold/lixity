@@ -15,10 +15,13 @@ from ..style_fingerprint import FingerprintThresholds
 from ..workspace import resolve_project_target
 from .constants import DEFAULT_HOST, DEFAULT_PORT
 from .handler import LixityServerHandler
+from .workspaces import WorkspaceRegistry
 
 
 class _LoopbackHTTPServer(ThreadingHTTPServer):
     """Bind the validated local address without an unnecessary reverse-DNS lookup."""
+
+    workspaces: WorkspaceRegistry
 
     def server_close(self) -> None:
         manager = getattr(self, "speech_jobs", None)
@@ -97,7 +100,9 @@ def run_server(
     LixityServerHandler.thresholds = thresholds or FingerprintThresholds()
     LixityServerHandler.refresh()
 
+    workspaces = WorkspaceRegistry(LixityServerHandler)
     server = _LoopbackHTTPServer((host, port), LixityServerHandler)
+    server.workspaces = workspaces
     url = f"http://{host}:{port}/"
     info = LixityServerHandler.dashboard_info
     debug_tag = " (debug mode active)" if is_debug else ""

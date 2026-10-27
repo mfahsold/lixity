@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import threading
 import warnings
 from pathlib import Path
 from typing import Any
@@ -29,17 +30,17 @@ class _SpeechStale(ValueError):
 
 
 class SpeechRoutesMixin(ResponseMixin):
+    _speech_manager_lock = threading.Lock()
+
     def _speech_manager(self) -> SpeechJobs:
-        manager = getattr(self.server, "speech_jobs", None)
-        if not isinstance(manager, SpeechJobs):
-            manager = SpeechJobs()
-            self.server.speech_jobs = manager
-        return manager
+        with self._speech_manager_lock:
+            manager = getattr(self.server, "speech_jobs", None)
+            if not isinstance(manager, SpeechJobs):
+                manager = SpeechJobs()
+                self.server.speech_jobs = manager
+            return manager
 
     def _speech_bound(self, supplied: dict[str, Any]) -> tuple[str, str, dict[str, Any], str]:
-        manager = getattr(self.server, "speech_jobs", None)
-        if isinstance(manager, SpeechJobs):
-            manager.cancel_stale()
         root, source = self.get_author_project_root(), self.source_input
         if not root or not source:
             raise ValueError("Open a manuscript project before using audio")
@@ -54,7 +55,7 @@ class SpeechRoutesMixin(ResponseMixin):
             warnings.simplefilter("error", UserWarning)
             settings = load_project_config(root)
         key = hashlib.sha256(
-            (expected + digest + self.language + str(self._speech_generation)).encode()
+            (self.api_base + expected + digest + self.language + str(self._speech_generation)).encode()
         ).hexdigest()
         return text, digest, settings, key
 
@@ -80,6 +81,7 @@ class SpeechRoutesMixin(ResponseMixin):
     def _handle_speech(self, _query: Any = None) -> None:
         try:
             query = self._speech_query()
+            self._speech_manager().cancel_stale()
             with self._workspace_lock:
                 text, digest, config, _key = self._speech_bound(query)
                 settings = None
@@ -148,6 +150,7 @@ class SpeechRoutesMixin(ResponseMixin):
                 raise ValueError("Fresh audio must be a boolean")
             if "profile" in payload and "profile_id" in payload:
                 raise ValueError("Choose a draft profile or a saved profile, not both")
+            self._speech_manager().cancel_stale()
             with self._workspace_lock:
                 text, _digest, settings, key = self._speech_bound(payload)
                 profile = (
@@ -173,10 +176,13 @@ class SpeechRoutesMixin(ResponseMixin):
                 )
                 binding = {name: payload[name] for name in ("project_token", "source_sha256")}
                 handler = type(self)
+                registry = getattr(self.server, "workspaces", None)
                 generation = handler._speech_generation
 
                 def valid() -> bool:
                     try:
+                        if registry is not None and not registry.contains(handler):
+                            return False
                         with handler._workspace_lock:
                             if handler._speech_generation != generation:
                                 return False
@@ -198,16 +204,17 @@ class SpeechRoutesMixin(ResponseMixin):
                 root = self.get_author_project_root()
                 cache_dir = (project_audio_cache(root) if root is not None and
                              profile.engine == "qwen3" and payload["mode"] == "chapter" else None)
-                job = self._speech_manager().start(key, prepared, profile, context, valid, cache_dir=cache_dir,
-                                                   fresh_audio=payload.get("fresh_audio", False),
-                                                   target=payload.get("target", "local"))
-                self._json({"ok": True, "job": job}, 202)
+            job = self._speech_manager().start(key, prepared, profile, context, valid, cache_dir=cache_dir,
+                                               fresh_audio=payload.get("fresh_audio", False),
+                                               target=payload.get("target", "local"))
+            self._json({"ok": True, "job": job}, 202)
         except (OSError, TypeError, ValueError, RuntimeError, UserWarning) as exc:
             self._speech_error(exc)
 
     def _handle_speech_job(self, _query: Any = None) -> None:
         try:
             query = self._speech_query(job=True)
+            self._speech_manager().cancel_stale()
             with self._workspace_lock:
                 _text, _digest, _settings, key = self._speech_bound(query)
                 self._json({"ok": True, "job": self._speech_manager().status(query["id"], key)})
@@ -220,6 +227,7 @@ class SpeechRoutesMixin(ResponseMixin):
                 payload["id"], str
             ):
                 raise ValueError("Supply one selected speech job ID")
+            self._speech_manager().cancel_stale()
             with self._workspace_lock:
                 _text, _digest, _settings, key = self._speech_bound(payload)
                 self._json({"ok": True, "job": self._speech_manager().cancel(payload["id"], key)})
@@ -229,6 +237,7 @@ class SpeechRoutesMixin(ResponseMixin):
     def _handle_speech_audio(self, _query: Any = None) -> None:
         try:
             query = self._speech_query(job=True)
+            self._speech_manager().cancel_stale()
             with self._workspace_lock:
                 _text, _digest, _settings, key = self._speech_bound(query)
                 data = self._speech_manager().audio(query["id"], key)
