@@ -55,7 +55,7 @@ capture variant.
 
 All product captures use [The Crate at Warehouse 4](../demo/report.html), the
 six-chapter synthetic manuscript owned by `samples/first-look.md`. They were
-captured from current development on 24 October 2026; installed releases can
+captured from current development on 27 October 2026; installed releases can
 show an earlier interface. A Fontane or Austen article must identify these as
 interface illustrations, not measurements of that literary work.
 
