@@ -180,7 +180,8 @@ The development audio workflow shares saved project voice profiles between
 `lixity read-aloud` and the native preview/export dialog. Piper supports local CPU
 listening copies; optional Qwen3-TTS adds preset voices and explicit style
 instructions through a local worker. CPU generation is supported and can be slow;
-audio remains a prototype requiring listening review. See the
+completed Qwen segments can be reused when retrying long renders. Audio remains
+a prototype requiring listening review. See the
 [read-aloud scope](https://mfahsold.github.io/lixity/USAGE.md#lixity-read-aloud)
 before relying on an export. NDA generation produces a draft, not consent or
 signatures. Dossier Markdown edits require explicit preview and apply.
@@ -2643,6 +2644,36 @@ lixity read-aloud --project ./novel --profile narrator -o reading-copy.wav
 lixity read-aloud --project ./novel --profile narrator --chapter 2 -o chapter-2.wav
 ```
 
+Long CPU renders can be retried without recomputing every completed segment.
+Qwen chapter jobs in the native UI and CLI renders retain verified segments in
+`$XDG_CACHE_HOME/lixity/speech/<project-hash>/` (default
+`~/.cache/lixity/speech/<project-hash>/`), bounded to 2 GiB per project.
+The manuscript folder need not be writable.
+Repeating the render reuses only requests with the same synthesis text, named
+model family, language, preset voice and delivery instructions. Changes to pauses
+are applied when assembling the output; they do not require new speech. Progress
+includes reused segments. The final WAV/MP3 still appears only after successful
+completion, so cancellation or failure preserves an existing output.
+
+The native **Reuse completed chapter segments** option is enabled by default;
+uncheck it for a fresh interpretation. CLI users can request the same explicitly:
+
+```bash
+lixity read-aloud --project ./novel --profile narrator --chapter 2 --fresh-audio -o chapter-2.wav
+```
+
+`--no-audio-cache` renders without reading or retaining segments.
+Previews are always fresh; Piper does not use this cache. The Python renderer
+opts in with `cache_dir=...`, and accepts `fresh_audio=True` to recompute while
+refreshing retained segments. Cache metadata stores request/audio hashes rather
+than raw manuscript text, but the WAV files contain spoken project content and
+must be treated as private. Missing, corrupt or evicted entries are recomputed.
+The cache is not a saved job ledger: after restarting the app, start a new chapter
+job to reuse its completed work. Temporary download expiration does not erase
+these retained segments. Remove the derived folder to discard it. After replacing
+local checkpoint files within the same named model family, request fresh audio
+or clear the cache; the key does not fingerprint model weight bytes.
+
 The selected saved profile is used when `--profile` is omitted. Explicit `--voice`,
 `--language`, `--speed` and `--instructions` override that invocation without
 rewriting the saved profile. Unsupported combinations fail before rendering.
@@ -2693,12 +2724,15 @@ downloads weights or sends manuscript text to an inference provider.
 Start the worker explicitly from that environment:
 
 ```bash
-python -m lixity.speech_qwen --model /path/to/CustomVoice --device cpu --threads 4
+python -m lixity.speech_qwen --model /path/to/CustomVoice --device cpu --threads 1
 ```
 
 It binds only to `127.0.0.1:8769`, loads the local model once and serializes
-synthesis. CPU operation is supported; generation can be much slower than the
-result's duration, so use a short preview to choose the voice. GPU operation is
+synthesis. CPU operation supports full chapters; generation can be much slower than the
+result's duration, so use a short preview to choose the voice. Match Torch threads
+to the CPU budget assigned to the worker. A heavily throttled four-thread worker
+can waste time contending within a one-core quota. Keep workstation CPU/memory
+headroom through the operating system rather than silently reducing model size. GPU operation is
 optional via `--device cuda`, with an explicit error when unavailable. The native
 UI starts a background job and reports completed segments without keeping the
 initial HTTP request open. Cancellation waits for an in-flight model segment to
@@ -8628,6 +8662,17 @@ after completion so a long CPU render cannot expire its own successful output.
 The dialog displays backend data and user choices; it neither assembles synthesis
 plans nor stores profile settings in browser storage.
 
+`speech_cache.py` provides bounded project-scoped reuse for Qwen segments in a private
+user cache outside manuscript folders, including read-only source projects. CLI
+renders and native chapter jobs opt into the same verified WAV/hash store;
+previews never reuse audio. Request keys contain synthesized text and delivery
+identity, while metadata retains only hashes and byte lengths. Each new segment
+is atomically stored after PCM validation; the final listening copy remains an
+independent atomic output. Source/context guards still govern downloads. Cache
+eviction or corruption causes recomputation, not publication of partial audio.
+The model identity is the named family, so local weight changes require a fresh
+render or cache removal. This derived cache does not persist native job state.
+
 ===============================================================================
 ## docs/AGENTS.md
 
@@ -10160,6 +10205,7 @@ All native speech reads require same-origin access and exactly one
 configuration error), backend capabilities and source chapter bounds.
 `POST /api/speech-render` accepts those context fields, `mode: preview|chapter`,
 a positive `chapter`, and either `profile_id` or a validated draft `profile`.
+Optional `fresh_audio` is a strict boolean: true bypasses reuse for that render.
 Preview may include the exact displayed `paragraph` identity (`start_line`,
 `end_line`, `paragraph_sha256`). Browser-provided text, paths and unknown request
 fields are rejected. Preview uses the first bounded supported prose segment; its
@@ -10180,6 +10226,15 @@ CustomVoice requests at `/v1/audio/speech`; the Lixity adapter checks model, voi
 format and response size and rejects redirects. No external provider endpoint or
 automatic backend fallback is supported. Heavy model dependencies and weights
 are separately installed machine resources. See the read-aloud usage for setup.
+
+Qwen chapter jobs retain verified derived PCM in a private project-keyed user
+cache (`$XDG_CACHE_HOME/lixity/speech/<project-hash>/`, default `~/.cache`,
+2 GiB per project), without requiring a writable source folder. The CLI uses the same implementation;
+`--fresh-audio` recomputes entries. Previews remain uncached. Restarting a chapter
+creates a new context-bound job and reuses matching segments; it does not revive
+an old job ID or stale download. Cache contents are private generated audio, not
+retained source evidence. The named model/profile/text key does not fingerprint
+local checkpoint bytes; clear or refresh the cache after changing those bytes.
 
 ===============================================================================
 ## docs/LICENSING.md

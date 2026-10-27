@@ -162,7 +162,8 @@ The development audio workflow shares saved project voice profiles between
 `lixity read-aloud` and the native preview/export dialog. Piper supports local CPU
 listening copies; optional Qwen3-TTS adds preset voices and explicit style
 instructions through a local worker. CPU generation is supported and can be slow;
-audio remains a prototype requiring listening review. See the
+completed Qwen segments can be reused when retrying long renders. Audio remains
+a prototype requiring listening review. See the
 [read-aloud scope](https://mfahsold.github.io/lixity/USAGE.md#lixity-read-aloud)
 before relying on an export. NDA generation produces a draft, not consent or
 signatures. Dossier Markdown edits require explicit preview and apply.

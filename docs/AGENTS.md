@@ -1525,6 +1525,7 @@ All native speech reads require same-origin access and exactly one
 configuration error), backend capabilities and source chapter bounds.
 `POST /api/speech-render` accepts those context fields, `mode: preview|chapter`,
 a positive `chapter`, and either `profile_id` or a validated draft `profile`.
+Optional `fresh_audio` is a strict boolean: true bypasses reuse for that render.
 Preview may include the exact displayed `paragraph` identity (`start_line`,
 `end_line`, `paragraph_sha256`). Browser-provided text, paths and unknown request
 fields are rejected. Preview uses the first bounded supported prose segment; its
@@ -1545,3 +1546,12 @@ CustomVoice requests at `/v1/audio/speech`; the Lixity adapter checks model, voi
 format and response size and rejects redirects. No external provider endpoint or
 automatic backend fallback is supported. Heavy model dependencies and weights
 are separately installed machine resources. See the read-aloud usage for setup.
+
+Qwen chapter jobs retain verified derived PCM in a private project-keyed user
+cache (`$XDG_CACHE_HOME/lixity/speech/<project-hash>/`, default `~/.cache`,
+2 GiB per project), without requiring a writable source folder. The CLI uses the same implementation;
+`--fresh-audio` recomputes entries. Previews remain uncached. Restarting a chapter
+creates a new context-bound job and reuses matching segments; it does not revive
+an old job ID or stale download. Cache contents are private generated audio, not
+retained source evidence. The named model/profile/text key does not fingerprint
+local checkpoint bytes; clear or refresh the cache after changing those bytes.

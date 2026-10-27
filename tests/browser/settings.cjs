@@ -191,6 +191,17 @@ server.serve_forever()
       assert.equal(response.status(),200);
       assert.equal((await response.body()).subarray(0,4).toString(),'RIFF');
       assert.ok((await page.locator('#modal-speech').textContent()).includes('first bounded paragraph'));
+      assert.equal(await page.locator('#speech-reuse').isChecked(),true);
+      await page.locator('#speech-reuse').uncheck();
+      const freshRequest=page.waitForRequest(request=>request.url().endsWith('/api/speech-render'));
+      await page.locator('[data-speech-action=chapter_render]').click();
+      assert.equal((await freshRequest).postDataJSON().fresh_audio,true,'Explicit fresh chapter bypasses reusable segments');
+      await page.waitForFunction(()=>!document.querySelector('#modal-speech audio').hidden);
+      await page.locator('#speech-reuse').check();
+      const resumedRequest=page.waitForRequest(request=>request.url().endsWith('/api/speech-render'));
+      await page.locator('[data-speech-action=chapter_render]').click();
+      assert.equal((await resumedRequest).postDataJSON().fresh_audio,false,'Chapter retries reuse completed segments by default');
+      await page.waitForFunction(()=>!document.querySelector('#modal-speech audio').hidden);
       await page.locator('#speech-name').fill('Edited narrator');
       assert.equal(await audio.isVisible(),false,'Profile edits remove completed audio');
       await page.locator('[data-speech-action=preview]').click();

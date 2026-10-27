@@ -12,6 +12,7 @@ from ..config import load_project_config
 from ..io import FileUtils
 from ..markdown_parser import split_chapters
 from ..pipeline import document_paragraph_texts, resolve_document_config
+from ..speech_cache import project_audio_cache
 from ..speech_jobs import SpeechJobs, prepare_speech_source
 from ..speech_profiles import (
     AudioProfile,
@@ -130,6 +131,7 @@ class SpeechRoutesMixin(ResponseMixin):
                 "chapter",
                 "profile",
                 "profile_id",
+                "fresh_audio",
                 "paragraph",
             }
             if set(payload) - allowed or not {
@@ -139,6 +141,8 @@ class SpeechRoutesMixin(ResponseMixin):
                 "chapter",
             } <= set(payload):
                 raise ValueError("Supply selected audio scope, not browser text or paths")
+            if type(payload.get("fresh_audio", False)) is not bool:
+                raise ValueError("Fresh audio must be a boolean")
             if "profile" in payload and "profile_id" in payload:
                 raise ValueError("Choose a draft profile or a saved profile, not both")
             with self._workspace_lock:
@@ -186,7 +190,11 @@ class SpeechRoutesMixin(ResponseMixin):
                     except (OSError, ValueError):
                         return False
 
-                job = self._speech_manager().start(key, prepared, profile, context, valid)
+                root = self.get_author_project_root()
+                cache_dir = (project_audio_cache(root) if root is not None and
+                             profile.engine == "qwen3" and payload["mode"] == "chapter" else None)
+                job = self._speech_manager().start(key, prepared, profile, context, valid, cache_dir=cache_dir,
+                                                   fresh_audio=payload.get("fresh_audio", False))
                 self._json({"ok": True, "job": job}, 202)
         except (OSError, TypeError, ValueError, RuntimeError, UserWarning) as exc:
             self._speech_error(exc)

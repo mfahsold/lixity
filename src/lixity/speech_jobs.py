@@ -80,6 +80,8 @@ class _Job:
     context: dict[str, Any]
     storage: tempfile.TemporaryDirectory[str]
     valid: Callable[[], bool]
+    cache_dir: Path | None = None
+    fresh_audio: bool = False
     state: str = "pending"
     done: int = 0
     total: int = 0
@@ -114,6 +116,9 @@ class SpeechJobs:
         profile: AudioProfile,
         context: dict[str, Any],
         valid: Callable[[], bool],
+        *,
+        cache_dir: Path | None = None,
+        fresh_audio: bool = False,
     ) -> dict[str, Any]:
         profile = AudioProfile.model_validate(profile.model_dump())
         self.cancel_stale()
@@ -131,7 +136,7 @@ class SpeechJobs:
                 raise RuntimeError("A speech job is already active; cancel it or wait")
             self._prune()
             storage = tempfile.TemporaryDirectory(prefix="lixity-speech-job-")
-            job = _Job(token_hex(16), context_key, dict(context), storage, valid)
+            job = _Job(token_hex(16), context_key, dict(context), storage, valid, cache_dir, fresh_audio)
             self._jobs[job.identifier] = job
             source = Path(storage.name) / "source.md"
             try:
@@ -157,14 +162,14 @@ class SpeechJobs:
                 with self._lock:
                     job.state = "stale"
                 return
-            self._render(
-                source,
-                output,
-                profile=profile,
-                progress=progress,
-                cancelled=job.cancel.is_set,
-                max_audio_bytes=MAX_AUDIO_BYTES,
-            )
+            options: dict[str, Any] = {
+                "profile": profile, "progress": progress, "cancelled": job.cancel.is_set,
+                "max_audio_bytes": MAX_AUDIO_BYTES,
+            }
+            if job.cache_dir is not None:
+                options["cache_dir"] = job.cache_dir
+                options["fresh_audio"] = job.fresh_audio
+            self._render(source, output, **options)
             if not output.is_file() or not 44 < output.stat().st_size <= MAX_AUDIO_BYTES:
                 raise ValueError("Generated audio is missing or exceeds the download limit")
             current = job.valid()

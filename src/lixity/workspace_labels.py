@@ -11309,13 +11309,20 @@ _ROWS["speech_truncated"] = (
 )
 
 _ROWS["speech_runtime_hint"] = (
-    "Qwen requires the optional local speech worker. CPU rendering can be slow; start with a short preview.",
-    "Qwen benötigt den optionalen lokalen Sprachdienst. Die CPU-Vertonung kann langsam sein; zuerst eine kurze Vorschau testen.",
-    "Qwen nécessite le service vocal local optionnel. La génération sur CPU peut être lente ; commencez par un court aperçu.",
-    "Qwen requiere el servicio de voz local opcional. La generación en CPU puede ser lenta; empiece con una vista previa breve.",
-    "Qwen richiede il servizio vocale locale opzionale. La generazione su CPU può essere lenta; inizia con una breve anteprima.",
-    "Qwen requer o serviço de voz local opcional. A geração em CPU pode ser lenta; comece com uma prévia curta.",
-    "Qwen vereist de optionele lokale spraakdienst. Genereren op de CPU kan traag zijn; begin met een kort voorbeeld.",
+    "Qwen requires the optional local speech worker. CPU rendering can be slow; start with a short preview. Completed chapter segments are saved locally for retries; previews are always fresh.",
+    "Qwen benötigt den optionalen lokalen Sprachdienst. Die CPU-Vertonung kann langsam sein; zuerst eine kurze Vorschau testen. Fertige Kapitelabschnitte bleiben für erneute Versuche lokal gespeichert; Vorschauen werden immer neu erzeugt.",
+    "Qwen nécessite le service vocal local optionnel. La génération sur CPU peut être lente ; commencez par un court aperçu. Les segments de chapitre terminés sont conservés localement pour une nouvelle tentative ; les aperçus sont toujours régénérés.",
+    "Qwen requiere el servicio de voz local opcional. La generación en CPU puede ser lenta; empiece con una vista previa breve. Los segmentos de capítulo completados se guardan localmente para reintentos; las vistas previas siempre se generan de nuevo.",
+    "Qwen richiede il servizio vocale locale opzionale. La generazione su CPU può essere lenta; inizia con una breve anteprima. I segmenti di capitolo completati restano salvati localmente per nuovi tentativi; le anteprime vengono sempre rigenerate.",
+    "Qwen requer o serviço de voz local opcional. A geração em CPU pode ser lenta; comece com uma prévia curta. Os segmentos de capítulo concluídos ficam guardados localmente para novas tentativas; as prévias são sempre geradas novamente.",
+    "Qwen vereist de optionele lokale spraakdienst. Genereren op de CPU kan traag zijn; begin met een kort voorbeeld. Voltooide hoofdstuksegmenten blijven lokaal bewaard voor nieuwe pogingen; voorbeelden worden altijd opnieuw gegenereerd.",
+)
+
+_ROWS["speech_reuse"] = (
+    "Reuse completed chapter segments", "Fertige Kapitelabschnitte wiederverwenden",
+    "Réutiliser les segments de chapitre terminés", "Reutilizar los segmentos de capítulo completados",
+    "Riutilizza i segmenti di capitolo completati", "Reutilizar segmentos de capítulo concluídos",
+    "Voltooide hoofdstuksegmenten hergebruiken",
 )
 
 _ROWS["speech_delivery"] = (

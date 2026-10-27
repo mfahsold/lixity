@@ -266,6 +266,8 @@ def render_speech_audio(
     progress: Callable[[int, int], None] | None = None,
     cancelled: Callable[[], bool] | None = None,
     max_audio_bytes: int | None = None,
+    cache_dir: str | Path | None = None,
+    fresh_audio: bool = False,
 ) -> Path:
     """Stream a consistent selected delivery into an atomic WAV or MP3 copy."""
     _check_cancelled(cancelled)
@@ -337,6 +339,11 @@ def render_speech_audio(
         cues = planned
     if not any(cue.text for cue in cues):
         raise ValueError("No spoken text in the selected chapter")
+    segment_cache = None
+    if qwen and cache_dir is not None:
+        from .speech_cache import SpeechSegmentCache
+
+        segment_cache = SpeechSegmentCache(Path(cache_dir))
     voice = None
     if not qwen and piper_bin is None:
         try:
@@ -380,9 +387,17 @@ def render_speech_audio(
                 if qwen and profile is not None:
                     from .speech_qwen import synthesize_qwen
 
-                    params, frames = _read_pcm(synthesize_qwen(cue.text, profile))
-                    if params != (1, 2, rate):
-                        raise ValueError("Unexpected Qwen audio format")
+                    data = None if fresh_audio or segment_cache is None else segment_cache.get(cue.text, profile)
+                    if data is None:
+                        data = synthesize_qwen(cue.text, profile)
+                        params, frames = _read_pcm(data)
+                        if params != (1, 2, rate):
+                            raise ValueError("Unexpected Qwen audio format")
+                        _check_cancelled(cancelled)
+                        if segment_cache is not None:
+                            segment_cache.put(cue.text, profile, data)
+                    else:
+                        params, frames = _read_pcm(data)
                     _check_cancelled(cancelled)
                     write_frames(frames)
                 elif voice is not None:

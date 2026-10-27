@@ -1329,3 +1329,14 @@ flight may finish, but cannot publish a cancelled/stale result. Retention starts
 after completion so a long CPU render cannot expire its own successful output.
 The dialog displays backend data and user choices; it neither assembles synthesis
 plans nor stores profile settings in browser storage.
+
+`speech_cache.py` provides bounded project-scoped reuse for Qwen segments in a private
+user cache outside manuscript folders, including read-only source projects. CLI
+renders and native chapter jobs opt into the same verified WAV/hash store;
+previews never reuse audio. Request keys contain synthesized text and delivery
+identity, while metadata retains only hashes and byte lengths. Each new segment
+is atomically stored after PCM validation; the final listening copy remains an
+independent atomic output. Source/context guards still govern downloads. Cache
+eviction or corruption causes recomputation, not publication of partial audio.
+The model identity is the named family, so local weight changes require a fresh
+render or cache removal. This derived cache does not persist native job state.

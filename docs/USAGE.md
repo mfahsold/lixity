@@ -1236,6 +1236,36 @@ lixity read-aloud --project ./novel --profile narrator -o reading-copy.wav
 lixity read-aloud --project ./novel --profile narrator --chapter 2 -o chapter-2.wav
 ```
 
+Long CPU renders can be retried without recomputing every completed segment.
+Qwen chapter jobs in the native UI and CLI renders retain verified segments in
+`$XDG_CACHE_HOME/lixity/speech/<project-hash>/` (default
+`~/.cache/lixity/speech/<project-hash>/`), bounded to 2 GiB per project.
+The manuscript folder need not be writable.
+Repeating the render reuses only requests with the same synthesis text, named
+model family, language, preset voice and delivery instructions. Changes to pauses
+are applied when assembling the output; they do not require new speech. Progress
+includes reused segments. The final WAV/MP3 still appears only after successful
+completion, so cancellation or failure preserves an existing output.
+
+The native **Reuse completed chapter segments** option is enabled by default;
+uncheck it for a fresh interpretation. CLI users can request the same explicitly:
+
+```bash
+lixity read-aloud --project ./novel --profile narrator --chapter 2 --fresh-audio -o chapter-2.wav
+```
+
+`--no-audio-cache` renders without reading or retaining segments.
+Previews are always fresh; Piper does not use this cache. The Python renderer
+opts in with `cache_dir=...`, and accepts `fresh_audio=True` to recompute while
+refreshing retained segments. Cache metadata stores request/audio hashes rather
+than raw manuscript text, but the WAV files contain spoken project content and
+must be treated as private. Missing, corrupt or evicted entries are recomputed.
+The cache is not a saved job ledger: after restarting the app, start a new chapter
+job to reuse its completed work. Temporary download expiration does not erase
+these retained segments. Remove the derived folder to discard it. After replacing
+local checkpoint files within the same named model family, request fresh audio
+or clear the cache; the key does not fingerprint model weight bytes.
+
 The selected saved profile is used when `--profile` is omitted. Explicit `--voice`,
 `--language`, `--speed` and `--instructions` override that invocation without
 rewriting the saved profile. Unsupported combinations fail before rendering.
@@ -1286,12 +1316,15 @@ downloads weights or sends manuscript text to an inference provider.
 Start the worker explicitly from that environment:
 
 ```bash
-python -m lixity.speech_qwen --model /path/to/CustomVoice --device cpu --threads 4
+python -m lixity.speech_qwen --model /path/to/CustomVoice --device cpu --threads 1
 ```
 
 It binds only to `127.0.0.1:8769`, loads the local model once and serializes
-synthesis. CPU operation is supported; generation can be much slower than the
-result's duration, so use a short preview to choose the voice. GPU operation is
+synthesis. CPU operation supports full chapters; generation can be much slower than the
+result's duration, so use a short preview to choose the voice. Match Torch threads
+to the CPU budget assigned to the worker. A heavily throttled four-thread worker
+can waste time contending within a one-core quota. Keep workstation CPU/memory
+headroom through the operating system rather than silently reducing model size. GPU operation is
 optional via `--device cuda`, with an explicit error when unavailable. The native
 UI starts a background job and reports completed segments without keeping the
 initial HTTP request open. Cancellation waits for an in-flight model segment to

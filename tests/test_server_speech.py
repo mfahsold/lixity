@@ -17,6 +17,7 @@ from tests.support import LoopbackServer, make_handler, send
 def speech_server(tmp_path, monkeypatch):
     import lixity.speech_jobs as jobs
 
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "user-cache"))
     source = tmp_path / "manuscript.md"
     source.write_text(
         "## First\n\nA bird crosses the garden.\n\n## Second\n\nThe second scene begins.\n"
@@ -166,3 +167,44 @@ def test_reselecting_same_project_cannot_revive_an_earlier_job(speech_server):
     handler.publish_dashboard(handler.dashboard_html, handler.dashboard_info)
     handler.publish_dashboard(handler.dashboard_html, handler.dashboard_info)
     assert send(port, "/api/speech-audio?" + query).status == 400
+
+
+def test_qwen_chapters_reuse_completed_segments_but_previews_stay_fresh(speech_server, monkeypatch):
+    import lixity.speech_jobs as jobs
+    from lixity.speech import render_speech_audio
+    from lixity.speech_cache import project_audio_cache
+    from lixity.speech_profiles import AudioProfile
+
+    port, source, handler, _observed = speech_server
+    before = source.read_bytes()
+    calls = []
+    monkeypatch.setattr(jobs, "render_speech_audio", render_speech_audio)
+    monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen",
+                        lambda text, profile: calls.append(text) or generate_silence_wav(.01, 24000))
+    bound = context(source, handler)
+    profile = AudioProfile(engine="qwen3", language="en", voice="Ryan").model_dump()
+
+    def render(mode, fresh=False):
+        response = send(port, "/api/speech-render", payload={**bound, "mode": mode, "chapter": 1, "profile": profile, "fresh_audio": fresh})
+        assert response.status == 202, response.body
+        identifier = json.loads(response.body)["job"]["id"]
+        query = urlencode({**bound, "id": identifier})
+        for _ in range(200):
+            status = json.loads(send(port, "/api/speech-job?" + query).body)["job"]
+            if status["state"] not in ("pending", "running"):
+                break
+            time.sleep(.01)
+        assert status["state"] == "ready", status
+        assert send(port, "/api/speech-audio?" + query).status == 200
+
+    render("chapter")
+    count = len(calls)
+    assert count > 0 and project_audio_cache(source.parent).is_dir()
+    render("chapter")
+    assert len(calls) == count
+    render("chapter", fresh=True)
+    assert len(calls) == count * 2
+    render("preview")
+    render("preview")
+    assert len(calls) == count * 2 + 2
+    assert source.read_bytes() == before

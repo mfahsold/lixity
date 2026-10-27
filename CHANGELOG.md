@@ -8,6 +8,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Shared bounded Qwen segment reuse for retrying long CPU renders in the CLI and
+  native chapter dialog, with explicit fresh-render controls. Completed segments
+  survive failed/cancelled runs; previews remain fresh and final output stays atomic.
 - Project-only audio profiles shared by CLI and the native Audio & voices dialog,
   with explicit narrator presets, supported delivery controls, pauses and literal
   pronunciation settings. Draft previews, saved-profile selection and cancellable

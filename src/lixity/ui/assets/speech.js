@@ -68,6 +68,8 @@
     fields.speed.disabled = !cap.speed.supported; fields.instructions.disabled = !cap.instructions;
     fields.advanced_voice.disabled = fields.engine.value !== "piper";
     fields.runtime_hint.hidden = fields.engine.value !== "qwen3";
+    fields.reuse.disabled = fields.engine.value !== "qwen3";
+    fields.reuse.closest("label").hidden = fields.reuse.disabled;
     ["advanced_voice", "speed", "instructions"].forEach(function(key) {
       fields[key].closest("label").hidden = fields[key].disabled;
     });
@@ -144,6 +146,7 @@
       status(label("state_pending"));
       var payload = Object.assign(tokens(), {mode: mode, chapter: Number(fields.chapter.value), profile: profile});
       if (mode === "preview" && paragraph) payload.paragraph = paragraph.identity;
+      if (mode === "chapter" && profile.engine === "qwen3") payload.fresh_audio = !fields.reuse.checked;
       fields.context.textContent = (mode === "preview" ? label(paragraph ? "paragraph_preview" : "first_preview") : label("chapter_render")) + " · " + fields.chapter.selectedOptions[0].textContent +
         (mode === "preview" && paragraph ? " · " + paragraph.identity.start_line + "–" + paragraph.identity.end_line : "");
       var data = await request("speech-render", payload);
@@ -184,7 +187,12 @@
     ["speed", "paragraph_pause", "scene_pause"].forEach(function(key) { var el = field(grid, key, "number"); el.min = key === "speed" ? "0.2" : "0"; el.max = key === "speed" ? "3" : "10"; el.step = "any"; el.required = true; });
     field(fields.editor, "instructions", "textarea").maxLength = 2000;
     field(fields.editor, "pronunciations", "textarea"); node("p", fields.editor, "ctl-note", label("pronunciation_hint"));
-    field(content, "chapter", "select"); var actions = node("div", content, "row");
+    field(content, "chapter", "select");
+    var reuse = node("label", content, "form-checkbox"); reuse.hidden = true;
+    fields.reuse = node("input", reuse); fields.reuse.type = "checkbox"; fields.reuse.id = "speech-reuse"; fields.reuse.checked = true;
+    node("span", reuse, "", label("reuse"));
+    fields.reuse.addEventListener("change", invalidate);
+    var actions = node("div", content, "row");
     fields.preview = button(actions, "preview", function() { render("preview"); });
     fields.chapter_render = button(actions, "chapter_render", function() { render("chapter"); });
     fields.cancel = button(actions, "cancel", cancel); fields.cancel.disabled = true;
@@ -213,7 +221,7 @@
       if (panel) paragraph = {chapter: Number((panel.closest(".chapter") || {}).id?.replace("ch-", "")), identity: {
         start_line: Number(panel.dataset.start), end_line: Number(panel.dataset.end), paragraph_sha256: panel.dataset.paragraphSha256}};
     }
-    fields.context.textContent = "";
+    fields.context.textContent = ""; fields.reuse.checked = true; fields.reuse.disabled = true; fields.reuse.closest("label").hidden = true;
     fields.editor.querySelectorAll("input, textarea").forEach(function(input) { input.value = ""; });
     ["profile", "engine", "language", "voice", "chapter"].forEach(function(key) { fields[key].replaceChildren(); });
     dialog.showModal(); status(label("loading")); fields.editor.disabled = true; fields.save.disabled = fields.create.disabled = fields.preview.disabled = fields.chapter_render.disabled = true;
