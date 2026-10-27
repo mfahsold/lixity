@@ -54,6 +54,8 @@ class ManuscriptPdfRoutesMixin(ResponseMixin):
                         warnings.filterwarnings("error", category=UserWarning, module=r"lixity\.config")
                         settings = load_project_config(source)
                 identity = settings
+                settings = {**settings, **{key: value for key, value in self.project_open_overrides.items()
+                                          if key in ("tense_model", "tense_scope")}}
 
             content = pdf_export.compose_pdf(
                 text, manuscript=source, layout=layout, language=language,

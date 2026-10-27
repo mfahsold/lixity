@@ -56,6 +56,7 @@ class _TenseEvidence(TypedDict):
 
 class TenseEvidence(_TenseEvidence, total=False):
     trigger: str
+    grammar: dict[str, Any]
 
 
 class _ParagraphEvidence(TypedDict):
@@ -236,6 +237,10 @@ def paragraph_evidence(text: str, config: CorpusConfig,
             result[index] = _envelope(paragraph.text, layers)
             continue
         clean = counting_inline_text(candidates[0].get("text", ""))
-        result[index] = matcher.evidence(clean, paragraph.text, matcher.count(clean), tense_spans=tense.spans(clean))
+        result[index] = matcher.evidence(clean, paragraph.text, matcher.count(clean),
+                                        tense_spans=tense.spans(clean, observation=paragraph.tense_analysis))
         result[index]["tense"]["trigger"] = paragraph.tense_trigger
+        grammar = paragraph.tense_analysis
+        if grammar is not None:
+            result[index]["tense"]["grammar"] = grammar
     return result

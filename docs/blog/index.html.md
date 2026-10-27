@@ -4,9 +4,9 @@ Practical articles for authors, editors and manuscript reviewers: investigate a 
 
 ## [Why is this passage marked?](why-this-passage.html)
 
-26 October 2026 · Development note · 5 minutes
+Updated 27 October 2026 · Lixity 0.7.6 · 5 minutes
 
-Inspect a tense signal, keep research attached to the chosen passage, and distinguish a current record from the exact version used. A practical review loop for authors and editors, with unreleased changes labelled explicitly.
+Inspect a tense signal, keep research attached to the chosen passage, and distinguish a current record from the exact version used. A practical review loop for authors and editors, with explicit grammatical-model limits.
 
 ## [What's new in Lixity 0.7.5: clearer marks and project structure](whats-new-lixity.html)
 

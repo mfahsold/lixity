@@ -138,6 +138,8 @@ class WorkspaceState:
                         project_root=cls.get_author_project_root(),
                         research_root=cls.get_research_root(),
                         strict_source=strict_source,
+                        identity_settings_override={key: value for key, value in cls.project_open_overrides.items()
+                                                    if key in ("tense_model", "tense_scope")},
                     )
             except (OSError, ValueError, RuntimeError, UserWarning):
                 cls.refresh_outcome = RefreshOutcome.REFRESH_FAILED

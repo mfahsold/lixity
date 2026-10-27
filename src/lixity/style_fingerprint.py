@@ -421,16 +421,27 @@ def effect_label(delta: float) -> str:
 
 
 def lag1_autocorrelation(values: list[float]) -> float | None:
-    """Lag-1 Pearson autocorrelation; None when n < 3 or zero variance."""
+    """Lag-1 sample ACF; None when n < 3 or zero variance.
+
+    Translation and common scaling cancel in the ratio. Anchor before scaling
+    so representable variation at large offsets survives centering.
+    """
     n = len(values)
     if n < 3:
         return None
-    mean = sum(values) / n
-    denom = sum((v - mean) ** 2 for v in values)
-    if denom == 0.0:
+    shifted = [value - values[0] for value in values]
+    if any(not math.isfinite(value) for value in shifted):
+        # Opposite finite extremes can overflow their unscaled difference.
+        scale = max(abs(value) for value in values)
+        shifted = [value / scale - values[0] / scale for value in values]
+    scale = max(abs(value) for value in shifted)
+    if scale == 0.0:
         return None
-    num = sum((values[i] - mean) * (values[i + 1] - mean) for i in range(n - 1))
-    return num / denom
+    shifted = [value / scale for value in shifted]
+    centre = math.fsum(shifted) / n
+    centered = [value - centre for value in shifted]
+    denominator = math.fsum(value * value for value in centered)
+    return math.fsum(a * b for a, b in pairwise(centered)) / denominator
 
 
 def runs_above_median_z(values: list[float]) -> float | None:
@@ -736,16 +747,31 @@ def dunning_g2(obs_a: int, obs_b: int, total_a: int, total_b: int) -> float:
         return 0.0
     c = obs_a + obs_b
     n = total_a + total_b
-    cells = (
-        (obs_a, total_a * c / n),
-        (obs_b, total_b * c / n),
-        (total_a - obs_a, total_a * (n - c) / n),
-        (total_b - obs_b, total_b * (n - c) / n),
+    exact_cells = (
+        (obs_a, total_a * c),
+        (obs_b, total_b * c),
+        (total_a - obs_a, total_a * (n - c)),
+        (total_b - obs_b, total_b * (n - c)),
     )
-    g2 = max(0.0, 2.0 * math.fsum(
-        observed * math.log(observed / expected)
-        for observed, expected in cells if observed > 0
-    ))
+    if all(10 * abs(observed * n - expected_numerator) <= expected_numerator
+           for observed, expected_numerator in exact_cells):
+        # Sum centered Poisson deviances: E*((1+x)*log(1+x)-x),
+        # x=(O-E)/E. The linear terms cancel over the contingency table.
+        # For |x| <= .1, evaluate its convergent series without subtracting
+        # nearly equal floats. Integer residuals also avoid rounded O/E.
+        terms = []
+        for observed, expected_numerator in exact_cells:
+            residual = observed * n - expected_numerator
+            relative = residual / expected_numerator
+            factor = math.fsum((-relative) ** k / ((k + 2) * (k + 1))
+                               for k in range(32))
+            terms.append((residual / n) * relative * factor)
+        g2 = 2.0 * math.fsum(terms)
+    else:
+        g2 = max(0.0, 2.0 * math.fsum(
+            observed * math.log(observed / (expected_numerator / n))
+            for observed, expected_numerator in exact_cells if observed > 0
+        ))
 
     # Sign: positive when A is over-represented
     if obs_a * total_b < obs_b * total_a:

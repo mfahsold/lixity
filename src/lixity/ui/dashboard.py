@@ -1189,6 +1189,8 @@ def render_dashboard(
                         f' data-tense-trigger="{p.tense_trigger}"'
                     )
                     flag_cls = f" flagged sev-{p.severity}"
+                elif p.tense_analysis is not None:
+                    flag_attrs = f' data-pre="{p.present_hits}" data-pas="{p.past_hits}"'
                 parts.append(
                     f'<div class="ptext{flag_cls}" id="p-{idx}" data-start="{p.start_line}" '
                     f'data-end="{p.end_line}" data-paragraph-sha256="{paragraph_identity(p)["paragraph_sha256"]}" '

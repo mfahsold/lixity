@@ -8,6 +8,8 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from lixity.cli import main
 from lixity.speech import (
     concatenate_wavs,
@@ -38,7 +40,6 @@ def test_extract_audio_cues_structure():
     cues = extract_audio_cues(
         SAMPLE_MANUSCRIPT,
         language="de",
-        has_emotional_voice=True,
         skip_editorial_markers=True,
     )
 
@@ -55,7 +56,6 @@ def test_extract_audio_cues_structure():
     # Dialogue cue checks
     dlg = next(c for c in cues if c.kind == "dialogue")
     assert "Wir müssen weitergehen" in dlg.text
-    assert dlg.speaker_id == 4  # Dialogue keeps the neutral delivery used for narration.
 
     # Heading cue checks
     heading = next(c for c in cues if c.kind == "heading")
@@ -100,6 +100,25 @@ def test_generate_silence_and_concatenate():
         assert wf.getnframes() == 3200
 
 
+def test_default_render_uses_qwen_without_voice_files(tmp_path, monkeypatch):
+    from lixity.speech import render_speech_audio
+
+    source = tmp_path / "synthetic.md"
+    source.write_text("One synthetic listening sentence.")
+    calls = []
+
+    def synthesize(text, profile, **kwargs):
+        calls.append((text, profile.engine, profile.voice, profile.language, kwargs["target"]))
+        return generate_silence_wav(.01, 24000)
+
+    monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen", synthesize)
+    output = render_speech_audio(source, tmp_path / "out.wav", language="en", target="jetson")
+    assert calls == [("One synthetic listening sentence.", "qwen3", "Ryan", "en", "jetson")]
+    with wave.open(str(output)) as audio:
+        assert (audio.getnchannels(), audio.getsampwidth(), audio.getframerate()) == (1, 2, 24000)
+    assert source.read_text() == "One synthetic listening sentence."
+
+
 def test_cli_read_aloud_help():
     buf = io.StringIO()
     with redirect_stdout(buf):
@@ -111,8 +130,20 @@ def test_cli_read_aloud_help():
     assert "--output" in help_text
     assert "--chapter" in help_text
     assert "--voice" in help_text
-    assert "--speed" in help_text
+    assert "--speech-target" in help_text
     assert "--keep-markers" in help_text
+
+
+def test_read_aloud_script_forwards_to_the_shared_cli(monkeypatch):
+    import runpy
+    import sys
+
+    calls = []
+    monkeypatch.setattr("lixity.cli.main", lambda args: calls.append(args) or 7)
+    monkeypatch.setattr(sys, "argv", ["read_aloud.py", "synthetic.md", "--speech-target", "jetson"])
+    module = runpy.run_path(str(Path(__file__).resolve().parents[1] / "scripts" / "read_aloud.py"))
+    assert module["main"]() == 7
+    assert calls == [["read-aloud", "synthetic.md", "--speech-target", "jetson"]]
 
 
 def test_cli_read_aloud_dispatch(tmp_path: Path):
@@ -128,35 +159,18 @@ def test_cli_read_aloud_dispatch(tmp_path: Path):
                 str(doc),
                 "-o", str(out_wav),
                 "--chapter", "1",
-                "--speed", "1.1",
                 "--language", "de",
             ])
         assert ret == 0
         mock_render.assert_called_once()
         call_kwargs = mock_render.call_args.kwargs
         assert call_kwargs["chapter"] == 1
-        assert call_kwargs["base_speed"] == 1.1
+        assert call_kwargs["profile"].engine == "qwen3"
         assert call_kwargs["language"] == "de"
         assert "output.wav" in buf.getvalue()
 
 
 # These cases exercise audible policy rather than infer intention from prose.
-def test_letters_and_emotion_words_keep_one_neutral_voice_and_speed():
-    text = '''# Example
-
-## Brief 1
-
-Die Lampe leuchtete leise. Er war müde.
-
-„Nein!“, schrie sie wütend.
-
-Ein Satz. Noch einer. Dies ist ein deutlich längerer Satz, der keine neue Sprechgeschwindigkeit auslösen soll.
-'''
-    cues = extract_audio_cues(text, language="de", has_emotional_voice=True, base_speed=1.2)
-    spoken = [cue for cue in cues if cue.text]
-    assert {cue.speaker_id for cue in spoken} == {4}
-    assert all(abs(cue.length_scale - 1 / 1.2) < 1e-9 for cue in spoken)
-    assert len({cue.sentence_silence for cue in spoken}) == 1
 
 
 def test_unknown_chapter_never_falls_back_to_the_whole_manuscript():
@@ -167,12 +181,6 @@ def test_unknown_chapter_never_falls_back_to_the_whole_manuscript():
             extract_audio_cues(SAMPLE_MANUSCRIPT, language="de", chapter_filter=value)
 
 
-def test_invalid_speed_is_rejected_instead_of_silently_clamped():
-    import pytest
-
-    for speed in (0, -1, float("nan"), float("inf"), 4):
-        with pytest.raises(ValueError, match=r"speed|Speed"):
-            extract_audio_cues(SAMPLE_MANUSCRIPT, base_speed=speed)
 
 
 def test_concatenation_rejects_missing_truncated_and_mismatched_audio():
@@ -186,74 +194,47 @@ def test_concatenation_rejects_missing_truncated_and_mismatched_audio():
             concatenate_wavs(segments)
 
 
-def test_external_piper_failure_is_not_a_missing_passage(tmp_path):
-    import subprocess
-
-    import pytest
-
-    from lixity.speech import AudioCue, synthesize_cue_subprocess
-
-    with patch("lixity.speech.subprocess.run", return_value=subprocess.CompletedProcess([], 1, b"", b"failed")), pytest.raises(RuntimeError, match=r"Piper"):
-        synthesize_cue_subprocess(AudioCue("Synthetic passage", "narrative"), "piper", tmp_path/"voice.onnx", tmp_path/"voice.json")
 
 
 def _fake_renderer(tmp_path, monkeypatch):
-    import json
-    import sys
-    from types import SimpleNamespace
-
     import lixity.speech as speech
 
-    voice_dir = tmp_path / "voices" / "synthetic"
-    voice_dir.mkdir(parents=True)
-    (voice_dir / "synthetic.onnx").write_bytes(b"model")
-    (voice_dir / "synthetic.onnx.json").write_text(json.dumps({
-        "audio": {"sample_rate": 16000}, "num_speakers": 8,
-        "speaker_id_map": {"neutral": 3, "whisper": 7},
-    }))
     calls = []
 
-    class Voice:
-        config = SimpleNamespace(sample_rate=16000)
+    def synthesize(text, profile, **_kwargs):
+        calls.append((text, profile))
+        return generate_silence_wav(.005, 24000)
 
-        @staticmethod
-        def load(*_args, **_kwargs):
-            return Voice()
-
-        def synthesize(self, text, config):
-            calls.append((text, config))
-            yield SimpleNamespace(audio_int16_bytes=b"\x01\x00" * 160,
-                                  sample_rate=16000, sample_width=2, sample_channels=1)
-
-    monkeypatch.setattr(speech, "DEFAULT_VOICE_DIR", voice_dir.parent)
-    monkeypatch.setitem(sys.modules, "piper.config", SimpleNamespace(SynthesisConfig=SimpleNamespace))
-    monkeypatch.setitem(sys.modules, "piper.voice", SimpleNamespace(PiperVoice=Voice))
+    monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen", synthesize)
     monkeypatch.setattr(speech.shutil, "which", lambda _name: None)
     source = tmp_path / "source.md"
     source.write_text("# Synthetic\n\n## First\n\nA short passage.\n\nAnother passage.")
-    return speech, source, calls, Voice
+    return speech, source, calls
 
 
-def test_render_uses_model_neutral_mapping_and_sample_rate(tmp_path, monkeypatch):
-    speech, source, calls, _voice = _fake_renderer(tmp_path, monkeypatch)
-    output = speech.render_speech_audio(source, tmp_path/"result.wav", voice_name="synthetic")
-    assert calls and all(config.speaker_id == 3 for _text, config in calls)
+def test_render_uses_one_selected_qwen_profile_and_sample_rate(tmp_path, monkeypatch):
+    from lixity.speech_profiles import AudioProfile
+
+    speech, source, calls = _fake_renderer(tmp_path, monkeypatch)
+    profile = AudioProfile(voice="Ryan", language="en", instructions="Read calmly.")
+    output = speech.render_speech_audio(source, tmp_path / "result.wav", profile=profile)
+    assert calls and all(selected == profile for _text, selected in calls)
     with wave.open(str(output), "rb") as audio:
-        assert audio.getframerate() == 16000
+        assert audio.getframerate() == 24000
         assert audio.getnframes() > 0
 
 
-def test_failed_or_empty_synthesis_preserves_existing_output(tmp_path, monkeypatch):
-    import pytest
-
-    speech, source, _calls, voice = _fake_renderer(tmp_path, monkeypatch)
+@pytest.mark.parametrize("data", [b"", b"not a WAV", generate_silence_wav(.01, 24000)[:-2],
+                                  generate_silence_wav(.01, 16000)])
+def test_invalid_synthesis_preserves_existing_output(tmp_path, monkeypatch, data):
+    speech, source, _calls = _fake_renderer(tmp_path, monkeypatch)
     output = tmp_path / "result.wav"
     output.write_bytes(b"previous output")
-    monkeypatch.setattr(voice, "synthesize", lambda *_args: iter(()))
-    with pytest.raises((ValueError, RuntimeError), match=r"audio|Piper|segment"):
-        speech.render_speech_audio(source, output, voice_name="synthetic")
+    monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen", lambda *_args, **_kwargs: data)
+    with pytest.raises(ValueError, match=r"audio|WAV|PCM"):
+        speech.render_speech_audio(source, output)
     assert output.read_bytes() == b"previous output"
-    assert sorted(p.name for p in tmp_path.iterdir()) == ["result.wav", "source.md", "voices"]
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["result.wav", "source.md"]
 
 
 def test_mp3_requires_ffmpeg_and_failed_conversion_is_atomic(tmp_path, monkeypatch):
@@ -261,18 +242,62 @@ def test_mp3_requires_ffmpeg_and_failed_conversion_is_atomic(tmp_path, monkeypat
 
     import pytest
 
-    speech, source, calls, _voice = _fake_renderer(tmp_path, monkeypatch)
+    speech, source, calls = _fake_renderer(tmp_path, monkeypatch)
     output = tmp_path / "result.mp3"
     output.write_bytes(b"previous output")
     with pytest.raises((ValueError, RuntimeError, FileNotFoundError), match=r"FFmpeg|ffmpeg"):
-        speech.render_speech_audio(source, output, voice_name="synthetic")
+        speech.render_speech_audio(source, output)
     assert not calls and output.read_bytes() == b"previous output"
     monkeypatch.setattr(speech.shutil, "which", lambda _name: "/synthetic/ffmpeg")
     monkeypatch.setattr(speech.subprocess, "run", lambda *_args, **_kw: subprocess.CompletedProcess([], 1, b"", b"conversion failed"))
     with pytest.raises(RuntimeError, match=r"FFmpeg|ffmpeg"):
-        speech.render_speech_audio(source, output, voice_name="synthetic")
+        speech.render_speech_audio(source, output)
     assert output.read_bytes() == b"previous output"
-    assert sorted(p.name for p in tmp_path.iterdir()) == ["result.mp3", "source.md", "voices"]
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["result.mp3", "source.md"]
+
+
+def test_ffmpeg_timeout_terminates_child_and_preserves_output(tmp_path, monkeypatch):
+    import sys
+
+    speech, source, _calls = _fake_renderer(tmp_path, monkeypatch)
+    executable = tmp_path / "synthetic-audio.py"
+    finished = tmp_path / "finished"
+    segment_path = tmp_path / "segment-path"
+    executable.write_text(
+        "import sys, time\n"
+        "from pathlib import Path\n"
+        "target = Path(sys.argv[-1])\n"
+        f"Path({str(segment_path)!r}).write_text(str(target))\n"
+        "target.write_bytes(b'partial synthetic audio')\n"
+        "time.sleep(2)\n"
+        f"Path({str(finished)!r}).write_text('child was not terminated')\n"
+    )
+    # Use the Python interpreter explicitly on every platform, including Windows.
+    real_run, real_popen = speech.subprocess.run, speech.subprocess.Popen
+    children = []
+
+    def start_child(*args, **kwargs):
+        child = real_popen(*args, **kwargs)
+        children.append(child)
+        return child
+
+    def run_python_child(command, **kwargs):
+        return real_run([sys.executable, str(executable), *command[1:]], **kwargs)
+
+    monkeypatch.setattr(speech.subprocess, "Popen", start_child)
+    monkeypatch.setattr(speech.subprocess, "run", run_python_child)
+    monkeypatch.setattr(speech, "SUBPROCESS_TIMEOUT_SECONDS", .5)
+    output = tmp_path / "result.mp3"
+    output.write_bytes(b"previous complete audio")
+    monkeypatch.setattr(speech.shutil, "which", lambda _name: str(executable))
+    with pytest.raises(RuntimeError, match="FFmpeg timed out"):
+        speech.render_speech_audio(source, output)
+    assert output.read_bytes() == b"previous complete audio"
+    assert not finished.exists(), "the timed-out child must not continue running"
+    assert len(children) == 1 and children[0].poll() is not None
+    assert children[0].returncode != 0, "the timed-out child is terminated and reaped"
+    assert not Path(segment_path.read_text()).parent.exists(), "temporary partial audio is removed"
+    assert not list(tmp_path.glob(".lixity-speech-*"))
 
 
 def test_quoted_and_list_prose_are_read_without_markdown_destinations():
@@ -308,22 +333,62 @@ def test_unbounded_word_is_rejected_without_changing_its_spelling():
         extract_audio_cues("## First\n\n" + "x" * 601, language="en")
 
 
-def test_piper_profile_owns_speed_voice_and_pronunciations(tmp_path, monkeypatch):
+@pytest.mark.parametrize("pronunciations", [{}, {"river": "quiet river"}])
+def test_profile_render_preserves_complete_sentence_boundaries(tmp_path, monkeypatch, pronunciations):
+    import lixity.speech as speech
     from lixity.speech_profiles import AudioProfile
 
-    speech, source, calls, _voice = _fake_renderer(tmp_path, monkeypatch)
-    old = tmp_path / "voices" / "synthetic"
-    selected = "en_US-lessac-medium"
-    directory = old.with_name(selected)
-    old.rename(directory)
-    (directory / "synthetic.onnx").rename(directory / f"{selected}.onnx")
-    (directory / "synthetic.onnx.json").rename(directory / f"{selected}.onnx.json")
-    profile = AudioProfile(voice=selected, language="en", speed=1.4,
-                           pronunciations={"passage": "reading"})
-    speech.render_speech_audio(source, tmp_path / "result.wav", language="de", base_speed=.7,
-                               voice_name="invalid", profile=profile)
-    assert calls and all(config.length_scale == 1 / 1.4 for _text, config in calls)
-    assert "reading" in " ".join(text for text, _config in calls)
+    body = ("A calm synthetic sentence about the river and the bridge. " * 30).strip()
+    source = tmp_path / "source.md"
+    source.write_text(body)
+    spoken = []
+
+    def synthesize(text, _profile, **_kwargs):
+        spoken.append(text)
+        return speech.generate_silence_wav(.01, 24000)
+
+    monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen", synthesize)
+    profile = AudioProfile(engine="qwen3", voice="Ryan", language="en", pronunciations=pronunciations)
+    output = speech.render_speech_audio(source, tmp_path / "result.wav", profile=profile)
+    expected = body.replace("river", "quiet river") if pronunciations else body
+    assert len(spoken) > 1
+    assert all(text.endswith(".") and len(text) <= 600 for text in spoken)
+    assert " ".join(spoken) == expected
+    assert source.read_text() == body
+    with wave.open(str(output)) as audio:
+        # Only the completed paragraph receives the default .45-second pause.
+        assert audio.getnframes() == len(spoken) * 240 + 10800
+
+
+def test_profile_render_splits_long_single_sentence_at_words(tmp_path, monkeypatch):
+    import lixity.speech as speech
+    from lixity.speech_profiles import AudioProfile
+
+    body = " ".join(f"word{index}" for index in range(200)) + "."
+    source = tmp_path / "source.md"
+    source.write_text(body)
+    spoken = []
+
+    def synthesize(text, _profile, **_kwargs):
+        spoken.append(text)
+        return speech.generate_silence_wav(.01, 24000)
+
+    monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen", synthesize)
+    profile = AudioProfile(engine="qwen3", voice="Ryan", language="en")
+    speech.render_speech_audio(source, tmp_path / "result.wav", profile=profile)
+    assert len(spoken) > 1
+    assert all(len(text) <= 600 for text in spoken)
+    assert " ".join(spoken) == body
+
+
+def test_qwen_profile_owns_language_voice_and_pronunciations(tmp_path, monkeypatch):
+    from lixity.speech_profiles import AudioProfile
+
+    speech, source, calls = _fake_renderer(tmp_path, monkeypatch)
+    profile = AudioProfile(voice="Aiden", language="en", pronunciations={"passage": "reading"})
+    speech.render_speech_audio(source, tmp_path / "result.wav", language="de", profile=profile)
+    assert calls and all(selected == profile for _text, selected in calls)
+    assert "reading" in " ".join(text for text, _profile in calls)
     assert "passage" in source.read_text()
 
 
@@ -343,33 +408,29 @@ def test_cli_uses_saved_profile_without_replacing_its_language_with_project_defa
         assert render.call_args.kwargs['profile'].instructions == 'Ruhig vorlesen.'
 
 
-def test_cli_rejects_unsupported_qwen_speed_before_rendering(tmp_path):
-    from lixity.config import prepare_project_settings
-    project = tmp_path/'project'
-    project.mkdir()
-    source=project/'manuscript.md'
-    source.write_text('## One\n\nA small passage.')
-    (project/'lixity.toml').write_text('language="en"\nmanuscript="manuscript.md"\n')
-    prepare_project_settings(project, {'audio': {'selected':'reader','profiles':{'reader':{
-        'name':'Reader','engine':'qwen3','language':'en','voice':'Ryan'
-    }}}}).commit()
-    with patch('lixity.speech.render_speech_audio') as render:
-        assert main(['read-aloud','--project',str(project),'--speed','1.2','-o',str(tmp_path/'result.wav')]) == 1
+def test_cli_rejects_removed_speed_option_before_rendering(tmp_path):
+    source = tmp_path / "synthetic.md"
+    source.write_text("A synthetic listening passage.")
+    with patch("lixity.speech.render_speech_audio") as render:
+        with pytest.raises(SystemExit) as error:
+            main(["read-aloud", str(source), "--speed", "1.2"])
+        assert error.value.code == 2
         render.assert_not_called()
+    assert source.read_text() == "A synthetic listening passage."
 
 
 def test_audio_byte_limit_counts_structural_silence_and_preserves_output(tmp_path, monkeypatch):
     import pytest
 
-    speech, source, calls, _voice = _fake_renderer(tmp_path, monkeypatch)
+    speech, source, calls = _fake_renderer(tmp_path, monkeypatch)
     output = tmp_path / "limited.wav"
     output.write_bytes(b"previous audio")
-    # The first PCM chunk (320 bytes) fits; its one-second heading pause does not.
+    # The first PCM chunk (240 bytes) fits; its one-second heading pause does not.
     with pytest.raises(ValueError, match="byte limit"):
-        speech.render_speech_audio(source, output, voice_name="synthetic", max_audio_bytes=500)
+        speech.render_speech_audio(source, output, max_audio_bytes=500)
     assert len(calls) == 1
     assert output.read_bytes() == b"previous audio"
-    assert sorted(item.name for item in tmp_path.iterdir()) == ["limited.wav", "source.md", "voices"]
+    assert sorted(item.name for item in tmp_path.iterdir()) == ["limited.wav", "source.md"]
 
 
 def test_audio_byte_limit_rejects_invalid_bounds_before_loading(tmp_path):

@@ -7,7 +7,18 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.6] - 2026-10-27
+
 ### Added
+- Explicit Qwen attention and bounded codec-chunk controls, inference-mode
+  execution and non-sensitive resolved worker runtime diagnostics for measured
+  CPU/CUDA tuning of the same full 1.7B checkpoint.
+- Explicit offline grammatical tense analysis in seven languages with installed
+  spaCy models or explicit French/Italian Stanza CPU profiles,
+  central verb-group composition, chapter-bounded quotation scope, exact evidence,
+  model/version review identities and explicit unresolved forms. Scientific
+  verification tools distinguish UD token-feature checks from verb-group tests. CLI, native UI,
+  scenes and exports share the same implementation; no model download or fallback.
 - One-origin native project views with independent tab contexts, scoped API and
   artifact routes, explicit expired-view handling and a bounded shared audio FIFO.
 - Native app/audio operational overview with actual local/Jetson model health
@@ -29,46 +40,6 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   chapter jobs use one validated backend path; read-only snapshots cannot render.
 - Optional offline Qwen3-TTS 1.7B CustomVoice worker with explicit CPU/CUDA modes,
   bounded local transport and no automatic model download or backend fallback.
-
-### Changed
-- Curated reader/companion exports omit inactive workspace controllers and omit
-  the offline diagram library when their prepared content cannot request it.
-  Later-revealed diagrams retain the library; media, citations and offline reads
-  continue through the shared components.
-- Native and review-site adapters share supplementary report assembly while
-  retaining their character-validation policies and existing public results.
-- Documentation disclosure styles no longer leak into embedded workspaces or
-  reports through the public Pages wrapper. Native reader controls retain the
-  same appearance; demo privacy guidance reflects optional remote processing.
-- Reduced the agent discovery index and generated operational reference bundle,
-  linking setup, architecture and history instead of repeating them. Current
-  audio guidance now describes shared CLI/native profiles and optional Qwen.
-- Removed retired screenshot capture paths and reused the existing Python fixture
-  runner in five browser suites; the reviewed screenshot catalogue stays canonical.
-- Local read-aloud uses constant neutral delivery and explicit speed rather than
-  sentence-length pacing or inferred emotions. Shared Markdown prose includes
-  quoted blocks and list items; long inputs retain their text across bounded
-  segments. The default German voice is single-speaker Thorsten.
-- Audio generation rejects missing/failed segments, mismatched PCM, invalid
-  chapter/speed selection and unavailable MP3 conversion. Streamed atomic output
-  preserves an existing listening copy when synthesis or conversion fails.
-- Native passage research and offline exports share a bounded backend context
-  projection from one archive snapshot, grouping dossier/claim pins and decisions
-  centrally. Opening a passage context no longer fetches separate record versions
-  or joins them in the browser; malformed/unavailable data remains explicit.
-- Shared control hover/pressed feedback keeps click targets stationary, fixing
-  a mobile export retry button that oscillated at the pointer edge.
-- Passage context closes on a different chapter/passage or deliberate reading
-  beyond the inspected paragraph. Tool switching uses the requested passage;
-  compact return navigation leaves record metadata in its viewer.
-- Heuristic tense marks expose a labelled, keyboard-accessible review action
-  independent of the selected measurement layer.
-- Consolidated shared document typography, status recipes and surface/marker
-  tokens while retaining token → component → view stylesheet ownership.
-
-## [0.7.6] - Unreleased
-
-### Added
 - Single-commit publication batching in `reconcile-manuscript` (parsing manuscript
   paragraphs once and committing all accepted link updates in one transaction) and
   extended `revise-batch` support for source-verified `manuscript_claim_link`
@@ -122,7 +93,104 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   those archives. Existing PNG/JPEG interfaces and accepted record bytes remain
   unchanged; attachments do not manufacture extraction or linguistic scores.
 
+### Changed
+- Remove Piper completely from rendering, native controls and CLI; use the full
+  Qwen3-TTS 1.7B CustomVoice model for all audio. Removed profiles require explicit
+  preset choices through a read-only migration preview and backed-up apply.
+  Removed Piper-only renderer arguments and exact-speed CLI flags have no silent replacement.
+- Separate pure multilingual verb rules from parser adaptation, dependency
+  composition and scoped evidence/cache ownership without changing measured results.
+- Curated reader/companion exports omit inactive workspace controllers and omit
+  the offline diagram library when their prepared content cannot request it.
+  Later-revealed diagrams retain the library; media, citations and offline reads
+  continue through the shared components.
+- Native and review-site adapters share supplementary report assembly while
+  retaining their character-validation policies and existing public results.
+- Documentation disclosure styles no longer leak into embedded workspaces or
+  reports through the public Pages wrapper. Native reader controls retain the
+  same appearance; demo privacy guidance reflects optional remote processing.
+- Reduced the agent discovery index and generated operational reference bundle,
+  linking setup, architecture and history instead of repeating them. Current
+  audio guidance now describes shared CLI/native profiles and optional Qwen.
+- Removed retired screenshot capture paths and reused the existing Python fixture
+  runner in five browser suites; the reviewed screenshot catalogue stays canonical.
+- Local read-aloud uses constant neutral delivery and explicit speed rather than
+  sentence-length pacing or inferred emotions. Shared Markdown prose includes
+  quoted blocks and list items; long inputs retain their text across bounded
+  segments. The default German voice is single-speaker Thorsten.
+- Audio generation rejects missing/failed segments, mismatched PCM, invalid
+  chapter/speed selection and unavailable MP3 conversion. Streamed atomic output
+  preserves an existing listening copy when synthesis or conversion fails.
+- Native passage research and offline exports share a bounded backend context
+  projection from one archive snapshot, grouping dossier/claim pins and decisions
+  centrally. Opening a passage context no longer fetches separate record versions
+  or joins them in the browser; malformed/unavailable data remains explicit.
+- Shared control hover/pressed feedback keeps click targets stationary, fixing
+  a mobile export retry button that oscillated at the pointer edge.
+- Passage context closes on a different chapter/passage or deliberate reading
+  beyond the inspected paragraph. Tool switching uses the requested passage;
+  compact return navigation leaves record metadata in its viewer.
+- Heuristic tense marks expose a labelled, keyboard-accessible review action
+  independent of the selected measurement layer.
+- Consolidated shared document typography, status recipes and surface/marker
+  tokens while retaining token → component → view stylesheet ownership.
+- Shorter reading, analysis and manuscript-link help in all seven UI languages;
+  storage guidance names retained data instead of promising a format-7 upgrade.
+  Manuscript CLI help separates preview, acceptance flags and partial success.
+- Distinguish saved manuscript research references from metric overlays through
+  neutral dotted marks, explicit localized Research labels and book icons.
+  Research context keeps a neutral document identity alongside analysis colors.
+- First-analysis help uses three direct actions: choose a measure, inspect a
+  counted-text example, and explore the current passage. Opening help remains
+  inert; the shorter panel reuses existing reader controls and focus handling.
+- Dossiers share a source-order reading surface across research and record
+  inspection. Repeated/nested headings retain their order and levels; unique
+  section edits stay at the heading. Maps join the contents, media use the
+  shared toolbar, and supplemental dossier actions follow the reading content.
+- Contributor guidance uses one current product path with reviewed release
+  migrations instead of permanent legacy UI modes or compatibility branches.
+- Map detail navigation brings the selected geographic entry and its context
+  into view, including later entries with repeated names on mobile. The shared
+  dossier editor explains route coordinates, saving and playback limitations.
+- The strongest tense stage is neutrally labelled “strong difference” instead
+  of “strong friction”. Flag rows explain their real tense markers/switch
+  criteria and prioritize reading instead of directly generating To-dos.
+- Reader-first analysis adds voluntary, initially closed guidance with
+  Analysis Off / no metric / selected metric states, shared localized action
+  names and explicit paragraph-versus-chapter comparison scope. Focus and overview
+  hide it without resetting display choices. Overview passage selection exposes
+  its existing tense-flag/opening fallback reason. `profile --help` adds a short
+  source-line/counting workflow without changing metrics, thresholds or JSON.
+- Public introduction and first-look guide lead with one revision question
+  rather than a feature inventory. The demo's chapter-2 task uses native
+  sentence-length navigation and explanation controls, with a compact optional
+  reading path and an explicit human decision. A linked German introduction
+  identifies the English demo and explains local setup without promising a
+  desktop installer. Tool comparisons avoid unsupported category-wide exclusions.
+- Heatmap cells, style-reference cutoff-hit counts and all style-space loadings
+  share a read-only chapter measurement dialog. It retains chapter context and
+  shows definitions, units, sample size, manuscript medians and z* for the
+  existing 16 metrics, without recomputation or a cross-metric quality ranking.
+  Explicit **Read chapter** reuses manuscript navigation; chapter-only metrics
+  clear unsupported paragraph layers. Axis loadings remain distinct from
+  chapter measurements, and close/Escape restores the original trigger.
+- Documentation separates paragraph, chapter and style-axis comparisons,
+  corrects obsolete control descriptions and MTLD's inclusive factor threshold,
+  consolidates passage-inspection guidance, and distinguishes pushed source,
+  installed/running code, deployed Pages and fixed reading exports.
+
 ### Fixed
+- Preserve grammatical model/scope overrides when reapplying view settings,
+  without persisting temporary selections; identical requests retain identical HTML.
+- Follow nested verb coordination when inheriting a shared auxiliary, stop at
+  finite conjuncts, and reject malformed dependency graphs before composition.
+- Limit external FFmpeg conversion to one hour through one shared
+  subprocess owner; timeout errors preserve completed outputs and clean temporary audio.
+- Preserve sentence boundaries after audio pronunciation replacements through
+  one shared segment packer; retain bounded words, source text and structural pauses.
+- Stabilize lag-1 autocorrelation at extreme finite scales/offsets and constant
+  decimal samples, and preserve near-null Dunning G² with centered deviances.
+  Independent high-precision oracle tests cover these numerical changes.
 - Keep workspace project identity visible even when the manuscript repeats its
   title, and show analysis navigation only within the analysis overview.
 - Align adjacent paragraph review and research buttons with consistent sizing
@@ -248,52 +316,6 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   transfers are no longer described as invalid ZIP files.
   Bounded pre-export profile/catalogue receipts additionally distinguish empty,
   invalid and unsaved configuration without logging project identifiers.
-
-### Changed
-- Shorter reading, analysis and manuscript-link help in all seven UI languages;
-  storage guidance names retained data instead of promising a format-7 upgrade.
-  Manuscript CLI help separates preview, acceptance flags and partial success.
-- Distinguish saved manuscript research references from metric overlays through
-  neutral dotted marks, explicit localized Research labels and book icons.
-  Research context keeps a neutral document identity alongside analysis colors.
-- First-analysis help uses three direct actions: choose a measure, inspect a
-  counted-text example, and explore the current passage. Opening help remains
-  inert; the shorter panel reuses existing reader controls and focus handling.
-- Dossiers share a source-order reading surface across research and record
-  inspection. Repeated/nested headings retain their order and levels; unique
-  section edits stay at the heading. Maps join the contents, media use the
-  shared toolbar, and supplemental dossier actions follow the reading content.
-- Contributor guidance uses one current product path with reviewed release
-  migrations instead of permanent legacy UI modes or compatibility branches.
-- Map detail navigation brings the selected geographic entry and its context
-  into view, including later entries with repeated names on mobile. The shared
-  dossier editor explains route coordinates, saving and playback limitations.
-- The strongest tense stage is neutrally labelled “strong difference” instead
-  of “strong friction”. Flag rows explain their real tense markers/switch
-  criteria and prioritize reading instead of directly generating To-dos.
-- Reader-first analysis adds voluntary, initially closed guidance with
-  Analysis Off / no metric / selected metric states, shared localized action
-  names and explicit paragraph-versus-chapter comparison scope. Focus and overview
-  hide it without resetting display choices. Overview passage selection exposes
-  its existing tense-flag/opening fallback reason. `profile --help` adds a short
-  source-line/counting workflow without changing metrics, thresholds or JSON.
-- Public introduction and first-look guide lead with one revision question
-  rather than a feature inventory. The demo's chapter-2 task uses native
-  sentence-length navigation and explanation controls, with a compact optional
-  reading path and an explicit human decision. A linked German introduction
-  identifies the English demo and explains local setup without promising a
-  desktop installer. Tool comparisons avoid unsupported category-wide exclusions.
-- Heatmap cells, style-reference cutoff-hit counts and all style-space loadings
-  share a read-only chapter measurement dialog. It retains chapter context and
-  shows definitions, units, sample size, manuscript medians and z* for the
-  existing 16 metrics, without recomputation or a cross-metric quality ranking.
-  Explicit **Read chapter** reuses manuscript navigation; chapter-only metrics
-  clear unsupported paragraph layers. Axis loadings remain distinct from
-  chapter measurements, and close/Escape restores the original trigger.
-- Documentation separates paragraph, chapter and style-axis comparisons,
-  corrects obsolete control descriptions and MTLD's inclusive factor threshold,
-  consolidates passage-inspection guidance, and distinguishes pushed source,
-  installed/running code, deployed Pages and fixed reading exports.
 
 ## [0.7.5] - 2026-10-22
 

@@ -5,7 +5,7 @@
 > instructions to rewrite prose. Analysis is deterministic for fixed text and
 > settings; research records also contain generated IDs and timestamps.
 
-Documentation source version: 0.7.6 (development preview). Check
+Documentation source version: 0.7.6. Check
 [GitHub releases](https://github.com/mfahsold/lixity/releases) and
 [PyPI](https://pypi.org/project/lixity/) for published packages. Current-main
 features can differ from an installed release with the same version string.
@@ -78,17 +78,18 @@ Research requires an initialized, explicitly selected project. Its usage guide
 owns available commands; RFC command sketches are not executable contracts.
 The Zotero bridge is read-only and captures selected eligible attachments with
 retention consent, without background sync. Local imports work independently.
-Current main supports retained dossier images, PDF and MP4/WebM attachments;
+Since v0.7.6, Lixity supports retained dossier images, PDF and MP4/WebM attachments;
 media records have explicit compatibility and source-file export requirements.
 
 Reading websites are copies, not backups or access control. Review-workspace
 exports and curated reader/companion publications have different disclosure
 scopes. Original sources require separate inclusion consent. Exports cannot save
 project changes or synthesize speech. Current-main audio shares project voice
-profiles between the CLI and native preview/chapter dialog: Piper or an optional
-Qwen3-TTS CustomVoice worker on this computer or a configured Jetson over SSH,
+profiles between the CLI and native preview/chapter dialog: an optional
+Qwen3-TTS 1.7B CustomVoice worker on this computer or a configured Jetson over SSH,
 selected per render, with no silent backend fallback. CPU generation
-can be slow; verified Qwen chapter segments can be reused. Audio remains a
+can be slow; verified Qwen chapter segments can be reused. Removed Piper profiles
+require an explicit preview and backed-up `audio-migrate` replacement. Audio remains a
 prototype requiring listening review; see Usage for setup, privacy and limits.
 
 ## Data boundaries

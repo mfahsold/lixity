@@ -373,9 +373,14 @@ async function finish(page, errors, writes) {
             assert.equal(await page.evaluate(() => LixityWorkbench.state().analysisVisible), origin.state.analysisVisible);
 
             await openOverview(page);
-            const toggle = page.locator('#manuscript-analysis-toggle'); await toggle.focus();
+            assert.equal(await page.locator('#manuscript-analysis-toggle').isVisible(), false);
+            const focusOwner = page.locator('#tab-view-analysis');
+            assert.equal(await focusOwner.isVisible(), true);
+            await focusOwner.focus();
+            assert.equal(await focusOwner.evaluate(node => node === document.activeElement), true,
+              'The programmatic-jump check starts with an actually focused visible control');
             await page.evaluate(() => scrollAndFlash(document.getElementById('p-12'))); await settle(page);
-            assert.equal(await toggle.evaluate(node => node === document.activeElement), true,
+            assert.equal(await focusOwner.evaluate(node => node === document.activeElement), true,
               'A programmatic jump preserves another visible focus owner');
             assert.equal(await page.locator('#reader-inspector').isVisible(), true);
             await page.locator('#tab-view-research').click();

@@ -16,9 +16,10 @@ QWEN_LANGUAGES = {
     "es": "Spanish", "it": "Italian",
 }
 QWEN_VOICES = ("Vivian", "Serena", "Uncle_Fu", "Dylan", "Eric", "Ryan", "Aiden", "Ono_Anna", "Sohee")
-PIPER_DEFAULT_VOICES = {"en": "en_US-lessac-medium", "de": "de_DE-thorsten-medium"}
 _PROFILE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}\Z")
-_PIPER_VOICE = re.compile(r"(en|de)_[A-Z]{2}-[A-Za-z0-9_]+-(?:x_low|low|medium|high)\Z")
+_REMOVED_ENGINE = ("Piper audio profiles are no longer supported. Make a backup and explicitly migrate "
+                   "each profile to a Qwen preset voice; the old voice and precise speed are not equivalent. "
+                   "Use audio-migrate --project PATH --replace PROFILE=VOICE to review the migration.")
 
 
 def _text(value: str, *, empty: bool = False) -> str:
@@ -32,12 +33,12 @@ def _text(value: str, *, empty: bool = False) -> str:
 class AudioProfile(BaseModel):
     """One narrator's explicit synthesis controls; no executable or remote paths."""
 
-    model_config = ConfigDict(extra="forbid", strict=True, allow_inf_nan=False)
+    model_config = ConfigDict(extra="forbid", strict=True, allow_inf_nan=False, hide_input_in_errors=True)
     name: str = Field(default="Narrator", min_length=1, max_length=100)
-    engine: Literal["piper", "qwen3"] = "piper"
+    engine: Literal["qwen3"] = "qwen3"
     language: str = "en"
-    voice: str = Field(default="en_US-lessac-medium", min_length=1, max_length=100)
-    speed: float = Field(default=1.0, ge=0.2, le=3.0)
+    voice: str = Field(default="Ryan", min_length=1, max_length=100)
+    speed: float = Field(default=1.0, ge=1.0, le=1.0)
     instructions: str = Field(default="", max_length=2000)
     paragraph_pause: float = Field(default=0.45, ge=0, le=10)
     scene_pause: float = Field(default=1.2, ge=0, le=10)
@@ -62,33 +63,41 @@ class AudioProfile(BaseModel):
             _text(replacement)
         return values
 
+    @model_validator(mode="before")
+    @classmethod
+    def reject_removed_engine(cls, raw: Any) -> Any:
+        if isinstance(raw, Mapping) and raw.get("engine") == "piper":
+            raise ValueError(_REMOVED_ENGINE)
+        return raw
+
     @model_validator(mode="after")
     def supported_controls(self) -> AudioProfile:
-        if self.engine == "piper":
-            if self.language not in PIPER_DEFAULT_VOICES:
-                raise ValueError("Piper profiles support only en and de")
-            match = _PIPER_VOICE.fullmatch(self.voice)
-            if not match or match[1] != self.language:
-                raise ValueError("Piper voice must be a safe cached model name matching the profile language")
-            if self.instructions:
-                raise ValueError("Piper does not support instructions")
-        else:
-            if self.language not in QWEN_LANGUAGES:
-                raise ValueError("Unsupported Qwen language")
-            if self.voice not in QWEN_VOICES:
-                raise ValueError("Unsupported Qwen preset voice")
-            if self.speed != 1.0:
-                raise ValueError("Qwen does not support precise speed; speed must be 1.0")
+        if self.language not in QWEN_LANGUAGES:
+            raise ValueError("Unsupported Qwen language")
+        if self.voice not in QWEN_VOICES:
+            raise ValueError("Unsupported Qwen preset voice")
+        if self.speed != 1.0:
+            raise ValueError("Qwen does not support precise speed; speed must be 1.0")
         return self
 
 
 class AudioSettings(BaseModel):
     """Versioned project profile collection with one existing selected narrator."""
 
-    model_config = ConfigDict(extra="forbid", strict=True)
+    model_config = ConfigDict(extra="forbid", strict=True, hide_input_in_errors=True)
     schema_name: Literal["lixity-audio-settings/1"] = Field(default="lixity-audio-settings/1", alias="schema_version")
     selected: str
     profiles: dict[str, AudioProfile] = Field(min_length=1, max_length=32)
+
+    @model_validator(mode="before")
+    @classmethod
+    def require_explicit_engine(cls, raw: Any) -> Any:
+        if isinstance(raw, Mapping) and isinstance(raw.get("profiles"), Mapping):
+            for profile in raw["profiles"].values():
+                if isinstance(profile, Mapping) and "engine" not in profile:
+                    raise ValueError("Saved audio profiles require an explicit Qwen engine; "
+                                     "review the old profile before replacing it")
+        return raw
 
     @model_validator(mode="after")
     def valid_selection(self) -> AudioSettings:
@@ -102,11 +111,8 @@ class AudioSettings(BaseModel):
 def parse_audio_settings(raw: object | None, *, language: str = "en") -> AudioSettings:
     """Return an explicit default only for absent settings; reject malformed data."""
     if raw is None:
-        voice = PIPER_DEFAULT_VOICES.get(language)
-        if voice is None:
-            raise ValueError("No default Piper voice for this language; configure an explicit audio profile")
         return AudioSettings(selected="narrator", profiles={
-            "narrator": AudioProfile(language=language, voice=voice),
+            "narrator": AudioProfile(language=language),
         })
     return AudioSettings.model_validate(raw)
 
@@ -125,22 +131,9 @@ def resolve_audio_profile(
 def audio_capabilities() -> dict[str, Any]:
     """Describe supported controls independently of optional runtime readiness.
 
-    Piper accepts additional safe en/de cached model names at render time.
     Qwen timbres are multilingual; native-language quality requires auditioning.
     """
     return {
-        "piper": {
-            "name": "Piper", "targets": ["local"], "languages": list(PIPER_DEFAULT_VOICES),
-            "voices": {
-                **{voice: {"name": voice, "languages": [language]}
-                   for language, voice in PIPER_DEFAULT_VOICES.items()},
-                "de_DE-thorsten_emotional-medium": {
-                    "name": "Thorsten emotional (neutral delivery)", "languages": ["de"],
-                },
-            },
-            "instructions": False,
-            "speed": {"supported": True, "minimum": 0.2, "maximum": 3.0, "default": 1.0},
-        },
         "qwen3": {
             "name": "Qwen3-TTS 1.7B CustomVoice", "targets": ["local", "jetson"], "languages": list(QWEN_LANGUAGES),
             "voices": {voice: {"name": voice, "languages": list(QWEN_LANGUAGES)} for voice in QWEN_VOICES},
@@ -149,3 +142,41 @@ def audio_capabilities() -> dict[str, Any]:
             "model": QWEN_MODEL,
         },
     }
+
+
+def requires_audio_migration(raw: object) -> bool:
+    """Identify retained removed-engine profiles without interpreting their data."""
+    if not isinstance(raw, Mapping) or not isinstance(raw.get("profiles"), Mapping):
+        return False
+    return any(isinstance(profile, Mapping) and profile.get("engine") == "piper"
+               for profile in raw["profiles"].values())
+
+
+def migrate_audio_settings(
+    raw: object, *, replacements: Mapping[str, str], instructions: Mapping[str, str] | None = None,
+) -> AudioSettings:
+    """Build an explicit migration candidate without mutating input or writing files.
+
+    Every removed engine profile needs a chosen Qwen preset. Original identity,
+    language, structural pauses and pronunciation replacements are retained.
+    Exact old speed and timbre have no equivalent: speed becomes 1.0 and style
+    instructions require a separate explicit choice. Persist only after backup
+    and review through the project settings transaction.
+    """
+    if not isinstance(raw, Mapping) or not isinstance(raw.get("profiles"), Mapping):
+        raise ValueError("Migration requires existing versioned audio settings")
+    profiles = raw["profiles"]
+    legacy_ids = {key for key, profile in profiles.items()
+                  if isinstance(profile, Mapping) and profile.get("engine") == "piper"}
+    if set(replacements) != legacy_ids:
+        raise ValueError("Provide exactly one explicit Qwen preset replacement for every removed Piper profile")
+    styles = instructions if instructions is not None else {}
+    if not set(styles).issubset(legacy_ids):
+        raise ValueError("Migration instructions must name a replaced profile")
+    candidates: dict[str, Any] = dict(profiles)
+    for key in legacy_ids:
+        original = profiles[key]
+        candidate = {**original, "engine": "qwen3", "voice": replacements[key],
+                     "speed": 1.0, "instructions": styles.get(key, "")}
+        candidates[key] = AudioProfile.model_validate(candidate).model_dump()
+    return AudioSettings.model_validate({**raw, "profiles": candidates})

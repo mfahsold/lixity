@@ -166,7 +166,7 @@ neither document, evidence links nor the statistical baseline. See
 [reader controls](../USAGE.md#reading-paragraphs) for display preferences,
 keyboard access, navigation and the desktop split.
 
-**Current main, unreleased:** exact saved manuscript associations appear as
+**Since v0.7.6:** exact saved manuscript associations appear as
 neutral dotted marks and a book-icon **Research** control with an association
 count. They stay distinct from metric colors and counted-text underlines, even
 with Analysis Off. Use the control or paragraph menu by keyboard; clicking an
@@ -250,7 +250,7 @@ selections fail. Paths escaping the project, including through
 symlinks, are rejected. Source bytes are checked again before publication; this
 optimistic guard does not lock an external editor.
 
-**Current main:** `find-anchor --quote` aliases `--query`; in
+**Since v0.7.6:** `find-anchor --quote` aliases `--query`; in
 `reconcile-manuscript`, `--quote` aliases `--new-quote` and retains its explicit
 replacement semantics and `--link-id` requirement. Original flags remain valid.
 Saving an already active link for the same claim and exact manuscript occurrence
@@ -270,7 +270,7 @@ re-pin. Ambiguous quotes are not re-pinned; an edited quote requires an explicit
 reviewed, uniquely resolvable replacement through `--new-quote`. These flags
 request a human review, not a semantic contradiction check or factual verdict.
 
-**Current main:** manuscript associations are grouped by their current chapter
+**Since v0.7.6:** manuscript associations are grouped by their current chapter
 in the review view, also when opened from a dossier's quotation count. The CLI
 `review-manuscript --format text` or `--format table` shows the same current
 chapter; JSON adds `resolved_chapter_num` and `resolved_chapter_title` to each
@@ -410,7 +410,7 @@ review again. `unlink-manuscript` retracts one
 association while retaining history, even if its manuscript is unavailable.
 Optional snapshot/revision guards make retraction strict.
 
-**Current main:** in **Research → Review**, **Inspect candidate passage** opens
+**Since v0.7.6:** in **Research → Review**, **Inspect candidate passage** opens
 the current paragraph for a uniquely moved or adjusted saved quotation before
 acceptance. This also works in a read-only review website. From a dossier, its
 saved manuscript-quotation count opens the corresponding filtered review.
@@ -544,7 +544,7 @@ lixity research terms --project ./novel --set-term "CURIA" --case-sensitive --no
 ### Claims linked to a dossier
 
 The dossier detail groups **Dossier notes**, **Linked claims** and
-**Source quotations** in one place. **Current main, unreleased:** its reading
+**Source quotations** in one place. **Since v0.7.6:** its reading
 surface preserves the original heading order and nesting, including repeated
 headings. The section lookup does not reorder or replace the document. Unique
 editable sections have an editing action beside their heading; repeated names
@@ -744,7 +744,7 @@ reading copies. Use the [explicit body comparison](#compare-a-markdown-reading-c
 for that separate question. There is no separate
 "stable audit" mode that hides newly accepted revisions.
 
-**Current main:** audit also verifies the complete accepted manifest ancestry.
+**Since v0.7.6:** audit also verifies the complete accepted manifest ancestry.
 Missing, modified, foreign-project or non-contiguous ancestor manifests fail
 integrity. Its `records` count refers to accepted revision objects, including
 historical authored revisions, rather than current identities or source files.
@@ -869,7 +869,7 @@ It adds no final newline. The ordinary human display is not a replacement file:
 copying its title/version/heading into `--file` would store that display metadata
 as section content. JSON remains the default and keeps its existing fields.
 
-**Current main, unreleased:** omit `--section` from a selected dossier
+**Since v0.7.6:** omit `--section` from a selected dossier
 `--format text --body-only` read to export its entire authored body with the same
 exact UTF-8 bytes and no added newline. Redirect output to a file when the source
 contains terminal controls or Unicode formatting. `--title` also accepts a
@@ -905,7 +905,7 @@ result contracts are in the [automation reference](../AGENTS.md#51-research-api-
 #### Read, edit and verify a section
 
 This Bash example uses invented notes in a new scratch directory. The
-`--body-only` and `--compact` steps require the unreleased behavior described above.
+`--body-only` and `--compact` steps require v0.7.6 or newer.
 
 ```sh
 cat > notes.md <<'MD'
@@ -1087,7 +1087,7 @@ Saving a UTF-8 dossier body does not ingest its images: ordinary relative,
 Use **Add image**/`dossier-image` to capture and attach a local image, or reference
 an already retained exact version with `lixity:image/SOURCE_ID/VERSION_ID`.
 
-**Current main, unreleased:** the current dossier record viewer also offers this
+**Since v0.7.6:** the current dossier record viewer also offers this
 action. Its notes occupy a full-width reading column rather than a metadata
 cell. An ordinary missing image reference offers **Choose image file**; saving
 replaces that exact, unique reference in one new revision, leaving other text
@@ -1124,7 +1124,7 @@ exact dossier snapshot/revision guards. Canonical destinations are
 `lixity:image/SOURCE_ID/VERSION_ID` with UUID URNs. Purge identity metadata uses
 record schema v2; unprovable older image associations remain missing.
 
-**Current main, unreleased:** `dossier --summary` keeps its short body excerpt
+**Since v0.7.6:** `dossier --summary` keeps its short body excerpt
 but reports image and media references from the entire selected dossier revision.
 It no longer misses attachments placed after the excerpt.
 
@@ -1135,7 +1135,7 @@ lixity research dossier-images --project ./novel --limit 100 --offset 0
 lixity research dossier-images --project ./novel --dossier-id ID --limit 100
 ```
 
-**Current main, unreleased:** `dossier-images --json` explicitly selects its JSON
+**Since v0.7.6:** `dossier-images --json` explicitly selects its JSON
 output. `dossier-image --compact` and `dossier-media --compact` return the existing
 `research-revision-write-summary-local/1` receipt after saving, without copying
 the dossier body. Image batch saves accept the same flag; batch `--dry-run`
@@ -1170,7 +1170,7 @@ Storage-full/user-quota CLI failures additionally identify temporary storage
 not establish remaining user quota. Check both the project and temporary
 filesystems; the diagnostic does not authorize deletion or automatic repair.
 
-**Current main, unreleased batch attachment:** `dossier-image --batch FILE`
+**Since v0.7.6, batch attachment:** `dossier-image --batch FILE`
 accepts an explicit `research-dossier-image-batch/1` JSON manifest with an
 `items` array. Each item contains `file` and optional `alt`, `caption`, `title`,
 `context`, `origin_url`, `section` or `replace_reference`. Section and replacement
@@ -1208,7 +1208,7 @@ multi-dossier operations and an interactive batch gallery are not implemented.
 
 ### Retain a PDF or video in a dossier
 
-**Current main, unreleased:** choose **Add PDF / video** in the same dossier
+**Since v0.7.6:** choose **Add PDF / video** in the same dossier
 toolbar. Select a local PDF, MP4 or WebM, provide an accessible description and
 confirm retention. Existing files in your project's folders can be selected
 directly; their original bytes and paths are not modified. Source title,
@@ -1590,7 +1590,7 @@ lixity research audit --project ./novel
 Replace `PASSAGE_ID` with a full returned ID. Open the project from the managed
 app, or run `lixity serve --research-project ./novel --no-project` in the foreground.
 
-**Current main:** a new dossier without `--language` inherits the explicit
+**Since v0.7.6:** a new dossier without `--language` inherits the explicit
 research project's language. An explicit language overrides it. Manuscript
 analysis settings do not silently replace the research language, and ordinary
 body updates preserve an existing dossier's language. The Python API and native
@@ -2155,7 +2155,7 @@ their own rights.
 
 ### Correct retained media provenance without reattaching
 
-**Current main, unreleased:** `research media-context` corrects `origin_url`
+**Since v0.7.6:** `research media-context` corrects `origin_url`
 and/or `provenance_note` for a selected retained image, video or retained-only PDF.
 Use the exact source/version identifiers from the selected dossier and preview
 before saving:
@@ -2187,7 +2187,7 @@ includes ordinary/unavailable image references and does not audit PDF/video cred
 
 ### Edit the dossier preamble explicitly
 
-**Current main, unreleased:** `dossier ID --preamble` selects the exact source
+**Since v0.7.6:** `dossier ID --preamble` selects the exact source
 before the first actual ATX heading. It does not invent an `Overview` heading or
 match a real section with that name. In a heading-free body, it selects the entire
 body. Read a draft with `--format text --body-only`; update with `--file` or
@@ -2202,7 +2202,7 @@ now list actual heading candidates; selection remains exact and unambiguous.
 
 ### Migrate manifest storage
 
-**Current main, unreleased:** new archives use compressed manifest storage.
+**Since v0.7.6:** new archives use compressed manifest storage.
 Existing uncompressed projects require an explicit migration before normal use:
 
 ```sh

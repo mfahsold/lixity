@@ -100,10 +100,14 @@ async function textRole(locator) {
         await check(`${name} language and label pack`, async () => {
           assert.equal(await page.locator('html').getAttribute('lang'), locale);
           const packed = await page.locator('body').evaluate(element => JSON.parse(element.dataset.uiLabels));
-          for (const [key, value] of Object.entries(fixtures.labels[locale])) assert.equal(packed[key], value, key);
+          const speechCapable = await page.locator('body').getAttribute('data-speech-capable') === 'true';
+          for (const [key, value] of Object.entries(fixtures.labels[locale])) {
+            if (key.startsWith('speech_') && !speechCapable) assert.equal(packed[key], undefined, key);
+            else assert.equal(packed[key], value, key);
+          }
           for (const [key, english] of Object.entries(fixtures.labels.en)) {
             const fields = value => Array.from(value.matchAll(/\{([a-z_]+)\}/g), match => match[1]).sort();
-            assert.deepEqual(fields(packed[key]), fields(english), key);
+            assert.deepEqual(fields(fixtures.labels[locale][key]), fields(english), key);
           }
         });
         await page.locator('#tab-view-analysis').click();

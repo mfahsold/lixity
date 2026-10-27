@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import gc
 import importlib
+import inspect
 import io
 import json
 import os
@@ -15,6 +16,8 @@ import threading
 import urllib.error
 import urllib.request
 from collections.abc import Callable
+from dataclasses import asdict, dataclass
+from functools import partial
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -34,6 +37,38 @@ MAX_RESPONSE_BYTES = 32 * 1024 * 1024
 SAMPLE_RATE = 24000
 # CPU synthesis can take substantially longer than the resulting audio.
 SYNTHESIS_TIMEOUT_SECONDS = 3600
+
+
+@dataclass(frozen=True)
+class WorkerRuntime:
+    """Bounded resolved loading settings, not a checkpoint or hardware digest."""
+
+    device: str
+    dtype: str
+    threads: int
+    attention: str
+    codec_device: str
+    codec_chunk_frames: int = 300
+
+    def __post_init__(self) -> None:
+        if (self.device not in ("cpu", "cuda")
+                or self.dtype not in ("float32", "float16", "bfloat16")
+                or type(self.threads) is not int or not 1 <= self.threads <= 64
+                or self.attention not in ("eager", "sdpa")
+                or self.codec_device not in ("cpu", "cuda")
+                or type(self.codec_chunk_frames) is not int or not 16 <= self.codec_chunk_frames <= 300):
+            raise ValueError("Invalid Qwen worker runtime settings")
+
+
+@dataclass(frozen=True)
+class LoadedRenderer:
+    """One loaded renderer with its explicit, non-sensitive runtime settings."""
+
+    render: Callable[[dict[str, Any]], bytes]
+    runtime_info: WorkerRuntime
+
+    def __call__(self, request: dict[str, Any]) -> bytes:
+        return self.render(request)
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -107,7 +142,8 @@ def synthesize_qwen(text: str, profile: AudioProfile, *, target: str = "local", 
     return data
 
 
-def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 8769) -> ThreadingHTTPServer:
+def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 8769,
+                  runtime_info: WorkerRuntime | None = None) -> ThreadingHTTPServer:
     """Build a loopback-only worker with injectable serialized inference."""
     lock = threading.Lock()
 
@@ -129,7 +165,8 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
 
         def do_GET(self) -> None:
             if self.path == "/health":
-                self.reply(200, json.dumps({"ready": True, "model": QWEN_MODEL}).encode())
+                self.reply(200, json.dumps({"ready": True, "model": QWEN_MODEL,
+                                           **({"runtime": asdict(runtime_info)} if runtime_info is not None else {})}).encode())
             elif self.path == "/capabilities":
                 self.reply(200, json.dumps(audio_capabilities()["qwen3"]).encode())
             else:
@@ -193,12 +230,17 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
 
 def load_local_model(
     model_path: Path, *, device: str = "cpu", threads: int = 4, codec_device: str = "model",
-) -> Callable[[dict[str, Any]], bytes]:
+    attention: str = "auto", codec_chunk_frames: int = 300,
+) -> LoadedRenderer:
     """Load only the pinned CustomVoice architecture from local files, once."""
     if device not in ("cpu", "cuda"):
         raise ValueError("Qwen device must be cpu or cuda")
     if codec_device not in ("cpu", "model"):
         raise ValueError("Qwen codec device must be cpu or model")
+    if attention not in ("auto", "eager", "sdpa"):
+        raise ValueError("Qwen attention must be auto, eager or sdpa")
+    if type(codec_chunk_frames) is not int or not 16 <= codec_chunk_frames <= 300:
+        raise ValueError("Qwen codec chunk frames must be an integer between 16 and 300")
     if type(threads) is not int or not 1 <= threads <= 64:
         raise ValueError("Qwen threads must be an integer between 1 and 64")
     model_path = model_path.expanduser().resolve()
@@ -213,14 +255,32 @@ def load_local_model(
         if not torch.cuda.is_available():
             raise RuntimeError("CUDA was requested but is unavailable; select cpu explicitly")
         dtype = torch.bfloat16 if torch.cuda.is_bf16_supported(including_emulation=False) else torch.float16
-        device_map, attention = "cuda:0", "sdpa"
+        device_map, default_attention = "cuda:0", "sdpa"
     else:
-        dtype, device_map, attention = torch.float32, "cpu", "eager"
+        dtype, device_map, default_attention = torch.float32, "cpu", "eager"
+    attention = default_attention if attention == "auto" else attention
     torch.set_num_threads(threads)
     qwen_tts = importlib.import_module("qwen_tts")
 
     model = qwen_tts.Qwen3TTSModel.from_pretrained(str(model_path), device_map=device_map, dtype=dtype,
                                                  attn_implementation=attention, local_files_only=True)
+    if codec_chunk_frames != 300:
+        # The upstream public tokenizer decode API exposes no chunk setting.
+        # Bind only this loaded decoder's existing overlap-and-trim algorithm;
+        # keep its 25-frame left context and leave the default path untouched.
+        try:
+            decoder = model.model.speech_tokenizer.model.decoder
+            chunked_decode = decoder.chunked_decode
+            signature = inspect.signature(chunked_decode)
+            for name in ("chunk_size", "left_context_size"):
+                if signature.parameters[name].kind not in (
+                    inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY,
+                ):
+                    raise ValueError("Codec chunk settings must accept keyword arguments")
+            signature.bind(object(), chunk_size=codec_chunk_frames, left_context_size=25)
+        except (AttributeError, KeyError, TypeError, ValueError) as exc:
+            raise ValueError("Local Qwen codec does not support explicit chunk settings") from exc
+        decoder.chunked_decode = partial(chunked_decode, chunk_size=codec_chunk_frames, left_context_size=25)
     if device == "cuda" and codec_device == "cpu":
         # Keep the talker on CUDA while moving only audio decoding to CPU.
         codec = model.model.speech_tokenizer
@@ -237,17 +297,23 @@ def load_local_model(
     def synthesize(request: dict[str, Any]) -> bytes:
         soundfile = importlib.import_module("soundfile")
 
-        wavs, rate = model.generate_custom_voice(text=request["input"],
-                                                language=QWEN_LANGUAGES[request["language"]],
-                                                speaker=request["voice"], instruct=request["instructions"],
-                                                max_new_tokens=2048)
+        # CustomVoice includes codec decoding; its upstream no_grad guard does
+        # not disable view tracking and version-counter overhead as this does.
+        with torch.inference_mode():
+            wavs, rate = model.generate_custom_voice(text=request["input"],
+                                                    language=QWEN_LANGUAGES[request["language"]],
+                                                    speaker=request["voice"], instruct=request["instructions"],
+                                                    max_new_tokens=2048)
         if rate != SAMPLE_RATE or len(wavs) != 1:
             raise ValueError("Unexpected Qwen output")
         output = io.BytesIO()
         soundfile.write(output, wavs[0], rate, format="WAV", subtype="PCM_16")
         return output.getvalue()
 
-    return synthesize
+    return LoadedRenderer(synthesize, WorkerRuntime(
+        device=device, dtype=str(dtype).removeprefix("torch."), threads=threads,
+        attention=attention, codec_device="cpu" if device == "cpu" or codec_device == "cpu" else "cuda",
+        codec_chunk_frames=codec_chunk_frames))
 
 
 def main() -> None:
@@ -257,12 +323,18 @@ def main() -> None:
                         help="Explicit inference device; unavailable CUDA fails without fallback")
     parser.add_argument("--codec-device", choices=["cpu", "model"], default="model",
                         help="Audio decoder placement; model follows --device (default)")
+    parser.add_argument("--attention", choices=["auto", "eager", "sdpa"], default="auto",
+                        help="Attention backend; auto preserves eager on CPU and SDPA on CUDA")
+    parser.add_argument("--codec-chunk-frames", type=int, default=300, choices=range(16, 301), metavar="N",
+                        help="Codec frames per decode chunk (16..300; upstream default 300); retains 25-frame context")
     parser.add_argument("--threads", type=int, default=4, choices=range(1, 65), metavar="N",
                         help="Torch CPU threads (1..64; default 4)")
     parser.add_argument("--port", type=int, default=8769, choices=[8769])
     args = parser.parse_args()
-    renderer = load_local_model(args.model, device=args.device, threads=args.threads, codec_device=args.codec_device)
-    server = worker_server(renderer, port=args.port)
+    renderer = load_local_model(args.model, device=args.device, threads=args.threads,
+                                codec_device=args.codec_device, attention=args.attention,
+                                codec_chunk_frames=args.codec_chunk_frames)
+    server = worker_server(renderer, port=args.port, runtime_info=renderer.runtime_info)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

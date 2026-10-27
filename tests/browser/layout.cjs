@@ -27,6 +27,7 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
       assert.ok((await page.locator('#license-terms').textContent()).includes('self-publishing'));
       await page.locator('.license-badge').focus();
       await page.keyboard.press('Enter');
+      await page.waitForURL('**/#license-terms');
       assert.ok(page.url().endsWith('#license-terms'));
       assert.equal(await page.locator('.license-links a').count(), 2);
       await page.locator('.project-header').screenshot({path: `/tmp/lixity-license-${width}.png`});

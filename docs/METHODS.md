@@ -49,7 +49,7 @@ semantic paragraph boundaries. Short-paragraph counting uses paragraph
 whitespace words and the inclusive configured threshold, including eight-word
 paragraphs. Legacy whitespace counts remain distinct from regex token counts.
 
-**Current main:** the shared Markdown counting projection uses Unicode NFC for
+**Since v0.7.6:** the shared Markdown counting projection uses Unicode NFC for
 token, vocabulary, cue and syllable measurements. Configured word/cue patterns
 operate on that canonical counting text; their flags are unchanged. Document
 boundary patterns and appendix markers still address the original source. Manuscript
@@ -366,6 +366,15 @@ Version 1.16.0 includes the non-term cells previously omitted from this calculat
 recompute older keyness values before comparison. A signed ranking is not a
 multiple-testing-adjusted significance claim.
 
+Since v0.7.6, near-null keyness uses exact integer table residuals and a centered
+deviance series for small relative residuals, avoiding cancellation of a small
+positive divergence into zero. Lag-1 sample autocorrelation uses anchored,
+scaled centered moments and accurate summation to avoid avoidable overflow,
+underflow and constant-sample roundoff. Constant samples remain unavailable.
+These are numerical corrections to the existing estimators, not new statistical
+calibrations; independent high-precision Decimal calculations cover their
+extreme-scale and near-null regression cases.
+
 The passport retains schema 4 and these field names. The structural summary
 uses the implemented thresholds; it does not certify a narrative boundary,
 trend or fitted distribution. See [STABILITY.md](STABILITY.md#structural-diagnostics)
@@ -593,7 +602,47 @@ of a ranking. These signals describe relative patterns, not prose quality.
 - Float operations in fixed order on the same interpreter → byte-identical
   HTML/JSON (platform last-bit differences are documented in STABILITY).
 
-## 11. Linguistic heuristics (tense, dialogue, sentences, scenes)
+## 11. Linguistic analysis (tense, dialogue, sentences, scenes)
+
+### Optional grammatical analysis
+
+The optional `tense_model` setting selects contextual POS/morphology/dependency
+analysis with an explicitly installed local spaCy or explicitly profiled Stanza
+pipeline. Language-specific composition covers de/en/fr/es/it/pt/nl. `grammatical_tense.py`
+composes auxiliary-linked German verbal complexes using TIGER `oc`/`pd` or UD
+`aux`/`aux:tense`/`aux:pass`/`cop` relations (English also `auxpass`), with
+coordinated auxiliary inheritance and shared nonverbal predicate heads. French/Italian
+reflexives and positive intransitive auxiliary licensing distinguish some perfect
+forms from simple be-passives; unlicensed ambiguous forms remain limited. This is an
+independent implementation informed by [IDS Grammis](https://grammis.ids-mannheim.de/progr%40mm/1695)
+and [Dönicke (2020)](https://aclanthology.org/2020.tlt-1.1/), not a reproduction of
+that paper's evaluated system. The published 92.6% score does not apply to Lixity.
+
+Nested coordination follows the [UD conjunct chain](https://universaldependencies.org/u/dep/conj.html),
+stopping at a finite component instead of borrowing across a separate finite
+clause. A shared token validator rejects duplicate/missing indices, cycles and
+source-span mismatches; expanded words may share their original token span.
+
+The finite carrier's tense and mood are composed with participles, infinitives,
+replacement infinitives and passive auxiliaries. Resolved simple present maps
+to present; preterite, imperfect, perfect, pluperfect and anterior perfect map to
+past. Absent English/Dutch Mood features remain `unmarked`, not indicative. Future and subjunctive
+forms remain separate and do not enter the binary counts. Ambiguous unlicensed
+`sein`/participle complexes remain unresolved. The existing curated `sein` inventory
+provides positive licensing only, not a complete valency lexicon.
+
+Each canonical prose paragraph is parsed consistently across corpus/profile calls;
+quotation scope is resolved over chapter-bounded prose before counting. Exact
+immutable parse results have a process-local LRU bounded to 256 entries and one
+million input characters. Models are explicitly loaded and cached; changing a
+model installation requires restart. The engine never sends text to a provider.
+The grammatical record carries a versioned policy and runtime/model identity;
+UI cue mapping still uses the existing NFC-to-original-source projection.
+
+This resolves many suffix collisions without certifying grammatical accuracy.
+See the [bounded evaluation and known errors](STABILITY.md#grammatical-tense).
+
+
 
 These heuristics are transparent rules over curated resources, not a
 grammatical parser. Their constants and guards live in the named modules.
@@ -614,7 +663,7 @@ restating formulas.
 | Nominal/adjective suffixes | Curated suffix cues; default nominal cues exclude curated function words (`language_data.py`) | Over-include (e.g. `month/health/truth`, `König/Saal`, `Musik/Natur`); adjective cues have no equivalent function-word exclusion |
 | Modal lexicons | Curated forms per language | Unequal morphology coverage; not cross-language comparable |
 
-**Current main:** nominal ending lists include selected plural forms in each
+**Since v0.7.6:** nominal ending lists include selected plural forms in each
 language, including `Entscheidungen`, `decisions`, `décisions`, `decisiones`,
 `decisioni`, `decisões` and `beslissingen`. German `zur` belongs to the curated
 function words and is excluded from default nominal matches. This corrects
@@ -639,7 +688,7 @@ The lightweight passive measurement therefore remains a cue count; a match does
 not resolve whether an ambiguous participle is adjectival or verbal.
 
 Configured cue patterns override the profile patterns for direct Python calls.
-**Current main:** `lixity.tense.TenseMatcher` owns tense counting for chapters,
+**Since v0.7.6:** `lixity.tense.TenseMatcher` owns tense counting for chapters,
 scenes and paragraph profiles. With default patterns, a standalone productive
 past candidate, or a pronoun-plus-finite candidate, is rejected when the finite
 word is explicitly listed as present and not past in the curated inventory.

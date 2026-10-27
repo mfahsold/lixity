@@ -4,7 +4,7 @@ Defines strict, validated models for corpus configuration, sentence distribution
 chapter metrics, tense profiles, and synchronization reports.
 """
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -98,6 +98,23 @@ class CorpusConfig(BaseModel):
         default=None,
         description="Regex for past-tense markers (None = language profile default).",
     )
+    tense_model: str | None = Field(
+        default=None, pattern=r"^(?:(?:de|en|fr|es|it|pt|nl)_[a-z0-9_]+|stanza:(?:it_markit|fr_gsd))$", max_length=100,
+        description="Explicit installed local syntax model for grammatical verb groups; no download or fallback.",
+    )
+    tense_scope: Literal["all", "narration"] = Field(
+        default="all",
+        description="Grammatical tense scope: all predicates or those outside recognized quotations. Not speaker attribution.",
+    )
+
+    @model_validator(mode="after")
+    def validate_tense_model(self) -> "CorpusConfig":
+        """Keep grammatical measurement and user regex contracts distinct."""
+        if self.tense_model is not None and (self.praesens_regex is not None or self.praeteritum_regex is not None):
+            raise ValueError("tense_model cannot be combined with tense regex overrides")
+        if self.tense_scope != "all" and self.tense_model is None:
+            raise ValueError("tense_scope=narration requires an explicit tense_model")
+        return self
     dialogue_regex: str | None = Field(
         default=None,
         description="Regex for quoted/direct speech detection (None = language profile default).",

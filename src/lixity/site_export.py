@@ -474,7 +474,8 @@ def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
                  thresholds: FingerprintThresholds | None = None,
                  include_research: bool = False, include_source_files: bool = False,
                  mode: SiteMode = "review", publication_profile: str | None = None,
-                 max_chapter: int | None = None) -> SiteBundle:
+                 max_chapter: int | None = None, tense_model: str | None = None,
+                 tense_scope: str | None = None) -> SiteBundle:
     """Prepare one explicit project website without writing source files or caches.
 
     Research includes authored versions and cited excerpts. Original retained
@@ -499,7 +500,10 @@ def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
     if source_info.st_size > MAX_SITE_DATA_BYTES:
         raise ResearchError("Manuscript exceeds the 64 MiB website input limit")
     text, source_hash = FileUtils.read_source_snapshot(str(source))
-    config, resolved = resolve_document_config(text, language or settings.get("language", "en"), project_config=settings)
+    analysis_overrides = {key: value for key, value in (("tense_model", tense_model), ("tense_scope", tense_scope))
+                          if value is not None}
+    config, resolved = resolve_document_config(text, language or settings.get("language", "en"),
+                                               project_config=settings, **analysis_overrides)
     effective_thresholds = thresholds or resolve_thresholds(project_config=settings)
     display_title = project_title(str(source), text, settings, title)
     snapshot = (_snapshot(repository, include_history=include_research)

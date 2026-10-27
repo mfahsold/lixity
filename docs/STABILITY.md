@@ -25,9 +25,125 @@ Engine tests use synthetic/public samples. Project adapters and optional local
 servers have separate trust boundaries and need their own tests; core test
 success is not a security certification for an arbitrary adapter.
 
+<a id="grammatical-german-tense"></a>
+
+### Grammatical tense
+
+The optional local model path covers all seven supported analysis languages and
+is a contextual grammatical measurement, not a
+linguistic correctness guarantee. The standard installation still uses incomplete
+lexical patterns; e.g. unknown adjectives ending in `-ten` can match past cues,
+and an unlisted present verb can be missed. To use the new path, explicitly select
+an installed model as described in [Usage](USAGE.md#grammatical-tense).
+
+The initial construction comparison used 40 newly written German sentences with
+manually assigned verb-group tense/mood labels, available in
+`tests/fixtures/german_verb_groups.json`. All systems used the same Lixity
+composition rules. It is a development construction set, not an independent,
+representative or held-out literary benchmark. Final matching-sentence counts:
+
+| Installed parser | Fully matching cases / 40 |
+| --- | --- |
+| spaCy `de_core_news_md` 3.8.0 | 39 |
+| spaCy `de_core_news_sm` 3.8.0 | 36 |
+| ZDL `de_zdl_lg` 4.0.0 | 33 |
+| Stanza 1.15.0, German HDT resources | 31 |
+
+These numbers evaluate complete sentence label sequences on this set, not token
+accuracy or editorial-warning precision. Stanza was compared through a temporary
+UD adapter; the shipped runtime uses spaCy. The small model sometimes mistakes
+modal/coordinate forms; the tested HDT models supplied incorrect mood features
+for several subjunctives. This supports selecting `de_core_news_md` as the initial
+CPU option, not declaring it universally superior. Model load/memory and
+long-manuscript throughput were not established by the short construction score.
+Reproduce the spaCy comparison from a development checkout with installed models:
+
+```sh
+python scripts/check_grammatical_tense.py de_core_news_sm de_core_news_md de_zdl_lg
+```
+
+The remaining md error is `Übe jeden Tag!`, tagged as indicative present rather
+than imperative. In the separate existing public-domain *Effi Briest* excerpt,
+the model correctly tags seven preterite predicates but misreads adjectival
+`weiß` in `blau und weiß gestreiftes …` as a present verb. That is a real false
+positive, not an accepted gold label. Ambiguous `sein` constructions may be
+reported unresolved. Indirect/free indirect discourse and semantic narrative
+time are not recognized automatically. Selecting `narration` only excludes spans
+recognized by the configured quotation pattern, including its capture convention;
+it must not be presented as reliable speaker attribution.
+
+Future, subjunctive and unresolved groups stay inspectable rather than being
+silently turned into past/present evidence. A zero count is the number of
+resolved selected indicative groups, not proof that the paragraph contains no
+verbs or tense changes. Model absence or failure is an explicit error. Optional
+model execution was checked on Linux ARM/Python 3.12; core portability checks do
+not establish optional spaCy model compatibility on every supported platform.
+
+#### Additional language construction checks
+
+The manually labeled synthetic cases in `tests/fixtures/multilingual_verb_groups.json`
+check whole finite-group **tense sequences**, separately from the German
+**tense-plus-mood** score above. These are development regression cases, not
+independent or representative literary evaluation sets:
+
+| Language / selected model | Matching tense sequences |
+| --- | --- |
+| English / spaCy medium 3.8.0 | 13 / 14 |
+| French / Stanza GSD nocharlm 1.15.0 | 14 / 15 |
+| Spanish / spaCy medium 3.8.0 | 14 / 14 |
+| Italian / Stanza MarkIT nocharlm 1.15.0 | 17 / 17 |
+| Portuguese / spaCy medium 3.8.0 | 15 / 16 |
+| Dutch / spaCy medium 3.8.0 | 15 / 15 |
+
+The English model misses a coordinated predicate, French treats `partie` as a
+noun in an anterior-perfect example, and Portuguese mistakes synthetic
+pluperfect `escrevera` for present. The French spaCy medium baseline matched
+10/15 on the same cases, including future/conditional mistakes, motivating the
+explicit Stanza option. No model is declared universally best. English/Dutch
+missing Mood stays `unmarked`; conditionals and modal forms are separate, not
+ordinary past. Unknown morphology, ambiguous `zijn` state/perfect-passive
+readings and incompatible finite carriers stay unresolved. Analytic prospective
+constructions and indirect/free indirect discourse are not comprehensively
+classified. A matching tense sequence does not validate mood, voice, aspect,
+quotation interpretation or warning usefulness.
+
+#### Official scientific corpus feature checks
+
+[Universal Dependencies 2.18](https://universaldependencies.org/) (15 May 2026)
+provides the official token-annotation reference. The first 100 sentences in file
+order from each tagged test partition were checked locally, 700 total. Selected
+models parsed all 700 after unknown word morphology was retained explicitly.
+This is a bounded **token-feature agreement** check, not a compound verb-group
+tense benchmark or a representative accuracy estimate:
+
+| Treebank, r2.18 test | Indicative token Tense matches / eligible |
+| --- | --- |
+| [German HDT](https://universaldependencies.org/treebanks/de_hdt/index.html) | 49 / 55 |
+| [English EWT](https://universaldependencies.org/treebanks/en_ewt/index.html) | 141 / 169 |
+| [French GSD](https://universaldependencies.org/treebanks/fr_gsd/index.html), selected Stanza | 149 / 149 |
+| [Spanish AnCora](https://universaldependencies.org/treebanks/es_ancora/index.html) | 195 / 201 |
+| [Italian MarkIT](https://universaldependencies.org/treebanks/it_markit/index.html) | 265 / 269 |
+| [Portuguese Bosque](https://universaldependencies.org/treebanks/pt_bosque/index.html) | 109 / 111 |
+| [Dutch Alpino](https://universaldependencies.org/treebanks/nl_alpino/index.html) | 154 / 162 |
+
+Eligible gold features enter the denominator before prediction/alignment checks.
+English had 28 eligible finite-word alignment misses; Portuguese had two.
+English omitted Mood for 90 aligned eligible words and Dutch for all 162.
+Missing gold features are reported separately; they are not invented as gold
+labels. Many-to-many expanded word spans are not guessed. HDT has converted
+manual morphology; GSD German features have different annotation provenance.
+MarkIT includes partially corrected automatic morphology. Training overlap,
+annotation conversion, domains and the small ordered prefixes limit interpretation.
+Raw external corpus bytes are not bundled; reproducible tools accept explicit
+local files and report their SHA256 and caller-supplied provenance:
+
+```sh
+python scripts/check_linguistic_corpus.py --conllu de_hdt-ud-test.conllu --language de --model de_core_news_md --limit 100 --corpus UD_German-HDT --release 2.18 --license "CC BY-SA4.0" --source https://raw.githubusercontent.com/UniversalDependencies/UD_German-HDT/r2.18/de_hdt-ud-test.conllu
+```
+
 ### Core validation status
 
-**Current main:** seven short original-language literary excerpts have manually
+**Since v0.7.6:** seven short original-language literary excerpts have manually
 transcribed sentence boundaries and orthographic tokens in
 [`tests/fixtures/literary_reference.json`](https://github.com/mfahsold/lixity/blob/main/tests/fixtures/literary_reference.json).
 They cover 375 tokens and 14 sentences, with edition URLs, extraction locators

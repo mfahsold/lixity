@@ -126,7 +126,7 @@ def build_server_dashboard(
     if identity_settings_override is not None:
         identity_settings = {**identity_settings, **identity_settings_override}
         settings = {**settings, **{key: value for key, value in identity_settings_override.items()
-                                  if key in {"register_profiles", "chapter_registers", "characters"}}}
+                                  if key in {"register_profiles", "chapter_registers", "characters", "tense_model", "tense_scope"}}}
     config, resolved = resolve_document_config(text, language, project_config=settings)
     status_labels = resolved.labels
 

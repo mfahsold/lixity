@@ -149,9 +149,11 @@ async function documentState(page) {
       const offOrigin = await page.evaluate(() => { const anchor = LixityReader.capture(); return {id: anchor.panel.id, top: anchor.top}; });
       await page.locator('#workbench-overview-open').click();
       await page.locator('#analysis-sections [data-section-link]').last().click();
+      assert.equal(await toggle.isVisible(), false, 'Analysis marks are controlled from the document surface');
+      await page.locator('#workbench-overview-back').click();
       await toggle.click(); await settle(page);
       assert.ok(Math.abs(await page.locator('#' + offOrigin.id).evaluate(node => node.getBoundingClientRect().top) - offOrigin.top) <= 2,
-        'Turning analysis off from overview returns to the original passage');
+        'Returning from overview and hiding analysis preserves the original passage');
       assert.equal(await page.locator('#workspace-reader-panel').isVisible(), true);
       await page.locator('#workspace-reader-close').click();
 

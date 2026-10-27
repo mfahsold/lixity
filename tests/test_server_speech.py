@@ -53,7 +53,10 @@ def test_preview_and_download_are_bound_to_actual_source_without_writes(speech_s
     assert response.status == 200, response.body
     data = json.loads(response.body)
     assert data["settings"]["selected"] == "narrator" and len(data["chapters"]) == 2
+    assert set(data["capabilities"]) == {"qwen3"}
+    assert data["requires_migration"] is False
     assert data["capabilities"]["qwen3"]["instructions"] is True
+    assert data["settings"]["profiles"]["narrator"]["engine"] == "qwen3"
     request = {
         **bound,
         "mode": "preview",
@@ -211,7 +214,8 @@ def test_qwen_chapters_reuse_completed_segments_but_previews_stay_fresh(speech_s
 
 
 @pytest.mark.parametrize("target", [None, "local", "jetson"])
-def test_api_dispatches_target_without_mutating_saved_profiles(speech_server, monkeypatch, target):
+@pytest.mark.parametrize("explicit_profile", [False, True])
+def test_api_dispatches_target_without_mutating_saved_profiles(speech_server, monkeypatch, target, explicit_profile):
     import lixity.speech_jobs as jobs
     from lixity.speech_profiles import AudioProfile
 
@@ -227,7 +231,9 @@ def test_api_dispatches_target_without_mutating_saved_profiles(speech_server, mo
 
     monkeypatch.setattr(jobs, "render_speech_audio", render)
     bound = context(source, handler)
-    payload = {**bound, "mode": "preview", "chapter": 1, "profile": profile}
+    payload = {**bound, "mode": "preview", "chapter": 1}
+    if explicit_profile:
+        payload["profile"] = profile
     if target is not None:
         payload["target"] = target
     response = send(port, "/api/speech-render", payload=payload)
@@ -248,18 +254,117 @@ def test_api_dispatches_target_without_mutating_saved_profiles(speech_server, mo
 
 
 @pytest.mark.parametrize("change", [
-    {"target": "jetson"},
     {"target": "remote"},
     {"target": "http://127.0.0.1:8770"},
     {"target": None},
     {"target": {"host": "jetson"}},
 ])
-def test_api_rejects_piper_or_untrusted_execution_targets(speech_server, change):
+def test_api_rejects_untrusted_execution_targets(speech_server, change):
     port, source, handler, observed = speech_server
     before = source.read_bytes()
+    config_before = (source.parent / "lixity.toml").read_bytes()
     response = send(port, "/api/speech-render", payload={
         **context(source, handler), "mode": "preview", "chapter": 1, **change,
     })
     assert response.status == 400, response.body
     assert observed == []
     assert source.read_bytes() == before
+    assert (source.parent / "lixity.toml").read_bytes() == config_before
+
+
+@pytest.mark.parametrize("target", ["local", "jetson"])
+def test_explicit_piper_draft_is_rejected_without_fallback_or_state_changes(speech_server, target):
+    port, source, handler, observed = speech_server
+    config = source.parent / "lixity.toml"
+    config_before, source_before = config.read_bytes(), source.read_bytes()
+    response = send(port, "/api/speech-render", payload={
+        **context(source, handler), "mode": "preview", "chapter": 1, "target": target,
+        "profile": {"engine": "piper", "language": "en", "voice": "en_US-lessac-medium"},
+    })
+    assert response.status == 400, response.body
+    error = json.loads(response.body)
+    assert error["ok"] is False and "Piper" in error["message"] and "audio-migrate" in error["message"]
+    assert "job" not in error and observed == []
+    assert config.read_bytes() == config_before and source.read_bytes() == source_before
+    # A valid request after rejection remains dispatchable in the same context.
+    valid = send(port, "/api/speech-render", payload={
+        **context(source, handler), "mode": "preview", "chapter": 1, "target": target,
+    })
+    assert valid.status == 202, valid.body
+
+
+def test_saved_piper_configuration_is_reported_and_never_rendered_or_rewritten(speech_server):
+    port, source, handler, observed = speech_server
+    config = source.parent / "lixity.toml"
+    config.write_text('''language = "en"
+[audio]
+schema_version = "lixity-audio-settings/1"
+selected = "narrator"
+[audio.profiles.narrator]
+engine = "piper"
+voice = "en_US-lessac-medium"
+''')
+    config_before, source_before = config.read_bytes(), source.read_bytes()
+    bound = context(source, handler)
+    response = send(port, "/api/speech?" + urlencode(bound))
+    assert response.status == 200, response.body
+    data = json.loads(response.body)
+    assert data["settings"] is None and set(data["capabilities"]) == {"qwen3"}
+    assert "Piper" in data["configuration_error"] and "audio-migrate" in data["configuration_error"]
+    response = send(port, "/api/speech-render", payload={**bound, "mode": "preview", "chapter": 1})
+    assert response.status == 400, response.body
+    error = json.loads(response.body)
+    assert "Piper" in error["message"] and "job" not in error
+    assert observed == []
+    assert config.read_bytes() == config_before and source.read_bytes() == source_before
+
+
+def test_legacy_audio_cannot_be_replaced_through_normal_settings_save(speech_server):
+    from lixity.config import read_explicit_project_config
+    from lixity.speech_profiles import parse_audio_settings
+
+    port, source, handler, _observed = speech_server
+    config = source.parent / "lixity.toml"
+    config.write_text('''language = "en"
+[audio]
+schema_version = "lixity-audio-settings/1"
+selected = "retained_narrator"
+[audio.profiles.retained_narrator]
+name = "Retained synthetic name"
+engine = "piper"
+language = "en"
+voice = "en_US-lessac-medium"
+pronunciations = { "Synthetic" = "Example" }
+[audio.profiles.retained_second]
+name = "Second narrator"
+engine = "piper"
+language = "de"
+voice = "de_DE-thorsten-medium"
+''')
+    before, source_before, title_before = config.read_bytes(), source.read_bytes(), handler.title
+    legacy_audio = read_explicit_project_config(source.parent)["audio"]
+    bound = context(source, handler)
+    data = json.loads(send(port, "/api/speech?" + urlencode(bound)).body)
+    response = send(port, "/api/settings", payload={
+        "project_token": bound["project_token"], "title": "Must not be saved",
+        "audio": parse_audio_settings(None).model_dump(by_alias=True),
+    })
+    assert response.status == 400, response.body
+    assert "audio-migrate" in json.loads(response.body)["message"]
+    assert data["requires_migration"] is True and data["settings"] is None
+    assert config.read_bytes() == before and source.read_bytes() == source_before
+    assert handler.title == title_before
+    # Unrelated settings remain editable and keep every legacy profile intact.
+    response = send(port, "/api/settings", payload={
+        "project_token": bound["project_token"], "title": "Allowed synthetic title",
+    })
+    assert response.status == 200, response.body
+    assert read_explicit_project_config(source.parent)["audio"] == legacy_audio
+    assert source.read_bytes() == source_before
+    response = send(port, "/api/settings", payload={
+        "project_token": context(source, handler)["project_token"],
+        "title": "Another allowed title", "audio": legacy_audio,
+    })
+    assert response.status == 200, response.body
+    assert read_explicit_project_config(source.parent)["audio"] == legacy_audio
+    assert source.read_bytes() == source_before

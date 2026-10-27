@@ -18,6 +18,7 @@ from ..config import (
     apply_config_to_thresholds,
     load_project_config,
     prepare_project_settings,
+    read_explicit_project_config,
     read_project_config,
     resolve_thresholds,
     validate_author_name,
@@ -27,6 +28,7 @@ from ..manuscript_import import convert_docx, preview_docx
 from ..project_structure import MAX_CONFIG_BYTES, inspect_project
 from ..research import api as research_api
 from ..research.repository import Repository, ResearchError
+from ..speech_profiles import requires_audio_migration
 from ..workspace import resolve_project_target
 from ..workspace_labels import WORKSPACE_LABELS
 from ._base import ResponseMixin
@@ -196,6 +198,13 @@ class ProjectRoutesMixin(ResponseMixin):
             title_custom = title is not None if "title" in payload else self.title_custom
             thresholds = replace(self.thresholds, **apply_config_to_thresholds(payload))
             changes: dict[str, Any] = {key: payload[key] for key in PERSISTED_SETTINGS_KEYS if key in payload}
+            if "audio" in changes and root is not None:
+                existing_audio = read_explicit_project_config(root).get("audio")
+                if requires_audio_migration(existing_audio):
+                    if changes["audio"] != existing_audio:
+                        raise ValueError("Existing Piper profiles require the reviewed, backed-up audio-migrate command; "
+                                         "normal settings saves cannot replace them")
+                    changes.pop("audio")
             if save_defaults:
                 changes.update({key: lang if key == "language" else payload[key]
                                 for key in ANALYSIS_SETTINGS_KEYS if key in payload})
@@ -213,7 +222,8 @@ class ProjectRoutesMixin(ResponseMixin):
                     self.source_input, language=lang, title=title, thresholds=thresholds,
                     controls=True, api_base=self.api_base, exports_dir=self.exports_dir, debug=self.debug,
                     project_root=root, research_root=self.get_research_root(),
-                    identity_settings_override=changes,
+                    identity_settings_override={**changes, **{key: value for key, value in self.project_open_overrides.items()
+                                                              if key in ("tense_model", "tense_scope")}},
                     project_config_bytes=prepared.content if prepared else None,
                     strict_source=True,
                 )
@@ -448,6 +458,8 @@ class ProjectRoutesMixin(ResponseMixin):
                 exports_dir=exports_dir,
                 project_root=ws_root,
                 research_root=ws_root,
+                identity_settings_override={key: value for key, value in overrides.items()
+                                            if key in ("tense_model", "tense_scope")},
                 strict_source=True,
             )
         except (

@@ -45,7 +45,9 @@ class AnalysisReviewRoutesMixin(ResponseMixin):
                 return
             try:
                 result = review_analysis(self.workspace_root, manuscript=self.source_input,
-                                        language=self.language, thresholds=self.thresholds)
+                                        language=self.language, thresholds=self.thresholds,
+                                        tense_model=self.project_open_overrides.get("tense_model"),
+                                        tense_scope=self.project_open_overrides.get("tense_scope"))
                 if result["source_sha256"] != self.dashboard_info.get("manuscript_source_sha256"):
                     raise ResearchConflictError("Manuscript differs from the displayed analysis; update analysis first")
                 self._json({"ok": True, **result})
@@ -65,6 +67,8 @@ class AnalysisReviewRoutesMixin(ResponseMixin):
             try:
                 result = record_analysis_review(self.workspace_root, request.observation_id, request.status,
                     manuscript=self.source_input, language=self.language, thresholds=self.thresholds,
+                    tense_model=self.project_open_overrides.get("tense_model"),
+                    tense_scope=self.project_open_overrides.get("tense_scope"),
                     expected_source_sha256=request.expected_source_sha256,
                     expected_analysis_sha256=request.expected_analysis_sha256,
                     expected_review_sha256=request.expected_review_sha256)

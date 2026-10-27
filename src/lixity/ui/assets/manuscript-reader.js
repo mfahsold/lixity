@@ -411,6 +411,17 @@
     try { if (owner && owner.tense) evidence = await owner.tense(panel); } catch (_) { /* Missing evidence stays explicit. */ }
     if (!current()) return;
     host.setAttribute("aria-busy", "false");
+    if (evidence && evidence.grammar) {
+      var groups = evidence.grammar.groups;
+      var grammarNote = document.createElement("p"); grammarNote.className = "ctl-note";
+      grammarNote.textContent = uiFormat("reading_tense_grammar_summary", {
+        groups:groups.length,
+        excluded:groups.filter(function(group) {return !group.selected;}).length,
+        other:groups.filter(function(group) {return group.selected && !group.bucket && group.tense !== "unresolved";}).length,
+        unresolved:groups.filter(function(group) {return group.tense === "unresolved" || group.scope === "unresolved";}).length
+      });
+      host.appendChild(grammarNote);
+    }
     var complete = true;
     ["present", "past"].forEach(function(key) {
       var layer = evidence && evidence[key], count = Number(panel.dataset[key === "present" ? "pre" : "pas"]);
@@ -481,6 +492,11 @@
       context.appendChild(flagCard);
       // Verification is asynchronous; the context identity is checked before display.
       Promise.resolve().then(function() {renderTenseCues(panel, cueHost);});
+    } else if (paragraphContent[panel.id] && paragraphContent[panel.id][3] &&
+        paragraphContent[panel.id][3].tense && paragraphContent[panel.id][3].tense.grammar) {
+      var grammarHost = document.createElement("div"); grammarHost.className = "reader-tense-evidence";
+      context.appendChild(grammarHost);
+      Promise.resolve().then(function() {renderTenseCues(panel, grammarHost);});
     }
     var tools = document.createElement("div"); tools.className = "reader-passage-tools";
     tools.setAttribute("role", "group"); tools.setAttribute("aria-label", uiLabel("reading_actions"));

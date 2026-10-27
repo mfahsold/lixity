@@ -167,18 +167,23 @@ def test_cli_dispatches_execution_target_without_saving_it(tmp_path, monkeypatch
     assert source.read_text() == "A synthetic target dispatch passage."
 
 
-def test_cli_rejects_jetson_for_piper_before_touching_output(tmp_path, monkeypatch, capsys):
+def test_cli_default_qwen_uses_jetson_without_saving_a_profile(tmp_path, monkeypatch):
     from lixity.cli import main
 
     source = tmp_path / "manuscript.md"
-    source.write_text("A synthetic Piper passage.")
+    source.write_text("A synthetic default narrator passage.")
     (tmp_path / "lixity.toml").write_text('language="en"\nmanuscript="manuscript.md"\n')
     output = tmp_path / "result.wav"
     output.write_bytes(b"retained listening copy")
     calls = []
-    monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen", lambda *args, **kwargs: calls.append(args))
+    def synthesize(text, profile, **kwargs):
+        calls.append((text, profile.engine, profile.voice, kwargs["target"]))
+        return generate_silence_wav(.01, 24000)
+
+    original = (tmp_path / "lixity.toml").read_bytes()
+    monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen", synthesize)
     assert main(["read-aloud", "--project", str(tmp_path), "--speech-target", "jetson",
-                 "-o", str(output)]) == 1
-    assert "Execution target is not supported" in capsys.readouterr().err
-    assert output.read_bytes() == b"retained listening copy"
-    assert calls == []
+                 "--no-audio-cache", "-o", str(output)]) == 0
+    assert output.read_bytes().startswith(b"RIFF")
+    assert calls == [("A synthetic default narrator passage.", "qwen3", "Ryan", "jetson")]
+    assert (tmp_path / "lixity.toml").read_bytes() == original

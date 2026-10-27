@@ -123,7 +123,7 @@ restored-store publication. Inventory paths use the repository's existing
 containment/symlink boundary, which also rejects parent components. Record and
 manifest schemas describe canonical JSON independently of its physical encoding.
 
-**Current main:** `research/storage.json` explicitly selects the current gzip
+**Since v0.7.6:** `research/storage.json` explicitly selects the current gzip
 manifest layout (`research-storage-local/1`, `manifest_encoding: gzip`). New
 projects store manifests as `research/manifests/HASH.json.gz`. The shared
 repository accessor bounds both compressed input and decompressed JSON, checks
@@ -143,7 +143,7 @@ plaintext layout authoritative. Interrupted cleanup leaves valid compressed
 storage and can be retried with the verified backup. Temporary backup verification
 requires room for a restored copy as well as both physical manifest encodings.
 
-**Current main:** explicit research audit reuses this manifest-chain validator.
+**Since v0.7.6:** explicit research audit reuses this manifest-chain validator.
 Its `records` count describes accepted revision objects, including historical
 authored revisions, rather than current identities or source files. Additive
 `manifest_history_checked` and `manifest_capacity` fields distinguish verified
@@ -256,7 +256,7 @@ distinguish contention, read-only/permission failures and other I/O errors.
 
 ### Passage research presentation
 
-**Current main:** manuscript review can inspect a unique moved/adjusted quotation
+**Since v0.7.6:** manuscript review can inspect a unique moved/adjusted quotation
 before accepting its new anchor. `manuscript-links.js` reuses the report's current
 line span and resolved Unicode offsets, verifies its exact saved quotation and
 rechecks the displayed project/source context at activation. The existing navigation
@@ -264,7 +264,7 @@ bridge opens the paragraph without a write; resolved-only inline markings and
 explicit re-pin acceptance remain separate. This adds no archive fields or
 semantic contradiction detector.
 
-**Current main:** the shared lightweight paragraph projection also retains the
+**Since v0.7.6:** the shared lightweight paragraph projection also retains the
 parser's chapter number and title. Manuscript review derives
 `resolved_chapter_num` and `resolved_chapter_title` from the unique current
 paragraph, including unaccepted moved/adjusted candidates. Missing, unreadable,
@@ -281,7 +281,7 @@ Chronology conflicts require explicit time/place assertions, not inferred dates
 presented as facts. Dossier composition and semantic conflict detection are not
 implemented by this chapter view.
 
-**Current main:** creation rejects an active association for the same claim and
+**Since v0.7.6:** creation rejects an active association for the same claim and
 exact source-path/paragraph/line/offset occurrence. The current source and claim
 guards still apply; a different occurrence is not deduplicated merely because
 its wording matches. `ManuscriptLinkExistsError` carries the existing link ID;
@@ -505,7 +505,7 @@ records, never fabricated text passages; textual analysis rejects them. Attachme
 and dossier revision publish atomically. Purge retains identity for honest unavailable
 placeholders, not image bytes. Shared limits come from `research.limits`.
 
-**Current main, unreleased:** PDF/video attachments reuse that same capture,
+**Since v0.7.6:** PDF/video attachments reuse that same capture,
 source context, CAS transaction, revision and lifecycle model. Separate
 `lixity:media/...` pins and additive `media` read arrays preserve the PNG/JPEG-only
 image interfaces. Videos and retained-only PDFs opt into record/manifest v9; earlier accepted records
@@ -606,7 +606,7 @@ actions while retaining product identity and all three destinations.
 
 ### Annotation semantics and visual identity
 
-**Current main, unreleased:** [the central product vocabulary](LOCALIZATION.md#product-vocabulary-and-ownership)
+**Since v0.7.6:** [the central product vocabulary](LOCALIZATION.md#product-vocabulary-and-ownership)
 distinguishes counted observations, interpretations, actions and saved state.
 The existing resource packs own labels; each resolved key has one definition.
 Presentation names describe actual measurements and effects while public
@@ -614,7 +614,7 @@ numeric identifiers remain language-neutral. The localization contract also
 defines action/category distinctions, German voice and the native language
 setting's existing analysis/interface coupling.
 
-**Current main, unreleased:** manuscript annotations distinguish the assertion
+**Since v0.7.6:** manuscript annotations distinguish the assertion
 being made, using pattern, position and a visible label as well as color. This
 is the central design contract; exact token values and dimensions remain in CSS.
 
@@ -679,13 +679,13 @@ specific presentation changes remain design proposals, not shipped controls or
 a new analysis engine. See [reader usage](USAGE.md#reading-paragraphs) and
 [automation hooks](AGENTS.md#34-dashboard-interaction-contract-for-embedding-and-ui-automation).
 
-The lightweight cue engine remains the default. Optional local grammatical
-models are a proposed extension, not a current dependency or a silent replacement
-for lexical counts. A future adapter must expose model/language/version and
-availability in its result identity, preserve exact source-offset mappings and
-keep grammatical predictions distinct from observed word-pattern evidence.
-Model downloads and remote manuscript processing are not implied by opening
-an analysis view. See [language validation](LOCALIZATION.md#direction-for-deeper-grammatical-analysis).
+The lightweight cue engine remains the default. Since v0.7.6, optional installed
+grammatical models provide a separate explicit measurement mode. The
+[shared backend](#shared-grammatical-tense-backend) exposes model/language/version
+and policy identity, preserves exact source-offset mappings and keeps grammatical
+predictions distinct from observed word-pattern evidence. Opening an analysis
+view never downloads a model or invokes remote manuscript processing. See
+[language validation](LOCALIZATION.md#direction-for-deeper-grammatical-analysis).
 
 ### Shared manuscript reader
 
@@ -854,7 +854,7 @@ Storage help describes retained data, not an unconditional historical format
 upgrade. Planned capabilities such as collections remain explicitly labelled as
 unimplemented in architecture documentation, not offered as available actions.
 
-**Current main:** mouse hints use a 600 ms first dwell, an 80 ms
+**Since v0.7.6:** mouse hints use a 600 ms first dwell, an 80 ms
 neighbor transition and a 1,000 ms warm window. These are interaction choices,
 not research-derived thresholds. One pending owner cancels on departure, scroll,
 activation, Escape, view changes or window blur; hovering the visible hint keeps
@@ -922,7 +922,7 @@ Native disclosure state survives view changes without a new preference store.
 Bounded flags/scene regions support keyboard scrolling, and wide comparisons
 retain chapter, character or scene identity while scrolling horizontally.
 
-**Current main:** the overview's section links form one wrapping contents list
+**Since v0.7.6:** the overview's section links form one wrapping contents list
 inside the existing measured reader header, before review guidance and search.
 The current link uses an underline and `aria-current`; the horizontal list has
 no progress track because its sections are not completion steps or new tabs.
@@ -1003,7 +1003,7 @@ close temporary menus/settings and suspend manuscript tools, so dormant views do
 not consume the active workspace's keys or restore focus. Browser appearance
 preferences are separate from ephemeral, project-bound passage/relation context.
 
-**Current main (unreleased):** chapter and passage jumps retire the previous
+**Since v0.7.6:** chapter and passage jumps retire the previous
 passage context before aligning the new destination. Reading another paragraph,
 or deliberately scrolling the manuscript beyond the inspected passage, closes
 that context; scrolling within a dossier or inspector retains it. Tool switching
@@ -1262,7 +1262,7 @@ calibration, navigability or historical accuracy.
 
 ## Shared document orientation and metric presentation
 
-**Current main, unreleased:** `research-content.js` owns one dossier reading
+**Since v0.7.6:** `research-content.js` owns one dossier reading
 presentation. It renders the canonical body in source order; `section_map` is
 a grouped lookup projection, never a reading source. Repeated headings and
 their original levels remain in place. Exact unambiguous section-edit actions
@@ -1299,7 +1299,7 @@ projection use the same comparison. Missing comparison is not zero. Display-only
 register/declared-POV controls change heatmap row visibility, preserving the
 accepted full-book analysis and existing exemption policy.
 
-**Current main (unreleased):** `ui.heatmap.render_metric_context` projects the
+**Since v0.7.6:** `ui.heatmap.render_metric_context` projects the
 existing 16-feature `StyleFingerprint` into one native chapter measurement
 dialog. Heatmap cells, style-reference cutoff-hit counts and all dimension
 loadings use the existing activation dispatcher and `metric-context.js`.
@@ -1327,15 +1327,22 @@ new archive schema or database authority is introduced.
 
 ## Project audio profiles and rendering
 
-**Current main (unreleased):** `speech_profiles.py` owns strict project-only audio
+**Since v0.7.6:** `speech_profiles.py` owns strict project-only audio
 settings and engine capabilities. Existing root-only atomic settings updates
-persist `audio`; the CLI and native dialog resolve the same profiles. Piper and
-Qwen CustomVoice expose different controls rather than a fictitious common
-emotion/speed interface. Explicit pronunciation substitutions do not edit source
-bytes. Optional inference dependencies remain outside the core installation.
+persist `audio`; the CLI and native dialog resolve the same Qwen3-TTS 1.7B
+CustomVoice profiles and rendering controls. Qwen is the sole supported engine.
+The `speed` field remains fixed at `1.0`; delivery instructions do not establish
+an exact speaking rate. Ten explicit speech languages include six of the seven
+analysis languages; Dutch is unsupported. Explicit pronunciation substitutions
+do not edit source bytes. Optional inference dependencies remain outside the core
+installation.
 
 `speech.py` owns bounded text planning, shared structural pauses, format checks
-and atomic output. `speech_qwen.py` is the fixed-loopback adapter and optional
+and atomic output. The subprocess runner limits FFmpeg conversion
+to one hour and translates timeout errors without exposing captured prose.
+Temporary output cleanup and final atomic publication remain renderer-owned;
+this direct-child deadline does not interrupt in-process model inference.
+`speech_qwen.py` is the fixed-loopback adapter and optional
 isolated model worker. It imports the heavy runtime lazily, loads a complete local
 checkpoint once, serializes synthesis and never downloads a model during use.
 CPU is a supported asynchronous rendering path; GPU availability is not presumed.
@@ -1343,11 +1350,33 @@ Optional operator selection `--device cuda --codec-device cpu` keeps the talker
 on CUDA while placing the existing audio decoder on CPU float32. Default decoder
 placement follows the main device. This changes resource placement, not the
 checkpoint family or portable voice-profile contract; memory sufficiency still
-requires a real synthesis test.
+requires a real synthesis test. Worker-only `--attention auto|eager|sdpa` permits
+explicit attention selection; `auto` keeps eager on CPU and SDPA on CUDA. Hardware
+comparisons require measured synthesis on the actual workload, without changing
+the model or promising faster output.
+Inference runs inside `torch.inference_mode`. Optional
+`--codec-chunk-frames` configures only the loaded 12 Hz decoder instance through
+its validated upstream chunk hook, retaining 25 frames of left context. Default
+300 is untouched; explicit 16–300 values bound chunk activations, not total
+model/KV-cache/output memory. Additive worker health metadata reports resolved
+device, dtype, threads, attention, codec placement and chunk size without paths.
+
 Per-render `local|jetson` selection chooses fixed loopback ports 8769 or 8770.
 The latter is an operator-configured authenticated SSH forward; the remote worker
 remains loopback-only. Location is not part of portable project voice settings,
 and neither browser input nor project configuration can supply an inference URL.
+
+`speech_migration.py` prepares explicit replacements for removed Piper profiles.
+The `lixity-audio-settings/1` wire version remains valid for existing Qwen records;
+Piper records and saved profiles without an explicit engine fail rather than
+silently changing voice. `audio-migrate` defaults to a JSON dry run. Apply requires
+the reviewed snapshot token, bound to source, root configs and replacement
+candidate, and a new backup outside the project. The verified private
+configuration ZIP contains no manuscript bytes. IDs, selection, names,
+languages, pauses and pronunciation settings survive the migration; the operator
+chooses each Qwen preset and any new style instructions, with speed fixed at
+`1.0`. Existing optimistic root-configuration checks and source snapshot checks
+guard the atomic update; they do not provide a cross-process manuscript lock.
 
 Native `SpeechJobs` own temporary immutable source snapshots and WAV outputs, one
 active render plus at most three FIFO waiters per app, progress, cancellation
@@ -1372,7 +1401,29 @@ is atomically stored after PCM validation; the final listening copy remains an
 independent atomic output. Source/context guards still govern downloads. Cache
 eviction or corruption causes recomputation, not publication of partial audio.
 The model identity is the named family, so local weight changes require a fresh
-render or cache removal. This derived cache does not persist native job state.
+render or cache removal. Cache replay deliberately works without a running
+worker; a family cache hit does not establish checkpoint, generation-recipe or
+device equivalence between machines. Exact renderer fingerprinting would require
+an explicit verified-online versus offline-replay policy before changing keys.
+This derived cache does not persist native job state.
+
+The October 2026 upstream review retains Qwen3-TTS 1.7B CustomVoice as the sole
+implemented synthesis engine. Model cards,
+code licenses, voice assets and measured hardware behavior are separate inputs
+to an integration decision. [Pocket TTS](https://github.com/kyutai-labs/pocket-tts)
+is a relevant CPU/Dutch evaluation candidate, but its
+[weights and access conditions](https://huggingface.co/kyutai/pocket-tts) and
+reference-voice licenses need separate handling. Its published CPU timings do
+not measure this project's Jetson path.
+[Chatterbox](https://github.com/resemble-ai/chatterbox) distinguishes multilingual
+models from smaller English models; their speed and language claims are not
+interchangeable. [VoxCPM](https://github.com/OpenBMB/VoxCPM),
+[CosyVoice](https://github.com/QwenAudio/CosyVoice) and
+[Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) have different language,
+frontend and runtime boundaries. None is an implemented Lixity backend. Choosing
+one requires checkpoint-specific offline checks, memory measurements and a
+controlled multilingual listening evaluation; valid WAV transport alone does
+not establish intelligibility, naturalness or faithful long-form narration.
 
 Current-main native workspace routing uses one bounded `WorkspaceRegistry` per
 HTTP server. A project view owns independent handler state, cached HTML and an
@@ -1383,3 +1434,21 @@ API, artifact and native dossier-image links retain the prefix. The shared
 `SpeechJobs` scheduler belongs to the HTTP server, not any selected view.
 Job ownership includes the view API prefix, so two views of the same project
 cannot read, cancel or download one another's jobs.
+
+### Shared grammatical tense backend
+
+The optional `CorpusConfig.tense_model` selects `grammatical_tense.py` through
+`TenseMatcher`; analysis adapters do not implement independent morphology.
+`grammatical_parts` resolves chapter quotation context before paragraph-granular
+parsing. The profiler includes blockquote context while retaining its established
+body/list membership. Corpus/scene, paragraph, CLI and native/website evidence
+reuse the same composition and exact component ranges. The private in-memory
+LRU is bounded and never persists manuscript strings. `verb_grammar.py` owns
+pure morphology and language-specific periphrase classification; it does not
+load models, retain text or select evidence scope. `grammatical_tense.py` owns
+dependency composition, bounded memoization and scoped evidence projection.
+The `linguistic_models.py` adapter preserves common immutable `SyntaxToken`
+offsets across spaCy and explicit Stanza profiles, including multiword-token expansions.
+Installed models are explicit machine resources, with no inference-time download or regex fallback.
+See [methods](METHODS.md#optional-grammatical-analysis) and
+[configuration](USAGE.md#grammatical-tense).

@@ -9,6 +9,8 @@ remain lexical cues.
 
 import re
 from bisect import bisect_right
+from collections.abc import Sequence
+from typing import Any
 
 from .language import ResolvedLanguage, compile_pattern
 from .language_data import (
@@ -40,6 +42,12 @@ class TenseMatcher:
         self._pronouns = frozenset(word.lower() for word in language.lexicon.get("pronouns", ()))
         self._auxiliaries = frozenset(word.lower() for word in language.lexicon.get("auxiliaries", ()))
         self._german = language.key == "de"
+        self._model = config.tense_model
+        self._scope = config.tense_scope
+        self._quotation = compile_pattern(language.dialogue_regex)
+        model_language = self._model.removeprefix("stanza:").split("_", 1)[0] if self._model else language.key
+        if self._model and model_language != language.key:
+            raise ValueError("The selected grammatical tense model does not match the explicit analysis language")
         self._perfect_auxiliaries = {
             form: GERMAN_PERFECT_PARTICIPLES[family]
             for family, forms in GERMAN_PERFECT_FORMS.items() for form in forms
@@ -113,12 +121,34 @@ class TenseMatcher:
         present, past = self.spans(text)
         return len(present), len(past)
 
-    def spans(self, text: str) -> tuple[list[tuple[int, int]], list[tuple[int, int]]]:
+    def parts(self, parts: Sequence[str]) -> list[dict[str, Any] | None]:
+        """Resolve shared quotation context before counting individual paragraphs."""
+        if self._model is None:
+            return [None] * len(parts)
+        from .grammatical_tense import grammatical_parts
+
+        return list(grammatical_parts(parts, self._model, self._scope, self._quotation))
+
+    def spans(self, text: str, *, observation: dict[str, Any] | None = None) -> tuple[list[tuple[int, int]], list[tuple[int, int]]]:
         """Return effective cue ranges, including undrawable zero-width cues.
 
         Ranges address the supplied counting text. A perfect construction owns
         one past cue; lexical ambiguities retain the existing counting policy.
         """
+        if self._model is not None:
+            spans: dict[str, list[tuple[int, int]]] = {"present": [], "past": []}
+            parts = text.split("\n\n")
+            observations = [observation] if observation is not None else self.parts(parts)
+            offset = 0
+            for part, result in zip(parts, observations, strict=True):
+                if result is None:
+                    raise ValueError("Missing grammatical tense observation; no pattern fallback was used")
+                for group in result["groups"]:
+                    if group["selected"] and group["bucket"] in spans:
+                        components = group["components"]
+                        spans[group["bucket"]].append((offset + components[0][0], offset + components[-1][1]))
+                offset += len(part) + 2
+            return spans["present"], spans["past"]
         if not self._protect_finite_forms:
             return ([match.span() for match in self._present.finditer(text)],
                     [match.span() for match in self._past.finditer(text)])

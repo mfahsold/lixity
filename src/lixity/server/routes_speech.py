@@ -19,6 +19,7 @@ from ..speech_profiles import (
     AudioProfile,
     audio_capabilities,
     parse_audio_settings,
+    requires_audio_migration,
     resolve_audio_profile,
 )
 from ._base import ResponseMixin
@@ -115,6 +116,7 @@ class SpeechRoutesMixin(ResponseMixin):
                         "schema_version": "lixity-speech-local/1",
                         "settings": settings,
                         "configuration_error": configuration_error,
+                        "requires_migration": requires_audio_migration(config.get("audio")),
                         "capabilities": audio_capabilities(),
                         "chapters": chapters,
                         "project_token": query["project_token"],
@@ -160,8 +162,6 @@ class SpeechRoutesMixin(ResponseMixin):
                         settings, payload.get("profile_id"), language=self.language
                     )
                 )
-                if profile.engine == "piper" and payload.get("target", "local") != "local":
-                    raise ValueError("Piper supports only local execution")
                 if payload.get("paragraph") is not None and not isinstance(
                     payload["paragraph"], dict
                 ):

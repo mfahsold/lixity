@@ -1,6 +1,7 @@
 // Browser plugin unavailable: use the repository's real Chromium/rendering helpers.
-// Independent hand-transcribed literary gold checks counting, not grammatical
-// classification, readability calibration, or representative language accuracy.
+// Default literary gold checks counting, not grammatical classification.
+// Optional installed-model construction checks are not representative language
+// accuracy or readability calibration benchmarks.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -30,6 +31,11 @@ const matchUnits = {
   de:['Treffer', 'Treffer'], en:['match', 'matches'], fr:['occurrence', 'occurrences'],
   es:['coincidencia', 'coincidencias'], it:['riscontro', 'riscontri'],
   pt:['ocorrência', 'ocorrências'], nl:['treffer', 'treffers'],
+};
+const grammarGold = {
+  de:['übt', 'ging'], en:['writes', 'wrote'], fr:['écrit', 'écrivait'],
+  es:['escribe', 'escribía'], it:['scrive', 'scriveva'],
+  pt:['escreve', 'escrevia'], nl:['schrijft', 'schreef'],
 };
 const fixtures = pythonFixture(`
 import contextlib, io, json, tempfile, unicodedata
@@ -90,6 +96,58 @@ with tempfile.TemporaryDirectory(prefix='lixity-literary-cli-') as directory:
             'profile_help':labels['help_words']}
 print(json.dumps(result))
 `, {root});
+
+// Opt in only with explicitly installed local models; never download resources.
+const grammarFixtures = process.env.LIXITY_TEST_GRAMMATICAL_MODELS === '1' ? pythonFixture(`
+import contextlib, io, json, tempfile
+from pathlib import Path
+from lixity.cli import main
+from lixity.models import CorpusConfig
+from lixity.language import get_language_profile
+from lixity.pipeline import analyze_document
+from lixity.style_fingerprint import FingerprintThresholds
+from lixity.ui import render_dashboard
+from lixity.workspace_labels import WORKSPACE_LABELS
+cases = {
+    'de': ('de_core_news_md', 'Sie übt.', 'Sie ging.'),
+    'en': ('en_core_web_md', 'She writes.', 'She wrote.'),
+    'fr': ('stanza:fr_gsd', 'Elle écrit.', 'Elle écrivait.'),
+    'es': ('es_core_news_md', 'Ella escribe.', 'Ella escribía.'),
+    'it': ('stanza:it_markit', 'Lei scrive.', 'Lei scriveva.'),
+    'pt': ('pt_core_news_md', 'Ela escreve.', 'Ela escrevia.'),
+    'nl': ('nl_core_news_md', 'Zij schrijft.', 'Zij schreef.'),
+}
+result = []
+with tempfile.TemporaryDirectory(prefix='lixity-grammar-browser-') as directory:
+    source = Path(directory) / 'synthetic.md'
+    for language, (model, present, past) in cases.items():
+        # ASCII quotation marks are recognized by every explicit language profile.
+        paragraph = ' '.join([present] * 3) + ' "' + ' '.join([past] * 3) + '"'
+        text = '## Reference\\n\\n' + paragraph + '\\n'
+        source.write_text(text, encoding='utf-8')
+        original = source.read_bytes()
+        for scope in ('all', 'narration'):
+            config = CorpusConfig(language=language, tense_model=model, tense_scope=scope)
+            analysis = analyze_document(text, config, FingerprintThresholds(), include_evidence=True)
+            row = analysis.paragraphs[0]
+            output, errors = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
+                status = main(['profile', str(source), '--language', language,
+                    '--tense-model', model, '--tense-scope', scope, '--layer', 'asl', '--evidence', '--json'])
+            assert status == 0, (language, scope, errors.getvalue())
+            assert not errors.getvalue(), errors.getvalue()
+            report = json.loads(output.getvalue())
+            labels = {**get_language_profile(language).labels, **WORKSPACE_LABELS[language]}
+            html = render_dashboard(analysis.chapters, analysis.paragraphs, metrics=analysis.metrics,
+                fingerprint=analysis.fingerprint, paragraph_evidence=analysis.evidence,
+                title='Synthetic grammar reference', controls=True, labels=labels, language_key=language)
+            assert source.read_bytes() == original
+            result.append({'language':language, 'model':model, 'scope':scope, 'paragraph':paragraph,
+                'html':html, 'cli':report['paragraphs'][0]['evidence']['tense'],
+                'evidence':analysis.evidence[0]['tense'],
+                'present':row.present_hits, 'past':row.past_hits, 'flagged':row.is_flagged})
+print(json.dumps(result))
+`, {root}) : [];
 
 function closeEnough(actual, expected, message, tolerance = 0.011) {
   assert.ok(Math.abs(actual - expected) <= tolerance, `${message}: ${actual} != ${expected}`);
@@ -281,16 +339,115 @@ async function checkCorpusScope(browser) {
   }
 }
 
+async function checkGrammaticalModels(browser) {
+  for (const fixture of grammarFixtures) {
+    const {language, scope, evidence} = fixture;
+    const expectedPast = scope === 'all' ? 3 : 0;
+    assert.deepEqual([fixture.present, fixture.past, fixture.flagged], [3, expectedPast, scope === 'all'],
+      `${language}/${scope}: actual model classification vs hand-written synthetic reference`);
+    assert.deepEqual(fixture.cli, evidence, `${language}/${scope}: explicit CLI model/scope matches backend evidence`);
+    assert.equal(evidence.grammar.scope, scope);
+    assert.equal(evidence.grammar.groups.length, 6);
+    assert.equal(evidence.grammar.groups.filter(group => !group.selected).length, scope === 'all' ? 0 : 3);
+    if (['en', 'nl'].includes(language)) {
+      assert.ok(evidence.grammar.groups.some(group => group.mood === 'unmarked'),
+        `${language}: absent model mood is preserved explicitly, not inferred indicative`);
+    }
+    const originalQuotes = [...evidence.present.spans, ...evidence.past.spans]
+      .map(span => Array.from(fixture.paragraph).slice(span.start, span.end).join(''));
+    // Direct inspection of the installed Italian markit tokenizer confirms it
+    // attaches periods to the first five verbs; preserve those original spans.
+    const expectedOriginalQuotes = language === 'it' ? [
+      ...Array(3).fill('scrive.'),
+      ...(expectedPast ? ['scriveva.', 'scriveva.', 'scriveva'] : []),
+    ] : [
+      ...Array(3).fill(grammarGold[language][0]),
+      ...Array(expectedPast).fill(grammarGold[language][1]),
+    ];
+    assert.deepEqual(originalQuotes, expectedOriginalQuotes,
+      `${language}/${scope}: original predicate cues match the synthetic verb forms`);
+    for (const width of [1440, 320]) {
+      const page = await browser.newPage({viewport:{width, height:width === 320 ? 480 : 950}, reducedMotion:'reduce'});
+      const errors = [], writes = [];
+      page.on('pageerror', error => errors.push(error.message));
+      page.on('console', message => {if (['error', 'warning'].includes(message.type())) errors.push(message.text());});
+      page.on('request', request => {if (!['GET', 'HEAD'].includes(request.method())) writes.push(request.method());});
+      try {
+        await page.route('**/*', route => route.fulfill({contentType:'text/html', body:fixture.html}));
+        await page.goto('http://localhost/');
+        assert.equal(await page.title(), 'Synthetic grammar reference – Lixity');
+        assert.equal(await page.locator('html').getAttribute('lang'), language);
+        const panel = page.locator('#p-0');
+        await panel.scrollIntoViewIfNeeded();
+        const before = await identity(page);
+        assert.deepEqual(before.map(row => row.text), [fixture.paragraph]);
+        await panel.locator('.ptext-inner > p').evaluate(node => {
+          window.grammarProse = {node, children:[...node.childNodes]};
+        });
+        assert.equal(await panel.getAttribute('data-pre'), '3');
+        assert.equal(await panel.getAttribute('data-pas'), String(expectedPast));
+        assert.equal(await panel.locator('.reader-review-flag').count(), scope === 'all' ? 1 : 0);
+        await panel.locator('.reader-paragraph-actions').click();
+        await page.locator('#manuscript-context-menu [data-reader-action="values"]').click();
+        const host = page.locator('#reader-inspector .reader-tense-evidence');
+        await page.waitForFunction(() => document.querySelector('#reader-inspector .reader-tense-evidence')?.getAttribute('aria-busy') === 'false');
+        const summary = await page.evaluate(excluded => uiFormat('reading_tense_grammar_summary',
+          {groups:6, excluded, other:0, unresolved:0}), scope === 'all' ? 0 : 3);
+        const summaryNote = host.getByText(summary, {exact:true});
+        await summaryNote.scrollIntoViewIfNeeded();
+        assert.equal(await summaryNote.isVisible(), true,
+          `${language}/${scope}/${width}: grammatical summary remains visible even without a review flag`);
+        assert.equal(await summaryNote.evaluate(node => {
+          const bounds = node.getBoundingClientRect();
+          return bounds.top >= 0 && bounds.bottom <= innerHeight;
+        }), true, 'the actual grammar summary fits in the viewport');
+        await page.screenshot({path:path.join(artifacts, `grammar-${language}-${scope}-${width}-summary.png`)});
+        const expectedSpans = [...evidence.present.spans, ...evidence.past.spans];
+        const expectedQuotes = expectedSpans
+          .map(span => Array.from(fixture.paragraph).slice(span.start, span.end).join(''));
+        const cues = host.locator('.reader-tense-cue');
+        assert.deepEqual(await cues.allTextContents(), expectedQuotes);
+        for (let index = 0; index < expectedQuotes.length; index++) {
+          await cues.nth(index).click();
+          await page.waitForFunction(({quote, start, end}) => {
+            const ranges = [...(CSS.highlights.get('lixity-tense-current') || [])];
+            if (ranges.length !== 1 || ranges[0].toString() !== quote) return false;
+            const prose = document.querySelector('#p-0 .ptext-inner > p');
+            const prefix = document.createRange(); prefix.selectNodeContents(prose);
+            prefix.setEnd(ranges[0].startContainer, ranges[0].startOffset);
+            const offset = Array.from(prefix.toString()).length;
+            return offset === start && offset + Array.from(ranges[0].toString()).length === end;
+          }, {quote:expectedQuotes[index], start:expectedSpans[index].start, end:expectedSpans[index].end});
+        }
+        assert.deepEqual(await identity(page), before, 'cue navigation preserves source text and paragraph identity');
+        assert.equal(await panel.locator('.ptext-inner > p').evaluate(node =>
+          node === grammarProse.node && node.childNodes.length === grammarProse.children.length &&
+          [...node.childNodes].every((child, index) => child === grammarProse.children[index])), true,
+        'grammatical evidence leaves original manuscript text nodes intact');
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+        await page.screenshot({path:path.join(artifacts, `grammar-${language}-${scope}-${width}.png`)});
+        assert.deepEqual(errors, []);
+        assert.deepEqual(writes, []);
+        console.log(`${language}/${scope}/${width}: installed model, CLI counts, grammatical summary, exact cue highlights and source identity passed`);
+      } finally {await page.close();}
+    }
+  }
+}
+
 (async () => {
   const browser = await launchChromium();
   try {
-    for (const form of ['NFC', 'NFD']) {
-      for (const caseData of reference.fixtures) verifyCLI(caseData, form, fixtures[caseData.language + '-' + form]);
-      for (const caseData of reference.fixtures) for (const width of [1440, 320]) {
-        await checkBrowser(browser, caseData, form, width);
+    if (process.env.LIXITY_TEST_GRAMMATICAL_MODELS === '1') {
+      await checkGrammaticalModels(browser);
+    } else {
+      for (const form of ['NFC', 'NFD']) {
+        for (const caseData of reference.fixtures) verifyCLI(caseData, form, fixtures[caseData.language + '-' + form]);
+        for (const caseData of reference.fixtures) for (const width of [1440, 320]) {
+          await checkBrowser(browser, caseData, form, width);
+        }
       }
+      await checkCorpusScope(browser);
     }
-    await checkCorpusScope(browser);
   } finally {await browser.close();}
   console.log('linguistic-reference passed; artifacts: ' + artifacts);
 })().catch(error => {console.error(error); process.exitCode = 1;});

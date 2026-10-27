@@ -2,20 +2,18 @@
 
 Statistical measurements and words in the manuscript do not establish an
 actor's intention. Use one explicit profile throughout a render; headings,
-sentences, paragraphs and scene breaks supply the pause structure. Without a
-profile, the existing neutral Piper delivery and explicit user speed apply.
+sentences, paragraphs and scene breaks supply the pause structure. Qwen3-TTS
+CustomVoice provides the selected preset throughout a render.
 """
 
 from __future__ import annotations
 
 import io
-import json
 import math
 import os
 import re
 import shutil
 import subprocess
-import sys
 import tempfile
 import textwrap
 import unicodedata
@@ -28,11 +26,11 @@ from typing import Any
 from .markdown_parser import counting_inline_text, parse_markdown_blocks, split_chapters
 from .models import CorpusConfig
 from .sentences import split_sentences
-from .speech_profiles import AudioProfile
+from .speech_profiles import AudioProfile, resolve_audio_profile
 
-DEFAULT_VOICE_DIR = Path.home() / ".cache" / "piper-voices"
-DEFAULT_VOICES = {"de": "de_DE-thorsten-medium", "en": "en_US-lessac-medium"}
 MAX_SEGMENT_CHARS = 600
+# Conservative per-invocation bound; this does not interrupt in-process inference.
+SUBPROCESS_TIMEOUT_SECONDS = 3600
 
 
 class SpeechCancelled(RuntimeError):
@@ -49,12 +47,7 @@ class AudioCue:
     text: str
     kind: str
     chapter_num: int = 0
-    length_scale: float = 1.0
-    sentence_silence: float = 0.15
     pause_after: float = 0.45
-    speaker_id: int | None = None
-    noise_scale: float | None = None
-    noise_w_scale: float | None = None
     join_before: str = " "
 
 
@@ -64,17 +57,27 @@ def _is_cjk(character: str) -> bool:
             "\uf900" <= character <= "\ufaff" or "\U00020000" <= character <= "\U000323af")
 
 
-def _speech_segments(text: str) -> list[str]:
-    """Bound synthesis input at whitespace or Han/kana character boundaries.
+def _speech_segments(text: str, language: str = "en") -> list[str]:
+    """Pack sentences within the transport bound, splitting long ones at words.
 
     This is transport segmentation, not linguistic word segmentation. Preserve
     CJK and mixed-script text exactly; Latin tokens still remain indivisible.
     """
     if not any(_is_cjk(character) for character in text):
-        pieces = textwrap.wrap(text, MAX_SEGMENT_CHARS, break_long_words=False, break_on_hyphens=False)
-        if any(len(piece) > MAX_SEGMENT_CHARS for piece in pieces):
-            raise ValueError("A word exceeds the speech segment limit; its spelling was not changed")
-        return pieces
+        segments = []
+        pending = ""
+        for sentence in split_sentences(text, language):
+            for piece in textwrap.wrap(sentence, MAX_SEGMENT_CHARS, break_long_words=False,
+                                       break_on_hyphens=False):
+                if len(piece) > MAX_SEGMENT_CHARS:
+                    raise ValueError("A word exceeds the speech segment limit; its spelling was not changed")
+                if pending and len(pending) + len(piece) + 1 > MAX_SEGMENT_CHARS:
+                    segments.append(pending)
+                    pending = ""
+                pending = (pending + " " + piece).strip()
+        if pending:
+            segments.append(pending)
+        return segments
     pieces = []
     while len(text) > MAX_SEGMENT_CHARS:
         boundaries = []
@@ -99,19 +102,11 @@ def _speech_segments(text: str) -> list[str]:
 
 def extract_audio_cues(
     text: str,
-    language: str = "de",
+    language: str = "en",
     chapter_filter: int | str | None = None,
-    has_emotional_voice: bool = False,
     skip_editorial_markers: bool = True,
-    base_speed: float = 1.0,
 ) -> list[AudioCue]:
-    """Keep delivery constant; the renderer resolves the model's neutral ID.
-
-    ``has_emotional_voice`` retains the existing Thorsten cue API. It selects
-    its neutral ID, never emotion inferred from the text or chapter title.
-    """
-    if not math.isfinite(base_speed) or not 0.2 <= base_speed <= 3.0:
-        raise ValueError("Reading speed must be finite and between 0.2 and 3.0")
+    """Extract spoken text and structural pauses without inferring delivery."""
     config = CorpusConfig(language=language)
     chapters = split_chapters(text, config) or [(1, "", text)]
     if chapter_filter is not None:
@@ -128,8 +123,7 @@ def extract_audio_cues(
     cues: list[AudioCue] = []
     for number, title, body in chapters:
         if title:
-            cues.append(AudioCue(title, "heading", number, 1 / base_speed,
-                                 pause_after=1.0, speaker_id=4 if has_emotional_voice else None))
+            cues.append(AudioCue(title, "heading", number, pause_after=1.0))
         blocks: list[dict[str, Any]] = []
         for block in parse_markdown_blocks(body, config):
             if block["type"] == "quote_block":
@@ -145,8 +139,7 @@ def extract_audio_cues(
             if kind.startswith("h"):
                 content = counting_inline_text(content)
                 if content and content != title:
-                    cues.append(AudioCue(content, "heading", number, 1 / base_speed,
-                                         pause_after=1.0, speaker_id=4 if has_emotional_voice else None))
+                    cues.append(AudioCue(content, "heading", number, pause_after=1.0))
                 continue
             if kind not in ("p", "quote", "paragraph", "list_item"):
                 continue
@@ -159,34 +152,18 @@ def extract_audio_cues(
             # Bound model inputs at sentence/word boundaries without dropping
             # prose. Intermediate fragments do not acquire paragraph pauses.
             cjk = any(_is_cjk(character) for character in content)
-            if cjk:
-                segments = _speech_segments(content)
-            else:
-                segments = []
-                pending = ""
-                for sentence in split_sentences(content, language):
-                    for piece in textwrap.wrap(sentence, MAX_SEGMENT_CHARS, break_long_words=False,
-                                              break_on_hyphens=False):
-                        if len(piece) > MAX_SEGMENT_CHARS:
-                            raise ValueError("A word exceeds the speech segment limit; its spelling was not changed")
-                        if pending and len(pending) + len(piece) + 1 > MAX_SEGMENT_CHARS:
-                            segments.append(pending)
-                            pending = ""
-                        pending = (pending + " " + piece).strip()
-                if pending:
-                    segments.append(pending)
+            segments = _speech_segments(content, language)
             cue_kind = "dialogue" if content.startswith(("„", "»", '"', "“", "'")) else "narrative"
-            speaker_id = 4 if has_emotional_voice else None
             for index, segment in enumerate(segments):
-                cues.append(AudioCue(segment, cue_kind, number, 1 / base_speed,
+                cues.append(AudioCue(segment, cue_kind, number,
                                      pause_after=.45 if index == len(segments) - 1 else 0,
-                                     speaker_id=speaker_id, join_before="" if cjk else " "))
+                                     join_before="" if cjk else " "))
     return cues
 
 
 def generate_silence_wav(
     duration_seconds: float,
-    sample_rate: int = 22050,
+    sample_rate: int = 24000,
     channels: int = 1,
     sample_width: int = 2,
 ) -> bytes:
@@ -230,37 +207,24 @@ def concatenate_wavs(wav_bytes_list: list[bytes]) -> bytes:
     return output.getvalue()
 
 
-def synthesize_cue_subprocess(
-    cue: AudioCue, piper_bin: str, model_path: Path, config_path: Path
-) -> bytes:
-    """Invoke Piper; a failed or empty segment aborts the export."""
-    with tempfile.TemporaryDirectory(prefix="lixity-piper-") as directory:
-        target = Path(directory) / "segment.wav"
-        command = [piper_bin, "-m", str(model_path), "-c", str(config_path),
-                   "--length-scale", str(cue.length_scale),
-                   "--sentence-silence", str(cue.sentence_silence), "-f", str(target)]
-        if cue.speaker_id is not None:
-            command.extend(["-s", str(cue.speaker_id)])
-        for option, value in (("--noise-scale", cue.noise_scale), ("--noise-w", cue.noise_w_scale)):
-            if value is not None:
-                command.extend([option, str(value)])
-        result = subprocess.run(command, input=cue.text.encode("utf-8"), capture_output=True, check=False)  # noqa: S603
-        if result.returncode != 0 or not target.is_file():
-            raise RuntimeError("Piper failed to synthesize an audio segment")
-        data = target.read_bytes()
-        _read_pcm(data)
-        return data
+def _run_ffmpeg(command: list[str]) -> subprocess.CompletedProcess[bytes]:
+    """Bound MP3 conversion without exposing captured text on timeout."""
+    try:
+        return subprocess.run(  # noqa: S603 - resolved executable and explicit arguments
+            command, capture_output=True, check=False, timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        # run() kills and waits for the direct child before raising. The caller's
+        # temporary-directory context removes partial audio without publishing it.
+        raise RuntimeError("FFmpeg timed out while creating audio") from None
 
 
 def render_speech_audio(
     manuscript_path: str | Path,
     output_path: str | Path,
-    voice_name: str | None = None,
-    language: str = "de",
+    language: str = "en",
     chapter: int | str | None = None,
-    base_speed: float = 1.0,
     skip_markers: bool = True,
-    piper_bin: str | None = None,
     *,
     profile: AudioProfile | None = None,
     progress: Callable[[int, int], None] | None = None,
@@ -274,12 +238,11 @@ def render_speech_audio(
     _check_cancelled(cancelled)
     if max_audio_bytes is not None and (type(max_audio_bytes) is not int or max_audio_bytes < 44):
         raise ValueError("Audio byte limit must be an integer of at least 44")
-    if profile is not None:
-        profile = AudioProfile.model_validate(profile.model_dump())
-        language, voice_name, base_speed = profile.language, profile.voice, profile.speed
-    qwen = profile is not None and profile.engine == "qwen3"
-    if target not in ("local", "jetson") or (not qwen and target != "local"):
-        raise ValueError("Execution target is not supported by this speech engine")
+    profile = (AudioProfile.model_validate(profile.model_dump()) if profile is not None
+               else resolve_audio_profile(None, language=language))
+    language = profile.language
+    if target not in ("local", "jetson"):
+        raise ValueError("Unknown Qwen execution target")
     source = Path(manuscript_path).expanduser().resolve()
     output = Path(output_path).expanduser().resolve()
     if not source.is_file():
@@ -291,74 +254,41 @@ def render_speech_audio(
     ffmpeg = shutil.which("ffmpeg") if output.suffix.lower() == ".mp3" else None
     if output.suffix.lower() == ".mp3" and not ffmpeg:
         raise FileNotFoundError("FFmpeg is required for MP3 output; choose WAV instead")
-    rate, speaker, selected = 24000, None, None
-    model, configuration = Path(), Path()
-    if not qwen:
-        selected = voice_name or DEFAULT_VOICES.get(language)
-        if not selected or not re.fullmatch(r"[\w.-]+", selected) or selected in (".", ".."):
-            raise ValueError("Choose a cached voice model for the requested language")
-        model = DEFAULT_VOICE_DIR / selected / f"{selected}.onnx"
-        configuration = model.with_suffix(".onnx.json")
-        if not model.is_file() or not configuration.is_file():
-            raise FileNotFoundError(f"Voice model and configuration required at {model}")
-        try:
-            settings = json.loads(configuration.read_text(encoding="utf-8"))
-            rate = settings["audio"]["sample_rate"]
-            speakers = settings.get("num_speakers", 1)
-            speaker = settings.get("speaker_id_map", {}).get("neutral", settings.get("default_speaker_id", 0)) if speakers > 1 else None
-            if not isinstance(rate, int) or rate <= 0 or (speaker is not None and
-                    (not isinstance(speaker, int) or not 0 <= speaker < speakers)):
-                raise ValueError("Invalid voice sample rate or speaker mapping")
-        except (KeyError, TypeError, json.JSONDecodeError) as exc:
-            raise ValueError("Invalid Piper voice configuration") from exc
+    rate = 24000
     cues = extract_audio_cues(source.read_text(encoding="utf-8"), language, chapter,
-                              has_emotional_voice="emotional" in (selected or ""),
-                              skip_editorial_markers=skip_markers, base_speed=base_speed)
-    if profile is not None:
-        planned: list[AudioCue] = []
-        # Recover whole paragraph text before replacing phrases, including
-        # phrases that straddle the initial transport segment boundary.
-        paragraphs: list[AudioCue] = []
-        for cue in cues:
-            if (paragraphs and paragraphs[-1].text and cue.text and
-                    paragraphs[-1].kind == cue.kind and paragraphs[-1].chapter_num == cue.chapter_num and
-                    paragraphs[-1].pause_after == 0):
-                previous = paragraphs[-1]
-                paragraphs[-1] = replace(previous, text=previous.text + cue.join_before + cue.text, pause_after=cue.pause_after)
-            else:
-                paragraphs.append(cue)
-        replacements = profile.pronunciations
-        pattern = re.compile("|".join(re.escape(key) for key in sorted(replacements, key=len, reverse=True))) if replacements else None
-        for cue in paragraphs:
-            if cue.kind == "scene_break":
-                cue.pause_after = profile.scene_pause
-            elif cue.kind != "heading" and cue.pause_after:
-                cue.pause_after = profile.paragraph_pause
-            if pattern is not None:
-                cue.text = pattern.sub(lambda match: replacements[match[0]], cue.text)
-            pieces = _speech_segments(cue.text) or [""]
-            planned.extend(replace(cue, text=piece, pause_after=cue.pause_after if index == len(pieces) - 1 else 0)
-                           for index, piece in enumerate(pieces))
-        cues = planned
+                              skip_editorial_markers=skip_markers)
+    planned: list[AudioCue] = []
+    # Recover whole paragraph text before replacing phrases, including
+    # phrases that straddle the initial transport segment boundary.
+    paragraphs: list[AudioCue] = []
+    for cue in cues:
+        if (paragraphs and paragraphs[-1].text and cue.text and
+                paragraphs[-1].kind == cue.kind and paragraphs[-1].chapter_num == cue.chapter_num and
+                paragraphs[-1].pause_after == 0):
+            previous = paragraphs[-1]
+            paragraphs[-1] = replace(previous, text=previous.text + cue.join_before + cue.text, pause_after=cue.pause_after)
+        else:
+            paragraphs.append(cue)
+    replacements = profile.pronunciations
+    pattern = re.compile("|".join(re.escape(key) for key in sorted(replacements, key=len, reverse=True))) if replacements else None
+    for cue in paragraphs:
+        if cue.kind == "scene_break":
+            cue.pause_after = profile.scene_pause
+        elif cue.kind != "heading" and cue.pause_after:
+            cue.pause_after = profile.paragraph_pause
+        if pattern is not None:
+            cue.text = pattern.sub(lambda match: replacements[match[0]], cue.text)
+        pieces = _speech_segments(cue.text, language) or [""]
+        planned.extend(replace(cue, text=piece, pause_after=cue.pause_after if index == len(pieces) - 1 else 0)
+                       for index, piece in enumerate(pieces))
+    cues = planned
     if not any(cue.text for cue in cues):
         raise ValueError("No spoken text in the selected chapter")
     segment_cache = None
-    if qwen and cache_dir is not None:
+    if cache_dir is not None:
         from .speech_cache import SpeechSegmentCache
 
         segment_cache = SpeechSegmentCache(Path(cache_dir))
-    voice = None
-    if not qwen and piper_bin is None:
-        try:
-            from piper.config import SynthesisConfig
-            from piper.voice import PiperVoice
-        except ImportError:
-            pass
-        else:
-            voice = PiperVoice.load(model, config_path=configuration)
-    executable = piper_bin or shutil.which("piper") or str(Path(sys.executable).parent / "piper")
-    if not qwen and voice is None and not Path(executable).is_file():
-        raise FileNotFoundError("Piper is required; install piper-tts in the Python environment")
     total = sum(bool(cue.text) for cue in cues)
     done = 0
     if progress is not None:
@@ -382,50 +312,24 @@ def render_speech_audio(
 
             for cue in cues:
                 _check_cancelled(cancelled)
-                if cue.speaker_id is None:
-                    cue.speaker_id = speaker
                 if cue.kind == "scene_break":
                     write_frames(bytes(int(rate * cue.pause_after) * 2))
                     continue
-                if qwen and profile is not None:
-                    from .speech_qwen import synthesize_qwen
+                from .speech_qwen import synthesize_qwen
 
-                    data = None if fresh_audio or segment_cache is None else segment_cache.get(cue.text, profile)
-                    if data is None:
-                        data = synthesize_qwen(cue.text, profile, target=target)
-                        params, frames = _read_pcm(data)
-                        if params != (1, 2, rate):
-                            raise ValueError("Unexpected Qwen audio format")
-                        _check_cancelled(cancelled)
-                        if segment_cache is not None:
-                            segment_cache.put(cue.text, profile, data)
-                    else:
-                        params, frames = _read_pcm(data)
-                    _check_cancelled(cancelled)
-                    write_frames(frames)
-                elif voice is not None:
-                    synthesis = SynthesisConfig(speaker_id=cue.speaker_id if cue.speaker_id is not None else speaker,
-                                                length_scale=cue.length_scale,
-                                                noise_scale=cue.noise_scale, noise_w_scale=cue.noise_w_scale)
-                    count = 0
-                    for chunk in voice.synthesize(cue.text, synthesis):
-                        _check_cancelled(cancelled)
-                        if (chunk.sample_channels, chunk.sample_width, chunk.sample_rate) != (1, 2, rate):
-                            raise ValueError("Unexpected Piper audio format")
-                        frames = chunk.audio_int16_bytes
-                        if not frames or len(frames) % 2:
-                            raise ValueError("Empty or incomplete Piper audio segment")
-                        if count:
-                            write_frames(bytes(int(rate * cue.sentence_silence) * 2))
-                        write_frames(frames)
-                        count += 1
-                    if not count:
-                        raise ValueError("Piper returned no audio for a spoken segment")
-                else:
-                    params, frames = _read_pcm(synthesize_cue_subprocess(cue, executable, model, configuration))
+                data = None if fresh_audio or segment_cache is None else segment_cache.get(cue.text, profile)
+                if data is None:
+                    data = synthesize_qwen(cue.text, profile, target=target)
+                    params, frames = _read_pcm(data)
                     if params != (1, 2, rate):
-                        raise ValueError("Unexpected Piper audio format")
-                    write_frames(frames)
+                        raise ValueError("Unexpected Qwen audio format")
+                    _check_cancelled(cancelled)
+                    if segment_cache is not None:
+                        segment_cache.put(cue.text, profile, data)
+                else:
+                    params, frames = _read_pcm(data)
+                _check_cancelled(cancelled)
+                write_frames(frames)
                 _check_cancelled(cancelled)
                 done += 1
                 if progress is not None:
@@ -435,9 +339,9 @@ def render_speech_audio(
         final = pcm
         if ffmpeg:
             final = Path(directory) / "reading.mp3"
-            result = subprocess.run(  # noqa: S603 - resolved executable, explicit argument list
+            result = _run_ffmpeg(
                 [ffmpeg, "-nostdin", "-y", "-v", "error", "-i", str(pcm),
-                                     "-b:a", "192k", str(final)], capture_output=True, check=False)
+                                     "-b:a", "192k", str(final)])
             if result.returncode != 0 or not final.is_file() or not final.stat().st_size:
                 raise RuntimeError("FFmpeg failed to create MP3 audio")
         _check_cancelled(cancelled)

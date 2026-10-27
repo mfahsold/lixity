@@ -349,6 +349,7 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("export-site", "Export a static read-only project website"),
     ("pdf", "Compose a PDF for editing, reading, submission or analysis"),
     ("read-aloud", "Create a local listening copy with project voice profiles"),
+    ("audio-migrate", "Preview or apply explicit backed-up Qwen profile replacements (JSON)"),
     ("serve", "Run local HTTP development server and interactive dashboard"),
     ("build", "Idempotent workspace build of analysis exports and artifact archive"),
     ("doctor", "Inspect installed versions, module location and local service without changing them"),
@@ -374,6 +375,40 @@ _lixity_complete() {
         COMPREPLY=( $(compgen -W "$cmds --help --version" -- "$cur") )
         return 0
     fi
+    case "${COMP_WORDS[1]}" in
+        read-aloud)
+            case "$prev" in
+                --language) COMPREPLY=( $(compgen -W "zh en ja ko de fr ru pt es it" -- "$cur") ) ;;
+                --speech-target) COMPREPLY=( $(compgen -W "local jetson" -- "$cur") ) ;;
+                --voice) COMPREPLY=( $(compgen -W "Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee" -- "$cur") ) ;;
+                --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
+                -o|--output) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
+                --profile|--instructions|--chapter) ;;
+                *)
+                    COMPREPLY=( $(compgen -W "--help --project -o --output --chapter --language --profile --instructions --voice --speech-target --no-audio-cache --fresh-audio --keep-markers" -- "$cur") )
+                    COMPREPLY+=( $(compgen -f -- "$cur") )
+                    ;;
+            esac
+            return 0
+            ;;
+        audio-migrate)
+            case "$prev" in
+                --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
+                --backup) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
+                --replace)
+                    if [[ $cur == *=* ]]; then
+                        local candidate replacement="${cur%%=*}="
+                        for candidate in $(compgen -W "Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee" -- "${cur#*=}"); do
+                            COMPREPLY+=( "$replacement$candidate" )
+                        done
+                    fi
+                    ;;
+                --instructions|--expected-snapshot) ;;
+                *) COMPREPLY=( $(compgen -W "--help --project --replace --instructions --apply --backup --expected-snapshot" -- "$cur") ) ;;
+            esac
+            return 0
+            ;;
+    esac
     case "$prev" in
         service)
             COMPREPLY=( $(compgen -W "start stop restart status" -- "$cur") )
@@ -446,7 +481,7 @@ _lixity_complete() {
         return 0
     fi
     if [[ ${COMP_WORDS[1]} == analysis-review ]]; then
-        COMPREPLY=( $(compgen -W "--help --project --manuscript --language --json --observation --status --expected-source-sha256 --expected-analysis-sha256 --expected-review-sha256" -- "$cur") )
+        COMPREPLY=( $(compgen -W "--help --project --manuscript --language --tense-model --tense-scope --json --observation --status --expected-source-sha256 --expected-analysis-sha256 --expected-review-sha256" -- "$cur") )
         return 0
     fi
     if [[ ${COMP_WORDS[1]} == scenes ]]; then
@@ -497,6 +532,33 @@ __LIXITY_ZSH_COMMANDS__
       ;;
     args)
       case $words[1] in
+        read-aloud)
+          _arguments \
+            '1:manuscript:_files' \
+            '--help[Help]' \
+            '--project[Explicit project root]:directory:_files -/' \
+            '-o[Audio WAV or MP3 output]:file:_files' \
+            '--output[Audio WAV or MP3 output]:file:_files' \
+            '--chapter[Canonical chapter number]:chapter:' \
+            '--language[Qwen speech language]:language:(zh en ja ko de fr ru pt es it)' \
+            '--profile[Saved narrator profile]:profile:' \
+            '--instructions[Explicit Qwen delivery instructions]:text:' \
+            '--voice[Qwen preset]:voice:(Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee)' \
+            '--speech-target[Execution target]:target:(local jetson)' \
+            '--no-audio-cache[Do not read or retain reusable audio segments]' \
+            '--fresh-audio[Recompute completed audio segments]' \
+            '--keep-markers[Read editorial markers aloud]'
+          ;;
+        audio-migrate)
+          _arguments \
+            '--help[Help]' \
+            '--project[Explicit project root]:directory:_files -/' \
+            '*--replace[Explicit PROFILE=VOICE replacement]:profile=preset:' \
+            '*--instructions[Explicit PROFILE=TEXT delivery]:profile=text:' \
+            '--apply[Apply the reviewed candidate]' \
+            '--backup[New backup ZIP outside the project]:file:_files' \
+            '--expected-snapshot[Reviewed preview snapshot token]:sha256:'
+          ;;
         research)
           _arguments \
             '1:action:(__LIXITY_RESEARCH_COMMANDS__)' \
@@ -529,6 +591,8 @@ __LIXITY_ZSH_COMMANDS__
             '--project[Explicit project root]:directory:_files -/' \
             '--manuscript[Selected manuscript]:file:_files' \
             '--language[Analysis language]:language:(en de fr es it pt nl generic auto)' \
+            '--tense-model[Installed local syntax model]:model:' \
+            '--tense-scope[Grammatical tense scope]:scope:(all narration)' \
             '--json[Versioned observations and state]' \
             '--observation[Reviewed observation identity]:sha256:' \
             '--status[Author assertion]:status:(kept changed later)' \
@@ -1151,7 +1215,7 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
     try:
         profile = resolve_audio_profile(args._project_config, args.profile, language=args.language)
         changes = profile.model_dump()
-        for name, value in (("voice", args.voice), ("speed", args.speed),
+        for name, value in (("voice", args.voice),
                             ("instructions", args.instructions),
                             ("language", getattr(args, "_speech_explicit_language", None))):
             if value is not None:
@@ -1160,13 +1224,11 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
         out_path = render_speech_audio(
             manuscript_path=workspace.manuscript,
             output_path=output,
-            voice_name=profile.voice,
             language=profile.language,
             chapter=args.chapter,
-            base_speed=profile.speed,
             profile=profile,
             skip_markers=not args.keep_markers,
-            cache_dir=project_audio_cache(workspace.root) if profile.engine == "qwen3" and not args.no_audio_cache else None,
+            cache_dir=project_audio_cache(workspace.root) if not args.no_audio_cache else None,
             fresh_audio=args.fresh_audio,
             target=args.speech_target,
         )
@@ -1406,9 +1468,9 @@ def _add_threshold_arguments(parser: argparse.ArgumentParser) -> None:
 def _run_text_report(args: argparse.Namespace, render: Callable[[], int]) -> int:
     """Write successful report data atomically, leaving diagnostics on stderr."""
     output = getattr(args, "output", None)
-    if output is None:
-        return render()
     try:
+        if output is None:
+            return render()
         FileUtils.require_distinct_output(args.file, output)
         with StringIO() as captured, redirect_stdout(captured):
             status = render()
@@ -1534,7 +1596,7 @@ def _cmd_analysis_report(
     raise ValueError("Unknown textual analysis report")
 
 
-def main(argv: list[str] | None = None) -> int:
+def _main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="lixity",
         description=(
@@ -1563,10 +1625,23 @@ def main(argv: list[str] | None = None) -> int:
             configure_service(sub.add_parser(name, help=help_text))
             continue
         p = sub.add_parser(name, help=help_text, description=help_text)
+        if name == "audio-migrate":
+            p.add_argument("--project", required=True, help="Explicit project root")
+            p.add_argument("--replace", action="append", default=[], metavar="PROFILE=VOICE",
+                           help="Explicit Qwen preset for each removed engine profile; repeat for multiple profiles")
+            p.add_argument("--instructions", action="append", default=[], metavar="PROFILE=TEXT",
+                           help="Explicit delivery instructions for a replaced profile")
+            p.add_argument("--apply", action="store_true", help="Apply the reviewed candidate; default only previews")
+            p.add_argument("--backup", help="New backup ZIP outside the project; required with --apply")
+            p.add_argument("--expected-snapshot", help="Snapshot token from the reviewed preview; required with --apply")
+            continue
         if name == "analysis-review":
             p.add_argument("--project", required=True, help="Explicit project root")
             p.add_argument("--manuscript", help="Manuscript within project (default: configured manuscript)")
             p.add_argument("--language", default=None, help="Explicit analysis language; default: project setting or en")
+            p.add_argument("--tense-model", default=None, help="Explicit installed local syntax model; no download or fallback")
+            p.add_argument("--tense-scope", choices=("all", "narration"), default=None,
+                           help="Grammatical tense scope: all predicates or outside recognized quotations")
             p.add_argument("--json", action="store_true", help="Complete versioned observation and review identities")
             p.add_argument("--observation", help="Exact observation ID from a current read")
             p.add_argument("--status", choices=("kept", "changed", "later"), help="Your decision, never a verified text edit")
@@ -1616,6 +1691,11 @@ def main(argv: list[str] | None = None) -> int:
         if name not in ("serve", "completion", "about", "schema"):
             p.add_argument("--project", metavar="PATH",
                            help="Select an explicit project root; relative manuscript files resolve inside it; settings are root-local (no user or ancestor configuration)")
+        if name in ("analyze", "profile", "style", "dashboard", "serve", "build", "scenes"):
+            p.add_argument("--tense-model", default=None,
+                           help="Explicit installed local syntax model for grammatical verb groups (no download/fallback)")
+            p.add_argument("--tense-scope", choices=("all", "narration"), default=None,
+                           help="Grammatical tense scope: all predicates or outside recognized quotations")
         if name == "style":
             p.epilog = (
                 "Dimensions compare complete chapters using standardized midranks. "
@@ -1724,7 +1804,7 @@ def main(argv: list[str] | None = None) -> int:
         if name == "read-aloud":
             p.epilog = (
                 "Renders local listening copies using saved project voice profiles. "
-                "Piper supports explicit speed; optional Qwen CustomVoice supports style instructions "
+                "Qwen3-TTS 1.7B CustomVoice supports explicit style instructions "
                 "on this computer or a configured Jetson. Runtimes and voice models are installed separately."
             )
             p.add_argument("file", nargs="?", help="Markdown manuscript (default: configured manuscript or folder discovery)")
@@ -1732,9 +1812,8 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--chapter", type=int, default=None, help="Synthesize only a specific 1-based chapter number")
             p.add_argument("--language", default=None, help="Speech language code (default: saved profile, then project setting)")
             p.add_argument("--profile", default=None, help="Saved project audio profile (default: selected project profile)")
-            p.add_argument("--instructions", default=None, help="Explicit Qwen style instructions (unsupported by Piper)")
+            p.add_argument("--instructions", default=None, help="Explicit Qwen delivery instructions")
             p.add_argument("--voice", default=None, help="Override the selected profile voice; model-specific validation applies")
-            p.add_argument("--speed", type=float, default=None, help="Piper reading speed override (default: saved profile); Qwen requires 1.0")
             p.add_argument("--speech-target", choices=("local", "jetson"), default="local", help="Execution target for this run (default: local); Jetson requires its configured SSH forward")
             p.add_argument("--no-audio-cache", action="store_true", help="Render without reading or retaining reusable audio segments")
             p.add_argument("--fresh-audio", action="store_true", help="Recompute Qwen segments instead of reusing completed project audio")
@@ -1869,11 +1948,13 @@ def main(argv: list[str] | None = None) -> int:
             if args.status:
                 triage_report = record_analysis_review(args.project, args.observation, args.status,
                     manuscript=args.manuscript, language=args.language,
+                    tense_model=args.tense_model, tense_scope=args.tense_scope,
                     expected_source_sha256=args.expected_source_sha256,
                     expected_analysis_sha256=args.expected_analysis_sha256,
                     expected_review_sha256=args.expected_review_sha256)
             else:
-                triage_report = review_analysis(args.project, manuscript=args.manuscript, language=args.language)
+                triage_report = review_analysis(args.project, manuscript=args.manuscript, language=args.language,
+                                               tense_model=args.tense_model, tense_scope=args.tense_scope)
             if args.json:
                 print(orjson.dumps(triage_report, option=orjson.OPT_INDENT_2).decode())
             else:
@@ -1939,6 +2020,32 @@ def main(argv: list[str] | None = None) -> int:
         # argparse choices already rejected unknown shells; keep a defensive path
         print(f"{_m('err_prefix')} {_m('err_shell', shell=args.shell)}", file=sys.stderr)
         return EXIT_ERROR
+    if args.command == "audio-migrate":
+        from .speech_migration import prepare_audio_migration
+
+        def pairs(values: list[str]) -> dict[str, str]:
+            result: dict[str, str] = {}
+            for value in values:
+                key, separator, item = value.partition("=")
+                if not separator or not key or not item or key in result:
+                    raise ValueError("Supply unique PROFILE=VALUE entries")
+                result[key] = item
+            return result
+
+        if args.apply and (not args.backup or not args.expected_snapshot):
+            parser.error("audio-migrate --apply requires --backup and --expected-snapshot from a reviewed preview")
+        if not args.apply and (args.backup or args.expected_snapshot):
+            parser.error("Omit --backup and --expected-snapshot for a read-only preview")
+        try:
+            prepared = prepare_audio_migration(args.project, pairs(args.replace), instructions=pairs(args.instructions))
+            if args.apply and args.expected_snapshot != prepared.snapshot:
+                raise ValueError("Migration snapshot changed; prepare and review the migration again")
+            result = prepared.apply(args.backup) if args.apply else prepared.public_dict()
+        except (OSError, ValueError, RuntimeError) as exc:
+            print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+            return EXIT_ERROR
+        print(_json(result, indent=True))
+        return EXIT_OK
     if args.command == "export-site":
         from .site_contracts import SiteExportOptions
         from .site_export import SiteExportLimitError, export_site, prepare_site
@@ -2022,6 +2129,8 @@ def main(argv: list[str] | None = None) -> int:
         except (OSError, ValueError) as exc:
             print(f"Error: {exc}", file=sys.stderr)
             return EXIT_ERROR
+    project_config = {**project_config, **{key: value for key in ("tense_model", "tense_scope")
+                      if (value := getattr(args, key, None)) is not None}}
     args._project_config = project_config
     explicit_language = getattr(args, "language", None)
     if args.command == "read-aloud":
@@ -2046,6 +2155,8 @@ def main(argv: list[str] | None = None) -> int:
                 ("min_chapters", getattr(args, "min_chapters", None)),
                 ("dim_score_threshold", args.dim_threshold),
                 ("flag_min_severity", args.flag_min_severity),
+                ("tense_model", args.tense_model),
+                ("tense_scope", args.tense_scope),
             )
             if value is not None
         }
@@ -2106,9 +2217,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{_m('err_prefix')} {_m('err_file', file=args.file, exc=exc)}", file=sys.stderr)
         return EXIT_ERROR
 
-    config, resolved = resolve_document_config(
-        text, args.language, project_config=args._project_config
-    )
+    try:
+        config, resolved = resolve_document_config(
+            text, args.language, project_config=args._project_config
+        )
+    except ValueError as exc:
+        print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+        return EXIT_ERROR
 
     if args.command in ("scenes", "analyze", "profile", "style"):
         return _run_text_report(args, lambda: _cmd_analysis_report(args, text, config, resolved))
@@ -2157,6 +2272,15 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_ERROR
     print(_m("dashboard_written" if changed else "dashboard_unchanged", output=output))
     return EXIT_OK
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Keep ordinary configuration/model failures inside the CLI error contract."""
+    try:
+        return _main(argv)
+    except (OSError, ValueError) as exc:
+        print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+        return EXIT_ERROR
 
 
 if __name__ == "__main__":

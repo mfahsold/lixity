@@ -68,6 +68,7 @@ server.serve_forever()
       await page.locator('#r-open-timeline').click();
       assert.equal(await page.locator('#rtab-timeline').isVisible(), true, 'The claims entry opens the more prominent timeline tab');
       await page.locator('[data-claim-view=timeline]').hover();
+      await page.waitForFunction(() => getComputedStyle(document.querySelector('[data-claim-view=timeline]')).color === 'rgb(255, 255, 255)');
       assert.equal(await page.locator('[data-claim-view=timeline]').evaluate(element => getComputedStyle(element).color), 'rgb(255, 255, 255)', 'Selected timeline view stays readable on hover');
       await page.waitForFunction(() => document.querySelectorAll('#research-claims-timeline .research-timeline-dated > li, #research-claims-timeline .research-timeline-unplaced > li').length === 6);
       assert.equal(await page.locator('#research-claims-timeline').isVisible(), true, 'Loaded timeline entries are visible');

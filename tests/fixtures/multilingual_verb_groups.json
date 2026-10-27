@@ -1,0 +1,661 @@
+{
+  "schema_version": "multilingual-verb-group-reference/1",
+  "purpose": "Original synthetic construction cases with manually assigned grammatical tense sequences; not a representative corpus or model-derived gold. Subjunctive/conditional mood is evaluated separately from tense.",
+  "sources": {
+    "en": "https://universaldependencies.org/en/",
+    "fr": "https://universaldependencies.org/fr/",
+    "es": "https://universaldependencies.org/es/",
+    "it": "https://universaldependencies.org/it/",
+    "pt": "https://universaldependencies.org/pt/",
+    "nl": "https://universaldependencies.org/nl/"
+  },
+  "cases": [
+    {
+      "language": "en",
+      "text": "She has a notebook.",
+      "tenses": [
+        "present"
+      ]
+    },
+    {
+      "language": "en",
+      "text": "She has written a note.",
+      "tenses": [
+        "perfect"
+      ]
+    },
+    {
+      "language": "en",
+      "text": "She had written a note.",
+      "tenses": [
+        "pluperfect"
+      ]
+    },
+    {
+      "language": "en",
+      "text": "She was writing a note.",
+      "tenses": [
+        "preterite"
+      ]
+    },
+    {
+      "language": "en",
+      "text": "A note is written daily.",
+      "tenses": [
+        "present"
+      ]
+    },
+    {
+      "language": "en",
+      "text": "A note has been written.",
+      "tenses": [
+        "perfect"
+      ]
+    },
+    {
+      "language": "en",
+      "text": "She will write a note.",
+      "tenses": [
+        "future"
+      ]
+    },
+    {
+      "language": "en",
+      "text": "She will have written a note.",
+      "tenses": [
+        "future_perfect"
+      ]
+    },
+    {
+      "language": "en",
+      "text": "She would write a note.",
+      "tenses": [
+        "conditional"
+      ]
+    },
+    {
+      "language": "en",
+      "text": "She would have written a note.",
+      "tenses": [
+        "conditional_perfect"
+      ]
+    },
+    {
+      "language": "en",
+      "text": "She writes tomorrow.",
+      "tenses": [
+        "present"
+      ]
+    },
+    {
+      "language": "en",
+      "text": "They have been happy.",
+      "tenses": [
+        "perfect"
+      ]
+    },
+    {
+      "language": "en",
+      "text": "She writes and reads.",
+      "tenses": [
+        "present",
+        "present"
+      ]
+    },
+    {
+      "language": "en",
+      "text": "She had been writing.",
+      "tenses": [
+        "pluperfect"
+      ]
+    },
+    {
+      "language": "fr",
+      "text": "Elle a un carnet.",
+      "tenses": [
+        "present"
+      ]
+    },
+    {
+      "language": "fr",
+      "text": "Elle a écrit une note.",
+      "tenses": [
+        "perfect"
+      ]
+    },
+    {
+      "language": "fr",
+      "text": "Elle avait écrit une note.",
+      "tenses": [
+        "pluperfect"
+      ]
+    },
+    {
+      "language": "fr",
+      "text": "Elle est arrivée.",
+      "tenses": [
+        "perfect"
+      ]
+    },
+    {
+      "language": "fr",
+      "text": "Elle était arrivée.",
+      "tenses": [
+        "pluperfect"
+      ]
+    },
+    {
+      "language": "fr",
+      "text": "Une note est écrite chaque jour.",
+      "tenses": [
+        "present"
+      ]
+    },
+    {
+      "language": "fr",
+      "text": "Une note a été écrite.",
+      "tenses": [
+        "perfect"
+      ]
+    },
+    {
+      "language": "fr",
+      "text": "Elle écrira.",
+      "tenses": [
+        "future"
+      ]
+    },
+    {
+      "language": "fr",
+      "text": "Elle aura écrit.",
+      "tenses": [
+        "future_perfect"
+      ]
+    },
+    {
+      "language": "fr",
+      "text": "Elle écrirait.",
+      "tenses": [
+        "conditional"
+      ]
+    },
+    {
+      "language": "fr",
+      "text": "Elle aurait écrit.",
+      "tenses": [
+        "conditional_perfect"
+      ]
+    },
+    {
+      "language": "fr",
+      "text": "Il faut qu’elle écrive.",
+      "tenses": [
+        "present",
+        "present"
+      ]
+    },
+    {
+      "language": "fr",
+      "text": "Il faut qu’elle ait écrit.",
+      "tenses": [
+        "present",
+        "perfect"
+      ]
+    },
+    {
+      "language": "fr",
+      "text": "Elle fut partie avant midi.",
+      "tenses": [
+        "anterior_perfect"
+      ]
+    },
+    {
+      "language": "fr",
+      "text": "La porte est fermée.",
+      "tenses": [
+        "present"
+      ]
+    },
+    {
+      "language": "es",
+      "text": "Ella tiene un cuaderno.",
+      "tenses": [
+        "present"
+      ]
+    },
+    {
+      "language": "es",
+      "text": "Ella ha escrito.",
+      "tenses": [
+        "perfect"
+      ]
+    },
+    {
+      "language": "es",
+      "text": "Ella había escrito.",
+      "tenses": [
+        "pluperfect"
+      ]
+    },
+    {
+      "language": "es",
+      "text": "Ella escribió.",
+      "tenses": [
+        "preterite"
+      ]
+    },
+    {
+      "language": "es",
+      "text": "Ella escribía.",
+      "tenses": [
+        "imperfect"
+      ]
+    },
+    {
+      "language": "es",
+      "text": "La nota es escrita cada día.",
+      "tenses": [
+        "present"
+      ]
+    },
+    {
+      "language": "es",
+      "text": "La nota ha sido escrita.",
+      "tenses": [
+        "perfect"
+      ]
+    },
+    {
+      "language": "es",
+      "text": "Ella escribirá.",
+      "tenses": [
+        "future"
+      ]
+    },
+    {
+      "language": "es",
+      "text": "Ella habrá escrito.",
+      "tenses": [
+        "future_perfect"
+      ]
+    },
+    {
+      "language": "es",
+      "text": "Ella escribiría.",
+      "tenses": [
+        "conditional"
+      ]
+    },
+    {
+      "language": "es",
+      "text": "Ella habría escrito.",
+      "tenses": [
+        "conditional_perfect"
+      ]
+    },
+    {
+      "language": "es",
+      "text": "Quiero que ella escriba.",
+      "tenses": [
+        "present",
+        "present"
+      ]
+    },
+    {
+      "language": "es",
+      "text": "Quiero que ella haya escrito.",
+      "tenses": [
+        "present",
+        "perfect"
+      ]
+    },
+    {
+      "language": "es",
+      "text": "La puerta está cerrada.",
+      "tenses": [
+        "present"
+      ]
+    },
+    {
+      "language": "it",
+      "text": "Lei ha un quaderno.",
+      "tenses": [
+        "present"
+      ]
+    },
+    {
+      "language": "it",
+      "text": "Lei ha scritto.",
+      "tenses": [
+        "perfect"
+      ]
+    },
+    {
+      "language": "it",
+      "text": "Lei aveva scritto.",
+      "tenses": [
+        "pluperfect"
+      ]
+    },
+    {
+      "language": "it",
+      "text": "Lei è arrivata.",
+      "tenses": [
+        "perfect"
+      ]
+    },
+    {
+      "language": "it",
+      "text": "Lei era arrivata.",
+      "tenses": [
+        "pluperfect"
+      ]
+    },
+    {
+      "language": "it",
+      "text": "Lei scrisse.",
+      "tenses": [
+        "preterite"
+      ]
+    },
+    {
+      "language": "it",
+      "text": "Lei scriveva.",
+      "tenses": [
+        "imperfect"
+      ]
+    },
+    {
+      "language": "it",
+      "text": "La nota è scritta ogni giorno.",
+      "tenses": [
+        "present"
+      ]
+    },
+    {
+      "language": "it",
+      "text": "La nota è stata scritta.",
+      "tenses": [
+        "perfect"
+      ]
+    },
+    {
+      "language": "it",
+      "text": "Lei scriverà.",
+      "tenses": [
+        "future"
+      ]
+    },
+    {
+      "language": "it",
+      "text": "Lei avrà scritto.",
+      "tenses": [
+        "future_perfect"
+      ]
+    },
+    {
+      "language": "it",
+      "text": "Lei scriverebbe.",
+      "tenses": [
+        "conditional"
+      ]
+    },
+    {
+      "language": "it",
+      "text": "Lei avrebbe scritto.",
+      "tenses": [
+        "conditional_perfect"
+      ]
+    },
+    {
+      "language": "it",
+      "text": "Voglio che lei scriva.",
+      "tenses": [
+        "present",
+        "present"
+      ]
+    },
+    {
+      "language": "it",
+      "text": "Voglio che lei abbia scritto.",
+      "tenses": [
+        "present",
+        "perfect"
+      ]
+    },
+    {
+      "language": "it",
+      "text": "Lei sta scrivendo.",
+      "tenses": [
+        "present"
+      ]
+    },
+    {
+      "language": "it",
+      "text": "La porta è chiusa.",
+      "tenses": [
+        "present"
+      ]
+    },
+    {
+      "language": "pt",
+      "text": "Ela tem um caderno.",
+      "tenses": [
+        "present"
+      ]
+    },
+    {
+      "language": "pt",
+      "text": "Ela tem escrito notas.",
+      "tenses": [
+        "perfect"
+      ]
+    },
+    {
+      "language": "pt",
+      "text": "Ela tinha escrito notas.",
+      "tenses": [
+        "pluperfect"
+      ]
+    },
+    {
+      "language": "pt",
+      "text": "Ela escrevera a nota.",
+      "tenses": [
+        "pluperfect"
+      ]
+    },
+    {
+      "language": "pt",
+      "text": "Ela escreveu.",
+      "tenses": [
+        "preterite"
+      ]
+    },
+    {
+      "language": "pt",
+      "text": "Ela escrevia.",
+      "tenses": [
+        "imperfect"
+      ]
+    },
+    {
+      "language": "pt",
+      "text": "A nota é escrita todos os dias.",
+      "tenses": [
+        "present"
+      ]
+    },
+    {
+      "language": "pt",
+      "text": "A nota tem sido escrita.",
+      "tenses": [
+        "perfect"
+      ]
+    },
+    {
+      "language": "pt",
+      "text": "Ela escreverá.",
+      "tenses": [
+        "future"
+      ]
+    },
+    {
+      "language": "pt",
+      "text": "Ela terá escrito.",
+      "tenses": [
+        "future_perfect"
+      ]
+    },
+    {
+      "language": "pt",
+      "text": "Ela escreveria.",
+      "tenses": [
+        "conditional"
+      ]
+    },
+    {
+      "language": "pt",
+      "text": "Ela teria escrito.",
+      "tenses": [
+        "conditional_perfect"
+      ]
+    },
+    {
+      "language": "pt",
+      "text": "Espero que ela escreva.",
+      "tenses": [
+        "present",
+        "present"
+      ]
+    },
+    {
+      "language": "pt",
+      "text": "Espero que ela tenha escrito.",
+      "tenses": [
+        "present",
+        "perfect"
+      ]
+    },
+    {
+      "language": "pt",
+      "text": "Ela está escrevendo.",
+      "tenses": [
+        "present"
+      ]
+    },
+    {
+      "language": "pt",
+      "text": "A porta está fechada.",
+      "tenses": [
+        "present"
+      ]
+    },
+    {
+      "language": "nl",
+      "text": "Zij heeft een schrift.",
+      "tenses": [
+        "present"
+      ]
+    },
+    {
+      "language": "nl",
+      "text": "Zij heeft geschreven.",
+      "tenses": [
+        "perfect"
+      ]
+    },
+    {
+      "language": "nl",
+      "text": "Zij had geschreven.",
+      "tenses": [
+        "pluperfect"
+      ]
+    },
+    {
+      "language": "nl",
+      "text": "Zij is gekomen.",
+      "tenses": [
+        "perfect"
+      ]
+    },
+    {
+      "language": "nl",
+      "text": "Zij was gekomen.",
+      "tenses": [
+        "pluperfect"
+      ]
+    },
+    {
+      "language": "nl",
+      "text": "De brief wordt geschreven.",
+      "tenses": [
+        "present"
+      ]
+    },
+    {
+      "language": "nl",
+      "text": "De brief werd geschreven.",
+      "tenses": [
+        "preterite"
+      ]
+    },
+    {
+      "language": "nl",
+      "text": "Zij zal schrijven.",
+      "tenses": [
+        "future"
+      ]
+    },
+    {
+      "language": "nl",
+      "text": "Zij zal geschreven hebben.",
+      "tenses": [
+        "future_perfect"
+      ]
+    },
+    {
+      "language": "nl",
+      "text": "Zij zou schrijven.",
+      "tenses": [
+        "conditional"
+      ]
+    },
+    {
+      "language": "nl",
+      "text": "Zij zou geschreven hebben.",
+      "tenses": [
+        "conditional_perfect"
+      ]
+    },
+    {
+      "language": "nl",
+      "text": "Zij heeft moeten werken.",
+      "tenses": [
+        "perfect"
+      ]
+    },
+    {
+      "language": "nl",
+      "text": "Zij had moeten werken.",
+      "tenses": [
+        "pluperfect"
+      ]
+    },
+    {
+      "language": "nl",
+      "text": "Zij heeft een boek te lezen.",
+      "tenses": [
+        "present"
+      ]
+    },
+    {
+      "language": "nl",
+      "text": "Zij schrijft en leest.",
+      "tenses": [
+        "present",
+        "present"
+      ]
+    }
+  ]
+}

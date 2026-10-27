@@ -181,11 +181,17 @@ or equal linguistic-analysis accuracy across the seven languages.
 
 ### Direction for deeper grammatical analysis
 
-The lightweight, transparent profile remains the default. Optional local
-grammatical models are an agreed direction, not an implemented capability.
-Such a model must identify its language, model/version, result provenance and
-availability separately from lexical cues; it must not silently replace counts,
-download itself or send manuscript text to a remote service. Existing exact
-source anchors and user decisions must survive switching the optional analysis.
-Precision/recall against appropriate per-language annotations is required before
-presenting model-based grammar as more accurate than the baseline.
+The lightweight, transparent profile remains the default. Since v0.7.6,
+explicit local grammatical tense models are implemented for all seven analysis
+languages through the shared verb-group engine. See
+[setup and model selection](USAGE.md#grammatical-tense) and
+[language-specific evidence and limits](STABILITY.md#grammatical-tense).
+Model language, installed version and policy identity remain separate from
+lexical cues. Analysis never downloads a model, silently falls back or sends
+manuscript text to a remote parser. Exact source anchors are retained; saved
+decisions are rechecked when the measurement identity changes.
+
+Synthetic construction checks and the bounded UD token-feature comparison are
+different measurements. Neither establishes representative verb-group
+precision/recall on literary manuscripts, nor equal accuracy across languages.
+Missing mood, ambiguous constructions and upstream parser errors remain visible.

@@ -230,11 +230,18 @@ async function geometryJourneys(browser, shortServer) {
           if (tool !== 'research') await page.locator(`[data-context-tool="${tool}"]`).click();
           if (tool === 'dossier') await expect(page.locator('#workspace-reader-dossier')).toBeEnabled();
           await assertDockGeometry(page);
-          const beforeScroll = await page.evaluate(() => scrollY);
           const dock = page.locator('#workspace-context-panel');
-          if (await dock.evaluate(node => node.scrollHeight > node.clientHeight + 2)) {
-            const box = await dock.boundingBox();
-            await page.mouse.move(box.x + box.width / 2, box.y + Math.min(120, box.height / 2));
+          const wheel = await dock.evaluate(async node => {
+            // Let the scroll-triggered dock fit and ResizeObserver reach paint;
+            // a previously overflowing dock can now fit its entire content.
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+            const box = node.getBoundingClientRect();
+            return {overflows: node.scrollHeight > node.clientHeight + 2, documentScroll: scrollY,
+              x: box.x + box.width / 2, y: box.y + Math.min(120, box.height / 2)};
+          });
+          const beforeScroll = wheel.documentScroll;
+          if (wheel.overflows) {
+            await page.mouse.move(wheel.x, wheel.y);
             await page.mouse.wheel(0, 200);
             await expect.poll(() => dock.evaluate(node => node.scrollTop)).toBeGreaterThan(0);
             assert.equal(await page.evaluate(() => scrollY), beforeScroll, 'Wheel input scrolls the existing dock, not the manuscript');

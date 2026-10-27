@@ -7,6 +7,7 @@ import threading
 import urllib.error
 import urllib.request
 import wave
+from contextlib import contextmanager
 from email.message import Message
 from pathlib import Path
 from types import SimpleNamespace
@@ -206,12 +207,14 @@ def test_pronunciation_phrase_crosses_transport_boundary(tmp_path, monkeypatch):
     assert source.read_text() == body
 
 
-@pytest.mark.parametrize("device,bf16,dtype,attention,device_map", [
-    ("cpu", False, "float32", "eager", "cpu"),
-    ("cuda", True, "bfloat16", "sdpa", "cuda:0"),
-    ("cuda", False, "float16", "sdpa", "cuda:0"),
+@pytest.mark.parametrize("device,bf16,dtype,attention,device_map,requested", [
+    ("cpu", False, "float32", "eager", "cpu", "auto"),
+    ("cuda", True, "bfloat16", "sdpa", "cuda:0", "auto"),
+    ("cuda", False, "float16", "sdpa", "cuda:0", "auto"),
+    ("cpu", False, "float32", "sdpa", "cpu", "sdpa"),
+    ("cuda", True, "bfloat16", "eager", "cuda:0", "eager"),
 ])
-def test_worker_explicit_device_loading(tmp_path, monkeypatch, device, bf16, dtype, attention, device_map):
+def test_worker_explicit_device_loading(tmp_path, monkeypatch, device, bf16, dtype, attention, device_map, requested):
     from lixity.speech_profiles import QWEN_LANGUAGES, QWEN_VOICES
     from lixity.speech_qwen import load_local_model
 
@@ -231,7 +234,13 @@ def test_worker_explicit_device_loading(tmp_path, monkeypatch, device, bf16, dty
     monkeypatch.setenv("TRANSFORMERS_OFFLINE", "1")
     monkeypatch.setattr("lixity.speech_qwen.importlib.import_module",
                         lambda name: {"torch": fake_torch, "qwen_tts": fake_qwen}[name])
-    assert callable(load_local_model(tmp_path, device=device))
+    loaded = load_local_model(tmp_path, device=device, attention=requested)
+    assert callable(loaded)
+    assert loaded.runtime_info.device == device
+    assert loaded.runtime_info.dtype == dtype
+    assert loaded.runtime_info.attention == attention
+    assert loaded.runtime_info.threads == 4
+    assert loaded.runtime_info.codec_chunk_frames == 300
     assert thread_counts == [4]
     assert calls == [((str(tmp_path),), {"device_map": device_map, "dtype": dtype,
                                         "attn_implementation": attention, "local_files_only": True})]
@@ -378,7 +387,9 @@ def test_worker_explicit_codec_placement(tmp_path, monkeypatch, device, codec_de
     monkeypatch.setattr("lixity.speech_qwen.importlib.import_module",
                         lambda name: {"torch": fake_torch, "qwen_tts": fake_qwen}[name])
     monkeypatch.setattr(gc, "collect", lambda: events.append(("collect", None)))
-    assert callable(load_local_model(tmp_path, device=device, codec_device=codec_device))
+    loaded = load_local_model(tmp_path, device=device, codec_device=codec_device)
+    assert callable(loaded)
+    assert loaded.runtime_info.codec_device == ("cpu" if move_codec or device == "cpu" else "cuda")
     assert events[0] == ("load", {"device_map": "cuda:0" if device == "cuda" else "cpu",
                                   "dtype": "bfloat16" if device == "cuda" else "float32",
                                   "attn_implementation": "sdpa" if device == "cuda" else "eager",
@@ -403,6 +414,96 @@ def test_worker_unknown_codec_device_fails_before_imports(tmp_path, monkeypatch)
         load_local_model(tmp_path / "missing", codec_device="remote")
 
 
+def test_worker_unknown_attention_fails_before_optional_imports(tmp_path, monkeypatch):
+    from lixity.speech_qwen import load_local_model
+
+    monkeypatch.setattr("lixity.speech_qwen.importlib.import_module",
+                        lambda _name: pytest.fail("Invalid attention must fail before optional imports"))
+    with pytest.raises(ValueError, match="attention"):
+        load_local_model(tmp_path / "missing", attention="flash_attention_2")
+
+
+def test_worker_synthesis_enters_inference_mode_and_restores_it_on_failure(tmp_path, monkeypatch):
+    from lixity.speech_profiles import QWEN_LANGUAGES, QWEN_VOICES
+    from lixity.speech_qwen import load_local_model
+
+    (tmp_path / "config.json").write_text(json.dumps({
+        "tts_model_type": "custom_voice", "tts_model_size": "1b7", "tokenizer_type": "qwen3_tts_tokenizer_12hz",
+    }))
+    active = False
+    fail = False
+    calls = []
+
+    @contextmanager
+    def inference_mode():
+        nonlocal active
+        assert not active
+        active = True
+        try:
+            yield
+        finally:
+            active = False
+
+    def generate(**kwargs):
+        assert active, "Generation and its internal codec decode need inference mode"
+        calls.append(kwargs)
+        if fail:
+            raise RuntimeError("Synthetic inference failure")
+        return ["synthetic audio"], 24000
+
+    model = SimpleNamespace(generate_custom_voice=generate,
+                            get_supported_speakers=lambda: list(QWEN_VOICES),
+                            get_supported_languages=lambda: list(QWEN_LANGUAGES.values()))
+    torch = SimpleNamespace(inference_mode=inference_mode, set_num_threads=lambda _n: None, float32="float32")
+    soundfile = SimpleNamespace(write=lambda output, *_args, **_kwargs: output.write(generate_silence_wav(.01, 24000)))
+    qwen = SimpleNamespace(Qwen3TTSModel=SimpleNamespace(from_pretrained=lambda *_a, **_kw: model))
+    monkeypatch.setattr("lixity.speech_qwen.importlib.import_module",
+                        lambda name: {"torch": torch, "soundfile": soundfile, "qwen_tts": qwen}[name])
+    render = load_local_model(tmp_path)
+    request = {"input": "Synthetic speech.", "language": "en", "voice": "Ryan", "instructions": "Read calmly."}
+    assert render(request).startswith(b"RIFF")
+    assert not active
+    assert calls[0]["max_new_tokens"] == 2048
+    fail = True
+    with pytest.raises(RuntimeError, match="Synthetic inference failure"):
+        render(request)
+    assert not active
+
+
+@pytest.mark.parametrize("changes", [
+    {"device": "remote"}, {"dtype": "/private/model"}, {"threads": True}, {"threads": 65},
+    {"attention": "unknown"}, {"codec_device": "remote"},
+    {"codec_chunk_frames": 15}, {"codec_chunk_frames": 301}, {"codec_chunk_frames": True},
+])
+def test_worker_runtime_diagnostics_reject_unbounded_values(changes):
+    from lixity.speech_qwen import WorkerRuntime
+
+    values = {"device": "cpu", "dtype": "float32", "threads": 4, "attention": "eager", "codec_device": "cpu"}
+    with pytest.raises(ValueError):
+        WorkerRuntime(**(values | changes))
+
+
+def test_worker_health_reports_bounded_resolved_runtime():
+    from lixity.speech_qwen import WorkerRuntime
+
+    runtime = WorkerRuntime(device="cuda", dtype="float16", threads=6, attention="sdpa", codec_device="cpu",
+                            codec_chunk_frames=32)
+    server = worker_server(lambda _request: generate_silence_wav(.01, 24000), port=0, runtime_info=runtime)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        with opener.open(f"http://127.0.0.1:{server.server_port}/health") as response:
+            payload = json.load(response)
+        assert payload == {"ready": True, "model": QWEN_MODEL, "runtime": {
+            "device": "cuda", "dtype": "float16", "threads": 6, "attention": "sdpa", "codec_device": "cpu",
+            "codec_chunk_frames": 32}}
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+
 def test_worker_cli_forwards_codec_device(monkeypatch):
     import sys
 
@@ -412,19 +513,101 @@ def test_worker_cli_forwards_codec_device(monkeypatch):
 
     def load(path, **kwargs):
         calls.append((path, kwargs))
-        return "synthetic renderer"
+        return SimpleNamespace(runtime_info="synthetic runtime")
+
+    def worker_server(render, port, runtime_info):
+        assert runtime_info == render.runtime_info == "synthetic runtime"
+        return server
 
     def serve():
         raise KeyboardInterrupt
 
     server = SimpleNamespace(serve_forever=serve, server_close=lambda: calls.append("closed"))
     monkeypatch.setattr(worker, "load_local_model", load)
-    monkeypatch.setattr(worker, "worker_server", lambda render, port: server)
+    monkeypatch.setattr(worker, "worker_server", worker_server)
     monkeypatch.setattr(sys, "argv", ["speech_qwen", "--model", "/synthetic/model", "--device", "cuda",
-                                      "--codec-device", "cpu"])
+                                      "--codec-device", "cpu", "--attention", "eager", "--threads", "6",
+                                      "--codec-chunk-frames", "32"])
     worker.main()
-    assert calls == [(Path("/synthetic/model"), {"device": "cuda", "codec_device": "cpu", "threads": 4}),
+    assert calls == [(Path("/synthetic/model"), {"device": "cuda", "codec_device": "cpu", "threads": 6,
+                                               "attention": "eager", "codec_chunk_frames": 32}),
                      "closed"]
+
+
+@pytest.fixture
+def chunk_codec(tmp_path, monkeypatch):
+    from lixity.speech_profiles import QWEN_LANGUAGES, QWEN_VOICES
+
+    (tmp_path / "config.json").write_text(json.dumps({
+        "tts_model_type": "custom_voice", "tts_model_size": "1b7", "tokenizer_type": "qwen3_tts_tokenizer_12hz",
+    }))
+    calls = []
+
+    class Decoder:
+        def chunked_decode(self, codes, chunk_size=300, left_context_size=25):
+            calls.append((self, codes, chunk_size, left_context_size))
+            return "decoded waveform"
+
+    decoder = Decoder()
+    model = SimpleNamespace(model=SimpleNamespace(speech_tokenizer=SimpleNamespace(
+        model=SimpleNamespace(decoder=decoder))),
+        get_supported_speakers=lambda: list(QWEN_VOICES),
+        get_supported_languages=lambda: list(QWEN_LANGUAGES.values()))
+    torch = SimpleNamespace(set_num_threads=lambda _n: None, float32="float32")
+    qwen = SimpleNamespace(Qwen3TTSModel=SimpleNamespace(from_pretrained=lambda *_a, **_kw: model))
+    monkeypatch.setattr("lixity.speech_qwen.importlib.import_module",
+                        lambda name: {"torch": torch, "qwen_tts": qwen}[name])
+    return tmp_path, decoder, calls
+
+
+@pytest.mark.parametrize("frames", [16, 32, 299])
+def test_codec_chunk_override_is_per_instance_and_retains_context(chunk_codec, frames):
+    from lixity.speech_qwen import load_local_model
+
+    path, decoder, calls = chunk_codec
+    peer = type(decoder)()
+    render = load_local_model(path, codec_chunk_frames=frames)
+    assert render.runtime_info.codec_chunk_frames == frames
+    codes = object()
+    assert decoder.chunked_decode(codes) == "decoded waveform"
+    assert calls[-1] == (decoder, codes, frames, 25)
+    peer.chunked_decode(codes)
+    assert calls[-1] == (peer, codes, 300, 25), "Another loaded model must keep upstream defaults"
+
+
+def test_codec_chunk_default_leaves_upstream_method_untouched(chunk_codec):
+    from lixity.speech_qwen import load_local_model
+
+    path, decoder, calls = chunk_codec
+    original = decoder.chunked_decode
+    render = load_local_model(path)
+    assert decoder.chunked_decode == original
+    assert render.runtime_info.codec_chunk_frames == 300
+    decoder.chunked_decode("codes")
+    assert calls[-1] == (decoder, "codes", 300, 25)
+
+
+@pytest.mark.parametrize("method", [
+    None,
+    lambda codes, **kwargs: None,
+    lambda codes, chunk_size=300: None,
+    lambda codes, chunk_size=300, left_context_size=25, /: None,
+])
+def test_codec_chunk_override_rejects_unsupported_upstream_signature(chunk_codec, method):
+    from lixity.speech_qwen import load_local_model
+
+    path, decoder, _calls = chunk_codec
+    decoder.chunked_decode = method
+    with pytest.raises(ValueError, match=r"codec.*chunk"):
+        load_local_model(path, codec_chunk_frames=32)
+
+
+@pytest.mark.parametrize("frames", [15, 301, True, 32.0, "32"])
+def test_invalid_codec_chunk_size_fails_before_reading_model(tmp_path, frames):
+    from lixity.speech_qwen import load_local_model
+
+    with pytest.raises(ValueError, match="chunk"):
+        load_local_model(tmp_path / "missing", codec_chunk_frames=frames)
 
 
 def test_worker_health_verifies_model_and_never_uses_proxy_or_redirects():

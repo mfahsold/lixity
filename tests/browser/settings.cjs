@@ -141,10 +141,26 @@ from lixity.server import LixityServerHandler
 import lixity.speech_jobs as jobs
 from lixity.speech import generate_silence_wav
 base = Path(sys.argv[1])
-source = base / 'manuscript.md'
-source.write_text('# Synthetic audio project\\n\\n## One\\n\\nA bird crosses the quiet garden.\\n\\nA second bird follows.\\n\\n## Two\\n\\nThe garden is still.\\n', encoding='utf-8')
-config = base / 'lixity.toml'
-config.write_text('language = "en"\\n', encoding='utf-8')
+from lixity.config import prepare_project_settings
+projects = []
+for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
+    project = base / locale
+    project.mkdir()
+    source = project / 'manuscript.md'
+    source.write_text('# Synthetic audio project\\n\\n## One\\n\\nA bird crosses the quiet garden.\\n\\nA second bird follows.\\n\\n## Two\\n\\nThe garden is still.\\n', encoding='utf-8')
+    config = project / 'lixity.toml'
+    config.write_text('language = "' + locale + '"\\n', encoding='utf-8')
+    # Explicit English narrator also makes Dutch UI testing independent of
+    # unsupported default Dutch synthesis; no language is guessed or converted.
+    prepare_project_settings(project, {'audio': {'selected':'narrator', 'profiles':{
+        'narrator': {'name':'Narrator', 'engine':'qwen3', 'language':'en', 'voice':'Ryan'}}}}).commit()
+    projects.append({'locale':locale, 'root':str(project), 'source':str(source), 'config':str(config)})
+legacy = base / 'legacy-audio'
+legacy.mkdir()
+legacy_source = legacy / 'manuscript.md'
+legacy_source.write_text('## Synthetic legacy project\\n\\nA river flows.\\n', encoding='utf-8')
+legacy_config = legacy / 'lixity.toml'
+legacy_config.write_text('language = "en"\\n[audio]\\nschema_version = "lixity-audio-settings/1"\\nselected = "retained_narrator"\\n[audio.profiles.retained_narrator]\\nname = "Retained narrator"\\nengine = "piper"\\nlanguage = "en"\\nvoice = "en_US-lessac-medium"\\npronunciations = { "Synthetic" = "Example" }\\n[audio.profiles.retained_second]\\nname = "Retained second"\\nengine = "piper"\\nlanguage = "de"\\nvoice = "de_DE-thorsten-medium"\\n', encoding='utf-8')
 def fake_render(source, output, *, profile, progress, cancelled, **kwargs):
     progress(0, 1)
     time.sleep(.7)
@@ -152,38 +168,38 @@ def fake_render(source, output, *, profile, progress, cancelled, **kwargs):
     progress(1, 1)
     return Path(output)
 jobs.render_speech_audio = fake_render
-LixityServerHandler.workspace_root = str(base)
-LixityServerHandler.source_input = str(source)
+LixityServerHandler.workspace_root = projects[0]['root']
+LixityServerHandler.source_input = projects[0]['source']
 LixityServerHandler.exports_dir = str(base / 'exports')
 LixityServerHandler.refresh()
 server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
-print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'source':str(source), 'config':str(config)}), flush=True)
+print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'projects':projects, 'legacy': {'root':str(legacy), 'source':str(legacy_source), 'config':str(legacy_config)}}), flush=True)
 server.serve_forever()
 `,artifacts);
   try {
-    const original=fs.readFileSync(server.fixture.source);
-    for(const width of [1440,320]) {
+    for(const project of server.fixture.projects) for(const width of [1440,320]) {
+      const {locale}=project, labels=data.fixtures[locale].labels;
+      const original=fs.readFileSync(project.source), originalConfig=fs.readFileSync(project.config);
       const page=await browser.newPage({viewport:{width,height:1000}}), errors=[];
       page.on('pageerror',error=>errors.push(error.message));
+      assert.equal((await page.request.post(server.fixture.url+'/api/project-open',{data:{path:project.root}})).status(),200);
       await page.goto(server.fixture.url);
+      assert.equal(await page.locator('html').getAttribute('lang'),locale);
       await page.locator('#tab-view-project').click();
       await page.locator('#settings-speech').click();
       const dialog=page.locator('#modal-speech');
       await page.waitForFunction(()=>document.querySelector('#speech-name')?.value==='Narrator');
       assert.equal(await dialog.isVisible(),true);
-      assert.equal(await page.locator('#speech-instructions').isDisabled(),true);
-      assert.equal(await page.locator('#speech-speed').isDisabled(),false);
-      assert.equal(await page.locator('#speech-target').isDisabled(),true);
-      assert.equal(await page.locator('#speech-target').locator('..').isVisible(),false,'Piper exposes no remote execution target');
-      await page.locator('#speech-engine').selectOption('qwen3');
+      assert.equal(await page.locator('#speech-engine, #speech-speed, #speech-advanced_voice').count(),0,
+        'The Qwen-only dialog has no removed engine, speed or cached voice controls');
+      assert.equal(await dialog.getByText(/Piper/i).count(),0,
+        JSON.stringify(await dialog.getByText(/Piper/i).allTextContents()));
       assert.equal(await page.locator('#speech-instructions').isDisabled(),false);
-      assert.equal(await page.locator('#speech-speed').isDisabled(),true);
-      assert.equal(await page.locator('#speech-speed').locator('..').isVisible(),false);
-      assert.equal(await page.locator('#speech-advanced_voice').locator('..').isVisible(),false);
+      assert.equal(await page.locator('#speech-target').isDisabled(),false);
       assert.equal(await page.locator('#speech-instructions').isVisible(),true);
-      assert.equal(await page.locator('#speech-language option:checked').textContent(),'English');
+      assert.equal(await page.locator('#speech-language').inputValue(),'en');
       assert.equal(await page.locator('#speech-runtime-hint').isVisible(),true);
-      assert.ok((await page.locator('#speech-runtime-hint').textContent()).includes('CPU rendering can be slow'));
+      assert.ok((await page.locator('#speech-runtime-hint').textContent()).includes(labels.speech_runtime_hint));
       assert.equal(await page.locator('#speech-target').isVisible(),true);
       assert.equal(await page.locator('#speech-target').inputValue(),'local','Execution defaults to this computer');
       await page.locator('#speech-instructions').fill('Read calmly.');
@@ -194,21 +210,23 @@ server.serve_forever()
       const response=await page.request.get(new URL(await audio.getAttribute('src'),server.fixture.url).href);
       assert.equal(response.status(),200);
       assert.equal((await response.body()).subarray(0,4).toString(),'RIFF');
-      assert.ok((await page.locator('#modal-speech').textContent()).includes('first bounded paragraph'));
+      assert.ok((await page.locator('#modal-speech').textContent()).includes(labels.speech_first_preview));
       await page.locator('#speech-target').selectOption('jetson');
       assert.equal(await audio.isVisible(),false,'Changing execution target removes audio from the previous target');
-      assert.ok((await page.locator('#speech-runtime-hint').textContent()).includes('SSH connection'));
+      assert.ok((await page.locator('#speech-runtime-hint').textContent()).includes(labels.speech_jetson_hint));
       const jetsonRequest=page.waitForRequest(request=>request.url().endsWith('/api/speech-render'));
       await page.locator('[data-speech-action=preview]').click();
       const jetsonPayload=(await jetsonRequest).postDataJSON();
       assert.equal(jetsonPayload.target,'jetson');
+      assert.equal(jetsonPayload.profile.engine,'qwen3');
+      assert.equal(jetsonPayload.profile.speed,1);
       assert.equal(Object.hasOwn(jetsonPayload.profile,'target'),false,'Execution selection is separate from the portable narrator');
       await page.waitForFunction(()=>!document.querySelector('#modal-speech audio').hidden);
       await dialog.locator('.modal-body').evaluate(el=>{el.scrollTop=el.scrollHeight;});
-      await dialog.screenshot({path:path.join(artifacts,`audio-jetson-${width}.png`)});
+      await dialog.screenshot({path:path.join(artifacts,`audio-jetson-${locale}-${width}.png`)});
       await page.locator('#speech-target').selectOption('local');
       assert.equal(await audio.isVisible(),false,'Returning to local clears the Jetson result');
-      assert.ok((await page.locator('#speech-runtime-hint').textContent()).includes('CPU rendering can be slow'));
+      assert.ok((await page.locator('#speech-runtime-hint').textContent()).includes(labels.speech_runtime_hint));
       await page.locator('#speech-target').selectOption('jetson');
       await page.locator('[data-speech-action=preview]').click();
       await page.waitForFunction(()=>!document.querySelector('[data-speech-action=cancel]').disabled);
@@ -235,7 +253,7 @@ server.serve_forever()
       await page.locator('[data-speech-action=preview]').click();
       await page.waitForFunction(()=>!document.querySelector('[data-speech-action=cancel]').disabled);
       await page.locator('[data-speech-action=cancel]').click();
-      await page.waitForFunction(()=>document.querySelector('#modal-speech [role=status]').textContent.includes('cancelled'));
+      await page.waitForFunction(text=>document.querySelector('#modal-speech [role=status]').textContent.includes(text),labels.speech_state_cancelled);
       assert.equal(await audio.isVisible(),false,'Cancelled inference cannot publish audio');
       await page.locator('[data-speech-action=preview]').click();
       await page.locator('#speech-name').fill('Newer draft');
@@ -243,9 +261,9 @@ server.serve_forever()
       assert.equal(await audio.isVisible(),false,'Late results cannot attach after profile edits');
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
       await dialog.locator('.modal-body').evaluate(el=>{el.scrollTop=0;});
-      await dialog.screenshot({path:path.join(artifacts,`audio-${width}.png`)});
+      await dialog.screenshot({path:path.join(artifacts,`audio-${locale}-${width}.png`)});
       await dialog.locator('.modal-body').evaluate(el=>{el.scrollTop=el.scrollHeight;});
-      await dialog.screenshot({path:path.join(artifacts,`audio-actions-${width}.png`)});
+      await dialog.screenshot({path:path.join(artifacts,`audio-actions-${locale}-${width}.png`)});
       await page.keyboard.press('Escape');
       assert.equal(await dialog.isVisible(),false);
       await page.locator('#tab-view-analysis').click();
@@ -267,7 +285,7 @@ server.serve_forever()
       const selectedPayload=(await selectedRequest).postDataJSON();
       assert.ok(selectedPayload.paragraph?.paragraph_sha256,'Reader preview retains exact paragraph identity');
       await page.waitForFunction(()=>!document.querySelector('#modal-speech audio').hidden);
-      assert.ok((await dialog.textContent()).includes('selected paragraph'));
+      assert.ok((await dialog.textContent()).includes(labels.speech_paragraph_preview));
       await page.locator('[data-speech-action=preview]').click();
       await page.waitForFunction(()=>!document.querySelector('[data-speech-action=cancel]').disabled);
       await page.evaluate(()=>{document.body.dataset.manuscriptSourceSha256='f'.repeat(64);});
@@ -275,11 +293,13 @@ server.serve_forever()
       await page.waitForTimeout(1000);
       assert.equal(await audio.getAttribute('src'),null,'Source changes close the dialog and cannot resurrect audio');
       assert.deepEqual(errors,[]);
+      assert.deepEqual(fs.readFileSync(project.source),original,'Preview never modifies source');
+      assert.deepEqual(fs.readFileSync(project.config),originalConfig,'Draft previews never save settings');
       await page.close();
     }
-    assert.deepEqual(fs.readFileSync(server.fixture.source),original,'Preview never modifies source');
-    assert.equal(fs.readFileSync(server.fixture.config,'utf8'),'language = "en"\n','Draft previews never save settings');
+    const savedProject=server.fixture.projects[0], original=fs.readFileSync(savedProject.source);
     const savedPage=await browser.newPage({viewport:{width:1440,height:1000}});
+    assert.equal((await savedPage.request.post(server.fixture.url+'/api/project-open',{data:{path:savedProject.root}})).status(),200);
     await savedPage.goto(server.fixture.url);
     await savedPage.locator('#tab-view-project').click();
     await savedPage.locator('#settings-speech').click();
@@ -297,13 +317,52 @@ server.serve_forever()
     await savedPage.locator('#tab-view-project').click();
     await savedPage.locator('#settings-speech').click();
     await savedPage.waitForFunction(()=>document.querySelector('#speech-name').value==='Saved synthetic narrator');
-    assert.equal(await savedPage.locator('#speech-engine').inputValue(),'qwen3');
+    assert.equal(await savedPage.locator('#speech-engine').count(),0);
     assert.equal(await savedPage.locator('#speech-target').inputValue(),'local','Execution target is not restored from saved audio settings');
-    assert.equal(/^target\s*=/m.test(fs.readFileSync(server.fixture.config,'utf8')),false,'Project TOML excludes the per-render target');
-    assert.ok(fs.readFileSync(server.fixture.config,'utf8').includes('Saved synthetic narrator'));
-    assert.deepEqual(fs.readFileSync(server.fixture.source),original);
+    assert.equal(/^target\s*=/m.test(fs.readFileSync(savedProject.config,'utf8')),false,'Project TOML excludes the per-render target');
+    assert.ok(fs.readFileSync(savedProject.config,'utf8').includes('Saved synthetic narrator'));
+    assert.deepEqual(fs.readFileSync(savedProject.source),original);
     await savedPage.close();
-    console.log('Native audio: synthetic WAV, draft controls, cancellation, stale results, keyboard/Escape, unchanged sources at1440/320 passed. '+artifacts);
+    const legacyProject=server.fixture.legacy;
+    const legacyConfig=fs.readFileSync(legacyProject.config), legacySource=fs.readFileSync(legacyProject.source);
+    for(const width of [1440,320]) {
+      const page=await browser.newPage({viewport:{width,height:1000}}), errors=[], posts=[];
+      page.on('pageerror',error=>errors.push(error.message));
+      page.on('request',request=>{if(request.method()==='POST') posts.push(request.url());});
+      assert.equal((await page.request.post(server.fixture.url+'/api/project-open',{data:{path:legacyProject.root}})).status(),200);
+      await page.goto(server.fixture.url);
+      await page.locator('#tab-view-project').click();
+      const opened=page.waitForResponse(response=>new URL(response.url()).pathname.endsWith('/api/speech') && response.request().method()==='GET');
+      await page.locator('#settings-speech').click();
+      const data=await (await opened).json();
+      assert.equal(data.requires_migration,true);
+      assert.equal(data.settings,null);
+      assert.ok(data.configuration_error.includes('audio-migrate'));
+      const dialog=page.locator('#modal-speech');
+      await page.waitForFunction(()=>document.querySelector('#modal-speech [role=status]').textContent.includes('audio-migrate'));
+      for(const action of ['create','save','preview','chapter_render'])
+        assert.equal(await dialog.locator('[data-speech-action='+action+']').isDisabled(),true,action+' requires explicit migration');
+      assert.equal(await page.locator('#speech-name').isDisabled(),true);
+      assert.equal(await dialog.locator('audio').isVisible(),false);
+      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      await dialog.screenshot({path:path.join(artifacts,`audio-migration-blocked-${width}.png`)});
+      await page.keyboard.press('Escape');
+      assert.equal(await dialog.isVisible(),false);
+      assert.equal(await page.locator('#settings-speech').evaluate(el=>el===document.activeElement),true);
+      await page.locator('#tab-view-analysis').click();
+      await page.locator('#reader-speech').click();
+      await page.waitForFunction(()=>document.querySelector('#modal-speech [role=status]').textContent.includes('audio-migrate'));
+      assert.equal(await dialog.locator('[data-speech-action=create]').isDisabled(),true);
+      assert.equal(await dialog.locator('[data-speech-action=save]').isDisabled(),true);
+      await page.keyboard.press('Escape');
+      assert.equal(await dialog.isVisible(),false);
+      assert.deepEqual(posts,[],'Opening, reading and closing legacy audio settings cannot send writes');
+      assert.deepEqual(errors,[]);
+      assert.deepEqual(fs.readFileSync(legacyProject.config),legacyConfig,'Both retained legacy profiles and their lexicon survive dialog access');
+      assert.deepEqual(fs.readFileSync(legacyProject.source),legacySource,'Migration guidance never changes source');
+      await page.close();
+    }
+    console.log('Native Qwen-only audio: synthetic WAV over real HTTP, seven locales at1440/320, paragraph previews, cache/target controls, cancellation, stale results, keyboard/Escape and unchanged sources passed. '+artifacts);
   } finally {await server.close();}
 }
 

@@ -24,6 +24,15 @@ for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
     labels = {**get_language_profile(locale).labels, **WORKSPACE_LABELS[locale]}
     def localized(*args, **kwargs):
         fixtures[locale] = {'text': [paragraph.text for paragraph in args[1]]}
+        # Transport-only annotation fixture; counts remain those of the shared
+        # profiler. Optional model composition is verified independently.
+        for evidence in (kwargs.get('paragraph_evidence') or {}).values():
+            if 'tense' in evidence:
+                evidence['tense']['grammar'] = {'schema_version':'grammatical-tense/1', 'groups':[
+                    {'selected':True,'bucket':'present','tense':'present','scope':'narration'},
+                    {'selected':False,'bucket':'past','tense':'preterite','scope':'quotation'},
+                    {'selected':True,'bucket':None,'tense':'future','scope':'narration'},
+                    {'selected':True,'bucket':None,'tense':'unresolved','scope':'narration'}]}
         return original(*args, **{**kwargs, 'labels': labels, 'language_key': locale,
             'enabled_actions': ['analyze', 'research-reader', 'research-manuscript-link'],
             'manuscript_pdf_token': 'synthetic-project-token', 'research_context_token': 'synthetic-research-token',
@@ -200,7 +209,7 @@ async function settleGeometry(page) {
         'The same context exposes saved research before any research view was opened');
       assert.equal(await inspector.locator('.reader-passage-context [data-manuscript-links-paragraph]').getAttribute('data-manuscript-links-paragraph'), id,
         'The passage lens routes research to the inspected paragraph, independently of scroll position');
-      assert.ok((await inspector.locator('.reader-passage-context p').textContent()).includes(await first.getAttribute('data-start')),
+      assert.ok((await inspector.locator('.reader-passage-context > .ctl-note').textContent()).includes(await first.getAttribute('data-start')),
         'The passage lens names its manuscript line context');
       assert.equal(await analysis.getAttribute('aria-pressed'), 'false', 'Local values do not enable global Analysis');
       await analysis.click(); await analysis.click();
@@ -287,6 +296,9 @@ async function settleGeometry(page) {
         await page.evaluate(() => uiLabel('reading_tense_mixed')), 'The passage names its actual mixed-tense trigger');
       const cue = tenseCard.locator('.reader-tense-cue').first();
       await cue.waitFor({state: 'visible'});
+      assert.ok(await tenseCard.getByText(await page.evaluate(() => uiFormat('reading_tense_grammar_summary',
+        {groups:4, excluded:1, other:1, unresolved:1})), {exact:true}).isVisible(),
+        'All locales expose unresolved grammar, excluded quotations and other verb forms beside the actual cues');
       const cueText = await cue.textContent(), selectedMetric = await page.locator('#style-layer').inputValue();
       assert.equal(await inspector.locator('.paragraph-values').getAttribute('open'), null,
         'Unrelated metrics start collapsed');

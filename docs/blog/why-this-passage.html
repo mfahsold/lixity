@@ -16,10 +16,10 @@
 <meta property="og:site_name" content="Lixity"/>
 <meta property="article:author" content="https://github.com/mfahsold"/>
 <meta property="article:published_time" content="2026-10-26"/>
-<meta property="article:modified_time" content="2026-10-26"/>
+<meta property="article:modified_time" content="2026-10-27"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-measurement-focus.png"/>
 <meta property="og:image:width" content="800"/>
-<meta property="og:image:height" content="810"/>
+<meta property="og:image:height" content="812"/>
 <meta property="og:image:alt" content="Sentence-length explanation with a selected sentence count and a separate paragraph comparison"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Why is this passage marked?"/>
@@ -42,7 +42,7 @@
   "mainEntityOfPage": "https://mfahsold.github.io/lixity/blog/why-this-passage.html",
   "inLanguage": "en",
   "datePublished": "2026-10-26",
-  "dateModified": "2026-10-26",
+  "dateModified": "2026-10-27",
   "author": {
     "@type": "Person",
     "name": "Matthias Fahsold",
@@ -57,7 +57,7 @@
     "@type": "ImageObject",
     "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-measurement-focus.png",
     "width": 800,
-    "height": 810,
+    "height": 812,
     "caption": "Sentence-length explanation with a selected sentence count and a separate paragraph comparison"
   }
 }
@@ -73,30 +73,31 @@
 <main class="guide" id="content">
 <nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="index.html">Articles</a></li><li><span aria-current="page">Why this passage?</span></li></ol></nav>
 <h1>Why is this passage marked?</h1>
-<p class="updated">By <a href="https://github.com/mfahsold">Matthias Fahsold</a> · <time datetime="2026-10-26">26 October 2026</time> · 5 minutes</p>
-<p class="section-note"><strong>Development note:</strong> this article describes a reviewed development build, including changes not yet in a published package. The published package observed on 26 October 2026 was 0.7.5. The demo, source checkout and installed app can differ; <a href="https://github.com/mfahsold/lixity/releases/latest">check the published release</a> and the <a href="../guides/installation.html">installation guide</a> before expecting preview controls in an installation.</p>
+<p class="updated">By <a href="https://github.com/mfahsold">Matthias Fahsold</a> · Published <time datetime="2026-10-26">26 October 2026</time> · Updated <time datetime="2026-10-27">27 October 2026</time> · 5 minutes</p>
+<p class="section-note"><strong>Lixity 0.7.6:</strong> this walkthrough follows the current manuscript and research review workflow. The local app keeps independent project views; optional installed grammar models extend tense analysis, and the optional Qwen3-TTS 1.7B worker shares listening profiles with the CLI. Existing Piper profiles require explicit, backed-up migration. See the <a href="../releases/v0.7.6.md">release notes</a>, <a href="../STABILITY.md#grammatical-tense">validation limits</a> and <a href="../guides/installation.html">installation guide</a>.</p>
 
 <p>A paragraph is marked while the toolbar shows a different measurement. A research panel still refers to a scene that has already scrolled away. The reader has to work out what the software means before returning to the manuscript.</p>
 <p>That is an editorial problem as well as an interface problem. An author needs the reason for reviewing a passage. An editor needs to explain an observation in terms the author can examine. A coloured edge alone supplies neither.</p>
-<p>The useful loop is short: <strong>read the passage, inspect the reason, make a contextual decision, return to the text.</strong> Lixity brings manuscript analysis and linked research into that loop. This development iteration makes their separate questions clearer.</p>
+<p>The useful loop is short: <strong>read the passage, inspect the reason, make a contextual decision, return to the text.</strong> Lixity brings manuscript analysis and linked research into that loop. The current workflow makes their separate questions clearer.</p>
 
 <h2 id="one-signal">1. Ask what the signal actually measures</h2>
-<p>A tense-pattern signal counts heuristic markers of present and past forms. It can indicate a mixture within a paragraph or a change from the previous paragraph. The selected measurement layer answers its own question, such as sentence length or literal perception-word matches. Those are separate observations.</p>
+<p>The default tense-pattern signal counts heuristic markers of present and past forms. It can indicate a mixture within a paragraph or a change from the previous paragraph. The selected measurement layer answers its own question, such as sentence length or literal perception-word matches. Those are separate observations.</p>
+<p>Optional installed syntax models instead compose contextual verb groups. Their evidence retains the model identity, quotation scope and unresolved forms. A controlled construction check is different from accuracy on a literary manuscript; the <a href="../USAGE.md#grammatical-tense">configuration guide</a> and <a href="../STABILITY.md#grammatical-tense">measured limits</a> explain the distinction.</p>
 <p>Consider this invented contrast:</p>
 <blockquote><p>Mara closed the gate and pocketed the key. Every morning, the porter checks the seal and writes down the number.</p></blockquote>
 <p>The second sentence could describe a standing routine within a past-tense narrative. It could also be an accidental change of tense during revision. This example illustrates the editorial distinction; it is not a claim that these two short sentences meet a particular detection threshold.</p>
 <p>The software cannot infer that intention reliably from marker counts. A useful explanation exposes the counts, their heuristic limits and the exact passage. The author or editor supplies the reading that turns them into a decision.</p>
-<p>In the reviewed development build, the labelled <strong>Tense pattern · review</strong> action opens that explanation directly. It is separate from <strong>Explain measurement</strong>, which inspects the selected analysis layer. A change of rhythm, voice or tense can be a reason to preserve a passage.</p>
+<p>In the local app, the labelled <strong>Tense pattern · review</strong> action opens that explanation directly. It is separate from <strong>Explain measurement</strong>, which inspects the selected analysis layer. A change of rhythm, voice or tense can be a reason to preserve a passage.</p>
 
 <h2 id="one-context">2. Keep the context attached to the chosen passage</h2>
 <p>Following research should make the scene easier to understand. A dossier from a previous chapter becomes distracting when it appears to explain the paragraph currently being read.</p>
-<p>The development reader retires the old passage context on an explicit chapter or passage change. Deliberately continuing through the manuscript beyond an inspected paragraph also closes its old context. Scrolling within the open research tool keeps that tool available. Switching tools uses the passage that was explicitly requested.</p>
+<p>The reader retires the old passage context on an explicit chapter or passage change. Deliberately continuing through the manuscript beyond an inspected paragraph also closes its old context. Scrolling within the open research tool keeps that tool available. Switching tools uses the passage that was explicitly requested.</p>
 <p>The return control retains the destination and one action. Record titles and revision metadata belong with the record being inspected. Repeating them in the primary navigation makes a short route harder to recognise.</p>
 <p>On a narrow screen, opening a tool can move it above the prose. A useful return therefore restores the reading position and keyboard focus as well as selecting the Manuscript view. These behaviours are checked with synthetic projects; passing those checks does not substitute for feedback from people reading a long draft.</p>
 
 <h2 id="versions">3. Separate the current record from the version used</h2>
 <p>Suppose two quotations refer to the same historical dossier, and one quotation was linked to an earlier version of a claim. A later correction should remain discoverable alongside the exact version used at the time.</p>
-<p>The development context shows a current dossier or claim once within its group. Distinct <strong>Linked version</strong> controls preserve the earlier pins. Each version's association disclosure retains its own quotation, confidence and dossier revision; multiple versions have visible version labels before they are expanded. Dossier-wide decisions appear once beside their related claims.</p>
+<p>The passage context shows a current dossier or claim once within its group. Distinct <strong>Linked version</strong> controls preserve the earlier pins. Each version's association disclosure retains its own quotation, confidence and dossier revision; multiple versions have visible version labels before they are expanded. Dossier-wide decisions appear once beside their related claims.</p>
 <p>This answers two different reading questions: what does the record say now, and what was linked to this sentence? A saved association records that connection. It does not automatically verify the claim, accept a new version or establish that a decision has been incorporated into the prose.</p>
 <p>The backend prepares these summaries from one archive snapshot for both the live reader and an offline review export. Opening the context no longer asks the browser to assemble several independently fetched record versions. Full records remain available through their explicit viewers. The <a href="../AGENTS.md">automation contracts</a> document the versioned data model.</p>
 

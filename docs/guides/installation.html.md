@@ -51,7 +51,7 @@ lixity service start --open
 
 If `lixity` is not found, check `uv tool list`, run `uv tool update-shell` and open a new terminal. `uv tool dir --bin` shows the executable directory. The health check reports installation/service issues, not linguistic validity.
 
-This installs the published package from PyPI in uv's [isolated tool environment](https://docs.astral.sh/uv/concepts/tools/). Shell integration applies to new terminals. The package observed on 26 October 2026 was 0.7.5; check [published release notes](https://github.com/mfahsold/lixity/releases/latest) for changes and compatibility. The [0.7.6 development notes](../releases/v0.7.6.md) describe prepared changes separately.
+This installs the published package from PyPI in uv's [isolated tool environment](https://docs.astral.sh/uv/concepts/tools/). Shell integration applies to new terminals. Install v0.7.6 and check [published release notes](https://github.com/mfahsold/lixity/releases/latest) for changes and compatibility. The [0.7.6 release notes](../releases/v0.7.6.md) describe changes and migration boundaries.
 
 ## Start the workspace
 

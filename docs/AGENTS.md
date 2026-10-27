@@ -212,7 +212,7 @@ selects rows after full references/counts are computed, without renumbering.
 Without `--json`, the selected-layer CLI prints a source-anchored human report.
 Chapter/FDR thresholds are different policies and are not changed by this view.
 
-**Current main, unreleased author triage:** `analysis-review --project PATH
+**Since v0.7.6, author triage:** `analysis-review --project PATH
 [--json]` / `lixity.analysis_review.review_analysis(project, manuscript=None,
 language=None, thresholds=None)` returns `lixity-analysis-review/1` with source,
 resolved-analysis and review-state SHA-256 identities. `observations` are only
@@ -243,7 +243,7 @@ configured tokenizer. Units differ: ASL counts sentences, dialogue counts quoted
 words, lexical layers count configured tokens or pattern matches. A span is
 counted evidence, not a statistical judgment about that individual word.
 
-**Current main, unreleased:** the same envelope optionally includes `tense`
+**Since v0.7.6:** the same envelope optionally includes `tense`
 with `present` and `past` entries using the existing layer shape, and a `trigger`
 of `none`, `mixed`, `switch` or `mixed_switch`. This is an additive optional
 field of `paragraph-evidence/1`; the seven measurement `layers` and default
@@ -356,7 +356,7 @@ navigation lists only rendered panels.
 PDF export, the read-only dossier companion and research saves use the explicit
 capability/context guards below. Selection drafts save nothing by themselves.
 
-**Current main, unreleased:** saved quotation links use neutral dotted
+**Since v0.7.6:** saved quotation links use neutral dotted
 `.manuscript-claim-hit` DOM marks and a book-icon paragraph control labelled
 **Research** plus its association count. The mark itself remains non-focusable;
 keyboard users use `[data-manuscript-links-paragraph]` or the paragraph menu.
@@ -403,7 +403,7 @@ Analysis Off and Focus hide both displays without resetting their preferences.
 | `data-target="p-<idx>"` | exact paragraph panel to open on jump (flagged-list rows) |
 | `[data-chapter-toggle]` | standalone report: fold or unfold a chapter body (strip and paragraphs); jumps and search steps expand a collapsed chapter; hidden in the continuous interactive reader |
 | `data-chapter="<n>"` | chapter navigation target; on metric triggers, the chapter to inspect before reading |
-| `[data-metric-feature="<field>"]` | current main (unreleased): heatmap cells, reference cutoff-hit counts and dimension loadings open shared chapter measurements using canonical fingerprint fields; no manuscript mutation |
+| `[data-metric-feature="<field>"]` | since v0.7.6: heatmap cells, reference cutoff-hit counts and dimension loadings open shared chapter measurements using canonical fingerprint fields; no manuscript mutation |
 | `#analysis-metric-context` / `#metric-context-values` | current main: native measurement dialog and metric switches within the same chapter; raw units, medians, sample counts and z* remain distinct |
 | `#metric-context-read` / `[data-metric-close]` | current main: explicitly navigate with the applicable paragraph layer (or clear it); close/Escape restores trigger focus without changing the selected layer |
 | `[data-dimension-loading]` | current main: metric trigger follows the style-space selected chapter; axis/loading origin is not a chapter contribution |
@@ -817,7 +817,7 @@ semantic contradiction or factual proof. `source_changed` is informational (a di
 source_sha256=..., paragraphs=..., source_state="available")` without another
 analysis pass; `source_state` also accepts `missing|unreadable`.
 
-**Current main (unreleased):** `include_context=True` adds `passage_context` with
+**Since v0.7.6:** `include_context=True` adds `passage_context` with
 schema `research-passage-context-local/1`. The native manuscript-review route
 and offline exporter request this same projection. The existing review envelope,
 default library/CLI output and retained archive records remain unchanged.
@@ -857,7 +857,7 @@ Native routes require explicit context guards:
 Successful native responses add `ok: true` to the corresponding envelope. Error responses on the manuscript-link routes add a stable `code`
 where the UI reacts: `stale-context` (selected manuscript or research context
 changed) and `stale-archive` (snapshot, revision or source conflict), both with
-HTTP 409. **Current main:** creating an exact duplicate active association returns
+HTTP 409. **Since v0.7.6:** creating an exact duplicate active association returns
 HTTP 409 with `code: "duplicate-link"` and the existing `link_id`; it does not
 change the archive. Occurrence identity includes the claim, source path,
 paragraph hash, line span and codepoint offsets. Other failures remain
@@ -915,7 +915,7 @@ locks. Local metadata can change after an observation.
 
 When running `lixity serve --port 8765`, local agents can trigger deterministic workspace actions over HTTP:
 
-**Current main, unreleased:** `GET /` redirects to a retained `/w/<id>/` view.
+**Since v0.7.6:** `GET /` redirects to a retained `/w/<id>/` view.
 Successful project-open/create/load responses add `workspace_url`; follow that
 URL instead of assuming the root selection changed. Each view exposes its
 `data-api` prefix and `GET <prefix>` advertises `api_base`; append action names
@@ -1157,7 +1157,7 @@ Calls without the parameter retain their existing behavior and JSON envelope.
 
 Dossier detail GET additionally accepts `section=Heading` and positive `revision=N`
 for a bounded exact-version read. Full/section/summary reads include `project_id`,
-`images` and canonical `editable_sections`. Current-main, unreleased reads also
+`images` and canonical `editable_sections`. Since v0.7.6, reads also
 include a separate `media` array for PDF/MP4/WebM; `images` remains PNG/JPEG only.
 Both resolver arrays identify exact
 source/version pins with `available|withdrawn|purged|missing` status; unavailable
@@ -1210,7 +1210,7 @@ ingest path automatically retries an external conflict. Version-purge identity
 metadata uses `research-local/2` Tombstones; 2.0.0 readers reject those records.
 Existing v1 bytes stay unchanged. See [image workflow and limits](research/USAGE.md#keep-a-visual-reference-in-a-dossier).
 
-**Current main, unreleased local document/video endpoints:**
+**Since v0.7.6, local document/video endpoints:**
 
 - `POST /api/research-media-ingest` and `POST /api/research-dossier-media` reuse
   the corresponding image payload and atomic transaction. They also accept
@@ -1538,21 +1538,55 @@ source/revision bytes, and supports interrupted-cleanup retry. Normal old-layout
 access fails with a migration requirement. Portable exports remain canonical
 `.json` transport and restore converts staging before publication.
 
-## Native speech (current main, unreleased)
+## Native speech
 
 `audio` is a project-only setting with schema `lixity-audio-settings/1`, selected
 profile ID and a bounded profile map. The installed configuration schema exposes
 its validation contract. `read-aloud --profile` and the native dialog share it;
-explicit CLI control overrides are per invocation, not project writes.
+explicit CLI control overrides are per invocation, not project writes. The sole
+engine is `qwen3`, pinned to `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice`, with nine
+preset voices and ten explicit speech languages. Dutch analysis projects need
+an explicit supported speech language. Profile `speed` must be `1.0`; style
+instructions do not implement precise speed control.
+
+Removed Piper profiles are rejected with actionable migration guidance. Existing
+Qwen records retain the `/1` wire contract; saved profiles without an explicit
+engine are not silently reinterpreted. `audio-migrate --project PATH --replace
+PROFILE=VOICE` emits a read-only JSON replacement summary and `snapshot` token.
+Optional repeated `--instructions PROFILE=TEXT` supplies new styles explicitly.
+Apply repeats those choices and requires `--apply --backup OUTSIDE.zip
+--expected-snapshot TOKEN`. The new private, non-overwriting ZIP backs up root
+configs and a verification manifest, without manuscript bytes. Migration retains
+IDs, selection, names, languages, pauses and pronunciation replacements, sets
+speed to `1.0` and clears style unless explicitly supplied. Source/configuration
+or replacement/style changes fail the snapshot checks; only validated audio
+settings are atomically persisted. Manuscripts and retained research records are never rewritten.
+
+The v0.7.6 Qwen-only transition intentionally changes the direct Python
+`speech` module API. `render_speech_audio` removes `voice_name`, `base_speed` and
+`piper_bin`; pass validated delivery choices through `profile=AudioProfile(...)`
+and use keyword arguments for `language`, `chapter` and `target`.
+`extract_audio_cues` removes `has_emotional_voice` and `base_speed`.
+`AudioCue` removes the Piper-specific `length_scale`, `sentence_silence`,
+`speaker_id`, `noise_scale` and `noise_w_scale` fields; retained cue fields are
+`text`, `kind`, `chapter_num`, `pause_after` and `join_before`.
+Both speech functions now default to English. `generate_silence_wav` defaults to
+24,000 Hz instead of 22,050 Hz, matching the Qwen PCM path. Callers relying on
+those removed arguments, positional layouts or earlier defaults must update;
+there is no compatibility engine or precise speed replacement.
 
 All native speech reads require same-origin access and exactly one
 `project_token` plus `source_sha256`. Tokens guard context, not authentication.
 `GET /api/speech` returns `lixity-speech-local/1`, settings (or an explicit
-configuration error), backend capabilities and source chapter bounds.
+configuration error), backend capabilities and source chapter bounds. A strict
+`requires_migration` boolean identifies retained Piper profiles: normal settings
+saves cannot replace them, and the dialog disables replacement controls until
+explicit migration. Unrelated settings saves remain available.
 `POST /api/speech-render` accepts those context fields, `mode: preview|chapter`,
 a positive `chapter`, and either `profile_id` or a validated draft `profile`.
 Optional `fresh_audio` is a strict boolean: true bypasses reuse for that render.
-Optional `target` is `local` (default) or `jetson`; Piper accepts only `local`.
+Optional `target` is `local` (default) or `jetson`; unavailable targets fail
+explicitly without switching to another machine or model.
 Execution location is per render and is not stored in `audio` voice profiles.
 Preview may include the exact displayed `paragraph` identity (`start_line`,
 `end_line`, `paragraph_sha256`). Browser-provided text, paths and unknown request
@@ -1579,7 +1613,9 @@ automatic backend fallback is supported. Heavy model dependencies and weights
 are separately installed machine resources. See the read-aloud usage for setup.
 Worker-only `--codec-device cpu` explicitly places decoding on CPU while a CUDA
 talker remains on GPU. Its default `model` follows `--device`; browser payloads
-and portable voice profiles cannot change this machine configuration.
+and portable voice profiles cannot change this machine configuration. The same
+boundary applies to `--attention auto|eager|sdpa`: `auto` selects eager on CPU
+and SDPA on CUDA; operator overrides need actual workload measurements.
 
 Qwen chapter jobs retain verified derived PCM in a private project-keyed user
 cache (`$XDG_CACHE_HOME/lixity/speech/<project-hash>/`, default `~/.cache`,
@@ -1589,3 +1625,28 @@ creates a new context-bound job and reuses matching segments; it does not revive
 an old job ID or stale download. Cache contents are private generated audio, not
 retained source evidence. The named model/profile/text key does not fingerprint
 local checkpoint bytes; clear or refresh the cache after changing those bytes.
+
+## Optional grammatical tense contract
+
+`CorpusConfig.tense_model` is null (lightweight patterns) or an explicitly
+installed supported-language spaCy pipeline name, or explicit `stanza:fr_gsd` /
+`stanza:it_markit` CPU profile. `tense_scope` is `all` or `narration`; the
+latter requires a model and excludes recognized quotation spans only. Regex
+overrides and model selection are mutually exclusive. CLI analysis commands
+accept `--tense-model` and `--tense-scope`; root settings drive the native app
+and exports. Missing models/failed annotation are explicit failures.
+
+Profile JSON adds optional `tense_analysis` (`grammatical-tense/1`): policy, model
+name/version, runtime/version, scope and groups. Groups contain `components`
+([start,end] pairs in `counting_text_unicode_codepoint`), `tense`, `mood`, `voice`,
+`reason`, quotation `scope`, `selected` and nullable binary `bucket`. The existing
+present/past counts count selected resolved finite predicates in model mode (missing English/Dutch Mood
+is retained as `unmarked`);
+future/subjunctive/unresolved forms are retained separately. `tense.grammar` in
+paragraph evidence uses the same record. Drawn cue spans remain display-mapped
+Unicode offsets under `paragraph-evidence/1`; do not interpret grammatical
+component offsets as Markdown bytes or as original decomposed Unicode offsets.
+
+This is an explicit opt-in semantic extension; existing pattern fields/overrides
+retain their contracts; models are explicit per-language opt-ins. Review identities include the model,
+runtime and composition policy. See [limits and measured errors](STABILITY.md#grammatical-tense).

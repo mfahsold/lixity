@@ -34,12 +34,12 @@ Manuscript input is Markdown or plain text; Word/DOCX and Scrivener need convers
 | How can an editorial observation be explained? | Keep the manuscript in view while moving between the measurement explanation and linked research; prepare an editorial PDF or a fixed review copy for the discussion. |
 | What belongs in a reader's copy? | Choose a manuscript with selected companion notes, a standalone companion, a review workspace or a PDF, and check what the copy includes. |
 
-**Current main, unreleased:** one local app address now retains independent
+**Since v0.7.6:** one local app address now retains independent
 project views in multiple tabs. **App and audio** shows open views, actual
 local/Jetson model readiness and a shared bounded audio queue. View URLs expire
 when the app restarts; reopen projects from the app home.
 
-**Current main, unreleased:** tense review cards show the original counted forms
+**Since v0.7.6:** tense review cards show the original counted forms
 and their exact manuscript locations before optional counts and heuristic help.
 These cues explain a mark; they do not establish an author error.
 
@@ -106,14 +106,20 @@ the passage, follow a source or an earlier linked version, then return to the
 text. For an editor, that gives a concrete starting point for an observation;
 for an author, it keeps the question and its supporting material together.
 
-**Development preview:** configured terms and props add another route into the
+**Since v0.7.6:** configured terms and props add another route into the
 manuscript. Declare a name, object or alternative term, inspect its occurrences
 and chapter scopes, and connect it to a dossier. Dossier manuscript evidence
 brings its linked quotations together; ordered collections organise related
 notes. These are declared lexical checks and explicit links, not automatic
 continuity checking or character understanding. See
 [terms and props](https://mfahsold.github.io/lixity/research/USAGE.md#configured-terms-props-and-boundary-policies)
-and the [development notes](https://mfahsold.github.io/lixity/releases/v0.7.6.md).
+and the [release notes](https://mfahsold.github.io/lixity/releases/v0.7.6.md).
+
+Optional grammatical tense analysis covers all seven interface languages using
+explicitly installed local syntax models and shared language-specific verb-group rules. It distinguishes perfect, passive,
+subjunctive and future constructions and can exclude recognized quotations.
+Parser errors remain possible; lightweight pattern counts stay available without
+model dependencies. See [grammatical tense setup](https://mfahsold.github.io/lixity/USAGE.md#grammatical-tense).
 
 The browser app, CLI and Python API share one analysis pipeline;
 `lixity --help` and `lixity about --json` describe installed capabilities.
@@ -127,10 +133,9 @@ they contain selected material, not the full archive.
 <details>
 <summary>Analysis controls, revision-aware research and other project tools</summary>
 
-**Version scope:** this source checkout and its prepared demo include unreleased
-changes. The published package is identified by [PyPI](https://pypi.org/project/lixity/)
-and the [GitHub releases](https://github.com/mfahsold/lixity/releases); a local
-version string is not proof that those changes have shipped.
+**Version scope:** these controls are included in v0.7.6. Verify the installed
+package separately from the running app with `lixity doctor`; the public demo is a
+read-only example, not your local installation.
 
 Turn **Analysis** on beside the text and choose the visible metric. Switch
 **Counted text** and **Paragraph comparison** independently. Violet underlines identify
@@ -139,7 +144,7 @@ with their chapter. Both preferences persist in the browser. Hover, touch and th
 paragraph menu explain the concrete text; the CLI exposes the same evidence with
 `lixity profile manuscript.md --layer asl --evidence`.
 
-**Current main (unreleased):** matrix cells and style-space loadings share
+**Since v0.7.6:** matrix cells and style-space loadings share
 chapter measurements: meaning, units, manuscript reference and the other
 metrics of the same chapter. Reading the text is an explicit next action;
 chapter-only measurements do not invent word-level highlights.
@@ -168,9 +173,10 @@ files nor establish that an output matches the current manuscript; see
 [project inspection](https://mfahsold.github.io/lixity/USAGE.md#inspect-project-structure).
 
 The development audio workflow shares saved project voice profiles between
-`lixity read-aloud` and the native preview/export dialog. Piper supports local CPU
-listening copies; optional Qwen3-TTS adds preset voices and explicit style
-instructions through a local worker or a configured Jetson over SSH. Select the
+`lixity read-aloud` and the native preview/export dialog. Optional Qwen3-TTS 1.7B
+CustomVoice provides preset voices and explicit style instructions through a
+local worker or a configured Jetson over SSH. Piper is removed; existing profiles
+require an explicit backed-up `audio-migrate` replacement. Select the
 execution target per render in the CLI or dialog. CPU generation can be slow;
 completed Qwen segments can be reused when retrying long renders. Audio remains
 a prototype requiring listening review. See the
@@ -212,7 +218,7 @@ their own projects.
 
 ## Release, citation and license
 
-> **Version line:** The documentation source version is **v0.7.6** (development preview), in the pre-1.0 **0.x** line.
+> **Version line:** The documentation source version is **v0.7.6**, in the pre-1.0 **0.x** line.
 > Historical **1.x** and **3.x** tags predate the numbering reset; use the current
 > release rather than the numerically largest tag. Product, JSON response and
 > archive schema versions are independent.
@@ -220,8 +226,7 @@ their own projects.
 [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.6.md)
 cover archive compatibility and upgrades. See the
 [changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md) for subsequent work.
-The repository's generated demo follows the interface documented here, including
-unreleased changes, with a fictional project and read-only research. Importing
+The repository's generated demo follows the interface documented here, using a fictional project and read-only research. Importing
 and saving require the local app. A push to `main` alone does not deploy Pages
 or update a running local installation; see
 [update and deployment boundaries](https://mfahsold.github.io/lixity/INSTALLATION.md).

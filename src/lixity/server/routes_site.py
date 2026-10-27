@@ -48,6 +48,8 @@ class SiteExportRoutesMixin(ResponseMixin):
                 root = self.workspace_root
                 language, title, thresholds = self.language, self.title, self.thresholds
                 info = self.dashboard_info
+                analysis_overrides = {key: value for key, value in self.project_open_overrides.items()
+                                      if key in ("tense_model", "tense_scope")}
                 token = manuscript_pdf_token(source, project_root=root, language=language,
                                              title=title, thresholds=thresholds)
                 if token != expected:
@@ -63,6 +65,7 @@ class SiteExportRoutesMixin(ResponseMixin):
 
             bundle = prepare_site(
                 root, manuscript=source, language=language, title=title, thresholds=thresholds,
+                **analysis_overrides,
                 **request.export_options().model_dump(exclude_defaults=True),
             )
             self._log.info("Website export id=%s stage=zip_preparation duration_ms=%d",

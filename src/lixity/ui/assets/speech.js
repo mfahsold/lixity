@@ -4,7 +4,7 @@
   var body = document.body, settingsForm = document.getElementById("settings-form");
   if (body.dataset.speechCapable !== "true" || body.dataset.readOnly === "true" || !settingsForm) return;
   var dialog, fields = {}, settings, capabilities, generation = 0, job = null, timer, openedContext, paragraph;
-  var executionTarget = "local";
+  var executionTarget = "local", migrationRequired = false;
   function label(key) { return uiLabel("speech_" + key); }
   function languageName(code) {
     try { return new Intl.DisplayNames([document.documentElement.lang || "en"], {type: "language"}).of(code); }
@@ -54,40 +54,27 @@
     fields.cancel.disabled = true; fields.preview.disabled = fields.chapter_render.disabled = !settings || !settings.selected || !fields.chapter.options.length;
     fields.progress.hidden = true;
   }
-  function engineControls(reset) {
-    var cap = capabilities[fields.engine.value];
+  function voiceControls() {
+    var cap = capabilities.qwen3;
     if (!cap) return;
     var language = fields.language.value, voice = fields.voice.value;
-    if (reset) {
-      language = cap.languages.includes(language) ? language : cap.languages[0];
-      voice = ""; fields.instructions.value = ""; fields.speed.value = "1";
-      status(label("engine_reset"));
-    }
     options(fields.language, cap.languages.map(function(value) { return [value, languageName(value)]; }), language);
     var voices = Object.entries(cap.voices).filter(function(pair) { return pair[1].languages.includes(fields.language.value); });
     options(fields.voice, voices.map(function(pair) { return [pair[0], pair[1].name]; }), voice);
-    fields.speed.disabled = !cap.speed.supported; fields.instructions.disabled = !cap.instructions;
-    fields.advanced_voice.disabled = fields.engine.value !== "piper";
     options(fields.target, cap.targets.map(function(value) { return [value, label("target_" + value)]; }),
       cap.targets.includes(executionTarget) ? executionTarget : cap.targets[0]);
     fields.target.disabled = cap.targets.length < 2;
     fields.target.closest("label").hidden = fields.target.disabled;
     fields.runtime_hint.textContent = label(fields.target.value === "jetson" ? "jetson_hint" : "runtime_hint");
-    fields.runtime_hint.hidden = fields.engine.value !== "qwen3";
-    fields.reuse.disabled = fields.engine.value !== "qwen3";
-    fields.reuse.closest("label").hidden = fields.reuse.disabled;
-    ["advanced_voice", "speed", "instructions"].forEach(function(key) {
-      fields[key].closest("label").hidden = fields[key].disabled;
-    });
-    if (reset) fields.advanced_voice.value = "";
+    fields.runtime_hint.hidden = false;
+    fields.reuse.closest("label").hidden = false;
   }
   function loadProfile() {
     invalidate();
     if (!settings.selected) return;
     var profile = settings.profiles[settings.selected];
-    ["name", "engine", "speed", "instructions", "paragraph_pause", "scene_pause"].forEach(function(key) { fields[key].value = profile[key]; });
-    options(fields.language, [], profile.language); options(fields.voice, [], profile.voice); engineControls(false);
-    fields.advanced_voice.value = profile.engine === "piper" && !Object.hasOwn(capabilities.piper.voices, profile.voice) ? profile.voice : "";
+    ["name", "instructions", "paragraph_pause", "scene_pause"].forEach(function(key) { fields[key].value = profile[key]; });
+    options(fields.language, [], profile.language); options(fields.voice, [], profile.voice); voiceControls();
     fields.pronunciations.value = Object.entries(profile.pronunciations).map(function(pair) { return pair.join("="); }).join("\n");
     fields.editor.disabled = false; fields.save.disabled = false;
   }
@@ -99,17 +86,18 @@
       if (split < 1 || !term || !value || Object.hasOwn(replacements, term)) throw new Error(label("pronunciation_error"));
       replacements[term] = value;
     });
-    return {name: fields.name.value.trim(), engine: fields.engine.value, language: fields.language.value,
-      voice: fields.engine.value === "piper" && fields.advanced_voice.value.trim() ? fields.advanced_voice.value.trim() : fields.voice.value,
-      speed: Number(fields.speed.value), instructions: fields.instructions.value.trim(),
+    return {name: fields.name.value.trim(), engine: "qwen3", language: fields.language.value,
+      voice: fields.voice.value,
+      speed: 1, instructions: fields.instructions.value.trim(),
       paragraph_pause: Number(fields.paragraph_pause.value), scene_pause: Number(fields.scene_pause.value), pronunciations: replacements};
   }
   function stash() { if (settings && settings.selected) settings.profiles[settings.selected] = readProfile(); }
   function profileOptions() {
     options(fields.profile, Object.entries(settings.profiles).map(function(pair) { return [pair[0], pair[1].name]; }), settings.selected);
-    fields.create.disabled = Object.keys(settings.profiles).length >= 32;
+    fields.create.disabled = migrationRequired || Object.keys(settings.profiles).length >= 32;
   }
   function create() {
+    if (migrationRequired) return;
     try { stash(); } catch (error) { status(error.message); return; }
     var id = "narrator", index = 1;
     while (Object.hasOwn(settings.profiles, id)) id = "narrator_" + (++index);
@@ -146,6 +134,7 @@
   }
   function finish() { job = null; fields.cancel.disabled = true; fields.preview.disabled = fields.chapter_render.disabled = !settings || !settings.selected || !fields.chapter.options.length; }
   async function render(mode) {
+    if (migrationRequired) return;
     try {
       if (!Array.from(fields.editor.querySelectorAll("input, select, textarea")).every(function(input) { return input.reportValidity(); })) return;
       var profile = readProfile(); invalidate(); var serial = generation;
@@ -153,7 +142,7 @@
       status(label("state_pending"));
       var payload = Object.assign(tokens(), {mode: mode, chapter: Number(fields.chapter.value), profile: profile, target: fields.target.value || "local"});
       if (mode === "preview" && paragraph) payload.paragraph = paragraph.identity;
-      if (mode === "chapter" && profile.engine === "qwen3") payload.fresh_audio = !fields.reuse.checked;
+      if (mode === "chapter") payload.fresh_audio = !fields.reuse.checked;
       fields.context.textContent = label("target_" + payload.target) + " · " + (mode === "preview" ? label(paragraph ? "paragraph_preview" : "first_preview") : label("chapter_render")) + " · " + fields.chapter.selectedOptions[0].textContent +
         (mode === "preview" && paragraph ? " · " + paragraph.identity.start_line + "–" + paragraph.identity.end_line : "");
       var data = await request("speech-render", payload);
@@ -168,6 +157,7 @@
     catch (error) { if (job === active) { status(error.message); fields.cancel.disabled = false; active.cancelling = false; } }
   }
   async function save() {
+    if (migrationRequired) return;
     try {
       if (!Array.from(fields.editor.querySelectorAll("input, select, textarea")).every(function(input) { return input.reportValidity(); })) return;
       stash(); invalidate(); var serial = generation; fields.save.disabled = true; status(label("saving"));
@@ -186,12 +176,13 @@
     var row = node("div", content, "row"); field(row, "profile", "select"); fields.create = button(row, "create", create);
     fields.editor = node("fieldset", content, "settings-section");
     node("legend", fields.editor, "", label("delivery"));
+    fields.model = node("p", fields.editor, "ctl-note");
     fields.runtime_hint = node("p", fields.editor, "ctl-note", label("runtime_hint")); fields.runtime_hint.hidden = true; fields.runtime_hint.id = "speech-runtime-hint";
     var grid = node("div", fields.editor, "settings-grid");
     field(grid, "name").maxLength = 100; fields.name.required = true;
-    ["engine", "language", "voice"].forEach(function(key) { field(grid, key, "select"); });
-    field(grid, "advanced_voice"); node("p", fields.editor, "ctl-note", label("voice_hint"));
-    ["speed", "paragraph_pause", "scene_pause"].forEach(function(key) { var el = field(grid, key, "number"); el.min = key === "speed" ? "0.2" : "0"; el.max = key === "speed" ? "3" : "10"; el.step = "any"; el.required = true; });
+    ["language", "voice"].forEach(function(key) { field(grid, key, "select"); });
+    node("p", fields.editor, "ctl-note", label("voice_hint"));
+    ["paragraph_pause", "scene_pause"].forEach(function(key) { var el = field(grid, key, "number"); el.min = "0"; el.max = "10"; el.step = "any"; el.required = true; });
     field(fields.editor, "instructions", "textarea").maxLength = 2000;
     field(fields.editor, "pronunciations", "textarea"); node("p", fields.editor, "ctl-note", label("pronunciation_hint"));
     field(content, "chapter", "select");
@@ -213,9 +204,7 @@
     fields.download = node("a", content, "ctl", label("download")); fields.download.download = "speech.wav"; fields.download.hidden = true;
     fields.save = button(content, "save", save);
     fields.editor.addEventListener("input", function() { invalidate(); });
-    fields.engine.addEventListener("change", function() { engineControls(true); });
-    fields.language.addEventListener("change", function() { fields.voice.value = ""; fields.advanced_voice.value = ""; engineControls(false); status(label("voice_changed")); });
-    fields.voice.addEventListener("change", function() { fields.advanced_voice.value = ""; });
+    fields.language.addEventListener("change", function() { fields.voice.value = ""; voiceControls(); status(label("voice_changed")); });
     fields.profile.addEventListener("change", function() {
       try { stash(); settings.selected = fields.profile.value; loadProfile(); }
       catch (error) { fields.profile.value = settings.selected; status(error.message); }
@@ -233,15 +222,16 @@
       if (panel) paragraph = {chapter: Number((panel.closest(".chapter") || {}).id?.replace("ch-", "")), identity: {
         start_line: Number(panel.dataset.start), end_line: Number(panel.dataset.end), paragraph_sha256: panel.dataset.paragraphSha256}};
     }
-    fields.context.textContent = ""; fields.reuse.checked = true; fields.reuse.disabled = true; fields.reuse.closest("label").hidden = true;
+    fields.context.textContent = ""; fields.reuse.checked = true; fields.reuse.disabled = false; fields.reuse.closest("label").hidden = true;
     fields.editor.querySelectorAll("input, textarea").forEach(function(input) { input.value = ""; });
-    ["profile", "engine", "language", "voice", "chapter"].forEach(function(key) { fields[key].replaceChildren(); });
+    ["profile", "language", "voice", "chapter"].forEach(function(key) { fields[key].replaceChildren(); });
     dialog.showModal(); status(label("loading")); fields.editor.disabled = true; fields.save.disabled = fields.create.disabled = fields.preview.disabled = fields.chapter_render.disabled = true;
     var serial = generation;
     try {
       var data = await request("speech"); if (!valid(serial)) return;
+      migrationRequired = data.requires_migration === true;
       settings = data.settings || {schema_version: "lixity-audio-settings/1", selected: "", profiles: {}}; capabilities = data.capabilities;
-      options(fields.engine, Object.entries(capabilities).map(function(pair) { return [pair[0], pair[1].name]; }));
+      fields.model.textContent = capabilities.qwen3.name;
       var matchedChapter = paragraph && data.chapters.find(function(chapter) {
         return paragraph.identity.start_line >= chapter.start_line && paragraph.identity.end_line <= chapter.end_line;
       });
@@ -250,7 +240,7 @@
       if (!data.chapters.some(function(chapter) { return String(chapter.number) === selectedChapter; })) selectedChapter = "";
       options(fields.chapter, data.chapters.map(function(chapter) { return [String(chapter.number), chapter.number + ". " + chapter.title]; }), selectedChapter);
       if (paragraph && !data.chapters.some(function(chapter) { return Number(fields.chapter.value) === chapter.number && paragraph.identity.start_line >= chapter.start_line && paragraph.identity.end_line <= chapter.end_line; })) paragraph = null;
-      profileOptions(); loadProfile(); status(data.configuration_error || ""); fields.save.disabled = !settings.selected;
+      profileOptions(); loadProfile(); status(data.configuration_error || ""); fields.save.disabled = migrationRequired || !settings.selected;
       fields.context.textContent = label(paragraph ? "paragraph_preview" : "first_preview");
     } catch (error) { if (valid(serial)) status(error.message); }
   }

@@ -23,7 +23,7 @@ from .workspace import resolve_manuscript_target
 ReviewStatus = Literal["kept", "changed", "later"]
 _MAX_STATE_BYTES = 4 * 1024 * 1024
 # Marker semantics are part of the review context, even with unchanged settings.
-_ANALYSIS_POLICY = "tense-review/5"
+_ANALYSIS_POLICY = "tense-review/6"
 
 
 class ReviewDecision(StrictModel):
@@ -64,7 +64,8 @@ def _read(repository: Repository) -> tuple[ReviewState, str]:
 
 
 def review_analysis(project: str | Path, *, manuscript: str | Path | None = None,
-                    language: str | None = None, thresholds: FingerprintThresholds | None = None) -> dict[str, Any]:
+                    language: str | None = None, thresholds: FingerprintThresholds | None = None,
+                    tense_model: str | None = None, tense_scope: str | None = None) -> dict[str, Any]:
     """Read current observations and classify prior decisions without writing."""
     workspace = resolve_manuscript_target(str(manuscript) if manuscript is not None else None, project=project)
     root = Path(workspace.root).resolve()
@@ -73,11 +74,19 @@ def review_analysis(project: str | Path, *, manuscript: str | Path | None = None
     repository = Repository(root)
     settings = read_explicit_project_config(root)
     text, source_hash = FileUtils.read_source_snapshot(str(source))
-    config, resolved = resolve_document_config(text, language or settings.get("language", "en"), project_config=settings)
+    overrides = {key: value for key, value in (("tense_model", tense_model), ("tense_scope", tense_scope))
+                 if value is not None}
+    config, resolved = resolve_document_config(text, language or settings.get("language", "en"),
+                                              project_config=settings, **overrides)
     effective = thresholds or resolve_thresholds(project_config=settings)
     paragraphs, _chapters = profile_document(text, config, effective)
+    linguistic_identity = None
+    if config.tense_model is not None:
+        from .grammatical_tense import model_identity
+
+        linguistic_identity = model_identity(config.tense_model)
     analysis_hash = _hash({"policy": _ANALYSIS_POLICY, "config": config.model_dump(mode="json"),
-                           "thresholds": asdict(effective)})
+                           "thresholds": asdict(effective), "linguistics": linguistic_identity})
     state, state_hash = _read(repository)
     saved = {item.observation_id: item for item in state.decisions if item.source_path == relative}
     observations = []
@@ -106,11 +115,13 @@ def record_analysis_review(project: str | Path, observation_id: str, status: Rev
                            expected_source_sha256: str, expected_analysis_sha256: str,
                            expected_review_sha256: str, manuscript: str | Path | None = None,
                            language: str | None = None,
-                           thresholds: FingerprintThresholds | None = None) -> dict[str, Any]:
+                           thresholds: FingerprintThresholds | None = None,
+                           tense_model: str | None = None, tense_scope: str | None = None) -> dict[str, Any]:
     """Save an author assertion, not a verified manuscript edit, under explicit guards."""
     repository = Repository(project)
     with repository.locked():
-        current = review_analysis(project, manuscript=manuscript, language=language, thresholds=thresholds)
+        current = review_analysis(project, manuscript=manuscript, language=language, thresholds=thresholds,
+                                  tense_model=tense_model, tense_scope=tense_scope)
         for name, expected in (("source_sha256", expected_source_sha256), ("analysis_sha256", expected_analysis_sha256),
                                ("review_sha256", expected_review_sha256)):
             if current[name] != expected:

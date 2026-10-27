@@ -92,8 +92,13 @@ print(json.dumps(fixtures))
       await page.locator('#workbench-overview-back').click();
       await first.locator('[data-reader-paragraph]').click();
       await page.locator('[data-reader-action=values]').click();
-      assert.equal(await page.locator('#reader-inspector .stats').isVisible(), true);
-      assert.equal(await page.locator('#reader-inspector summary').textContent(), fixture.values);
+      const values = page.locator('#reader-inspector .paragraph-values');
+      await values.locator(':scope > summary').waitFor({state: 'visible'});
+      assert.equal(await values.locator(':scope > summary').textContent(), fixture.values);
+      assert.equal(await values.getAttribute('open'), null, 'Paragraph measurements start collapsed');
+      await values.locator(':scope > summary').click();
+      await values.locator('.stats').waitFor({state: 'visible'});
+      assert.equal(await values.locator('.stats').isVisible(), true);
       await page.locator('#reader-inspector-close').click();
 
       await field.fill('Suchwort');

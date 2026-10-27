@@ -146,6 +146,7 @@ class ParagraphProfile:
     passive_density: float = 0.0
     text: str = ""
     flag_min: int = FLAG_MIN_SEVERITY
+    tense_analysis: dict[str, Any] | None = None
 
     @property
     def is_flagged(self) -> bool:
@@ -261,6 +262,40 @@ class ParagraphProfiler:
         """Project the exact profile text/anchors without linguistic measurements."""
         return [paragraph for _chapter, paragraph, _raw in self._profile_texts(blocks)]
 
+    def _grammatical_contexts(self, blocks: list[dict[str, Any]],
+                             entries: list[tuple[_ProfileChapter, ParagraphText, str]]) -> list[dict[str, Any] | None]:
+        """Use chapter-bounded canonical prose for quotation context, including block quotes."""
+        observations: list[dict[str, Any] | None] = [None] * len(entries)
+        if self.config.tense_model is None:
+            return observations
+        indices = {(paragraph.start_line, paragraph.end_line, raw): i
+                   for i, (_, paragraph, raw) in enumerate(entries)}
+        parts: list[str] = []
+        owners: list[int | None] = []
+
+        def flush() -> None:
+            for owner, observation in zip(owners, self._tense.parts(parts), strict=True):
+                if owner is not None:
+                    observations[owner] = observation
+            parts.clear()
+            owners.clear()
+
+        for block in blocks:
+            kind = block.get("type")
+            if kind == "h2":
+                flush()
+                if block.get("text", "").strip() == self._appendix_title:
+                    break
+            values = block.get("paras", []) if kind == "quote_block" else [block.get("text", "")] if kind in ("p", "list_item") else []
+            for raw in values:
+                clean = counting_inline_text(raw)
+                owner = indices.get((block.get("start_line", 0), block.get("end_line", 0), raw)) if kind != "quote_block" else None
+                if clean or owner is not None:
+                    parts.append(clean)
+                    owners.append(owner)
+        flush()
+        return observations
+
     def profile_blocks(
         self, blocks: list[dict[str, Any]], *, evidence: dict[int, ParagraphEvidence] | None = None,
     ) -> tuple[list[ParagraphProfile], list[ChapterProfile]]:
@@ -304,7 +339,9 @@ class ParagraphProfiler:
                 )
             )
 
-        for current_chapter, paragraph, raw_text in self._profile_texts(blocks):
+        entries = list(self._profile_texts(blocks))
+        observations = self._grammatical_contexts(blocks, entries)
+        for (current_chapter, paragraph, raw_text), observation in zip(entries, observations, strict=True):
             if current_chapter is not chapter:
                 close_chapter()
                 chapter = current_chapter
@@ -319,7 +356,7 @@ class ParagraphProfiler:
             # not a sentence, and a resolved auto language picks its own
             # abbreviation table.
             sentences = counts.sentences
-            tense_spans = self._tense.spans(clean)
+            tense_spans = self._tense.spans(clean, observation=observation)
             present, past = len(tense_spans[0]), len(tense_spans[1])
             dominant = self._dominant(present, past)
 
@@ -370,10 +407,13 @@ class ParagraphProfiler:
                 passive_density=round(passive_density, 1),
                 text=paragraph.text,
                 flag_min=self.thresholds.flag_min_severity,
+                tense_analysis=observation,
             )
             if evidence is not None:
                 evidence[len(paragraphs)] = self._matcher.evidence(clean, paragraph.text, counts, tense_spans=tense_spans)
                 evidence[len(paragraphs)]["tense"]["trigger"] = profile.tense_trigger
+                if profile.tense_analysis is not None:
+                    evidence[len(paragraphs)]["tense"]["grammar"] = profile.tense_analysis
             paragraphs.append(profile)
             chapter_paragraphs.append(profile)
             prev_dominant = dominant

@@ -63,7 +63,7 @@ or a different output.
 | Which files are sources or outputs, and are their locations usable? | `lixity project --project PATH` | read-only roles, existing outputs and bounded structure findings |
 | I want to manage and cite research sources | `lixity research` | immutable archives, citations, dossiers, manuscript grounding |
 | I want a printable document, report or reading copy | `lixity pdf` | neutral/editorial A4, A4 report, A5 book, 30×60 sheet |
-| I want an experimental local listening copy | `lixity read-aloud` | project voice profiles, Piper or local Qwen3-TTS; prototype setup and limits below |
+| I want an experimental local listening copy | `lixity read-aloud` | project voice profiles, Qwen3-TTS 1.7B locally or on a configured Jetson; prototype setup and limits below |
 | I want to share a browsable reading copy | `lixity export-site` | static website, optional research and original sources |
 | I want a reproducible artifact set | `lixity build` | `exports/`, archive rotation |
 | What can the engine do? | `lixity about --json` | languages, features, thresholds, commands |
@@ -192,7 +192,7 @@ after which it may appear. Chapter 0 means before the first chapter. A blank
 revision uses the current dossier when exporting; an explicit revision keeps
 that version. Each export records the actual resolved version.
 
-**Current main, unreleased:** export choices use only profiles saved with
+**Since v0.7.6:** export choices use only profiles saved with
 **Apply** in project settings. An empty selector explains that no saved profile
 exists and links directly to profile creation. Unsaved edits and malformed
 stored settings have distinct messages; they are not treated as selectable
@@ -302,7 +302,7 @@ analyzed paragraph's **Values** opens the **Passage values** inspector independe
 of the Analysis On/Off choice. **Analysis overview** opens chapter comparisons and other dense views;
 **Back to passage** restores the earlier analysis choice and document context.
 
-**Current main, unreleased:** a tense review card names its actual trigger:
+**Since v0.7.6:** a tense review card names its actual trigger:
 present/past cues in one paragraph, a dominant-tense change from the previous
 paragraph, or both. Original counted forms appear as buttons grouped by present
 and past; activate one to locate it in the manuscript. Repeated forms keep
@@ -450,7 +450,7 @@ marks** keeps the comparison method and counting guidance collapsed until opened
 A marked sentence's word count and its paragraph's average are different
 quantities.
 
-**Current main, unreleased:** saved research has a separate visual identity:
+**Since v0.7.6:** saved research has a separate visual identity:
 neutral dotted marks and a book-icon **Research · … associations** control. They
 identify explicitly saved quotation links to claims, dossiers and decisions;
 they are not measurement deviations or automatic fact checks. The count is
@@ -496,14 +496,14 @@ for text size (16–28 nominal pixels), narrow/standard/wide text and
 compact/standard/relaxed line spacing. Appearance and the desktop split are local
 browser preferences; display changes do not edit the source.
 
-**Current main:** the analysis overview's section links sit in its existing
+**Since v0.7.6:** the analysis overview's section links sit in its existing
 header and wrap instead of hiding later sections beyond a horizontal scroll.
 They jump within the overview; the underlined link indicates the current
 section, not a completed review step. **Back to passage** remains the return to
 the manuscript. On short viewports the header scrolls with the content to leave
 room for the measurements.
 
-**Current main, unreleased:** **? → Help with your first analysis** is a voluntary
+**Since v0.7.6:** **? → Help with your first analysis** is a voluntary
 panel in the reader toolbar. It explains the current Analysis Off /
 no selected measure / selected measure state and a read–count–compare workflow.
 It does not enable diagnostics, reset preferences, create a task or change
@@ -555,7 +555,7 @@ do not serialize decisions or allow saves. No review data is sent to analytics.
 
 **Since v0.7.3:** **Reading settings → Keyboard shortcuts**
 lists the passage menu, search and close keys. Hovering or focusing key controls
-also gives a short explanation; Escape dismisses a tooltip. **Current main:**
+also gives a short explanation; Escape dismisses a tooltip. **Since v0.7.6:**
 mouse hints wait briefly for deliberate hovering, then switch faster between
 neighboring tools. They appear beside the hovered control near the pointer;
 keyboard and touch hints keep room for adjacent toolbar actions. They show the control name, its explanation and any declared
@@ -663,7 +663,7 @@ Keep the three comparison scopes separate:
 The [methods](METHODS.md) define these quantities; the
 [interpretation guide](guides/interpretation.html) explains their limits.
 
-**Current main (unreleased):** selecting a heatmap cell or a style-reference
+**Since v0.7.6:** selecting a heatmap cell or a style-reference
 cutoff-hit count opens **Chapter measurements** before navigating. It explains
 the selected metric, its unit and chapter sample, alongside all 16 canonical
 chapter values, manuscript medians, reference sample counts and z* values.
@@ -737,7 +737,7 @@ chapter. Toggle the trajectory or cutoff box and reset the camera as needed.
 Rotation is opt-in and pauses in a hidden tab. Cards show positive/negative
 loadings; the table gives the same measured chapter scores and flags.
 
-**Current main (unreleased):** every loading, including chapter-only metrics,
+**Since v0.7.6:** every loading, including chapter-only metrics,
 opens the same **Chapter measurements** view for the selected chapter.
 The originating axis and loading coefficient remain distinct from the chapter's
 measurement and z*. Selecting another metric removes that axis-origin caption;
@@ -773,7 +773,7 @@ emits the same capability metadata, not a JSON Schema for every result.
 [Automation contracts](AGENTS.md) describe versioned output envelopes and exit
 codes; a running server advertises registered operations at `GET /api`.
 
-**Current main:** `analyze`, `profile`, `style`, `dialogue`, `pacing` and `showing`
+**Since v0.7.6:** `analyze`, `profile`, `style`, `dialogue`, `pacing` and `showing`
 accept `-o PATH` / `--output PATH` for their text or JSON report. Without it,
 report data goes to stdout. With it, a successful result is written atomically
 and stdout stays empty; diagnostics remain on stderr. A failed report/write
@@ -807,6 +807,128 @@ sides of a comparison with the same analysis version. See
 [metric definitions](#understanding-the-metrics) and
 [JSON contracts](AGENTS.md#3-json-contracts).
 
+<a id="grammatical-german-tense"></a>
+
+### Grammatical tense
+
+Since v0.7.6, explicitly installed local syntax models can replace lexical
+tense cues with contextual verb-group analysis in de/en/fr/es/it/pt/nl. This is optional: the default
+installation retains lightweight, incomplete pattern counts. Installing a model
+does not silently change existing projects. Languages without an explicitly selected model retain their existing
+profiles. No model or manuscript data is downloaded/uploaded during analysis.
+
+For the normal isolated application installation, install the extra and the
+explicit model wheel in the same environment (network access is needed here):
+
+```sh
+uv tool install --force --python 3.12 "lixity[linguistics]==0.7.6" --with https://github.com/explosion/spacy-models/releases/download/de_core_news_md-3.8.0/de_core_news_md-3.8.0-py3-none-any.whl
+```
+
+For a Python project, use `python -m pip install "lixity[linguistics]==0.7.6"`
+and install that model wheel into the same environment. The model is a separate
+upstream artifact, not bundled in the Lixity wheel. Its published metadata lists
+MIT licensing. Pin and review model versions independently; restart the app after
+changing models. The core package still supports Python 3.10+; model/runtime wheel
+availability is a separate platform prerequisite. Python 3.12 is the tested setup.
+
+The initial CPU model choices were checked separately, not assumed equally
+accurate. Models and their training data have separate licenses; none are
+bundled in Lixity. Review the selected artifact's current terms before reuse:
+
+| Analysis language | Initial tested model | Runtime | Published model terms |
+| --- | --- | --- | --- |
+| German | `de_core_news_md` 3.8.0 | spaCy | MIT |
+| English | `en_core_web_md` 3.8.0 | spaCy | MIT |
+| French | `stanza:fr_gsd`, resources 1.15.0, GSD nocharlm | Stanza CPU | Apache-2.0 model repository; GSD data CC BY-SA4.0 |
+| Spanish | `es_core_news_md` 3.8.0 | spaCy | GPL-3.0 |
+| Italian | `stanza:it_markit`, resources 1.15.0, MarkIT nocharlm | Stanza CPU | Apache-2.0 model repository; MarkIT data CC BY4.0 |
+| Portuguese | `pt_core_news_md` 3.8.0 | spaCy | CC BY-SA4.0 |
+| Dutch | `nl_core_news_md` 3.8.0 | spaCy | CC BY-SA4.0 |
+
+Other supported-language spaCy pipelines can be explicitly selected; they need
+a parser and POS/morphology annotations and their actual language must match.
+The Italian spaCy models' CC BY-NC-SA terms are why the initial tested Italian
+setup uses MarkIT instead. This records published terms, not blanket clearance
+of every training source or voice model. See official
+[spaCy model metadata](https://github.com/explosion/spacy-models/tree/master/meta)
+and the [Stanza Italian](https://huggingface.co/stanfordnlp/stanza-it) and
+[French](https://huggingface.co/stanfordnlp/stanza-fr) model repositories.
+
+The Stanza profiles require `lixity[linguistics-stanza]` and a suitable CPU
+PyTorch installation. Use the interpreter of the same environment that runs
+Lixity; obtain resources explicitly during setup, never during analysis:
+
+```python
+import stanza
+stanza.download("fr", package=None, processors={
+    "tokenize": "gsd_nocharlm", "mwt": "gsd", "pos": "gsd_nocharlm",
+    "lemma": "gsd_nocharlm", "depparse": "gsd_nocharlm",
+})
+stanza.download("it", package=None, processors={
+    "tokenize": "markit_nocharlm", "mwt": "markit", "pos": "markit_nocharlm",
+    "lemma": "markit_nocharlm", "depparse": "markit_nocharlm",
+})
+```
+
+`STANZA_RESOURCES_DIR` can explicitly select the machine's resource directory;
+use the same location during setup and app startup. The adapter selects only
+these named processors, CPU mode and `download_method=None`; it does not select
+a default/combined model if resources are missing. Set project `language="fr"`
+with `tense_model="stanza:fr_gsd"`, or `it` with `stanza:it_markit`. For spaCy,
+install the selected official 3.8.0 model wheel in the same environment, as in
+the German example above. Pipeline failures are explicit; a single word whose
+morphology is unknown is retained as an unresolved group instead of aborting
+an otherwise annotated chapter.
+
+Enable it explicitly at the project root, outside any TOML section:
+
+```toml
+language = "de"
+tense_model = "de_core_news_md"
+tense_scope = "narration"
+```
+
+Or select it for one invocation:
+
+```sh
+lixity profile draft.md --language de --tense-model de_core_news_md --tense-scope narration
+lixity analyze draft.md --language de --tense-model de_core_news_md --json
+```
+
+`analyze`, `profile`, `analysis-review`, `style`, `dashboard`, `build`, `scenes` and foreground
+`serve` accept these overrides. Saved project settings apply to CLI, native app,
+Python pipeline and exports. `tense_scope = "all"` counts indicative verb groups
+inside and outside recognized quotations; `narration` excludes recognized quoted
+spans. This is quotation scope, not automatic narrator, thought or speaker
+attribution. Scope is resolved over canonical chapter prose, including blockquote
+context, before individual paragraphs are analyzed. Unmatched and unsupported
+quotation formats can be missed; quotes do not continue across chapter boundaries.
+
+A perfect construction such as `hat lange gesungen` counts once as past;
+its auxiliary does not also count as present. Resolved present forms populate the present bucket; preterite, imperfect,
+perfect, pluperfect and anterior perfect populate past. English and Dutch models
+often omit Mood: those finite forms retain `mood="unmarked"` rather than being
+relabeled indicative, but can contribute a resolved morphological tense. Future, conditional, modal,
+subjunctive, imperative and nonfinite/unresolved groups do not populate them.
+`ParagraphProfile.tense_analysis` and profile JSON preserve the detailed
+`grammatical-tense/1` groups, exact component ranges, mood, voice, quotation scope,
+selection and unresolved reasons. Component offsets address canonical counting
+text; the existing evidence layer separately maps the enclosing cue span to
+original displayed prose. It may contain intervening words. A coordinated
+predicate can share an auxiliary with another predicate. The passage inspector
+shows exclusions and unresolved groups, including paragraphs without a warning.
+
+Explicit tense regex overrides cannot be combined with `tense_model`.
+Missing models, annotation failures and paragraphs over 250,000 characters fail
+explicitly; they never silently fall back to pattern counts. Parser model, model
+version, spaCy version and composition policy are part of saved review identity.
+Changing those settings invalidates prior review decisions rather than accepting
+old decisions under a new measurement. Recompute reports after enabling a model.
+
+The initial model comparison and known errors are documented in
+[Stability](STABILITY.md#grammatical-tense). A grammatical form is not an
+editorial error; historical present, recollections and dialogue need human review.
+
 ### `lixity profile`
 
 Locate paragraph-level tense mixtures, switches and style densities with
@@ -817,7 +939,7 @@ lixity profile manuscript.md > profile.json
 ```
 
 This command emits JSON. Language-neutral `dominant` values (`present`, `past`,
-`mixed`, `neutral`) become localized labels in reports. Tense classification
+`mixed`, `neutral`) become localized labels in reports. Without an explicit grammatical model, tense classification
 counts curated verb forms: `mixed` requires at least two markers per tense and
 at least 25% minority share. `switch` compares consecutive dominant tenses;
 severity 0–3 prioritizes review. See the [classification contract](AGENTS.md)
@@ -913,7 +1035,7 @@ length, staccato share, dialogue share and scene length. The hook score (0–3)
 adds one for each closing cue: at most eight words, terminal `?`/`!`/`…`, and
 closing dialogue. It measures these cues, not suspense or reader response.
 
-**Current main:** text summaries identify the chapters with the shortest and
+**Since v0.7.6:** text summaries identify the chapters with the shortest and
 longest mean sentence length. The historical JSON keys `fastest_chapter` and
 `slowest_chapter` retain their ASL-based meaning; they do not measure narrative
 speed or reading time.
@@ -1215,28 +1337,29 @@ not establish accessibility or production compliance.
 
 ### `lixity read-aloud`
 
-**Development prototype:** create a local listening copy. The CLI and, on
-current main, native preview/chapter dialog share project voice profiles with
-Piper or an optional local Qwen3-TTS worker. This is not a production audiobook
-pipeline. Setup and output limits are described below.
+**Development prototype:** create a listening copy using Qwen3-TTS 1.7B
+CustomVoice. The CLI and native preview/chapter dialog share the same project
+voice profiles, rendering controls and local/Jetson targets. The optional worker
+and its model require separate setup. This is not a production audiobook pipeline.
 
 ```bash
 lixity read-aloud manuscript.md --language en -o manuscript.wav
-lixity read-aloud manuscript.md --language de --chapter 2 --speed 1.1 -o chapter-2.wav
+lixity read-aloud manuscript.md --language de --chapter 2 --voice Ryan -o chapter-2.wav
 lixity read-aloud --project ./novel --language de -o reading-copy.wav
 ```
 
 `--chapter` selects a one-based chapter number. Without an explicit file, the
 command uses the selected project's configured manuscript or folder discovery.
-The CLI defaults to the project language, then English; pass `--language` explicitly
-for the intended voice. The prepared default voices are
-`de_DE-thorsten-medium` and `en_US-lessac-medium`. `--voice` currently
-accepts a cached model name, not an arbitrary ONNX path. A model needs both
-`~/.cache/piper-voices/NAME/NAME.onnx` and `NAME.onnx.json` beside it. Piper/ONNX
-dependencies and models are separate prerequisites; the command does not download
-them. Review each voice model's license before distribution.
+Without saved audio settings, the default is one Qwen narrator using preset
+`Ryan`, the project language and empty delivery instructions. English remains the
+language default. `--voice` selects a Qwen preset, such as `Ryan` or `Aiden`.
+The supported languages are `en`, `de`, `fr`, `es`, `it`, `pt`, `ru`, `zh`, `ja`
+and `ko`: six of the seven analysis languages, with Dutch (`nl`) unsupported.
+Choose a supported speech language explicitly for a Dutch project; there is no
+automatic language or backend fallback. Preset language support does not certify
+native pronunciation. Review the model license before distributing output.
 
-**Current main (unreleased):** saved project audio profiles are shared by the CLI
+**Since v0.7.6:** saved project audio profiles are shared by the CLI
 and native **Audio & voices** dialog, reachable from Project settings and the
 manuscript controls. Choose or create a profile, audition the selected passage,
 then render a chapter. Draft previews do not save settings; **Save profiles**
@@ -1248,10 +1371,10 @@ lixity read-aloud --project ./novel --profile narrator -o reading-copy.wav
 lixity read-aloud --project ./novel --profile narrator --chapter 2 -o chapter-2.wav
 ```
 
-For Qwen, choose **Render on → This computer / Configured Jetson** in the dialog,
+Choose **Render on → This computer / Configured Jetson** in the dialog,
 or pass `--speech-target local|jetson` to the CLI. This choice applies to that
-render; it is not part of a saved voice profile. Piper supports local execution
-only. The default remains local, and an unavailable target fails explicitly.
+render; it is not part of a saved voice profile. The default is local, and an
+unavailable target fails explicitly without switching machines or models.
 Jetson sends the selected synthesis text to your configured machine through SSH;
 it does not use a hosted inference provider.
 
@@ -1294,7 +1417,7 @@ lixity read-aloud --project ./novel --profile narrator --chapter 2 --fresh-audio
 ```
 
 `--no-audio-cache` renders without reading or retaining segments.
-Previews are always fresh; Piper does not use this cache. The Python renderer
+Previews are always fresh. The Python renderer
 opts in with `cache_dir=...`, and accepts `fresh_audio=True` to recompute while
 refreshing retained segments. Matching segments can be reused across execution
 targets; request fresh audio when comparing CPU and GPU delivery.
@@ -1307,12 +1430,16 @@ these retained segments. Remove the derived folder to discard it. After replacin
 local checkpoint files within the same named model family, request fresh audio
 or clear the cache; the key does not fingerprint model weight bytes.
 
+External FFmpeg conversion is limited to one hour per invocation.
+A timeout fails the export, preserves an existing completed output and removes
+temporary files. It does not restart a service or switch engines. This limits
+the direct child process, not in-process inference or arbitrary grandchildren.
+
 The selected saved profile is used when `--profile` is omitted. Explicit `--voice`,
-`--language`, `--speed` and `--instructions` override that invocation without
-rewriting the saved profile. Unsupported combinations fail before rendering.
-For example, Qwen does not expose Piper's precise speed factor; use an explicit
-style instruction instead of assuming that an instruction guarantees an exact
-speaking rate.
+`--language` and `--instructions` override that invocation without rewriting the
+saved profile. Unsupported combinations fail before rendering. Precise speed
+control and `--speed` are unavailable; profile `speed` must remain `1.0`. Delivery
+instructions can request a pace, but do not guarantee an exact speaking rate.
 
 A root `lixity.toml` can contain:
 
@@ -1337,14 +1464,44 @@ They also accept a `pronunciations` table of literal term-to-spoken-form pairs.
 These substitutions affect synthesis text only. A voice profile does not infer
 character identities or turn words such as “quiet” into acting instructions.
 
-**Backends:** `piper` uses cached voices and supports explicit speed; its style
-instructions must be empty. `qwen3` uses the fixed
-`Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` checkpoint family, one of its nine presets,
-and explicit style instructions. This iteration does not implement Base voice
-cloning or VoiceDesign. Both backends support structural pauses and the shared
-pronunciation settings. Model capabilities determine the available UI controls;
-there is no silent backend fallback. A preset speaking German does not establish
-native pronunciation or audiobook quality.
+**Current engine:** only `qwen3`, using the fixed
+`Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` checkpoint family and one of its nine presets.
+Explicit style instructions, structural pauses and pronunciation settings are
+shared by CLI and UI. Base voice cloning and VoiceDesign are not implemented.
+Model capabilities determine the available controls; there is no automatic
+backend fallback.
+
+Piper has been removed. Existing saved Piper profiles fail with migration
+guidance; a Qwen voice is not an exact replacement for their timbre or precise
+speed. Preview explicit replacements before applying them:
+
+```bash
+lixity audio-migrate --project ./novel --replace narrator=Ryan
+```
+
+The command prints a JSON dry run and its `snapshot` token, without changing files.
+Supply one `--replace PROFILE=VOICE` for every Piper profile; repeat the option for
+multiple profiles. Optional `--instructions PROFILE=TEXT` chooses a new delivery
+style explicitly; otherwise migrated instructions are empty. Review the choices,
+then repeat them with the returned token and a new backup path outside the project:
+
+```bash
+lixity audio-migrate --project ./novel --replace narrator=Ryan \
+  --apply --backup /backups/novel-audio-before-qwen.zip \
+  --expected-snapshot REVIEWED_TOKEN
+```
+
+Migration preserves profile IDs, selected profile, names, languages, pauses and
+pronunciation replacements. Speed becomes `1.0`; no timbre or exact pace equivalence
+is assumed. The non-overwriting ZIP backup contains the original root configuration
+files and a verification manifest, with private file permissions (`0600` on POSIX).
+It contains no manuscript bytes. Keep it in private project storage: configuration
+can contain private metadata and pronunciation text. Source/configuration changes
+or changed replacement/style choices invalidate the reviewed snapshot. Apply verifies the backup before the atomic
+settings update and never edits the manuscript. For recovery, preserve the current
+configuration, then restore the original root configuration files from the backup;
+do not replace manuscript or retained research files. Rendering restored Piper
+settings requires a compatible prior application version.
 
 Qwen runs in an optional isolated Python 3.12 environment with `qwen-tts` and a
 hardware-appropriate PyTorch installation. Install the development checkout into
@@ -1372,6 +1529,12 @@ initial HTTP request open. Cancellation waits for an in-flight model segment to
 return, then prevents publication. A slow segment is allowed up to one hour;
 that limit is not an estimate of chapter duration.
 
+Worker-only `--attention auto|eager|sdpa` selects the attention implementation.
+The default `auto` uses eager attention on CPU and SDPA on CUDA. An operator can
+compare an explicit override on the same checkpoint and workload; measure actual
+synthesis, memory and output before selecting it. This flag does not establish a
+performance improvement and cannot be set by browser input or a voice profile.
+
 On a memory-constrained CUDA machine, an operator can explicitly keep the
 talker on the GPU and run audio decoding on the CPU with the same checkpoint:
 
@@ -1380,6 +1543,15 @@ python -m lixity.speech_qwen --model /path/to/CustomVoice --device cuda --codec-
 ```
 
 The default `--codec-device model` keeps the decoder on the selected main device.
+Worker-only `--codec-chunk-frames N` accepts 16–300 audio-code frames. The default
+300 preserves the installed upstream decoder behavior. A smaller explicit value
+uses that decoder's existing chunk algorithm with its 25-frame left context;
+it can reduce per-chunk activation memory without changing model weights.
+For example, test `--device cuda --codec-device model --codec-chunk-frames 32`
+on the actual machine before adopting it. Unsupported decoder interfaces fail
+explicitly. Chunking does not bound all model, KV-cache or output allocations,
+and this option does not guarantee that a checkpoint fits in RAM.
+
 CPU decoding uses float32 and trades GPU allocations for CPU work; this is an
 explicit machine setting, not a voice profile or an automatic fallback. Shared
 RAM remains finite. Suitable SSD-backed swap is a separate operating-system
@@ -1391,7 +1563,7 @@ projection. Link labels are read; destinations, images, code, footnote definitio
 and YAML metadata are omitted. Long paragraphs use bounded sentence/word segments
 without inserting paragraph pauses between fragments. Recognised editorial
 markers are omitted unless `--keep-markers` is supplied. The manuscript is not
-edited. Unknown chapters and invalid speeds fail explicitly.
+edited. Unknown chapters, unsupported voices and unsupported languages fail explicitly.
 
 WAV output needs no FFmpeg; MP3 requires it before synthesis. Missing, malformed,
 empty or mismatched PCM and failed conversion are errors. Streamed atomic output
@@ -1406,7 +1578,7 @@ Successful encoding or an ASR transcript does not establish narration quality.
 
 ### `lixity service`
 
-**Current main, unreleased:** one regular app instance supports independent
+**Since v0.7.6:** one regular app instance supports independent
 project views in multiple tabs. Project selection returns a scoped view URL
 under the same origin instead of replacing every tab's selection. Use **App and
 audio** to revisit open views, close an idle view or refresh worker/queue status.
@@ -2108,7 +2280,7 @@ Commercial licensing on request: mfahsold@googlemail.com.
 
 ### Check a reading website before exporting
 
-**Current main, unreleased:** prepare and inspect the actual package without
+**Since v0.7.6:** prepare and inspect the actual package without
 writing an output directory:
 
 ```sh
@@ -2142,7 +2314,7 @@ avoid exporting internal review history; choose the appropriate saved profile
 and retained-file options deliberately. No automatic image recompression or
 promise of a package under 20 MiB is introduced here.
 
-**Current main:** export data, revision-count and bundle limits stop the check
+**Since v0.7.6:** export data, revision-count and bundle limits stop the check
 with exit code 1. With
 `--json`, stdout still contains a parseable `lixity-site-preflight-error/1`
 report identifying the limit, observed bytes/count, allowed amount and overflow.

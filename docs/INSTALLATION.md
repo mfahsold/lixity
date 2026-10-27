@@ -9,10 +9,9 @@ integrations. See [licensing](LICENSING.md) before installation.
 Analysis runs offline; downloading Python, the package and dependencies requires
 network access. No manuscript upload, account or API key is required.
 
-> **Version scope:** this source documentation describes the prepared **v0.7.6**
-> development build. The published package observed on 26 October 2026 was **0.7.5**;
-> check [GitHub releases](https://github.com/mfahsold/lixity/releases/latest) and
-> [PyPI](https://pypi.org/project/lixity/) for availability. The product uses the pre-1.0 **0.x** line.
+> **Version scope:** this documentation describes **v0.7.6**. Verify packages at
+> [GitHub releases](https://github.com/mfahsold/lixity/releases/latest) and
+> [PyPI](https://pypi.org/project/lixity/). The product uses the pre-1.0 **0.x** line.
 > Historical **1.x** and **3.x** tags predate the product-number reset; a larger
 > historical number does not mean a newer release. Product, JSON response and
 > archive schema versions are independent.
@@ -80,7 +79,7 @@ it does not certify linguistic accuracy or source truth.
 
 ## First useful result
 
-**Current main, unreleased:** use one regular app address. Opening a project
+**Since v0.7.6:** use one regular app address. Opening a project
 creates an independent view under that same address; existing tabs keep their
 project. **App and audio** lists open views and verifies each actual audio worker.
 A view URL is valid only while this server runs; after restart, reopen the project
@@ -162,6 +161,28 @@ Back up existing archives before creating v3 captures and use compatible version
 for all readers and writers. Installing Lixity does not download an OCR model.
 
 </details>
+
+### Optional Qwen audio worker
+
+Read-aloud uses only `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice`. The application and
+CLI share its project profiles and rendering controls. Audio runtime dependencies
+are optional: use a separate Python 3.12 environment with `qwen-tts`, a compatible
+PyTorch build and a complete local checkpoint, including its speech tokenizer.
+The core application install does not install or download model weights.
+
+Run the loopback-only worker explicitly on this computer, or on a configured
+Jetson reached through an authenticated SSH forward. Neither target is an
+automatic fallback. Start with a short preview and verify actual synthesis and
+memory headroom; model size and machine memory do not establish throughput.
+[Read-aloud setup and limits](USAGE.md#lixity-read-aloud) covers CPU/CUDA placement,
+the fixed ports, private segment reuse and worker commands. Optional worker
+`--attention auto|eager|sdpa` is an explicit machine setting; compare actual
+workloads before choosing an override, without assuming a speed improvement.
+
+Piper support has been removed. Existing Piper profiles require an explicit
+`audio-migrate` dry run and reviewed apply with a new backup outside the project.
+The migration preserves source files and never assumes an equivalent Qwen timbre
+or precise speed; see the same [read-aloud guide](USAGE.md#lixity-read-aloud).
 
 ### Development builds instead
 

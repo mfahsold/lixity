@@ -264,6 +264,11 @@
       if (layer) result[key] = {status:layer.value.status, count:layer.value.count,
         mapped_count:layer.value.mapped_count, cues:layer.spans.map(function(span, index) {return {quote:span.quote, index:index};})};
     });
+    if (record.evidence.tense && record.evidence.tense.grammar &&
+        record.evidence.tense.grammar.schema_version === "grammatical-tense/1") {
+      var grammar = record.evidence.tense.grammar;
+      if (Array.isArray(grammar.groups)) result.grammar = grammar;
+    }
     return result;
   }
   async function revealTense(panel, key, index) {

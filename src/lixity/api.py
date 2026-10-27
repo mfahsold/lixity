@@ -475,8 +475,14 @@ def about() -> dict[str, Any]:
             },
             {
                 "name": "read-aloud",
-                "purpose": "synthesize spoken audio with Lixity-guided prosody using local Piper neural TTS",
+                "purpose": "synthesize spoken audio with explicit project profiles using local Qwen3-TTS 1.7B CustomVoice",
                 "output": "audio",
+            },
+            {
+                "name": "audio-migrate",
+                "purpose": "preview explicit Qwen profile replacements and apply after reviewed snapshot and configuration backup",
+                "output": "json",
+                "schema_version": "lixity-audio-migration/1",
             },
             {
                 "name": "serve",

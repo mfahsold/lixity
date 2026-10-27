@@ -60,6 +60,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+linguistics = ["spacy>=3.8,<3.9"]
+linguistics-stanza = ["stanza>=1.15,<1.16"]
 dev = [
     "pip-audit>=2.7",
     "build>=1.2",

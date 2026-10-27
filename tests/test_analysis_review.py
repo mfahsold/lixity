@@ -1,6 +1,9 @@
 """Review decisions are author assertions bound to exact text and analysis state."""
 
 import json
+import re
+import shutil
+import subprocess
 from dataclasses import replace
 from urllib.parse import urlencode
 
@@ -154,3 +157,160 @@ def test_native_context_guards_and_static_state_exclusion(project):
     assert not any("analysis-review.json" in name for name in bundle.files)
     assert b'data-review-capable="false"' in bundle.files["index.html"]
     assert b'data-review-capable="true"' not in bundle.files["index.html"]
+
+
+@pytest.fixture
+def model_project(tmp_path, monkeypatch):
+    from lixity import grammatical_tense
+    from lixity.grammatical_tense import VerbGroup
+
+    text = "## Test\n\n" + "Sie übt. Er ging. " * 5 + "\n"
+    (tmp_path / "manuscript.md").write_text(text)
+    (tmp_path / "lixity.toml").write_text('manuscript = "manuscript.md"\nlanguage = "de"\n')
+
+    def annotated(text, _model):
+        return tuple(VerbGroup(((match.start(), match.end()),),
+                               "present" if match.group() == "übt" else "preterite", "indicative", "active")
+                     for match in re.finditer(r"übt|ging", text))
+
+    # Replace only the optional inference/identity boundary. Real profile,
+    # observation, guard, route and persistence paths remain under test.
+    monkeypatch.setattr(grammatical_tense, "analyze_verbs", annotated)
+    monkeypatch.setattr(grammatical_tense, "model_identity", lambda name: {
+        "policy": grammatical_tense.POLICY, "model": name, "version": "test-1", "language": "de"})
+    return tmp_path
+
+
+def test_model_override_review_read_and_save_share_exact_analysis(model_project):
+    before = files(model_project)
+    disk = review_analysis(model_project)
+    assert disk["total"] == 0
+    selected = {"tense_model": "de_test", "tense_scope": "narration"}
+    report = review_analysis(model_project, **selected)
+    assert report["total"] == 1
+    assert (report["observations"][0]["present_hits"], report["observations"][0]["past_hits"]) == (5, 5)
+    assert report["project_settings_sha256"] == disk["project_settings_sha256"]
+    assert report["analysis_sha256"] != disk["analysis_sha256"]
+    assert files(model_project) == before
+    with pytest.raises(ResearchConflictError):
+        save(model_project, report)
+    with pytest.raises(ResearchConflictError):
+        save(model_project, report, tense_model="de_test", tense_scope="all")
+    saved = save(model_project, report, **selected)
+    assert saved["completed"] == 1
+    assert review_analysis(model_project, **selected) == saved
+    for path, content in before.items():
+        assert (model_project / path).read_bytes() == content
+
+
+def test_model_override_keeps_before_replace_disk_settings_guard(model_project, monkeypatch):
+    from lixity.io import FileUtils
+
+    selected = {"tense_model": "de_test", "tense_scope": "narration"}
+    report = review_analysis(model_project, **selected)
+    original = FileUtils.atomic_write_bytes_if_changed
+
+    def race(path, content, **kwargs):
+        with (model_project / "lixity.toml").open("a") as config:
+            config.write('title = "Changed during save"\n')
+        return original(path, content, **kwargs)
+
+    monkeypatch.setattr(FileUtils, "atomic_write_bytes_if_changed", race)
+    with pytest.raises(ResearchConflictError):
+        save(model_project, report, **selected)
+    assert not (model_project / ".lixity/analysis-review.json").exists()
+
+
+def test_cli_model_override_review_read_and_save_agree(model_project, capsys):
+    flags = ["analysis-review", "--project", str(model_project), "--json",
+             "--tense-model", "de_test", "--tense-scope", "narration"]
+    assert main(flags) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert report["total"] == 1
+    assert main([*flags, "--observation", report["observations"][0]["id"], "--status", "kept",
+                 "--expected-source-sha256", report["source_sha256"],
+                 "--expected-analysis-sha256", report["analysis_sha256"],
+                 "--expected-review-sha256", report["review_sha256"]]) == 0
+    assert json.loads(capsys.readouterr().out)["completed"] == 1
+
+
+def test_review_model_flags_complete_in_bash(capsys):
+    shell = shutil.which("bash")
+    if shell is None:
+        pytest.skip("Bash is not installed")
+    assert main(["completion", "bash"]) == 0
+    script = capsys.readouterr().out
+    probe = ('\nCOMP_WORDS=(lixity analysis-review --tense-); COMP_CWORD=2; '
+             '_lixity_complete; printf "%s\\n" "${COMPREPLY[@]}"\n')
+    # Only generated product completion and the literal probe reach Bash.
+    result = subprocess.run([shell], input=script + probe, capture_output=True, text=True, check=True)  # noqa: S603
+    assert set(result.stdout.splitlines()) == {"--tense-model", "--tense-scope"}
+
+
+def test_native_model_override_survives_review_and_reopen(model_project):
+    from lixity.server.pdf_context import manuscript_pdf_token
+
+    before = files(model_project)
+    handler = make_handler(model_project, source_input=model_project / "manuscript.md", language="de",
+                           project_open_overrides={"tense_model": "de_test", "tense_scope": "narration"})
+    handler.refresh()
+    assert handler.dashboard_info["flagged"] == 1
+    token = manuscript_pdf_token(str(model_project / "manuscript.md"), project_root=model_project,
+                                language=handler.language, title=handler.title, thresholds=handler.thresholds)
+    with LoopbackServer(handler) as server:
+        url = "/api/analysis-review?" + urlencode({"project_token": token})
+        response = server.request(url)
+        assert response.status == 200, response.body
+        report = response.json
+        assert report["total"] == 1
+        payload = {"project_token": token, "observation_id": report["observations"][0]["id"], "status": "kept",
+                   "expected_source_sha256": report["source_sha256"],
+                   "expected_analysis_sha256": report["analysis_sha256"],
+                   "expected_review_sha256": report["review_sha256"]}
+        assert server.request("/api/analysis-review", payload=payload).status == 200
+        reopened = server.request("/api/project-open", payload={"path": str(model_project)})
+        assert reopened.status == 200, reopened.body
+        assert handler.dashboard_info["flagged"] == 1
+        assert server.request(url).json["completed"] == 1
+    for path, content in before.items():
+        assert (model_project / path).read_bytes() == content
+
+
+def test_new_workspace_does_not_inherit_grammatical_override(model_project):
+    from lixity.server.pdf_context import manuscript_pdf_token
+    from lixity.server.workspaces import WorkspaceRegistry
+
+    handler = make_handler(model_project, source_input=model_project / "manuscript.md", language="de",
+                           project_open_overrides={"tense_model": "de_test", "tense_scope": "narration"})
+    registry = WorkspaceRegistry(handler)
+    assert registry.default.dashboard_info["flagged"] == 1
+    token = manuscript_pdf_token(str(model_project / "manuscript.md"), project_root=model_project,
+                                language=handler.language, title=handler.title, thresholds=handler.thresholds)
+    with LoopbackServer(handler) as server:
+        server._server.workspaces = registry
+        opened = server.request("/api/project-open", payload={"path": str(model_project)})
+        assert opened.status == 200, opened.body
+        workspace = opened.json["workspace_url"]
+        query = "api/analysis-review?" + urlencode({"project_token": token})
+        assert server.request(workspace + query).json["total"] == 0
+        default = registry.default.api_base.removesuffix("api")
+        assert server.request(default + query).json["total"] == 1
+        registry.close(workspace.split("/")[2])
+        assert server.request(workspace + query).status == 410
+
+
+def test_reapplying_view_settings_preserves_grammar_and_source_bytes(model_project):
+    before = files(model_project)
+    handler = make_handler(model_project, source_input=model_project / "manuscript.md", language="de",
+                           project_open_overrides={"tense_model": "de_test", "tense_scope": "narration"})
+    handler.refresh()
+    assert handler.dashboard_info["flagged"] == 1
+    with LoopbackServer(handler) as server:
+        applied = server.request("/api/settings", payload={"z_mild": 2.6})
+        assert applied.status == 200, applied.body
+        assert handler.dashboard_info["flagged"] == 1
+        first = handler.dashboard_html
+        reapplied = server.request("/api/settings", payload={"z_mild": 2.6})
+        assert reapplied.status == 200, reapplied.body
+        assert handler.dashboard_html == first
+    assert files(model_project) == before
