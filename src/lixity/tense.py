@@ -110,8 +110,18 @@ class TenseMatcher:
 
     def count(self, text: str) -> tuple[int, int]:
         """Return present/past counts, preserving custom capture/zero-width cues."""
+        present, past = self.spans(text)
+        return len(present), len(past)
+
+    def spans(self, text: str) -> tuple[list[tuple[int, int]], list[tuple[int, int]]]:
+        """Return effective cue ranges, including undrawable zero-width cues.
+
+        Ranges address the supplied counting text. A perfect construction owns
+        one past cue; lexical ambiguities retain the existing counting policy.
+        """
         if not self._protect_finite_forms:
-            return len(self._present.findall(text)), len(self._past.findall(text))
+            return ([match.span() for match in self._present.finditer(text)],
+                    [match.span() for match in self._past.finditer(text)])
         constructions = self._german_perfect_spans(text) if self._german else []
         starts = [start for start, _, _ in constructions]
 
@@ -120,9 +130,9 @@ class TenseMatcher:
             return (index >= 0 and end <= constructions[index][1]
                     and (not licensed_only or constructions[index][2]))
 
-        present = sum(not consumed(match.start(), match.end(), licensed_only=True)
-                      for match in self._present.finditer(text))
-        past = len(constructions)
+        present = [match.span() for match in self._present.finditer(text)
+                   if not consumed(match.start(), match.end(), licensed_only=True)]
+        past = [(start, end) for start, end, _ in constructions]
         for match in self._past.finditer(text):
             if consumed(match.start(), match.end()):
                 continue
@@ -147,5 +157,5 @@ class TenseMatcher:
             if (finite_candidate and self._curated_present.fullmatch(words[-1])
                     and not self._curated_past.fullmatch(words[-1])):
                 continue
-            past += 1
-        return present, past
+            past.append(match.span())
+        return present, sorted(past)

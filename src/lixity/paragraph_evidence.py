@@ -20,6 +20,7 @@ from .language import (
 from .markdown_parser import counting_inline_text, parse_markdown_blocks, strip_inline_markup
 from .models import CorpusConfig
 from .sentences import split_sentence_spans, split_sentences
+from .tense import TenseMatcher
 from .text_normalization import counting_view
 
 if TYPE_CHECKING:
@@ -48,11 +49,24 @@ class LayerEvidence(_LayerEvidence, total=False):
     reason: str
 
 
-class ParagraphEvidence(TypedDict):
+class _TenseEvidence(TypedDict):
+    present: LayerEvidence
+    past: LayerEvidence
+
+
+class TenseEvidence(_TenseEvidence, total=False):
+    trigger: str
+
+
+class _ParagraphEvidence(TypedDict):
     schema_version: str
     paragraph_sha256: str
     offset_unit: str
     layers: dict[str, LayerEvidence]
+
+
+class ParagraphEvidence(_ParagraphEvidence, total=False):
+    tense: TenseEvidence
 
 
 _KINDS = {"asl": "sentence", "function": "word", "dialogue": "dialogue",
@@ -93,9 +107,13 @@ def _layer(kind: str, count: int, spans: list[EvidenceSpan], *,
 
 
 def _envelope(text: str, layers: dict[str, LayerEvidence]) -> ParagraphEvidence:
-    return {"schema_version": "paragraph-evidence/1",
-            "paragraph_sha256": sha256(text.encode("utf-8")).hexdigest(),
-            "offset_unit": "unicode_codepoint", "layers": layers}
+    result: ParagraphEvidence = {"schema_version": "paragraph-evidence/1",
+                                "paragraph_sha256": sha256(text.encode("utf-8")).hexdigest(),
+                                "offset_unit": "unicode_codepoint",
+                                "layers": {key: value for key, value in layers.items() if key in _KINDS}}
+    if "present" in layers:
+        result["tense"] = {"present": layers["present"], "past": layers["past"]}
+    return result
 
 
 class ParagraphMatcher:
@@ -127,18 +145,26 @@ class ParagraphMatcher:
             passive=len(self.passive.findall(clean)),
         )
 
-    def evidence(self, clean: str, display: str, counts: ParagraphCounts) -> ParagraphEvidence:
+    def evidence(self, clean: str, display: str, counts: ParagraphCounts, *,
+                 tense_spans: tuple[list[tuple[int, int]], list[tuple[int, int]]] | None = None) -> ParagraphEvidence:
         values = counts.layers()
+        kinds = dict(_KINDS)
+        if tense_spans is not None:
+            kinds.update(present="pattern", past="pattern")
+            values.update(present=len(tense_spans[0]), past=len(tense_spans[1]))
         clean = normalize("NFC", clean)
         view = counting_view(display)
         if clean != view.text:
             # The parser's count projection may remove code or destinations
             # still present in ParagraphProfile.text. Do not relocate matches.
-            layers = {key: _layer(_KINDS[key], count, [], reason="inline_mapping_unavailable")
+            layers = {key: _layer(kinds[key], count, [], reason="inline_mapping_unavailable")
                       for key, count in values.items()}
             return _envelope(display, layers)
 
-        spans: dict[str, list[EvidenceSpan]] = {key: [] for key in _KINDS}
+        spans: dict[str, list[EvidenceSpan]] = {key: [] for key in kinds}
+        if tense_spans is not None:
+            for key, cues in zip(("present", "past"), tense_spans, strict=True):
+                spans[key] = [{"start": start, "end": end, "count": 1} for start, end in cues]
         for (start, end), sentence in zip(split_sentence_spans(clean, self.language.key),
                                           split_sentences(clean, self.language.key), strict=True):
             words = len(self.word.findall(sentence))
@@ -178,7 +204,7 @@ class ParagraphMatcher:
                     mapped.append({**span, "start": source[0], "end": source[1]})
                 spans[key] = mapped
         return _envelope(display, {
-            key: _layer(_KINDS[key], count, spans[key],
+            key: _layer(kinds[key], count, spans[key],
                         reason="unicode_mapping_unavailable" if key in unmapped else "zero_width_matches")
             for key, count in values.items()
         })
@@ -191,7 +217,9 @@ def paragraph_evidence(text: str, config: CorpusConfig,
     Existing anchors and exact display text must agree. This does not profile
     again, change paragraph identities, or retain another copy of the prose.
     """
-    matcher = ParagraphMatcher(config, resolve_language(config, sample_text=text))
+    language = resolve_language(config, sample_text=text)
+    matcher = ParagraphMatcher(config, language)
+    tense = TenseMatcher(config, language)
     blocks: dict[tuple[int, int], list[dict[str, Any]]] = {}
     for block in parse_markdown_blocks(text, config):
         if block.get("type") in ("p", "list_item"):
@@ -208,5 +236,6 @@ def paragraph_evidence(text: str, config: CorpusConfig,
             result[index] = _envelope(paragraph.text, layers)
             continue
         clean = counting_inline_text(candidates[0].get("text", ""))
-        result[index] = matcher.evidence(clean, paragraph.text, matcher.count(clean))
+        result[index] = matcher.evidence(clean, paragraph.text, matcher.count(clean), tense_spans=tense.spans(clean))
+        result[index]["tense"]["trigger"] = paragraph.tense_trigger
     return result

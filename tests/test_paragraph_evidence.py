@@ -26,6 +26,37 @@ def slices(paragraph, layer):
             for span in layer["spans"]]
 
 
+def test_tense_evidence_reuses_counts_and_keeps_metric_contract():
+    text = "## Example\n\n😀 Ich halte das Seil. Wir haben gesprochen. Ich halte das Seil.\n"
+    config = CorpusConfig(language="de")
+    analysis = analyze_document(text, config, FingerprintThresholds(), include_evidence=True)
+    paragraph = analysis.paragraphs[0]
+    assert analysis.evidence is not None
+    evidence = analysis.evidence[0]
+    assert evidence["tense"]["trigger"] == paragraph.tense_trigger
+    assert set(evidence["layers"]) == {"asl", "function", "dialogue", "filter", "modal", "nominal", "passive"}
+    assert evidence["tense"]["present"]["count"] == paragraph.present_hits == 2
+    assert evidence["tense"]["past"]["count"] == paragraph.past_hits == 1
+    assert slices(paragraph, evidence["tense"]["present"]) == [("halte", 1), ("halte", 1)]
+    assert slices(paragraph, evidence["tense"]["past"]) == [("haben gesprochen", 1)]
+    module = importlib.import_module("lixity.paragraph_evidence")
+    assert module.paragraph_evidence(text, config, analysis.paragraphs)[0] == evidence
+
+
+def test_tense_mapping_preserves_unicode_and_fails_closed_for_inline_code():
+    config = CorpusConfig(language="en", praesens_regex=r"(?=é)|é", praeteritum_regex=r"was")
+    result = analyze_document("## Example\n\n😀 e\u0301 was here.\n", config, FingerprintThresholds(), include_evidence=True)
+    assert result.evidence is not None
+    layer = result.evidence[0]["tense"]["present"]
+    assert (layer["count"], layer["mapped_count"], layer["status"]) == (2, 1, "partial")
+    assert slices(result.paragraphs[0], layer) == [("e\u0301", 1)]
+    result = analyze_document("## Example\n\nI was `was` here.\n", config, FingerprintThresholds(), include_evidence=True)
+    assert result.evidence is not None
+    layer = result.evidence[0]["tense"]["past"]
+    assert layer["count"] == result.paragraphs[0].past_hits == 1
+    assert layer["status"] == "unavailable" and layer["spans"] == []
+
+
 def test_repeated_unicode_tokens_and_sentences_keep_their_exact_occurrences():
     paragraphs, evidence = build('## Example\n\n🧭 I think I can. I think I can.\n')
     paragraph, result = paragraphs[0], evidence[0]

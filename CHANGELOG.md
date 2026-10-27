@@ -8,6 +8,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Passage-specific tense review with exact counted cue ranges from the shared
+  backend, keyboard-accessible cue navigation and explicit unavailable mappings.
+  Mixed/switch triggers precede collapsed counts, help and other paragraph values.
 - Explicit worker-only CPU decoder placement for CUDA Qwen inference, retaining
   the same 1.7B checkpoint and portable voice profiles without automatic fallback.
 - Per-render local/Jetson Qwen selection in the CLI and native audio dialog,

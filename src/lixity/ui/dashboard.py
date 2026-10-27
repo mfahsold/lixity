@@ -143,6 +143,8 @@ _JS_FILES = (
     "reader-publication.js",
 )
 _NATIVE_JS_FILES = ("speech.js",)
+# The passage inspector requires the workspace shell; classic reports have none.
+_REPORT_JS_FILES = tuple(name for name in _JS_FILES if name != "manuscript-reader.js")
 
 # Curated publications reuse the shared renderers without dormant workspace controls.
 _PUBLICATION_JS_FILES = tuple(
@@ -1182,6 +1184,7 @@ def render_dashboard(
                         f' data-pas="{p.past_hits}"'
                         f' data-mix="{int(p.mixed)}"'
                         f' data-swi="{int(p.switch)}"'
+                        f' data-tense-trigger="{p.tense_trigger}"'
                     )
                     flag_cls = f" flagged sev-{p.severity}"
                 parts.append(
@@ -1542,7 +1545,7 @@ def render_dashboard(
                 f"<td>{chapter_cell}</td>"
                 f'<td class="num">{esc(line_label(labels, p))}</td>'
                 f'<td class="flag-excerpt">{esc(excerpt)}'
-                f'<details class="triage-reason"><summary>{L("triage_why")}</summary>'
+                f'<details class="triage-reason"><summary>{L("reading_tense_" + p.tense_trigger if p.tense_trigger != "none" else "reading_tense_flag")}</summary>'
                 f'<p>{esc(label(labels, "triage_reason").format(present=p.present_hits, past=p.past_hits, mixed=L("research_value_yes" if p.mixed else "research_value_no"), switch=L("research_value_yes" if p.switch else "research_value_no")))}</p>'
                 '</details></td>'
             )
@@ -1745,7 +1748,7 @@ def render_dashboard(
              f"<footer><span>{esc(engine_name)}</span> · <span>{esc(title)}</span></footer>"),
             ('<script type="application/json" id="research-diagram-library">'
              + _script_json(_bundle(("vendor/mermaid-tiny-12.2.0.min.js",))) + "</script>" if controls else ""),
-            f"<script>{_bundle(_JS_FILES + (_NATIVE_JS_FILES if speech_enabled else ()))}</script>",
+            f"<script>{_bundle((_JS_FILES if controls else _REPORT_JS_FILES) + (_NATIVE_JS_FILES if speech_enabled else ()))}</script>",
             "</body>",
             "</html>",
         ]

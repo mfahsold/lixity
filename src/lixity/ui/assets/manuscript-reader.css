@@ -282,10 +282,16 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 .reader-passage-context p { margin: 0; }
 .reader-passage-flag { margin-block: var(--space-1) var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--flag) 8%, var(--surface)); border: 1px solid color-mix(in srgb, var(--flag) 28%, transparent); border-inline-start: 3px solid var(--flag); }
 .reader-passage-flag.sev-3 { background: color-mix(in srgb, var(--flag-strong, #dc2626) 8%, var(--surface)); border-color: color-mix(in srgb, var(--flag-strong, #dc2626) 30%, transparent); border-inline-start-color: var(--flag-strong, #dc2626); }
-.reader-passage-flag-header { display: flex; align-items: center; gap: var(--space-2); margin-block-end: var(--space-1); }
+.reader-passage-flag-header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-block-end: var(--space-1); }
+.reader-passage-flag-header > .badge { flex-shrink: 0; white-space: nowrap; }
 .reader-passage-flag-title { font-size: var(--text-note); font-weight: 600; color: var(--fg); }
-.reader-passage-flag-guidance { margin: 0 0 var(--space-1); font-size: var(--text-small); line-height: var(--line-compact); color: var(--fg); font-weight: 500; }
 .reader-passage-flag-reason { margin: 0; font-size: var(--text-small); line-height: var(--line-tight, 1.4); color: var(--fg-secondary); }
+.reader-tense-evidence { display: grid; gap: var(--space-3); margin-block: var(--space-3); }
+.reader-tense-group > strong { display: block; margin-block-end: var(--space-1); font-size: var(--text-small); }
+.reader-tense-cues { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.reader-tense-cue { min-height: 2rem; max-width: 100%; white-space: normal; overflow-wrap: anywhere; text-align: start; }
+.reader-tense-group > details, .reader-tense-counts, .reader-tense-help { margin-block-start: var(--space-2); }
+.reader-tense-group summary, .reader-tense-counts > summary, .reader-tense-help > summary { min-height: 2.75rem; align-content: center; cursor: pointer; font-size: var(--text-small); }
 .manuscript-reading :is(.reader-review-flag, .manuscript-link-related) {
   vertical-align: top; min-height: 2.75rem; font-size: var(--text-control);
   margin-block: var(--space-2) 0; margin-inline: 0 var(--space-2);

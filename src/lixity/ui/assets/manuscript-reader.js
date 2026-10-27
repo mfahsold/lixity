@@ -332,7 +332,7 @@
       flag.type = "button"; flag.className = "ctl reader-review-flag";
       flag.dataset.readerFlag = panel.id;
       flag.textContent = uiLabel("reading_tense_flag");
-      flag.dataset.help = uiLabel("reading_tense_flag_help");
+      flag.dataset.help = tenseTitle(panel);
       flag.setAttribute("aria-controls", "reader-inspector");
       inner.appendChild(flag);
     }
@@ -394,12 +394,60 @@
     return (heading ? heading.textContent.trim() + " · " : "") +
       uiFormat("reading_passage_lines", {start: panel.dataset.start, end: panel.dataset.end});
   }
+  function tenseTitle(panel) {
+    var trigger = panel.dataset.tenseTrigger;
+    return uiLabel(["mixed", "switch", "mixed_switch"].includes(trigger) ? "reading_tense_" + trigger : "reading_tense_flag");
+  }
+  async function renderTenseCues(panel, host) {
+    var owner = window.LixityAnalysisEvidence, source = paragraphContent[panel.id];
+    var project = document.body.dataset.manuscriptProjectToken, hash = panel.dataset.paragraphSha256;
+    function current() {
+      return inspectorTarget === panel && inspectorBody.contains(host) && panel.isConnected &&
+        paragraphContent[panel.id] === source && document.body.dataset.manuscriptProjectToken === project &&
+        panel.dataset.paragraphSha256 === hash;
+    }
+    host.setAttribute("aria-busy", "true");
+    var evidence = null;
+    try { if (owner && owner.tense) evidence = await owner.tense(panel); } catch (_) { /* Missing evidence stays explicit. */ }
+    if (!current()) return;
+    host.setAttribute("aria-busy", "false");
+    var complete = true;
+    ["present", "past"].forEach(function(key) {
+      var layer = evidence && evidence[key], count = Number(panel.dataset[key === "present" ? "pre" : "pas"]);
+      if (!layer || layer.count !== count) {complete = false; return;}
+      if (layer.status !== "available") complete = false;
+      if (!layer.cues.length) return;
+      var group = document.createElement("section"); group.className = "reader-tense-group";
+      group.setAttribute("aria-label", uiLabel("reading_tense_" + key));
+      var title = document.createElement("strong"); title.textContent = uiLabel("reading_tense_" + key); group.appendChild(title);
+      var cues = document.createElement("div"); cues.className = "reader-tense-cues";
+      var extra = document.createElement("details"), summary = document.createElement("summary");
+      summary.textContent = uiCountFormat("reading_tense_more", layer.cues.length - 3); extra.appendChild(summary);
+      var rest = document.createElement("div"); rest.className = "reader-tense-cues"; extra.appendChild(rest);
+      layer.cues.forEach(function(cue, index) {
+        var button = document.createElement("button"); button.type = "button"; button.className = "ctl reader-tense-cue";
+        button.textContent = cue.quote; button.title = uiLabel("reading_tense_cue_help");
+        button.addEventListener("click", async function() {
+          if (!current()) return;
+          var revealed = false;
+          try { revealed = await owner.revealTense(panel, key, cue.index); } catch (_) { /* Recheck failed; do not guess a range. */ }
+          if (!revealed && current()) {host.textContent = uiLabel("reading_tense_unmapped");}
+        });
+        (index < 3 ? cues : rest).appendChild(button);
+      });
+      group.appendChild(cues); if (layer.cues.length > 3) group.appendChild(extra); host.appendChild(group);
+    });
+    if (!complete) {
+      var note = document.createElement("p"); note.className = "ctl-note";
+      note.textContent = uiLabel("reading_tense_unmapped"); host.appendChild(note);
+    }
+  }
   function showValues(panel, point) {
     if (!panel) return;
     renderParagraph(panel);
     var values = panel.querySelector(".paragraph-values");
     if (!values) return;
-    var copy = values.cloneNode(true); copy.open = true;
+    var copy = values.cloneNode(true); copy.open = false;
     if (inspectorTarget) inspectorTarget.classList.remove("reader-inspector-target");
     var context = document.createElement("div"); context.className = "reader-passage-context";
     var location = document.createElement("p"); location.className = "ctl-note";
@@ -411,10 +459,12 @@
       flagBadge.className = "badge sev-" + panel.dataset.severity;
       flagBadge.textContent = uiLabel("severity_" + panel.dataset.severity);
       var flagTitle = document.createElement("span"); flagTitle.className = "reader-passage-flag-title";
-      flagTitle.textContent = uiLabel("reading_tense_flag");
+      flagTitle.textContent = tenseTitle(panel);
       flagHeader.appendChild(flagBadge); flagHeader.appendChild(flagTitle);
-      var flagGuidance = document.createElement("p"); flagGuidance.className = "reader-passage-flag-guidance";
-      flagGuidance.textContent = uiLabel("triage_author_guidance");
+      var cueHost = document.createElement("div"); cueHost.className = "reader-tense-evidence";
+      var counts = document.createElement("details"); counts.className = "reader-tense-counts";
+      var countsTitle = document.createElement("summary"); countsTitle.textContent = uiLabel("reading_tense_counts");
+      counts.appendChild(countsTitle);
       var flagBody = document.createElement("p"); flagBody.className = "reader-passage-flag-reason";
       flagBody.textContent = uiFormat("triage_reason", {
         present: panel.dataset.pre || "0",
@@ -422,8 +472,15 @@
         mixed: uiLabel(panel.dataset.mix === "1" ? "research_value_yes" : "research_value_no"),
         switch: uiLabel(panel.dataset.swi === "1" ? "research_value_yes" : "research_value_no")
       });
-      flagCard.appendChild(flagHeader); flagCard.appendChild(flagGuidance); flagCard.appendChild(flagBody);
+      counts.appendChild(flagBody);
+      var help = document.createElement("details"), helpTitle = document.createElement("summary");
+      help.className = "reader-tense-help"; helpTitle.textContent = uiLabel("reading_tense_help");
+      var guidance = document.createElement("p"); guidance.className = "ctl-note";
+      guidance.textContent = uiLabel("triage_author_guidance"); help.append(helpTitle, guidance);
+      flagCard.append(flagHeader, cueHost, counts, help);
       context.appendChild(flagCard);
+      // Verification is asynchronous; the context identity is checked before display.
+      Promise.resolve().then(function() {renderTenseCues(panel, cueHost);});
     }
     var tools = document.createElement("div"); tools.className = "reader-passage-tools";
     tools.setAttribute("role", "group"); tools.setAttribute("aria-label", uiLabel("reading_actions"));

@@ -104,6 +104,8 @@ No. Benjamini–Hochberg and Benjamini–Yekutieli require valid input probabili
 
 ## What can tense and pacing labels tell me?
 
+**Current main, unreleased:** the passage card distinguishes mixed tense cues from a dominant-tense change since the previous paragraph. Open an original counted form to locate it in the manuscript; repeated forms have separate locations. Counts, other paragraph values and general heuristic help start collapsed. If a cue cannot be mapped reliably, Lixity says so. Mixed cues alone do not establish a tense switch.
+
 Tense labels, dialogue detection, pacing indicators and showing/telling patterns are language-dependent heuristics. Quoted speech, ambiguous word forms and unconventional punctuation can affect them. A friction rating locates mixed signals; it does not determine whether a flashback or tense change is mistaken. Read the original paragraph before making an editorial decision.
 
 Without explicit scene dividers, `scenes_are_chapters` is true: scene counts are chapter placeholders, not detected narrative transitions. Dialogue shares count quoted and total words with the same configured token regex; quotation marks still do not identify a speaker.

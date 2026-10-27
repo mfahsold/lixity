@@ -20,6 +20,12 @@
   text-decoration-thickness: 2px;
   text-underline-offset: .2em;
 }
+::highlight(lixity-tense-current) {
+  background-color: var(--flag-light);
+  text-decoration: underline;
+  text-decoration-color: var(--flag);
+  text-decoration-thickness: 2px;
+}
 .analysis-evidence-card {
   position: fixed;
   z-index: 220;

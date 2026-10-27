@@ -37,7 +37,7 @@ SAMPLE = (
 )
 
 
-def full_dashboard(enabled_actions: tuple[str, ...] | None = None) -> str:
+def full_dashboard(enabled_actions: tuple[str, ...] | None = None, *, include_evidence: bool = False) -> str:
     # Three complete, varying chapters exercise the optional rank-space panel.
     complete = SAMPLE.replace(
         "## Kap 2",
@@ -47,7 +47,8 @@ def full_dashboard(enabled_actions: tuple[str, ...] | None = None) -> str:
     complete += "\n\n## Kap 3\n\n" + "Der Morgen beginnt. Regen fällt auf die Straße. " * 15
     text, _marker = add_marker(complete, kind="todo", note="Prüfen", target_line=3)
     config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
-    paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text))
+    evidence = {} if include_evidence else None
+    paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text), evidence=evidence)
     metrics = CorpusAnalyzer(config).analyze_text(text)
     fingerprint = StyleFingerprint.from_metrics(metrics)
     from lixity.characters import presence_report
@@ -60,6 +61,7 @@ def full_dashboard(enabled_actions: tuple[str, ...] | None = None) -> str:
     return render_dashboard(
         chapters,
         paragraphs,
+        paragraph_evidence=evidence,
         metrics=metrics,
         fingerprint=fingerprint,
         markers=list_markers(text),

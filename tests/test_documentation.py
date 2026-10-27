@@ -18,15 +18,19 @@ sys.path.insert(0, str(ROOT / "scripts"))
 class TestDocumentation(unittest.TestCase):
     def test_published_reports_bundle_the_current_packaged_interface(self):
         """Published reports share current assets; live-only audio is capability-gated."""
-        from lixity.ui.dashboard import _CSS_FILES, _JS_FILES
+        from lixity.ui.dashboard import _CSS_FILES, _JS_FILES, _REPORT_JS_FILES
 
         assets = ROOT / "src/lixity/ui/assets"
         for relative in ("demo/report.html", "examples/effi-briest.html", "examples/pride-and-prejudice.html"):
             report = (ROOT / "docs" / relative).read_text(encoding="utf-8")
-            for name in (*_CSS_FILES, *_JS_FILES):
+            scripts = _JS_FILES if relative == "demo/report.html" else _REPORT_JS_FILES
+            for name in (*_CSS_FILES, *scripts):
                 with self.subTest(report=relative, asset=name):
                     self.assertEqual(report.count((assets / name).read_text(encoding="utf-8").strip()), 1,
                                      "Regenerate public reports with 'make examples' before publishing UI changes")
+            if relative.startswith("examples/"):
+                self.assertNotIn((assets / "manuscript-reader.js").read_text(encoding="utf-8").strip(), report,
+                                 "Classic reports must not ship the inactive workspace inspector")
 
     def test_public_demo_can_read_exact_passage_research_versions(self):
         """The read-only adapter must serve native context-bound pinned reads."""

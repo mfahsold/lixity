@@ -152,6 +152,11 @@ class ParagraphProfile:
         """True when severity reaches this paragraph's flag cut (default FLAG_MIN_SEVERITY)."""
         return self.severity >= self.flag_min
 
+    @property
+    def tense_trigger(self) -> str:
+        """Describe the measured trigger without diagnosing an author error."""
+        return "mixed_switch" if self.mixed and self.switch else "mixed" if self.mixed else "switch" if self.switch else "none"
+
 
 @dataclass(frozen=True)
 class ParagraphText:
@@ -314,7 +319,8 @@ class ParagraphProfiler:
             # not a sentence, and a resolved auto language picks its own
             # abbreviation table.
             sentences = counts.sentences
-            present, past = self._tense.count(clean)
+            tense_spans = self._tense.spans(clean)
+            present, past = len(tense_spans[0]), len(tense_spans[1])
             dominant = self._dominant(present, past)
 
             mixed, minority_ratio = mixed_tense(present, past, self.thresholds)
@@ -366,7 +372,8 @@ class ParagraphProfiler:
                 flag_min=self.thresholds.flag_min_severity,
             )
             if evidence is not None:
-                evidence[len(paragraphs)] = self._matcher.evidence(clean, paragraph.text, counts)
+                evidence[len(paragraphs)] = self._matcher.evidence(clean, paragraph.text, counts, tense_spans=tense_spans)
+                evidence[len(paragraphs)]["tense"]["trigger"] = profile.tense_trigger
             paragraphs.append(profile)
             chapter_paragraphs.append(profile)
             prev_dominant = dominant

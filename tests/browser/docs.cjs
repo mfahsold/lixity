@@ -614,6 +614,8 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   await expect(passage).toHaveCSS('opacity', '1');
   assert.ok((await passage.locator('.ptext-inner > p').innerText()).length > 50, 'Opening a block exposes the synthetic source paragraph');
   await openValues(page, passage);
+  await expect(page.locator('#reader-inspector .paragraph-values')).not.toHaveAttribute('open', '');
+  await page.locator('#reader-inspector .paragraph-values > summary').click();
   assert.ok((await page.locator('#reader-inspector .anchor').innerText()).length > 5,
     'Passage values include the selected source lines');
   await passage.locator('.ptext-inner > p').click();
@@ -958,7 +960,7 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   await expect(page.locator('#text-search')).toHaveValue(demoQuote);
   await expect(page.locator('#style-layer')).toHaveValue('asl');
   await expect(page.locator('#reader-inspector')).toBeVisible();
-  await expect(page.locator('#reader-inspector .paragraph-values')).toHaveAttribute('open', '');
+  await expect(page.locator('#reader-inspector .paragraph-values')).not.toHaveAttribute('open', '');
   assert.equal(await page.locator('#reader-inspector-body').textContent(), inspectedValues,
     'Returning from research preserves the selected passage values');
   await expect(page.locator('#' + passageId + ' p').first()).toHaveText(paragraphText);

@@ -14,6 +14,34 @@ from lixity.style_profile import ParagraphProfiler
 from lixity.tense import TenseMatcher
 
 
+@pytest.mark.parametrize("text", [
+    "Ich halte das Seil. Wir haben gesprochen. Ich halte das Seil.",
+    "Wir sind gewarnt. Sie ist verhaftet worden. Wir haben geschlossen gehalten.",
+    "Er war hier. Er ist hier. Sie gingen und sie gehen.",
+])
+def test_cue_spans_preserve_effective_counting_and_original_occurrences(text):
+    config = CorpusConfig(language="de")
+    matcher = TenseMatcher(config, resolve_language(config))
+    present, past = matcher.spans(text)
+    assert (len(present), len(past)) == matcher.count(text)
+    for start, end in present + past:
+        assert 0 <= start < end <= len(text)
+    if "haben gesprochen" in text:
+        assert "haben gesprochen" in [text[start:end] for start, end in past]
+        assert "haben" not in [text[start:end] for start, end in present]
+        assert sum(text[start:end] == "halte" for start, end in present) == 2
+
+
+def test_custom_capture_and_zero_width_cues_keep_counts_without_fake_ranges():
+    config = CorpusConfig(language="en", praesens_regex=r"(?=think)|(think)", praeteritum_regex=r"(was) (here)")
+    matcher = TenseMatcher(config, resolve_language(config))
+    text = "think was here think"
+    present, past = matcher.spans(text)
+    assert (len(present), len(past)) == matcher.count(text) == (4, 1)
+    assert [text[start:end] for start, end in past] == ["was here"]
+    assert sum(start == end for start, end in present) == 2
+
+
 @pytest.mark.parametrize(("language", "sentence"), [
     ("de", "Ich halte das Seil."),
     ("de", "Wir halten Wache."),

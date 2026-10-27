@@ -29,7 +29,7 @@ for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
             'manuscript_pdf_token': 'synthetic-project-token', 'research_context_token': 'synthetic-research-token',
             'manuscript_source_sha256': 'a' * 64})
     render.__globals__['render_dashboard'] = localized
-    html = render()
+    html = render(include_evidence=True)
     fixtures[locale]['html'] = html
 print(json.dumps(fixtures))
 `, {root});
@@ -37,11 +37,12 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
   revision: 1, body: '## Context\n\nA saved synthetic dossier beside the manuscript.\n\n' + 'Context for reading. '.repeat(100),
   editable_sections: ['Context'], citations: [], sections: ['Context'], tags: [], evidence_count: 0};
 
-async function createPage(browser, fixture, width) {
+async function createPage(browser, fixture, width, initialize) {
   const page = await browser.newPage({viewport: {width, height: 900}, reducedMotion: 'reduce', hasTouch: width <= 390});
+  if (initialize) await page.addInitScript(initialize);
   const errors = [], writes = [];
   page.on('pageerror', error => errors.push(error.message));
-  await page.route('http://lixity.test/**', route => {
+  await page.route('http://localhost/**', route => {
     const request = route.request(), url = new URL(request.url());
     if (request.method() !== 'GET') {
       writes.push(url.pathname);
@@ -59,7 +60,7 @@ async function createPage(browser, fixture, width) {
     }});
     return route.fulfill({contentType: 'text/html', body: fixture.html});
   });
-  await page.goto('http://lixity.test/');
+  await page.goto('http://localhost/');
   await page.locator('#tab-view-analysis').click();
   return {page, errors, writes};
 }
@@ -280,6 +281,41 @@ async function settleGeometry(page) {
       }
       if (locale === 'de') await flagged.screenshot({path: path.join(artifacts, `paragraph-actions-${width}.png`)});
       await flagged.locator('[data-layout-probe]').evaluate(button => button.remove());
+      await flagged.locator('.reader-review-flag').click();
+      const tenseCard = inspector.locator('.reader-passage-flag');
+      assert.equal(await tenseCard.locator('.reader-passage-flag-title').textContent(),
+        await page.evaluate(() => uiLabel('reading_tense_mixed')), 'The passage names its actual mixed-tense trigger');
+      const cue = tenseCard.locator('.reader-tense-cue').first();
+      await cue.waitFor({state: 'visible'});
+      const cueText = await cue.textContent(), selectedMetric = await page.locator('#style-layer').inputValue();
+      assert.equal(await inspector.locator('.paragraph-values').getAttribute('open'), null,
+        'Unrelated metrics start collapsed');
+      assert.equal(await tenseCard.locator('.reader-tense-counts').getAttribute('open'), null,
+        'Tense counts start collapsed behind the original cues');
+      if (locale === 'de') {
+        const dock = page.locator('#workspace-context-panel');
+        await dock.evaluate(node => {node.scrollTop = 0;});
+        await dock.screenshot({path: path.join(artifacts, `tense-card-${width}.png`)});
+      }
+      const helpSummary = tenseCard.locator('.reader-tense-help > summary');
+      await helpSummary.click();
+      assert.equal(await tenseCard.locator('.reader-tense-help').getAttribute('open'), '');
+      await helpSummary.click();
+      const countSummary = tenseCard.locator('.reader-tense-counts > summary');
+      await countSummary.click();
+      assert.equal(await tenseCard.locator('.reader-tense-counts').getAttribute('open'), '');
+      await countSummary.click();
+      await cue.scrollIntoViewIfNeeded();
+      await cue.focus(); await page.keyboard.press('Enter');
+      await page.waitForFunction(quote => {
+        const current = CSS.highlights.get('lixity-tense-current');
+        return current && Array.from(current).some(range => range.toString() === quote);
+      }, cueText);
+      assert.equal(await page.locator('#style-layer').inputValue(), selectedMetric,
+        'A tense cue does not replace the selected measurement');
+      assert.deepEqual(await sourceState(page), anchors, 'Cue navigation preserves manuscript text and anchors');
+      if (locale === 'de') await page.screenshot({path: path.join(artifacts, `tense-passage-${width}.png`)});
+      await page.locator('#reader-inspector-close').click();
       assert.equal(await page.locator('#chapters .strip').first().isVisible(), true,
         'Analysis exposes restrained paragraph diagnostics alongside the same prose');
       await page.locator('#filter-flags').check();
@@ -499,6 +535,41 @@ async function settleGeometry(page) {
       assert.deepEqual(errors, []);
       await page.close();
     }
-    console.log(`Manuscript reader: continuous exact text, reversible tools, seven desktop/mobile locales, keyboard context menus, typography, selection, focus and accessible dossier divider passed. Screenshots: ${artifacts}`);
+    for (const fault of ['no-crypto', 'bad-hash', 'stale-text', 'no-highlight']) {
+      const initialize = fault === 'no-crypto' ? () => Object.defineProperty(crypto, 'subtle', {value: undefined}) :
+        fault === 'no-highlight' ? () => Object.defineProperty(CSS, 'highlights', {value: undefined}) : undefined;
+      const {page, errors, writes} = await createPage(browser, fixtures.en, 390, initialize);
+      await page.locator('#manuscript-analysis-toggle').click();
+      const panel = page.locator('#chapters .ptext.flagged').first();
+      await panel.scrollIntoViewIfNeeded();
+      await panel.locator('.reader-review-flag').waitFor({state: 'visible'});
+      if (fault === 'bad-hash') await panel.evaluate(node => {
+        const source = paragraphContent[node.id]; source[3] = {...source[3], paragraph_sha256: '0'.repeat(64)};
+      });
+      await panel.locator('.reader-review-flag').click();
+      const host = page.locator('#reader-inspector .reader-tense-evidence');
+      await page.waitForFunction(() => document.querySelector('#reader-inspector .reader-tense-evidence')?.getAttribute('aria-busy') === 'false');
+      if (fault === 'stale-text' || fault === 'no-highlight') {
+        const cue = host.locator('.reader-tense-cue').first();
+        await cue.waitFor({state: 'visible'});
+        const quote = await cue.textContent();
+        if (fault === 'stale-text') await panel.locator('.ptext-inner > p').evaluate(node => {node.textContent += ' Changed.';});
+        else await page.locator('#manuscript-analysis-toggle').click();
+        await cue.focus(); await page.keyboard.press('Enter');
+        if (fault === 'no-highlight') {
+          await page.waitForFunction(quote => window.getSelection().toString() === quote, quote);
+          assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'false',
+            'Local cue navigation works without enabling global analysis');
+        }
+      }
+      if (fault !== 'no-highlight') {
+        await page.waitForFunction(() => document.querySelector('#reader-inspector .reader-tense-evidence')?.textContent === uiLabel('reading_tense_unmapped'));
+        assert.equal(await host.locator('.reader-tense-cue').count(), 0, `${fault}: unverifiable cues cannot be clicked`);
+        assert.equal(await page.evaluate(() => Boolean(CSS.highlights?.get('lixity-tense-current'))), false);
+      }
+      assert.deepEqual(errors, [], `${fault}: no console failures`); assert.deepEqual(writes, []);
+      await page.close();
+    }
+    console.log(`Manuscript reader: continuous exact text, reversible tools, seven desktop/mobile locales, exact tense cues and stale/unsupported fallbacks, keyboard context menus, typography, selection, focus and accessible dossier divider passed. Screenshots: ${artifacts}`);
   } finally {await browser.close();}
 })().catch(error => {console.error(error); process.exitCode = 1;});

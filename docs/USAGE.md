@@ -302,6 +302,16 @@ analyzed paragraph's **Values** opens the **Passage values** inspector independe
 of the Analysis On/Off choice. **Analysis overview** opens chapter comparisons and other dense views;
 **Back to passage** restores the earlier analysis choice and document context.
 
+**Current main, unreleased:** a tense review card names its actual trigger:
+present/past cues in one paragraph, a dominant-tense change from the previous
+paragraph, or both. Original counted forms appear as buttons grouped by present
+and past; activate one to locate it in the manuscript. Repeated forms keep
+separate occurrences. The card starts with three cues per group; expand the
+remaining cues, counts or heuristic help when needed. Other paragraph values
+start collapsed. Missing or unverifiable mappings are stated explicitly. A
+counted cue does not prove a grammatical error, and mixed cues alone do not
+establish a switch from the previous paragraph.
+
 **Start your review → Open passage** opens the first paragraph meeting the
 selected tense threshold, otherwise the opening paragraph, clearing filters and
 focusing the passage. **Explore chapters** opens available chapter comparisons;

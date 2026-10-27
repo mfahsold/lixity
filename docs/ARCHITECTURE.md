@@ -719,6 +719,13 @@ are prepared, with explicit codepoint-to-UTF-16 conversion and hash validation.
 Search/research mark changes invalidate derived ranges, not source identities.
 Analysis visibility, metric changes and workspace changes cancel stale cards and
 marks. Unsupported or unprovable mappings remain explicit unavailable states.
+Current-main tense evidence extends the same optional envelope without adding
+measurement layers or paragraph JSON fields. `TenseMatcher.spans` and `count`
+share effective cue selection; the existing normalization mapper retains exact
+display offsets. The backend names mixed, switched or combined triggers. The
+passage inspector shows verified cue buttons before collapsed counts and help;
+the existing evidence owner verifies and reveals their ranges independently of
+the selected measurement. It never repeats a tense detector in JavaScript.
 Since v0.7.4, the paragraph menu opens one existing passage inspector. Its
 measurement action captures the source point and uses the evidence owner; its
 research action delegates to the existing explicit passage association reader.

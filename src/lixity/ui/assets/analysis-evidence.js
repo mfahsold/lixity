@@ -12,6 +12,11 @@
   host.id = "analysis-evidence-card"; host.className = "analysis-evidence-card"; host.hidden = true;
   document.body.appendChild(host);
   var html = LixityComponents.html;
+  var tensePanel = null;
+  function clearTense() {
+    tensePanel = null;
+    if (supported) CSS.highlights.delete("lixity-tense-current");
+  }
 
   function active() {
     var state = LixityWorkbench.state();
@@ -60,7 +65,7 @@
     var prose = paragraph(panel), content = paragraphContent[panel.id], evidence = content && content[3];
     var old = records.get(panel);
     if (old && old.prose === prose && old.evidence === evidence && old.text === (content && content[0])) return old.promise;
-    var record = {panel:panel, prose:prose, text:content && content[0], evidence:evidence, layers:{}, error:"evidence_unavailable"};
+    var record = {panel:panel, prose:prose, text:content && content[0], evidence:evidence, layers:{}, tense:{}, error:"evidence_unavailable"};
     records.set(panel, record);
     record.promise = (async function() {
       if (!prose || typeof record.text !== "string" || !evidence) return record;
@@ -90,18 +95,23 @@
         }
         return {node:nodes[low].node, offset:at - nodes[low].start};
       }
-      Object.keys(evidence.layers).forEach(function(key) {
-        var value = evidence.layers[key];
-        if (!validLayer(value, offsets.length - 1)) return;
-        var spans = value.spans.map(function(span) {
-          var range = document.createRange(), start = point(offsets[span.start]), end = point(offsets[span.end]);
-          range.setStart(start.node, start.offset); range.setEnd(end.node, end.offset);
-          return {range:range, count:span.count, words:Number.isSafeInteger(span.words) && span.words >= 0 ? span.words : null,
-            start:offsets[span.start], end:offsets[span.end],
-            quote:record.text.slice(offsets[span.start], offsets[span.end])};
+      function prepareLayers(values, target) {
+        if (!values || typeof values !== "object") return;
+        Object.keys(values).forEach(function(key) {
+          var value = values[key];
+          if (!validLayer(value, offsets.length - 1)) return;
+          var spans = value.spans.map(function(span) {
+            var range = document.createRange(), start = point(offsets[span.start]), end = point(offsets[span.end]);
+            range.setStart(start.node, start.offset); range.setEnd(end.node, end.offset);
+            return {range:range, count:span.count, words:Number.isSafeInteger(span.words) && span.words >= 0 ? span.words : null,
+              start:offsets[span.start], end:offsets[span.end],
+              quote:record.text.slice(offsets[span.start], offsets[span.end])};
+          });
+          target[key] = {value:value, spans:spans};
         });
-        record.layers[key] = {value:value, spans:spans};
-      });
+      }
+      prepareLayers(evidence.layers, record.layers);
+      prepareLayers(evidence.tense, record.tense);
       record.error = null; return record;
     })();
     return record.promise;
@@ -219,6 +229,13 @@
     card.index = (card.index + direction + spans.length) % spans.length; card.pinned = true;
     delete card.pointerX;
     var range = spans[card.index].range, panel = card.record.panel;
+    var containers = revealRange(panel, range);
+    // Retain this explicit arrival across its queued scroll events only while
+    // all actual positions still match. Any subsequent user scroll closes it.
+    card.arrival = scrollPosition(containers, card.trigger);
+    card.rect = range.getClientRects()[0]; paint();
+  }
+  function revealRange(panel, range) {
     var containers = passageScrollContainers(panel);
     setPassageScrollMargin(panel);
     var margin = parseFloat(getComputedStyle(panel).scrollMarginTop) || 12;
@@ -230,10 +247,35 @@
     });
     var rect = range.getClientRects()[0], top = containers.length ? 12 : margin;
     if (rect.top < top || rect.bottom > innerHeight - 12) window.scrollBy({top:rect.top - top, behavior:"instant"});
-    // Retain this explicit arrival across its queued scroll events only while
-    // all actual positions still match. Any subsequent user scroll closes it.
-    card.arrival = scrollPosition(containers, card.trigger);
-    card.rect = range.getClientRects()[0]; paint();
+    return containers;
+  }
+  function currentRecord(record) {
+    var content = paragraphContent[record.panel.id];
+    return available() && records.get(record.panel) === record && record.panel.isConnected &&
+      paragraph(record.panel) === record.prose && record.prose.textContent === record.text &&
+      content && content[0] === record.text && content[3] === record.evidence && !record.error;
+  }
+  async function tenseEvidence(panel) {
+    var record = await prepare(panel);
+    if (!currentRecord(record)) return null;
+    var result = {};
+    ["present", "past"].forEach(function(key) {
+      var layer = record.tense[key];
+      if (layer) result[key] = {status:layer.value.status, count:layer.value.count,
+        mapped_count:layer.value.mapped_count, cues:layer.spans.map(function(span, index) {return {quote:span.quote, index:index};})};
+    });
+    return result;
+  }
+  async function revealTense(panel, key, index) {
+    var record = await prepare(panel), layer = record.tense[key];
+    if (!currentRecord(record) || !layer || !Number.isSafeInteger(index) || index < 0 || index >= layer.spans.length) return false;
+    var range = layer.spans[index].range;
+    close(false); clearTense(); revealRange(panel, range); tensePanel = panel;
+    if (supported) CSS.highlights.set("lixity-tense-current", new Highlight(range));
+    else {
+      var selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range.cloneRange());
+    }
+    return true;
   }
   async function inspect(panel, trigger, point) {
     opening = null;
@@ -359,9 +401,10 @@
   host.addEventListener("pointerleave", function() {if (card && !card.pinned) dismissTimer = setTimeout(function() {close(false);}, 180);});
   host.addEventListener("focusin", function() {if (card) card.pinned = true;});
   host.addEventListener("focusout", function(event) {if (event.relatedTarget && !host.contains(event.relatedTarget)) close(false);});
-  document.addEventListener("pointerdown", function(event) {if (!host.contains(event.target)) close(false);}, {passive:true});
+  document.addEventListener("pointerdown", function(event) {clearTense(); if (!host.contains(event.target)) close(false);}, {passive:true});
   document.addEventListener("focusin", function(event) {if (event.target.closest("dialog[open]")) close(false);});
   window.addEventListener("keydown", function(event) {
+    if (event.key === "Escape") clearTense();
     if (opening && !event.defaultPrevented && !event.isComposing &&
         ["PageDown", "PageUp", "ArrowDown", "ArrowUp", "Home", "End", " "].includes(event.key) &&
         !event.target.isContentEditable && !event.target.closest("input, textarea, select")) close(false);
@@ -380,8 +423,8 @@
     schedule();
   }, {passive:true, capture:true});
   window.addEventListener("resize", function() {close(false); schedule();}, {passive:true});
-  document.addEventListener("visibilitychange", function() {if (document.hidden) {close(false); clearHighlight();} else schedule();});
-  function changed() {epoch++; close(false); clearHighlight(); schedule();}
+  document.addEventListener("visibilitychange", function() {if (document.hidden) {close(false); clearTense(); clearHighlight();} else schedule();});
+  function changed() {epoch++; close(false); clearTense(); clearHighlight(); schedule();}
   document.addEventListener("lixity:analysis-layer-change", changed);
   document.addEventListener("lixity:workbench-change", changed);
   document.addEventListener("lixity:viewchange", changed);
@@ -394,7 +437,7 @@
       var panel = element && element.closest(".ptext");
       if (panel && (element.matches(".ptext-inner") || element.closest(".ptext-inner > p"))) dirty.add(panel);
     });
-    dirty.forEach(function(panel) {records.delete(panel); if (card && card.record.panel === panel) close(false);});
+    dirty.forEach(function(panel) {records.delete(panel); if (tensePanel === panel) clearTense(); if (card && card.record.panel === panel) close(false);});
     if (dirty.size) {epoch++; clearHighlight(); schedule();}
   }).observe(chapters, {childList:true, subtree:true, characterData:true});
   var observer = new IntersectionObserver(function(entries) {
@@ -406,6 +449,6 @@
     var state = LixityWorkbench.state();
     return !document.hidden && state.view === "analysis" && state.surface === "document";
   }
-  window.LixityAnalysisEvidence = {inspect:inspect, available:available};
+  window.LixityAnalysisEvidence = {inspect:inspect, available:available, tense:tenseEvidence, revealTense:revealTense};
   schedule();
 })();

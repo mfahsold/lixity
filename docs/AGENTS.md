@@ -243,6 +243,15 @@ configured tokenizer. Units differ: ASL counts sentences, dialogue counts quoted
 words, lexical layers count configured tokens or pattern matches. A span is
 counted evidence, not a statistical judgment about that individual word.
 
+**Current main, unreleased:** the same envelope optionally includes `tense`
+with `present` and `past` entries using the existing layer shape, and a `trigger`
+of `none`, `mixed`, `switch` or `mixed_switch`. This is an additive optional
+field of `paragraph-evidence/1`; the seven measurement `layers` and default
+profile JSON remain unchanged. Effective cues use the same finite-form
+precedence and German perfect-construction ownership as the counters. These
+are lexical cues, not grammatical error annotations. Consumers can ignore
+`tense`; absent or unmappable evidence must never be guessed from counts.
+
 `available` means all counted contributions map; `partial` preserves the mapped
 subset; `unavailable` supplies no invented range. Optional stable `reason` codes
 explain unmapped contributions. When source profiles cannot be verified,
