@@ -68,7 +68,8 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
       const departure = await page.evaluate(() => {
         const anchor = LixityReader.capture();
         window.__testCompanionAnchor = anchor.panel;
-        return {top:anchor.top, scrollY, tag:anchor.panel.tagName, id:anchor.panel.id};
+        return {top:anchor.top, scrollY, maxScroll:document.documentElement.scrollHeight - innerHeight,
+          height:document.documentElement.scrollHeight, tag:anchor.panel.tagName, id:anchor.panel.id};
       });
       assert.equal(await toggle.evaluate(node => {
         const bounds = node.getBoundingClientRect();
@@ -85,6 +86,7 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
       } catch (error) {
         const actual = await page.evaluate(() => ({top:window.__testCompanionAnchor.getBoundingClientRect().top,
           connected:window.__testCompanionAnchor.isConnected, scrollY, innerHeight,
+          maxScroll:document.documentElement.scrollHeight - innerHeight, height:document.documentElement.scrollHeight,
           focus:document.activeElement?.id, state:LixityWorkbench.state()}));
         throw new Error(`Companion position ${locale}/${width}: departure=${JSON.stringify(departure)} actual=${JSON.stringify(actual)}`, {cause:error});
       }
