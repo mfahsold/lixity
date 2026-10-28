@@ -90,6 +90,8 @@ class LixityServerHandler(
     POST_ROUTES: ClassVar[dict[str, str]] = {
         "workspace-close": "_handle_workspace_close",
         "speech-render": "_handle_speech_render",
+        "speech-plan": "_handle_speech_plan",
+        "speech-direction": "_handle_speech_direction",
         "speech-cancel": "_handle_speech_cancel",
         "nda-draft": "_handle_nda_draft",
         "manuscript-pdf": "_handle_manuscript_pdf",

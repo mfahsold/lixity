@@ -1650,3 +1650,42 @@ component offsets as Markdown bytes or as original decomposed Unicode offsets.
 This is an explicit opt-in semantic extension; existing pattern fields/overrides
 retain their contracts; models are explicit per-language opt-ins. Review identities include the model,
 runtime and composition policy. See [limits and measured errors](STABILITY.md#grammatical-tense).
+
+## Passage speech direction (current main, after 0.7.6)
+
+`lixity audio-direction inspect --project PATH [--manuscript PATH]` is read-only.
+It emits `lixity-audio-direction-view/1`: `source_path`, source/settings/direction
+SHA-256 snapshots, `passages` with exact `anchor`, `chapter`, spoken `text`, and
+`directions` with stable `id` and `stale`. Offsets are Unicode code points in
+that spoken projection, not Markdown bytes or browser UTF-16 positions.
+`save --input FILE` and `remove --id ID` require all three observed hashes via
+`--expected-source`, `--expected-settings`, `--expected-direction`. JSON input is
+bounded to 4 MiB; output contains private text. The ledger wire version is
+`lixity-audio-directions/1`, bounded to 4 MiB and 10,000 source-scoped entries.
+
+Direction object: `anchor={start_line,end_line,paragraph_sha256}`, `start=0`,
+nullable `end` (whole remaining passage), nullable saved `profile_id`,
+`instructions` (maximum 2,000 characters), `pause_before=0.0`, nullable
+`pause_after` (each explicit pause 0–10 seconds). Unknown fields, invalid ranges,
+combining/joiner splits, overlaps and missing profiles fail. Stale records are
+retained for explicit review and must not be silently remapped.
+
+Native `GET <prefix>/speech` adds `direction` with that view. POST
+`<prefix>/speech-direction` accepts the existing project/source binding,
+`expected_settings_sha256`, `expected_direction_sha256`, and exactly one of
+`direction` or `remove_id`; saving may also supply the observed original
+`replace_id` when adjusting range bounds. Guarded conflicts return 409, invalid requests 400.
+POST `<prefix>/speech-plan` accepts the existing render scope and returns
+`ok`, `plan`, `context` without inference, a job, audio caching or file creation.
+The plan uses `lixity-speech-plan/1`, with effective text/profile/pauses/anchor per
+segment and explicit model-interpreted/exact-silence/unsupported capabilities.
+`read-aloud --plan-only` exposes the same compiler.
+
+Render/plan accept `draft_direction` and optional original `draft_replace_id`
+only for preview, never chapter output;
+`ignore_direction` is an optional strict boolean for an explicit baseline.
+No browser-supplied synthesis text, filename or inference URL is accepted.
+Saving direction changes its ledger snapshot and makes pending/completed jobs
+from the old snapshot stale. Profile-only drafts and per-render hardware targets
+remain distinct. CLI `--no-direction` ignores saved direction for that render,
+without deleting it. No native SSML/IPA/control-tag support is implied.

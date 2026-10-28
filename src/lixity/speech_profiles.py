@@ -53,7 +53,7 @@ class AudioProfile(BaseModel):
     @field_validator("instructions")
     @classmethod
     def valid_instructions(cls, value: str) -> str:
-        return _text(value, empty=True)
+        return _text(value.replace("\r\n", " ").replace("\n", " "), empty=True)
 
     @field_validator("pronunciations")
     @classmethod

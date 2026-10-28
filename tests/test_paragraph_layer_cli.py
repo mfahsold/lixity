@@ -154,6 +154,30 @@ def test_human_zero_density_explains_unavailable_comparison(manuscript, capsys):
     assert "at least 3 measurable paragraphs" in output and "nonzero MAD" in output
 
 
+def test_german_layer_explanations_follow_analysis_language(manuscript, capsys):
+    status, output, errors = run(capsys, manuscript, "--language", "de", "--layer", "asl")
+    assert status == 0, errors
+    assert "Referenz:" in output and "Vergleich nicht verfügbar" in output
+    assert "vergleichbar" in output and "angezeigt" in output
+    assert "Reference:" not in output and "comparison unavailable" not in output
+
+
+def test_empty_selection_explains_actual_chapter_limits_and_quotes_command(manuscript, capsys):
+    import shlex
+
+    status, output, errors = run(
+        capsys, manuscript, "--language", "de", "--layer", "modal", "--only-notable",
+    )
+    assert status == 0, errors
+    assert "weniger als 3 messbaren Absätzen: 1" in output
+    assert "MAD = 0: 2" in output
+    command = output.split("Vollständige Belege: ")[1].strip()
+    arguments = shlex.split(command)
+    assert arguments[:3] == ["lixity", "profile", str(manuscript)]
+    assert "--only-notable" not in arguments
+    assert "--evidence" in arguments and "--json" in arguments
+
+
 @pytest.mark.parametrize("arguments,message", [
     (("--only-notable",), "requires --layer"),
     (("--only-notable", "--json"), "requires --layer"),

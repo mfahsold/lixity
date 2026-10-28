@@ -368,3 +368,43 @@ voice = "de_DE-thorsten-medium"
     assert response.status == 200, response.body
     assert read_explicit_project_config(source.parent)["audio"] == legacy_audio
     assert source.read_bytes() == source_before
+
+
+def test_native_direction_save_plan_and_stale_snapshot(speech_server):
+    port, source, handler, observed = speech_server
+    bound = context(source, handler)
+    data = json.loads(send(port, '/api/speech?' + urlencode(bound)).body)
+    state = data['direction']
+    entry = {'anchor': state['passages'][0]['anchor'], 'instructions': 'Restrained tension.'}
+    payload = {**bound, 'expected_settings_sha256':state['settings_sha256'],
+               'expected_direction_sha256':state['direction_sha256'], 'direction':entry}
+    saved = send(port,'/api/speech-direction',payload=payload)
+    assert saved.status == 200, saved.body
+    assert send(port,'/api/speech-direction',payload=payload).status == 409
+    planned = send(port,'/api/speech-plan',payload={**bound,'chapter':1,'mode':'chapter'})
+    assert planned.status == 200, planned.body
+    plan = json.loads(planned.body)['plan']
+    assert any(row['profile']['instructions']=='Restrained tension.' for row in plan['segments'])
+    assert observed == []
+    assert source.read_text().startswith('## First')
+
+
+def test_saving_direction_invalidates_a_completed_download(speech_server):
+    port, source, handler, _observed = speech_server
+    bound=context(source,handler)
+    response=send(port,'/api/speech-render',payload={**bound,'mode':'preview','chapter':1})
+    identifier=json.loads(response.body)['job']['id']
+    query=urlencode({**bound,'id':identifier})
+    for _ in range(100):
+        status=json.loads(send(port,'/api/speech-job?'+query).body)['job']
+        if status['state']=='ready':
+            break
+        time.sleep(.01)
+    assert send(port,'/api/speech-audio?'+query).status==200
+    state=json.loads(send(port,'/api/speech?'+urlencode(bound)).body)['direction']
+    saved=send(port,'/api/speech-direction',payload={**bound,
+        'expected_settings_sha256':state['settings_sha256'],
+        'expected_direction_sha256':state['direction_sha256'],
+        'direction':{'anchor':state['passages'][0]['anchor'],'instructions':'Calm.'}})
+    assert saved.status==200
+    assert send(port,'/api/speech-audio?'+query).status!=200

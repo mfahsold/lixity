@@ -126,3 +126,10 @@ written commercial license. See [licensing](https://mfahsold.github.io/lixity/LI
 [source](https://github.com/mfahsold/lixity),
 [contributing](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md) and
 [security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md).
+
+Current main after 0.7.6: authored passage direction is separate project-local
+metadata in `.lixity/audio-directions.json`. `audio-direction inspect` is read-only;
+save/remove require source/settings/ledger snapshots. `read-aloud --plan-only`
+and native preview inspection expose the shared effective speech plan without
+inference. Qwen interprets local direction; Lixity generates exact silence.
+This is not SSML/IPA support, native inline emotion tags or a new audio backend.

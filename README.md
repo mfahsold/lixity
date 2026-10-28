@@ -173,7 +173,7 @@ files nor establish that an output matches the current manuscript; see
 [project inspection](https://mfahsold.github.io/lixity/USAGE.md#inspect-project-structure).
 
 The development audio workflow shares saved project voice profiles between
-`lixity read-aloud` and the native preview/export dialog. Optional Qwen3-TTS 1.7B
+`lixity read-aloud` and the native preview/export dialog. Current main adds separately saved passage direction, source-bound text ranges, explicit silence and a shared inspectable CLI/UI speech plan; this addition is not part of the published 0.7.6 package. Optional Qwen3-TTS 1.7B
 CustomVoice provides preset voices and explicit style instructions through a
 local worker or a configured Jetson over SSH. Piper is removed; existing profiles
 require an explicit backed-up `audio-migrate` replacement. Select the

@@ -748,6 +748,7 @@
     if (chapter) {
       var search = document.getElementById("text-search");
       if (search && search.value) document.getElementById("text-search-clear").click();
+      event.target.dataset.currentChapter = chapter.id;
       scrollAndFlash(chapter);
       event.target.value = "";
     }
@@ -946,6 +947,8 @@
   function rememberReadingPassage(panel, selectedRange) {
     var anchor = panel ? {panel: panel, top: panel.getBoundingClientRect().top} : capture();
     if (!anchor) return;
+    var chapterControl = document.getElementById("reader-chapter");
+    if (chapterControl && anchor.panel.closest(".chapter")) chapterControl.dataset.currentChapter = anchor.panel.closest(".chapter").id;
     var range = selectedRange || rangeFor(anchor.panel), offsets = null;
     if (range) {
       if (selectedRange && getSelection().isCollapsed) { getSelection().removeAllRanges(); getSelection().addRange(selectedRange); }

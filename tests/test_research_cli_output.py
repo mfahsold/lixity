@@ -43,7 +43,7 @@ class TestResearchCliOutput(unittest.TestCase):
                     for name in (command["name"], *command.get("aliases", []))}
         for shell, pattern in (
             ("bash", r'research\)\s+COMPREPLY=\( \$\(compgen -W "([^"]+)"'),
-            ("zsh", r"'1:action:\(([^)]*)\)'"),
+            ("zsh", r"research\)[\s\S]*?'1:action:\(([^)]*)\)'"),
         ):
             with self.subTest(shell=shell), patch("lixity.cli.load_project_config", return_value={}):
                 output = io.StringIO()

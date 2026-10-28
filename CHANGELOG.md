@@ -7,6 +7,21 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- Model-independent project-local passage direction with exact paragraph/range
+  anchors, saved voice selection, free-form delivery, explicit PCM pauses,
+  stale/overlap guards and idempotent atomic saves. CLI `audio-direction`,
+  `read-aloud --plan-only` and the seven-language native Audio dialog share one
+  planner for previews and chapter renders; Qwen retains its existing full model.
+
+### Changed
+- German paragraph-layer reports localize their explanations. Empty selections
+  explain actual chapter comparison limits and show a shell-quoted command for
+  full evidence; versioned JSON contracts and measurements remain unchanged.
+- Audio extraction retains full-source line identities and configured chapter
+  boundaries. Direction is resolved before pronunciation replacement and input
+  segmentation; multiline delivery instructions normalize to single-line text.
+
 ## [0.7.6] - 2026-10-27
 
 ### Added

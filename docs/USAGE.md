@@ -963,7 +963,11 @@ Choices are `asl`, `function`, `dialogue`, `filter`, `modal`, `nominal` and
 `passive`. Human output lists source-file/line anchors, raw values/units and local
 z. `--only-notable` filters output after computing all chapter references; it
 requires `--layer`. The summary keeps full profiled/comparable/notable counts
-separate from rows shown. Configured manuscript omission follows the existing
+separate from rows shown. On current main after v0.7.6, empty human selections
+explain the actual chapter limits (too few measurable paragraphs, zero MAD or no
+measurable values) and provide a shell-quoted full-evidence command. German
+analysis reports also use German explanations; machine identifiers remain stable.
+Configured manuscript omission follows the existing
 [project resolver](#default-manuscript). Without `--layer`, profile retains its
 existing JSON v2 output, including when `--json` is omitted.
 
@@ -1470,6 +1474,83 @@ Explicit style instructions, structural pauses and pronunciation settings are
 shared by CLI and UI. Base voice cloning and VoiceDesign are not implemented.
 Model capabilities determine the available controls; there is no automatic
 backend fallback.
+
+### Passage direction (current main; after 0.7.6)
+
+The native Audio dialog can attach an author's direction to an exact passage or
+selected range. Open Audio from the manuscript or Project settings, choose the
+passage, and select text in the read-only **Spoken text** field for a smaller
+range. With no selection, **Use selected text / whole passage** restores the
+whole passage. Choose a saved voice profile or inherit the current narrator,
+write local direction, and optionally set silence before/after in seconds.
+The calm/tension/whisper choices are editable English prompt starting points,
+not measured emotion controls. **Inspect preview plan** shows the actual spoken
+text, effective preset, combined instructions and silence before calling a model.
+Preview uses the draft; chapter generation requires **Save passage direction**.
+Profile settings and passage direction have separate save actions.
+
+Direction is retained in `.lixity/audio-directions.json`, separately from both
+manuscript prose and `lixity.toml`. Each record binds the project-relative source,
+its exact paragraph line/hash identity and a Unicode-code-point range in the
+advertised spoken projection. Repeated wording at another location is a different
+passage. Changed or moved paragraphs are preserved as stale records and require
+explicit review/removal; they are never automatically reassigned. Overlapping
+ranges and missing saved profiles fail before synthesis. The native dialog lists
+stale records with explicit removal controls. Saved direction is private author
+metadata and must be included in project backups when it should survive a move.
+
+The shared planner first resolves ranges, then applies the selected profile's
+literal pronunciation substitutions, then splits at direction and transport
+boundaries. It never interprets bracketed manuscript text as acting instructions.
+Longer pronunciation keys win; matching is case-sensitive, can match within a
+word and is a single non-recursive replacement pass. A substitution spanning two
+direction ranges does not match across their boundary.
+
+A directed range uses its explicitly selected saved profile, otherwise the
+invocation's current profile. Its local direction is appended to that profile's
+instructions. CLI voice/language/instruction overrides affect the invocation's
+default profile; explicitly referenced profiles keep their own settings. Newlines
+in instructions become spaces. Silence after a range is inherited at paragraph
+end or zero inside the paragraph unless supplied explicitly; supplied silence
+replaces that boundary's default rather than adding a second pause. Pauses are
+inserted as PCM silence by Lixity, not requested probabilistically from Qwen.
+
+This data model takes separation of voice, pronunciation and pauses from SSML,
+without claiming SSML compliance. Qwen receives ordinary `text`, `speaker`,
+`language` and a separate `instruct`. Tone, emphasis and pace are model-interpreted;
+there is no calibrated emotion intensity, exact speaking-rate/pitch control,
+IPA phoneme input, guaranteed nonverbal effect or automatic character assignment.
+Very short directed spans can sound disconnected. No cross-segment dramatic
+memory or seamless multi-character performance is promised. Audio must be heard
+and checked for word fidelity, pronunciation, voice continuity and delivery.
+
+CLI observation and plan inspection need no running worker:
+
+```bash
+lixity audio-direction inspect --project ./novel
+lixity read-aloud --project ./novel --chapter 1 --plan-only
+lixity read-aloud --project ./novel --chapter 1 --no-direction --fresh-audio -o neutral.wav
+```
+
+`audio-direction inspect` returns paragraph anchors/spoken text, saved ranges,
+stale flags, and the `source_sha256`, `settings_sha256`, `direction_sha256`
+snapshots. Its JSON and plan output contain private prose and instructions.
+To save, put one direction object in a private JSON file: `anchor` copied exactly
+from inspection, optional code-point `start`/`end` (default whole paragraph),
+optional `profile_id`, `instructions`, `pause_before`, and nullable `pause_after`.
+`audio-direction save --project ./novel --input direction.json` additionally
+requires `--expected-source`, `--expected-settings`, `--expected-direction` with
+the three observed hashes. When changing a saved range’s bounds, pass its original
+`--replace-id ID`; the original range is replaced under the same snapshot guards.
+Removal uses `audio-direction remove --project ./novel
+--id ID` with the same guards. Concurrent source/settings/direction changes reject
+writes instead of overwriting another edit. Identical saves are idempotent.
+`--no-direction` is an explicit neutral baseline for that invocation, not deletion.
+Saved offsets use the marker-stripped spoken projection. `--keep-markers` is
+rejected when retaining editorial markers would shift a directed passage; use
+`--no-direction` for that deliberate alternative.
+Cache reuse keys include the effective text/profile instructions; edited direction
+cannot accidentally reuse audio synthesized with different instructions.
 
 Piper has been removed. Existing saved Piper profiles fail with migration
 guidance; a Qwen voice is not an exact replacement for their timbre or precise

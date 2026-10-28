@@ -14,6 +14,7 @@ from typing import Any
 from .markdown_parser import split_chapters
 from .pipeline import document_paragraph_texts, paragraph_identity, resolve_document_config
 from .speech import SpeechCancelled, extract_audio_cues, render_speech_audio
+from .speech_direction import SpeechSegment
 from .speech_profiles import AudioProfile
 
 MAX_AUDIO_BYTES = 200 * 1024 * 1024
@@ -84,6 +85,7 @@ class _Job:
     cache_dir: Path | None = None
     fresh_audio: bool = False
     target: str = "local"
+    plan: list[SpeechSegment] | None = None
     state: str = "pending"
     done: int = 0
     total: int = 0
@@ -126,6 +128,7 @@ class SpeechJobs:
         cache_dir: Path | None = None,
         fresh_audio: bool = False,
         target: str = "local",
+        plan: list[SpeechSegment] | None = None,
     ) -> dict[str, Any]:
         profile = AudioProfile.model_validate(profile.model_dump())
         self.cancel_stale()
@@ -140,6 +143,7 @@ class SpeechJobs:
             self._prune()
             storage = tempfile.TemporaryDirectory(prefix="lixity-speech-job-")
             job = _Job(token_hex(16), context_key, dict(context), storage, valid, cache_dir, fresh_audio, target)
+            job.plan = [SpeechSegment(p.text, AudioProfile.model_validate(p.profile.model_dump()), p.pause_before, p.pause_after, dict(p.anchor) if p.anchor else None) for p in plan] if plan is not None else None
             self._jobs[job.identifier] = job
             source = Path(storage.name) / "source.md"
             try:
@@ -176,6 +180,8 @@ class SpeechJobs:
                 "profile": profile, "progress": progress, "cancelled": job.cancel.is_set,
                 "max_audio_bytes": MAX_AUDIO_BYTES, "target": job.target,
             }
+            if job.plan is not None:
+                options["plan"] = job.plan
             if job.cache_dir is not None:
                 options["cache_dir"] = job.cache_dir
                 options["fresh_audio"] = job.fresh_audio

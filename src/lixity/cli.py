@@ -90,6 +90,29 @@ _META = {
 # LIXITY_LANG=de.
 CLI_TEXTS: dict[str, dict[str, str]] = {
     "en": {
+        "layer_reference": 'Reference: all measurable paragraphs within each chapter; median/MAD robust z. Requires at least 3 measurable paragraphs and nonzero MAD.',
+        "layer_notable": 'Notable: |round(z, 2)| >= {cutoff}; descriptive heuristic for human review.',
+        "layer_counts": '{total_count} total · {comparable_count} comparable · {notable_count} notable · {selected_count} shown',
+        "layer_unavailable": 'comparison unavailable',
+        "layer_local": 'local z {z}',
+        "layer_flag": 'notable',
+        "layer_empty": 'No paragraphs selected. This is not a finding that the text has no issues.',
+        "layer_empty_source": 'No paragraphs available.',
+        "layer_empty_cutoff": 'No comparable paragraph reaches the selected cutoff.',
+        "layer_short": 'Chapters with fewer than 3 measurable paragraphs: {count}',
+        "layer_constant": 'Chapters with MAD = 0: {count}',
+        "layer_unmeasured": 'Chapters without measurable values: {count}',
+        "layer_full": 'Full evidence: {command}',
+        "layer_evidence": 'Evidence: {status} · {mapped}/{count} {unit} mapped{reason}',
+        "layer_available": 'available',
+        "layer_partial": 'partial',
+        "layer_missing": 'unavailable',
+        "layer_sentence": 'sentences',
+        "layer_word": 'word cues',
+        "layer_pattern": 'pattern matches',
+        "layer_dialogue": 'quoted words',
+        "layer_words": 'words',
+        "layer_more": 'further spans; use --json for all offsets',
         "about_title": "lixity {version} – quantitative text linguistics & stylometry",
         "about_languages": "Languages: {languages}",
         "about_features": "Features ({count}):",
@@ -191,6 +214,29 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "show_title": "Title",
     },
     "de": {
+        "layer_reference": 'Referenz: alle messbaren Absätze innerhalb jedes Kapitels; robuster z-Wert aus Median/MAD. Mindestens 3 messbare Absätze und MAD größer als 0 erforderlich.',
+        "layer_notable": 'Auffällig: |round(z, 2)| >= {cutoff}; beschreibende Heuristik zur menschlichen Prüfung.',
+        "layer_counts": '{total_count} gesamt · {comparable_count} vergleichbar · {notable_count} auffällig · {selected_count} angezeigt',
+        "layer_unavailable": 'Vergleich nicht verfügbar',
+        "layer_local": 'lokaler z-Wert {z}',
+        "layer_flag": 'auffällig',
+        "layer_empty": 'Keine Absätze ausgewählt. Das bedeutet nicht, dass der Text keine Probleme enthält.',
+        "layer_empty_source": 'Keine Absätze vorhanden.',
+        "layer_empty_cutoff": 'Kein vergleichbarer Absatz erreicht den gewählten Schwellenwert.',
+        "layer_short": 'Kapitel mit weniger als 3 messbaren Absätzen: {count}',
+        "layer_constant": 'Kapitel mit MAD = 0: {count}',
+        "layer_unmeasured": 'Kapitel ohne messbare Werte: {count}',
+        "layer_full": 'Vollständige Belege: {command}',
+        "layer_evidence": 'Belege: {status} · {mapped}/{count} {unit} zugeordnet{reason}',
+        "layer_available": 'verfügbar',
+        "layer_partial": 'teilweise',
+        "layer_missing": 'nicht verfügbar',
+        "layer_sentence": 'Sätze',
+        "layer_word": 'Wortbelege',
+        "layer_pattern": 'Mustertreffer',
+        "layer_dialogue": 'Wörter in Anführungszeichen',
+        "layer_words": 'Wörter',
+        "layer_more": 'weitere Bereiche; --json zeigt alle Positionen',
         "about_title": "lixity {version} – quantitative Textlinguistik & Stilometrie",
         "about_languages": "Sprachen: {languages}",
         "about_features": "Merkmale ({count}):",
@@ -349,6 +395,7 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("export-site", "Export a static read-only project website"),
     ("pdf", "Compose a PDF for editing, reading, submission or analysis"),
     ("read-aloud", "Create a local listening copy with project voice profiles"),
+    ("audio-direction", "Inspect and save project-local passage speech direction (JSON)"),
     ("audio-migrate", "Preview or apply explicit backed-up Qwen profile replacements (JSON)"),
     ("serve", "Run local HTTP development server and interactive dashboard"),
     ("build", "Idempotent workspace build of analysis exports and artifact archive"),
@@ -385,9 +432,18 @@ _lixity_complete() {
                 -o|--output) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
                 --profile|--instructions|--chapter) ;;
                 *)
-                    COMPREPLY=( $(compgen -W "--help --project -o --output --chapter --language --profile --instructions --voice --speech-target --no-audio-cache --fresh-audio --keep-markers" -- "$cur") )
+                    COMPREPLY=( $(compgen -W "--help --project -o --output --chapter --language --profile --instructions --voice --speech-target --no-audio-cache --fresh-audio --keep-markers --plan-only --no-direction" -- "$cur") )
                     COMPREPLY+=( $(compgen -f -- "$cur") )
                     ;;
+            esac
+            return 0
+            ;;
+        audio-direction)
+            case "$prev" in
+                --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
+                --input|--manuscript) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
+                --id|--replace-id|--expected-source|--expected-settings|--expected-direction) ;;
+                *) COMPREPLY=( $(compgen -W "inspect save remove --help --project --manuscript --input --id --replace-id --expected-source --expected-settings --expected-direction" -- "$cur") ) ;;
             esac
             return 0
             ;;
@@ -545,9 +601,24 @@ __LIXITY_ZSH_COMMANDS__
             '--instructions[Explicit Qwen delivery instructions]:text:' \
             '--voice[Qwen preset]:voice:(Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee)' \
             '--speech-target[Execution target]:target:(local jetson)' \
+            '--plan-only[Inspect the effective speech plan without synthesis]' \
+            '--no-direction[Explicitly ignore saved passage direction]' \
             '--no-audio-cache[Do not read or retain reusable audio segments]' \
             '--fresh-audio[Recompute completed audio segments]' \
             '--keep-markers[Read editorial markers aloud]'
+          ;;
+        audio-direction)
+          _arguments \
+            '1:action:(inspect save remove)' \
+            '--help[Help]' \
+            '--project[Explicit project root]:directory:_files -/' \
+            '--manuscript[Selected manuscript]:file:_files' \
+            '--input[Direction JSON file]:file:_files' \
+            '--id[Observed direction ID]:id:' \
+            '--replace-id[Original range ID for bounds edits]:id:' \
+            '--expected-source[Observed manuscript hash]:sha256:' \
+            '--expected-settings[Observed settings hash]:sha256:' \
+            '--expected-direction[Observed direction state hash]:sha256:'
           ;;
         audio-migrate)
           _arguments \
@@ -742,30 +813,57 @@ def _print_paragraph_layer(
 ) -> None:
     """Print measurements and anchors, with literal snippets only when requested."""
     from .format import num, safe_text
-    from .style_fingerprint import FEATURE_UNITS, FEATURES
+    from .style_fingerprint import FEATURE_UNITS, FEATURES, paragraph_layer_projection
+
+    pack = CLI_TEXTS.get(language_key, CLI_TEXTS["en"])
+
+    def message(key: str, **values: object) -> str:
+        return pack[key].format(**values)
 
     feature = report["feature"]
     label_key = next(label for field, label, _unit in FEATURES if field == feature)
     unit = FEATURE_UNITS.get(language_key, {}).get(feature, report["unit"])
     print(f"{labels.get(label_key, feature)} ({unit})")
-    print(
-        "Reference: all measurable paragraphs within each chapter; median/MAD robust z. "
-        "Requires at least 3 measurable paragraphs and nonzero MAD."
-    )
+    print(message("layer_reference"))
     cutoff = num(report["comparison"]["notable_abs_z"], language_key, 2)
-    print(f"Notable: |round(z, 2)| >= {cutoff}; descriptive heuristic for human review.")
+    print(message("layer_notable", cutoff=cutoff))
     counts = report["selection"]
-    print(
-        f"{counts['total_count']} total · {counts['comparable_count']} comparable · "
-        f"{counts['notable_count']} notable · {counts['selected_count']} shown"
-    )
+    print(message("layer_counts", **counts))
+    if counts["selected_count"] == 0:
+        print(message("layer_empty"))
+        if counts["total_count"] == 0:
+            print(message("layer_empty_source"))
+        if counts["comparable_count"]:
+            print(message("layer_empty_cutoff"))
+        if paragraphs:
+            rows = paragraph_layer_projection(paragraphs, report["layer"])["paragraphs"]
+            chapters: dict[int, list[dict[str, Any]]] = {}
+            for row in rows:
+                chapters.setdefault(row["chapter_num"], []).append(row)
+            reasons = {"layer_short": 0, "layer_constant": 0, "layer_unmeasured": 0}
+            for chapter in chapters.values():
+                measured = [row for row in chapter if row["value"] is not None]
+                if not measured:
+                    reasons["layer_unmeasured"] += 1
+                elif len(measured) < report["comparison"]["minimum_paragraphs"]:
+                    reasons["layer_short"] += 1
+                elif not any(row["comparable"] for row in measured):
+                    reasons["layer_constant"] += 1
+            for reason_key, count in reasons.items():
+                if count:
+                    print(message(reason_key, count=count))
+        from shlex import join
+
+        command = join(["lixity", "profile", source, "--language", language_key,
+                        "--layer", report["layer"], "--evidence", "--json"])
+        print(message("layer_full", command=safe_text(command)))
     for row in report["paragraphs"]:
         value = "—" if row["value"] is None else num(row["value"], language_key, 2)
         comparison = (
-            "comparison unavailable" if row["z"] is None
-            else f"local z {num(row['z'], language_key, 2, signed=True)}"
+            message("layer_unavailable") if row["z"] is None
+            else message("layer_local", z=num(row["z"], language_key, 2, signed=True))
         )
-        notable = " · notable" if row["notable"] is True else ""
+        notable = " · " + message("layer_flag") if row["notable"] is True else ""
         anchor = safe_text(f"{source}:{row['start_line']}-{row['end_line']}")
         title = safe_text(row["chapter_title"])
         print(
@@ -775,18 +873,20 @@ def _print_paragraph_layer(
         if paragraphs is not None and "evidence" in row:
             evidence = row["evidence"]["layers"][report["layer"]]
             reason = f" · {evidence['reason']}" if evidence.get("reason") else ""
-            evidence_unit = {"sentence": "sentences", "word": "word cues",
-                             "pattern": "pattern matches", "dialogue": "quoted words"}[evidence["kind"]]
-            print(f"  Evidence: {evidence['status']} · "
-                  f"{evidence['mapped_count']}/{evidence['count']} {evidence_unit} mapped{reason}")
+            evidence_unit = message("layer_" + evidence["kind"])
+            status_key = {"available": "layer_available", "partial": "layer_partial",
+                          "unavailable": "layer_missing"}[evidence["status"]]
+            print("  " + message("layer_evidence", status=message(status_key),
+                                 mapped=evidence["mapped_count"], count=evidence["count"],
+                                 unit=evidence_unit, reason=reason))
             for span in evidence["spans"][:8]:
                 snippet = paragraphs[row["index"]].text[span["start"]:span["end"]]
                 snippet = snippet[:120] + ("…" if len(snippet) > 120 else "")
-                sentence_words = f" · {span['words']} words" if "words" in span else ""
+                sentence_words = f" · {span['words']} {message('layer_words')}" if "words" in span else ""
                 print(f"    [{span['start']}:{span['end']}] x{span['count']}{sentence_words} "
                       f"{safe_text(snippet)}")
             if len(evidence["spans"]) > 8:
-                print(f"    … {len(evidence['spans']) - 8} further spans; use --json for all offsets")
+                print(f"    … {len(evidence['spans']) - 8} {message('layer_more')}")
 
 
 def _print_about_json(section: str | None = None) -> None:
@@ -1197,9 +1297,11 @@ def _cmd_pdf(args: argparse.Namespace) -> int:
 
 def _cmd_read_aloud(args: argparse.Namespace) -> int:
     """Create a local manuscript listening copy with a validated project profile."""
+    from pathlib import Path
+
     from .speech import render_speech_audio
     from .speech_cache import project_audio_cache
-    from .speech_profiles import AudioProfile, resolve_audio_profile
+    from .speech_profiles import AudioProfile, parse_audio_settings, resolve_audio_profile
 
     workspace = args._workspace
     output = args.output or os.path.join(
@@ -1221,6 +1323,20 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
             if value is not None:
                 changes[name] = value
         profile = AudioProfile.model_validate(changes)
+        from .speech_direction import (
+            build_speech_plan,
+            direction_state,
+            plan_json,
+            saved_directions,
+        )
+        view = None if args.no_direction else direction_state(workspace.root, workspace.manuscript, language=profile.language)
+        profiles = parse_audio_settings(args._project_config.get("audio"), language=profile.language).profiles
+        plan = build_speech_plan(Path(workspace.manuscript).read_text(encoding="utf-8"), profile,
+            directions=saved_directions(view) if view is not None else [], profiles=profiles,
+            chapter=args.chapter, project_config=args._project_config, skip_markers=not args.keep_markers)
+        if args.plan_only:
+            print(_json(plan_json(plan), indent=True))
+            return EXIT_OK
         out_path = render_speech_audio(
             manuscript_path=workspace.manuscript,
             output_path=output,
@@ -1231,6 +1347,7 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
             cache_dir=project_audio_cache(workspace.root) if not args.no_audio_cache else None,
             fresh_audio=args.fresh_audio,
             target=args.speech_target,
+            plan=plan,
         )
     except (OSError, ValueError, RuntimeError, FileNotFoundError) as exc:
         print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
@@ -1574,7 +1691,7 @@ def _cmd_analysis_report(
                 print(_json(payload, indent=True))
             else:
                 _print_paragraph_layer(payload, args.file, resolved.key, resolved.labels,
-                                       paragraphs=paragraphs if evidence is not None else None)
+                                       paragraphs=paragraphs)
             return EXIT_OK
         payload = _meta_payload(
             resolved.key,
@@ -1625,6 +1742,10 @@ def _main(argv: list[str] | None = None) -> int:
             configure_service(sub.add_parser(name, help=help_text))
             continue
         p = sub.add_parser(name, help=help_text, description=help_text)
+        if name == "audio-direction":
+            from .speech_direction_cli import configure
+            configure(p)
+            continue
         if name == "audio-migrate":
             p.add_argument("--project", required=True, help="Explicit project root")
             p.add_argument("--replace", action="append", default=[], metavar="PROFILE=VOICE",
@@ -1812,6 +1933,8 @@ def _main(argv: list[str] | None = None) -> int:
             p.add_argument("--chapter", type=int, default=None, help="Synthesize only a specific 1-based chapter number")
             p.add_argument("--language", default=None, help="Speech language code (default: saved profile, then project setting)")
             p.add_argument("--profile", default=None, help="Saved project audio profile (default: selected project profile)")
+            p.add_argument("--plan-only", action="store_true", help="Inspect effective speech text and direction as JSON; no synthesis or output")
+            p.add_argument("--no-direction", action="store_true", help="Explicitly ignore saved passage direction for this invocation")
             p.add_argument("--instructions", default=None, help="Explicit Qwen delivery instructions")
             p.add_argument("--voice", default=None, help="Override the selected profile voice; model-specific validation applies")
             p.add_argument("--speech-target", choices=("local", "jetson"), default="local", help="Execution target for this run (default: local); Jetson requires its configured SSH forward")
@@ -2020,6 +2143,14 @@ def _main(argv: list[str] | None = None) -> int:
         # argparse choices already rejected unknown shells; keep a defensive path
         print(f"{_m('err_prefix')} {_m('err_shell', shell=args.shell)}", file=sys.stderr)
         return EXIT_ERROR
+    if args.command == "audio-direction":
+        from .speech_direction_cli import run
+        try:
+            print(_json(run(args), indent=True))
+            return EXIT_OK
+        except (OSError, ValueError, RuntimeError) as exc:
+            print(_json({"ok": False, "message": str(exc)}, indent=True))
+            return EXIT_ERROR
     if args.command == "audio-migrate":
         from .speech_migration import prepare_audio_migration
 

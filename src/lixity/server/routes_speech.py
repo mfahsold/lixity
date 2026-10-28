@@ -14,6 +14,16 @@ from ..io import FileUtils
 from ..markdown_parser import split_chapters
 from ..pipeline import document_paragraph_texts, resolve_document_config
 from ..speech_cache import project_audio_cache
+from ..speech_direction import (
+    Direction,
+    build_speech_plan,
+    direction_id,
+    direction_snapshot,
+    direction_state,
+    plan_json,
+    save_direction,
+    saved_directions,
+)
 from ..speech_jobs import SpeechJobs, prepare_speech_source
 from ..speech_profiles import (
     AudioProfile,
@@ -79,6 +89,13 @@ class SpeechRoutesMixin(ResponseMixin):
         )
         self._json({"ok": False, "message": str(exc)}, code)
 
+    @classmethod
+    def _direction_view(cls) -> dict[str, Any]:
+        root, source = cls.get_author_project_root(), cls.source_input
+        if root is None or source is None:
+            raise ValueError("Open a manuscript project before using direction")
+        return direction_state(root, source, language=cls.language)
+
     def _handle_speech(self, _query: Any = None) -> None:
         try:
             query = self._speech_query()
@@ -118,6 +135,7 @@ class SpeechRoutesMixin(ResponseMixin):
                         "configuration_error": configuration_error,
                         "requires_migration": requires_audio_migration(config.get("audio")),
                         "capabilities": audio_capabilities(),
+                        "direction": self._direction_view(),
                         "chapters": chapters,
                         "project_token": query["project_token"],
                         "source_sha256": digest,
@@ -126,7 +144,33 @@ class SpeechRoutesMixin(ResponseMixin):
         except (OSError, ValueError, RuntimeError, UserWarning) as exc:
             self._speech_error(exc)
 
-    def _handle_speech_render(self, payload: dict[str, Any]) -> None:
+    def _handle_speech_direction(self, payload: dict[str, Any]) -> None:
+        try:
+            allowed = {"project_token", "source_sha256", "expected_settings_sha256", "expected_direction_sha256", "direction", "remove_id", "replace_id"}
+            if set(payload) - allowed or not {"project_token", "source_sha256", "expected_settings_sha256", "expected_direction_sha256"} <= set(payload):
+                raise ValueError("Supply the selected direction and its observed snapshots")
+            with self._workspace_lock:
+                self._speech_bound(payload)
+                root, source = self.get_author_project_root(), self.source_input
+                if root is None or source is None:
+                    raise ValueError("Open a manuscript project before saving direction")
+                result = save_direction(root, source, payload.get("direction"),
+                    expected_source_sha256=payload["source_sha256"],
+                    expected_settings_sha256=payload["expected_settings_sha256"],
+                    expected_direction_sha256=payload["expected_direction_sha256"],
+                    language=self.language, remove_id=payload.get("remove_id"), replace_id=payload.get("replace_id"))
+            self._speech_manager().cancel_stale()
+            self._json({"ok": True, "direction": result})
+        except (OSError, ValueError, RuntimeError, UserWarning) as exc:
+            from ..research.repository import ResearchConflictError
+            if isinstance(exc, ResearchConflictError):
+                exc = _SpeechStale(str(exc))
+            self._speech_error(exc)
+
+    def _handle_speech_plan(self, payload: dict[str, Any]) -> None:
+        self._handle_speech_render(payload, plan_only=True)
+
+    def _handle_speech_render(self, payload: dict[str, Any], *, plan_only: bool = False) -> None:
         try:
             allowed = {
                 "project_token",
@@ -138,6 +182,9 @@ class SpeechRoutesMixin(ResponseMixin):
                 "fresh_audio",
                 "target",
                 "paragraph",
+                "draft_direction",
+                "draft_replace_id",
+                "ignore_direction",
             }
             if set(payload) - allowed or not {
                 "project_token",
@@ -174,6 +221,38 @@ class SpeechRoutesMixin(ResponseMixin):
                     paragraph=payload.get("paragraph"),
                     project_config=settings,
                 )
+                view = self._direction_view()
+                if type(payload.get("ignore_direction", False)) is not bool:
+                    raise ValueError("Ignore direction must be a boolean")
+                directions = [] if payload.get("ignore_direction") else saved_directions(view)
+                if "draft_replace_id" in payload and "draft_direction" not in payload:
+                    raise ValueError("Draft replacement requires a direction")
+                if "draft_direction" in payload:
+                    if payload["mode"] != "preview":
+                        raise ValueError("Save passage direction before rendering a chapter")
+                    draft = Direction.model_validate(payload["draft_direction"])
+                    replacement = payload.get("draft_replace_id", direction_id(draft))
+                    if "draft_replace_id" in payload and not any(direction_id(d) == replacement for d in directions):
+                        raise ValueError("Choose an existing direction to replace")
+                    directions = [d for d in directions if direction_id(d) != replacement] + [draft]
+                profiles = parse_audio_settings(settings.get("audio"), language=self.language).profiles
+                plan = build_speech_plan(text, profile, directions=directions, profiles=profiles,
+                                         chapter=payload["chapter"], project_config=settings)
+                if payload["mode"] == "preview":
+                    selected = payload.get("paragraph")
+                    if selected:
+                        plan = [row for row in plan if row.anchor == selected]
+                        if not plan:
+                            raise ValueError("Choose a displayed spoken paragraph")
+                        if sum(len(row.text) for row in plan) > 6000:
+                            raise ValueError("Passage preview exceeds 6000 characters; render the chapter")
+                        context["truncated"] = False
+                    else:
+                        plan = next(([row] for row in plan if row.anchor), plan[:1])
+                context["direction_sha256"] = view["direction_sha256"]
+                if plan_only:
+                    self._json({"ok": True, "plan": plan_json(plan), "context": context})
+                    return
                 binding = {name: payload[name] for name in ("project_token", "source_sha256")}
                 handler = type(self)
                 registry = getattr(self.server, "workspaces", None)
@@ -194,6 +273,9 @@ class SpeechRoutesMixin(ResponseMixin):
                                 or not handler.source_input
                             ):
                                 return False
+                            root = handler.get_author_project_root()
+                            if root is None or direction_snapshot(root) != view["direction_sha256"]:
+                                return False
                             return bool(
                                 FileUtils.read_source_snapshot(handler.source_input)[1]
                                 == binding["source_sha256"]
@@ -206,7 +288,7 @@ class SpeechRoutesMixin(ResponseMixin):
                              profile.engine == "qwen3" and payload["mode"] == "chapter" else None)
             job = self._speech_manager().start(key, prepared, profile, context, valid, cache_dir=cache_dir,
                                                fresh_audio=payload.get("fresh_audio", False),
-                                               target=payload.get("target", "local"))
+                                               target=payload.get("target", "local"), plan=plan)
             self._json({"ok": True, "job": job}, 202)
         except (OSError, TypeError, ValueError, RuntimeError, UserWarning) as exc:
             self._speech_error(exc)

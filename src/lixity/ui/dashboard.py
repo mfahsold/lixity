@@ -142,7 +142,7 @@ _JS_FILES = (
     "analysis-review.js",
     "reader-publication.js",
 )
-_NATIVE_JS_FILES = ("speech.js",)
+_NATIVE_JS_FILES = ("speech-direction.js", "speech.js",)
 # The passage inspector requires the workspace shell; classic reports have none.
 _REPORT_JS_FILES = tuple(name for name in _JS_FILES if name != "manuscript-reader.js")
 

@@ -18,15 +18,17 @@ import tempfile
 import textwrap
 import unicodedata
 import wave
-from collections.abc import Callable
-from dataclasses import dataclass, replace
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .markdown_parser import counting_inline_text, parse_markdown_blocks, split_chapters
-from .models import CorpusConfig
 from .sentences import split_sentences
 from .speech_profiles import AudioProfile, resolve_audio_profile
+
+if TYPE_CHECKING:
+    from .speech_direction import SpeechSegment
 
 MAX_SEGMENT_CHARS = 600
 # Conservative per-invocation bound; this does not interrupt in-process inference.
@@ -49,6 +51,7 @@ class AudioCue:
     chapter_num: int = 0
     pause_after: float = 0.45
     join_before: str = " "
+    anchor: dict[str, Any] | None = None
 
 
 
@@ -105,10 +108,14 @@ def extract_audio_cues(
     language: str = "en",
     chapter_filter: int | str | None = None,
     skip_editorial_markers: bool = True,
+    project_config: Mapping[str, Any] | None = None,
+    *, segment: bool = True,
 ) -> list[AudioCue]:
     """Extract spoken text and structural pauses without inferring delivery."""
-    config = CorpusConfig(language=language)
-    chapters = split_chapters(text, config) or [(1, "", text)]
+    from .pipeline import resolve_document_config
+    config, _resolved = resolve_document_config(text, language, project_config=project_config)
+    all_chapters = split_chapters(text, config) or [(1, "", text)]
+    chapters = all_chapters
     if chapter_filter is not None:
         try:
             chapter_number = int(chapter_filter)
@@ -120,44 +127,75 @@ def extract_audio_cues(
             raise ValueError("Chapter selection must identify one existing chapter")
         chapters = matches
 
+    from bisect import bisect_left
+    from itertools import accumulate
+
+    from .markdown_parser import _chapter_spans, _front_matter_end, chapter_heading_spans
+    from .pipeline import document_paragraph_texts, paragraph_identity
+    anchors = {(p.start_line, p.end_line): paragraph_identity(p)
+               for p in document_paragraph_texts(text, config)}
+    selected_numbers = {row[0] for row in chapters}
+    heading_ends = {line: end for _start, end, line, _title in chapter_heading_spans(text, config)}
+    original_lines = text.splitlines(keepends=True)
+    line_offsets = [0, *accumulate(len(line) for line in original_lines)]
+    content_begin = line_offsets[_front_matter_end(original_lines)]
+    accepted = _chapter_spans(text, config)
+    if not accepted:
+        accepted = [(1, '', text, 1)]
     cues: list[AudioCue] = []
-    for number, title, body in chapters:
+    for number, title, body, heading_line in accepted:
+        if number not in selected_numbers:
+            continue
         if title:
-            cues.append(AudioCue(title, "heading", number, pause_after=1.0))
+            cues.append(AudioCue(title, 'heading', number, pause_after=1.0))
+        begin = heading_ends.get(heading_line)
+        if begin is None:
+            line_index = heading_line - 1
+            if title and heading_ends:
+                # The shared segmenter consumes the first physical preface line.
+                while line_index < len(original_lines) and not original_lines[line_index].strip():
+                    line_index += 1
+                line_index += 1
+            begin = sum(len(line) for line in original_lines[:line_index])
+        begin = max(begin, content_begin)
+        offset = next((position for position in line_offsets[bisect_left(line_offsets, begin):]
+                       if text.startswith(body, position)), -1)
+        if offset < 0:
+            raise ValueError('Accepted speech chapter cannot be aligned with its source')
+        line_offset = len(text[:offset].splitlines())
         blocks: list[dict[str, Any]] = []
-        for block in parse_markdown_blocks(body, config):
-            if block["type"] == "quote_block":
-                blocks.extend({"type": "p", "text": value} for value in block["paras"])
+        for block in parse_markdown_blocks(body, config, _front_matter=False):
+            if block['type']=='quote_block':
+                blocks.extend({'type':'p','text':value} for value in block['paras'])
             else:
                 blocks.append(block)
         for block in blocks:
-            kind = block.get("type", "")
-            content = (block.get("text") or "").strip()
-            if kind in ("divider", "thematic_break"):
-                cues.append(AudioCue("", "scene_break", number, pause_after=1.2))
+            kind = block.get('type','')
+            content = (block.get('text') or '').strip()
+            if kind in ('divider','thematic_break'):
+                cues.append(AudioCue('', 'scene_break', number, pause_after=1.2))
                 continue
-            if kind.startswith("h"):
+            if kind.startswith('h'):
                 content = counting_inline_text(content)
                 if content and content != title:
-                    cues.append(AudioCue(content, "heading", number, pause_after=1.0))
+                    cues.append(AudioCue(content, 'heading', number, pause_after=1.0))
                 continue
-            if kind not in ("p", "quote", "paragraph", "list_item"):
+            if kind not in ('p','quote','paragraph','list_item'):
                 continue
             if skip_editorial_markers:
-                content = re.sub(r"\[(TODO|PRÜFEN|ACHTUNG|SACHCHECK)[^\]]*\]", "", content,
+                content = re.sub(r'\[(TODO|PRÜFEN|ACHTUNG|SACHCHECK)[^\]]*\]', '', content,
                                  flags=re.IGNORECASE).strip()
             content = counting_inline_text(content)
             if not content:
                 continue
-            # Bound model inputs at sentence/word boundaries without dropping
-            # prose. Intermediate fragments do not acquire paragraph pauses.
+            anchor = anchors.get((block.get('start_line',0)+line_offset, block.get('end_line',0)+line_offset)) if 'start_line' in block else None
             cjk = any(_is_cjk(character) for character in content)
-            segments = _speech_segments(content, language)
-            cue_kind = "dialogue" if content.startswith(("„", "»", '"', "“", "'")) else "narrative"
-            for index, segment in enumerate(segments):
-                cues.append(AudioCue(segment, cue_kind, number,
-                                     pause_after=.45 if index == len(segments) - 1 else 0,
-                                     join_before="" if cjk else " "))
+            segments = _speech_segments(content, language) if segment else [content]
+            cue_kind = 'dialogue' if content.startswith(('„','»','"','“',"'")) else 'narrative'
+            for index, piece in enumerate(segments):
+                cues.append(AudioCue(piece, cue_kind, number,
+                    pause_after=.45 if index == len(segments)-1 else 0,
+                    join_before='' if cjk else ' ', anchor=anchor))
     return cues
 
 
@@ -233,6 +271,7 @@ def render_speech_audio(
     cache_dir: str | Path | None = None,
     fresh_audio: bool = False,
     target: str = "local",
+    plan: list[SpeechSegment] | None = None,
 ) -> Path:
     """Stream a consistent selected delivery into an atomic WAV or MP3 copy."""
     _check_cancelled(cancelled)
@@ -255,33 +294,10 @@ def render_speech_audio(
     if output.suffix.lower() == ".mp3" and not ffmpeg:
         raise FileNotFoundError("FFmpeg is required for MP3 output; choose WAV instead")
     rate = 24000
-    cues = extract_audio_cues(source.read_text(encoding="utf-8"), language, chapter,
-                              skip_editorial_markers=skip_markers)
-    planned: list[AudioCue] = []
-    # Recover whole paragraph text before replacing phrases, including
-    # phrases that straddle the initial transport segment boundary.
-    paragraphs: list[AudioCue] = []
-    for cue in cues:
-        if (paragraphs and paragraphs[-1].text and cue.text and
-                paragraphs[-1].kind == cue.kind and paragraphs[-1].chapter_num == cue.chapter_num and
-                paragraphs[-1].pause_after == 0):
-            previous = paragraphs[-1]
-            paragraphs[-1] = replace(previous, text=previous.text + cue.join_before + cue.text, pause_after=cue.pause_after)
-        else:
-            paragraphs.append(cue)
-    replacements = profile.pronunciations
-    pattern = re.compile("|".join(re.escape(key) for key in sorted(replacements, key=len, reverse=True))) if replacements else None
-    for cue in paragraphs:
-        if cue.kind == "scene_break":
-            cue.pause_after = profile.scene_pause
-        elif cue.kind != "heading" and cue.pause_after:
-            cue.pause_after = profile.paragraph_pause
-        if pattern is not None:
-            cue.text = pattern.sub(lambda match: replacements[match[0]], cue.text)
-        pieces = _speech_segments(cue.text, language) or [""]
-        planned.extend(replace(cue, text=piece, pause_after=cue.pause_after if index == len(pieces) - 1 else 0)
-                       for index, piece in enumerate(pieces))
-    cues = planned
+    from .speech_direction import build_speech_plan
+
+    cues = plan if plan is not None else build_speech_plan(
+        source.read_text(encoding="utf-8"), profile, chapter=chapter, skip_markers=skip_markers)
     if not any(cue.text for cue in cues):
         raise ValueError("No spoken text in the selected chapter")
     segment_cache = None
@@ -312,20 +328,23 @@ def render_speech_audio(
 
             for cue in cues:
                 _check_cancelled(cancelled)
-                if cue.kind == "scene_break":
+                if cue.pause_before:
+                    write_frames(bytes(int(rate * cue.pause_before) * 2))
+                if not cue.text:
                     write_frames(bytes(int(rate * cue.pause_after) * 2))
                     continue
+                effective = cue.profile
                 from .speech_qwen import synthesize_qwen
 
-                data = None if fresh_audio or segment_cache is None else segment_cache.get(cue.text, profile)
+                data = None if fresh_audio or segment_cache is None else segment_cache.get(cue.text, effective)
                 if data is None:
-                    data = synthesize_qwen(cue.text, profile, target=target)
+                    data = synthesize_qwen(cue.text, effective, target=target)
                     params, frames = _read_pcm(data)
                     if params != (1, 2, rate):
                         raise ValueError("Unexpected Qwen audio format")
                     _check_cancelled(cancelled)
                     if segment_cache is not None:
-                        segment_cache.put(cue.text, profile, data)
+                        segment_cache.put(cue.text, effective, data)
                 else:
                     params, frames = _read_pcm(data)
                 _check_cancelled(cancelled)

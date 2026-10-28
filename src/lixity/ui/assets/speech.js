@@ -4,7 +4,7 @@
   var body = document.body, settingsForm = document.getElementById("settings-form");
   if (body.dataset.speechCapable !== "true" || body.dataset.readOnly === "true" || !settingsForm) return;
   var dialog, fields = {}, settings, capabilities, generation = 0, job = null, timer, openedContext, paragraph;
-  var executionTarget = "local", migrationRequired = false;
+  var executionTarget = "local", migrationRequired = false, direction;
   function label(key) { return uiLabel("speech_" + key); }
   function languageName(code) {
     try { return new Intl.DisplayNames([document.documentElement.lang || "en"], {type: "language"}).of(code); }
@@ -53,6 +53,7 @@
     }
     fields.cancel.disabled = true; fields.preview.disabled = fields.chapter_render.disabled = !settings || !settings.selected || !fields.chapter.options.length;
     fields.progress.hidden = true;
+    if (fields.plan) { fields.plan.replaceChildren(); fields.plan.hidden = true; }
   }
   function voiceControls() {
     var cap = capabilities.qwen3;
@@ -133,7 +134,7 @@
     } catch (error) { if (valid(serial)) { status(error.message); finish(); } }
   }
   function finish() { job = null; fields.cancel.disabled = true; fields.preview.disabled = fields.chapter_render.disabled = !settings || !settings.selected || !fields.chapter.options.length; }
-  async function render(mode) {
+  async function render(mode, planOnly) {
     if (migrationRequired) return;
     try {
       if (!Array.from(fields.editor.querySelectorAll("input, select, textarea")).every(function(input) { return input.reportValidity(); })) return;
@@ -142,10 +143,24 @@
       status(label("state_pending"));
       var payload = Object.assign(tokens(), {mode: mode, chapter: Number(fields.chapter.value), profile: profile, target: fields.target.value || "local"});
       if (mode === "preview" && paragraph) payload.paragraph = paragraph.identity;
-      if (mode === "chapter") payload.fresh_audio = !fields.reuse.checked;
+      if (mode === "chapter") {
+        if (direction.dirty()) throw new Error(label("direction_save_first"));
+        payload.fresh_audio = !fields.reuse.checked;
+      } else {
+        var draft = direction.draft(); if (draft) { payload.draft_direction = draft; var replacement=direction.replacement(); if (replacement) payload.draft_replace_id=replacement; }
+      }
       fields.context.textContent = label("target_" + payload.target) + " · " + (mode === "preview" ? label(paragraph ? "paragraph_preview" : "first_preview") : label("chapter_render")) + " · " + fields.chapter.selectedOptions[0].textContent +
         (mode === "preview" && paragraph ? " · " + paragraph.identity.start_line + "–" + paragraph.identity.end_line : "");
-      var data = await request("speech-render", payload);
+      var data = await request(planOnly ? "speech-plan" : "speech-render", payload);
+      if (planOnly) {
+        if (!valid(serial)) return;
+        fields.plan.replaceChildren();
+        data.plan.segments.forEach(function(row) {
+          var item = node("li",fields.plan,"",row.text || label("direction_pause"));
+          node("p",item,"ctl-note",row.profile.voice + " · " + (row.profile.instructions || label("direction_default")) + " · " + label("direction_before") + ": " + row.pause_before + " · " + label("direction_after") + ": " + row.pause_after);
+        });
+        fields.plan.hidden = false; finish(); return;
+      }
       if (!valid(serial)) { request("speech-cancel", Object.assign({}, {project_token: payload.project_token, source_sha256: payload.source_sha256}, {id: data.job.id})).catch(function() {}); return; }
       job = {id: data.job.id, tokens: tokens()}; fields.cancel.disabled = false; fields.progress.hidden = false; poll(serial, job);
     } catch (error) { if (serial == null || valid(serial)) { status(error.message); finish(); } }
@@ -186,6 +201,12 @@
     field(fields.editor, "instructions", "textarea").maxLength = 2000;
     field(fields.editor, "pronunciations", "textarea"); node("p", fields.editor, "ctl-note", label("pronunciation_hint"));
     field(content, "chapter", "select");
+    direction = window.LixitySpeechDirection(content, {
+      node:node, field:field, button:button, options:options, label:label, request:request,
+      status:status, invalidate:invalidate, tokens:tokens,
+      current:function() { return dialog.open && openedContext === context(); },
+      selected:function(p) { paragraph={identity:p.anchor,chapter:p.chapter}; fields.chapter.value=String(p.chapter); }
+    });
     field(content, "target", "select"); fields.target.closest("label").hidden = true;
     fields.target.addEventListener("change", function() {
       executionTarget = fields.target.value; invalidate();
@@ -197,6 +218,8 @@
     fields.reuse.addEventListener("change", invalidate);
     var actions = node("div", content, "row");
     fields.preview = button(actions, "preview", function() { render("preview"); });
+    button(actions, "direction_plan", function() { render("preview", true); });
+    fields.plan = node("ol", content, "speech-plan"); fields.plan.hidden = true;
     fields.chapter_render = button(actions, "chapter_render", function() { render("chapter"); });
     fields.cancel = button(actions, "cancel", cancel); fields.cancel.disabled = true;
     fields.context = node("p", content, "ctl-note"); fields.progress = node("progress", content); fields.progress.hidden = true; fields.progress.setAttribute("aria-label", label("progress"));
@@ -209,16 +232,22 @@
       try { stash(); settings.selected = fields.profile.value; loadProfile(); }
       catch (error) { fields.profile.value = settings.selected; status(error.message); }
     });
-    fields.chapter.addEventListener("change", function() { paragraph = null; invalidate(); fields.context.textContent = label("first_preview"); });
+    fields.chapter.addEventListener("change", function() { paragraph = null; invalidate(); var select=fields.direction_passage; var choice=Array.from(select.options).find(function(o) { return o.textContent.startsWith(fields.chapter.value + " · "); }); if (choice) { select.value=choice.value; select.dispatchEvent(new Event("change")); } fields.context.textContent = label("first_preview"); });
     dialog.addEventListener("close", invalidate);
   }
   async function open(fromReader) {
-    if (!dialog) build(); invalidate(); settings = null; openedContext = context(); paragraph = null;
+    var readerControl = document.getElementById("reader-chapter");
+    var readerChapterIntent = fromReader && readerControl ? (readerControl.value || readerControl.dataset.currentChapter || "") : "";
+    if (!dialog) build(); invalidate(); direction.disable(); settings = null; openedContext = context(); paragraph = null;
     if (fromReader) {
       var selection = window.getSelection(), anchor = selection && selection.anchorNode;
       var element = anchor && (anchor.nodeType === 1 ? anchor : anchor.parentElement);
       var panel = element && element.closest("#chapters .ptext[data-paragraph-sha256]");
-      if (!panel) panel = document.querySelector("#chapters .ptext.reader-selected, #chapters .ptext:focus-within");
+      if (!panel) {
+        panel = document.querySelector("#chapters .ptext.reader-selected, #chapters .ptext:focus-within");
+      }
+      var reader = document.getElementById("reader-chapter");
+      if (panel && reader && /^ch-\d+$/.test(readerChapterIntent) && panel.closest(".chapter").id !== readerChapterIntent) panel = null;
       if (panel) paragraph = {chapter: Number((panel.closest(".chapter") || {}).id?.replace("ch-", "")), identity: {
         start_line: Number(panel.dataset.start), end_line: Number(panel.dataset.end), paragraph_sha256: panel.dataset.paragraphSha256}};
     }
@@ -236,11 +265,17 @@
         return paragraph.identity.start_line >= chapter.start_line && paragraph.identity.end_line <= chapter.end_line;
       });
       var readerChapter = document.getElementById("reader-chapter");
-      var selectedChapter = matchedChapter ? String(matchedChapter.number) : fromReader && readerChapter ? readerChapter.value.replace("ch-", "") : "";
+      var selectedChapter = matchedChapter ? String(matchedChapter.number) : fromReader && readerChapter ? readerChapterIntent.replace("ch-", "") : "";
       if (!data.chapters.some(function(chapter) { return String(chapter.number) === selectedChapter; })) selectedChapter = "";
       options(fields.chapter, data.chapters.map(function(chapter) { return [String(chapter.number), chapter.number + ". " + chapter.title]; }), selectedChapter);
       if (paragraph && !data.chapters.some(function(chapter) { return Number(fields.chapter.value) === chapter.number && paragraph.identity.start_line >= chapter.start_line && paragraph.identity.end_line <= chapter.end_line; })) paragraph = null;
-      profileOptions(); loadProfile(); status(data.configuration_error || ""); fields.save.disabled = migrationRequired || !settings.selected;
+      profileOptions(); loadProfile();
+      if (data.direction) {
+        var initialPassage = paragraph ? {anchor:paragraph.identity} : data.direction.passages.find(function(p) { return p.chapter === Number(fields.chapter.value); });
+        direction.open(data.direction, initialPassage && initialPassage.anchor, settings.profiles);
+      }
+      if (migrationRequired) direction.disable();
+      status(data.configuration_error || ""); fields.save.disabled = migrationRequired || !settings.selected;
       fields.context.textContent = label(paragraph ? "paragraph_preview" : "first_preview");
     } catch (error) { if (valid(serial)) status(error.message); }
   }

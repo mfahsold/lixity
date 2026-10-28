@@ -202,6 +202,44 @@ server.serve_forever()
       assert.ok((await page.locator('#speech-runtime-hint').textContent()).includes(labels.speech_runtime_hint));
       assert.equal(await page.locator('#speech-target').isVisible(),true);
       assert.equal(await page.locator('#speech-target').inputValue(),'local','Execution defaults to this computer');
+      await page.waitForFunction(()=>document.querySelector('#speech-direction_text')?.value.includes('bird'));
+      assert.equal(await page.locator('#speech-direction_text').getAttribute('readonly'),'');
+      await page.locator('#speech-direction_style').selectOption('tense');
+      await page.locator('#speech-direction_text').evaluate(el=>el.setSelectionRange(2,6));
+      await page.locator('[data-speech-action=direction_selection]').click();
+      const directionPlanRequest=page.waitForRequest(request=>request.url().endsWith('/api/speech-plan'));
+      await page.locator('[data-speech-action=direction_plan]').click();
+      const draft=(await directionPlanRequest).postDataJSON().draft_direction;
+      assert.equal(draft.start,2); assert.equal(draft.end,6);
+
+      await page.waitForFunction(()=>!document.querySelector('.speech-plan').hidden);
+      assert.ok((await page.locator('.speech-plan').textContent()).includes('restrained tension'));
+      await page.locator('#speech-direction_text').evaluate(el=>el.scrollIntoView({block:'center'}));
+      await dialog.screenshot({path:path.join(artifacts,`direction-${locale}-${width}.png`)});
+      let axePath; try { axePath=require.resolve('axe-core'); } catch (_) { axePath=path.join(require('node:os').homedir(),'rosts_services/node_modules/axe-core/axe.js'); }
+      if(fs.existsSync(axePath)) {
+        await page.evaluate(fs.readFileSync(axePath,'utf8'));
+        const audit=await page.evaluate(async()=>await axe.run(document.getElementById('modal-speech')));
+        assert.deepEqual(audit.violations.map(v=>({id:v.id,impact:v.impact})),[], 'Audio direction accessibility');
+        fs.writeFileSync(path.join(artifacts,`direction-a11y-${locale}-${width}.json`),JSON.stringify({violations:audit.violations,incomplete:audit.incomplete.map(v=>v.id)}));
+      } else console.log('axe-core unavailable; automated audio direction accessibility audit skipped');
+
+      await page.locator('[data-speech-action=direction_save]').click();
+      await page.waitForFunction(()=>document.querySelector('#speech-direction_entries').options.length===2);
+      const ledger=path.join(project.root,'.lixity','audio-directions.json');
+      assert.equal(JSON.parse(fs.readFileSync(ledger)).entries.length,1);
+      await page.locator('#speech-direction_entries').selectOption({index:1});
+      await page.locator('#speech-direction_text').evaluate(el=>el.setSelectionRange(2,18));
+      await page.locator('[data-speech-action=direction_selection]').click();
+      await page.locator('[data-speech-action=direction_plan]').click();
+      await page.waitForFunction(()=>!document.querySelector('.speech-plan').hidden);
+      await page.locator('[data-speech-action=direction_save]').click();
+      await page.waitForFunction(()=>document.querySelector('#speech-direction_entries').options.length===2 && document.querySelector('#speech-direction_entries').options[1].textContent.startsWith('2–18'));
+      assert.equal(JSON.parse(fs.readFileSync(ledger)).entries.length,1,'Range edits replace the selected original');
+      await page.locator('#speech-direction_entries').selectOption({index:1});
+      await page.locator('[data-speech-action=direction_remove]').click();
+      await page.waitForFunction(()=>document.querySelector('#speech-direction_entries').options.length===1);
+      assert.equal(JSON.parse(fs.readFileSync(ledger)).entries.length,0);
       await page.locator('#speech-instructions').fill('Read calmly.');
       await page.locator('#speech-pronunciations').fill('Lixity=Lik-si-tee');
       await page.locator('[data-speech-action=preview]').click();
@@ -210,7 +248,7 @@ server.serve_forever()
       const response=await page.request.get(new URL(await audio.getAttribute('src'),server.fixture.url).href);
       assert.equal(response.status(),200);
       assert.equal((await response.body()).subarray(0,4).toString(),'RIFF');
-      assert.ok((await page.locator('#modal-speech').textContent()).includes(labels.speech_first_preview));
+      assert.ok((await page.locator('#modal-speech').textContent()).includes(labels.speech_paragraph_preview));
       await page.locator('#speech-target').selectOption('jetson');
       assert.equal(await audio.isVisible(),false,'Changing execution target removes audio from the previous target');
       assert.ok((await page.locator('#speech-runtime-hint').textContent()).includes(labels.speech_jetson_hint));
@@ -267,9 +305,12 @@ server.serve_forever()
       await page.keyboard.press('Escape');
       assert.equal(await dialog.isVisible(),false);
       await page.locator('#tab-view-analysis').click();
+      await page.locator('#reader-chapter').selectOption('ch-2');
       await page.locator('#reader-speech').click();
       await page.waitForFunction(()=>!document.querySelector('#speech-name').disabled && document.querySelector('#speech-name').value==='Narrator');
       assert.equal(await dialog.isVisible(),true,'Reader and settings use one dialog');
+      assert.equal(await page.locator('#speech-chapter').inputValue(),'2','Audio retains the reader chapter');
+      assert.equal(await page.locator('#speech-direction_text').inputValue(),'The garden is still.');
       assert.equal(await page.locator('#modal-speech').count(),1);
       await page.keyboard.press('Escape');
       assert.equal(await page.locator('#reader-speech').evaluate(el=>el===document.activeElement),true,'Escape returns focus to the reader entry');

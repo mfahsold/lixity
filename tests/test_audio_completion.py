@@ -12,7 +12,7 @@ from lixity.cli import _completion_scripts
 
 READ_FLAGS = {
     "--help", "--project", "-o", "--output", "--chapter", "--language", "--profile",
-    "--instructions", "--voice", "--speech-target", "--no-audio-cache", "--fresh-audio", "--keep-markers",
+    "--plan-only", "--no-direction", "--instructions", "--voice", "--speech-target", "--no-audio-cache", "--fresh-audio", "--keep-markers",
 }
 MIGRATION_FLAGS = {
     "--help", "--project", "--replace", "--instructions", "--apply", "--backup", "--expected-snapshot",
