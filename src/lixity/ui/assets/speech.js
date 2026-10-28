@@ -62,6 +62,7 @@
     var cap = capabilities[fields.engine.value];
     if (!cap) return;
     var designed = fields.engine.value === "qwen3-design";
+    var referenced = fields.engine.value === "qwen3-base";
     var language = fields.language.value, voice = fields.voice.value;
     options(fields.language, cap.languages.map(function(value) { return [value, languageName(value)]; }), language);
     var voices = Object.entries(cap.voices).filter(function(pair) { return pair[1].languages.includes(fields.language.value); });
@@ -71,8 +72,14 @@
     fields.voice_description.closest("label").hidden = !designed;
     fields.voice_description.disabled = !designed;
     fields.voice_description.required = designed;
-    fields.voice_hint.hidden = designed;
+    fields.reference_id.closest("label").hidden = !referenced;
+    fields.reference_id.disabled = !referenced;
+    fields.reference_id.required = referenced;
+    fields.reference_hint.hidden = !referenced;
+    fields.voice_hint.hidden = designed || referenced;
     fields.design_hint.hidden = !designed;
+    fields.speed.min = String(cap.speed.minimum);
+    fields.speed.max = String(cap.speed.maximum);
     fields.model.textContent = cap.name;
     options(fields.target, cap.targets.map(function(value) { return [value, label("target_" + value)]; }),
       cap.targets.includes(executionTarget) ? executionTarget : cap.targets[0]);
@@ -86,9 +93,10 @@
     if (!settings.selected) return;
     var profile = settings.profiles[settings.selected];
     lastPreset = profile.engine === "qwen3" ? profile.voice : "Ryan";
-    ["name", "instructions", "paragraph_pause", "scene_pause"].forEach(function(key) { fields[key].value = profile[key]; });
-    options(fields.engine, Object.keys(capabilities).filter(function(key) { return key === "qwen3" || key === "qwen3-design"; }).map(function(key) { return [key, capabilities[key].name]; }), profile.engine);
+    ["name", "instructions", "speed", "paragraph_pause", "scene_pause"].forEach(function(key) { fields[key].value = profile[key]; });
+    options(fields.engine, Object.keys(capabilities).filter(function(key) { return key === "qwen3" || key === "qwen3-design" || key === "qwen3-base"; }).map(function(key) { return [key, capabilities[key].name]; }), profile.engine);
     fields.voice_description.value = profile.voice_description || "";
+    fields.reference_id.value = profile.reference_id || "";
     options(fields.language, [], profile.language); options(fields.voice, [], profile.voice); voiceControls();
     setPronunciations(profile.pronunciations);
     editingPronunciation = null; fields.pronunciation_term.value = fields.pronunciation_spoken.value = "";
@@ -123,9 +131,10 @@
     var replacements = pronunciationEntries();
     var profile = {name: fields.name.value.trim(), engine: fields.engine.value, language: fields.language.value,
       voice: fields.voice.value,
-      speed: 1, instructions: fields.instructions.value.trim(),
+      speed: Number(fields.speed.value), instructions: fields.instructions.value.trim(),
       paragraph_pause: Number(fields.paragraph_pause.value), scene_pause: Number(fields.scene_pause.value), pronunciations: replacements};
     if (profile.engine === "qwen3-design") profile.voice_description = fields.voice_description.value.trim();
+    if (profile.engine === "qwen3-base") profile.reference_id = fields.reference_id.value.trim();
     return profile;
   }
   function pronunciationPending() {
@@ -201,7 +210,7 @@
     var projectLanguage = document.getElementById("set-language");
     var language = fields.language.value || (projectLanguage && projectLanguage.value) || document.documentElement.lang;
     if (!capabilities.qwen3.languages.includes(language)) language = "en";
-    settings.profiles[id] = {name: label("new_profile"), engine: "qwen3", language: language, voice: "Ryan", speed: 1,
+    settings.profiles[id] = {name: label("new_profile"), engine: "qwen3", language: language, voice: "Ryan", speed: capabilities.qwen3.speed.default,
       instructions: "", paragraph_pause: 0.45, scene_pause: 1.2, pronunciations: {}};
     profilesDirty = true;
     settings.selected = id; profileOptions(); loadProfile(); fields.name.focus();
@@ -317,6 +326,11 @@
     fields.voice_hint = node("p", fields.editor, "ctl-note", label("voice_hint"));
     field(fields.editor, "voice_description", "textarea").maxLength = 2000;
     fields.design_hint = node("p", fields.editor, "ctl-note", label("design_hint"));
+    var reference = field(fields.editor, "reference_id"); reference.maxLength = 64; reference.pattern = "[0-9a-f]{64}";
+    fields.reference_hint = node("p", fields.editor, "ctl-note", label("reference_hint"));
+    var speed = field(grid, "speed", "number"); speed.step = "any"; speed.required = true;
+    var speedHint = node("span", speed.closest("label"), "ctl-note", label("speed_hint"));
+    speedHint.id = "speech-speed-hint"; speed.setAttribute("aria-describedby", speedHint.id);
     ["paragraph_pause", "scene_pause"].forEach(function(key) { var el = field(grid, key, "number"); el.min = "0"; el.max = "10"; el.step = "any"; el.required = true; });
     field(fields.editor, "instructions", "textarea").maxLength = 2000;
     var lexicon = node("details", fields.editor, "settings-section"); lexicon.id = "speech-lexicon";
@@ -386,8 +400,8 @@
       invalidate();
     });
     fields.engine.addEventListener("change", function() {
-      if (fields.engine.value === "qwen3-design") lastPreset = fields.voice.value || lastPreset;
-      options(fields.voice, [], fields.engine.value === "qwen3-design" ? "design" : lastPreset);
+      if (capabilities.qwen3.voices[fields.voice.value]) lastPreset = fields.voice.value;
+      options(fields.voice, [], fields.engine.value === "qwen3-design" ? "design" : fields.engine.value === "qwen3-base" ? "reference" : lastPreset);
       voiceControls(); invalidate();
     });
     fields.language.addEventListener("change", function() { fields.voice.value = ""; voiceControls(); status(label("voice_changed")); });

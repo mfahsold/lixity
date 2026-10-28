@@ -113,7 +113,7 @@ brings its linked quotations together; ordered collections organise related
 notes. These are declared lexical checks and explicit links, not automatic
 continuity checking or character understanding. See
 [terms and props](https://mfahsold.github.io/lixity/research/USAGE.md#configured-terms-props-and-boundary-policies)
-and the [release notes](https://mfahsold.github.io/lixity/releases/v0.7.6.md).
+and the [release notes](https://mfahsold.github.io/lixity/releases/v0.7.7.md).
 
 Optional grammatical tense analysis covers all seven interface languages using
 explicitly installed local syntax models and shared language-specific verb-group rules. It distinguishes perfect, passive,
@@ -177,19 +177,23 @@ files nor establish that an output matches the current manuscript; see
 [project inspection](https://mfahsold.github.io/lixity/USAGE.md#inspect-project-structure).
 
 The development audio workflow shares saved project voice profiles between
-`lixity read-aloud` and the native interface. Current main separates project voice
+`lixity read-aloud` and the native interface. Version 0.7.7 separates project voice
 profiles and chapter output from manuscript passage direction and preview. It adds
 separately saved passage direction, source-bound text ranges, explicit silence and
-a shared inspectable CLI/UI speech plan; these additions are not part of the
-published 0.7.6 package. Optional Qwen3-TTS 1.7B
+a shared inspectable CLI/UI speech plan. Optional Qwen3-TTS 1.7B
 CustomVoice provides preset voices and explicit style instructions through a
-local worker or a configured Jetson over SSH. Current main also supports the
+local worker or a configured Jetson over SSH. Version 0.7.7 also supports the
 separately installed Qwen 1.7B VoiceDesign checkpoint for described voices;
-voice consistency across segments is not guaranteed. Piper is removed; existing profiles
+voice consistency across segments is not guaranteed. It also supports
+explicit project-local reference voices using the separately installed Base model;
+its reference and transcript need a project backup, and Base does not interpret
+free-form delivery instructions. Assign voice profiles to passages deliberately.
+Piper is removed; existing profiles
 require an explicit backed-up `audio-migrate` replacement. Select the
 execution target per render in the CLI or dialog. CPU generation can be slow;
 completed Qwen segments can be reused when retrying long renders. Audio remains
-a prototype requiring listening review. See the
+a prototype requiring listening review. Version 0.7.7 adds an optional FFmpeg
+post-synthesis tempo factor; it is not native model rate control. See the
 [read-aloud scope](https://mfahsold.github.io/lixity/USAGE.md#lixity-read-aloud)
 before relying on an export. NDA generation produces a draft, not consent or
 signatures. Dossier Markdown edits require explicit preview and apply.
@@ -228,12 +232,12 @@ their own projects.
 
 ## Release, citation and license
 
-> **Version line:** The documentation source version is **v0.7.6**, in the pre-1.0 **0.x** line.
+> **Version line:** The documentation source version is **v0.7.7**, in the pre-1.0 **0.x** line.
 > Historical **1.x** and **3.x** tags predate the numbering reset; use the current
 > release rather than the numerically largest tag. Product, JSON response and
 > archive schema versions are independent.
 
-[Release notes](https://mfahsold.github.io/lixity/releases/v0.7.6.md)
+[Release notes](https://mfahsold.github.io/lixity/releases/v0.7.7.md)
 cover archive compatibility and upgrades. See the
 [changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md) for subsequent work.
 The repository's generated demo follows the interface documented here, using a fictional project and read-only research. Importing

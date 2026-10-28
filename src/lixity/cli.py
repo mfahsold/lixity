@@ -411,6 +411,7 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("pdf", "Compose a PDF for editing, reading, submission or analysis"),
     ("read-aloud", "Create a local listening copy with project voice profiles"),
     ("audio-status", "Inspect audio profiles and worker readiness"),
+    ("audio-reference", "Create a private project-local voice reference (JSON)"),
     ("audio-direction", "Inspect and save project-local passage speech direction (JSON)"),
     ("audio-migrate", "Preview or apply explicit backed-up Qwen profile replacements (JSON)"),
     ("serve", "Run local HTTP development server and interactive dashboard"),
@@ -443,13 +444,13 @@ _lixity_complete() {
             case "$prev" in
                 --language) COMPREPLY=( $(compgen -W "zh en ja ko de fr ru pt es it" -- "$cur") ) ;;
                 --speech-target) COMPREPLY=( $(compgen -W "local jetson" -- "$cur") ) ;;
-                --voice) COMPREPLY=( $(compgen -W "Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee design" -- "$cur") ) ;;
-                --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design" -- "$cur") ) ;;
+                --voice) COMPREPLY=( $(compgen -W "Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee design reference" -- "$cur") ) ;;
+                --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design qwen3-base" -- "$cur") ) ;;
                 --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
                 -o|--output) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
-                --profile|--instructions|--voice-description|--chapter|--preview-line) ;;
+                --profile|--instructions|--voice-description|--reference-id|--chapter|--preview-line|--speed) ;;
                 *)
-                    COMPREPLY=( $(compgen -W "--help --project -o --output --chapter --language --profile --engine --instructions --voice --voice-description --speech-target --no-audio-cache --fresh-audio --keep-markers --plan-only --no-direction --preview --preview-line --progress" -- "$cur") )
+                    COMPREPLY=( $(compgen -W "--help --project -o --output --chapter --language --profile --engine --instructions --voice --voice-description --reference-id --speed --speech-target --no-audio-cache --fresh-audio --keep-markers --plan-only --no-direction --preview --preview-line --progress" -- "$cur") )
                     COMPREPLY+=( $(compgen -f -- "$cur") )
                     ;;
             esac
@@ -458,8 +459,16 @@ _lixity_complete() {
         audio-status)
             case "$prev" in
                 --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
-                --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design" -- "$cur") ) ;;
+                --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design qwen3-base" -- "$cur") ) ;;
                 *) COMPREPLY=( $(compgen -W "--help --project --engine --json" -- "$cur") ) ;;
+            esac
+            return 0
+            ;;
+        audio-reference)
+            case "$prev" in
+                --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
+                --audio|--transcript-file) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
+                *) COMPREPLY=( $(compgen -W "create --help --project --audio --transcript-file" -- "$cur") ) ;;
             esac
             return 0
             ;;
@@ -625,9 +634,11 @@ __LIXITY_ZSH_COMMANDS__
             '--language[Qwen speech language]:language:(zh en ja ko de fr ru pt es it)' \
             '--profile[Saved narrator profile]:profile:' \
             '--instructions[Explicit Qwen delivery instructions]:text:' \
-            '--engine[Qwen model variant]:engine:(qwen3 qwen3-design)' \
-            '--voice[Qwen preset or design]:voice:(Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee design)' \
+            '--engine[Qwen model variant]:engine:(qwen3 qwen3-design qwen3-base)' \
+            '--voice[Qwen preset, design, or reference]:voice:(Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee design reference)' \
             '--voice-description[VoiceDesign description]:text:' \
+            '--reference-id[Saved project reference]:id:' \
+            '--speed[Postprocessing tempo factor]:speed:' \
             '--speech-target[Execution target]:target:(local jetson)' \
             '--plan-only[Inspect the effective speech plan without synthesis]' \
             '--no-direction[Explicitly ignore saved passage direction]' \
@@ -642,8 +653,15 @@ __LIXITY_ZSH_COMMANDS__
           _arguments \
             '--help[Help]' \
             '--project[Explicit project root]:directory:_files -/' \
-            '--engine[Compare a model variant]:engine:(qwen3 qwen3-design)' \
+            '--engine[Compare a model variant]:engine:(qwen3 qwen3-design qwen3-base)' \
             '--json[Machine-readable status]'
+          ;;
+        audio-reference)
+          _arguments \
+            '1:action:(create)' \
+            '--project[Explicit project root]:directory:_files -/' \
+            '--audio[Reference WAV]:file:_files' \
+            '--transcript-file[Exact UTF-8 transcript]:file:_files'
           ;;
         audio-direction)
           _arguments \
@@ -1341,6 +1359,7 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
     from .speech import render_speech_audio
     from .speech_cache import project_audio_cache
     from .speech_profiles import AudioProfile, parse_audio_settings, resolve_audio_profile
+    from .speech_references import SpeechReference, references_for_plan, references_unchanged
 
     workspace = args._workspace
     preview = args.preview or args.preview_line is not None
@@ -1361,14 +1380,20 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
         for name, value in (("engine", args.engine),
                             ("voice", args.voice),
                             ("voice_description", args.voice_description),
+                            ("reference_id", args.reference_id),
                             ("instructions", args.instructions),
+                            ("speed", args.speed),
                             ("language", getattr(args, "_speech_explicit_language", None))):
             if value is not None:
                 changes[name] = value
         if args.engine == "qwen3-design" and args.voice is None and profile.engine != "qwen3-design":
             changes["voice"] = "design"
-        if args.engine == "qwen3" and profile.engine == "qwen3-design" and args.voice_description is None:
+        if args.engine == "qwen3-base" and args.voice is None and profile.engine != "qwen3-base":
+            changes["voice"] = "reference"
+        if args.engine in ("qwen3", "qwen3-base") and profile.engine == "qwen3-design" and args.voice_description is None:
             changes.pop("voice_description", None)
+        if args.engine in ("qwen3", "qwen3-design") and profile.engine == "qwen3-base":
+            changes.pop("reference_id", None)
         profile = AudioProfile.model_validate(changes)
         from .speech_direction import (
             build_speech_plan,
@@ -1382,6 +1407,7 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
         if view is not None and view["source_sha256"] != source_hash:
             raise ValueError("Manuscript changed while preparing speech; retry")
         direction_hash = view["direction_sha256"] if view is not None else None
+        references: dict[str, SpeechReference] = {}
 
         def check_context() -> bool:
             try:
@@ -1392,7 +1418,8 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
                                         else load_project_config(start))
                 valid = (FileUtils.read_source_snapshot(workspace.manuscript)[1] == source_hash
                          and current_settings == args._project_config
-                         and (direction_hash is None or direction_snapshot(workspace.root) == direction_hash))
+                         and (direction_hash is None or direction_snapshot(workspace.root) == direction_hash)
+                         and references_unchanged(workspace.root, references))
             except (OSError, ValueError, UserWarning) as exc:
                 raise ValueError("Manuscript, settings or speech directions changed or became unreadable; retry") from exc
             if not valid:
@@ -1401,6 +1428,9 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
 
         check_context()
         profiles = parse_audio_settings(args._project_config.get("audio"), language=profile.language).profiles
+        if args.speed is not None:
+            profiles = {key: AudioProfile.model_validate({**item.model_dump(), "speed": args.speed})
+                        for key, item in profiles.items()}
         plan = build_speech_plan(text, profile,
             directions=saved_directions(view) if view is not None else [], profiles=profiles,
             chapter=args.chapter, project_config=args._project_config, skip_markers=not args.keep_markers)
@@ -1413,10 +1443,12 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
             plan = [row for row in plan if row.anchor == selected]
             if sum(len(row.text) for row in plan) > 6000:
                 raise ValueError("Passage preview exceeds 6000 characters; render the chapter")
+        references = references_for_plan(workspace.root, plan)
         if args.plan_only:
             check_context()
             print(_json(plan_json(plan), indent=True))
             return EXIT_OK
+        render_options: dict[str, Any] = {"references": references} if references else {}
         out_path = render_speech_audio(
             manuscript_path=workspace.manuscript,
             output_path=output,
@@ -1430,6 +1462,7 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
             plan=plan,
             cancelled=check_context,
             progress=(lambda done, total: print(f"Audio: {done}/{total}", file=sys.stderr)) if args.progress else None,
+            **render_options,
         )
     except (OSError, ValueError, RuntimeError, FileNotFoundError) as exc:
         print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
@@ -1826,8 +1859,14 @@ def _main(argv: list[str] | None = None) -> int:
         p = sub.add_parser(name, help=help_text, description=help_text)
         if name == "audio-status":
             p.add_argument("--project", help="Explicit project root; omit to inspect workers only")
-            p.add_argument("--engine", choices=("qwen3", "qwen3-design"), help="Compare this model variant instead of the selected profile")
+            p.add_argument("--engine", choices=("qwen3", "qwen3-design", "qwen3-base"), help="Compare this model variant instead of the selected profile")
             p.add_argument("--json", action="store_true", help="Machine-readable status")
+            continue
+        if name == "audio-reference":
+            p.add_argument("action", choices=("create",))
+            p.add_argument("--project", required=True, help="Explicit existing project root")
+            p.add_argument("--audio", required=True, help="Reference WAV, 1–30 seconds, mono PCM 24 kHz")
+            p.add_argument("--transcript-file", required=True, help="Exact UTF-8 transcript of the reference WAV")
             continue
         if name == "audio-direction":
             from .speech_direction_cli import configure
@@ -2014,7 +2053,7 @@ def _main(argv: list[str] | None = None) -> int:
         if name == "read-aloud":
             p.epilog = (
                 "Renders local listening copies using saved project voice profiles. "
-                "Qwen3-TTS 1.7B supports CustomVoice or explicit VoiceDesign "
+                "Qwen3-TTS 1.7B supports CustomVoice, VoiceDesign and reference-based Base "
                 "on this computer or a configured Jetson. Runtimes and voice models are installed separately."
             )
             p.add_argument("file", nargs="?", help="Markdown manuscript (default: configured manuscript or folder discovery)")
@@ -2029,9 +2068,11 @@ def _main(argv: list[str] | None = None) -> int:
             p.add_argument("--progress", action="store_true", help="Report segment progress to stderr")
             p.add_argument("--no-direction", action="store_true", help="Explicitly ignore saved passage direction for this invocation")
             p.add_argument("--instructions", default=None, help="Explicit Qwen delivery instructions")
-            p.add_argument("--engine", choices=("qwen3", "qwen3-design"), default=None, help="Explicit Qwen model variant")
+            p.add_argument("--engine", choices=("qwen3", "qwen3-design", "qwen3-base"), default=None, help="Explicit Qwen model variant")
             p.add_argument("--voice-description", default=None, help="VoiceDesign voice description")
+            p.add_argument("--reference-id", default=None, help="Project-local Base voice reference identity")
             p.add_argument("--voice", default=None, help="Override the selected profile voice; model-specific validation applies")
+            p.add_argument("--speed", type=float, default=None, help="Override all profile tempo factors for this render (0.5–2.0; FFmpeg required unless 1.0)")
             p.add_argument("--speech-target", choices=("local", "jetson"), default="local", help="Execution target for this run (default: local); Jetson requires its configured SSH forward")
             p.add_argument("--no-audio-cache", action="store_true", help="Render without reading or retaining reusable audio segments")
             p.add_argument("--fresh-audio", action="store_true", help="Recompute Qwen segments instead of reusing completed project audio")
@@ -2244,6 +2285,18 @@ def _main(argv: list[str] | None = None) -> int:
         # argparse choices already rejected unknown shells; keep a defensive path
         print(f"{_m('err_prefix')} {_m('err_shell', shell=args.shell)}", file=sys.stderr)
         return EXIT_ERROR
+    if args.command == "audio-reference":
+        from .speech_qwen import MAX_REFERENCE_BYTES
+        from .speech_references import read_reference_input, save_reference
+        try:
+            audio = read_reference_input(args.audio, MAX_REFERENCE_BYTES)
+            transcript = read_reference_input(args.transcript_file, 8000).decode("utf-8")
+            reference = save_reference(args.project, audio, transcript)
+        except (OSError, ValueError) as exc:
+            print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+            return EXIT_ERROR
+        print(_json({"schema_version": "lixity-audio-reference-created/1", "id": reference.id}, indent=True))
+        return EXIT_OK
     if args.command == "audio-status":
         from .format import safe_text
         from .speech_status import audio_status

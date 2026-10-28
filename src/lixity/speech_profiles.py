@@ -21,12 +21,16 @@ from .speech_controls import speech_control_support
 
 QWEN_MODEL = "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice"
 QWEN_DESIGN_MODEL = "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign"
+QWEN_BASE_MODEL = "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
 QWEN_LANGUAGES = {
     "zh": "Chinese", "en": "English", "ja": "Japanese", "ko": "Korean",
     "de": "German", "fr": "French", "ru": "Russian", "pt": "Portuguese",
     "es": "Spanish", "it": "Italian",
 }
 QWEN_VOICES = ("Vivian", "Serena", "Uncle_Fu", "Dylan", "Eric", "Ryan", "Aiden", "Ono_Anna", "Sohee")
+DEFAULT_PLAYBACK_SPEED = 1.2
+MIN_PLAYBACK_SPEED = 0.5
+MAX_PLAYBACK_SPEED = 2.0
 _PROFILE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}\Z")
 _REMOVED_ENGINE = ("Piper audio profiles are no longer supported. Make a backup and explicitly migrate "
                    "each profile to a Qwen preset voice; the old voice and precise speed are not equivalent. "
@@ -46,11 +50,14 @@ class AudioProfile(BaseModel):
 
     model_config = ConfigDict(extra="forbid", strict=True, allow_inf_nan=False, hide_input_in_errors=True)
     name: str = Field(default="Narrator", min_length=1, max_length=100)
-    engine: Literal["qwen3", "qwen3-design"] = "qwen3"
+    engine: Literal["qwen3", "qwen3-design", "qwen3-base"] = "qwen3"
     language: str = "en"
     voice: str = Field(default="Ryan", min_length=1, max_length=100)
     voice_description: str = Field(default="", max_length=2000)
-    speed: float = Field(default=1.0, ge=1.0, le=1.0)
+    reference_id: str = ""
+    # Preserve older explicit and omitted profile values. Only a new implicit
+    # profile uses DEFAULT_PLAYBACK_SPEED in parse_audio_settings below.
+    speed: float = Field(default=1.0, ge=MIN_PLAYBACK_SPEED, le=MAX_PLAYBACK_SPEED)
     instructions: str = Field(default="", max_length=2000)
     paragraph_pause: float = Field(default=0.45, ge=0, le=10)
     scene_pause: float = Field(default=1.2, ge=0, le=10)
@@ -62,6 +69,8 @@ class AudioProfile(BaseModel):
         data: dict[str, Any] = handler(self)
         if not self.voice_description:
             data.pop("voice_description", None)
+        if not self.reference_id:
+            data.pop("reference_id", None)
         return data
 
     @field_validator("name", "voice", "language")
@@ -98,15 +107,20 @@ class AudioProfile(BaseModel):
     def supported_controls(self) -> AudioProfile:
         if self.language not in QWEN_LANGUAGES:
             raise ValueError("Unsupported Qwen language")
-        if self.engine == "qwen3":
+        if self.engine == "qwen3-base":
+            if self.voice != "reference" or re.fullmatch(r"[0-9a-f]{64}", self.reference_id) is None:
+                raise ValueError("Qwen Base requires voice='reference' and a saved reference identity")
+            if self.instructions or self.voice_description:
+                raise ValueError("Qwen Base does not support delivery instructions or voice descriptions")
+        elif self.reference_id:
+            raise ValueError("Reference identities are only supported by Qwen Base")
+        elif self.engine == "qwen3":
             if self.voice not in QWEN_VOICES:
                 raise ValueError("Unsupported Qwen preset voice")
             if self.voice_description:
                 raise ValueError("CustomVoice does not accept a voice description")
         elif self.voice != "design" or not self.voice_description:
             raise ValueError("VoiceDesign requires voice='design' and a voice description")
-        if self.speed != 1.0:
-            raise ValueError("Qwen does not support precise speed; speed must be 1.0")
         return self
 
 
@@ -141,7 +155,7 @@ def parse_audio_settings(raw: object | None, *, language: str = "en") -> AudioSe
     """Return an explicit default only for absent settings; reject malformed data."""
     if raw is None:
         return AudioSettings(selected="narrator", profiles={
-            "narrator": AudioProfile(language=language),
+            "narrator": AudioProfile(language=language, speed=DEFAULT_PLAYBACK_SPEED),
         })
     return AudioSettings.model_validate(raw)
 
@@ -168,7 +182,8 @@ def audio_capabilities() -> dict[str, Any]:
             "voices": {voice: {"name": voice, "languages": list(QWEN_LANGUAGES)} for voice in QWEN_VOICES},
             "instructions": True,
             "control_support": speech_control_support("qwen3").as_dict(),
-            "speed": {"supported": False, "minimum": 1.0, "maximum": 1.0, "default": 1.0},
+            "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
+                      "default": DEFAULT_PLAYBACK_SPEED, "implementation": "ffmpeg-atempo"},
             "model": QWEN_MODEL,
         },
         "qwen3-design": {
@@ -176,8 +191,19 @@ def audio_capabilities() -> dict[str, Any]:
             "languages": list(QWEN_LANGUAGES), "voices": {}, "voice_design": True,
             "instructions": True,
             "control_support": speech_control_support("qwen3-design").as_dict(),
-            "speed": {"supported": False, "minimum": 1.0, "maximum": 1.0, "default": 1.0},
+            "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
+                      "default": DEFAULT_PLAYBACK_SPEED, "implementation": "ffmpeg-atempo"},
             "model": QWEN_DESIGN_MODEL,
+        },
+        "qwen3-base": {
+            "name": "Qwen3-TTS 1.7B Base", "targets": ["local", "jetson"],
+            "languages": list(QWEN_LANGUAGES),
+            "voices": {"reference": {"name": "Reference", "languages": list(QWEN_LANGUAGES)}},
+            "reference_required": True, "instructions": False,
+            "control_support": speech_control_support("qwen3-base").as_dict(),
+            "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
+                      "default": DEFAULT_PLAYBACK_SPEED, "implementation": "ffmpeg-atempo"},
+            "model": QWEN_BASE_MODEL,
         },
     }
 

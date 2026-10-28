@@ -5,13 +5,13 @@
 > instructions to rewrite prose. Analysis is deterministic for fixed text and
 > settings; research records also contain generated IDs and timestamps.
 
-Documentation source version: 0.7.6. Check
+Documentation source version: 0.7.7. Check
 [GitHub releases](https://github.com/mfahsold/lixity/releases) and
 [PyPI](https://pypi.org/project/lixity/) for published packages. Current-main
 features can differ from an installed release with the same version string.
 The current 0.x line follows a numbering reset; historical 1.x/3.x tags are older.
 Product, response and archive schema numbers are independent.
-[Release notes](https://mfahsold.github.io/lixity/releases/v0.7.6.md) describe this
+[Release notes](https://mfahsold.github.io/lixity/releases/v0.7.7.md) describe this
 source version; the link alone is not publication evidence.
 
 ## Discover the installed interface
@@ -130,20 +130,26 @@ written commercial license. See [licensing](https://mfahsold.github.io/lixity/LI
 [contributing](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md) and
 [security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md).
 
-Current main after 0.7.6: authored passage direction is separate project-local
+Since 0.7.7: authored passage direction is separate project-local
 metadata in `.lixity/audio-directions.json`. `audio-direction inspect` is read-only;
 save/remove require source/settings/ledger snapshots. `read-aloud --plan-only`
 and native preview inspection expose the shared effective speech plan without
-inference. Qwen interprets local direction; Lixity generates exact silence.
+inference. CustomVoice and VoiceDesign interpret local direction; Lixity generates exact silence.
 This is not SSML/IPA support, native inline emotion tags or a new audio backend.
 Shared `control_support` describes actual Qwen adapter capabilities: literal
 spoken-form substitutions, model-interpreted direction and explicit silence;
 phonemes, SSML and precise rate are not implemented.
+Version 0.7.7 can apply a 0.5–2.0 FFmpeg tempo factor to synthesized speech,
+without changing explicit pauses or cached raw audio. `read-aloud --speed`
+overrides all profile rates for one run. New implicit profiles default to 1.2;
+existing saved values and omitted legacy speed remain unchanged. Non-1.0
+speed requires FFmpeg on the Lixity host.
 
-Current main also supports explicit Qwen3-TTS 1.7B VoiceDesign profiles with a
+Version 0.7.7 supports explicit Qwen3-TTS 1.7B VoiceDesign profiles with a
 voice description and a separately configured matching worker. Designed voice
-identity may vary across segments; reference-based Base/voice cloning is not
-implemented.
+identity may vary across segments. A separately configured Base worker can reuse
+an explicitly saved private audio reference and exact transcript; Base does not
+accept free-form delivery instructions. Assign profiles to passages explicitly.
 
 Current main: `audio-status [--project PATH] --json` inspects profiles and
 worker model identities without prose. `read-aloud --preview` or `--preview-line

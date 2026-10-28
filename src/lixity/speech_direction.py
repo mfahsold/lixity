@@ -182,7 +182,7 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
 
 
 def plan_json(plan: list[SpeechSegment]) -> dict[str, Any]:
-    support = speech_control_support('qwen3')
+    support = speech_control_support('qwen3-base' if any(row.profile.engine == 'qwen3-base' for row in plan) else 'qwen3')
     return {'schema_version': POLICY, 'controls': {'instructions': support.direction.replace('_', '-'),
             'pauses': support.pauses.replace('_', '-'), 'phonemes': support.phonemes, 'ssml': support.ssml},
             'segments': [{'text': row.text, 'profile': row.profile.model_dump(),

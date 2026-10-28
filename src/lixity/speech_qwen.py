@@ -6,7 +6,9 @@ requires a complete local model directory and disables Hugging Face networking.
 from __future__ import annotations
 
 import argparse
+import base64
 import gc
+import hashlib
 import importlib
 import inspect
 import io
@@ -20,9 +22,13 @@ from dataclasses import asdict, dataclass
 from functools import partial
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .speech_references import SpeechReference
 
 from .speech_profiles import (
+    QWEN_BASE_MODEL,
     QWEN_DESIGN_MODEL,
     QWEN_LANGUAGES,
     QWEN_MODEL,
@@ -34,6 +40,8 @@ from .speech_profiles import (
 ENDPOINT = "http://127.0.0.1:8769/v1/audio/speech"
 TARGET_ENDPOINTS = {"local": ENDPOINT, "jetson": "http://127.0.0.1:8770/v1/audio/speech"}
 MAX_REQUEST_BYTES = 32768
+MAX_REFERENCE_BYTES = 2 * 1024 * 1024
+MAX_BASE_REQUEST_BYTES = MAX_REQUEST_BYTES + 4 * ((MAX_REFERENCE_BYTES + 2) // 3)
 MAX_RESPONSE_BYTES = 32 * 1024 * 1024
 SAMPLE_RATE = 24000
 # CPU synthesis can take substantially longer than the resulting audio.
@@ -91,7 +99,7 @@ def worker_health(target: str, *, opener: Any = None) -> dict[str, Any]:
         if len(raw) > 4096:
             raise ValueError("Oversized health response")
         value = json.loads(raw)
-        if not isinstance(value, dict) or value.get("model") not in (QWEN_MODEL, QWEN_DESIGN_MODEL) or type(value.get("ready")) is not bool:
+        if not isinstance(value, dict) or value.get("model") not in (QWEN_MODEL, QWEN_DESIGN_MODEL, QWEN_BASE_MODEL) or type(value.get("ready")) is not bool:
             raise ValueError("Unexpected worker identity")
         model_id = value["model"]
         state = "ready" if value["ready"] else "starting"
@@ -100,23 +108,33 @@ def worker_health(target: str, *, opener: Any = None) -> dict[str, Any]:
     return {"target": target, "state": state, "transport": "loopback" if target == "local" else "ssh", "model": model_id}
 
 
-def synthesize_qwen(text: str, profile: AudioProfile, *, target: str = "local", opener: Any = None) -> bytes:
+def synthesize_qwen(text: str, profile: AudioProfile, *, target: str = "local", opener: Any = None,
+                    reference: SpeechReference | None = None) -> bytes:
     """Request bounded PCM WAV through a fixed loopback target, without fallback."""
     from .speech import MAX_SEGMENT_CHARS, _read_pcm
 
     profile = AudioProfile.model_validate(profile.model_dump())
     if target not in TARGET_ENDPOINTS:
         raise ValueError("Unknown Qwen execution target")
-    if profile.engine not in ("qwen3", "qwen3-design") or not text.strip() or len(text) > MAX_SEGMENT_CHARS:
+    if profile.engine not in ("qwen3", "qwen3-design", "qwen3-base") or not text.strip() or len(text) > MAX_SEGMENT_CHARS:
         raise ValueError("Invalid Qwen synthesis request")
-    model_id = QWEN_DESIGN_MODEL if profile.engine == "qwen3-design" else QWEN_MODEL
+    model_id = QWEN_BASE_MODEL if profile.engine == "qwen3-base" else QWEN_DESIGN_MODEL if profile.engine == "qwen3-design" else QWEN_MODEL
     request_data = {"model": model_id, "input": text, "voice": profile.voice,
                           "language": profile.language, "instructions": profile.instructions,
                           "response_format": "wav"}
     if profile.engine == "qwen3-design":
         request_data["voice_description"] = profile.voice_description
+    elif profile.engine == "qwen3-base":
+        from .speech_references import validate_reference
+        if reference is None or reference.id != profile.reference_id:
+            raise ValueError("Qwen Base requires the matching verified reference")
+        validate_reference(reference)
+        request_data["reference_audio"] = base64.b64encode(reference.audio).decode("ascii")
+        request_data["reference_text"] = reference.transcript
+    elif reference is not None:
+        raise ValueError("This Qwen model does not use a reference")
     payload = json.dumps(request_data, ensure_ascii=False).encode("utf-8")
-    if len(payload) > MAX_REQUEST_BYTES:
+    if len(payload) > (MAX_BASE_REQUEST_BYTES if profile.engine == "qwen3-base" else MAX_REQUEST_BYTES):
         raise ValueError("Qwen synthesis request is too large")
     request = urllib.request.Request(TARGET_ENDPOINTS[target], data=payload,  # noqa: S310 - fixed loopback allowlist
                                      headers={"Content-Type": "application/json"})
@@ -137,7 +155,7 @@ def synthesize_qwen(text: str, profile: AudioProfile, *, target: str = "local", 
         # entering the response context manager.
         actual_model = exc.headers.get("X-Lixity-Model") if exc.headers else None
         exc.close()
-        if actual_model in (QWEN_MODEL, QWEN_DESIGN_MODEL) and actual_model != model_id:
+        if actual_model in (QWEN_MODEL, QWEN_DESIGN_MODEL, QWEN_BASE_MODEL) and actual_model != model_id:
             raise RuntimeError(f"Qwen worker ({target}) is running a different Qwen model; select the matching worker variant") from exc
         if exc.code == 400:
             raise RuntimeError(f"Qwen worker ({target}) rejected the synthesis request (HTTP 400); check the selected profile and model") from exc
@@ -158,12 +176,32 @@ def synthesize_qwen(text: str, profile: AudioProfile, *, target: str = "local", 
     return data
 
 
+def _decode_reference(encoded: object, transcript: object) -> tuple[bytes, bytes]:
+    """Validate a bounded in-memory PCM reference and exact transcript."""
+    from .speech import _read_pcm
+
+    if (not isinstance(encoded, str) or not encoded or
+            len(encoded) > 4 * ((MAX_REFERENCE_BYTES + 2) // 3)):
+        raise ValueError("Invalid reference audio size")
+    if (not isinstance(transcript, str) or not transcript.strip() or len(transcript) > 2000 or
+            any(ord(char) < 32 and char not in "\n\r\t" for char in transcript)):
+        raise ValueError("A bounded reference transcript is required")
+    transcript.encode("utf-8")  # Reject lone surrogates before inference.
+    data = base64.b64decode(encoded, validate=True)
+    if len(data) > MAX_REFERENCE_BYTES:
+        raise ValueError("Reference audio is too large")
+    params, frames = _read_pcm(data)
+    if params != (1, 2, SAMPLE_RATE) or not SAMPLE_RATE * 2 <= len(frames) <= SAMPLE_RATE * 2 * 30:
+        raise ValueError("Reference must be 1 to 30 seconds of 24 kHz mono 16-bit PCM WAV")
+    return data, frames
+
+
 def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 8769,
                   runtime_info: WorkerRuntime | None = None, model: str = QWEN_MODEL) -> ThreadingHTTPServer:
     """Build a loopback-only worker with injectable serialized inference."""
-    if model not in (QWEN_MODEL, QWEN_DESIGN_MODEL):
+    if model not in (QWEN_MODEL, QWEN_DESIGN_MODEL, QWEN_BASE_MODEL):
         raise ValueError("Unsupported worker model")
-    engine = "qwen3-design" if model == QWEN_DESIGN_MODEL else "qwen3"
+    engine = "qwen3-base" if model == QWEN_BASE_MODEL else "qwen3-design" if model == QWEN_DESIGN_MODEL else "qwen3"
     lock = threading.Lock()
 
     class Handler(BaseHTTPRequestHandler):
@@ -203,7 +241,7 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
                 return
             try:
                 size = int(self.headers.get("Content-Length", "0"))
-                if not 0 < size <= MAX_REQUEST_BYTES:
+                if not 0 < size <= (MAX_BASE_REQUEST_BYTES if engine == "qwen3-base" else MAX_REQUEST_BYTES):
                     raise ValueError("Invalid request size")
                 if self.headers.get_content_type() != "application/json":
                     raise ValueError("Expected JSON")
@@ -214,6 +252,8 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
                 expected_fields = {"model", "input", "voice", "language", "instructions", "response_format"}
                 if engine == "qwen3-design":
                     expected_fields.add("voice_description")
+                if engine == "qwen3-base":
+                    expected_fields.update(("reference_audio", "reference_text"))
                 if not isinstance(request, dict) or set(request) != expected_fields:
                     raise ValueError("Invalid request fields")
                 if request["model"] != model or request["response_format"] != "wav":
@@ -221,9 +261,15 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
                 text = request["input"]
                 if not isinstance(text, str) or not text.strip() or len(text) > MAX_SEGMENT_CHARS:
                     raise ValueError("Invalid synthesis text")
-                AudioProfile.model_validate({"name": "Worker", "engine": engine, "language": request["language"],
-                                             "voice": request["voice"], "instructions": request["instructions"],
-                                             "voice_description": request.get("voice_description", "")})
+                if engine == "qwen3-base":
+                    if (request["voice"] != "reference" or request["instructions"] != "" or
+                            request["language"] not in QWEN_LANGUAGES):
+                        raise ValueError("Unsupported reference voice controls")
+                    _decode_reference(request["reference_audio"], request["reference_text"])
+                else:
+                    AudioProfile.model_validate({"name": "Worker", "engine": engine, "language": request["language"],
+                                                 "voice": request["voice"], "instructions": request["instructions"],
+                                                 "voice_description": request.get("voice_description", "")})
             except (ValueError, TypeError):
                 self.reply(400, b'{"error":"Invalid synthesis request"}')
                 return
@@ -255,7 +301,7 @@ def load_local_model(
     variant: str = "custom-voice",
 ) -> LoadedRenderer:
     """Load an explicitly selected pinned Qwen architecture from local files."""
-    if variant not in ("custom-voice", "voice-design"):
+    if variant not in ("custom-voice", "voice-design", "base"):
         raise ValueError("Unknown Qwen model variant")
     if device not in ("cpu", "cuda"):
         raise ValueError("Qwen device must be cpu or cuda")
@@ -269,7 +315,7 @@ def load_local_model(
         raise ValueError("Qwen threads must be an integer between 1 and 64")
     model_path = model_path.expanduser().resolve()
     config = json.loads((model_path / "config.json").read_text(encoding="utf-8"))
-    expected_type = "voice_design" if variant == "voice-design" else "custom_voice"
+    expected_type = {"voice-design": "voice_design", "custom-voice": "custom_voice", "base": "base"}[variant]
     if (config.get("tts_model_type") != expected_type or
             config.get("tts_model_size") != "1b7" or config.get("tokenizer_type") != "qwen3_tts_tokenizer_12hz"):
         raise ValueError(f"A local Qwen3-TTS-12Hz-1.7B {variant} model is required")
@@ -319,13 +365,30 @@ def load_local_model(
             not {value.lower() for value in QWEN_LANGUAGES.values()}.issubset(languages)):
         raise ValueError("Local Qwen model does not support the required presets and languages")
 
+    reference_key: tuple[str, str] | None = None
+    reference_prompt: Any = None
+
     def synthesize(request: dict[str, Any]) -> bytes:
+        nonlocal reference_key, reference_prompt
         soundfile = importlib.import_module("soundfile")
 
         # CustomVoice includes codec decoding; its upstream no_grad guard does
         # not disable view tracking and version-counter overhead as this does.
         with torch.inference_mode():
-            if variant == "voice-design":
+            if variant == "base":
+                if request.get("instructions", ""):
+                    raise ValueError("Qwen Base does not support delivery instructions")
+                data, frames = _decode_reference(request["reference_audio"], request["reference_text"])
+                key = (hashlib.sha256(data).hexdigest(), hashlib.sha256(request["reference_text"].encode("utf-8")).hexdigest())
+                if key != reference_key:
+                    np = importlib.import_module("numpy")
+                    waveform = np.frombuffer(frames, dtype="<i2").astype(np.float32) / 32768.0
+                    reference_prompt = model.create_voice_clone_prompt(
+                        ref_audio=(waveform, SAMPLE_RATE), ref_text=request["reference_text"], x_vector_only_mode=False)
+                    reference_key = key
+                wavs, rate = model.generate_voice_clone(text=request["input"],
+                    language=QWEN_LANGUAGES[request["language"]], voice_clone_prompt=reference_prompt, max_new_tokens=2048)
+            elif variant == "voice-design":
                 instruction = " ".join(part for part in (request["voice_description"], request["instructions"]) if part)
                 wavs, rate = model.generate_voice_design(text=request["input"],
                                                         language=QWEN_LANGUAGES[request["language"]],
@@ -350,7 +413,7 @@ def load_local_model(
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", required=True, type=Path, help="Complete local model directory")
-    parser.add_argument("--variant", choices=["custom-voice", "voice-design"], default="custom-voice")
+    parser.add_argument("--variant", choices=["custom-voice", "voice-design", "base"], default="custom-voice")
     parser.add_argument("--device", choices=["cpu", "cuda"], default="cpu",
                         help="Explicit inference device; unavailable CUDA fails without fallback")
     parser.add_argument("--codec-device", choices=["cpu", "model"], default="model",
@@ -371,6 +434,8 @@ def main() -> None:
     server_options: dict[str, Any] = {"port": args.port, "runtime_info": renderer.runtime_info}
     if args.variant == "voice-design":
         server_options["model"] = QWEN_DESIGN_MODEL
+    elif args.variant == "base":
+        server_options["model"] = QWEN_BASE_MODEL
     server = worker_server(renderer, **server_options)
     try:
         server.serve_forever()

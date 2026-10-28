@@ -178,6 +178,7 @@ from lixity.server import LixityServerHandler
 from tests.locales import LOCALES
 import lixity.speech_jobs as jobs
 from lixity.speech import SpeechCancelled, generate_silence_wav
+from lixity.speech_references import save_reference
 base = Path(sys.argv[1])
 from lixity.config import prepare_project_settings
 projects = []
@@ -224,7 +225,8 @@ class TestHandler(LixityServerHandler):
             return
         super().do_GET()
 server = ThreadingHTTPServer(('127.0.0.1', 0), TestHandler)
-print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'projects':projects, 'legacy': {'root':str(legacy), 'source':str(legacy_source), 'config':str(legacy_config)}}), flush=True)
+reference = save_reference(projects[0]['root'], generate_silence_wav(2), 'Synthetic reference recording.')
+print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'projects':projects, 'reference_id':reference.id, 'legacy': {'root':str(legacy), 'source':str(legacy_source), 'config':str(legacy_config)}}), flush=True)
 server.serve_forever()
 `,artifacts);
   try {
@@ -261,8 +263,8 @@ server.serve_forever()
       assert.equal(await page.locator('#speech-direction_text').isVisible(),false, 'Passage direction is reserved for the reader');
       assert.equal(await page.locator('#speech-chapter').isVisible(),false, 'Chapter output has a separate entry');
       assert.equal(await page.locator('#speech-pronunciations').isVisible(),false, 'Pronunciations start collapsed');
-      assert.equal(await page.locator('#speech-speed, #speech-advanced_voice').count(),0,
-        'The dialog has no unsupported speed or cached voice controls');
+      assert.equal(await page.locator('#speech-speed').inputValue(),'1', 'Saved profiles without speed retain their old rate');
+      assert.equal(await page.locator('#speech-advanced_voice').count(),0);
       assert.equal(await page.locator('#speech-engine').inputValue(),'qwen3');
       assert.equal(await page.locator('#speech-voice_description').isVisible(),false);
       await page.locator('#speech-engine').selectOption('qwen3-design');
@@ -517,6 +519,8 @@ server.serve_forever()
     await savedPage.locator('#speech-language').selectOption('de');
     await savedPage.locator('[data-speech-action=create]').click();
     assert.equal(await savedPage.locator('#speech-language').inputValue(),'de','New Qwen profiles retain the supported chosen language');
+    assert.equal(await savedPage.locator('#speech-speed').inputValue(),'1.2');
+    await savedPage.locator('#speech-speed').fill('1.3');
     await savedPage.locator('#speech-name').fill('Saved synthetic narrator');
     await savedPage.locator('#speech-engine').selectOption('qwen3-design');
     await savedPage.locator('#speech-voice_description').fill('A natural German narrator with a calm voice.');
@@ -525,11 +529,26 @@ server.serve_forever()
     const savedPayload=(await saveRequest).postDataJSON();
     assert.equal(Object.hasOwn(savedPayload.audio,'target'),false);
     assert.ok(Object.values(savedPayload.audio.profiles).every(profile=>!Object.hasOwn(profile,'target')));
+    assert.equal(savedPayload.audio.profiles.narrator.speed,1);
+    assert.equal(savedPayload.audio.profiles[savedPayload.audio.selected].speed,1.3);
     await savedPage.locator('#tab-view-project').click();
     await savedPage.locator('#settings-speech').click();
     await savedPage.waitForFunction(()=>document.querySelector('#speech-name').value==='Saved synthetic narrator');
     assert.equal(await savedPage.locator('#speech-engine').inputValue(),'qwen3-design');
+    assert.equal(await savedPage.locator('#speech-speed').inputValue(),'1.3');
     assert.equal(await savedPage.locator('#speech-voice_description').inputValue(),'A natural German narrator with a calm voice.');
+    await savedPage.locator('[data-speech-action=create]').click();
+    await savedPage.locator('#speech-name').fill('Reference narrator');
+    await savedPage.locator('#speech-engine').selectOption('qwen3-base');
+    assert.ok(await savedPage.locator('#speech-reference_id').isVisible());
+    await savedPage.locator('#speech-reference_id').fill(server.fixture.reference_id);
+    assert.ok((await savedPage.locator('#modal-speech').textContent()).includes('Qwen Base'));
+    await Promise.all([savedPage.waitForNavigation(),savedPage.locator('[data-speech-action=save]').click()]);
+    await savedPage.locator('#tab-view-project').click();
+    await savedPage.locator('#settings-speech').click();
+    await savedPage.waitForFunction(()=>document.querySelector('#speech-name').value==='Reference narrator');
+    assert.equal(await savedPage.locator('#speech-engine').inputValue(),'qwen3-base');
+    assert.equal(await savedPage.locator('#speech-reference_id').inputValue(),server.fixture.reference_id);
     await savedPage.keyboard.press('Escape');
     await savedPage.locator('#settings-speech-output').click();
     await savedPage.waitForFunction(()=>document.querySelector('#speech-profile')?.value);

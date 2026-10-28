@@ -147,6 +147,51 @@ local files and report their SHA256 and caller-supplied provenance:
 python scripts/check_linguistic_corpus.py --conllu de_hdt-ud-test.conllu --language de --model de_core_news_md --limit 100 --corpus UD_German-HDT --release 2.18 --license "CC BY-SA4.0" --source https://raw.githubusercontent.com/UniversalDependencies/UD_German-HDT/r2.18/de_hdt-ud-test.conllu
 ```
 
+#### Finite-verb detection, separately from feature agreement
+
+The evaluator additionally reports `finite_verb_detection` over **all uniquely
+aligned gold words**, including nonverbs. A positive requires `VERB` or `AUX`
+and `VerbForm=Fin`. This exposes false-positive finite verbs on gold adjectives
+or nouns that the gold-verb-conditioned feature table above cannot measure.
+The [CoNLL-U format](https://universaldependencies.org/format.html) distinguishes
+syntactic words, surface tokens and morphology; expanded many-to-many spans
+remain unscored rather than being guessed into alignment.
+
+The independent 28 October 2026 rerun used the same official r2.18 test files,
+first 100 sentences per language and local model versions listed above. French
+was rerun with both the earlier spaCy medium baseline and selected Stanza GSD.
+All original feature metrics, including eligible Tense denominators, matched
+the retained previous reports exactly. No sentence failed source reconstruction
+or parsing in these eight runs. Counts below are **conditional on unique exact
+alignment**, not end-to-end detection across excluded words:
+
+| Test partition / parser | Aligned / all gold words | TP / FP / FN | Precision / recall |
+| --- | ---: | ---: | ---: |
+| German HDT / spaCy md | 1656 / 1700 | 119 / 5 / 4 | 0.960 / 0.967 |
+| English EWT / spaCy md | 2110 / 2202 | 166 / 4 / 12 | 0.976 / 0.933 |
+| French GSD / spaCy md baseline | 2395 / 2584 | 149 / 1 / 9 | 0.993 / 0.943 |
+| Spanish AnCora / spaCy md | 2944 / 3076 | 220 / 2 / 2 | 0.991 / 0.991 |
+| Italian MarkIT / Stanza | 2868 / 3224 | 292 / 2 / 4 | 0.993 / 0.986 |
+| Portuguese Bosque / spaCy md | 1563 / 1797 | 128 / 0 / 0 | 1.000 / 1.000 |
+| Dutch Alpino / spaCy md | 2049 / 2049 | 157 / 5 / 5 | 0.969 / 0.969 |
+| French GSD / Stanza | 2414 / 2584 | 158 / 0 / 0 | 1.000 / 1.000 |
+
+The JSON separately reports gold/predicted alignment misses and unscored words
+from source/parse failures. A gold verb without unambiguous finiteness is not
+invented as a negative: one aligned French word per run and one Portuguese word
+were excluded from detection labels. Missing predicted verb finiteness is
+counted explicitly; it misses a known gold finite verb rather than manufacturing
+a resolved prediction. Undefined precision/recall denominators produce `null`.
+Italian MarkIT, Portuguese and French Stanza each had one aligned prediction
+without verb finiteness in this bounded rerun.
+
+These are token-detection and token-feature checks. They do not validate composed
+verb-group tense, narration attribution, editorial warnings or literary quality.
+The ordered sample, alignment exclusions, corpus annotation provenance and
+possible training overlap prevent representative accuracy or a general parser
+ranking. In particular, perfect scores on the selected aligned subset do not
+establish perfect detection in excluded spans or unseen literary text.
+
 ### Core validation status
 
 **Since v0.7.6:** seven short original-language literary excerpts have manually

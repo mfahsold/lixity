@@ -9,7 +9,7 @@ integrations. See [licensing](LICENSING.md) before installation.
 Analysis runs offline; downloading Python, the package and dependencies requires
 network access. No manuscript upload, account or API key is required.
 
-> **Version scope:** this documentation describes **v0.7.6**. Verify packages at
+> **Version scope:** this documentation describes **v0.7.7**. Verify packages at
 > [GitHub releases](https://github.com/mfahsold/lixity/releases/latest) and
 > [PyPI](https://pypi.org/project/lixity/). The product uses the pre-1.0 **0.x** line.
 > Historical **1.x** and **3.x** tags predate the product-number reset; a larger
@@ -67,7 +67,7 @@ lixity doctor
 lixity service start --open
 ```
 
-See the [release notes](releases/v0.7.6.md)
+See the [release notes](releases/v0.7.7.md)
 for changes and compatibility. `uv tool update-shell` configures new terminals;
 it does not change the terminal already open.
 
@@ -164,7 +164,8 @@ for all readers and writers. Installing Lixity does not download an OCR model.
 
 ### Optional Qwen audio worker
 
-Read-aloud uses only `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice`. The application and
+Version 0.7.7 supports `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` and also
+supports separate VoiceDesign and reference-based Base checkpoints. The application and
 CLI share its project profiles and rendering controls. Audio runtime dependencies
 are optional: use a separate Python 3.12 environment with `qwen-tts`, a compatible
 PyTorch build and a complete local checkpoint, including its speech tokenizer.
@@ -178,6 +179,9 @@ memory headroom; model size and machine memory do not establish throughput.
 the fixed ports, private segment reuse and worker commands. Optional worker
 `--attention auto|eager|sdpa` is an explicit machine setting; compare actual
 workloads before choosing an override, without assuming a speed improvement.
+In 0.7.7, new audio profiles default to a 1.2 playback tempo factor;
+FFmpeg is required on the Lixity host for any factor other than 1.0 and for MP3.
+The factor is applied after synthesis, not by the Qwen model.
 
 Piper support has been removed. Existing Piper profiles require an explicit
 `audio-migrate` dry run and reviewed apply with a new backup outside the project.

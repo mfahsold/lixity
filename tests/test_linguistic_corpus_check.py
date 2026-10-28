@@ -67,6 +67,8 @@ def test_failures_and_missing_predictions_stay_in_gold_denominator(tmp_path, mon
     assert report["corpus_sha256"] == hashlib.sha256(corpus.encode()).hexdigest()
     assert report["sentences_selected"] == 4
     assert report["parse_failures"] == 1
+    assert report["finite_verb_detection"]["parse_unscored_tokens"] == 1
+    assert report["finite_verb_detection"]["gold_alignment_misses"] == 1
     assert report["alignment_misses"] == 1
     assert report["metrics"]["Tense"] == {
         "eligible": 4, "compared": 2, "correct": 1, "missing_prediction": 1,
@@ -128,6 +130,86 @@ def test_multiword_and_bad_source_alignment_never_raise_the_match_rate(tmp_path,
     report = checker.check_corpus(path, "en", "test", limit=2, provenance={})
     assert report["alignment_misses"] == 1
     assert report["source_alignment_failures"] == 1
+    assert report["finite_verb_detection"]["source_unscored_tokens"] == 1
     assert report["metrics"]["Tense"]["eligible"] == 2
     assert report["metrics"]["Tense"]["compared"] == 0
     assert report["metrics"]["Tense"]["match_rate_all_eligible"] == 0
+
+
+def test_finite_detection_counts_false_positive_on_gold_adjective(tmp_path, monkeypatch):
+    checker = _script()
+    path = tmp_path / "detection.conllu"
+    path.write_text("\n".join([
+        "# text = White writes danced quietly .",
+        _row(1, "White", "white", "ADJ"),
+        _row(2, "writes", "write", "VERB", "Mood=Ind|Tense=Pres|VerbForm=Fin"),
+        _row(3, "danced", "dance", "VERB", "Mood=Ind|Tense=Past|VerbForm=Fin"),
+        _row(4, "quietly", "quietly", "ADV"), _row(5, "."), "", "",
+    ]))
+    predicted = (
+        SyntaxToken(0, 0, 5, "White", "white", "VERB", "VB", "Fin", "Ind", "Pres", 0, "root"),
+        SyntaxToken(1, 6, 12, "writes", "write", "VERB", "VBZ", "Fin", "Ind", "Pres", 1, "root"),
+        SyntaxToken(2, 13, 19, "danced", "dance", "ADJ", "JJ", "", "", "", 1, "amod"),
+        SyntaxToken(3, 20, 27, "quietly", "quietly", "ADV", "RB", "", "", "", 1, "advmod"),
+        SyntaxToken(4, 28, 29, ".", ".", "PUNCT", ".", "", "", "", 1, "punct"),
+    )
+    monkeypatch.setattr(checker, "model_identity", lambda name: {"language": "en"})
+    monkeypatch.setattr(checker, "parse_tokens", lambda text, name: predicted)
+    report = checker.check_corpus(path, "en", "test", limit=1, provenance={})
+    detection = report["finite_verb_detection"]
+    assert (detection["true_positive"], detection["false_positive"],
+            detection["false_negative"], detection["true_negative"]) == (1, 1, 1, 2)
+    assert detection["precision"] == 0.5 and detection["recall"] == 0.5
+    assert detection["aligned_tokens"] == 5
+    # The extra false-positive adjective must not change the existing Tense denominator.
+    assert report["metrics"]["Tense"] == {
+        "eligible": 2, "compared": 2, "correct": 1, "missing_prediction": 1,
+        "match_rate_all_eligible": 0.5,
+    }
+
+
+@pytest.mark.parametrize("unknown_form", ["_", "VerbForm=Fin,Inf"])
+def test_unknown_gold_finiteness_is_not_invented_and_prediction_abstention_is_visible(tmp_path, monkeypatch, unknown_form):
+    checker = _script()
+    path = tmp_path / "unknown.conllu"
+    path.write_text("\n".join([
+        "# text = Writes Maybe Hidden",
+        _row(1, "Writes", "write", "VERB", "Mood=Ind|Tense=Pres|VerbForm=Fin"),
+        _row(2, "Maybe", "maybe", "VERB", unknown_form), _row(3, "Hidden", "hidden", "ADJ"), "", "",
+    ]))
+    predicted = (
+        SyntaxToken(0, 0, 6, "Writes", "write", "VERB", "VB", "", "", "", 0, "root"),
+        SyntaxToken(1, 7, 12, "Maybe", "maybe", "VERB", "VB", "Fin", "Ind", "Pres", 0, "conj"),
+        SyntaxToken(2, 13, 19, "Hidden", "hide", "VERB", "VB", "", "", "", 0, "conj"),
+    )
+    monkeypatch.setattr(checker, "model_identity", lambda name: {"language": "en"})
+    monkeypatch.setattr(checker, "parse_tokens", lambda text, name: predicted)
+    report = checker.check_corpus(path, "en", "test", limit=1, provenance={})
+    detection = report["finite_verb_detection"]
+    assert detection["unknown_gold_finiteness"] == 1
+    assert detection["unknown_prediction_finiteness"] == 2
+    assert detection["false_negative"] == 1 and detection["false_positive"] == 0
+    assert detection["true_negative"] == 1 and detection["true_positive"] == 0
+    assert detection["precision"] is None and detection["recall"] == 0
+    assert detection["aligned_tokens"] == 3
+
+
+def test_ambiguous_alignment_stays_outside_detection_scores(tmp_path, monkeypatch):
+    checker = _script()
+    path = tmp_path / "alignment.conllu"
+    path.write_text("\n".join([
+        "# text = Can't", _row("1-2", "Can't"),
+        _row(1, "Can", "can", "AUX", "Mood=Ind|Tense=Pres|VerbForm=Fin"),
+        _row(2, "not", "not", "PART"), "", "",
+    ]))
+    monkeypatch.setattr(checker, "model_identity", lambda name: {"language": "en"})
+    monkeypatch.setattr(checker, "parse_tokens", lambda text, name: (
+        SyntaxToken(0, 0, 5, text, "can", "AUX", "MD", "Fin", "Ind", "Pres", 0, "root"),
+    ))
+    report = checker.check_corpus(path, "en", "test", limit=1, provenance={})
+    detection = report["finite_verb_detection"]
+    assert detection["gold_tokens"] == 2 and detection["aligned_tokens"] == 0
+    assert detection["gold_alignment_misses"] == 2 and detection["prediction_alignment_misses"] == 1
+    assert detection["true_positive"] == detection["false_positive"] == detection["false_negative"] == 0
+    assert detection["precision"] is None and detection["recall"] is None
+    assert report["metrics"]["Tense"]["eligible"] == 1

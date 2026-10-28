@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import shutil
 import wave
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -100,6 +101,7 @@ def test_generate_silence_and_concatenate():
         assert wf.getnframes() == 3200
 
 
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="Default tempo requires FFmpeg")
 def test_default_render_uses_qwen_without_voice_files(tmp_path, monkeypatch):
     from lixity.speech import render_speech_audio
 
@@ -109,7 +111,7 @@ def test_default_render_uses_qwen_without_voice_files(tmp_path, monkeypatch):
 
     def synthesize(text, profile, **kwargs):
         calls.append((text, profile.engine, profile.voice, profile.language, kwargs["target"]))
-        return generate_silence_wav(.01, 24000)
+        return generate_silence_wav(.5, 24000)
 
     monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen", synthesize)
     output = render_speech_audio(source, tmp_path / "out.wav", language="en", target="jetson")
@@ -227,12 +229,13 @@ def test_render_uses_one_selected_qwen_profile_and_sample_rate(tmp_path, monkeyp
 @pytest.mark.parametrize("data", [b"", b"not a WAV", generate_silence_wav(.01, 24000)[:-2],
                                   generate_silence_wav(.01, 16000)])
 def test_invalid_synthesis_preserves_existing_output(tmp_path, monkeypatch, data):
+    from lixity.speech_profiles import AudioProfile
     speech, source, _calls = _fake_renderer(tmp_path, monkeypatch)
     output = tmp_path / "result.wav"
     output.write_bytes(b"previous output")
     monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen", lambda *_args, **_kwargs: data)
     with pytest.raises(ValueError, match=r"audio|WAV|PCM"):
-        speech.render_speech_audio(source, output)
+        speech.render_speech_audio(source, output, profile=AudioProfile(speed=1.0))
     assert output.read_bytes() == b"previous output"
     assert sorted(p.name for p in tmp_path.iterdir()) == ["result.wav", "source.md"]
 
@@ -408,26 +411,27 @@ def test_cli_uses_saved_profile_without_replacing_its_language_with_project_defa
         assert render.call_args.kwargs['profile'].instructions == 'Ruhig vorlesen.'
 
 
-def test_cli_rejects_removed_speed_option_before_rendering(tmp_path):
+def test_cli_speed_override_reaches_audio_renderer(tmp_path):
     source = tmp_path / "synthetic.md"
     source.write_text("A synthetic listening passage.")
     with patch("lixity.speech.render_speech_audio") as render:
-        with pytest.raises(SystemExit) as error:
-            main(["read-aloud", str(source), "--speed", "1.2"])
-        assert error.value.code == 2
-        render.assert_not_called()
+        assert main(["read-aloud", str(source), "--speed", "1.2"]) == 0
+        assert render.call_args.kwargs["profile"].speed == 1.2
+        assert all(row.profile.speed == 1.2 for row in render.call_args.kwargs["plan"])
     assert source.read_text() == "A synthetic listening passage."
 
 
 def test_audio_byte_limit_counts_structural_silence_and_preserves_output(tmp_path, monkeypatch):
     import pytest
 
+    from lixity.speech_profiles import AudioProfile
+
     speech, source, calls = _fake_renderer(tmp_path, monkeypatch)
     output = tmp_path / "limited.wav"
     output.write_bytes(b"previous audio")
     # The first PCM chunk (240 bytes) fits; its one-second heading pause does not.
     with pytest.raises(ValueError, match="byte limit"):
-        speech.render_speech_audio(source, output, max_audio_bytes=500)
+        speech.render_speech_audio(source, output, max_audio_bytes=500, profile=AudioProfile(speed=1.0))
     assert len(calls) == 1
     assert output.read_bytes() == b"previous audio"
     assert sorted(item.name for item in tmp_path.iterdir()) == ["limited.wav", "source.md"]

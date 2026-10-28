@@ -12,13 +12,13 @@ from lixity.cli import _completion_scripts
 
 READ_FLAGS = {
     "--help", "--project", "-o", "--output", "--chapter", "--language", "--profile",
-    "--plan-only", "--no-direction", "--engine", "--voice-description", "--instructions", "--voice", "--speech-target", "--no-audio-cache", "--fresh-audio", "--keep-markers", "--preview", "--preview-line", "--progress",
+    "--plan-only", "--no-direction", "--engine", "--voice-description", "--reference-id", "--instructions", "--voice", "--speed", "--speech-target", "--no-audio-cache", "--fresh-audio", "--keep-markers", "--preview", "--preview-line", "--progress",
 }
 MIGRATION_FLAGS = {
     "--help", "--project", "--replace", "--instructions", "--apply", "--backup", "--expected-snapshot",
 }
 LANGUAGES = {"zh", "en", "ja", "ko", "de", "fr", "ru", "pt", "es", "it"}
-VOICES = {"Vivian", "Serena", "Uncle_Fu", "Dylan", "Eric", "Ryan", "Aiden", "Ono_Anna", "Sohee", "design"}
+VOICES = {"Vivian", "Serena", "Uncle_Fu", "Dylan", "Eric", "Ryan", "Aiden", "Ono_Anna", "Sohee", "design", "reference"}
 
 
 def bash_complete(tmp_path, *words):
@@ -42,7 +42,7 @@ def test_bash_audio_commands_offer_only_their_actual_options(tmp_path, command, 
 
 @pytest.mark.parametrize(("option", "expected"), [
     ("--language", LANGUAGES), ("--speech-target", {"local", "jetson"}), ("--voice", VOICES),
-    ("--engine", {"qwen3", "qwen3-design"}),
+    ("--engine", {"qwen3", "qwen3-design", "qwen3-base"}),
 ])
 def test_bash_qwen_values_match_supported_model_controls(tmp_path, option, expected):
     assert bash_complete(tmp_path, "lixity", "read-aloud", option, "") == expected
@@ -54,7 +54,7 @@ def test_bash_migration_replacement_retains_explicit_profile_id(tmp_path):
 
 
 @pytest.mark.parametrize(("command", "option"), [
-    ("read-aloud", "--profile"), ("read-aloud", "--instructions"), ("read-aloud", "--chapter"),
+    ("read-aloud", "--profile"), ("read-aloud", "--instructions"), ("read-aloud", "--chapter"), ("read-aloud", "--speed"),
     ("audio-migrate", "--instructions"), ("audio-migrate", "--expected-snapshot"),
 ])
 def test_bash_free_values_do_not_offer_analysis_flags_or_files(tmp_path, command, option):

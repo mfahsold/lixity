@@ -425,9 +425,9 @@ Analysis Off and Focus hide both displays without resetting their preferences.
 | `[data-chapter-toggle]` | standalone report: fold or unfold a chapter body (strip and paragraphs); jumps and search steps expand a collapsed chapter; hidden in the continuous interactive reader |
 | `data-chapter="<n>"` | chapter navigation target; on metric triggers, the chapter to inspect before reading |
 | `[data-metric-feature="<field>"]` | since v0.7.6: heatmap cells, reference cutoff-hit counts and dimension loadings open shared chapter measurements using canonical fingerprint fields; no manuscript mutation |
-| `#analysis-metric-context` / `#metric-context-values` | current main: native measurement dialog and metric switches within the same chapter; raw units, medians, sample counts and z* remain distinct |
-| `#metric-context-read` / `[data-metric-close]` | current main: explicitly navigate with the applicable paragraph layer (or clear it); close/Escape restores trigger focus without changing the selected layer |
-| `[data-dimension-loading]` | current main: metric trigger follows the style-space selected chapter; axis/loading origin is not a chapter contribution |
+| `#analysis-metric-context` / `#metric-context-values` | Native measurement dialog and metric switches within the same chapter; raw units, medians, sample counts and z* remain distinct |
+| `#metric-context-read` / `[data-metric-close]` | Explicitly navigate with the applicable paragraph layer (or clear it); close/Escape restores trigger focus without changing the selected layer |
+| `[data-dimension-loading]` | Metric trigger follows the style-space selected chapter; axis/loading origin is not a chapter contribution |
 | `#style-tab-<panel-id>` / `data-style-view="<panel-id>"` | native style tab for `heatmap`, `bands`, `dimensions` or `structural`; its `aria-controls` points to that existing panel |
 | `.paragraph-values > summary` | standalone report and no-JavaScript fallback: native disclosure for source lines and measurements; inline Values is hidden in the interactive reader |
 | `.reader-paragraph-actions[data-reader-paragraph]` / `#manuscript-context-menu [data-reader-action="values"]` | interactive reader: open the paragraph menu, then **Explore passage** without changing global Analysis visibility; the internal `values` action key is unchanged |
@@ -992,7 +992,7 @@ pending sharing. This changes no endpoint, response envelope or write guard.
 **Since v0.7.4:** `POST /api/site-export` requires
 `{"project_token":"<current manuscript metadata token>","include_research":false,"include_source_files":false}`.
 Optional fields are `mode` (`review`, `reader`, `companion`; default `review`),
-`publication_profile`, `max_chapter` and (current main) `analysis_sections`. The installed `export-site` command's
+`publication_profile`, `max_chapter` and `analysis_sections`. The installed `export-site` command's
 `scope_schema` describes the strict shared request options. Review mode rejects
 profile/cap and requires research inclusion for source files. Reader/companion
 require a root-local profile and reject raw research inclusion; selected source
@@ -1582,8 +1582,21 @@ its validation contract. `read-aloud --profile` and the native dialog share it;
 explicit CLI control overrides are per invocation, not project writes. In the
 published 0.7.6 release the engine is `qwen3`, pinned to `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice`, with nine
 preset voices and ten explicit speech languages. Dutch analysis projects need
-an explicit supported speech language. Profile `speed` must be `1.0`; style
-instructions do not implement precise speed control.
+an explicit supported speech language. In 0.7.7 `speed` is a 0.5–2.0
+FFmpeg postprocessing factor, not native Qwen rate control; a new implicit
+profile uses 1.2. Existing explicit and omitted saved values preserve 1.0 where
+applicable. CLI `--speed` overrides all profiles for that run without saving.
+Non-1.0 factors require FFmpeg on the render host. Structural pauses stay unchanged.
+Style instructions do not implement precise speed control.
+
+Version 0.7.7 also supports `qwen3-base` profiles with `voice=reference` and a
+project-local `reference_id`. `audio-reference create --project PATH --audio WAV
+--transcript-file TXT` stores an immutable `lixity-audio-reference/1` object and
+returns only its ID. Reference bytes and transcript are private project data,
+not cache; they are validated and bound to job context and cache identity.
+Base profiles and passage ranges reject nonempty delivery instructions. A Base
+worker must be selected explicitly; it does not infer or assign character voices.
+Older installations that do not support the new engine reject these profiles.
 
 Removed Piper profiles are rejected with actionable migration guidance. Existing
 Qwen records retain the `/1` wire contract; saved profiles without an explicit
@@ -1609,7 +1622,7 @@ and use keyword arguments for `language`, `chapter` and `target`.
 Both speech functions now default to English. `generate_silence_wav` defaults to
 24,000 Hz instead of 22,050 Hz, matching the Qwen PCM path. Callers relying on
 those removed arguments, positional layouts or earlier defaults must update;
-there is no compatibility engine or precise speed replacement.
+there is no compatibility engine or native model rate control.
 
 All native speech reads require same-origin access and exactly one
 `project_token` plus `source_sha256`. Tokens guard context, not authentication.
@@ -1691,7 +1704,7 @@ This is an explicit opt-in semantic extension; existing pattern fields/overrides
 retain their contracts; models are explicit per-language opt-ins. Review identities include the model,
 runtime and composition policy. See [limits and measured errors](STABILITY.md#grammatical-tense).
 
-## Passage speech direction (current main, after 0.7.6)
+## Passage speech direction
 
 `lixity audio-direction inspect --project PATH [--manuscript PATH]` is read-only.
 It emits `lixity-audio-direction-view/1`: `source_path`, source/settings/direction
@@ -1740,7 +1753,7 @@ CustomVoice profile serialization and worker request fields remain unchanged.
 The cache identity includes model, description and effective instructions.
 
 
-## CLI audio status and previews (current main)
+## CLI audio status and previews
 
 `audio-status --json [--project PATH] [--engine qwen3|qwen3-design]` returns `lixity-audio-status/1` with
 actual per-target state, model identity and nullable comparison with the selected

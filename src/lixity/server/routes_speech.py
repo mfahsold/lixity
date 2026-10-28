@@ -32,6 +32,7 @@ from ..speech_profiles import (
     requires_audio_migration,
     resolve_audio_profile,
 )
+from ..speech_references import references_for_plan, references_unchanged
 from ._base import ResponseMixin
 from .pdf_context import project_settings_token
 
@@ -250,6 +251,10 @@ class SpeechRoutesMixin(ResponseMixin):
                     else:
                         plan = next(([row] for row in plan if row.anchor), plan[:1])
                 context["direction_sha256"] = view["direction_sha256"]
+                root = self.get_author_project_root()
+                if root is None:
+                    raise ValueError("Open a manuscript project before using audio")
+                references = references_for_plan(root, plan)
                 if plan_only:
                     self._json({"ok": True, "plan": plan_json(plan), "context": context})
                     return
@@ -274,7 +279,8 @@ class SpeechRoutesMixin(ResponseMixin):
                             ):
                                 return False
                             root = handler.get_author_project_root()
-                            if root is None or direction_snapshot(root) != view["direction_sha256"]:
+                            if (root is None or direction_snapshot(root) != view["direction_sha256"]
+                                    or not references_unchanged(root, references)):
                                 return False
                             return bool(
                                 FileUtils.read_source_snapshot(handler.source_input)[1]
@@ -283,12 +289,12 @@ class SpeechRoutesMixin(ResponseMixin):
                     except (OSError, ValueError):
                         return False
 
-                root = self.get_author_project_root()
                 cache_dir = (project_audio_cache(root) if root is not None and
-                             profile.engine in ("qwen3", "qwen3-design") and payload["mode"] == "chapter" else None)
+                             profile.engine in ("qwen3", "qwen3-design", "qwen3-base") and payload["mode"] == "chapter" else None)
+            reference_options = {"references": references} if references else {}
             job = self._speech_manager().start(key, prepared, profile, context, valid, cache_dir=cache_dir,
                                                fresh_audio=payload.get("fresh_audio", False),
-                                               target=payload.get("target", "local"), plan=plan)
+                                               target=payload.get("target", "local"), plan=plan, **reference_options)
             self._json({"ok": True, "job": job}, 202)
         except (OSError, TypeError, ValueError, RuntimeError, UserWarning) as exc:
             self._speech_error(exc)

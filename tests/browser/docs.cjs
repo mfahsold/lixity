@@ -23,12 +23,14 @@ function htmlRoutes(directory, prefix = '') {
 }
 const routes = htmlRoutes(root).filter(route => route !== 'demo/research.html').sort();
 const publicationRoutes = new Set(['demo/reader/index.html', 'demo/companion/index.html']);
+const publicationAnalysisRoutes = new Set(['demo/reader/analysis.html']);
 for (const route of publicationRoutes) assert.ok(routes.includes(route), `Missing curated public example: ${route}`);
+for (const route of publicationAnalysisRoutes) assert.ok(routes.includes(route), `Missing curated analysis: ${route}`);
 // Every content page gets all widths. Shared surface types cover theme/JS variants.
 const fullMatrixRoutes = new Set(['', 'guides/first-look.html', 'guides/first-look-de.html', 'guides/interpretation.html', 'guides/research-pdf.html', 'demo/report.html',
-  'examples/effi-briest.html', 'blog/index.html', 'blog/whats-new-lixity.html', 'blog/manuscript-reading-workbench.html', ...publicationRoutes]);
+  'examples/effi-briest.html', 'blog/index.html', 'blog/whats-new-lixity.html', 'blog/manuscript-reading-workbench.html', ...publicationRoutes, ...publicationAnalysisRoutes]);
 const returnJourneyRoutes = new Set(['', 'guides/first-look.html', 'blog/index.html',
-  'blog/whats-new-lixity.html', 'demo/report.html', 'examples/effi-briest.html', ...publicationRoutes]);
+  'blog/whats-new-lixity.html', 'demo/report.html', 'examples/effi-briest.html', ...publicationRoutes, ...publicationAnalysisRoutes]);
 let origin;
 const demoTitle = 'The Crate at Warehouse 4';
 const demoQuote = 'Someone had tried the eastern gate of Warehouse 4.';
@@ -111,6 +113,17 @@ async function returnToTop(page, route) {
 }
 
 async function checkReturnNavigation(page, route, exercise) {
+  if (publicationAnalysisRoutes.has(route)) {
+    const back = page.getByRole('link', {name: 'Back to reading copy'});
+    await expect(back).toBeVisible();
+    await expect(back).toHaveAttribute('href', 'index.html');
+    if (exercise) {
+      await back.click();
+      await expect(page).toHaveURL(origin + '/lixity/demo/reader/index.html');
+      await page.goBack();
+    }
+    return;
+  }
   const top = page.locator('body#top.site-page');
   await expect(top).toHaveAttribute('tabindex', '-1');
   const navigation = page.locator('nav.site-return[aria-label="Lixity navigation"]');
@@ -1091,7 +1104,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
           // Plain reports retain lazy paragraph payloads; the interactive demo
           // mounts continuous prose. Content pages need a readable article.
           const dashboard = route === 'demo/report.html' || route.startsWith('examples/');
-          const publication = publicationRoutes.has(route);
+          const publication = publicationRoutes.has(route) || publicationAnalysisRoutes.has(route);
           if (!dashboard && !publication) {
             const themeControl = page.locator('#themeToggle');
             if (javaScriptEnabled) await expect(themeControl).toBeVisible();
@@ -1114,6 +1127,10 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
           if (dashboard) {
             assert.ok(await page.locator('.chapter').count() > 0, `${route} renders chapters`);
             assert.ok(await page.locator('.chip').count() > 0, `${route} renders paragraph chips`);
+          } else if (publicationAnalysisRoutes.has(route)) {
+            await expect(page.locator('body')).toHaveAttribute('data-read-only', 'true');
+            assert.ok(await page.locator('#analysis-section-chapters .reader-analysis-chapter').count() > 0,
+              `${route} renders chapter analysis`);
           } else if (!publication) {
             assert.ok((await page.locator('main').innerText()).length > 1000,
               `${route} has too little visible text`);
@@ -1236,7 +1253,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
           }
           await page.screenshot({path: path.join(artifacts, `${route ? path.basename(route, '.html') : 'home'}-${width}-${colorScheme}${javaScriptEnabled ? '' : '-js-off'}.png`), fullPage: route === '' || route === 'guides/first-look.html'});
           if (route === 'demo/report.html') await checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme);
-          if (publication) await checkPublicationExample(page, route, javaScriptEnabled, width, colorScheme);
+          if (publicationRoutes.has(route)) await checkPublicationExample(page, route, javaScriptEnabled, width, colorScheme);
         }
         await page.goto(origin + '/lixity/');
         await page.locator('.site-header a[href="#installation"]').focus();

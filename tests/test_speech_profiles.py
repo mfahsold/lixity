@@ -49,7 +49,8 @@ def test_malformed_settings_fail_explicitly(raw):
     {"paragraph_pause": -1}, {"scene_pause": float("inf")},
     {"pronunciations": {"": "say"}}, {"pronunciations": {"term": ""}},
     {"pronunciations": {"term": "two\nlines"}}, {"endpoint": "http://localhost"},
-    {"engine": "qwen3", "voice": "Ryan", "speed": 1.2},
+    {"engine": "qwen3", "voice": "Ryan", "speed": 0.49},
+    {"engine": "qwen3", "voice": "Ryan", "speed": 2.01},
     {"engine": "qwen3", "voice": "invented"},
 ])
 def test_unsupported_profile_values_fail(changes):
@@ -59,12 +60,13 @@ def test_unsupported_profile_values_fail(changes):
 
 def test_capabilities_drive_multilingual_voice_validation():
     capabilities = audio_capabilities()
-    assert set(capabilities) == {"qwen3", "qwen3-design"}
+    assert set(capabilities) == {"qwen3", "qwen3-design", "qwen3-base"}
     for language in ("en", "de", "fr", "es", "it", "pt", "ru", "zh", "ja", "ko"):
         profile = AudioProfile(engine="qwen3", language=language, voice="Ryan", instructions="Calm")
         assert profile.language == language
     assert capabilities["qwen3"]["instructions"] is True
-    assert capabilities["qwen3"]["speed"]["supported"] is False
+    assert capabilities["qwen3"]["speed"]["supported"] is True
+    assert capabilities["qwen3"]["speed"]["implementation"] == "ffmpeg-atempo"
     json.dumps(capabilities, allow_nan=False)
     capabilities["qwen3"]["languages"].append("invented")
     assert "invented" not in audio_capabilities()["qwen3"]["languages"]
@@ -125,7 +127,7 @@ def test_settings_reject_empty_selection_and_validate_complete_round_trip():
 def test_default_qwen_language_is_explicit(language):
     profile = parse_audio_settings(None, language=language).profiles["narrator"]
     assert profile.language == language and profile.engine == "qwen3"
-    assert profile.voice == "Ryan" and profile.speed == 1.0
+    assert profile.voice == "Ryan" and profile.speed == 1.2
 
 
 def test_unsupported_default_language_does_not_silently_select_english():

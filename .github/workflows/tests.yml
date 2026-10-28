@@ -1,8 +1,8 @@
-# Full source checks run locally with `make check`; retain this job as an
-# explicitly dispatched fallback instead of repeating it on every push or PR.
+# Full source checks run locally and are reusable by the tagged release.
 name: tests
 on:
   workflow_dispatch:
+  workflow_call:
 permissions:
   contents: read
 concurrency:
@@ -14,6 +14,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"

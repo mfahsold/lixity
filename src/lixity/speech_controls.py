@@ -17,7 +17,7 @@ class SpeechControlSupport:
     """Advertised implementation, separate from an author's desired effect."""
 
     pronunciation: Literal["text_substitution"]
-    direction: Literal["model_interpreted"]
+    direction: Literal["model_interpreted", "unsupported"]
     pauses: Literal["explicit_silence"]
     phonemes: bool
     ssml: bool
@@ -31,10 +31,16 @@ _QWEN_SUPPORT = SpeechControlSupport(
     pronunciation="text_substitution", direction="model_interpreted", pauses="explicit_silence",
     phonemes=False, ssml=False, precise_rate=False,
 )
+_QWEN_BASE_SUPPORT = SpeechControlSupport(
+    pronunciation="text_substitution", direction="unsupported", pauses="explicit_silence",
+    phonemes=False, ssml=False, precise_rate=False,
+)
 
 
 def speech_control_support(engine: str) -> SpeechControlSupport:
     """Describe the actual Lixity adapter, not the model's theoretical features."""
+    if engine == "qwen3-base":
+        return _QWEN_BASE_SUPPORT
     if engine not in ("qwen3", "qwen3-design"):
         raise ValueError("Unknown speech engine")
     return _QWEN_SUPPORT

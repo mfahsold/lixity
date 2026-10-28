@@ -53,7 +53,7 @@ def test_preview_and_download_are_bound_to_actual_source_without_writes(speech_s
     assert response.status == 200, response.body
     data = json.loads(response.body)
     assert data["settings"]["selected"] == "narrator" and len(data["chapters"]) == 2
-    assert set(data["capabilities"]) == {"qwen3", "qwen3-design"}
+    assert set(data["capabilities"]) == {"qwen3", "qwen3-design", "qwen3-base"}
     assert data["requires_migration"] is False
     assert data["capabilities"]["qwen3"]["instructions"] is True
     assert data["settings"]["profiles"]["narrator"]["engine"] == "qwen3"
@@ -221,7 +221,7 @@ def test_qwen_chapters_reuse_completed_segments_but_previews_stay_fresh(speech_s
 @pytest.mark.parametrize("explicit_profile", [False, True])
 def test_api_dispatches_target_without_mutating_saved_profiles(speech_server, monkeypatch, target, explicit_profile):
     import lixity.speech_jobs as jobs
-    from lixity.speech_profiles import AudioProfile
+    from lixity.speech_profiles import AudioProfile, parse_audio_settings
 
     port, source, handler, _observed = speech_server
     received = []
@@ -251,7 +251,8 @@ def test_api_dispatches_target_without_mutating_saved_profiles(speech_server, mo
         time.sleep(.01)
     assert status["state"] == "ready", status
     assert send(port, "/api/speech-audio?" + query).status == 200
-    assert received == [(target or "local", profile)]
+    expected = profile if explicit_profile else parse_audio_settings(None).profiles["narrator"].model_dump()
+    assert received == [(target or "local", expected)]
     assert "target" not in received[0][1]
     assert (source.parent / "lixity.toml").read_bytes() == original_config
     assert source.read_bytes() == original_source
@@ -313,7 +314,7 @@ voice = "en_US-lessac-medium"
     response = send(port, "/api/speech?" + urlencode(bound))
     assert response.status == 200, response.body
     data = json.loads(response.body)
-    assert data["settings"] is None and set(data["capabilities"]) == {"qwen3", "qwen3-design"}
+    assert data["settings"] is None and set(data["capabilities"]) == {"qwen3", "qwen3-design", "qwen3-base"}
     assert "Piper" in data["configuration_error"] and "audio-migrate" in data["configuration_error"]
     response = send(port, "/api/speech-render", payload={**bound, "mode": "preview", "chapter": 1})
     assert response.status == 400, response.body
@@ -391,6 +392,48 @@ def test_native_direction_save_plan_and_stale_snapshot(speech_server):
     assert any(row['profile']['instructions']=='Restrained tension.' for row in plan['segments'])
     assert observed == []
     assert source.read_text().startswith('## First')
+
+
+def test_native_base_plan_binds_reference_and_rejects_changed_reference(speech_server):
+    from lixity.speech_references import save_reference
+
+    port, source, handler, _observed = speech_server
+    bound = context(source, handler)
+    reference = save_reference(source.parent, generate_silence_wav(1), "Exact transcript.")
+    profile = {"name": "Reference", "engine": "qwen3-base", "language": "en",
+               "voice": "reference", "reference_id": reference.id}
+    payload = {**bound, "mode": "preview", "chapter": 1, "profile": profile}
+    response = send(port, "/api/speech-plan", payload=payload)
+    assert response.status == 200, response.body
+    plan = json.loads(response.body)["plan"]
+    assert plan["controls"]["instructions"] == "unsupported"
+    assert b"Exact transcript" not in response.body
+    path = source.parent / ".lixity" / "audio-references" / f"{reference.id}.json"
+    path.write_text("changed")
+    assert send(port, "/api/speech-render", payload=payload).status == 400
+
+
+def test_native_base_download_expires_when_reference_changes(speech_server):
+    from lixity.speech_references import save_reference
+
+    port, source, handler, _observed = speech_server
+    bound = context(source, handler)
+    reference = save_reference(source.parent, generate_silence_wav(1), "Exact transcript.")
+    profile = {"name": "Reference", "engine": "qwen3-base", "language": "en",
+               "voice": "reference", "reference_id": reference.id}
+    response = send(port, "/api/speech-render", payload={**bound, "mode": "preview", "chapter": 1, "profile": profile})
+    assert response.status == 202, response.body
+    query = urlencode({**bound, "id": json.loads(response.body)["job"]["id"]})
+    for _ in range(100):
+        status = json.loads(send(port, "/api/speech-job?" + query).body)["job"]
+        if status["state"] == "ready":
+            break
+        time.sleep(.01)
+    assert status["state"] == "ready"
+    assert send(port, "/api/speech-audio?" + query).status == 200
+    path = source.parent / ".lixity" / "audio-references" / f"{reference.id}.json"
+    path.write_text("changed")
+    assert send(port, "/api/speech-audio?" + query).status != 200
 
 
 def test_saving_direction_invalidates_a_completed_download(speech_server):

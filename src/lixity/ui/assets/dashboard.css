@@ -30,6 +30,7 @@ code, pre { font-family: var(--font-mono); }
 #analysis-metric-context p { margin: 0; }
 #metric-context-chapter, .metric-context-value { font-weight: var(--weight-strong); }
 #analysis-metric-context table { min-width: 40rem; }
+#analysis-metric-context thead th:nth-child(2) { min-width: 7rem; }
 #metric-context-values th { min-width: 10rem; }
 #metric-context-values td { font-variant-numeric: tabular-nums; }
 #metric-context-values .ctl { text-align: start; justify-content: flex-start; }

@@ -1,6 +1,8 @@
 """Synthetic tests for fixed local synthesis transport and atomic cancellation."""
 from __future__ import annotations
 
+import base64
+import http.client
 import io
 import json
 import threading
@@ -132,6 +134,54 @@ def test_worker_health_validation_and_pcm():
         with error.value:
             assert error.value.code == 400
         assert len(calls) == 1
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+
+def test_base_worker_accepts_bounded_reference_and_rejects_unsupported_direction():
+    model_id = "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
+    calls = []
+    server = worker_server(lambda request: calls.append(request) or generate_silence_wav(.01), port=0, model=model_id)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    url = f"http://127.0.0.1:{server.server_address[1]}"
+    payload = {"model": model_id, "input": "A short synthetic passage.", "voice": "reference", "language": "de",
+               "instructions": "", "response_format": "wav", "reference_audio": base64.b64encode(generate_silence_wav(1)).decode(),
+               "reference_text": "Referenztext."}
+
+    def post(value):
+        request = urllib.request.Request(url + "/v1/audio/speech", data=json.dumps(value).encode(),  # noqa: S310
+                                         headers={"Content-Type": "application/json"})
+        return opener.open(request)
+
+    try:
+        with opener.open(url + "/health") as response:
+            assert json.load(response)["model"] == model_id
+        with post(payload) as response:
+            assert response.status == 200 and response.headers["X-Lixity-Voice"] == "reference"
+        assert len(calls) == 1
+        for update in ({"instructions": "Whisper"}, {"reference_audio": "!"},
+                       {"reference_audio": base64.b64encode(generate_silence_wav(1, 16000)).decode()},
+                       {"reference_audio": base64.b64encode(generate_silence_wav(.01)).decode()},
+                       {"reference_text": ""}, {"reference_text": "text\x00invalid"},
+                       {"reference_text": "\ud800"}, {"voice": "Ryan"}):
+            with pytest.raises(urllib.error.HTTPError) as error:
+                post({**payload, **update})
+            with error.value:
+                assert error.value.code == 400
+        assert len(calls) == 1
+        connection = http.client.HTTPConnection("127.0.0.1", server.server_address[1])
+        try:
+            connection.putrequest("POST", "/v1/audio/speech")
+            connection.putheader("Content-Type", "application/json")
+            connection.putheader("Content-Length", str(3 * 1024 * 1024))
+            connection.endheaders()
+            assert connection.getresponse().status == 400
+        finally:
+            connection.close()
     finally:
         server.shutdown()
         server.server_close()
@@ -730,6 +780,46 @@ def test_voice_design_worker_calls_official_api_with_separate_description_and_di
                       'instruct':'Natural German baritone. Read calmly.','max_new_tokens':2048}]
     with pytest.raises(ValueError,match='model'):
         load_local_model(tmp_path, variant='custom-voice')
+
+
+def test_base_worker_reuses_only_matching_reference_prompt(tmp_path, monkeypatch):
+    from contextlib import nullcontext
+
+    import numpy as np
+
+    from lixity.speech_profiles import QWEN_LANGUAGES
+    from lixity.speech_qwen import load_local_model
+
+    (tmp_path / 'config.json').write_text(json.dumps({'tts_model_type':'base',
+        'tts_model_size':'1b7', 'tokenizer_type':'qwen3_tts_tokenizer_12hz'}))
+    created, generated = [], []
+    def create_prompt(**kwargs):
+        created.append(kwargs)
+        return f'prompt-{len(created)}'
+    model = SimpleNamespace(get_supported_languages=lambda:list(QWEN_LANGUAGES.values()),
+                            create_voice_clone_prompt=create_prompt,
+                            generate_voice_clone=lambda **kwargs:(generated.append(kwargs) or (['sample'],24000)))
+    torch = SimpleNamespace(float32='float32', set_num_threads=lambda n:None, inference_mode=nullcontext)
+    qwen = SimpleNamespace(Qwen3TTSModel=SimpleNamespace(from_pretrained=lambda *a,**k:model))
+    soundfile = SimpleNamespace(write=lambda out, *_a, **_k:out.write(generate_silence_wav(.01,24000)))
+    monkeypatch.setattr('lixity.speech_qwen.importlib.import_module',
+                        lambda name:{'torch':torch,'qwen_tts':qwen,'soundfile':soundfile,'numpy':np}[name])
+    worker = load_local_model(tmp_path, variant='base')
+    reference = base64.b64encode(generate_silence_wav(1)).decode()
+    request = {'input':'Ein kurzer Satz.', 'language':'de', 'instructions':'',
+               'reference_audio':reference, 'reference_text':'Referenztext.'}
+    assert worker(request).startswith(b'RIFF')
+    worker({**request, 'input':'Ein anderer Satz.'})
+    worker({**request, 'reference_text':'Anderer Referenztext.'})
+    worker({**request, 'reference_audio':base64.b64encode(generate_silence_wav(1.1)).decode()})
+    worker(request)
+    assert len(created) == 4
+    assert [x['voice_clone_prompt'] for x in generated] == [
+        'prompt-1', 'prompt-1', 'prompt-2', 'prompt-3', 'prompt-4']
+    assert created[0]['ref_text'] == request['reference_text']
+    assert created[0]['ref_audio'][1] == 24000
+    assert len(created[0]['ref_audio'][0]) == 24000
+    assert all('instruct' not in kwargs for kwargs in generated)
 
 
 def test_adapter_reports_wrong_active_worker_model():

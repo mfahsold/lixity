@@ -1,6 +1,8 @@
 """Completed synthetic segments survive failures without publishing partial audio."""
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from lixity.speech import SpeechCancelled, generate_silence_wav, render_speech_audio
@@ -91,6 +93,42 @@ def test_cache_is_bounded_and_retains_no_raw_prose_in_metadata(tmp_path):
     assert cache.get("Private synthetic phrase two.", narrator(voice="Aiden")) is None
 
 
+def test_base_cache_separates_reference_and_model_but_not_playback_speed(tmp_path):
+    from lixity.speech_cache import SpeechSegmentCache
+
+    cache = SpeechSegmentCache(tmp_path / "segments")
+    first_id, second_id = "a" * 64, "b" * 64
+    def base(reference_id, *, speed=1.0):
+        return AudioProfile(engine="qwen3-base", voice="reference", language="de",
+                            reference_id=reference_id, speed=speed)
+
+    audio = generate_silence_wav(.01, 24000)
+    text = "Synthetic reference cache text."
+    cache.put(text, base(first_id), audio)
+    assert cache.get(text, base(first_id, speed=1.8)) == audio
+    assert cache.get(text, base(second_id)) is None
+    custom = SimpleNamespace(engine="qwen3", voice="reference", language="de", instructions="")
+    assert cache.get(text, custom) is None
+    metadata = next(cache.directory.glob("*.json")).read_text()
+    assert text not in metadata and first_id not in metadata
+
+
+def test_existing_voice_cache_keys_remain_stable(tmp_path):
+    from lixity.speech_cache import SpeechSegmentCache
+
+    cache = SpeechSegmentCache(tmp_path / "segments")
+    audio = generate_silence_wav(.01, 24000)
+    text = "Cache contract sample."
+    design = AudioProfile(engine="qwen3-design", voice="design", language="en",
+                          voice_description="A synthetic voice.")
+    cache.put(text, narrator(), audio)
+    cache.put(text, design, audio)
+    assert {p.stem for p in cache.directory.glob("*.json")} == {
+        "8b7ec6d77ba432b441af1b9354c84f1a4a1123418de4780f87b4d089efa71dee",
+        "8247f46630f3a6f5cf0f870e2f15cd3105d12d288f6024a72b51f207d08a378e",
+    }
+
+
 def test_cli_reuses_project_segments_and_explicit_fresh_flag(tmp_path, monkeypatch):
     from lixity.cli import main
     from lixity.config import prepare_project_settings
@@ -178,7 +216,9 @@ def test_cli_default_qwen_uses_jetson_without_saving_a_profile(tmp_path, monkeyp
     calls = []
     def synthesize(text, profile, **kwargs):
         calls.append((text, profile.engine, profile.voice, kwargs["target"]))
-        return generate_silence_wav(.01, 24000)
+        # The implicit profile applies tempo processing, which needs more than
+        # a few milliseconds of PCM to produce a valid output segment.
+        return generate_silence_wav(.2, 24000)
 
     original = (tmp_path / "lixity.toml").read_bytes()
     monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen", synthesize)

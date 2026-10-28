@@ -11382,6 +11382,19 @@ _ROWS.update(
             'Voz predefinida',
             'Stemkeuze',
         ),
+        'speech_reference_id': (
+            'Voice reference ID', 'Stimmreferenz-ID', 'Identifiant de la référence vocale',
+            'ID de referencia de voz', 'ID del riferimento vocale', 'ID da referência de voz', 'Stemreferentie-ID',
+        ),
+        'speech_reference_hint': (
+            'Create a project-local reference with the CLI and enter its ID. Qwen Base cannot interpret delivery instructions.',
+            'Erstelle eine projektlokale Referenz über die CLI und trage ihre ID ein. Qwen Base verarbeitet keine Sprech- oder Regieanweisungen.',
+            'Créez une référence locale avec la CLI et saisissez son identifiant. Qwen Base ne traite pas les consignes vocales.',
+            'Crea una referencia local con la CLI e introduce su ID. Qwen Base no interpreta instrucciones de voz.',
+            'Crea un riferimento locale con la CLI e inserisci il suo ID. Qwen Base non interpreta istruzioni vocali.',
+            'Crie uma referência local com a CLI e informe seu ID. Qwen Base não interpreta instruções de voz.',
+            'Maak een lokale referentie met de CLI en voer de ID in. Qwen Base verwerkt geen voordrachtinstructies.',
+        ),
         'speech_voice_hint': (
             'Qwen uses preset voices. Choose delivery instructions explicitly.',
             'Qwen verwendet Stimmvorgaben. Vortragsanweisungen ausdrücklich wählen.',
@@ -11399,6 +11412,19 @@ _ROWS.update(
             'Istruzioni vocali (solo Qwen)',
             'Instruções de voz (apenas Qwen)',
             'Spreekinstructies (alleen Qwen)',
+        ),
+        'speech_speed': (
+            'Playback tempo factor', 'Sprechtempo-Faktor', 'Facteur de tempo',
+            'Factor de velocidad', 'Fattore di velocità', 'Fator de velocidade', 'Tempofactor',
+        ),
+        'speech_speed_hint': (
+            'FFmpeg adjusts rendered speech after synthesis. 1.0 keeps the original; pauses stay unchanged.',
+            'FFmpeg passt die Sprache nach der Synthese an. 1,0 belässt das Original; Pausen bleiben unverändert.',
+            'FFmpeg ajuste la voix après synthèse. 1,0 conserve l’original ; les pauses restent inchangées.',
+            'FFmpeg ajusta la voz tras la síntesis. 1,0 conserva el original; las pausas no cambian.',
+            'FFmpeg regola la voce dopo la sintesi. 1,0 mantiene l’originale; le pause non cambiano.',
+            'O FFmpeg ajusta a voz após a síntese. 1,0 mantém o original; as pausas não mudam.',
+            'FFmpeg past de spraak na synthese aan. 1,0 behoudt het origineel; pauzes blijven gelijk.',
         ),
         'speech_paragraph_pause': (
             'Paragraph pause (seconds)',

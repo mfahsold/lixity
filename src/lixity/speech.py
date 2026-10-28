@@ -29,6 +29,7 @@ from .speech_profiles import AudioProfile, resolve_audio_profile
 
 if TYPE_CHECKING:
     from .speech_direction import SpeechSegment
+    from .speech_references import SpeechReference
 
 MAX_SEGMENT_CHARS = 600
 # Conservative per-invocation bound; this does not interrupt in-process inference.
@@ -216,13 +217,14 @@ def generate_silence_wav(
     return output.getvalue()
 
 
-def _read_pcm(data: bytes) -> tuple[tuple[int, int, int], bytes]:
+def _read_pcm(data: bytes, *, allow_empty: bool = False) -> tuple[tuple[int, int, int], bytes]:
     try:
         with wave.open(io.BytesIO(data), "rb") as reader:
             params = (reader.getnchannels(), reader.getsampwidth(), reader.getframerate())
             count = reader.getnframes()
             frames = reader.readframes(count)
-            if reader.getcomptype() != "NONE" or not count or len(frames) != count * params[0] * params[1]:
+            if (reader.getcomptype() != "NONE" or (not count and not allow_empty)
+                    or len(frames) != count * params[0] * params[1]):
                 raise ValueError("Missing or truncated PCM audio segment")
             return params, frames
     except (wave.Error, EOFError, OSError) as exc:
@@ -246,7 +248,7 @@ def concatenate_wavs(wav_bytes_list: list[bytes]) -> bytes:
 
 
 def _run_ffmpeg(command: list[str]) -> subprocess.CompletedProcess[bytes]:
-    """Bound MP3 conversion without exposing captured text on timeout."""
+    """Bound each FFmpeg operation without exposing captured text on timeout."""
     try:
         return subprocess.run(  # noqa: S603 - resolved executable and explicit arguments
             command, capture_output=True, check=False, timeout=SUBPROCESS_TIMEOUT_SECONDS,
@@ -272,6 +274,7 @@ def render_speech_audio(
     fresh_audio: bool = False,
     target: str = "local",
     plan: list[SpeechSegment] | None = None,
+    references: Mapping[str, SpeechReference] | None = None,
 ) -> Path:
     """Stream a consistent selected delivery into an atomic WAV or MP3 copy."""
     _check_cancelled(cancelled)
@@ -290,9 +293,6 @@ def render_speech_audio(
         raise ValueError("Audio output must differ from the manuscript")
     if output.suffix.lower() not in (".wav", ".mp3"):
         raise ValueError("Audio output must use .wav or .mp3")
-    ffmpeg = shutil.which("ffmpeg") if output.suffix.lower() == ".mp3" else None
-    if output.suffix.lower() == ".mp3" and not ffmpeg:
-        raise FileNotFoundError("FFmpeg is required for MP3 output; choose WAV instead")
     rate = 24000
     from .speech_direction import build_speech_plan
 
@@ -300,6 +300,19 @@ def render_speech_audio(
         source.read_text(encoding="utf-8"), profile, chapter=chapter, skip_markers=skip_markers)
     if not any(cue.text for cue in cues):
         raise ValueError("No spoken text in the selected chapter")
+    from .speech_references import validate_reference
+    for reference_id in {cue.profile.reference_id for cue in cues
+                         if cue.text and cue.profile.engine == "qwen3-base"}:
+        reference = (references or {}).get(reference_id)
+        if reference is None or reference.id != reference_id:
+            raise ValueError("A verified reference is required for every Qwen Base profile")
+        validate_reference(reference)
+    needs_tempo = any(cue.text and cue.profile.speed != 1.0 for cue in cues)
+    ffmpeg = shutil.which("ffmpeg") if output.suffix.lower() == ".mp3" or needs_tempo else None
+    if not ffmpeg and needs_tempo:
+        raise FileNotFoundError("FFmpeg is required for audio speed adjustment; install FFmpeg or set speed to 1.0")
+    if not ffmpeg and output.suffix.lower() == ".mp3":
+        raise FileNotFoundError("FFmpeg is required for MP3 output; choose WAV instead")
     segment_cache = None
     if cache_dir is not None:
         from .speech_cache import SpeechSegmentCache
@@ -353,7 +366,10 @@ def render_speech_audio(
 
                 data = None if fresh_audio or segment_cache is None else segment_cache.get(cue.text, effective)
                 if data is None:
-                    data = synthesize_qwen(cue.text, effective, target=target)
+                    data = (synthesize_qwen(cue.text, effective, target=target,
+                                           reference=(references or {})[effective.reference_id])
+                            if effective.engine == "qwen3-base" else
+                            synthesize_qwen(cue.text, effective, target=target))
                     params, frames = _read_pcm(data)
                     if params != (1, 2, rate):
                         raise ValueError("Unexpected Qwen audio format")
@@ -363,6 +379,29 @@ def render_speech_audio(
                 else:
                     params, frames = _read_pcm(data)
                 _check_cancelled(cancelled)
+                if effective.speed != 1.0:
+                    # Cache the unmodified model audio. Processing each spoken
+                    # segment leaves explicit pauses and per-profile rates intact.
+                    tempo_source = Path(directory) / "tempo-source.wav"
+                    tempo_output = Path(directory) / "tempo-output.wav"
+                    tempo_source.write_bytes(data)
+                    if ffmpeg is None:  # defensive: checked before synthesis
+                        raise FileNotFoundError("FFmpeg is required for audio speed adjustment")
+                    result = _run_ffmpeg([ffmpeg, "-nostdin", "-y", "-v", "error", "-i", str(tempo_source),
+                                          "-af", f"atempo={effective.speed}", "-ac", "1", "-ar", str(rate),
+                                          "-c:a", "pcm_s16le", str(tempo_output)])
+                    if result.returncode != 0 or not tempo_output.is_file():
+                        raise RuntimeError("FFmpeg failed to adjust audio speed")
+                    adjusted_params, adjusted_frames = _read_pcm(tempo_output.read_bytes(), allow_empty=True)
+                    if adjusted_params != (1, 2, rate):
+                        raise ValueError("Unexpected tempo-adjusted audio format")
+                    # At very short durations atempo can produce no samples. In
+                    # that case preserve the original rather than lose speech.
+                    if adjusted_frames:
+                        frames = adjusted_frames
+                    elif len(frames) > rate * 2 // 10:
+                        raise RuntimeError("FFmpeg produced empty tempo-adjusted audio")
+                    _check_cancelled(cancelled)
                 write_frames(frames)
                 _check_cancelled(cancelled)
                 done += 1
@@ -371,7 +410,9 @@ def render_speech_audio(
                 if cue.pause_after:
                     write_frames(bytes(int(rate * cue.pause_after) * 2))
         final = pcm
-        if ffmpeg:
+        if output.suffix.lower() == ".mp3":
+            if ffmpeg is None:  # defensive: checked before synthesis
+                raise FileNotFoundError("FFmpeg is required for MP3 output")
             final = Path(directory) / "reading.mp3"
             result = _run_ffmpeg(
                 [ffmpeg, "-nostdin", "-y", "-v", "error", "-i", str(pcm),

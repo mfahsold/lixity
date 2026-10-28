@@ -2,7 +2,7 @@
 
 > Generated file for AI agents and offline reading. Do not edit it by hand:
 > run `python scripts/build_llms_full.py` after changing a bundled document.
-> The individually published files remain authoritative. Product version 0.7.6.
+> The individually published files remain authoritative. Product version 0.7.7.
 
 Lixity is open source under AGPL-3.0-or-later; writing for any purpose is
 covered. A separate written commercial license exists only for closed-source
@@ -27,13 +27,13 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/llms.txt
 > instructions to rewrite prose. Analysis is deterministic for fixed text and
 > settings; research records also contain generated IDs and timestamps.
 
-Documentation source version: 0.7.6. Check
+Documentation source version: 0.7.7. Check
 [GitHub releases](https://github.com/mfahsold/lixity/releases) and
 [PyPI](https://pypi.org/project/lixity/) for published packages. Current-main
 features can differ from an installed release with the same version string.
 The current 0.x line follows a numbering reset; historical 1.x/3.x tags are older.
 Product, response and archive schema numbers are independent.
-[Release notes](https://mfahsold.github.io/lixity/releases/v0.7.6.md) describe this
+[Release notes](https://mfahsold.github.io/lixity/releases/v0.7.7.md) describe this
 source version; the link alone is not publication evidence.
 
 ## Discover the installed interface
@@ -152,20 +152,26 @@ written commercial license. See [licensing](https://mfahsold.github.io/lixity/LI
 [contributing](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md) and
 [security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md).
 
-Current main after 0.7.6: authored passage direction is separate project-local
+Since 0.7.7: authored passage direction is separate project-local
 metadata in `.lixity/audio-directions.json`. `audio-direction inspect` is read-only;
 save/remove require source/settings/ledger snapshots. `read-aloud --plan-only`
 and native preview inspection expose the shared effective speech plan without
-inference. Qwen interprets local direction; Lixity generates exact silence.
+inference. CustomVoice and VoiceDesign interpret local direction; Lixity generates exact silence.
 This is not SSML/IPA support, native inline emotion tags or a new audio backend.
 Shared `control_support` describes actual Qwen adapter capabilities: literal
 spoken-form substitutions, model-interpreted direction and explicit silence;
 phonemes, SSML and precise rate are not implemented.
+Version 0.7.7 can apply a 0.5–2.0 FFmpeg tempo factor to synthesized speech,
+without changing explicit pauses or cached raw audio. `read-aloud --speed`
+overrides all profile rates for one run. New implicit profiles default to 1.2;
+existing saved values and omitted legacy speed remain unchanged. Non-1.0
+speed requires FFmpeg on the Lixity host.
 
-Current main also supports explicit Qwen3-TTS 1.7B VoiceDesign profiles with a
+Version 0.7.7 supports explicit Qwen3-TTS 1.7B VoiceDesign profiles with a
 voice description and a separately configured matching worker. Designed voice
-identity may vary across segments; reference-based Base/voice cloning is not
-implemented.
+identity may vary across segments. A separately configured Base worker can reuse
+an explicitly saved private audio reference and exact transcript; Base does not
+accept free-form delivery instructions. Assign profiles to passages explicitly.
 
 Current main: `audio-status [--project PATH] --json` inspects profiles and
 worker model identities without prose. `read-aloud --preview` or `--preview-line
@@ -1229,7 +1235,7 @@ Choices are `asl`, `function`, `dialogue`, `filter`, `modal`, `nominal` and
 `passive`. Human output lists source-file/line anchors, raw values/units and local
 z. `--only-notable` filters output after computing all chapter references; it
 requires `--layer`. The summary keeps full profiled/comparable/notable counts
-separate from rows shown. On current main after v0.7.6, empty human selections
+separate from rows shown. Empty human selections
 explain the actual chapter limits (too few measurable paragraphs, zero MAD or no
 measurable values) and provide a shell-quoted full-evidence command. German
 analysis reports also use German explanations; machine identifiers remain stable.
@@ -1608,7 +1614,7 @@ There is no EPUB/DOCX export, custom trim size, bleed/crop marks, print color ma
 PDF/UA/PDF/X certification. Searchable text, metadata and bookmarks alone do
 not establish accessibility or production compliance.
 
-### Audio status (current main; after 0.7.6)
+### Audio status
 
 `lixity audio-status [--project PATH] [--engine qwen3|qwen3-design] [--json]` inspects the actual fixed local
 and Jetson workers without synthesis. With an explicit project, it lists saved
@@ -1622,7 +1628,7 @@ that the worker will remain available during a later render.
 ### `lixity read-aloud`
 
 **Development prototype:** create a listening copy using Qwen3-TTS 1.7B.
-Published 0.7.6 uses CustomVoice; current main also supports VoiceDesign. The CLI and native preview/chapter dialog share the same project
+Version 0.7.7 supports CustomVoice, VoiceDesign and Base references. The CLI and native preview/chapter dialog share the same project
 voice profiles, rendering controls and local/Jetson targets. The optional worker
 and its model require separate setup. This is not a production audiobook pipeline.
 
@@ -1632,7 +1638,7 @@ lixity read-aloud manuscript.md --language de --chapter 2 --voice Ryan -o chapte
 lixity read-aloud --project ./novel --language de -o reading-copy.wav
 ```
 
-On current main, `--preview` renders the first anchored paragraph or list item, and
+`--preview` renders the first anchored paragraph or list item, and
 `--preview-line N` selects the anchored paragraph or list item containing source line N.
 Quote blocks do not currently have selectable preview anchors.
 A chapter selection constrains either preview. Preview skips headings and uses a
@@ -1744,9 +1750,18 @@ the direct child process, not in-process inference or arbitrary grandchildren.
 
 The selected saved profile is used when `--profile` is omitted. Explicit `--voice`,
 `--language` and `--instructions` override that invocation without rewriting the
-saved profile. Unsupported combinations fail before rendering. Precise speed
-control and `--speed` are unavailable; profile `speed` must remain `1.0`. Delivery
-instructions can request a pace, but do not guarantee an exact speaking rate.
+saved profile. In 0.7.7, `--speed 1.2` sets a playback tempo factor for all
+profiles in that render; it does not modify saved profiles. Profile speed ranges
+from 0.5 to 2.0. New default profiles use 1.2; existing saved profiles retain their
+explicit rate, and previously omitted rates remain 1.0. FFmpeg applies `atempo`
+to each synthesized or cached speech segment before the explicitly configured
+pauses are inserted; speed 1.0 leaves the original speech untouched. If FFmpeg
+returns no samples for an extremely short segment, the original segment is kept.
+Qwen has no
+precise native rate control, and delivery instructions do not guarantee a speaking
+rate. Postprocessing can change perceived quality; compare short previews by ear.
+The factor applies to model audio, including its internal pauses, so the overall
+chapter's words per minute will not necessarily increase by exactly that factor.
 
 A root `lixity.toml` can contain:
 
@@ -1760,7 +1775,7 @@ name = "Narrator"
 engine = "qwen3"
 language = "de"
 voice = "Ryan"
-speed = 1.0
+speed = 1.2
 instructions = "Read calmly and clearly, without whispering."
 paragraph_pause = 0.45
 scene_pause = 1.2
@@ -1771,18 +1786,19 @@ They also accept a `pronunciations` table of literal term-to-spoken-form pairs.
 These substitutions affect synthesis text only. A voice profile does not infer
 character identities or turn words such as “quiet” into acting instructions.
 
-Published 0.7.6 uses `qwen3`, the
+`qwen3` uses the
 `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` checkpoint and its nine presets.
 Explicit style instructions, structural pauses and pronunciation settings are
-shared by CLI and UI. Current main also offers the separate experimental
-VoiceDesign checkpoint described below. Base voice cloning is not implemented.
+shared by CLI and UI. Version 0.7.7 also offers separate experimental
+VoiceDesign and reference-based Base checkpoints described below.
 There is no automatic backend fallback.
 
 The shared control model separates literal spoken-form substitutions, free-text
-delivery direction and explicit PCM silence. Qwen receives substituted text and
-interprets the direction; neither pronunciation nor acting is guaranteed. Its
+delivery direction and explicit PCM silence. Qwen receives substituted text;
+CustomVoice and VoiceDesign interpret direction while Base rejects it. Neither
+pronunciation nor acting is guaranteed. The
 adapter advertises these capabilities in `control_support` and explicitly reports
-that IPA/phoneme input, SSML and precise speed are unsupported. This describes
+that IPA/phoneme input, SSML and native model speed control are unsupported. This describes
 Lixity's implementation, not every capability of every Qwen-derived model.
 For comparison, [W3C SSML](https://www.w3.org/TR/speech-synthesis11/) and
 [PLS lexicons](https://www.w3.org/TR/pronunciation-lexicon/) define structured
@@ -1792,9 +1808,9 @@ speech and pronunciation controls, while implementations vary by voice and model
 [ElevenLabs](https://elevenlabs.io/docs/eleven-api/guides/how-to/text-to-speech/pronunciation-dictionaries)).
 Lixity does not silently translate unsupported phonemes or markup into text.
 
-### Experimental Qwen VoiceDesign (current main; after 0.7.6)
+### Experimental Qwen VoiceDesign
 
-Current main can use the separately installed Qwen3-TTS 1.7B VoiceDesign
+Version 0.7.7 can use the separately installed Qwen3-TTS 1.7B VoiceDesign
 checkpoint. Start a worker explicitly with `--variant voice-design --model
 PATH` and select `qwen3-design` in a project profile. Its `voice` is `design`,
 and `voice_description` contains the desired voice characteristics. The normal
@@ -1805,7 +1821,7 @@ For an unsaved CLI audition or plan, use `--engine qwen3-design
 --voice-description 'A natural, clear German narrator.'` with `read-aloud`.
 `--plan-only` needs no worker. A worker serves one selected model variant; a
 profile and its selected target must use the same variant. There is no automatic
-download, fallback, voice cloning, or calibrated pace control. Identical
+download, fallback, or calibrated native pace control. Identical
 descriptions do not guarantee the same voice across independently generated
 segments. Listen for accent, pronunciation and continuity before a long render.
 The cache distinguishes the model, voice description and effective direction.
@@ -1814,7 +1830,39 @@ and stops before synthesis when uncached segments require multiple variants.
 Use one variant throughout, or reuse previously cached segments.
 Cache entries can still be evicted while a render is in progress.
 
-### Passage direction (current main; after 0.7.6)
+### Experimental reference voices
+
+Qwen's [Voice Design then Clone](https://github.com/QwenLM/Qwen3-TTS#voice-design-then-clone)
+workflow creates a short reference with VoiceDesign and reuses it with the
+separately installed Qwen3-TTS 1.7B Base model. Listen to a reference before
+using it. Save only audio you have the right to use, together with its exact
+spoken transcript. Lixity accepts a 1–30 second, mono, 24 kHz, 16-bit PCM WAV
+and a UTF-8 transcript of at most 2,000 characters:
+
+```sh
+lixity audio-reference create --project ./novel --audio reference.wav --transcript-file reference.txt
+```
+
+The returned ID identifies an immutable project-local record in
+`.lixity/audio-references/`; include this private audio and transcript in the
+project backup. Creating the same reference again is idempotent. Add a project
+profile with `engine = "qwen3-base"`, `voice = "reference"` and the returned
+`reference_id`, or use `read-aloud --engine qwen3-base --reference-id ID
+--instructions ''`. The UI can edit the ID of an existing reference; creation
+is currently a CLI action. Start a worker with `--variant base --model PATH`;
+the chosen local or Jetson worker must actually serve Base. Models are never
+downloaded or switched automatically.
+
+Qwen Base does not accept separate delivery instructions. Nonempty profile or
+passage instructions fail rather than being ignored; explicit pauses, speech
+rate postprocessing and pronunciation substitutions still apply. `--no-direction`
+is a deliberate baseline that ignores *all* saved passage directions, including
+their voice assignments. To retain character voices, assign saved Base profiles
+to the intended passage ranges with empty local instructions. No character or
+speaker is inferred automatically. Reusing a reference encourages consistency,
+but accent, identity, naturalness and pronunciation still require listening.
+
+### Passage direction
 
 The native manuscript **Listen and direct** dialog can attach an author's direction
 to an exact passage or selected range. Open it from the manuscript, choose the
@@ -1989,7 +2037,9 @@ without inserting paragraph pauses between fragments. Recognised editorial
 markers are omitted unless `--keep-markers` is supplied. The manuscript is not
 edited. Unknown chapters, unsupported voices and unsupported languages fail explicitly.
 
-WAV output needs no FFmpeg; MP3 requires it before synthesis. Missing, malformed,
+WAV output at speed 1.0 needs no FFmpeg; other tempo factors and MP3 output require
+FFmpeg on the machine running Lixity before synthesis, including for Jetson workers.
+Missing, malformed,
 empty or mismatched PCM and failed conversion are errors. Streamed atomic output
 preserves an existing file on failure. Native audio is a temporary download:
 WAV output is capped at 200 MB during rendering, including inserted silence;
@@ -5950,6 +6000,51 @@ local files and report their SHA256 and caller-supplied provenance:
 python scripts/check_linguistic_corpus.py --conllu de_hdt-ud-test.conllu --language de --model de_core_news_md --limit 100 --corpus UD_German-HDT --release 2.18 --license "CC BY-SA4.0" --source https://raw.githubusercontent.com/UniversalDependencies/UD_German-HDT/r2.18/de_hdt-ud-test.conllu
 ```
 
+#### Finite-verb detection, separately from feature agreement
+
+The evaluator additionally reports `finite_verb_detection` over **all uniquely
+aligned gold words**, including nonverbs. A positive requires `VERB` or `AUX`
+and `VerbForm=Fin`. This exposes false-positive finite verbs on gold adjectives
+or nouns that the gold-verb-conditioned feature table above cannot measure.
+The [CoNLL-U format](https://universaldependencies.org/format.html) distinguishes
+syntactic words, surface tokens and morphology; expanded many-to-many spans
+remain unscored rather than being guessed into alignment.
+
+The independent 28 October 2026 rerun used the same official r2.18 test files,
+first 100 sentences per language and local model versions listed above. French
+was rerun with both the earlier spaCy medium baseline and selected Stanza GSD.
+All original feature metrics, including eligible Tense denominators, matched
+the retained previous reports exactly. No sentence failed source reconstruction
+or parsing in these eight runs. Counts below are **conditional on unique exact
+alignment**, not end-to-end detection across excluded words:
+
+| Test partition / parser | Aligned / all gold words | TP / FP / FN | Precision / recall |
+| --- | ---: | ---: | ---: |
+| German HDT / spaCy md | 1656 / 1700 | 119 / 5 / 4 | 0.960 / 0.967 |
+| English EWT / spaCy md | 2110 / 2202 | 166 / 4 / 12 | 0.976 / 0.933 |
+| French GSD / spaCy md baseline | 2395 / 2584 | 149 / 1 / 9 | 0.993 / 0.943 |
+| Spanish AnCora / spaCy md | 2944 / 3076 | 220 / 2 / 2 | 0.991 / 0.991 |
+| Italian MarkIT / Stanza | 2868 / 3224 | 292 / 2 / 4 | 0.993 / 0.986 |
+| Portuguese Bosque / spaCy md | 1563 / 1797 | 128 / 0 / 0 | 1.000 / 1.000 |
+| Dutch Alpino / spaCy md | 2049 / 2049 | 157 / 5 / 5 | 0.969 / 0.969 |
+| French GSD / Stanza | 2414 / 2584 | 158 / 0 / 0 | 1.000 / 1.000 |
+
+The JSON separately reports gold/predicted alignment misses and unscored words
+from source/parse failures. A gold verb without unambiguous finiteness is not
+invented as a negative: one aligned French word per run and one Portuguese word
+were excluded from detection labels. Missing predicted verb finiteness is
+counted explicitly; it misses a known gold finite verb rather than manufacturing
+a resolved prediction. Undefined precision/recall denominators produce `null`.
+Italian MarkIT, Portuguese and French Stanza each had one aligned prediction
+without verb finiteness in this bounded rerun.
+
+These are token-detection and token-feature checks. They do not validate composed
+verb-group tense, narration attribution, editorial warnings or literary quality.
+The ordered sample, alignment exclusions, corpus annotation provenance and
+possible training overlap prevent representative accuracy or a general parser
+ranking. In particular, perfect scores on the selected aligned subset do not
+establish perfect detection in excluded spans or unseen literary text.
+
 ### Core validation status
 
 **Since v0.7.6:** seven short original-language literary excerpts have manually
@@ -6941,9 +7036,9 @@ Analysis Off and Focus hide both displays without resetting their preferences.
 | `[data-chapter-toggle]` | standalone report: fold or unfold a chapter body (strip and paragraphs); jumps and search steps expand a collapsed chapter; hidden in the continuous interactive reader |
 | `data-chapter="<n>"` | chapter navigation target; on metric triggers, the chapter to inspect before reading |
 | `[data-metric-feature="<field>"]` | since v0.7.6: heatmap cells, reference cutoff-hit counts and dimension loadings open shared chapter measurements using canonical fingerprint fields; no manuscript mutation |
-| `#analysis-metric-context` / `#metric-context-values` | current main: native measurement dialog and metric switches within the same chapter; raw units, medians, sample counts and z* remain distinct |
-| `#metric-context-read` / `[data-metric-close]` | current main: explicitly navigate with the applicable paragraph layer (or clear it); close/Escape restores trigger focus without changing the selected layer |
-| `[data-dimension-loading]` | current main: metric trigger follows the style-space selected chapter; axis/loading origin is not a chapter contribution |
+| `#analysis-metric-context` / `#metric-context-values` | Native measurement dialog and metric switches within the same chapter; raw units, medians, sample counts and z* remain distinct |
+| `#metric-context-read` / `[data-metric-close]` | Explicitly navigate with the applicable paragraph layer (or clear it); close/Escape restores trigger focus without changing the selected layer |
+| `[data-dimension-loading]` | Metric trigger follows the style-space selected chapter; axis/loading origin is not a chapter contribution |
 | `#style-tab-<panel-id>` / `data-style-view="<panel-id>"` | native style tab for `heatmap`, `bands`, `dimensions` or `structural`; its `aria-controls` points to that existing panel |
 | `.paragraph-values > summary` | standalone report and no-JavaScript fallback: native disclosure for source lines and measurements; inline Values is hidden in the interactive reader |
 | `.reader-paragraph-actions[data-reader-paragraph]` / `#manuscript-context-menu [data-reader-action="values"]` | interactive reader: open the paragraph menu, then **Explore passage** without changing global Analysis visibility; the internal `values` action key is unchanged |
@@ -7508,7 +7603,7 @@ pending sharing. This changes no endpoint, response envelope or write guard.
 **Since v0.7.4:** `POST /api/site-export` requires
 `{"project_token":"<current manuscript metadata token>","include_research":false,"include_source_files":false}`.
 Optional fields are `mode` (`review`, `reader`, `companion`; default `review`),
-`publication_profile`, `max_chapter` and (current main) `analysis_sections`. The installed `export-site` command's
+`publication_profile`, `max_chapter` and `analysis_sections`. The installed `export-site` command's
 `scope_schema` describes the strict shared request options. Review mode rejects
 profile/cap and requires research inclusion for source files. Reader/companion
 require a root-local profile and reject raw research inclusion; selected source
@@ -8098,8 +8193,21 @@ its validation contract. `read-aloud --profile` and the native dialog share it;
 explicit CLI control overrides are per invocation, not project writes. In the
 published 0.7.6 release the engine is `qwen3`, pinned to `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice`, with nine
 preset voices and ten explicit speech languages. Dutch analysis projects need
-an explicit supported speech language. Profile `speed` must be `1.0`; style
-instructions do not implement precise speed control.
+an explicit supported speech language. In 0.7.7 `speed` is a 0.5–2.0
+FFmpeg postprocessing factor, not native Qwen rate control; a new implicit
+profile uses 1.2. Existing explicit and omitted saved values preserve 1.0 where
+applicable. CLI `--speed` overrides all profiles for that run without saving.
+Non-1.0 factors require FFmpeg on the render host. Structural pauses stay unchanged.
+Style instructions do not implement precise speed control.
+
+Version 0.7.7 also supports `qwen3-base` profiles with `voice=reference` and a
+project-local `reference_id`. `audio-reference create --project PATH --audio WAV
+--transcript-file TXT` stores an immutable `lixity-audio-reference/1` object and
+returns only its ID. Reference bytes and transcript are private project data,
+not cache; they are validated and bound to job context and cache identity.
+Base profiles and passage ranges reject nonempty delivery instructions. A Base
+worker must be selected explicitly; it does not infer or assign character voices.
+Older installations that do not support the new engine reject these profiles.
 
 Removed Piper profiles are rejected with actionable migration guidance. Existing
 Qwen records retain the `/1` wire contract; saved profiles without an explicit
@@ -8125,7 +8233,7 @@ and use keyword arguments for `language`, `chapter` and `target`.
 Both speech functions now default to English. `generate_silence_wav` defaults to
 24,000 Hz instead of 22,050 Hz, matching the Qwen PCM path. Callers relying on
 those removed arguments, positional layouts or earlier defaults must update;
-there is no compatibility engine or precise speed replacement.
+there is no compatibility engine or native model rate control.
 
 All native speech reads require same-origin access and exactly one
 `project_token` plus `source_sha256`. Tokens guard context, not authentication.
@@ -8207,7 +8315,7 @@ This is an explicit opt-in semantic extension; existing pattern fields/overrides
 retain their contracts; models are explicit per-language opt-ins. Review identities include the model,
 runtime and composition policy. See [limits and measured errors](STABILITY.md#grammatical-tense).
 
-## Passage speech direction (current main, after 0.7.6)
+## Passage speech direction
 
 `lixity audio-direction inspect --project PATH [--manuscript PATH]` is read-only.
 It emits `lixity-audio-direction-view/1`: `source_path`, source/settings/direction
@@ -8256,7 +8364,7 @@ CustomVoice profile serialization and worker request fields remain unchanged.
 The cache identity includes model, description and effective instructions.
 
 
-## CLI audio status and previews (current main)
+## CLI audio status and previews
 
 `audio-status --json [--project PATH] [--engine qwen3|qwen3-design]` returns `lixity-audio-status/1` with
 actual per-target state, model identity and nullable comparison with the selected

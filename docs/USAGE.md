@@ -1051,7 +1051,7 @@ Choices are `asl`, `function`, `dialogue`, `filter`, `modal`, `nominal` and
 `passive`. Human output lists source-file/line anchors, raw values/units and local
 z. `--only-notable` filters output after computing all chapter references; it
 requires `--layer`. The summary keeps full profiled/comparable/notable counts
-separate from rows shown. On current main after v0.7.6, empty human selections
+separate from rows shown. Empty human selections
 explain the actual chapter limits (too few measurable paragraphs, zero MAD or no
 measurable values) and provide a shell-quoted full-evidence command. German
 analysis reports also use German explanations; machine identifiers remain stable.
@@ -1430,7 +1430,7 @@ There is no EPUB/DOCX export, custom trim size, bleed/crop marks, print color ma
 PDF/UA/PDF/X certification. Searchable text, metadata and bookmarks alone do
 not establish accessibility or production compliance.
 
-### Audio status (current main; after 0.7.6)
+### Audio status
 
 `lixity audio-status [--project PATH] [--engine qwen3|qwen3-design] [--json]` inspects the actual fixed local
 and Jetson workers without synthesis. With an explicit project, it lists saved
@@ -1444,7 +1444,7 @@ that the worker will remain available during a later render.
 ### `lixity read-aloud`
 
 **Development prototype:** create a listening copy using Qwen3-TTS 1.7B.
-Published 0.7.6 uses CustomVoice; current main also supports VoiceDesign. The CLI and native preview/chapter dialog share the same project
+Version 0.7.7 supports CustomVoice, VoiceDesign and Base references. The CLI and native preview/chapter dialog share the same project
 voice profiles, rendering controls and local/Jetson targets. The optional worker
 and its model require separate setup. This is not a production audiobook pipeline.
 
@@ -1454,7 +1454,7 @@ lixity read-aloud manuscript.md --language de --chapter 2 --voice Ryan -o chapte
 lixity read-aloud --project ./novel --language de -o reading-copy.wav
 ```
 
-On current main, `--preview` renders the first anchored paragraph or list item, and
+`--preview` renders the first anchored paragraph or list item, and
 `--preview-line N` selects the anchored paragraph or list item containing source line N.
 Quote blocks do not currently have selectable preview anchors.
 A chapter selection constrains either preview. Preview skips headings and uses a
@@ -1566,9 +1566,18 @@ the direct child process, not in-process inference or arbitrary grandchildren.
 
 The selected saved profile is used when `--profile` is omitted. Explicit `--voice`,
 `--language` and `--instructions` override that invocation without rewriting the
-saved profile. Unsupported combinations fail before rendering. Precise speed
-control and `--speed` are unavailable; profile `speed` must remain `1.0`. Delivery
-instructions can request a pace, but do not guarantee an exact speaking rate.
+saved profile. In 0.7.7, `--speed 1.2` sets a playback tempo factor for all
+profiles in that render; it does not modify saved profiles. Profile speed ranges
+from 0.5 to 2.0. New default profiles use 1.2; existing saved profiles retain their
+explicit rate, and previously omitted rates remain 1.0. FFmpeg applies `atempo`
+to each synthesized or cached speech segment before the explicitly configured
+pauses are inserted; speed 1.0 leaves the original speech untouched. If FFmpeg
+returns no samples for an extremely short segment, the original segment is kept.
+Qwen has no
+precise native rate control, and delivery instructions do not guarantee a speaking
+rate. Postprocessing can change perceived quality; compare short previews by ear.
+The factor applies to model audio, including its internal pauses, so the overall
+chapter's words per minute will not necessarily increase by exactly that factor.
 
 A root `lixity.toml` can contain:
 
@@ -1582,7 +1591,7 @@ name = "Narrator"
 engine = "qwen3"
 language = "de"
 voice = "Ryan"
-speed = 1.0
+speed = 1.2
 instructions = "Read calmly and clearly, without whispering."
 paragraph_pause = 0.45
 scene_pause = 1.2
@@ -1593,18 +1602,19 @@ They also accept a `pronunciations` table of literal term-to-spoken-form pairs.
 These substitutions affect synthesis text only. A voice profile does not infer
 character identities or turn words such as “quiet” into acting instructions.
 
-Published 0.7.6 uses `qwen3`, the
+`qwen3` uses the
 `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` checkpoint and its nine presets.
 Explicit style instructions, structural pauses and pronunciation settings are
-shared by CLI and UI. Current main also offers the separate experimental
-VoiceDesign checkpoint described below. Base voice cloning is not implemented.
+shared by CLI and UI. Version 0.7.7 also offers separate experimental
+VoiceDesign and reference-based Base checkpoints described below.
 There is no automatic backend fallback.
 
 The shared control model separates literal spoken-form substitutions, free-text
-delivery direction and explicit PCM silence. Qwen receives substituted text and
-interprets the direction; neither pronunciation nor acting is guaranteed. Its
+delivery direction and explicit PCM silence. Qwen receives substituted text;
+CustomVoice and VoiceDesign interpret direction while Base rejects it. Neither
+pronunciation nor acting is guaranteed. The
 adapter advertises these capabilities in `control_support` and explicitly reports
-that IPA/phoneme input, SSML and precise speed are unsupported. This describes
+that IPA/phoneme input, SSML and native model speed control are unsupported. This describes
 Lixity's implementation, not every capability of every Qwen-derived model.
 For comparison, [W3C SSML](https://www.w3.org/TR/speech-synthesis11/) and
 [PLS lexicons](https://www.w3.org/TR/pronunciation-lexicon/) define structured
@@ -1614,9 +1624,9 @@ speech and pronunciation controls, while implementations vary by voice and model
 [ElevenLabs](https://elevenlabs.io/docs/eleven-api/guides/how-to/text-to-speech/pronunciation-dictionaries)).
 Lixity does not silently translate unsupported phonemes or markup into text.
 
-### Experimental Qwen VoiceDesign (current main; after 0.7.6)
+### Experimental Qwen VoiceDesign
 
-Current main can use the separately installed Qwen3-TTS 1.7B VoiceDesign
+Version 0.7.7 can use the separately installed Qwen3-TTS 1.7B VoiceDesign
 checkpoint. Start a worker explicitly with `--variant voice-design --model
 PATH` and select `qwen3-design` in a project profile. Its `voice` is `design`,
 and `voice_description` contains the desired voice characteristics. The normal
@@ -1627,7 +1637,7 @@ For an unsaved CLI audition or plan, use `--engine qwen3-design
 --voice-description 'A natural, clear German narrator.'` with `read-aloud`.
 `--plan-only` needs no worker. A worker serves one selected model variant; a
 profile and its selected target must use the same variant. There is no automatic
-download, fallback, voice cloning, or calibrated pace control. Identical
+download, fallback, or calibrated native pace control. Identical
 descriptions do not guarantee the same voice across independently generated
 segments. Listen for accent, pronunciation and continuity before a long render.
 The cache distinguishes the model, voice description and effective direction.
@@ -1636,7 +1646,39 @@ and stops before synthesis when uncached segments require multiple variants.
 Use one variant throughout, or reuse previously cached segments.
 Cache entries can still be evicted while a render is in progress.
 
-### Passage direction (current main; after 0.7.6)
+### Experimental reference voices
+
+Qwen's [Voice Design then Clone](https://github.com/QwenLM/Qwen3-TTS#voice-design-then-clone)
+workflow creates a short reference with VoiceDesign and reuses it with the
+separately installed Qwen3-TTS 1.7B Base model. Listen to a reference before
+using it. Save only audio you have the right to use, together with its exact
+spoken transcript. Lixity accepts a 1–30 second, mono, 24 kHz, 16-bit PCM WAV
+and a UTF-8 transcript of at most 2,000 characters:
+
+```sh
+lixity audio-reference create --project ./novel --audio reference.wav --transcript-file reference.txt
+```
+
+The returned ID identifies an immutable project-local record in
+`.lixity/audio-references/`; include this private audio and transcript in the
+project backup. Creating the same reference again is idempotent. Add a project
+profile with `engine = "qwen3-base"`, `voice = "reference"` and the returned
+`reference_id`, or use `read-aloud --engine qwen3-base --reference-id ID
+--instructions ''`. The UI can edit the ID of an existing reference; creation
+is currently a CLI action. Start a worker with `--variant base --model PATH`;
+the chosen local or Jetson worker must actually serve Base. Models are never
+downloaded or switched automatically.
+
+Qwen Base does not accept separate delivery instructions. Nonempty profile or
+passage instructions fail rather than being ignored; explicit pauses, speech
+rate postprocessing and pronunciation substitutions still apply. `--no-direction`
+is a deliberate baseline that ignores *all* saved passage directions, including
+their voice assignments. To retain character voices, assign saved Base profiles
+to the intended passage ranges with empty local instructions. No character or
+speaker is inferred automatically. Reusing a reference encourages consistency,
+but accent, identity, naturalness and pronunciation still require listening.
+
+### Passage direction
 
 The native manuscript **Listen and direct** dialog can attach an author's direction
 to an exact passage or selected range. Open it from the manuscript, choose the
@@ -1811,7 +1853,9 @@ without inserting paragraph pauses between fragments. Recognised editorial
 markers are omitted unless `--keep-markers` is supplied. The manuscript is not
 edited. Unknown chapters, unsupported voices and unsupported languages fail explicitly.
 
-WAV output needs no FFmpeg; MP3 requires it before synthesis. Missing, malformed,
+WAV output at speed 1.0 needs no FFmpeg; other tempo factors and MP3 output require
+FFmpeg on the machine running Lixity before synthesis, including for Jetson workers.
+Missing, malformed,
 empty or mismatched PCM and failed conversion are errors. Streamed atomic output
 preserves an existing file on failure. Native audio is a temporary download:
 WAV output is capped at 200 MB during rendering, including inserted silence;

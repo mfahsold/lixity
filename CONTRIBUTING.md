@@ -91,9 +91,10 @@ introducing a second incompatible checker configuration. For edited JavaScript,
 `node --check path/to/file.js` catches syntax errors before a browser run.
 These checks complement focused behavior tests; they do not prove runtime behavior.
 
-GitHub's `tests`, `browser` and `research-platforms` workflows are manual
-fallbacks; pushes and pull requests do not automatically repeat these heavy
-suites. The `tests` workflow preserves Ruff, strict `mypy` and the full Python
+GitHub's `tests`, `browser` and `research-platforms` workflows can be dispatched
+manually; ordinary branch pushes and pull requests do not repeat these suites.
+Tagged releases reuse `tests` and `browser` on the exact release commit before
+publication. The `tests` workflow runs Ruff, strict `mypy` and the full Python
 suite with Poppler on Linux/Python 3.12. Run relevant supported interpreters
 locally. Filesystem, process-lifecycle, packaging and native-tool changes also
 need Windows/macOS evidence, either on those systems or from a deliberately
@@ -240,12 +241,13 @@ and running service separately; rebuilding public pages does not update either.
 Preparation does not commit, tag, push or publish. After reviewing the changes
 and obtaining release authorization, complete `make browser-full` for UI-affecting releases,
 push the reviewed commit to `main` and its matching `vX.Y.Z` tag. The tag
-workflow only builds, verifies and smoke-installs the artifacts from the tag,
-attests them for `gh attestation verify`, attaches them to a draft release and
-publishes that draft only when every asset is present. The full source and
-documentation checks must already have passed locally through `make release-check`;
-the tag workflow does not rerun the heavy source/browser suites. Release build,
-smoke installation and attestation remain automatic; after GitHub publication
+workflow first runs the reusable full source and browser checks on the same
+commit; either failure blocks publication. It then builds, verifies and
+smoke-installs artifacts from that commit, attests them for `gh attestation verify`,
+attaches them to a draft release and publishes only when every asset is present.
+The local `make release-check` and applicable browser checks remain required:
+the CI gate does not replace the local dependency audit or cross-platform work.
+Release build, smoke installation and attestation remain automatic; after GitHub publication
 and a successful or intentionally skipped PyPI step, the release pipeline
 deploys Pages from that exact tag.
 Verify a downloaded artifact with:
@@ -264,7 +266,8 @@ Every tagged release is distributed and archived automatically:
 - the workflow uploads wheel and sdist to PyPI when the repository variable
   `PUBLISH_PYPI` is `true` (trusted publishing, environment `pypi`); if a run
   misses PyPI, dispatch the same workflow with the `tag` input to build and
-  publish without touching the GitHub release;
+  publish without touching the GitHub release; this catch-up uses the previously
+  published tag and does not rerun the push-only test gates;
 - Zenodo archives each new release once the repository is enabled there, so
   released versions receive a DOI without a local step.
 

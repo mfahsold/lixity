@@ -3,7 +3,9 @@
 No downloads occur. This is a bounded feature check, not a verb-group tense
 accuracy benchmark. Corpus provenance labels are caller-supplied assertions;
 the SHA256 identifies the actual bytes. Unknown predictions, parser failures
-and alignment misses remain in eligible-feature denominators.
+and alignment misses remain in eligible-feature denominators. Finite-verb
+detection is reported separately on uniquely aligned word spans, including
+false positives on gold nonverbs; it does not validate composed verb groups.
 """
 
 from __future__ import annotations
@@ -132,6 +134,14 @@ def check_corpus(path: Path, language: str, model: str, *, limit: int,
     metrics: dict[str, dict[str, Any]] = {
         name: {"eligible": 0, "compared": 0, "correct": 0, "missing_prediction": 0}
                for name in ("POS", "Lemma", "VerbForm", "Mood", "Tense")}
+    detection: dict[str, Any] = {
+        "unit": "uniquely_aligned_word_tokens",
+        "gold_tokens": 0, "aligned_tokens": 0,
+        "true_positive": 0, "false_positive": 0, "false_negative": 0, "true_negative": 0,
+        "unknown_gold_pos": 0, "unknown_gold_finiteness": 0, "unknown_prediction_finiteness": 0,
+        "gold_alignment_misses": 0, "prediction_alignment_misses": 0,
+        "source_unscored_tokens": 0, "parse_unscored_tokens": 0,
+    }
     report: dict[str, Any] = {
         "schema_version": "linguistic-corpus-check/1",
         "benchmark_kind": "token_features_not_verb_group_tense",
@@ -143,16 +153,21 @@ def check_corpus(path: Path, language: str, model: str, *, limit: int,
         "source_alignment_failures": 0, "parse_failures": 0, "alignment_misses": 0,
         "gold_verb_tokens": 0, "gold_finite_tokens": 0, "gold_nonfinite_tokens": 0,
         "gold_nonindicative_or_unknown_mood": 0, "missing_gold_finiteness": 0,
-        "metrics": metrics, "issues": [],
+        "metrics": metrics, "finite_verb_detection": detection, "issues": [],
         "limitations": [
             "UD morphology is token-level; no gold verb-group tense score is inferred.",
             "POS and lemma are compared on gold finite verbs; Tense requires gold Mood=Ind.",
             "Many-to-many source spans, including expanded MWTs, are unscored alignment misses.",
             "Domain, annotation conversion and training overlap limit interpretation.",
+            "Finite detection precision/recall condition on unique exact alignment; alignment misses are unscored.",
+            "Gold verbs without unambiguous VerbForm are excluded from detection labels, not assumed nonfinite.",
+            "A resolved finite prediction requires VERB/AUX and VerbForm=Fin; unknown prediction morphology "
+            "is counted separately and misses a known gold finite verb.",
         ],
     }
     missing: Counter[str] = Counter()
     for sentence in sentences:
+        detection["gold_tokens"] += len(sentence.words)
         eligible: list[tuple[GoldWord, dict[str, str]]] = []
         for word in sentence.words:
             if word.pos not in ("VERB", "AUX"):
@@ -186,12 +201,14 @@ def check_corpus(path: Path, language: str, model: str, *, limit: int,
             eligible.append((word, wanted))
         if sentence.source_error:
             report["source_alignment_failures"] += 1
+            detection["source_unscored_tokens"] += len(sentence.words)
             report["issues"].append({"sent_id": sentence.sent_id, "kind": sentence.source_error})
             continue
         try:
             predicted = parse_tokens(sentence.text, model)
         except ValueError as exc:
             report["parse_failures"] += 1
+            detection["parse_unscored_tokens"] += len(sentence.words)
             report["issues"].append({"sent_id": sentence.sent_id, "kind": "parse_failure",
                                      "exception": type(exc).__name__})
             continue
@@ -200,6 +217,31 @@ def check_corpus(path: Path, language: str, model: str, *, limit: int,
         gold_counts = Counter((word.start, word.end) for word in sentence.words)
         for token in predicted:
             by_span[token.start, token.end].append(token)
+        detection["prediction_alignment_misses"] += sum(
+            len(by_span[token.start, token.end]) != 1 or gold_counts[token.start, token.end] != 1
+            for token in predicted
+        )
+        for word in sentence.words:
+            aligned = by_span[word.start, word.end]
+            if len(aligned) != 1 or gold_counts[word.start, word.end] != 1:
+                detection["gold_alignment_misses"] += 1
+                continue
+            detection["aligned_tokens"] += 1
+            token = aligned[0]
+            if token.pos in ("VERB", "AUX") and (not token.form or "," in token.form):
+                detection["unknown_prediction_finiteness"] += 1
+            if not word.pos or word.pos == "_":
+                detection["unknown_gold_pos"] += 1
+                continue
+            form = word.features.get("VerbForm", "")
+            if word.pos in ("VERB", "AUX") and (not form or "," in form):
+                detection["unknown_gold_finiteness"] += 1
+                continue
+            gold_finite = word.pos in ("VERB", "AUX") and form == "Fin"
+            predicted_finite = token.pos in ("VERB", "AUX") and token.form == "Fin"
+            outcome = (("true_positive" if predicted_finite else "false_negative") if gold_finite
+                       else ("false_positive" if predicted_finite else "true_negative"))
+            detection[outcome] += 1
         for word, wanted in eligible:
             span = word.start, word.end
             aligned = by_span[span]
@@ -220,6 +262,10 @@ def check_corpus(path: Path, language: str, model: str, *, limit: int,
     for metric in metrics.values():
         metric["match_rate_all_eligible"] = (metric["correct"] / metric["eligible"]
                                              if metric["eligible"] else None)
+    predicted_positive = detection["true_positive"] + detection["false_positive"]
+    gold_positive = detection["true_positive"] + detection["false_negative"]
+    detection["precision"] = detection["true_positive"] / predicted_positive if predicted_positive else None
+    detection["recall"] = detection["true_positive"] / gold_positive if gold_positive else None
     report["missing_gold_features"] = dict(missing)
     return report
 

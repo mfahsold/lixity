@@ -7,7 +7,22 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.7] - 2026-10-28
+
 ### Added
+- Reference-based Qwen3-TTS 1.7B Base voices: explicit private project-local
+  WAV/transcript references, guarded CLI and browser profiles, reference-bound
+  segment caching and explicit per-passage voice selection. Base rejects delivery
+  instructions it cannot interpret; it does not infer character speakers.
+- Post-synthesis FFmpeg tempo factors for Qwen audio, preserving explicit pauses
+  and unmodified cached model segments. New default profiles use 1.2; existing
+  saved or formerly omitted values retain their previous meaning.
+- Opt-in corpus evaluation of German quotation cues against the separately
+  obtained REDEWIEDERGABE corpus and French syllables against Lexique; neither
+  corpus is bundled or a representative contemporary literary benchmark.
+- The UD token-feature checker reports aligned finite-verb true/false positives,
+  false negatives and coverage separately, including false positives on gold
+  nonverbs; previous tense-feature denominators remain unchanged.
 - Optional local PhonItalia 1.10 benchmark reports aggregate Italian syllable
   agreement and the source digest without bundling or downloading the lexicon.
 - Reader websites can explicitly include selected chapter or language
@@ -23,6 +38,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   planner for previews and chapter renders; Qwen retains its existing full model.
 
 ### Changed
+- Passage review links back to its exact saved decision; unmatched decisions
+  for the current manuscript are reported and retained in UI and CLI.
+- The normal-model threshold expectation is labeled as a model reference,
+  not an empirically established count of false findings.
+- Tagged releases run reusable full source and browser checks on the same
+  commit before publication. Local and cross-platform checks remain separate.
 - Style JSON schema 5 replaces the misleading exchangeability verdict and
   averaged lag with nullable, per-feature order indicators and chapter coverage.
   Missing chapters are not treated as adjacent; segmentation reports missing
@@ -3148,7 +3169,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.7.6...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.7.7...HEAD
+[0.7.7]: https://github.com/mfahsold/lixity/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/mfahsold/lixity/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/mfahsold/lixity/compare/v0.7.4...v0.7.5
 [0.7.4]: https://github.com/mfahsold/lixity/compare/v0.7.3...v0.7.4

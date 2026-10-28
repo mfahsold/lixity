@@ -13,12 +13,27 @@ permissions:
   id-token: write
   attestations: write
 jobs:
+  source_checks:
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/tests.yml
+
+  browser_checks:
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/browser.yml
+
   publish:
+    needs: [source_checks, browser_checks]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"

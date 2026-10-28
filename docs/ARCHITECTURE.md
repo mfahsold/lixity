@@ -1331,14 +1331,28 @@ new archive schema or database authority is introduced.
 settings and engine capabilities. Existing root-only atomic settings updates
 persist `audio`; the CLI and native dialog resolve the same Qwen3-TTS 1.7B
 CustomVoice profiles and rendering controls. Qwen is the sole supported engine.
-The `speed` field remains fixed at `1.0`; delivery instructions do not establish
-an exact speaking rate. Ten explicit speech languages include six of the seven
+In 0.7.7, the `speed` field is a post-synthesis FFmpeg `atempo` factor
+from 0.5 to 2.0, not native model rate control. Fresh implicit profiles use 1.2;
+previously saved explicit or omitted values retain 1.0 where applicable. Cached
+model segments remain unmodified and are tempo-adjusted before explicit silence
+is inserted. Delivery instructions do not establish an exact speaking rate. Ten
+explicit speech languages include six of the seven
 analysis languages; Dutch is unsupported. Explicit pronunciation substitutions
 do not edit source bytes. Optional inference dependencies remain outside the core
 installation.
 
+For Base, explicitly created immutable project-local reference records bind the
+exact PCM WAV and transcript to a content identity. The identity is checked when
+planning, rendering and accepting a job result, and participates in the raw audio
+cache key. References are private project data, not disposable cache; their bytes
+and transcripts are not returned by the plan. The Base worker accepts bounded
+reference data over the existing fixed transport and caches at most one prompt.
+Base does not support free-form delivery instructions: invalid combinations fail
+instead of silently dropping them. A selected reference does not infer speakers.
+
 `speech.py` owns bounded text planning, shared structural pauses, format checks
-and atomic output. The subprocess runner limits FFmpeg conversion
+and atomic output. FFmpeg is needed for MP3 and non-1.0 tempo; a missing executable
+fails before synthesis. The subprocess runner limits each FFmpeg conversion
 to one hour and translates timeout errors without exposing captured prose.
 Temporary output cleanup and final atomic publication remain renderer-owned;
 this direct-child deadline does not interrupt in-process model inference.
@@ -1453,7 +1467,7 @@ Installed models are explicit machine resources, with no inference-time download
 See [methods](METHODS.md#optional-grammatical-analysis) and
 [configuration](USAGE.md#grammatical-tense).
 
-### Authored passage direction (current main, after 0.7.6)
+### Authored passage direction
 
 `speech_direction.py` owns the versioned project-local ledger and pure speech
 plan compiler; `speech_direction_cli.py` is its explicit-project CLI adapter.
