@@ -21,6 +21,9 @@ selects suites and `--start NAME` resumes after a failure.
 After a parallel run, the runner reports all failed suites with an `--only`
 command; completion order does not define a safe `--start` position. Repeat
 the full suite before a release after fixing a failure.
+The manually dispatched `browser` workflow accepts an optional space-separated
+`suites` input for focused GitHub-runner debugging. Release gates always run
+the complete suite on the tagged commit.
 
 A failed Git comparison, including an invalid `BASE`, stops selection with an
 error. Shared support files and runner changes select all suites, as do unknown

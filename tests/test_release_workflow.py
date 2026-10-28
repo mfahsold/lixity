@@ -55,7 +55,10 @@ def test_existing_pypi_catchup_and_pages_release_ref_remain_available():
 
 
 def test_browser_release_gate_uses_the_shared_full_suite_command():
-    assert re.search(r"(?m)^\s+run: make browser-full PYTHON=python\s*$", workflow("browser.yml"))
+    source = workflow("browser.yml")
+    assert "github.event_name == 'workflow_dispatch' && inputs.suites || ''" in source
+    assert 'python scripts/run_browser_suites.py --only "${suite_names[@]}" --jobs 3' in source
+    assert "make browser-full PYTHON=python" in source
 
 
 def test_release_skips_browser_gate_when_source_checks_fail():

@@ -68,7 +68,7 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
       const departure = await page.evaluate(() => {
         const anchor = LixityReader.capture();
         window.__testCompanionAnchor = anchor.panel;
-        return {top:anchor.top};
+        return {top:anchor.top, scrollY, tag:anchor.panel.tagName, id:anchor.panel.id};
       });
       assert.equal(await toggle.evaluate(node => {
         const bounds = node.getBoundingClientRect();
@@ -78,9 +78,16 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
       await toggle.click();
       await page.waitForFunction(() => !document.querySelector('#workspace-reader-dossier').disabled);
       await toggle.click();
-      await page.waitForFunction(top => window.__testCompanionAnchor.isConnected &&
-        Math.abs(window.__testCompanionAnchor.getBoundingClientRect().top - top) <= 2, departure.top,
-        {timeout: 5000});
+      try {
+        await page.waitForFunction(top => window.__testCompanionAnchor.isConnected &&
+          Math.abs(window.__testCompanionAnchor.getBoundingClientRect().top - top) <= 2, departure.top,
+          {timeout: 5000});
+      } catch (error) {
+        const actual = await page.evaluate(() => ({top:window.__testCompanionAnchor.getBoundingClientRect().top,
+          connected:window.__testCompanionAnchor.isConnected, scrollY, innerHeight,
+          focus:document.activeElement?.id, state:LixityWorkbench.state()}));
+        throw new Error(`Companion position ${locale}/${width}: departure=${JSON.stringify(departure)} actual=${JSON.stringify(actual)}`, {cause:error});
+      }
       await toggle.click();
       if (width >= 1100) {
         assert.equal(await navigation.isVisible(), false, 'Companion automatically frees desktop navigation space');

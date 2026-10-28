@@ -4,6 +4,11 @@
 name: browser
 on:
   workflow_dispatch:
+    inputs:
+      suites:
+        description: Optional space-separated browser suite names for focused debugging
+        type: string
+        required: false
   workflow_call:
 permissions:
   contents: read
@@ -31,4 +36,11 @@ jobs:
       - name: Run all browser regression suites
         env:
           PYTHON_BIN: python
-        run: make browser-full PYTHON=python
+          SUITES: ${{ github.event_name == 'workflow_dispatch' && inputs.suites || '' }}
+        run: |
+          if [ -n "$SUITES" ]; then
+            read -r -a suite_names <<< "$SUITES"
+            python scripts/run_browser_suites.py --only "${suite_names[@]}" --jobs 3
+          else
+            make browser-full PYTHON=python
+          fi
