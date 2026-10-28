@@ -284,7 +284,30 @@ speech or thought representation, and [GermAnProse](https://aclanthology.org/202
 which provides narrative annotations for four German short prose texts. Neither
 is a representative contemporary multilingual benchmark; annotation schemes,
 text editions, permitted uses and span/token conventions must be checked before
-comparison. They have not been evaluated in this project.
+comparison. GermAnProse has not been evaluated in this project.
+
+An exploratory comparison against the fictional subset of the
+[REDEWIEDERGABE consensus corpus](https://github.com/redewiedergabe/corpus)
+(commit `45abfcf5f9c2a3d9a903f5c68f8f5b36bbce5563`, CC BY-NC-SA 4.0)
+can be reproduced with `PYTHONPATH=src python scripts/evaluate_redewiedergabe.py
+PATH_TO_DATA_MAIN_XML`. The script retains and outputs only aggregate counts;
+the corpus remains a separately supplied resource. It flattens the TEI body,
+preserving Unicode codepoint offsets and nested spans, and compares the German
+production quotation and word regexes with `direct`/`speech` annotations at
+word-token level. Mixed-medium, borderline direct spans and tokens crossing
+annotation or match boundaries are excluded. This matches the exact patterns,
+not the full Markdown manuscript preprocessing pipeline.
+
+For 395 fictional samples (aggregate source SHA-256
+`4cd63654a362794be47effe6856ac1526660fbd13a6a31c817c4c95266c9fd3f`),
+the comparison has 39,455 true positives, 1,681 positive disagreements,
+17,501 negative disagreements and 143,202 true negatives; 527 ambiguous and
+zero boundary-crossing tokens were excluded. The resulting token precision is
+95.9% and recall 69.3%. These are disagreements between quotation-mark cues
+and direct-speech annotations: quoted thoughts or writing may be positive
+disagreements even when the quotation cue is correct. Excerpt boundaries,
+historical conventions, tokenization and annotation scope matter, and the
+inspected corpus is not a held-out or representative contemporary evaluation.
 
 ### Manual manuscript association limits
 

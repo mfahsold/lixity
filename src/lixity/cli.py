@@ -2178,6 +2178,12 @@ def _main(argv: list[str] | None = None) -> int:
             else:
                 print(f"Tense-pattern review: {triage_report['completed']} / {triage_report['total']} decisions completed.")
                 print("Differences are not errors; changed is your assertion, and later remains open.")
+                unmatched = triage_report["unmatched_decisions"]
+                if unmatched:
+                    noun, verb, retained = (("decision", "matches", "it is") if unmatched == 1
+                                            else ("decisions", "match", "they are"))
+                    print(f"{unmatched} previously saved {noun} for this manuscript no longer {verb} current observations; "
+                          f"{retained} retained in the project.")
                 for observation in triage_report["observations"][:20]:
                     print(safe_text(f"{triage_report['source_path']}:{observation['start_line']}-{observation['end_line']} · "
                         f"{observation['status']} · present {observation['present_hits']} / past {observation['past_hits']} · {observation['id']}"))

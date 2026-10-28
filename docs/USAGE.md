@@ -600,8 +600,10 @@ Chapter, stage and decision filters limit the visible list; **Read next visible
 passage** follows that selection without saving anything. Choose **Deliberately
 kept**, **Changed by me** or **Review later**, then save explicitly. Completed
 counts include only current kept/changed decisions, not deferred or stale ones.
-Previously saved decisions that no longer match a current observation are counted
-as unmatched and retained, including when no flags remain. They are not silently
+Previously saved decisions for the current manuscript path that no longer match a
+current observation are counted as unmatched and retained, including when no flags
+remain. Decisions under another path, including a manuscript's former name, remain
+in the state file but are not included in this count. Decisions are not silently
 attached to another passage; their individual contents are not yet exposed here.
 No automatic manuscript change, task, source capture or research decision occurs.
 
@@ -614,6 +616,8 @@ lixity analysis-review --project ./novel --observation ID --status kept \
   --expected-review-sha256 REVIEW --json
 ```
 
+The human-readable CLI also reports the unmatched count when it is nonzero;
+the versioned JSON reports it as `unmatched_decisions`.
 Use exact identities from the current read. A stale tab/writer/settings/source
 returns an error; read again before deciding. **Changed by me** is explicitly
 self-reported. State lives in `.lixity/analysis-review.json` with schema

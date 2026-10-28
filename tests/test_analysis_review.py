@@ -194,6 +194,52 @@ def test_cli_read_and_guarded_write_share_the_same_state(project, capsys):
     assert "changed" in capsys.readouterr().err
 
 
+@pytest.mark.parametrize("count, wording", [(1, "1 previously saved decision for this manuscript no longer matches"),
+                                           (2, "2 previously saved decisions for this manuscript no longer match")])
+def test_cli_reports_retained_unmatched_decisions_without_writing(project, capsys, count, wording):
+    assert main(["analysis-review", "--project", str(project)]) == 0
+    assert "previously saved decision" not in capsys.readouterr().out
+
+    report = review_analysis(project)
+    saved = save(project, report)
+    if count == 2:
+        record_analysis_review(project, saved["observations"][1]["id"], "later",
+                               expected_source_sha256=saved["source_sha256"],
+                               expected_analysis_sha256=saved["analysis_sha256"],
+                               expected_review_sha256=saved["review_sha256"])
+    state = project / ".lixity/analysis-review.json"
+    original = state.read_bytes()
+    (project / "manuscript.md").write_text("## First\n\nShe walks. She waits.\n")
+    assert main(["analysis-review", "--project", str(project)]) == 0
+    output = capsys.readouterr().out
+    assert wording in output
+    assert "retained" in output
+    assert state.read_bytes() == original
+
+    assert main(["analysis-review", "--project", str(project), "--json"]) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert report["schema_version"] == "lixity-analysis-review/1"
+    assert report["unmatched_decisions"] == count
+    assert report["observations"] == []
+
+
+def test_renamed_manuscript_does_not_reassign_or_count_other_path_decisions(project):
+    report = review_analysis(project)
+    saved = save(project, report)
+    assert saved["observations"][0]["status"] == "kept"
+    state = project / ".lixity/analysis-review.json"
+    previous = state.read_bytes()
+    (project / "manuscript.md").rename(project / "renamed.md")
+    (project / "lixity.toml").write_text('manuscript = "renamed.md"\nlanguage = "en"\n')
+
+    renamed = review_analysis(project)
+    assert renamed["source_path"] == "renamed.md"
+    assert renamed["unmatched_decisions"] == 0
+    assert renamed["observations"][0]["status"] == "unreviewed"
+    assert state.read_bytes() == previous
+    assert json.loads(previous)["decisions"][0]["source_path"] == "manuscript.md"
+
+
 def test_native_context_guards_and_static_state_exclusion(project):
     from lixity.server.pdf_context import manuscript_pdf_token
     from lixity.site_export import prepare_site

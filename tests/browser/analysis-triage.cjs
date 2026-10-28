@@ -131,9 +131,16 @@ server.serve_forever()
     await page.locator('#tab-view-analysis').click();
     await page.locator('#workbench-overview-open').click();
     await expect(page.locator('#triage-progress')).toContainText('2 previously saved decisions');
+    await expect(page.locator('#triage-progress')).toContainText('for this manuscript');
     await expect(page.locator('#triage-progress')).toContainText('retained');
     assert.equal(await rows.count(), 0);
     assert.equal(JSON.parse(fs.readFileSync(path.join(server.fixture.project, '.lixity/analysis-review.json'))).decisions.length, 2);
+    for (const width of [1440, 320]) {
+      await page.setViewportSize({width,height:950});
+      await page.locator('#flags').scrollIntoViewIfNeeded();
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      await page.screenshot({path:path.join(artifacts,`review-unmatched-${width}.png`)});
+    }
     assert.deepEqual(markerWrites, []);
     assert.deepEqual(errors, []);
     console.log(`Native analysis triage: explicit decisions, reload, no manuscript/task writes, deferred count, stale source, filters, next-passage, conflict recovery and desktop/mobile passed. Screenshots: ${artifacts}`);

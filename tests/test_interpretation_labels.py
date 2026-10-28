@@ -95,6 +95,15 @@ class TestInterpretationLabels(unittest.TestCase):
                 label = LANGUAGE_PROFILES[language].labels["expected_false_positives"]
                 self.assertIn(term, label.casefold())
 
+    def test_unmatched_review_count_identifies_the_current_manuscript_scope(self):
+        terms = {"en": "manuscript", "de": "manuskript", "fr": "manuscrit",
+                 "es": "manuscrito", "it": "manoscritto", "pt": "manuscrito",
+                 "nl": "manuscript"}
+        for language, term in terms.items():
+            with self.subTest(language=language):
+                for key in ("triage_unmatched", "triage_unmatched_one"):
+                    self.assertIn(term, WORKSPACE_LABELS[language][key].casefold())
+
     def test_structural_help_qualifies_segmentation_and_nominal_probabilities(self):
         independence = {"en": "independent", "de": "unabhängige", "fr": "indépendantes",
                         "es": "independientes", "it": "indipendenti",
