@@ -223,8 +223,10 @@ pins (`make docs-sync`), run:
 make release-check RELEASE_TAG=vX.Y.Z
 ```
 
-This first rejects a missing or source-mismatched tag or absent/empty release notes, before heavy checks even
-under `make -j`. It then runs `make check` once, `make docs-generated-check` and the dependency audit,
+This first rejects a missing tag argument, a tag name that does not match the
+source version, or absent/empty release notes, before heavy checks even under
+`make -j`. The argument check does not inspect a Git tag or its target commit.
+It then runs `make check` once, `make docs-generated-check` and the dependency audit,
 then builds fresh archives, requires an exact tag/source/wheel/sdist version match,
 and installs the wheel in a temporary
 isolated environment outside the checkout. It checks dependencies, CLI/distribution
@@ -247,7 +249,11 @@ and running service separately; rebuilding public pages does not update either.
 Preparation does not commit, tag, push or publish. After reviewing the changes
 and obtaining release authorization, complete `make browser-full` for UI-affecting releases,
 push the reviewed commit to `main` and its matching `vX.Y.Z` tag. The tag
-workflow first runs the reusable full source and browser checks on the same
+must resolve to the reviewed commit: compare `git rev-parse HEAD` with
+`git rev-parse 'vX.Y.Z^{commit}'` locally, then verify the remote tag and the
+release workflow's commit after pushing. Annotated tags must be dereferenced to
+their commit for this comparison. A matching version string alone is insufficient.
+The tag workflow first runs the reusable full source and browser checks on the same
 commit; either failure blocks publication. It then builds, verifies and
 smoke-installs artifacts from that commit, attests them for `gh attestation verify`,
 attaches them to a draft release and publishes only when every asset is present.
@@ -266,6 +272,13 @@ Repository-level immutable releases are enabled, so published assets and tags
 remain fixed. Prepare and review release notes before tagging. Corrected code or
 artifacts belong in a new patch release, preserving the earlier checksums and
 provenance.
+
+If a tag-triggered run fails, check the workflow, the remote tag target, the
+GitHub release and PyPI publication status before deciding how to recover.
+Prefer a new patch release when corrections are needed; do not silently move a
+public tag. An exception for a visible tag that has not been published as a
+release or package requires explicit authorization and a record of its previous
+and corrected targets. Never replace an already published release or artifact.
 
 Every tagged release is distributed and archived automatically:
 

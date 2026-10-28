@@ -221,6 +221,14 @@ independent: back up research before an upgrade and inspect the
 [reader/writer compatibility limits](research/USAGE.md#limits). Installing new
 files does not restart a running workspace.
 
+Before stopping the app, check **App and audio** for active or queued audio
+jobs and let them finish or cancel them deliberately. Separate CLI renders are
+not shown there. Note the startup project and port, and preserve any separately
+installed tool dependencies or language models when replacing the installation.
+For a uv tool, `uv tool list --show-with --show-extras` shows recorded additional
+requirements. The app and an optional audio worker are separate services;
+updating or restarting one does not update the other.
+
 When upgrading from a historical build before v2.4.0, stop its instance through the
 original foreground terminal (Ctrl+C), checkout launcher or configured OS
 manager before replacing the installation. That version has no `service`
@@ -233,8 +241,9 @@ lixity --version
 lixity service restart --open
 ```
 
-`uv tool upgrade lixity` selects the newest published release when the tool came
-from PyPI. A tool installed from a pinned wheel keeps that fixed URL — replace it
+`uv tool upgrade lixity` selects the highest compatible, non-yanked version
+available under the tool's PyPI constraints, not the most recently published by
+date. A tool installed from a pinned wheel keeps that fixed URL — replace it
 with `uv tool install --reinstall-package lixity` and the new wheel URL.
 `--reinstall-package lixity` refreshes that package without forcing ownership
 of another installer's entrypoint. See the official
@@ -243,6 +252,10 @@ of another installer's entrypoint. See the official
 an empty workspace unless you provide a project; it does not reuse those settings.
 A project selected later in the browser is not the recorded startup project. Pass
 that project explicitly to `restart` when you want it to become the launch default.
+To roll back, choose and verify the intended older release wheel and its
+checksum, check archive compatibility, and restore a compatible backup if needed
+before using that version. Reopen projects and verify the installed version and
+service after the restart; do not assume older code can read newer archives.
 
 Before updates or removal, stop each managed instance using its port, for example
 `lixity service stop --port 9000` for a custom-port instance. Before removal,
@@ -307,8 +320,8 @@ choice. The controller manages instances it created, not arbitrary foreground
 servers or external startup units. If another process owns the port, identify
 that instance or choose another port; do not assume the controller owns it.
 
-All tabs connected to one server share its active project. **Open Project**
-changes that live workspace; CLI analysis, research and build commands do not.
+Project views on one server have independent selected projects. **Open Project**
+creates a view; CLI analysis, research and build commands do not change it.
 `start` uses fresh launch settings. `restart` uses recorded launch settings plus
 explicit overrides, even after a stop; a project selected later in the browser
 does not replace the startup project. After updates or OCR environment
@@ -562,10 +575,12 @@ package rather than copying engine code into every book project.
 For contributors, `make check` is the everyday local source check and
 `make browser` covers rendered changes. Before preparing a release, use
 `make release-check RELEASE_TAG=vX.Y.Z`, plus `make browser-full` for UI changes.
-Heavy GitHub test/browser/platform workflows are manual fallbacks. Tagged
-releases build/attest packages and deploy Pages from that published tag; manual
-Pages dispatch is a deliberate preview. Pushing `main` alone updates neither
-the deployed site nor a local installation.
+Tagged releases first run the full source and browser gates, then build and
+attest packages and deploy Pages from the published tag. The research-platform
+workflow remains a manual cross-platform check; manual Pages dispatch is a
+deliberate preview. See [release preparation](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#preparing-a-release)
+for the gates and recovery. Pushing `main` alone updates neither the deployed
+site nor a local installation.
 
 Installing an update changes the installed package, not another checkout or an
 already running process; restart the managed service to load it. A **Reading

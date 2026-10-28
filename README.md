@@ -129,7 +129,7 @@ Try the same fictional project as a
 or a [standalone companion](https://mfahsold.github.io/lixity/demo/companion/index.html).
 These curated reading copies are different from the analysis/research workspace:
 they contain selected material, not the full archive.
-Current main can optionally include selected chapter or language measurements,
+Since v0.7.7, reading copies can optionally include selected chapter or language measurements,
 or a fuller analysis of the exported chapters, in a reader copy. Its figures use
 standard settings and may differ from project-specific analysis; later chapters
 and internal work markers remain outside that copy.
@@ -153,21 +153,21 @@ chapter measurements: meaning, units, manuscript reference and the other
 metrics of the same chapter. Reading the text is an explicit next action;
 chapter-only measurements do not invent word-level highlights.
 
-Current-main `export-site --preflight` and the native **Check export** action
+`export-site --preflight` and the native **Check export** action
 measure the prepared package before writing/downloading, including media not
 packaged and missing attribution fields. Reading website exports are beta and
 can be large; the check does not promise a package size or mobile performance. Existing research projects require the
 [explicit manifest-storage migration](https://mfahsold.github.io/lixity/research/USAGE.md#migrate-manifest-storage)
 before using the current compressed layout.
 
-Current main also shares versioned image, PDF and MP4/WebM attachments across
+Lixity also shares versioned image, PDF and MP4/WebM attachments across
 dossiers and reading copies, with explicit retention and source-file export
 choices. [Media workflow and compatibility](https://mfahsold.github.io/lixity/research/USAGE.md#retain-a-pdf-or-video-in-a-dossier).
 
 A passage's research associations open its claims and dossier beside the
 manuscript, with a return to the passage. Current entries and exact linked earlier
 versions remain distinct. Dossier editing offers `--body-only` section drafts and
-`--compact` update receipts. Current-main `--preamble` targets the opening text,
+`--compact` update receipts. `--preamble` targets the opening text,
 `research media-context` corrects retained-media attribution without copying bytes,
 and `dossier-images --missing-provenance` finds absent attribution fields; see the
 [section-editing workflow](https://mfahsold.github.io/lixity/research/USAGE.md#work-on-one-dossier-section).
@@ -176,7 +176,7 @@ sources, existing outputs and read-only structure findings. They neither move
 files nor establish that an output matches the current manuscript; see
 [project inspection](https://mfahsold.github.io/lixity/USAGE.md#inspect-project-structure).
 
-The development audio workflow shares saved project voice profiles between
+The audio workflow shares saved project voice profiles between
 `lixity read-aloud` and the native interface. Version 0.7.7 separates project voice
 profiles and chapter output from manuscript passage direction and preview. It adds
 separately saved passage direction, source-bound text ranges, explicit silence and

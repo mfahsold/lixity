@@ -33,7 +33,7 @@ The optional local model path covers all seven supported analysis languages and
 is a contextual grammatical measurement, not a
 linguistic correctness guarantee. The standard installation uses incomplete
 lexical patterns. In v0.7.6 German unknown adjectives ending in `-ten` can match
-past cues. Current main removes that unrestricted German suffix rule and adds
+past cues. Version 0.7.7 removes that unrestricted German suffix rule and adds
 selected forms such as `übt`; unlisted regular past forms such as `flatterten`
 can now be missed. Listed forms and auxiliary/participle matches can still be
 ambiguous: for example, `Ich habe gelben Stoff` can still produce a spurious

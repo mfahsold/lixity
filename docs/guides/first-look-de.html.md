@@ -79,7 +79,7 @@ lixity service start --open
 
 Ein Projekt oder die Importvorschau für das Markdown-Manuskript öffnen und die Sprache **Deutsch** bestätigen. Englisch ist die Voreinstellung; automatische Erkennung ist eine ausdrückliche Wahl. Die eingebaute Analyse läuft lokal. Optionale Integrationen haben eigene [Datengrenzen](../research/USAGE.md).
 
-Die öffentliche Demo zeigt Version 0.7.6 mit einem fiktiven Projekt. Das installierbare Paket und sein Funktionsumfang sind über die [Versionshinweise](../releases/v0.7.6.md) und `lixity --version` prüfbar. Die Demo kann weder importieren noch Änderungen speichern.
+Die öffentliche Demo zeigt ein fiktives Projekt. Das installierte Paket und sein Funktionsumfang sind über `lixity --version` und die [Versionshinweise](https://github.com/mfahsold/lixity/releases/latest) prüfbar. Die Demo kann weder importieren noch Änderungen speichern.
 
 [English tour with more controls](first-look.html) · [Praxisbeispiel zu Wiederholungen (Englisch)](../blog/local-word-echoes.html)
 

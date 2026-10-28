@@ -115,7 +115,7 @@ uv tool update-shell</code></pre>
 lixity doctor
 lixity service start --open</code></pre>
 <p>If <code>lixity</code> is not found, check <code>uv tool list</code>, run <code>uv tool update-shell</code> and open a new terminal. <code>uv tool dir --bin</code> shows the executable directory. The health check reports installation/service issues, not linguistic validity.</p>
-<p>This installs the published package from PyPI in uv's <a href="https://docs.astral.sh/uv/concepts/tools/">isolated tool environment</a>. Shell integration applies to new terminals. Install v0.7.6 and check <a href="https://github.com/mfahsold/lixity/releases/latest">published release notes</a> for changes and compatibility. The <a href="../releases/v0.7.7.md">0.7.7 release notes</a> describe changes and migration boundaries.</p>
+<p>This installs the published package from PyPI in uv's <a href="https://docs.astral.sh/uv/concepts/tools/">isolated tool environment</a>. Shell integration applies to new terminals. Check <code>lixity --version</code> and the <a href="../releases/v0.7.7.md">release notes</a> for changes and compatibility.</p>
 
 <h2 id="first-dashboard">Start the workspace</h2>
 <p>The managed app opens <code>http://127.0.0.1:8765/</code>. Its default is an empty workspace; it does not search your terminal's current folder. Choose <strong>Open Project</strong> for an existing folder or <strong>Analyze a manuscript</strong> for an import preview. Confirm the language and read a passage before interpreting its measurements.</p>

@@ -64,7 +64,7 @@ mentions, motifs, pacing, paragraph tense heuristics and manuscript-relative
 style comparisons. Heuristic cutoff hits, FDR-selected cells and tense flags are
 different result sets. Source analysis never changes the manuscript baseline.
 
-Current-main native project views share one app origin; use each view's `data-api`
+Native project views share one app origin; use each view's `data-api`
 prefix. **App and audio** reports open views, actual worker health and the bounded
 shared audio queue. View URLs expire on app restart; reopen from home.
 
@@ -84,10 +84,10 @@ media records have explicit compatibility and source-file export requirements.
 Reading websites are copies, not backups or access control. Review-workspace
 exports and curated reader/companion publications have different disclosure
 scopes. Original sources require separate inclusion consent. Exports cannot save
-project changes or synthesize speech. Current main permits an explicit reader
-analysis selection (`--analysis chapters`, `language` or `all`) for capped
+project changes or synthesize speech. Since v0.7.7, authors can explicitly select
+reader analysis (`--analysis chapters`, `language` or `all`) for capped
 chapters; v2 manifests identify the selection. It recomputes using standard
-settings and omits work markers and project-defined figures. Current-main audio shares project voice
+settings and omits work markers and project-defined figures. Audio shares project voice
 profiles between the CLI and native preview/chapter dialog: an optional
 Qwen3-TTS 1.7B CustomVoice worker on this computer or a configured Jetson over SSH,
 selected per render, with no silent backend fallback. CPU generation
@@ -151,6 +151,6 @@ identity may vary across segments. A separately configured Base worker can reuse
 an explicitly saved private audio reference and exact transcript; Base does not
 accept free-form delivery instructions. Assign profiles to passages explicitly.
 
-Current main: `audio-status [--project PATH] --json` inspects profiles and
+`audio-status [--project PATH] --json` inspects profiles and
 worker model identities without prose. `read-aloud --preview` or `--preview-line
 N` renders a fresh paragraph; `--progress` reports segments on stderr.

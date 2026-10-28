@@ -49,8 +49,10 @@ collapsed when a manuscript is loaded; the three workspace destinations stay vis
 **Open Project** reconnects the folder and research archive visible to the server.
 Browsing or cancelling does not switch projects. **Analyze a manuscript** copies
 a file into a separate project after preview; it does not reconnect the original
-folder's archive. A research project may open without a manuscript. All tabs on
-one server share its active project, so check the displayed path before saving.
+folder's archive. A research project may open without a manuscript. One server
+can retain independent project views in multiple tabs; tabs using the same view
+share its project context. Check the displayed path before saving. View URLs
+expire on restart; see [service management](USAGE.md#lixity-service).
 
 If configuration or Research setup fails while creating/importing a project,
 the app reports incomplete setup and keeps the previous project selected. Created
@@ -60,7 +62,7 @@ continue and initialize Research if it is still absent.
 
 ### Read and explore
 
-**Current main, unreleased:** the **?** control (**Help with your first analysis**)
+The **?** control (**Help with your first analysis**)
 in the reading toolbar opens an optional, initially closed guide. It stays with the manuscript,
 not the overview or Focus reading. Opening it changes no analysis setting.
 It distinguishes Analysis Off, no selected measure, and the selected measure
@@ -98,7 +100,7 @@ read on a wide screen. On mobile, use the same views above the workspace.
 alongside it when you need context, and use **Research** to work on the source
 archive. Analysis guides your attention; the manuscript remains the reference.
 
-Current-main research references use a neutral dotted line and an adjacent book
+Research references use a neutral dotted line and an adjacent book
 icon labelled **Research** with the association count. These identify saved links
 to claims, dossiers and author decisions. Metric comparisons retain their color
 scale; solid analysis underlines identify counted text. Research references stay
@@ -124,7 +126,7 @@ the map context is hidden.
 
 ## Work through review notes
 
-**Current main, unreleased:** **Analysis overview → Flagged passages** is
+**Analysis overview → Flagged passages** is
 specifically a heuristic tense-pattern list, not a combined ranking of all
 analysis metrics. Its strongest stage is called a **strong difference**, not a
 defect. Filter by chapter/stage, inspect **Why here?**, and choose **Read passage**
@@ -173,7 +175,7 @@ Enable Zotero's local API and download the needed attachments. **Since v0.7.1:**
 choose **Research → Evidence captures → Capture from Zotero**,
 then preview a library, collection and attachment before permitting retention.
 The Zotero bridge captures PDF/text and PNG/JPEG; it does not capture audio or
-video. Current main separately supports [local PDF/video dossier attachments](research/USAGE.md#retain-a-pdf-or-video-in-a-dossier).
+video. Lixity separately supports [local PDF/video dossier attachments](research/USAGE.md#retain-a-pdf-or-video-in-a-dossier).
 Scanned text needs an OCR backend. The [Zotero reference](research/USAGE.md#zotero-desktop-bridge-since-v1190)
 owns setup, refresh, migration and paired backup. Capture enables no background sync.
 

@@ -260,7 +260,7 @@ explain unmapped contributions. When source profiles cannot be verified,
 The current inline-count/display
 projection may report `inline_mapping_unavailable`. Zero-width matches remain in
 the metric count but cannot form highlights. No prose is added to JSON.
-Current main counts NFC prose while keeping `ParagraphProfile.text` and its
+Lixity counts NFC prose while keeping `ParagraphProfile.text` and its
 hash in the original representation. Canonical-cluster ranges map back to those
 original codepoints; `unicode_mapping_unavailable` preserves a count when an
 ambiguous inner-cluster cut cannot be mapped. Configured word/cue patterns use
@@ -955,7 +955,7 @@ claims tunnel or GPU readiness. `POST <prefix>/workspace-close` accepts only
 `id`; it forgets an idle non-startup view without changing project files.
 
 
-**Current-main analysis review endpoints:** `GET /api/analysis-review?project_token=...`
+**Analysis review endpoints:** `GET /api/analysis-review?project_token=...`
 reads the selected displayed analysis's review state. `POST /api/analysis-review`
 accepts only `project_token`, `observation_id`, `status`,
 `expected_source_sha256`, `expected_analysis_sha256`, `expected_review_sha256`.
@@ -977,8 +977,7 @@ accepts nullable `export_id` (32 lowercase hexadecimal characters), `stage`
 `catalogue_failed`), nullable `error_name`
 (`AbortError`, `NetworkError`, `TypeError`, `Error`, `Other`), nullable strict
 integer `profile_count` (0–50) and `http_status` (0–599). Pre-export profile
-observations have no export ID. These additive diagnostics are current-main,
-unreleased additions.
+observations have no export ID. These diagnostics are included in v0.7.7.
 Extra fields are rejected. These same-origin receipts are browser observations,
 not proof of successful file saving. They contain no project token or content;
 see [service logging](INSTALLATION.md#logs).
@@ -1199,7 +1198,7 @@ Both resolver arrays identify exact
 source/version pins with `available|withdrawn|purged|missing` status; unavailable
 entries have no image URL. Historical reads resolve the pinned image version,
 not the latest source. Record/history dossier envelopes include both arrays.
-Current-main summaries resolve those references from the entire selected body,
+Summaries resolve those references from the entire selected body,
 not only its display excerpt. Python `list_dossier_images(project,
 dossier_id=None, limit=100, offset=0, missing_provenance=False)` and CLI `research dossier-images` return
 `research-dossier-images-local/1`: `project_id`, `snapshot`, `images`, `total`,
@@ -1533,7 +1532,7 @@ Browsing/capture authorizes no manuscript or Zotero-library writes. Retention
 permission does not authorize redistribution.
 
 
-Current-main `update_dossier_media_context(project, dossier_id, source_id,
+`update_dossier_media_context(project, dossier_id, source_id,
 source_version_id, expected_snapshot=..., expected_revision=..., context=...,
 reason=..., actor="local-author", dry_run=False)` and CLI `research media-context`
 correct only `origin_url`/`provenance_note`. They reuse retained bytes/source
@@ -1545,7 +1544,7 @@ media is refused to preserve text lineage. Receipts use
 semantics. It cannot combine with a body/section replacement.
 
 
-Current-main native `POST /api/site-preflight` accepts the same strict
+Native `POST /api/site-preflight` accepts the same strict
 `SiteExportRequest` as `/api/site-export`, including the selected project token
 and explicit research/source-file choices. It returns `{ok:true, preflight:...}`
 with `lixity-site-preflight/1`, measuring the actual prepared HTML/ZIP/files and
@@ -1743,7 +1742,7 @@ from the old snapshot stale. Profile-only drafts and per-render hardware targets
 remain distinct. CLI `--no-direction` ignores saved direction for that render,
 without deleting it. No native SSML/IPA/control-tag support is implied.
 
-Current main adds an experimental `qwen3-design` profile variant with
+Version 0.7.7 includes an experimental `qwen3-design` profile variant with
 `voice="design"` and a required `voice_description`. The existing `instructions`
 field remains delivery direction; both strings are sent separately to an
 explicitly configured VoiceDesign worker, which joins them for Qwen's `instruct`.
@@ -1755,7 +1754,7 @@ The cache identity includes model, description and effective instructions.
 
 ## CLI audio status and previews
 
-`audio-status --json [--project PATH] [--engine qwen3|qwen3-design]` returns `lixity-audio-status/1` with
+`audio-status --json [--project PATH] [--engine qwen3|qwen3-design|qwen3-base]` returns `lixity-audio-status/1` with
 actual per-target state, model identity and nullable comparison with the selected
 project profile or explicitly selected engine. Omitted/unknown information is not a negative match. No
 manuscript prose, pronunciations or delivery descriptions are included.

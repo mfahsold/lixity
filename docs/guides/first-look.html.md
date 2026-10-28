@@ -16,7 +16,7 @@ This walkthrough follows the generated demo. It uses the same reading website ex
 
 [Video walkthrough](../videos/analysis-review.mp4)
 
-*Warehouse 4: explore a passage and compare its chapter. Recorded with v0.7.5 using the same app controls as the demo; current-main annotation styling may differ.*
+*Warehouse 4: explore a passage and compare its chapter. Recorded with v0.7.5 using the same app controls as the demo; annotation styling in the demo may differ.*
 
 ## 2. Inspect one difference
 

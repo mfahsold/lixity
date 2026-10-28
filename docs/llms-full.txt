@@ -86,7 +86,7 @@ mentions, motifs, pacing, paragraph tense heuristics and manuscript-relative
 style comparisons. Heuristic cutoff hits, FDR-selected cells and tense flags are
 different result sets. Source analysis never changes the manuscript baseline.
 
-Current-main native project views share one app origin; use each view's `data-api`
+Native project views share one app origin; use each view's `data-api`
 prefix. **App and audio** reports open views, actual worker health and the bounded
 shared audio queue. View URLs expire on app restart; reopen from home.
 
@@ -106,10 +106,10 @@ media records have explicit compatibility and source-file export requirements.
 Reading websites are copies, not backups or access control. Review-workspace
 exports and curated reader/companion publications have different disclosure
 scopes. Original sources require separate inclusion consent. Exports cannot save
-project changes or synthesize speech. Current main permits an explicit reader
-analysis selection (`--analysis chapters`, `language` or `all`) for capped
+project changes or synthesize speech. Since v0.7.7, authors can explicitly select
+reader analysis (`--analysis chapters`, `language` or `all`) for capped
 chapters; v2 manifests identify the selection. It recomputes using standard
-settings and omits work markers and project-defined figures. Current-main audio shares project voice
+settings and omits work markers and project-defined figures. Audio shares project voice
 profiles between the CLI and native preview/chapter dialog: an optional
 Qwen3-TTS 1.7B CustomVoice worker on this computer or a configured Jetson over SSH,
 selected per render, with no silent backend fallback. CPU generation
@@ -173,7 +173,7 @@ identity may vary across segments. A separately configured Base worker can reuse
 an explicitly saved private audio reference and exact transcript; Base does not
 accept free-form delivery instructions. Assign profiles to passages explicitly.
 
-Current main: `audio-status [--project PATH] --json` inspects profiles and
+`audio-status [--project PATH] --json` inspects profiles and
 worker model identities without prose. `read-aloud --preview` or `--preview-line
 N` renders a fresh paragraph; `--progress` reports segments on stderr.
 
@@ -362,7 +362,7 @@ profile or saved profile clears source-file inclusion. Leave research unchecked
 for a manuscript/analysis copy, or choose a reader format and publication profile
 for selected companion notes.
 
-**Current main:** a manuscript-and-background reader copy can optionally include
+**Since v0.7.7:** a manuscript-and-background reader copy can optionally include
 analysis. Select chapter figures and/or language measurements, or the complete
 analysis. The default is no analysis. In the CLI, repeat `--analysis chapters`
 and `--analysis language` for the two summaries; `--analysis full` (or `all`)
@@ -433,7 +433,7 @@ complete extracted source text. `--include-research` is rejected for these
 formats; choose the curated profile instead. Selected retained media needs the
 separate source-file inclusion choice.
 
-Current-main PDF/video attachments use the same source-file choice and
+PDF/video attachments use the same source-file choice and
 dossier/section scope as images. They remain unavailable placeholders when the
 original files are omitted. See the [shared media workflow](research/USAGE.md#retain-a-pdf-or-video-in-a-dossier)
 for file limits, version compatibility and public credit requirements.
@@ -767,7 +767,7 @@ explains its existing tense-flag/opening-paragraph selection, not a quality rank
 CLI `profile --help` gives the same source-lines → counted-text workflow;
 default outputs and JSON contracts are unchanged.
 
-**Current main review decisions:** the overview's flagged list contains tense
+**Review decisions:** the overview's flagged list contains tense
 heuristics, not all chapter or paragraph metrics. **Why here?** reports actual
 configured present/past marker counts and mixed/switch criteria. **Read passage**
 is primary; a diagnostic no longer directly proposes a To-do. Author work markers
@@ -1081,14 +1081,18 @@ installation retains lightweight, incomplete pattern counts. Installing a model
 does not silently change existing projects. Languages without an explicitly selected model retain their existing
 profiles. No model or manuscript data is downloaded/uploaded during analysis.
 
-For the normal isolated application installation, install the extra and the
+For a new isolated application installation, install the extra and the
 explicit model wheel in the same environment (network access is needed here):
 
 ```sh
-uv tool install --force --python 3.12 "lixity[linguistics]==0.7.6" --with https://github.com/explosion/spacy-models/releases/download/de_core_news_md-3.8.0/de_core_news_md-3.8.0-py3-none-any.whl
+uv tool install --python 3.12 "lixity[linguistics]" --with https://github.com/explosion/spacy-models/releases/download/de_core_news_md-3.8.0/de_core_news_md-3.8.0-py3-none-any.whl
 ```
 
-For a Python project, use `python -m pip install "lixity[linguistics]==0.7.6"`
+For an existing tool installation, review its recorded additional requirements
+first: replacing it can remove other installed models and dependencies. See
+[updates and removal](INSTALLATION.md#updates-and-removal).
+
+For a Python project, use `python -m pip install --upgrade "lixity[linguistics]"`
 and install that model wheel into the same environment. The model is a separate
 upstream artifact, not bundled in the Lixity wheel. Its published metadata lists
 MIT licensing. Pin and review model versions independently; restart the app after
@@ -1209,7 +1213,7 @@ at least 25% minority share. `switch` compares consecutive dominant tenses;
 severity 0–3 prioritizes review. See the [classification contract](AGENTS.md)
 for the truth table and direct-library threshold controls.
 
-**Current main:** the default German patterns no longer treat an unknown
+**Since v0.7.7:** the default German patterns no longer treat an unknown
 `-te/-ten/-test` ending as sufficient evidence of past tense. This avoids some
 adjective matches and adds selected cues such as `übt`, but unlisted regular
 past forms such as `flatterten` can now be missed; other ambiguous matches remain.
@@ -1485,7 +1489,7 @@ ordering, not identical artistic effect.
 
 The native **Analysis overview → Signal-group comparison** panel
 shows these chapter values and links back to the manuscript. Review-workspace
-website copies include that analysis; current-main reader copies include it only
+website copies include that analysis; reader copies include it only
 when full analysis is explicitly selected. Companion copies exclude it. Reader
 copies recalculate on the capped chapters using default rules and thresholds.
 Bar length shows the magnitude of the balance; its signed number gives the
@@ -1660,7 +1664,7 @@ Choose a supported speech language explicitly for a Dutch project; there is no
 automatic language or backend fallback. Preset language support does not certify
 native pronunciation. Review the model license before distributing output.
 
-**Current main:** saved project audio profiles are shared with the CLI. In the
+Saved project audio profiles are shared with the CLI. Since v0.7.7, in the
 native interface, open **Project → Voice profiles** to create or edit a profile,
 including its model, delivery, standard pauses and pronunciation replacements.
 The pronunciation editor can be expanded and searched. Filter and edit individual
@@ -5677,7 +5681,7 @@ restating formulas.
 | Sentence bins | ≤ 6 / 7–15 / 16–25 / > 25 words (`analyzer.py`, `pacing.py`) | Bins describe the supplied text; tokenless fragments distort ASL |
 | Hook | Closing sentence ≤ `HOOK_SHORT_SENTENCE` (8) words, ending in `?`, `!` or `…`, or containing detected dialogue (`pacing.py`) | Each condition adds one point; this is not a validated suspense measure. Only the ellipsis character scores; `...` does not |
 | Dialogue paragraph | ≥ 50 % of the paragraph's words inside dialogue spans (`dialogue.py`) | Quotation conventions differ per language |
-| Tense mixed/switch | `mixed`: ≥ 2 present and ≥ 2 past markers and minority share ≥ 25 %; `switch`: the dominant tense changes between consecutive paragraphs (`style_profile.py`) | Lexical cues and language-specific patterns are incomplete and can be ambiguous; they are not grammatical parses. Current main no longer treats an unknown German `-te/-ten/-test` ending alone as a past cue; no productive present pattern |
+| Tense mixed/switch | `mixed`: ≥ 2 present and ≥ 2 past markers and minority share ≥ 25 %; `switch`: the dominant tense changes between consecutive paragraphs (`style_profile.py`) | Lexical cues and language-specific patterns are incomplete and can be ambiguous; they are not grammatical parses. Since v0.7.7, an unknown German `-te/-ten/-test` ending alone is not a past cue; no productive present pattern |
 | Sentence splitter | Language abbreviation tables, digit and initial guards; utterance `no.`/`co.` split; prose splits keep blank-line block boundaries (`split_prose_sentences`) | Tables are curated and incomplete; tokenless fragments are not sentences; an unterminated block stays one fragment unit with its token length |
 | Severity | `classify_severity` truth table; defaults: 3 = switch + mixed + minority ≥ 3, 2 = (switch + minority ≥ 2) or (mixed + minority ≥ 3), 1 = either, 0 = neither | Only `flag_min_severity` reaches CLI/API/config; other `ProfileThresholds` fields need direct `ParagraphProfiler` construction |
 | Dominance | Neutral with at most one marker; otherwise present when `present/(past+ε) > 1.5`, past when `< 0.67`, mixed within the band; ε = 0.001 (`style_profile.py`) | Ratio bands are conventions, not measured boundaries |
@@ -5716,7 +5720,7 @@ word is explicitly listed as present and not past in the curated inventory.
 Auxiliary-plus-participle candidates are preserved, including participles that
 also occur as finite forms (`haben erzählt`, `a écrit`). This corrects collisions such as
 German `halten` and Dutch `Wij moeten`; it does not infer syntax from endings.
-**Current main:** German removes the unrestricted weak-past suffix rule used in
+**Since v0.7.7:** German removes the unrestricted weak-past suffix rule used in
 v0.7.6: `feuchten` and `kunstvollsten` no longer become past cues merely from
 their endings. Selected forms of `üben` and `singen` have been added to the
 lexicon, including `übt`; unknown regular past forms such as `flatterten` can
@@ -5886,7 +5890,7 @@ The optional local model path covers all seven supported analysis languages and
 is a contextual grammatical measurement, not a
 linguistic correctness guarantee. The standard installation uses incomplete
 lexical patterns. In v0.7.6 German unknown adjectives ending in `-ten` can match
-past cues. Current main removes that unrestricted German suffix rule and adds
+past cues. Version 0.7.7 removes that unrestricted German suffix rule and adds
 selected forms such as `übt`; unlisted regular past forms such as `flatterten`
 can now be missed. Listed forms and auxiliary/participle matches can still be
 ambiguous: for example, `Ich habe gelben Stoff` can still produce a spurious
@@ -6871,7 +6875,7 @@ explain unmapped contributions. When source profiles cannot be verified,
 The current inline-count/display
 projection may report `inline_mapping_unavailable`. Zero-width matches remain in
 the metric count but cannot form highlights. No prose is added to JSON.
-Current main counts NFC prose while keeping `ParagraphProfile.text` and its
+Lixity counts NFC prose while keeping `ParagraphProfile.text` and its
 hash in the original representation. Canonical-cluster ranges map back to those
 original codepoints; `unicode_mapping_unavailable` preserves a count when an
 ambiguous inner-cluster cut cannot be mapped. Configured word/cue patterns use
@@ -7566,7 +7570,7 @@ claims tunnel or GPU readiness. `POST <prefix>/workspace-close` accepts only
 `id`; it forgets an idle non-startup view without changing project files.
 
 
-**Current-main analysis review endpoints:** `GET /api/analysis-review?project_token=...`
+**Analysis review endpoints:** `GET /api/analysis-review?project_token=...`
 reads the selected displayed analysis's review state. `POST /api/analysis-review`
 accepts only `project_token`, `observation_id`, `status`,
 `expected_source_sha256`, `expected_analysis_sha256`, `expected_review_sha256`.
@@ -7588,8 +7592,7 @@ accepts nullable `export_id` (32 lowercase hexadecimal characters), `stage`
 `catalogue_failed`), nullable `error_name`
 (`AbortError`, `NetworkError`, `TypeError`, `Error`, `Other`), nullable strict
 integer `profile_count` (0–50) and `http_status` (0–599). Pre-export profile
-observations have no export ID. These additive diagnostics are current-main,
-unreleased additions.
+observations have no export ID. These diagnostics are included in v0.7.7.
 Extra fields are rejected. These same-origin receipts are browser observations,
 not proof of successful file saving. They contain no project token or content;
 see [service logging](INSTALLATION.md#logs).
@@ -7810,7 +7813,7 @@ Both resolver arrays identify exact
 source/version pins with `available|withdrawn|purged|missing` status; unavailable
 entries have no image URL. Historical reads resolve the pinned image version,
 not the latest source. Record/history dossier envelopes include both arrays.
-Current-main summaries resolve those references from the entire selected body,
+Summaries resolve those references from the entire selected body,
 not only its display excerpt. Python `list_dossier_images(project,
 dossier_id=None, limit=100, offset=0, missing_provenance=False)` and CLI `research dossier-images` return
 `research-dossier-images-local/1`: `project_id`, `snapshot`, `images`, `total`,
@@ -8144,7 +8147,7 @@ Browsing/capture authorizes no manuscript or Zotero-library writes. Retention
 permission does not authorize redistribution.
 
 
-Current-main `update_dossier_media_context(project, dossier_id, source_id,
+`update_dossier_media_context(project, dossier_id, source_id,
 source_version_id, expected_snapshot=..., expected_revision=..., context=...,
 reason=..., actor="local-author", dry_run=False)` and CLI `research media-context`
 correct only `origin_url`/`provenance_note`. They reuse retained bytes/source
@@ -8156,7 +8159,7 @@ media is refused to preserve text lineage. Receipts use
 semantics. It cannot combine with a body/section replacement.
 
 
-Current-main native `POST /api/site-preflight` accepts the same strict
+Native `POST /api/site-preflight` accepts the same strict
 `SiteExportRequest` as `/api/site-export`, including the selected project token
 and explicit research/source-file choices. It returns `{ok:true, preflight:...}`
 with `lixity-site-preflight/1`, measuring the actual prepared HTML/ZIP/files and
@@ -8354,7 +8357,7 @@ from the old snapshot stale. Profile-only drafts and per-render hardware targets
 remain distinct. CLI `--no-direction` ignores saved direction for that render,
 without deleting it. No native SSML/IPA/control-tag support is implied.
 
-Current main adds an experimental `qwen3-design` profile variant with
+Version 0.7.7 includes an experimental `qwen3-design` profile variant with
 `voice="design"` and a required `voice_description`. The existing `instructions`
 field remains delivery direction; both strings are sent separately to an
 explicitly configured VoiceDesign worker, which joins them for Qwen's `instruct`.
@@ -8366,7 +8369,7 @@ The cache identity includes model, description and effective instructions.
 
 ## CLI audio status and previews
 
-`audio-status --json [--project PATH] [--engine qwen3|qwen3-design]` returns `lixity-audio-status/1` with
+`audio-status --json [--project PATH] [--engine qwen3|qwen3-design|qwen3-base]` returns `lixity-audio-status/1` with
 actual per-target state, model identity and nullable comparison with the selected
 project profile or explicitly selected engine. Omitted/unknown information is not a negative match. No
 manuscript prose, pronunciations or delivery descriptions are included.

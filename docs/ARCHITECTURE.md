@@ -62,11 +62,13 @@ source passages do not enter manuscript baselines. The browser owns transient
 selection/display state, while guarded routes delegate durable writes to the
 research API and repository.
 
-One process has one selected workspace. Opening selects an existing project;
-importing browser bytes creates one at an explicit destination. A browser filename
-does not identify its original parent directory. An archive may open without a
-manuscript. `workspace.resolve_project_target` resolves explicit selectors; API
-research calls stay explicitly scoped. An occupied port fails startup. Since
+One server process can retain independent project views through its bounded
+`WorkspaceRegistry`; tabs that use the same view share that view's state.
+Opening selects an existing project in a view; importing browser bytes creates
+one at an explicit destination. A browser filename does not identify its original
+parent directory. An archive may open without a manuscript.
+`workspace.resolve_project_target` resolves explicit selectors; API research
+calls stay explicitly scoped. An occupied port fails startup. Since
 v0.7.2, an invalid explicit `serve` selector fails before binding or selecting a
 workspace. Valid directories without a unique manuscript can still open as empty
 workspaces; `--no-project` explicitly starts without project selection.
@@ -188,7 +190,7 @@ opted-in save requires record/manifest v7; reads never upgrade existing archives
 Historical v3.0.1 supports only v1–v6 despite its higher product number.
 
 `pipeline.paragraph_identity` supplies the same identity to rendering and research.
-Current-main anchor reads use the same displayed-paragraph projection as the
+Anchor reads use the same displayed-paragraph projection as the
 full profiler, without running linguistic counters or chapter aggregation.
 The parser's chapter membership, inline display text, line spans and hashes
 remain shared. Literal occurrence matching counts overlapping occurrences;
@@ -719,7 +721,7 @@ are prepared, with explicit codepoint-to-UTF-16 conversion and hash validation.
 Search/research mark changes invalidate derived ranges, not source identities.
 Analysis visibility, metric changes and workspace changes cancel stale cards and
 marks. Unsupported or unprovable mappings remain explicit unavailable states.
-Current-main tense evidence extends the same optional envelope without adding
+Tense evidence extends the same optional envelope without adding
 measurement layers or paragraph JSON fields. `TenseMatcher.spans` and `count`
 share effective cue selection; the existing normalization mapper retains exact
 display offsets. The backend names mixed, switched or combined triggers. The
@@ -1327,10 +1329,27 @@ new archive schema or database authority is introduced.
 
 ## Project audio profiles and rendering
 
+```mermaid
+flowchart LR
+    CLI[CLI] --> Planner[Shared speech planning and rendering]
+    UI[Workspace audio routes] --> Planner
+    Project[Project profiles, direction and references] --> Planner
+    Planner --> Cache[Raw segment cache]
+    Planner --> Worker[Matching local or Jetson Qwen worker]
+    Worker --> Cache
+    Cache --> Output[Tempo, pauses and audio output]
+```
+
+The worker variant must match the profile; the Jetson connection uses an
+operator-configured SSH tunnel. References are retained project data, while
+cached segments are disposable. Tempo and pauses are applied after synthesis.
+
 **Since v0.7.6:** `speech_profiles.py` owns strict project-only audio
 settings and engine capabilities. Existing root-only atomic settings updates
-persist `audio`; the CLI and native dialog resolve the same Qwen3-TTS 1.7B
-CustomVoice profiles and rendering controls. Qwen is the sole supported engine.
+persist `audio`; the CLI and native dialog share profile resolution and rendering
+controls. Version 0.7.7 supports Qwen3-TTS 1.7B CustomVoice, VoiceDesign and Base
+profiles. Qwen is the sole supported model family; synthesis requires a matching
+worker for the selected variant.
 In 0.7.7, the `speed` field is a post-synthesis FFmpeg `atempo` factor
 from 0.5 to 2.0, not native model rate control. Fresh implicit profiles use 1.2;
 previously saved explicit or omitted values retain 1.0 where applicable. Cached
@@ -1421,8 +1440,8 @@ device equivalence between machines. Exact renderer fingerprinting would require
 an explicit verified-online versus offline-replay policy before changing keys.
 This derived cache does not persist native job state.
 
-The October 2026 upstream review retains Qwen3-TTS 1.7B CustomVoice as the sole
-implemented synthesis engine. Model cards,
+The October 2026 upstream review retains Qwen3-TTS 1.7B as the sole implemented
+model family, with CustomVoice, VoiceDesign and Base variants. Model cards,
 code licenses, voice assets and measured hardware behavior are separate inputs
 to an integration decision. [Pocket TTS](https://github.com/kyutai-labs/pocket-tts)
 is a relevant CPU/Dutch evaluation candidate, but its
@@ -1439,7 +1458,7 @@ one requires checkpoint-specific offline checks, memory measurements and a
 controlled multilingual listening evaluation; valid WAV transport alone does
 not establish intelligibility, naturalness or faithful long-form narration.
 
-Current-main native workspace routing uses one bounded `WorkspaceRegistry` per
+Native workspace routing uses one bounded `WorkspaceRegistry` per
 HTTP server. A project view owns independent handler state, cached HTML and an
 RLock. The request adapter reuses the parsed HTTP transport and existing route
 mixins; it opens no extra listener and does not swap process-global selection.

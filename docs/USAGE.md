@@ -178,7 +178,7 @@ profile or saved profile clears source-file inclusion. Leave research unchecked
 for a manuscript/analysis copy, or choose a reader format and publication profile
 for selected companion notes.
 
-**Current main:** a manuscript-and-background reader copy can optionally include
+**Since v0.7.7:** a manuscript-and-background reader copy can optionally include
 analysis. Select chapter figures and/or language measurements, or the complete
 analysis. The default is no analysis. In the CLI, repeat `--analysis chapters`
 and `--analysis language` for the two summaries; `--analysis full` (or `all`)
@@ -249,7 +249,7 @@ complete extracted source text. `--include-research` is rejected for these
 formats; choose the curated profile instead. Selected retained media needs the
 separate source-file inclusion choice.
 
-Current-main PDF/video attachments use the same source-file choice and
+PDF/video attachments use the same source-file choice and
 dossier/section scope as images. They remain unavailable placeholders when the
 original files are omitted. See the [shared media workflow](research/USAGE.md#retain-a-pdf-or-video-in-a-dossier)
 for file limits, version compatibility and public credit requirements.
@@ -583,7 +583,7 @@ explains its existing tense-flag/opening-paragraph selection, not a quality rank
 CLI `profile --help` gives the same source-lines → counted-text workflow;
 default outputs and JSON contracts are unchanged.
 
-**Current main review decisions:** the overview's flagged list contains tense
+**Review decisions:** the overview's flagged list contains tense
 heuristics, not all chapter or paragraph metrics. **Why here?** reports actual
 configured present/past marker counts and mixed/switch criteria. **Read passage**
 is primary; a diagnostic no longer directly proposes a To-do. Author work markers
@@ -897,14 +897,18 @@ installation retains lightweight, incomplete pattern counts. Installing a model
 does not silently change existing projects. Languages without an explicitly selected model retain their existing
 profiles. No model or manuscript data is downloaded/uploaded during analysis.
 
-For the normal isolated application installation, install the extra and the
+For a new isolated application installation, install the extra and the
 explicit model wheel in the same environment (network access is needed here):
 
 ```sh
-uv tool install --force --python 3.12 "lixity[linguistics]==0.7.6" --with https://github.com/explosion/spacy-models/releases/download/de_core_news_md-3.8.0/de_core_news_md-3.8.0-py3-none-any.whl
+uv tool install --python 3.12 "lixity[linguistics]" --with https://github.com/explosion/spacy-models/releases/download/de_core_news_md-3.8.0/de_core_news_md-3.8.0-py3-none-any.whl
 ```
 
-For a Python project, use `python -m pip install "lixity[linguistics]==0.7.6"`
+For an existing tool installation, review its recorded additional requirements
+first: replacing it can remove other installed models and dependencies. See
+[updates and removal](INSTALLATION.md#updates-and-removal).
+
+For a Python project, use `python -m pip install --upgrade "lixity[linguistics]"`
 and install that model wheel into the same environment. The model is a separate
 upstream artifact, not bundled in the Lixity wheel. Its published metadata lists
 MIT licensing. Pin and review model versions independently; restart the app after
@@ -1025,7 +1029,7 @@ at least 25% minority share. `switch` compares consecutive dominant tenses;
 severity 0–3 prioritizes review. See the [classification contract](AGENTS.md)
 for the truth table and direct-library threshold controls.
 
-**Current main:** the default German patterns no longer treat an unknown
+**Since v0.7.7:** the default German patterns no longer treat an unknown
 `-te/-ten/-test` ending as sufficient evidence of past tense. This avoids some
 adjective matches and adds selected cues such as `übt`, but unlisted regular
 past forms such as `flatterten` can now be missed; other ambiguous matches remain.
@@ -1301,7 +1305,7 @@ ordering, not identical artistic effect.
 
 The native **Analysis overview → Signal-group comparison** panel
 shows these chapter values and links back to the manuscript. Review-workspace
-website copies include that analysis; current-main reader copies include it only
+website copies include that analysis; reader copies include it only
 when full analysis is explicitly selected. Companion copies exclude it. Reader
 copies recalculate on the capped chapters using default rules and thresholds.
 Bar length shows the magnitude of the balance; its signed number gives the
@@ -1476,7 +1480,7 @@ Choose a supported speech language explicitly for a Dutch project; there is no
 automatic language or backend fallback. Preset language support does not certify
 native pronunciation. Review the model license before distributing output.
 
-**Current main:** saved project audio profiles are shared with the CLI. In the
+Saved project audio profiles are shared with the CLI. Since v0.7.7, in the
 native interface, open **Project → Voice profiles** to create or edit a profile,
 including its model, delivery, standard pauses and pronunciation replacements.
 The pronunciation editor can be expanded and searched. Filter and edit individual
