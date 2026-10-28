@@ -68,6 +68,7 @@ dev = [
     "hypothesis>=6.0",
     "mutmut>=2.4",
     "mypy>=1.8",
+    "numpy>=1.24",
     "pytest>=8.0",
     "ruff==0.17.0",
 ]

@@ -30,7 +30,7 @@ def test_cli_never_replaces_output_when_context_changes_during_synthesis(tmp_pat
         return generate_silence_wav(.01, 24000)
 
     monkeypatch.setattr(qwen, 'synthesize_qwen', synthesize)
-    status = main(['read-aloud', '--project', str(tmp_path), '--no-audio-cache', '-o', str(output)])
+    status = main(['read-aloud', '--project', str(tmp_path), '--no-audio-cache', '--speed', '1.0', '-o', str(output)])
     error = capsys.readouterr().err
     assert status == 1 and 'changed' in error.lower()
     assert output.read_bytes() == b'old output'
@@ -50,7 +50,7 @@ def test_cli_no_direction_ignores_changes_to_the_direction_ledger(tmp_path, monk
         return generate_silence_wav(.01, 24000)
     monkeypatch.setattr(qwen, 'synthesize_qwen', synthesize)
     output = tmp_path / 'out.wav'
-    assert main(['read-aloud', '--project', str(tmp_path), '--no-direction', '--no-audio-cache', '-o', str(output)]) == 0
+    assert main(['read-aloud', '--project', str(tmp_path), '--no-direction', '--no-audio-cache', '--speed', '1.0', '-o', str(output)]) == 0
     assert output.read_bytes().startswith(b'RIFF')
 
 
@@ -65,7 +65,7 @@ def test_cli_cache_reuse_works_without_a_worker_when_context_is_unchanged(tmp_pa
         calls.append(text)
         return generate_silence_wav(.01, 24000)
     monkeypatch.setattr(qwen, 'synthesize_qwen', synthesize)
-    args = ['read-aloud', '--project', str(tmp_path), '-o', str(tmp_path / 'out.wav')]
+    args = ['read-aloud', '--project', str(tmp_path), '--speed', '1.0', '-o', str(tmp_path / 'out.wav')]
     assert main(args) == 0
     assert calls
     calls.clear()

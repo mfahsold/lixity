@@ -1,6 +1,7 @@
 """Completed synthetic segments survive failures without publishing partial audio."""
 from __future__ import annotations
 
+import shutil
 from types import SimpleNamespace
 
 import pytest
@@ -205,6 +206,7 @@ def test_cli_dispatches_execution_target_without_saving_it(tmp_path, monkeypatch
     assert source.read_text() == "A synthetic target dispatch passage."
 
 
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="Default playback speed requires FFmpeg")
 def test_cli_default_qwen_uses_jetson_without_saving_a_profile(tmp_path, monkeypatch):
     from lixity.cli import main
 

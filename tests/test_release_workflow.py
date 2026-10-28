@@ -3,6 +3,11 @@
 import re
 from pathlib import Path
 
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10
+    import tomli as tomllib
+
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 
@@ -51,3 +56,13 @@ def test_existing_pypi_catchup_and_pages_release_ref_remain_available():
 
 def test_browser_release_gate_uses_the_shared_full_suite_command():
     assert re.search(r"(?m)^\s+run: make browser-full PYTHON=python\s*$", workflow("browser.yml"))
+
+
+def test_release_checks_install_synthetic_audio_prerequisites():
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    assert any(re.match(r"numpy(?:[<>=!~; ]|$)", dep, re.IGNORECASE)
+               for dep in project["project"]["optional-dependencies"]["dev"])
+    for filename in ("tests.yml", "browser.yml"):
+        source = workflow(filename)
+        assert 'python -m pip install ".[dev]"' in source
+        assert re.search(r"apt-get install -y [^\n]*\bffmpeg\b", source)

@@ -95,7 +95,9 @@ GitHub's `tests`, `browser` and `research-platforms` workflows can be dispatched
 manually; ordinary branch pushes and pull requests do not repeat these suites.
 Tagged releases reuse `tests` and `browser` on the exact release commit before
 publication. The `tests` workflow runs Ruff, strict `mypy` and the full Python
-suite with Poppler on Linux/Python 3.12. Run relevant supported interpreters
+suite with Poppler and FFmpeg on Linux/Python 3.12. The development extra includes
+NumPy for the optional Base speech-worker tests; the analysis engine does not
+depend on it. Run relevant supported interpreters
 locally. Filesystem, process-lifecycle, packaging and native-tool changes also
 need Windows/macOS evidence, either on those systems or from a deliberately
 dispatched `research-platforms` run. A Linux pass does not establish equivalent
@@ -124,6 +126,8 @@ The source archive also includes and verifies shared Python test fixtures.
 
 Native PDF tests need Poppler (`pdftotext` and `pdftoppm`) and report an explicit
 skip if it is missing. Select them locally with `pytest -m native_pdf`.
+FFmpeg exercises speech tempo processing and creates synthetic video fixtures for
+the full browser suite; install it to run these integration checks.
 Synthetic worker and Tesseract protocol tests need no model or installed OCR engine.
 For optional hooks, install `pre-commit` separately, then run
 `pre-commit install`; see

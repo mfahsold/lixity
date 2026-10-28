@@ -28,7 +28,7 @@ def test_preview_renders_first_paragraph_without_cache_or_overwriting_chapter(tm
     observed = []
     monkeypatch.setattr('lixity.speech_qwen.synthesize_qwen', lambda text, profile, **kw:
                         observed.append(text) or generate_silence_wav(.01, 24000))
-    assert main(['read-aloud', '--project', str(root), '--preview', '--progress']) == 0
+    assert main(['read-aloud', '--project', str(root), '--preview', '--progress', '--speed', '1.0']) == 0
     result = capsys.readouterr()
     assert observed == ['Der erste Absatz spricht.']
     assert '1/1' in result.err

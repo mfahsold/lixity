@@ -1,7 +1,8 @@
 # Dashboard browser regression
 
-Run after installing the Python development environment and Playwright with
-Chromium. Playwright is optional tooling, not a Lixity runtime dependency.
+Run after installing the Python development environment, FFmpeg and Playwright
+with Chromium. FFmpeg creates synthetic media for the dossier-media suite;
+Playwright is optional tooling, not a Lixity runtime dependency.
 
 ```sh
 make browser          # everyday core surfaces (fast group, 3 workers)
