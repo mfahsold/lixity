@@ -81,6 +81,41 @@ def test_preview_and_download_are_bound_to_actual_source_without_writes(speech_s
     assert send(port, "/api/speech-audio?" + query).status == 409
 
 
+def test_global_lexicon_reaches_ui_draft_plan_and_survives_profile_save(speech_server):
+    from lixity.config import read_explicit_project_config
+
+    port, source, handler, _observed = speech_server
+    config = source.parent / "lixity.toml"
+    config.write_text('''language = "en"
+[audio]
+schema_version = "lixity-audio-settings/2"
+selected = "narrator"
+pronunciations = { BIRD = "berd" }
+pronunciation_matching = { case_sensitive = false, whole_words = true }
+[audio.profiles.narrator]
+engine = "qwen3"
+pronunciations = { garden = "gardn" }
+''')
+    bound = context(source, handler)
+    response = send(port, "/api/speech?" + urlencode(bound))
+    assert response.status == 200, response.body
+    audio = json.loads(response.body)["settings"]
+    assert audio["pronunciations"] == {"BIRD": "berd"}
+    profile = audio["profiles"]["narrator"]
+    response = send(port, "/api/speech-plan", payload={**bound, "mode": "preview", "chapter": 1,
+                                                       "profile": profile})
+    assert response.status == 200, response.body
+    assert json.loads(response.body)["plan"]["segments"][0]["text"] == "A berd crosses the gardn."
+    profile["voice"] = "Vivian"
+    response = send(port, "/api/settings", payload={"project_token": bound["project_token"], "audio": audio})
+    assert response.status == 200, response.body
+    stored = read_explicit_project_config(source.parent)["audio"]
+    assert stored["schema_version"] == "lixity-audio-settings/2"
+    assert stored["pronunciations"] == {"BIRD": "berd"}
+    assert stored["pronunciation_matching"] == {"case_sensitive": False, "whole_words": True}
+    assert stored["profiles"]["narrator"]["pronunciations"] == {"garden": "gardn"}
+
+
 @pytest.mark.parametrize(
     "change",
     [

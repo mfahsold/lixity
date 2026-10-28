@@ -7,6 +7,20 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- Optional project-wide pronunciation rules in audio settings schema `/2`, with
+  per-profile overrides and opt-in whole-word/case-insensitive matching; `/1`
+  remains unchanged and version 0.7.7 cannot read `/2`.
+- `audio-direction add` resolves chapter and source line to a guarded passage
+  direction without manually supplying snapshot hashes.
+
+### Changed
+- CLI audio progress includes a rough remaining-time estimate after two segments.
+- Counted-text visibility is remembered per analysis measure; the chapter-strip
+  emphasis control and comparison counts use descriptive, neutral labels.
+- Tense-pattern badges no longer overlap an active metric overlay; the passage
+  inspector and chapter counts follow the configured tense severity threshold.
+
 ## [0.7.7] - 2026-10-28
 
 ### Added

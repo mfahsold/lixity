@@ -132,6 +132,16 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
                       skip_markers: bool = True) -> list[SpeechSegment]:
     """Compile explicit ranges to effective per-segment controls, never spoken tags."""
     from .speech import _speech_segments, extract_audio_cues
+    audio_settings = parse_audio_settings(project_config.get('audio'), language=profile.language) if project_config and project_config.get('audio') is not None else None
+    common = audio_settings.pronunciations if audio_settings else {}
+
+    def effective_profile(selected: AudioProfile) -> AudioProfile:
+        if not common:
+            return selected
+        return AudioProfile.model_validate({**selected.model_dump(),
+                                            'pronunciations': {**common, **selected.pronunciations}})
+
+    profile = effective_profile(profile)
     passages = speech_passages(text, profile.language, project_config, skip_markers=skip_markers)
     ranges = _ranges(passages, directions or [])
     if directions and not skip_markers:
@@ -159,6 +169,7 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
             selected = (profiles or {}).get(d.profile_id) if d.profile_id else profile
             if selected is None:
                 raise ValueError('A saved direction references an unavailable voice profile')
+            selected = effective_profile(selected)
             instructions = combine_delivery(selected.instructions, d.instructions)
             selected = AudioProfile.model_validate({**selected.model_dump(), 'instructions': instructions})
             end = d.end if d.end is not None else len(cue.text)
@@ -166,9 +177,16 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
             cursor = end
         if cursor < len(cue.text) or not chunks:
             chunks.append((cue.text[cursor:], profile, 0.0, None))
+        chunk_start = 0
         for index, (raw_content, effective, before, after) in enumerate(chunks):
             content = raw_content
-            content = apply_pronunciation(content, effective.pronunciations)
+            matching = audio_settings.pronunciation_matching if audio_settings else None
+            content = apply_pronunciation(content, effective.pronunciations,
+                                          case_sensitive=matching.case_sensitive if matching else True,
+                                          whole_words=matching.whole_words if matching else False,
+                                          left_context=cue.text[chunk_start - 1:chunk_start] if chunk_start else "",
+                                          right_context=cue.text[chunk_start + len(raw_content):chunk_start + len(raw_content) + 1])
+            chunk_start += len(raw_content)
             pieces = _speech_segments(content, effective.language) or ['']
             for n, piece in enumerate(pieces):
                 pause = after if after is not None else (effective.paragraph_pause if cue.kind not in ('heading', 'scene_break') else default_pause) if index == len(chunks)-1 else 0.0

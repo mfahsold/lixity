@@ -1,12 +1,14 @@
 """Lixity – command line: corpus analysis, style profile, style reference and dashboard."""
 
 import argparse
+import math
 import os
 import re
 import sys
 from collections.abc import Callable, Mapping
 from contextlib import redirect_stdout
 from io import StringIO
+from time import monotonic as _monotonic
 from typing import Any
 
 import orjson
@@ -49,6 +51,24 @@ from .workspace import resolve_manuscript_target
 
 EXIT_OK = 0
 EXIT_ERROR = 1
+
+
+def _audio_progress() -> Callable[[int, int], None]:
+    """Report segment progress and a coarse estimate, without changing the render."""
+    started: float | None = None
+
+    def report(done: int, total: int) -> None:
+        nonlocal started
+        now = _monotonic()
+        if started is None:
+            started = now
+        message = f"Audio: {done}/{total}"
+        if 2 <= done < total:
+            remaining = max(0, math.ceil((now - started) * (total - done) / done))
+            message += f" (ETA ~{remaining}s)"
+        print(message, file=sys.stderr)
+
+    return report
 
 
 def _document_title(args: argparse.Namespace, manuscript: str, text: str) -> str:
@@ -476,8 +496,8 @@ _lixity_complete() {
             case "$prev" in
                 --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
                 --input|--manuscript) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
-                --id|--replace-id|--expected-source|--expected-settings|--expected-direction) ;;
-                *) COMPREPLY=( $(compgen -W "inspect save remove --help --project --manuscript --input --id --replace-id --expected-source --expected-settings --expected-direction" -- "$cur") ) ;;
+                --id|--replace-id|--expected-source|--expected-settings|--expected-direction|--chapter|--line|--instruction|--profile-id|--pause-before|--pause-after|--start|--end) ;;
+                *) COMPREPLY=( $(compgen -W "inspect add save remove --help --project --manuscript --input --id --replace-id --expected-source --expected-settings --expected-direction --chapter --line --instruction --profile-id --pause-before --pause-after --start --end" -- "$cur") ) ;;
             esac
             return 0
             ;;
@@ -665,7 +685,7 @@ __LIXITY_ZSH_COMMANDS__
           ;;
         audio-direction)
           _arguments \
-            '1:action:(inspect save remove)' \
+            '1:action:(inspect add save remove)' \
             '--help[Help]' \
             '--project[Explicit project root]:directory:_files -/' \
             '--manuscript[Selected manuscript]:file:_files' \
@@ -674,7 +694,15 @@ __LIXITY_ZSH_COMMANDS__
             '--replace-id[Original range ID for bounds edits]:id:' \
             '--expected-source[Observed manuscript hash]:sha256:' \
             '--expected-settings[Observed settings hash]:sha256:' \
-            '--expected-direction[Observed direction state hash]:sha256:'
+            '--expected-direction[Observed direction state hash]:sha256:' \
+            '--chapter[Chapter number]:number:' \
+            '--line[Source line]:number:' \
+            '--instruction[Delivery instruction]:text:' \
+            '--profile-id[Saved voice profile]:id:' \
+            '--pause-before[Pause before in seconds]:seconds:' \
+            '--pause-after[Pause after in seconds]:seconds:' \
+            '--start[Spoken code-point start offset]:offset:' \
+            '--end[Spoken code-point end offset]:offset:'
           ;;
         audio-migrate)
           _arguments \
@@ -1461,7 +1489,7 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
             target=args.speech_target,
             plan=plan,
             cancelled=check_context,
-            progress=(lambda done, total: print(f"Audio: {done}/{total}", file=sys.stderr)) if args.progress else None,
+            progress=_audio_progress() if args.progress else None,
             **render_options,
         )
     except (OSError, ValueError, RuntimeError, FileNotFoundError) as exc:
@@ -2065,7 +2093,7 @@ def _main(argv: list[str] | None = None) -> int:
             previews = p.add_mutually_exclusive_group()
             previews.add_argument("--preview", action="store_true", help="Preview the first anchored paragraph or list item")
             previews.add_argument("--preview-line", type=int, help="Preview the anchored paragraph or list item containing this source line")
-            p.add_argument("--progress", action="store_true", help="Report segment progress to stderr")
+            p.add_argument("--progress", action="store_true", help="Report segment progress and estimated remaining time to stderr")
             p.add_argument("--no-direction", action="store_true", help="Explicitly ignore saved passage direction for this invocation")
             p.add_argument("--instructions", default=None, help="Explicit Qwen delivery instructions")
             p.add_argument("--engine", choices=("qwen3", "qwen3-design", "qwen3-base"), default=None, help="Explicit Qwen model variant")

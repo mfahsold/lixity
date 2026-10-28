@@ -424,9 +424,66 @@ server.serve_forever()
     assert.deepEqual(fs.readFileSync(server.fixture.manuscript), originalBytes, 'reader controls never edit manuscript bytes');
   } finally {await server.close();}
 }
+async function metricPreferences(browser) {
+  const keys = ['asl', 'function', 'dialogue', 'filter', 'passive', 'modal', 'nominal'];
+  for (const width of [1440, 320]) {
+    const page = await browser.newPage({viewport:{width,height:900}, reducedMotion:'reduce'});
+    await page.route('**/*', route => route.fulfill({contentType:'text/html',body:fixtures.native}));
+    await page.goto('http://localhost/');
+    await page.locator('#manuscript-analysis-toggle').click();
+    assert.equal(await page.locator('#style-layer').inputValue(), 'asl');
+    assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false);
+    for (const key of keys) {
+      await selectMetric(page, key);
+      assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false, key + ' starts without counted text');
+      if (key === 'modal' || key === 'passive') await marksEnabled(page, true);
+    }
+    for (const key of keys) {
+      await selectMetric(page, key);
+      assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), key === 'modal' || key === 'passive', key + ' retains its own choice');
+    }
+    await page.reload();
+    await page.locator('#manuscript-analysis-toggle').click();
+    for (const key of keys) {
+      await selectMetric(page, key);
+      assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), key === 'modal' || key === 'passive', key + ' survives reload');
+    }
+    await page.close();
+  }
+  for (const old of [{metric:'modal', evidence:true, comparison:false}, {metric:'', evidence:true, comparison:true}]) {
+    const page = await browser.newPage();
+    await page.addInitScript(value => {if (!localStorage.getItem('lixity.manuscript.reader')) localStorage.setItem('lixity.manuscript.reader', JSON.stringify(value));}, old);
+    await page.route('**/*', route => route.fulfill({contentType:'text/html',body:fixtures.native}));
+    await page.goto('http://localhost/');
+    await page.locator('#manuscript-analysis-toggle').click();
+    assert.equal(await page.locator('#style-layer').inputValue(), old.metric);
+    assert.equal(await page.locator('#analysis-comparison-enabled').isChecked(), old.comparison);
+    await selectMetric(page, 'asl');
+    assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false, 'legacy preference must not leak to another metric');
+    await selectMetric(page, 'modal');
+    assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), old.metric === 'modal', 'legacy value belongs only to its last metric');
+    await page.reload(); await page.locator('#manuscript-analysis-toggle').click();
+    assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), old.metric === 'modal', 'migrated preference survives reload');
+    await selectMetric(page, 'asl');
+    assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false);
+    await page.close();
+  }
+  const page = await browser.newPage();
+  await page.addInitScript(() => Object.defineProperty(window, 'localStorage', {value:{getItem(){throw Error('blocked');},setItem(){throw Error('blocked');}}}));
+  await page.route('**/*', route => route.fulfill({contentType:'text/html',body:fixtures.native}));
+  await page.goto('http://localhost/');
+  await page.locator('#manuscript-analysis-toggle').click();
+  await selectMetric(page, 'modal'); await marksEnabled(page, true);
+  await selectMetric(page, 'asl');
+  assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false);
+  await selectMetric(page, 'modal');
+  assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), true, 'in-memory choices survive blocked storage');
+  await page.close();
+}
 (async () => {
   const browser = await launchChromium();
   try {
+    await metricPreferences(browser);
     const proximity = await browser.newPage({viewport:{width:1440,height:950}, reducedMotion:'reduce'});
     await proximity.route('**/*', route => route.fulfill({contentType:'text/html',body:fixtures.native}));
     await proximity.goto('http://localhost/');
@@ -453,6 +510,7 @@ server.serve_forever()
         await page.locator('#manuscript-analysis-toggle').click();
         await marksEnabled(page, true);
         await selectMetric(page, 'nominal');
+        await marksEnabled(page, true);
         assert.equal(await page.locator('#style-layer option:checked').textContent(), 'Nomen-Endungen');
         await page.locator('.layer-comparison-note > summary').click();
         assert.match(await page.locator('#layer-comparison-hint').textContent(), /Die Prüfung des Antrags erfolgt/);
@@ -465,6 +523,7 @@ server.serve_forever()
         assert.deepEqual(await ranges(page), ['Untersuchung'], 'German contractions are excluded from actual nominal highlights');
         await page.screenshot({path:path.join(artifacts, `german-nominal-${width}.png`)});
         await selectMetric(page, 'function');
+        await marksEnabled(page, true);
         await page.waitForFunction(() => [...(CSS.highlights?.get('lixity-analysis-evidence') || [])].some(range => range.toString() === 'ZUR'));
         const words = await ranges(page);
         assert.ok(words.includes('ZUR') && words.includes('Zur'), 'The same contractions remain visible in the function-word measurement');
@@ -535,6 +594,7 @@ server.serve_forever()
     await long.locator('#manuscript-analysis-toggle').click();
     await marksEnabled(long, true);
     await selectMetric(long, 'filter');
+    await marksEnabled(long, true);
     await long.locator('.reader-paragraph-actions').first().click();
     await explainFromMenu(long);
     await long.locator('#analysis-evidence-card').waitFor({state:'visible'});
@@ -549,6 +609,7 @@ server.serve_forever()
     }), true, 'Next match reveals the actual offscreen evidence range');
     await long.keyboard.press('Escape');
     await selectMetric(long, 'function');
+    await marksEnabled(long, true);
     await long.locator('.ptext-inner > p').first().scrollIntoViewIfNeeded();
     await long.waitForFunction(() => CSS.highlights.get('lixity-analysis-evidence')?.size >= 1000);
     const benchmark = await long.evaluate(async () => {
@@ -698,6 +759,7 @@ server.serve_forever()
     await selected(native, 'filter');
     assert.ok((await ranges(native)).includes('feel'), 'native shared detector contributes exact filter evidence');
     await selectMetric(native, 'passive');
+    await marksEnabled(native, true);
     await native.locator('.ptext-inner > p').filter({hasText:'😀 I feel'}).first().scrollIntoViewIfNeeded();
     await native.waitForFunction(() => [...(CSS.highlights.get('lixity-analysis-evidence') || [])].some(range => range.toString() === 'was opened'));
     await menuInspect(native);
@@ -758,6 +820,7 @@ server.serve_forever()
       await page.locator('#manuscript-analysis-toggle').click();
       await marksEnabled(page, true);
       await selectMetric(page, 'filter');
+      await marksEnabled(page, true);
       await page.locator('.ptext-inner > p').filter({hasText:'😀 I feel'}).first().scrollIntoViewIfNeeded();
       if (fault === 'stale-digest') {
         await page.waitForFunction(() => releaseEvidenceHashes.length > 0);
@@ -845,6 +908,7 @@ server.serve_forever()
     const bytes = fs.readFileSync(server.fixture.manuscript);
     try {
       const cases = [{width:1440}, {width:320}];
+      if (locale === 'de' || locale === 'fr') cases.push({width:390});
       if (locale === 'en') cases.push({width:320, fault:'unsupported'}, {width:320, fault:'missing'});
       for (const {width, fault} of cases) {
         const page = await browser.newPage({viewport:{width,height:width === 320 ? 480 : 950}, reducedMotion:'reduce', colorScheme:width === 320 ? 'dark' : 'light'});
@@ -876,6 +940,7 @@ server.serve_forever()
           assert.equal(await counted.locator('.analysis-evidence-swatch').evaluate(node => getComputedStyle(node).textDecorationLine.includes('underline')), true);
           for (const key of ['asl', 'passive']) {
             await selectMetric(page, key);
+            await marksEnabled(page, true);
             const current = await page.locator('#style-layer option:checked').evaluate(node => ({title:node.textContent,hint:node.dataset.hint}));
             assert.equal(await page.locator('#layer-comparison-hint').textContent(), current.hint);
             const guide = legend.locator('.layer-comparison-note');

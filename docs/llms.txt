@@ -135,6 +135,10 @@ metadata in `.lixity/audio-directions.json`. `audio-direction inspect` is read-o
 save/remove require source/settings/ledger snapshots. `read-aloud --plan-only`
 and native preview inspection expose the shared effective speech plan without
 inference. CustomVoice and VoiceDesign interpret local direction; Lixity generates exact silence.
+Current main adds `audio-direction add` with chapter and source line and guarded
+automatic snapshots. Audio settings `/2` optionally add project-wide pronunciation
+rules, profile overrides and explicit whole-word/case-insensitive matching;
+version 0.7.7 cannot read `/2` and existing `/1` settings keep their behavior.
 This is not SSML/IPA support, native inline emotion tags or a new audio backend.
 Shared `control_support` describes actual Qwen adapter capabilities: literal
 spoken-form substitutions, model-interpreted direction and explicit silence;
@@ -153,4 +157,5 @@ accept free-form delivery instructions. Assign profiles to passages explicitly.
 
 `audio-status [--project PATH] --json` inspects profiles and
 worker model identities without prose. `read-aloud --preview` or `--preview-line
-N` renders a fresh paragraph; `--progress` reports segments on stderr.
+N` renders a fresh paragraph; on current main, `--progress` reports segments
+and a coarse remaining-time estimate on stderr (excluding final encoding).

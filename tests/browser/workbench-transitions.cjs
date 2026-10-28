@@ -189,6 +189,7 @@ async function assertToolbarDossierReturn(page, paragraph, width) {
       assert.equal(await page.locator('#workspace-context-panel').isVisible(), false,
         'Continuing to read beyond the inspected passage closes its obsolete context');
       await page.locator('#manuscript-analysis-toggle').click();
+      await page.locator('#style-layer').selectOption('');
       const flagged = page.locator('#chapters .ptext.flagged').first();
       await flagged.scrollIntoViewIfNeeded();
       const reason = flagged.locator('[data-reader-flag]');

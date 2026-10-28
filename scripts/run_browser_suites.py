@@ -81,6 +81,7 @@ AREAS: dict[str, tuple[str, ...]] = {
         "analysis-triage.cjs",
         "analysis-triage-layout.cjs",
         "analysis-evidence.cjs",
+        "tense-thresholds.cjs",
         "linguistic-reference.cjs",
         "anchor-navigation.cjs",
         "analysis-narration.cjs",

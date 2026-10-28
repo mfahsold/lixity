@@ -17,7 +17,7 @@ from pydantic import (
     model_validator,
 )
 
-from .speech_controls import speech_control_support
+from .speech_controls import speech_control_support, validate_pronunciation_keys
 
 QWEN_MODEL = "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice"
 QWEN_DESIGN_MODEL = "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign"
@@ -35,6 +35,8 @@ _PROFILE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}\Z")
 _REMOVED_ENGINE = ("Piper audio profiles are no longer supported. Make a backup and explicitly migrate "
                    "each profile to a Qwen preset voice; the old voice and precise speed are not equivalent. "
                    "Use audio-migrate --project PATH --replace PROFILE=VOICE to review the migration.")
+PronunciationMap = dict[Annotated[str, Field(min_length=1, max_length=100)],
+                        Annotated[str, Field(min_length=1, max_length=300)]]
 
 
 def _text(value: str, *, empty: bool = False) -> str:
@@ -61,8 +63,7 @@ class AudioProfile(BaseModel):
     instructions: str = Field(default="", max_length=2000)
     paragraph_pause: float = Field(default=0.45, ge=0, le=10)
     scene_pause: float = Field(default=1.2, ge=0, le=10)
-    pronunciations: dict[Annotated[str, Field(min_length=1, max_length=100)],
-                         Annotated[str, Field(min_length=1, max_length=300)]] = Field(default_factory=dict, max_length=200)
+    pronunciations: PronunciationMap = Field(default_factory=dict, max_length=200)
 
     @model_serializer(mode="wrap")
     def serialize_profile(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
@@ -124,17 +125,42 @@ class AudioProfile(BaseModel):
         return self
 
 
+class PronunciationMatching(BaseModel):
+    """Explicit project-wide matching policy for schema /2."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    case_sensitive: bool = True
+    whole_words: bool = False
+
+
 class AudioSettings(BaseModel):
     """Versioned project profile collection with one existing selected narrator."""
 
     model_config = ConfigDict(extra="forbid", strict=True, hide_input_in_errors=True)
-    schema_name: Literal["lixity-audio-settings/1"] = Field(default="lixity-audio-settings/1", alias="schema_version")
+    schema_name: Literal["lixity-audio-settings/1", "lixity-audio-settings/2"] = Field(default="lixity-audio-settings/1", alias="schema_version")
     selected: str
     profiles: dict[str, AudioProfile] = Field(min_length=1, max_length=32)
+    pronunciations: PronunciationMap = Field(default_factory=dict, max_length=200)
+    pronunciation_matching: PronunciationMatching = Field(default_factory=PronunciationMatching)
+
+    @model_serializer(mode="wrap")
+    def serialize_settings(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        data: dict[str, Any] = handler(self)
+        if self.schema_name == "lixity-audio-settings/1":
+            data.pop("pronunciations", None)
+            data.pop("pronunciation_matching", None)
+        return data
+
+    @field_validator("pronunciations")
+    @classmethod
+    def valid_pronunciations(cls, values: dict[str, str]) -> dict[str, str]:
+        return AudioProfile.valid_pronunciations(values)
 
     @model_validator(mode="before")
     @classmethod
     def require_explicit_engine(cls, raw: Any) -> Any:
+        if isinstance(raw, Mapping) and ("pronunciations" in raw or "pronunciation_matching" in raw) and raw.get("schema_version", "lixity-audio-settings/1") != "lixity-audio-settings/2":
+            raise ValueError("Project pronunciations require audio schema lixity-audio-settings/2")
         if isinstance(raw, Mapping) and isinstance(raw.get("profiles"), Mapping):
             for profile in raw["profiles"].values():
                 if isinstance(profile, Mapping) and "engine" not in profile:
@@ -148,6 +174,12 @@ class AudioSettings(BaseModel):
             raise ValueError("Audio profile IDs must be safe identifiers of at most 64 characters")
         if self.selected not in self.profiles:
             raise ValueError("Selected audio profile does not exist")
+        if any(len(self.pronunciations.keys() | profile.pronunciations.keys()) > 200
+               for profile in self.profiles.values()):
+            raise ValueError("Combined project and profile pronunciations must not exceed 200 entries")
+        if not self.pronunciation_matching.case_sensitive:
+            for profile in self.profiles.values():
+                validate_pronunciation_keys({**self.pronunciations, **profile.pronunciations}, case_sensitive=False)
         return self
 
 

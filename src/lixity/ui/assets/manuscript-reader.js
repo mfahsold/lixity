@@ -186,7 +186,7 @@
   var width = document.getElementById("reader-width");
   var spacing = document.getElementById("reader-spacing");
   var current = null, savedRange = null, evidencePoint = null, returnTarget = null, selecting = false;
-  var preferences = {size: 18, width: "standard", spacing: "standard", metric: null, evidence: false, comparison: true};
+  var preferences = {size: 18, width: "standard", spacing: "standard", metric: null, evidence: false, evidenceByMetric: Object.create(null), comparison: true};
   function read(key) { try { return localStorage.getItem(key); } catch (_) { return null; } }
   function save(key, value) { try { localStorage.setItem(key, value); } catch (_) { /* Display works without storage. */ } }
   try {
@@ -197,15 +197,23 @@
       if (["compact", "standard", "relaxed"].includes(stored.spacing)) preferences.spacing = stored.spacing;
       if (typeof stored.metric === "string" && metric && Array.from(metric.options).some(function(option) {return option.value === stored.metric;})) preferences.metric = stored.metric;
       if (typeof stored.evidence === "boolean") preferences.evidence = stored.evidence;
+      if (stored.evidenceByMetric && typeof stored.evidenceByMetric === "object" && !Array.isArray(stored.evidenceByMetric)) {
+        Object.keys(stored.evidenceByMetric).forEach(function(key) {
+          if (key && typeof stored.evidenceByMetric[key] === "boolean") preferences.evidenceByMetric[key] = stored.evidenceByMetric[key];
+        });
+      } else if (preferences.metric && typeof stored.evidence === "boolean") {
+        // A global legacy choice belongs only to the last selected metric.
+        preferences.evidenceByMetric[preferences.metric] = stored.evidence;
+      }
       if (typeof stored.comparison === "boolean") preferences.comparison = stored.comparison;
     }
   } catch (_) { /* A malformed preference never changes manuscript data. */ }
   if (metric && preferences.metric !== null) metric.value = preferences.metric;
-  if (evidenceToggle) evidenceToggle.checked = preferences.evidence;
+  if (evidenceToggle) evidenceToggle.checked = Boolean(metric && metric.value && preferences.evidenceByMetric[metric.value]);
   if (comparisonToggle) comparisonToggle.checked = preferences.comparison;
   function rememberAnalysis() {
     if (metric) preferences.metric = metric.value;
-    if (evidenceToggle) preferences.evidence = evidenceToggle.checked;
+    if (metric && metric.value && evidenceToggle) preferences.evidence = evidenceToggle.checked;
     if (comparisonToggle) preferences.comparison = comparisonToggle.checked;
     save("lixity.manuscript.reader", JSON.stringify(preferences));
   }
@@ -214,16 +222,24 @@
     metric.value = "asl";
     metric.dispatchEvent(new Event("change", {bubbles:true}));
   }
-  if (metric) metric.addEventListener("change", rememberAnalysis);
-  if (evidenceToggle) evidenceToggle.addEventListener("change", rememberAnalysis);
+  function selectMetricPreference() {
+    if (metric && evidenceToggle) evidenceToggle.checked = Boolean(metric.value && preferences.evidenceByMetric[metric.value]);
+    rememberAnalysis();
+  }
+  // Restore before the dashboard's change listener updates the visible overlay.
+  if (metric) metric.addEventListener("change", selectMetricPreference, true);
+  if (evidenceToggle) evidenceToggle.addEventListener("change", function() {
+    if (metric && metric.value) preferences.evidenceByMetric[metric.value] = evidenceToggle.checked;
+    rememberAnalysis();
+  });
   if (comparisonToggle) comparisonToggle.addEventListener("change", rememberAnalysis);
   var clearMetric = document.getElementById("layer-clear");
   if (clearMetric) clearMetric.addEventListener("click", function() {
-    rememberAnalysis();
+    selectMetricPreference();
     if (metric) metric.focus({preventScroll:true});
   });
   var resetParagraphs = document.getElementById("paragraph-filter-reset");
-  if (resetParagraphs) resetParagraphs.addEventListener("click", rememberAnalysis);
+  if (resetParagraphs) resetParagraphs.addEventListener("click", selectMetricPreference);
   function capture() {
     if (workbench.state().view !== "analysis" || workbench.state().surface !== "document") return null;
     if (pendingDockAnchor && pendingDockAnchor.revision === arrangementRevision) return pendingDockAnchor.anchor;
@@ -521,7 +537,7 @@
       review.addEventListener("click", function() {window.LixityAnalysisReview.open(panel);});
       context.appendChild(review);
     }
-    if (panel.dataset.severity && Number(panel.dataset.severity) >= 2) {
+    if (panel.classList.contains("flagged")) {
       var flagCard = document.createElement("div"); flagCard.className = "reader-passage-flag sev-" + panel.dataset.severity;
       var flagHeader = document.createElement("div"); flagHeader.className = "reader-passage-flag-header";
       var flagBadge = document.createElement("span");

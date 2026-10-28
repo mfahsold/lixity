@@ -53,6 +53,15 @@ def test_bash_migration_replacement_retains_explicit_profile_id(tmp_path):
     assert bash_complete(tmp_path, "lixity", "audio-migrate", "--replace", "") == set()
 
 
+def test_direction_add_completion_exposes_new_action_and_options(tmp_path):
+    assert "add" in bash_complete(tmp_path, "lixity", "audio-direction", "a")
+    assert "--instruction" in bash_complete(tmp_path, "lixity", "audio-direction", "--inst")
+    assert bash_complete(tmp_path, "lixity", "audio-direction", "--instruction", "") == set()
+    arguments = zsh_arguments("audio-direction")
+    assert "1:action:(inspect add save remove)" in arguments
+    assert any(argument.startswith("--instruction[") for argument in arguments)
+
+
 @pytest.mark.parametrize(("command", "option"), [
     ("read-aloud", "--profile"), ("read-aloud", "--instructions"), ("read-aloud", "--chapter"), ("read-aloud", "--speed"),
     ("audio-migrate", "--instructions"), ("audio-migrate", "--expected-snapshot"),

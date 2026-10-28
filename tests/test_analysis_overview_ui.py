@@ -7,6 +7,7 @@ from lixity.models import CorpusConfig
 from lixity.pipeline import analyze_document
 from lixity.style_fingerprint import FingerprintThresholds
 from lixity.ui import render_dashboard
+from lixity.workspace_labels import WORKSPACE_LABELS
 
 
 class TestAnalysisOverview(unittest.TestCase):
@@ -122,6 +123,11 @@ class TestAnalysisOverview(unittest.TestCase):
         # Sentence evidence can cover the entire manuscript, so opt in to it.
         self.assertIn('<input type="checkbox" id="analysis-evidence-enabled"/>', html)
         self.assertRegex(html, r'<input type="checkbox" id="analysis-comparison-enabled" checked\s*/?>')
+
+    def test_comparison_labels_describe_the_visible_effect(self):
+        html = self.render()
+        self.assertTrue("Emphasize deviations in chapter strips" in html)
+        self.assertIn("Abweichungen", WORKSPACE_LABELS["de"]["layer_coverage"])
 
 
 if __name__ == "__main__":

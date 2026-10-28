@@ -7,8 +7,10 @@ sent to the model; it is not a phonetic transcription.
 from __future__ import annotations
 
 import re
+import unicodedata
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
+from functools import lru_cache
 from typing import Literal
 
 
@@ -46,14 +48,50 @@ def speech_control_support(engine: str) -> SpeechControlSupport:
     return _QWEN_SUPPORT
 
 
-def apply_pronunciation(text: str, substitutions: Mapping[str, str]) -> str:
-    """Apply literal, case-sensitive, longest-first replacements in one pass."""
-    if not substitutions:
-        return text
+def validate_pronunciation_keys(substitutions: Mapping[str, str], *, case_sensitive: bool = True) -> None:
+    """Reject keys that Python's case-insensitive regex treats as equivalent."""
     if any(not key for key in substitutions):
         raise ValueError("Pronunciation terms must not be empty")
-    pattern = re.compile("|".join(re.escape(key) for key in sorted(substitutions, key=len, reverse=True)))
-    return pattern.sub(lambda match: substitutions[match[0]], text)
+    if not case_sensitive:
+        seen: list[str] = []
+        for key in substitutions:
+            if any(re.fullmatch(re.escape(other), key, re.IGNORECASE) for other in seen):
+                raise ValueError("Case-insensitive pronunciation keys are ambiguous")
+            seen.append(key)
+
+
+@lru_cache(maxsize=64)
+def _pronunciation_pattern(terms: tuple[str, ...], case_sensitive: bool,
+                           whole_words: bool) -> tuple[list[str], re.Pattern[str]]:
+    validate_pronunciation_keys(dict.fromkeys(terms, ""), case_sensitive=case_sensitive)
+    keys = sorted(terms, key=len, reverse=True)
+    alternatives = "|".join(f"(?P<term{idx}>{re.escape(key)})" for idx, key in enumerate(keys))
+    expression = f"(?<!\\w)(?:{alternatives})(?!\\w)" if whole_words else alternatives
+    pattern = re.compile(expression, 0 if case_sensitive else re.IGNORECASE)
+    return keys, pattern
+
+
+def apply_pronunciation(text: str, substitutions: Mapping[str, str], *,
+                        case_sensitive: bool = True, whole_words: bool = False,
+                        left_context: str = "", right_context: str = "") -> str:
+    """Apply longest-first literal replacements, with optional matching constraints."""
+    if not substitutions:
+        return text
+    keys, pattern = _pronunciation_pattern(tuple(substitutions), case_sensitive, whole_words)
+
+    def replace(match: re.Match[str]) -> str:
+        if whole_words:
+            before = text[match.start() - 1] if match.start() else left_context[-1:]
+            after = text[match.end()] if match.end() < len(text) else right_context[:1]
+            if any(char and (char.isalnum() or char == "_" or unicodedata.category(char).startswith("M"))
+                   for char in (before, after)):
+                return match[0]
+        group = match.lastgroup
+        if group is None:  # All alternatives are named and exactly one must match.
+            raise RuntimeError("Pronunciation match has no rule")
+        return substitutions[keys[int(group[4:])]]
+
+    return pattern.sub(replace, text)
 
 
 def combine_delivery(profile_instruction: str, passage_instruction: str) -> str:

@@ -264,6 +264,10 @@ async function settleGeometry(page) {
       assert.equal(await analysis.getAttribute('aria-label'), analysisName, 'Analysis keeps its accessible name when active');
       const flagged = page.locator('#chapters .ptext.flagged').first();
       await flagged.scrollIntoViewIfNeeded();
+      await page.locator('#style-layer').selectOption('asl');
+      assert.equal(await flagged.locator('.reader-review-flag').isVisible(), false,
+        'Tense actions do not compete with a selected metric');
+      await page.locator('#style-layer').selectOption('');
       await flagged.locator('.reader-review-flag').waitFor({state: 'visible'});
       // A saved-association control exercises the same adjacent layout without
       // requiring an archive write in this synthetic reading fixture.
@@ -552,6 +556,7 @@ async function settleGeometry(page) {
         fault === 'no-highlight' ? () => Object.defineProperty(CSS, 'highlights', {value: undefined}) : undefined;
       const {page, errors, writes} = await createPage(browser, fixtures.en, 390, initialize);
       await page.locator('#manuscript-analysis-toggle').click();
+      await page.locator('#style-layer').selectOption('');
       const panel = page.locator('#chapters .ptext.flagged').first();
       await panel.scrollIntoViewIfNeeded();
       await panel.locator('.reader-review-flag').waitFor({state: 'visible'});

@@ -1588,6 +1588,22 @@ applicable. CLI `--speed` overrides all profiles for that run without saving.
 Non-1.0 factors require FFmpeg on the render host. Structural pauses stay unchanged.
 Style instructions do not implement precise speed control.
 
+Current main additionally accepts schema `lixity-audio-settings/2`, which adds
+optional project-wide `pronunciations`. Each profile's same-key entries override
+the project map when a speech plan is compiled; profile settings remain raw.
+Matching defaults to case-sensitive literal substitution, including within words.
+Only `/2` accepts optional `pronunciation_matching` with boolean `case_sensitive`
+(default true) and `whole_words` (default false), applying to both project and
+profile terms. Case-insensitive matching follows Python Unicode regex semantics;
+regex-equivalent distinct keys within an effective profile are rejected. Whole
+terms require no adjacent Unicode word character or combining mark, including
+across directed-range boundaries. No normalization, language-specific tokenization
+or automatic capitalization is applied. Exact-key profile overrides remain valid.
+The merged map is limited to 200 unique entries per profile. The profile editor
+preserves the global map but does not edit it. Changed synthesized text changes
+the segment cache key. `/1` remains unchanged; 0.7.7 cannot read `/2`, so opt in
+only after backing up and updating the installation.
+
 Version 0.7.7 also supports `qwen3-base` profiles with `voice=reference` and a
 project-local `reference_id`. `audio-reference create --project PATH --audio WAV
 --transcript-file TXT` stores an immutable `lixity-audio-reference/1` object and
@@ -1715,6 +1731,14 @@ that spoken projection, not Markdown bytes or browser UTF-16 positions.
 bounded to 4 MiB; output contains private text. The ledger wire version is
 `lixity-audio-directions/1`, bounded to 4 MiB and 10,000 source-scoped entries.
 
+On current main, `add --chapter N --line N` resolves one spoken passage and
+captures its three snapshots internally. Supply at least `--instruction`,
+`--profile-id`, `--pause-before`, or `--pause-after`; optional `--start` and
+`--end` address Unicode code-point offsets in the spoken projection. The write
+uses the same concurrency and overlap checks as `save`, and refuses an existing
+identical range instead of replacing it. Inspect the returned state to verify the
+selected passage. This does not infer or assign speakers.
+
 Direction object: `anchor={start_line,end_line,paragraph_sha256}`, `start=0`,
 nullable `end` (whole remaining passage), nullable saved `profile_id`,
 `instructions` (maximum 2,000 characters), `pause_before=0.0`, nullable
@@ -1760,6 +1784,8 @@ project profile or explicitly selected engine. Omitted/unknown information is no
 manuscript prose, pronunciations or delivery descriptions are included.
 `read-aloud --preview` or `--preview-line N` selects a bounded source paragraph,
 uses a fresh render and a separate preview output by default; `--plan-only`
-retains its existing speech-plan JSON contract. `--progress` writes to stderr.
+retains its existing speech-plan JSON contract. On current main, `--progress`
+writes segment counts and a coarse remaining-time estimate to stderr after two
+segments; this estimate excludes final encoding and publication.
 CLI publication checks source, effective settings and active direction snapshots
 throughout rendering and before atomic replacement.

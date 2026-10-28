@@ -36,6 +36,24 @@ def test_preview_renders_first_paragraph_without_cache_or_overwriting_chapter(tm
     assert list(root.glob('*preview.wav'))
 
 
+def test_progress_estimates_remaining_time_after_two_segments(tmp_path, capsys, monkeypatch):
+    root = project(tmp_path)
+    (root / 'draft.md').write_text('## Eins\n\nErster Absatz.\n\nZweiter Absatz.\n\nDritter Absatz.\n')
+    clock = [100.0]
+    monkeypatch.setattr('lixity.cli._monotonic', lambda: clock[0], raising=False)
+
+    def synthesize(text, profile, **kwargs):
+        clock[0] += 10
+        return generate_silence_wav(.01, 24000)
+
+    monkeypatch.setattr('lixity.speech_qwen.synthesize_qwen', synthesize)
+    assert main(['read-aloud', '--project', str(root), '--no-audio-cache', '--progress', '--speed', '1.0']) == 0
+    lines = capsys.readouterr().err.splitlines()
+    assert lines[:2] == ['Audio: 0/4', 'Audio: 1/4']
+    assert lines[2] == 'Audio: 2/4 (ETA ~20s)'
+    assert lines[-1] == 'Audio: 4/4'
+
+
 def test_preview_rejects_unmatched_line_without_synthesis(tmp_path, capsys, monkeypatch):
     root = project(tmp_path)
     monkeypatch.setattr('lixity.speech_qwen.synthesize_qwen', lambda *a, **kw: (_ for _ in ()).throw(AssertionError('unexpected inference')))

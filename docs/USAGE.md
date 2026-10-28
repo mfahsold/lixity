@@ -496,17 +496,24 @@ The first explicit **Analysis On** selects **Sentence length**
 unless you have already saved a metric choice.
 Use the directly visible **Measure**
 selector while Analysis is on. **Counted text** and **Paragraph comparison** are
-independent switches: keep either, both or neither. **Current main:** counted text starts off for a
-new browser preference; paragraph comparison starts on. Existing saved choices
-are retained. For sentence length, every recognized sentence with words is counted,
+independent switches: keep either, both or neither. **Current main:** counted text starts off
+for each measure, and its choice is remembered separately per measure; paragraph
+comparison starts on and remains a shared choice. An older saved global counted-text
+choice is assigned to the last selected measure, if one was selected. If it was
+set to None or no valid measure was saved, all measures start with counted text off.
+Other reader preferences are retained. For sentence length, every recognized sentence with words is counted,
 so enabling counted text can underline almost the whole manuscript; this does not
 mean that those sentences are unusually long or require editing. With counted text enabled,
 violet underlines identify counted words, patterns, quoted speech or sentences.
 Hover a mark for its explanation; a short stationary tap opens it on touch
 screens. Escape closes it. Analysis Off and **None** hide both kinds of indicator;
 unchecking either switch hides only its own marks and key. The selected metric and
-both switch preferences persist in the browser, including deliberate **None** and
+the switch preferences persist in the browser, including deliberate **None** and
 disabled switches. Turning Analysis on again preserves those choices.
+
+While a measurement overlay is active, separate tense-pattern badges are hidden
+in the text. Tense findings remain available in the analysis overview and passage
+inspector, subject to the configured severity threshold.
 
 **Explore passage** opens chapter/source-line context and measurements in the
 existing passage inspector without changing global Analysis. Its **Explain
@@ -523,6 +530,8 @@ background receives only a subtle edge wash. Click the marker to inspect the mea
 marks** keeps the comparison method and counting guidance collapsed until opened.
 A marked sentence's word count and its paragraph's average are different
 quantities.
+The **Emphasize deviations in chapter strips** control dims other paragraph chips
+in those strips; it does not remove manuscript paragraphs.
 
 Saved research has a separate visual identity:
 neutral dotted marks and a book-icon **Research · … associations** control. They
@@ -1468,7 +1477,10 @@ Quote blocks do not currently have selectable preview anchors.
 A chapter selection constrains either preview. Preview skips headings and uses a
 separate default `-preview.wav` output; it does not read or write the segment
 cache. `--plan-only` can be combined with either preview without synthesizing.
-`--progress` reports completed segments on stderr. The CLI checks manuscript,
+On current main, `--progress` reports completed segments and, after two segments,
+a rough remaining-time estimate on stderr. The estimate averages completed
+segments; different text lengths, cache hits and model startup can make it
+inaccurate, and final encoding and publication are not included. The CLI checks manuscript,
 settings and active direction snapshots during rendering and immediately before
 publishing; changed or unreadable inputs reject the result and preserve an
 existing output. `--no-direction` deliberately excludes the direction ledger.
@@ -1610,6 +1622,42 @@ They also accept a `pronunciations` table of literal term-to-spoken-form pairs.
 These substitutions affect synthesis text only. A voice profile does not infer
 character identities or turn words such as “quiet” into acting instructions.
 
+Current main also supports an optional project-wide lexicon. To opt in, change
+the audio schema to `/2` and add a table shared by every profile:
+
+```toml
+[audio]
+schema_version = "lixity-audio-settings/2"
+selected = "narrator"
+pronunciation_matching = { case_sensitive = false, whole_words = true }
+
+[audio.pronunciations]
+"Lixity" = "Lik-si-tee"
+
+[audio.profiles.narrator]
+engine = "qwen3"
+pronunciations = { "Lixity" = "Liksity" }
+```
+
+Profile entries override project entries with the same exact key. Matching defaults
+to case-sensitive literal substitution, including inside longer words. The optional
+`pronunciation_matching` settings shown above change this for all profiles in the
+project: `case_sensitive = false` uses Python's Unicode case-insensitive regex
+matching, while `whole_words = true` requires the entire literal term, including
+multiword or punctuation-bearing terms, to have no adjoining Unicode word character
+or combining mark. This is not language-specific word segmentation or Unicode
+normalization; preview with real text, particularly for scripts without spaces.
+Replacement text retains its configured spelling and is not automatically
+capitalized. Keys that the case-insensitive matcher considers equivalent are
+rejected as ambiguous, including conflicts between global and profile entries;
+an exact-key profile override remains valid. The combined project and profile map is limited to
+200 distinct entries per profile. The UI's profile editor retains the project
+table when saving; the project-wide table is currently edited in the project
+configuration. Affected spoken segments get new cache keys when their substituted
+text changes. Existing `/1` projects retain their behavior and need no migration.
+Once a project uses `/2`, Lixity 0.7.7 and older installations do not accept its
+audio settings: keep a backup and use a current version to render or edit them.
+
 `qwen3` uses the
 `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` checkpoint and its nine presets.
 Explicit style instructions, structural pauses and pronunciation settings are
@@ -1750,6 +1798,14 @@ lixity read-aloud --project ./novel --chapter 1 --no-direction --fresh-audio -o 
 `audio-direction inspect` returns paragraph anchors/spoken text, saved ranges,
 stale flags, and the `source_sha256`, `settings_sha256`, `direction_sha256`
 snapshots. Its JSON and plan output contain private prose and instructions.
+On current main, `audio-direction add --project ./novel --chapter 2 --line 42
+--instruction "Quietly." --pause-after 0.4` selects the spoken passage at that
+source line and saves the direction without manually copying hashes. Optional
+`--start` and `--end` select offsets in Unicode code points in the spoken
+projection; `--profile-id` selects an existing saved voice profile. Inspect the
+source and resulting direction to verify the intended passage. The command
+rejects an existing identical range, overlaps, and concurrent changes; use
+`inspect` and `save` for an explicit replacement.
 To save, put one direction object in a private JSON file: `anchor` copied exactly
 from inspection, optional code-point `start`/`end` (default whole paragraph),
 optional `profile_id`, `instructions`, `pause_before`, and nullable `pause_after`.
@@ -1760,7 +1816,9 @@ the three observed hashes. When changing a saved range’s bounds, pass its orig
 Removal uses `audio-direction remove --project ./novel
 --id ID` with the same guards. Concurrent source/settings/direction changes reject
 writes instead of overwriting another edit. Identical saves are idempotent.
-`--no-direction` is an explicit neutral baseline for that invocation, not deletion.
+`--no-direction` ignores saved passage direction for that invocation; it does not
+delete it. The selected profile, pronunciation rules, speed and default pauses
+remain active, so this is not a comparison without those influences.
 Saved offsets use the marker-stripped spoken projection. `--keep-markers` is
 rejected when retaining editorial markers would shift a directed passage; use
 `--no-direction` for that deliberate alternative.

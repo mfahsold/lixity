@@ -1116,7 +1116,8 @@ def render_dashboard(
     for chapter in chapters:
         chapter_start = len(parts)
         chapter_paras = by_chapter.get(chapter.num, [])
-        has_flags = any(p.is_flagged for _, p in chapter_paras)
+        chapter_flagged = sum(p.severity >= flag_min_severity for _, p in chapter_paras)
+        has_flags = chapter_flagged > 0
         classes = "chapter has-flags" if has_flags else "chapter"
         parts.append(
             f'<section class="{classes}" id="ch-{chapter.num}" '
@@ -1131,18 +1132,18 @@ def render_dashboard(
         )
         words_unit = L("words_one") if chapter.words == 1 else L("words")
         paragraphs_unit = L("paragraphs_one") if chapter.paragraphs == 1 else L("paragraphs")
-        flags_unit = L("flags_one") if chapter.flagged == 1 else L("flags")
+        flags_unit = L("flags_one") if chapter_flagged == 1 else L("flags")
         parts.append(
             f'<span class="meta">{N(chapter.words, 0)} {words_unit} · '
             f"{chapter.paragraphs} {paragraphs_unit} · {esc(tense_label(labels, chapter.dominant))} · "
-            f"{chapter.flagged} {flags_unit} · {L('line')} {chapter.start_line}–{chapter.end_line}</span>"
+            f"{chapter_flagged} {flags_unit} · {L('line')} {chapter.start_line}–{chapter.end_line}</span>"
         )
         parts.append("</div>")
 
         if chapter_paras:
             parts.append('<div class="strip">')
             for idx, p in chapter_paras:
-                sev = f" sev-{p.severity}" if p.is_flagged else ""
+                sev = f" sev-{p.severity}" if p.severity >= flag_min_severity else ""
                 width = max(1.0, p.words / scale * 100.0)
                 dom_label = tense_label(labels, p.dominant)
                 sev_label = label(labels, f"severity_{p.severity}")
@@ -1179,7 +1180,7 @@ def render_dashboard(
                 sev_label = label(labels, f"severity_{p.severity}")
                 flag_attrs = ""
                 flag_cls = ""
-                if p.is_flagged:
+                if p.severity >= flag_min_severity:
                     flag_attrs = (
                         f' data-severity="{p.severity}"'
                         f' data-pre="{p.present_hits}"'
@@ -1678,7 +1679,8 @@ def render_dashboard(
         max_asl = max((c.asl for c in chapters), default=1.0) or 1.0
         max_dialog = max((c.dialog_pct for c in chapters), default=1.0) or 1.0
         for c in chapters:
-            row_hint = ' data-flags="1"' if c.flagged else ""
+            chapter_flagged = sum(p.severity >= flag_min_severity for _, p in by_chapter.get(c.num, []))
+            row_hint = ' data-flags="1"' if chapter_flagged else ""
             parts.append(
                 f'<tr class="row-link" data-jump="#ch-{c.num}"{row_hint} role="button" tabindex="0">'
                 f"<td>{c.num}</td><td>{esc(c.title)}</td>"
@@ -1688,7 +1690,7 @@ def render_dashboard(
                 f'<td class="num bar-cell"><i style="--v:{c.dialog_pct / max_dialog * 100:.0f}%"></i>'
                 f"{P(c.dialog_pct)}</td>"
                 f'<td class="num">{P(c.function_word_pct)}</td>'
-                f'<td>{esc(tense_label(labels, c.dominant))}</td><td class="num">{c.flagged}</td>'
+                f'<td>{esc(tense_label(labels, c.dominant))}</td><td class="num">{chapter_flagged}</td>'
             )
             if fingerprint is not None:
                 dev = fingerprint.deviations.get(c.num, {})
