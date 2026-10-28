@@ -354,8 +354,9 @@ def benjamini_yekutieli(
 ) -> list[tuple[int, str]]:
     """
     Benjamini-Yekutieli FDR control: BH step-up with the harmonic factor
-    c(m) = sum 1/i, valid under arbitrary dependence between tests
-    (style features are strongly correlated).
+    c(m) = sum 1/i. For valid null p-values, this controls FDR under arbitrary
+    dependence. Lixity's manuscript-derived normal-tail values are exploratory;
+    their calibration as null p-values has not been established.
     """
     if not cells:
         return []

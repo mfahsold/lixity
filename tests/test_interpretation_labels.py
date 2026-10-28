@@ -87,6 +87,14 @@ class TestInterpretationLabels(unittest.TestCase):
                 self.assertIn("nom", WORKSPACE_LABELS[language]["structural_confirmed"].lower())
                 self.assertIn("nom", WORKSPACE_LABELS[language]["welcome_fdr_desc"].lower())
 
+    def test_expected_count_is_identified_as_a_normal_model_reference(self):
+        terms = {"en": "normal", "de": "normal", "fr": "normal",
+                 "es": "normal", "it": "normal", "pt": "normal", "nl": "normaal"}
+        for language, term in terms.items():
+            with self.subTest(language=language):
+                label = LANGUAGE_PROFILES[language].labels["expected_false_positives"]
+                self.assertIn(term, label.casefold())
+
     def test_structural_help_qualifies_segmentation_and_nominal_probabilities(self):
         independence = {"en": "independent", "de": "unabhängige", "fr": "indépendantes",
                         "es": "independientes", "it": "indipendenti",

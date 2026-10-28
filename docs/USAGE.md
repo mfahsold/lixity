@@ -593,10 +593,16 @@ available pane becomes too narrow. Reading and decision controls remain visible
 beside the sidebar as well as on smaller screens.
 
 The native host advertises `analysis-review` to permit project-local decisions.
+From a flagged passage, **Explore passage** offers **Open review decision** to
+return directly to its matching review entry. Filters that would hide the entry
+are cleared. The passage identity must still match; opening it does not save.
 Chapter, stage and decision filters limit the visible list; **Read next visible
 passage** follows that selection without saving anything. Choose **Deliberately
 kept**, **Changed by me** or **Review later**, then save explicitly. Completed
 counts include only current kept/changed decisions, not deferred or stale ones.
+Previously saved decisions that no longer match a current observation are counted
+as unmatched and retained, including when no flags remain. They are not silently
+attached to another passage; their individual contents are not yet exposed here.
 No automatic manuscript change, task, source capture or research decision occurs.
 
 For the same observation/state model from the CLI:

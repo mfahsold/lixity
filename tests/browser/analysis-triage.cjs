@@ -58,6 +58,22 @@ server.serve_forever()
     await rows.first().locator('[data-triage-save]').click();
     await expect(rows.first().locator('.triage-saved-state')).toHaveText('Deliberately kept');
     await expect(page.locator('#triage-progress')).toContainText('1 /');
+    const target = await rows.first().getAttribute('data-target');
+    await rows.first().locator('.triage-read-cell button').click();
+    assert.equal(await page.evaluate(id => {
+      const passage = document.getElementById(id), original = passage.dataset.paragraphSha256;
+      passage.dataset.paragraphSha256 = '0'.repeat(64);
+      const available = LixityAnalysisReview.available(passage);
+      passage.dataset.paragraphSha256 = original;
+      return available;
+    }, target), false, 'A changed passage cannot select an old decision');
+    await page.locator('#triage-status-filter').selectOption('unreviewed', {force:true});
+    await page.locator(`#${target} .reader-paragraph-actions`).click();
+    await page.locator('#manuscript-context-menu [data-reader-action="values"]').click();
+    await page.locator('#reader-inspector-body [data-reader-action="review"]').click();
+    await expect(rows.first().locator('.triage-saved-state')).toHaveText('Deliberately kept');
+    await expect(rows.first().locator('.triage-choice')).toBeFocused();
+    assert.equal(await page.locator('#triage-status-filter').inputValue(), '', 'A conflicting filter cannot hide the selected decision');
     await page.reload(); await overview();
     await expect(rows.first().locator('.triage-saved-state')).toHaveText('Deliberately kept');
     await page.locator('#triage-status-filter').selectOption('unreviewed');
@@ -79,6 +95,14 @@ server.serve_forever()
           decision:row.querySelector('.triage-decision-cell').getBoundingClientRect().top,
         }));
         assert.ok(positions.read <= positions.decision, 'Reading precedes decisions without overlapping mobile cards');
+        const mobileTarget = await rows.first().getAttribute('data-target');
+        await rows.first().locator('.triage-read-cell button').click();
+        await page.locator(`#${mobileTarget} .reader-paragraph-actions`).click();
+        await page.locator('#manuscript-context-menu [data-reader-action="values"]').click();
+        await expect(page.locator('#reader-inspector-body [data-reader-action="review"]')).toBeVisible();
+        await page.screenshot({path:path.join(artifacts, 'review-passage-320.png')});
+        await page.locator('#reader-inspector-body [data-reader-action="review"]').click();
+        await expect(rows.first().locator('.triage-choice')).toBeFocused();
       }
       await page.screenshot({path:path.join(artifacts,`review-${width}.png`)});
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
@@ -102,6 +126,14 @@ server.serve_forever()
     release();
     await expect(page.locator('#triage-save-status')).toContainText('could not be confirmed');
     await expect(page.locator('#triage-reload')).toBeVisible();
+    execFileSync(python, ['-c', "from pathlib import Path; import sys; Path(sys.argv[1]).write_text('## First\\n\\nShe walks. She waits.\\n')", server.fixture.source]);
+    await page.reload();
+    await page.locator('#tab-view-analysis').click();
+    await page.locator('#workbench-overview-open').click();
+    await expect(page.locator('#triage-progress')).toContainText('2 previously saved decisions');
+    await expect(page.locator('#triage-progress')).toContainText('retained');
+    assert.equal(await rows.count(), 0);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(server.fixture.project, '.lixity/analysis-review.json'))).decisions.length, 2);
     assert.deepEqual(markerWrites, []);
     assert.deepEqual(errors, []);
     console.log(`Native analysis triage: explicit decisions, reload, no manuscript/task writes, deferred count, stale source, filters, next-passage, conflict recovery and desktop/mobile passed. Screenshots: ${artifacts}`);

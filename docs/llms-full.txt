@@ -771,10 +771,16 @@ available pane becomes too narrow. Reading and decision controls remain visible
 beside the sidebar as well as on smaller screens.
 
 The native host advertises `analysis-review` to permit project-local decisions.
+From a flagged passage, **Explore passage** offers **Open review decision** to
+return directly to its matching review entry. Filters that would hide the entry
+are cleared. The passage identity must still match; opening it does not save.
 Chapter, stage and decision filters limit the visible list; **Read next visible
 passage** follows that selection without saving anything. Choose **Deliberately
 kept**, **Changed by me** or **Review later**, then save explicitly. Completed
 counts include only current kept/changed decisions, not deferred or stale ones.
+Previously saved decisions that no longer match a current observation are counted
+as unmatched and retained, including when no flags remain. They are not silently
+attached to another passage; their individual contents are not yet exposed here.
 No automatic manuscript change, task, source capture or research decision occurs.
 
 For the same observation/state model from the CLI:
@@ -6021,6 +6027,36 @@ not a language-wide accuracy estimate: pronunciation, dialect, token frequency,
 syllabification conventions and literary usage vary. No separate literary
 holdout or human listening evaluation was used.
 
+The same command also compares the production estimator with an **experimental,
+unshipped** rising-diphthong rule. It groups case-normalized NFC spellings,
+excludes the 16 spellings with differing source counts and partitions the 90,665
+remaining word types by SHA-256 modulo five. On the 18,156-type comparison
+partition, exact agreement rises from 13,944 to 17,248 and mean absolute
+difference falls from 0.2405 to 0.0505; nevertheless, 469 forms become worse
+while 3,771 improve. This partition was inspected during development and is
+not an untouched holdout; these figures do not measure performance on novels
+or token-weighted text. The candidate incorrectly merges common hiatuses such
+as `io` and `mio`, because unmarked stress cannot reliably be inferred from the
+letters alone. It was therefore not enabled. Italian phonology distinguishes
+[rising diphthongs](https://www.treccani.it/enciclopedia/dittongo_%28Enciclopedia-dell%27Italiano%29/)
+from [hiatuses](https://www.treccani.it/enciclopedia/iato_%28Enciclopedia-dell%27Italiano%29/);
+pronunciation varies with lexical and linguistic context. A larger independent
+literary evaluation and a suitable stress-aware pronunciation resource remain
+necessary before changing this counter.
+
+For French, `PYTHONPATH=src python scripts/evaluate_lexique.py PATH_TO_TSV`
+compares an experimental removal of the final `-ent` deduction with the
+`1_Mot` and `26_SyllNb` fields of [Lexique 4.10](https://www.lexique.org/databases/Lexique410/Lexique4.1.zip)
+(New et al., 2026; CC BY-SA 4.0; extracted TSV SHA-256
+`f112ad487334c8ab702e6b95cf08110b2ac534d1896e1643f9c669f91a139a84`).
+Among 12,705 unique alphabetic `-ent` spellings with one agreed count, 7,011
+improve but 5,594 become worse; 26 ambiguous spellings are excluded. This is
+type-weighted agreement with the lexicon, not accuracy on literary text. Its
+syllable counts are algorithmically derived from phonological forms with final
+schwas removed; real speakers can pronounce those schwas in some contexts.
+The French counter remains unchanged: distinguishing spoken endings from
+silent verb inflections requires additional contextual evidence.
+
 The audit also reproduces unresolved weaknesses:
 
 | Area | Observed limitation and interpretation |
@@ -6040,6 +6076,14 @@ Future corpus evaluation must report per-language boundary precision/recall,
 cue precision/recall against appropriate annotations and the dataset/genre;
 arithmetic tests, UI localization and highlighted count agreement are separate
 checks. No novel-wide accuracy percentage is claimed here.
+
+Potential external references include [Corpus REDEWIEDERGABE](https://aclanthology.org/2020.lrec-1.100/),
+whose historical German material distinguishes direct, indirect and other
+speech or thought representation, and [GermAnProse](https://aclanthology.org/2026.latechclfl-1.25/),
+which provides narrative annotations for four German short prose texts. Neither
+is a representative contemporary multilingual benchmark; annotation schemes,
+text editions, permitted uses and span/token conventions must be checked before
+comparison. They have not been evaluated in this project.
 
 ### Manual manuscript association limits
 

@@ -1509,11 +1509,13 @@ def render_dashboard(
                          for status in ("unreviewed", "stale", "later", "kept", "changed"))
             parts.append('</select></label>')
         parts.append(f'<button type="button" class="ctl" id="triage-next">{L("triage_next")}</button></div>')
+    if flagged or review_capable:
         parts.append('<p class="ctl-note" id="triage-progress" role="status" aria-live="polite"></p>')
         if review_capable:
             parts.append(f'<p class="ctl-note">{L("triage_storage")}</p>')
             parts.append('<p class="ctl-status" id="triage-save-status" role="status" aria-live="polite"></p>')
             parts.append(f'<button type="button" class="ctl" id="triage-reload" hidden>{L("triage_reload")}</button>')
+    if flagged:
         para_index = {id(p): i for i, p in enumerate(paragraphs)}
         parts.append('<div class="table-wrap flags-wrap" tabindex="0" role="region" '
                      f'aria-label="{L("panel_flags")}">')

@@ -222,6 +222,7 @@ class TestSettingsUi(unittest.TestCase):
                                     fingerprint=result.fingerprint, labels=language.labels)
         self.assertEqual(len(re.findall(r'class="fdr-marker"', rendered)), 1)
         self.assertIn('id="heatmap-fdr-only"', rendered)
+        self.assertIn("Normal model: expected threshold exceedances", rendered)
         self.assertIn("Cliff", rendered)
 
     def test_color_legend_does_not_misrepresent_configured_threshold(self):

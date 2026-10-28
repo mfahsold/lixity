@@ -463,6 +463,11 @@
     var context = document.createElement("div"); context.className = "reader-passage-context";
     var location = document.createElement("p"); location.className = "ctl-note";
     location.textContent = passageContext(panel); context.appendChild(location);
+    if (window.LixityAnalysisReview && window.LixityAnalysisReview.available(panel)) {
+      var review = actionButton("review", "triage_open", false);
+      review.addEventListener("click", function() {window.LixityAnalysisReview.open(panel);});
+      context.appendChild(review);
+    }
     if (panel.dataset.severity && Number(panel.dataset.severity) >= 2) {
       var flagCard = document.createElement("div"); flagCard.className = "reader-passage-flag sev-" + panel.dataset.severity;
       var flagHeader = document.createElement("div"); flagHeader.className = "reader-passage-flag-header";

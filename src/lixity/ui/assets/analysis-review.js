@@ -11,22 +11,23 @@
   var next = document.getElementById("triage-next");
   var status = document.getElementById("triage-save-status");
   var reload = document.getElementById("triage-reload");
-  if (!rows.length || !next) return;
   var native = panel.dataset.reviewCapable === "true" && !window.LixitySite.readOnly;
+  if (!rows.length && !native) return;
   var accepted = null, pending = false, cursor = null;
   function token() { return document.body.dataset.manuscriptProjectToken; }
   function label(key) { return uiLabel("triage_" + key); }
   function visible() { return rows.filter(function(row) {return !row.hidden;}); }
   function apply() {
     rows.forEach(function(row) {
-      row.hidden = Boolean(chapter.value && row.dataset.triageChapter !== chapter.value ||
-        severity.value && row.dataset.triageSeverity !== severity.value ||
+      row.hidden = Boolean(chapter && chapter.value && row.dataset.triageChapter !== chapter.value ||
+        severity && severity.value && row.dataset.triageSeverity !== severity.value ||
         filter && filter.value && row.dataset.reviewState !== filter.value);
     });
     var count = visible().length;
     progress.textContent = uiFormat("triage_progress", {shown:count, total:rows.length}) +
-      (accepted ? " · " + uiFormat("triage_completed", {completed:accepted.completed, total:accepted.total}) : "");
-    next.disabled = !count;
+      (accepted ? " · " + uiFormat("triage_completed", {completed:accepted.completed, total:accepted.total}) : "") +
+      (accepted && accepted.unmatched_decisions ? " · " + uiCountFormat("triage_unmatched", accepted.unmatched_decisions) : "");
+    if (next) next.disabled = !count;
   }
   function controls(disabled) {
     panel.querySelectorAll(".triage-choice, [data-triage-save]").forEach(function(control) {
@@ -51,6 +52,7 @@
         !["analysis_sha256", "review_sha256"].every(function(key) {return /^[0-9a-f]{64}$/.test(data[key] || "");}) ||
         !Number.isSafeInteger(data.total) || data.total !== rows.length || data.observations.length !== rows.length ||
         !Number.isSafeInteger(data.completed) || data.completed < 0 || data.completed > data.total ||
+        !Number.isSafeInteger(data.unmatched_decisions) || data.unmatched_decisions < 0 ||
         !data.observations.every(function(item) {
           return item && Number.isSafeInteger(item.start_line) &&
             /^[0-9a-f]{64}$/.test(item.id || "") && /^[0-9a-f]{64}$/.test(item.paragraph_sha256 || "") &&
@@ -83,9 +85,33 @@
     if (selected !== token() || !accept(data)) {failed(); return;}
     status.textContent = "";
   }
+  function passageRow(passage) {
+    if (!native || !passage || !passage.isConnected) return null;
+    return rows.find(function(row) {
+      return row.dataset.target === passage.id && row.dataset.line === passage.dataset.start &&
+        row.dataset.reviewSha === passage.dataset.paragraphSha256;
+    }) || null;
+  }
+  function openPassage(passage) {
+    var row = passageRow(passage);
+    if (!row) return false;
+    // The regular overview action retains the reader's return position.
+    document.getElementById("workbench-overview-open").click();
+    if (chapter.value && chapter.value !== row.dataset.triageChapter) chapter.value = "";
+    if (severity.value && severity.value !== row.dataset.triageSeverity) severity.value = "";
+    if (filter && filter.value && filter.value !== row.dataset.reviewState) filter.value = "";
+    apply();
+    cursor = row;
+    var choice = row.querySelector(".triage-choice");
+    var target = choice && !choice.disabled ? choice : row.querySelector(".triage-read-cell button");
+    target.scrollIntoView({block:"center"});
+    target.focus({preventScroll:true});
+    return true;
+  }
+  window.LixityAnalysisReview = {available:function(passage) {return Boolean(passageRow(passage));}, open:openPassage};
   if (reload) reload.addEventListener("click", load);
   [chapter, severity, filter].forEach(function(control) {if (control) control.addEventListener("change", apply);});
-  next.addEventListener("click", function() {
+  if (next) next.addEventListener("click", function() {
     var candidates = visible();
     if (!candidates.length) return;
     var index = candidates.indexOf(cursor);
