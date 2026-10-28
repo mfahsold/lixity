@@ -99,6 +99,71 @@ def test_marker_policy_changes_invalidate_saved_decisions(project, monkeypatch, 
     assert current["observations"][0]["previous_status"] == "kept"
 
 
+def test_german_default_policy_invalidates_previous_decision_without_rewriting_state(project, monkeypatch):
+    import lixity.analysis_review as review_module
+
+    (project / "manuscript.md").write_text(
+        "## Eins\n\nSie denkt an den Garten und sie denkt an den Weg. "
+        "Sie denkt an das Haus. Sie fand den Garten und sie fand den Weg. "
+        "Sie fand auch das Haus.\n")
+    (project / "lixity.toml").write_text('manuscript = "manuscript.md"\nlanguage = "de"\n')
+    with monkeypatch.context() as old:
+        old.setattr(review_module, "_GERMAN_LEXICAL_POLICY", None)
+        previous = review_analysis(project)
+        save(project, previous)
+    state = (project / ".lixity/analysis-review.json").read_bytes()
+    current = review_analysis(project)
+    assert current["analysis_sha256"] != previous["analysis_sha256"]
+    assert current["observations"][0]["status"] == "stale"
+    assert current["observations"][0]["previous_status"] == "kept"
+    assert (project / ".lixity/analysis-review.json").read_bytes() == state
+    with pytest.raises(ResearchConflictError):
+        save(project, previous)
+
+
+@pytest.mark.parametrize("language,patterns", [
+    ("en", ""),
+    ("de", 'praesens_regex = "present"\npraeteritum_regex = "past"\n'),
+])
+def test_unaffected_review_context_retains_identity(project, monkeypatch, language, patterns):
+    import lixity.analysis_review as review_module
+
+    (project / "lixity.toml").write_text(
+        f'manuscript = "manuscript.md"\nlanguage = "{language}"\n' + patterns)
+    with monkeypatch.context() as old:
+        old.setattr(review_module, "_GERMAN_LEXICAL_POLICY", None)
+        previous = review_analysis(project)
+    assert review_analysis(project)["analysis_sha256"] == previous["analysis_sha256"]
+
+
+@pytest.mark.parametrize("patterns", [
+    'praesens_regex = "present"\n',
+    'praeteritum_regex = "past"\n',
+])
+def test_german_partial_override_retains_changed_default_policy(project, monkeypatch, patterns):
+    import lixity.analysis_review as review_module
+
+    (project / "lixity.toml").write_text(
+        'manuscript = "manuscript.md"\nlanguage = "de"\n' + patterns)
+    with monkeypatch.context() as old:
+        old.setattr(review_module, "_GERMAN_LEXICAL_POLICY", None)
+        previous = review_analysis(project)
+    assert review_analysis(project)["analysis_sha256"] != previous["analysis_sha256"]
+
+
+def test_german_contextual_model_does_not_use_lexical_policy(project, monkeypatch):
+    import lixity.analysis_review as review_module
+    import lixity.grammatical_tense as grammatical_tense
+
+    (project / "lixity.toml").write_text('manuscript = "manuscript.md"\nlanguage = "de"\n')
+    monkeypatch.setattr(review_module, "profile_document", lambda *args: ([], []))
+    monkeypatch.setattr(grammatical_tense, "model_identity", lambda name: {"model": name})
+    with monkeypatch.context() as old:
+        old.setattr(review_module, "_GERMAN_LEXICAL_POLICY", None)
+        previous = review_analysis(project, tense_model="de_core_news_md")
+    assert review_analysis(project, tense_model="de_core_news_md")["analysis_sha256"] == previous["analysis_sha256"]
+
+
 def test_corrupt_or_foreign_review_state_never_looks_unreviewed(project):
     report = review_analysis(project)
     with pytest.raises(ValueError):
@@ -164,14 +229,14 @@ def model_project(tmp_path, monkeypatch):
     from lixity import grammatical_tense
     from lixity.grammatical_tense import VerbGroup
 
-    text = "## Test\n\n" + "Sie übt. Er ging. " * 5 + "\n"
+    text = "## Test\n\n" + "Sie wippt. Er ging. " * 5 + "\n"
     (tmp_path / "manuscript.md").write_text(text)
     (tmp_path / "lixity.toml").write_text('manuscript = "manuscript.md"\nlanguage = "de"\n')
 
     def annotated(text, _model):
         return tuple(VerbGroup(((match.start(), match.end()),),
-                               "present" if match.group() == "übt" else "preterite", "indicative", "active")
-                     for match in re.finditer(r"übt|ging", text))
+                               "present" if match.group() == "wippt" else "preterite", "indicative", "active")
+                     for match in re.finditer(r"wippt|ging", text))
 
     # Replace only the optional inference/identity boundary. Real profile,
     # observation, guard, route and persistence paths remain under test.

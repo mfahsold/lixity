@@ -29,6 +29,10 @@ for mode in ('reader','companion'):
   bundle=prepare_site(project,mode=mode,publication_profile='readers',max_chapter=cap,include_source_files=True)
   for name,content in bundle.files.items():
    target=base/(mode+'-'+str(cap))/name;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(content)
+for name,sections in [('chapter-analysis',['chapters']),('language-analysis',['language']),('full-analysis',['full'])]:
+ bundle=prepare_site(project,mode='reader',publication_profile='readers',max_chapter=1,analysis_sections=sections)
+ for file,content in bundle.files.items():
+  target=base/name/file;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(content)
 assert digest()==before
 print(json.dumps({'project':str(project),'before':before}))
 `.replace('ARTIFACTS',JSON.stringify(artifacts)));
@@ -76,6 +80,30 @@ print(json.dumps({'project':str(project),'before':before}))
    await expect(page.locator('#publication-contents')).not.toContainText('LATE_OVERRIDE_TITLE');
    await page.locator('#publication-progress').selectOption('3');await page.locator('#publication-progress-apply').click();
    await expect(page.locator('#publication-entries')).toContainText('LATEENTRYBODY');
+   assert.ok(!requests.some(url=>/\/api\/|openstreetmap|https:\/\//.test(url)),requests.join('\n'));
+   await page.close();
+  }
+  for(const scheme of ['file','http'])for(const width of [1440,320])for(const selected of ['chapter-analysis','language-analysis','full-analysis']){
+   const page=await browser.newPage({viewport:{width,height:900},reducedMotion:'reduce'}),requests=[];
+   page.on('pageerror',error=>errors.push(error.message));
+   page.on('console',message=>{if(['error','warning'].includes(message.type()))errors.push(message.text());});
+   page.on('request',request=>requests.push(request.url()));
+   const url=scheme==='file'?pathToFileURL(path.join(artifacts,`${selected}/index.html`)).href:`${origin}/nested/${selected}/index.html`;
+   await page.goto(url);
+   await page.locator('a[href="analysis.html"]').click();
+   await expect(page.locator('body')).not.toContainText('MIDDLE_NOVEL_PROSE');
+   if(selected==='full-analysis'){
+    await expect(page.locator('body')).toContainText('EARLY_NOVEL_PROSE');
+    assert.equal(await page.locator('[data-read-only="true"]').count(),1);
+   }else{
+    assert.equal(await page.locator('#analysis-section-chapters').count(),selected==='chapter-analysis'?1:0);
+    assert.equal(await page.locator('#analysis-section-language').count(),selected==='language-analysis'?1:0);
+    await expect(page.locator('body')).not.toContainText('EARLY_NOVEL_PROSE');
+   }
+   await page.screenshot({path:path.join(artifacts,`${selected}-${scheme}-${width}.png`)});
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${selected} ${width} overflows`);
+   await page.locator('a[href="index.html"]').first().click();
+   await expect(page.locator('#publication-entries')).toContainText('APPROVEDPUBLICBODY');
    assert.ok(!requests.some(url=>/\/api\/|openstreetmap|https:\/\//.test(url)),requests.join('\n'));
    await page.close();
   }

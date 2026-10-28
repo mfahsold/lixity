@@ -31,10 +31,16 @@ success is not a security certification for an arbitrary adapter.
 
 The optional local model path covers all seven supported analysis languages and
 is a contextual grammatical measurement, not a
-linguistic correctness guarantee. The standard installation still uses incomplete
-lexical patterns; e.g. unknown adjectives ending in `-ten` can match past cues,
-and an unlisted present verb can be missed. To use the new path, explicitly select
-an installed model as described in [Usage](USAGE.md#grammatical-tense).
+linguistic correctness guarantee. The standard installation uses incomplete
+lexical patterns. In v0.7.6 German unknown adjectives ending in `-ten` can match
+past cues. Current main removes that unrestricted German suffix rule and adds
+selected forms such as `übt`; unlisted regular past forms such as `flatterten`
+can now be missed. Listed forms and auxiliary/participle matches can still be
+ambiguous: for example, `Ich habe gelben Stoff` can still produce a spurious
+past cue from `habe gelben`. This changes counts and dependent results, so regenerate analyses and
+review previous decisions. Other languages retain their existing patterns. To use
+the contextual path, explicitly select an installed model as described in
+[Usage](USAGE.md#grammatical-tense).
 
 The initial construction comparison used 40 newly written German sentences with
 manually assigned verb-group tense/mood labels, available in

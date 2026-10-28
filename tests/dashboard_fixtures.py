@@ -18,7 +18,7 @@ SAMPLE = (
     "ich glaube, es wird kalt. Ich spüre das Zittern. Ich sehe den Mond.\n\n"
     "Die Straße liegt still. Die Stadt schweigt. Der Abend kommt. Die Lichter "
     "gehen an. Ein Wagen fährt vorbei.\n\n"
-    "Ich trinke Kaffee und ich ging zum Laden. Ich sehe den Regen und ich kaufte Brot. "
+    "Ich trinke Kaffee und ich ging zum Laden. Ich sehe den Regen und ich fand Brot. "
     "Ich gehe nach Hause und ich trank den Tee. Ich höre den Wind und ich sehe "
     "die Tropfen an der Scheibe.\n\n"
     "## Kap 2\n\n"

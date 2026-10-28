@@ -385,7 +385,8 @@ def build_publication_examples(root: Path, project: Path) -> dict[str, Path]:
     outputs = {}
     for mode, cap in (("reader", None), ("companion", 3)):
         bundle = prepare_site(project, manuscript=manuscript, mode=mode,
-            publication_profile="readers", max_chapter=cap, include_source_files=True)
+            publication_profile="readers", max_chapter=cap, include_source_files=True,
+            analysis_sections=["chapters"] if mode == "reader" else [])
         document = bundle.files["index.html"].decode("utf-8")
         title = "Warehouse 4 — " + ("read with context" if mode == "reader" else "a reader's companion")
         description = ("Read six fictional harbour chapters with context you reveal as you read." if mode == "reader" else
@@ -399,11 +400,23 @@ def build_publication_examples(root: Path, project: Path) -> dict[str, Path]:
         notice = ('<details class="panel"><summary>About this synthetic reading example</summary>'
             '<p>The people, records and incident are invented. Reveal context deliberately with the reading-progress control. '
             'All content included in a static file remains inspectable; chapter caps remove later material before export.</p>'
+            + ('<p>Choose <strong>Analysis</strong> above the reading view for a chapter overview, then '
+               '<strong>Back to reading copy</strong> to return. This example includes all six chapters; '
+               'the analysis is not hidden by reading progress.</p>' if mode == "reader" else '') +
             '<p>The map and harbour view are public-domain setting references from circa 1900, not evidence of the fictional 1923 incident. '
             '<a href="../../assets/research/sources.json">Image credits and reviewed provenance</a>. '
             'The ordinary product export has the same reading interface and no visitor counter.</p></details>')
         document = document.replace("<footer>", notice + "<footer>", 1)
         files = {**bundle.files, "index.html": _finalize(document).encode("utf-8")}
+        if mode == "reader":
+            analysis = files["analysis.html"].decode("utf-8")
+            analysis_metadata = _head_metadata(
+                canonical=f"{SITE}/demo/reader/analysis.html",
+                title="Warehouse 4 — chapter analysis",
+                description="Explore selected chapter measurements for the synthetic Warehouse 4 reading copy.",
+                language="en", analytics=False)
+            analysis = analysis.replace("</head>", analysis_metadata + "</head>", 1)
+            files["analysis.html"] = _finalize(analysis).encode("utf-8")
         files.pop("manifest.json")
         manifest = {**bundle.manifest,
             "disclosures": [*bundle.manifest["disclosures"],

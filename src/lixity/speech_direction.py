@@ -23,6 +23,7 @@ from .io import FileUtils
 from .markdown_parser import counting_inline_text
 from .pipeline import document_paragraph_texts, paragraph_identity, resolve_document_config
 from .research.repository import Repository, ResearchConflictError
+from .speech_controls import apply_pronunciation, combine_delivery, speech_control_support
 from .speech_profiles import AudioProfile, parse_audio_settings
 
 POLICY = 'lixity-speech-plan/1'
@@ -125,14 +126,6 @@ def _ranges(passages: list[dict[str, Any]], directions: list[Direction]) -> dict
     return dict(result)
 
 
-def _pronounce(text: str, profile: AudioProfile) -> str:
-    replacements = profile.pronunciations
-    if not replacements:
-        return text
-    pattern = re.compile('|'.join(re.escape(k) for k in sorted(replacements, key=len, reverse=True)))
-    return pattern.sub(lambda match: replacements[match[0]], text)
-
-
 def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Direction] | None = None,
                       profiles: Mapping[str, AudioProfile] | None = None, chapter: int | str | None = None,
                       project_config: Mapping[str, Any] | None = None,
@@ -166,7 +159,7 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
             selected = (profiles or {}).get(d.profile_id) if d.profile_id else profile
             if selected is None:
                 raise ValueError('A saved direction references an unavailable voice profile')
-            instructions = ' '.join(part for part in (selected.instructions, d.instructions.strip()) if part)
+            instructions = combine_delivery(selected.instructions, d.instructions)
             selected = AudioProfile.model_validate({**selected.model_dump(), 'instructions': instructions})
             end = d.end if d.end is not None else len(cue.text)
             chunks.append((cue.text[d.start:end], selected, d.pause_before, d.pause_after))
@@ -175,7 +168,7 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
             chunks.append((cue.text[cursor:], profile, 0.0, None))
         for index, (raw_content, effective, before, after) in enumerate(chunks):
             content = raw_content
-            content = _pronounce(content, effective)
+            content = apply_pronunciation(content, effective.pronunciations)
             pieces = _speech_segments(content, effective.language) or ['']
             for n, piece in enumerate(pieces):
                 pause = after if after is not None else (effective.paragraph_pause if cue.kind not in ('heading', 'scene_break') else default_pause) if index == len(chunks)-1 else 0.0
@@ -189,8 +182,9 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
 
 
 def plan_json(plan: list[SpeechSegment]) -> dict[str, Any]:
-    return {'schema_version': POLICY, 'controls': {'instructions': 'model-interpreted',
-            'pauses': 'explicit-silence', 'phonemes': False, 'ssml': False},
+    support = speech_control_support('qwen3')
+    return {'schema_version': POLICY, 'controls': {'instructions': support.direction.replace('_', '-'),
+            'pauses': support.pauses.replace('_', '-'), 'phonemes': support.phonemes, 'ssml': support.ssml},
             'segments': [{'text': row.text, 'profile': row.profile.model_dump(),
                           'pause_before': row.pause_before, 'pause_after': row.pause_after,
                           'anchor': row.anchor} for row in plan]}

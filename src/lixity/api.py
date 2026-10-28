@@ -104,9 +104,8 @@ def fingerprint(
     ``dimension_diagnostics`` support/availability metadata and redundant
     feature pairs.
 
-    Thresholds (z_mild=2.5, z_strong=3.5, fdr_q=0.05, fdr_method='bh',
-    dim_score_threshold=2.5, min_chapters=2) are injectable. ``None`` resolves
-    from project settings, then code defaults. ``project_config={}`` disables
+    Thresholds are injectable. ``None`` resolves from project settings, then
+    ``FingerprintThresholds`` defaults. ``project_config={}`` disables
     implicit threshold discovery; a mapping supplies thresholds and known corpus settings.
     Language and corpus options remain explicit arguments. Returns the style
     reference dict (see docs/AGENTS.md).
@@ -341,7 +340,7 @@ def about() -> dict[str, Any]:
     from .diversity import HD_D_DRAW_SIZE, MIN_TOKENS_LD
     from .research.cli import command_metadata
     from .research.models import ENTITY, Manifest
-    from .site_contracts import DATA_SCHEMA, SITE_SCHEMA, SiteExportOptions
+    from .site_contracts import DATA_SCHEMA, SITE_ANALYSIS_SCHEMA, SITE_SCHEMA, SiteExportOptions
     from .style_fingerprint import (
         FEATURES,
         LAYER_FEATURES,
@@ -463,6 +462,7 @@ def about() -> dict[str, Any]:
                 "purpose": "static read-only project website with explicitly included research and source files",
                 "output": "directory|json",
                 "schema_version": SITE_SCHEMA,
+                "additional_schema_versions": [SITE_ANALYSIS_SCHEMA],
                 "preflight_schema_version": "lixity-site-preflight/1",
                 "preflight_error_schema_version": "lixity-site-preflight-error/1",
                 "data_schema_version": DATA_SCHEMA,

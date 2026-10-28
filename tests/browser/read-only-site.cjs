@@ -96,18 +96,88 @@ print(json.dumps(documents))
           await expect(page.locator('#site-export-research')).toBeHidden();
           await page.locator('#site-export-profile').selectOption('public');
           await page.locator('#site-export-max-chapter').selectOption('1');
+          if (mode === 'reader') {
+            const chapters = page.locator('#site-export-analysis-chapters');
+            const language = page.locator('#site-export-analysis-language');
+            const full = page.locator('#site-export-analysis-full');
+            for (const option of [chapters, language, full]) { await expect(option).toBeVisible(); await expect(option).not.toBeChecked(); }
+            await chapters.check(); await language.check(); await full.check();
+            await expect(chapters).not.toBeChecked(); await expect(language).not.toBeChecked();
+            await chapters.check(); await expect(full).not.toBeChecked();
+            await language.check();
+            await page.keyboard.press('Escape'); await page.locator('#btn-site-export').click();
+            await expect(page.locator('#site-export-mode')).toHaveValue('reader');
+            await expect(page.locator('#site-export-profile')).toHaveValue('public');
+            await expect(chapters).toBeChecked(); await expect(language).toBeChecked();
+          } else await expect(page.locator('#site-export-analysis-options')).toBeHidden();
           await expect(page.locator('#site-export-sources')).toBeEnabled();
           await page.locator('#modal-site-export').screenshot({path:path.join(artifacts, `website-dialog-${mode}-${width}.png`)});
           const modeDownload=page.waitForEvent('download');
           await page.locator('#site-export-download').click();
           await modeDownload;
           assert.deepEqual(posts.at(-1),{project_token:'selected-manuscript-context', include_research:false,
-            include_source_files:false,mode,publication_profile:'public',max_chapter:1});
+            include_source_files:false,mode,publication_profile:'public',max_chapter:1,
+            ...(mode === 'reader' ? {analysis_sections:['chapters','language']} : {})});
         }
+        await page.locator('#site-export-sources').check();
+        await page.keyboard.press('Escape');
+        await page.locator('#btn-site-export').click();
+        await expect(page.locator('#site-export-mode')).toHaveValue('companion');
+        await expect(page.locator('#site-export-profile')).toHaveValue('public');
+        await expect(page.locator('#site-export-max-chapter')).toHaveValue('1');
+        await expect(page.locator('#site-export-sources')).toBeChecked();
+        await expect(page.locator('#site-export-preflight')).toBeHidden();
+        await page.evaluate(() => window.LixityPublicationSettings.accepted({
+          public:{title:'Selected public context', introduction:'', entries:[]},
+          other:{title:'Other context', introduction:'', entries:[]},
+        }));
+        await expect(page.locator('#site-export-sources')).not.toBeChecked();
+        await page.locator('#site-export-sources').check();
+        await page.locator('#site-export-profile').selectOption('other');
+        await expect(page.locator('#site-export-sources')).not.toBeChecked();
+        await page.locator('#site-export-profile').selectOption('public');
+        await page.locator('#site-export-sources').check();
+        await page.evaluate(() => window.LixityPublicationSettings.accepted({}));
+        await expect(page.locator('#site-export-profile')).toHaveValue('');
+        await expect(page.locator('#site-export-max-chapter')).toHaveValue('');
+        await expect(page.locator('#site-export-sources')).not.toBeChecked();
+        await expect(page.locator('#site-export-download')).toBeDisabled();
+        await page.evaluate(() => window.LixityPublicationSettings.accepted({public: {title:'Selected public context', introduction:'', entries:[]}}));
+        await page.locator('#site-export-profile').selectOption('public');
+        await page.locator('#site-export-max-chapter').selectOption('1');
+        await page.evaluate(() => { document.body.dataset.manuscriptProjectToken = 'other-project-context'; });
+        await expect(page.locator('#site-export-mode')).toHaveValue('review');
+        await expect(page.locator('#site-export-profile')).toHaveValue('');
+        await expect(page.locator('#site-export-max-chapter')).toHaveValue('');
+        await expect(page.locator('#site-export-sources')).not.toBeChecked();
+        let releaseOldExport, reportStarted;
+        const oldExportWaiting = new Promise(resolve => { releaseOldExport = resolve; });
+        const oldExportStarted = new Promise(resolve => { reportStarted = resolve; });
+        let lateDownloads = 0;
+        page.on('download', () => { lateDownloads++; });
+        await page.route('**/api/site-export', async route => {
+          reportStarted(); await oldExportWaiting;
+          await route.fulfill({contentType:'application/zip', body:Buffer.from('504b0506000000000000000000000000000000000000', 'hex')});
+        }, {times:1});
+        await page.locator('#site-export-download').click(); await oldExportStarted;
+        await page.evaluate(() => { document.body.dataset.manuscriptProjectToken = 'third-project-context'; });
+        releaseOldExport();
+        await expect(page.locator('#site-export-download')).toBeEnabled();
+        assert.equal(lateDownloads, 0, 'A late ZIP must not download in a different project context');
+        await page.keyboard.press('Escape');
+        await page.evaluate(() => { document.body.dataset.manuscriptProjectToken = 'selected-manuscript-context'; });
+        await page.locator('#btn-site-export').click();
         await page.locator('#site-export-mode').selectOption('review');
       }
       if (locale !== 'en') {
+        await page.locator('#site-export-mode').selectOption('reader');
+        await page.locator('#site-export-profile').selectOption('public');
+        await expect(page.locator('#site-export-analysis-options')).toBeVisible();
+        await expect(page.locator('#site-export-analysis-full')).not.toBeChecked();
+        await page.locator('#site-export-analysis-language').check();
+        if (locale === 'de') await page.locator('#modal-site-export').screenshot({path:path.join(artifacts, `website-analysis-de-${width}.png`)});
         await page.locator('#site-export-mode').selectOption('companion');
+        await expect(page.locator('#site-export-analysis-options')).toBeHidden();
         await page.locator('#site-export-profile').selectOption('public');
         await page.locator('#site-export-max-chapter').selectOption('1');
         await expect(page.locator('#site-export-download')).toBeEnabled();

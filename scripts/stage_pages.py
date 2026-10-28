@@ -114,21 +114,28 @@ def _demo_bundle_files(source: Path, *, directory: str = "demo", entrypoint: str
     if not manifest.exists():
         return set()
     data = json.loads(manifest.read_text(encoding="utf-8"))
-    if (not isinstance(data, dict) or data.get("schema_version") != "lixity-read-only-site/1"
+    version = data.get("schema_version") if isinstance(data, dict) else None
+    approved_analysis = (mode == "reader" and version == "lixity-read-only-site/2"
+                         and isinstance(data.get("publication"), dict)
+                         and data["publication"].get("analysis_sections") == ["chapters"])
+    if (not isinstance(data, dict) or not (version == "lixity-read-only-site/1" or approved_analysis)
             or data.get("entrypoint") != entrypoint or not isinstance(data.get("files"), dict)
             or entrypoint not in data["files"]):
         raise ValueError("The public demo requires a reviewed website manifest")
+    if approved_analysis and "analysis.html" not in data["files"]:
+        raise ValueError("The reviewed reader analysis page is missing")
     if mode is not None and (data.get("mode") != mode
             or not isinstance(data.get("capabilities"), dict)
-            or data["capabilities"].get("analysis") is not False
+            or data["capabilities"].get("analysis") is not approved_analysis
             or data["capabilities"].get("research") is not False
             or data["capabilities"].get("automatic_external_requests") is not False):
-        raise ValueError("Reader examples require their explicit publication mode without archive analysis or analytics")
+        raise ValueError("Reader examples require their reviewed publication mode and analysis scope")
     selected = {directory + "/manifest.json"}
     for name, metadata in data["files"].items():
         approved = isinstance(name, str) and (
             (directory == "demo" and "demo/" + name in DOCS_ROOT_FILES)
             or (mode is not None and name == "index.html")
+            or (approved_analysis and name == "analysis.html")
             or re.fullmatch(r"assets/sources/[0-9a-f]{64}\.(?:jpg|png|txt|pdf)", name)
             or re.fullmatch(r"licenses/(?:Lixity-LICENSE|[A-Za-z0-9._-]+\.LICENSE)", name)
         )

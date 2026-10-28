@@ -129,6 +129,10 @@ Try the same fictional project as a
 or a [standalone companion](https://mfahsold.github.io/lixity/demo/companion/index.html).
 These curated reading copies are different from the analysis/research workspace:
 they contain selected material, not the full archive.
+Current main can optionally include selected chapter or language measurements,
+or a fuller analysis of the exported chapters, in a reader copy. Its figures use
+standard settings and may differ from project-specific analysis; later chapters
+and internal work markers remain outside that copy.
 
 <details>
 <summary>Analysis controls, revision-aware research and other project tools</summary>

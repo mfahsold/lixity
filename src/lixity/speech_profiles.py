@@ -17,6 +17,8 @@ from pydantic import (
     model_validator,
 )
 
+from .speech_controls import speech_control_support
+
 QWEN_MODEL = "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice"
 QWEN_DESIGN_MODEL = "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign"
 QWEN_LANGUAGES = {
@@ -165,6 +167,7 @@ def audio_capabilities() -> dict[str, Any]:
             "name": "Qwen3-TTS 1.7B CustomVoice", "targets": ["local", "jetson"], "languages": list(QWEN_LANGUAGES),
             "voices": {voice: {"name": voice, "languages": list(QWEN_LANGUAGES)} for voice in QWEN_VOICES},
             "instructions": True,
+            "control_support": speech_control_support("qwen3").as_dict(),
             "speed": {"supported": False, "minimum": 1.0, "maximum": 1.0, "default": 1.0},
             "model": QWEN_MODEL,
         },
@@ -172,6 +175,7 @@ def audio_capabilities() -> dict[str, Any]:
             "name": "Qwen3-TTS 1.7B VoiceDesign", "targets": ["local", "jetson"],
             "languages": list(QWEN_LANGUAGES), "voices": {}, "voice_design": True,
             "instructions": True,
+            "control_support": speech_control_support("qwen3-design").as_dict(),
             "speed": {"supported": False, "minimum": 1.0, "maximum": 1.0, "default": 1.0},
             "model": QWEN_DESIGN_MODEL,
         },

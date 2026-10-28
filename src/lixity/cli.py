@@ -570,7 +570,8 @@ _lixity_complete() {
         return 0
     fi
     if [[ ${COMP_WORDS[1]} == export-site ]]; then
-        COMPREPLY=( $(compgen -W "--help --project --language --json -o --output --include-research --include-source-files --mode --publication-profile --max-chapter" -- "$cur") )
+        if [[ $prev == --analysis ]]; then COMPREPLY=( $(compgen -W "chapters language full all" -- "$cur") ); return 0; fi
+        COMPREPLY=( $(compgen -W "--help --project --language --json -o --output --include-research --include-source-files --mode --publication-profile --max-chapter --analysis" -- "$cur") )
         COMPREPLY+=( $(compgen -f -- "$cur") )
         return 0
     fi
@@ -760,6 +761,7 @@ __LIXITY_ZSH_COMMANDS__
             '--mode[Reading format]:mode:(review reader companion)' \
             '--publication-profile[Root-local reading profile]:name:' \
             '--max-chapter[Omit content after this chapter]:chapter:' \
+            '*--analysis[Optional reader analysis]:section:(chapters language full all)' \
             '--include-research[Include authored history and cited excerpts]' \
             '--include-source-files[Also include original source files and full text]' \
             '--json[Print the export manifest]' \
@@ -1885,6 +1887,8 @@ def _main(argv: list[str] | None = None) -> int:
             p.add_argument("--mode", choices=SITE_MODES, default="review", help="Review workspace, novel with curated notes, or companion without novel text")
             p.add_argument("--publication-profile", metavar="NAME", help="Root-local site_publications profile for reader/companion mode")
             p.add_argument("--max-chapter", type=int, metavar="N", help="In publication modes, omit later chapters, notes and their assets from the exported files")
+            p.add_argument("--analysis", action="append", choices=("chapters", "language", "full", "all"),
+                           help="Reader analysis to disclose; repeat chapters/language or select full (all is an alias); default none")
             p.add_argument("--json", action="store_true", help="Print the versioned export manifest as JSON")
             p.epilog = (
                 "Creates a portable read-only snapshot, not an authenticated website or backup. "
@@ -2300,10 +2304,15 @@ def _main(argv: list[str] | None = None) -> int:
         if not args.preflight and not args.output:
             parser.error("export-site requires --output, or --preflight to check without writing")
         try:
+            sections = args.analysis or []
+            if "all" in sections:
+                if sections != ["all"]:
+                    raise ValueError("The all-analysis choice cannot be combined with other sections")
+                sections = ["full"]
             options = SiteExportOptions(include_research=args.include_research,
                                         include_source_files=args.include_source_files,
                                         mode=args.mode, publication_profile=args.publication_profile,
-                                        max_chapter=args.max_chapter)
+                                        max_chapter=args.max_chapter, analysis_sections=sections)
             if args.preflight:
                 report = prepare_site(args.project, manuscript=args.file, language=args.language,
                                       **options.model_dump(exclude_defaults=True)).preflight()

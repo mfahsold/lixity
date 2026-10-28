@@ -654,9 +654,9 @@ restating formulas.
 | Heuristic | Rule | Limits |
 | :--- | :--- | :--- |
 | Sentence bins | ≤ 6 / 7–15 / 16–25 / > 25 words (`analyzer.py`, `pacing.py`) | Bins describe the supplied text; tokenless fragments distort ASL |
-| Hook | First sentence ≤ `HOOK_SHORT_SENTENCE` (8) words or ending in `…` (`pacing.py`) | Only the ellipsis character scores; `...` does not |
+| Hook | Closing sentence ≤ `HOOK_SHORT_SENTENCE` (8) words, ending in `?`, `!` or `…`, or containing detected dialogue (`pacing.py`) | Each condition adds one point; this is not a validated suspense measure. Only the ellipsis character scores; `...` does not |
 | Dialogue paragraph | ≥ 50 % of the paragraph's words inside dialogue spans (`dialogue.py`) | Quotation conventions differ per language |
-| Tense mixed/switch | `mixed`: ≥ 2 present and ≥ 2 past markers and minority share ≥ 25 %; `switch`: the dominant tense changes between consecutive paragraphs (`style_profile.py`) | Whole-word stop lists and curated noun exclusions; German `-tet` intentionally omitted (present `arbeitet`, participle `abgewartet` vs rare past 2pl `machtet`); no productive present pattern |
+| Tense mixed/switch | `mixed`: ≥ 2 present and ≥ 2 past markers and minority share ≥ 25 %; `switch`: the dominant tense changes between consecutive paragraphs (`style_profile.py`) | Lexical cues and language-specific patterns are incomplete and can be ambiguous; they are not grammatical parses. Current main no longer treats an unknown German `-te/-ten/-test` ending alone as a past cue; no productive present pattern |
 | Sentence splitter | Language abbreviation tables, digit and initial guards; utterance `no.`/`co.` split; prose splits keep blank-line block boundaries (`split_prose_sentences`) | Tables are curated and incomplete; tokenless fragments are not sentences; an unterminated block stays one fragment unit with its token length |
 | Severity | `classify_severity` truth table; defaults: 3 = switch + mixed + minority ≥ 3, 2 = (switch + minority ≥ 2) or (mixed + minority ≥ 3), 1 = either, 0 = neither | Only `flag_min_severity` reaches CLI/API/config; other `ProfileThresholds` fields need direct `ParagraphProfiler` construction |
 | Dominance | Neutral with at most one marker; otherwise present when `present/(past+ε) > 1.5`, past when `< 0.67`, mixed within the band; ε = 0.001 (`style_profile.py`) | Ratio bands are conventions, not measured boundaries |
@@ -695,6 +695,13 @@ word is explicitly listed as present and not past in the curated inventory.
 Auxiliary-plus-participle candidates are preserved, including participles that
 also occur as finite forms (`haben erzählt`, `a écrit`). This corrects collisions such as
 German `halten` and Dutch `Wij moeten`; it does not infer syntax from endings.
+**Current main:** German removes the unrestricted weak-past suffix rule used in
+v0.7.6: `feuchten` and `kunstvollsten` no longer become past cues merely from
+their endings. Selected forms of `üben` and `singen` have been added to the
+lexicon, including `übt`; unknown regular past forms such as `flatterten` can
+now be missed. Listed forms can still be ambiguous, as can auxiliary/participle
+matches. This intentionally changes the counts and dependent results; regenerate
+analyses before comparison and review old decisions against the new evidence.
 In German, listed auxiliary/participle pairs additionally form one past cue;
 their contained lexical matches are consumed, so three recognized perfect
 constructions give three past cues and no present-auxiliary double count.
@@ -795,9 +802,8 @@ prompt for reading, never a verdict about authorship, quality or machine origin.
 
 References:
 
-- Bestgen, Y. (2024). *The impact of text length on the estimation of lexical
-  diversity: A methodological review.* (Length problem, HD-D/MATTR/MTLD
-  recommendations, parameter 42.)
+- Bestgen, Y. (2024). *Measuring lexical diversity in texts: The twofold length
+  problem.* *Language Learning* 74(3), 638–671. doi:10.1111/lang.12630
 - Bestgen, Y. (2024). *Estimating lexical diversity using the moving average
   type-token ratio (MATTR): Pros and cons.* (Positional weighting of MATTR.)
 - Covington, M. A., & McFall, J. D. (2010). Cutting the Gordian knot: The

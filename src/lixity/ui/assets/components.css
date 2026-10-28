@@ -414,6 +414,7 @@ details.nda .row { margin-top: .5rem; }
 .settings-section > * + * { margin-top: var(--space-3); }
 .settings-section > .ctl-note { margin-top: 0; }
 .settings-section > .settings-advanced { margin-top: var(--space-3); }
+.site-export-analysis-choices { display: flex; flex-wrap: wrap; gap: .5rem 1rem; }
 
 .ctl:disabled { opacity: .6; cursor: default; }
 .ctl[aria-busy="true"] { cursor: wait; }

@@ -8,6 +8,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Reader websites can explicitly include selected chapter or language
+  measurements, or a fuller analysis of capped chapters. Opt-in exports use
+  `lixity-read-only-site/2`; the synthetic reader demo shows chapter measurements.
 - CLI audio status, fresh paragraph previews by source line and opt-in segment
   progress; long renders reject changed source, settings and active direction.
 - Experimental Qwen3-TTS 1.7B VoiceDesign profiles with an explicit voice description, separate model identity and a shared CLI/native audio path. The matching offline worker must be started explicitly.
@@ -18,6 +21,17 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   planner for previews and chapter renders; Qwen retains its existing full model.
 
 ### Changed
+- The default German tense heuristic no longer guesses past tense from arbitrary
+  `-te/-ten/-test` endings, avoiding adjective false positives; selected cues
+  such as `übt` are added. Unlisted regular past forms may now be missed and
+  other ambiguities remain. Recompute comparisons; retained observations with
+  saved decisions become stale, while disappeared observations are unmatched.
+  Existing review storage is preserved.
+- Reading website export retains choices within the current project context,
+  clears source-file consent when the profile changes and rejects stale downloads.
+- Pronunciation replacements can be filtered and edited individually, with
+  explicit save/discard protection for project audio drafts. Speech control
+  semantics and Qwen adapter capability declarations share one implementation.
 - German paragraph-layer reports localize their explanations. Empty selections
   explain actual chapter comparison limits and show a shell-quoted command for
   full evidence; versioned JSON contracts and measurements remain unchanged.

@@ -8,11 +8,19 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal, get_args
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SerializerFunctionWrapHandler,
+    model_serializer,
+    model_validator,
+)
 
 from .site_publications import ProfileKey
 
 SITE_SCHEMA = "lixity-read-only-site/1"
+SITE_ANALYSIS_SCHEMA = "lixity-read-only-site/2"
 DATA_SCHEMA = "lixity-read-only-site-data/1"
 MAX_SITE_BYTES = 200 * 1024 * 1024
 MAX_SITE_DATA_BYTES = 64 * 1024 * 1024
@@ -21,6 +29,7 @@ MAX_SITE_REVISIONS = 10_000
 MAX_SITE_RESPONSES = 50_000
 Digest = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
 SiteMode = Literal["review", "reader", "companion"]
+AnalysisSection = Literal["chapters", "language", "full"]
 SITE_MODES = get_args(SiteMode)
 
 
@@ -36,9 +45,24 @@ class SiteExportOptions(_SiteModel):
     mode: SiteMode = "review"
     publication_profile: ProfileKey | None = None
     max_chapter: Annotated[int, Field(ge=0)] | None = None
+    analysis_sections: Annotated[list[AnalysisSection], Field(max_length=3)] = Field(default_factory=list)
+
+    @model_serializer(mode="wrap")
+    def serialize_options(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        """Keep the v1 default representation unchanged while exposing opt-ins."""
+        data: dict[str, Any] = handler(self)
+        if not self.analysis_sections:
+            data.pop("analysis_sections", None)
+        return data
 
     @model_validator(mode="after")
     def source_scope(self) -> SiteExportOptions:
+        if len(set(self.analysis_sections)) != len(self.analysis_sections):
+            raise ValueError("Analysis sections must not be repeated")
+        if "full" in self.analysis_sections and len(self.analysis_sections) != 1:
+            raise ValueError("Full analysis cannot be combined with individual analysis sections")
+        if self.mode != "reader" and self.analysis_sections:
+            raise ValueError("Selected analysis is available only in reader mode")
         if self.mode == "review":
             if self.publication_profile is not None or self.max_chapter is not None:
                 raise ValueError("Publication profile and chapter cap require reader or companion mode")
@@ -113,7 +137,7 @@ class SiteCapabilities(_SiteModel):
 class SiteManifest(_SiteModel):
     """Inventory for the publication projection; it is not a restore manifest."""
 
-    schema_version: Literal["lixity-read-only-site/1"]
+    schema_version: Literal["lixity-read-only-site/1", "lixity-read-only-site/2"]
     product_version: str
     created_at: str
     entrypoint: str
@@ -132,14 +156,20 @@ class SiteManifest(_SiteModel):
         scope = SiteExportOptions(include_research=self.research.included,
                                   include_source_files=self.capabilities.source_files,
                                   mode=self.mode,
-                                  publication_profile=(self.publication or {}).get("profile"))
+                                  publication_profile=(self.publication or {}).get("profile"),
+                                  analysis_sections=(self.publication or {}).get("analysis_sections", []))
         if (self.capabilities.research != scope.include_research
                 or (self.research.snapshot is not None) != scope.include_research
                 or (not scope.include_research and self.research.revision_count != 0)
                 or self.entrypoint not in self.files):
             raise ValueError("Website manifest scope and inventory disagree")
-        if self.mode != "review" and (self.capabilities.analysis or self.analysis is not None):
-            raise ValueError("Reader publications must not contain analysis payloads")
+        if self.schema_version == SITE_SCHEMA and self.mode != "review" and (
+                scope.analysis_sections or self.capabilities.analysis or self.analysis is not None):
+            raise ValueError("Version 1 reader publications must not contain analysis payloads")
+        if self.schema_version == SITE_ANALYSIS_SCHEMA and (
+                self.mode != "reader" or not scope.analysis_sections or not self.capabilities.analysis
+                or self.analysis is None or "analysis.html" not in self.files):
+            raise ValueError("Version 2 requires explicitly selected reader analysis")
         return self
 
 

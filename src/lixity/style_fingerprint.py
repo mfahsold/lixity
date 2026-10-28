@@ -251,6 +251,8 @@ MIN_DIMENSION_CHAPTERS = 3
 MIN_DIMENSION_FEATURES = 3
 DIM_SCORE_THRESHOLD = 2.5  # |chapter score| from here: strong position on a dimension
 REDUNDANCY_RHO = 0.8  # |Spearman rho| from here: features measure (almost) the same
+DEFAULT_FDR_Q = 0.05
+DEFAULT_FDR_METHOD = "bh"
 
 
 @dataclass(frozen=True)
@@ -285,8 +287,8 @@ class FingerprintThresholds:
 
     z_mild: float = 2.5  # significance-adjusted z from here: noticeable deviation
     z_strong: float = 3.5  # significance-adjusted z from here: strong deviation
-    fdr_q: float = 0.05  # Benjamini-Hochberg / Benjamini-Yekutieli false-discovery rate
-    fdr_method: str = "bh"  # "bh" (default) or "by" (arbitrary dependence)
+    fdr_q: float = DEFAULT_FDR_Q  # Benjamini-Hochberg / Benjamini-Yekutieli false-discovery rate
+    fdr_method: str = DEFAULT_FDR_METHOD  # "bh" (default) or "by" (arbitrary dependence)
     min_chapters: int = 2  # below this chapter count no baseline is derived
     dim_score_threshold: float = DIM_SCORE_THRESHOLD  # |dimension score| from here: flagged
     flag_min_severity: int = 2  # paragraph severity floor for the flags panel (1|2|3)
@@ -332,7 +334,7 @@ def dimension_loading_poles(
 
 
 def benjamini_hochberg(
-    cells: list[tuple[int, str, float]], q: float = 0.05
+    cells: list[tuple[int, str, float]], q: float = DEFAULT_FDR_Q
 ) -> list[tuple[int, str]]:
     """
     Benjamini-Hochberg FDR control over (chapter, feature, p-value) cells.
@@ -348,7 +350,7 @@ def benjamini_hochberg(
 
 
 def benjamini_yekutieli(
-    cells: list[tuple[int, str, float]], q: float = 0.05
+    cells: list[tuple[int, str, float]], q: float = DEFAULT_FDR_Q
 ) -> list[tuple[int, str]]:
     """
     Benjamini-Yekutieli FDR control: BH step-up with the harmonic factor
@@ -363,7 +365,7 @@ def benjamini_yekutieli(
 
 
 def fdr_rejects(
-    cells: list[tuple[int, str, float]], q: float = 0.05, method: str = "bh"
+    cells: list[tuple[int, str, float]], q: float = DEFAULT_FDR_Q, method: str = DEFAULT_FDR_METHOD
 ) -> list[tuple[int, str]]:
     """Dispatch BH (default) or BY multiplicity control."""
     if method.lower() in ("by", "benjamini-yekutieli", "benjamini_yekutieli"):

@@ -63,6 +63,10 @@ desktop/mobile navigation, literal filenames, encoded output downloads, stale
 project rejection and mismatched research contexts. Synthetic source, settings
 and output bytes must remain unchanged after inspection.
 
+The audio-pronunciations suite edits and filters synthetic pronunciation entries
+at desktop and mobile widths, checks duplicate/draft guards and verifies saved
+project settings retain unrelated replacements, including keys containing `=`.
+
 The audio-profile-delete suite uses a synthetic native project at desktop and
 mobile widths. It checks that referenced profiles remain selectable, removing an
 unreferenced profile is a visible draft, and saving persists the removal.

@@ -137,7 +137,7 @@ lixity service stop
 
 After a computer restart, start the service again; no reimport is needed. Restart uses the saved launch settings, not a later project choice in the browser. A browser reload alone does not update running code.
 
-Since v3.0.1, foreground `serve` and managed start/restart accept `--min-chapters N`, an integer of at least 2 (default 2). Restart retains the saved threshold unless overridden. See the [service command reference](../USAGE.md#lixity-service).
+Foreground `serve` and managed start/restart accept `--min-chapters N`, an integer of at least 2 (default 2). Restart retains the saved threshold unless overridden. See the [service command reference](../USAGE.md#lixity-service).
 
 The controller manages its own instances. A foreground `lixity serve` process still stops with `Ctrl+C`; external systemd, launchd or Task Scheduler entries use their own manager. Login startup is an explicit advanced choice in the [setup reference](../INSTALLATION.md#optional-startup-at-login). Start Zotero for new captures; retained research stays readable while it is closed.
 

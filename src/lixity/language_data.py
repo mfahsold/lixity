@@ -448,7 +448,8 @@ PROFILE_DATA: dict[str, dict[str, Any]] = {
             "lache|lachst|lacht|lachen|schaue|schaust|schaut|schauen|"
             "hole|holst|holt|holen|stelle|stellst|stellt|stellen|"
             "packe|packst|packt|packen|drehe|drehst|dreht|drehen|"
-            "arbeite|arbeitest|arbeitet|arbeiten"
+            "arbeite|arbeitest|arbeitet|arbeiten|übe|übst|übt|üben|"
+            "singe|singst|singt|singen"
             r")\b"
         ),
         "praeteritum_regex": (
@@ -480,7 +481,8 @@ PROFILE_DATA: dict[str, dict[str, Any]] = {
             "wischte|wischten|packte|packten|stellte|stellten|atmete|atmeten|"
             "weinte|weinten|nickte|nickten|zuckte|zuckten|zitterte|zitterten|"
             "kippte|kippten|öffnete|öffneten|tanzte|tanzten|lachte|lachten|"
-            "kochte|kochten|träumte|träumten"
+            "kochte|kochten|träumte|träumten|arbeitete|arbeiteten|"
+            "tastete|tasteten|übte|übten|sang|sangen"
             r")\b"
         ),
         # Listed finite forms are lexical cues, not a syntactic perception parse.
@@ -1447,11 +1449,8 @@ GERMAN_PRODUCTIVE_PARTICIPLE = (
 LANGUAGE_PATTERNS = {
     "de": {
         "praeteritum": [
-            # Weak preterite (stem + -te/-test/-ten); the stop list guards
-            # nouns and adjectives. "-tet" is deliberately absent: the
-            # present 3sg/2pl form (arbeitet, rechnet) is far more frequent
-            # than the rare past 2pl (machtet).
-            r"\b(?!bitte|dritte|fünfte|achte|vierte|sechste|siebte|neunte|zehnte|Kate|Note|Date|Mitte|Route|Torte|Rente|Akte|Quote|Kante|Warte|Worte|Schritte|Gerüchte|Beichte|Nichte|Geschichte|Karte|Seite|Städte|Tante|Kälte)\w{3,}(?:test|ten|te)\b",
+            # Unknown weak-looking endings alone are not sufficient evidence:
+            # attributive adjectives and nouns share -te/-ten morphology.
             # Perfekt/Plusquamperfekt: haben/sein + Partizip II (ge-/ver-/er-/be-/ent-/zer-/miss-…).
             r"\b(?:habe|hast|hat|haben|habt|hatte|hatten|hattet|bin|bist|ist|sind|seid|war|warst|waren|wart)\s+\w*(?:ge|ver|er|be|ent|zer|miss|hinter|wider)\w+(?:t|en)\b",
         ],
@@ -3749,7 +3748,7 @@ HELP_TEXTS = {
         "help_asl": "Mittlere Wortzahl je erkanntem Satz: Ein Satz mit 10 und einer mit 20 Wörtern ergeben ASL 15. Das beschreibt Länge, nicht Spannung oder Erzähltempo.",
         "help_ttr": "Anteil verschiedener Wortformen: 20 Formen bei 100 gezählten Wörtern ergeben 0,20. Längere Passagen senken diese Quote oft; ähnliche Längen und Themen vergleichen.",
         "help_yules": "Konzentration auf wiederholte Wortformen. Höheres K bedeutet stärkere Dominanz häufiger Formen; kommt jede Form nur einmal vor, ist K gleich 0. Textlänge und Kontext beeinflussen Vergleiche; keine Qualitätsnote.",
-        "help_flesch": "Rechnerische Satz- und Wortlängenstruktur nach der Formel des Sprachprofils (z. B. Amstad/Flesch). Beschreibt syntaktische Schachtelung und Dichte, keine Qualitätsnote (literarische Hypotaxen erzielen naturgemäß niedrigere Werte).",
+        "help_flesch": "Die Formel des Sprachprofils verwendet Wörter pro Satz und geschätzte Silben pro Wort. Ein höherer Wert bedeutet nach diesem Modell leichter lesbar; er ist weder eine Qualitätsnote noch ein Test des Verständnisses.",
         "help_lix": "Mittlere Satzlänge plus Prozentanteil der Wörter mit mehr als 6 Zeichen. Längere Sätze oder Wörter erhöhen den Wert; keine allgemeine Alters- oder Qualitätsbewertung.",
         "help_dialogue": "Anteil gezählter Wörter in erkannten Anführungszeichen. 30% bedeuten etwa 3 von 10 Wörtern in Zitaten; Zitate müssen kein Dialog sein, andere Zitatformen können unerkannt bleiben.",
         "help_function_words": "Anteil gezählter Wörter aus der Funktionswortliste des Sprachprofils, etwa Artikel und Pronomen. Höher heißt mehr solche Wörter, nicht weniger Inhalt; die Listen unterscheiden sich nach Sprache.",
@@ -3842,7 +3841,7 @@ HELP_TEXTS = {
         "help_asl": "Average words per detected sentence: a 10-word and a 20-word sentence give ASL 15. This describes length, not suspense or narrative pace.",
         "help_ttr": "Share of different word forms: 20 forms among 100 counted words gives 0.20. Longer passages often lower this ratio; compare similar lengths and topics.",
         "help_yules": "Concentration on repeated word forms. Higher K means frequent forms dominate more; if every form appears once, K is 0. Text length and context affect comparisons; this is not a quality score.",
-        "help_flesch": "Sentence- and word-length formula for the active profile (e.g. Flesch/Amstad). Reflects syntactic density and nesting rather than prose quality (literary hypotaxis naturally scores lower).",
+        "help_flesch": "The selected language formula uses words per sentence and estimated syllables per word. A higher value means easier reading under this model; it is not a quality grade or a comprehension test.",
         "help_lix": "Average sentence length plus the percentage of words longer than 6 characters. It rises with longer sentences or words; it is not a universal reader-age or quality rating.",
         "help_dialogue": "Share of counted words inside recognized quotation marks. For example, 30% means 3 in 10 words are quoted; quotations may not be dialogue, and other quotation formats can be missed.",
         "help_function_words": "Share of counted words on the profile's function-word list, such as articles and pronouns. Higher means more listed grammatical words, not less meaning; lists differ by language.",
@@ -3875,7 +3874,7 @@ HELP_TEXTS = {
         "help_asl": "Nombre moyen de mots par phrase détectée : une phrase de 10 mots et une de 20 mots donnent un ASL de 15. Cela décrit la longueur, pas le suspense ni le rythme du récit.",
         "help_ttr": "Part des formes de mots différentes : 20 formes parmi 100 mots comptés donnent 0,20. Les passages plus longs font souvent baisser ce rapport ; comparez des longueurs et des sujets similaires.",
         "help_yules": "Concentration sur les formes de mots répétées. Un K plus élevé signifie que les formes fréquentes dominent davantage ; si chaque forme apparaît une seule fois, K vaut 0. La longueur et le contexte influencent les comparaisons ; ce n'est pas une note de qualité.",
-        "help_flesch": "Estimation de la facilité de lecture par une formule pour la langue choisie. Elle utilise des indicateurs de longueur des phrases et des mots ; plus élevé signifie plus facile selon ce modèle, pas une note de qualité ni un test de compréhension.",
+        "help_flesch": "La formule de la langue choisie utilise les mots par phrase et les syllabes estimées par mot. Une valeur plus élevée signifie une lecture plus facile selon ce modèle, pas une note de qualité ni un test de compréhension.",
         "help_lix": "Longueur moyenne des phrases plus pourcentage de mots de plus de 6 caractères. Le chiffre augmente avec des phrases ou des mots plus longs ; ce n'est pas une évaluation universelle de l'âge des lecteurs ou de la qualité.",
         "help_dialogue": "Part des mots comptés à l'intérieur de guillemets reconnus. Par exemple, 30 % signifie que 3 mots sur 10 sont entre guillemets ; les citations ne sont pas forcément du dialogue, et d'autres formats de citation peuvent ne pas être reconnus.",
         "help_function_words": "Part des mots comptés figurant dans la liste de mots-outils du profil, comme les articles et les pronoms. Plus élevé signifie davantage de mots grammaticaux de cette liste, pas moins de sens ; les listes diffèrent selon la langue.",
@@ -3938,7 +3937,7 @@ HELP_TEXTS = {
         "help_asl": "Promedio de palabras por oración detectada: una oración de 10 palabras y otra de 20 dan un ASL de 15. Describe la longitud, no el suspense ni el ritmo narrativo.",
         "help_ttr": "Proporción de formas de palabra distintas: 20 formas entre 100 palabras contadas dan 0,20. Los pasajes más largos suelen reducir esta proporción; compare longitudes y temas similares.",
         "help_yules": "Concentración en formas de palabra repetidas. Un K mayor significa que las formas frecuentes dominan más; si cada forma aparece una sola vez, K es 0. La longitud y el contexto del texto influyen en las comparaciones; no es una nota de calidad.",
-        "help_flesch": "Estimación de la facilidad de lectura mediante una fórmula para el idioma elegido. Usa indicadores de longitud de oraciones y palabras; un valor mayor significa más fácil según ese modelo, no una nota de calidad ni una prueba de comprensión.",
+        "help_flesch": "La fórmula del idioma elegido usa palabras por oración y sílabas estimadas por palabra. Un valor mayor indica una lectura más fácil según este modelo, no una nota de calidad ni una prueba de comprensión.",
         "help_lix": "Longitud media de las oraciones más el porcentaje de palabras de más de 6 caracteres. Aumenta con oraciones o palabras más largas; no es una valoración universal de la edad del lector ni de la calidad.",
         "help_dialogue": "Proporción de palabras contadas dentro de comillas reconocidas. Por ejemplo, 30 % significa que 3 de cada 10 palabras están entre comillas; las citas pueden no ser diálogo y otros formatos de cita pueden pasar inadvertidos.",
         "help_function_words": "Proporción de palabras contadas que figuran en la lista de palabras funcionales del perfil, como artículos y pronombres. Un valor mayor indica más palabras gramaticales de la lista, no menos significado; las listas varían según el idioma.",
@@ -4001,7 +4000,7 @@ HELP_TEXTS = {
         "help_asl": "Numero medio di parole per frase rilevata: una frase di 10 parole e una di 20 danno un ASL di 15. Descrive la lunghezza, non la suspense o il ritmo narrativo.",
         "help_ttr": "Quota di forme di parola diverse: 20 forme su 100 parole contate danno 0,20. I passaggi più lunghi spesso riducono questo rapporto; confronta lunghezze e argomenti simili.",
         "help_yules": "Concentrazione su forme di parola ripetute. Un K più alto significa che le forme frequenti dominano di più; se ogni forma appare una sola volta, K è 0. Lunghezza e contesto del testo influenzano i confronti; non è un voto di qualità.",
-        "help_flesch": "Stima della facilità di lettura con una formula per la lingua scelta. Usa indicatori di lunghezza delle frasi e delle parole; un valore più alto significa più facile secondo quel modello, non un voto di qualità o un test di comprensione.",
+        "help_flesch": "La formula della lingua scelta usa le parole per frase e le sillabe stimate per parola. Un valore più alto indica una lettura più facile secondo questo modello, non un voto di qualità o un test di comprensione.",
         "help_lix": "Lunghezza media delle frasi più percentuale di parole con più di 6 caratteri. Aumenta con frasi o parole più lunghe; non è una valutazione universale dell'età del lettore o della qualità.",
         "help_dialogue": "Quota di parole contate dentro virgolette riconosciute. Per esempio, 30% significa che 3 parole su 10 sono tra virgolette; le citazioni possono non essere dialogo e altri formati di citazione possono non essere rilevati.",
         "help_function_words": "Quota di parole contate presenti nella lista di parole funzionali del profilo, come articoli e pronomi. Un valore più alto indica più parole grammaticali della lista, non meno significato; le liste cambiano secondo la lingua.",
@@ -4064,7 +4063,7 @@ HELP_TEXTS = {
         "help_asl": "Média de palavras por frase detectada: uma frase de 10 palavras e outra de 20 dão um ASL de 15. Isso descreve o comprimento, não o suspense nem o ritmo narrativo.",
         "help_ttr": "Proporção de formas de palavra diferentes: 20 formas entre 100 palavras contadas dão 0,20. Passagens mais longas costumam reduzir essa proporção; compare comprimentos e temas semelhantes.",
         "help_yules": "Concentração em formas de palavra repetidas. Um K maior significa que as formas frequentes dominam mais; se cada forma aparece uma só vez, K é 0. O comprimento e o contexto do texto influenciam as comparações; não é uma nota de qualidade.",
-        "help_flesch": "Estimativa da facilidade de leitura por uma fórmula para a língua escolhida. Usa indicadores de comprimento de frases e palavras; um valor maior significa mais fácil segundo esse modelo, não uma nota de qualidade nem um teste de compreensão.",
+        "help_flesch": "A fórmula da língua escolhida usa palavras por frase e sílabas estimadas por palavra. Um valor maior indica leitura mais fácil segundo este modelo, não uma nota de qualidade nem um teste de compreensão.",
         "help_lix": "Comprimento médio das frases mais a porcentagem de palavras com mais de 6 caracteres. Aumenta com frases ou palavras mais longas; não é uma avaliação universal da idade do leitor nem da qualidade.",
         "help_dialogue": "Proporção de palavras contadas dentro de aspas reconhecidas. Por exemplo, 30% significa que 3 de 10 palavras estão entre aspas; as citações podem não ser diálogo e outros formatos de citação podem não ser reconhecidos.",
         "help_function_words": "Proporção de palavras contadas presentes na lista de palavras funcionais do perfil, como artigos e pronomes. Um valor maior indica mais palavras gramaticais da lista, não menos significado; as listas variam conforme a língua.",
@@ -4127,7 +4126,7 @@ HELP_TEXTS = {
         "help_asl": "Gemiddeld aantal woorden per herkende zin: een zin van 10 en een van 20 woorden geven ASL 15. Dit beschrijft lengte, geen spanning of verteltempo.",
         "help_ttr": "Aandeel verschillende woordvormen: 20 vormen onder 100 getelde woorden geven 0,20. Langere passages verlagen deze verhouding vaak; vergelijk teksten van vergelijkbare lengte en over vergelijkbare onderwerpen.",
         "help_yules": "Concentratie op herhaalde woordvormen. Een hogere K betekent dat veelvoorkomende vormen sterker overheersen; als elke vorm één keer voorkomt, is K 0. Tekstlengte en context beïnvloeden de vergelijking; dit is geen kwaliteitsscore.",
-        "help_flesch": "Schatting van leesgemak met een formule voor de gekozen taal. Die gebruikt indicatoren van zins- en woordlengte; hoger betekent volgens dat model makkelijker, geen kwaliteitscijfer of begripstest.",
+        "help_flesch": "De formule voor de gekozen taal gebruikt woorden per zin en geschatte lettergrepen per woord. Een hogere waarde betekent volgens dit model makkelijker lezen, geen kwaliteitscijfer of test van begrip.",
         "help_lix": "Gemiddelde zinslengte plus het percentage woorden met meer dan 6 tekens. Langere zinnen of woorden verhogen de waarde; dit is geen algemene beoordeling van lezersleeftijd of kwaliteit.",
         "help_dialogue": "Aandeel getelde woorden binnen herkende aanhalingstekens. Zo betekent 30% dat 3 op de 10 woorden tussen aanhalingstekens staan; citaten zijn niet altijd dialoog en andere citaatvormen kunnen worden gemist.",
         "help_function_words": "Aandeel getelde woorden uit de lijst met functiewoorden van het profiel, zoals lidwoorden en voornaamwoorden. Hoger betekent meer grammaticale woorden uit die lijst, geen minder betekenis; de lijsten verschillen per taal.",
@@ -4431,6 +4430,9 @@ class ReadabilityFormula(TypedDict):
     long_word_min: int
 
 
+# LIX uses words longer than six characters across the supported profiles.
+LIX_LONG_WORD_MIN = 6
+
 READABILITY: dict[str, ReadabilityFormula] = {
     "de": {
         "variant": "Amstad",
@@ -4438,7 +4440,7 @@ READABILITY: dict[str, ReadabilityFormula] = {
         "constant": 180.0,
         "asl_coef": 1.0,
         "asw_coef": 58.5,
-        "long_word_min": 6,
+        "long_word_min": LIX_LONG_WORD_MIN,
     },
     "en": {
         "variant": "Flesch",
@@ -4446,7 +4448,7 @@ READABILITY: dict[str, ReadabilityFormula] = {
         "constant": 206.835,
         "asl_coef": 1.015,
         "asw_coef": 84.6,
-        "long_word_min": 6,
+        "long_word_min": LIX_LONG_WORD_MIN,
     },
     "fr": {
         "variant": "Kandel-Moles",
@@ -4454,7 +4456,7 @@ READABILITY: dict[str, ReadabilityFormula] = {
         "constant": 207.0,
         "asl_coef": 1.015,
         "asw_coef": 73.6,
-        "long_word_min": 6,
+        "long_word_min": LIX_LONG_WORD_MIN,
     },
     "es": {
         "variant": "Szigriszt-Pazos",
@@ -4462,7 +4464,7 @@ READABILITY: dict[str, ReadabilityFormula] = {
         "constant": 206.835,
         "asl_coef": 1.0,
         "asw_coef": 62.35,
-        "long_word_min": 6,
+        "long_word_min": LIX_LONG_WORD_MIN,
     },
     "it": {
         "variant": "Franchina-Vacca",
@@ -4470,7 +4472,7 @@ READABILITY: dict[str, ReadabilityFormula] = {
         "constant": 217.0,
         "asl_coef": 1.3,
         "asw_coef": 60.0,
-        "long_word_min": 6,
+        "long_word_min": LIX_LONG_WORD_MIN,
     },
     "pt": {
         "variant": "Martins",
@@ -4478,7 +4480,7 @@ READABILITY: dict[str, ReadabilityFormula] = {
         "constant": 248.835,
         "asl_coef": 1.015,
         "asw_coef": 84.6,
-        "long_word_min": 6,
+        "long_word_min": LIX_LONG_WORD_MIN,
     },
     "nl": {
         "variant": "Douma",
@@ -4486,7 +4488,7 @@ READABILITY: dict[str, ReadabilityFormula] = {
         "constant": 207.0,
         "asl_coef": 0.93,
         "asw_coef": 77.0,
-        "long_word_min": 6,
+        "long_word_min": LIX_LONG_WORD_MIN,
     },
     "generic": {
         "variant": "Flesch",
@@ -4494,7 +4496,7 @@ READABILITY: dict[str, ReadabilityFormula] = {
         "constant": 206.835,
         "asl_coef": 1.015,
         "asw_coef": 84.6,
-        "long_word_min": 6,
+        "long_word_min": LIX_LONG_WORD_MIN,
     },
 }
 

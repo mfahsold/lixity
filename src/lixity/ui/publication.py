@@ -13,6 +13,7 @@ def render_publication(
     publication: Mapping[str, Any], *, reader_document: Sequence[ReaderBlock] | None = None,
     labels: Mapping[str, str] | None = None, language_key: str = "en",
     resources: Mapping[str, str] | None = None,
+    analysis_available: bool = False,
 ) -> str:
     """Render only prepared public content; progress is not a privacy boundary.
 
@@ -72,6 +73,8 @@ def render_publication(
     ]
     if publication.get("introduction", "").strip():
         parts.append(f'<div class="research-prose markdown-body publication-introduction">{esc(publication["introduction"])}</div>')
+    if analysis_available:
+        parts.append(f'<p><a class="ctl" href="analysis.html">{esc(ui_labels.get("publication_analysis_link", "Analysis"))}</a></p>')
     parts.extend([
         '<div class="publication-reading-layout">',
     ])

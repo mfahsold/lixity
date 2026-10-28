@@ -47,7 +47,7 @@ server.serve_forever()
       await page.locator('#btn-site-export').click();
       const check = page.locator('#site-export-check');
       await expect(check).toBeVisible();
-      assert.equal(checks, width === 1440 ? 0 : 1, 'Opening the dialog must not prepare a package');
+      assert.equal(checks, width === 1440 ? 0 : 2, 'Opening the dialog must not prepare a package');
       await check.click();
       await expect(page.locator('#site-export-preflight')).toBeVisible();
       await expect(page.locator('#site-export-preflight')).toContainText('MiB');
@@ -57,6 +57,15 @@ server.serve_forever()
       assert.equal(downloads, 0);
       assert(await page.locator('#modal-site-export').evaluate(n => n.scrollWidth <= n.clientWidth + 1));
       await page.locator('#modal-site-export').screenshot({path:path.join(artifacts, `check-${width}.png`)});
+      await page.keyboard.press('Escape');
+      await page.locator('#btn-site-export').click();
+      await expect(page.locator('#site-export-preflight')).toBeHidden();
+      await page.route('**/api/site-preflight', route => route.fulfill({json:{ok:true, preflight:{
+        schema_version:'lixity-site-preflight/1', sizes:{html_bytes:1048576, total_html_bytes:3145728, zip_bytes:2097152, total_bytes:5242880},
+        media:{references:0, unavailable:0, not_packaged:0, missing_attribution:0, ordinary_image_references:0}, warnings:[],
+      }}}), {times:1});
+      await check.click();
+      await expect(page.locator('#site-export-preflight')).toContainText('3.00 MiB');
       await page.locator('#site-export-research').check();
       await expect(page.locator('#site-export-preflight')).toBeHidden();
     }

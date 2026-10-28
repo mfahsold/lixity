@@ -94,8 +94,8 @@ def test_past_forms_compounds_and_ambiguous_forms_keep_their_cues(language, sent
 
 
 @pytest.mark.parametrize(("overrides", "expected"), [
-    ({"praesens_regex": r"\bhalten\b"}, (2, 2)),
-    ({"praesens_regex": ""}, (0, 2)),
+    ({"praesens_regex": r"\bhalten\b"}, (2, 0)),
+    ({"praesens_regex": ""}, (0, 0)),
     ({"praeteritum_regex": ""}, (2, 0)),
     ({"praeteritum_regex": r"\b(halten)\b"}, (2, 2)),
     ({"praeteritum_regex": r"\b(hal)(ten)\b"}, (2, 2)),
@@ -163,7 +163,7 @@ def test_auxiliary_compounds_keep_present_homograph_participles(language, text):
 
 @pytest.mark.parametrize("token", ["2halten", "x_halten"])
 def test_word_character_prefixes_do_not_invent_a_present_only_final_word(token):
-    # Default suffix patterns use Unicode word characters, including digits and
-    # underscores. The veto must assess that complete candidate, not a substring.
+    # The conservative German default does not infer a past cue from endings,
+    # including word-like strings with digits or underscores.
     config = CorpusConfig(language="de")
-    assert TenseMatcher(config, resolve_language(config)).count(token) == (0, 1)
+    assert TenseMatcher(config, resolve_language(config)).count(token) == (0, 0)

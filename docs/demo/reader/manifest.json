@@ -1,18 +1,30 @@
 {
-  "analysis": null,
+  "analysis": {
+    "language": "en",
+    "thresholds": {
+      "dim_score_threshold": 2.5,
+      "fdr_method": "bh",
+      "fdr_q": 0.05,
+      "flag_min_severity": 2,
+      "min_chapters": 2,
+      "z_mild": 2.5,
+      "z_strong": 3.5
+    }
+  },
   "capabilities": {
-    "analysis": false,
+    "analysis": true,
     "automatic_external_requests": false,
     "read_only": true,
     "research": false,
     "source_files": true
   },
-  "created_at": "2026-10-28T10:52:02.345566+00:00",
+  "created_at": "2026-10-28T11:49:19.510822+00:00",
   "disclosures": [
     "Contains only the selected publication profile, approved dossier content and explicitly selected citations/maps.",
     "Reading progress hides content already included in this file; it is not access control.",
     "The export chapter cap removes later publication entries and resources before assembly.",
     "Contains manuscript reading text only through the export cap.",
+    "Contains explicitly selected analysis computed only from the exported chapters with default settings; no work-marker notes.",
     "Includes original source bytes and images; retention does not grant redistribution rights. Only selected publication dependencies are copied.",
     "A local reading snapshot, not a research backup or access-control system. No automatic publishing.",
     "Saved prose and source URLs can contain personal information; review before sharing.",
@@ -20,6 +32,10 @@
   ],
   "entrypoint": "index.html",
   "files": {
+    "analysis.html": {
+      "byte_length": 210567,
+      "sha256": "33a4a22d06ff423fbd243d8712aee0ff503e85f937f07efc7db55dfc0eb397ea"
+    },
     "assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg": {
       "byte_length": 2515979,
       "sha256": "2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d"
@@ -29,8 +45,8 @@
       "sha256": "993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64"
     },
     "index.html": {
-      "byte_length": 1097415,
-      "sha256": "9ebd6b850e0a76576e25cbf5e32bef357a4a2e5a556325cf6aa2ed37dd732c05"
+      "byte_length": 1102646,
+      "sha256": "8bb802a63ce33cf477fad7a33a854da1cb4063ff8d11b51ecb539ca6aaf1c7ea"
     },
     "licenses/Lixity-LICENSE": {
       "byte_length": 34523,
@@ -63,13 +79,16 @@
   "mode": "reader",
   "product_version": "0.7.6",
   "project": {
-    "id": "urn:uuid:906ed653-33a3-497d-b8a6-b916b9ef78ac",
+    "id": "urn:uuid:bd4409ef-7a11-468f-919e-4855089838c6",
     "language": "en",
     "title": "Warehouse 4 — a reader's companion"
   },
   "publication": {
+    "analysis_sections": [
+      "chapters"
+    ],
     "entry_count": 6,
-    "identity": "1722eaa47d4c04edd1a04a00f922ede4566e337ce5b8d4b907714b6ff28c36de",
+    "identity": "a6998a63bac3059b766842e5c01af815f9d40782d05d7085a88c2e54adb18d72",
     "max_chapter": 6,
     "profile": "readers"
   },
@@ -78,5 +97,5 @@
     "revision_count": 0,
     "snapshot": null
   },
-  "schema_version": "lixity-read-only-site/1"
+  "schema_version": "lixity-read-only-site/2"
 }

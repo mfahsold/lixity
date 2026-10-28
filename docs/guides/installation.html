@@ -164,7 +164,7 @@ lixity service start --open</code></pre>
 lixity service restart
 lixity service stop</code></pre>
 <p>After a computer restart, start the service again; no reimport is needed. Restart uses the saved launch settings, not a later project choice in the browser. A browser reload alone does not update running code.</p>
-<p>Since v3.0.1, foreground <code>serve</code> and managed start/restart accept <code>--min-chapters N</code>, an integer of at least 2 (default 2). Restart retains the saved threshold unless overridden. See the <a href="../USAGE.md#lixity-service">service command reference</a>.</p>
+<p>Foreground <code>serve</code> and managed start/restart accept <code>--min-chapters N</code>, an integer of at least 2 (default 2). Restart retains the saved threshold unless overridden. See the <a href="../USAGE.md#lixity-service">service command reference</a>.</p>
 <p>The controller manages its own instances. A foreground <code>lixity serve</code> process still stops with <code>Ctrl+C</code>; external systemd, launchd or Task Scheduler entries use their own manager. Login startup is an explicit advanced choice in the <a href="../INSTALLATION.md#optional-startup-at-login">setup reference</a>. Start Zotero for new captures; retained research stays readable while it is closed.</p>
 
 <p>PyPI installations use <code>uv tool upgrade lixity</code>; wheel-pinned installations require the new release URL. Restart the workspace after updating. Product versions describe development maturity and are independent of research storage versions; consult the <a href="../research/USAGE.md#storage-lifecycle-and-recovery">archive compatibility guidance</a> before sharing an archive with older readers.</p>

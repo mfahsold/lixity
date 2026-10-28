@@ -4,7 +4,9 @@
   var body = document.body, settingsForm = document.getElementById("settings-form");
   if (body.dataset.speechCapable !== "true" || body.dataset.readOnly === "true" || !settingsForm) return;
   var dialog, fields = {}, settings, capabilities, generation = 0, job = null, timer, openedContext, paragraph;
-  var executionTarget = "local", migrationRequired = false, direction, savedDirectionView, lastPreset = "Ryan", mode = "profiles";
+  var executionTarget = "local", migrationRequired = false, direction, savedDirectionView, lastPreset = "Ryan", mode = "profiles", editingPronunciation = null;
+  var savedSettings = null, profilesDirty = false, profileSaving = false;
+  var specialPronunciations = Object.create(null);
   function label(key) { return uiLabel("speech_" + key); }
   function languageName(code) {
     try { return new Intl.DisplayNames([document.documentElement.lang || "en"], {type: "language"}).of(code); }
@@ -88,10 +90,12 @@
     options(fields.engine, Object.keys(capabilities).filter(function(key) { return key === "qwen3" || key === "qwen3-design"; }).map(function(key) { return [key, capabilities[key].name]; }), profile.engine);
     fields.voice_description.value = profile.voice_description || "";
     options(fields.language, [], profile.language); options(fields.voice, [], profile.voice); voiceControls();
-    fields.pronunciations.value = Object.entries(profile.pronunciations).map(function(pair) { return pair.join("="); }).join("\n");
+    setPronunciations(profile.pronunciations);
+    editingPronunciation = null; fields.pronunciation_term.value = fields.pronunciation_spoken.value = "";
+    fields.pronunciation_search.value = ""; renderPronunciations();
     fields.editor.disabled = false; fields.save.disabled = false;
   }
-  function readProfile() {
+  function pronunciationEntries() {
     var replacements = Object.create(null);
     fields.pronunciations.value.split("\n").forEach(function(line) {
       if (!line.trim()) return;
@@ -99,12 +103,76 @@
       if (split < 1 || !term || !value || Object.hasOwn(replacements, term)) throw new Error(label("pronunciation_error"));
       replacements[term] = value;
     });
+    Object.entries(specialPronunciations).forEach(function(pair) {
+      if (Object.hasOwn(replacements, pair[0])) throw new Error(label("pronunciation_error"));
+      replacements[pair[0]] = pair[1];
+    });
+    return replacements;
+  }
+  function setPronunciations(entries) {
+    specialPronunciations = Object.create(null);
+    var lines = [];
+    Object.entries(entries).forEach(function(pair) {
+      if (pair[0].includes("=")) specialPronunciations[pair[0]] = pair[1];
+      else lines.push(pair.join("="));
+    });
+    fields.pronunciations.value = lines.join("\n");
+  }
+  function readProfile() {
+    if (pronunciationPending()) throw new Error(label("pronunciation_pending"));
+    var replacements = pronunciationEntries();
     var profile = {name: fields.name.value.trim(), engine: fields.engine.value, language: fields.language.value,
       voice: fields.voice.value,
       speed: 1, instructions: fields.instructions.value.trim(),
       paragraph_pause: Number(fields.paragraph_pause.value), scene_pause: Number(fields.scene_pause.value), pronunciations: replacements};
     if (profile.engine === "qwen3-design") profile.voice_description = fields.voice_description.value.trim();
     return profile;
+  }
+  function pronunciationPending() {
+    return Boolean(fields.pronunciation_term.value.trim() || fields.pronunciation_spoken.value.trim());
+  }
+  function renderPronunciations() {
+    var replacements;
+    fields.pronunciation_list.replaceChildren();
+    try { replacements = pronunciationEntries(); }
+    catch (_) { return; }
+    var query = fields.pronunciation_search.value.trim().toLocaleLowerCase();
+    var matches = 0;
+    Object.entries(replacements).forEach(function(pair) {
+      if (query && !pair.join(" ").toLocaleLowerCase().includes(query)) return;
+      matches++;
+      var row = node("li", fields.pronunciation_list, "row"); row.dataset.pronunciationRow = "true";
+      node("span", row, "", pair[0] + " → " + pair[1]);
+      var edit = button(row, "pronunciation_edit", function() {
+        if (pronunciationPending()) { status(label("pronunciation_pending")); return; }
+        editingPronunciation = pair[0]; fields.pronunciation_term.value = pair[0];
+        fields.pronunciation_spoken.value = pair[1]; fields.pronunciation_spoken.focus();
+      });
+      edit.setAttribute("aria-label", label("pronunciation_edit") + ": " + pair[0]);
+      var remove = button(row, "pronunciation_remove", function() {
+        if (pronunciationPending()) { status(label("pronunciation_pending")); return; }
+        try {
+          var current = pronunciationEntries(); delete current[pair[0]];
+          setPronunciations(current);
+          if (editingPronunciation === pair[0]) { editingPronunciation = null; fields.pronunciation_term.value = fields.pronunciation_spoken.value = ""; }
+          profilesDirty = true; invalidate(); renderPronunciations(); status(label("profiles_unsaved"));
+        } catch (error) { status(error.message); }
+      });
+      remove.setAttribute("aria-label", label("pronunciation_remove") + ": " + pair[0]);
+    });
+    fields.pronunciation_empty.hidden = !query || matches > 0;
+  }
+  function applyPronunciation() {
+    try {
+      var entries = pronunciationEntries(), term = fields.pronunciation_term.value.trim(), spoken = fields.pronunciation_spoken.value.trim();
+      if (!term || !spoken || /[\r\n]/.test(term) || /[\r\n]/.test(spoken) ||
+          (Object.hasOwn(entries, term) && term !== editingPronunciation)) throw new Error(label("pronunciation_error"));
+      if (editingPronunciation !== null && editingPronunciation !== term) delete entries[editingPronunciation];
+      entries[term] = spoken;
+      setPronunciations(entries);
+      editingPronunciation = null; fields.pronunciation_term.value = fields.pronunciation_spoken.value = "";
+      profilesDirty = true; invalidate(); renderPronunciations(); status(label("profiles_unsaved"));
+    } catch (error) { status(error.message); }
   }
   function stash() { if (settings && settings.selected) settings.profiles[settings.selected] = readProfile(); }
   function profileOptions() {
@@ -114,11 +182,13 @@
   }
   function removeProfile() {
     if (migrationRequired || !settings || Object.keys(settings.profiles).length <= 1) return;
+    if (pronunciationPending()) { status(label("pronunciation_pending")); return; }
     var id = settings.selected;
     if (savedDirectionView && savedDirectionView.directions.some(function(item) { return item.profile_id === id; })) {
       status(label("profile_referenced")); return;
     }
     delete settings.profiles[id];
+    profilesDirty = true;
     settings.selected = Object.keys(settings.profiles)[0];
     profileOptions(); loadProfile(); status(label("profile_removed_draft"));
   }
@@ -133,6 +203,7 @@
     if (!capabilities.qwen3.languages.includes(language)) language = "en";
     settings.profiles[id] = {name: label("new_profile"), engine: "qwen3", language: language, voice: "Ryan", speed: 1,
       instructions: "", paragraph_pause: 0.45, scene_pause: 1.2, pronunciations: {}};
+    profilesDirty = true;
     settings.selected = id; profileOptions(); loadProfile(); fields.name.focus();
   }
   function valid(serial) { return serial === generation && dialog.open && openedContext === context(); }
@@ -198,24 +269,38 @@
     catch (error) { if (job === active) { status(error.message); fields.cancel.disabled = false; active.cancelling = false; } }
   }
   async function save() {
-    if (migrationRequired) return;
+    if (migrationRequired || profileSaving) return;
+    if (openedContext !== context()) { status(label("pronunciation_context_changed")); return; }
     try {
       if (!Array.from(fields.editor.querySelectorAll("input, select, textarea")).every(function(input) { return input.reportValidity(); })) return;
-      stash(); invalidate(); var serial = generation; fields.save.disabled = true; status(label("saving"));
+      stash(); invalidate(); var serial = generation; profileSaving = true;
+      fields.editor.disabled = fields.profile.disabled = fields.create.disabled = fields.remove_profile.disabled = fields.profile_discard.disabled = fields.save.disabled = true;
+      status(label("saving"));
       await request("settings", {project_token: tokens().project_token, audio: settings});
       if (valid(serial)) location.reload();
     } catch (error) {
       if (serial == null || valid(serial)) status(error.message.includes("A removed voice profile is used by saved speech direction") ? label("profile_referenced") : error.message);
     }
-    finally { if (serial == null || valid(serial)) fields.save.disabled = false; }
+    finally {
+      if (profileSaving) {
+        profileSaving = false;
+        if (dialog.open) {
+          fields.editor.disabled = false; fields.profile_discard.disabled = false;
+          if (openedContext === context()) { fields.profile.disabled = false; profileOptions(); fields.save.disabled = migrationRequired || !settings.selected; }
+        }
+      } else if (serial == null || valid(serial)) fields.save.disabled = false;
+    }
   }
   function build() {
     dialog = node("dialog", body, "lixity-modal"); dialog.id = "modal-speech"; dialog.setAttribute("aria-labelledby", "speech-title");
     var card = node("div", dialog, "modal-card"), header = node("div", card, "modal-header");
     fields.heading = node("h3", header, "", label("title")); fields.heading.id = "speech-title";
     var close = button(header, "close", function() {
+      if (profileSaving) { status(label("saving")); return; }
       if (direction.busy()) { status(label("saving")); return; }
       if (direction.dirty()) { status(label("direction_switch_first")); return; }
+      if (mode === "profiles" && pronunciationPending()) { status(label("pronunciation_pending")); return; }
+      if (mode === "profiles" && profilesDirty) { status(label("profiles_unsaved")); return; }
       dialog.close();
     }); close.className = "ctl";
     var content = node("div", card, "modal-body");
@@ -234,16 +319,26 @@
     fields.design_hint = node("p", fields.editor, "ctl-note", label("design_hint"));
     ["paragraph_pause", "scene_pause"].forEach(function(key) { var el = field(grid, key, "number"); el.min = "0"; el.max = "10"; el.step = "any"; el.required = true; });
     field(fields.editor, "instructions", "textarea").maxLength = 2000;
-    var lexicon = node("details", fields.editor, "settings-section");
+    var lexicon = node("details", fields.editor, "settings-section"); lexicon.id = "speech-lexicon";
     node("summary", lexicon, "", label("pronunciations"));
     var searchRow = node("div", lexicon, "row"), search = field(searchRow, "pronunciation_search", "search");
-    button(searchRow, "pronunciation_find", function() {
-      var query = search.value.trim().toLocaleLowerCase(), value = fields.pronunciations.value;
-      var index = query ? value.toLocaleLowerCase().indexOf(query) : -1;
-      if (index < 0) { status(label("pronunciation_not_found")); return; }
-      fields.pronunciations.focus(); fields.pronunciations.setSelectionRange(index, index + query.length); status("");
+    search.addEventListener("input", renderPronunciations);
+    fields.pronunciation_list = node("ul", lexicon, "pronunciation-list");
+    fields.pronunciation_list.setAttribute("aria-label", label("pronunciations"));
+    fields.pronunciation_empty = node("p", lexicon, "ctl-note pronunciation-empty", label("pronunciation_not_found"));
+    fields.pronunciation_empty.hidden = true; fields.pronunciation_empty.setAttribute("aria-live", "polite");
+    var pronunciationEditor = node("div", lexicon, "settings-grid");
+    field(pronunciationEditor, "pronunciation_term").maxLength = 100;
+    field(pronunciationEditor, "pronunciation_spoken").maxLength = 300;
+    button(lexicon, "pronunciation_apply", applyPronunciation);
+    button(lexicon, "pronunciation_discard", function() {
+      editingPronunciation = null; fields.pronunciation_term.value = fields.pronunciation_spoken.value = ""; status("");
     });
-    field(lexicon, "pronunciations", "textarea"); node("p", lexicon, "ctl-note", label("pronunciation_hint"));
+    var rawList = node("details", lexicon, "settings-section");
+    node("summary", rawList, "", label("pronunciation_bulk"));
+    field(rawList, "pronunciations", "textarea").addEventListener("input", renderPronunciations);
+    node("p", rawList, "ctl-note", label("pronunciation_hint"));
+    node("p", rawList, "ctl-note", label("pronunciation_bulk_special"));
     field(content, "chapter", "select");
     direction = window.LixitySpeechDirection(content, {
       node:node, field:field, button:button, options:options, label:label, request:request,
@@ -278,8 +373,18 @@
     fields.audio = node("audio", content, "media-player"); fields.audio.controls = true; fields.audio.hidden = true;
     fields.download = node("a", content, "ctl", label("download")); fields.download.download = "speech.wav"; fields.download.hidden = true;
     fields.save = button(content, "save", save);
+    fields.profile_discard = button(content, "profiles_discard", function() {
+      if (profileSaving || !savedSettings) return;
+      settings = JSON.parse(JSON.stringify(savedSettings)); profilesDirty = false;
+      profileOptions(); loadProfile();
+      if (openedContext !== context()) fields.save.disabled = fields.create.disabled = fields.remove_profile.disabled = fields.profile.disabled = true;
+      status(""); invalidate();
+    });
     fields.reuseLabel = reuse;
-    fields.editor.addEventListener("input", function() { invalidate(); });
+    fields.editor.addEventListener("input", function(event) {
+      if (mode === "profiles" && ![fields.pronunciation_search, fields.pronunciation_term, fields.pronunciation_spoken].includes(event.target)) profilesDirty = true;
+      invalidate();
+    });
     fields.engine.addEventListener("change", function() {
       if (fields.engine.value === "qwen3-design") lastPreset = fields.voice.value || lastPreset;
       options(fields.voice, [], fields.engine.value === "qwen3-design" ? "design" : lastPreset);
@@ -287,13 +392,18 @@
     });
     fields.language.addEventListener("change", function() { fields.voice.value = ""; voiceControls(); status(label("voice_changed")); });
     fields.profile.addEventListener("change", function() {
-      try { stash(); settings.selected = fields.profile.value; loadProfile(); }
+      try { stash(); if (settings.selected !== fields.profile.value) profilesDirty = true; settings.selected = fields.profile.value; loadProfile(); }
       catch (error) { fields.profile.value = settings.selected; status(error.message); }
     });
     fields.chapter.addEventListener("change", function() { paragraph = null; invalidate(); var select=fields.direction_passage; var choice=Array.from(select.options).find(function(o) { return o.textContent.startsWith(fields.chapter.value + " · "); }); if (choice) { select.value=choice.value; select.dispatchEvent(new Event("change")); } fields.context.textContent = label("first_preview"); });
     dialog.addEventListener("cancel", function(event) {
-      if (direction.busy() || direction.dirty()) {
+      if (profileSaving) { event.preventDefault(); status(label("saving")); }
+      else if (direction.busy() || direction.dirty()) {
         event.preventDefault(); status(label(direction.busy() ? "saving" : "direction_switch_first"));
+      } else if (mode === "profiles" && pronunciationPending()) {
+        event.preventDefault(); status(label("pronunciation_pending"));
+      } else if (mode === "profiles" && profilesDirty) {
+        event.preventDefault(); status(label("profiles_unsaved"));
       }
     });
     dialog.addEventListener("close", invalidate);
@@ -303,12 +413,14 @@
     var fromReader = mode === "reader";
     var readerControl = document.getElementById("reader-chapter");
     var readerChapterIntent = fromReader && readerControl ? (readerControl.value || readerControl.dataset.currentChapter || "") : "";
-    if (!dialog) build(); invalidate(); direction.disable(); settings = null; openedContext = context(); paragraph = null;
+    if (!dialog) build(); invalidate(); direction.disable(); settings = null; savedSettings = null; profilesDirty = false; profileSaving = false; openedContext = context(); paragraph = null;
+    fields.profile.disabled = false;
     fields.heading.textContent = label(mode === "profiles" ? "profiles_title" : mode === "output" ? "output_title" : "reader_title");
     fields.editor.hidden = mode !== "profiles";
     fields.create.hidden = mode !== "profiles";
     fields.remove_profile.hidden = mode !== "profiles";
     fields.save.hidden = mode !== "profiles";
+    fields.profile_discard.hidden = mode !== "profiles"; fields.profile_discard.disabled = false;
     direction.section.hidden = mode !== "reader";
     fields.chapter.closest("label").hidden = mode === "profiles";
     fields.target.closest("label").hidden = mode === "profiles";
@@ -341,6 +453,7 @@
       var data = await request("speech"); if (!valid(serial)) return;
       migrationRequired = data.requires_migration === true;
       settings = data.settings || {schema_version: "lixity-audio-settings/1", selected: "", profiles: {}}; capabilities = data.capabilities;
+      savedSettings = JSON.parse(JSON.stringify(settings));
       fields.model.textContent = capabilities.qwen3.name;
       var matchedChapter = paragraph && data.chapters.find(function(chapter) {
         return paragraph.identity.start_line >= chapter.start_line && paragraph.identity.end_line <= chapter.end_line;
@@ -369,13 +482,20 @@
   if (toolbar) button(toolbar, "reader_title", function() { open("reader"); }).id = "reader-speech";
   document.addEventListener("lixity:workbench-change", function() {
     if (!dialog || !dialog.open) return;
+    if (profileSaving) { status(label("saving")); return; }
     if (direction.busy() || direction.dirty()) {
       status(label(direction.busy() ? "saving" : "direction_switch_first")); return;
     }
+    if (mode === "profiles" && pronunciationPending()) { status(label("pronunciation_pending")); return; }
+    if (mode === "profiles" && profilesDirty) { status(label("profiles_unsaved")); return; }
     dialog.close();
   });
   new MutationObserver(function() {
     if (!dialog || !dialog.open || context() === openedContext) return;
+    if (mode === "profiles" && (pronunciationPending() || profilesDirty || profileSaving)) {
+      invalidate(); fields.save.disabled = fields.create.disabled = fields.remove_profile.disabled = fields.profile.disabled = true;
+      status(label(pronunciationPending() && !profilesDirty ? "pronunciation_context_changed" : "profiles_context_changed")); return;
+    }
     if (direction.dirty() || direction.busy()) {
       invalidate(); direction.stale(); status(label("direction_context_changed")); return;
     }

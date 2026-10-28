@@ -19,6 +19,24 @@ from tests.support import LOCALES
 
 
 class TestInterpretationLabels(unittest.TestCase):
+    def test_flesch_help_describes_inputs_without_claiming_syntactic_analysis(self):
+        terms = {
+            "en": ("sentence", "syllables", "comprehension"),
+            "de": ("Satz", "Silben", "Verständnis"),
+            "fr": ("phrase", "syllabes", "compréhension"),
+            "es": ("oración", "sílabas", "comprensión"),
+            "it": ("frase", "sillabe", "comprensione"),
+            "pt": ("frase", "sílabas", "compreensão"),
+            "nl": ("zin", "lettergrepen", "begrip"),
+        }
+        for language, words in terms.items():
+            with self.subTest(language=language):
+                help_text = LANGUAGE_PROFILES[language].labels["help_flesch"].casefold()
+                for word in words:
+                    self.assertIn(word.casefold(), help_text)
+                for unsupported in ("nesting", "hypotaxis", "Schachtelung", "Hypotaxen"):
+                    self.assertNotIn(unsupported.casefold(), help_text)
+
     def test_resolved_labels_have_one_authoritative_definition(self):
         packs = (GUIDANCE_LABELS, SCENE_LABELS, IDENTITY_LABELS, LABELS,
                  METRIC_LABELS, HELP_TEXTS, GROUP_LABELS, LAYER_LABELS,

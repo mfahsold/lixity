@@ -66,6 +66,10 @@ From an open dossier, **Back to dossier** restores its saved version and reading
 
 People, events and journeys are fictional. The historical images do not verify them. Maps in this website use local sketches and geographic shapes without requesting online map tiles. [Sources and PDF copies](research-pdf.html) explains retention and saving in the local app.
 
+## Read with selected analysis
+
+Open the [synthetic reading copy](../demo/reader/), choose **Analysis** above the story, and inspect its chapter overview. Choose **Back to reading copy** to return to the story and its selected background. This example deliberately includes chapter figures for all six chapters; reading progress does not hide analysis. In your own export, select only the analysis you want to share and use a chapter cap to omit later content.
+
 ## 4. Choose a PDF copy
 
 Use the direct PDF links below or in the demo page; the exported website does not generate new PDFs. Compare the same manuscript as an [editorial copy](../demo/warehouse-4-editor.pdf), [reading copy](../demo/warehouse-4-book.pdf), [submission sheets](../demo/warehouse-4-sheet.pdf) or [analysis report](../demo/warehouse-4-report.pdf). The [PDF guide](research-pdf.html#manuscript-export) explains their purposes and limits.

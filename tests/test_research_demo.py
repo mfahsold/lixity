@@ -361,7 +361,8 @@ def test_public_reader_and_companion_use_the_production_scope_and_assets(tmp_pat
         page = target.read_text()
         cap = 3 if mode == 'companion' else None
         native = prepare_site(project, manuscript='harbour-manuscript.md', mode=mode,
-            publication_profile='readers', max_chapter=cap, include_source_files=True)
+            publication_profile='readers', max_chapter=cap, include_source_files=True,
+            analysis_sections=['chapters'] if mode == 'reader' else [])
         assert site_data(page) == site_data(native.files['index.html'].decode())
         assert 'src="../assets/analytics.js"' not in page
         assert 'src="../../assets/analytics.js"' not in page
@@ -377,7 +378,17 @@ def test_public_reader_and_companion_use_the_production_scope_and_assets(tmp_pat
         manifest = json.loads(target.with_name('manifest.json').read_text())
         assert manifest['mode'] == mode
         assert manifest['capabilities']['automatic_external_requests'] is False
-        assert manifest['capabilities']['analysis'] is False
+        assert manifest['capabilities']['analysis'] is (mode == 'reader')
+        if mode == 'reader':
+            assert manifest['schema_version'] == 'lixity-read-only-site/2'
+            assert manifest['publication']['analysis_sections'] == ['chapters']
+            assert 'href="analysis.html"' in page
+            analysis = target.with_name('analysis.html').read_text()
+            assert 'analysis-section-chapters' in analysis
+            assert 'analysis-section-language' not in analysis
+            assert 'rel="canonical" href="https://mfahsold.github.io/lixity/demo/reader/analysis.html"' in analysis
+            assert 'src="../assets/analytics.js"' not in analysis
+            assert 'rel="canonical"' not in native.files['analysis.html'].decode()
         assert manifest['research']['included'] is False
         for name, item in manifest['files'].items():
             content = (target.parent / name).read_bytes()
@@ -404,6 +415,17 @@ def test_public_companion_contains_no_novel_and_actual_cap_omits_late_content(tm
     assert b'The Customs Note' not in public
     assert b'A blank signature is an absence, not a name.' not in public
     assert b'No receiving signature had yet been identified' not in public
+
+
+def test_public_demo_staging_rejects_unreviewed_analysis_scope(tmp_path, public_publications):
+    from scripts.stage_pages import stage
+
+    manifest_file = public_publications['reader'].with_name('manifest.json')
+    manifest = json.loads(manifest_file.read_text())
+    manifest['publication']['analysis_sections'] = ['full']
+    manifest_file.write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match=r'reviewed website manifest|analysis scope'):
+        stage(tmp_path / 'docs', tmp_path / 'unreviewed')
 
 
 def test_pages_stages_only_two_approved_publication_manifest_inventories(tmp_path, public_publications):

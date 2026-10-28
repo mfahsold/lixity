@@ -30,7 +30,7 @@ Retained research sources do not enter this manuscript baseline. An archived sou
 
 ## Why does an empty manuscript show “–”?
 
-Since v1.18.0, the dashboard and text style report show a dash when no chapter–feature cells can be measured. This includes empty or heading-only manuscripts and material below the configured chapter minimum. A dash means unavailable, not zero quality or perfect consistency.
+The dashboard and text style report show a dash when no chapter–feature cells can be measured. This includes empty or heading-only manuscripts and material below the configured chapter minimum. A dash means unavailable, not zero quality or perfect consistency.
 
 For API compatibility, style JSON schema version 4 retains the historical numeric `consistency` value. The new `measured_cells` field identifies the supporting count. When it is zero, the retained value `1.0` is a compatibility sentinel and must not be displayed as 100%. Older JSON without the field cannot establish availability from that number alone.
 
@@ -64,7 +64,7 @@ The showing/telling panel displays “–” with an explanation when there are 
 
 5. After changing the manuscript, compare results using the same analysis version, language and thresholds.
 
-**Since v2.3.0:** an opened paragraph shows the passage first, followed by a compact **Values** disclosure (**Werte** in German). Expand it to inspect the measurements. The matrix, reference bands, dimensions and structural diagnostics share one style area with tabs; links to their existing anchors select the relevant panel. Without JavaScript, all available style panels remain readable.
+An opened paragraph shows the passage first, followed by a compact **Values** disclosure (**Werte** in German). Expand it to inspect the measurements. The matrix, reference bands, dimensions and structural diagnostics share one style area with tabs; links to their existing anchors select the relevant panel. Without JavaScript, all available style panels remain readable.
 
 For example, a synthetic chapter consisting of short dialogue may differ sharply from a descriptive chapter. That contrast can be intentional. Neither moving both toward a common average nor maximizing consistency is a general writing objective.
 
@@ -72,17 +72,9 @@ For a scene or narrative-voice comparison, choose passages with comparable langu
 
 **Perception filters and dialogue:** `filter_density`, modal, passive and nominal densities count the whole text, including quoted speech. A character who says “I believe this sanatorium…” contributes the same filter marker as a narrating voice would. When one of these values stands out, read the passages and compare with the chapter’s dialogue share: a high value inside dialogue is characterisation, not narration. A narrative-only variant of these densities is a documented candidate, not part of the current contract.
 
-## The studio monitor principle: exposing friction without smoothing prose
+## Use signals as questions
 
-Lixity is built around the discipline of a **high-fidelity studio monitor in audio engineering**:
-
-- A studio monitor does not make a recording sound sweeter or warmer. It reproduces phase cancellations, resonance peaks and harsh clipping with ruthless transparency—so the mastering engineer and artist can decide whether distortion is intentional creative character (tape saturation, guitar fuzz) or an unwanted technical flaw.
-
-- **Avoiding sterile over-smoothing:** Literature lives from deliberate rule-breaking, calculated redundancy, syntactic pauses and syncopated cadence. Treating analysis signals as a checklist to clear homogenises prose into generic corporate copy. Lixity is a diagnostic mirror, never a censorship committee.
-
-- **When to use the tools:** Leave Analysis Off during initial drafting. Raw generation requires momentum, trance and freedom from premature editing. Lixity’s full power emerges in substantial revision passes (drafts two through four) to uncover unconscious word echoes, accidental tense drift and register collapse.
-
-- **Character voice vs. narrative register:** Dialect, staccato fragments, rhetorical questions and heavy perception markers in dialogue constitute characterisation, not stylistic defects. Never force dialogue toward an expository benchmark.
+Measurements point to passages for human review; they do not establish an error, artistic intent or a preferable style. Read dialogue, dialect, repeated words and changes in register in context. Choose when the analysis helps your own writing process.
 
 ## Signals and questions for review
 
@@ -92,7 +84,7 @@ Use this reference to connect a measurement with a question to investigate. None
 | --- | --- | --- | --- |
 | **Sentence Rhythm & Length Tiers** | ASL, rhythm CV, staccato (≤6w), very long (>25w) | **Pacing:** Sentence-length variation can draw attention to shifts between action, dialogue and reflection. | Low or high CV and changes in long-sentence frequency invite a read of the passage; neither implies good or bad prose. |
 | **Lexical Diversity** | Hypergeometric HD-D (McCarthy & Jarvis), MTLD, Yule's K | **Vocabulary Pattern:** These measures reduce some length sensitivity compared with raw TTR, subject to token floors and corpus context. | A later change may prompt a look at repetition, dialogue mix or topic shifts; it does not identify author fatigue or a quality problem. |
-| **Tense Continuity & Friction** | Present, past, friction rating 0–3 | **Timeline & Perspective:** Heuristic labels help locate tense changes at paragraph scale. | Higher friction may merit a check of quotation, dialogue, flashback or deliberate perspective shifts before treating it as an error. |
+| **Tense Continuity & Friction** | Present, past, friction rating 0–3 | **Timeline & Perspective:** Heuristic labels locate passages with mixed tense cues; they do not prove a tense change. | Higher friction may merit a check of quotation, dialogue, flashback or deliberate perspective shifts before treating it as an error. |
 | **Perception & Exposition Patterns** | Perception verbs, passive voice, nominal style | **Register:** Word-pattern counts highlight possible changes in viewpoint or exposition. | Read passages in context; these constructions can be deliberate and their counts do not measure immersion. Densities count matches per 1,000 words, not percentages; a few hits in a very short paragraph can produce a large value. Default nominal-suffix counts exclude known function words. |
 | **FDR Heatmap** | Noise-aware z* shrinkage, Benjamini-Hochberg (●), Cliff's δ | **Statistical Review:** A dot marks a cell selected by the configured FDR procedure. Its probability model has not been calibrated for manuscript comparisons; effect size adds context. | Read flagged passages in context; a flag neither proves a defect nor calls for a rewrite. Unflagged passages can still matter artistically. |
 | **Structural & Drift Diagnostics** | Guarded-cost changepoints, Mann-Kendall τ, Wasserstein-KS | **Structure Review:** These exploratory outputs suggest passages to inspect. They do not establish narrative boundaries or statistically confirmed shifts; see the [stability notes](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md#structural-diagnostics). | A change point can prompt review of scene, character or chapter context; it does not identify an author handover or its cause. Structural trends need at least three chapters. Show/tell comparison also needs three chapters with differing signals; an unavailable comparison does not mean the app has failed. |

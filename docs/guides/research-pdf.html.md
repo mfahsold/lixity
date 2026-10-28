@@ -133,7 +133,7 @@ The CLI defaults to source passages. Search matches words in current records, no
 
 ## Choose a citation by keywords
 
-**Since v3.0.0:** select a claim in the evidence form and choose **Find source passage**. Search opens with **Sources** selected and keeps your claim choice. Read a match, choose **Use for claim**, then review the full paragraph, select the evidence relation and save explicitly. A search match or draft does not verify a claim or create a saved link.
+Select a claim in the evidence form and choose **Find source passage**. Search opens with **Sources** selected and keeps your claim choice. Read a match, choose **Use for claim**, then review the full paragraph, select the evidence relation and save explicitly. A search match or draft does not verify a claim or create a saved link.
 
 ```
 lixity research cite --project ./sample-project --query "reading room"
@@ -146,7 +146,7 @@ One match resolves the existing full-paragraph citation. Zero or multiple matche
 
 ## Organize claim periods and causal interpretations
 
-**Since v3.0.0:** inside **Claims**, choose **Timeline**. It places valid four-digit CE years, `YYYY-MM` months, ISO dates and supported ranges while preserving your original period labels. Missing, unclear or invalid periods remain visible under **Unplaced periods**. Reading makes no archive changes, and creation dates never stand in for historical periods.
+Inside **Claims**, choose **Timeline**. It places valid four-digit CE years, `YYYY-MM` months, ISO dates and supported ranges while preserving your original period labels. Missing, unclear or invalid periods remain visible under **Unplaced periods**. Reading makes no archive changes, and creation dates never stand in for historical periods.
 
 The timeline sorts claims by the calendar value in their period and shows how the placed spans relate. Every dated claim is one row on a shared axis; the badge repeats its placed range and **Placed periods** lists the full cards below. Free-text periods such as *present day* are not calendar values, so they stay under **Unplaced periods** with a reason and a formatting hint. To place a claim, enter a value like `1926`, `1926-03`, `1926-03-15` or `1924–1926`; the claim form shows these formats and a save reports an unplaceable period as a warning. The axis shows only what you entered — placement never verifies a historical fact.
 
@@ -174,7 +174,7 @@ Replace the claim placeholders with complete IDs from the claim list. `results_i
 
 ## Prepare evidence from selected source text
 
-**Since v2.4.0:** open a retained source and select text within one uniquely resolved paragraph. The selection action prepares the existing claim evidence-link form. Its preview shows both your selected quote and the full retained paragraph; choose a claim and relation, add your own rationale if needed, then save separately.
+Open a retained source and select text within one uniquely resolved paragraph. The selection action prepares the existing claim evidence-link form. Its preview shows both your selected quote and the full retained paragraph; choose a claim and relation, add your own rationale if needed, then save separately.
 
 The saved citation still identifies the whole paragraph and its source version. It creates no sentence-level citation. Cross-paragraph or ambiguous selections are unavailable; use the whole-passage actions in the Passages view instead. Selecting text or opening the draft writes no record. Evidence status labels express your own assessment, not historical certainty or a computed probability.
 
@@ -182,7 +182,7 @@ For reading notes against the manuscript, open **Dossier alongside** in Manuscri
 
 ## Use the intended research project in the terminal
 
-**Since v2.4.0:** existing-archive commands may omit `--project` only when your current directory is itself a validated initialized research project. Lixity does not search parent folders or reuse the browser's last project. An explicit `--project` remains authoritative. Initialization still names its project.
+Existing-archive commands may omit `--project` only when your current directory is itself a validated initialized research project. Lixity does not search parent folders or reuse the browser's last project. An explicit `--project` remains authoritative. Initialization still names its project.
 
 ```
 cd ./sample-project

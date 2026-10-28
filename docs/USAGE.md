@@ -172,9 +172,27 @@ lixity export-site --project . -o excerpt-copy --mode reader --publication-profi
 The destination must be a **new directory**. Existing paths are never
 overwritten. With no mode flag, the default is the review workspace. It includes
 manuscript text, work-marker notes and analysis, including exact text marks.
-The dialog starts with research and source-file inclusion unchecked each time.
-Leave research unchecked for a manuscript/analysis copy, or choose a reader format
-and publication profile for selected companion notes.
+On first opening for a project, research and source-file inclusion are unchecked.
+The dialog retains choices within that project; changing the format, publication
+profile or saved profile clears source-file inclusion. Leave research unchecked
+for a manuscript/analysis copy, or choose a reader format and publication profile
+for selected companion notes.
+
+**Current main:** a manuscript-and-background reader copy can optionally include
+analysis. Select chapter figures and/or language measurements, or the complete
+analysis. The default is no analysis. In the CLI, repeat `--analysis chapters`
+and `--analysis language` for the two summaries; `--analysis full` (or `all`)
+selects the complete analysis instead. These choices require `--mode reader`.
+They produce a separate `analysis.html` linked from the reading copy. Summaries
+contain figures and chapter titles, not paragraphs; the full analysis contains
+the exported manuscript text and evidence. Neither includes work-marker notes.
+
+Analysis is recomputed from only the chapters physically included by the export
+cap, using the chosen language's default rules and default thresholds. It can
+therefore differ from the project's analysis. Reading progress does not hide
+the resulting figures or full-analysis evidence; use a chapter cap when later
+content must be omitted from the delivered files. Opt-in analysis copies use
+manifest schema `lixity-read-only-site/2`; existing exports retain version 1.
 `--include-research` adds authored dossiers, claims, decisions, their accessible
 revision history, cited excerpts, manuscript associations, timelines and map
 geometry. This can include internal notes and superseded wording; review the
@@ -290,6 +308,58 @@ not apply the history count. The manifest's `research.revision_count` still coun
 all accepted record versions when research is included, so it may exceed 10,000.
 The byte and response limits above still apply. For a history-limit error, export
 without internal research or select a curated reader/companion profile.
+
+#### Check a reading website before exporting
+**Since v0.7.6:** prepare and inspect the actual package without
+writing an output directory:
+
+```sh
+lixity export-site --project ./novel --preflight --json
+lixity export-site --project ./novel --mode reader --publication-profile readers --preflight
+```
+
+Do not supply `--output` with `--preflight`. The native **Reading website** dialog
+has the same explicit **Check export** action. It neither downloads nor publishes;
+changing the selection clears the displayed result. Preparation uses the same
+scope, project guards and limits as export and can take comparable time/memory.
+An invalid selection or an unreadable selected asset fails explicitly rather
+than returning an invented size.
+
+`lixity-site-preflight/1` measures actual `html_bytes`, `total_bytes`, `zip_bytes`,
+`source_file_bytes` and `file_count` for the prepared candidate. Counts cover
+exactly the exported dossier revisions (including earlier revisions in review
+mode), or selected publication entries after the chapter cap. `html_bytes` is
+the entry page; when reader analysis is included, `analysis_html_bytes` and
+`total_html_bytes` report the additional page and both HTML pages together.
+Available retained
+media without copied source files is reported as `not_packaged`, separately from
+unavailable pins. Ordinary Markdown image destinations are counted as unchecked;
+no loose file or external URL is opened. Attribution checks only the presence of
+`origin_url` and `provenance_note` in retained source metadata, not license validity
+or whether a reader-visible credit appears in the exported page. External link auditing
+and mobile rendering are not performed: `mobile_layout_check` is `not_run` and
+`rights_check` is `not_performed`.
+
+Warnings advise on HTML over 10 MiB or ZIP over 20 MiB; these are disclosed
+practical thresholds, not performance guarantees. The result describes this
+candidate, not a reserved later export. Curated reader/companion modes often
+avoid exporting internal review history; choose the appropriate saved profile
+and retained-file options deliberately. No automatic image recompression or
+promise of a package under 20 MiB is introduced here.
+
+**Since v0.7.6:** export data, revision-count and bundle limits stop the check
+with exit code 1. With
+`--json`, stdout still contains a parseable `lixity-site-preflight-error/1`
+report identifying the limit, observed bytes/count, allowed amount and overflow.
+Response-budget failures identify the route and affected record parameters, with
+accepted bytes grouped by route; operational tokens and source prose are omitted.
+This is the first limit crossing, not a full package-size estimate: `complete`
+is false and no output is written. The 64 MiB data and 200 MiB bundle limits
+remain in force. Suggestions follow the limiting category: prepared research
+responses can exceed their budget without original source files. Omitting
+`--include-source-files` is relevant to the separate bundle budget, not a general
+repair for large record/history responses. Select a narrower publication scope
+rather than deleting project records to make an export fit.
 
 <a id="start-a-review-since-v230"></a>
 
@@ -940,10 +1010,18 @@ lixity profile manuscript.md > profile.json
 
 This command emits JSON. Language-neutral `dominant` values (`present`, `past`,
 `mixed`, `neutral`) become localized labels in reports. Without an explicit grammatical model, tense classification
-counts curated verb forms: `mixed` requires at least two markers per tense and
+counts incomplete lexical and pattern cues: `mixed` requires at least two markers per tense and
 at least 25% minority share. `switch` compares consecutive dominant tenses;
 severity 0–3 prioritizes review. See the [classification contract](AGENTS.md)
 for the truth table and direct-library threshold controls.
+
+**Current main:** the default German patterns no longer treat an unknown
+`-te/-ten/-test` ending as sufficient evidence of past tense. This avoids some
+adjective matches and adds selected cues such as `übt`, but unlisted regular
+past forms such as `flatterten` can now be missed; other ambiguous matches remain.
+Recompute analyses before comparing with v0.7.6 results. Saved decisions for
+observations that remain are marked stale; disappeared observations are counted
+as unmatched. Stored decisions are not altered automatically.
 
 Densities are counts per 1,000 words, not percentages; short paragraphs can have
 large values from few matches. Nominalization suffix cues exclude curated
@@ -1212,8 +1290,10 @@ Empty ranks mean no distinguishable ordering, not identical artistic effect.
 
 The native **Analysis overview → Signal-group comparison** panel
 shows these chapter values and links back to the manuscript. Review-workspace
-website copies include that analysis; curated reader/companion copies exclude
-it. Bar length shows the magnitude of the balance; its signed number gives the
+website copies include that analysis; current-main reader copies include it only
+when full analysis is explicitly selected. Companion copies exclude it. Reader
+copies recalculate on the capped chapters using default rules and thresholds.
+Bar length shows the magnitude of the balance; its signed number gives the
 direction between the two groups relative to this manuscript. For concrete wording, enable manuscript **Analysis**
 and choose a component such as **Perception filters**, **Modals**, **Noun endings** or
 **Passive patterns**. **Counted text** marks the exact
@@ -1388,9 +1468,12 @@ native pronunciation. Review the model license before distributing output.
 **Current main:** saved project audio profiles are shared with the CLI. In the
 native interface, open **Project → Voice profiles** to create or edit a profile,
 including its model, delivery, standard pauses and pronunciation replacements.
-The pronunciation editor can be expanded and searched. **Save project audio settings** stores
-the selected profile and its controls through the normal atomic project settings
-path. A profile can be removed as a draft before saving; the last profile cannot
+The pronunciation editor can be expanded and searched. Filter and edit individual
+entries, or open the text editor for bulk changes. Apply or discard an individual
+entry draft before saving. Terms containing `=` are edited individually rather
+than in the bulk editor. **Save project audio settings** stores the selected profile
+and its controls through the normal atomic project settings path. A profile can be
+removed as a draft before saving; the last profile cannot
 be removed. A profile referenced by saved passage direction cannot be removed,
 including references in stale direction entries or other manuscript sources.
 Review or remove those references first. Use **Listen and direct** in the manuscript to audition and direct a
@@ -1505,6 +1588,20 @@ Explicit style instructions, structural pauses and pronunciation settings are
 shared by CLI and UI. Current main also offers the separate experimental
 VoiceDesign checkpoint described below. Base voice cloning is not implemented.
 There is no automatic backend fallback.
+
+The shared control model separates literal spoken-form substitutions, free-text
+delivery direction and explicit PCM silence. Qwen receives substituted text and
+interprets the direction; neither pronunciation nor acting is guaranteed. Its
+adapter advertises these capabilities in `control_support` and explicitly reports
+that IPA/phoneme input, SSML and precise speed are unsupported. This describes
+Lixity's implementation, not every capability of every Qwen-derived model.
+For comparison, [W3C SSML](https://www.w3.org/TR/speech-synthesis11/) and
+[PLS lexicons](https://www.w3.org/TR/pronunciation-lexicon/) define structured
+speech and pronunciation controls, while implementations vary by voice and model
+([Amazon Polly](https://docs.aws.amazon.com/polly/latest/dg/supportedtags.html),
+[Azure Speech](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-pronunciation),
+[ElevenLabs](https://elevenlabs.io/docs/eleven-api/guides/how-to/text-to-speech/pronunciation-dictionaries)).
+Lixity does not silently translate unsupported phonemes or markup into text.
 
 ### Experimental Qwen VoiceDesign (current main; after 0.7.6)
 
@@ -2414,54 +2511,3 @@ for checkout setup, supported checks, browser suites and documentation generatio
 
 GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later) – see [`LICENSE`](https://github.com/mfahsold/lixity/blob/main/LICENSE).
 Commercial licensing on request: mfahsold@googlemail.com.
-
-
-### Check a reading website before exporting
-
-**Since v0.7.6:** prepare and inspect the actual package without
-writing an output directory:
-
-```sh
-lixity export-site --project ./novel --preflight --json
-lixity export-site --project ./novel --mode reader --publication-profile readers --preflight
-```
-
-Do not supply `--output` with `--preflight`. The native **Reading website** dialog
-has the same explicit **Check export** action. It neither downloads nor publishes;
-changing the selection clears the displayed result. Preparation uses the same
-scope, project guards and limits as export and can take comparable time/memory.
-An invalid selection or an unreadable selected asset fails explicitly rather
-than returning an invented size.
-
-`lixity-site-preflight/1` measures actual `html_bytes`, `total_bytes`, `zip_bytes`,
-`source_file_bytes` and `file_count` for the prepared candidate. Counts cover
-exactly the exported dossier revisions (including earlier revisions in review
-mode), or selected publication entries after the chapter cap. Available retained
-media without copied source files is reported as `not_packaged`, separately from
-unavailable pins. Ordinary Markdown image destinations are counted as unchecked;
-no loose file or external URL is opened. Attribution checks only the presence of
-`origin_url` and `provenance_note` in retained source metadata, not license validity
-or whether a reader-visible credit appears in the exported page. External link auditing
-and mobile rendering are not performed: `mobile_layout_check` is `not_run` and
-`rights_check` is `not_performed`.
-
-Warnings advise on HTML over 10 MiB or ZIP over 20 MiB; these are disclosed
-practical thresholds, not performance guarantees. The result describes this
-candidate, not a reserved later export. Curated reader/companion modes often
-avoid exporting internal review history; choose the appropriate saved profile
-and retained-file options deliberately. No automatic image recompression or
-promise of a package under 20 MiB is introduced here.
-
-**Since v0.7.6:** export data, revision-count and bundle limits stop the check
-with exit code 1. With
-`--json`, stdout still contains a parseable `lixity-site-preflight-error/1`
-report identifying the limit, observed bytes/count, allowed amount and overflow.
-Response-budget failures identify the route and affected record parameters, with
-accepted bytes grouped by route; operational tokens and source prose are omitted.
-This is the first limit crossing, not a full package-size estimate: `complete`
-is false and no output is written. The 64 MiB data and 200 MiB bundle limits
-remain in force. Suggestions follow the limiting category: prepared research
-responses can exceed their budget without original source files. Omitting
-`--include-source-files` is relevant to the separate bundle budget, not a general
-repair for large record/history responses. Select a narrower publication scope
-rather than deleting project records to make an export fit.

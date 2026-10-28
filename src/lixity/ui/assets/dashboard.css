@@ -1825,3 +1825,8 @@ footer:empty { display: none; }
 body[data-read-only="true"] [data-requires-write],
 body[data-read-only="true"] [data-requires-live] { display: none !important; }
 .site-read-only-notice { margin: 0; padding: .45rem 1rem; color: var(--muted); background: var(--surface); font-size: .85rem; text-align: center; }
+/* The pronunciation list remains usable when a project has many replacements. */
+.pronunciation-list { list-style: none; padding: 0; max-height: 18rem; overflow-y: auto; }
+.pronunciation-list li { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: .5rem 0; }
+.pronunciation-list li span { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 480px) { .pronunciation-list li span { flex-basis: 100%; } }

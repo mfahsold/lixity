@@ -24,6 +24,7 @@ ReviewStatus = Literal["kept", "changed", "later"]
 _MAX_STATE_BYTES = 4 * 1024 * 1024
 # Marker semantics are part of the review context, even with unchanged settings.
 _ANALYSIS_POLICY = "tense-review/6"
+_GERMAN_LEXICAL_POLICY = "de-tense-cues/conservative-1"
 
 
 class ReviewDecision(StrictModel):
@@ -85,8 +86,12 @@ def review_analysis(project: str | Path, *, manuscript: str | Path | None = None
         from .grammatical_tense import model_identity
 
         linguistic_identity = model_identity(config.tense_model)
-    analysis_hash = _hash({"policy": _ANALYSIS_POLICY, "config": config.model_dump(mode="json"),
-                           "thresholds": asdict(effective), "linguistics": linguistic_identity})
+    analysis_context = {"policy": _ANALYSIS_POLICY, "config": config.model_dump(mode="json"),
+                        "thresholds": asdict(effective), "linguistics": linguistic_identity}
+    if (resolved.key == "de" and config.tense_model is None and _GERMAN_LEXICAL_POLICY is not None
+            and (config.praesens_regex is None or config.praeteritum_regex is None)):
+        analysis_context["lexical_policy"] = _GERMAN_LEXICAL_POLICY
+    analysis_hash = _hash(analysis_context)
     state, state_hash = _read(repository)
     saved = {item.observation_id: item for item in state.decisions if item.source_path == relative}
     observations = []

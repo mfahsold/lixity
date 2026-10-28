@@ -84,7 +84,10 @@ media records have explicit compatibility and source-file export requirements.
 Reading websites are copies, not backups or access control. Review-workspace
 exports and curated reader/companion publications have different disclosure
 scopes. Original sources require separate inclusion consent. Exports cannot save
-project changes or synthesize speech. Current-main audio shares project voice
+project changes or synthesize speech. Current main permits an explicit reader
+analysis selection (`--analysis chapters`, `language` or `all`) for capped
+chapters; v2 manifests identify the selection. It recomputes using standard
+settings and omits work markers and project-defined figures. Current-main audio shares project voice
 profiles between the CLI and native preview/chapter dialog: an optional
 Qwen3-TTS 1.7B CustomVoice worker on this computer or a configured Jetson over SSH,
 selected per render, with no silent backend fallback. CPU generation
@@ -133,6 +136,9 @@ save/remove require source/settings/ledger snapshots. `read-aloud --plan-only`
 and native preview inspection expose the shared effective speech plan without
 inference. Qwen interprets local direction; Lixity generates exact silence.
 This is not SSML/IPA support, native inline emotion tags or a new audio backend.
+Shared `control_support` describes actual Qwen adapter capabilities: literal
+spoken-form substitutions, model-interpreted direction and explicit silence;
+phonemes, SSML and precise rate are not implemented.
 
 Current main also supports explicit Qwen3-TTS 1.7B VoiceDesign profiles with a
 voice description and a separately configured matching worker. Designed voice

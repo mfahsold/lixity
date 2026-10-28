@@ -969,7 +969,7 @@ pending sharing. This changes no endpoint, response envelope or write guard.
 **Since v0.7.4:** `POST /api/site-export` requires
 `{"project_token":"<current manuscript metadata token>","include_research":false,"include_source_files":false}`.
 Optional fields are `mode` (`review`, `reader`, `companion`; default `review`),
-`publication_profile` and `max_chapter`. The installed `export-site` command's
+`publication_profile`, `max_chapter` and (current main) `analysis_sections`. The installed `export-site` command's
 `scope_schema` describes the strict shared request options. Review mode rejects
 profile/cap and requires research inclusion for source files. Reader/companion
 require a root-local profile and reject raw research inclusion; selected source
@@ -987,13 +987,26 @@ checks apply to every format.
 Python callers use `lixity.site_export.prepare_site(project, *, manuscript=None,
 language=None, title=None, thresholds=None, include_research=False,
 include_source_files=False, mode="review", publication_profile=None,
-max_chapter=None)` to obtain a `SiteBundle` with `files`, `manifest` and `to_zip()`.
+max_chapter=None, analysis_sections=None)` to obtain a `SiteBundle` with `files`, `manifest` and `to_zip()`.
 `export_site(project, output, **same_options)` writes a new directory and returns
-its `lixity-read-only-site/1` manifest. Existing destinations are rejected.
+its `lixity-read-only-site/1` or `/2` manifest, depending on the selected
+analysis. Existing destinations are rejected.
 The inline envelope is `lixity-read-only-site-data/1`. Review reads preserve native
 response contracts; mutation and unknown requests fail closed. Curated formats
-instead carry `lixity-reader-publication/1` with an empty response table and no
-analysis. An export cap removes content before serialization; local chapter
+instead carry `lixity-reader-publication/1` with an empty response table. A
+reader can explicitly select `analysis_sections` as `chapters`, `language`, or
+both; `full` is an exclusive third choice. Empty is the default; review and
+companion reject nonempty choices. The CLI accepts repeated `--analysis` flags;
+`--analysis all` aliases `full`. Selected analysis is recomputed from the
+physically capped chapter bodies with default language rules and thresholds,
+with comments/work markers and project configuration omitted. Partial output
+contains only its selected figures and chapter titles; full output includes
+capped manuscript text and evidence. The files include `analysis.html` and the
+manifest uses `lixity-read-only-site/2`, with `publication.analysis_sections`
+and `capabilities.analysis=true`. Other exports retain the version 1 contract.
+Preflight reports opt-in `analysis_sections`, the entry page as `sizes.html_bytes`,
+the second page as `analysis_html_bytes` and their sum as `total_html_bytes`. The inline site
+data schema remains version 1. An export cap removes content before serialization; local chapter
 progress only hides included content. See [sharing scope](USAGE.md#export-a-reading-website)
 and [projection semantics](research/DATA_MODEL.md#reading-website-projection).
 
@@ -1578,8 +1591,12 @@ there is no compatibility engine or precise speed replacement.
 All native speech reads require same-origin access and exactly one
 `project_token` plus `source_sha256`. Tokens guard context, not authentication.
 `GET /api/speech` returns `lixity-speech-local/1`, settings (or an explicit
-configuration error), backend capabilities and source chapter bounds. A strict
-`requires_migration` boolean identifies retained Piper profiles: normal settings
+configuration error), backend capabilities and source chapter bounds. A
+`control_support` object per engine identifies literal text substitution,
+model-interpreted delivery and explicit silence, and reports unsupported
+phonemes, SSML and precise rate. It describes the Lixity adapter rather than
+promising model compliance. Existing speech-plan version 1 remains unchanged.
+The strict `requires_migration` boolean identifies retained Piper profiles: normal settings
 saves cannot replace them, and the dialog disables replacement controls until
 explicit migration. Unrelated settings saves remain available.
 `POST /api/speech-render` accepts those context fields, `mode: preview|chapter`,

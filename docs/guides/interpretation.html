@@ -117,7 +117,7 @@
 <p>Retained research sources do not enter this manuscript baseline. An archived source is analyzed against its own chapters (<code>source_internal</code>); source–manuscript comparison is a separate, explicit lexical and register report. Travel accounts, monographs and their period or genre labels are evidence and user-supplied context, not an automatic writing standard. Archive integrity checks retained bytes and citations, not historical truth.</p>
 
 <h2 id="empty">Why does an empty manuscript show “–”?</h2>
-<p>Since v1.18.0, the dashboard and text style report show a dash when no chapter–feature cells can be measured. This includes empty or heading-only manuscripts and material below the configured chapter minimum. A dash means unavailable, not zero quality or perfect consistency.</p>
+<p>The dashboard and text style report show a dash when no chapter–feature cells can be measured. This includes empty or heading-only manuscripts and material below the configured chapter minimum. A dash means unavailable, not zero quality or perfect consistency.</p>
 <p>For API compatibility, style JSON schema version 4 retains the historical numeric <code>consistency</code> value. The new <code>measured_cells</code> field identifies the supporting count. When it is zero, the retained value <code>1.0</code> is a compatibility sentinel and must not be displayed as 100%. Older JSON without the field cannot establish availability from that number alone.</p>
 
 <h2 id="scenes">Compare scenes within a register</h2>
@@ -146,19 +146,13 @@
 <li>Record your interpretation or a work marker if useful. A diagnostic does not decide whether to edit.</li>
 <li>After changing the manuscript, compare results using the same analysis version, language and thresholds.</li>
 </ol>
-<p><strong>Since v2.3.0:</strong> an opened paragraph shows the passage first, followed by a compact <strong>Values</strong> disclosure (<strong>Werte</strong> in German). Expand it to inspect the measurements. The matrix, reference bands, dimensions and structural diagnostics share one style area with tabs; links to their existing anchors select the relevant panel. Without JavaScript, all available style panels remain readable.</p>
+<p>An opened paragraph shows the passage first, followed by a compact <strong>Values</strong> disclosure (<strong>Werte</strong> in German). Expand it to inspect the measurements. The matrix, reference bands, dimensions and structural diagnostics share one style area with tabs; links to their existing anchors select the relevant panel. Without JavaScript, all available style panels remain readable.</p>
 <p>For example, a synthetic chapter consisting of short dialogue may differ sharply from a descriptive chapter. That contrast can be intentional. Neither moving both toward a common average nor maximizing consistency is a general writing objective.</p>
 <p>For a scene or narrative-voice comparison, choose passages with comparable language, scope and discourse mode, then read the source text alongside sentence rhythm, dialogue, vocabulary and register measures. A dialogue-heavy scene and an expository scene need not share a target distribution. Short sentences do not establish dramatic pace, and few perception-filter verbs do not establish immersion. The tools do not identify speakers or validate a narrator's artistic voice.</p>
 <p><strong>Perception filters and dialogue:</strong> <code>filter_density</code>, modal, passive and nominal densities count the whole text, including quoted speech. A character who says “I believe this sanatorium…” contributes the same filter marker as a narrating voice would. When one of these values stands out, read the passages and compare with the chapter’s dialogue share: a high value inside dialogue is characterisation, not narration. A narrative-only variant of these densities is a documented candidate, not part of the current contract.</p>
 
-<h2 id="studio-monitor">The studio monitor principle: exposing friction without smoothing prose</h2>
-<p>Lixity is built around the discipline of a <strong>high-fidelity studio monitor in audio engineering</strong>:</p>
-<ul>
-<li>A studio monitor does not make a recording sound sweeter or warmer. It reproduces phase cancellations, resonance peaks and harsh clipping with ruthless transparency—so the mastering engineer and artist can decide whether distortion is intentional creative character (tape saturation, guitar fuzz) or an unwanted technical flaw.</li>
-<li><strong>Avoiding sterile over-smoothing:</strong> Literature lives from deliberate rule-breaking, calculated redundancy, syntactic pauses and syncopated cadence. Treating analysis signals as a checklist to clear homogenises prose into generic corporate copy. Lixity is a diagnostic mirror, never a censorship committee.</li>
-<li><strong>When to use the tools:</strong> Leave Analysis Off during initial drafting. Raw generation requires momentum, trance and freedom from premature editing. Lixity’s full power emerges in substantial revision passes (drafts two through four) to uncover unconscious word echoes, accidental tense drift and register collapse.</li>
-<li><strong>Character voice vs. narrative register:</strong> Dialect, staccato fragments, rhetorical questions and heavy perception markers in dialogue constitute characterisation, not stylistic defects. Never force dialogue toward an expository benchmark.</li>
-</ul>
+<h2 id="studio-monitor">Use signals as questions</h2>
+<p>Measurements point to passages for human review; they do not establish an error, artistic intent or a preferable style. Read dialogue, dialect, repeated words and changes in register in context. Choose when the analysis helps your own writing process.</p>
 
 <h2 id="editorial-matrix">Signals and questions for review</h2>
 <p>Use this reference to connect a measurement with a question to investigate. None of these signals establishes a writing defect.</p>
@@ -193,7 +187,7 @@
             <td><strong>Tense Continuity &amp; Friction</strong></td>
             <td><span class="tech-metric">Present, past, friction rating 0&ndash;3</span></td>
             <td class="editorial-callout">
-              <strong>Timeline &amp; Perspective:</strong> Heuristic labels help locate tense changes at paragraph scale.
+              <strong>Timeline &amp; Perspective:</strong> Heuristic labels locate passages with mixed tense cues; they do not prove a tense change.
             </td>
             <td>Higher friction may merit a check of quotation, dialogue, flashback or deliberate perspective shifts before treating it as an error.</td>
           </tr>

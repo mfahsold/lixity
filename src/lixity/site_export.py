@@ -28,7 +28,7 @@ from ._version import __version__
 from .characters import presence_report, resolve_character_settings
 from .config import read_explicit_project_config, resolve_thresholds, validate_author_name
 from .io import FileUtils
-from .markdown_parser import split_chapters
+from .markdown_parser import _without_comments, split_chapters
 from .markers import list_markers
 from .pipeline import analyze_document, resolve_document_config, supplementary_reports
 from .project_identity import manuscript_identity_check, project_title
@@ -65,7 +65,9 @@ from .site_contracts import (
     MAX_SITE_DATA_BYTES,
     MAX_SITE_RESPONSES,
     MAX_SITE_REVISIONS,
+    SITE_ANALYSIS_SCHEMA,
     SITE_SCHEMA,
+    AnalysisSection,
     SiteData,
     SiteExportOptions,
     SiteManifest,
@@ -399,6 +401,90 @@ def _publication(repository: Repository, snapshot: Snapshot, text: str, config: 
     return data, resources, document
 
 
+def _reader_analysis(text: str, config: Any, language: str, cap: int, title: str,
+                     sections: list[AnalysisSection]) -> tuple[bytes, dict[str, Any]]:
+    """Build analysis from selected chapters only; no project metadata or comments."""
+    from .ui.components import esc, label
+    from .ui.dashboard import _CSS_FILES, _bundle
+    from .workspace_labels import WORKSPACE_LABELS
+
+    selected = split_chapters(text, config)[:cap]
+    # Reconstruct the disclosed chapter bodies before analysis. Never derive a
+    # book-wide metric and then merely hide its later chapter rows.
+    # A reader chapter may contain ordinary headings matching the default
+    # chapter or appendix patterns. Use a collision-free synthetic heading
+    # prefix so those authored blocks cannot change the chosen scope.
+    boundary = "#" * 128
+    while any(line.startswith(boundary + " ") for _, chapter_title, body in selected
+              for line in (chapter_title + "\n" + body).splitlines()):
+        boundary += "#"
+    appendix_guard = "LIXITYREADERAPPENDIXBOUNDARY"
+    while any(appendix_guard in chapter_title or appendix_guard in body for _, chapter_title, body in selected):
+        appendix_guard += "X"
+    capped = "\n\n".join(f"{boundary} {_without_comments(chapter_title)}\n\n{_without_comments(body)}"
+                         for _number, chapter_title, body in selected)
+    analysis_config, resolved = resolve_document_config(capped, language, project_config={})
+    analysis_config = analysis_config.model_copy(update={
+        # The parser removes heading markup from an empty title's fallback.
+        "chapter_regex": rf"(?m)^{boundary} ", "appendix_marker": appendix_guard,
+    })
+    thresholds = resolve_thresholds(project_config={})
+    analysis = analyze_document(capped, analysis_config, thresholds, include_evidence=sections == ["full"])
+    labels = {**WORKSPACE_LABELS.get(resolved.key, WORKSPACE_LABELS["en"]), **resolved.labels}
+    def L(key: str) -> str:
+        return esc(label(labels, key))
+    if sections == ["full"]:
+        page = render_analysis(analysis, resolved, title=title, flag_min_severity=thresholds.flag_min_severity,
+            controls=True, read_only=True, enabled_actions=[], markers=[],
+            reader_document=reader_blocks(capped, analysis_config, analysis.paragraphs),
+            **supplementary_reports(capped, analysis_config, analysis))
+        envelope = {"schema_version": DATA_SCHEMA, "responses": {}, "resources": {}}
+        script = '<script type="application/json" id="lixity-site-data">' + _script_json(envelope) + '</script>\n'
+        page = page.replace('<script>', script + '<script>', 1)
+        link = f'<p class="ctl-note"><a href="index.html">{L("publication_analysis_back")}</a> · {L("publication_analysis_cap_note")}</p>'
+        page = page.replace('<body ', '<body ', 1).replace('<div class="page"', link + '<div class="page"', 1)
+    else:
+        metrics = analysis.metrics
+        def number(value: float | int, available: bool = True) -> str:
+            return esc(f"{value:.2f}" if isinstance(value, float) else value) if available else "—"
+        def percentage(value: float, available: bool) -> str:
+            return number(value) + "%" if available else "—"
+        page_parts = ['<!DOCTYPE html>', f'<html lang="{esc(resolved.key)}"><head><meta charset="utf-8"/>',
+            '<meta name="viewport" content="width=device-width, initial-scale=1"/>',
+            '<link rel="icon" href="data:,"/>',
+            f'<title>{L("publication_analysis_title")} · {esc(title)}</title>',
+            f'<style>{_bundle(_CSS_FILES)}\n.reader-analysis-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,12rem),1fr));gap:.5rem 1rem}} .reader-analysis-grid dt{{font-weight:600}} .reader-analysis-grid dd{{margin:0}} .reader-analysis-grid div{{min-width:0}} .reader-analysis-chapter h3{{overflow-wrap:anywhere}}</style></head>',
+            '<body class="lixity-report" data-read-only="true"><main class="page">',
+            f'<a href="index.html">{L("publication_analysis_back")}</a>',
+            f'<h1>{L("publication_analysis_title")}</h1>', f'<p>{L("publication_analysis_cap_note")}</p>']
+        if "language" in sections:
+            valid = metrics.clean_words > 0 and metrics.total_sentences > 0
+            page_parts.extend(['<section id="analysis-section-language">', f'<h2>{L("publication_analysis_language")}</h2>', '<dl>',
+                f'<dt>{L("words")}</dt><dd>{number(metrics.clean_words)}</dd>',
+                f'<dt>{L("sentences")}</dt><dd>{number(metrics.total_sentences)}</dd>',
+                f'<dt>{L("layer_asl")}</dt><dd>{number(metrics.asl, valid)}</dd>',
+                f'<dt>{L("dialogue")}</dt><dd>{percentage(metrics.dialog_ratio, metrics.clean_words > 0)}</dd>',
+                f'<dt>LIX</dt><dd>{number(metrics.lix, valid)}</dd>',
+                f'<dt>Flesch</dt><dd>{number(metrics.flesch_de, valid)}</dd>', '</dl></section>'])
+        if "chapters" in sections:
+            page_parts.extend(['<section id="analysis-section-chapters">', f'<h2>{L("publication_analysis_chapters")}</h2>'])
+            page_parts.extend(f'<article class="reader-analysis-chapter"><h3>{chapter.num}. {esc(chapter.title)}</h3>'
+                    f'<dl class="reader-analysis-grid"><div><dt>{L("words")}</dt><dd>{chapter.words}</dd></div>'
+                    f'<div><dt>{L("sentences")}</dt><dd>{chapter.sentences}</dd></div>'
+                    f'<div><dt>{L("layer_asl")}</dt><dd>{number(chapter.asl, chapter.sentences > 0)}</dd></div>'
+                    f'<div><dt>{L("dialogue")}</dt><dd>{percentage(chapter.dialog_pct, chapter.words > 0)}</dd></div>'
+                    '</dl></article>' for chapter in metrics.chapters)
+            page_parts.append('</section>')
+        page_parts.append('</main></body></html>')
+        page = '\n'.join(page_parts)
+    policy = ('<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; '
+              'script-src \'self\' \'unsafe-inline\'; style-src \'unsafe-inline\'; '
+              'img-src \'self\' data: blob:; media-src \'self\' blob:; connect-src \'self\'; font-src data:; '
+              'base-uri \'none\'; form-action \'none\'"/>')
+    page = page.replace('<head>', '<head>\n' + policy, 1)
+    return page.encode('utf-8'), {"language": resolved.key, "thresholds": asdict(thresholds)}
+
+
 def _research(repository: Repository, snapshot: Snapshot, text: str, source: Path,
               source_hash: str, analysis: Any, token: str, include_files: bool,
               files: dict[str, bytes], *, settings: dict[str, Any] | None = None) -> tuple[dict[str, Any], dict[str, str]]:
@@ -474,7 +560,8 @@ def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
                  thresholds: FingerprintThresholds | None = None,
                  include_research: bool = False, include_source_files: bool = False,
                  mode: SiteMode = "review", publication_profile: str | None = None,
-                 max_chapter: int | None = None, tense_model: str | None = None,
+                 max_chapter: int | None = None, analysis_sections: list[AnalysisSection] | None = None,
+                 tense_model: str | None = None,
                  tense_scope: str | None = None) -> SiteBundle:
     """Prepare one explicit project website without writing source files or caches.
 
@@ -484,7 +571,8 @@ def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
     """
     options = SiteExportOptions(include_research=include_research,
         include_source_files=include_source_files, mode=mode,
-        publication_profile=publication_profile, max_chapter=max_chapter)
+        publication_profile=publication_profile, max_chapter=max_chapter,
+        analysis_sections=[] if analysis_sections is None else analysis_sections)
     include_research, include_source_files = options.include_research, options.include_source_files
     repository = Repository(project)
     if not repository.root.is_dir():
@@ -512,6 +600,7 @@ def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
                              "language": resolved.key, "thresholds": asdict(effective_thresholds), "title": display_title}))
     files = _software_notices()
     publication = None
+    publication_analysis = None
     if mode == "review":
         analysis = analyze_document(text, config, effective_thresholds, include_evidence=True)
         responses, resources = (_research(repository, snapshot, text, source, source_hash, analysis, token,
@@ -537,8 +626,12 @@ def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
                                                       settings, options, files)
         responses = {}
         display_title = publication["title"]
+        if options.analysis_sections:
+            files["analysis.html"], publication_analysis = _reader_analysis(
+                text, config, resolved.key, publication["max_chapter"], display_title, options.analysis_sections)
         document = render_publication(publication, reader_document=reading, labels=resolved.labels,
-                                      language_key=resolved.key, resources=resources)
+                                      language_key=resolved.key, resources=resources,
+                                      analysis_available=bool(options.analysis_sections))
     envelope = {"schema_version": DATA_SCHEMA, "responses": responses, "resources": resources,
                 **({"publication": publication} if publication is not None else {})}
     envelope_size = len(_json(envelope))
@@ -560,24 +653,26 @@ def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
         raise ResearchConflictError("Project settings changed during website preparation; retry the export")
     if snapshot and Head.model_validate_json(repository.read(repository.data / "HEAD.json", maximum=4096)).sha256 != snapshot.digest:
         raise ResearchConflictError("Research changed during website preparation; retry the export")
-    manifest: dict[str, Any] = {"schema_version": SITE_SCHEMA, "product_version": __version__,
+    manifest: dict[str, Any] = {"schema_version": SITE_ANALYSIS_SCHEMA if publication_analysis is not None else SITE_SCHEMA, "product_version": __version__,
         "created_at": datetime.now(timezone.utc).isoformat(), "entrypoint": "index.html",
         "mode": mode,
         "project": {"title": display_title, "language": resolved.key,
                     **({"id": snapshot.project.id} if snapshot else {})},
         "manuscript": {**({"name": source.name} if mode == "review" else {}), "source_sha256": source_hash},
-        "analysis": ({"language": resolved.key, "thresholds": asdict(effective_thresholds)} if mode == "review" else None),
+        "analysis": ({"language": resolved.key, "thresholds": asdict(effective_thresholds)} if mode == "review" else publication_analysis),
         "research": {"included": include_research, "snapshot": snapshot.digest if include_research and snapshot else None,
                      "revision_count": len(snapshot.revisions) if include_research and snapshot else 0},
         **({"publication": {"profile": publication["profile"], "identity": publication["identity"],
-            "max_chapter": publication["max_chapter"], "entry_count": len(publication["entries"])}} if publication else {}),
-        "capabilities": {"read_only": True, "analysis": mode == "review", "research": include_research,
+            "max_chapter": publication["max_chapter"], "entry_count": len(publication["entries"]),
+            **({"analysis_sections": options.analysis_sections} if options.analysis_sections else {})}} if publication else {}),
+        "capabilities": {"read_only": True, "analysis": mode == "review" or publication_analysis is not None, "research": include_research,
                          "source_files": include_source_files, "automatic_external_requests": False},
         "disclosures": [*( ["Contains manuscript prose, analysis and work-marker notes."] if mode == "review" else [
             "Contains only the selected publication profile, approved dossier content and explicitly selected citations/maps.",
             "Reading progress hides content already included in this file; it is not access control.",
             "The export chapter cap removes later publication entries and resources before assembly.",
-            "Contains manuscript reading text only through the export cap." if mode == "reader" else "Contains no manuscript prose or analysis."]),
+            "Contains manuscript reading text only through the export cap." if mode == "reader" else "Contains no manuscript prose or analysis.",
+            *(["Contains explicitly selected analysis computed only from the exported chapters with default settings; no work-marker notes."] if publication_analysis is not None else [])]),
             *( ["Contains accessible authored research history, notes, source metadata and cited excerpts; local Zotero identities are omitted."] if include_research else []),
             *( ["Includes original source bytes and images; retention does not grant redistribution rights." +
                 (" Review mode also includes full extracted text." if mode == "review" else " Only selected publication dependencies are copied.")] if include_source_files else []),
@@ -630,7 +725,7 @@ def export_site(project: str | Path, output: str | Path, *, manuscript: str | Pa
                 thresholds: FingerprintThresholds | None = None,
                 include_research: bool = False, include_source_files: bool = False,
                 mode: SiteMode = "review", publication_profile: str | None = None,
-                max_chapter: int | None = None) -> dict[str, Any]:
+                max_chapter: int | None = None, analysis_sections: list[AnalysisSection] | None = None) -> dict[str, Any]:
     """Publish a complete new local folder; never replace an existing target."""
     root = Path(project).expanduser().resolve()
     target = Path(output).expanduser().absolute()
@@ -648,7 +743,8 @@ def export_site(project: str | Path, output: str | Path, *, manuscript: str | Pa
     bundle = prepare_site(project, manuscript=manuscript, language=language, title=title,
                           thresholds=thresholds, include_research=include_research,
                           include_source_files=include_source_files, mode=mode,
-                          publication_profile=publication_profile, max_chapter=max_chapter)
+                          publication_profile=publication_profile, max_chapter=max_chapter,
+                          analysis_sections=analysis_sections)
     target.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=".lixity-site-", dir=target.parent) as directory:
         stage = Path(directory) / "site"

@@ -9,7 +9,9 @@ Analysis, research, screenshots and PDF layouts use that same project.
 Two curated examples use the same production export and manuscript:
 
 - [Read with context](reader/index.html) combines the six chapters with selected
-  dossier passages, diagrams and images, without the analysis or internal archive.
+  dossier passages, diagrams and images, plus an explicitly selected chapter
+  analysis. Use **Analysis** from the reading page and **Back to reading copy**
+  to return. The internal research archive is not included.
 - [Companion only](companion/index.html) presents that context without novel or
   analysis bytes. This example is capped at chapter 3: later entries and their
   resources are omitted before the website is assembled.

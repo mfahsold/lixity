@@ -210,11 +210,14 @@ server.serve_forever()
       assert.equal(await page.locator('#speech-instructions').isDisabled(),false);
       assert.equal(await page.locator('#speech-instructions').isVisible(),true);
       assert.equal(await page.locator('#speech-language').inputValue(),'en');
-      await page.locator('#speech-pronunciations').locator('xpath=ancestor::details/summary').click();
+      await page.locator('#speech-lexicon > summary').click();
+      await page.locator('#speech-pronunciations').locator('xpath=ancestor::details[1]/summary').click();
       await page.locator('#speech-pronunciations').fill('Lixity=Lik-si-tee');
       await page.locator('#speech-pronunciation_search').fill('Lixity');
-      await page.locator('[data-speech-action=pronunciation_find]').click();
-      assert.equal(await page.locator('#speech-pronunciations').evaluate(el=>el.value.slice(el.selectionStart,el.selectionEnd)),'Lixity');
+      assert.equal(await page.locator('[data-pronunciation-row]:visible').count(), 1);
+      await page.keyboard.press('Escape');
+      assert.equal(await dialog.isVisible(),true,'Profile edits need an explicit save or discard');
+      await page.locator('[data-speech-action=profiles_discard]').click();
       await page.keyboard.press('Escape');
       await page.locator('#tab-view-analysis').click();
       await page.locator('#reader-speech').click();
