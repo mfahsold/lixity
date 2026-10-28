@@ -3,6 +3,7 @@
 import json
 import math
 import os
+import re
 import tempfile
 from collections.abc import Mapping, Sequence
 from contextlib import suppress
@@ -19,6 +20,8 @@ from .revisions import _record, prepare_record_revision
 
 _PREFIX = "<!-- lixity-dossier-edit/1\n"
 _END = "\n-->\n"
+_HEADER_START = re.compile(r"<!-- lixity-dossier-edit/1\r?\n")
+_HEADER_END = re.compile(r"\r?\n-->\r?\n")
 # The model's maximum is a codepoint limit; UTF-8 requires at most four bytes each.
 _BODY_MAX_CHARS = next(item.max_length for item in Dossier.model_fields["body"].metadata
                        if hasattr(item, "max_length"))
@@ -96,12 +99,13 @@ def encode_dossier_edit(record: Dossier) -> str:
 
 def decode_dossier_edit(text: str) -> dict[str, Any]:
     """Read only the explicit leading control comment; body content stays inert."""
-    if not text.startswith(_PREFIX):
+    start = _HEADER_START.match(text)
+    if start is None:
         raise ResearchError("Expected an exported lixity-dossier-edit/1 header")
-    end = text.find(_END, len(_PREFIX))
-    if end < 0:
+    end = _HEADER_END.search(text, start.end())
+    if end is None:
         raise ResearchError("Dossier edit header is incomplete")
-    raw = text[len(_PREFIX):end]
+    raw = text[start.end():end.start()]
     if len(_utf8(raw, "header")) > MAX_RESEARCH_OBJECT_BYTES:
         raise ResearchError("Dossier edit header exceeds the supported structured-record size")
     try:
@@ -112,7 +116,7 @@ def decode_dossier_edit(text: str) -> dict[str, Any]:
         header = _EditHeader.model_validate(values)
     except (ValueError, RecursionError) as exc:
         raise ResearchError("Invalid dossier edit header; preserve exported identities and fields") from exc
-    body = text[end + len(_END):]
+    body = text[end.end():]
     _body_bytes(body)
     return {**header.model_dump(), "body": body}
 
@@ -236,7 +240,8 @@ def prepare_dossier_edits(
 
 def read_dossier_edit(path: str | Path) -> str:
     """Read a bounded UTF-8 edit file without newline translation."""
-    maximum = MAX_RESEARCH_OBJECT_BYTES + _BODY_MAX_BYTES + len(_PREFIX) + len(_END)
+    # The three envelope line endings may each contain an additional CR byte.
+    maximum = MAX_RESEARCH_OBJECT_BYTES + _BODY_MAX_BYTES + len(_PREFIX) + len(_END) + 3
     try:
         with Path(path).expanduser().open("rb") as stream:
             content = stream.read(maximum + 1)

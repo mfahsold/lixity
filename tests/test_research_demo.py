@@ -358,7 +358,7 @@ def test_public_reader_and_companion_use_the_production_scope_and_assets(tmp_pat
 
     project = tmp_path / 'research-demo'
     for mode, target in public_publications.items():
-        page = target.read_text()
+        page = target.read_text(encoding='utf-8')
         cap = 3 if mode == 'companion' else None
         native = prepare_site(project, manuscript='harbour-manuscript.md', mode=mode,
             publication_profile='readers', max_chapter=cap, include_source_files=True,
@@ -372,10 +372,10 @@ def test_public_reader_and_companion_use_the_production_scope_and_assets(tmp_pat
         assert 'href="../../assets/research/sources.json"' in page
         assert site_data(page)['responses'] == {}
         for asset in (*_CSS_FILES, *_PUBLICATION_JS_FILES):
-            assert page.count((ROOT / 'src/lixity/ui/assets' / asset).read_text().strip()) == 1, asset
+            assert page.count((ROOT / 'src/lixity/ui/assets' / asset).read_text(encoding='utf-8').strip()) == 1, asset
         for asset in set(_JS_FILES) - set(_PUBLICATION_JS_FILES):
-            assert (ROOT / 'src/lixity/ui/assets' / asset).read_text().strip() not in page, asset
-        manifest = json.loads(target.with_name('manifest.json').read_text())
+            assert (ROOT / 'src/lixity/ui/assets' / asset).read_text(encoding='utf-8').strip() not in page, asset
+        manifest = json.loads(target.with_name('manifest.json').read_text(encoding='utf-8'))
         assert manifest['mode'] == mode
         assert manifest['capabilities']['automatic_external_requests'] is False
         assert manifest['capabilities']['analysis'] is (mode == 'reader')
@@ -383,7 +383,7 @@ def test_public_reader_and_companion_use_the_production_scope_and_assets(tmp_pat
             assert manifest['schema_version'] == 'lixity-read-only-site/2'
             assert manifest['publication']['analysis_sections'] == ['chapters']
             assert 'href="analysis.html"' in page
-            analysis = target.with_name('analysis.html').read_text()
+            analysis = target.with_name('analysis.html').read_text(encoding='utf-8')
             assert 'analysis-section-chapters' in analysis
             assert 'analysis-section-language' not in analysis
             assert 'rel="canonical" href="https://mfahsold.github.io/lixity/demo/reader/analysis.html"' in analysis
@@ -398,8 +398,8 @@ def test_public_reader_and_companion_use_the_production_scope_and_assets(tmp_pat
 def test_public_companion_contains_no_novel_and_actual_cap_omits_late_content(tmp_path, public_publications):
     from lixity.site_export import prepare_site
 
-    companion = public_publications['companion'].read_text()
-    source = (ROOT / 'samples/first-look.md').read_text()
+    companion = public_publications['companion'].read_text(encoding='utf-8')
+    source = (ROOT / 'samples/first-look.md').read_text(encoding='utf-8')
     data = site_data(companion)['publication']
     assert data['max_chapter'] == 3
     assert data['chapters'] == [{'number': 1}, {'number': 2}, {'number': 3}]
@@ -421,9 +421,9 @@ def test_public_demo_staging_rejects_unreviewed_analysis_scope(tmp_path, public_
     from scripts.stage_pages import stage
 
     manifest_file = public_publications['reader'].with_name('manifest.json')
-    manifest = json.loads(manifest_file.read_text())
+    manifest = json.loads(manifest_file.read_text(encoding='utf-8'))
     manifest['publication']['analysis_sections'] = ['full']
-    manifest_file.write_text(json.dumps(manifest))
+    manifest_file.write_text(json.dumps(manifest), encoding='utf-8')
     with pytest.raises(ValueError, match=r'reviewed website manifest|analysis scope'):
         stage(tmp_path / 'docs', tmp_path / 'unreviewed')
 
@@ -437,16 +437,16 @@ def test_pages_stages_only_two_approved_publication_manifest_inventories(tmp_pat
     for name in unapproved:
         path = docs / name
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text('UNREVIEWED_LOCAL_MATERIAL')
+        path.write_text('UNREVIEWED_LOCAL_MATERIAL', encoding='utf-8')
     destination = tmp_path / 'published'
     stage(docs, destination)
     expected = set()
     for mode, target in public_publications.items():
-        manifest = json.loads(target.with_name('manifest.json').read_text())
+        manifest = json.loads(target.with_name('manifest.json').read_text(encoding='utf-8'))
         expected.update('demo/' + mode + '/' + name for name in [*manifest['files'], 'manifest.json'])
     actual = {path.relative_to(destination).as_posix() for path in (destination / 'demo').rglob('*') if path.is_file()}
     assert actual == expected
     assert not any((destination / name).exists() for name in unapproved)
-    public_publications['reader'].write_text('Changed after review')
+    public_publications['reader'].write_text('Changed after review', encoding='utf-8')
     with pytest.raises(ValueError, match=r'changed|checksum'):
         stage(docs, tmp_path / 'changed-output')

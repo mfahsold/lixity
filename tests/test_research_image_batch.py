@@ -1,6 +1,7 @@
 """Explicit image batches retain all captures and one dossier revision, or none."""
 
 import json
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -79,7 +80,7 @@ def test_cli_batch_relative_paths_preview_and_apply(batch, tmp_path, capsys):
     project, dossier, items, options = batch
     manifest = tmp_path / "batch.json"
     manifest.write_text(json.dumps({"schema_version": "research-dossier-image-batch/1",
-        "items": [{**item, "file": item["file"].rsplit("/", 1)[1]} for item in items]}))
+        "items": [{**item, "file": Path(item["file"]).name} for item in items]}), encoding="utf-8")
     args = ["research", "dossier-image", "--project", str(project), "--dossier-id", dossier,
             "--expected-snapshot", options["expected_snapshot"], "--expected-revision", "1",
             "--allow-retention", "--batch", str(manifest)]

@@ -38,6 +38,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   planner for previews and chapter renders; Qwen retains its existing full model.
 
 ### Changed
+- Dossier edit files accept LF and CRLF control headers without changing the
+  saved body, including on Windows.
 - Passage review links back to its exact saved decision; unmatched decisions
   for the current manuscript are reported and retained in UI and CLI.
 - The normal-model threshold expectation is labeled as a model reference,

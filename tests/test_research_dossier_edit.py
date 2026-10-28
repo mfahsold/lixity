@@ -49,6 +49,26 @@ def _header():
             "fields": {"title": "Notes", "language": "en", "tags": [], "geography": None, "evidence_ids": []}}
 
 
+@pytest.mark.parametrize("opening,ending", [("\n", "\n"), ("\r\n", "\r\n"), ("\n", "\r\n"), ("\r\n", "\n")])
+def test_control_header_accepts_lf_and_crlf_without_changing_body(opening, ending):
+    from lixity.research.dossier_edit import decode_dossier_edit
+
+    body = "First\r\nsecond\nthird\rlast"
+    text = "<!-- lixity-dossier-edit/1" + opening + json.dumps(_header()) + ending + "-->" + ending + body
+    assert decode_dossier_edit(text)["body"] == body
+
+
+def test_read_dossier_edit_allows_crlf_control_envelope_at_size_limit(tmp_path, monkeypatch):
+    from lixity.research import dossier_edit
+
+    monkeypatch.setattr(dossier_edit, "MAX_RESEARCH_OBJECT_BYTES", 10)
+    monkeypatch.setattr(dossier_edit, "_BODY_MAX_BYTES", 10)
+    text = "<!-- lixity-dossier-edit/1\r\n" + "x" * 10 + "\r\n-->\r\n" + "y" * 10
+    path = tmp_path / "draft.md"
+    path.write_bytes(text.encode("utf-8"))
+    assert dossier_edit.read_dossier_edit(path) == text
+
+
 @pytest.mark.parametrize("change", [
     {"kind": "claim"}, {"base_revision": True}, {"base_revision": 0}, {"base_revision": 1.5},
     {"project_id": "../other"}, {"record_id": "00000000-0000-4000-8000-000000000002"},
@@ -272,6 +292,20 @@ def test_prepare_dossier_edits_multi_file_and_atomic_batch(project, tmp_path):
     assert doc1["body"] == "Updated 1."
     assert doc2["revision"] == 2
     assert doc2["body"] == "Updated 2."
+
+
+def test_batch_prepare_accepts_crlf_draft_and_preserves_body(project, tmp_path):
+    from lixity.research.dossier_edit import prepare_dossier_edits, write_dossier_edit
+
+    identifier = api.create_dossier(project, "Notes", "Original.")["dossier_id"]
+    draft = tmp_path / "draft.md"
+    write_dossier_edit(project, identifier, draft)
+    document = draft.read_bytes().replace(b"\n", b"\r\n").replace(b"Original.", b"First\r\nSecond\n")
+    draft.write_bytes(document)
+    preview = prepare_dossier_edits(project, [draft])
+    assert preview["ready"] and preview["changed_files"] == 1
+    api.apply_record_revisions(project, preview["batch_packet"], expected_snapshot=preview["snapshot"])
+    assert api.get_dossier(project, identifier)["body"] == "First\r\nSecond\n"
 
 
 def test_prepare_dossier_edits_rejects_duplicate_and_foreign_files(project, tmp_path):
