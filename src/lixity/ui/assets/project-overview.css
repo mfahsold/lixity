@@ -2,6 +2,13 @@
 .project-overview-heading { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
 .project-overview-heading h3 { margin: 0; }
 .project-overview-heading .ctl { flex-shrink: 0; }
+.project-overview-workflow h4, .project-overview-outputs h4 { font-size: .9rem; margin: .9rem 0 .6rem; }
+.project-overview-actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: flex-start; }
+.project-overview-action { min-width: 0; }
+.project-overview-action .ctl-note { max-width: 24rem; margin: .25rem 0; }
+.project-overview-technical { margin-top: 1rem; }
+.project-overview-technical > summary { cursor: pointer; font-size: .9rem; font-weight: 600; }
+.project-overview-technical .project-overview-columns { margin-top: .75rem; }
 .project-overview-root { display: flex; flex-wrap: wrap; gap: .25rem .65rem; margin: .5rem 0 1rem; font-size: .85rem; }
 .project-overview-root span { color: var(--muted); }
 .project-overview code { overflow-wrap: anywhere; white-space: normal; }

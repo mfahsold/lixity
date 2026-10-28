@@ -968,7 +968,11 @@ window.LixityManuscriptLinks = {
       data.audio.targets.forEach(function(target) {
         var title = document.createElement("dt"), value = document.createElement("dd");
         title.textContent = uiLabel("speech_target_" + target.target);
-        value.textContent = uiLabel("runtime_" + target.state); targets.append(title, value);
+        value.textContent = uiLabel("runtime_" + target.state);
+        var model = document.createElement("div");
+        model.textContent = uiLabel("runtime_model") + ": " +
+          (typeof target.model === "string" && target.model.trim() ? target.model : uiLabel("runtime_model_unknown"));
+        value.appendChild(model); targets.append(title, value);
       }); content.appendChild(targets);
       heading("runtime_jobs");
       var jobs = document.createElement("ul");

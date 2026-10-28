@@ -106,6 +106,24 @@ _ROWS = {
         'Indisponível ou não preparado',
         'Niet bereikbaar of niet gereed',
     ),
+    'runtime_model': (
+        'Model',
+        'Modell',
+        'Modèle',
+        'Modelo',
+        'Modello',
+        'Modelo',
+        'Model',
+    ),
+    'runtime_model_unknown': (
+        'Unknown',
+        'Unbekannt',
+        'Inconnu',
+        'Desconocido',
+        'Sconosciuto',
+        'Desconhecido',
+        'Onbekend',
+    ),
     'runtime_refresh': (
         'Refresh status',
         'Status aktualisieren',
@@ -332,13 +350,21 @@ _ROWS = {
         "Projectoverzicht",
     ),
     "project_structure_scope": (
-        "Read-only inspection of sources and generated files.",
-        "Schreibgeschützte Prüfung von Quellen und erzeugten Dateien.",
-        "Inspection en lecture seule des sources et fichiers générés.",
-        "Inspección de solo lectura de fuentes y archivos generados.",
-        "Verifica in sola lettura di fonti e file generati.",
-        "Inspeção somente leitura de fontes e arquivos gerados.",
-        "Alleen-lezencontrole van bronnen en gegenereerde bestanden.",
+        "Continue your work and inspect project files.",
+        "Am Projekt weiterarbeiten und Dateien einsehen.",
+        "Continuer votre travail et consulter les fichiers du projet.",
+        "Continúe su trabajo y consulte los archivos del proyecto.",
+        "Continua il lavoro e consulta i file del progetto.",
+        "Continue o seu trabalho e consulte os ficheiros do projeto.",
+        "Werk verder en bekijk de projectbestanden.",
+    ),
+    "project_structure_workflow": (
+        "Work on your project", "Am Projekt arbeiten", "Travailler sur le projet", "Trabajar en el proyecto",
+        "Lavora al progetto", "Trabalhar no projeto", "Aan het project werken",
+    ),
+    "project_structure_technical": (
+        "Folders and structure", "Ordner und Struktur", "Dossiers et structure", "Carpetas y estructura",
+        "Cartelle e struttura", "Pastas e estrutura", "Mappen en structuur",
     ),
     "project_structure_sources": (
         "Sources",
@@ -11557,6 +11583,29 @@ _ROWS["speech_delivery"] = (
     "Interpretazione", "Interpretação", "Voordracht",
 )
 
+_ROWS["speech_remove_profile"] = (
+    "Remove profile", "Profil entfernen", "Supprimer le profil", "Eliminar perfil",
+    "Rimuovi profilo", "Remover perfil", "Profiel verwijderen",
+)
+_ROWS["speech_profile_removed_draft"] = (
+    "Profile removed from the draft. Save project audio settings to apply.",
+    "Profil aus dem Entwurf entfernt. Zum Übernehmen Audio-Projekteinstellungen speichern.",
+    "Profil retiré du brouillon. Enregistrez les paramètres audio pour appliquer.",
+    "Perfil retirado del borrador. Guarda los ajustes de audio para aplicar.",
+    "Profilo rimosso dalla bozza. Salva le impostazioni audio per applicare.",
+    "Perfil removido do rascunho. Guarde as definições de áudio para aplicar.",
+    "Profiel uit het concept verwijderd. Sla de audio-instellingen op om dit toe te passen.",
+)
+_ROWS["speech_profile_referenced"] = (
+    "This profile is used by saved passage direction. Review or remove that direction first.",
+    "Dieses Profil wird in gespeicherter Textstellenregie verwendet. Bitte zuerst die Regie prüfen oder entfernen.",
+    "Ce profil est utilisé par une direction enregistrée. Vérifiez-la ou supprimez-la d'abord.",
+    "Este perfil se usa en una dirección guardada. Revísala o elimínala primero.",
+    "Questo profilo è usato in una regia salvata. Verificala o rimuovila prima.",
+    "Este perfil é usado numa direção guardada. Reveja-a ou remova-a primeiro.",
+    "Dit profiel wordt gebruikt in opgeslagen passageregie. Controleer of verwijder die eerst.",
+)
+
 
 # Authored speech direction uses the same seven-locale label pack.
 _ROWS.update({
@@ -11589,6 +11638,26 @@ _ROWS.update({
 })
 
 _ROWS["speech_direction_discard"] = ("Discard direction draft", "Regieentwurf verwerfen", "Abandonner le brouillon", "Descartar borrador", "Scarta bozza di regia", "Descartar rascunho", "Regieconcept verwerpen")
+
+_ROWS["speech_direction_switch_first"] = (
+    "Save or discard the direction draft before switching or closing.",
+    "Regieentwurf vor dem Wechsel oder Schließen speichern oder verwerfen.",
+    "Enregistrez ou abandonnez le brouillon avant de changer ou de fermer.",
+    "Guarda o descarta el borrador antes de cambiar o cerrar.",
+    "Salva o scarta la bozza prima di cambiare o chiudere.",
+    "Guarde ou descarte o rascunho antes de mudar ou fechar.",
+    "Sla het regieconcept op of verwerp het voordat je wisselt of sluit.",
+)
+
+_ROWS["speech_direction_context_changed"] = (
+    "The project or manuscript changed. Copy your direction draft; saving and synthesis are disabled. Discard the draft to close.",
+    "Projekt oder Manuskript wurde geändert. Kopiere deinen Regieentwurf; Speichern und Vertonen sind gesperrt. Verwirf den Entwurf zum Schließen.",
+    "Le projet ou le manuscrit a changé. Copiez le brouillon ; l’enregistrement et la synthèse sont désactivés. Abandonnez-le pour fermer.",
+    "Cambió el proyecto o el manuscrito. Copia el borrador; guardar y sintetizar están desactivados. Descártalo para cerrar.",
+    "Il progetto o manoscritto è cambiato. Copia la bozza; salvataggio e sintesi sono disattivati. Scartala per chiudere.",
+    "O projeto ou manuscrito mudou. Copie o rascunho; guardar e sintetizar estão desativados. Descarte-o para fechar.",
+    "Het project of manuscript is gewijzigd. Kopieer het regieconcept; opslaan en inspreken zijn uitgeschakeld. Verwerp het concept om te sluiten.",
+)
 
 _ROWS["speech_engine"] = ("Voice model", "Stimmmodell", "Modèle vocal", "Modelo de voz", "Modello vocale", "Modelo de voz", "Stemmodel")
 _ROWS["speech_voice_description"] = (

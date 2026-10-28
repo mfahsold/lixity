@@ -261,11 +261,11 @@ defines that boundary and the optional local-import workflow.
 
 ### Inspect project structure
 
-Open **Project** to inspect the selected
-folder. **Sources** identifies the selected/configured manuscript and native
-research folder; **Outputs** lists existing files directly under `exports/`
-and the conventional `exports/archive/` location. Open the manuscript or matching
-research workspace through its existing view, or open an eligible output.
+Open **Project** for direct access to the manuscript, matching research workspace,
+voice profiles and chapter audio, when those actions are available. **Outputs**
+groups and searches eligible files directly under `exports/`; the expanded
+technical details identify the configured sources and the conventional
+`exports/archive/` location.
 **Check again** repeats the metadata inspection without rebuilding analysis.
 There is no background scan of all projects.
 
@@ -1562,7 +1562,10 @@ native interface, open **Project → Voice profiles** to create or edit a profil
 including its model, delivery, standard pauses and pronunciation replacements.
 The pronunciation editor can be expanded and searched. **Save project audio settings** stores
 the selected profile and its controls through the normal atomic project settings
-path. Use **Listen and direct** in the manuscript to audition and direct a
+path. A profile can be removed as a draft before saving; the last profile cannot
+be removed. A profile referenced by saved passage direction cannot be removed,
+including references in stale direction entries or other manuscript sources.
+Review or remove those references first. Use **Listen and direct** in the manuscript to audition and direct a
 passage; the active project profile is shown there. **Project → Render chapter
 audio** selects a chapter and shows progress and the resulting download. The
 passage dialog also links directly to chapter output and retains the selected
@@ -1699,8 +1702,8 @@ Cache entries can still be evicted while a render is in progress.
 
 ### Passage direction (current main; after 0.7.6)
 
-The native Audio dialog can attach an author's direction to an exact passage or
-selected range. Open Audio from the manuscript or Project settings, choose the
+The native manuscript **Listen and direct** dialog can attach an author's direction
+to an exact passage or selected range. Open it from the manuscript, choose the
 passage, and select text in the read-only **Spoken text** field for a smaller
 range. With no selection, **Use selected text / whole passage** restores the
 whole passage. Choose a saved voice profile or inherit the current narrator,
@@ -1710,6 +1713,10 @@ not measured emotion controls. **Inspect preview plan** shows the actual spoken
 text, effective preset, combined instructions and silence before calling a model.
 Preview uses the draft; chapter generation requires **Save passage direction**.
 Profile settings and passage direction have separate save actions.
+
+**App and audio** reports the actual model identity advertised by each available
+local or Jetson worker; an unknown identity is shown as unknown. The dialog also
+provides access to open projects and the audio queue.
 
 Direction is retained in `.lixity/audio-directions.json`, separately from both
 manuscript prose and `lixity.toml`. Each record binds the project-relative source,

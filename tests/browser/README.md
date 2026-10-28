@@ -63,6 +63,10 @@ desktop/mobile navigation, literal filenames, encoded output downloads, stale
 project rejection and mismatched research contexts. Synthetic source, settings
 and output bytes must remain unchanged after inspection.
 
+The audio-profile-delete suite uses a synthetic native project at desktop and
+mobile widths. It checks that referenced profiles remain selectable, removing an
+unreferenced profile is a visible draft, and saving persists the removal.
+
 The anchor-navigation suite checks real nested scroll areas, short mobile
 viewports, single arrival feedback, superseded jumps and live reduced motion.
 Dossier-return uses a disposable native archive to check exact returns, saved
@@ -199,7 +203,9 @@ The project-controls suite checks manuscript file/drop selection and inert
 filenames, explicit native import confirmation, the existing embedding load
 payload, persistent New/Open/guidance across the three views, and the initially
 explicit NDA capability gating. Its synthetic examples and intercepted
-requests exercise desktop/mobile layouts and seven languages; screenshots stay
+requests exercise desktop/mobile layouts and seven languages. A native synthetic
+workspace also checks actual worker model identity, an unknown model, refresh,
+and preserved project navigation at desktop and mobile widths. Screenshots stay
 under `/tmp/lixity-project-controls-*`.
 
 The manuscript-pdf suite checks the native manuscript download controls in all

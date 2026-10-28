@@ -62,15 +62,19 @@
   }
   function roleRow(role) {
     var row = node("li", "project-overview-row");
-    row.dataset.projectRole = role.role;
     var heading = node("div", "project-overview-row-heading");
     heading.append(node("strong", "", text(keys.roles[role.role])),
       node("span", "project-overview-state", text(mapped(keys.states, role.state, "project_structure_state_unknown"))));
     row.append(heading);
     if (role.path !== null) row.append(node("code", "", role.path));
-    if (role.state === "available" && ["manuscript", "research"].includes(role.role)) {
-      var button = node("button", "ctl", text("project_structure_open_" + (role.role === "manuscript" ? "manuscript" : "research")));
-      button.type = "button";
+    return row;
+  }
+  function roleAction(role) {
+    var row = node("div", "project-overview-action");
+    row.dataset.projectRole = role.role;
+    var button = node("button", "ctl", text("project_structure_open_" + role.role));
+    button.type = "button";
+    if (role.state === "available") {
       if (role.role === "research" && overview.dataset.researchNavigation !== "true") {
         button.disabled = true;
         row.append(node("p", "ctl-note", text("project_structure_research_context")));
@@ -78,9 +82,20 @@
         button.dataset.switchView = role.role === "manuscript" ? "analysis" : "research";
         if (role.role === "research") button.dataset.projectResearch = "true";
       }
-      row.append(button);
+    } else {
+      button.disabled = true;
+      row.append(node("p", "ctl-note", text(mapped(keys.states, role.state, "project_structure_state_unknown"))));
     }
+    row.prepend(button);
     return row;
+  }
+  function audioAction(id, kind, label) {
+    var target = document.getElementById(id);
+    if (!target) return null;
+    var button = node("button", "ctl", text(label));
+    button.type = "button"; button.dataset.projectAudio = kind;
+    button.addEventListener("click", function () { target.click(); });
+    return button;
   }
   function outputRow(artifact, token) {
     var row = node("li", "project-overview-row"), heading = node("div", "project-overview-row-heading");
@@ -161,6 +176,19 @@
     folder.append(node("span", "", text("project_structure_folder")), node("code", "", data.root));
     var columns = node("div", "project-overview-columns"), roles = Object.create(null);
     data.roles.forEach(function (role) { roles[role.role] = role; });
+    var workflow = node("section", "project-overview-workflow");
+    workflow.append(node("h4", "", text("project_structure_workflow")));
+    var actions = node("div", "project-overview-actions");
+    ["manuscript", "research"].forEach(function (key) { actions.append(roleAction(roles[key])); });
+    [["settings-speech", "profiles", "speech_profiles_title"], ["settings-speech-output", "output", "speech_output_title"]].forEach(function (args) {
+      var action = audioAction.apply(null, args);
+      if (action) actions.append(action);
+    });
+    workflow.append(actions);
+    var outputs = node("section", "project-overview-outputs");
+    outputs.append(node("h4", "", text("project_structure_outputs")));
+    if (data.artifacts.length) outputs.append(outputBrowser(data.artifacts, token));
+    else outputs.append(node("p", "ctl-note", text("project_structure_no_outputs")));
     ["sources", "outputs"].forEach(function (group) {
       var section = node("section", "project-overview-group"), list = node("ul", "project-overview-list");
       section.append(node("h4", "", text("project_structure_" + group)));
@@ -168,11 +196,6 @@
         list.append(roleRow(roles[role]));
       });
       section.append(list);
-      if (group === "outputs") {
-        if (data.artifacts.length) {
-          section.append(outputBrowser(data.artifacts, token));
-        } else section.append(node("p", "ctl-note", text("project_structure_no_outputs")));
-      }
       columns.append(section);
     });
     var submissions = node("ul", "project-overview-list");
@@ -193,7 +216,12 @@
     if (data.truncated && !data.issues.some(function (issue) { return keys.issues[issue.code] === "project_structure_issue_limited"; })) {
       findings.append(node("p", "ctl-note", text("project_structure_issue_limited")));
     }
-    body.replaceChildren(folder, columns, submissions, findings);
+    var technical = node("details", "project-overview-technical");
+    technical.append(node("summary", "", text("project_structure_technical")), folder, columns, submissions);
+    if (!data.issues.length && !data.truncated) technical.append(findings);
+    body.replaceChildren(workflow, outputs);
+    if (data.issues.length || data.truncated) body.append(findings);
+    body.append(technical);
     body.hidden = false;
   }
   async function load() {

@@ -83,6 +83,10 @@ async function mockedFlows(browser) {
       assert.deepEqual(reads, [token]);
       const overview = page.locator('#project-overview'), labels = fixtures[locale].labels;
       assert.equal(await overview.locator('h3').textContent(), labels.project_structure_title);
+      assert.equal(await overview.locator('.project-overview-workflow [data-project-role="manuscript"] button').isVisible(), true);
+      assert.equal(await overview.locator('.project-overview-workflow [data-project-role="research"] button').isVisible(), true);
+      assert.equal(await overview.locator('.project-overview-technical').getAttribute('open'), null,
+        'Project paths and structural details are secondary by default');
       assert.equal(await overview.locator('.project-overview-columns > section').count(), 2);
       assert.ok((await overview.textContent()).includes(labels.project_structure_provenance_unknown));
       assert.ok((await overview.textContent()).includes('<img src=x onerror=alert(1)>.pdf'));
@@ -112,6 +116,11 @@ async function mockedFlows(browser) {
       assert.equal(reads.length, 2, 'Each explicit activation inspects again');
 
       if (locale === 'en') {
+        response = {...report(), roles: report().roles.map(role => role.role === 'research' ? {...role, state: 'missing'} : role)};
+        await page.locator('#project-overview-refresh').click();
+        await page.locator('#project-overview-body:not([hidden])').waitFor();
+        assert.equal(await overview.locator('[data-project-role="research"] button').isDisabled(), true);
+        assert.ok((await overview.locator('[data-project-role="research"]').textContent()).includes(labels.project_structure_state_missing));
         failure = true;
         await page.locator('#project-overview-refresh').click();
         await page.waitForFunction(text => document.getElementById('project-overview-status').textContent === text, labels.project_structure_failed);
@@ -124,6 +133,7 @@ async function mockedFlows(browser) {
         await page.locator('#project-overview-body:not([hidden])').waitFor();
         assert.ok((await overview.textContent()).includes(labels.project_structure_issue_source_output));
         assert.ok((await overview.textContent()).includes(labels.project_structure_issue_limited));
+        assert.equal(await overview.locator('.project-overview-findings').isVisible(), true, 'Structural warnings are visible without opening folders');
         let release;
         hold = new Promise(resolve => { release = resolve; });
         response = report('/Stale project');
@@ -226,6 +236,18 @@ server.serve_forever()
         await page.locator('#tab-view-project').click();
         await page.locator('#project-overview-body:not([hidden])').waitFor();
         const overview = page.locator('#project-overview');
+        assert.equal(await overview.locator('.project-overview-workflow [data-project-role="manuscript"] button').isVisible(), true);
+        assert.equal(await overview.locator('.project-overview-workflow [data-project-role="research"] button').isVisible(), true);
+        assert.equal(await overview.locator('.project-overview-technical').getAttribute('open'), null);
+        assert.equal(await page.locator('#settings-speech').count(), 1, 'Native fixture enables audio');
+        await overview.locator('[data-project-audio="profiles"]').click();
+        assert.equal(await page.locator('#modal-speech[open]').count(), 1);
+        assert.equal(await page.locator('#speech-title').textContent(), fixtures.en.labels.speech_profiles_title);
+        await page.locator('#modal-speech button').first().click();
+        await overview.locator('[data-project-audio="output"]').click();
+        assert.equal(await page.locator('#modal-speech[open]').count(), 1);
+        assert.equal(await page.locator('#speech-title').textContent(), fixtures.en.labels.speech_output_title);
+        await page.locator('#modal-speech button').first().click();
         assert.ok((await overview.textContent()).includes(server.fixture.projects.Alpha.root));
         assert.ok((await overview.textContent()).includes('drafts/manuscript.md'));
         const outputs = overview.locator('.project-overview-artifacts a');

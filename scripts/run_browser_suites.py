@@ -112,6 +112,7 @@ AREAS: dict[str, tuple[str, ...]] = {
         "visual-consistency.cjs",
     ),
     "project": (
+        "audio-profile-delete.cjs",
         "read-only-site.cjs",
         "overlay-layout.cjs",
         "debug.cjs",

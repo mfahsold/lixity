@@ -214,6 +214,23 @@ def direction_snapshot(project: str | Path) -> str:
     return _read(Path(project).resolve())[1]
 
 
+def check_profile_removals(project: str | Path, audio: object) -> None:
+    """Reject removal of profiles still referenced by any retained direction.
+
+    Call under the project's repository writer lock, immediately before committing
+    the prepared project settings. This includes stale and other-source entries.
+    """
+    root = Path(project).resolve()
+    previous = parse_audio_settings(read_explicit_project_config(root).get('audio')).profiles
+    replacement = parse_audio_settings(audio).profiles
+    removed = previous.keys() - replacement.keys()
+    if removed:
+        state, _ = _read(root)
+        if any(entry.direction.profile_id in removed for entry in state.entries):
+            raise ValueError('A removed voice profile is used by saved speech direction; '
+                             'review or remove that direction before deleting the profile')
+
+
 def direction_state(project: str | Path, source: str | Path, *, language: str = 'en') -> dict[str, Any]:
     root = Path(project).resolve()
     path = Path(source).resolve()

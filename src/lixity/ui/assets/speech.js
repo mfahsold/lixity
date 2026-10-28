@@ -4,7 +4,7 @@
   var body = document.body, settingsForm = document.getElementById("settings-form");
   if (body.dataset.speechCapable !== "true" || body.dataset.readOnly === "true" || !settingsForm) return;
   var dialog, fields = {}, settings, capabilities, generation = 0, job = null, timer, openedContext, paragraph;
-  var executionTarget = "local", migrationRequired = false, direction, lastPreset = "Ryan", mode = "profiles";
+  var executionTarget = "local", migrationRequired = false, direction, savedDirectionView, lastPreset = "Ryan", mode = "profiles";
   function label(key) { return uiLabel("speech_" + key); }
   function languageName(code) {
     try { return new Intl.DisplayNames([document.documentElement.lang || "en"], {type: "language"}).of(code); }
@@ -51,7 +51,8 @@
       var previous = job; job = null;
       request("speech-cancel", Object.assign({}, previous.tokens, {id: previous.id})).catch(function() {});
     }
-    fields.cancel.disabled = true; fields.preview.disabled = fields.chapter_render.disabled = !settings || !settings.selected || !fields.chapter.options.length;
+    fields.cancel.disabled = true; fields.preview.disabled = fields.chapter_render.disabled = !settings || !settings.selected || !fields.chapter.options.length || openedContext !== context();
+    if (fields.direction_plan) fields.direction_plan.disabled = openedContext !== context();
     fields.progress.hidden = true;
     if (fields.plan) { fields.plan.replaceChildren(); fields.plan.hidden = true; }
   }
@@ -109,6 +110,17 @@
   function profileOptions() {
     options(fields.profile, Object.entries(settings.profiles).map(function(pair) { return [pair[0], pair[1].name]; }), settings.selected);
     fields.create.disabled = migrationRequired || Object.keys(settings.profiles).length >= 32;
+    fields.remove_profile.disabled = migrationRequired || Object.keys(settings.profiles).length <= 1;
+  }
+  function removeProfile() {
+    if (migrationRequired || !settings || Object.keys(settings.profiles).length <= 1) return;
+    var id = settings.selected;
+    if (savedDirectionView && savedDirectionView.directions.some(function(item) { return item.profile_id === id; })) {
+      status(label("profile_referenced")); return;
+    }
+    delete settings.profiles[id];
+    settings.selected = Object.keys(settings.profiles)[0];
+    profileOptions(); loadProfile(); status(label("profile_removed_draft"));
   }
   function create() {
     if (migrationRequired) return;
@@ -146,9 +158,10 @@
       else timer = setTimeout(function() { poll(serial, active); }, 500);
     } catch (error) { if (valid(serial)) { status(error.message); finish(); } }
   }
-  function finish() { job = null; fields.cancel.disabled = true; fields.preview.disabled = fields.chapter_render.disabled = !settings || !settings.selected || !fields.chapter.options.length; }
+  function finish() { job = null; fields.cancel.disabled = true; fields.preview.disabled = fields.chapter_render.disabled = !settings || !settings.selected || !fields.chapter.options.length || openedContext !== context(); }
   async function render(mode, planOnly) {
     if (migrationRequired) return;
+    if (openedContext !== context()) { status(label("direction_context_changed")); return; }
     try {
       if (!Array.from(fields.editor.querySelectorAll("input, select, textarea")).every(function(input) { return input.reportValidity(); })) return;
       var profile = readProfile(); invalidate(); var serial = generation;
@@ -191,17 +204,24 @@
       stash(); invalidate(); var serial = generation; fields.save.disabled = true; status(label("saving"));
       await request("settings", {project_token: tokens().project_token, audio: settings});
       if (valid(serial)) location.reload();
-    } catch (error) { if (serial == null || valid(serial)) status(error.message); }
+    } catch (error) {
+      if (serial == null || valid(serial)) status(error.message.includes("A removed voice profile is used by saved speech direction") ? label("profile_referenced") : error.message);
+    }
     finally { if (serial == null || valid(serial)) fields.save.disabled = false; }
   }
   function build() {
     dialog = node("dialog", body, "lixity-modal"); dialog.id = "modal-speech"; dialog.setAttribute("aria-labelledby", "speech-title");
     var card = node("div", dialog, "modal-card"), header = node("div", card, "modal-header");
     fields.heading = node("h3", header, "", label("title")); fields.heading.id = "speech-title";
-    var close = button(header, "close", function() { dialog.close(); }); close.className = "ctl";
+    var close = button(header, "close", function() {
+      if (direction.busy()) { status(label("saving")); return; }
+      if (direction.dirty()) { status(label("direction_switch_first")); return; }
+      dialog.close();
+    }); close.className = "ctl";
     var content = node("div", card, "modal-body");
     fields.status = node("p", content, "ctl-status"); fields.status.setAttribute("role", "status"); fields.status.setAttribute("aria-live", "polite");
     var row = node("div", content, "row"); field(row, "profile", "select"); fields.create = button(row, "create", create);
+    fields.remove_profile = button(row, "remove_profile", removeProfile);
     fields.editor = node("fieldset", content, "settings-section");
     node("legend", fields.editor, "", label("delivery"));
     fields.model = node("p", fields.editor, "ctl-note");
@@ -271,6 +291,11 @@
       catch (error) { fields.profile.value = settings.selected; status(error.message); }
     });
     fields.chapter.addEventListener("change", function() { paragraph = null; invalidate(); var select=fields.direction_passage; var choice=Array.from(select.options).find(function(o) { return o.textContent.startsWith(fields.chapter.value + " · "); }); if (choice) { select.value=choice.value; select.dispatchEvent(new Event("change")); } fields.context.textContent = label("first_preview"); });
+    dialog.addEventListener("cancel", function(event) {
+      if (direction.busy() || direction.dirty()) {
+        event.preventDefault(); status(label(direction.busy() ? "saving" : "direction_switch_first"));
+      }
+    });
     dialog.addEventListener("close", invalidate);
   }
   async function open(entry) {
@@ -282,6 +307,7 @@
     fields.heading.textContent = label(mode === "profiles" ? "profiles_title" : mode === "output" ? "output_title" : "reader_title");
     fields.editor.hidden = mode !== "profiles";
     fields.create.hidden = mode !== "profiles";
+    fields.remove_profile.hidden = mode !== "profiles";
     fields.save.hidden = mode !== "profiles";
     direction.section.hidden = mode !== "reader";
     fields.chapter.closest("label").hidden = mode === "profiles";
@@ -327,6 +353,7 @@
       profileOptions(); loadProfile();
       fields.target.closest("label").hidden = mode === "profiles" || fields.target.disabled;
       fields.reuseLabel.hidden = mode !== "output";
+      savedDirectionView = data.direction || null;
       if (data.direction) {
         var initialPassage = paragraph ? {anchor:paragraph.identity} : data.direction.passages.find(function(p) { return p.chapter === Number(fields.chapter.value); });
         direction.open(data.direction, initialPassage && initialPassage.anchor, settings.profiles);
@@ -340,7 +367,19 @@
   button(settingsForm, "output_title", function() { open("output"); }).id = "settings-speech-output";
   var toolbar = document.getElementById("manuscript-reader-controls");
   if (toolbar) button(toolbar, "reader_title", function() { open("reader"); }).id = "reader-speech";
-  document.addEventListener("lixity:workbench-change", function() { if (dialog && dialog.open) dialog.close(); });
-  new MutationObserver(function() { if (dialog && dialog.open && context() !== openedContext) dialog.close(); }).observe(body, {
+  document.addEventListener("lixity:workbench-change", function() {
+    if (!dialog || !dialog.open) return;
+    if (direction.busy() || direction.dirty()) {
+      status(label(direction.busy() ? "saving" : "direction_switch_first")); return;
+    }
+    dialog.close();
+  });
+  new MutationObserver(function() {
+    if (!dialog || !dialog.open || context() === openedContext) return;
+    if (direction.dirty() || direction.busy()) {
+      invalidate(); direction.stale(); status(label("direction_context_changed")); return;
+    }
+    dialog.close();
+  }).observe(body, {
     subtree: true, attributes: true, attributeFilter: ["data-project-token", "data-manuscript-source-sha256", "data-manuscript-project-token"]});
 })();

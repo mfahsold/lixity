@@ -198,6 +198,7 @@ class ProjectRoutesMixin(ResponseMixin):
             title_custom = title is not None if "title" in payload else self.title_custom
             thresholds = replace(self.thresholds, **apply_config_to_thresholds(payload))
             changes: dict[str, Any] = {key: payload[key] for key in PERSISTED_SETTINGS_KEYS if key in payload}
+            audio_profile_removal = False
             if "audio" in changes and root is not None:
                 existing_audio = read_explicit_project_config(root).get("audio")
                 if requires_audio_migration(existing_audio):
@@ -205,6 +206,13 @@ class ProjectRoutesMixin(ResponseMixin):
                         raise ValueError("Existing Piper profiles require the reviewed, backed-up audio-migrate command; "
                                          "normal settings saves cannot replace them")
                     changes.pop("audio")
+                else:
+                    from ..speech_profiles import parse_audio_settings
+
+                    audio_profile_removal = bool(
+                        parse_audio_settings(existing_audio).profiles.keys()
+                        - parse_audio_settings(changes["audio"]).profiles.keys()
+                    )
             if save_defaults:
                 changes.update({key: lang if key == "language" else payload[key]
                                 for key in ANALYSIS_SETTINGS_KEYS if key in payload})
@@ -228,7 +236,17 @@ class ProjectRoutesMixin(ResponseMixin):
                     strict_source=True,
                 )
             if prepared:
-                prepared.commit()
+                if audio_profile_removal and root is not None:
+                    from ..research.repository import Repository
+                    from ..speech_direction import check_profile_removals
+
+                    # Direction writes use this same project lock. Validate all
+                    # retained references while it is held through commit.
+                    with Repository(root).locked():
+                        check_profile_removals(root, changes["audio"])
+                        prepared.commit()
+                else:
+                    prepared.commit()
         except (OSError, TypeError, ValueError, RuntimeError, UserWarning) as exc:
             if publication_save:
                 self._log.warning("Publication profiles stage=save_failed error=%s errno=%s",

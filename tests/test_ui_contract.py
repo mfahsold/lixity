@@ -399,6 +399,7 @@ class TestJsDomContract(unittest.TestCase):
         ids.discard("r-dos-geography")  # mounted by the shared optional geography editor
         ids.discard("workbench-thread")  # mounted once by the shared reading-thread owner
         ids.discard("lixity-site-data")  # injected only by the prepared website exporter
+        ids.discard("speech-chapter")  # created dynamically by the speech dialog
         self.assertTrue(ids)
         # Onboarding controls exist only in the empty/research-only state.
         html = (

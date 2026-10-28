@@ -81,7 +81,7 @@ Handler = type('SyntheticApp', (LixityServerHandler,), {'_workspace_lock': RLock
 Handler.refresh()
 server = _LoopbackHTTPServer(('127.0.0.1', 0), Handler)
 server.workspaces = WorkspaceRegistry(Handler)
-module.worker_health = lambda target: {'target': target, 'state': 'ready' if target == 'local' else 'unavailable', 'transport': 'loopback' if target == 'local' else 'ssh'}
+module.worker_health = lambda target: {'target': target, 'state': 'ready' if target == 'local' else 'unavailable', 'transport': 'loopback' if target == 'local' else 'ssh', 'model': 'Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice' if target == 'local' else None}
 print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'paths': paths}), flush=True)
 server.serve_forever()
 `;
@@ -105,6 +105,18 @@ server.serve_forever()
         await second.locator('#runtime-open').click();
         await second.waitForFunction(() => document.querySelector('#runtime-content a'));
         assert.ok(await second.locator('#runtime-content').textContent().then(text => text.includes('First') && text.includes('Second')));
+        const models = second.locator('#runtime-content dl dd');
+        assert.match(await models.nth(0).textContent(), /Qwen\/Qwen3-TTS-12Hz-1\.7B-CustomVoice/);
+        assert.match(await models.nth(1).textContent(), /Modell: Unbekannt/);
+        await second.route('**/api/runtime', async route => {
+          const response = await route.fetch();
+          const data = await response.json();
+          data.audio.targets[1] = {target:'jetson', state:'ready', transport:'ssh', model:'Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign'};
+          await route.fulfill({json:data});
+        });
+        await second.locator('#runtime-refresh').click();
+        await second.waitForFunction(() => document.querySelectorAll('#runtime-content dl dd')[1]?.textContent.includes('VoiceDesign'));
+        assert.match(await models.nth(1).textContent(), /Qwen\/Qwen3-TTS-12Hz-1\.7B-VoiceDesign/);
         assert.equal(await second.locator('#modal-runtime').evaluate(modal => modal.scrollWidth <= modal.clientWidth), true);
         await second.locator('#modal-runtime').screenshot({path:path.join(screenshotDir, `runtime-${width}.png`)});
         await second.keyboard.press('Escape');
@@ -176,6 +188,7 @@ async function restoreFileReads(page) {
 (async () => {
   const browser = await launchChromium();
   try {
+    if (process.argv.includes('--runtime-only')) {await checkNativeWorkspaceTabs(browser); return;}
     const page = await browser.newPage({viewport: {width: 1440, height: 900}});
     // Keep chooser interception enabled between waits: removing the last listener
     // makes Playwright toggle it asynchronously and race the next activation.

@@ -1,7 +1,7 @@
 /* Author-owned passage direction; prose is read-only and never sent by the browser. */
 window.LixitySpeechDirection = function(parent, h) {
   "use strict";
-  var view, profiles, selected, dirty = false, revision = 0;
+  var view, profiles, selected, selectedPassage, dirty = false, pending = false, revision = 0;
   var section = h.node("fieldset", parent, "settings-section");
   h.node("legend", section, "", h.label("direction_title"));
   h.node("p", section, "ctl-note", h.label("direction_hint"));
@@ -44,37 +44,64 @@ window.LixitySpeechDirection = function(parent, h) {
     h.options(voice, [["",h.label("direction_default")]].concat(Object.entries(profiles).map(function(p) { return [p[0],p[1].name]; })), entry && entry.profile_id || "");
     instructions.value = entry && entry.instructions || "";
     before.value = entry ? entry.pause_before : 0; after.value = entry && entry.pause_after != null ? entry.pause_after : "";
-    style.value = ""; dirty = false; remove.disabled = !entry; showRange();
+    style.value = ""; dirty = false; remove.disabled = !entry || !h.current(); showRange();
   }
   function loadPassage() {
+    selectedPassage = passage.value;
     var p = current(); text.value = p ? p.text : "";
     var values = view.directions.filter(function(d) { return p && JSON.stringify(d.anchor) === JSON.stringify(p.anchor); });
     h.options(entries, [["", h.label("direction_new")]].concat(values.map(function(d) { return [d.id, d.start + "–" + (d.end == null ? Array.from(text.value).length : d.end) + " · " + d.instructions.slice(0,50)]; })), "");
-    loadEntry(); select.disabled = save.disabled = !p;
+    loadEntry(); select.disabled = !p; save.disabled = !p || !h.current();
     if (p) h.selected(p);
   }
-  passage.addEventListener("change", function() { h.invalidate(); loadPassage(); });
-  entries.addEventListener("change", function() { h.invalidate(); loadEntry(); });
+  passage.addEventListener("change", function() {
+    if (dirty) { passage.value = selectedPassage; h.status(h.label("direction_switch_first")); return; }
+    h.invalidate(); loadPassage();
+  });
+  entries.addEventListener("change", function() {
+    if (dirty) { entries.value = selected ? selected.id : ""; h.status(h.label("direction_switch_first")); return; }
+    h.invalidate(); loadEntry();
+  });
+  var chapter = document.getElementById("speech-chapter");
+  if (chapter) chapter.addEventListener("change", function(event) {
+    if (!dirty) return;
+    var p = current();
+    if (p) chapter.value = String(p.chapter);
+    event.stopImmediatePropagation();
+    h.status(h.label("direction_switch_first"));
+  }, true);
   [voice,instructions,before,after].forEach(function(el) { el.addEventListener("input", changed); });
   style.addEventListener("change", function() {
     var styles = {calm:"Read calmly and clearly, with restrained expression.", tense:"Read with restrained tension and controlled urgency, without shouting.", whisper:"Speak in a quiet whisper while keeping every word intelligible."};
     if (styles[style.value]) { instructions.value = styles[style.value]; changed(); }
   });
   async function mutate(deleting) {
+    if (pending) return;
+    if (!h.current()) { h.status(h.label("direction_context_changed")); return; }
     var serial = revision;
+    var chapterWasDisabled = chapter && chapter.disabled;
     try {
       var payload = Object.assign(h.tokens(), {expected_settings_sha256:view.settings_sha256, expected_direction_sha256:view.direction_sha256});
       if (deleting) { if (!selected) return; payload.remove_id = selected.id; }
       else { payload.direction = read(); if (selected) payload.replace_id = selected.id; }
-      save.disabled = remove.disabled = true;
+      pending = true; section.disabled = true;
+      if (chapter) chapter.disabled = true;
       var data = await h.request("speech-direction", payload);
       if (serial !== revision || !h.current()) return;
+      pending = false; section.disabled = false;
+      if (chapter) chapter.disabled = chapterWasDisabled;
       var anchor = passage.value; view = data.direction;
       open(view, anchor, profiles); h.invalidate(); h.status(h.label("direction_saved"));
     } catch (error) { if (serial === revision && h.current()) { h.status(error.message); save.disabled = !current(); remove.disabled = !selected; } }
+    finally {
+      if (serial === revision && h.current()) {
+        pending = false; section.disabled = false;
+        if (chapter) chapter.disabled = chapterWasDisabled;
+      }
+    }
   }
   function open(data, anchor, available) {
-    ++revision; view = data; profiles = available; dirty = false;
+    ++revision; view = data; profiles = available; dirty = false; pending = false;
     section.disabled = false;
     h.options(voice, [["",h.label("direction_default")]].concat(Object.entries(profiles).map(function(p) { return [p[0],p[1].name]; })), "");
     h.options(passage, [["",h.label("direction_passage")]].concat(view.passages.map(function(p) { return [JSON.stringify(p.anchor), p.chapter + " · " + p.anchor.start_line + "–" + p.anchor.end_line + " · " + p.text.slice(0,65)]; })), typeof anchor === "string" ? anchor : anchor ? JSON.stringify(anchor) : "");
@@ -87,5 +114,7 @@ window.LixitySpeechDirection = function(parent, h) {
     loadPassage();
   }
   return {section:section, open:open, draft:function() { return dirty ? read() : null; },
-    dirty:function() { return dirty; }, replacement:function() { return dirty && selected ? selected.id : null; }, disable:function() { section.disabled = true; }};
+    dirty:function() { return dirty; }, busy:function() { return pending; }, replacement:function() { return dirty && selected ? selected.id : null; },
+    stale:function() { ++revision; pending = false; section.disabled = false; save.disabled = remove.disabled = true; if (chapter) chapter.disabled = true; },
+    disable:function() { pending = false; section.disabled = true; if (chapter) chapter.disabled = false; }};
 };
