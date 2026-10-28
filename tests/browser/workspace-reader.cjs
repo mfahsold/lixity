@@ -76,6 +76,11 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
         return bounds.top >= 0 && bounds.bottom <= innerHeight &&
           document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)?.closest('#workspace-reader-toggle') === node;
       }), true, 'companion navigation remains reachable at the current deep reading position');
+      await toggle.evaluate(node => node.addEventListener('click', () => {
+        const current = LixityReader.capture();
+        window.__testBeforeToggle = {top:window.__testCompanionAnchor.getBoundingClientRect().top, scrollY,
+          anchorId:current && current.panel.id, anchorTop:current && current.top};
+      }, {capture:true, once:true}));
       await toggle.click();
       await page.waitForFunction(() => !document.querySelector('#workspace-reader-dossier').disabled);
       const opened = await page.evaluate(() => {
@@ -92,7 +97,7 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
         const actual = await page.evaluate(() => ({top:window.__testCompanionAnchor.getBoundingClientRect().top,
           connected:window.__testCompanionAnchor.isConnected, scrollY, innerHeight,
           maxScroll:document.documentElement.scrollHeight - innerHeight, height:document.documentElement.scrollHeight,
-          focus:document.activeElement?.id, state:LixityWorkbench.state()}));
+          beforeToggle:window.__testBeforeToggle, focus:document.activeElement?.id, state:LixityWorkbench.state()}));
         throw new Error(`Companion position ${locale}/${width}: departure=${JSON.stringify(departure)} opened=${JSON.stringify(opened)} actual=${JSON.stringify(actual)}`, {cause:error});
       }
       await toggle.click();

@@ -812,7 +812,23 @@ async function checkDemoCapabilities(page, width) {
   await expect(reader.locator('h3').first()).toHaveText('Warehouse 4 case notes');
   const companionImage = reader.locator('[data-dossier-enlarge]').first();
   await companionImage.locator('..').scrollIntoViewIfNeeded();
-  await companionImage.locator('img').evaluate(image => image.decode());
+  const companionThumbnail = companionImage.locator('img');
+  await companionThumbnail.evaluate(image => { image.loading = 'eager'; });
+  // decode() may reject when a lazy image request is replaced during a
+  // rerender. Require a connected, decoded image with real dimensions; a
+  // permanently broken request still fails rather than being ignored.
+  try {
+    await expect.poll(() => companionThumbnail.evaluate(async image => {
+      if (!image.isConnected || !image.complete || !image.naturalWidth) return false;
+      try { await image.decode(); }
+      catch (error) { if (error.name === 'EncodingError') return false; throw error; }
+      return image.isConnected && image.naturalWidth > 0;
+    }), {message: 'The companion thumbnail is loaded and decoded', timeout: 10000}).toBe(true);
+  } catch (error) {
+    const details = await companionThumbnail.evaluate(image => ({src: image.src, currentSrc: image.currentSrc,
+      complete: image.complete, naturalWidth: image.naturalWidth, connected: image.isConnected})).catch(() => null);
+    throw new Error('Companion thumbnail did not decode: ' + JSON.stringify(details), {cause: error});
+  }
   await companionImage.click();
   const enlarged = page.locator('#modal-dossier-image-enlarge');
   await expect(enlarged).toBeVisible();
