@@ -429,7 +429,10 @@ server.serve_forever()
     await secondGeography.locator('[data-geo-fit]').click();
     await expect(geography.locator('.geography-feature-list button[data-geo-select="0"]')).toHaveAttribute('aria-pressed', 'true');
     await geography.locator('[data-geo-map]').click();
-    assert.equal(requests.length, requestCount, 'Feature navigation and rerendering never request data');
+    // Opening and moving the maps can request intercepted tiles, depending on
+    // browser cache state. No API or other network request may be introduced.
+    const unexpectedRequests = requests.slice(requestCount).filter(url => !url.startsWith('https://tile.openstreetmap.org/'));
+    assert.deepEqual(unexpectedRequests, [], 'Feature navigation and rerendering make no other requests');
     assert.equal(writes.length, writeCount, 'Feature navigation never writes');
     assert.equal((await (await page.request.get(recordURL)).json()).snapshot, saved.snapshot, 'Feature selection is not stored');
     // A later entry must arrive with its metadata, rather than just its title

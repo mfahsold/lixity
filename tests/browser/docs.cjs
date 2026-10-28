@@ -47,9 +47,12 @@ async function openResearchVersions(page) {
   if (!await versions.evaluate(details => details.open)) await versions.locator(':scope > summary').click();
 }
 
-async function withoutRequests(page, description, exercise) {
+async function withoutRequests(page, description, exercise, allowedStaticUrls = new Set()) {
   const requests = [];
-  const record = request => requests.push({url: request.url(), method: request.method()});
+  const record = request => {
+    if (request.method() !== 'GET' || !allowedStaticUrls.has(request.url()))
+      requests.push({url: request.url(), method: request.method()});
+  };
   page.on('request', record);
   try {
     await exercise();
@@ -253,6 +256,10 @@ async function checkPublicationExample(page, route, javaScriptEnabled, width, co
   assert.equal(images.length, 2);
   await Promise.all(images.map(image => image.evaluate(element => {element.loading='eager';return element.decode();})));
   assert.ok(await images[0].evaluate(element => element.naturalWidth > 1000));
+  // Playwright routing disables HTTP caching. Rerendering already visible
+  // images may request their same static bytes again on some Chromium builds;
+  // still reject APIs, writes and every resource not already displayed here.
+  const displayedImages = new Set(await Promise.all(images.map(image => image.evaluate(element => element.src))));
   await withoutRequests(page, 'Published progress, search and preview never call an API or load hidden assets', async () => {
     await page.locator('#publication-progress').selectOption('3');
     await expect(entries.locator('article')).toHaveCount(3);
@@ -275,7 +282,7 @@ async function checkPublicationExample(page, route, javaScriptEnabled, width, co
     }
     await contents.getByRole('link', {name:'Light and sound', exact:true}).click();
     await expect(entries.getByRole('heading', {name:'Light and sound', exact:true})).toBeFocused();
-  });
+  }, displayedImages);
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await page.locator('#publication-progress-reset').click();
   await page.locator('#publication-context').evaluate(context => context.scrollTo({top:0, behavior:'instant'}));

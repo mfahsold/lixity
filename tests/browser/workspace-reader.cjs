@@ -68,7 +68,7 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
       const departure = await page.evaluate(() => {
         const anchor = LixityReader.capture();
         window.__testCompanionAnchor = anchor.panel;
-        return {top:anchor.top, scrollY, maxScroll:document.documentElement.scrollHeight - innerHeight,
+        return {top:anchor.top, proseOffset:anchor.proseOffset, scrollY, maxScroll:document.documentElement.scrollHeight - innerHeight,
           height:document.documentElement.scrollHeight, tag:anchor.panel.tagName, id:anchor.panel.id};
       });
       assert.equal(await toggle.evaluate(node => {
@@ -78,6 +78,11 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
       }), true, 'companion navigation remains reachable at the current deep reading position');
       await toggle.click();
       await page.waitForFunction(() => !document.querySelector('#workspace-reader-dossier').disabled);
+      const opened = await page.evaluate(() => {
+        const current = LixityReader.capture();
+        return {top:window.__testCompanionAnchor.getBoundingClientRect().top, scrollY,
+          anchorId:current && current.panel.id, anchorTop:current && current.top, proseOffset:current && current.proseOffset};
+      });
       await toggle.click();
       try {
         await page.waitForFunction(top => window.__testCompanionAnchor.isConnected &&
@@ -88,7 +93,7 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
           connected:window.__testCompanionAnchor.isConnected, scrollY, innerHeight,
           maxScroll:document.documentElement.scrollHeight - innerHeight, height:document.documentElement.scrollHeight,
           focus:document.activeElement?.id, state:LixityWorkbench.state()}));
-        throw new Error(`Companion position ${locale}/${width}: departure=${JSON.stringify(departure)} actual=${JSON.stringify(actual)}`, {cause:error});
+        throw new Error(`Companion position ${locale}/${width}: departure=${JSON.stringify(departure)} opened=${JSON.stringify(opened)} actual=${JSON.stringify(actual)}`, {cause:error});
       }
       await toggle.click();
       if (width >= 1100) {

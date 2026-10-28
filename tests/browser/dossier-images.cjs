@@ -351,12 +351,19 @@ server.serve_forever()
     const imageURL = await figure.locator('img').evaluate(image => image.src);
     const lazyURLs = [1, 2, 3].map(index => imageURL + '&gallery_fixture=held' + index);
     const lazyLoads = new Map();
+    const releasedURLs = new Set();
     for (const url of lazyURLs) {
-      await page.route(url, route => new Promise(resolve => {
-        lazyLoads.set(url, async () => {
-          await route.fulfill({contentType: 'image/png', body: file.buffer}); resolve();
+      await page.route(url, route => {
+        // A revisited slide may request the same image again when the browser
+        // does not reuse its cache. Only the first request is deliberately held.
+        if (releasedURLs.has(url)) return route.fulfill({contentType: 'image/png', body: file.buffer});
+        return new Promise(resolve => {
+          lazyLoads.set(url, async () => {
+            releasedURLs.add(url);
+            await route.fulfill({contentType: 'image/png', body: file.buffer}); resolve();
+          });
         });
-      }));
+      });
     }
     await figure.evaluate((element, urls) => {
       for (const src of urls) {

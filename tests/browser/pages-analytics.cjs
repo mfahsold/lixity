@@ -121,6 +121,9 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
           file = path.join(root, 'src/lixity/ui', relative);
         } else if (!file.startsWith(docs + path.sep)) return route.abort();
         if (fs.existsSync(file) && fs.statSync(file).isFile()) {
+          // Simulate a slow public configuration response so the journey must
+          // wait for the installation page's analytics before navigating away.
+          if (relative === 'assets/analytics.json') await new Promise(resolve => setTimeout(resolve, 500));
           const contentType = {'.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript',
             '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png',
             '.jpg': 'image/jpeg', '.pdf': 'application/pdf', '.md': 'text/markdown'}[path.extname(file)];
@@ -174,6 +177,8 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
       await page.locator('#example-context a[href="../guides/installation.html"]').click();
       await page.waitForURL(publicOrigin + '/lixity/guides/installation.html');
       await expect.poll(() => pixels.filter(pixel => pixel.url.searchParams.get('p') === 'install-open').length).toBe(1);
+      await expect.poll(() => pixels.filter(pixel => pixel.url.searchParams.get('p') === '/lixity/guides/installation.html').length,
+        {message: 'The destination finishes loading its analytics configuration before the next navigation'}).toBe(1);
       assert.equal(pixels.filter(pixel => pixel.url.searchParams.get('p') === '/lixity/demo/report.html').length, 1);
       await page.goto(publicOrigin + '/lixity/', {waitUntil: 'domcontentloaded'});
       await expect.poll(() => pixels.filter(pixel => pixel.url.searchParams.get('p') === '/lixity/').length).toBe(1);
