@@ -130,8 +130,8 @@ def check_or_sync_files(version: str, *, check_only: bool = False) -> list[str]:
     for guide in sorted((ROOT / "docs" / "guides").glob("*.html")):
         pins = [install_pin]
         if guide.name == "installation.html":
-            pins.append((r'This source guide describes <strong>v\d+\.\d+\.\d+ development</strong>',
-                         f'This source guide describes <strong>v{version} development</strong>'))
+            pins.append((r'This source guide describes <strong>v\d+\.\d+\.\d+(?: development)?</strong>',
+                         f'This source guide describes <strong>v{version}</strong>'))
             pins.append((r'<a href="\.\./releases/v\d+\.\d+\.\d+\.md">\d+\.\d+\.\d+ development notes</a>',
                          f'<a href="../releases/v{version}.md">{version} development notes</a>'))
             pins.append((r'The current release is <strong>v\d+\.\d+\.\d+</strong>',
@@ -181,7 +181,7 @@ CURRENT_CLAIMS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("Markdown documentation source version",
      re.compile(r"(?:The documentation source version is|this source documentation describes the prepared) \*\*v(\d+\.\d+\.\d+)\*\*")),
     ("HTML documentation source version",
-     re.compile(r'This source guide describes <strong>v(\d+\.\d+\.\d+) development</strong>')),
+     re.compile(r'This source guide describes <strong>v(\d+\.\d+\.\d+)(?: development)?</strong>')),
     ("documentation source version",
      re.compile(r"Documentation source version:\s*(\d+\.\d+\.\d+)", re.I)),
     ("current release statement",

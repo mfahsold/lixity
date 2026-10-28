@@ -309,6 +309,24 @@ class TestDocumentation(unittest.TestCase):
                 self.assertEqual(guide.read_text(encoding="utf-8"), notice.replace("v1.2.3", "v2.3.4"))
                 self.assertEqual(find_version_drift("2.3.4"), [])
 
+    def test_html_source_version_line_is_checked_and_synced(self):
+        import tempfile
+        from unittest.mock import patch
+
+        from sync_docs import check_or_sync_files, find_version_drift
+
+        notice = '<p>This source guide describes <strong>v1.2.3</strong>.</p>'
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            guide = root / "docs/guides/installation.html"
+            guide.parent.mkdir(parents=True)
+            guide.write_text(notice, encoding="utf-8")
+            with patch("sync_docs.ROOT", root):
+                self.assertTrue(find_version_drift("2.3.4"))
+                check_or_sync_files("2.3.4")
+                self.assertEqual(guide.read_text(encoding="utf-8"), notice.replace("v1.2.3", "v2.3.4"))
+                self.assertEqual(find_version_drift("2.3.4"), [])
+
     def test_next_release_syncs_current_note_links_and_preserves_history(self):
         import tempfile
         from unittest.mock import patch

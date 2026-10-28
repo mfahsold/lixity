@@ -4,7 +4,7 @@ Explore sentence rhythm, vocabulary and style patterns in your Markdown manuscri
 
 Updated 23 October 2026
 
-**Version line:** This source guide describes **v0.7.7 development**; check [published releases](https://github.com/mfahsold/lixity/releases/latest) for package availability, in the pre-1.0 **0.x** line. Historical **1.x** and **3.x** tags predate the numbering reset. A larger historical number does not mean a newer release; product and schema versions are independent.
+**Version line:** This source guide describes **v0.7.7**; check [published releases](https://github.com/mfahsold/lixity/releases/latest) for package availability, in the pre-1.0 **0.x** line. Historical **1.x** and **3.x** tags predate the numbering reset. A larger historical number does not mean a newer release; product and schema versions are independent.
 
 ## What do I need?
 
