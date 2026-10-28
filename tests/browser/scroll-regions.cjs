@@ -16,6 +16,7 @@ from lixity.style_fingerprint import FingerprintThresholds
 from lixity.ui import render_dashboard
 from lixity.pacing import pacing_report
 from lixity.showing import showing_report
+from tests.locales import LOCALES
 prose = [
     "The observer believed that the decision was considered carefully, because every detail of the explanation seemed important to the people who waited inside the quiet room.",
     "Rain fell. A door shut. The bell rang. Footsteps stopped. A bird called.",
@@ -30,7 +31,7 @@ for count in (6, 24):
     pacing = pacing_report(text, config).to_dict()
     showing = showing_report(text, config, metrics=analysis.metrics).to_dict()
     documents[str(count)] = {}
-    for language in ("en", "de", "fr", "es", "it", "pt", "nl"):
+    for language in LOCALES:
         profile = LANGUAGE_PROFILES[language]
         documents[str(count)][language] = render_dashboard(
             analysis.chapters, analysis.paragraphs, metrics=analysis.metrics,
@@ -94,7 +95,9 @@ async function scrollInput(chart, action) {
   const browser = await launchChromium();
   const errors = [];
   try {
+    const testedLocales = new Set();
     for (const count of [6, 24]) for (const [locale, html] of Object.entries(fixtures[count])) {
+      testedLocales.add(locale);
       for (const width of [1440, 320]) for (const theme of ['dark', 'light']) {
         const page = await browser.newPage({viewport: {width, height: 900}, colorScheme: theme,
           reducedMotion: 'reduce', hasTouch: true});
@@ -155,6 +158,6 @@ async function scrollInput(chart, action) {
       }
     }
     assert.deepEqual(errors, []);
-    console.log(`Chapter charts: fitting and long lists, fully painted final rows, wheel/keyboard/touch, seven locales and desktop/mobile themes passed. ${artifacts}`);
+    console.log(`Chapter charts: fitting and long lists, fully painted final rows, wheel/keyboard/touch, ${testedLocales.size} locales and desktop/mobile themes passed. ${artifacts}`);
   } finally { await browser.close(); }
 })().catch(error => {console.error(error); process.exitCode = 1;});

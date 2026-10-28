@@ -14,7 +14,7 @@ import pytest
 
 from lixity.research import api
 from lixity.research.repository import Repository, ResearchError
-from tests.test_research_images import png
+from tests.media_fixtures import png
 
 pytestmark = pytest.mark.portability
 

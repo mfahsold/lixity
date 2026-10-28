@@ -8,13 +8,12 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from test_research_images import JPEG, png
-
 from lixity.api import about
 from lixity.cli import main
 from lixity.research import api
 from lixity.research.limits import MAX_IMAGE_BYTES
 from lixity.research.repository import Repository
+from tests.media_fixtures import JPEG, png
 
 
 class TestDossierImageCLI(unittest.TestCase):

@@ -11,7 +11,8 @@ from lixity.style_fingerprint import FingerprintThresholds
 from lixity.ui import render_dashboard
 from lixity.ui.settings import settings_form
 from lixity.workspace_labels import WORKSPACE_LABELS
-from tests.support import LOCALES, HtmlControls, labels_for
+from tests.locales import LOCALES
+from tests.support import HtmlControls, labels_for
 
 
 def settings_markup(locale="en", **options):

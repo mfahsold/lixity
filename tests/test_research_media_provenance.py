@@ -5,7 +5,7 @@ import json
 from lixity.cli import main
 from lixity.research import api
 from lixity.research.repository import Repository
-from tests.test_research_images import png
+from tests.media_fixtures import png
 
 
 def test_missing_provenance_is_filtered_before_pagination_without_writes(tmp_path, capsys):

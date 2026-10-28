@@ -29,38 +29,7 @@ from lixity.research.ocr import (
     render_pdf_pages,
 )
 from lixity.research.repository import Repository, ResearchError
-
-
-def make_synthetic_pdf(text: str) -> bytes:
-    """Generate a minimal valid PDF-1.4 containing text in a standard Type1 font."""
-    stream_bytes = f"BT /F1 12 Tf 72 712 Td ({text}) Tj ET".encode("latin1")
-    stream_obj = (
-        f"<< /Length {len(stream_bytes)} >>\nstream\n".encode("latin1")
-        + stream_bytes
-        + b"\nendstream"
-    )
-    objs = [
-        b"",
-        b"<< /Type /Catalog /Pages 2 0 R >>",
-        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
-        stream_obj,
-        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-    ]
-    pdf = [b"%PDF-1.4\n"]
-    offsets = [0]
-    for i in range(1, len(objs)):
-        offsets.append(sum(len(x) for x in pdf))
-        pdf.append(f"{i} 0 obj\n".encode("latin1") + objs[i] + b"\nendobj\n")
-    xref_offset = sum(len(x) for x in pdf)
-    pdf.append(f"xref\n0 {len(objs)}\n0000000000 65535 f \n".encode("latin1"))
-    pdf.extend(f"{off:010d} 00000 n \n".encode("latin1") for off in offsets[1:])
-    pdf.append(
-        f"trailer\n<< /Size {len(objs)} /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n".encode(
-            "latin1"
-        )
-    )
-    return b"".join(pdf)
+from tests.media_fixtures import make_synthetic_pdf
 
 
 class ResearchOCRTest(unittest.TestCase):

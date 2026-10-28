@@ -11,8 +11,8 @@ from lixity.language import get_language_profile
 from lixity.models import CorpusConfig
 from lixity.motifs import motif_report
 from lixity.ui.narration import render_motifs_panel
+from tests.locales import LOCALES
 
-LOCALES = ("en", "de", "fr", "es", "it", "pt", "nl")
 LOCAL = "## First chapter\n\nsilver lantern shines. blue river flows. silver lantern shines.\n"
 GLOBAL = LOCAL + "\n## Second chapter\n\nsilver lantern shines.\n"
 

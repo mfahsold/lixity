@@ -7,6 +7,7 @@ import pytest
 from lixity import api
 from lixity.language import get_language_profile
 from lixity.ui.narration import render_scenes_panel
+from tests.locales import LOCALES
 
 TEXT = "## First\n\nA door opens. Rain falls.\n\n## Second\n\nThe quiet garden holds its breath."
 BASE = {"assignments": {"1:1": "voice", "2:1": "voice"}, "groups": {"voice": {}}}
@@ -70,7 +71,7 @@ def test_empty_plan_preserves_ordinary_response():
     assert report(settings=settings) == report()
 
 
-@pytest.mark.parametrize("locale", ["en", "de", "fr", "es", "it", "pt", "nl"])
+@pytest.mark.parametrize("locale", LOCALES)
 def test_pending_only_panel_is_localized_reversible_and_has_no_fake_measurements(locale):
     group = '<img src=x onerror="bad()">'
     settings = {"assignments": {"1:1": group}, "groups": {group: {}}, "planned": ["1:1"]}

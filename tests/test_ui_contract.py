@@ -33,9 +33,10 @@ from lixity.markdown_parser import parse_markdown_blocks  # noqa: E402
 from lixity.style_profile import ParagraphProfiler  # noqa: E402
 from lixity.ui import render_dashboard  # noqa: E402
 from lixity.workspace_labels import WORKSPACE_LABELS  # noqa: E402
+from tests.locales import LOCALES  # noqa: E402
 
 UI_DIR = Path(BASE_DIR) / "src" / "lixity" / "ui"
-LANGUAGES = ("de", "en", "fr", "es", "it", "pt", "nl")
+LANGUAGES = LOCALES
 
 class _StructureBalance(HTMLParser):
     """Track explicitly closed structural elements across a rendered page.
@@ -175,7 +176,7 @@ class TestJsDomContract(unittest.TestCase):
 
         report = {"chapters": 2, "figures": [{"name": "Mara", "mentions": 0,
                   "chapters_present": [], "declared_pov_chapters": [2]}]}
-        for language in ("en", "de", "fr", "es", "it", "pt", "nl"):
+        for language in LOCALES:
             with self.subTest(language=language):
                 labels = resolve_language(CorpusConfig(language=language)).labels
                 panel = render_characters_panel(report, [], labels)
@@ -444,7 +445,7 @@ class TestJsDomContract(unittest.TestCase):
         paragraphs, chapters = ParagraphProfiler(CorpusConfig(language="en")).profile_blocks(
             parse_markdown_blocks("## Synthetic\n\nA bird waits beside the river.\n")
         )
-        for locale in ("en", "de", "fr", "es", "it", "pt", "nl"):
+        for locale in LOCALES:
             labels = get_language_profile(locale).labels
             rendered = render_dashboard(chapters, paragraphs, controls=True, labels=labels, language_key=locale)
             for kind in ("pruefen", "sachcheck", "todo", "achtung"):

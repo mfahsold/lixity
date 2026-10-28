@@ -1,6 +1,9 @@
 """Ordered chapter diagnostics must not imply exchangeability or fill gaps."""
 
+from itertools import pairwise
 from types import SimpleNamespace
+
+import pytest
 
 from lixity.style_fingerprint import StyleFingerprint
 
@@ -53,3 +56,32 @@ def test_constant_and_short_series_are_unavailable_not_zero():
     assert diag["features"]["asl"]["lag1_rho"] is None
     assert diag["features"]["dialog_pct"]["lag1_rho"] is None
     assert diag["measured_features"] == 0
+
+
+@pytest.mark.parametrize("size,missing_chapter", [
+    (size, gap) for size in range(3, 10) for gap in range(size + 1)
+])
+def test_order_coverage_across_chapter_counts_and_gaps(size, missing_chapter):
+    """Check real passport output against independently constructed coverage."""
+    values = [float((number * number + 3 * number) % 11) for number in range(1, size + 1)]
+    chapters = [
+        SimpleNamespace(num=number, words=3 if number == missing_chapter else 100,
+                        sentences=5, asl=value, style_se={})
+        for number, value in enumerate(values, 1)
+    ]
+    diag = StyleFingerprint.from_metrics(SimpleNamespace(chapters=chapters)).passport()[
+        "baseline_diagnostics"
+    ]
+    feature = diag["features"]["asl"]
+    assert feature["observed_chapters"] == [n for n in range(1, size + 1) if n != missing_chapter]
+    assert feature["missing_chapters"] == ([missing_chapter] if missing_chapter else [])
+    if missing_chapter:
+        assert feature["lag1_rho"] is None
+        assert feature["runs_z"] is None
+    else:
+        mean = sum(values) / size
+        centered = [value - mean for value in values]
+        expected = sum(a * b for a, b in pairwise(centered)) / sum(
+            value * value for value in centered
+        )
+        assert feature["lag1_rho"] == pytest.approx(round(expected, 4), abs=1e-4)

@@ -10,12 +10,10 @@ import zlib
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from test_research_images import JPEG, png
-from test_research_ocr import make_synthetic_pdf
-
 from lixity.research import api, zotero
 from lixity.research.ocr import OCRExtractionResult
 from lixity.research.repository import Repository, ResearchError
+from tests.media_fixtures import JPEG, make_synthetic_pdf, png
 
 
 class TestZotero(unittest.TestCase):

@@ -24,9 +24,6 @@ from lixity.server.runtime import _LoopbackHTTPServer
 from lixity.style_fingerprint import FingerprintThresholds
 from lixity.workspace_labels import WORKSPACE_LABELS
 
-#: Locales with complete language and workspace label packs.
-LOCALES = ("en", "de", "fr", "es", "it", "pt", "nl")
-
 #: Class attributes covered by the state guards and the handler factory.
 HANDLER_STATE = (
     "workspace_root",

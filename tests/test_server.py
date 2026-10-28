@@ -1908,14 +1908,9 @@ class TestLixityServer(unittest.TestCase):
     @unittest.skipUnless(shutil.which("pdftotext"), "requires Poppler pdftotext")
     def test_research_ingest_content_base64_pdf(self):
         import base64
-        import sys
 
         from lixity.research import api as research_api
-
-        tests_dir = str(Path(__file__).parent)
-        if tests_dir not in sys.path:
-            sys.path.insert(0, tests_dir)
-        from test_research_ocr import make_synthetic_pdf
+        from tests.media_fixtures import make_synthetic_pdf
 
         with tempfile.TemporaryDirectory() as td:
             orig_rdir = LixityServerHandler.research_dir

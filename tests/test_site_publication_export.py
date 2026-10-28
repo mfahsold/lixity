@@ -9,7 +9,7 @@ from lixity.config import prepare_project_settings
 from lixity.research import api
 from lixity.research.repository import ResearchError
 from lixity.site_export import prepare_site
-from tests.test_research_images import png
+from tests.media_fixtures import png
 from tests.test_site_export import file_bytes, site_data
 
 pytestmark = pytest.mark.portability

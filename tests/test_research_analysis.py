@@ -13,7 +13,7 @@ from lixity import pipeline
 from lixity.markdown_parser import parse_markdown_blocks
 from lixity.research import api
 from lixity.research.repository import ResearchError
-from tests.support import LOCALES
+from tests.locales import LOCALES
 
 
 class TestResearchAnalysis(unittest.TestCase):

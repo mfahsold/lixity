@@ -23,7 +23,7 @@ from lixity.style_profile import ParagraphProfiler
 from lixity.ui.components import help_term, label
 from lixity.ui.dashboard import render_dashboard
 from lixity.workspace_labels import WORKSPACE_LABELS
-from tests.support import LOCALES
+from tests.locales import LOCALES
 
 
 class _DashboardBodyParser(HTMLParser):
@@ -44,6 +44,11 @@ class _DashboardBodyParser(HTMLParser):
 
 
 class TestLocalization(unittest.TestCase):
+    def test_locale_fixture_covers_the_actual_supported_registries(self):
+        """A new or missing locale must not silently escape cross-language tests."""
+        self.assertEqual(set(LOCALES), set(WORKSPACE_LABELS))
+        self.assertEqual(set(LOCALES), set(LANGUAGE_PROFILES) - {"generic"})
+
     @unittest.skipIf(sys.version_info < (3, 11), "Project TOML loading requires Python 3.11+")
     def test_cli_uses_the_manuscript_project_from_another_directory(self):
         with tempfile.TemporaryDirectory() as directory:

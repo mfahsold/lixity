@@ -9,8 +9,8 @@ import pytest
 
 from lixity.research import api
 from lixity.research.repository import Repository
+from tests.media_fixtures import png
 from tests.support import LoopbackServer, make_handler
-from tests.test_research_images import png
 
 
 @pytest.fixture

@@ -378,9 +378,13 @@ actual per-scene observations, inert project labels, direct comparison-row route
 grouped keyboard-operated disclosures, readable bounded scrolling tables and
 unavailable values. Screenshots stay under `/tmp/lixity-scenes-ui-*`.
 
-The settings test intercepts all requests to a synthetic host. It verifies
-locale-safe values, validation before submission, reset without saving, FDR
-row filtering, mobile layout and the serif font being limited to the title.
+The settings suite uses synthetic intercepted responses and disposable native
+projects. It verifies locale-safe values, validation before submission, reset
+without saving, FDR row filtering, mobile layout and the title's serif font. For
+audio races, a real ready-status response is held until the target or manuscript
+context changes. The test waits until the browser has consumed it before asserting
+that audio stays hidden. A separate renderer gate keeps cancellation in flight;
+neither check relies on a fixed inference delay.
 
 The register-settings suite uses a disposable native project to verify register
 and chapter-assignment saves, target validation, duplicate removal, inert names,

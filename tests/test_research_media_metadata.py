@@ -10,10 +10,9 @@ from lixity.research import api
 from lixity.research.media_metadata import update_dossier_media_context
 from lixity.research.models import Extraction, Source, SourceVersion
 from lixity.research.repository import Repository, ResearchConflictError, ResearchError
+from tests.media_fixtures import make_synthetic_pdf, png
 from tests.research_support import retained_files
-from tests.test_research_images import png
 from tests.test_research_media import mp4
-from tests.test_research_ocr import make_synthetic_pdf
 
 
 @pytest.fixture

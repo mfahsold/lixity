@@ -28,6 +28,9 @@ def test_half_comparison_uses_original_chapter_midpoint():
     diag = fingerprint([None, None, 1.0, 2.0, 10.0, 11.0, 12.0, 13.0])._derive_structural_diagnostics()
     shift = diag["distribution_shift"]["asl"]
     early, late = [1.0, 2.0], [10.0, 11.0, 12.0, 13.0]
+    # These disjoint samples have W1=10 and KS D=1 by direct calculation.
+    assert shift["wasserstein"] == 10.0
+    assert shift["ks_d"] == 1.0
     d, p = ks_2sample(early, late)
     assert shift == {"wasserstein": round(wasserstein_1d(early, late), 6),
                      "ks_d": round(d, 4), "ks_p": round(p, 4)}

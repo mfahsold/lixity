@@ -4,9 +4,10 @@ import pytest
 
 from lixity.ui import render_dashboard
 from lixity.workspace_labels import WORKSPACE_LABELS
+from tests.locales import LOCALES
 
 
-@pytest.mark.parametrize("locale", ("en", "de", "fr", "es", "it", "pt", "nl"))
+@pytest.mark.parametrize("locale", LOCALES)
 def test_native_overview_precedes_settings_and_replaces_the_generated_file_list(locale):
     rendered = render_dashboard([], [], controls=True, language_key=locale,
         labels=WORKSPACE_LABELS[locale], project_overview_enabled=True, project_token="a" * 64,

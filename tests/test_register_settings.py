@@ -14,10 +14,11 @@ from lixity.server.views import build_server_dashboard
 from lixity.style_fingerprint import FEATURE_UNITS, FingerprintThresholds, StyleFingerprint
 from lixity.ui.heatmap import render_register_targets
 from lixity.ui.settings import settings_form
+from tests.locales import LOCALES
 from tests.support import HtmlControls, labels_for, recording_handler
 
 
-@pytest.mark.parametrize("language", ("en", "de", "fr", "es", "it", "pt", "nl"))
+@pytest.mark.parametrize("language", LOCALES)
 def test_register_controls_and_comparisons_show_shared_feature_units(tmp_path: Path, language):
     manuscript = tmp_path / "manuscript.md"
     manuscript.write_text("\n\n".join(

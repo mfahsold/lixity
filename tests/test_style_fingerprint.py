@@ -35,6 +35,7 @@ from lixity.style_fingerprint import (  # noqa: E402
 )
 from lixity.style_profile import ParagraphProfiler  # noqa: E402
 from lixity.ui import render_dashboard  # noqa: E402
+from tests.locales import LOCALES  # noqa: E402
 
 SAMPLE = (
     "## Kap 1\n\n"
@@ -354,7 +355,7 @@ class TestStyleFingerprint(unittest.TestCase):
         before = json.dumps(fingerprint.passport(), sort_keys=True)
         strongest = fingerprint.top_deviants(5)
         self.assertTrue(fingerprint.deviations)
-        for language in ("en", "de", "fr", "es", "it", "pt", "nl"):
+        for language in LOCALES:
             with self.subTest(language=language):
                 text = fingerprint.passport_text(labels=labels, language_key=language)
                 self.assertNotIn("σ", text)

@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from lixity.nda import draft_document
-from tests.support import LOCALES
+from tests.locales import LOCALES
 
 
 @pytest.mark.parametrize("language", list(LOCALES))

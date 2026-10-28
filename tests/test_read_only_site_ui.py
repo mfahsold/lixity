@@ -8,9 +8,10 @@ from lixity.language import get_language_profile
 from lixity.ui import render_dashboard
 from lixity.ui.dashboard import _JS_FILES
 from lixity.workspace_labels import WORKSPACE_LABELS
+from tests.locales import LOCALES
 
 
-@pytest.mark.parametrize("language", ("en", "de", "fr", "es", "it", "pt", "nl"))
+@pytest.mark.parametrize("language", LOCALES)
 def test_read_only_renderer_keeps_native_reading_and_labels_scope(language):
     page = render_dashboard([], [], controls=True, read_only=True,
                             labels=get_language_profile(language).labels,

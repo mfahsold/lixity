@@ -20,6 +20,7 @@ from lixity.scenes import scene_report_for_display
 from lixity.pipeline import analyze_document
 from lixity.style_fingerprint import FingerprintThresholds
 from lixity.ui import render_dashboard
+from tests.locales import LOCALES
 prose = [
     "Mara walks to the gate. She watches the street. I see the light. I go to the house. I see the tree. I went to the house. I saw the tree. I heard the bell. I saw the light. I went to the gate. ",
     "The observer believed that the decision was considered carefully, because every detail of the explanation seemed important to the people who waited inside the quiet room. Mara carried the lamp. ",
@@ -43,8 +44,7 @@ def render(language, controls):
     return render_dashboard(analysis.chapters, analysis.paragraphs, metrics=analysis.metrics,
         fingerprint=analysis.fingerprint, labels=LANGUAGE_PROFILES[language].labels,
         language_key=language, controls=controls, title="Synthetic analysis overview", **reports)
-print(json.dumps({"locales": {language: render(language, True) for language in
-    ("en", "de", "fr", "es", "it", "pt", "nl")}, "standalone": render("en", False),
+print(json.dumps({"locales": {language: render(language, True) for language in LOCALES}, "standalone": render("en", False),
     "flags": sum(paragraph.is_flagged for paragraph in analysis.paragraphs)}))
 `, {root});
 
@@ -202,6 +202,6 @@ async function pinnedIdentity(page, panel, cellIndex) {
     await report.close();
     assert.deepEqual(errors, []);
     assert.equal(writes, 0, 'Overview browsing performs no writes');
-    console.log(`Analysis overview: native disclosure, complete measurements, long flags, readable anchors, pinned table identity and unavailable values in seven desktop/mobile locales passed. Screenshots: ${artifacts}`);
+    console.log(`Analysis overview: native disclosure, complete measurements, long flags, readable anchors, pinned table identity and unavailable values in ${Object.keys(fixtures.locales).length} desktop/mobile locales passed. Screenshots: ${artifacts}`);
   } finally { await browser.close(); }
 })().catch(error => {console.error(error); process.exitCode = 1;});

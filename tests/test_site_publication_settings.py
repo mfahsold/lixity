@@ -7,7 +7,8 @@ import pytest
 
 from lixity.style_fingerprint import FingerprintThresholds
 from lixity.ui.settings import settings_form
-from tests.support import LOCALES, HtmlControls, labels_for
+from tests.locales import LOCALES
+from tests.support import HtmlControls, labels_for
 
 PROFILES = {"readers": {"title": 'Reader <img src=x onerror="alert(1)">',
     "introduction": "Authored reader introduction.", "entries": [{

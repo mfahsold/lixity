@@ -28,7 +28,7 @@ from lixity.research.models import (
     reference,
 )
 from lixity.research.repository import Repository, ResearchConflictError, encode
-from tests.support import LOCALES
+from tests.locales import LOCALES
 
 
 def random_uuid() -> str:

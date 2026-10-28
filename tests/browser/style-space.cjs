@@ -7,6 +7,7 @@ const {pythonFixture} = require('./support/python-fixture.cjs');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-ui-'));
 const locales = pythonFixture(`
 from lixity.api import dashboard
+from tests.locales import LOCALES
 import json
 # Three varying chapters above the diversity floor expose optional style axes.
 text = "## First chapter\\n\\n" + (
@@ -22,7 +23,7 @@ text += "\\n\\n## Third chapter\\n\\n" + (
 text += "\\n\\nI walk home." * 100
 text = text.replace("First chapter", '<img src=x onerror="window.tooltipInjected=true">', 1)
 print(json.dumps({language: dashboard(text, language=language, title="Browser regression")
-                  for language in ("en", "de", "fr", "es", "it", "pt", "nl")}))
+                  for language in LOCALES}))
 `);
 
 (async () => {
@@ -79,7 +80,9 @@ print(json.dumps({language: dashboard(text, language=language, title="Browser re
       const canvas = document.querySelector('#dim-3d-canvas');
       return {labels: window.canvasLabels, width: canvas.clientWidth, height: canvas.clientHeight};
     });
-    assert.ok(labels.some(label => label.text === '+D1'), JSON.stringify(labels));
+    // Either endpoint can be omitted when no collision-free position remains;
+    // the inspector above still exposes both meanings of the axis.
+    assert.ok(labels.some(label => /^[+−]D1$/.test(label.text)), JSON.stringify(labels));
     assert.ok(labels.some(label => /^\d+$/.test(label.text)), JSON.stringify(labels));
     for (const [index, label] of labels.entries()) {
       assert.ok(Number(label.font.match(/(\d+)px/)[1]) >= 12, JSON.stringify(label));

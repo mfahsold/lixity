@@ -15,7 +15,7 @@ from lixity.language_data import (
     UI_LABELS,
 )
 from lixity.workspace_labels import WORKSPACE_LABELS
-from tests.support import LOCALES
+from tests.locales import LOCALES
 
 
 class TestInterpretationLabels(unittest.TestCase):

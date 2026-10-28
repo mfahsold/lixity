@@ -16,8 +16,8 @@ from lixity.research.media import validate_media
 from lixity.research.models import Extraction, SourceVersion
 from lixity.research.repository import Repository, ResearchConflictError, ResearchError
 from lixity.site_export import prepare_site
+from tests.media_fixtures import make_synthetic_pdf
 from tests.support import LoopbackServer, make_handler
-from tests.test_research_ocr import make_synthetic_pdf
 from tests.test_site_export import response, site_data
 
 

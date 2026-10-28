@@ -10,8 +10,7 @@ from lixity.models import CorpusConfig
 from lixity.pacing import pacing_report
 from lixity.scenes import scene_report
 from lixity.ui.narration import render_dialogue_panel, render_pacing_panel, render_scenes_panel
-
-LOCALES = ("en", "de", "fr", "es", "it", "pt", "nl")
+from tests.locales import LOCALES
 
 
 def synthetic_scenes():

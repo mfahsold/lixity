@@ -8,6 +8,7 @@ const {pythonFixture} = require('./support/python-fixture.cjs');
 const root = path.resolve(__dirname, '../..');
 const data = pythonFixture(`
 import json
+from tests.locales import LOCALES
 from lixity.workspace_labels import WORKSPACE_LABELS
 from lixity.language import get_language_profile
 from lixity.pipeline import analyze_document, resolve_document_config
@@ -23,7 +24,7 @@ baseline = render_dashboard(result.chapters, result.paragraphs, metrics=result.m
     fingerprint=result.fingerprint, labels=language.labels, language_key="de", controls=True,
     enabled_actions=("analyze", "rebuild", "nda-draft"), nda_project_name="Synthetic project")
 fixtures = {}
-for locale in ("en", "de", "fr", "es", "it", "pt", "nl"):
+for locale in LOCALES:
     labels = {**get_language_profile(locale).labels, **WORKSPACE_LABELS[locale]}
     checks = {"title": {"status":"missing", "value":None, "source":None},
               "author_name": {"status":"mismatch", "value":'Other <img src=x onerror=alert(1)> Writer', "source":"front_matter"}}
@@ -36,6 +37,42 @@ for locale in ("en", "de", "fr", "es", "it", "pt", "nl"):
 print(json.dumps({"baseline":baseline,"fixtures":fixtures}))
 `, {root});
 const identityArtifacts=require('node:fs').mkdtempSync('/tmp/lixity-project-identity-settings-');
+
+// Hold an actual ready status response until the test changes its context.
+// The browser marker is written on the next task after poll() consumed JSON,
+// so a negative assertion cannot pass before the stale result was processed.
+async function holdReadySpeechStatus(page) {
+  let release, markHeld, heldId;
+  const released = new Promise(resolve => { release = resolve; });
+  const held = new Promise(resolve => { markHeld = resolve; });
+  const pattern = '**/api/speech-job?*';
+  const handler = async route => {
+    const response = await route.fetch();
+    const data = await response.json();
+    if (!heldId && data.job?.state === 'ready') {
+      heldId = data.job.id;
+      markHeld(heldId);
+      await released;
+    }
+    await route.fulfill({response});
+  };
+  await page.route(pattern, handler);
+  return {
+    async ready() {
+      let timer;
+      try {
+        return await Promise.race([held, new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error('No ready speech response was captured')), 10000);
+        })]);
+      } finally { clearTimeout(timer); }
+    },
+    async deliver(id) {
+      release();
+      await page.waitForFunction(jobId => window.__speechStatusProcessed?.includes(jobId), id, {timeout:10000});
+      await page.unroute(pattern, handler);
+    },
+  };
+}
 
 async function verifyNativeDefaults(browser) {
   const artifacts=fs.mkdtempSync('/tmp/lixity-settings-defaults-native-');
@@ -134,16 +171,17 @@ server.serve_forever()
 async function verifyNativeSpeech(browser) {
   const artifacts=fs.mkdtempSync('/tmp/lixity-speech-native-');
   const server=await startNativeServer(`
-import json, sys, time
+import json, sys, threading
 from pathlib import Path
 from http.server import ThreadingHTTPServer
 from lixity.server import LixityServerHandler
+from tests.locales import LOCALES
 import lixity.speech_jobs as jobs
-from lixity.speech import generate_silence_wav
+from lixity.speech import SpeechCancelled, generate_silence_wav
 base = Path(sys.argv[1])
 from lixity.config import prepare_project_settings
 projects = []
-for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
+for locale in LOCALES:
     project = base / locale
     project.mkdir()
     source = project / 'manuscript.md'
@@ -161,9 +199,14 @@ legacy_source = legacy / 'manuscript.md'
 legacy_source.write_text('## Synthetic legacy project\\n\\nA river flows.\\n', encoding='utf-8')
 legacy_config = legacy / 'lixity.toml'
 legacy_config.write_text('language = "en"\\n[audio]\\nschema_version = "lixity-audio-settings/1"\\nselected = "retained_narrator"\\n[audio.profiles.retained_narrator]\\nname = "Retained narrator"\\nengine = "piper"\\nlanguage = "en"\\nvoice = "en_US-lessac-medium"\\npronunciations = { "Synthetic" = "Example" }\\n[audio.profiles.retained_second]\\nname = "Retained second"\\nengine = "piper"\\nlanguage = "de"\\nvoice = "de_DE-thorsten-medium"\\n', encoding='utf-8')
+render_gate = threading.Event()
+render_gate.set()
 def fake_render(source, output, *, profile, progress, cancelled, **kwargs):
     progress(0, 1)
-    time.sleep(.7)
+    if not render_gate.wait(10):
+        raise RuntimeError('Synthetic render gate timed out')
+    if cancelled():
+        raise SpeechCancelled('Synthetic render cancelled')
     Path(output).write_bytes(generate_silence_wav(.1))
     progress(1, 1)
     return Path(output)
@@ -172,7 +215,15 @@ LixityServerHandler.workspace_root = projects[0]['root']
 LixityServerHandler.source_input = projects[0]['source']
 LixityServerHandler.exports_dir = str(base / 'exports')
 LixityServerHandler.refresh()
-server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
+class TestHandler(LixityServerHandler):
+    def do_GET(self):
+        if self.path in ('/test/render-hold', '/test/render-release'):
+            (render_gate.clear if self.path.endswith('hold') else render_gate.set)()
+            self.send_response(204)
+            self.end_headers()
+            return
+        super().do_GET()
+server = ThreadingHTTPServer(('127.0.0.1', 0), TestHandler)
 print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'projects':projects, 'legacy': {'root':str(legacy), 'source':str(legacy_source), 'config':str(legacy_config)}}), flush=True)
 server.serve_forever()
 `,artifacts);
@@ -181,6 +232,22 @@ server.serve_forever()
       const {locale}=project, labels=data.fixtures[locale].labels;
       const original=fs.readFileSync(project.source), originalConfig=fs.readFileSync(project.config);
       const page=await browser.newPage({viewport:{width,height:1000}}), errors=[];
+      await page.addInitScript(() => {
+        window.__speechStatusProcessed = [];
+        const originalFetch = window.fetch;
+        window.fetch = async function(...args) {
+          const response = await originalFetch.apply(this, args);
+          if (new URL(response.url).pathname.endsWith('/api/speech-job')) {
+            const json = response.json.bind(response);
+            response.json = async function() {
+              const data = await json();
+              if (data.job?.id && data.job.state === 'ready') setTimeout(() => window.__speechStatusProcessed.push(data.job.id), 0);
+              return data;
+            };
+          }
+          return response;
+        };
+      });
       page.on('pageerror',error=>errors.push(error.message));
       assert.equal((await page.request.post(server.fixture.url+'/api/project-open',{data:{path:project.root}})).status(),200);
       await page.goto(server.fixture.url);
@@ -337,10 +404,11 @@ server.serve_forever()
       assert.equal((await page.locator('#modal-speech').textContent()).includes(labels.speech_target_jetson + ' ·'),false,'Returning to local clears the previous result context');
       assert.ok((await page.locator('#speech-runtime-hint').textContent()).includes(labels.speech_runtime_hint));
       await page.locator('#speech-target').selectOption('jetson');
+      const targetRace=await holdReadySpeechStatus(page);
       await page.locator('[data-speech-action=preview]').click();
-      await page.waitForFunction(()=>!document.querySelector('[data-speech-action=cancel]').disabled);
+      const targetRaceId=await targetRace.ready();
       await page.locator('#speech-target').selectOption('local');
-      await page.waitForTimeout(1000);
+      await targetRace.deliver(targetRaceId);
       assert.equal(await audio.isVisible(),false,'A late result cannot attach after switching targets');
       const localRequest=page.waitForRequest(request=>request.url().endsWith('/api/speech-render'));
       await page.locator('[data-speech-action=preview]').click();
@@ -365,15 +433,21 @@ server.serve_forever()
       await page.waitForFunction(()=>!document.querySelector('#modal-speech audio').hidden);
       await page.locator('#speech-target').selectOption('jetson');
       assert.equal(await audio.isVisible(),false,'Changing target removes completed audio');
+      assert.equal((await page.request.get(server.fixture.url+'/test/render-hold')).status(),204);
       await page.locator('[data-speech-action=preview]').click();
       await page.waitForFunction(()=>!document.querySelector('[data-speech-action=cancel]').disabled);
+      const cancelledResponse=page.waitForResponse(response=>response.url().endsWith('/api/speech-cancel'));
       await page.locator('[data-speech-action=cancel]').click();
+      assert.equal((await cancelledResponse).status(),200);
+      assert.equal((await page.request.get(server.fixture.url+'/test/render-release')).status(),204);
       await page.waitForFunction(text=>document.querySelector('#modal-speech [role=status]').textContent.includes(text),labels.speech_state_cancelled);
       assert.equal(await audio.isVisible(),false,'Cancelled inference cannot publish audio');
+      const secondTargetRace=await holdReadySpeechStatus(page);
       await page.locator('[data-speech-action=preview]').click();
+      const secondTargetRaceId=await secondTargetRace.ready();
       await page.locator('#speech-target').selectOption('local');
-      await page.waitForTimeout(1000);
-      assert.equal(await audio.isVisible(),false,'Late results cannot attach after profile edits');
+      await secondTargetRace.deliver(secondTargetRaceId);
+      assert.equal(await audio.isVisible(),false,'Late results cannot attach after another target change');
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
       await dialog.locator('.modal-body').evaluate(el=>{el.scrollTop=0;});
       await dialog.screenshot({path:path.join(artifacts,`audio-${locale}-${width}.png`)});
@@ -404,11 +478,12 @@ server.serve_forever()
       assert.ok(selectedPayload.paragraph?.paragraph_sha256,'Reader preview retains exact paragraph identity');
       await page.waitForFunction(()=>!document.querySelector('#modal-speech audio').hidden);
       assert.ok((await dialog.textContent()).includes(labels.speech_paragraph_preview));
+      const sourceRace=await holdReadySpeechStatus(page);
       await page.locator('[data-speech-action=preview]').click();
-      await page.waitForFunction(()=>!document.querySelector('[data-speech-action=cancel]').disabled);
+      const sourceRaceId=await sourceRace.ready();
       await page.evaluate(()=>{document.body.dataset.manuscriptSourceSha256='f'.repeat(64);});
       await page.waitForFunction(()=>!document.querySelector('#modal-speech').open);
-      await page.waitForTimeout(1000);
+      await sourceRace.deliver(sourceRaceId);
       assert.equal(await audio.getAttribute('src'),null,'Source changes close the dialog and cannot resurrect audio');
       if (locale === 'de') {
         await page.reload();
@@ -417,7 +492,7 @@ server.serve_forever()
         await page.waitForFunction(()=>document.querySelector('#speech-direction_text')?.value.includes('bird'));
         await page.locator('#speech-direction_instructions').fill('Copyable synthetic draft.');
         await page.evaluate(()=>{document.body.dataset.manuscriptSourceSha256='e'.repeat(64);});
-        await page.waitForTimeout(50);
+        await page.waitForFunction(text=>document.querySelector('#modal-speech [role=status]').textContent===text,labels.speech_direction_context_changed);
         assert.equal(await dialog.isVisible(), true, 'A changed source preserves an unsaved draft');
         assert.equal(await dialog.locator('[role=status]').textContent(), labels.speech_direction_context_changed);
         assert.equal(await page.locator('#speech-direction_instructions').inputValue(), 'Copyable synthetic draft.');
@@ -502,7 +577,7 @@ server.serve_forever()
       assert.deepEqual(fs.readFileSync(legacyProject.source),legacySource,'Migration guidance never changes source');
       await page.close();
     }
-    console.log('Native Qwen audio: synthetic WAV over real HTTP, seven locales at1440/320, VoiceDesign profiles, paragraph previews, cache/target controls, cancellation, stale results, keyboard/Escape and unchanged sources passed. '+artifacts);
+    console.log(`Native Qwen audio: synthetic WAV over real HTTP, ${server.fixture.projects.length} locales at 1440/320, VoiceDesign profiles, paragraph previews, cache/target controls, cancellation, stale results, keyboard/Escape and unchanged sources passed. ${artifacts}`);
   } finally {await server.close();}
 }
 
@@ -699,7 +774,7 @@ server.serve_forever()
     assert.deepEqual(errors, []);
     await verifyNativeDefaults(browser);
     await verifyNativeSpeech(browser);
-    console.log('Settings guidance and project identity: seven desktop/mobile locales, accessible scope/default hints, inert data and failed primary saves; pending/capability cases at both widths passed. '+identityArtifacts);
+    console.log(`Settings guidance and project identity: ${Object.keys(data.fixtures).length} desktop/mobile locales, accessible scope/default hints, inert data and failed primary saves; pending/capability cases at both widths passed. ${identityArtifacts}`);
     console.log('Settings: localized values, validation, keyboard submission, reset, payload, FDR filter and mobile layout passed');
   } finally {
     await browser.close();

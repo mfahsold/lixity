@@ -9,6 +9,7 @@ const fixtures = pythonFixture(`
 import json
 from lixity.api import dashboard
 from lixity.language import get_language_profile
+from tests.locales import LOCALES
 text = "\\n\\n".join(f"## Chapter {n}\\n\\n" + (("moss " * length).strip() + ". ") * 20
                        for n, length in enumerate((8, 9, 10, 11, 70), 1))
 settings = {"register_profiles": {'Letters <img src=x onerror="window.scopeInjected=true">': {}},
@@ -18,7 +19,7 @@ settings = {"register_profiles": {'Letters <img src=x onerror="window.scopeInjec
                            "Robin": {"pov_in_chapters": [3, 5]}, "Mention only": {"aliases": ["moss"]}}}
 print(json.dumps({locale: {"html": dashboard(text, language=locale, title="Synthetic chapter groups", project_config=settings),
                          "status": get_language_profile(locale).labels["analysis_scope_status"]}
-                  for locale in ("en", "de", "fr", "es", "it", "pt", "nl")}))
+                  for locale in LOCALES}))
 `, {root});
 
 (async () => {
@@ -107,7 +108,7 @@ print(json.dumps({locale: {"html": dashboard(text, language=locale, title="Synth
         await page.close();
       }
     }
-    console.log('Analysis scope: 7 locales × desktop/short mobile, declared groups/FDR/reset/fragment/jump/source/reference checks passed; ' + artifacts);
+    console.log(`Analysis scope: ${Object.keys(fixtures).length} locales × desktop/short mobile, declared groups/FDR/reset/fragment/jump/source/reference checks passed; ${artifacts}`);
   } finally {
     await browser.close();
   }

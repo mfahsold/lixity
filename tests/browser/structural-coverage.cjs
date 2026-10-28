@@ -12,6 +12,7 @@ const fixtures = pythonFixture(`
 import json
 from pathlib import Path
 from lixity.language import LANGUAGE_PROFILES
+from tests.locales import LOCALES
 from lixity.analyzer import CorpusAnalyzer
 from lixity.models import CorpusConfig
 from lixity.style_fingerprint import StyleFingerprint
@@ -52,7 +53,7 @@ def zero_mad(language):
     return {'html': '<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + css + '</style>' + html + '<script>' + js + '</script>',
             'reason': labels['baseline_zero_mad']}
 print(json.dumps({language: {**{str(partial): render(language, partial) for partial in (False, True)},
-    'zero': zero_mad(language)} for language in ('en','de','fr','es','it','pt','nl')}))
+    'zero': zero_mad(language)} for language in LOCALES}))
 `, {root});
 
 (async () => {
@@ -89,6 +90,6 @@ print(json.dumps({language: {**{str(partial): render(language, partial) for part
       if (language === 'de') await dialog.screenshot({path: path.join(artifacts, `${language}-${width}-zero-mad.png`)});
       await page.close();
     }
-    console.log(`Structural coverage in seven locales on desktop/mobile passed: ${artifacts}`);
+    console.log(`Structural coverage in ${Object.keys(fixtures).length} locales on desktop/mobile passed: ${artifacts}`);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

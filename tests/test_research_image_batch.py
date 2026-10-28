@@ -8,9 +8,8 @@ import pytest
 from lixity.cli import main
 from lixity.research import api
 from lixity.research.repository import Repository, ResearchConflictError, ResearchError
+from tests.media_fixtures import JPEG, make_synthetic_pdf, png
 from tests.research_support import retained_files
-from tests.test_research_images import JPEG, png
-from tests.test_research_ocr import make_synthetic_pdf
 
 
 @pytest.fixture

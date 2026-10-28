@@ -7,13 +7,13 @@ import json
 from unittest.mock import patch
 
 import pytest
-from test_research_ocr import make_synthetic_pdf
 
 from lixity.cli import main
 from lixity.research import api
 from lixity.research.models import Blob, Extraction, Passage, SourceVersion
 from lixity.research.ocr import OCRBlock, OCRExtractionResult
 from lixity.research.repository import Repository, ResearchConflictError, ResearchError
+from tests.media_fixtures import make_synthetic_pdf
 
 
 @pytest.fixture

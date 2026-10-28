@@ -7,8 +7,8 @@ import json
 import pytest
 
 from lixity.research import api, cli
+from tests.media_fixtures import png
 from tests.research_support import capture_research, parse_research_args
-from tests.test_research_images import png
 from tests.test_research_media import mp4
 
 

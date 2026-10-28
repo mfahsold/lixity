@@ -9,7 +9,8 @@ import pytest
 
 from lixity.server import _state
 from lixity.server.views import build_server_dashboard
-from tests.support import LOCALES, LoopbackServer, labels_for, make_handler, preserved_handler_state
+from tests.locales import LOCALES
+from tests.support import LoopbackServer, labels_for, make_handler, preserved_handler_state
 
 
 class _FreshnessNotice(HTMLParser):
