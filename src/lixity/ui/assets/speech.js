@@ -4,7 +4,7 @@
   var body = document.body, settingsForm = document.getElementById("settings-form");
   if (body.dataset.speechCapable !== "true" || body.dataset.readOnly === "true" || !settingsForm) return;
   var dialog, fields = {}, settings, capabilities, generation = 0, job = null, timer, openedContext, paragraph;
-  var executionTarget = "local", migrationRequired = false, direction;
+  var executionTarget = "local", migrationRequired = false, direction, lastPreset = "Ryan", mode = "profiles";
   function label(key) { return uiLabel("speech_" + key); }
   function languageName(code) {
     try { return new Intl.DisplayNames([document.documentElement.lang || "en"], {type: "language"}).of(code); }
@@ -46,7 +46,7 @@
   function status(message) { fields.status.textContent = message || ""; }
   function clearAudio() { fields.audio.pause(); fields.audio.removeAttribute("src"); fields.audio.load(); fields.audio.hidden = true; fields.download.hidden = true; fields.download.removeAttribute("href"); }
   function invalidate() {
-    ++generation; clearTimeout(timer); clearAudio(); status("");
+    ++generation; clearTimeout(timer); clearAudio(); status(""); fields.context.textContent = "";
     if (job) {
       var previous = job; job = null;
       request("speech-cancel", Object.assign({}, previous.tokens, {id: previous.id})).catch(function() {});
@@ -56,25 +56,36 @@
     if (fields.plan) { fields.plan.replaceChildren(); fields.plan.hidden = true; }
   }
   function voiceControls() {
-    var cap = capabilities.qwen3;
+    var cap = capabilities[fields.engine.value];
     if (!cap) return;
+    var designed = fields.engine.value === "qwen3-design";
     var language = fields.language.value, voice = fields.voice.value;
     options(fields.language, cap.languages.map(function(value) { return [value, languageName(value)]; }), language);
     var voices = Object.entries(cap.voices).filter(function(pair) { return pair[1].languages.includes(fields.language.value); });
-    options(fields.voice, voices.map(function(pair) { return [pair[0], pair[1].name]; }), voice);
+    options(fields.voice, designed ? [["design", "VoiceDesign"]] : voices.map(function(pair) { return [pair[0], pair[1].name]; }), designed ? "design" : voice);
+    fields.voice.closest("label").hidden = designed;
+    fields.voice.disabled = designed;
+    fields.voice_description.closest("label").hidden = !designed;
+    fields.voice_description.disabled = !designed;
+    fields.voice_description.required = designed;
+    fields.voice_hint.hidden = designed;
+    fields.design_hint.hidden = !designed;
+    fields.model.textContent = cap.name;
     options(fields.target, cap.targets.map(function(value) { return [value, label("target_" + value)]; }),
       cap.targets.includes(executionTarget) ? executionTarget : cap.targets[0]);
     fields.target.disabled = cap.targets.length < 2;
-    fields.target.closest("label").hidden = fields.target.disabled;
+    fields.target.closest("label").hidden = mode === "profiles" || fields.target.disabled;
     fields.runtime_hint.textContent = label(fields.target.value === "jetson" ? "jetson_hint" : "runtime_hint");
-    fields.runtime_hint.hidden = false;
-    fields.reuse.closest("label").hidden = false;
+    fields.reuse.closest("label").hidden = mode !== "output";
   }
   function loadProfile() {
     invalidate();
     if (!settings.selected) return;
     var profile = settings.profiles[settings.selected];
+    lastPreset = profile.engine === "qwen3" ? profile.voice : "Ryan";
     ["name", "instructions", "paragraph_pause", "scene_pause"].forEach(function(key) { fields[key].value = profile[key]; });
+    options(fields.engine, Object.keys(capabilities).filter(function(key) { return key === "qwen3" || key === "qwen3-design"; }).map(function(key) { return [key, capabilities[key].name]; }), profile.engine);
+    fields.voice_description.value = profile.voice_description || "";
     options(fields.language, [], profile.language); options(fields.voice, [], profile.voice); voiceControls();
     fields.pronunciations.value = Object.entries(profile.pronunciations).map(function(pair) { return pair.join("="); }).join("\n");
     fields.editor.disabled = false; fields.save.disabled = false;
@@ -87,10 +98,12 @@
       if (split < 1 || !term || !value || Object.hasOwn(replacements, term)) throw new Error(label("pronunciation_error"));
       replacements[term] = value;
     });
-    return {name: fields.name.value.trim(), engine: "qwen3", language: fields.language.value,
+    var profile = {name: fields.name.value.trim(), engine: fields.engine.value, language: fields.language.value,
       voice: fields.voice.value,
       speed: 1, instructions: fields.instructions.value.trim(),
       paragraph_pause: Number(fields.paragraph_pause.value), scene_pause: Number(fields.scene_pause.value), pronunciations: replacements};
+    if (profile.engine === "qwen3-design") profile.voice_description = fields.voice_description.value.trim();
+    return profile;
   }
   function stash() { if (settings && settings.selected) settings.profiles[settings.selected] = readProfile(); }
   function profileOptions() {
@@ -157,7 +170,7 @@
         fields.plan.replaceChildren();
         data.plan.segments.forEach(function(row) {
           var item = node("li",fields.plan,"",row.text || label("direction_pause"));
-          node("p",item,"ctl-note",row.profile.voice + " · " + (row.profile.instructions || label("direction_default")) + " · " + label("direction_before") + ": " + row.pause_before + " · " + label("direction_after") + ": " + row.pause_after);
+          node("p",item,"ctl-note",(row.profile.voice_description || row.profile.voice) + " · " + (row.profile.instructions || label("direction_default")) + " · " + label("direction_before") + ": " + row.pause_before + " · " + label("direction_after") + ": " + row.pause_after);
         });
         fields.plan.hidden = false; finish(); return;
       }
@@ -184,7 +197,7 @@
   function build() {
     dialog = node("dialog", body, "lixity-modal"); dialog.id = "modal-speech"; dialog.setAttribute("aria-labelledby", "speech-title");
     var card = node("div", dialog, "modal-card"), header = node("div", card, "modal-header");
-    node("h3", header, "", label("title")).id = "speech-title";
+    fields.heading = node("h3", header, "", label("title")); fields.heading.id = "speech-title";
     var close = button(header, "close", function() { dialog.close(); }); close.className = "ctl";
     var content = node("div", card, "modal-body");
     fields.status = node("p", content, "ctl-status"); fields.status.setAttribute("role", "status"); fields.status.setAttribute("aria-live", "polite");
@@ -192,14 +205,25 @@
     fields.editor = node("fieldset", content, "settings-section");
     node("legend", fields.editor, "", label("delivery"));
     fields.model = node("p", fields.editor, "ctl-note");
-    fields.runtime_hint = node("p", fields.editor, "ctl-note", label("runtime_hint")); fields.runtime_hint.hidden = true; fields.runtime_hint.id = "speech-runtime-hint";
     var grid = node("div", fields.editor, "settings-grid");
     field(grid, "name").maxLength = 100; fields.name.required = true;
+    field(grid, "engine", "select");
     ["language", "voice"].forEach(function(key) { field(grid, key, "select"); });
-    node("p", fields.editor, "ctl-note", label("voice_hint"));
+    fields.voice_hint = node("p", fields.editor, "ctl-note", label("voice_hint"));
+    field(fields.editor, "voice_description", "textarea").maxLength = 2000;
+    fields.design_hint = node("p", fields.editor, "ctl-note", label("design_hint"));
     ["paragraph_pause", "scene_pause"].forEach(function(key) { var el = field(grid, key, "number"); el.min = "0"; el.max = "10"; el.step = "any"; el.required = true; });
     field(fields.editor, "instructions", "textarea").maxLength = 2000;
-    field(fields.editor, "pronunciations", "textarea"); node("p", fields.editor, "ctl-note", label("pronunciation_hint"));
+    var lexicon = node("details", fields.editor, "settings-section");
+    node("summary", lexicon, "", label("pronunciations"));
+    var searchRow = node("div", lexicon, "row"), search = field(searchRow, "pronunciation_search", "search");
+    button(searchRow, "pronunciation_find", function() {
+      var query = search.value.trim().toLocaleLowerCase(), value = fields.pronunciations.value;
+      var index = query ? value.toLocaleLowerCase().indexOf(query) : -1;
+      if (index < 0) { status(label("pronunciation_not_found")); return; }
+      fields.pronunciations.focus(); fields.pronunciations.setSelectionRange(index, index + query.length); status("");
+    });
+    field(lexicon, "pronunciations", "textarea"); node("p", lexicon, "ctl-note", label("pronunciation_hint"));
     field(content, "chapter", "select");
     direction = window.LixitySpeechDirection(content, {
       node:node, field:field, button:button, options:options, label:label, request:request,
@@ -207,6 +231,7 @@
       current:function() { return dialog.open && openedContext === context(); },
       selected:function(p) { paragraph={identity:p.anchor,chapter:p.chapter}; fields.chapter.value=String(p.chapter); }
     });
+    fields.runtime_hint = node("p", content, "ctl-note", label("runtime_hint")); fields.runtime_hint.id = "speech-runtime-hint";
     field(content, "target", "select"); fields.target.closest("label").hidden = true;
     fields.target.addEventListener("change", function() {
       executionTarget = fields.target.value; invalidate();
@@ -218,15 +243,28 @@
     fields.reuse.addEventListener("change", invalidate);
     var actions = node("div", content, "row");
     fields.preview = button(actions, "preview", function() { render("preview"); });
-    button(actions, "direction_plan", function() { render("preview", true); });
+    fields.direction_plan = button(actions, "direction_plan", function() { render("preview", true); });
     fields.plan = node("ol", content, "speech-plan"); fields.plan.hidden = true;
     fields.chapter_render = button(actions, "chapter_render", function() { render("chapter"); });
+    fields.open_output = button(actions, "output_title", function() {
+      if (direction.dirty()) { status(label("direction_save_first")); return; }
+      invalidate(); mode = "output"; fields.heading.textContent = label("output_title");
+      direction.section.hidden = true; fields.direction_plan.hidden = true;
+      fields.open_output.hidden = true; fields.chapter_render.hidden = false;
+      fields.reuseLabel.hidden = false;
+    });
     fields.cancel = button(actions, "cancel", cancel); fields.cancel.disabled = true;
     fields.context = node("p", content, "ctl-note"); fields.progress = node("progress", content); fields.progress.hidden = true; fields.progress.setAttribute("aria-label", label("progress"));
     fields.audio = node("audio", content, "media-player"); fields.audio.controls = true; fields.audio.hidden = true;
     fields.download = node("a", content, "ctl", label("download")); fields.download.download = "speech.wav"; fields.download.hidden = true;
     fields.save = button(content, "save", save);
+    fields.reuseLabel = reuse;
     fields.editor.addEventListener("input", function() { invalidate(); });
+    fields.engine.addEventListener("change", function() {
+      if (fields.engine.value === "qwen3-design") lastPreset = fields.voice.value || lastPreset;
+      options(fields.voice, [], fields.engine.value === "qwen3-design" ? "design" : lastPreset);
+      voiceControls(); invalidate();
+    });
     fields.language.addEventListener("change", function() { fields.voice.value = ""; voiceControls(); status(label("voice_changed")); });
     fields.profile.addEventListener("change", function() {
       try { stash(); settings.selected = fields.profile.value; loadProfile(); }
@@ -235,10 +273,27 @@
     fields.chapter.addEventListener("change", function() { paragraph = null; invalidate(); var select=fields.direction_passage; var choice=Array.from(select.options).find(function(o) { return o.textContent.startsWith(fields.chapter.value + " · "); }); if (choice) { select.value=choice.value; select.dispatchEvent(new Event("change")); } fields.context.textContent = label("first_preview"); });
     dialog.addEventListener("close", invalidate);
   }
-  async function open(fromReader) {
+  async function open(entry) {
+    mode = entry;
+    var fromReader = mode === "reader";
     var readerControl = document.getElementById("reader-chapter");
     var readerChapterIntent = fromReader && readerControl ? (readerControl.value || readerControl.dataset.currentChapter || "") : "";
     if (!dialog) build(); invalidate(); direction.disable(); settings = null; openedContext = context(); paragraph = null;
+    fields.heading.textContent = label(mode === "profiles" ? "profiles_title" : mode === "output" ? "output_title" : "reader_title");
+    fields.editor.hidden = mode !== "profiles";
+    fields.create.hidden = mode !== "profiles";
+    fields.save.hidden = mode !== "profiles";
+    direction.section.hidden = mode !== "reader";
+    fields.chapter.closest("label").hidden = mode === "profiles";
+    fields.target.closest("label").hidden = mode === "profiles";
+    fields.runtime_hint.hidden = mode === "profiles";
+    fields.preview.hidden = mode === "profiles";
+    fields.direction_plan.hidden = mode !== "reader";
+    fields.chapter_render.hidden = mode !== "output";
+    fields.open_output.hidden = mode !== "reader";
+    fields.cancel.hidden = mode === "profiles";
+    fields.reuseLabel.hidden = mode !== "output";
+    fields.context.hidden = mode === "profiles";
     if (fromReader) {
       var selection = window.getSelection(), anchor = selection && selection.anchorNode;
       var element = anchor && (anchor.nodeType === 1 ? anchor : anchor.parentElement);
@@ -270,6 +325,8 @@
       options(fields.chapter, data.chapters.map(function(chapter) { return [String(chapter.number), chapter.number + ". " + chapter.title]; }), selectedChapter);
       if (paragraph && !data.chapters.some(function(chapter) { return Number(fields.chapter.value) === chapter.number && paragraph.identity.start_line >= chapter.start_line && paragraph.identity.end_line <= chapter.end_line; })) paragraph = null;
       profileOptions(); loadProfile();
+      fields.target.closest("label").hidden = mode === "profiles" || fields.target.disabled;
+      fields.reuseLabel.hidden = mode !== "output";
       if (data.direction) {
         var initialPassage = paragraph ? {anchor:paragraph.identity} : data.direction.passages.find(function(p) { return p.chapter === Number(fields.chapter.value); });
         direction.open(data.direction, initialPassage && initialPassage.anchor, settings.profiles);
@@ -279,9 +336,10 @@
       fields.context.textContent = label(paragraph ? "paragraph_preview" : "first_preview");
     } catch (error) { if (valid(serial)) status(error.message); }
   }
-  button(settingsForm, "title", function() { open(false); }).id = "settings-speech";
+  button(settingsForm, "profiles_title", function() { open("profiles"); }).id = "settings-speech";
+  button(settingsForm, "output_title", function() { open("output"); }).id = "settings-speech-output";
   var toolbar = document.getElementById("manuscript-reader-controls");
-  if (toolbar) button(toolbar, "title", function() { open(true); }).id = "reader-speech";
+  if (toolbar) button(toolbar, "reader_title", function() { open("reader"); }).id = "reader-speech";
   document.addEventListener("lixity:workbench-change", function() { if (dialog && dialog.open) dialog.close(); });
   new MutationObserver(function() { if (dialog && dialog.open && context() !== openedContext) dialog.close(); }).observe(body, {
     subtree: true, attributes: true, attributeFilter: ["data-project-token", "data-manuscript-source-sha256", "data-manuscript-project-token"]});

@@ -59,7 +59,7 @@ def test_unsupported_profile_values_fail(changes):
 
 def test_capabilities_drive_multilingual_voice_validation():
     capabilities = audio_capabilities()
-    assert set(capabilities) == {"qwen3"}
+    assert set(capabilities) == {"qwen3", "qwen3-design"}
     for language in ("en", "de", "fr", "es", "it", "pt", "ru", "zh", "ja", "ko"):
         profile = AudioProfile(engine="qwen3", language=language, voice="Ryan", instructions="Calm")
         assert profile.language == language
@@ -231,3 +231,16 @@ def test_validation_messages_hide_private_profile_input_values(model, raw, messa
     text = str(error.value)
     assert message in text
     assert all(marker not in text for marker in ("PRIVATE", "STYLE_PRIVATE", "LEXICON_PRIVATE"))
+
+
+def test_voice_design_is_explicit_and_requires_a_description():
+    from lixity.speech_profiles import AudioProfile, audio_capabilities
+
+    profile = AudioProfile(engine='qwen3-design', voice='design', language='de',
+                           voice_description='A natural German narrator.')
+    assert profile.voice_description == 'A natural German narrator.'
+    assert 'qwen3-design' in audio_capabilities()
+    with pytest.raises(ValueError):
+        AudioProfile(engine='qwen3-design', voice='design')
+    with pytest.raises(ValueError):
+        AudioProfile(engine='qwen3', voice='Ryan', voice_description='ignored')

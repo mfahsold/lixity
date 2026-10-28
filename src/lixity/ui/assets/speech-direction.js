@@ -86,6 +86,6 @@ window.LixitySpeechDirection = function(parent, h) {
     }
     loadPassage();
   }
-  return {open:open, draft:function() { return dirty ? read() : null; },
+  return {section:section, open:open, draft:function() { return dirty ? read() : null; },
     dirty:function() { return dirty; }, replacement:function() { return dirty && selected ? selected.id : null; }, disable:function() { section.disabled = true; }};
 };

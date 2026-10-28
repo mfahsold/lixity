@@ -285,7 +285,7 @@ class SpeechRoutesMixin(ResponseMixin):
 
                 root = self.get_author_project_root()
                 cache_dir = (project_audio_cache(root) if root is not None and
-                             profile.engine == "qwen3" and payload["mode"] == "chapter" else None)
+                             profile.engine in ("qwen3", "qwen3-design") and payload["mode"] == "chapter" else None)
             job = self._speech_manager().start(key, prepared, profile, context, valid, cache_dir=cache_dir,
                                                fresh_audio=payload.get("fresh_audio", False),
                                                target=payload.get("target", "local"), plan=plan)

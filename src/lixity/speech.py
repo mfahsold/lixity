@@ -305,6 +305,21 @@ def render_speech_audio(
         from .speech_cache import SpeechSegmentCache
 
         segment_cache = SpeechSegmentCache(Path(cache_dir))
+    # One target serves one model variant. A mixed plan can still succeed if
+    # all missing segments use the same variant and the rest are cached.
+    if len({cue.profile.engine for cue in cues if cue.text}) > 1:
+        missing_engines: set[str] = set()
+        for cue in cues:
+            _check_cancelled(cancelled)
+            if not cue.text:
+                continue
+            cached = None if fresh_audio or segment_cache is None else segment_cache.get(cue.text, cue.profile)
+            if cached is None:
+                missing_engines.add(cue.profile.engine)
+                if len(missing_engines) > 1:
+                    raise ValueError("The audio plan needs multiple uncached model variants; one worker serves "
+                                     "one model. Choose profiles using the same model or reuse previously "
+                                     "cached segments")
     total = sum(bool(cue.text) for cue in cues)
     done = 0
     if progress is not None:

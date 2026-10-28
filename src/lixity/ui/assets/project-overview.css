@@ -17,6 +17,10 @@
 .project-overview-row .ctl { margin-top: .35rem; }
 .project-overview-artifacts { margin-top: .75rem; }
 .project-overview-artifacts .project-overview-row-heading strong { overflow-wrap: anywhere; }
+.project-overview-browser, .project-overview-output-group { margin-top: .65rem; }
+.project-overview-browser summary, .project-overview-output-group summary { cursor: pointer; font-size: .9rem; font-weight: 600; }
+.project-overview-search { display: flex; flex-direction: column; gap: .3rem; margin: .75rem 0; font-size: .85rem; }
+.project-overview-search input { max-width: 100%; }
 .project-overview-findings { margin-top: 1.25rem; }
 .project-overview-issues li { padding: .45rem 0; font-size: .85rem; }
 .project-overview-issues strong { margin-right: .45rem; }

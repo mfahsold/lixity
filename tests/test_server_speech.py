@@ -53,7 +53,7 @@ def test_preview_and_download_are_bound_to_actual_source_without_writes(speech_s
     assert response.status == 200, response.body
     data = json.loads(response.body)
     assert data["settings"]["selected"] == "narrator" and len(data["chapters"]) == 2
-    assert set(data["capabilities"]) == {"qwen3"}
+    assert set(data["capabilities"]) == {"qwen3", "qwen3-design"}
     assert data["requires_migration"] is False
     assert data["capabilities"]["qwen3"]["instructions"] is True
     assert data["settings"]["profiles"]["narrator"]["engine"] == "qwen3"
@@ -172,7 +172,8 @@ def test_reselecting_same_project_cannot_revive_an_earlier_job(speech_server):
     assert send(port, "/api/speech-audio?" + query).status == 400
 
 
-def test_qwen_chapters_reuse_completed_segments_but_previews_stay_fresh(speech_server, monkeypatch):
+@pytest.mark.parametrize("engine", ["qwen3", "qwen3-design"])
+def test_qwen_chapters_reuse_completed_segments_but_previews_stay_fresh(speech_server, monkeypatch, engine):
     import lixity.speech_jobs as jobs
     from lixity.speech import render_speech_audio
     from lixity.speech_cache import project_audio_cache
@@ -185,7 +186,10 @@ def test_qwen_chapters_reuse_completed_segments_but_previews_stay_fresh(speech_s
     monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen",
                         lambda text, profile, **_kwargs: calls.append(text) or generate_silence_wav(.01, 24000))
     bound = context(source, handler)
-    profile = AudioProfile(engine="qwen3", language="en", voice="Ryan").model_dump()
+    profile_data = {"engine": engine, "language": "en", "voice": "Ryan"}
+    if engine == "qwen3-design":
+        profile_data.update(voice="design", voice_description="A calm German narrator.")
+    profile = AudioProfile.model_validate(profile_data).model_dump()
 
     def render(mode, fresh=False):
         response = send(port, "/api/speech-render", payload={**bound, "mode": mode, "chapter": 1, "profile": profile, "fresh_audio": fresh})
@@ -309,7 +313,7 @@ voice = "en_US-lessac-medium"
     response = send(port, "/api/speech?" + urlencode(bound))
     assert response.status == 200, response.body
     data = json.loads(response.body)
-    assert data["settings"] is None and set(data["capabilities"]) == {"qwen3"}
+    assert data["settings"] is None and set(data["capabilities"]) == {"qwen3", "qwen3-design"}
     assert "Piper" in data["configuration_error"] and "audio-migrate" in data["configuration_error"]
     response = send(port, "/api/speech-render", payload={**bound, "mode": "preview", "chapter": 1})
     assert response.status == 400, response.body

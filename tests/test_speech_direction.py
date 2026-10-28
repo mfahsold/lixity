@@ -208,3 +208,16 @@ def test_yaml_metadata_cannot_capture_an_identically_worded_spoken_anchor():
     p=speech_passages(text,'en')[0]
     plan=build_speech_plan(text,AudioProfile(),directions=[Direction(anchor=p['anchor'],instructions='Calm.')])
     assert [(row.text,row.profile.instructions) for row in plan if row.text]==[('Same prose.','Calm.')]
+
+
+def test_cli_can_preview_an_explicit_voice_design_profile_without_worker(tmp_path, capsys):
+    import json
+
+    from lixity.cli import main
+    (tmp_path/'draft.md').write_text(TEXT)
+    (tmp_path/'lixity.toml').write_text('language="de"\n')
+    assert main(['read-aloud', '--project', str(tmp_path), '--plan-only', '--engine', 'qwen3-design',
+                 '--voice', 'design', '--voice-description', 'A natural German voice.']) == 0
+    plan=json.loads(capsys.readouterr().out)
+    assert plan['segments'][0]['profile']['engine'] == 'qwen3-design'
+    assert plan['segments'][0]['profile']['voice_description'] == 'A natural German voice.'

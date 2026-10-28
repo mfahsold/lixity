@@ -7,9 +7,18 @@ import unicodedata
 from collections.abc import Mapping
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SerializerFunctionWrapHandler,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 QWEN_MODEL = "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice"
+QWEN_DESIGN_MODEL = "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign"
 QWEN_LANGUAGES = {
     "zh": "Chinese", "en": "English", "ja": "Japanese", "ko": "Korean",
     "de": "German", "fr": "French", "ru": "Russian", "pt": "Portuguese",
@@ -35,15 +44,23 @@ class AudioProfile(BaseModel):
 
     model_config = ConfigDict(extra="forbid", strict=True, allow_inf_nan=False, hide_input_in_errors=True)
     name: str = Field(default="Narrator", min_length=1, max_length=100)
-    engine: Literal["qwen3"] = "qwen3"
+    engine: Literal["qwen3", "qwen3-design"] = "qwen3"
     language: str = "en"
     voice: str = Field(default="Ryan", min_length=1, max_length=100)
+    voice_description: str = Field(default="", max_length=2000)
     speed: float = Field(default=1.0, ge=1.0, le=1.0)
     instructions: str = Field(default="", max_length=2000)
     paragraph_pause: float = Field(default=0.45, ge=0, le=10)
     scene_pause: float = Field(default=1.2, ge=0, le=10)
     pronunciations: dict[Annotated[str, Field(min_length=1, max_length=100)],
                          Annotated[str, Field(min_length=1, max_length=300)]] = Field(default_factory=dict, max_length=200)
+
+    @model_serializer(mode="wrap")
+    def serialize_profile(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        data: dict[str, Any] = handler(self)
+        if not self.voice_description:
+            data.pop("voice_description", None)
+        return data
 
     @field_validator("name", "voice", "language")
     @classmethod
@@ -53,6 +70,11 @@ class AudioProfile(BaseModel):
     @field_validator("instructions")
     @classmethod
     def valid_instructions(cls, value: str) -> str:
+        return _text(value.replace("\r\n", " ").replace("\n", " "), empty=True)
+
+    @field_validator("voice_description")
+    @classmethod
+    def valid_voice_description(cls, value: str) -> str:
         return _text(value.replace("\r\n", " ").replace("\n", " "), empty=True)
 
     @field_validator("pronunciations")
@@ -74,8 +96,13 @@ class AudioProfile(BaseModel):
     def supported_controls(self) -> AudioProfile:
         if self.language not in QWEN_LANGUAGES:
             raise ValueError("Unsupported Qwen language")
-        if self.voice not in QWEN_VOICES:
-            raise ValueError("Unsupported Qwen preset voice")
+        if self.engine == "qwen3":
+            if self.voice not in QWEN_VOICES:
+                raise ValueError("Unsupported Qwen preset voice")
+            if self.voice_description:
+                raise ValueError("CustomVoice does not accept a voice description")
+        elif self.voice != "design" or not self.voice_description:
+            raise ValueError("VoiceDesign requires voice='design' and a voice description")
         if self.speed != 1.0:
             raise ValueError("Qwen does not support precise speed; speed must be 1.0")
         return self
@@ -140,6 +167,13 @@ def audio_capabilities() -> dict[str, Any]:
             "instructions": True,
             "speed": {"supported": False, "minimum": 1.0, "maximum": 1.0, "default": 1.0},
             "model": QWEN_MODEL,
+        },
+        "qwen3-design": {
+            "name": "Qwen3-TTS 1.7B VoiceDesign", "targets": ["local", "jetson"],
+            "languages": list(QWEN_LANGUAGES), "voices": {}, "voice_design": True,
+            "instructions": True,
+            "speed": {"supported": False, "minimum": 1.0, "maximum": 1.0, "default": 1.0},
+            "model": QWEN_DESIGN_MODEL,
         },
     }
 

@@ -133,3 +133,12 @@ save/remove require source/settings/ledger snapshots. `read-aloud --plan-only`
 and native preview inspection expose the shared effective speech plan without
 inference. Qwen interprets local direction; Lixity generates exact silence.
 This is not SSML/IPA support, native inline emotion tags or a new audio backend.
+
+Current main also supports explicit Qwen3-TTS 1.7B VoiceDesign profiles with a
+voice description and a separately configured matching worker. Designed voice
+identity may vary across segments; reference-based Base/voice cloning is not
+implemented.
+
+Current main: `audio-status [--project PATH] --json` inspects profiles and
+worker model identities without prose. `read-aloud --preview` or `--preview-line
+N` renders a fresh paragraph; `--progress` reports segments on stderr.

@@ -45,6 +45,8 @@ function report(root = '/Synthetic project') {
         provenance: 'unknown', downloadable: true},
       {name: '<img src=x onerror=alert(1)>.pdf', path: 'exports/<img src=x onerror=alert(1)>.pdf',
         size_bytes: null, provenance: 'unknown', downloadable: false},
+      {name: 'Synthetic backup.tar.gz', path: 'exports/Synthetic backup.tar.gz', size_bytes: 123,
+        provenance: 'unknown', downloadable: false},
     ], issues: [], truncated: false};
 }
 
@@ -85,6 +87,19 @@ async function mockedFlows(browser) {
       assert.ok((await overview.textContent()).includes(labels.project_structure_provenance_unknown));
       assert.ok((await overview.textContent()).includes('<img src=x onerror=alert(1)>.pdf'));
       assert.equal(await overview.locator('img').count(), 0);
+      const fileBrowser = overview.locator('.project-overview-browser');
+      assert.equal(await fileBrowser.getAttribute('open'), null, 'The output inventory is collapsed initially');
+      await fileBrowser.locator('summary').first().click();
+      assert.equal(await fileBrowser.locator('.project-overview-output-group').count(), 2);
+      assert.equal(await fileBrowser.locator('.project-overview-output-group[open]').count(), 0);
+      const search = fileBrowser.locator('input[type=search]');
+      await search.fill('backup');
+      assert.equal(await fileBrowser.locator('.project-overview-output-group:visible').count(), 1);
+      assert.equal(await fileBrowser.locator('.project-overview-row:visible').count(), 1);
+      assert.ok((await fileBrowser.locator('.project-overview-row:visible').textContent()).includes('Synthetic backup.tar.gz'));
+      await search.fill('nothing matches this');
+      assert.ok(await fileBrowser.getByText(labels.project_structure_output_no_matches).isVisible());
+      await search.fill('');
       const link = overview.locator('.project-overview-artifacts a');
       assert.equal(await link.count(), 1);
       assert.equal(await link.getAttribute('href'), '/artifact/' + encodeURIComponent('Synthetic #1 %.pdf') + '?project_token=' + token);

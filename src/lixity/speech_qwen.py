@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from .speech_profiles import (
+    QWEN_DESIGN_MODEL,
     QWEN_LANGUAGES,
     QWEN_MODEL,
     QWEN_VOICES,
@@ -32,7 +33,7 @@ from .speech_profiles import (
 
 ENDPOINT = "http://127.0.0.1:8769/v1/audio/speech"
 TARGET_ENDPOINTS = {"local": ENDPOINT, "jetson": "http://127.0.0.1:8770/v1/audio/speech"}
-MAX_REQUEST_BYTES = 16384
+MAX_REQUEST_BYTES = 32768
 MAX_RESPONSE_BYTES = 32 * 1024 * 1024
 SAMPLE_RATE = 24000
 # CPU synthesis can take substantially longer than the resulting audio.
@@ -83,18 +84,20 @@ def worker_health(target: str, *, opener: Any = None) -> dict[str, Any]:
         raise ValueError("Unknown Qwen execution target")
     request = urllib.request.Request(TARGET_ENDPOINTS[target].replace("/v1/audio/speech", "/health"))  # noqa: S310 - fixed loopback allowlist
     client = opener or urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
+    model_id = None
     try:
         with client.open(request, timeout=1.5) as response:
             raw = response.read(4097)
         if len(raw) > 4096:
             raise ValueError("Oversized health response")
         value = json.loads(raw)
-        if not isinstance(value, dict) or value.get("model") != QWEN_MODEL or type(value.get("ready")) is not bool:
+        if not isinstance(value, dict) or value.get("model") not in (QWEN_MODEL, QWEN_DESIGN_MODEL) or type(value.get("ready")) is not bool:
             raise ValueError("Unexpected worker identity")
+        model_id = value["model"]
         state = "ready" if value["ready"] else "starting"
     except (OSError, ValueError, urllib.error.URLError):
         state = "unavailable"
-    return {"target": target, "state": state, "transport": "loopback" if target == "local" else "ssh"}
+    return {"target": target, "state": state, "transport": "loopback" if target == "local" else "ssh", "model": model_id}
 
 
 def synthesize_qwen(text: str, profile: AudioProfile, *, target: str = "local", opener: Any = None) -> bytes:
@@ -104,11 +107,15 @@ def synthesize_qwen(text: str, profile: AudioProfile, *, target: str = "local", 
     profile = AudioProfile.model_validate(profile.model_dump())
     if target not in TARGET_ENDPOINTS:
         raise ValueError("Unknown Qwen execution target")
-    if profile.engine != "qwen3" or not text.strip() or len(text) > MAX_SEGMENT_CHARS:
+    if profile.engine not in ("qwen3", "qwen3-design") or not text.strip() or len(text) > MAX_SEGMENT_CHARS:
         raise ValueError("Invalid Qwen synthesis request")
-    payload = json.dumps({"model": QWEN_MODEL, "input": text, "voice": profile.voice,
+    model_id = QWEN_DESIGN_MODEL if profile.engine == "qwen3-design" else QWEN_MODEL
+    request_data = {"model": model_id, "input": text, "voice": profile.voice,
                           "language": profile.language, "instructions": profile.instructions,
-                          "response_format": "wav"}).encode("utf-8")
+                          "response_format": "wav"}
+    if profile.engine == "qwen3-design":
+        request_data["voice_description"] = profile.voice_description
+    payload = json.dumps(request_data, ensure_ascii=False).encode("utf-8")
     if len(payload) > MAX_REQUEST_BYTES:
         raise ValueError("Qwen synthesis request is too large")
     request = urllib.request.Request(TARGET_ENDPOINTS[target], data=payload,  # noqa: S310 - fixed loopback allowlist
@@ -119,7 +126,7 @@ def synthesize_qwen(text: str, profile: AudioProfile, *, target: str = "local", 
         with client.open(request, timeout=SYNTHESIS_TIMEOUT_SECONDS) as response:
             if response.status != 200:
                 raise RuntimeError("Qwen worker rejected the synthesis request")
-            if (response.headers.get("X-Lixity-Model") != QWEN_MODEL or
+            if (response.headers.get("X-Lixity-Model") != model_id or
                     response.headers.get("X-Lixity-Voice") != profile.voice):
                 raise ValueError("Qwen worker model or voice mismatch")
             if response.headers.get_content_type() != "audio/wav":
@@ -128,7 +135,16 @@ def synthesize_qwen(text: str, profile: AudioProfile, *, target: str = "local", 
     except urllib.error.HTTPError as exc:
         # HTTPError owns a response stream even though open() raised before
         # entering the response context manager.
+        actual_model = exc.headers.get("X-Lixity-Model") if exc.headers else None
         exc.close()
+        if actual_model in (QWEN_MODEL, QWEN_DESIGN_MODEL) and actual_model != model_id:
+            raise RuntimeError(f"Qwen worker ({target}) is running a different Qwen model; select the matching worker variant") from exc
+        if exc.code == 400:
+            raise RuntimeError(f"Qwen worker ({target}) rejected the synthesis request (HTTP 400); check the selected profile and model") from exc
+        if exc.code == 500:
+            raise RuntimeError(f"Qwen worker ({target}) reported synthesis failed (HTTP 500); check the worker runtime and resources") from exc
+        if exc.code == 503:
+            raise RuntimeError(f"Qwen worker ({target}) is busy (HTTP 503); retry after the current request finishes") from exc
         raise RuntimeError(f"Qwen worker ({target}) is unavailable or failed") from exc
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         raise RuntimeError(f"Qwen worker ({target}) is unavailable or failed") from exc
@@ -143,8 +159,11 @@ def synthesize_qwen(text: str, profile: AudioProfile, *, target: str = "local", 
 
 
 def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 8769,
-                  runtime_info: WorkerRuntime | None = None) -> ThreadingHTTPServer:
+                  runtime_info: WorkerRuntime | None = None, model: str = QWEN_MODEL) -> ThreadingHTTPServer:
     """Build a loopback-only worker with injectable serialized inference."""
+    if model not in (QWEN_MODEL, QWEN_DESIGN_MODEL):
+        raise ValueError("Unsupported worker model")
+    engine = "qwen3-design" if model == QWEN_DESIGN_MODEL else "qwen3"
     lock = threading.Lock()
 
     class Handler(BaseHTTPRequestHandler):
@@ -157,7 +176,7 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
             self.send_response(status)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(data)))
-            self.send_header("X-Lixity-Model", QWEN_MODEL)
+            self.send_header("X-Lixity-Model", model)
             if voice is not None:
                 self.send_header("X-Lixity-Voice", voice)
             self.end_headers()
@@ -165,10 +184,10 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
 
         def do_GET(self) -> None:
             if self.path == "/health":
-                self.reply(200, json.dumps({"ready": True, "model": QWEN_MODEL,
+                self.reply(200, json.dumps({"ready": True, "model": model,
                                            **({"runtime": asdict(runtime_info)} if runtime_info is not None else {})}).encode())
             elif self.path == "/capabilities":
-                self.reply(200, json.dumps(audio_capabilities()["qwen3"]).encode())
+                self.reply(200, json.dumps(audio_capabilities()[engine]).encode())
             else:
                 self.reply(404, b'{"error":"Not found"}')
 
@@ -192,17 +211,19 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
                 if len(raw) != size:
                     raise ValueError("Truncated request")
                 request = json.loads(raw)
-                if not isinstance(request, dict) or set(request) != {
-                    "model", "input", "voice", "language", "instructions", "response_format"
-                }:
+                expected_fields = {"model", "input", "voice", "language", "instructions", "response_format"}
+                if engine == "qwen3-design":
+                    expected_fields.add("voice_description")
+                if not isinstance(request, dict) or set(request) != expected_fields:
                     raise ValueError("Invalid request fields")
-                if request["model"] != QWEN_MODEL or request["response_format"] != "wav":
+                if request["model"] != model or request["response_format"] != "wav":
                     raise ValueError("Unsupported model or format")
                 text = request["input"]
                 if not isinstance(text, str) or not text.strip() or len(text) > MAX_SEGMENT_CHARS:
                     raise ValueError("Invalid synthesis text")
-                AudioProfile.model_validate({"name": "Worker", "engine": "qwen3", "language": request["language"],
-                                             "voice": request["voice"], "instructions": request["instructions"]})
+                AudioProfile.model_validate({"name": "Worker", "engine": engine, "language": request["language"],
+                                             "voice": request["voice"], "instructions": request["instructions"],
+                                             "voice_description": request.get("voice_description", "")})
             except (ValueError, TypeError):
                 self.reply(400, b'{"error":"Invalid synthesis request"}')
                 return
@@ -231,8 +252,11 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
 def load_local_model(
     model_path: Path, *, device: str = "cpu", threads: int = 4, codec_device: str = "model",
     attention: str = "auto", codec_chunk_frames: int = 300,
+    variant: str = "custom-voice",
 ) -> LoadedRenderer:
-    """Load only the pinned CustomVoice architecture from local files, once."""
+    """Load an explicitly selected pinned Qwen architecture from local files."""
+    if variant not in ("custom-voice", "voice-design"):
+        raise ValueError("Unknown Qwen model variant")
     if device not in ("cpu", "cuda"):
         raise ValueError("Qwen device must be cpu or cuda")
     if codec_device not in ("cpu", "model"):
@@ -245,9 +269,10 @@ def load_local_model(
         raise ValueError("Qwen threads must be an integer between 1 and 64")
     model_path = model_path.expanduser().resolve()
     config = json.loads((model_path / "config.json").read_text(encoding="utf-8"))
-    if (config.get("tts_model_type") != "custom_voice" or
+    expected_type = "voice_design" if variant == "voice-design" else "custom_voice"
+    if (config.get("tts_model_type") != expected_type or
             config.get("tts_model_size") != "1b7" or config.get("tokenizer_type") != "qwen3_tts_tokenizer_12hz"):
-        raise ValueError("A local Qwen3-TTS-12Hz-1.7B-CustomVoice model is required")
+        raise ValueError(f"A local Qwen3-TTS-12Hz-1.7B {variant} model is required")
     os.environ["HF_HUB_OFFLINE"] = "1"
     os.environ["TRANSFORMERS_OFFLINE"] = "1"
     torch = importlib.import_module("torch")
@@ -288,9 +313,9 @@ def load_local_model(
         codec.device = torch.device("cpu")
         gc.collect()
         torch.cuda.empty_cache()
-    speakers = {value.lower() for value in model.get_supported_speakers()}
+    speakers = {value.lower() for value in model.get_supported_speakers()} if variant == "custom-voice" else set()
     languages = {value.lower() for value in model.get_supported_languages()}
-    if (not {value.lower() for value in QWEN_VOICES}.issubset(speakers) or
+    if ((variant == "custom-voice" and not {value.lower() for value in QWEN_VOICES}.issubset(speakers)) or
             not {value.lower() for value in QWEN_LANGUAGES.values()}.issubset(languages)):
         raise ValueError("Local Qwen model does not support the required presets and languages")
 
@@ -300,10 +325,16 @@ def load_local_model(
         # CustomVoice includes codec decoding; its upstream no_grad guard does
         # not disable view tracking and version-counter overhead as this does.
         with torch.inference_mode():
-            wavs, rate = model.generate_custom_voice(text=request["input"],
-                                                    language=QWEN_LANGUAGES[request["language"]],
-                                                    speaker=request["voice"], instruct=request["instructions"],
-                                                    max_new_tokens=2048)
+            if variant == "voice-design":
+                instruction = " ".join(part for part in (request["voice_description"], request["instructions"]) if part)
+                wavs, rate = model.generate_voice_design(text=request["input"],
+                                                        language=QWEN_LANGUAGES[request["language"]],
+                                                        instruct=instruction, max_new_tokens=2048)
+            else:
+                wavs, rate = model.generate_custom_voice(text=request["input"],
+                                                        language=QWEN_LANGUAGES[request["language"]],
+                                                        speaker=request["voice"], instruct=request["instructions"],
+                                                        max_new_tokens=2048)
         if rate != SAMPLE_RATE or len(wavs) != 1:
             raise ValueError("Unexpected Qwen output")
         output = io.BytesIO()
@@ -318,7 +349,8 @@ def load_local_model(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", required=True, type=Path, help="Complete local CustomVoice model directory")
+    parser.add_argument("--model", required=True, type=Path, help="Complete local model directory")
+    parser.add_argument("--variant", choices=["custom-voice", "voice-design"], default="custom-voice")
     parser.add_argument("--device", choices=["cpu", "cuda"], default="cpu",
                         help="Explicit inference device; unavailable CUDA fails without fallback")
     parser.add_argument("--codec-device", choices=["cpu", "model"], default="model",
@@ -331,10 +363,15 @@ def main() -> None:
                         help="Torch CPU threads (1..64; default 4)")
     parser.add_argument("--port", type=int, default=8769, choices=[8769])
     args = parser.parse_args()
-    renderer = load_local_model(args.model, device=args.device, threads=args.threads,
-                                codec_device=args.codec_device, attention=args.attention,
-                                codec_chunk_frames=args.codec_chunk_frames)
-    server = worker_server(renderer, port=args.port, runtime_info=renderer.runtime_info)
+    options = {"device": args.device, "threads": args.threads, "codec_device": args.codec_device,
+               "attention": args.attention, "codec_chunk_frames": args.codec_chunk_frames}
+    if args.variant != "custom-voice":
+        options["variant"] = args.variant
+    renderer = load_local_model(args.model, **options)
+    server_options: dict[str, Any] = {"port": args.port, "runtime_info": renderer.runtime_info}
+    if args.variant == "voice-design":
+        server_options["model"] = QWEN_DESIGN_MODEL
+    server = worker_server(renderer, **server_options)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

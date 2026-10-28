@@ -325,6 +325,26 @@ def test_adapter_closes_http_error_response(status):
     assert response.closed
 
 
+@pytest.mark.parametrize(('status', 'message'), [
+    (400, 'rejected the synthesis request'),
+    (500, 'synthesis failed'),
+    (503, 'busy'),
+])
+def test_adapter_reports_http_failure_without_exposing_worker_response(status, message):
+    response = io.BytesIO(b'private worker response')
+    headers = Message()
+    headers['X-Lixity-Model'] = QWEN_MODEL
+    error = urllib.error.HTTPError(ENDPOINT, status, 'private error reason', headers, response)
+
+    def fail_request(*_args, **_kwargs):
+        raise error
+
+    with pytest.raises(RuntimeError, match=message) as captured:
+        synthesize_qwen('Synthetic text.', profile(), opener=SimpleNamespace(open=fail_request))
+    assert 'private' not in str(captured.value)
+    assert response.closed
+
+
 @pytest.mark.parametrize("target,port", [("local", 8769), ("jetson", 8770)])
 def test_execution_target_uses_only_fixed_loopback_endpoints(target, port):
     headers = Message()
@@ -629,3 +649,116 @@ def test_worker_health_verifies_model_and_never_uses_proxy_or_redirects():
     assert worker_health('jetson', opener=Opener())['state'] == 'ready'
     with pytest.raises(ValueError):
         worker_health('external')
+
+
+def test_design_worker_accepts_only_its_model_and_description():
+    from lixity.speech_profiles import QWEN_DESIGN_MODEL
+    calls = []
+    server = worker_server(lambda request: calls.append(request) or generate_silence_wav(.01, 24000),
+                           port=0, model=QWEN_DESIGN_MODEL)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    url = f'http://127.0.0.1:{server.server_address[1]}'
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    try:
+        with opener.open(url + '/health') as response:
+            assert json.load(response)['model'] == QWEN_DESIGN_MODEL
+        payload = {'model':QWEN_DESIGN_MODEL, 'input':'Ein kurzer Text.', 'voice':'design',
+                   'language':'de', 'instructions':'Read calmly.',
+                   'voice_description':'A natural German narrator.', 'response_format':'wav'}
+        request = urllib.request.Request(url + '/v1/audio/speech', data=json.dumps(payload).encode(),  # noqa: S310
+                                         headers={'Content-Type':'application/json'})
+        with opener.open(request) as response:
+            assert response.headers['X-Lixity-Model'] == QWEN_DESIGN_MODEL
+            assert response.read().startswith(b'RIFF')
+        assert calls[0]['voice_description'] == 'A natural German narrator.'
+        payload['model'] = QWEN_MODEL
+        request.data = json.dumps(payload).encode()
+        with pytest.raises(urllib.error.HTTPError) as error:
+            opener.open(request)
+        error.value.close()
+        assert len(calls) == 1
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+
+def test_design_adapter_accepts_maximum_multilingual_text_and_profile():
+    from lixity.speech_profiles import QWEN_DESIGN_MODEL
+    headers = Message()
+    headers['Content-Type'] = 'audio/wav'
+    headers['X-Lixity-Model'] = QWEN_DESIGN_MODEL
+    headers['X-Lixity-Voice'] = 'design'
+
+    def open_request(request, timeout):
+        sent = json.loads(request.data)
+        assert sent['voice_description'] == '🌊' * 2000
+        assert sent['instructions'] == '🌊' * 2000
+        assert sent['input'] == '🌊' * 600
+        result = io.BytesIO(generate_silence_wav(.01, 24000))
+        result.status = 200
+        result.headers = headers
+        return result
+
+    selected = AudioProfile(engine='qwen3-design', voice='design',
+                            voice_description='🌊' * 2000, instructions='🌊' * 2000)
+    assert synthesize_qwen('🌊' * 600, selected, opener=SimpleNamespace(open=open_request)).startswith(b'RIFF')
+
+
+def test_voice_design_worker_calls_official_api_with_separate_description_and_direction(tmp_path, monkeypatch):
+    from contextlib import nullcontext
+
+    from lixity.speech_profiles import QWEN_LANGUAGES
+    from lixity.speech_qwen import load_local_model
+
+    (tmp_path/'config.json').write_text(json.dumps({'tts_model_type':'voice_design',
+        'tts_model_size':'1b7', 'tokenizer_type':'qwen3_tts_tokenizer_12hz'}))
+    calls=[]
+    model=SimpleNamespace(get_supported_languages=lambda:list(QWEN_LANGUAGES.values()),
+                          generate_voice_design=lambda **kwargs:(calls.append(kwargs) or (['sample'],24000)))
+    torch=SimpleNamespace(float32='float32',set_num_threads=lambda n:None, inference_mode=nullcontext)
+    qwen=SimpleNamespace(Qwen3TTSModel=SimpleNamespace(from_pretrained=lambda *a,**k:model))
+    soundfile=SimpleNamespace(write=lambda out, *_a, **_k:out.write(generate_silence_wav(.01,24000)))
+    monkeypatch.setattr('lixity.speech_qwen.importlib.import_module',
+                        lambda name:{'torch':torch,'qwen_tts':qwen,'soundfile':soundfile}[name])
+    worker=load_local_model(tmp_path, variant='voice-design')
+    audio=worker({'input':'Ein kurzer Satz.', 'language':'de',
+                  'voice_description':'Natural German baritone.', 'instructions':'Read calmly.'})
+    assert audio.startswith(b'RIFF')
+    assert calls == [{'text':'Ein kurzer Satz.','language':'German',
+                      'instruct':'Natural German baritone. Read calmly.','max_new_tokens':2048}]
+    with pytest.raises(ValueError,match='model'):
+        load_local_model(tmp_path, variant='custom-voice')
+
+
+def test_adapter_reports_wrong_active_worker_model():
+    from lixity.speech_profiles import QWEN_DESIGN_MODEL
+    headers = Message()
+    headers['X-Lixity-Model'] = QWEN_MODEL
+
+    def open_request(*_args, **_kwargs):
+        raise urllib.error.HTTPError('http://127.0.0.1:8769', 400, 'bad request', headers, io.BytesIO(b'{}'))
+
+    selected = AudioProfile(engine='qwen3-design', voice='design', voice_description='A clear German narrator.')
+    with pytest.raises(RuntimeError, match='different Qwen model'):
+        synthesize_qwen('Ein kurzer Satz.', selected, opener=SimpleNamespace(open=open_request))
+    assert QWEN_DESIGN_MODEL != QWEN_MODEL
+
+
+def test_health_preserves_identity_of_both_worker_variants():
+    from lixity.speech_profiles import QWEN_DESIGN_MODEL
+    from lixity.speech_qwen import worker_health
+
+    class Reply:
+        def __init__(self, model):
+            self.model = model
+        def __enter__(self):
+            return self
+        def __exit__(self, *_args):
+            pass
+        def read(self, _limit):
+            return json.dumps({'ready': True, 'model': self.model}).encode()
+    for model in (QWEN_MODEL, QWEN_DESIGN_MODEL):
+        opener=SimpleNamespace(open=lambda *_args, selected=model, **_kwargs: Reply(selected))
+        assert worker_health('local', opener=opener)['model'] == model

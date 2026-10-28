@@ -190,14 +190,39 @@ server.serve_forever()
       const dialog=page.locator('#modal-speech');
       await page.waitForFunction(()=>document.querySelector('#speech-name')?.value==='Narrator');
       assert.equal(await dialog.isVisible(),true);
-      assert.equal(await page.locator('#speech-engine, #speech-speed, #speech-advanced_voice').count(),0,
-        'The Qwen-only dialog has no removed engine, speed or cached voice controls');
+      assert.equal(await page.locator('#speech-name').isVisible(),true, 'Project audio opens the profile editor');
+      assert.equal(await page.locator('#speech-direction_text').isVisible(),false, 'Passage direction is reserved for the reader');
+      assert.equal(await page.locator('#speech-chapter').isVisible(),false, 'Chapter output has a separate entry');
+      assert.equal(await page.locator('#speech-pronunciations').isVisible(),false, 'Pronunciations start collapsed');
+      assert.equal(await page.locator('#speech-speed, #speech-advanced_voice').count(),0,
+        'The dialog has no unsupported speed or cached voice controls');
+      assert.equal(await page.locator('#speech-engine').inputValue(),'qwen3');
+      assert.equal(await page.locator('#speech-voice_description').isVisible(),false);
+      await page.locator('#speech-engine').selectOption('qwen3-design');
+      assert.equal(await page.locator('#speech-voice').isVisible(),false);
+      assert.equal(await page.locator('#speech-voice_description').isVisible(),true);
+      await page.locator('#speech-voice_description').fill('A natural German narrator with a calm voice.');
+      await dialog.screenshot({path:path.join(artifacts,`voice-design-${locale}-${width}.png`)});
+      await page.locator('#speech-engine').selectOption('qwen3');
+      assert.equal(await page.locator('#speech-voice').isVisible(),true);
       assert.equal(await dialog.getByText(/Piper/i).count(),0,
         JSON.stringify(await dialog.getByText(/Piper/i).allTextContents()));
       assert.equal(await page.locator('#speech-instructions').isDisabled(),false);
-      assert.equal(await page.locator('#speech-target').isDisabled(),false);
       assert.equal(await page.locator('#speech-instructions').isVisible(),true);
       assert.equal(await page.locator('#speech-language').inputValue(),'en');
+      await page.locator('#speech-pronunciations').locator('xpath=ancestor::details/summary').click();
+      await page.locator('#speech-pronunciations').fill('Lixity=Lik-si-tee');
+      await page.locator('#speech-pronunciation_search').fill('Lixity');
+      await page.locator('[data-speech-action=pronunciation_find]').click();
+      assert.equal(await page.locator('#speech-pronunciations').evaluate(el=>el.value.slice(el.selectionStart,el.selectionEnd)),'Lixity');
+      await page.keyboard.press('Escape');
+      await page.locator('#tab-view-analysis').click();
+      await page.locator('#reader-speech').click();
+      await page.waitForFunction(()=>document.querySelector('#speech-direction_text')?.value.includes('bird'));
+      assert.equal(await page.locator('#speech-name').isVisible(),false, 'Reader keeps the profile editor out of passage work');
+      assert.equal(await page.locator('#speech-profile').isVisible(),true, 'Reader exposes the current project profile');
+      assert.equal(await page.locator('[data-speech-action=chapter_render]').isVisible(),false);
+      assert.equal(await page.locator('#speech-target').isDisabled(),false);
       assert.equal(await page.locator('#speech-runtime-hint').isVisible(),true);
       assert.ok((await page.locator('#speech-runtime-hint').textContent()).includes(labels.speech_runtime_hint));
       assert.equal(await page.locator('#speech-target').isVisible(),true);
@@ -240,8 +265,6 @@ server.serve_forever()
       await page.locator('[data-speech-action=direction_remove]').click();
       await page.waitForFunction(()=>document.querySelector('#speech-direction_entries').options.length===1);
       assert.equal(JSON.parse(fs.readFileSync(ledger)).entries.length,0);
-      await page.locator('#speech-instructions').fill('Read calmly.');
-      await page.locator('#speech-pronunciations').fill('Lixity=Lik-si-tee');
       await page.locator('[data-speech-action=preview]').click();
       await page.waitForFunction(()=>!document.querySelector('#modal-speech audio').hidden);
       const audio=page.locator('#modal-speech audio');
@@ -264,6 +287,7 @@ server.serve_forever()
       await dialog.screenshot({path:path.join(artifacts,`audio-jetson-${locale}-${width}.png`)});
       await page.locator('#speech-target').selectOption('local');
       assert.equal(await audio.isVisible(),false,'Returning to local clears the Jetson result');
+      assert.equal((await page.locator('#modal-speech').textContent()).includes(labels.speech_target_jetson + ' ·'),false,'Returning to local clears the previous result context');
       assert.ok((await page.locator('#speech-runtime-hint').textContent()).includes(labels.speech_runtime_hint));
       await page.locator('#speech-target').selectOption('jetson');
       await page.locator('[data-speech-action=preview]').click();
@@ -275,6 +299,12 @@ server.serve_forever()
       await page.locator('[data-speech-action=preview]').click();
       assert.equal((await localRequest).postDataJSON().target,'local');
       await page.waitForFunction(()=>!document.querySelector('#modal-speech audio').hidden);
+      const previousChapter=await page.locator('#speech-chapter').inputValue();
+      await dialog.locator('[data-speech-action=output_title]').click();
+      assert.equal(await page.locator('#speech-chapter').inputValue(),previousChapter, 'Reader shortcut retains the chapter');
+      assert.equal(await page.locator('#speech-name').isVisible(),false);
+      assert.equal(await page.locator('#speech-direction_text').isVisible(),false);
+      assert.equal(await page.locator('#speech-chapter').isVisible(),true);
       assert.equal(await page.locator('#speech-reuse').isChecked(),true);
       await page.locator('#speech-reuse').uncheck();
       const freshRequest=page.waitForRequest(request=>request.url().endsWith('/api/speech-render'));
@@ -286,15 +316,15 @@ server.serve_forever()
       await page.locator('[data-speech-action=chapter_render]').click();
       assert.equal((await resumedRequest).postDataJSON().fresh_audio,false,'Chapter retries reuse completed segments by default');
       await page.waitForFunction(()=>!document.querySelector('#modal-speech audio').hidden);
-      await page.locator('#speech-name').fill('Edited narrator');
-      assert.equal(await audio.isVisible(),false,'Profile edits remove completed audio');
+      await page.locator('#speech-target').selectOption('jetson');
+      assert.equal(await audio.isVisible(),false,'Changing target removes completed audio');
       await page.locator('[data-speech-action=preview]').click();
       await page.waitForFunction(()=>!document.querySelector('[data-speech-action=cancel]').disabled);
       await page.locator('[data-speech-action=cancel]').click();
       await page.waitForFunction(text=>document.querySelector('#modal-speech [role=status]').textContent.includes(text),labels.speech_state_cancelled);
       assert.equal(await audio.isVisible(),false,'Cancelled inference cannot publish audio');
       await page.locator('[data-speech-action=preview]').click();
-      await page.locator('#speech-name').fill('Newer draft');
+      await page.locator('#speech-target').selectOption('local');
       await page.waitForTimeout(1000);
       assert.equal(await audio.isVisible(),false,'Late results cannot attach after profile edits');
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
@@ -349,7 +379,8 @@ server.serve_forever()
     await savedPage.locator('[data-speech-action=create]').click();
     assert.equal(await savedPage.locator('#speech-language').inputValue(),'de','New Qwen profiles retain the supported chosen language');
     await savedPage.locator('#speech-name').fill('Saved synthetic narrator');
-    await savedPage.locator('#speech-target').selectOption('jetson');
+    await savedPage.locator('#speech-engine').selectOption('qwen3-design');
+    await savedPage.locator('#speech-voice_description').fill('A natural German narrator with a calm voice.');
     const saveRequest=savedPage.waitForRequest(request=>request.url().endsWith('/api/settings'));
     await Promise.all([savedPage.waitForNavigation(),savedPage.locator('[data-speech-action=save]').click()]);
     const savedPayload=(await saveRequest).postDataJSON();
@@ -358,7 +389,11 @@ server.serve_forever()
     await savedPage.locator('#tab-view-project').click();
     await savedPage.locator('#settings-speech').click();
     await savedPage.waitForFunction(()=>document.querySelector('#speech-name').value==='Saved synthetic narrator');
-    assert.equal(await savedPage.locator('#speech-engine').count(),0);
+    assert.equal(await savedPage.locator('#speech-engine').inputValue(),'qwen3-design');
+    assert.equal(await savedPage.locator('#speech-voice_description').inputValue(),'A natural German narrator with a calm voice.');
+    await savedPage.keyboard.press('Escape');
+    await savedPage.locator('#settings-speech-output').click();
+    await savedPage.waitForFunction(()=>document.querySelector('#speech-profile')?.value);
     assert.equal(await savedPage.locator('#speech-target').inputValue(),'local','Execution target is not restored from saved audio settings');
     assert.equal(/^target\s*=/m.test(fs.readFileSync(savedProject.config,'utf8')),false,'Project TOML excludes the per-render target');
     assert.ok(fs.readFileSync(savedProject.config,'utf8').includes('Saved synthetic narrator'));
@@ -403,7 +438,7 @@ server.serve_forever()
       assert.deepEqual(fs.readFileSync(legacyProject.source),legacySource,'Migration guidance never changes source');
       await page.close();
     }
-    console.log('Native Qwen-only audio: synthetic WAV over real HTTP, seven locales at1440/320, paragraph previews, cache/target controls, cancellation, stale results, keyboard/Escape and unchanged sources passed. '+artifacts);
+    console.log('Native Qwen audio: synthetic WAV over real HTTP, seven locales at1440/320, VoiceDesign profiles, paragraph previews, cache/target controls, cancellation, stale results, keyboard/Escape and unchanged sources passed. '+artifacts);
   } finally {await server.close();}
 }
 

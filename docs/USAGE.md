@@ -1339,10 +1339,21 @@ There is no EPUB/DOCX export, custom trim size, bleed/crop marks, print color ma
 PDF/UA/PDF/X certification. Searchable text, metadata and bookmarks alone do
 not establish accessibility or production compliance.
 
+### Audio status (current main; after 0.7.6)
+
+`lixity audio-status [--project PATH] [--engine qwen3|qwen3-design] [--json]` inspects the actual fixed local
+and Jetson workers without synthesis. With an explicit project, it lists saved
+profile identities and compares the selected profile's model with each worker. `--engine` explicitly compares a model variant
+even without a saved profile. `model_matches: null` means no model identity or selected profile is known; it
+is not a successful or failed match. It does not output manuscript prose, voice
+descriptions, pronunciation replacements or delivery instructions. Missing or
+invalid project settings fail explicitly. This is a snapshot, not a guarantee
+that the worker will remain available during a later render.
+
 ### `lixity read-aloud`
 
-**Development prototype:** create a listening copy using Qwen3-TTS 1.7B
-CustomVoice. The CLI and native preview/chapter dialog share the same project
+**Development prototype:** create a listening copy using Qwen3-TTS 1.7B.
+Published 0.7.6 uses CustomVoice; current main also supports VoiceDesign. The CLI and native preview/chapter dialog share the same project
 voice profiles, rendering controls and local/Jetson targets. The optional worker
 and its model require separate setup. This is not a production audiobook pipeline.
 
@@ -1351,6 +1362,17 @@ lixity read-aloud manuscript.md --language en -o manuscript.wav
 lixity read-aloud manuscript.md --language de --chapter 2 --voice Ryan -o chapter-2.wav
 lixity read-aloud --project ./novel --language de -o reading-copy.wav
 ```
+
+On current main, `--preview` renders the first anchored paragraph or list item, and
+`--preview-line N` selects the anchored paragraph or list item containing source line N.
+Quote blocks do not currently have selectable preview anchors.
+A chapter selection constrains either preview. Preview skips headings and uses a
+separate default `-preview.wav` output; it does not read or write the segment
+cache. `--plan-only` can be combined with either preview without synthesizing.
+`--progress` reports completed segments on stderr. The CLI checks manuscript,
+settings and active direction snapshots during rendering and immediately before
+publishing; changed or unreadable inputs reject the result and preserve an
+existing output. `--no-direction` deliberately excludes the direction ledger.
 
 `--chapter` selects a one-based chapter number. Without an explicit file, the
 command uses the selected project's configured manuscript or folder discovery.
@@ -1363,12 +1385,18 @@ Choose a supported speech language explicitly for a Dutch project; there is no
 automatic language or backend fallback. Preset language support does not certify
 native pronunciation. Review the model license before distributing output.
 
-**Since v0.7.6:** saved project audio profiles are shared by the CLI
-and native **Audio & voices** dialog, reachable from Project settings and the
-manuscript controls. Choose or create a profile, audition the selected passage,
-then render a chapter. Draft previews do not save settings; **Save profiles**
-persists the selected profile and its controls through the normal atomic project
-settings path. Read-only exports do not offer synthesis or expose audio settings.
+**Current main:** saved project audio profiles are shared with the CLI. In the
+native interface, open **Project → Voice profiles** to create or edit a profile,
+including its model, delivery, standard pauses and pronunciation replacements.
+The pronunciation editor can be expanded and searched. **Save project audio settings** stores
+the selected profile and its controls through the normal atomic project settings
+path. Use **Listen and direct** in the manuscript to audition and direct a
+passage; the active project profile is shown there. **Project → Render chapter
+audio** selects a chapter and shows progress and the resulting download. The
+passage dialog also links directly to chapter output and retains the selected
+chapter; save or discard any direction draft before switching. Draft
+previews do not save settings. Read-only exports do not offer synthesis or expose
+audio settings. These separated entry points are not in the published 0.7.6 package.
 
 ```bash
 lixity read-aloud --project ./novel --profile narrator -o reading-copy.wav
@@ -1468,12 +1496,34 @@ They also accept a `pronunciations` table of literal term-to-spoken-form pairs.
 These substitutions affect synthesis text only. A voice profile does not infer
 character identities or turn words such as “quiet” into acting instructions.
 
-**Current engine:** only `qwen3`, using the fixed
-`Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` checkpoint family and one of its nine presets.
+Published 0.7.6 uses `qwen3`, the
+`Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` checkpoint and its nine presets.
 Explicit style instructions, structural pauses and pronunciation settings are
-shared by CLI and UI. Base voice cloning and VoiceDesign are not implemented.
-Model capabilities determine the available controls; there is no automatic
-backend fallback.
+shared by CLI and UI. Current main also offers the separate experimental
+VoiceDesign checkpoint described below. Base voice cloning is not implemented.
+There is no automatic backend fallback.
+
+### Experimental Qwen VoiceDesign (current main; after 0.7.6)
+
+Current main can use the separately installed Qwen3-TTS 1.7B VoiceDesign
+checkpoint. Start a worker explicitly with `--variant voice-design --model
+PATH` and select `qwen3-design` in a project profile. Its `voice` is `design`,
+and `voice_description` contains the desired voice characteristics. The normal
+`instructions` and passage direction remain separate delivery instructions;
+Qwen receives the description followed by the effective direction.
+
+For an unsaved CLI audition or plan, use `--engine qwen3-design
+--voice-description 'A natural, clear German narrator.'` with `read-aloud`.
+`--plan-only` needs no worker. A worker serves one selected model variant; a
+profile and its selected target must use the same variant. There is no automatic
+download, fallback, voice cloning, or calibrated pace control. Identical
+descriptions do not guarantee the same voice across independently generated
+segments. Listen for accent, pronunciation and continuity before a long render.
+The cache distinguishes the model, voice description and effective direction.
+If passage directions mix model variants, rendering checks cached segments first
+and stops before synthesis when uncached segments require multiple variants.
+Use one variant throughout, or reuse previously cached segments.
+Cache entries can still be evicted while a render is in progress.
 
 ### Passage direction (current main; after 0.7.6)
 

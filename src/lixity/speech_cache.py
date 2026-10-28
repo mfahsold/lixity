@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 
 from .io import FileUtils
-from .speech_profiles import QWEN_MODEL, AudioProfile
+from .speech_profiles import QWEN_DESIGN_MODEL, QWEN_MODEL, AudioProfile
 from .speech_qwen import MAX_RESPONSE_BYTES
 
 CACHE_BYTES = 2 * 1024**3
@@ -43,6 +43,9 @@ class SpeechSegmentCache:
         request = {"schema_version": _SCHEMA, "model": QWEN_MODEL, "text": text,
                    "language": profile.language, "voice": profile.voice,
                    "instructions": profile.instructions}
+        if profile.engine == "qwen3-design":
+            request["model"] = QWEN_DESIGN_MODEL
+            request["voice_description"] = profile.voice_description
         key = hashlib.sha256(json.dumps(request, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
         audio, metadata = self.directory / (key + ".wav"), self.directory / (key + ".json")
         if audio.is_symlink() or metadata.is_symlink():

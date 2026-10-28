@@ -358,6 +358,31 @@ _ROWS = {
         "Arquivos gerados",
         "Uitvoer",
     ),
+    "project_structure_output_files": (
+        "Browse files", "Dateien durchsuchen", "Parcourir les fichiers", "Explorar archivos",
+        "Sfoglia file", "Procurar ficheiros", "Bestanden bekijken",
+    ),
+    "project_structure_output_search": (
+        "Search filenames", "Dateinamen suchen", "Rechercher un nom de fichier", "Buscar nombres de archivo",
+        "Cerca nomi di file", "Pesquisar nomes de ficheiro", "Bestandsnamen zoeken",
+    ),
+    "project_structure_output_no_matches": (
+        "No matching files.", "Keine passenden Dateien.", "Aucun fichier correspondant.", "No hay archivos coincidentes.",
+        "Nessun file corrispondente.", "Nenhum ficheiro correspondente.", "Geen overeenkomende bestanden.",
+    ),
+    "project_structure_output_pdf": ("PDF", "PDF", "PDF", "PDF", "PDF", "PDF", "PDF"),
+    "project_structure_output_archive": (
+        "Archives", "Archive", "Archives", "Archivos comprimidos", "Archivi", "Arquivos comprimidos", "Archieven",
+    ),
+    "project_structure_output_web": (
+        "Web pages", "Webseiten", "Pages web", "Páginas web", "Pagine web", "Páginas web", "Webpagina's",
+    ),
+    "project_structure_output_data": (
+        "Data files", "Datendateien", "Fichiers de données", "Archivos de datos", "File di dati", "Ficheiros de dados", "Databestanden",
+    ),
+    "project_structure_output_other": (
+        "Other files", "Weitere Dateien", "Autres fichiers", "Otros archivos", "Altri file", "Outros ficheiros", "Andere bestanden",
+    ),
     "project_structure_folder": (
         "Project folder",
         "Projektordner",
@@ -11564,6 +11589,30 @@ _ROWS.update({
 })
 
 _ROWS["speech_direction_discard"] = ("Discard direction draft", "Regieentwurf verwerfen", "Abandonner le brouillon", "Descartar borrador", "Scarta bozza di regia", "Descartar rascunho", "Regieconcept verwerpen")
+
+_ROWS["speech_engine"] = ("Voice model", "Stimmmodell", "Modèle vocal", "Modelo de voz", "Modello vocale", "Modelo de voz", "Stemmodel")
+_ROWS["speech_voice_description"] = (
+    "Voice description", "Stimmbeschreibung", "Description de la voix", "Descripción de la voz",
+    "Descrizione della voce", "Descrição da voz", "Stembeschrijving",
+)
+_ROWS["speech_design_hint"] = (
+    "Describe the voice and accent. Delivery instructions remain separate. VoiceDesign needs a matching worker; the voice may change between segments.",
+    "Beschreibe Stimme und Akzent. Die Sprechregie bleibt getrennt. VoiceDesign benötigt einen passenden Dienst; die Stimme kann zwischen Abschnitten variieren.",
+    "Décrivez la voix et l’accent. La direction reste séparée. VoiceDesign nécessite un service adapté ; la voix peut varier entre les passages.",
+    "Describe la voz y el acento. La dirección se mantiene separada. VoiceDesign necesita un servicio compatible; la voz puede variar entre segmentos.",
+    "Descrivi la voce e l’accento. La regia resta separata. VoiceDesign richiede un servizio compatibile; la voce può variare tra i segmenti.",
+    "Descreva a voz e o sotaque. A direção mantém-se separada. VoiceDesign precisa de um serviço compatível; a voz pode variar entre segmentos.",
+    "Beschrijf de stem en het accent. De regie blijft apart. VoiceDesign vereist een passende service; de stem kan per segment verschillen.",
+)
+
+_ROWS.update({
+    "speech_profiles_title": ("Voice profiles", "Hörprofile", "Profils vocaux", "Perfiles de voz", "Profili vocali", "Perfis de voz", "Stemprofielen"),
+    "speech_output_title": ("Render chapter audio", "Kapitel vertonen", "Produire un chapitre audio", "Producir audio del capítulo", "Genera audio del capitolo", "Produzir áudio do capítulo", "Hoofdstuk inspreken"),
+    "speech_reader_title": ("Listen and direct", "Anhören und Regie", "Écouter et diriger", "Escuchar y dirigir", "Ascolta e dirigi", "Ouvir e dirigir", "Beluisteren en regisseren"),
+    "speech_pronunciation_search": ("Find a term", "Begriff suchen", "Rechercher un terme", "Buscar un término", "Cerca un termine", "Procurar um termo", "Zoek een term"),
+    "speech_pronunciation_find": ("Find", "Suchen", "Rechercher", "Buscar", "Cerca", "Procurar", "Zoeken"),
+    "speech_pronunciation_not_found": ("No matching term found.", "Kein passender Begriff gefunden.", "Aucun terme trouvé.", "No se encontró el término.", "Nessun termine trovato.", "Nenhum termo encontrado.", "Geen passende term gevonden."),
+})
 
 if any(len(values) != len(_LANGUAGES) for values in _ROWS.values()):
     raise ValueError("Workspace label rows must include every supported locale")

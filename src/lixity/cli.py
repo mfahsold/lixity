@@ -90,6 +90,13 @@ _META = {
 # LIXITY_LANG=de.
 CLI_TEXTS: dict[str, dict[str, str]] = {
     "en": {
+        "audio_status_project": "Project",
+        "audio_status_selected": "Selected profile",
+        "audio_status_unavailable": "Profile unavailable",
+        "audio_status_match": "model match",
+        "audio_status_unknown": "unknown",
+        "audio_status_yes": "yes",
+        "audio_status_no": "no",
         "layer_reference": 'Reference: all measurable paragraphs within each chapter; median/MAD robust z. Requires at least 3 measurable paragraphs and nonzero MAD.',
         "layer_notable": 'Notable: |round(z, 2)| >= {cutoff}; descriptive heuristic for human review.',
         "layer_counts": '{total_count} total · {comparable_count} comparable · {notable_count} notable · {selected_count} shown',
@@ -214,6 +221,13 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "show_title": "Title",
     },
     "de": {
+        "audio_status_project": "Projekt",
+        "audio_status_selected": "Gewähltes Profil",
+        "audio_status_unavailable": "Profil nicht verfügbar",
+        "audio_status_match": "Modell passt",
+        "audio_status_unknown": "unbekannt",
+        "audio_status_yes": "ja",
+        "audio_status_no": "nein",
         "layer_reference": 'Referenz: alle messbaren Absätze innerhalb jedes Kapitels; robuster z-Wert aus Median/MAD. Mindestens 3 messbare Absätze und MAD größer als 0 erforderlich.',
         "layer_notable": 'Auffällig: |round(z, 2)| >= {cutoff}; beschreibende Heuristik zur menschlichen Prüfung.',
         "layer_counts": '{total_count} gesamt · {comparable_count} vergleichbar · {notable_count} auffällig · {selected_count} angezeigt',
@@ -395,6 +409,7 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("export-site", "Export a static read-only project website"),
     ("pdf", "Compose a PDF for editing, reading, submission or analysis"),
     ("read-aloud", "Create a local listening copy with project voice profiles"),
+    ("audio-status", "Inspect audio profiles and worker readiness"),
     ("audio-direction", "Inspect and save project-local passage speech direction (JSON)"),
     ("audio-migrate", "Preview or apply explicit backed-up Qwen profile replacements (JSON)"),
     ("serve", "Run local HTTP development server and interactive dashboard"),
@@ -427,14 +442,23 @@ _lixity_complete() {
             case "$prev" in
                 --language) COMPREPLY=( $(compgen -W "zh en ja ko de fr ru pt es it" -- "$cur") ) ;;
                 --speech-target) COMPREPLY=( $(compgen -W "local jetson" -- "$cur") ) ;;
-                --voice) COMPREPLY=( $(compgen -W "Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee" -- "$cur") ) ;;
+                --voice) COMPREPLY=( $(compgen -W "Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee design" -- "$cur") ) ;;
+                --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design" -- "$cur") ) ;;
                 --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
                 -o|--output) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
-                --profile|--instructions|--chapter) ;;
+                --profile|--instructions|--voice-description|--chapter|--preview-line) ;;
                 *)
-                    COMPREPLY=( $(compgen -W "--help --project -o --output --chapter --language --profile --instructions --voice --speech-target --no-audio-cache --fresh-audio --keep-markers --plan-only --no-direction" -- "$cur") )
+                    COMPREPLY=( $(compgen -W "--help --project -o --output --chapter --language --profile --engine --instructions --voice --voice-description --speech-target --no-audio-cache --fresh-audio --keep-markers --plan-only --no-direction --preview --preview-line --progress" -- "$cur") )
                     COMPREPLY+=( $(compgen -f -- "$cur") )
                     ;;
+            esac
+            return 0
+            ;;
+        audio-status)
+            case "$prev" in
+                --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
+                --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design" -- "$cur") ) ;;
+                *) COMPREPLY=( $(compgen -W "--help --project --engine --json" -- "$cur") ) ;;
             esac
             return 0
             ;;
@@ -599,13 +623,25 @@ __LIXITY_ZSH_COMMANDS__
             '--language[Qwen speech language]:language:(zh en ja ko de fr ru pt es it)' \
             '--profile[Saved narrator profile]:profile:' \
             '--instructions[Explicit Qwen delivery instructions]:text:' \
-            '--voice[Qwen preset]:voice:(Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee)' \
+            '--engine[Qwen model variant]:engine:(qwen3 qwen3-design)' \
+            '--voice[Qwen preset or design]:voice:(Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee design)' \
+            '--voice-description[VoiceDesign description]:text:' \
             '--speech-target[Execution target]:target:(local jetson)' \
             '--plan-only[Inspect the effective speech plan without synthesis]' \
             '--no-direction[Explicitly ignore saved passage direction]' \
+            '--preview[Preview the first spoken paragraph]' \
+            '--preview-line[Preview paragraph at source line]:line:' \
+            '--progress[Report progress to stderr]' \
             '--no-audio-cache[Do not read or retain reusable audio segments]' \
             '--fresh-audio[Recompute completed audio segments]' \
             '--keep-markers[Read editorial markers aloud]'
+          ;;
+        audio-status)
+          _arguments \
+            '--help[Help]' \
+            '--project[Explicit project root]:directory:_files -/' \
+            '--engine[Compare a model variant]:engine:(qwen3 qwen3-design)' \
+            '--json[Machine-readable status]'
           ;;
         audio-direction)
           _arguments \
@@ -1297,15 +1333,17 @@ def _cmd_pdf(args: argparse.Namespace) -> int:
 
 def _cmd_read_aloud(args: argparse.Namespace) -> int:
     """Create a local manuscript listening copy with a validated project profile."""
-    from pathlib import Path
+    import warnings
 
     from .speech import render_speech_audio
     from .speech_cache import project_audio_cache
     from .speech_profiles import AudioProfile, parse_audio_settings, resolve_audio_profile
 
     workspace = args._workspace
+    preview = args.preview or args.preview_line is not None
     output = args.output or os.path.join(
         workspace.root,
+        f"{workspace.slug}-preview.wav" if preview else
         f"{workspace.slug}-chapter-{args.chapter}.wav" if args.chapter is not None else f"{workspace.slug}.wav",
     )
     try:
@@ -1317,24 +1355,63 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
     try:
         profile = resolve_audio_profile(args._project_config, args.profile, language=args.language)
         changes = profile.model_dump()
-        for name, value in (("voice", args.voice),
+        for name, value in (("engine", args.engine),
+                            ("voice", args.voice),
+                            ("voice_description", args.voice_description),
                             ("instructions", args.instructions),
                             ("language", getattr(args, "_speech_explicit_language", None))):
             if value is not None:
                 changes[name] = value
+        if args.engine == "qwen3-design" and args.voice is None and profile.engine != "qwen3-design":
+            changes["voice"] = "design"
+        if args.engine == "qwen3" and profile.engine == "qwen3-design" and args.voice_description is None:
+            changes.pop("voice_description", None)
         profile = AudioProfile.model_validate(changes)
         from .speech_direction import (
             build_speech_plan,
+            direction_snapshot,
             direction_state,
             plan_json,
             saved_directions,
         )
+        text, source_hash = FileUtils.read_source_snapshot(workspace.manuscript)
         view = None if args.no_direction else direction_state(workspace.root, workspace.manuscript, language=profile.language)
+        if view is not None and view["source_sha256"] != source_hash:
+            raise ValueError("Manuscript changed while preparing speech; retry")
+        direction_hash = view["direction_sha256"] if view is not None else None
+
+        def check_context() -> bool:
+            try:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("error", UserWarning)
+                    use_explicit, start = args._speech_config_selection
+                    current_settings = (read_explicit_project_config(start) if use_explicit
+                                        else load_project_config(start))
+                valid = (FileUtils.read_source_snapshot(workspace.manuscript)[1] == source_hash
+                         and current_settings == args._project_config
+                         and (direction_hash is None or direction_snapshot(workspace.root) == direction_hash))
+            except (OSError, ValueError, UserWarning) as exc:
+                raise ValueError("Manuscript, settings or speech directions changed or became unreadable; retry") from exc
+            if not valid:
+                raise ValueError("Manuscript, settings or speech directions changed during rendering; retry")
+            return False
+
+        check_context()
         profiles = parse_audio_settings(args._project_config.get("audio"), language=profile.language).profiles
-        plan = build_speech_plan(Path(workspace.manuscript).read_text(encoding="utf-8"), profile,
+        plan = build_speech_plan(text, profile,
             directions=saved_directions(view) if view is not None else [], profiles=profiles,
             chapter=args.chapter, project_config=args._project_config, skip_markers=not args.keep_markers)
+        if preview:
+            anchors = [row.anchor for row in plan if row.text and row.anchor]
+            selected = next((anchor for anchor in anchors if args.preview_line is None or
+                             anchor["start_line"] <= args.preview_line <= anchor["end_line"]), None)
+            if selected is None:
+                raise ValueError("No anchored paragraph or list item found at the selected line or chapter; quote blocks cannot currently be selected for preview")
+            plan = [row for row in plan if row.anchor == selected]
+            if sum(len(row.text) for row in plan) > 6000:
+                raise ValueError("Passage preview exceeds 6000 characters; render the chapter")
         if args.plan_only:
+            check_context()
             print(_json(plan_json(plan), indent=True))
             return EXIT_OK
         out_path = render_speech_audio(
@@ -1344,10 +1421,12 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
             chapter=args.chapter,
             profile=profile,
             skip_markers=not args.keep_markers,
-            cache_dir=project_audio_cache(workspace.root) if not args.no_audio_cache else None,
+            cache_dir=project_audio_cache(workspace.root) if not args.no_audio_cache and not preview else None,
             fresh_audio=args.fresh_audio,
             target=args.speech_target,
             plan=plan,
+            cancelled=check_context,
+            progress=(lambda done, total: print(f"Audio: {done}/{total}", file=sys.stderr)) if args.progress else None,
         )
     except (OSError, ValueError, RuntimeError, FileNotFoundError) as exc:
         print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
@@ -1742,6 +1821,11 @@ def _main(argv: list[str] | None = None) -> int:
             configure_service(sub.add_parser(name, help=help_text))
             continue
         p = sub.add_parser(name, help=help_text, description=help_text)
+        if name == "audio-status":
+            p.add_argument("--project", help="Explicit project root; omit to inspect workers only")
+            p.add_argument("--engine", choices=("qwen3", "qwen3-design"), help="Compare this model variant instead of the selected profile")
+            p.add_argument("--json", action="store_true", help="Machine-readable status")
+            continue
         if name == "audio-direction":
             from .speech_direction_cli import configure
             configure(p)
@@ -1925,7 +2009,7 @@ def _main(argv: list[str] | None = None) -> int:
         if name == "read-aloud":
             p.epilog = (
                 "Renders local listening copies using saved project voice profiles. "
-                "Qwen3-TTS 1.7B CustomVoice supports explicit style instructions "
+                "Qwen3-TTS 1.7B supports CustomVoice or explicit VoiceDesign "
                 "on this computer or a configured Jetson. Runtimes and voice models are installed separately."
             )
             p.add_argument("file", nargs="?", help="Markdown manuscript (default: configured manuscript or folder discovery)")
@@ -1934,8 +2018,14 @@ def _main(argv: list[str] | None = None) -> int:
             p.add_argument("--language", default=None, help="Speech language code (default: saved profile, then project setting)")
             p.add_argument("--profile", default=None, help="Saved project audio profile (default: selected project profile)")
             p.add_argument("--plan-only", action="store_true", help="Inspect effective speech text and direction as JSON; no synthesis or output")
+            previews = p.add_mutually_exclusive_group()
+            previews.add_argument("--preview", action="store_true", help="Preview the first anchored paragraph or list item")
+            previews.add_argument("--preview-line", type=int, help="Preview the anchored paragraph or list item containing this source line")
+            p.add_argument("--progress", action="store_true", help="Report segment progress to stderr")
             p.add_argument("--no-direction", action="store_true", help="Explicitly ignore saved passage direction for this invocation")
             p.add_argument("--instructions", default=None, help="Explicit Qwen delivery instructions")
+            p.add_argument("--engine", choices=("qwen3", "qwen3-design"), default=None, help="Explicit Qwen model variant")
+            p.add_argument("--voice-description", default=None, help="VoiceDesign voice description")
             p.add_argument("--voice", default=None, help="Override the selected profile voice; model-specific validation applies")
             p.add_argument("--speech-target", choices=("local", "jetson"), default="local", help="Execution target for this run (default: local); Jetson requires its configured SSH forward")
             p.add_argument("--no-audio-cache", action="store_true", help="Render without reading or retaining reusable audio segments")
@@ -2143,6 +2233,30 @@ def _main(argv: list[str] | None = None) -> int:
         # argparse choices already rejected unknown shells; keep a defensive path
         print(f"{_m('err_prefix')} {_m('err_shell', shell=args.shell)}", file=sys.stderr)
         return EXIT_ERROR
+    if args.command == "audio-status":
+        from .format import safe_text
+        from .speech_status import audio_status
+        try:
+            status = audio_status(args.project, engine=args.engine)
+        except (OSError, ValueError, RuntimeError, UserWarning) as exc:
+            print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+            return EXIT_ERROR
+        if args.json:
+            print(_json(status, indent=True))
+        else:
+            if status['project'] is not None:
+                print(f"{_m('audio_status_project')}: {safe_text(status['project']['root'])}")
+                print(f"{_m('audio_status_selected')}: {status['project']['selected_profile'] or _m('audio_status_unknown')}")
+                for item in status['project']['profiles']:
+                    print(safe_text(f"  {item['id']}: {item['name']} · {item['engine']} · {item['voice']} · {item['language']}"))
+                if status['project'].get('profile_issue'):
+                    print(f"{_m('audio_status_unavailable')}: {status['project']['profile_issue']}")
+            for target in status['targets']:
+                match = target['model_matches']
+                matching = _m('audio_status_yes' if match is True else 'audio_status_no' if match is False else 'audio_status_unknown')
+                print(f"{target['target']}: {target['state']} · {target.get('model') or _m('audio_status_unknown')} · "
+                      f"{_m('audio_status_match')}: {matching}")
+        return EXIT_OK
     if args.command == "audio-direction":
         from .speech_direction_cli import run
         try:
@@ -2250,13 +2364,18 @@ def _main(argv: list[str] | None = None) -> int:
             if explicit_file is None or args.project is not None:
                 args.file = workspace.manuscript
                 project_config = read_explicit_project_config(workspace.root)
+                speech_config_selection = (True, workspace.root)
                 if (args.project is None and args.command in ("scenes", "build", "read-aloud")
                         and "manuscript" not in project_config):
                     # Preserve conventional folder users' defaults, rooted at
                     # the selected workspace rather than an implicit cwd.
                     project_config = load_project_config(workspace.root)
+                    speech_config_selection = (False, workspace.root)
             else:
                 project_config = load_project_config(explicit_file)
+                speech_config_selection = (False, explicit_file)
+            if args.command == "read-aloud":
+                args._speech_config_selection = speech_config_selection
         except (OSError, ValueError) as exc:
             print(f"Error: {exc}", file=sys.stderr)
             return EXIT_ERROR

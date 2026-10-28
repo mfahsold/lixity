@@ -1543,8 +1543,8 @@ access fails with a migration requirement. Portable exports remain canonical
 `audio` is a project-only setting with schema `lixity-audio-settings/1`, selected
 profile ID and a bounded profile map. The installed configuration schema exposes
 its validation contract. `read-aloud --profile` and the native dialog share it;
-explicit CLI control overrides are per invocation, not project writes. The sole
-engine is `qwen3`, pinned to `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice`, with nine
+explicit CLI control overrides are per invocation, not project writes. In the
+published 0.7.6 release the engine is `qwen3`, pinned to `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice`, with nine
 preset voices and ten explicit speech languages. Dutch analysis projects need
 an explicit supported speech language. Profile `speed` must be `1.0`; style
 instructions do not implement precise speed control.
@@ -1606,7 +1606,7 @@ research archive records are changed.
 The optional Qwen worker listens on 127.0.0.1:8769 only. The adapter selects either
 that local worker or the fixed loopback port 8770 for an externally configured
 SSH forward to a Jetson worker. Browser payloads cannot set an endpoint URL.
-The worker accepts bounded CustomVoice requests at `/v1/audio/speech`;
+The worker accepts bounded requests for its configured model at `/v1/audio/speech`;
 the Lixity adapter checks model, voice,
 format and response size and rejects redirects. No external provider endpoint or
 automatic backend fallback is supported. Heavy model dependencies and weights
@@ -1689,3 +1689,25 @@ Saving direction changes its ledger snapshot and makes pending/completed jobs
 from the old snapshot stale. Profile-only drafts and per-render hardware targets
 remain distinct. CLI `--no-direction` ignores saved direction for that render,
 without deleting it. No native SSML/IPA/control-tag support is implied.
+
+Current main adds an experimental `qwen3-design` profile variant with
+`voice="design"` and a required `voice_description`. The existing `instructions`
+field remains delivery direction; both strings are sent separately to an
+explicitly configured VoiceDesign worker, which joins them for Qwen's `instruct`.
+The worker's `model` identity is exposed in audio target health. An incompatible
+active model is an error, never an automatic model change or fallback. Existing
+CustomVoice profile serialization and worker request fields remain unchanged.
+The cache identity includes model, description and effective instructions.
+
+
+## CLI audio status and previews (current main)
+
+`audio-status --json [--project PATH] [--engine qwen3|qwen3-design]` returns `lixity-audio-status/1` with
+actual per-target state, model identity and nullable comparison with the selected
+project profile or explicitly selected engine. Omitted/unknown information is not a negative match. No
+manuscript prose, pronunciations or delivery descriptions are included.
+`read-aloud --preview` or `--preview-line N` selects a bounded source paragraph,
+uses a fresh render and a separate preview output by default; `--plan-only`
+retains its existing speech-plan JSON contract. `--progress` writes to stderr.
+CLI publication checks source, effective settings and active direction snapshots
+throughout rendering and before atomic replacement.

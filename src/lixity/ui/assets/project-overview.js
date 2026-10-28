@@ -85,8 +85,7 @@
   function outputRow(artifact, token) {
     var row = node("li", "project-overview-row"), heading = node("div", "project-overview-row-heading");
     heading.append(node("strong", "", artifact.name));
-    if (artifact.size_bytes !== null) heading.append(node("span", "project-overview-state",
-      new Intl.NumberFormat(document.documentElement.lang || "en").format(artifact.size_bytes) + " B"));
+    if (artifact.size_bytes !== null) heading.append(node("span", "project-overview-state", outputSize(artifact.size_bytes)));
     row.append(heading, node("code", "", artifact.path));
     var name = artifact.name;
     if (artifact.downloadable && name && name !== "." && name !== ".." && !/[\\/\u0000-\u001f\u007f]/.test(name) && artifact.path === "exports/" + name) {
@@ -96,6 +95,66 @@
       row.append(link);
     }
     return row;
+  }
+  function outputSize(bytes) {
+    var units = ["B", "KiB", "MiB", "GiB", "TiB"], unit = 0, size = bytes;
+    while (size >= 1024 && unit < units.length - 1) { size /= 1024; unit++; }
+    return new Intl.NumberFormat(document.documentElement.lang || "en", {
+      maximumFractionDigits: unit ? 1 : 0
+    }).format(size) + " " + units[unit];
+  }
+  function outputGroup(name) {
+    var lower = name.toLowerCase();
+    if (/\.pdf$/.test(lower)) return "pdf";
+    if (/\.(?:tar|tgz|tar\.gz|tar\.xz|tar\.bz2|zip|7z|gz|bz2|xz)$/.test(lower)) return "archive";
+    if (/\.html?$/.test(lower)) return "web";
+    if (/\.(?:json|csv|tsv|xml)$/.test(lower)) return "data";
+    return "other";
+  }
+  function outputBrowser(artifacts, token) {
+    var browser = node("details", "project-overview-browser");
+    browser.append(node("summary", "", text("project_structure_output_files") + " (" + artifacts.length + ")"));
+    browser.append(node("p", "ctl-note", text("project_structure_provenance_unknown")));
+    var label = node("label", "project-overview-search", text("project_structure_output_search"));
+    var search = node("input", "");
+    search.type = "search"; search.autocomplete = "off";
+    label.append(search); browser.append(label);
+    var groups = Object.create(null);
+    ["pdf", "archive", "web", "data", "other"].forEach(function (key) { groups[key] = []; });
+    artifacts.forEach(function (artifact) { groups[outputGroup(artifact.name)].push(artifact); });
+    var sections = [];
+    Object.keys(groups).forEach(function (key) {
+      if (!groups[key].length) return;
+      var section = node("details", "project-overview-output-group");
+      var summary = node("summary", "", text("project_structure_output_" + key) + " (" + groups[key].length + ")");
+      var list = node("ul", "project-overview-list project-overview-artifacts");
+      var rows = groups[key].sort(function (a, b) {
+        return a.name.localeCompare(b.name, document.documentElement.lang || "en", {numeric: true, sensitivity: "base"});
+      }).map(function (artifact) {
+        var row = outputRow(artifact, token); list.append(row);
+        return {element: row, name: artifact.name.toLocaleLowerCase()};
+      });
+      section.append(summary, list); browser.append(section);
+      sections.push({element: section, rows: rows});
+    });
+    var empty = node("p", "ctl-note", text("project_structure_output_no_matches"));
+    empty.hidden = true; empty.setAttribute("role", "status"); browser.append(empty);
+    search.addEventListener("input", function () {
+      var query = search.value.trim().toLocaleLowerCase(), count = 0;
+      sections.forEach(function (section) {
+        var visible = 0;
+        section.rows.forEach(function (row) {
+          var match = !query || row.name.includes(query);
+          row.element.hidden = !match;
+          if (match) visible++;
+        });
+        section.element.hidden = visible === 0;
+        if (query && visible) section.element.open = true;
+        count += visible;
+      });
+      empty.hidden = count !== 0;
+    });
+    return browser;
   }
   function render(data, token) {
     var folder = node("p", "project-overview-root");
@@ -111,10 +170,7 @@
       section.append(list);
       if (group === "outputs") {
         if (data.artifacts.length) {
-          section.append(node("p", "ctl-note", text("project_structure_provenance_unknown")));
-          var outputs = node("ul", "project-overview-list project-overview-artifacts");
-          data.artifacts.forEach(function (artifact) { outputs.append(outputRow(artifact, token)); });
-          section.append(outputs);
+          section.append(outputBrowser(data.artifacts, token));
         } else section.append(node("p", "ctl-note", text("project_structure_no_outputs")));
       }
       columns.append(section);

@@ -8,6 +8,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- CLI audio status, fresh paragraph previews by source line and opt-in segment
+  progress; long renders reject changed source, settings and active direction.
+- Experimental Qwen3-TTS 1.7B VoiceDesign profiles with an explicit voice description, separate model identity and a shared CLI/native audio path. The matching offline worker must be started explicitly.
 - Model-independent project-local passage direction with exact paragraph/range
   anchors, saved voice selection, free-form delivery, explicit PCM pauses,
   stale/overlap guards and idempotent atomic saves. CLI `audio-direction`,

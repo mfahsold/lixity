@@ -187,3 +187,14 @@ def test_cli_default_qwen_uses_jetson_without_saving_a_profile(tmp_path, monkeyp
     assert output.read_bytes().startswith(b"RIFF")
     assert calls == [("A synthetic default narrator passage.", "qwen3", "Ryan", "jetson")]
     assert (tmp_path / "lixity.toml").read_bytes() == original
+
+
+def test_design_cache_separates_model_and_voice_description(tmp_path):
+    from lixity.speech_cache import SpeechSegmentCache
+    cache = SpeechSegmentCache(tmp_path / 'segments')
+    one = AudioProfile(engine='qwen3-design', voice='design', language='de', voice_description='A German voice.')
+    two = AudioProfile(engine='qwen3-design', voice='design', language='de', voice_description='Another German voice.')
+    data = generate_silence_wav(.01, 24000)
+    cache.put('Ein kurzer Satz.', one, data)
+    assert cache.get('Ein kurzer Satz.', one) == data
+    assert cache.get('Ein kurzer Satz.', two) is None
