@@ -680,7 +680,11 @@ The first explicit **Analysis On** selects **Sentence length**
 unless you have already saved a metric choice.
 Use the directly visible **Measure**
 selector while Analysis is on. **Counted text** and **Paragraph comparison** are
-independent switches: keep either, both or neither. With counted text enabled,
+independent switches: keep either, both or neither. **Current main:** counted text starts off for a
+new browser preference; paragraph comparison starts on. Existing saved choices
+are retained. For sentence length, every recognized sentence with words is counted,
+so enabling counted text can underline almost the whole manuscript; this does not
+mean that those sentences are unusually long or require editing. With counted text enabled,
 violet underlines identify counted words, patterns, quoted speech or sentences.
 Hover a mark for its explanation; a short stationary tap opens it on touch
 screens. Escape closes it. Analysis Off and **None** hide both kinds of indicator;

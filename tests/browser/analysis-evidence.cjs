@@ -71,6 +71,7 @@ async function ranges(page) {
 }
 async function selected(page, key) {
   await selectMetric(page, key);
+  if (!await page.locator('#analysis-evidence-enabled').isChecked()) await marksEnabled(page, true);
   await page.locator('.ptext-inner > p').filter({hasText:'😀 I feel'}).first().scrollIntoViewIfNeeded();
   await page.waitForFunction(text => [...(CSS.highlights?.get('lixity-analysis-evidence') || [])].some(range => range.toString() === text), expected[key]);
   await page.evaluate(text => {
@@ -119,6 +120,7 @@ async function localizedSentenceCards(browser) {
     await page.route('**/*', route => route.fulfill({contentType:'text/html',body:fixtures['native-' + locale]}));
     await page.goto('http://localhost/');
     await page.locator('#manuscript-analysis-toggle').click();
+    await marksEnabled(page, true);
     for (const [quote, count] of [['😀 I feel the gate.', 4], ['Wait.', 1]]) {
       await page.locator('.ptext-inner > p').filter({hasText:'😀 I feel'}).first().scrollIntoViewIfNeeded();
       await page.waitForFunction(quote => [...(CSS.highlights.get('lixity-analysis-evidence') || [])].some(range => range.toString() === quote), quote);
@@ -214,6 +216,16 @@ server.serve_forever()
 `, artifacts);
   try {
     const originalBytes = fs.readFileSync(server.fixture.manuscript);
+    const returning = await browser.newPage({viewport:{width:1440,height:950}, reducedMotion:'reduce'});
+    await returning.addInitScript(() => localStorage.setItem('lixity.manuscript.reader', JSON.stringify({
+      metric:'asl', evidence:true, comparison:false
+    })));
+    await returning.goto(server.fixture.url);
+    await returning.locator('#manuscript-analysis-toggle').click();
+    assert.equal(await returning.locator('#analysis-evidence-enabled').isChecked(), true, 'an existing enabled preference is retained');
+    assert.equal(await returning.locator('#analysis-comparison-enabled').isChecked(), false, 'an existing disabled comparison is retained');
+    await returning.waitForFunction(() => CSS.highlights.get('lixity-analysis-evidence')?.size > 0);
+    await returning.close();
     for (const width of [1440, 320]) {
       const page = await browser.newPage({viewport:{width,height:width === 320 ? 480 : 950}, hasTouch:width === 320, reducedMotion:'reduce'});
       const errors = [], writes = [];
@@ -234,8 +246,18 @@ server.serve_forever()
       assert.equal(await page.locator('#style-layer').isVisible(), true, 'the metric selector is directly visible beside the analysis switches');
       assert.equal(await page.locator('#analysis-evidence-enabled').isVisible(), true);
       assert.equal(await page.locator('#analysis-comparison-enabled').isVisible(), true);
+      assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false, 'first use leaves counted-text marks off');
+      assert.equal(await page.locator('#analysis-comparison-enabled').isChecked(), true, 'first use retains paragraph comparison');
+      await settle(page);
+      assert.deepEqual(await ranges(page), [], 'first use does not underline every recognized sentence');
       assert.equal(await page.locator('#reader-analysis-settings > summary').count(), 0);
       await page.screenshot({path:path.join(artifacts, `native-settings-${width}.png`)});
+      await actions.click(); await explainFromMenu(page);
+      await page.locator('#analysis-evidence-card').waitFor({state:'visible'});
+      assert.deepEqual(await ranges(page), [], 'explicit inspection works without enabling global marks');
+      assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false, 'inspection keeps the default preference');
+      await page.keyboard.press('Escape');
+      if (await page.locator('#workspace-reader-close').isVisible()) await page.locator('#workspace-reader-close').click();
       await page.keyboard.press('Escape');
       // Direct analysis controls support keyboard input without opening a popup.
       const metric = page.locator('#style-layer');
@@ -246,12 +268,14 @@ server.serve_forever()
       assert.equal(await metric.evaluate(node => node === document.activeElement), true);
       for (const id of ['analysis-evidence-enabled', 'analysis-comparison-enabled']) {
         const control = page.locator('#' + id), other = page.locator('#' + (id === 'analysis-evidence-enabled' ? 'analysis-comparison-enabled' : 'analysis-evidence-enabled'));
+        const before = await control.isChecked(), otherBefore = await other.isChecked();
         await control.focus(); await page.keyboard.press('Space');
-        assert.equal(await control.isChecked(), false);
-        assert.equal(await other.isChecked(), true, 'the two analysis decorations have independent controls');
+        assert.equal(await control.isChecked(), !before);
+        assert.equal(await other.isChecked(), otherBefore, 'the two analysis decorations have independent controls');
         assert.equal(await control.evaluate(node => node === document.activeElement), true);
-        await page.keyboard.press('Space'); assert.equal(await control.isChecked(), true);
+        await page.keyboard.press('Space'); assert.equal(await control.isChecked(), before);
       }
+      await marksEnabled(page, true);
       // Appearance retains its keyboard popup and returns focus to its trigger.
       await page.locator('#reader-settings > summary').focus(); await page.keyboard.press('Enter');
       assert.equal(await page.locator('#reader-settings').evaluate(node => node.open), true);
@@ -327,6 +351,7 @@ server.serve_forever()
       await page.reload();
       await page.locator('#manuscript-analysis-toggle').click();
       assert.equal(await page.locator('#style-layer').inputValue(), 'asl');
+      assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), true, 'reload retains explicitly enabled marks');
       assert.equal(await page.locator('body').evaluate(node => node.classList.contains('layer-on')), true, 'restored metric reapplies shared paragraph layer');
       assert.equal(await page.locator('#layer-legend').isVisible(), true);
       assert.equal(await page.locator('#layer-legend-title').textContent(), 'Sentence length · words per sentence',
@@ -426,6 +451,7 @@ server.serve_forever()
         await page.route('**/*', route => route.fulfill({contentType:'text/html', body:fixtures['german-nominal']}));
         await page.goto('http://localhost/');
         await page.locator('#manuscript-analysis-toggle').click();
+        await marksEnabled(page, true);
         await selectMetric(page, 'nominal');
         assert.equal(await page.locator('#style-layer option:checked').textContent(), 'Nomen-Endungen');
         await page.locator('.layer-comparison-note > summary').click();
@@ -507,6 +533,7 @@ server.serve_forever()
     await long.route('**/*', route => route.fulfill({contentType:'text/html',body:fixtures.longNative}));
     await long.goto('http://localhost/');
     await long.locator('#manuscript-analysis-toggle').click();
+    await marksEnabled(long, true);
     await selectMetric(long, 'filter');
     await long.locator('.reader-paragraph-actions').first().click();
     await explainFromMenu(long);
@@ -729,6 +756,7 @@ server.serve_forever()
         }
       }, fault);
       await page.locator('#manuscript-analysis-toggle').click();
+      await marksEnabled(page, true);
       await selectMetric(page, 'filter');
       await page.locator('.ptext-inner > p').filter({hasText:'😀 I feel'}).first().scrollIntoViewIfNeeded();
       if (fault === 'stale-digest') {
@@ -835,6 +863,10 @@ server.serve_forever()
           const legend = page.locator('#layer-legend'), counted = page.locator('#layer-evidence-legend'), comparison = page.locator('#layer-comparison-legend');
           assert.equal(await legend.isVisible(), false);
           await page.locator('#manuscript-analysis-toggle').click();
+          assert.equal(await counted.isVisible(), false, 'Counted text is initially off');
+          assert.equal(await comparison.isVisible(), true, 'Paragraph comparison is initially on');
+          assert.deepEqual(await ranges(page), [], 'No counted-text ranges are painted by default');
+          await marksEnabled(page, true);
           assert.equal(await counted.isVisible(), true, 'Counted text has its own visible legend');
           assert.equal(await comparison.isVisible(), true, 'Paragraph comparison has a separate visible legend');
           assert.equal(await page.locator('.toolbar > .legend').isVisible(), false, 'An active metric hides the unrelated tense key in reading');

@@ -380,6 +380,7 @@ async function verifyComparisonRegressions(browser) {
       assert.equal(await page.locator('#style-layer option:checked').textContent(), fixture.labels.layer_asl);
       await openAnalysisSettings(page);
       assert.equal(await page.locator('#style-layer').isVisible(), true, 'the selector needs no settings disclosure');
+      await page.locator('#analysis-evidence-enabled').check();
       for (const key of Object.keys(fixture.expected)) {
         await selectMetric(page, key);
         await frames(page);

@@ -10542,6 +10542,15 @@ _ROWS.update(
             "{metric}: o texto sublinhado foi contado. Examine um trecho marcado para ver o valor concreto.",
             "{metric}: onderstreepte tekst is geteld. Bekijk een gemarkeerde passage voor de concrete waarde.",
         ),
+        "legend_counted_sentences_hint": (
+            "{metric}: every recognized sentence with words is counted. Underlining does not indicate an unusually long sentence.",
+            "{metric}: Jeder erkannte Satz mit Wörtern wird gezählt. Die Unterstreichung weist nicht auf einen ungewöhnlich langen Satz hin.",
+            "{metric} : chaque phrase reconnue contenant des mots est comptée. Le soulignement ne signale pas une phrase inhabituellement longue.",
+            "{metric}: se cuenta cada oración reconocida que contiene palabras. El subrayado no indica una oración excepcionalmente larga.",
+            "{metric}: viene conteggiata ogni frase riconosciuta che contiene parole. La sottolineatura non indica una frase insolitamente lunga.",
+            "{metric}: cada frase reconhecida que contém palavras é contada. O sublinhado não indica uma frase invulgarmente longa.",
+            "{metric}: elke herkende zin met woorden wordt geteld. De onderstreping duidt niet op een uitzonderlijk lange zin.",
+        ),
         "reading_passage_context": (
             "Passage",
             "Textstelle",

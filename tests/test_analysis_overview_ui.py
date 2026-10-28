@@ -119,8 +119,8 @@ class TestAnalysisOverview(unittest.TestCase):
         self.assertIn('id="analysis-evidence-enabled"', html)
         self.assertIn('class="reader-comparison-toggle"', html)
         self.assertIn('id="analysis-comparison-enabled"', html)
-        # Ensure toggles are checked by default
-        self.assertRegex(html, r'<input type="checkbox" id="analysis-evidence-enabled" checked\s*/?>')
+        # Sentence evidence can cover the entire manuscript, so opt in to it.
+        self.assertIn('<input type="checkbox" id="analysis-evidence-enabled"/>', html)
         self.assertRegex(html, r'<input type="checkbox" id="analysis-comparison-enabled" checked\s*/?>')
 
 

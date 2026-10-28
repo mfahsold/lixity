@@ -238,6 +238,7 @@ async function checkBrowser(browser, caseData, form, width) {
     assert.equal(await page.locator('html').getAttribute('lang'), language);
     await page.locator('#manuscript-analysis-toggle').click();
     await selectMetric(page, 'asl');
+    await page.locator('#analysis-evidence-enabled').check();
     // Open each native paragraph before recording its original DOM identity.
     for (const panel of await page.locator('#chapters .ptext').all()) await panel.scrollIntoViewIfNeeded();
     const before = await identity(page);

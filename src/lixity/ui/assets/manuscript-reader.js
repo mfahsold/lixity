@@ -186,7 +186,7 @@
   var width = document.getElementById("reader-width");
   var spacing = document.getElementById("reader-spacing");
   var current = null, savedRange = null, evidencePoint = null, returnTarget = null, selecting = false;
-  var preferences = {size: 18, width: "standard", spacing: "standard", metric: null, evidence: true, comparison: true};
+  var preferences = {size: 18, width: "standard", spacing: "standard", metric: null, evidence: false, comparison: true};
   function read(key) { try { return localStorage.getItem(key); } catch (_) { return null; } }
   function save(key, value) { try { localStorage.setItem(key, value); } catch (_) { /* Display works without storage. */ } }
   try {

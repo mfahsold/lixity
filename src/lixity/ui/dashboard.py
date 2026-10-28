@@ -952,7 +952,7 @@ def render_dashboard(
             f'{metric_control}'
             f'{layer_navigation}'
             '<div class="reader-analysis-switches">'
-            f'<label class="reader-evidence-toggle"><input type="checkbox" id="analysis-evidence-enabled" checked/> '
+            f'<label class="reader-evidence-toggle"><input type="checkbox" id="analysis-evidence-enabled"/> '
             f'<span class="analysis-evidence-key">{L("legend_counted_text")}</span></label>'
             f'<label class="reader-comparison-toggle"><input type="checkbox" id="analysis-comparison-enabled" checked/> '
             f'<span class="analysis-comparison-key">{L("legend_paragraph_comparison")}</span></label>'

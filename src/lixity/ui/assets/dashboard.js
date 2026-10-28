@@ -443,7 +443,7 @@ function applyLayer() {
         var comparisonHint = document.getElementById("layer-comparison-hint");
         if (comparisonHint) comparisonHint.textContent = hint;
         var evidenceHint = document.getElementById("layer-evidence-hint");
-        if (evidenceHint) evidenceHint.textContent = uiFormat("legend_counted_text_hint", {metric: option.textContent});
+        if (evidenceHint) evidenceHint.textContent = uiFormat(key === "asl" ? "legend_counted_sentences_hint" : "legend_counted_text_hint", {metric: option.textContent});
         var comparable = Number(option.dataset.comparable);
         var count = outlierChips().length;
         if (layerCount) {
