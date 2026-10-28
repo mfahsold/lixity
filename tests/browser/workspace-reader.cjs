@@ -64,6 +64,18 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
       const navigation = page.locator('#workspace-navigation-content');
       const originalWidth = await page.locator('.workspace-shell').evaluate(node => node.getBoundingClientRect().width);
       await page.locator('#chapters .ptext').last().scrollIntoViewIfNeeded();
+      if (locale === 'en' && width === 1440) {
+        // Reproduce a split layout with a shorter scroll range, as when content
+        // below the manuscript collapses while the adjacent panel is open.
+        await page.evaluate(() => {
+          const style = document.createElement('style');
+          style.textContent = 'body:has(#workspace-reader-layout.is-open) #test-end-spacer { height: 0 !important; }';
+          document.head.appendChild(style);
+          const spacer = document.createElement('div'); spacer.id = 'test-end-spacer'; spacer.style.height = '60px';
+          document.body.appendChild(spacer);
+          window.scrollTo(0, document.documentElement.scrollHeight);
+        });
+      }
       await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       const departure = await page.evaluate(() => {
         const anchor = LixityReader.capture();
@@ -76,31 +88,33 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
         return bounds.top >= 0 && bounds.bottom <= innerHeight &&
           document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)?.closest('#workspace-reader-toggle') === node;
       }), true, 'companion navigation remains reachable at the current deep reading position');
-      await toggle.evaluate(node => node.addEventListener('click', () => {
-        const current = LixityReader.capture();
-        window.__testBeforeToggle = {top:window.__testCompanionAnchor.getBoundingClientRect().top, scrollY,
-          anchorId:current && current.panel.id, anchorTop:current && current.top};
-      }, {capture:true, once:true}));
-      await page.evaluate(() => {
-        const scrollBy = window.scrollBy;
-        window.__testScrollTrace = [];
-        window.scrollBy = function(...args) {
-          const record = {before:scrollY, top:window.__testCompanionAnchor.getBoundingClientRect().top,
-            args, stack:new Error().stack};
-          const result = scrollBy.apply(window, args);
-          record.after = scrollY;
-          window.__testScrollTrace.push(record);
-          return result;
-        };
-      });
-      await toggle.click();
+      if (locale === 'en' && width === 1440) {
+        await toggle.focus(); await toggle.press('Space');
+      } else await toggle.click();
       await page.waitForFunction(() => !document.querySelector('#workspace-reader-dossier').disabled);
       const opened = await page.evaluate(() => {
         const current = LixityReader.capture();
         return {top:window.__testCompanionAnchor.getBoundingClientRect().top, scrollY,
+          maxScroll:document.documentElement.scrollHeight-innerHeight,
           anchorId:current && current.panel.id, anchorTop:current && current.top, proseOffset:current && current.proseOffset};
       });
-      await toggle.click();
+      if (locale === 'en' && width === 1440) {
+        assert.ok(Math.abs(opened.top - departure.top) > 2 && Math.abs(opened.scrollY - opened.maxScroll) <= 1,
+          'the synthetic layout actually restricts the requested scroll');
+        await select.selectOption(dossier.id);
+        await page.waitForFunction(() => !document.querySelector('#workspace-reader-dossier').disabled &&
+          document.querySelector('#workspace-reader-body').textContent.includes('Historical source notes'));
+        const context = page.locator('#workspace-context-panel');
+        const bounds = await context.boundingBox();
+        await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+        await page.mouse.wheel(0, 120);
+        await page.waitForFunction(() => document.querySelector('#workspace-context-panel').scrollTop > 0, null, {timeout: 5000});
+        assert.equal(await page.evaluate(() => LixityReader.captureForRestore().top), departure.top,
+          'scrolling the independent dossier does not discard the manuscript anchor');
+        await select.selectOption('');
+      }
+      if (locale === 'en' && width === 1440) await toggle.press('Space');
+      else await toggle.click();
       try {
         await page.waitForFunction(top => window.__testCompanionAnchor.isConnected &&
           Math.abs(window.__testCompanionAnchor.getBoundingClientRect().top - top) <= 2, departure.top,
@@ -109,9 +123,118 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
         const actual = await page.evaluate(() => ({top:window.__testCompanionAnchor.getBoundingClientRect().top,
           connected:window.__testCompanionAnchor.isConnected, scrollY, innerHeight,
           maxScroll:document.documentElement.scrollHeight - innerHeight, height:document.documentElement.scrollHeight,
-          beforeToggle:window.__testBeforeToggle, scrollTrace:window.__testScrollTrace,
           focus:document.activeElement?.id, state:LixityWorkbench.state()}));
         throw new Error(`Companion position ${locale}/${width}: departure=${JSON.stringify(departure)} opened=${JSON.stringify(opened)} actual=${JSON.stringify(actual)}`, {cause:error});
+      }
+      if (locale === 'en' && width === 1440) {
+        // A deliberate scroll while the constrained layout is open takes
+        // precedence over the previously unreachable position.
+        await toggle.click();
+        await page.waitForFunction(() => !document.querySelector('#workspace-reader-dossier').disabled);
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        const beforeUserScroll = await page.evaluate(() => scrollY);
+        await page.mouse.move(width / 3, 450);
+        await page.mouse.wheel(0, -200);
+        await page.waitForFunction(before => scrollY < before - 50, beforeUserScroll);
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        const moved = await page.evaluate(() => {
+          const anchor = LixityReader.capture(); window.__testMovedAnchor = anchor.panel;
+          return {top:anchor.top, scrollY};
+        });
+        await toggle.click();
+        await page.waitForFunction(top => window.__testMovedAnchor.isConnected &&
+          Math.abs(window.__testMovedAnchor.getBoundingClientRect().top - top) <= 2, moved.top, {timeout: 5000});
+
+        // The same central mechanism also preserves a position across an
+        // unrelated size change, while normal capture reports real geometry.
+        const original = await page.evaluate(async () => {
+          const spacer = document.getElementById('test-end-spacer');
+          window.scrollTo(0, document.documentElement.scrollHeight);
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          const anchor = LixityReader.capture(); window.__testResizeAnchor = anchor.panel;
+          LixityReader.retain(() => { spacer.style.height = '0px'; });
+          return anchor.top;
+        });
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        const geometry = await page.evaluate(() => ({actual:LixityReader.capture().top,
+          retained:LixityReader.captureForRestore().top}));
+        assert.ok(Math.abs(geometry.actual - original) > 2, 'the shorter document constrains the actual position');
+        assert.equal(geometry.retained, original, 'only a preserving transition keeps the unreachable target');
+        await page.evaluate(() => LixityReader.retain(() => { document.getElementById('test-end-spacer').style.height = '60px'; }));
+        await page.waitForFunction(top => Math.abs(window.__testResizeAnchor.getBoundingClientRect().top - top) <= 2,
+          original, {timeout: 5000});
+
+        await page.evaluate(() => LixityReader.retain(() => { document.getElementById('test-end-spacer').style.height = '0px'; }));
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        const constrainedScroll = await page.evaluate(() => scrollY);
+        await page.evaluate(() => window.scrollBy(0, -100));
+        await page.waitForFunction(before => scrollY < before - 50, constrainedScroll, {timeout: 5000});
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        await page.evaluate(() => window.scrollBy(0, 100));
+        await page.waitForFunction(before => Math.abs(scrollY - before) <= 1, constrainedScroll, {timeout: 5000});
+        const reselected = await page.evaluate(() => {
+          const actual = LixityReader.capture(); window.__testResizeAnchor = actual.panel;
+          return {actual:actual.top, retained:LixityReader.captureForRestore().top};
+        });
+        assert.equal(reselected.retained, reselected.actual, 'moving away and back invalidates the old target');
+        await page.evaluate(() => LixityReader.retain(() => { document.getElementById('test-end-spacer').style.height = '60px'; }));
+        await page.waitForFunction(top => Math.abs(window.__testResizeAnchor.getBoundingClientRect().top - top) <= 2,
+          reselected.actual, {timeout: 5000});
+
+        const race = await page.evaluate(() => {
+          LixityReader.retain(() => { document.getElementById('test-end-spacer').style.height = '0px'; });
+          window.scrollBy(0, -100);
+          return scrollY;
+        });
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        assert.equal(await page.evaluate(() => scrollY), race, 'a newer scroll must supersede a pending layout restore');
+        await page.evaluate(() => { document.getElementById('test-end-spacer').style.height = '60px'; });
+
+        const reflow = await page.evaluate(async () => {
+          window.scrollTo(0, document.documentElement.scrollHeight);
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          const desired = LixityReader.capture().top;
+          LixityReader.retain(() => {});
+          document.getElementById('test-end-spacer').style.height = '0px';
+          return desired;
+        });
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        assert.equal(await page.evaluate(() => LixityReader.captureForRestore().top), reflow,
+          'automatic post-scheduling scroll clamping keeps the unreachable layout target');
+        await page.evaluate(() => LixityReader.retain(() => { document.getElementById('test-end-spacer').style.height = '60px'; }));
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+
+        await page.evaluate(() => LixityReader.retain(() => { document.getElementById('test-end-spacer').style.height = '0px'; }));
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        const changedSource = await page.evaluate(() => {
+          const prior = LixityReader.captureForRestore();
+          const actual = LixityReader.capture();
+          const saved = prior.panel.dataset.paragraphSha256;
+          prior.panel.dataset.paragraphSha256 = 'synthetic-new-revision';
+          const retained = LixityReader.captureForRestore();
+          if (saved === undefined) delete prior.panel.dataset.paragraphSha256;
+          else prior.panel.dataset.paragraphSha256 = saved;
+          return {actual:actual.top, retained:retained.top};
+        });
+        assert.equal(changedSource.retained, changedSource.actual, 'a changed passage revision discards the old target');
+        await page.evaluate(() => LixityReader.retain(() => { document.getElementById('test-end-spacer').style.height = '60px'; }));
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+
+        const staleFrame = await page.evaluate(() => {
+          const anchor = LixityReader.capture(); window.__testStaleFrame = anchor.panel;
+          window.__testPriorHash = anchor.panel.dataset.paragraphSha256;
+          LixityReader.retain(() => { document.getElementById('test-end-spacer').style.height = '0px'; });
+          const afterLayout = scrollY;
+          anchor.panel.dataset.paragraphSha256 = 'synthetic-new-revision';
+          return afterLayout;
+        });
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        assert.equal(await page.evaluate(() => scrollY), staleFrame, 'a new passage revision cancels an older queued restore');
+        await page.evaluate(() => {
+          if (window.__testPriorHash === undefined) delete window.__testStaleFrame.dataset.paragraphSha256;
+          else window.__testStaleFrame.dataset.paragraphSha256 = window.__testPriorHash;
+          document.getElementById('test-end-spacer').style.height = '60px';
+        });
       }
       await toggle.click();
       if (width >= 1100) {

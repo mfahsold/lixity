@@ -136,7 +136,7 @@
   var layout = document.getElementById("workspace-reader-layout");
   var overviewAnchor = null, inspectorTarget = null, contextPassage = null, inspectorTrigger = null, origin = null;
   var retainedAnchor = null, requestedAnchor = null, dockOrigin = null, arrangementRevision = 0;
-  var pendingDockAnchor = null;
+  var pendingDockAnchor = null, clampedAnchor = null;
   var narrowContext = window.matchMedia("(max-width: 900px)");
   var dockFitFrame = 0;
   function fitContextDock() {
@@ -238,6 +238,21 @@
     if (prose) anchor.proseOffset = prose.getBoundingClientRect().top - anchor.top;
     return anchor;
   }
+  // Geometry capture stays literal for navigation. A layout-preserving action
+  // may instead retry a position which the previous layout could not reach.
+  function captureForRestore() {
+    if (clampedAnchor && clampedAnchor.anchor.panel.isConnected && clampedAnchor.context === sourceContext() &&
+        clampedAnchor.hash === clampedAnchor.anchor.panel.dataset.paragraphSha256 &&
+        Math.abs(window.scrollY - clampedAnchor.scrollY) < 1) return clampedAnchor.anchor;
+    clampedAnchor = null;
+    return capture();
+  }
+  // A real window scroll supersedes a pending target even if the reader
+  // subsequently returns to the same position. Nested panels do not affect it.
+  function clearClampedAnchor() { clampedAnchor = null; }
+  window.addEventListener("scroll", function() {
+    if (clampedAnchor && Math.abs(window.scrollY - clampedAnchor.scrollY) >= 1) clearClampedAnchor();
+  }, {passive:true});
   function updateGuideActions() {
     if (!analysisGuide) return;
     var example = analysisGuide.querySelector('[data-analysis-guide-action="example"]');
@@ -280,22 +295,47 @@
   }
   function restore(anchor, arrival) {
     if (!anchor) return;
+    if (clampedAnchor && clampedAnchor.anchor !== anchor) clampedAnchor = null;
     var revision = arrangementRevision;
+    var scheduledScrollY = window.scrollY;
+    var scheduledContext = sourceContext(), scheduledHash = anchor.panel.dataset.paragraphSha256;
     requestAnimationFrame(function() {
       if (revision !== arrangementRevision) return;
-      if (anchor.panel.isConnected) {
-        var top = anchor.panel.getBoundingClientRect().top;
-        var prose = anchor.panel.querySelector(".ptext-inner > p");
-        // Inline analysis controls may disappear while the prose stays in view.
-        if (prose && Number.isFinite(anchor.proseOffset)) top = prose.getBoundingClientRect().top - anchor.proseOffset;
-        window.scrollBy(0, top - anchor.top);
-        if (arrival && window.LixityMotion) window.LixityMotion.passage(anchor.panel);
+      if (!anchor.panel.isConnected || sourceContext() !== scheduledContext ||
+          anchor.panel.dataset.paragraphSha256 !== scheduledHash) {
+        clampedAnchor = null;
+        if (pendingDockAnchor && pendingDockAnchor.revision === revision) pendingDockAnchor = null;
+        return;
       }
+      var scrollRoot = document.scrollingElement || document.documentElement;
+      var maximum = Math.max(0, scrollRoot.scrollHeight - window.innerHeight);
+      // Reflow can itself clamp an old position at the new document end. A
+      // different position that is not this clamp supersedes the queued restore.
+      var clampedByReflow = scheduledScrollY > maximum + 1 && Math.abs(window.scrollY - maximum) < 1;
+      if (Math.abs(window.scrollY - scheduledScrollY) >= 1 && !clampedByReflow) {
+        clampedAnchor = null;
+        if (pendingDockAnchor && pendingDockAnchor.revision === revision) pendingDockAnchor = null;
+        return;
+      }
+      var top = anchor.panel.getBoundingClientRect().top;
+      var prose = anchor.panel.querySelector(".ptext-inner > p");
+      // Inline analysis controls may disappear while the prose stays in view.
+      if (prose && Number.isFinite(anchor.proseOffset)) top = prose.getBoundingClientRect().top - anchor.proseOffset;
+      var offset = top - anchor.top, before = window.scrollY;
+      window.scrollBy(0, offset);
+      // A changed layout can temporarily make the requested position
+      // unreachable. Retry it on the next preserving transition only if
+      // the reader has not moved elsewhere.
+      var requested = before + offset;
+      clampedAnchor = (requested < -1 || requested > maximum + 1) &&
+        Math.abs(window.scrollY - before - offset) > 1 ?
+        {anchor: anchor, scrollY: window.scrollY, context: sourceContext(), hash: anchor.panel.dataset.paragraphSha256} : null;
+      if (arrival && window.LixityMotion) window.LixityMotion.passage(anchor.panel);
       if (pendingDockAnchor && pendingDockAnchor.revision === revision) pendingDockAnchor = null;
     });
   }
   function retain(action) {
-    var anchor = capture(), previous = workbench.state(), outer = retainedAnchor;
+    var anchor = captureForRestore(), previous = workbench.state(), outer = retainedAnchor;
     retainedAnchor = anchor;
     try { action(); } finally { retainedAnchor = outer; }
     var next = workbench.state();
@@ -352,6 +392,7 @@
     }
   }
   function requestTool(value, panel, trigger) {
+    clampedAnchor = null;
     contextPassage = panel;
     if (inspectorTarget && inspectorTarget !== panel) {
       inspectorTarget.classList.remove("reader-inspector-target");
@@ -374,7 +415,7 @@
     if (owner && (target === owner || owner.contains(target))) return;
     // Explicit navigation owns the destination. Do not restore the old tool's
     // scroll/focus origin when retiring its context, including on mobile.
-    dockOrigin = requestedAnchor = pendingDockAnchor = null;
+    dockOrigin = requestedAnchor = pendingDockAnchor = clampedAnchor = null;
     if (inspectorTarget) inspectorTarget.classList.remove("reader-inspector-target");
     contextPassage = inspectorTarget = inspectorTrigger = null; inspectorBody.replaceChildren();
     if (workbench.state().contextTool !== "none") workbench.dispatch({type: "tool", value: "none"});
@@ -536,7 +577,8 @@
     // Until the opening restore commits, current rectangles describe temporary
     // layout. A reversal must retain the prior reading position instead.
     var pending = sameDocument && pendingDockAnchor && pendingDockAnchor.revision === arrangementRevision;
-    var anchor = requestedAnchor || (pending && pendingDockAnchor.anchor) || retainedAnchor || capture();
+    if (!sameDocument) clampedAnchor = null;
+    var anchor = requestedAnchor || (pending && pendingDockAnchor.anchor) || retainedAnchor || captureForRestore();
     var revision = ++arrangementRevision;
     var open = state.contextTool !== "none" && state.surface === "document";
     pendingDockAnchor = sameDocument && open && !narrowContext.matches && (toolChanged || pending) ? {anchor: anchor, revision: revision} : null;
@@ -966,7 +1008,7 @@
     origin = {anchor: anchor, offsets: offsets, state: workbench.state(), hash: anchor.panel.dataset.paragraphSha256, context: sourceContext()};
     readingThread.rememberPassage({description: passageContext(anchor.panel), valid: validOrigin, restore: returnToPassage});
   }
-  window.LixityReader = {fitContext: fitContextDock, requestTool: requestTool, leavePassage: leavePassage, capture: capture, restore: restore, retain: retain,
+  window.LixityReader = {fitContext: fitContextDock, requestTool: requestTool, leavePassage: leavePassage, capture: capture, captureForRestore: captureForRestore, restore: restore, retain: retain,
     enableEvidence: function() { retain(function() {defaultMetric(true); workbench.dispatch({type:"analysis", value:true});}); },
     inspect: function() { setMode("inspect", true); },
     inspectPassage: function(panel, point) {

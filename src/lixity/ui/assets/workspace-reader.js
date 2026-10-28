@@ -201,13 +201,13 @@
       event.key === "Home" ? 35 : event.key === "End" ? 75 : null;
     if (next === null) return;
     event.preventDefault();
-    anchor = window.LixityReader && window.LixityReader.capture();
+    anchor = window.LixityReader && window.LixityReader.captureForRestore();
     update(next);
     if (window.LixityReader) window.LixityReader.restore(anchor);
   });
   divider.addEventListener("pointerdown", function(event) {
     if (event.button !== 0) return;
-    dragging = true; anchor = window.LixityReader && window.LixityReader.capture();
+    dragging = true; anchor = window.LixityReader && window.LixityReader.captureForRestore();
     divider.setPointerCapture(event.pointerId); event.preventDefault();
   });
   divider.addEventListener("pointermove", function(event) {
