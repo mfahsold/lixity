@@ -2,7 +2,8 @@
 
 Run after installing the Python development environment, FFmpeg and Playwright
 with Chromium. FFmpeg creates synthetic media for the dossier-media suite;
-Playwright is optional tooling, not a Lixity runtime dependency.
+install `axe-core` as well to run the audio direction accessibility audit.
+Playwright and axe-core are optional tooling, not Lixity runtime dependencies.
 
 ```sh
 make browser          # everyday core surfaces (fast group, 3 workers)
@@ -17,6 +18,9 @@ surfaces or everything, `--area NAME` runs one surface (`docs`, `research`,
 to the affected areas (falling back to the full set when a shared foundation
 changed), `--jobs N` runs independent suites in parallel, `--only NAME`
 selects suites and `--start NAME` resumes after a failure.
+After a parallel run, the runner reports all failed suites with an `--only`
+command; completion order does not define a safe `--start` position. Repeat
+the full suite before a release after fixing a failure.
 
 A failed Git comparison, including an invalid `BASE`, stops selection with an
 error. Shared support files and runner changes select all suites, as do unknown

@@ -58,6 +58,12 @@ def test_browser_release_gate_uses_the_shared_full_suite_command():
     assert re.search(r"(?m)^\s+run: make browser-full PYTHON=python\s*$", workflow("browser.yml"))
 
 
+def test_release_skips_browser_gate_when_source_checks_fail():
+    browser = job(workflow("release.yml"), "browser_checks")
+    assert re.search(r"(?m)^    needs: source_checks\s*$", browser)
+    assert "always()" not in browser and "continue-on-error" not in browser
+
+
 def test_release_checks_install_synthetic_audio_prerequisites():
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     assert any(re.match(r"numpy(?:[<>=!~; ]|$)", dep, re.IGNORECASE)
@@ -66,3 +72,5 @@ def test_release_checks_install_synthetic_audio_prerequisites():
         source = workflow(filename)
         assert 'python -m pip install ".[dev]"' in source
         assert re.search(r"apt-get install -y [^\n]*\bffmpeg\b", source)
+    browser = workflow("browser.yml")
+    assert re.search(r"npm install --no-save [^\n]*\baxe-core@", browser)

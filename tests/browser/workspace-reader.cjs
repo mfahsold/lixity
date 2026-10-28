@@ -66,7 +66,9 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
       await page.locator('#chapters .ptext').last().scrollIntoViewIfNeeded();
       await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       const departure = await page.evaluate(() => {
-        const anchor = LixityReader.capture(); return {id:anchor.panel.id, top:anchor.top};
+        const anchor = LixityReader.capture();
+        window.__testCompanionAnchor = anchor.panel;
+        return {top:anchor.top};
       });
       assert.equal(await toggle.evaluate(node => {
         const bounds = node.getBoundingClientRect();
@@ -76,9 +78,9 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
       await toggle.click();
       await page.waitForFunction(() => !document.querySelector('#workspace-reader-dossier').disabled);
       await toggle.click();
-      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-      assert.ok(Math.abs(await page.locator('#' + departure.id).evaluate(node => node.getBoundingClientRect().top) - departure.top) <= 2,
-        'opening and closing the companion restores the exact deep reading position');
+      await page.waitForFunction(top => window.__testCompanionAnchor.isConnected &&
+        Math.abs(window.__testCompanionAnchor.getBoundingClientRect().top - top) <= 2, departure.top,
+        {timeout: 5000});
       await toggle.click();
       if (width >= 1100) {
         assert.equal(await navigation.isVisible(), false, 'Companion automatically frees desktop navigation space');

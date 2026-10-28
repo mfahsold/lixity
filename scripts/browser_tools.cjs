@@ -11,7 +11,9 @@ const path = require('node:path');
 function resolvePlaywright() {
   if (process.env.PLAYWRIGHT_MODULE) return process.env.PLAYWRIGHT_MODULE;
   try {
-    return require.resolve('playwright');
+    // Consumers load both the package and its `test` submodule; return the
+    // package directory, not the resolved main file (`index.js`).
+    return path.dirname(require.resolve('playwright/package.json'));
   } catch {}
   const home = os.homedir();
   const candidates = [

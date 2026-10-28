@@ -20,6 +20,8 @@ jobs:
     uses: ./.github/workflows/tests.yml
 
   browser_checks:
+    # Avoid starting the longer browser run when the source gate has failed.
+    needs: source_checks
     if: github.event_name == 'push'
     permissions:
       contents: read

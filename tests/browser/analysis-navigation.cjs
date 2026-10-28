@@ -344,7 +344,8 @@ async function finish(page, errors, writes) {
             await paragraph.scrollIntoViewIfNeeded(); await settle(page);
             const origin = await page.evaluate(() => {
               const anchor = LixityReader.capture();
-              return {id: anchor.panel.id, top: anchor.top, state: LixityWorkbench.state()};
+              window.__testOverviewAnchor = anchor.panel;
+              return {top: anchor.top, state: LixityWorkbench.state()};
             });
             const source = await page.locator('#chapters .ptext').evaluateAll(nodes => nodes.map(node => ({
               id: node.id, start: node.dataset.start, end: node.dataset.end,
@@ -365,7 +366,7 @@ async function finish(page, errors, writes) {
               'A metric jump reveals its hidden Style tab');
             assert.equal(await page.locator('#style-tab-bands').getAttribute('aria-selected'), 'true');
             await page.locator('#workbench-overview-back').click(); await settle(page);
-            assert.ok(Math.abs(await page.locator('#' + origin.id).evaluate(node => node.getBoundingClientRect().top) - origin.top) <= 2,
+            assert.ok(Math.abs(await page.evaluate(() => window.__testOverviewAnchor.getBoundingClientRect().top) - origin.top) <= 2,
               'Back restores the exact passage position after navigating hidden Style content');
             assert.equal(await page.locator('#reader-inspector').isVisible(), true,
               'Back restores the suspended passage-values context');

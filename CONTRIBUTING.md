@@ -94,7 +94,9 @@ These checks complement focused behavior tests; they do not prove runtime behavi
 GitHub's `tests`, `browser` and `research-platforms` workflows can be dispatched
 manually; ordinary branch pushes and pull requests do not repeat these suites.
 Tagged releases reuse `tests` and `browser` on the exact release commit before
-publication. The `tests` workflow runs Ruff, strict `mypy` and the full Python
+publication. The browser gate starts only after the source gate passes; a failed
+source gate therefore does not consume a browser runner, at the cost of a longer
+successful release. The `tests` workflow runs Ruff, strict `mypy` and the full Python
 suite with Poppler and FFmpeg on Linux/Python 3.12. The development extra includes
 NumPy for the optional Base speech-worker tests; the analysis engine does not
 depend on it. Run relevant supported interpreters

@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 class TestNativePdfSelection(unittest.TestCase):
@@ -146,3 +147,19 @@ class TestBrowserSuiteSelection(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("Cannot determine browser changes", result.stderr)
         self.assertNotIn(".cjs", result.stdout)
+
+    def test_parallel_failure_retry_includes_every_failed_suite(self):
+        from contextlib import redirect_stderr, redirect_stdout
+        from io import StringIO
+
+        from scripts.run_browser_suites import run_parallel
+
+        def synthetic_suite(_node, name, _capture):
+            return name, 0.0, 0 if name == "b.cjs" else 1, ""
+
+        output, errors = StringIO(), StringIO()
+        with patch("scripts.run_browser_suites.run_suite", side_effect=synthetic_suite), \
+             redirect_stdout(output), redirect_stderr(errors):
+            self.assertNotEqual(run_parallel("node", ["a.cjs", "b.cjs", "c.cjs"], 2), 0)
+        self.assertIn("--only a.cjs c.cjs", errors.getvalue())
+        self.assertNotIn("--start", errors.getvalue())

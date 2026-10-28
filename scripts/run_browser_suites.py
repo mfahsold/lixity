@@ -17,6 +17,7 @@ local and CI runs stay aligned.
 import argparse
 import concurrent.futures
 import fnmatch
+import shlex
 import shutil
 import subprocess
 import sys
@@ -334,9 +335,10 @@ def run_parallel(node: str, names: list[str], jobs: int) -> int:
                 print(f"Failed: {name} (exit {code})", file=sys.stderr, flush=True)
     report_summary(names, len(names), failures, time.monotonic() - started)
     if failures:
-        name, code = failures[0]
-        print(f"Resume after the fix with: --start {name}", file=sys.stderr, flush=True)
-        return code
+        failed = sorted(name for name, _ in failures)
+        print(f"Rerun failed suites with: {shlex.join(['--only', *failed])}", file=sys.stderr, flush=True)
+        print("Run the full suite again before a release.", file=sys.stderr, flush=True)
+        return failures[0][1]
     return 0
 
 
