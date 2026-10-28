@@ -63,6 +63,24 @@ async function withoutRequests(page, description, exercise, allowedStaticUrls = 
   }
 }
 
+async function ensureImageDecoded(image) {
+  // Lazy requests can start or be replaced after a redraw. A permanent load or
+  // decode failure still fails with enough state to identify the affected asset.
+  await image.evaluate(node => { node.loading = 'eager'; });
+  try {
+    await expect.poll(() => image.evaluate(async node => {
+      if (!node.isConnected || !node.complete || !node.naturalWidth) return false;
+      try { await node.decode(); }
+      catch (error) { if (error.name === 'EncodingError') return false; throw error; }
+      return node.isConnected && node.naturalWidth > 0;
+    }), {message: 'The image is loaded and decoded', timeout: 10000}).toBe(true);
+  } catch (error) {
+    const details = await image.evaluate(node => ({src: node.src, currentSrc: node.currentSrc,
+      complete: node.complete, naturalWidth: node.naturalWidth, connected: node.isConnected})).catch(() => null);
+    throw new Error('Image did not decode: ' + JSON.stringify(details), {cause: error});
+  }
+}
+
 async function checkLazyPreviewStability(page) {
   let release;
   const held = new Promise(resolve => { release = resolve; });
@@ -78,7 +96,7 @@ async function checkLazyPreviewStability(page) {
     const followingTop = () => page.locator('#search').evaluate(node => node.getBoundingClientRect().top + scrollY);
     const beforeTop = await followingTop();
     release();
-    await image.evaluate(node => node.decode());
+    await ensureImageDecoded(image);
     assert.ok(Math.abs(await followingTop() - beforeTop) <= 1,
       'Loading screenshot bytes must not move the following content');
   } finally {
@@ -254,7 +272,7 @@ async function checkPublicationExample(page, route, javaScriptEnabled, width, co
   await expect(contents).not.toContainText('The receiving signature');
   const images = await entries.locator('.dossier-image img').all();
   assert.equal(images.length, 2);
-  await Promise.all(images.map(image => image.evaluate(element => {element.loading='eager';return element.decode();})));
+  await Promise.all(images.map(ensureImageDecoded));
   assert.ok(await images[0].evaluate(element => element.naturalWidth > 1000));
   // Playwright routing disables HTTP caching. Rerendering already visible
   // images may request their same static bytes again on some Chromium builds;
@@ -399,10 +417,10 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   await expect(authoredClaim.locator('[data-claim-revision="2"]')).toBeVisible();
   await expect(detail.locator('.dossier-image img')).toHaveCount(2);
   const dossierImages = await detail.locator('.dossier-image img').all();
-  await Promise.all(dossierImages.map(image => image.evaluate(element => { element.loading = 'eager'; return element.decode(); })));
+  await Promise.all(dossierImages.map(ensureImageDecoded));
   let imageIndex = 0;
   for (const image of dossierImages) {
-    await image.evaluate(element => { element.loading = 'eager'; return element.decode(); });
+    await ensureImageDecoded(image);
     assert.ok(await image.evaluate(element => element.naturalWidth > 1000 && element.naturalHeight > 1000), 'Reviewed public images decode at their original resolution');
     assert.match(await image.getAttribute('src'), /^assets\/sources\/[0-9a-f]{64}\.jpg$/);
     await image.locator('..').click();
@@ -812,23 +830,7 @@ async function checkDemoCapabilities(page, width) {
   await expect(reader.locator('h3').first()).toHaveText('Warehouse 4 case notes');
   const companionImage = reader.locator('[data-dossier-enlarge]').first();
   await companionImage.locator('..').scrollIntoViewIfNeeded();
-  const companionThumbnail = companionImage.locator('img');
-  await companionThumbnail.evaluate(image => { image.loading = 'eager'; });
-  // decode() may reject when a lazy image request is replaced during a
-  // rerender. Require a connected, decoded image with real dimensions; a
-  // permanently broken request still fails rather than being ignored.
-  try {
-    await expect.poll(() => companionThumbnail.evaluate(async image => {
-      if (!image.isConnected || !image.complete || !image.naturalWidth) return false;
-      try { await image.decode(); }
-      catch (error) { if (error.name === 'EncodingError') return false; throw error; }
-      return image.isConnected && image.naturalWidth > 0;
-    }), {message: 'The companion thumbnail is loaded and decoded', timeout: 10000}).toBe(true);
-  } catch (error) {
-    const details = await companionThumbnail.evaluate(image => ({src: image.src, currentSrc: image.currentSrc,
-      complete: image.complete, naturalWidth: image.naturalWidth, connected: image.isConnected})).catch(() => null);
-    throw new Error('Companion thumbnail did not decode: ' + JSON.stringify(details), {cause: error});
-  }
+  await ensureImageDecoded(companionImage.locator('img'));
   await companionImage.click();
   const enlarged = page.locator('#modal-dossier-image-enlarge');
   await expect(enlarged).toBeVisible();
@@ -953,8 +955,7 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
     await dossier.locator('[data-research-detail=dossier]').click();
     const detail = dossier.locator('.research-details-body');
     await expect(detail.locator('.dossier-geography')).toBeVisible();
-    await Promise.all((await detail.locator('.dossier-image img').all()).map(image =>
-      image.evaluate(element => { element.loading = 'eager'; return element.decode(); })));
+    await Promise.all((await detail.locator('.dossier-image img').all()).map(ensureImageDecoded));
     await checkGeographyInsights(page, detail.locator('.dossier-geography'));
     await assertDemoReadOnly(page);
     await detail.locator('.dossier-geography').screenshot({path: path.join(artifacts, `research-geography-${width}-${colorScheme}.png`)});
@@ -1104,7 +1105,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
           for (const image of await page.locator('figure.frame img, figure.walkthrough img').all()) {
             if (!await image.evaluate(node => node.getClientRects().length > 0)) continue;
             await image.scrollIntoViewIfNeeded();
-            await image.evaluate(node => node.decode());
+            await ensureImageDecoded(image);
           }
           const previews = await page.locator('figure.frame :is(img, video), figure.walkthrough :is(img, video)').evaluateAll(nodes =>
             nodes.filter(node => node.getClientRects().length > 0).map(node => {
@@ -1239,7 +1240,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
             }
             await expect(readingCopies).toContainText('not access control');
             const dossierPreview = page.locator('#passage-context img');
-            await dossierPreview.evaluate(element => element.decode());
+            await ensureImageDecoded(dossierPreview);
             assert.deepEqual(await dossierPreview.evaluate(element => [element.naturalWidth, element.naturalHeight]),
               [Number(await dossierPreview.getAttribute('width')), Number(await dossierPreview.getAttribute('height'))],
               'The research preview reserves its actual image dimensions');
@@ -1258,7 +1259,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
             await expect(reference.locator(':scope > summary')).toBeFocused();
             const image = page.locator('.hero .frame img');
             await expect(image).toHaveCount(1);
-            await image.evaluate(element => element.decode());
+            await ensureImageDecoded(image);
             assert.equal(await image.evaluate(element => element.parentElement.getAttribute('href')),
               await image.getAttribute('src'), 'The product image opens at full size without JavaScript');
             assert.deepEqual(await image.evaluate(element => [element.naturalWidth, element.naturalHeight]),
