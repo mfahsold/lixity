@@ -167,7 +167,7 @@ def analyze(
     estimable = sum(
         1
         for b in analysis.fingerprint.baseline.values()
-        if b.get("n", 0) >= resolved_thresholds.min_chapters
+        if b.get("comparison_status") == "available"
     )
     baseline_coverage = {
         "total_features": len(FEATURES),

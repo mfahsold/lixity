@@ -212,7 +212,7 @@ class TestSettingsUi(unittest.TestCase):
 
     def test_matrix_marks_only_the_core_fdr_set(self):
         long_one = "I walk through the rain and I see the lights of the street. " * 9
-        long_two = "The house was sold and the door was closed before the night came. " * 9
+        long_two = "The house was sold and the door was closed before the night came again. " * 9
         text = f"## One\n\n{long_one}\n\n## Two\n\n{long_two}\n"
         config, language = resolve_document_config(text, "en")
         result = analyze_document(text, config, FingerprintThresholds())

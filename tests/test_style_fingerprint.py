@@ -114,8 +114,9 @@ class TestRobustStatistics(unittest.TestCase):
         self.assertNotIn("asl", fingerprint.z_scores[1])
         self.assertEqual(fingerprint.baseline["asl"]["n"], 2)
         self.assertEqual(fingerprint.baseline["asl"]["median"], 5.0)
-        self.assertEqual(fingerprint.z_scores[2]["asl"], 0.0)
-        self.assertEqual(fingerprint.z_scores[3]["asl"], 0.0)
+        self.assertEqual(fingerprint.baseline["asl"]["comparison_status"], "zero_mad_constant")
+        self.assertNotIn("asl", fingerprint.z_scores[2])
+        self.assertNotIn("asl", fingerprint.z_scores[3])
         metrics.chapters[2] = metrics.chapters[2].model_copy(update={"asl": None})
         self.assertIsNone(StyleFingerprint.from_metrics(metrics).values["asl"][3])
 
@@ -181,7 +182,7 @@ class TestRegisterProfiles(unittest.TestCase):
         self.assertEqual(targets[5]["hd_d"]["position"], "below")
         passport = registered.passport()
         self.assertEqual(passport.get("register_targets", {}).get("5"), targets[5])
-        self.assertEqual(passport["meta"]["schema_version"], 4)
+        self.assertEqual(passport["meta"]["schema_version"], 5)
 
     def test_target_positions_include_above_below_and_unavailable(self):
         for bounds, expected in (([71, 80], "below"), ([1, 69], "above")):
@@ -711,7 +712,7 @@ class TestStyleDimensions(unittest.TestCase):
 
     def test_passport_meta_v2(self):
         passport = self.fp.passport()
-        self.assertEqual(passport["meta"]["schema_version"], 4)
+        self.assertEqual(passport["meta"]["schema_version"], 5)
         self.assertIn("expected_false_positives", passport["meta"])
         self.assertIn("dimensions", passport)
         self.assertIn("fdr_flagged", passport)
@@ -764,7 +765,7 @@ class TestDimensionInformation(unittest.TestCase):
             ({name: {1: 1.0, 2: 2.0, 3: None} for name in
               ("asl", "staccato_pct", "hd_d")}, "insufficient_complete_chapters"),
             ({name: {1: 1.0, 2: 1.0, 3: 1.0} for name in
-              ("asl", "staccato_pct", "hd_d")}, "insufficient_varying_features"),
+              ("asl", "staccato_pct", "hd_d")}, "insufficient_features"),
         )
         for values, status in cases:
             with self.subTest(status=status):
@@ -795,7 +796,7 @@ class TestDimensionInformation(unittest.TestCase):
         self.assertEqual(summary["omitted_chapters"], [{"chapter": 1, "missing_features": ["asl"]}])
         self.assertAlmostEqual(summary["retained_variance"], 1.0, places=3)
         self.assertEqual(summary["score_threshold"], 2.5)
-        self.assertEqual(fp.passport()["meta"]["schema_version"], 4)
+        self.assertEqual(fp.passport()["meta"]["schema_version"], 5)
 
     def test_rounding_does_not_decide_dimension_flags(self):
         values = {name: dict(enumerate([1.0, 2.0, 3.0, 4.0], 1))
@@ -1294,6 +1295,7 @@ class TestStructuralIntegration(unittest.TestCase):
         self.assertEqual(set(diagnostics), {
             "changepoints", "trends", "robust_scales", "tail_index", "distribution_shift",
             "trending_features", "segmented_features", "shifted_features",
+            "segmentation_unavailable", "distribution_unavailable", "distribution_incomplete", "trend_incomplete",
         })
         # Each half contains four measured chapters; these checks cannot pass
         # vacuously when the distribution-shift implementation returns {}.
@@ -1317,7 +1319,7 @@ class TestStructuralIntegration(unittest.TestCase):
     def test_passport_serializes_structural_payload_and_thresholds(self):
         passport = json.loads(json.dumps(self.fp.passport()))
         self.assertEqual(passport["structural_diagnostics"], self.fp.structural_diagnostics)
-        self.assertEqual(passport["meta"]["schema_version"], 4)
+        self.assertEqual(passport["meta"]["schema_version"], 5)
         self.assertEqual(passport["meta"]["flag_min_severity"], self.fp.thresholds.flag_min_severity)
         self.assertEqual(passport["meta"]["min_chapters"], self.fp.thresholds.min_chapters)
 

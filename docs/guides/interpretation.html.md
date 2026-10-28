@@ -32,7 +32,7 @@ Retained research sources do not enter this manuscript baseline. An archived sou
 
 The dashboard and text style report show a dash when no chapter–feature cells can be measured. This includes empty or heading-only manuscripts and material below the configured chapter minimum. A dash means unavailable, not zero quality or perfect consistency.
 
-For API compatibility, style JSON schema version 4 retains the historical numeric `consistency` value. The new `measured_cells` field identifies the supporting count. When it is zero, the retained value `1.0` is a compatibility sentinel and must not be displayed as 100%. Older JSON without the field cannot establish availability from that number alone.
+Style JSON retains the historical numeric `consistency` value for compatibility. The `measured_cells` field identifies the supporting count. When it is zero, the retained value `1.0` is a compatibility sentinel and must not be displayed as 100%. Older JSON without the field cannot establish availability from that number alone.
 
 ## Compare scenes within a register
 

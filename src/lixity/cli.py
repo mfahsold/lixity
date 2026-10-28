@@ -37,6 +37,7 @@ from .pipeline import (
 from .project_identity import project_title
 from .scenes import scene_report_for_display
 from .site import docs_url
+from .status import SCHEMA_VERSION_STYLE
 from .style_fingerprint import (
     LAYER_FEATURES,
     FingerprintThresholds,
@@ -404,7 +405,7 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("scenes", "Scene features, register references and author targets (text/JSON)"),
     ("motifs", "Motif tracking, repetition and local phrase echoes (text/JSON)"),
     ("showing", "Compare word-pattern and quotation/short-sentence signals (text/JSON)"),
-    ("style", "Self-calibrated style reference of the manuscript (text/JSON, schema v4)"),
+    ("style", f"Self-calibrated style reference of the manuscript (text/JSON, schema v{SCHEMA_VERSION_STYLE})"),
     ("dashboard", "Generate a single-file HTML dashboard"),
     ("export-site", "Export a static read-only project website"),
     ("pdf", "Compose a PDF for editing, reading, submission or analysis"),

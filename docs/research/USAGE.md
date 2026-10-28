@@ -1691,6 +1691,9 @@ covers public entrypoints and envelopes.
 Source analysis uses the shared engine, selected archived version/language and
 explicit overrides. Its interpretation is `source_internal`, with
 `context_status: user_supplied_unverified`; manuscript settings are not inherited.
+`baseline_coverage.estimable_features` counts features whose standardized
+comparison is available under the active style schema, excluding insufficient
+chapter samples and zero-MAD references.
 Period, place, genre, translation and language context do not validate a source or
 make it a manuscript style baseline. Local title/tag filters search only loaded
 metadata; use archive search for retained text.

@@ -1064,9 +1064,10 @@ PASSPORT_TEXTS: dict[str, dict[str, str]] = {
         "expected_hits": "normal-model reference hits",
         "fdr_confirmed": "nominal FDR selection",
         "cells": "cells",
-        "exchangeability": "Exchangeability",
-        "mean_acf": "mean lag-1",
-        "low_power": "low power (n < 8)",
+        "order_indicators": "Order indicators (exploratory)",
+        "order_unavailable": "unavailable",
+        "order_features": "features measured",
+        "order_flags": "features with a heuristic flag",
         "dimension": "Dimension",
         "variance": "variance",
         "flagged": "flagged",
@@ -1092,9 +1093,10 @@ PASSPORT_TEXTS: dict[str, dict[str, str]] = {
         "expected_hits": "Treffer als Referenz des Normalmodells",
         "fdr_confirmed": "nominale FDR-Auswahl",
         "cells": "Zellen",
-        "exchangeability": "Austauschbarkeit",
-        "mean_acf": "mittlere Verzögerung-1",
-        "low_power": "geringe Kraft (n < 8)",
+        "order_indicators": "Reihenfolgehinweise (explorativ)",
+        "order_unavailable": "nicht verfügbar",
+        "order_features": "Merkmale gemessen",
+        "order_flags": "Merkmale mit heuristischem Hinweis",
         "dimension": "Dimension",
         "variance": "Varianz",
         "flagged": "auffällig",
@@ -1124,7 +1126,7 @@ class StyleFingerprint:
     """
 
     values: dict[str, dict[int, float | None]] = field(default_factory=dict)
-    baseline: dict[str, dict[str, float | int]] = field(default_factory=dict)
+    baseline: dict[str, dict[str, float | int | str]] = field(default_factory=dict)
     z_scores: dict[int, dict[str, float]] = field(default_factory=dict)
     effect_sizes: dict[int, dict[str, float]] = field(default_factory=dict)
     cliffs_delta: dict[int, dict[str, float]] = field(default_factory=dict)
@@ -1204,7 +1206,7 @@ class StyleFingerprint:
             values[field_name] = col
             ses[field_name] = se_col
 
-        baseline: dict[str, dict[str, float | int]] = {}
+        baseline: dict[str, dict[str, float | int | str]] = {}
         z_scores: dict[int, dict[str, float]] = {c.num: {} for c in chapters}
         effect_sizes: dict[int, dict[str, float]] = {c.num: {} for c in chapters}
         cliffs: dict[int, dict[str, float]] = {c.num: {} for c in chapters}
@@ -1214,7 +1216,8 @@ class StyleFingerprint:
         for field_name, _label, _unit in FEATURES:
             obs = [v for v in values[field_name].values() if v is not None]
             if len(obs) < thresholds.min_chapters:
-                baseline[field_name] = {"median": 0.0, "mad": 0.0, "sigma": 0.0, "n": len(obs)}
+                baseline[field_name] = {"median": 0.0, "mad": 0.0, "sigma": 0.0, "n": len(obs),
+                                        "comparison_status": "insufficient_chapters"}
                 continue
             centre = median(obs)
             spread = mad(obs, centre)
@@ -1224,17 +1227,22 @@ class StyleFingerprint:
                 "mad": spread,
                 "sigma": sigma,
                 "n": len(obs),
+                "comparison_status": ("available" if spread > 0 else
+                                      "zero_mad_varying" if any(value != centre for value in obs)
+                                      else "zero_mad_constant"),
             }
             chapter_cliffs = _chapter_cliff_deltas(values[field_name])
             for chapter in chapters:
                 value = values[field_name].get(chapter.num)
                 if value is None:
                     continue
+                cliffs[chapter.num][field_name] = chapter_cliffs[chapter.num]
+                if spread == 0.0:
+                    continue
                 z_raw = robust_z(value, centre, spread)
                 z_sig = significance_z(value, centre, sigma, ses[field_name][chapter.num])
                 z_scores[chapter.num][field_name] = z_sig
                 effect_sizes[chapter.num][field_name] = z_raw
-                cliffs[chapter.num][field_name] = chapter_cliffs[chapter.num]
                 measured_cells += 1
                 if abs(z_sig) < thresholds.z_mild:
                     in_band += 1
@@ -1295,36 +1303,48 @@ class StyleFingerprint:
 
     def _derive_baseline_diagnostics(self) -> dict[str, Any]:
         """
-        Exchangeability diagnostics: are chapters i.i.d. draws from one house
-        style? Runs z (above/below median) and lag-1 autocorrelation per usable
-        feature; low power when n < 8 (documented).
+        Exploratory order indicators, not a test of exchangeability.
+
+        Only complete chapter series can support the order-based calculations:
+        removing an unavailable chapter must not make its neighbours adjacent.
+        The local flag thresholds are heuristic and do not establish an error
+        rate or independence. Retain per-feature coverage and null for an
+        undefined indicator instead of averaging opposing autocorrelations.
         """
-        fields = self._usable_features()
-        n = self.n_chapters
+        chapters = sorted({chapter for column in self.values.values() for chapter in column})
+        features: dict[str, dict[str, Any]] = {}
         runs_flagged: list[str] = []
-        acf_values: list[float] = []
-        for field_name in fields:
-            series: list[float] = []
-            for ch in sorted(self.values[field_name]):
-                value = self.values[field_name].get(ch)
-                if value is not None:
-                    series.append(float(value))
-            rz = runs_above_median_z(series)
-            rho1 = lag1_autocorrelation(series)
+        lag1_flagged: list[str] = []
+        measured_features = 0
+        for field_name, _label, _unit in FEATURES:
+            column = self.values.get(field_name, {})
+            observed = [ch for ch in chapters if column.get(ch) is not None]
+            if not observed:
+                continue
+            missing = [ch for ch in chapters if column.get(ch) is None]
+            series = [float(value) for ch in observed if (value := column[ch]) is not None]
+            rz = runs_above_median_z(series) if not missing else None
+            rho1 = lag1_autocorrelation(series) if not missing else None
+            critical = 1.0 / math.sqrt(len(series)) if rho1 is not None else None
             if rz is not None and abs(rz) >= 1.96:
                 runs_flagged.append(field_name)
-            if rho1 is not None:
-                acf_values.append(rho1)
-        mean_rho1 = sum(acf_values) / len(acf_values) if acf_values else 0.0
-        acf_critical = 1.0 / math.sqrt(n) if n >= 3 else 1.0
-        exchangeable = not runs_flagged and abs(mean_rho1) < acf_critical
+            if rho1 is not None and critical is not None and abs(rho1) >= critical:
+                lag1_flagged.append(field_name)
+            if rz is not None or rho1 is not None:
+                measured_features += 1
+            features[field_name] = {
+                "observed_chapters": observed,
+                "missing_chapters": missing,
+                "runs_z": round(rz, 4) if rz is not None else None,
+                "lag1_rho": round(rho1, 4) if rho1 is not None else None,
+                "lag1_critical": round(critical, 4) if critical is not None else None,
+            }
         return {
-            "n_chapters": n,
-            "low_power": n < 8,
+            "n_chapters": self.n_chapters,
+            "features": features,
+            "measured_features": measured_features,
             "runs_flagged": sorted(runs_flagged),
-            "mean_lag1_rho": round(mean_rho1, 4),
-            "acf_critical": round(acf_critical, 4),
-            "exchangeable": exchangeable,
+            "lag1_flagged": sorted(lag1_flagged),
         }
 
     def _derive_structural_diagnostics(self) -> dict[str, Any]:
@@ -1343,19 +1363,31 @@ class StyleFingerprint:
         robust_scales: dict[str, dict[str, float]] = {}
         tail_index: dict[str, float] = {}
         distribution_shift: dict[str, dict[str, float]] = {}
+        segmentation_unavailable: list[str] = []
+        distribution_unavailable: list[str] = []
+        distribution_incomplete: list[str] = []
+        trend_incomplete: list[str] = []
+        chapter_ids = sorted({chapter for column in self.values.values() for chapter in column})
+        midpoint = len(chapter_ids) // 2
 
         for field_name in fields:
+            column = self.values[field_name]
             series: list[float] = []
-            for ch in sorted(self.values[field_name]):
-                value = self.values[field_name].get(ch)
+            for ch in chapter_ids:
+                value = column.get(ch)
                 if value is not None:
                     series.append(float(value))
 
-            if len(series) >= 3:
+            if len(series) >= 3 and len(series) == len(chapter_ids):
                 cps = pelt_changepoints(series)
                 if cps:
                     changepoints[field_name] = cps
+            else:
+                segmentation_unavailable.append(field_name)
 
+            if len(series) >= 3:
+                if len(series) != len(chapter_ids):
+                    trend_incomplete.append(field_name)
                 mk = mann_kendall(series)
                 if mk is not None:
                     tau, s_val, p_val = mk
@@ -1380,17 +1412,22 @@ class StyleFingerprint:
                 if alpha is not None:
                     tail_index[field_name] = round(alpha, 4)
 
-            if len(series) >= 4:
-                mid = len(series) // 2
-                first, second = series[:mid], series[mid:]
-                if len(first) >= 2 and len(second) >= 2:
-                    w1 = wasserstein_1d(first, second)
-                    ks_d, ks_p = ks_2sample(first, second)
-                    distribution_shift[field_name] = {
-                        "wasserstein": round(w1, 6),
-                        "ks_d": round(ks_d, 4),
-                        "ks_p": round(ks_p, 4),
-                    }
+            first = [float(value) for ch in chapter_ids[:midpoint]
+                     if (value := column.get(ch)) is not None]
+            second = [float(value) for ch in chapter_ids[midpoint:]
+                      if (value := column.get(ch)) is not None]
+            if len(first) >= 2 and len(second) >= 2:
+                if len(first) + len(second) < len(chapter_ids):
+                    distribution_incomplete.append(field_name)
+                w1 = wasserstein_1d(first, second)
+                ks_d, ks_p = ks_2sample(first, second)
+                distribution_shift[field_name] = {
+                    "wasserstein": round(w1, 6),
+                    "ks_d": round(ks_d, 4),
+                    "ks_p": round(ks_p, 4),
+                }
+            else:
+                distribution_unavailable.append(field_name)
 
         # Summary: features with significant trends (p < 0.05)
         trending = [f for f, t in trends.items() if t["p"] < 0.05]
@@ -1408,14 +1445,18 @@ class StyleFingerprint:
             "trending_features": sorted(trending),
             "segmented_features": sorted(segmented),
             "shifted_features": sorted(shifted),
+            "segmentation_unavailable": sorted(segmentation_unavailable),
+            "distribution_unavailable": sorted(distribution_unavailable),
+            "distribution_incomplete": sorted(distribution_incomplete),
+            "trend_incomplete": sorted(trend_incomplete),
         }
 
     def _usable_features(self) -> list[str]:
         return [
             field
             for field, _label, _unit in FEATURES
-            if self.baseline.get(field, {}).get("n", 0) >= 2
-            and float(self.baseline.get(field, {}).get("sigma", 0.0)) > 0.0
+            if int(self.baseline.get(field, {}).get("n", 0)) >= max(2, self.thresholds.min_chapters)
+            and len({value for value in self.values.get(field, {}).values() if value is not None}) >= 2
         ]
 
     def _derive_dimensions(self) -> list[dict[str, Any]]:
@@ -1543,13 +1584,17 @@ class StyleFingerprint:
             base = self.baseline.get(field_name, {})
             sigma = float(base.get("sigma", 0.0))
             centre = float(base.get("median", 0.0))
+            status = str(base.get("comparison_status", "insufficient_chapters"))
+            measured = status != "insufficient_chapters"
             features.append(
                 {
                     "feature": field_name,
                     "unit": unit,
-                    "median": round(centre, 4),
-                    "sigma": round(sigma, 4),
-                    "band": [round(centre - 2 * sigma, 4), round(centre + 2 * sigma, 4)],
+                    "median": round(centre, 4) if measured else None,
+                    "sigma": round(sigma, 4) if measured else None,
+                    "band": ([round(centre - 2 * sigma, 4), round(centre + 2 * sigma, 4)]
+                             if status == "available" else None),
+                    "comparison_status": status,
                     "chapters_measured": int(base.get("n", 0)),
                 }
             )
@@ -1593,6 +1638,10 @@ class StyleFingerprint:
             },
             "fdr_flagged": {
                 str(chapter_num): fields for chapter_num, fields in sorted(self.fdr_flagged.items())
+            },
+            "cliffs_delta": {
+                str(chapter_num): {feature: round(value, 4) for feature, value in cells.items()}
+                for chapter_num, cells in sorted(self.cliffs_delta.items()) if cells
             },
             "effect_magnitudes": effect_magnitudes,
             "register_profiles": self.register_profiles,
@@ -1668,13 +1717,11 @@ class StyleFingerprint:
         )
         if self.baseline_diagnostics:
             diag = self.baseline_diagnostics
-            rho = format_num(float(diag.get("mean_lag1_rho", 0.0)), language_key, 2, signed=True)
-            flag = "✓" if diag.get("exchangeable") else "!"
-            lines.append(
-                f"{t('exchangeability')}: {flag} "
-                f"{t('mean_acf')} ρ₁={rho}"
-                + (f" · {t('low_power')}" if diag.get("low_power") else "")
-            )
+            count = int(diag.get("measured_features", 0))
+            flagged_features = set(diag.get("runs_flagged", ())) | set(diag.get("lag1_flagged", ()))
+            detail = (f"{count} {t('order_features')} · {len(flagged_features)} {t('order_flags')}"
+                      if count else t("order_unavailable"))
+            lines.append(f"{t('order_indicators')}: {detail}")
         if self.structural_diagnostics:
             w2 = self.structural_diagnostics
             seg = w2.get(ContractKeys.SEGMENTED_FEATURES) or []

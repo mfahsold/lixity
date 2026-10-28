@@ -41,13 +41,14 @@ __all__ = [
 SCHEMA_VERSION_ANALYZE = 2
 """analyze / profile contracts (language-neutral tense values)."""
 
-SCHEMA_VERSION_STYLE = 4
+SCHEMA_VERSION_STYLE = 5
 """style passport contract.
 
-v4 exposes the structural diagnostics block under ``structural_diagnostics``
-(guarded-cost changepoints, Mann–Kendall trends, robust scales, tail index,
-distribution shift, co-occurrence, keyness) with passport text label
-``structural``.
+v5 replaces the exchangeability claim and averaged lag in
+``baseline_diagnostics`` with per-feature exploratory order indicators and
+explicit coverage. v4 exposed ``structural_diagnostics`` (guarded-cost
+changepoints, Mann–Kendall trends, robust scales, tail index, distribution
+shift, co-occurrence, keyness) with passport text label ``structural``.
 """
 
 
@@ -76,6 +77,10 @@ class ContractKeys:
     TRENDING_FEATURES = "trending_features"
     SEGMENTED_FEATURES = "segmented_features"
     SHIFTED_FEATURES = "shifted_features"
+    SEGMENTATION_UNAVAILABLE = "segmentation_unavailable"
+    DISTRIBUTION_UNAVAILABLE = "distribution_unavailable"
+    DISTRIBUTION_INCOMPLETE = "distribution_incomplete"
+    TREND_INCOMPLETE = "trend_incomplete"
     COOCCURRENCE = "cooccurrence"
     KEYNESS = "keyness"
 

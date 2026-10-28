@@ -71,6 +71,10 @@ The audio-profile-delete suite uses a synthetic native project at desktop and
 mobile widths. It checks that referenced profiles remain selectable, removing an
 unreferenced profile is a visible draft, and saving persists the removal.
 
+The structural-coverage suite renders missing and partial chapter measurements
+in all seven locales on desktop and mobile. It checks that unavailable results
+are explained and not shown with success badges.
+
 The anchor-navigation suite checks real nested scroll areas, short mobile
 viewports, single arrival feedback, superseded jumps and live reduced motion.
 Dossier-return uses a disposable native archive to check exact returns, saved

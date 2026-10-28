@@ -5,9 +5,12 @@ Showing/telling balance: self-calibrating robust z-scores, chapter ranking
 and determinism.
 """
 
+import json
 import os
 import sys
 import unittest
+
+import pytest
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
@@ -62,6 +65,42 @@ TEXT = (
     "## Vier\n\n" + NEUTRAL + "\n\n"
     "## Fünf\n\n" + NEUTRAL + "\n"
 )
+
+
+@pytest.mark.parametrize("long_chapters", [1, 2])
+def test_too_few_eligible_chapters_have_no_comparison_values(long_chapters):
+    from lixity import api
+    from lixity.ui.narration import render_showing_panel
+
+    text = "\n\n".join(f"## {i}\n\n{NEUTRAL}" for i in range(1, long_chapters + 1))
+    text += "\n\n## Short\n\nThe rain falls."
+    report = showing_report(text, DE).to_dict()
+    assert api.showing(text, language="de")["showing"] == report
+    assert report["chapters"] == long_chapters + 1
+    assert report["comparable_chapters"] == 0
+    assert all(report[key] is None for key in ("tell_z_mean", "show_z_mean", "balance_mean"))
+    assert report["most_telling"] == report["most_showing"] == []
+    for chapter in report["chapter_list"]:
+        assert chapter["comparable"] is False
+        assert all(chapter[key] is None for key in ("tell_z", "show_z", "balance"))
+        assert chapter["staccato_pct"] >= 0  # Raw measurements remain available.
+    panel = render_showing_panel(report, {"showing_unavailable_note": "No comparison"}, "en")
+    assert "No comparison" in panel
+    assert 'class="kpi-row"' not in panel
+
+
+def test_showing_cli_reports_unavailable_instead_of_zero(tmp_path, capsys):
+    from lixity.cli import main
+
+    path = tmp_path / "synthetic.md"
+    path.write_text("## Eins\n\n" + NEUTRAL, encoding="utf-8")
+    assert main(["showing", str(path), "--language", "de", "--json"]) == 0
+    showing = json.loads(capsys.readouterr().out)["showing"]
+    assert showing["balance_mean"] is None
+    assert showing["chapter_list"][0]["balance"] is None
+    assert main(["showing", str(path), "--language", "de"]) == 0
+    output = capsys.readouterr().out
+    assert "–" in output and "+0.00" not in output
 
 
 class TestShowingReport(unittest.TestCase):

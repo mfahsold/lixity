@@ -215,6 +215,19 @@ separated from terminal punctuation by spaces remain in their original sentence;
 negative fixtures distinguish a following opening quote and blank-line boundaries.
 Their effects reach syllables-per-word and the declared readability formula.
 
+The Italian counter was compared post hoc against the `word` and `SumSylls`
+fields in [PhonItalia 1.10](https://github.com/stefanocoretta/phonItaliaR/tree/main/data-raw/phonItalia-1.10)
+(source TSV SHA-256 `22d22409c1fc3ad2844f47543f3017c50ef9d3f95f5196093ff2203d7f071b17`).
+Run `PYTHONPATH=src python scripts/evaluate_phonitalia.py PATH_TO_WORDFORMS_TSV`
+to reproduce aggregate agreement without copying the lexicon into Lixity.
+Of 120,000 rows, 4,170 were excluded by the alphabetic-word/positive-count
+filter; 90,134 of 115,830 remaining rows agreed exactly (77.82%), with mean
+absolute difference 0.230 syllables. The sample contains 90,681 distinct
+spellings, so repeated forms retain row weight. These are lexicon agreements,
+not a language-wide accuracy estimate: pronunciation, dialect, token frequency,
+syllabification conventions and literary usage vary. No separate literary
+holdout or human listening evaluation was used.
+
 The audit also reproduces unresolved weaknesses:
 
 | Area | Observed limitation and interpretation |
@@ -222,7 +235,7 @@ The audit also reproduces unresolved weaknesses:
 | Unicode | NFC equivalence is corrected, preserving source bytes and offsets. Combining sequences without a precomposed letter can still exceed the word patterns' coverage; the mapper does not claim full grapheme segmentation. See [Unicode UAX #29](https://www.unicode.org/reports/tr29/). |
 | Tense | Curated present-only forms no longer also count as productive past candidates. Listed German perfect/pluperfect pairs count as one construction across chapter, scene and paragraph analysis, with bounded intervening words. Unlicensed auxiliary/participle combinations retain both cues; regional/transitive variants, unlisted forms and other languages can still produce spurious mixed classifications. A `mixed` result is not proof of a grammatical tense switch. English `read` and Portuguese `falamos` require context. |
 | Dialogue | Quoted-segment patterns miss conventional dialogue dashes and some single-quote styles. Zero detected quotation words does not establish absence of speech. |
-| Syllables | Italian rising diphthongs such as `fiore`/`buono` remain overcounted. Broadly merging vowels would introduce other hiatus errors; this requires a separately verified rule or lexicon. The corrected Dutch `ij` rule is not a complete pronunciation model. |
+| Syllables | Italian rising diphthongs such as `fiore`/`buono` remain overcounted; `paura` is undercounted. Broadly merging vowels would introduce other hiatus errors. French `vraiment`/`moment` are undercounted by the final `-ent` rule, which also serves silent verb endings; neither issue is resolved by spelling alone. The corrected Dutch `ij` rule is not a complete pronunciation model. |
 | Sentence spans | Sentence-final abbreviations can merge sentences. Paired spaced closers and German single `‚…‘` closers have direct boundary/evidence controls, but quotation pairing and abbreviation tables are incomplete; a matching total does not guarantee correct boundaries. |
 | Nominal/passive cues | Word endings and auxiliary patterns do not resolve lexical category, adjectival participles or syntactic voice. Short regular and selected irregular passive forms have positive/negative controls; German `ist geöffnet` state passive remains outside the event-passive cue pattern. Coverage is improved, not complete. |
 
@@ -233,7 +246,7 @@ formula a comprehension test for these novels; see
 Future corpus evaluation must report per-language boundary precision/recall,
 cue precision/recall against appropriate annotations and the dataset/genre;
 arithmetic tests, UI localization and highlighted count agreement are separate
-checks. No empirical accuracy percentage is claimed here.
+checks. No novel-wide accuracy percentage is claimed here.
 
 ### Manual manuscript association limits
 
@@ -280,7 +293,7 @@ zero event counts or constant samples do not establish certainty.
 BH/BY are established selection procedures **given valid null probabilities**
 and their dependence conditions. Lixity's normal-tail probabilities use a
 baseline estimated from the same chapters; their calibration is not established.
-BY, runs/lag diagnostics and the `low_power` flag do not repair that gap.
+BY and the exploratory runs/lag diagnostics do not repair that gap.
 `fdr_flagged` means selected under the implemented model, and
 `expected_false_positives` is a standard-normal reference expectation, not an
 observed error count. Cliff's delta describes ordinal contrast, not quality.

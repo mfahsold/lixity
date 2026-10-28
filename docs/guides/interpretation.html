@@ -118,7 +118,7 @@
 
 <h2 id="empty">Why does an empty manuscript show “–”?</h2>
 <p>The dashboard and text style report show a dash when no chapter–feature cells can be measured. This includes empty or heading-only manuscripts and material below the configured chapter minimum. A dash means unavailable, not zero quality or perfect consistency.</p>
-<p>For API compatibility, style JSON schema version 4 retains the historical numeric <code>consistency</code> value. The new <code>measured_cells</code> field identifies the supporting count. When it is zero, the retained value <code>1.0</code> is a compatibility sentinel and must not be displayed as 100%. Older JSON without the field cannot establish availability from that number alone.</p>
+<p>Style JSON retains the historical numeric <code>consistency</code> value for compatibility. The <code>measured_cells</code> field identifies the supporting count. When it is zero, the retained value <code>1.0</code> is a compatibility sentinel and must not be displayed as 100%. Older JSON without the field cannot establish availability from that number alone.</p>
 
 <h2 id="scenes">Compare scenes within a register</h2>
 <p>The Scenes &amp; style registers view measures scenes separately. Assign scene registers and target ranges in <code>lixity.toml</code>; each scene register has its own manuscript-only median. Chapter registers have a separate editor in Project settings, and display filters do not recalculate the whole-book reference. Counts and approximate standard errors show the data behind the values. Targets are your choices, not automatic writing rules. <a href="../USAGE.md#scene-registers-and-project-targets">Set up scene comparisons</a>.</p>

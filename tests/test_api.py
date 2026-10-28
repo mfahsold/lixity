@@ -88,7 +88,7 @@ class TestApiFacade(unittest.TestCase):
 
     def test_fingerprint_is_the_passport(self):
         passport = api.fingerprint(SAMPLE, language="de")
-        self.assertEqual(passport["meta"]["schema_version"], 4)
+        self.assertEqual(passport["meta"]["schema_version"], 5)
         self.assertIn("features", passport)
         self.assertIn("dimensions", passport)
         self.assertIn("fdr_flagged", passport)

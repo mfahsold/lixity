@@ -8,8 +8,9 @@ Review thresholds are configurable heuristics, not universal laws. Read their
 active values from passport `meta`; formula constants and estimator conventions
 are separate from author preferences.
 
-The 1.25 corrections below retain the JSON field names and passport
-schema 4, but change measurements and derived results. Regenerate chapter
+The earlier 1.25 corrections changed measurements and derived results.
+Passport schema 5 also changes the ordered-baseline diagnostics described below.
+Regenerate chapter
 metrics, style passports and reports before comparing outputs from before the
 prose-scope, MTLD, robust-scale, segmentation, distribution and dimension
 corrections. A source update alone does not refresh stored outputs.
@@ -133,18 +134,18 @@ were scaled first. MAD reuses the shared median. Ordinary finite rounding,
 signed-zero and empty-input conventions are unchanged; this is not a claim of
 exact arithmetic throughout every downstream statistic.
 
-A chapter–feature cell is **measurable** when the feature has at least
-`FingerprintThresholds.min_chapters` observations (default 2). Below this floor,
-the baseline is zeroed and no cells are scored. Constant features can still
-produce measured zero deviations; derived dimensions and spread-based
-diagnostics require positive $\sigma$. Availability and informative variation
-are different conditions.
+A standardized chapter–feature comparison requires at least
+`FingerprintThresholds.min_chapters` observations and a nonzero MAD. Schema 5
+marks insufficient references and both constant and varying zero-MAD series
+explicitly. It excludes those cells from z*, nominal FDR and consistency;
+zero MAD does not establish that every observation is equal. Raw values and
+separately calculated Cliff's delta remain available where supported. Ranked
+dimensions and structural measurements can still use varying zero-MAD series.
 
-Text passports show insufficient reference support as unavailable with the
-observed/required chapter count, rather than presenting the zero-filled baseline
-as a measured median. A zero MAD alone does not establish constancy: tied values
-can have zero MAD while other chapter values differ. Only equal observations are
-described as constant; other zero-MAD references have no nonzero robust band.
+Text passports show unavailable reference bands and their reason. JSON uses
+`null` for the band when MAD is zero and for median, sigma and band when there
+are too few observations. The legacy numeric consistency sentinel is qualified
+by `measured_cells` and is not a measurement when that count is zero.
 
 ## 2. Noise-adjusted deviation (z*)
 
@@ -292,20 +293,28 @@ neither numerical value is emitted in that field:
 Sign: positive = the chapter exceeds more other chapters than it falls below;
 ties contribute zero. The bands describe ordinal contrast, not literary merit.
 
-## 4b. Exchangeability diagnostics (baseline quality)
+<a id="4b-exchangeability-diagnostics-baseline-quality"></a>
+## 4b. Exploratory chapter-order indicators
 
-On the ordered per-feature series $x_1,\dots,x_n$ (chapters in order):
+Schema 5 replaces schema 4's `exchangeable`, `mean_lag1_rho`, `acf_critical`
+and global `low_power` fields. They could imply a positive result without any
+measurements and opposite feature correlations could cancel. Each entry in
+`baseline_diagnostics.features` instead records `observed_chapters` and
+`missing_chapters`, plus `runs_z`, `lag1_rho` and `lag1_critical` as numbers or
+null. A feature with no observations has no entry. A missing chapter makes its
+order statistics unavailable: observations on either side are not treated as
+adjacent. A constant series or fewer than three chapters has no lag statistic;
+the runs statistic additionally requires at least eight chapters.
 
-- **Runs test** about the series median: $z = (R - \mu_R)/\sigma_R$;
-  $\lvert z\rvert \ge 1.96$ puts the feature on `runs_flagged` (temporal
-  structure the i.i.d. FDR model ignores); the statistic is omitted for
-  $n < 8$ chapters, mirroring `low_power`.
-- **Lag-1 autocorrelation** $\rho_1$; critical band $\approx 1/\sqrt{n}$,
-  falling back to $1.0$ for $n < 3$. `mean_lag1_rho` and `acf_critical` are
-  reported; `exchangeable` is false when runs flag or
-  $|\mathrm{mean}(\rho_1)|$ reaches or exceeds the critical value.
-- `low_power` is true for $n < 8$ chapters. Neither this flag nor an
-  `exchangeable` result establishes calibrated probabilities.
+For a complete measured series, `lag1_flagged` uses the local descriptive
+cutoff $|\rho_1| \ge 1/\sqrt{n}$, with that feature's own $n$;
+`runs_flagged` uses $|z| \ge 1.96$. `measured_features` counts features with
+at least one available statistic. These cutoffs are exploratory heuristics,
+not validated tests for literary chapter series. For example, the conventional
+normal approximation for the runs test has stronger sample requirements
+([NIST](https://www.itl.nist.gov/div898/handbook/eda/section3/eda35d.htm)).
+Neither a flag nor its absence establishes exchangeability, independence,
+calibrated probabilities or an artistic judgment.
 
 ## 4c. Structural diagnostics (`structural_diagnostics`)
 
@@ -318,11 +327,11 @@ limits are listed below.
 
 | Key | Estimator | Guard / notes |
 | :--- | :--- | :--- |
-| `changepoints` | exact unpruned dynamic programming for guarded cost $n\ln\sigma^2$ and penalty $2\ln n$ | singleton/zero-variance costs are zero; anchored centred moments; $O(n^2)$ time, $O(n)$ storage; $n<3$ or constant → `[]`; 0-based indices of the first observation after a break |
-| `trends` | Mann–Kendall $S$ with tie-corrected normal $p$ and continuity correction; $\tau=S/\binom n2$ is tau-a | $n<3$ → `None`; constant → $(0,0,1)$; not tie-normalized tau-b |
+| `changepoints` | exact unpruned dynamic programming for guarded cost $n\ln\sigma^2$ and penalty $2\ln n$ | singleton/zero-variance costs are zero; anchored centred moments; $O(n^2)$ time, $O(n)$ storage; a feature with missing chapters or $n<3$ is listed in `segmentation_unavailable`; complete series use 0-based indices of the first chapter after a break |
+| `trends` | Mann–Kendall $S$ with tie-corrected normal $p$ and continuity correction; $\tau=S/\binom n2$ is tau-a | uses the available observations in chapter order; $n<3$ → unavailable; partial series are listed in `trend_incomplete`, with observed and missing chapter IDs in `baseline_diagnostics.features`; not tie-normalized tau-b |
 | `robust_scales` | Sn: low outer median of high inner medians, including self-distances, ×1.1926; Qn: sorted pairwise distance at rank $\binom{\lfloor n/2\rfloor+1}{2}$, ×2.21914 | Gaussian asymptotic factors; no finite-sample correction; $n<2$ → 0 |
 | `tail_index` | **Hill** estimator $\hat\alpha = \bigl[\tfrac1k\sum\ln\frac{x_{(n-i+1)}}{x_{(n-k)}}\bigr]^{-1}$ over the $k$ largest values | $n \ge 5$, $k=\lfloor\sqrt n\rfloor$ (or user $k\ge 2$); non-positive threshold → `None`; $k \ge n$ → `None` |
-| `distribution_shift` | exact empirical-CDF Wasserstein $W_1$ and two-sample KS $D$; stable asymptotic KS $p$ | sort plus linear CDF merge, including ties and unequal sizes; $D=0$ → $p=1$; both halves need $\ge2$ observations; $p$ is not calibrated for tied/fitted distributions |
+| `distribution_shift` | exact empirical-CDF Wasserstein $W_1$ and two-sample KS $D$; stable asymptotic KS $p$ | the chapter sequence is split before dropping unavailable values; both original halves need $\ge2$ observations or the feature is listed in `distribution_unavailable`; computed but partial comparisons appear in `distribution_incomplete`. Coverage is in `baseline_diagnostics.features`. $D=0$ → $p=1$; $p$ is not calibrated for tied/fitted distributions |
 | `trending_features` | feature names with Mann–Kendall $p < 0.05$ | summary list |
 | `segmented_features` | feature names with at least one guarded-objective changepoint | summary list |
 | `shifted_features` | feature names with early/late KS $p < 0.05$ | summary list |
@@ -375,7 +384,7 @@ These are numerical corrections to the existing estimators, not new statistical
 calibrations; independent high-precision Decimal calculations cover their
 extreme-scale and near-null regression cases.
 
-The passport retains schema 4 and these field names. The structural summary
+The structural diagnostics retain their field names in schema 5. The structural summary
 uses the implemented thresholds; it does not certify a narrative boundary,
 trend or fitted distribution. See [STABILITY.md](STABILITY.md#structural-diagnostics)
 for the model assumptions and current calculation limits.
@@ -591,10 +600,11 @@ feature weights: four word-pattern cues versus quoted-word and short-sentence
 shares. The displayed difference is second group minus first. Zero spread uses
 the population standard deviation when available. The `tell_z`/`show_z` names are
 machine identities, not evidence for a validated narrative-distance construct.
-Fewer than three chapters or zero spread produce zero component scores.
-`most_telling` and `most_showing` are empty when all balances are identical,
-including this insufficient-data fallback; chapter-order ties are not evidence
-of a ranking. These signals describe relative patterns, not prose quality.
+Fewer than three sufficiently long chapters leave component scores and means
+unavailable. With sufficient chapters, a constant component has zero relative
+variation. `most_telling` and `most_showing` are empty when balances are
+unavailable or identical; chapter-order ties are not evidence of a ranking.
+These signals describe relative patterns, not prose quality.
 
 ## 10. Determinism contract
 

@@ -210,7 +210,7 @@ after which it may appear. Chapter 0 means before the first chapter. A blank
 revision uses the current dossier when exporting; an explicit revision keeps
 that version. Each export records the actual resolved version.
 
-**Since v0.7.6:** export choices use only profiles saved with
+Export choices use only profiles saved with
 **Apply** in project settings. An empty selector explains that no saved profile
 exists and links directly to profile creation. Unsaved edits and malformed
 stored settings have distinct messages; they are not treated as selectable
@@ -310,7 +310,7 @@ The byte and response limits above still apply. For a history-limit error, expor
 without internal research or select a curated reader/companion profile.
 
 #### Check a reading website before exporting
-**Since v0.7.6:** prepare and inspect the actual package without
+Prepare and inspect the actual package without
 writing an output directory:
 
 ```sh
@@ -347,7 +347,7 @@ avoid exporting internal review history; choose the appropriate saved profile
 and retained-file options deliberately. No automatic image recompression or
 promise of a package under 20 MiB is introduced here.
 
-**Since v0.7.6:** export data, revision-count and bundle limits stop the check
+Export data, revision-count and bundle limits stop the check
 with exit code 1. With
 `--json`, stdout still contains a parseable `lixity-site-preflight-error/1`
 report identifying the limit, observed bytes/count, allowed amount and overflow.
@@ -372,7 +372,7 @@ analyzed paragraph's **Values** opens the **Passage values** inspector independe
 of the Analysis On/Off choice. **Analysis overview** opens chapter comparisons and other dense views;
 **Back to passage** restores the earlier analysis choice and document context.
 
-**Since v0.7.6:** a tense review card names its actual trigger:
+A tense review card names its actual trigger:
 present/past cues in one paragraph, a dominant-tense change from the previous
 paragraph, or both. Original counted forms appear as buttons grouped by present
 and past; activate one to locate it in the manuscript. Repeated forms keep
@@ -389,7 +389,7 @@ focusing the passage. **Explore chapters** opens available chapter comparisons;
 navigate to the corresponding prose. These are review locations, not rankings
 or instructions to revise.
 
-**Since v0.7.3:** the overview keeps these review routes,
+The overview keeps these review routes,
 section navigation and flagged passages visible. Expand **Manuscript
 measurements** for the grouped scope, rhythm, language, vocabulary and style
 values; use the same summary to collapse them. Its open state survives switching
@@ -424,7 +424,7 @@ dossier's close button; refresh explicitly for the latest revision. The
 [research workflow](research/USAGE.md#reading-and-cli-workflows) owns
 selection, evidence and retention semantics.
 
-**Since v0.7.3:** the workspace switcher comes before project
+The workspace switcher comes before project
 details, so a long title does not push Manuscript, Research and Project out of
 reach. **Project actions** keeps New, Open, guidance and available PDF exports
 together; version and license information follow those controls.
@@ -444,7 +444,7 @@ Claim and dossier views can open their manuscript
 associations in Review. Only an exactly resolved current passage offers a direct
 jump; moved, changed, ambiguous and unavailable anchors retain their review state.
 
-**Since v0.7.4:** choose **Explore passage → Research for this
+Choose **Explore passage → Research for this
 passage**, its association count or a marked quotation to read the linked
 context beside the manuscript. The context shows up to five associations with
 their total, grouping quotations of the same claim version. Titles open the
@@ -468,7 +468,7 @@ Cited source
 quotations remain pinned retained passages; opening an ordinary source reader is
 not a new historical-source navigation contract.
 
-**Since v0.7.3:** leaving an open dossier for its saved
+Leaving an open dossier for its saved
 associations or a global research collection offers **Back to dossier**. It
 restores that saved version, tab, scroll position and requesting control without
 reloading the dossier or discarding drafts. An earlier manuscript return remains
@@ -492,7 +492,7 @@ then **Back to passage** to restore the document context and prior analysis
 display choice. Hiding analysis leaves the overview and restores the prior
 passage tool. The inspector and dossier work with Analysis On or Off.
 
-**Since v0.7.3:** the first explicit **Analysis On** selects **Sentence length**
+The first explicit **Analysis On** selects **Sentence length**
 unless you have already saved a metric choice.
 Use the directly visible **Measure**
 selector while Analysis is on. **Counted text** and **Paragraph comparison** are
@@ -520,7 +520,7 @@ marks** keeps the comparison method and counting guidance collapsed until opened
 A marked sentence's word count and its paragraph's average are different
 quantities.
 
-**Since v0.7.6:** saved research has a separate visual identity:
+Saved research has a separate visual identity:
 neutral dotted marks and a book-icon **Research · … associations** control. They
 identify explicitly saved quotation links to claims, dossiers and decisions;
 they are not measurement deviations or automatic fact checks. The count is
@@ -566,14 +566,14 @@ for text size (16–28 nominal pixels), narrow/standard/wide text and
 compact/standard/relaxed line spacing. Appearance and the desktop split are local
 browser preferences; display changes do not edit the source.
 
-**Since v0.7.6:** the analysis overview's section links sit in its existing
+The analysis overview's section links sit in its existing
 header and wrap instead of hiding later sections beyond a horizontal scroll.
 They jump within the overview; the underlined link indicates the current
 section, not a completed review step. **Back to passage** remains the return to
 the manuscript. On short viewports the header scrolls with the content to leave
 room for the measurements.
 
-**Since v0.7.6:** **? → Help with your first analysis** is a voluntary
+**? → Help with your first analysis** is a voluntary
 panel in the reader toolbar. It explains the current Analysis Off /
 no selected measure / selected measure state and a read–count–compare workflow.
 It does not enable diagnostics, reset preferences, create a task or change
@@ -623,11 +623,11 @@ prior decision is retained but unmatched. This is a conservative review boundary
 not semantic change detection or a “since last session” diff. Reading exports
 do not serialize decisions or allow saves. No review data is sent to analytics.
 
-**Since v0.7.3:** **Reading settings → Keyboard shortcuts**
+**Reading settings → Keyboard shortcuts**
 lists the passage menu, search and close keys. Hovering or focusing key controls
-also gives a short explanation; Escape dismisses a tooltip. **Since v0.7.6:**
-mouse hints wait briefly for deliberate hovering, then switch faster between
-neighboring tools. They appear beside the hovered control near the pointer;
+also gives a short explanation; Escape dismisses a tooltip. Mouse hints wait
+briefly for deliberate hovering, then switch faster between neighboring tools.
+They appear beside the hovered control near the pointer;
 keyboard and touch hints keep room for adjacent toolbar actions. They show the control name, its explanation and any declared
 shortcut. Moving away or starting an action cancels a pending hint. Keyboard
 focus and explicit touch explanations do not wait for mouse dwell. Essential actions
@@ -733,7 +733,7 @@ Keep the three comparison scopes separate:
 The [methods](METHODS.md) define these quantities; the
 [interpretation guide](guides/interpretation.html) explains their limits.
 
-**Since v0.7.6:** selecting a heatmap cell or a style-reference
+Selecting a heatmap cell or a style-reference
 cutoff-hit count opens **Chapter measurements** before navigating. It explains
 the selected metric, its unit and chapter sample, alongside all 16 canonical
 chapter values, manuscript medians, reference sample counts and z* values.
@@ -743,7 +743,7 @@ Each metric has its own unit and reference. `–` remains unavailable, never zer
 applicable paragraph layer; chapter-only metrics clear the prior layer rather
 than substituting word marks. Closing or Escape returns focus to the trigger.
 
-**Since v0.7.3:** the chapter matrix shows `0` when a style
+The chapter matrix shows `0` when a style
 comparison is available and no feature crosses its cutoff; `–` means that the
 comparison is unavailable. **What is counted** explains the existing coverage:
 chapter values use profiled body paragraphs and lists, while corpus/style
@@ -807,7 +807,7 @@ chapter. Toggle the trajectory or cutoff box and reset the camera as needed.
 Rotation is opt-in and pauses in a hidden tab. Cards show positive/negative
 loadings; the table gives the same measured chapter scores and flags.
 
-**Since v0.7.6:** every loading, including chapter-only metrics,
+Every loading, including chapter-only metrics,
 opens the same **Chapter measurements** view for the selected chapter.
 The originating axis and loading coefficient remain distinct from the chapter's
 measurement and z*. Selecting another metric removes that axis-origin caption;
@@ -843,7 +843,7 @@ emits the same capability metadata, not a JSON Schema for every result.
 [Automation contracts](AGENTS.md) describe versioned output envelopes and exit
 codes; a running server advertises registered operations at `GET /api`.
 
-**Since v0.7.6:** `analyze`, `profile`, `style`, `dialogue`, `pacing` and `showing`
+`analyze`, `profile`, `style`, `dialogue`, `pacing` and `showing`
 accept `-o PATH` / `--output PATH` for their text or JSON report. Without it,
 report data goes to stdout. With it, a successful result is written atomically
 and stdout stays empty; diagnostics remain on stderr. A failed report/write
@@ -1028,7 +1028,7 @@ large values from few matches. Nominalization suffix cues exclude curated
 function words unless a project regex override is supplied. They remain
 heuristics rather than a grammatical parse.
 
-**Since v0.7.3:** inspect the same selected paragraph metric
+Inspect the same selected paragraph metric
 from the terminal, without printing manuscript prose:
 
 ```bash
@@ -1080,7 +1080,7 @@ A turn is a quotation segment, without speaker attribution. A dialogue paragraph
 has at least half its words inside detected quotations. `--json` returns these
 summary and per-chapter measurements for automation.
 
-**Since v0.7.3:** the browser dialogue chart retains every
+The browser dialogue chart retains every
 measured chapter in manuscript order, including chapters with zero detected
 turns. Long charts scroll within their bounded area rather than showing only
 the chapters with the most dialogue.
@@ -1117,12 +1117,12 @@ length, staccato share, dialogue share and scene length. The hook score (0–3)
 adds one for each closing cue: at most eight words, terminal `?`/`!`/`…`, and
 closing dialogue. It measures these cues, not suspense or reader response.
 
-**Since v0.7.6:** text summaries identify the chapters with the shortest and
+Text summaries identify the chapters with the shortest and
 longest mean sentence length. The historical JSON keys `fastest_chapter` and
 `slowest_chapter` retain their ASL-based meaning; they do not measure narrative
 speed or reading time.
 
-**Since v0.7.3:** the pacing panel labels average sentence length
+The pacing panel labels average sentence length
 as **ASL**, gives its words-per-sentence unit and explains that bars are scaled
 to the largest chapter average. The **Hook** help describes the same 0–3
 heuristic; it adds no new suspense or quality score.
@@ -1142,7 +1142,7 @@ add `--json` for the scene envelope (schema version 1). The dashboard
 shows the same observations in **Scenes & style registers**. Chapters serve as
 scenes when there are no explicit dividers.
 
-**Since v0.7.3:** the scene comparison table stays visible in a
+The scene comparison table stays visible in a
 bounded scrolling region. Choose a scene's linked title to reveal its detailed
 measurements inside **Scene measurements**. The catalogue and each scene use
 native, reversible disclosures; close either summary when finished. These are
@@ -1240,7 +1240,8 @@ standard errors and descriptive target positions (below/within/above). HD-D is
 unavailable below 100 tokens; CV needs at least two sentences. Zero plug-in
 standard errors are withheld, and HD-D has no population error estimate.
 These are not validated confidence intervals or a literary-quality score.
-Existing analyze/profile (v2) and style (v4) envelopes remain unchanged.
+Analyze/profile use schema 2; the style schema and its migration are described
+in [automation contracts](AGENTS.md).
 
 ### `lixity motifs`
 
@@ -1282,11 +1283,11 @@ positive means the second group is higher relative to this manuscript's baseline
 negative means the first is higher. This does not classify narrative distance,
 showing/telling or scene quality. Zero MAD falls back to standard deviation.
 
-Comparison needs at least three chapters with differing signals. Otherwise the
-app shows `–` and explains the missing support while retaining raw measurements.
-For compatibility, JSON component z-scores fall back to zero with too few
-chapters; identical balances yield empty `most_telling`/`most_showing` ranks.
-Empty ranks mean no distinguishable ordering, not identical artistic effect.
+Comparison needs at least three chapters above the word-count floor. With fewer,
+the app and CLI show `–`, JSON component scores and means are `null`, and raw
+measurements remain available. Identical balances yield empty
+`most_telling`/`most_showing` ranks. Empty ranks mean no distinguishable
+ordering, not identical artistic effect.
 
 The native **Analysis overview → Signal-group comparison** panel
 shows these chapter values and links back to the manuscript. Review-workspace
@@ -1813,7 +1814,7 @@ Successful encoding or an ASR transcript does not establish narration quality.
 
 ### `lixity service`
 
-**Since v0.7.6:** one regular app instance supports independent
+One regular app instance supports independent
 project views in multiple tabs. Project selection returns a scoped view URL
 under the same origin instead of replacing every tab's selection. Use **App and
 audio** to revisit open views, close an idle view or refresh worker/queue status.
@@ -1873,7 +1874,7 @@ exits 0; stopped, starting, busy and unknown states exit 1. JSON for `start`,
 success semantics; stopping an already stopped instance succeeds. Stop preserves
 saved launch settings and logs.
 
-**Since v0.7.3:** status does not create or repair storage or
+Status does not create or repair storage or
 acquire the lifecycle writer lock. Missing private folders are a normal stopped
 state. Unsafe, unreadable or changing records report uncertainty; status does not
 change runtime locations to work around a permission error. Lifecycle commands
@@ -1914,7 +1915,7 @@ lixity build manuscript.md --dry-run
 ```
 
 Remove `--dry-run` to write `exports/<slug>_metrics.json` (v2), `_profile.json`
-(v2), `_style.json` (v4), `_style_passport.txt` (legacy filename), `_report.md`
+(v2), `_style.json` (v5), `_style_passport.txt` (legacy filename), `_report.md`
 and `_dashboard.html`. Identical content causes zero writes. Changed artifacts
 get unique timestamped versions and atomically replace stable links or fallback
 copies; the last 10 versions per artifact family remain in `exports/archive/`.
@@ -2037,7 +2038,7 @@ belong to localized labels, not callable API functions or result fields.
 
 Dashboard/text reports show `–` without measurable chapter–feature cells.
 Empty chapters contribute no measurements; one chapter or fewer than configured
-`min_chapters` is insufficient for a baseline. Style JSON v4 reports
+`min_chapters` is insufficient for a baseline. Style JSON reports
 `measured_cells`: when zero, legacy `consistency: 1.0` is an unavailable sentinel,
 not 100%. Otherwise consistency counts cells with `abs(z*) < z_mild`, not whole
 chapters. See [interpretation](guides/interpretation.html) for short-text limits.
@@ -2070,7 +2071,7 @@ value is not an editing instruction.
 
 Line anchors in reports and dashboards refer to lines in the source file, so
 findings stay navigable in the editor.
-**Since v0.7.1:** shared counting excludes inline code, images and
+Shared counting excludes inline code, images and
 Markdown link destinations while retaining visible link labels. This measurement
 projection does not change displayed paragraph text, saved quote identities or
 chapter numbering; a chapter without countable prose still retains its number.
@@ -2230,7 +2231,7 @@ The published v0.7.2 release uses this setting for folder selection (Open
 Project, service startup and `build`), omitted `scenes` input and read-only
 Research manuscript review. Text-taking Python APIs do not discover files.
 
-**Since v0.7.3:** all manuscript analysis/export commands accept
+All manuscript analysis/export commands accept
 `--project PATH`: `analyze`, `profile`, `dialogue`, `pacing`, `showing`, `style`,
 `motifs`, `characters`, `dashboard`, `pdf`, `scenes` and `build`. With no file,
 these commands use the selected root's configured manuscript. Only `scenes` and
@@ -2261,7 +2262,7 @@ source states. See the [research reference](research/USAGE.md).
 
 ### Character profiles
 
-**Since v0.7.1:** define literal aliases and optional author-declared
+Define literal aliases and optional author-declared
 viewpoint chapters in the selected project's configuration:
 
 ```toml

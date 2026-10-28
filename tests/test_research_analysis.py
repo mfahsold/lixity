@@ -60,7 +60,7 @@ class TestResearchAnalysis(unittest.TestCase):
         self.assertEqual(result["metrics"], core.analyze(self.text)["metrics"])
         self.assertEqual(result["style"], core.fingerprint(self.text, project_config={}, fdr_method="by"))
         self.assertEqual(result["meta"]["schema_version"], 2)
-        self.assertEqual(result["style"]["meta"]["schema_version"], 4)
+        self.assertEqual(result["style"]["meta"]["schema_version"], 5)
         self.assertEqual(result["interpretation"]["scope"], "source_internal")
         self.assertEqual(result["interpretation"]["context_status"], "user_supplied_unverified")
         self.assertEqual(before, {path: path.read_bytes() for path in self.project.rglob("*") if path.is_file()})
@@ -102,6 +102,34 @@ class TestResearchAnalysis(unittest.TestCase):
         self.assertNotIn("historical_language", limits)
         self.assertEqual(result["interpretation"]["baseline_coverage"]["estimable_features"], 0)
         self.assertEqual(result["style"]["fdr_flagged"], {})
+
+    def test_baseline_coverage_counts_only_available_standardized_comparisons(self):
+        def analyze_chapters(bodies):
+            self.file.write_text("\n\n".join(
+                f"## Chapter {index}\n\n{body}" for index, body in enumerate(bodies, 1)
+            ), encoding="utf-8")
+            source = self.ingest(language="en")
+            return api.analyze_source(self.project, source["source_id"])
+
+        repeated = "The rain falls. " * 40
+        constant = analyze_chapters([repeated] * 4)
+        assert constant["interpretation"]["baseline_coverage"]["estimable_features"] == 0
+        assert any(feature["comparison_status"] == "zero_mad_constant"
+                   for feature in constant["style"]["features"])
+
+        distinct = "The rain falls across the quiet garden. " * 20
+        varying = analyze_chapters([repeated, repeated, repeated, distinct])
+        features = varying["style"]["features"]
+        available = sum(feature["comparison_status"] == "available" for feature in features)
+        assert any(feature["comparison_status"] == "zero_mad_varying" for feature in features)
+        assert varying["interpretation"]["baseline_coverage"]["estimable_features"] == available
+
+        longer = "The rain falls across the quiet garden under the cloudy sky. " * 12
+        supported = analyze_chapters([repeated, repeated, distinct, longer])
+        features = supported["style"]["features"]
+        available = sum(feature["comparison_status"] == "available" for feature in features)
+        assert available > 0
+        assert supported["interpretation"]["baseline_coverage"]["estimable_features"] == available
 
     def test_invalid_context_and_thresholds_do_not_mutate_archive(self):
         from pydantic import ValidationError

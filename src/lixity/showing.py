@@ -29,8 +29,8 @@ MIN_COMPARISON_CHAPTERS = 3
 class ChapterBalance:
     """Telling/showing balance of one chapter (robust z, self-calibrated).
 
-    ``comparable`` is False below the manuscript-level word floor: the raw
-    densities stay visible, but no z-scores or rankings are derived from them.
+    ``comparable`` is False below the chapter word floor or when fewer than
+    three chapters meet that floor. Raw densities remain visible in both cases.
     """
 
     chapter_num: int
@@ -105,7 +105,7 @@ def _z_map(values: dict[int, float]) -> dict[int, float]:
     the standard deviation is used instead so the signal is not lost.
     """
     if len(values) < MIN_COMPARISON_CHAPTERS:
-        return dict.fromkeys(values, 0.0)
+        return {}
     data = list(values.values())
     centre = median(data)
     spread = mad(data, centre)
@@ -137,9 +137,10 @@ def showing_report(
             language=language, chapters=0, tell_z_mean=None, show_z_mean=None, balance_mean=None
         )
 
-    # Comparability floor: chapters below MIN_COMPARABLE_WORDS keep their raw
-    # densities but stay out of every z-score, mean and ranking.
-    comparable_nums = {chapter.num for chapter in chapters if chapter.words >= MIN_COMPARABLE_WORDS}
+    # Both a chapter word floor and enough eligible chapters are required for
+    # the manuscript-relative baseline; raw densities remain available.
+    eligible_nums = {chapter.num for chapter in chapters if chapter.words >= MIN_COMPARABLE_WORDS}
+    comparable_nums = eligible_nums if len(eligible_nums) >= MIN_COMPARISON_CHAPTERS else set()
     tell_z: dict[int, float] = {}
     show_z: dict[int, float] = {}
     for field_name in TELL_FEATURES:

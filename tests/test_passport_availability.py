@@ -45,7 +45,8 @@ def test_unsupported_reference_does_not_print_a_zero_median(lengths, minimum, la
 def test_tied_zero_mad_does_not_claim_constant_chapter_values(language):
     result = fingerprint([6, 6, 6, 12])
     original = result.passport()
-    assert result.baseline["asl"] == {"median": 6.0, "mad": 0.0, "sigma": 0.0, "n": 4}
+    assert result.baseline["asl"] == {"median": 6.0, "mad": 0.0, "sigma": 0.0, "n": 4,
+                                      "comparison_status": "zero_mad_varying"}
     row = asl_line(result, language)
     assert "MAD" in row
     assert "constant" not in row and "konstant" not in row

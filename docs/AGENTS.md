@@ -161,7 +161,8 @@ words explain divergence without establishing its artistic value.
 Localized names identify counted suffix patterns rather than a grammatical
 classification. Text style passports display insufficient reference support as
 unavailable; a zero MAD is called constant only when observations are equal.
-These presentation corrections do not rename JSON keys or change their units.
+The schema 5 style contract below describes the corresponding availability and
+field changes; analyze/profile units remain unchanged.
 
 Comparability floors (METHODS.md §2): the fingerprint withholds every feature of
 chapters below 100 words and sentence-distribution features below five
@@ -268,7 +269,22 @@ These mappings do not make excluded inline-code regions drawable.
 `--evidence` requires `--layer`; default schema 2 and the existing
 `paragraph-layer/1` projection remain unchanged.
 
-### 3.2 `style --json` (style reference, schema_version 4)
+<a id="32-style---json-style-reference-schema_version-4"></a>
+
+### 3.2 `style --json` (style reference, schema_version 5)
+
+Schema 5 replaces the former `baseline_diagnostics.exchangeable`,
+`mean_lag1_rho`, `acf_critical` and `low_power` fields with per-feature
+chapter coverage and nullable exploratory order indicators; see
+[methods and migration](METHODS.md#4b-exploratory-chapter-order-indicators).
+Do not treat a missing flag as proof of exchangeability.
+
+Each `features[]` entry includes `comparison_status`: `available`,
+`insufficient_chapters`, `zero_mad_constant` or `zero_mad_varying`. Median and
+sigma are null for insufficient chapters; the reference band is null whenever
+the standardized comparison is unavailable. Zero-MAD cells have no z* or
+FDR entry and do not enter consistency. `cliffs_delta` separately retains
+available chapter-level ordinal contrasts; it is not an FDR verdict.
 
 Integer `measured_cells` reports the number of chapter–feature cells
 supporting the consistency ratio. Empty chapters do not count. At zero, the
@@ -298,19 +314,24 @@ The response carries `meta`, `features`, `deviations`, `fdr_flagged`,
 diagnostics. Use `features[].feature` to join the feature rows to chapter-keyed
 deviation/FDR maps; localized `feat_*` strings are display keys.
 
-**Since v0.7.2:** additive `dimension_diagnostics` explains support
-and availability without changing schema v4 scores. Use `dimensions[].flagged`,
+`dimension_diagnostics` explains support and availability. Use `dimensions[].flagged`,
 not rounded scores, for cutoff status; unavailable positions are not zero.
 
-`structural_diagnostics` is empty when no feature is measurable. Changepoint
-indices are 0-based positions of the first element after each break;
-`trends[field]` is `null` when $n < 3$; `tail_index[field]` is omitted
+`structural_diagnostics` contains empty result maps when no feature is measurable.
+Changepoint indices are 0-based positions of the first chapter after each break;
+features with missing chapter values or fewer than three observations appear in
+`segmentation_unavailable`. `trends[field]` is omitted when $n < 3$; trends
+computed over incomplete chapter series appear in `trend_incomplete`.
+`tail_index[field]` is omitted
 when the Hill estimator is undefined. `distribution_shift` / `shifted_features`
-compare the first half of chapters against the second (both halves ≥ 2).
+compare the first half of chapters against the second, splitting the original
+chapter order before excluding missing values (both halves need ≥ 2 observations;
+otherwise the feature is listed in `distribution_unavailable`). Computed
+comparisons with missing chapters appear in `distribution_incomplete`.
 `cooccurrence` and `keyness` are present only when the passport is built
 from source text (`api.fingerprint`, CLI `style`/`build`/`dashboard`) —
 they need enough content tokens (≥ 50 for the graph, ≥ 20 per keyness half).
-Prefer `fdr_flagged` over raw `deviations` for strong claims; read
+Both `fdr_flagged` and raw `deviations` are exploratory, not strong claims; read
 `structural_diagnostics` for *where* the house style shifts over chapter order.
 
 ### 3.3 UI label packs (merge order)
@@ -473,10 +494,11 @@ deterministic proxies, with the following scope and availability rules.
   vs. showing signals (dialogue, staccato) as robust z against the book's own
   chapter medians; `balance = show_z − tell_z` (positive = showing).
   Documented fallback: if MAD = 0 (majority of chapters share the median), the
-  standard deviation is used when nonzero. Fewer than three comparable chapters
-  give zero component scores; `most_telling=[]` and `most_showing=[]` when all
-  balances are identical. Numeric fallback zeros do not support a ranking or an
-  artistic equivalence claim. Heuristic composite, **not** a quality verdict.
+  standard deviation is used when nonzero. Fewer than three sufficiently long
+  chapters give null component scores and means. `most_telling=[]` and
+  `most_showing=[]` when balances are identical or comparison is unavailable.
+  Neither empty rankings nor zero scores imply artistic equivalence. Heuristic
+  composite, **not** a quality verdict.
   Chapters below `MIN_COMPARABLE_WORDS` (100) keep their raw densities but are
   marked `comparable: false`; their `tell_z`, `show_z` and `balance` are JSON
   `null`, they are excluded from `comparable_chapters`, the means and both
@@ -486,11 +508,11 @@ deterministic proxies, with the following scope and availability rules.
   `min_comparable_sentences`; the style fingerprint applies the same floors to
   its feature values, baselines and FDR sets (see METHODS.md).
 
-**Style schema v4 additions in v0.5.0:** `passport.register_profiles` contains
+`passport.register_profiles` contains
 normalized author ranges; `passport.register_targets` maps chapter numbers to
 feature records `{lower, upper, value, position}` (`below|within|above|unavailable`).
 `passport.meta.chapter_registers` maps assigned chapter numbers to names. These
-optional additions keep style schema v4 and do not alter existing field types.
+author-declared references do not supply sampling distributions.
 Assigned chapters are excluded from deviation/FDR flags; z-scores, baseline
 membership and consistency still describe the whole manuscript. Target ranges
 never define statistical significance. Configuration validation and selector
@@ -521,15 +543,16 @@ workflows, not authorization to edit the manuscript.
   with σ = 1.4826·MAD. Short chapters can have noisy estimates; a larger
   available SE shrinks the deviation. This reduces one source of noise;
   false alarms and model misspecification remain possible.
-- **Thresholds**: |z*| ≥ 2.5 noticeable, ≥ 3.5 strong (injectable via
-  `--z-mild` / `--z-strong` / `--fdr-q` / `--fdr-method` /
+- **Thresholds**: the active `z_mild` and `z_strong` values define the
+  corresponding deviation bands (injectable via `--z-mild` / `--z-strong` /
+  `--fdr-q` / `--fdr-method` /
   `--dim-threshold` / `--flag-min-severity`, API kwargs, the control-server
   settings, or `[tool.lixity]`; always re-read them from `passport.meta`,
   never assume the defaults). `expected_false_positives` is a reference count
   under a standard-normal null, not a measured false-alarm rate for this
   manuscript. Same-sample median/MAD residuals need not have that distribution.
-- **FDR**: `fdr_flagged` is the Benjamini–Hochberg set by default
-  (q = 0.05), or Benjamini–Yekutieli when `meta.fdr_method` is `by` –
+- **FDR**: `fdr_flagged` is the Benjamini–Hochberg set by default,
+  or Benjamini–Yekutieli when `meta.fdr_method` is `by`, using `meta.fdr_q` –
   a selection computed from normal-tail probabilities. These probabilities
   are not calibrated for the same-sample baseline; neither method establishes
   prose-level false-discovery control. Selected cells also carry ordinal
@@ -585,7 +608,7 @@ from lixity import api
 
 metrics = api.analyze(text, language="auto")          # -> {"meta", "metrics"}
 profiles = api.profile(text, language="de", project_config={})  # -> {"meta", "chapters", "paragraphs"}
-reference = api.fingerprint(text, language="de", project_config={})  # -> style reference (schema v4)
+reference = api.fingerprint(text, language="de", project_config={})  # -> style reference
 turns = api.dialogue(text, language="de")             # -> {"meta", "dialogue"}
 cast = api.characters(text, ["Anna", "Ralf"], language="de")  # -> {"meta", "chapters", "figures"}
 pace = api.pacing(text, language="de")                # -> {"meta", "pacing"}
@@ -738,7 +761,7 @@ owns file creation, preview and explicit application.
 
 Manuscript associations require record/manifest v7; historical v3.0.1 cannot read
 them. Product numbers do not establish schema compatibility. Existing analysis
-schema 2 and style schema 4 are independent. [Retention and anchor review](research/USAGE.md#associate-a-manuscript-quote-with-a-claim)
+schema 2 and style schema 5 are independent. [Retention and anchor review](research/USAGE.md#associate-a-manuscript-quote-with-a-claim)
 explain the user workflow and stored data.
 
 Python `research_api.link_manuscript_claim(project, manuscript, claim_id, *,

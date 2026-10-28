@@ -50,6 +50,8 @@ def style_structural(
 
     # --- Card 1: Guarded-cost changepoints ---
     changepoints = diag.get(ContractKeys.CHANGEPOINTS) or {}
+    segmentation_unavailable = diag.get(ContractKeys.SEGMENTATION_UNAVAILABLE) or []
+    segmentation_measured = set(fingerprint._usable_features()) - set(segmentation_unavailable)
     parts.append('<div class="structural-card">')
     parts.append(
         f'<h3><span>{help_term(labels, "changepoints", translated("structural_changepoints_title"))}</span>'
@@ -71,7 +73,9 @@ def style_structural(
 
             shift_links: list[str] = []
             for cp in cps:
-                ch_num = sorted_chs[cp] if cp < len(sorted_chs) else (cp + 1)
+                if cp < 0 or cp >= len(sorted_chs):
+                    continue
+                ch_num = sorted_chs[cp]
                 link_text = label(labels, "structural_shift_from").replace("{chapter}", str(ch_num))
                 layer_attr = f' data-layer="{esc(layer)}"' if layer else ""
                 shift_links.append(
@@ -88,10 +92,13 @@ def style_structural(
             parts.append('</div>')
         parts.append('</div>')
     else:
+        available = bool(segmentation_measured)
         parts.append(
-            f'<div class="structural-empty"><span class="badge badge-success">✓</span> '
-            f'<span>{translated("structural_no_changepoints")}</span></div>'
+            f'<div class="structural-empty"><span class="badge badge-neutral">–</span> '
+            f'<span>{translated("structural_no_changepoints" if available else "structural_unavailable")}</span></div>'
         )
+    if segmentation_unavailable and segmentation_measured:
+        parts.append(f'<p class="hint">{translated("structural_partly_unavailable")}</p>')
     parts.append('</div>')
 
     # --- Card 2: Mann-Kendall Monotonic Drift (Trends) ---
@@ -145,14 +152,17 @@ def style_structural(
         parts.append('</div>')
     else:
         parts.append(
-            f'<div class="structural-empty"><span class="badge badge-success">✓</span> '
-            f'<span>{translated("structural_no_trends")}</span></div>'
+            f'<div class="structural-empty"><span class="badge badge-neutral">–</span> '
+            f'<span>{translated("structural_no_trends" if trends else "structural_unavailable")}</span></div>'
         )
+    if diag.get(ContractKeys.TREND_INCOMPLETE):
+        parts.append(f'<p class="hint">{translated("structural_partial_trend")}</p>')
     parts.append('</div>')
 
     # --- Card 3: Distribution Shift (First Half vs. Second Half) ---
     dist_shift = diag.get(ContractKeys.DISTRIBUTION_SHIFT) or {}
     shifted_set = set(diag.get(ContractKeys.SHIFTED_FEATURES) or [])
+    distribution_unavailable = diag.get(ContractKeys.DISTRIBUTION_UNAVAILABLE) or []
     parts.append('<div class="structural-card">')
     parts.append(
         f'<h3><span>{help_term(labels, "distribution_shift", translated("structural_distribution_title"))}</span>'
@@ -183,9 +193,13 @@ def style_structural(
         parts.append('</div>')
     else:
         parts.append(
-            f'<div class="structural-empty"><span class="badge badge-success">✓</span> '
-            f'<span>{translated("structural_no_shifts")}</span></div>'
+            f'<div class="structural-empty"><span class="badge badge-neutral">–</span> '
+            f'<span>{translated("structural_no_shifts" if dist_shift else "structural_unavailable")}</span></div>'
         )
+    if distribution_unavailable and dist_shift:
+        parts.append(f'<p class="hint">{translated("structural_partly_unavailable")}</p>')
+    if diag.get(ContractKeys.DISTRIBUTION_INCOMPLETE):
+        parts.append(f'<p class="hint">{translated("structural_partial_distribution")}</p>')
     parts.append('</div>')
 
     parts.append('</div>')  # .structural-grid

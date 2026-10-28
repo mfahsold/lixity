@@ -8,6 +8,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Optional local PhonItalia 1.10 benchmark reports aggregate Italian syllable
+  agreement and the source digest without bundling or downloading the lexicon.
 - Reader websites can explicitly include selected chapter or language
   measurements, or a fuller analysis of capped chapters. Opt-in exports use
   `lixity-read-only-site/2`; the synthetic reader demo shows chapter measurements.
@@ -21,6 +23,18 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   planner for previews and chapter renders; Qwen retains its existing full model.
 
 ### Changed
+- Style JSON schema 5 replaces the misleading exchangeability verdict and
+  averaged lag with nullable, per-feature order indicators and chapter coverage.
+  Missing chapters are not treated as adjacent; segmentation reports missing
+  data and distribution comparisons preserve the original chapter midpoint.
+  Zero-MAD references no longer create artificial standardized scores or enter
+  consistency and FDR; available ordinal contrasts are retained separately.
+  Flags remain exploratory.
+- Showing comparisons with fewer than three sufficiently long chapters now
+  report unavailable component scores and means instead of artificial zeros;
+  their raw chapter measurements remain available.
+- Research source analysis counts only available standardized comparisons in
+  its baseline coverage; zero-MAD features are excluded.
 - The default German tense heuristic no longer guesses past tense from arbitrary
   `-te/-ten/-test` endings, avoiding adjective false positives; selected cues
   such as `übt` are added. Unlisted regular past forms may now be missed and

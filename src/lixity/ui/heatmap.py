@@ -73,6 +73,10 @@ def render_metric_context(
                 field: {
                     "value": format_num(value, language_key, 2) if value is not None else "–",
                     "z": format_num(z, language_key, 2, signed=True) if z is not None else "–",
+                    "reason": (label(labels, "baseline_zero_mad")
+                               if z is None and value is not None and
+                               fingerprint.baseline.get(field, {}).get("comparison_status")
+                               in ("zero_mad_varying", "zero_mad_constant") else ""),
                 }
                 for field, _key, _unit in FEATURES
                 for value in [fingerprint.values.get(field, {}).get(chapter.num)]
@@ -286,9 +290,14 @@ def render_heatmap_panel(
                 + ' tabindex="0" role="button"'
             )
             if z is None:
+                status = fingerprint.baseline.get(field_name, {}).get("comparison_status")
+                reason = (label(labels, "baseline_zero_mad")
+                          if fingerprint.values.get(field_name, {}).get(chapter.num) is not None
+                          and status in ("zero_mad_varying", "zero_mad_constant")
+                          else label(labels, "project_identity_unavailable"))
                 description = esc(
                     f"{label(labels, label_key)} · {label(labels, 'chapter')} {chapter.num} · "
-                    f"{label(labels, 'project_identity_unavailable')}",
+                    f"{reason}",
                     quote=True,
                 )
                 parts.append(f'<td class="z"{cell_attrs} aria-label="{description}">–</td>')
@@ -364,6 +373,15 @@ def render_style_passport_panel(
         centre = float(base["median"])
         sigma = float(base["sigma"])
         series = fingerprint.values.get(field_name, {})
+        if sigma == 0.0:
+            layer = feature_layers.get(field_name)
+            layer_attr = f' data-layer="{esc(layer)}"' if layer else ""
+            parts.append(f'<div class="band-row" data-jump="#feat-{field_name}" '
+                         f'data-feature="{field_name}" role="button" tabindex="0"{layer_attr}>')
+            parts.append(f'<span class="band-label">{esc(label(labels, label_key))}'
+                         f'<small class="band-summary">{L("median")} {N(centre, 2)} · n = {int(base["n"])}</small></span>')
+            parts.append(f'<span class="hint">{L("baseline_zero_mad")}</span></div>')
+            continue
         values = [float(v) for v in series.values() if v is not None]
         outlier_chapters = [
             int(ch) for ch, feats in fingerprint.deviations.items() if field_name in feats

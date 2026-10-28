@@ -388,7 +388,7 @@ after which it may appear. Chapter 0 means before the first chapter. A blank
 revision uses the current dossier when exporting; an explicit revision keeps
 that version. Each export records the actual resolved version.
 
-**Since v0.7.6:** export choices use only profiles saved with
+Export choices use only profiles saved with
 **Apply** in project settings. An empty selector explains that no saved profile
 exists and links directly to profile creation. Unsaved edits and malformed
 stored settings have distinct messages; they are not treated as selectable
@@ -488,7 +488,7 @@ The byte and response limits above still apply. For a history-limit error, expor
 without internal research or select a curated reader/companion profile.
 
 #### Check a reading website before exporting
-**Since v0.7.6:** prepare and inspect the actual package without
+Prepare and inspect the actual package without
 writing an output directory:
 
 ```sh
@@ -525,7 +525,7 @@ avoid exporting internal review history; choose the appropriate saved profile
 and retained-file options deliberately. No automatic image recompression or
 promise of a package under 20 MiB is introduced here.
 
-**Since v0.7.6:** export data, revision-count and bundle limits stop the check
+Export data, revision-count and bundle limits stop the check
 with exit code 1. With
 `--json`, stdout still contains a parseable `lixity-site-preflight-error/1`
 report identifying the limit, observed bytes/count, allowed amount and overflow.
@@ -550,7 +550,7 @@ analyzed paragraph's **Values** opens the **Passage values** inspector independe
 of the Analysis On/Off choice. **Analysis overview** opens chapter comparisons and other dense views;
 **Back to passage** restores the earlier analysis choice and document context.
 
-**Since v0.7.6:** a tense review card names its actual trigger:
+A tense review card names its actual trigger:
 present/past cues in one paragraph, a dominant-tense change from the previous
 paragraph, or both. Original counted forms appear as buttons grouped by present
 and past; activate one to locate it in the manuscript. Repeated forms keep
@@ -567,7 +567,7 @@ focusing the passage. **Explore chapters** opens available chapter comparisons;
 navigate to the corresponding prose. These are review locations, not rankings
 or instructions to revise.
 
-**Since v0.7.3:** the overview keeps these review routes,
+The overview keeps these review routes,
 section navigation and flagged passages visible. Expand **Manuscript
 measurements** for the grouped scope, rhythm, language, vocabulary and style
 values; use the same summary to collapse them. Its open state survives switching
@@ -602,7 +602,7 @@ dossier's close button; refresh explicitly for the latest revision. The
 [research workflow](research/USAGE.md#reading-and-cli-workflows) owns
 selection, evidence and retention semantics.
 
-**Since v0.7.3:** the workspace switcher comes before project
+The workspace switcher comes before project
 details, so a long title does not push Manuscript, Research and Project out of
 reach. **Project actions** keeps New, Open, guidance and available PDF exports
 together; version and license information follow those controls.
@@ -622,7 +622,7 @@ Claim and dossier views can open their manuscript
 associations in Review. Only an exactly resolved current passage offers a direct
 jump; moved, changed, ambiguous and unavailable anchors retain their review state.
 
-**Since v0.7.4:** choose **Explore passage → Research for this
+Choose **Explore passage → Research for this
 passage**, its association count or a marked quotation to read the linked
 context beside the manuscript. The context shows up to five associations with
 their total, grouping quotations of the same claim version. Titles open the
@@ -646,7 +646,7 @@ Cited source
 quotations remain pinned retained passages; opening an ordinary source reader is
 not a new historical-source navigation contract.
 
-**Since v0.7.3:** leaving an open dossier for its saved
+Leaving an open dossier for its saved
 associations or a global research collection offers **Back to dossier**. It
 restores that saved version, tab, scroll position and requesting control without
 reloading the dossier or discarding drafts. An earlier manuscript return remains
@@ -670,7 +670,7 @@ then **Back to passage** to restore the document context and prior analysis
 display choice. Hiding analysis leaves the overview and restores the prior
 passage tool. The inspector and dossier work with Analysis On or Off.
 
-**Since v0.7.3:** the first explicit **Analysis On** selects **Sentence length**
+The first explicit **Analysis On** selects **Sentence length**
 unless you have already saved a metric choice.
 Use the directly visible **Measure**
 selector while Analysis is on. **Counted text** and **Paragraph comparison** are
@@ -698,7 +698,7 @@ marks** keeps the comparison method and counting guidance collapsed until opened
 A marked sentence's word count and its paragraph's average are different
 quantities.
 
-**Since v0.7.6:** saved research has a separate visual identity:
+Saved research has a separate visual identity:
 neutral dotted marks and a book-icon **Research · … associations** control. They
 identify explicitly saved quotation links to claims, dossiers and decisions;
 they are not measurement deviations or automatic fact checks. The count is
@@ -744,14 +744,14 @@ for text size (16–28 nominal pixels), narrow/standard/wide text and
 compact/standard/relaxed line spacing. Appearance and the desktop split are local
 browser preferences; display changes do not edit the source.
 
-**Since v0.7.6:** the analysis overview's section links sit in its existing
+The analysis overview's section links sit in its existing
 header and wrap instead of hiding later sections beyond a horizontal scroll.
 They jump within the overview; the underlined link indicates the current
 section, not a completed review step. **Back to passage** remains the return to
 the manuscript. On short viewports the header scrolls with the content to leave
 room for the measurements.
 
-**Since v0.7.6:** **? → Help with your first analysis** is a voluntary
+**? → Help with your first analysis** is a voluntary
 panel in the reader toolbar. It explains the current Analysis Off /
 no selected measure / selected measure state and a read–count–compare workflow.
 It does not enable diagnostics, reset preferences, create a task or change
@@ -801,11 +801,11 @@ prior decision is retained but unmatched. This is a conservative review boundary
 not semantic change detection or a “since last session” diff. Reading exports
 do not serialize decisions or allow saves. No review data is sent to analytics.
 
-**Since v0.7.3:** **Reading settings → Keyboard shortcuts**
+**Reading settings → Keyboard shortcuts**
 lists the passage menu, search and close keys. Hovering or focusing key controls
-also gives a short explanation; Escape dismisses a tooltip. **Since v0.7.6:**
-mouse hints wait briefly for deliberate hovering, then switch faster between
-neighboring tools. They appear beside the hovered control near the pointer;
+also gives a short explanation; Escape dismisses a tooltip. Mouse hints wait
+briefly for deliberate hovering, then switch faster between neighboring tools.
+They appear beside the hovered control near the pointer;
 keyboard and touch hints keep room for adjacent toolbar actions. They show the control name, its explanation and any declared
 shortcut. Moving away or starting an action cancels a pending hint. Keyboard
 focus and explicit touch explanations do not wait for mouse dwell. Essential actions
@@ -911,7 +911,7 @@ Keep the three comparison scopes separate:
 The [methods](METHODS.md) define these quantities; the
 [interpretation guide](guides/interpretation.html) explains their limits.
 
-**Since v0.7.6:** selecting a heatmap cell or a style-reference
+Selecting a heatmap cell or a style-reference
 cutoff-hit count opens **Chapter measurements** before navigating. It explains
 the selected metric, its unit and chapter sample, alongside all 16 canonical
 chapter values, manuscript medians, reference sample counts and z* values.
@@ -921,7 +921,7 @@ Each metric has its own unit and reference. `–` remains unavailable, never zer
 applicable paragraph layer; chapter-only metrics clear the prior layer rather
 than substituting word marks. Closing or Escape returns focus to the trigger.
 
-**Since v0.7.3:** the chapter matrix shows `0` when a style
+The chapter matrix shows `0` when a style
 comparison is available and no feature crosses its cutoff; `–` means that the
 comparison is unavailable. **What is counted** explains the existing coverage:
 chapter values use profiled body paragraphs and lists, while corpus/style
@@ -985,7 +985,7 @@ chapter. Toggle the trajectory or cutoff box and reset the camera as needed.
 Rotation is opt-in and pauses in a hidden tab. Cards show positive/negative
 loadings; the table gives the same measured chapter scores and flags.
 
-**Since v0.7.6:** every loading, including chapter-only metrics,
+Every loading, including chapter-only metrics,
 opens the same **Chapter measurements** view for the selected chapter.
 The originating axis and loading coefficient remain distinct from the chapter's
 measurement and z*. Selecting another metric removes that axis-origin caption;
@@ -1021,7 +1021,7 @@ emits the same capability metadata, not a JSON Schema for every result.
 [Automation contracts](AGENTS.md) describe versioned output envelopes and exit
 codes; a running server advertises registered operations at `GET /api`.
 
-**Since v0.7.6:** `analyze`, `profile`, `style`, `dialogue`, `pacing` and `showing`
+`analyze`, `profile`, `style`, `dialogue`, `pacing` and `showing`
 accept `-o PATH` / `--output PATH` for their text or JSON report. Without it,
 report data goes to stdout. With it, a successful result is written atomically
 and stdout stays empty; diagnostics remain on stderr. A failed report/write
@@ -1206,7 +1206,7 @@ large values from few matches. Nominalization suffix cues exclude curated
 function words unless a project regex override is supplied. They remain
 heuristics rather than a grammatical parse.
 
-**Since v0.7.3:** inspect the same selected paragraph metric
+Inspect the same selected paragraph metric
 from the terminal, without printing manuscript prose:
 
 ```bash
@@ -1258,7 +1258,7 @@ A turn is a quotation segment, without speaker attribution. A dialogue paragraph
 has at least half its words inside detected quotations. `--json` returns these
 summary and per-chapter measurements for automation.
 
-**Since v0.7.3:** the browser dialogue chart retains every
+The browser dialogue chart retains every
 measured chapter in manuscript order, including chapters with zero detected
 turns. Long charts scroll within their bounded area rather than showing only
 the chapters with the most dialogue.
@@ -1295,12 +1295,12 @@ length, staccato share, dialogue share and scene length. The hook score (0–3)
 adds one for each closing cue: at most eight words, terminal `?`/`!`/`…`, and
 closing dialogue. It measures these cues, not suspense or reader response.
 
-**Since v0.7.6:** text summaries identify the chapters with the shortest and
+Text summaries identify the chapters with the shortest and
 longest mean sentence length. The historical JSON keys `fastest_chapter` and
 `slowest_chapter` retain their ASL-based meaning; they do not measure narrative
 speed or reading time.
 
-**Since v0.7.3:** the pacing panel labels average sentence length
+The pacing panel labels average sentence length
 as **ASL**, gives its words-per-sentence unit and explains that bars are scaled
 to the largest chapter average. The **Hook** help describes the same 0–3
 heuristic; it adds no new suspense or quality score.
@@ -1320,7 +1320,7 @@ add `--json` for the scene envelope (schema version 1). The dashboard
 shows the same observations in **Scenes & style registers**. Chapters serve as
 scenes when there are no explicit dividers.
 
-**Since v0.7.3:** the scene comparison table stays visible in a
+The scene comparison table stays visible in a
 bounded scrolling region. Choose a scene's linked title to reveal its detailed
 measurements inside **Scene measurements**. The catalogue and each scene use
 native, reversible disclosures; close either summary when finished. These are
@@ -1418,7 +1418,8 @@ standard errors and descriptive target positions (below/within/above). HD-D is
 unavailable below 100 tokens; CV needs at least two sentences. Zero plug-in
 standard errors are withheld, and HD-D has no population error estimate.
 These are not validated confidence intervals or a literary-quality score.
-Existing analyze/profile (v2) and style (v4) envelopes remain unchanged.
+Analyze/profile use schema 2; the style schema and its migration are described
+in [automation contracts](AGENTS.md).
 
 ### `lixity motifs`
 
@@ -1460,11 +1461,11 @@ positive means the second group is higher relative to this manuscript's baseline
 negative means the first is higher. This does not classify narrative distance,
 showing/telling or scene quality. Zero MAD falls back to standard deviation.
 
-Comparison needs at least three chapters with differing signals. Otherwise the
-app shows `–` and explains the missing support while retaining raw measurements.
-For compatibility, JSON component z-scores fall back to zero with too few
-chapters; identical balances yield empty `most_telling`/`most_showing` ranks.
-Empty ranks mean no distinguishable ordering, not identical artistic effect.
+Comparison needs at least three chapters above the word-count floor. With fewer,
+the app and CLI show `–`, JSON component scores and means are `null`, and raw
+measurements remain available. Identical balances yield empty
+`most_telling`/`most_showing` ranks. Empty ranks mean no distinguishable
+ordering, not identical artistic effect.
 
 The native **Analysis overview → Signal-group comparison** panel
 shows these chapter values and links back to the manuscript. Review-workspace
@@ -1991,7 +1992,7 @@ Successful encoding or an ASR transcript does not establish narration quality.
 
 ### `lixity service`
 
-**Since v0.7.6:** one regular app instance supports independent
+One regular app instance supports independent
 project views in multiple tabs. Project selection returns a scoped view URL
 under the same origin instead of replacing every tab's selection. Use **App and
 audio** to revisit open views, close an idle view or refresh worker/queue status.
@@ -2051,7 +2052,7 @@ exits 0; stopped, starting, busy and unknown states exit 1. JSON for `start`,
 success semantics; stopping an already stopped instance succeeds. Stop preserves
 saved launch settings and logs.
 
-**Since v0.7.3:** status does not create or repair storage or
+Status does not create or repair storage or
 acquire the lifecycle writer lock. Missing private folders are a normal stopped
 state. Unsafe, unreadable or changing records report uncertainty; status does not
 change runtime locations to work around a permission error. Lifecycle commands
@@ -2092,7 +2093,7 @@ lixity build manuscript.md --dry-run
 ```
 
 Remove `--dry-run` to write `exports/<slug>_metrics.json` (v2), `_profile.json`
-(v2), `_style.json` (v4), `_style_passport.txt` (legacy filename), `_report.md`
+(v2), `_style.json` (v5), `_style_passport.txt` (legacy filename), `_report.md`
 and `_dashboard.html`. Identical content causes zero writes. Changed artifacts
 get unique timestamped versions and atomically replace stable links or fallback
 copies; the last 10 versions per artifact family remain in `exports/archive/`.
@@ -2215,7 +2216,7 @@ belong to localized labels, not callable API functions or result fields.
 
 Dashboard/text reports show `–` without measurable chapter–feature cells.
 Empty chapters contribute no measurements; one chapter or fewer than configured
-`min_chapters` is insufficient for a baseline. Style JSON v4 reports
+`min_chapters` is insufficient for a baseline. Style JSON reports
 `measured_cells`: when zero, legacy `consistency: 1.0` is an unavailable sentinel,
 not 100%. Otherwise consistency counts cells with `abs(z*) < z_mild`, not whole
 chapters. See [interpretation](guides/interpretation.html) for short-text limits.
@@ -2248,7 +2249,7 @@ value is not an editing instruction.
 
 Line anchors in reports and dashboards refer to lines in the source file, so
 findings stay navigable in the editor.
-**Since v0.7.1:** shared counting excludes inline code, images and
+Shared counting excludes inline code, images and
 Markdown link destinations while retaining visible link labels. This measurement
 projection does not change displayed paragraph text, saved quote identities or
 chapter numbering; a chapter without countable prose still retains its number.
@@ -2408,7 +2409,7 @@ The published v0.7.2 release uses this setting for folder selection (Open
 Project, service startup and `build`), omitted `scenes` input and read-only
 Research manuscript review. Text-taking Python APIs do not discover files.
 
-**Since v0.7.3:** all manuscript analysis/export commands accept
+All manuscript analysis/export commands accept
 `--project PATH`: `analyze`, `profile`, `dialogue`, `pacing`, `showing`, `style`,
 `motifs`, `characters`, `dashboard`, `pdf`, `scenes` and `build`. With no file,
 these commands use the selected root's configured manuscript. Only `scenes` and
@@ -2439,7 +2440,7 @@ source states. See the [research reference](research/USAGE.md).
 
 ### Character profiles
 
-**Since v0.7.1:** define literal aliases and optional author-declared
+Define literal aliases and optional author-declared
 viewpoint chapters in the selected project's configuration:
 
 ```toml
@@ -4388,6 +4389,9 @@ covers public entrypoints and envelopes.
 Source analysis uses the shared engine, selected archived version/language and
 explicit overrides. Its interpretation is `source_internal`, with
 `context_status: user_supplied_unverified`; manuscript settings are not inherited.
+`baseline_coverage.estimable_features` counts features whose standardized
+comparison is available under the active style schema, excluding insufficient
+chapter samples and zero-MAD references.
 Period, place, genre, translation and language context do not validate a source or
 make it a manuscript style baseline. Local title/tag filters search only loaded
 metadata; use archive search for retained text.
@@ -4955,8 +4959,9 @@ Review thresholds are configurable heuristics, not universal laws. Read their
 active values from passport `meta`; formula constants and estimator conventions
 are separate from author preferences.
 
-The 1.25 corrections below retain the JSON field names and passport
-schema 4, but change measurements and derived results. Regenerate chapter
+The earlier 1.25 corrections changed measurements and derived results.
+Passport schema 5 also changes the ordered-baseline diagnostics described below.
+Regenerate chapter
 metrics, style passports and reports before comparing outputs from before the
 prose-scope, MTLD, robust-scale, segmentation, distribution and dimension
 corrections. A source update alone does not refresh stored outputs.
@@ -5080,18 +5085,18 @@ were scaled first. MAD reuses the shared median. Ordinary finite rounding,
 signed-zero and empty-input conventions are unchanged; this is not a claim of
 exact arithmetic throughout every downstream statistic.
 
-A chapter–feature cell is **measurable** when the feature has at least
-`FingerprintThresholds.min_chapters` observations (default 2). Below this floor,
-the baseline is zeroed and no cells are scored. Constant features can still
-produce measured zero deviations; derived dimensions and spread-based
-diagnostics require positive $\sigma$. Availability and informative variation
-are different conditions.
+A standardized chapter–feature comparison requires at least
+`FingerprintThresholds.min_chapters` observations and a nonzero MAD. Schema 5
+marks insufficient references and both constant and varying zero-MAD series
+explicitly. It excludes those cells from z*, nominal FDR and consistency;
+zero MAD does not establish that every observation is equal. Raw values and
+separately calculated Cliff's delta remain available where supported. Ranked
+dimensions and structural measurements can still use varying zero-MAD series.
 
-Text passports show insufficient reference support as unavailable with the
-observed/required chapter count, rather than presenting the zero-filled baseline
-as a measured median. A zero MAD alone does not establish constancy: tied values
-can have zero MAD while other chapter values differ. Only equal observations are
-described as constant; other zero-MAD references have no nonzero robust band.
+Text passports show unavailable reference bands and their reason. JSON uses
+`null` for the band when MAD is zero and for median, sigma and band when there
+are too few observations. The legacy numeric consistency sentinel is qualified
+by `measured_cells` and is not a measurement when that count is zero.
 
 ## 2. Noise-adjusted deviation (z*)
 
@@ -5239,20 +5244,28 @@ neither numerical value is emitted in that field:
 Sign: positive = the chapter exceeds more other chapters than it falls below;
 ties contribute zero. The bands describe ordinal contrast, not literary merit.
 
-## 4b. Exchangeability diagnostics (baseline quality)
+<a id="4b-exchangeability-diagnostics-baseline-quality"></a>
+## 4b. Exploratory chapter-order indicators
 
-On the ordered per-feature series $x_1,\dots,x_n$ (chapters in order):
+Schema 5 replaces schema 4's `exchangeable`, `mean_lag1_rho`, `acf_critical`
+and global `low_power` fields. They could imply a positive result without any
+measurements and opposite feature correlations could cancel. Each entry in
+`baseline_diagnostics.features` instead records `observed_chapters` and
+`missing_chapters`, plus `runs_z`, `lag1_rho` and `lag1_critical` as numbers or
+null. A feature with no observations has no entry. A missing chapter makes its
+order statistics unavailable: observations on either side are not treated as
+adjacent. A constant series or fewer than three chapters has no lag statistic;
+the runs statistic additionally requires at least eight chapters.
 
-- **Runs test** about the series median: $z = (R - \mu_R)/\sigma_R$;
-  $\lvert z\rvert \ge 1.96$ puts the feature on `runs_flagged` (temporal
-  structure the i.i.d. FDR model ignores); the statistic is omitted for
-  $n < 8$ chapters, mirroring `low_power`.
-- **Lag-1 autocorrelation** $\rho_1$; critical band $\approx 1/\sqrt{n}$,
-  falling back to $1.0$ for $n < 3$. `mean_lag1_rho` and `acf_critical` are
-  reported; `exchangeable` is false when runs flag or
-  $|\mathrm{mean}(\rho_1)|$ reaches or exceeds the critical value.
-- `low_power` is true for $n < 8$ chapters. Neither this flag nor an
-  `exchangeable` result establishes calibrated probabilities.
+For a complete measured series, `lag1_flagged` uses the local descriptive
+cutoff $|\rho_1| \ge 1/\sqrt{n}$, with that feature's own $n$;
+`runs_flagged` uses $|z| \ge 1.96$. `measured_features` counts features with
+at least one available statistic. These cutoffs are exploratory heuristics,
+not validated tests for literary chapter series. For example, the conventional
+normal approximation for the runs test has stronger sample requirements
+([NIST](https://www.itl.nist.gov/div898/handbook/eda/section3/eda35d.htm)).
+Neither a flag nor its absence establishes exchangeability, independence,
+calibrated probabilities or an artistic judgment.
 
 ## 4c. Structural diagnostics (`structural_diagnostics`)
 
@@ -5265,11 +5278,11 @@ limits are listed below.
 
 | Key | Estimator | Guard / notes |
 | :--- | :--- | :--- |
-| `changepoints` | exact unpruned dynamic programming for guarded cost $n\ln\sigma^2$ and penalty $2\ln n$ | singleton/zero-variance costs are zero; anchored centred moments; $O(n^2)$ time, $O(n)$ storage; $n<3$ or constant → `[]`; 0-based indices of the first observation after a break |
-| `trends` | Mann–Kendall $S$ with tie-corrected normal $p$ and continuity correction; $\tau=S/\binom n2$ is tau-a | $n<3$ → `None`; constant → $(0,0,1)$; not tie-normalized tau-b |
+| `changepoints` | exact unpruned dynamic programming for guarded cost $n\ln\sigma^2$ and penalty $2\ln n$ | singleton/zero-variance costs are zero; anchored centred moments; $O(n^2)$ time, $O(n)$ storage; a feature with missing chapters or $n<3$ is listed in `segmentation_unavailable`; complete series use 0-based indices of the first chapter after a break |
+| `trends` | Mann–Kendall $S$ with tie-corrected normal $p$ and continuity correction; $\tau=S/\binom n2$ is tau-a | uses the available observations in chapter order; $n<3$ → unavailable; partial series are listed in `trend_incomplete`, with observed and missing chapter IDs in `baseline_diagnostics.features`; not tie-normalized tau-b |
 | `robust_scales` | Sn: low outer median of high inner medians, including self-distances, ×1.1926; Qn: sorted pairwise distance at rank $\binom{\lfloor n/2\rfloor+1}{2}$, ×2.21914 | Gaussian asymptotic factors; no finite-sample correction; $n<2$ → 0 |
 | `tail_index` | **Hill** estimator $\hat\alpha = \bigl[\tfrac1k\sum\ln\frac{x_{(n-i+1)}}{x_{(n-k)}}\bigr]^{-1}$ over the $k$ largest values | $n \ge 5$, $k=\lfloor\sqrt n\rfloor$ (or user $k\ge 2$); non-positive threshold → `None`; $k \ge n$ → `None` |
-| `distribution_shift` | exact empirical-CDF Wasserstein $W_1$ and two-sample KS $D$; stable asymptotic KS $p$ | sort plus linear CDF merge, including ties and unequal sizes; $D=0$ → $p=1$; both halves need $\ge2$ observations; $p$ is not calibrated for tied/fitted distributions |
+| `distribution_shift` | exact empirical-CDF Wasserstein $W_1$ and two-sample KS $D$; stable asymptotic KS $p$ | the chapter sequence is split before dropping unavailable values; both original halves need $\ge2$ observations or the feature is listed in `distribution_unavailable`; computed but partial comparisons appear in `distribution_incomplete`. Coverage is in `baseline_diagnostics.features`. $D=0$ → $p=1$; $p$ is not calibrated for tied/fitted distributions |
 | `trending_features` | feature names with Mann–Kendall $p < 0.05$ | summary list |
 | `segmented_features` | feature names with at least one guarded-objective changepoint | summary list |
 | `shifted_features` | feature names with early/late KS $p < 0.05$ | summary list |
@@ -5322,7 +5335,7 @@ These are numerical corrections to the existing estimators, not new statistical
 calibrations; independent high-precision Decimal calculations cover their
 extreme-scale and near-null regression cases.
 
-The passport retains schema 4 and these field names. The structural summary
+The structural diagnostics retain their field names in schema 5. The structural summary
 uses the implemented thresholds; it does not certify a narrative boundary,
 trend or fitted distribution. See [STABILITY.md](STABILITY.md#structural-diagnostics)
 for the model assumptions and current calculation limits.
@@ -5538,10 +5551,11 @@ feature weights: four word-pattern cues versus quoted-word and short-sentence
 shares. The displayed difference is second group minus first. Zero spread uses
 the population standard deviation when available. The `tell_z`/`show_z` names are
 machine identities, not evidence for a validated narrative-distance construct.
-Fewer than three chapters or zero spread produce zero component scores.
-`most_telling` and `most_showing` are empty when all balances are identical,
-including this insufficient-data fallback; chapter-order ties are not evidence
-of a ranking. These signals describe relative patterns, not prose quality.
+Fewer than three sufficiently long chapters leave component scores and means
+unavailable. With sufficient chapters, a constant component has zero relative
+variation. `most_telling` and `most_showing` are empty when balances are
+unavailable or identical; chapter-order ties are not evidence of a ranking.
+These signals describe relative patterns, not prose quality.
 
 ## 10. Determinism contract
 
@@ -5994,6 +6008,19 @@ separated from terminal punctuation by spaces remain in their original sentence;
 negative fixtures distinguish a following opening quote and blank-line boundaries.
 Their effects reach syllables-per-word and the declared readability formula.
 
+The Italian counter was compared post hoc against the `word` and `SumSylls`
+fields in [PhonItalia 1.10](https://github.com/stefanocoretta/phonItaliaR/tree/main/data-raw/phonItalia-1.10)
+(source TSV SHA-256 `22d22409c1fc3ad2844f47543f3017c50ef9d3f95f5196093ff2203d7f071b17`).
+Run `PYTHONPATH=src python scripts/evaluate_phonitalia.py PATH_TO_WORDFORMS_TSV`
+to reproduce aggregate agreement without copying the lexicon into Lixity.
+Of 120,000 rows, 4,170 were excluded by the alphabetic-word/positive-count
+filter; 90,134 of 115,830 remaining rows agreed exactly (77.82%), with mean
+absolute difference 0.230 syllables. The sample contains 90,681 distinct
+spellings, so repeated forms retain row weight. These are lexicon agreements,
+not a language-wide accuracy estimate: pronunciation, dialect, token frequency,
+syllabification conventions and literary usage vary. No separate literary
+holdout or human listening evaluation was used.
+
 The audit also reproduces unresolved weaknesses:
 
 | Area | Observed limitation and interpretation |
@@ -6001,7 +6028,7 @@ The audit also reproduces unresolved weaknesses:
 | Unicode | NFC equivalence is corrected, preserving source bytes and offsets. Combining sequences without a precomposed letter can still exceed the word patterns' coverage; the mapper does not claim full grapheme segmentation. See [Unicode UAX #29](https://www.unicode.org/reports/tr29/). |
 | Tense | Curated present-only forms no longer also count as productive past candidates. Listed German perfect/pluperfect pairs count as one construction across chapter, scene and paragraph analysis, with bounded intervening words. Unlicensed auxiliary/participle combinations retain both cues; regional/transitive variants, unlisted forms and other languages can still produce spurious mixed classifications. A `mixed` result is not proof of a grammatical tense switch. English `read` and Portuguese `falamos` require context. |
 | Dialogue | Quoted-segment patterns miss conventional dialogue dashes and some single-quote styles. Zero detected quotation words does not establish absence of speech. |
-| Syllables | Italian rising diphthongs such as `fiore`/`buono` remain overcounted. Broadly merging vowels would introduce other hiatus errors; this requires a separately verified rule or lexicon. The corrected Dutch `ij` rule is not a complete pronunciation model. |
+| Syllables | Italian rising diphthongs such as `fiore`/`buono` remain overcounted; `paura` is undercounted. Broadly merging vowels would introduce other hiatus errors. French `vraiment`/`moment` are undercounted by the final `-ent` rule, which also serves silent verb endings; neither issue is resolved by spelling alone. The corrected Dutch `ij` rule is not a complete pronunciation model. |
 | Sentence spans | Sentence-final abbreviations can merge sentences. Paired spaced closers and German single `‚…‘` closers have direct boundary/evidence controls, but quotation pairing and abbreviation tables are incomplete; a matching total does not guarantee correct boundaries. |
 | Nominal/passive cues | Word endings and auxiliary patterns do not resolve lexical category, adjectival participles or syntactic voice. Short regular and selected irregular passive forms have positive/negative controls; German `ist geöffnet` state passive remains outside the event-passive cue pattern. Coverage is improved, not complete. |
 
@@ -6012,7 +6039,7 @@ formula a comprehension test for these novels; see
 Future corpus evaluation must report per-language boundary precision/recall,
 cue precision/recall against appropriate annotations and the dataset/genre;
 arithmetic tests, UI localization and highlighted count agreement are separate
-checks. No empirical accuracy percentage is claimed here.
+checks. No novel-wide accuracy percentage is claimed here.
 
 ### Manual manuscript association limits
 
@@ -6059,7 +6086,7 @@ zero event counts or constant samples do not establish certainty.
 BH/BY are established selection procedures **given valid null probabilities**
 and their dependence conditions. Lixity's normal-tail probabilities use a
 baseline estimated from the same chapters; their calibration is not established.
-BY, runs/lag diagnostics and the `low_power` flag do not repair that gap.
+BY and the exploratory runs/lag diagnostics do not repair that gap.
 `fdr_flagged` means selected under the implemented model, and
 `expected_false_positives` is a standard-normal reference expectation, not an
 observed error count. Cliff's delta describes ordinal contrast, not quality.
@@ -6579,7 +6606,8 @@ words explain divergence without establishing its artistic value.
 Localized names identify counted suffix patterns rather than a grammatical
 classification. Text style passports display insufficient reference support as
 unavailable; a zero MAD is called constant only when observations are equal.
-These presentation corrections do not rename JSON keys or change their units.
+The schema 5 style contract below describes the corresponding availability and
+field changes; analyze/profile units remain unchanged.
 
 Comparability floors (METHODS.md §2): the fingerprint withholds every feature of
 chapters below 100 words and sentence-distribution features below five
@@ -6686,7 +6714,22 @@ These mappings do not make excluded inline-code regions drawable.
 `--evidence` requires `--layer`; default schema 2 and the existing
 `paragraph-layer/1` projection remain unchanged.
 
-### 3.2 `style --json` (style reference, schema_version 4)
+<a id="32-style---json-style-reference-schema_version-4"></a>
+
+### 3.2 `style --json` (style reference, schema_version 5)
+
+Schema 5 replaces the former `baseline_diagnostics.exchangeable`,
+`mean_lag1_rho`, `acf_critical` and `low_power` fields with per-feature
+chapter coverage and nullable exploratory order indicators; see
+[methods and migration](METHODS.md#4b-exploratory-chapter-order-indicators).
+Do not treat a missing flag as proof of exchangeability.
+
+Each `features[]` entry includes `comparison_status`: `available`,
+`insufficient_chapters`, `zero_mad_constant` or `zero_mad_varying`. Median and
+sigma are null for insufficient chapters; the reference band is null whenever
+the standardized comparison is unavailable. Zero-MAD cells have no z* or
+FDR entry and do not enter consistency. `cliffs_delta` separately retains
+available chapter-level ordinal contrasts; it is not an FDR verdict.
 
 Integer `measured_cells` reports the number of chapter–feature cells
 supporting the consistency ratio. Empty chapters do not count. At zero, the
@@ -6716,19 +6759,24 @@ The response carries `meta`, `features`, `deviations`, `fdr_flagged`,
 diagnostics. Use `features[].feature` to join the feature rows to chapter-keyed
 deviation/FDR maps; localized `feat_*` strings are display keys.
 
-**Since v0.7.2:** additive `dimension_diagnostics` explains support
-and availability without changing schema v4 scores. Use `dimensions[].flagged`,
+`dimension_diagnostics` explains support and availability. Use `dimensions[].flagged`,
 not rounded scores, for cutoff status; unavailable positions are not zero.
 
-`structural_diagnostics` is empty when no feature is measurable. Changepoint
-indices are 0-based positions of the first element after each break;
-`trends[field]` is `null` when $n < 3$; `tail_index[field]` is omitted
+`structural_diagnostics` contains empty result maps when no feature is measurable.
+Changepoint indices are 0-based positions of the first chapter after each break;
+features with missing chapter values or fewer than three observations appear in
+`segmentation_unavailable`. `trends[field]` is omitted when $n < 3$; trends
+computed over incomplete chapter series appear in `trend_incomplete`.
+`tail_index[field]` is omitted
 when the Hill estimator is undefined. `distribution_shift` / `shifted_features`
-compare the first half of chapters against the second (both halves ≥ 2).
+compare the first half of chapters against the second, splitting the original
+chapter order before excluding missing values (both halves need ≥ 2 observations;
+otherwise the feature is listed in `distribution_unavailable`). Computed
+comparisons with missing chapters appear in `distribution_incomplete`.
 `cooccurrence` and `keyness` are present only when the passport is built
 from source text (`api.fingerprint`, CLI `style`/`build`/`dashboard`) —
 they need enough content tokens (≥ 50 for the graph, ≥ 20 per keyness half).
-Prefer `fdr_flagged` over raw `deviations` for strong claims; read
+Both `fdr_flagged` and raw `deviations` are exploratory, not strong claims; read
 `structural_diagnostics` for *where* the house style shifts over chapter order.
 
 ### 3.3 UI label packs (merge order)
@@ -6891,10 +6939,11 @@ deterministic proxies, with the following scope and availability rules.
   vs. showing signals (dialogue, staccato) as robust z against the book's own
   chapter medians; `balance = show_z − tell_z` (positive = showing).
   Documented fallback: if MAD = 0 (majority of chapters share the median), the
-  standard deviation is used when nonzero. Fewer than three comparable chapters
-  give zero component scores; `most_telling=[]` and `most_showing=[]` when all
-  balances are identical. Numeric fallback zeros do not support a ranking or an
-  artistic equivalence claim. Heuristic composite, **not** a quality verdict.
+  standard deviation is used when nonzero. Fewer than three sufficiently long
+  chapters give null component scores and means. `most_telling=[]` and
+  `most_showing=[]` when balances are identical or comparison is unavailable.
+  Neither empty rankings nor zero scores imply artistic equivalence. Heuristic
+  composite, **not** a quality verdict.
   Chapters below `MIN_COMPARABLE_WORDS` (100) keep their raw densities but are
   marked `comparable: false`; their `tell_z`, `show_z` and `balance` are JSON
   `null`, they are excluded from `comparable_chapters`, the means and both
@@ -6904,11 +6953,11 @@ deterministic proxies, with the following scope and availability rules.
   `min_comparable_sentences`; the style fingerprint applies the same floors to
   its feature values, baselines and FDR sets (see METHODS.md).
 
-**Style schema v4 additions in v0.5.0:** `passport.register_profiles` contains
+`passport.register_profiles` contains
 normalized author ranges; `passport.register_targets` maps chapter numbers to
 feature records `{lower, upper, value, position}` (`below|within|above|unavailable`).
 `passport.meta.chapter_registers` maps assigned chapter numbers to names. These
-optional additions keep style schema v4 and do not alter existing field types.
+author-declared references do not supply sampling distributions.
 Assigned chapters are excluded from deviation/FDR flags; z-scores, baseline
 membership and consistency still describe the whole manuscript. Target ranges
 never define statistical significance. Configuration validation and selector
@@ -6939,15 +6988,16 @@ workflows, not authorization to edit the manuscript.
   with σ = 1.4826·MAD. Short chapters can have noisy estimates; a larger
   available SE shrinks the deviation. This reduces one source of noise;
   false alarms and model misspecification remain possible.
-- **Thresholds**: |z*| ≥ 2.5 noticeable, ≥ 3.5 strong (injectable via
-  `--z-mild` / `--z-strong` / `--fdr-q` / `--fdr-method` /
+- **Thresholds**: the active `z_mild` and `z_strong` values define the
+  corresponding deviation bands (injectable via `--z-mild` / `--z-strong` /
+  `--fdr-q` / `--fdr-method` /
   `--dim-threshold` / `--flag-min-severity`, API kwargs, the control-server
   settings, or `[tool.lixity]`; always re-read them from `passport.meta`,
   never assume the defaults). `expected_false_positives` is a reference count
   under a standard-normal null, not a measured false-alarm rate for this
   manuscript. Same-sample median/MAD residuals need not have that distribution.
-- **FDR**: `fdr_flagged` is the Benjamini–Hochberg set by default
-  (q = 0.05), or Benjamini–Yekutieli when `meta.fdr_method` is `by` –
+- **FDR**: `fdr_flagged` is the Benjamini–Hochberg set by default,
+  or Benjamini–Yekutieli when `meta.fdr_method` is `by`, using `meta.fdr_q` –
   a selection computed from normal-tail probabilities. These probabilities
   are not calibrated for the same-sample baseline; neither method establishes
   prose-level false-discovery control. Selected cells also carry ordinal
@@ -7003,7 +7053,7 @@ from lixity import api
 
 metrics = api.analyze(text, language="auto")          # -> {"meta", "metrics"}
 profiles = api.profile(text, language="de", project_config={})  # -> {"meta", "chapters", "paragraphs"}
-reference = api.fingerprint(text, language="de", project_config={})  # -> style reference (schema v4)
+reference = api.fingerprint(text, language="de", project_config={})  # -> style reference
 turns = api.dialogue(text, language="de")             # -> {"meta", "dialogue"}
 cast = api.characters(text, ["Anna", "Ralf"], language="de")  # -> {"meta", "chapters", "figures"}
 pace = api.pacing(text, language="de")                # -> {"meta", "pacing"}
@@ -7156,7 +7206,7 @@ owns file creation, preview and explicit application.
 
 Manuscript associations require record/manifest v7; historical v3.0.1 cannot read
 them. Product numbers do not establish schema compatibility. Existing analysis
-schema 2 and style schema 4 are independent. [Retention and anchor review](research/USAGE.md#associate-a-manuscript-quote-with-a-claim)
+schema 2 and style schema 5 are independent. [Retention and anchor review](research/USAGE.md#associate-a-manuscript-quote-with-a-claim)
 explain the user workflow and stored data.
 
 Python `research_api.link_manuscript_claim(project, manuscript, claim_id, *,

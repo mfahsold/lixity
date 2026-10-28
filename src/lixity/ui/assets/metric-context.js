@@ -26,7 +26,8 @@
     text("metric-context-title", meta.label);
     text("metric-context-chapter", chapter.title);
     text("metric-context-sample", chapter.sample);
-    text("metric-context-definition", meta.help);
+    text("metric-context-definition", meta.help +
+      (chapter.values[feature].reason ? " " + chapter.values[feature].reason : ""));
     text("metric-context-value", chapter.values[feature].value + " " + meta.unit);
     document.getElementById("metric-context-no-layer").hidden = Boolean(meta.layer);
     read.href = "#ch-" + chapterKey;
@@ -49,7 +50,7 @@
       name.appendChild(button); row.appendChild(name);
       cell(row, "td", values.value + " " + item.unit);
       cell(row, "td", item.median + " · n = " + item.n);
-      cell(row, "td", values.z);
+      cell(row, "td", values.z + (values.reason ? " · " + values.reason : ""));
       body.appendChild(row);
     });
   }

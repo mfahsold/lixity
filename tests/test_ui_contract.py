@@ -841,8 +841,11 @@ class TestShowDontTellComponents(unittest.TestCase):
             base = fingerprint.baseline[field]
             self.assertEqual(payload["features"][field]["median"], num(base["median"], "en", 2))
             self.assertEqual(payload["features"][field]["n"], base["n"])
+            score = fingerprint.z_scores[1].get(field)
             self.assertEqual(payload["chapters"]["1"]["values"][field]["z"],
-                             num(fingerprint.z_scores[1][field], "en", 2, signed=True))
+                             num(score, "en", 2, signed=True) if score is not None else "–")
+            if base["comparison_status"] in ("zero_mad_varying", "zero_mad_constant"):
+                self.assertTrue(payload["chapters"]["1"]["values"][field]["reason"])
 
     def test_metric_context_is_rendered_once_and_empty_workspace_remains_valid(self):
         rendered = _full_dashboard()
