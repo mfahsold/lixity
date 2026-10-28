@@ -183,6 +183,7 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
 
         const race = await page.evaluate(() => {
           LixityReader.retain(() => { document.getElementById('test-end-spacer').style.height = '0px'; });
+          window.dispatchEvent(new WheelEvent('wheel', {deltaY:-100}));
           window.scrollBy(0, -100);
           return scrollY;
         });

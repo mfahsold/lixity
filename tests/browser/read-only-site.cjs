@@ -84,12 +84,34 @@ print(json.dumps(documents))
       await page.locator('#site-export-research').uncheck();
       await expect(page.locator('#site-export-sources')).not.toBeChecked();
       await expect(page.locator('#site-export-sources')).toBeDisabled();
+      if (locale === 'en') await page.evaluate(() => {
+        window.testOriginalAnchorClick = HTMLAnchorElement.prototype.click;
+        HTMLAnchorElement.prototype.click = function() {
+          if (this.download && document.activeElement instanceof HTMLElement) document.activeElement.blur();
+          return window.testOriginalAnchorClick.call(this);
+        };
+      });
       const downloaded = page.waitForEvent('download');
       await page.locator('#site-export-download').click();
       const download = await downloaded;
+      if (locale === 'en') {
+        await expect(page.locator('#site-export-download')).toBeFocused();
+        await page.evaluate(() => { HTMLAnchorElement.prototype.click = window.testOriginalAnchorClick; });
+      }
       assert.equal(download.suggestedFilename(), 'lixity-reading-website.zip');
       assert.deepEqual(posts, [{project_token: 'selected-manuscript-context', include_research: false, include_source_files: false}]);
       if (locale === 'en') {
+        await page.evaluate(() => {
+          HTMLAnchorElement.prototype.click = function() {
+            if (this.download) document.querySelector('#modal-site-export [data-close-modal]').focus();
+            return window.testOriginalAnchorClick.call(this);
+          };
+        });
+        const secondDownload = page.waitForEvent('download');
+        await page.locator('#site-export-download').click();
+        await secondDownload;
+        await expect(page.locator('#modal-site-export [data-close-modal]').first()).toBeFocused();
+        await page.evaluate(() => { HTMLAnchorElement.prototype.click = window.testOriginalAnchorClick; });
         for (const mode of ['reader','companion']) {
           await page.locator('#site-export-mode').selectOption(mode);
           if (mode === 'reader') await expect(page.locator('#site-export-download')).toBeDisabled();
@@ -269,7 +291,16 @@ print(json.dumps(documents))
       const dialog = page.locator('#modal-site-export');
       assert.ok(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth + 1));
       await page.keyboard.press('Escape');
-      await expect(page.locator('#btn-site-export')).toBeFocused();
+      try { await expect(page.locator('#btn-site-export')).toBeFocused(); }
+      catch (error) {
+        const state = await page.evaluate(() => ({
+          focused: document.activeElement?.outerHTML.slice(0, 500),
+          dialogOpen: document.querySelector('#modal-site-export').open,
+          actionsOpen: document.querySelector('#project-actions').open,
+          hasFocus: document.hasFocus(),
+        }));
+        throw new Error(`focus ${locale}/${width}: ${JSON.stringify(state)}`, {cause:error});
+      }
       await page.goto('http://lixity.test/empty');
       await page.locator('#project-actions').evaluate(element => {element.open = true;});
       await page.locator('#btn-site-export').click();

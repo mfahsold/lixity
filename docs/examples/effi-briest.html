@@ -7682,8 +7682,12 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
     }
     finally {
       busy = false; sync();
-      if (checking && selectedSerial === selectionSerial && dialog.open &&
-          (document.activeElement === document.body || document.activeElement === dialog)) checkButton.focus();
+      // Some browsers move focus out of a modal when a programmatic download
+      // starts. Restore a usable in-dialog focus only when it was actually lost.
+      if (selectedSerial === selectionSerial && dialog.open &&
+          (document.activeElement === document.body || document.activeElement === dialog)) {
+        (checking ? checkButton : downloadButton).focus();
+      }
     }
   });
   updateProfiles();

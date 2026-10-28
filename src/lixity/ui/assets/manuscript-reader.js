@@ -136,7 +136,7 @@
   var layout = document.getElementById("workspace-reader-layout");
   var overviewAnchor = null, inspectorTarget = null, contextPassage = null, inspectorTrigger = null, origin = null;
   var retainedAnchor = null, requestedAnchor = null, dockOrigin = null, arrangementRevision = 0;
-  var pendingDockAnchor = null, clampedAnchor = null;
+  var pendingDockAnchor = null, clampedAnchor = null, scrollIntentRevision = 0;
   var narrowContext = window.matchMedia("(max-width: 900px)");
   var dockFitFrame = 0;
   function fitContextDock() {
@@ -253,6 +253,18 @@
   window.addEventListener("scroll", function() {
     if (clampedAnchor && Math.abs(window.scrollY - clampedAnchor.scrollY) >= 1) clearClampedAnchor();
   }, {passive:true});
+  // Record user gestures separately from browser scroll anchoring. The frame
+  // cancels only when a gesture also changed the document's scroll position,
+  // so scrolling an independent panel does not cancel manuscript restoration.
+  function scrollIntent() { ++scrollIntentRevision; }
+  window.addEventListener("wheel", scrollIntent, {passive:true});
+  window.addEventListener("touchmove", scrollIntent, {passive:true});
+  document.addEventListener("keydown", function(event) {
+    if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) scrollIntent();
+  });
+  document.addEventListener("pointerdown", function(event) {
+    if (event.target === document.documentElement && event.clientX >= document.documentElement.clientWidth) scrollIntent();
+  }, {passive:true});
   function updateGuideActions() {
     if (!analysisGuide) return;
     var example = analysisGuide.querySelector('[data-analysis-guide-action="example"]');
@@ -298,6 +310,7 @@
     if (clampedAnchor && clampedAnchor.anchor !== anchor) clampedAnchor = null;
     var revision = arrangementRevision;
     var scheduledScrollY = window.scrollY;
+    var scheduledScrollIntent = scrollIntentRevision;
     var scheduledContext = sourceContext(), scheduledHash = anchor.panel.dataset.paragraphSha256;
     requestAnimationFrame(function() {
       if (revision !== arrangementRevision) return;
@@ -309,10 +322,9 @@
       }
       var scrollRoot = document.scrollingElement || document.documentElement;
       var maximum = Math.max(0, scrollRoot.scrollHeight - window.innerHeight);
-      // Reflow can itself clamp an old position at the new document end. A
-      // different position that is not this clamp supersedes the queued restore.
-      var clampedByReflow = scheduledScrollY > maximum + 1 && Math.abs(window.scrollY - maximum) < 1;
-      if (Math.abs(window.scrollY - scheduledScrollY) >= 1 && !clampedByReflow) {
+      // Automatic scroll anchoring is not a reader's gesture. Only a newer
+      // gesture that actually moved this document supersedes the restoration.
+      if (scheduledScrollIntent !== scrollIntentRevision && Math.abs(window.scrollY - scheduledScrollY) >= 1) {
         clampedAnchor = null;
         if (pendingDockAnchor && pendingDockAnchor.revision === revision) pendingDockAnchor = null;
         return;
