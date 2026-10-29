@@ -7,12 +7,11 @@ from typing import Any
 
 from ..diversity import MIN_TOKENS_LD
 from ..format import num as format_num
-from ..format import pct as format_pct
 from ..pacing import HOOK_SHORT_SENTENCE
 from ..showing import MIN_COMPARISON_CHAPTERS
 from ..style_fingerprint import FEATURE_UNITS, FEATURES, MIN_COMPARABLE_WORDS
 from ..style_profile import ChapterProfile
-from .components import esc, help_term, kpi, label, panel_start
+from .components import esc, help_term, kpi, label, panel_formatters, panel_label, panel_start
 
 
 def render_scenes_panel(
@@ -127,11 +126,7 @@ def render_sentence_dist_panel(
     if metrics is None:
         return ""
 
-    def N(value: float, decimals: int = 1) -> str:
-        return format_num(value, language_key, decimals)
-
-    def P(value: float, decimals: int = 1) -> str:
-        return format_pct(value, language_key, decimals)
+    _, N, P = panel_formatters(labels, language_key)
 
     d = metrics.sentence_dist
     rows = [
@@ -161,14 +156,7 @@ def render_dialogue_panel(
     if not dialogue:
         return ""
 
-    def L(key: str) -> str:
-        return esc(label(labels, key))
-
-    def N(value: float, decimals: int = 1) -> str:
-        return format_num(value, language_key, decimals)
-
-    def P(value: float, decimals: int = 1) -> str:
-        return format_pct(value, language_key, decimals)
+    L, N, P = panel_formatters(labels, language_key)
 
     parts: list[str] = [panel_start("dialogue", labels, "panel_dialogue")]
     parts.append('<div class="kpi-row">')
@@ -212,8 +200,7 @@ def render_characters_panel(
     if not (characters and characters.get("figures")):
         return ""
 
-    def L(key: str) -> str:
-        return esc(label(labels, key))
+    L = panel_label(labels)
 
     parts: list[str] = [panel_start("characters", labels, "panel_characters")]
     parts.append(f'<p class="hint">{L("chr_hint")}</p>')
@@ -271,11 +258,7 @@ def render_pacing_panel(
     if not (pacing and pacing.get("chapter_list")):
         return ""
 
-    def L(key: str) -> str:
-        return esc(label(labels, key))
-
-    def N(value: float, decimals: int = 1) -> str:
-        return format_num(value, language_key, decimals)
+    L, N, _ = panel_formatters(labels, language_key)
 
     parts: list[str] = [panel_start("pacing", labels, "panel_pacing")]
     if pacing.get("scenes_are_chapters", False):
@@ -319,8 +302,7 @@ def render_motifs_panel(
     if not (motifs and (motifs.get("motifs") or motifs.get("repeated_phrases") or motifs.get("echoes"))):
         return ""
 
-    def L(key: str) -> str:
-        return esc(label(labels, key))
+    L = panel_label(labels)
 
     parts: list[str] = [panel_start("motifs", labels, "panel_motifs")]
     if motifs.get("motifs"):
@@ -395,11 +377,7 @@ def render_showing_panel(
     if not (showing and showing.get("chapter_list")):
         return ""
 
-    def L(key: str) -> str:
-        return esc(label(labels, key))
-
-    def N(value: float, decimals: int = 1, signed: bool = False) -> str:
-        return format_num(value, language_key, decimals, signed)
+    L, N, _ = panel_formatters(labels, language_key)
 
     showing_chapters = showing["chapter_list"]
     comparable_chapters = [chapter for chapter in showing_chapters if chapter.get("comparable", True)]

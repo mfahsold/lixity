@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from .components import checkbox_field, esc, help_term, label
+from .components import checkbox_field, esc, help_term, panel_label
 
 
 def render_project_modals(
@@ -15,8 +15,7 @@ def render_project_modals(
 ) -> str:
     """Renders the project wizard and research revision modal dialogs."""
 
-    def L(key: str) -> str:
-        return esc(label(labels, key))
+    L = panel_label(labels)
 
     parts: list[str] = []
     parts.append('<dialog class="lixity-modal" id="modal-runtime" closedby="any" aria-labelledby="runtime-title">'

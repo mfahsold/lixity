@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from ..site import docs_url
-from .components import checkbox_field, esc, help_term, label, loading_state
+from .components import checkbox_field, esc, help_term, label, loading_state, panel_label
 
 
 def render_research_panel(
@@ -16,8 +16,7 @@ def render_research_panel(
 ) -> str:
     """Renders the local research archive panel and its tab panes."""
 
-    def L(key: str) -> str:
-        return esc(label(labels, key))
+    L = panel_label(labels)
 
     def form_field(identifier: str, key: str, control: str) -> str:
         return (

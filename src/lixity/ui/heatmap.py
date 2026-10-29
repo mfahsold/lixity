@@ -18,7 +18,15 @@ from ..style_fingerprint import (
     StyleFingerprint,
     z_color,
 )
-from .components import band_chart, checkbox_field, contrast_text, esc, help_term, label
+from .components import (
+    band_chart,
+    checkbox_field,
+    contrast_text,
+    esc,
+    help_term,
+    label,
+    panel_formatters,
+)
 
 FEATURE_HELP_KEYS: dict[str, str] = {
     "asl": "asl",
@@ -167,11 +175,7 @@ def render_heatmap_panel(
     if fingerprint is None or metrics is None or not metrics.chapters:
         return ""
 
-    def L(key: str) -> str:
-        return esc(label(labels, key))
-
-    def N(value: float, decimals: int = 1, signed: bool = False) -> str:
-        return format_num(value, language_key, decimals, signed)
+    L, N, _ = panel_formatters(labels, language_key)
 
     feature_layers = {field: key for key, field in LAYER_FEATURES.items()}
     z_mild = fingerprint.thresholds.z_mild
@@ -354,11 +358,7 @@ def render_style_passport_panel(
     if fingerprint is None:
         return ""
 
-    def L(key: str) -> str:
-        return esc(label(labels, key))
-
-    def N(value: float, decimals: int = 1, signed: bool = False) -> str:
-        return format_num(value, language_key, decimals, signed)
+    L, N, _ = panel_formatters(labels, language_key)
 
     feature_layers = {field: key for key, field in LAYER_FEATURES.items()}
 

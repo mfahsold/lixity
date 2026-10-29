@@ -42,9 +42,9 @@ capture variant.
 | What changed after an edit? | [dashboard-research-review.png](dashboard-research-review.png) | reference: Detailed full-size reference, unsuitable as a small social card. |
 | When are the recorded events placed? | [dashboard-research-timeline.png](dashboard-research-timeline.png) | reference: Long full-size reference; a placed event is not a verified chronology. |
 | Which visual source was retained? | [dashboard-dossier-image.png](dashboard-dossier-image.png) | guide: A visual research source; the invented incident is not verified by this map. |
-| How does a retained map fit on mobile? | [dashboard-dossier-image-mobile.png](dashboard-dossier-image-mobile.png) | reference: A specific responsive visual-source reference, not another lead image. |
-| Can I inspect a source image closely? | [dashboard-dossier-image-zoom.png](dashboard-dossier-image-zoom.png) | guide: Shows the image viewer, not a manuscript fact-check. |
-| Can I retain a visual setting reference? | [dashboard-dossier-photo.png](dashboard-dossier-photo.png) | guide: Setting reference with provenance; not evidence for the fictional scene. |
+| How does a retained map fit on mobile? | [dashboard-dossier-image-mobile.webp](dashboard-dossier-image-mobile.webp) | reference: A specific responsive visual-source reference, not another lead image. |
+| Can I inspect a source image closely? | [dashboard-dossier-image-zoom.webp](dashboard-dossier-image-zoom.webp) | guide: Shows the image viewer, not a manuscript fact-check. |
+| Can I retain a visual setting reference? | [dashboard-dossier-photo.webp](dashboard-dossier-photo.webp) | guide: Setting reference with provenance; not evidence for the fictional scene. |
 | How are evidence, claims and decisions related? | [dashboard-dossier-diagram.png](dashboard-dossier-diagram.png) | guide: An explanatory authored diagram, not an automatically inferred evidence chain. |
 | How do I inspect declared places and journeys? | [dashboard-dossier-geography.png](dashboard-dossier-geography.png) | guide: The demonstration positions and journeys are synthetic. |
 | Can I use Lixity from the terminal? | [cli-analyze.png](cli-analyze.png) | reference: Developer reference; not the lead image for an author-facing introduction. |

@@ -139,7 +139,6 @@ from .revisions import (
     claim_relation_view,
     dossier_withdrawal,
     require_active_dossier_association,
-    resolve_evidence_citation,
     source_updates,
 )
 from .revisions import (
@@ -2290,11 +2289,6 @@ def set_term_profiles(
         ],
     }
 
-
-def _resolve_evidence_citation(
-    repository: Repository, snapshot: Any, ref: Reference
-) -> dict[str, Any]:
-    return resolve_evidence_citation(repository, snapshot, ref)
 
 
 def get_dossier(

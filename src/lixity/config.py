@@ -481,22 +481,6 @@ def load_project_config(start: str | Path | None = None) -> dict[str, Any]:
     return {k: v for k, v in merged.items() if k in TOOL_KEYS}
 
 
-def same_config_scope(project_root: str | Path | None, start: str | Path | None) -> bool:
-    """True when two selectors resolve to the same project-local config scope.
-
-    ``load_project_config`` keeps author and publication only for files directly
-    in the requested directory. Two selectors in that directory therefore read
-    identical configuration, and callers may reuse one result instead of two.
-    """
-    if project_root is None or start is None:
-        return False
-    try:
-        root = Path(project_root).resolve()
-        target = Path(start).resolve()
-    except OSError:
-        return False
-    return (target if target.is_dir() else target.parent) == root
-
 
 #: Threshold keys shared by config resolution and the research analysis.
 THRESHOLD_KEYS: tuple[str, ...] = (

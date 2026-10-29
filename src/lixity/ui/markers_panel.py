@@ -6,7 +6,7 @@ from collections.abc import Mapping, Sequence
 
 from ..markers import Marker
 from ..style_profile import ChapterProfile
-from .components import esc, help_term, label
+from .components import esc, help_term, label, panel_label
 
 
 def render_markers_panel(
@@ -19,8 +19,7 @@ def render_markers_panel(
     if markers is None:
         return ""
 
-    def L(key: str) -> str:
-        return esc(label(labels, key))
+    L = panel_label(labels)
 
     parts: list[str] = ['<section class="panel" id="markers">']
     parts.append(f"<h2>{help_term(labels, 'markers', L('markers'))}</h2>")

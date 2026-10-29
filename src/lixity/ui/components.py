@@ -10,11 +10,13 @@ standard library.
 from __future__ import annotations
 
 import html
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 from urllib.parse import urlsplit
 
 from .._version import __version__
+from ..format import num as format_num
+from ..format import pct as format_pct
 from ..language_data import (
     EN_LABELS,
     GROUP_LABELS,
@@ -52,6 +54,41 @@ def label(labels: Mapping[str, str] | None, key: str) -> str:
 def esc(value: object, quote: bool = True) -> str:
     """HTML-escapes any value (single helper for the whole UI)."""
     return html.escape(str(value), quote=quote)
+
+
+def panel_label(
+    labels: Mapping[str, str] | None,
+) -> Callable[[str], str]:
+    """Bind the shared L helper for surfaces that resolve labels only."""
+
+    def L(key: str) -> str:
+        return esc(label(labels, key))
+
+    return L
+
+
+def panel_formatters(
+    labels: Mapping[str, str] | None,
+    language_key: str,
+) -> tuple[Callable[[str], str], Callable[..., str], Callable[..., str]]:
+    """Bind the shared L/N/P helpers for one rendered measurement panel.
+
+    Every measurement surface used to re-declare the localized label, number
+    and percent closures locally; binding them here keeps one
+    implementation for localization, rounding and percent formatting across
+    the dashboard, narrated panels and the chapter heatmap.
+    """
+
+    def L(key: str) -> str:
+        return esc(label(labels, key))
+
+    def N(value: float, decimals: int = 1, signed: bool = False) -> str:
+        return format_num(value, language_key, decimals, signed)
+
+    def P(value: float, decimals: int = 1) -> str:
+        return format_pct(value, language_key, decimals)
+
+    return L, N, P
 
 
 def contrast_text(background: str) -> str:

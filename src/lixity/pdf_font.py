@@ -14,7 +14,6 @@ instead of producing a document that renders as blank pages.
 from __future__ import annotations
 
 import struct
-import zlib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -685,6 +684,3 @@ def _assemble(tables: dict[bytes, bytes]) -> bytes:
     struct.pack_into(">I", font, head_offset + 8, adjustment)
     return bytes(font)
 
-
-def compress_font(data: bytes) -> bytes:
-    return zlib.compress(data, 9)

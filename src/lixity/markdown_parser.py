@@ -641,11 +641,6 @@ def prose_text(
     return "\n\n".join(prose_paragraphs(content, config, _front_matter=_front_matter))
 
 
-def parse_markdown_file(filepath: str) -> list[dict[str, Any]]:
-    """Reads a Markdown file in a UTF-8-safe way and parses it into semantic blocks."""
-    with open(filepath, encoding="utf-8") as f:
-        return parse_markdown_blocks(f.read())
-
 
 def inline_markdown_to_html(
     text: str,

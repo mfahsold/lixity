@@ -786,9 +786,6 @@ td.flag-excerpt {
 }
 .dim-title { font-weight: var(--weight-strong); }
 .dim-meta { font-size: var(--text-small); color: var(--muted); }
-.dim-loadings { font-size: var(--text-note); color: var(--muted); line-height: 1.45; }
-.dim-loadings b { color: var(--fg); font-weight: 500; }
-
 @media (max-width: 900px) {
   .dim-layout {
     grid-template-columns: 1fr;
@@ -1033,8 +1030,6 @@ mark.search-hit {
 .research-details-body dt { font-weight: var(--weight-semibold); }
 .research-details-body dd { margin: 0 0 .4rem; overflow-wrap: anywhere; }
 .research-passage-actions { margin-top: .5rem; }
-.research-claim-views { margin-top: .8rem; }
-
 .empty-state-note { max-width: 60ch; margin: 0 auto 1.2rem; line-height: 1.5; }
 .recent-projects-heading { display: block; font-size: var(--text-small); font-weight: var(--weight-semibold); margin-bottom: .3rem; }
 .ctl { max-width: 100%; }
@@ -1471,10 +1466,6 @@ button.research-tag {
   border-color: var(--accent);
   color: var(--accent);
 }
-.view-nav-icon {
-  font-size: 1.05rem;
-  line-height: 1;
-}
 .view-pane {
   display: none;
 }
@@ -1491,7 +1482,6 @@ button.research-tag {
 @media (max-width: 480px) {
   .view-navigation { gap: var(--space-1); }
   .view-nav-tab { padding: var(--space-2); font-size: var(--text-control); }
-  .view-nav-icon { display: none; }
 }
 
 /* The interactive workspace has application chrome; exported reports keep
@@ -1717,8 +1707,7 @@ button.research-tag {
   overflow-y: auto;
 }
 .research-claim-statement,
-.research-decision-rationale,
-.research-decision-impact {
+.research-decision-rationale {
   font-size: var(--text-control);
   line-height: 1.5;
   color: var(--fg);

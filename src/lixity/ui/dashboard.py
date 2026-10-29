@@ -14,8 +14,6 @@ from pathlib import Path as _Path
 from typing import Any
 
 from ..diversity import MIN_TOKENS_LD
-from ..format import num as format_num
-from ..format import pct as format_pct
 from ..language import ResolvedLanguage
 from ..pipeline import DocumentAnalysis, paragraph_identity
 from ..site import docs_url
@@ -48,6 +46,7 @@ from .components import (
     license_terms,
     line_label,
     manuscript_pdf_controls,
+    panel_formatters,
     panel_start,
     product_details,
     project_header,
@@ -292,14 +291,7 @@ def render_dashboard(
         else "0"
     )
 
-    def L(key: str) -> str:
-        return esc(label(labels, key))
-
-    def N(value: float, decimals: int = 1, signed: bool = False) -> str:
-        return format_num(value, language_key, decimals, signed)
-
-    def P(value: float, decimals: int = 1) -> str:
-        return format_pct(value, language_key, decimals)
+    L, N, P = panel_formatters(labels, language_key)
 
     html_lang = language_key if language_key not in ("auto", "generic") else "en"
     workspace_labels_json = esc(

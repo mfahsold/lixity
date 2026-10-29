@@ -1546,9 +1546,6 @@ td.flag-excerpt {
 }
 .dim-title { font-weight: var(--weight-strong); }
 .dim-meta { font-size: var(--text-small); color: var(--muted); }
-.dim-loadings { font-size: var(--text-note); color: var(--muted); line-height: 1.45; }
-.dim-loadings b { color: var(--fg); font-weight: 500; }
-
 @media (max-width: 900px) {
   .dim-layout {
     grid-template-columns: 1fr;
@@ -1793,8 +1790,6 @@ mark.search-hit {
 .research-details-body dt { font-weight: var(--weight-semibold); }
 .research-details-body dd { margin: 0 0 .4rem; overflow-wrap: anywhere; }
 .research-passage-actions { margin-top: .5rem; }
-.research-claim-views { margin-top: .8rem; }
-
 .empty-state-note { max-width: 60ch; margin: 0 auto 1.2rem; line-height: 1.5; }
 .recent-projects-heading { display: block; font-size: var(--text-small); font-weight: var(--weight-semibold); margin-bottom: .3rem; }
 .ctl { max-width: 100%; }
@@ -2231,10 +2226,6 @@ button.research-tag {
   border-color: var(--accent);
   color: var(--accent);
 }
-.view-nav-icon {
-  font-size: 1.05rem;
-  line-height: 1;
-}
 .view-pane {
   display: none;
 }
@@ -2251,7 +2242,6 @@ button.research-tag {
 @media (max-width: 480px) {
   .view-navigation { gap: var(--space-1); }
   .view-nav-tab { padding: var(--space-2); font-size: var(--text-control); }
-  .view-nav-icon { display: none; }
 }
 
 /* The interactive workspace has application chrome; exported reports keep
@@ -2477,8 +2467,7 @@ button.research-tag {
   overflow-y: auto;
 }
 .research-claim-statement,
-.research-decision-rationale,
-.research-decision-impact {
+.research-decision-rationale {
   font-size: var(--text-control);
   line-height: 1.5;
   color: var(--fg);
@@ -3964,7 +3953,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .reader-analysis-guide[hidden], .reader-focus .reader-analysis-guide { display: none; }
 .manuscript-reading.workbench-analysis:not(.reader-focus) .reader-secondary-controls { display: flex; flex-wrap: wrap; gap: .5rem; padding-block: .5rem; }
 .reader-focus .reader-secondary-controls { display: none !important; }
-.reader-mode-label { color: var(--muted); font-size: var(--text-small); }
 .reader-control-icon { display: none; }
 .reader-chapter { max-width: 18rem; min-width: 0; flex: 1 1 10rem; }
 .reader-size-controls { display: inline-flex; align-items: center; gap: .35rem; }
@@ -4127,7 +4115,6 @@ body.lixity-workspace.reader-focus { padding-left: 1.5rem; }
 .reader-focus .reader-controls { display: none; }
 @media (max-width: 600px) {
   .manuscript-reader-controls { gap: .35rem; padding-block: .35rem; }
-  .reader-mode-label { display: none; }
   .reader-chapter { flex: 1 1 8rem; width: 8rem; max-width: none; }
   .reader-size-controls { margin-left: auto; }
   .reader-compact-control { width: 44px; min-height: 44px; padding: .4rem; justify-content: center; }
@@ -4200,7 +4187,6 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 .manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .strip { display: flex; margin: .6rem 0 1.25rem; }
 .manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .chapter-head .meta { display: block; margin-top: .4rem; font-size: var(--text-note); }
 .manuscript-reading.workbench-analysis:not(.workbench-overview) .toolbar > label { display: inline-flex !important; }
-.manuscript-reading .ptext.analysis-jump { outline: 2px solid var(--accent); }
 .workspace-shell > #workbench-return { white-space: normal; }
 .workspace-shell > #workbench-return[hidden] { display: none; }
 .workbench-thread { display: grid; gap: var(--space-2); min-width: 0; padding-block: var(--space-3); border-top: 1px solid var(--line); }
@@ -4705,7 +4691,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 <div id="publication-entries"></div>
 <noscript><p>Enable JavaScript to select reading progress and open the context.</p></noscript></aside></div>
 <details class="panel"><summary>About this synthetic reading example</summary><p>The people, records and incident are invented. Reveal context deliberately with the reading-progress control. All content included in a static file remains inspectable; chapter caps remove later material before export.</p><p>The map and harbour view are public-domain setting references from circa 1900, not evidence of the fictional 1923 incident. <a href="../../assets/research/sources.json">Image credits and reviewed provenance</a>. The ordinary product export has the same reading interface and no visitor counter.</p></details><footer><span class="version-badge">Version 0.7.7</span><a class="license-badge" href="#license-terms">Open source · AGPL-3.0</a></footer></div>
-<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3A2bbcf6e3-af9f-410c-9abc-b9840a892bd1\u0026version_id=urn%3Auuid%3A23c2e4ae-d119-429f-9d48-c24282a15f64":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3A045a723d-4aec-4cc3-8d13-db70853bdd4c\u0026source_id=urn%3Auuid%3A2bbcf6e3-af9f-410c-9abc-b9840a892bd1\u0026version_id=urn%3Auuid%3A23c2e4ae-d119-429f-9d48-c24282a15f64":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3Aa33009ff-f257-479e-a9db-91e8a70de451\u0026version_id=urn%3Auuid%3A72ea7574-5057-4952-a005-848a88bfc3aa":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3A045a723d-4aec-4cc3-8d13-db70853bdd4c\u0026source_id=urn%3Auuid%3Aa33009ff-f257-479e-a9db-91e8a70de451\u0026version_id=urn%3Auuid%3A72ea7574-5057-4952-a005-848a88bfc3aa":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/1","mode":"companion","profile":"readers","project_id":"urn:uuid:045a723d-4aec-4cc3-8d13-db70853bdd4c","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":3,"chapters":[{"number":1},{"number":2},{"number":3}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:4ae949e7-80ea-4fb3-aada-0ece0372eb2f","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:65f25581-323a-4c5d-9d57-b5adea2220a4","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:2bbcf6e3-af9f-410c-9abc-b9840a892bd1/urn:uuid:23c2e4ae-d119-429f-9d48-c24282a15f64)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:045a723d-4aec-4cc3-8d13-db70853bdd4c","source_id":"urn:uuid:2bbcf6e3-af9f-410c-9abc-b9840a892bd1","source_version_id":"urn:uuid:23c2e4ae-d119-429f-9d48-c24282a15f64","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3A045a723d-4aec-4cc3-8d13-db70853bdd4c\u0026source_id=urn%3Auuid%3A2bbcf6e3-af9f-410c-9abc-b9840a892bd1\u0026version_id=urn%3Auuid%3A23c2e4ae-d119-429f-9d48-c24282a15f64","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:65f25581-323a-4c5d-9d57-b5adea2220a4","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:a33009ff-f257-479e-a9db-91e8a70de451/urn:uuid:72ea7574-5057-4952-a005-848a88bfc3aa)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:045a723d-4aec-4cc3-8d13-db70853bdd4c","source_id":"urn:uuid:a33009ff-f257-479e-a9db-91e8a70de451","source_version_id":"urn:uuid:72ea7574-5057-4952-a005-848a88bfc3aa","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3A045a723d-4aec-4cc3-8d13-db70853bdd4c\u0026source_id=urn%3Auuid%3Aa33009ff-f257-479e-a9db-91e8a70de451\u0026version_id=urn%3Auuid%3A72ea7574-5057-4952-a005-848a88bfc3aa","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:4ae949e7-80ea-4fb3-aada-0ece0372eb2f","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:4ae949e7-80ea-4fb3-aada-0ece0372eb2f","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null}],"identity":"6611c468b940c57eaa4b27a48ac9fa964b8250852f5773ee85734381597a8929"}}</script>
+<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3A9fba90b8-1b29-47fe-9e5b-61eb6f5e5e79\u0026version_id=urn%3Auuid%3A8a56c8c1-8352-447c-8a43-e0900ef53892":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3Ac718bde6-12df-4c15-8beb-915f59062b6b\u0026source_id=urn%3Auuid%3A9fba90b8-1b29-47fe-9e5b-61eb6f5e5e79\u0026version_id=urn%3Auuid%3A8a56c8c1-8352-447c-8a43-e0900ef53892":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3Ae4369c07-1abc-475b-9476-4b21fc46f4da\u0026version_id=urn%3Auuid%3A9a257700-8abb-413c-bf30-878e37b0769d":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3Ac718bde6-12df-4c15-8beb-915f59062b6b\u0026source_id=urn%3Auuid%3Ae4369c07-1abc-475b-9476-4b21fc46f4da\u0026version_id=urn%3Auuid%3A9a257700-8abb-413c-bf30-878e37b0769d":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/1","mode":"companion","profile":"readers","project_id":"urn:uuid:c718bde6-12df-4c15-8beb-915f59062b6b","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":3,"chapters":[{"number":1},{"number":2},{"number":3}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:16d23260-33ff-40f3-902a-6a608b59c319","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:61f86174-4eca-4e38-9599-245c34f14e63","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:9fba90b8-1b29-47fe-9e5b-61eb6f5e5e79/urn:uuid:8a56c8c1-8352-447c-8a43-e0900ef53892)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:c718bde6-12df-4c15-8beb-915f59062b6b","source_id":"urn:uuid:9fba90b8-1b29-47fe-9e5b-61eb6f5e5e79","source_version_id":"urn:uuid:8a56c8c1-8352-447c-8a43-e0900ef53892","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3Ac718bde6-12df-4c15-8beb-915f59062b6b\u0026source_id=urn%3Auuid%3A9fba90b8-1b29-47fe-9e5b-61eb6f5e5e79\u0026version_id=urn%3Auuid%3A8a56c8c1-8352-447c-8a43-e0900ef53892","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:61f86174-4eca-4e38-9599-245c34f14e63","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:e4369c07-1abc-475b-9476-4b21fc46f4da/urn:uuid:9a257700-8abb-413c-bf30-878e37b0769d)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:c718bde6-12df-4c15-8beb-915f59062b6b","source_id":"urn:uuid:e4369c07-1abc-475b-9476-4b21fc46f4da","source_version_id":"urn:uuid:9a257700-8abb-413c-bf30-878e37b0769d","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3Ac718bde6-12df-4c15-8beb-915f59062b6b\u0026source_id=urn%3Auuid%3Ae4369c07-1abc-475b-9476-4b21fc46f4da\u0026version_id=urn%3Auuid%3A9a257700-8abb-413c-bf30-878e37b0769d","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:16d23260-33ff-40f3-902a-6a608b59c319","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:16d23260-33ff-40f3-902a-6a608b59c319","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null}],"identity":"75e0e223a369f85bfba696f33e82de289fbd44e34d5226eccf76b98163bbc1c9"}}</script>
 <script>// A prepared website has no server: every API read belongs to its inline snapshot.
 (function () {
   "use strict";

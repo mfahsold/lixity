@@ -112,11 +112,11 @@ In the [Warehouse 4 demo project's Research view](../demo/report.html#research-m
 
 ![Retained historical map in the Hamburg research dossier, with its source and provenance](../screenshots/dashboard-dossier-image.png)
 
-*Historical visual references stay attached to exact source versions. [Mobile map view](../screenshots/dashboard-dossier-image-mobile.png) · [Harbour photochrom](../screenshots/dashboard-dossier-photo.png) · [Places and journeys](../screenshots/dashboard-dossier-geography.png) · [Credits and file hashes](../assets/research/sources.json).*
+*Historical visual references stay attached to exact source versions. [Mobile map view](../screenshots/dashboard-dossier-image-mobile.webp) · [Harbour photochrom](../screenshots/dashboard-dossier-photo.webp) · [Places and journeys](../screenshots/dashboard-dossier-geography.png) · [Credits and file hashes](../assets/research/sources.json).*
 
 Use **Places and routes** in the dossier editor for named points, paths and areas. In the local app, maps open with OpenStreetMap; turn off the background or choose the numbered sketch for offline use. Exported reading websites keep their map geometry offline and make no tile requests. Tile requests disclose the viewed area and client IP to the provider and stop outside the visible map/project context. The view explains its measurements and limits; historical map images remain separate evidence. See [geography and v8 compatibility](../research/USAGE.md#keep-places-and-journeys-in-a-dossier).
 
-Images and rendered diagrams share a [local zoom viewer](../screenshots/dashboard-dossier-image-zoom.png). [Mermaid diagrams](../screenshots/dashboard-dossier-diagram.png) retain their source; restricted or unsupported syntax stays readable as source. No CDN or diagram upload is required.
+Images and rendered diagrams share a [local zoom viewer](../screenshots/dashboard-dossier-image-zoom.webp). [Mermaid diagrams](../screenshots/dashboard-dossier-diagram.png) retain their source; restricted or unsupported syntax stays readable as source. No CDN or diagram upload is required.
 
 ## Search sources and current notes
 
