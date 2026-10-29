@@ -13,6 +13,7 @@ from ..config import load_project_config
 from ..io import FileUtils
 from ..markdown_parser import split_chapters
 from ..pipeline import document_paragraph_texts, resolve_document_config
+from ..speech import MAX_SEGMENT_CHARS
 from ..speech_cache import project_audio_cache
 from ..speech_direction import (
     Direction,
@@ -33,6 +34,7 @@ from ..speech_profiles import (
     resolve_audio_profile,
 )
 from ..speech_references import references_for_plan, references_unchanged
+from ..speech_status import audio_status
 from ._base import ResponseMixin
 from .pdf_context import project_settings_token
 
@@ -128,20 +130,24 @@ class SpeechRoutesMixin(ResponseMixin):
                     }
                     for number, title, _body in (split_chapters(text, document) or [(1, "", text)])
                 ]
-                self._json(
-                    {
-                        "ok": True,
-                        "schema_version": "lixity-speech-local/1",
-                        "settings": settings,
-                        "configuration_error": configuration_error,
-                        "requires_migration": requires_audio_migration(config.get("audio")),
-                        "capabilities": audio_capabilities(),
-                        "direction": self._direction_view(),
-                        "chapters": chapters,
-                        "project_token": query["project_token"],
-                        "source_sha256": digest,
-                    }
-                )
+                response = {
+                    "ok": True,
+                    "schema_version": "lixity-speech-local/1",
+                    "settings": settings,
+                    "configuration_error": configuration_error,
+                    "requires_migration": requires_audio_migration(config.get("audio")),
+                    "capabilities": audio_capabilities(),
+                    "direction": self._direction_view(),
+                    "chapters": chapters,
+                    "project_token": query["project_token"],
+                    "source_sha256": digest,
+                }
+            # Probe fixed loopback endpoints without holding the workspace lock.
+            # A worker status is a snapshot, not a promise of later readiness.
+            response["workers"] = audio_status()["targets"]
+            with self._workspace_lock:
+                self._speech_bound(query)
+                self._json(response)
         except (OSError, ValueError, RuntimeError, UserWarning) as exc:
             self._speech_error(exc)
 
@@ -241,15 +247,21 @@ class SpeechRoutesMixin(ResponseMixin):
                                          chapter=payload["chapter"], project_config=settings)
                 if payload["mode"] == "preview":
                     selected = payload.get("paragraph")
-                    if selected:
-                        plan = [row for row in plan if row.anchor == selected]
-                        if not plan:
-                            raise ValueError("Choose a displayed spoken paragraph")
-                        if sum(len(row.text) for row in plan) > 6000:
-                            raise ValueError("Passage preview exceeds 6000 characters; render the chapter")
-                        context["truncated"] = False
-                    else:
-                        plan = next(([row] for row in plan if row.anchor), plan[:1])
+                    if not selected:
+                        selected = next((row.anchor for row in plan if row.anchor), None)
+                    if selected is None:
+                        raise ValueError("No anchored paragraph or list item found at the selected line or chapter; quote blocks cannot currently be selected for preview")
+                    plan = [row for row in plan if row.anchor == selected]
+                    if not plan:
+                        raise ValueError("Choose a displayed spoken paragraph")
+                    passage = next((item["text"] for item in view["passages"] if item["anchor"] == selected), None)
+                    if passage is None:
+                        raise ValueError("The selected passage changed; choose it again")
+                    context["excerpt"] = (passage[:MAX_SEGMENT_CHARS].rstrip() + "…"
+                                          if len(passage) > MAX_SEGMENT_CHARS else passage)
+                    context["truncated"] = False
+                    if sum(len(row.text) for row in plan) > 6000:
+                        raise ValueError("Passage preview exceeds 6000 characters; render the chapter")
                 context["direction_sha256"] = view["direction_sha256"]
                 root = self.get_author_project_root()
                 if root is None:

@@ -2,7 +2,8 @@
 
 Launch settings persist separately from process ownership. A child records
 readiness only after its own HTTP socket is bound; another listener cannot make
-a launch succeed. Runtime records and logs never contain manuscript text.
+a launch succeed. Runtime records omit manuscript text; captured stderr may
+include contextual details from other components.
 """
 
 from __future__ import annotations

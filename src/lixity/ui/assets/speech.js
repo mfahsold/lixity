@@ -3,7 +3,7 @@
   "use strict";
   var body = document.body, settingsForm = document.getElementById("settings-form");
   if (body.dataset.speechCapable !== "true" || body.dataset.readOnly === "true" || !settingsForm) return;
-  var dialog, fields = {}, settings, capabilities, generation = 0, job = null, timer, openedContext, paragraph;
+  var dialog, fields = {}, settings, capabilities, workers, generation = 0, openSequence = 0, job = null, timer, openedContext, paragraph;
   var executionTarget = "local", migrationRequired = false, direction, savedDirectionView, lastPreset = "Ryan", mode = "profiles", editingPronunciation = null;
   var savedSettings = null, profilesDirty = false, profileSaving = false;
   var specialPronunciations = Object.create(null);
@@ -58,6 +58,41 @@
     fields.progress.hidden = true;
     if (fields.plan) { fields.plan.replaceChildren(); fields.plan.hidden = true; }
   }
+  function updateWorkerStatus() {
+    if (!fields.worker_status || !fields.engine || !capabilities) return;
+    var target = fields.target.value || "local", cap = capabilities[fields.engine.value];
+    var worker = Array.isArray(workers) ? workers.find(function(item) { return item.target === target; }) : null;
+    var args = {target: label("target_" + target)};
+    var knownModel = worker && Object.values(capabilities).find(function(item) { return item.model === worker.model; });
+    var key = "unknown";
+    if (worker && worker.state === "starting") key = "starting";
+    else if (worker && worker.state === "unavailable") key = "unavailable";
+    else if (worker && worker.state === "ready" && knownModel && cap) {
+      args.model = knownModel.name;
+      key = worker.model === cap.model ? "match" : "mismatch";
+    }
+    fields.worker_status.textContent = uiFormat("speech_worker_" + key, args);
+  }
+  function updateModelFields() {
+    var designed = fields.engine.value === "qwen3-design", referenced = fields.engine.value === "qwen3-base";
+    var descriptionPresent = Boolean(fields.voice_description.value.trim());
+    var referencePresent = Boolean(fields.reference_id.value.trim());
+    var instructionPresent = Boolean(fields.instructions.value.trim());
+    fields.voice_description.closest("label").hidden = !designed && !descriptionPresent;
+    fields.voice_description.disabled = !designed && !descriptionPresent;
+    fields.voice_description.required = designed;
+    fields.voice_description.setCustomValidity(!designed && descriptionPresent ? label("model_clear_description") : "");
+    fields.reference_id.closest("label").hidden = !referenced && !referencePresent;
+    fields.reference_id.disabled = !referenced && !referencePresent;
+    fields.reference_id.required = referenced;
+    fields.reference_id.setCustomValidity(!referenced && referencePresent ? label("model_clear_reference") : "");
+    fields.instructions.closest("label").hidden = referenced && !instructionPresent;
+    fields.instructions.disabled = referenced && !instructionPresent;
+    fields.instructions.setCustomValidity(referenced && instructionPresent ? label("model_clear_instructions") : "");
+    fields.model_conflict.textContent = [fields.voice_description, fields.reference_id, fields.instructions]
+      .filter(function(input) { return input.validity.customError; }).map(function(input) { return input.validationMessage; }).join(" ");
+    fields.model_conflict.hidden = !fields.model_conflict.textContent;
+  }
   function voiceControls() {
     var cap = capabilities[fields.engine.value];
     if (!cap) return;
@@ -67,26 +102,22 @@
     options(fields.language, cap.languages.map(function(value) { return [value, languageName(value)]; }), language);
     var voices = Object.entries(cap.voices).filter(function(pair) { return pair[1].languages.includes(fields.language.value); });
     options(fields.voice, designed ? [["design", "VoiceDesign"]] : voices.map(function(pair) { return [pair[0], pair[1].name]; }), designed ? "design" : voice);
-    fields.voice.closest("label").hidden = designed;
-    fields.voice.disabled = designed;
-    fields.voice_description.closest("label").hidden = !designed;
-    fields.voice_description.disabled = !designed;
-    fields.voice_description.required = designed;
-    fields.reference_id.closest("label").hidden = !referenced;
-    fields.reference_id.disabled = !referenced;
-    fields.reference_id.required = referenced;
+    fields.voice.closest("label").hidden = designed || referenced;
+    fields.voice.disabled = designed || referenced;
+    updateModelFields();
     fields.reference_hint.hidden = !referenced;
     fields.voice_hint.hidden = designed || referenced;
     fields.design_hint.hidden = !designed;
     fields.speed.min = String(cap.speed.minimum);
     fields.speed.max = String(cap.speed.maximum);
-    fields.model.textContent = cap.name;
+    fields.model.textContent = label(designed ? "model_design_hint" : referenced ? "model_base_hint" : "model_preset_hint");
     options(fields.target, cap.targets.map(function(value) { return [value, label("target_" + value)]; }),
       cap.targets.includes(executionTarget) ? executionTarget : cap.targets[0]);
     fields.target.disabled = cap.targets.length < 2;
-    fields.target.closest("label").hidden = mode === "profiles" || fields.target.disabled;
+    fields.target.closest("label").hidden = fields.target.disabled;
     fields.runtime_hint.textContent = label(fields.target.value === "jetson" ? "jetson_hint" : "runtime_hint");
     fields.reuse.closest("label").hidden = mode !== "output";
+    updateWorkerStatus();
   }
   function loadProfile() {
     invalidate();
@@ -94,7 +125,9 @@
     var profile = settings.profiles[settings.selected];
     lastPreset = profile.engine === "qwen3" ? profile.voice : "Ryan";
     ["name", "instructions", "speed", "paragraph_pause", "scene_pause"].forEach(function(key) { fields[key].value = profile[key]; });
-    options(fields.engine, Object.keys(capabilities).filter(function(key) { return key === "qwen3" || key === "qwen3-design" || key === "qwen3-base"; }).map(function(key) { return [key, capabilities[key].name]; }), profile.engine);
+    options(fields.engine, Object.keys(capabilities).filter(function(key) { return key === "qwen3" || key === "qwen3-design" || key === "qwen3-base"; }).map(function(key) {
+      return [key, label(key === "qwen3" ? "model_preset" : key === "qwen3-design" ? "model_design" : "model_base")];
+    }), profile.engine);
     fields.voice_description.value = profile.voice_description || "";
     fields.reference_id.value = profile.reference_id || "";
     options(fields.language, [], profile.language); options(fields.voice, [], profile.voice); voiceControls();
@@ -128,6 +161,10 @@
   }
   function readProfile() {
     if (pronunciationPending()) throw new Error(label("pronunciation_pending"));
+    var conflict = [fields.voice_description, fields.reference_id, fields.instructions].find(function(input) { return input.validity.customError; });
+    if (conflict) throw new Error(conflict.validationMessage);
+    if (fields.engine.value === "qwen3-base" && !fields.reference_id.checkValidity()) throw new Error(label("model_need_reference"));
+    if (fields.engine.value === "qwen3-design" && !fields.voice_description.value.trim()) throw new Error(label("model_need_description"));
     var replacements = pronunciationEntries();
     var profile = {name: fields.name.value.trim(), engine: fields.engine.value, language: fields.language.value,
       voice: fields.voice.value,
@@ -247,12 +284,13 @@
       var profile = readProfile(); invalidate(); var serial = generation;
       fields.preview.disabled = fields.chapter_render.disabled = true;
       status(label("state_pending"));
-      var payload = Object.assign(tokens(), {mode: mode, chapter: Number(fields.chapter.value), profile: profile, target: fields.target.value || "local"});
+      var payload = Object.assign(tokens(), {mode: mode, chapter: Number(fields.chapter.value), profile: profile,
+        target: fields.target.value || "local", ignore_direction: fields.ignore_direction.checked});
       if (mode === "preview" && paragraph) payload.paragraph = paragraph.identity;
       if (mode === "chapter") {
-        if (direction.dirty()) throw new Error(label("direction_save_first"));
+        if (direction.dirty() && !fields.ignore_direction.checked) throw new Error(label("direction_save_first"));
         payload.fresh_audio = !fields.reuse.checked;
-      } else {
+      } else if (!fields.ignore_direction.checked) {
         var draft = direction.draft(); if (draft) { payload.draft_direction = draft; var replacement=direction.replacement(); if (replacement) payload.draft_replace_id=replacement; }
       }
       fields.context.textContent = label("target_" + payload.target) + " · " + (mode === "preview" ? label(paragraph ? "paragraph_preview" : "first_preview") : label("chapter_render")) + " · " + fields.chapter.selectedOptions[0].textContent +
@@ -316,23 +354,47 @@
     fields.status = node("p", content, "ctl-status"); fields.status.setAttribute("role", "status"); fields.status.setAttribute("aria-live", "polite");
     var row = node("div", content, "row"); field(row, "profile", "select"); fields.create = button(row, "create", create);
     fields.remove_profile = button(row, "remove_profile", removeProfile);
+    field(content, "target", "select"); fields.target.closest("label").hidden = true;
+    var targetHint = node("span", fields.target.closest("label"), "ctl-note", label("target_scope"));
+    targetHint.id = "speech-target-hint"; fields.target.setAttribute("aria-describedby", targetHint.id);
+    fields.target.addEventListener("change", function() {
+      executionTarget = fields.target.value; invalidate();
+      fields.runtime_hint.textContent = label(executionTarget === "jetson" ? "jetson_hint" : "runtime_hint");
+      updateWorkerStatus();
+    });
+    fields.worker_status = node("p", content, "ctl-note"); fields.worker_status.id = "speech-worker-status";
+    fields.worker_status.setAttribute("aria-live", "polite");
+    fields.worker_refresh = button(content, "worker_refresh", async function() {
+      var sequence = openSequence; fields.worker_refresh.disabled = true;
+      function currentOpen() { return sequence === openSequence && dialog.open && openedContext === context(); }
+      try { var data = await request("speech"); if (currentOpen()) { workers = data.workers; updateWorkerStatus(); } }
+      catch (_) { if (currentOpen()) { workers = null; updateWorkerStatus(); } }
+      finally { if (currentOpen()) fields.worker_refresh.disabled = false; }
+    });
     fields.editor = node("fieldset", content, "settings-section");
     node("legend", fields.editor, "", label("delivery"));
-    fields.model = node("p", fields.editor, "ctl-note");
     var grid = node("div", fields.editor, "settings-grid");
     field(grid, "name").maxLength = 100; fields.name.required = true;
     field(grid, "engine", "select");
+    fields.model = node("span", fields.engine.closest("label"), "ctl-note"); fields.model.id = "speech-model-hint";
     ["language", "voice"].forEach(function(key) { field(grid, key, "select"); });
+    fields.engine.setAttribute("aria-describedby", "speech-model-hint speech-worker-status");
+    fields.model_conflict = node("p", fields.editor, "ctl-note"); fields.model_conflict.setAttribute("aria-live", "polite"); fields.model_conflict.hidden = true;
     fields.voice_hint = node("p", fields.editor, "ctl-note", label("voice_hint"));
     field(fields.editor, "voice_description", "textarea").maxLength = 2000;
     fields.design_hint = node("p", fields.editor, "ctl-note", label("design_hint"));
+    fields.design_hint.id = "speech-design-hint"; fields.voice_description.setAttribute("aria-describedby", fields.design_hint.id);
     var reference = field(fields.editor, "reference_id"); reference.maxLength = 64; reference.pattern = "[0-9a-f]{64}";
     fields.reference_hint = node("p", fields.editor, "ctl-note", label("reference_hint"));
+    fields.reference_hint.id = "speech-reference-hint"; reference.setAttribute("aria-describedby", fields.reference_hint.id);
     var speed = field(grid, "speed", "number"); speed.step = "any"; speed.required = true;
     var speedHint = node("span", speed.closest("label"), "ctl-note", label("speed_hint"));
     speedHint.id = "speech-speed-hint"; speed.setAttribute("aria-describedby", speedHint.id);
     ["paragraph_pause", "scene_pause"].forEach(function(key) { var el = field(grid, key, "number"); el.min = "0"; el.max = "10"; el.step = "any"; el.required = true; });
     field(fields.editor, "instructions", "textarea").maxLength = 2000;
+    [fields.voice_description, fields.reference_id, fields.instructions].forEach(function(input) {
+      input.addEventListener("input", updateModelFields);
+    });
     var lexicon = node("details", fields.editor, "settings-section"); lexicon.id = "speech-lexicon";
     node("summary", lexicon, "", label("pronunciations"));
     var searchRow = node("div", lexicon, "row"), search = field(searchRow, "pronunciation_search", "search");
@@ -361,11 +423,11 @@
       selected:function(p) { paragraph={identity:p.anchor,chapter:p.chapter}; fields.chapter.value=String(p.chapter); }
     });
     fields.runtime_hint = node("p", content, "ctl-note", label("runtime_hint")); fields.runtime_hint.id = "speech-runtime-hint";
-    field(content, "target", "select"); fields.target.closest("label").hidden = true;
-    fields.target.addEventListener("change", function() {
-      executionTarget = fields.target.value; invalidate();
-      fields.runtime_hint.textContent = label(executionTarget === "jetson" ? "jetson_hint" : "runtime_hint");
-    });
+    var ignore = node("label", content, "form-checkbox"); ignore.hidden = true;
+    fields.ignore_direction = node("input", ignore); fields.ignore_direction.type = "checkbox"; fields.ignore_direction.id = "speech-ignore-direction";
+    node("span", ignore, "", label("ignore_direction"));
+    fields.ignore_direction.addEventListener("change", invalidate);
+    fields.ignoreLabel = ignore;
     var reuse = node("label", content, "form-checkbox"); reuse.hidden = true;
     fields.reuse = node("input", reuse); fields.reuse.type = "checkbox"; fields.reuse.id = "speech-reuse"; fields.reuse.checked = true;
     node("span", reuse, "", label("reuse"));
@@ -376,9 +438,9 @@
     fields.plan = node("ol", content, "speech-plan"); fields.plan.hidden = true;
     fields.chapter_render = button(actions, "chapter_render", function() { render("chapter"); });
     fields.open_output = button(actions, "output_title", function() {
-      if (direction.dirty()) { status(label("direction_save_first")); return; }
+      if (direction.dirty() && !fields.ignore_direction.checked) { status(label("direction_save_first")); return; }
       invalidate(); mode = "output"; fields.heading.textContent = label("output_title");
-      direction.section.hidden = true; fields.direction_plan.hidden = true;
+      direction.section.hidden = !direction.dirty(); fields.direction_plan.hidden = true;
       fields.open_output.hidden = true; fields.chapter_render.hidden = false;
       fields.reuseLabel.hidden = false;
     });
@@ -424,10 +486,12 @@
   }
   async function open(entry) {
     mode = entry;
+    ++openSequence;
     var fromReader = mode === "reader";
     var readerControl = document.getElementById("reader-chapter");
     var readerChapterIntent = fromReader && readerControl ? (readerControl.value || readerControl.dataset.currentChapter || "") : "";
-    if (!dialog) build(); invalidate(); direction.disable(); settings = null; savedSettings = null; profilesDirty = false; profileSaving = false; openedContext = context(); paragraph = null;
+    if (!dialog) build(); invalidate(); direction.disable(); settings = null; savedSettings = null; workers = null; profilesDirty = false; profileSaving = false; openedContext = context(); paragraph = null;
+    fields.worker_status.textContent = label("loading"); fields.worker_refresh.disabled = true; fields.model.textContent = "";
     fields.profile.disabled = false;
     fields.heading.textContent = label(mode === "profiles" ? "profiles_title" : mode === "output" ? "output_title" : "reader_title");
     fields.editor.hidden = mode !== "profiles";
@@ -437,8 +501,9 @@
     fields.profile_discard.hidden = mode !== "profiles"; fields.profile_discard.disabled = false;
     direction.section.hidden = mode !== "reader";
     fields.chapter.closest("label").hidden = mode === "profiles";
-    fields.target.closest("label").hidden = mode === "profiles";
+    fields.target.closest("label").hidden = true;
     fields.runtime_hint.hidden = mode === "profiles";
+    fields.ignoreLabel.hidden = mode === "profiles"; fields.ignore_direction.checked = false;
     fields.preview.hidden = mode === "profiles";
     fields.direction_plan.hidden = mode !== "reader";
     fields.chapter_render.hidden = mode !== "output";
@@ -460,13 +525,14 @@
     }
     fields.context.textContent = ""; fields.reuse.checked = true; fields.reuse.disabled = false; fields.reuse.closest("label").hidden = true;
     fields.editor.querySelectorAll("input, textarea").forEach(function(input) { input.value = ""; });
-    ["profile", "language", "voice", "chapter"].forEach(function(key) { fields[key].replaceChildren(); });
+    ["profile", "engine", "language", "voice", "chapter"].forEach(function(key) { fields[key].replaceChildren(); });
     dialog.showModal(); status(label("loading")); fields.editor.disabled = true; fields.save.disabled = fields.create.disabled = fields.preview.disabled = fields.chapter_render.disabled = true;
     var serial = generation;
     try {
       var data = await request("speech"); if (!valid(serial)) return;
       migrationRequired = data.requires_migration === true;
-      settings = data.settings || {schema_version: "lixity-audio-settings/1", selected: "", profiles: {}}; capabilities = data.capabilities;
+      settings = data.settings || {schema_version: "lixity-audio-settings/1", selected: "", profiles: {}}; capabilities = data.capabilities; workers = data.workers;
+      fields.worker_refresh.disabled = false;
       savedSettings = JSON.parse(JSON.stringify(settings));
       fields.model.textContent = capabilities.qwen3.name;
       var matchedChapter = paragraph && data.chapters.find(function(chapter) {
@@ -478,7 +544,7 @@
       options(fields.chapter, data.chapters.map(function(chapter) { return [String(chapter.number), chapter.number + ". " + chapter.title]; }), selectedChapter);
       if (paragraph && !data.chapters.some(function(chapter) { return Number(fields.chapter.value) === chapter.number && paragraph.identity.start_line >= chapter.start_line && paragraph.identity.end_line <= chapter.end_line; })) paragraph = null;
       profileOptions(); loadProfile();
-      fields.target.closest("label").hidden = mode === "profiles" || fields.target.disabled;
+      fields.target.closest("label").hidden = fields.target.disabled;
       fields.reuseLabel.hidden = mode !== "output";
       savedDirectionView = data.direction || null;
       if (data.direction) {
@@ -488,7 +554,12 @@
       if (migrationRequired) direction.disable();
       status(data.configuration_error || ""); fields.save.disabled = migrationRequired || !settings.selected;
       fields.context.textContent = label(paragraph ? "paragraph_preview" : "first_preview");
-    } catch (error) { if (valid(serial)) status(error.message); }
+    } catch (error) {
+      if (valid(serial)) {
+        fields.worker_status.textContent = uiFormat("speech_worker_unknown", {target: label("target_" + (fields.target.value || "local"))});
+        status(error.message);
+      }
+    }
   }
   button(settingsForm, "profiles_title", function() { open("profiles"); }).id = "settings-speech";
   button(settingsForm, "output_title", function() { open("output"); }).id = "settings-speech-output";

@@ -11,6 +11,7 @@ from pathlib import Path
 from secrets import token_hex
 from typing import TYPE_CHECKING, Any
 
+from .log import get_logger, new_speech_diagnostic_id, speech_diagnostic_scope
 from .markdown_parser import split_chapters
 from .pipeline import document_paragraph_texts, paragraph_identity, resolve_document_config
 from .speech import SpeechCancelled, extract_audio_cues, render_speech_audio
@@ -97,6 +98,7 @@ class _Job:
     created: float = field(default_factory=time.monotonic)
     finished: float | None = None
     cancel: threading.Event = field(default_factory=threading.Event)
+    diagnostic_id: str = field(default_factory=new_speech_diagnostic_id)
 
 
 class SpeechJobs:
@@ -110,16 +112,28 @@ class SpeechJobs:
         self._pending: list[str] = []
         self._active: str | None = None
         self._closed = False
+        self._log = get_logger("speech.jobs")
 
     def _prune(self) -> None:
         completed = [job for job in self._jobs.values() if job.state not in ("pending", "running")]
         excess = max(0, len(completed) - MAX_RETAINED_JOBS)
         for index, job in enumerate(completed):
-            if (
+            expired = (
                 job.finished is not None and time.monotonic() - job.finished > JOB_TTL_SECONDS
-            ) or index < excess:
+            )
+            if (expired or index < excess) and self._cleanup(job):
                 self._jobs.pop(job.identifier)
-                job.storage.cleanup()
+
+    def _cleanup(self, job: _Job) -> bool:
+        """Remove temporary files without exposing filesystem errors to diagnostics."""
+        try:
+            job.storage.cleanup()
+        except OSError:
+            job.state = "error"
+            job.message = "Could not remove temporary speech files"
+            self._log.warning("audio_job stage=cleanup id=%s status=failed category=io", job.diagnostic_id)
+            return False
+        return True
 
     def start(
         self,
@@ -155,15 +169,25 @@ class SpeechJobs:
             try:
                 source.write_text(text, encoding="utf-8")
             except OSError:
-                self._jobs.pop(job.identifier)
-                storage.cleanup()
+                job.finished = time.monotonic()
+                if self._cleanup(job):
+                    self._jobs.pop(job.identifier)
                 raise
             self._pending.append(job.identifier)
+            mode = job.context.get("mode")
+            safe_mode = mode if isinstance(mode, str) and mode in ("preview", "chapter") else "unknown"
+            safe_target = job.target if job.target in ("local", "jetson") else "unknown"
+            self._log.info("audio_job stage=queued id=%s mode=%s target=%s", job.diagnostic_id, safe_mode, safe_target)
             threading.Thread(target=self._run, args=(job, source, profile), daemon=True).start()
             return self._report(job)
 
     def _run(self, job: _Job, source: Path, profile: AudioProfile) -> None:
+        with speech_diagnostic_scope(job.diagnostic_id):
+            self._run_scoped(job, source, profile)
+
+    def _run_scoped(self, job: _Job, source: Path, profile: AudioProfile) -> None:
         output = Path(job.storage.name) / "reading.wav"
+        category = "none"
 
         def progress(done: int, total: int) -> None:
             with self._lock:
@@ -178,6 +202,7 @@ class SpeechJobs:
                 self._pending.remove(job.identifier)
                 self._active = job.identifier
                 job.state = "running"
+                self._log.info("audio_job stage=running id=%s", job.diagnostic_id)
             if not job.valid():
                 with self._lock:
                     job.state = "stale"
@@ -200,9 +225,12 @@ class SpeechJobs:
             with self._lock:
                 job.state = "cancelled" if job.cancel.is_set() else "ready" if current else "stale"
         except SpeechCancelled:
+            category = "cancelled"
             with self._lock:
                 job.state = "cancelled"
         except Exception as exc:  # noqa: BLE001 - asynchronous adapter failures must settle the job
+            category = ("io" if isinstance(exc, OSError) else "validation" if isinstance(exc, ValueError)
+                        else "runtime" if isinstance(exc, RuntimeError) else "unexpected")
             with self._lock:
                 job.state = "cancelled" if job.cancel.is_set() else "error"
                 job.message = str(exc)[:500]
@@ -210,6 +238,7 @@ class SpeechJobs:
             try:
                 source.unlink(missing_ok=True)
             except OSError:
+                category = "cleanup"
                 with self._lock:
                     job.state = "error"
                     job.message = "Could not remove the temporary speech source"
@@ -220,8 +249,10 @@ class SpeechJobs:
                     self._active = None
                 self._condition.notify_all()
                 job.finished = time.monotonic()
-                if job.state != "ready" or self._closed:
-                    job.storage.cleanup()
+                if (job.state != "ready" or self._closed) and not self._cleanup(job):
+                    category = "cleanup"
+                self._log.info("audio_job stage=finished id=%s status=%s category=%s duration_ms=%d",
+                               job.diagnostic_id, job.state, category, int((job.finished - job.created) * 1000))
 
     def _find(self, identifier: str, context_key: str) -> _Job:
         self._prune()
@@ -250,9 +281,11 @@ class SpeechJobs:
             job = self._find(identifier, context_key)
             job.cancel.set()
             self._condition.notify_all()
+            self._log.info("audio_job stage=cancel_requested id=%s", job.diagnostic_id)
             if job.state == "ready":
                 job.state = "cancelled"
-                job.storage.cleanup()
+                self._cleanup(job)
+                self._log.info("audio_job stage=invalidated id=%s status=%s reason=cancel", job.diagnostic_id, job.state)
             return self._report(job)
 
     def cancel_stale(self) -> None:
@@ -261,11 +294,17 @@ class SpeechJobs:
         for job in candidates:
             if not job.valid():
                 with self._lock:
+                    was_cancelled = job.cancel.is_set()
                     job.cancel.set()
                     self._condition.notify_all()
+                    if not was_cancelled:
+                        self._log.info("audio_job stage=stale_requested id=%s", job.diagnostic_id)
                     if job.state not in ("pending", "running"):
+                        was_stale = job.state == "stale"
                         job.state = "stale"
-                        job.storage.cleanup()
+                        self._cleanup(job)
+                        if not was_stale:
+                            self._log.info("audio_job stage=invalidated id=%s status=%s reason=context", job.diagnostic_id, job.state)
 
     def audio(self, identifier: str, context_key: str) -> bytes:
         with self._lock:
@@ -286,7 +325,7 @@ class SpeechJobs:
             for job in self._jobs.values():
                 job.cancel.set()
                 if job.state not in ("pending", "running"):
-                    job.storage.cleanup()
+                    self._cleanup(job)
 
     def overview(self) -> list[dict[str, Any]]:
         """Content-free operational observations, never manuscript/job bindings."""

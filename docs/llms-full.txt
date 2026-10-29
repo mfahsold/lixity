@@ -173,14 +173,33 @@ speed requires FFmpeg on the Lixity host.
 
 Version 0.7.7 supports explicit Qwen3-TTS 1.7B VoiceDesign profiles with a
 voice description and a separately configured matching worker. Designed voice
-identity may vary across segments. A separately configured Base worker can reuse
+identity may vary across separately synthesized segments; changing passage
+direction may also affect the voice. Compare short fresh previews before a long
+render. `--no-direction` omits saved passage direction but retains the selected
+profile's instructions, pronunciation, speed and standard pauses. A separately configured Base worker can reuse
 an explicitly saved private audio reference and exact transcript; Base does not
-accept free-form delivery instructions. Assign profiles to passages explicitly.
+accept free-form delivery instructions. A human can record and review a 1–30 second
+mono 24 kHz 16-bit PCM WAV and its exact spoken transcript, register them with
+`audio-reference create`, and audition a short Base preview as described in
+`docs/USAGE.md#experimental-reference-voices`. Model selection does not download
+weights or switch the worker. Assign profiles to passages explicitly.
+On current main, the native preview/chapter dialog offers an initially off option
+to ignore saved and draft passage direction for one render; this also omits
+range voice assignments and pauses, while preserving profile controls and saved
+direction. The corresponding `POST /api/speech-render` field is the strict
+boolean `ignore_direction`.
 
 `audio-status [--project PATH] --json` inspects profiles and
 worker model identities without prose. `read-aloud --preview` or `--preview-line
 N` renders a fresh paragraph; on current main, `--progress` reports segments
 and a coarse remaining-time estimate on stderr (excluding final encoding).
+Current main also logs content-free audio job, render and worker events to the
+existing logger; `LIXITY_SPEECH_LOG_LEVEL=DEBUG` enables per-segment diagnostics
+without enabling other debug branches. Native job/render IDs
+correlate; worker requests have separate IDs and can include an optional,
+untrusted render correlation ID.
+Managed-service stderr is captured, but standalone CLI/worker stderr requires
+separate retention. Segment timings do not measure speaker identity.
 
 ===============================================================================
 ## docs/USAGE.md
@@ -1638,7 +1657,7 @@ not establish accessibility or production compliance.
 
 ### Audio status
 
-`lixity audio-status [--project PATH] [--engine qwen3|qwen3-design] [--json]` inspects the actual fixed local
+`lixity audio-status [--project PATH] [--engine qwen3|qwen3-design|qwen3-base] [--json]` inspects the actual fixed local
 and Jetson workers without synthesis. With an explicit project, it lists saved
 profile identities and compares the selected profile's model with each worker. `--engine` explicitly compares a model variant
 even without a saved profile. `model_matches: null` means no model identity or selected profile is known; it
@@ -1674,6 +1693,19 @@ settings and active direction snapshots during rendering and immediately before
 publishing; changed or unreadable inputs reject the result and preserve an
 existing output. `--no-direction` deliberately excludes the direction ledger.
 
+On current main, the shared audio logger emits a random render ID and job/render
+states at INFO. With `LIXITY_SPEECH_LOG_LEVEL=DEBUG` set before startup it also
+records segment boundaries and timing, requested
+preset/model variant, cache outcome and indicators showing whether effective
+instructions, the voice description or the selected reference changed from the
+previous segment. It does not log their contents or the manuscript. This helps locate a
+change to audition; it does not determine whether the voice actually changed.
+Native jobs and their renders share an ID; a current worker records this ID
+alongside its own request ID when the optional correlation header is present.
+The separate worker and a standalone
+CLI do not automatically write into the managed app's log; see
+[Logs](INSTALLATION.md#logs) for capture, rotation and privacy limitations.
+
 `--chapter` selects a one-based chapter number. Without an explicit file, the
 command uses the selected project's configured manuscript or folder discovery.
 Without saved audio settings, the default is one Qwen narrator using preset
@@ -1684,6 +1716,11 @@ and `ko`: six of the seven analysis languages, with Dutch (`nl`) unsupported.
 Choose a supported speech language explicitly for a Dutch project; there is no
 automatic language or backend fallback. Preset language support does not certify
 native pronunciation. Review the model license before distributing output.
+On current main, explicitly switching an existing VoiceDesign or Base profile
+to CustomVoice also requires an explicit preset, such as `--engine qwen3
+--voice Ryan`. An explicitly supplied reference ID cannot be used with a
+non-Base engine. For Base, clear inherited profile instructions with
+`--instructions ''`; `--no-direction` only omits saved passage directions.
 
 Saved project audio profiles are shared with the CLI. Since v0.7.7, in the
 native interface, open **Project → Voice profiles** to create or edit a profile,
@@ -1704,6 +1741,14 @@ chapter; save or discard any direction draft before switching. Draft
 previews do not save settings. Read-only exports do not offer synthesis or expose
 audio settings. These separated entry points are not in the published 0.7.6 package.
 
+On current main, the preview and chapter controls offer an explicit option to
+ignore passage direction. It is off when the dialog opens. Enabling it omits
+saved passage instructions, voice assignments and range-specific pauses for that
+render; an unsaved direction draft is also omitted from the preview but remains
+in the editor. The selected profile's instructions, pronunciation rules, speed
+and standard pauses still apply. No saved direction is deleted or rewritten.
+For a Base profile, clear any incompatible instructions in the profile as well.
+
 ```bash
 lixity read-aloud --project ./novel --profile narrator -o reading-copy.wav
 lixity read-aloud --project ./novel --profile narrator --chapter 2 -o chapter-2.wav
@@ -1713,6 +1758,14 @@ Choose **Render on → This computer / Configured Jetson** in the dialog,
 or pass `--speech-target local|jetson` to the CLI. This choice applies to that
 render; it is not part of a saved voice profile. The default is local, and an
 unavailable target fails explicitly without switching machines or models.
+On current main, the native audio interface names the choices by how the voice
+is selected: a preset, a description or a reference recording. It also displays
+a point-in-time worker status and compares a known loaded model with the selected
+profile's model. An unreachable worker is unavailable; a missing or unrecognised
+model identity leaves the match unknown. The display neither downloads a checkpoint
+nor switches a worker. Check again before rendering if the worker has changed
+since the status was retrieved. An incompatible delivery instruction remains
+visible when switching to Base; remove it explicitly before saving.
 Jetson sends the selected synthesis text to your configured machine through SSH;
 it does not use a hosted inference provider.
 
@@ -1849,6 +1902,10 @@ audio settings: keep a backup and use a current version to render or edit them.
 
 `qwen3` uses the
 `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` checkpoint and its nine presets.
+Qwen lists the presets' native languages as Chinese, English, Japanese or Korean;
+none is listed as a native German voice. They can still synthesize German, and
+individual pronunciation and accent must be assessed by listening. See Qwen's
+[speaker descriptions](https://github.com/QwenLM/Qwen3-TTS#custom-voice-generate).
 Explicit style instructions, structural pauses and pronunciation settings are
 shared by CLI and UI. Version 0.7.7 also offers separate experimental
 VoiceDesign and reference-based Base checkpoints described below.
@@ -1885,6 +1942,13 @@ profile and its selected target must use the same variant. There is no automatic
 download, fallback, or calibrated native pace control. Identical
 descriptions do not guarantee the same voice across independently generated
 segments. Listen for accent, pronunciation and continuity before a long render.
+The planner can start a separate synthesis at paragraph boundaries, directed
+ranges and the 600-character transport limit; it does not necessarily split
+every sentence. For a single narrator, avoid direction that asks for different
+voice types or named character voices. Even when all ranges use the same saved
+profile, changing the free-text direction can change how VoiceDesign sounds.
+The cache can reproduce a previously generated segment but cannot establish a
+common voice identity across separately generated segments.
 The cache distinguishes the model, voice description and effective direction.
 If passage directions mix model variants, rendering checks cached segments first
 and stops before synthesis when uncached segments require multiple variants.
@@ -1895,24 +1959,90 @@ Cache entries can still be evicted while a render is in progress.
 
 Qwen's [Voice Design then Clone](https://github.com/QwenLM/Qwen3-TTS#voice-design-then-clone)
 workflow creates a short reference with VoiceDesign and reuses it with the
-separately installed Qwen3-TTS 1.7B Base model. Listen to a reference before
-using it. Save only audio you have the right to use, together with its exact
-spoken transcript. Lixity accepts a 1–30 second, mono, 24 kHz, 16-bit PCM WAV
-and a UTF-8 transcript of at most 2,000 characters:
+separately installed Qwen3-TTS 1.7B Base model. Alternatively, record your own
+voice or use another recording you have permission to use. The reference is a
+recording and its exact spoken transcript, not a voice-design prompt. Lixity
+accepts a 1–30 second, mono, 24 kHz, 16-bit PCM WAV and a UTF-8 transcript of
+at most 2,000 characters. A recording may be longer if you select a suitable
+continuous excerpt before creating the reference.
+
+Start and stop the recording yourself. For example, on a Linux desktop with
+PipeWire's `pw-record` and a selected default microphone, the following creates
+a private working directory and records until you press **Ctrl+C**:
 
 ```sh
-lixity audio-reference create --project ./novel --audio reference.wav --transcript-file reference.txt
+mkdir -m 700 voice-work
+pw-record --rate 24000 --channels 1 --format s16 voice-work/recording.wav
 ```
 
-The returned ID identifies an immutable project-local record in
-`.lixity/audio-references/`; include this private audio and transcript in the
-project backup. Creating the same reference again is idempotent. Add a project
-profile with `engine = "qwen3-base"`, `voice = "reference"` and the returned
-`reference_id`, or use `read-aloud --engine qwen3-base --reference-id ID
---instructions ''`. The UI can edit the ID of an existing reference; creation
-is currently a CLI action. Start a worker with `--variant base --model PATH`;
-the chosen local or Jetson worker must actually serve Base. Models are never
-downloaded or switched automatically.
+Choose a new directory and file name; a recording command may overwrite an
+existing file. A graphical recorder may also be used. Keep the audio clear,
+single-speaker and reasonably free of background sound. Listen to it and choose
+an uninterrupted excerpt that begins and ends between spoken phrases. If you
+stumbled, a clean later passage may work; do not transcribe words outside the
+selected excerpt. Audio quality, the speaker's accent and the outcome need a
+human listening check.
+
+For example, with FFmpeg, this command selects seconds 0–20 and converts to the
+required format. The time values are only an example: adjust them to the actual
+recording and listen to the result to ensure they do not cut off words.
+
+```sh
+ffmpeg -ss 0 -i voice-work/recording.wav -t 20 -ac 1 -ar 24000 -c:a pcm_s16le voice-work/reference.wav
+ffprobe -v error -show_entries stream=codec_name,sample_rate,channels:format=duration -of default=noprint_wrappers=1 voice-work/reference.wav
+```
+
+Write exactly what is spoken in the selected excerpt to
+`voice-work/reference.txt` as UTF-8 text, including any spoken changes from a
+prepared script. Listen and review any automatic transcript; transcription can
+mishear names, short words or inflections. Do not include speech outside the
+excerpt. The format check does not establish transcript accuracy or sound quality.
+Then register the reference in an explicit project:
+
+```sh
+lixity audio-reference create --project ./novel --audio voice-work/reference.wav --transcript-file voice-work/reference.txt
+```
+
+The returned JSON `id` identifies an immutable project-local record in
+`.lixity/audio-references/`; include the private reference audio and transcript
+in a protected project backup. The original working files are separate and may
+also contain sensitive voice data. Creating the same reference again is
+idempotent. The UI can edit the ID of an existing reference; creation is
+currently a CLI action.
+
+Install the separate Qwen3-TTS 1.7B Base checkpoint, including its tokenizer,
+in the optional Qwen runtime environment as described in the
+[upstream setup instructions](https://github.com/QwenLM/Qwen3-TTS). The existing
+CustomVoice or VoiceDesign checkpoint cannot serve Base requests. After ensuring
+no render is using the local worker, stop that worker using its process manager
+and start the Base worker from the configured Qwen environment:
+
+```sh
+python -m lixity.speech_qwen --variant base --model /path/to/Base --device cpu --threads 4
+```
+
+The worker binds to `127.0.0.1:8769`; only one process can bind this port. Do not
+stop a render in progress. An operator who replaces an existing worker should
+restart the previous one when returning to its model. Models are never
+downloaded or switched automatically. With the Base worker ready, check the
+requested variant and render a short preview, replacing `REFERENCE_ID` with the
+JSON ID from `audio-reference create`:
+
+```sh
+lixity audio-status --project ./novel --engine qwen3-base
+lixity read-aloud --project ./novel --preview --speech-target local \
+  --engine qwen3-base --voice reference --reference-id REFERENCE_ID \
+  --instructions '' --no-direction --speed 1.0 -o reference-preview.wav
+```
+
+These overrides affect this CLI invocation, not saved project settings. The
+preview retains the selected profile's pronunciation rules and standard pauses;
+`--no-direction` also omits saved passage voice assignments and pauses. On CPU,
+synthesis can take substantially longer than the resulting audio; use a short
+preview and measure on the actual machine. Listen for intelligibility, accent
+and continuity before a longer export. If the reference is suitable, add a
+project profile with `engine = "qwen3-base"`, `voice = "reference"` and the
+returned `reference_id`. Adjust or duplicate pronunciation settings as needed.
 
 Qwen Base does not accept separate delivery instructions. Nonempty profile or
 passage instructions fail rather than being ignored; explicit pauses, speech
@@ -1922,6 +2052,34 @@ their voice assignments. To retain character voices, assign saved Base profiles
 to the intended passage ranges with empty local instructions. No character or
 speaker is inferred automatically. Reusing a reference encourages consistency,
 but accent, identity, naturalness and pronunciation still require listening.
+
+### Check narration continuity before a chapter render
+
+Select a short passage with several sentences and audition the same passage both
+with and without saved direction. For example, replace `12` with a source line
+inside the intended paragraph and use the local worker explicitly:
+
+```sh
+lixity audio-status --project ./novel
+lixity read-aloud --project ./novel --chapter 1 --preview-line 12 --speech-target local -o preview-directed.wav
+lixity read-aloud --project ./novel --chapter 1 --preview-line 12 --speech-target local --no-direction -o preview-without-direction.wav
+```
+
+Both commands need a reachable local worker serving the selected profile's model;
+CPU synthesis can be slow. The comparison keeps the selected profile, its
+pronunciation rules, speed and default pauses. `--no-direction` excludes all saved
+passage directions, including their voice assignments and custom pauses; it does
+not remove the profile's own instructions. Each preview is generated afresh, so
+differences can also reflect sampling and segmentation, not just the direction.
+Listen to several short previews and, if needed, repeat them before drawing a
+conclusion or rendering a chapter. `--plan-only` inspects the segment plan without
+starting the model; its JSON contains private manuscript text and instructions.
+
+If VoiceDesign still drifts, compare a suitable CustomVoice preset or a Base
+profile built from one reviewed reference. CustomVoice presets are not certified
+as native German voices; Base does not interpret free-text delivery direction.
+Neither option guarantees continuity. Changing an instruction only affects new
+renders; an existing WAV is not changed automatically.
 
 ### Passage direction
 
@@ -8165,7 +8323,7 @@ appear as dashboard notes; do not assume all exporters remove them.
 `analyze`/`profile`/`style` do not modify the manuscript. Apply the
 [operating boundaries](#operating-boundaries) before any write.
 
-## 7. Best practices for LLM agent integration
+## 7. Guidance for LLM agent integration
 
 Read active result metadata, preserve units and represent unavailable data
 explicitly. `build` skips unchanged exports; a successful artifact does not imply
@@ -8294,6 +8452,10 @@ not cache; they are validated and bound to job context and cache identity.
 Base profiles and passage ranges reject nonempty delivery instructions. A Base
 worker must be selected explicitly; it does not infer or assign character voices.
 Older installations that do not support the new engine reject these profiles.
+The [reference-voice workflow](USAGE.md#experimental-reference-voices) describes
+human-controlled recording and review, the 1–30 second PCM format, exact
+transcript and an unsaved Base preview. Format and immutable-record checks do
+not verify that the transcript matches the sound or that a voice is suitable.
 
 Removed Piper profiles are rejected with actionable migration guidance. Existing
 Qwen records retain the `/1` wire contract; saved profiles without an explicit
@@ -8329,19 +8491,46 @@ configuration error), backend capabilities and source chapter bounds. A
 model-interpreted delivery and explicit silence, and reports unsupported
 phonemes, SSML and precise rate. It describes the Lixity adapter rather than
 promising model compliance. Existing speech-plan version 1 remains unchanged.
+On current main, the additive `workers` list gives a point-in-time probe for
+`local` and `jetson`, in that order. Each entry contains `target`, `state`
+(`ready`, `starting` or `unavailable`), `transport` (`loopback` or `ssh`),
+`model` (an allowlisted Qwen checkpoint name or null) and `model_matches`
+(always null in this endpoint because it does not supply a comparison model).
+The native UI compares the returned model with the currently selected profile;
+unknown identities stay unknown. A snapshot does not guarantee future readiness,
+and the UI does not switch or download a worker. After validating the workspace,
+the server probes both targets concurrently outside the workspace lock, with a
+1.5-second timeout per target.
 The strict `requires_migration` boolean identifies retained Piper profiles: normal settings
 saves cannot replace them, and the dialog disables replacement controls until
 explicit migration. Unrelated settings saves remain available.
 `POST /api/speech-render` accepts those context fields, `mode: preview|chapter`,
 a positive `chapter`, and either `profile_id` or a validated draft `profile`.
 Optional `fresh_audio` is a strict boolean: true bypasses reuse for that render.
+On current main, optional `ignore_direction` is a strict boolean, default false,
+for both `/api/speech-render` and `/api/speech-plan`.
+When true, both preview and chapter rendering omit saved passage directions,
+including range-specific voice assignments and pauses. A directly supplied
+`draft_direction` may still be applied in a preview subject to its normal
+validation; the native UI omits its draft from the request when the switch is on.
+This is an invocation-only choice: profile instructions,
+pronunciation, speed and standard pauses remain active, and saved direction is
+not modified. The native switch starts off each time its dialog opens.
 Optional `target` is `local` (default) or `jetson`; unavailable targets fail
 explicitly without switching to another machine or model.
 Execution location is per render and is not stored in `audio` voice profiles.
 Preview may include the exact displayed `paragraph` identity (`start_line`,
 `end_line`, `paragraph_sha256`). Browser-provided text, paths and unknown request
-fields are rejected. Preview uses the first bounded supported prose segment; its
-context reports the excerpt and whether more prose follows.
+fields are rejected. On current main, an anchored preview without an explicit
+paragraph selects all planned segments of the first anchored paragraph, just as
+the CLI preview does. Both explicit and implicit anchored previews reject plans
+over 6,000 spoken characters rather than silently shortening them. The context
+excerpt identifies the selected original passage; it is capped at 600 characters
+plus an ellipsis. For an anchored preview, `truncated` is false because the
+selected paragraph is rendered in full, even when its display excerpt is shorter.
+If the chapter has no anchored paragraph or list item, preview fails explicitly;
+quote blocks cannot currently be selected for preview. Chapter renders retain
+their existing handling of headings and quote blocks.
 
 Rendering returns HTTP 202 with `job` (`id`, `state`, `done`, `total`, `message`,
 `context`, plus optional `queue_position`). `GET /api/speech-job` polls it with the same context and `id`. States
@@ -8455,7 +8644,13 @@ explicitly configured VoiceDesign worker, which joins them for Qwen's `instruct`
 The worker's `model` identity is exposed in audio target health. An incompatible
 active model is an error, never an automatic model change or fallback. Existing
 CustomVoice profile serialization and worker request fields remain unchanged.
-The cache identity includes model, description and effective instructions.
+Each directed or transport segment is synthesized separately; identical profile
+identifiers and descriptions do not establish a shared speaker identity. The
+model interprets delivery text together with the voice description, so character
+or voice instructions can alter the result. The cache identity includes model,
+description and effective instructions; it reuses a segment but does not align
+independently generated speaker identities. A `qwen3-base` reference can be
+reused, but Base rejects nonempty text direction and still needs listening review.
 
 
 ## CLI audio status and previews
@@ -8471,3 +8666,24 @@ writes segment counts and a coarse remaining-time estimate to stderr after two
 segments; this estimate excludes final encoding and publication.
 CLI publication checks source, effective settings and active direction snapshots
 throughout rendering and before atomic replacement.
+The `--no-direction` preview is not free of profile instructions, pronunciation,
+speed or standard pauses; it also omits saved passage voice assignments and
+custom pauses. Separate previews can differ due to sampling or segmentation, so
+their audible difference alone does not prove the effect of a single setting.
+
+On current main, the existing `lixity.*` logger records audio job lifecycle and
+render events at INFO; `LIXITY_SPEECH_LOG_LEVEL=DEBUG` enables per-segment events
+without enabling debug for unrelated logger branches. A random operational ID
+correlates native jobs and their nested render; it is distinct from the job access
+identifier. Segment events include allowlisted requested engine and preset, cache
+outcome, duration, changes in effective instruction, voice description or
+reference selection and assembled PCM timeline
+positions, but no source text, instructions, path, reference ID or exception
+message. A separate worker logs model-load and request outcomes with its own IDs.
+Clients may pass the render ID through the optional `X-Lixity-Render-Id` HTTP
+header; the worker accepts only 16 lowercase hexadecimal characters and records
+`unknown` otherwise. This untrusted correlation hint is not authentication.
+The request JSON is unchanged. CLI stdout and versioned JSON
+are unchanged. Service stderr is captured by the managed service, while standalone
+CLI and worker stderr must be retained separately. These diagnostics do not prove
+speaker identity or the loaded model weights behind a cached segment.

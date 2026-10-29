@@ -48,7 +48,7 @@ def test_progress_estimates_remaining_time_after_two_segments(tmp_path, capsys, 
 
     monkeypatch.setattr('lixity.speech_qwen.synthesize_qwen', synthesize)
     assert main(['read-aloud', '--project', str(root), '--no-audio-cache', '--progress', '--speed', '1.0']) == 0
-    lines = capsys.readouterr().err.splitlines()
+    lines = [line for line in capsys.readouterr().err.splitlines() if line.startswith('Audio: ')]
     assert lines[:2] == ['Audio: 0/4', 'Audio: 1/4']
     assert lines[2] == 'Audio: 2/4 (ETA ~20s)'
     assert lines[-1] == 'Audio: 4/4'

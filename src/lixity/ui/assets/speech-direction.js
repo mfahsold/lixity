@@ -4,7 +4,7 @@ window.LixitySpeechDirection = function(parent, h) {
   var view, profiles, selected, selectedPassage, dirty = false, pending = false, revision = 0;
   var section = h.node("fieldset", parent, "settings-section");
   h.node("legend", section, "", h.label("direction_title"));
-  h.node("p", section, "ctl-note", h.label("direction_hint"));
+  var hint = h.node("p", section, "ctl-note", h.label("direction_hint")); hint.id = "speech-direction-hint";
   var passage = h.field(section, "direction_passage", "select");
   var entries = h.field(section, "direction_entries", "select");
   var text = h.field(section, "direction_text", "textarea"); text.readOnly = true; text.rows = 4;
@@ -20,6 +20,7 @@ window.LixitySpeechDirection = function(parent, h) {
   var style = h.field(section, "direction_style", "select");
   h.options(style, [["", h.label("direction_custom")], ["calm", h.label("direction_calm")], ["tense", h.label("direction_tense")], ["whisper", h.label("direction_whisper")]], "");
   var instructions = h.field(section, "direction_instructions", "textarea"); instructions.maxLength = 2000;
+  instructions.setAttribute("aria-describedby", hint.id);
   var grid = h.node("div", section, "settings-grid");
   var before = h.field(grid, "direction_before", "number"), after = h.field(grid, "direction_after", "number");
   [before, after].forEach(function(input) { input.min = "0"; input.max = "10"; input.step = "any"; });
@@ -72,7 +73,7 @@ window.LixitySpeechDirection = function(parent, h) {
   }, true);
   [voice,instructions,before,after].forEach(function(el) { el.addEventListener("input", changed); });
   style.addEventListener("change", function() {
-    var styles = {calm:"Read calmly and clearly, with restrained expression.", tense:"Read with restrained tension and controlled urgency, without shouting.", whisper:"Speak in a quiet whisper while keeping every word intelligible."};
+    var styles = {calm:"Maintain the same voice; read calmly and clearly, with restrained expression.", tense:"Maintain the same voice; read with restrained tension and controlled urgency, without shouting.", whisper:"Maintain the same voice; whisper quietly while keeping every word intelligible."};
     if (styles[style.value]) { instructions.value = styles[style.value]; changed(); }
   });
   async function mutate(deleting) {

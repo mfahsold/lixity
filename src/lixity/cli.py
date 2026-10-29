@@ -115,9 +115,24 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "audio_status_selected": "Selected profile",
         "audio_status_unavailable": "Profile unavailable",
         "audio_status_match": "model match",
+        "audio_status_comparison": "Comparison model",
         "audio_status_unknown": "unknown",
         "audio_status_yes": "yes",
         "audio_status_no": "no",
+        "audio_status_design_hint": "VoiceDesign generates each section independently, so the voice may vary even with the same description. Different direction can also affect the voice. Compare short listening samples. Base can use a reference, but does not accept free-form direction.",
+        "audio_status_base_hint": "Base reuses a voice reference but does not guarantee identical delivery; free-form direction is unsupported. Compare short listening samples.",
+        "audio_no_direction_help": "Ignore saved passage direction; profile, pronunciation, speed and default pauses remain",
+        "audio_instructions_help": "Explicit Qwen delivery instructions (not supported by Base)",
+        "audio_engine_help": "qwen3: preset voices; qwen3-design: described voice; qwen3-base: saved reference. The worker must serve the same model",
+        "audio_voice_help": "CustomVoice presets: {voices}. Qwen lists no German-native preset; audition pronunciation. Base uses reference and VoiceDesign uses design",
+        "audio_base_reference_required": "Qwen Base needs a saved reference: create one with 'lixity audio-reference create' and pass --reference-id ID",
+        "audio_base_instructions_inherited": "Qwen Base cannot use the selected profile's delivery instructions; pass --instructions '' to clear them for this run or select a Base profile. --no-direction only excludes passage directions",
+        "audio_base_instructions_explicit": "Qwen Base does not support delivery instructions; pass --instructions '' or select another model",
+        "audio_design_description_required": "VoiceDesign needs a voice description: pass --voice-description TEXT or select a VoiceDesign profile",
+        "audio_custom_voice_required": "CustomVoice needs a preset voice: pass --voice with a supported preset or select a CustomVoice profile",
+        "audio_reference_wrong_engine": "--reference-id is only supported by Qwen Base; select --engine qwen3-base or omit the reference",
+        "audio_read_help": "VoiceDesign generates segments independently; a voice description and direction can affect the perceived voice. For a consistent narrator, compare short --preview samples with fewer role-specific directions. Base reuses an explicit voice reference, but does not accept free-form direction; neither option guarantees continuity. --no-direction ignores saved passage direction only: the selected profile, pronunciation rules, tempo and default pauses remain active. Models and matching local workers are installed separately.",
+        "audio_direction_help": "With VoiceDesign, role-specific instructions may change the perceived voice between independently generated segments. Use short listening previews; Base does not support free-form direction. Pauses and explicit saved profile choices remain separate.",
         "layer_reference": 'Reference: all measurable paragraphs within each chapter; median/MAD robust z. Requires at least 3 measurable paragraphs and nonzero MAD.',
         "layer_notable": 'Notable: |round(z, 2)| >= {cutoff}; descriptive heuristic for human review.',
         "layer_counts": '{total_count} total · {comparable_count} comparable · {notable_count} notable · {selected_count} shown',
@@ -246,9 +261,24 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "audio_status_selected": "Gewähltes Profil",
         "audio_status_unavailable": "Profil nicht verfügbar",
         "audio_status_match": "Modell passt",
+        "audio_status_comparison": "Vergleichsmodell",
         "audio_status_unknown": "unbekannt",
         "audio_status_yes": "ja",
         "audio_status_no": "nein",
+        "audio_status_design_hint": "VoiceDesign erzeugt Abschnitte einzeln; die Stimme kann trotz gleicher Beschreibung variieren. Unterschiedliche Regie kann den Klang zusätzlich beeinflussen. Kurze Hörproben vergleichen. Base nutzt eine Referenz, unterstützt aber keine freie Regie.",
+        "audio_status_base_hint": "Base nutzt eine Stimmreferenz, garantiert aber keine gleichbleibende Darbietung; freie Regie wird nicht unterstützt. Kurze Hörproben vergleichen.",
+        "audio_no_direction_help": "Gespeicherte Passagenregie ignorieren; Profil, Aussprache, Tempo und Standardpausen bleiben aktiv",
+        "audio_instructions_help": "Ausdrückliche Qwen-Regieanweisungen (von Base nicht unterstützt)",
+        "audio_engine_help": "qwen3: feste Stimmen; qwen3-design: beschriebene Stimme; qwen3-base: gespeicherte Referenz. Der Worker muss dasselbe Modell nutzen",
+        "audio_voice_help": "CustomVoice-Stimmen: {voices}. Qwen nennt keine deutschsprachige Mutterstimme; Aussprache anhören. Base verwendet reference, VoiceDesign design",
+        "audio_base_reference_required": "Qwen Base benötigt eine gespeicherte Referenz: mit 'lixity audio-reference create' anlegen und --reference-id ID angeben",
+        "audio_base_instructions_inherited": "Qwen Base unterstützt die Regieanweisung des gewählten Profils nicht; für diesen Lauf --instructions '' angeben oder ein Base-Profil wählen. --no-direction schaltet nur die Passagenregie aus",
+        "audio_base_instructions_explicit": "Qwen Base unterstützt keine Regieanweisungen; --instructions '' angeben oder ein anderes Modell wählen",
+        "audio_design_description_required": "VoiceDesign benötigt eine Stimmbeschreibung: --voice-description TEXT angeben oder ein VoiceDesign-Profil wählen",
+        "audio_custom_voice_required": "CustomVoice benötigt eine feste Stimme: mit --voice eine unterstützte Stimme angeben oder ein CustomVoice-Profil wählen",
+        "audio_reference_wrong_engine": "--reference-id wird nur von Qwen Base unterstützt; --engine qwen3-base wählen oder die Referenz weglassen",
+        "audio_read_help": "VoiceDesign erzeugt Abschnitte einzeln; Stimmbeschreibung und Regie können die wahrgenommene Stimme beeinflussen. Für eine einheitliche Erzählstimme kurze --preview-Hörproben mit weniger rollenspezifischer Regie vergleichen. Base verwendet eine ausdrückliche Stimmreferenz, unterstützt aber keine freie Regie; beide Wege garantieren keine Stimmkonstanz. --no-direction ignoriert nur gespeicherte Passagenregie: Profil, Ausspracheregeln, Tempo und Standardpausen bleiben aktiv. Modelle und passende lokale Worker werden separat installiert.",
+        "audio_direction_help": "Bei VoiceDesign können rollenspezifische Anweisungen die wahrgenommene Stimme zwischen einzeln erzeugten Abschnitten verändern. Kurze Hörproben vergleichen; Base unterstützt keine freie Regie. Pausen und ausdrücklich gespeicherte Profilzuweisungen bleiben getrennt.",
         "layer_reference": 'Referenz: alle messbaren Absätze innerhalb jedes Kapitels; robuster z-Wert aus Median/MAD. Mindestens 3 messbare Absätze und MAD größer als 0 erforderlich.',
         "layer_notable": 'Auffällig: |round(z, 2)| >= {cutoff}; beschreibende Heuristik zur menschlichen Prüfung.',
         "layer_counts": '{total_count} gesamt · {comparable_count} vergleichbar · {notable_count} auffällig · {selected_count} angezeigt',
@@ -1420,8 +1450,20 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
             changes["voice"] = "reference"
         if args.engine in ("qwen3", "qwen3-base") and profile.engine == "qwen3-design" and args.voice_description is None:
             changes.pop("voice_description", None)
-        if args.engine in ("qwen3", "qwen3-design") and profile.engine == "qwen3-base":
+        if args.engine in ("qwen3", "qwen3-design") and profile.engine == "qwen3-base" and args.reference_id is None:
             changes.pop("reference_id", None)
+        if changes["engine"] != "qwen3-base" and args.reference_id:
+            raise ValueError(_m("audio_reference_wrong_engine"))
+        if changes["engine"] == "qwen3-base":
+            if not changes.get("reference_id"):
+                raise ValueError(_m("audio_base_reference_required"))
+            if changes.get("instructions"):
+                raise ValueError(_m("audio_base_instructions_inherited" if args.instructions is None
+                                    else "audio_base_instructions_explicit"))
+        if changes["engine"] == "qwen3-design" and not changes.get("voice_description"):
+            raise ValueError(_m("audio_design_description_required"))
+        if args.engine == "qwen3" and profile.engine != "qwen3" and args.voice is None:
+            raise ValueError(_m("audio_custom_voice_required"))
         profile = AudioProfile.model_validate(changes)
         from .speech_direction import (
             build_speech_plan,
@@ -1898,6 +1940,7 @@ def _main(argv: list[str] | None = None) -> int:
             continue
         if name == "audio-direction":
             from .speech_direction_cli import configure
+            p.epilog = _m("audio_direction_help")
             configure(p)
             continue
         if name == "audio-migrate":
@@ -2079,11 +2122,9 @@ def _main(argv: list[str] | None = None) -> int:
             p.add_argument("-o", "--output", help="HTML target file (default: lixity-dashboard.html)")
             continue
         if name == "read-aloud":
-            p.epilog = (
-                "Renders local listening copies using saved project voice profiles. "
-                "Qwen3-TTS 1.7B supports CustomVoice, VoiceDesign and reference-based Base "
-                "on this computer or a configured Jetson. Runtimes and voice models are installed separately."
-            )
+            from .speech_profiles import QWEN_VOICES
+
+            p.epilog = _m("audio_read_help")
             p.add_argument("file", nargs="?", help="Markdown manuscript (default: configured manuscript or folder discovery)")
             p.add_argument("-o", "--output", help="Audio target file (WAV or MP3, default: <workspace-slug>.wav)")
             p.add_argument("--chapter", type=int, default=None, help="Synthesize only a specific 1-based chapter number")
@@ -2094,12 +2135,12 @@ def _main(argv: list[str] | None = None) -> int:
             previews.add_argument("--preview", action="store_true", help="Preview the first anchored paragraph or list item")
             previews.add_argument("--preview-line", type=int, help="Preview the anchored paragraph or list item containing this source line")
             p.add_argument("--progress", action="store_true", help="Report segment progress and estimated remaining time to stderr")
-            p.add_argument("--no-direction", action="store_true", help="Explicitly ignore saved passage direction for this invocation")
-            p.add_argument("--instructions", default=None, help="Explicit Qwen delivery instructions")
-            p.add_argument("--engine", choices=("qwen3", "qwen3-design", "qwen3-base"), default=None, help="Explicit Qwen model variant")
+            p.add_argument("--no-direction", action="store_true", help=_m("audio_no_direction_help"))
+            p.add_argument("--instructions", default=None, help=_m("audio_instructions_help"))
+            p.add_argument("--engine", choices=("qwen3", "qwen3-design", "qwen3-base"), default=None, help=_m("audio_engine_help"))
             p.add_argument("--voice-description", default=None, help="VoiceDesign voice description")
             p.add_argument("--reference-id", default=None, help="Project-local Base voice reference identity")
-            p.add_argument("--voice", default=None, help="Override the selected profile voice; model-specific validation applies")
+            p.add_argument("--voice", default=None, help=_m("audio_voice_help", voices=", ".join(QWEN_VOICES)))
             p.add_argument("--speed", type=float, default=None, help="Override all profile tempo factors for this render (0.5–2.0; FFmpeg required unless 1.0)")
             p.add_argument("--speech-target", choices=("local", "jetson"), default="local", help="Execution target for this run (default: local); Jetson requires its configured SSH forward")
             p.add_argument("--no-audio-cache", action="store_true", help="Render without reading or retaining reusable audio segments")
@@ -2336,6 +2377,8 @@ def _main(argv: list[str] | None = None) -> int:
         if args.json:
             print(_json(status, indent=True))
         else:
+            if status['comparison_engine'] is not None:
+                print(f"{_m('audio_status_comparison')}: {status['comparison_engine']}")
             if status['project'] is not None:
                 print(f"{_m('audio_status_project')}: {safe_text(status['project']['root'])}")
                 print(f"{_m('audio_status_selected')}: {status['project']['selected_profile'] or _m('audio_status_unknown')}")
@@ -2348,6 +2391,10 @@ def _main(argv: list[str] | None = None) -> int:
                 matching = _m('audio_status_yes' if match is True else 'audio_status_no' if match is False else 'audio_status_unknown')
                 print(f"{target['target']}: {target['state']} · {target.get('model') or _m('audio_status_unknown')} · "
                       f"{_m('audio_status_match')}: {matching}")
+            if status['comparison_engine'] == 'qwen3-design':
+                print(_m('audio_status_design_hint'))
+            elif status['comparison_engine'] == 'qwen3-base':
+                print(_m('audio_status_base_hint'))
         return EXIT_OK
     if args.command == "audio-direction":
         from .speech_direction_cli import run

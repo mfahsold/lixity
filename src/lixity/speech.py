@@ -8,6 +8,7 @@ CustomVoice provides the selected preset throughout a render.
 
 from __future__ import annotations
 
+import functools
 import io
 import math
 import os
@@ -16,16 +17,26 @@ import shutil
 import subprocess
 import tempfile
 import textwrap
+import time
 import unicodedata
 import wave
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
 
+from .log import get_logger, speech_diagnostic_id, speech_diagnostic_scope
 from .markdown_parser import counting_inline_text, parse_markdown_blocks, split_chapters
 from .sentences import split_sentences
-from .speech_profiles import AudioProfile, resolve_audio_profile
+from .speech_profiles import (
+    MAX_PLAYBACK_SPEED,
+    MIN_PLAYBACK_SPEED,
+    QWEN_LANGUAGES,
+    QWEN_VOICES,
+    AudioProfile,
+    resolve_audio_profile,
+)
 
 if TYPE_CHECKING:
     from .speech_direction import SpeechSegment
@@ -38,6 +49,87 @@ SUBPROCESS_TIMEOUT_SECONDS = 3600
 
 class SpeechCancelled(RuntimeError):
     """The caller cancelled a render before publication."""
+
+
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+
+def _speech_error_kind(error: BaseException) -> str:
+    # Exception text and untrusted class names can contain private input.
+    if isinstance(error, SpeechCancelled):
+        return "cancelled"
+    if isinstance(error, KeyboardInterrupt):
+        return "interrupted"
+    if isinstance(error, TimeoutError):
+        return "timeout"
+    if isinstance(error, FileNotFoundError):
+        return "missing"
+    if isinstance(error, ValueError):
+        return "validation"
+    if isinstance(error, OSError):
+        return "io"
+    if isinstance(error, RuntimeError):
+        return "runtime"
+    return "other"
+
+
+def _changed_value(previous: str | None, current: str) -> str:
+    if previous is None:
+        return "first"
+    return "true" if previous != current else "false"
+
+
+def _observe_speech_render(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Report bounded diagnostics even when preflight or cancellation fails."""
+    @functools.wraps(func)
+    def wrapped(*args: _P.args, **kwargs: _P.kwargs) -> _R:
+        with speech_diagnostic_scope() as diagnostic_id:
+            logger = get_logger("speech")
+            started = time.monotonic()
+            logger.info("event=render_start id=%s", diagnostic_id)
+            status, error_kind = "success", "none"
+            try:
+                return func(*args, **kwargs)
+            except BaseException as error:
+                error_kind = _speech_error_kind(error)
+                status = "cancelled" if error_kind in ("cancelled", "interrupted") else "error"
+                raise
+            finally:
+                logger.info("event=render_end id=%s status=%s error=%s duration_ms=%d",
+                            diagnostic_id, status, error_kind, max(0, round((time.monotonic() - started) * 1000)))
+    return wrapped
+
+
+@contextmanager
+def _observe_speech_segment(index: int, total: int, profile: AudioProfile,
+                            pcm_start_ms: int, instruction_changed: str,
+                            description_changed: str, reference_changed: str) -> Iterator[dict[str, Any]]:
+    """Track timings and selected controls without recording text or paths."""
+    logger = get_logger("speech")
+    diagnostic_id = speech_diagnostic_id()
+    engine = profile.engine if profile.engine in ("qwen3", "qwen3-design", "qwen3-base") else "unknown"
+    voice = profile.voice if profile.voice in (*QWEN_VOICES, "design", "reference") else "unknown"
+    language = profile.language if profile.language in QWEN_LANGUAGES else "unknown"
+    has_instruction = "true" if profile.instructions else "false"
+    speed = (profile.speed if type(profile.speed) in (int, float) and math.isfinite(profile.speed)
+             and MIN_PLAYBACK_SPEED <= profile.speed <= MAX_PLAYBACK_SPEED else None)
+    logger.debug("event=segment_start id=%s index=%d total=%d requested_engine=%s voice=%s language=%s tempo=%s has_instruction=%s instruction_changed=%s description_changed=%s reference_changed=%s pcm_start_ms=%d",
+                 diagnostic_id, index, total, engine, voice, language, speed if speed is not None else "unknown", has_instruction, instruction_changed, description_changed, reference_changed, pcm_start_ms)
+    state: dict[str, Any] = {"cache": "unknown", "pcm_end_ms": None}
+    started = time.monotonic()
+    status, error_kind = "success", "none"
+    try:
+        yield state
+    except BaseException as error:
+        error_kind = _speech_error_kind(error)
+        status = "cancelled" if error_kind in ("cancelled", "interrupted") else "error"
+        raise
+    finally:
+        logger.debug("event=segment_end id=%s index=%d total=%d status=%s error=%s cache=%s pcm_start_ms=%d pcm_end_ms=%s duration_ms=%d",
+                     diagnostic_id, index, total, status, error_kind, state["cache"], pcm_start_ms,
+                     state["pcm_end_ms"] if state["pcm_end_ms"] is not None else "unknown",
+                     max(0, round((time.monotonic() - started) * 1000)))
 
 
 def _check_cancelled(cancelled: Callable[[], bool] | None) -> None:
@@ -259,6 +351,7 @@ def _run_ffmpeg(command: list[str]) -> subprocess.CompletedProcess[bytes]:
         raise RuntimeError("FFmpeg timed out while creating audio") from None
 
 
+@_observe_speech_render
 def render_speech_audio(
     manuscript_path: str | Path,
     output_path: str | Path,
@@ -334,6 +427,12 @@ def render_speech_audio(
                                      "one model. Choose profiles using the same model or reuse previously "
                                      "cached segments")
     total = sum(bool(cue.text) for cue in cues)
+    requested_engines = sorted({cue.profile.engine if cue.profile.engine in ("qwen3", "qwen3-design", "qwen3-base") else "unknown"
+                                for cue in cues if cue.text})
+    cache_mode = "disabled" if segment_cache is None else "fresh" if fresh_audio else "enabled"
+    get_logger("speech").info("event=render_plan id=%s target=%s requested_engines=%s segments=%d cache_mode=%s output_format=%s",
+                              speech_diagnostic_id(), target, ",".join(requested_engines), total, cache_mode,
+                              "mp3" if output.suffix.lower() == ".mp3" else "wav")
     done = 0
     if progress is not None:
         progress(done, total)
@@ -354,6 +453,7 @@ def render_speech_audio(
                 writer.writeframes(frames)
                 written += len(frames)
 
+            previous_profile: AudioProfile | None = None
             for cue in cues:
                 _check_cancelled(cancelled)
                 if cue.pause_before:
@@ -364,46 +464,58 @@ def render_speech_audio(
                 effective = cue.profile
                 from .speech_qwen import synthesize_qwen
 
-                data = None if fresh_audio or segment_cache is None else segment_cache.get(cue.text, effective)
-                if data is None:
-                    data = (synthesize_qwen(cue.text, effective, target=target,
-                                           reference=(references or {})[effective.reference_id])
-                            if effective.engine == "qwen3-base" else
-                            synthesize_qwen(cue.text, effective, target=target))
-                    params, frames = _read_pcm(data)
-                    if params != (1, 2, rate):
-                        raise ValueError("Unexpected Qwen audio format")
+                instruction_changed = _changed_value(previous_profile.instructions if previous_profile else None,
+                                                     effective.instructions)
+                description_changed = _changed_value(previous_profile.voice_description if previous_profile else None,
+                                                     effective.voice_description)
+                reference_changed = _changed_value(previous_profile.reference_id if previous_profile else None,
+                                                   effective.reference_id)
+                previous_profile = effective
+                with _observe_speech_segment(done + 1, total, effective, writer.getnframes() * 1000 // rate,
+                                             instruction_changed, description_changed, reference_changed) as diagnostic:
+                    data = None if fresh_audio or segment_cache is None else segment_cache.get(cue.text, effective)
+                    diagnostic["cache"] = ("disabled" if segment_cache is None else "fresh" if fresh_audio else
+                                           "hit" if data is not None else "miss")
+                    if data is None:
+                        data = (synthesize_qwen(cue.text, effective, target=target,
+                                               reference=(references or {})[effective.reference_id])
+                                if effective.engine == "qwen3-base" else
+                                synthesize_qwen(cue.text, effective, target=target))
+                        params, frames = _read_pcm(data)
+                        if params != (1, 2, rate):
+                            raise ValueError("Unexpected Qwen audio format")
+                        _check_cancelled(cancelled)
+                        if segment_cache is not None:
+                            segment_cache.put(cue.text, effective, data)
+                    else:
+                        params, frames = _read_pcm(data)
                     _check_cancelled(cancelled)
-                    if segment_cache is not None:
-                        segment_cache.put(cue.text, effective, data)
-                else:
-                    params, frames = _read_pcm(data)
-                _check_cancelled(cancelled)
-                if effective.speed != 1.0:
-                    # Cache the unmodified model audio. Processing each spoken
-                    # segment leaves explicit pauses and per-profile rates intact.
-                    tempo_source = Path(directory) / "tempo-source.wav"
-                    tempo_output = Path(directory) / "tempo-output.wav"
-                    tempo_source.write_bytes(data)
-                    if ffmpeg is None:  # defensive: checked before synthesis
-                        raise FileNotFoundError("FFmpeg is required for audio speed adjustment")
-                    result = _run_ffmpeg([ffmpeg, "-nostdin", "-y", "-v", "error", "-i", str(tempo_source),
-                                          "-af", f"atempo={effective.speed}", "-ac", "1", "-ar", str(rate),
-                                          "-c:a", "pcm_s16le", str(tempo_output)])
-                    if result.returncode != 0 or not tempo_output.is_file():
-                        raise RuntimeError("FFmpeg failed to adjust audio speed")
-                    adjusted_params, adjusted_frames = _read_pcm(tempo_output.read_bytes(), allow_empty=True)
-                    if adjusted_params != (1, 2, rate):
-                        raise ValueError("Unexpected tempo-adjusted audio format")
-                    # At very short durations atempo can produce no samples. In
-                    # that case preserve the original rather than lose speech.
-                    if adjusted_frames:
-                        frames = adjusted_frames
-                    elif len(frames) > rate * 2 // 10:
-                        raise RuntimeError("FFmpeg produced empty tempo-adjusted audio")
+                    if effective.speed != 1.0:
+                        # Cache the unmodified model audio. Processing each spoken
+                        # segment leaves explicit pauses and per-profile rates intact.
+                        tempo_source = Path(directory) / "tempo-source.wav"
+                        tempo_output = Path(directory) / "tempo-output.wav"
+                        tempo_source.write_bytes(data)
+                        if ffmpeg is None:  # defensive: checked before synthesis
+                            raise FileNotFoundError("FFmpeg is required for audio speed adjustment")
+                        result = _run_ffmpeg([ffmpeg, "-nostdin", "-y", "-v", "error", "-i", str(tempo_source),
+                                              "-af", f"atempo={effective.speed}", "-ac", "1", "-ar", str(rate),
+                                              "-c:a", "pcm_s16le", str(tempo_output)])
+                        if result.returncode != 0 or not tempo_output.is_file():
+                            raise RuntimeError("FFmpeg failed to adjust audio speed")
+                        adjusted_params, adjusted_frames = _read_pcm(tempo_output.read_bytes(), allow_empty=True)
+                        if adjusted_params != (1, 2, rate):
+                            raise ValueError("Unexpected tempo-adjusted audio format")
+                        # At very short durations atempo can produce no samples. In
+                        # that case preserve the original rather than lose speech.
+                        if adjusted_frames:
+                            frames = adjusted_frames
+                        elif len(frames) > rate * 2 // 10:
+                            raise RuntimeError("FFmpeg produced empty tempo-adjusted audio")
+                        _check_cancelled(cancelled)
+                    write_frames(frames)
+                    diagnostic["pcm_end_ms"] = writer.getnframes() * 1000 // rate
                     _check_cancelled(cancelled)
-                write_frames(frames)
-                _check_cancelled(cancelled)
                 done += 1
                 if progress is not None:
                     progress(done, total)

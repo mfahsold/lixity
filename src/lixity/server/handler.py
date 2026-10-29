@@ -408,22 +408,16 @@ class LixityServerHandler(
         return payload
 
     def log_request(self, code: int | str = "-", size: int | str = "-") -> None:
-        """Access-log the route without its query string.
-
-        Context tokens and other selectors travel in query strings; debug logs
-        keep the route for diagnosis and leave the values out.
-        """
+        """Access-log only a controlled route, method and status."""
         if not self.debug:
             return
         method, _, remainder = self.requestline.partition(" ")
-        path, _, version = remainder.partition(" ")
-        self._debug_log(
-            f'{self.address_string()} - "{method} {path.split("?", 1)[0]} '
-            f'{version or "HTTP/1.0"}" {code} {size}'
-        )
+        path, _, _version = remainder.partition(" ")
+        status = str(code) if isinstance(code, int) and 100 <= code <= 599 else "unknown"
+        self._debug_log(f"{self._safe_debug_method(method)} {self._safe_debug_route(path)} {status}")
 
     def log_message(self, format: str, *args: Any) -> None:
-        """Suppress default request logging unless debug mode is active."""
+        """Record HTTP transport errors without untrusted formatted arguments."""
         if not self.debug:
             return
-        self._debug_log(f"{self.address_string()} - {format % args}")
+        self._debug_log("HTTP transport message")

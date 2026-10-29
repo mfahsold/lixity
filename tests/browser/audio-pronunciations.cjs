@@ -10,6 +10,9 @@ import json, sys
 from pathlib import Path
 from http.server import ThreadingHTTPServer
 from lixity.server import LixityServerHandler
+import lixity.speech_status as speech_status
+speech_status.worker_health = lambda target: {'target':target, 'state':'unavailable',
+    'transport':'loopback' if target == 'local' else 'ssh', 'model':None}
 root = Path(sys.argv[1]); source = root / 'manuscript.md'
 source.write_text('## One\\n\\nA synthetic passage.\\n')
 (root / 'lixity.toml').write_text('''language = "de"

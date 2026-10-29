@@ -28,6 +28,28 @@ class ResponseMixin(WorkspaceState):
 
     _log = get_logger("server")
 
+    def _safe_debug_route(self, raw_path: str) -> str:
+        """Keep known route names without retaining user-controlled path data."""
+        path = raw_path.split("?", 1)[0]
+        if path.startswith("/w/"):
+            pieces = path.split("/", 3)
+            if len(pieces) < 4 or len(pieces[2]) != 32 or any(c not in "0123456789abcdef" for c in pieces[2]):
+                return "unknown"
+            path = "/" + pieces[3]
+        if path in ("/", "/index.html"):
+            return "/"
+        if path in getattr(self, "GET_ROUTES", {}):
+            return path
+        if path.startswith("/api/") and path[len("/api/"):] in getattr(self, "POST_ROUTES", {}):
+            return path
+        if path.startswith("/artifact/"):
+            return "/artifact/<redacted>"
+        return "unknown"
+
+    @staticmethod
+    def _safe_debug_method(method: str) -> str:
+        return method if method in ("GET", "POST", "HEAD", "OPTIONS") else "OTHER"
+
     def _debug_log(self, message: str) -> None:
         """Record request and error diagnostics on the shared logger.
 
@@ -126,11 +148,8 @@ class ResponseMixin(WorkspaceState):
             self._workspace_selection_ok = True
             payload = {**payload, "workspace_url": self.api_base.removesuffix("/api") + "/"}
         if self.debug and code >= 400:
-            msg = payload.get("message", "")
-            # Log the route without its query string: context tokens and other
-            # selectors travel there and must not reach diagnostics.
-            route = self.path.split("?", 1)[0]
-            self._debug_log(f"HTTP {code} on {self.command} {route}: {msg}")
+            route = self._safe_debug_route(self.path)
+            self._debug_log(f"HTTP {code} on {self._safe_debug_method(self.command)} {route}")
         self._send(
             code,
             json.dumps(payload, ensure_ascii=False).encode("utf-8"),

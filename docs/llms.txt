@@ -151,11 +151,30 @@ speed requires FFmpeg on the Lixity host.
 
 Version 0.7.7 supports explicit Qwen3-TTS 1.7B VoiceDesign profiles with a
 voice description and a separately configured matching worker. Designed voice
-identity may vary across segments. A separately configured Base worker can reuse
+identity may vary across separately synthesized segments; changing passage
+direction may also affect the voice. Compare short fresh previews before a long
+render. `--no-direction` omits saved passage direction but retains the selected
+profile's instructions, pronunciation, speed and standard pauses. A separately configured Base worker can reuse
 an explicitly saved private audio reference and exact transcript; Base does not
-accept free-form delivery instructions. Assign profiles to passages explicitly.
+accept free-form delivery instructions. A human can record and review a 1–30 second
+mono 24 kHz 16-bit PCM WAV and its exact spoken transcript, register them with
+`audio-reference create`, and audition a short Base preview as described in
+`docs/USAGE.md#experimental-reference-voices`. Model selection does not download
+weights or switch the worker. Assign profiles to passages explicitly.
+On current main, the native preview/chapter dialog offers an initially off option
+to ignore saved and draft passage direction for one render; this also omits
+range voice assignments and pauses, while preserving profile controls and saved
+direction. The corresponding `POST /api/speech-render` field is the strict
+boolean `ignore_direction`.
 
 `audio-status [--project PATH] --json` inspects profiles and
 worker model identities without prose. `read-aloud --preview` or `--preview-line
 N` renders a fresh paragraph; on current main, `--progress` reports segments
 and a coarse remaining-time estimate on stderr (excluding final encoding).
+Current main also logs content-free audio job, render and worker events to the
+existing logger; `LIXITY_SPEECH_LOG_LEVEL=DEBUG` enables per-segment diagnostics
+without enabling other debug branches. Native job/render IDs
+correlate; worker requests have separate IDs and can include an optional,
+untrusted render correlation ID.
+Managed-service stderr is captured, but standalone CLI/worker stderr requires
+separate retention. Segment timings do not measure speaker identity.

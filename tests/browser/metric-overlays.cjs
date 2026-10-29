@@ -12,7 +12,7 @@ const generated = pythonFixture(`
 import json
 from lixity.language import get_language_profile
 from lixity.workspace_labels import WORKSPACE_LABELS
-from lixity.style_fingerprint import LAYER_PARAGRAPH_ATTR, layer_stats, z_color
+from lixity.style_fingerprint import LAYER_PARAGRAPH_ATTR, PARAGRAPH_LAYER_Z_CUTOFF, layer_stats, z_color
 from dashboard_fixtures import full_dashboard
 reading_html = full_dashboard()
 full_dashboard.__globals__['SAMPLE'] = '## Measured paragraphs\\n\\n' + '\\n\\n'.join(
@@ -27,7 +27,7 @@ for locale in ('en','de','fr','es','it','pt','nl'):
         for index, paragraph in enumerate(args[1]):
             for field in LAYER_PARAGRAPH_ATTR.values():
                 setattr(paragraph, field, [0, 1, 2, 3, 8, 30, 60][index % 7] if paragraph.chapter_num == 1 else 0)
-        expected = {key: [f'p-{i}' for i, (_, z) in layer_stats(args[1], key).items() if abs(round(z, 2)) >= 1.5]
+        expected = {key: [f'p-{i}' for i, (_, z) in layer_stats(args[1], key).items() if abs(round(z, 2)) >= PARAGRAPH_LAYER_Z_CUTOFF]
                     for key in LAYER_PARAGRAPH_ATTR}
         fixtures[locale] = {'expected': expected, 'labels': labels}
         return original(*args, **{**kwargs, 'labels': labels, 'language_key': locale})
@@ -419,6 +419,18 @@ async function verifyComparisonRegressions(browser) {
       });
       assert.deepEqual(retainedSelection, {same: true, anchor: 12, focus: 2});
       const expected = fixture.expected.passive;
+      assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false, 'Counted text remains off for a newly selected metric');
+      assert.equal(await page.locator('#layer-evidence-legend').isVisible(), false);
+      await page.locator('#analysis-evidence-enabled').check();
+      await selectMetric(page, 'asl');
+      assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), true, 'Sentence length retains its earlier choice');
+      await page.locator('#analysis-evidence-enabled').uncheck();
+      await selectMetric(page, 'passive');
+      assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), true, 'Changing sentence length does not change passive');
+      await selectMetric(page, 'asl');
+      assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false, 'The new sentence-length choice is remembered');
+      await selectMetric(page, 'passive');
+      assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), true, 'Passive retains its separate choice');
       await page.locator('#analysis-comparison-enabled').uncheck();
       assert.equal(await page.locator('.reader-comparison-value:visible').count(), 0);
       assert.equal(await page.locator('#layer-comparison-legend').isVisible(), false);

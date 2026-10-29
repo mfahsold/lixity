@@ -8,6 +8,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- An explicit per-render control in the audio dialog to ignore passage direction
+  for a preview or chapter without modifying saved direction.
+- Privacy-preserving audio diagnostics for job lifecycle and render segments,
+  including independent diagnostic IDs and PCM timeline positions.
 - Optional project-wide pronunciation rules in audio settings schema `/2`, with
   per-profile overrides and opt-in whole-word/case-insensitive matching; `/1`
   remains unchanged and version 0.7.7 cannot read `/2`.
@@ -15,6 +19,16 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   direction without manually supplying snapshot hashes.
 
 ### Changed
+- Native audio previews now include all planned segments of the first anchored
+  paragraph, enforce the same 6,000-character preview limit as selected passages,
+  and fail explicitly when no paragraph or list item can be selected. The
+  bounded context excerpt identifies the selected original passage; `truncated`
+  is false when that passage is fully rendered, even if its display excerpt is
+  abbreviated. Chapter rendering is unchanged.
+- Documented the local recording, excerpt, transcript and short preview workflow
+  for an explicit Base reference voice.
+- CLI, audio dialogs and guidance clarify VoiceDesign continuity, the role of
+  passage direction and the trade-offs of reference-based voices.
 - CLI audio progress includes a rough remaining-time estimate after two segments.
 - Counted-text visibility is remembered per analysis measure; the chapter-strip
   emphasis control and comparison counts use descriptive, neutral labels.
@@ -2536,7 +2550,7 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- **Packaging & installability (SOTA):** dynamic version from
+- **Packaging & installability:** dynamic version from
   `lixity._version.__version__` (single source for setuptools / `__version__` /
   `--version`), optional-dependencies `dev` extra (`pytest`, `mypy`, `ruff`,
   `build`), richer classifiers (`Environment :: Console`, Python 3.13,

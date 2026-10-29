@@ -11,8 +11,11 @@
   the server tests.
 - The level comes from an explicit argument, else ``LIXITY_LOG_LEVEL``, else
   DEBUG while ``LIXITY_DEBUG``/``--debug`` is active, else INFO.
+- ``LIXITY_SPEECH_LOG_LEVEL=DEBUG`` separately enables speech diagnostics,
+  without enabling debug logging for the rest of the application.
 
-Log files and runtime records never contain manuscript text.
+Individual call sites must avoid logging manuscript text or credentials. Other
+stderr output and existing debug errors can contain contextual details.
 """
 
 from __future__ import annotations
@@ -21,13 +24,44 @@ import logging
 import os
 import sys
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
+from secrets import token_hex
+from threading import RLock
 from typing import IO, Any
 
 NAME = "lixity"
 FORMAT = "%(asctime)s %(levelname)s %(name)s %(message)s"
 DATEFMT = "%Y-%m-%d %H:%M:%S UTC"
 _TRUE_VALUES = {"1", "true", "yes", "on"}
+_SPEECH_DIAGNOSTIC_ID: ContextVar[str | None] = ContextVar("lixity_speech_diagnostic_id", default=None)
+_CONFIGURE_LOCK = RLock()
+_SPEECH_PREVIOUS_LEVEL: list[int] = []
+
+
+def new_speech_diagnostic_id() -> str:
+    """Create a random operational ID unrelated to project and job tokens."""
+    return token_hex(8)
+
+
+def speech_diagnostic_id() -> str | None:
+    """Return the diagnostic ID for this context, if one has been entered."""
+    return _SPEECH_DIAGNOSTIC_ID.get()
+
+
+@contextmanager
+def speech_diagnostic_scope(identifier: str | None = None) -> Iterator[str]:
+    """Correlate nested speech work without leaking state across threads."""
+    selected = identifier or speech_diagnostic_id() or new_speech_diagnostic_id()
+    if len(selected) != 16 or any(char not in "0123456789abcdef" for char in selected):
+        raise ValueError("Invalid speech diagnostic identifier")
+    reset = _SPEECH_DIAGNOSTIC_ID.set(selected)
+    try:
+        yield selected
+    finally:
+        _SPEECH_DIAGNOSTIC_ID.reset(reset)
 
 
 class _UtcFormatter(logging.Formatter):
@@ -78,19 +112,27 @@ def configure(
     *, level: int | str | None = None, stream: IO[str] | None = None, force: bool = False
 ) -> logging.Logger:
     """Configure the ``lixity`` logger tree once and return its root logger."""
-    logger = logging.getLogger(NAME)
-    logger.propagate = False
-    if force:
-        for handler in list(logger.handlers):
-            logger.removeHandler(handler)
-    if not logger.handlers:
-        stream_handler: logging.Handler = (
-            _StderrHandler() if stream is None else logging.StreamHandler(stream)
-        )
-        stream_handler.setFormatter(_UtcFormatter(FORMAT, datefmt=DATEFMT))
-        logger.addHandler(stream_handler)
-    logger.setLevel(resolve_level(level))
-    return logger
+    with _CONFIGURE_LOCK:
+        logger = logging.getLogger(NAME)
+        logger.propagate = False
+        if force:
+            for handler in list(logger.handlers):
+                logger.removeHandler(handler)
+        if not logger.handlers:
+            stream_handler: logging.Handler = (
+                _StderrHandler() if stream is None else logging.StreamHandler(stream)
+            )
+            stream_handler.setFormatter(_UtcFormatter(FORMAT, datefmt=DATEFMT))
+            logger.addHandler(stream_handler)
+        logger.setLevel(resolve_level(level))
+        speech = logging.getLogger(f"{NAME}.speech")
+        if os.environ.get("LIXITY_SPEECH_LOG_LEVEL", "").strip().upper() == "DEBUG":
+            if not _SPEECH_PREVIOUS_LEVEL:
+                _SPEECH_PREVIOUS_LEVEL.append(speech.level)
+            speech.setLevel(logging.DEBUG)
+        elif _SPEECH_PREVIOUS_LEVEL:
+            speech.setLevel(_SPEECH_PREVIOUS_LEVEL.pop())
+        return logger
 
 
 def get_logger(suffix: str | None = None) -> logging.Logger:

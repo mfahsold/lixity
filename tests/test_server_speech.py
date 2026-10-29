@@ -18,6 +18,10 @@ def speech_server(tmp_path, monkeypatch):
     import lixity.speech_jobs as jobs
 
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "user-cache"))
+    monkeypatch.setattr("lixity.speech_status.worker_health", lambda target: {
+        "target": target, "state": "unavailable", "transport": "loopback" if target == "local" else "ssh",
+        "model": None,
+    })
     source = tmp_path / "manuscript.md"
     source.write_text(
         "## First\n\nA bird crosses the garden.\n\n## Second\n\nThe second scene begins.\n"
@@ -43,6 +47,151 @@ def context(source, handler):
         "project_token": project_settings_token(handler.workspace_root, str(source)),
         "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
     }
+
+
+@pytest.mark.parametrize("saved", [False, True], ids=["draft", "saved"])
+def test_first_paragraph_preview_keeps_all_directed_segments(speech_server, saved, capsys):
+    from lixity.cli import main
+    from lixity.speech_direction import direction_state, save_direction
+
+    port, source, handler, _observed = speech_server
+    view = direction_state(source.parent, source, language="en")
+    entry = {"anchor": view["passages"][0]["anchor"], "start": 0, "end": 6, "instructions": "Calm."}
+    if saved:
+        save_direction(source.parent, source, entry, expected_source_sha256=view["source_sha256"],
+                       expected_settings_sha256=view["settings_sha256"],
+                       expected_direction_sha256=view["direction_sha256"], language="en")
+    payload = {**context(source, handler), "mode": "preview", "chapter": 1}
+    if not saved:
+        payload["draft_direction"] = entry
+    response = send(port, "/api/speech-plan", payload=payload)
+    assert response.status == 200, response.body
+    result = json.loads(response.body)
+    segments = result["plan"]["segments"]
+    assert [row["text"] for row in segments] == ["A bird", "crosses the garden."]
+    assert [row["profile"]["instructions"] for row in segments] == ["Calm.", ""]
+    assert result["context"]["excerpt"] == "A bird crosses the garden."
+    assert result["context"]["truncated"] is False
+    if saved:
+        assert main(["read-aloud", "--project", str(source.parent), "--chapter", "1", "--preview", "--plan-only"]) == 0
+        cli = json.loads(capsys.readouterr().out)
+        assert cli["segments"] == segments
+
+
+def test_first_paragraph_preview_does_not_report_truncation_for_complete_split_paragraph(speech_server):
+    port, source, handler, _observed = speech_server
+    paragraph = "A quiet bird flies. " * 45
+    source.write_text("## First\n\n" + paragraph.strip() + "\n", encoding="utf-8")
+    payload = {**context(source, handler), "mode": "preview", "chapter": 1}
+    response = send(port, "/api/speech-plan", payload=payload)
+    assert response.status == 200, response.body
+    result = json.loads(response.body)
+    segments = result["plan"]["segments"]
+    assert len(segments) > 1
+    assert " ".join(row["text"] for row in segments) == paragraph.strip()
+    assert result["context"]["truncated"] is False
+    assert len(result["context"]["excerpt"]) <= 601
+    assert result["context"]["excerpt"].endswith("…")
+
+
+def test_first_paragraph_preview_context_matches_selected_paragraph_after_quote(speech_server):
+    port, source, handler, _observed = speech_server
+    source.write_text("## First\n\n> A quoted opening.\n\nA bird crosses the garden.\n", encoding="utf-8")
+    payload = {**context(source, handler), "mode": "preview", "chapter": 1}
+    response = send(port, "/api/speech-plan", payload=payload)
+    assert response.status == 200, response.body
+    result = json.loads(response.body)
+    assert [row["text"] for row in result["plan"]["segments"]] == ["A bird crosses the garden."]
+    assert result["context"]["excerpt"] == "A bird crosses the garden."
+    assert result["context"]["truncated"] is False
+
+
+def test_preview_without_anchored_paragraph_does_not_read_chapter_heading(speech_server, capsys):
+    from lixity.cli import main
+
+    port, source, handler, _observed = speech_server
+    source.write_text("## First\n\n> A quoted opening.\n", encoding="utf-8")
+    response = send(port, "/api/speech-plan", payload={**context(source, handler), "mode": "preview", "chapter": 1})
+    assert response.status == 400
+    assert "No anchored paragraph" in json.loads(response.body)["message"]
+    assert main(["read-aloud", "--project", str(source.parent), "--chapter", "1", "--preview", "--plan-only"]) != 0
+    assert "No anchored paragraph" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("explicit_paragraph", [False, True])
+def test_first_paragraph_preview_rejects_over_limit_for_both_entry_points(speech_server, explicit_paragraph):
+    from lixity.speech_direction import speech_passages
+
+    port, source, handler, _observed = speech_server
+    source.write_text("## First\n\n" + "A quiet bird flies. " * 350 + "\n", encoding="utf-8")
+    payload = {**context(source, handler), "mode": "preview", "chapter": 1}
+    if explicit_paragraph:
+        payload["paragraph"] = speech_passages(source.read_text(), "en")[0]["anchor"]
+    response = send(port, "/api/speech-plan", payload=payload)
+    assert response.status == 400
+    assert "exceeds 6000 characters" in json.loads(response.body)["message"]
+
+
+def test_speech_fixture_does_not_probe_external_workers(speech_server, monkeypatch):
+    port, source, handler, _observed = speech_server
+
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError("Synthetic speech fixture contacted a worker")
+
+    monkeypatch.setattr("lixity.speech_qwen.urllib.request.build_opener", forbidden)
+    response = send(port, "/api/speech?" + urlencode(context(source, handler)))
+    assert response.status == 200
+    assert [worker["state"] for worker in json.loads(response.body)["workers"]] == ["unavailable", "unavailable"]
+
+
+def test_speech_view_exposes_actual_workers_without_sensitive_details(speech_server, monkeypatch):
+    from lixity.speech_profiles import QWEN_BASE_MODEL
+
+    port, source, handler, _observed = speech_server
+    observed_targets = []
+
+    def health(target):
+        observed_targets.append(target)
+        return {"target": target, "state": "ready" if target == "local" else "unavailable",
+                "transport": "loopback" if target == "local" else "ssh",
+                "model": QWEN_BASE_MODEL if target == "local" else None}
+
+    monkeypatch.setattr("lixity.speech_status.worker_health", health)
+    response = send(port, "/api/speech?" + urlencode(context(source, handler)))
+    assert response.status == 200
+    data = json.loads(response.body)
+    assert {row["target"] for row in data["workers"]} == {"local", "jetson"}
+    local, remote = data["workers"]
+    assert local["state"] == "ready" and local["model"] == QWEN_BASE_MODEL
+    assert remote["state"] == "unavailable" and remote["model"] is None
+    assert all(row["model_matches"] is None for row in data["workers"])
+    assert set(observed_targets) == {"local", "jetson"}
+    assert "A bird crosses" not in json.dumps(data["workers"])
+
+
+def test_speech_view_rejects_stale_context_before_probing_workers(speech_server, monkeypatch):
+    port, source, handler, _observed = speech_server
+    calls = []
+    monkeypatch.setattr("lixity.speech_status.worker_health", calls.append)
+    bound = context(source, handler)
+    bound["source_sha256"] = "stale"
+    assert send(port, "/api/speech?" + urlencode(bound)).status == 409
+    assert calls == []
+
+
+@pytest.mark.parametrize("changed_file", ["manuscript.md", "lixity.toml"])
+def test_speech_view_rechecks_context_after_probing_workers(speech_server, monkeypatch, changed_file):
+    port, source, handler, _observed = speech_server
+    bound = context(source, handler)
+
+    def health(target):
+        if target == "local":
+            changed = source.parent / changed_file
+            changed.write_text(changed.read_text() + "\n", encoding="utf-8")
+        return {"target": target, "state": "unavailable", "transport": "loopback", "model": None}
+
+    monkeypatch.setattr("lixity.speech_status.worker_health", health)
+    assert send(port, "/api/speech?" + urlencode(bound)).status == 409
 
 
 def test_preview_and_download_are_bound_to_actual_source_without_writes(speech_server):

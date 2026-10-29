@@ -22,6 +22,23 @@ def settings_markup(locale="en", **options):
 
 
 class TestSettingsUi(unittest.TestCase):
+    def test_audio_guidance_distinguishes_voice_design_from_base(self):
+        for locale in LOCALES:
+            with self.subTest(locale=locale):
+                labels = WORKSPACE_LABELS[locale]
+                self.assertIn("VoiceDesign", labels["speech_design_hint"])
+                self.assertIn("Qwen Base", labels["speech_reference_hint"])
+                self.assertIn("VoiceDesign", labels["speech_direction_hint"])
+                self.assertIn("Qwen Base", labels["speech_direction_hint"])
+                self.assertIn("CustomVoice", labels["speech_instructions"])
+                self.assertTrue(labels["speech_model_preset_hint"])
+                self.assertTrue(labels["speech_worker_match"])
+        self.assertIn("not guaranteed", WORKSPACE_LABELS["en"]["speech_direction_hint"])
+        self.assertIn("nicht garantiert", WORKSPACE_LABELS["de"]["speech_direction_hint"])
+        self.assertIn("Deutsch sprechen", WORKSPACE_LABELS["de"]["speech_model_preset_hint"])
+        self.assertIn("Muttersprache", WORKSPACE_LABELS["de"]["speech_model_preset_hint"])
+        self.assertIn("beschäftigt sein", WORKSPACE_LABELS["de"]["speech_worker_match"])
+
     def test_analysis_language_control_names_its_manuscript_scope(self):
         rendered = settings_markup()
         control_label = rendered.split('<label for="set-language">', 1)[1].split('</label>', 1)[0]

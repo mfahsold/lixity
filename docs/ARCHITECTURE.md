@@ -543,17 +543,31 @@ attached historical images remain independent evidence, not calibrated basemaps.
 
 `src/lixity/log.py` is the one logging entry point. Modules log through
 `get_logger()` under the `lixity` tree; the CLI keeps stdout as its result
-channel and sends diagnostics through logging. Lines use a single UTC format
+channel and sends logs and other diagnostics to stderr. Logger lines use a single UTC format
 (`YYYY-MM-DD HH:MM:SS UTC LEVEL lixity.<area> message`) with standard levels,
 resolved from an explicit argument, else `LIXITY_LOG_LEVEL`, else DEBUG while
-`LIXITY_DEBUG`/`--debug` is active, else INFO.
+`LIXITY_DEBUG`/`--debug` is active, else INFO. On current main,
+`LIXITY_SPEECH_LOG_LEVEL=DEBUG` enables audio-specific segment diagnostics
+without enabling DEBUG for unrelated branches.
 
 The managed service appends the child's stderr to `service-PORT.log`;
 `rotate_service_log()` bounds that file at service start (one writer per file,
 rotated to `.1`–`.3`). The stderr handler follows `sys.stderr` at emit time,
 so `redirect_stderr`, the captured service descriptor and tests all see the
-same stream. Request logs never contain query strings — context tokens and
-selectors travel there — and log records never contain manuscript text.
+same stream. On current main, request diagnostics retain only controlled route
+names, methods and status, omitting workspace IDs, query strings, unknown paths
+and response error text. Audio events exclude manuscript, direction text,
+references and paths. Captured stderr may contain other contextual details and
+must be reviewed before sharing. Log rotation happens at service start, not
+continuously while the service runs.
+
+Audio renders send their random diagnostic ID to the worker in the optional
+`X-Lixity-Render-Id` header; the request JSON is unchanged. The worker accepts
+only 16 lowercase hexadecimal characters for this field, logs `unknown` for
+other input, and assigns its own request ID. A received ID is untrusted and
+serves only to correlate logs, never to authenticate a request. Segment events
+record whether instructions, voice descriptions and reference selections
+changed without exposing their contents or identifiers.
 
 `ui/dimensions.py` renders a semantic score table from the same measured points
 as the canvas. It keeps chapter titles, available scores and native chapter links
@@ -1119,7 +1133,7 @@ remain under the user's own storage policy.
 
 Browser debug selection uses an explicit saved `1`/`0` before
 window/server defaults. The server's response mixin supplies the shared UTC
-writer for both request lines and error details. This separates a browser's
+writer for controlled request routes and error status. This separates a browser's
 diagnostic preference from the server process's logging setting.
 
 Project and research interface labels use the same language-profile resources

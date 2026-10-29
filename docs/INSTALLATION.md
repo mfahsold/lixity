@@ -176,7 +176,10 @@ Jetson reached through an authenticated SSH forward. Neither target is an
 automatic fallback. Start with a short preview and verify actual synthesis and
 memory headroom; model size and machine memory do not establish throughput.
 [Read-aloud setup and limits](USAGE.md#lixity-read-aloud) covers CPU/CUDA placement,
-the fixed ports, private segment reuse and worker commands. Optional worker
+the fixed ports, private segment reuse and worker commands. The
+[reference-voice workflow](USAGE.md#experimental-reference-voices) covers
+recording, selecting and transcribing a private voice sample and testing it with
+a separately installed Base worker. Optional worker
 `--attention auto|eager|sdpa` is an explicit machine setting; compare actual
 workloads before choosing an override, without assuming a speed improvement.
 In 0.7.7, new audio profiles default to a 1.2 playback tempo factor;
@@ -385,21 +388,59 @@ that deletes project storage.
 
 #### Logs
 
-Every diagnostic goes through one logging tree (`lixity.*`) with a single UTC
+Lixity's structured diagnostic events use one logging tree (`lixity.*`) with a single UTC
 line format and standard levels; stdout stays the result channel of the CLI,
 and the service appends the process' stderr to `service-PORT.log`. `lixity
 service status` prints that path, so `tail -f` follows a running server.
 
 | Setting | Effect |
 | --- | --- |
-| `--debug` (start/restart) | DEBUG level; request lines and error details |
+| `--debug` (start/restart) | DEBUG level; controlled request routes and error status |
 | `LIXITY_DEBUG=1` | Same as `--debug` for the foreground server |
 | `LIXITY_LOG_LEVEL` | Explicit level name (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+| `LIXITY_SPEECH_LOG_LEVEL=DEBUG` | Enable audio segment details without enabling other server debug output |
 
-`service-PORT.log` is bounded: starting the service rotates an oversized log
-to `service-PORT.log.1` … `.3` (oldest dropped). Request logs never contain
-query strings, so context tokens and selectors stay out of the file; log
-records and runtime files never contain manuscript text.
+Starting the service rotates an oversized `service-PORT.log` to
+`service-PORT.log.1` … `.3` (oldest dropped). The file can grow between starts;
+this is not continuous rotation. On current main, request diagnostics retain only
+known route names, methods and status; workspace identifiers, query strings,
+unrecognized paths and response error text are omitted. Other stderr output can
+still include contextual details; inspect logs before sharing them.
+
+On current main, audio jobs and renders add technical events to the same logger.
+A random diagnostic ID correlates a native job with its render without using the
+job's access identifier. INFO events record queue and render state and segment
+count; DEBUG additionally records each segment's requested model variant and
+preset, cache outcome, elapsed time and bounds on the assembled PCM timeline.
+Change indicators show whether the instruction, voice description or reference
+selection differs from the preceding segment without recording their values.
+The client also sends the random render ID as an optional HTTP header; a current
+worker logs it alongside its own request ID. Missing or malformed IDs become
+`unknown`. This client-supplied value is only a correlation hint, not proof of
+identity, and older workers can ignore it.
+Set `LIXITY_SPEECH_LOG_LEVEL=DEBUG` before starting the CLI or managed service
+to retain those details without enabling general server debugging. Other values
+leave the normal log-level inheritance in effect. They can show boundaries but
+cannot identify a voice or judge its sound. They do not contain manuscript or
+instruction text, reference audio, project paths or raw exception messages.
+The events describe the requested engine, not the model weight bytes or hardware
+that produced a cached segment. Existing WAV files acquire no retroactive log.
+
+The managed application captures its own stderr in `service-PORT.log`. A separate
+CLI or speech-worker process writes to its own stderr and is not automatically
+merged into that file. To retain a CLI run, deliberately redirect stderr to a
+new private file, for example:
+
+```sh
+(umask 077; LIXITY_SPEECH_LOG_LEVEL=DEBUG lixity read-aloud --project ./novel --chapter 1 --speech-target local --progress -o chapter.wav 2> audio-diagnostics.log)
+```
+
+The shell umask applies when creating the file; check permissions separately if
+the file already exists. The command above renders audio using the selected
+profile and requires a matching local worker.
+That captures **all** stderr, including other CLI errors or progress messages,
+not only the redacted logger events; inspect it before sharing. Worker logs also
+remain separate, and rotation of a redirected file is the operator's responsibility.
 
 Reading-website exports log a random export ID, preparation size/time and socket
 write outcome at the default INFO level; disconnected clients produce a WARNING.

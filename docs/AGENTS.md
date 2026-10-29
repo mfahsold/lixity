@@ -1483,7 +1483,7 @@ appear as dashboard notes; do not assume all exporters remove them.
 `analyze`/`profile`/`style` do not modify the manuscript. Apply the
 [operating boundaries](#operating-boundaries) before any write.
 
-## 7. Best practices for LLM agent integration
+## 7. Guidance for LLM agent integration
 
 Read active result metadata, preserve units and represent unavailable data
 explicitly. `build` skips unchanged exports; a successful artifact does not imply
@@ -1612,6 +1612,10 @@ not cache; they are validated and bound to job context and cache identity.
 Base profiles and passage ranges reject nonempty delivery instructions. A Base
 worker must be selected explicitly; it does not infer or assign character voices.
 Older installations that do not support the new engine reject these profiles.
+The [reference-voice workflow](USAGE.md#experimental-reference-voices) describes
+human-controlled recording and review, the 1–30 second PCM format, exact
+transcript and an unsaved Base preview. Format and immutable-record checks do
+not verify that the transcript matches the sound or that a voice is suitable.
 
 Removed Piper profiles are rejected with actionable migration guidance. Existing
 Qwen records retain the `/1` wire contract; saved profiles without an explicit
@@ -1647,19 +1651,46 @@ configuration error), backend capabilities and source chapter bounds. A
 model-interpreted delivery and explicit silence, and reports unsupported
 phonemes, SSML and precise rate. It describes the Lixity adapter rather than
 promising model compliance. Existing speech-plan version 1 remains unchanged.
+On current main, the additive `workers` list gives a point-in-time probe for
+`local` and `jetson`, in that order. Each entry contains `target`, `state`
+(`ready`, `starting` or `unavailable`), `transport` (`loopback` or `ssh`),
+`model` (an allowlisted Qwen checkpoint name or null) and `model_matches`
+(always null in this endpoint because it does not supply a comparison model).
+The native UI compares the returned model with the currently selected profile;
+unknown identities stay unknown. A snapshot does not guarantee future readiness,
+and the UI does not switch or download a worker. After validating the workspace,
+the server probes both targets concurrently outside the workspace lock, with a
+1.5-second timeout per target.
 The strict `requires_migration` boolean identifies retained Piper profiles: normal settings
 saves cannot replace them, and the dialog disables replacement controls until
 explicit migration. Unrelated settings saves remain available.
 `POST /api/speech-render` accepts those context fields, `mode: preview|chapter`,
 a positive `chapter`, and either `profile_id` or a validated draft `profile`.
 Optional `fresh_audio` is a strict boolean: true bypasses reuse for that render.
+On current main, optional `ignore_direction` is a strict boolean, default false,
+for both `/api/speech-render` and `/api/speech-plan`.
+When true, both preview and chapter rendering omit saved passage directions,
+including range-specific voice assignments and pauses. A directly supplied
+`draft_direction` may still be applied in a preview subject to its normal
+validation; the native UI omits its draft from the request when the switch is on.
+This is an invocation-only choice: profile instructions,
+pronunciation, speed and standard pauses remain active, and saved direction is
+not modified. The native switch starts off each time its dialog opens.
 Optional `target` is `local` (default) or `jetson`; unavailable targets fail
 explicitly without switching to another machine or model.
 Execution location is per render and is not stored in `audio` voice profiles.
 Preview may include the exact displayed `paragraph` identity (`start_line`,
 `end_line`, `paragraph_sha256`). Browser-provided text, paths and unknown request
-fields are rejected. Preview uses the first bounded supported prose segment; its
-context reports the excerpt and whether more prose follows.
+fields are rejected. On current main, an anchored preview without an explicit
+paragraph selects all planned segments of the first anchored paragraph, just as
+the CLI preview does. Both explicit and implicit anchored previews reject plans
+over 6,000 spoken characters rather than silently shortening them. The context
+excerpt identifies the selected original passage; it is capped at 600 characters
+plus an ellipsis. For an anchored preview, `truncated` is false because the
+selected paragraph is rendered in full, even when its display excerpt is shorter.
+If the chapter has no anchored paragraph or list item, preview fails explicitly;
+quote blocks cannot currently be selected for preview. Chapter renders retain
+their existing handling of headings and quote blocks.
 
 Rendering returns HTTP 202 with `job` (`id`, `state`, `done`, `total`, `message`,
 `context`, plus optional `queue_position`). `GET /api/speech-job` polls it with the same context and `id`. States
@@ -1773,7 +1804,13 @@ explicitly configured VoiceDesign worker, which joins them for Qwen's `instruct`
 The worker's `model` identity is exposed in audio target health. An incompatible
 active model is an error, never an automatic model change or fallback. Existing
 CustomVoice profile serialization and worker request fields remain unchanged.
-The cache identity includes model, description and effective instructions.
+Each directed or transport segment is synthesized separately; identical profile
+identifiers and descriptions do not establish a shared speaker identity. The
+model interprets delivery text together with the voice description, so character
+or voice instructions can alter the result. The cache identity includes model,
+description and effective instructions; it reuses a segment but does not align
+independently generated speaker identities. A `qwen3-base` reference can be
+reused, but Base rejects nonempty text direction and still needs listening review.
 
 
 ## CLI audio status and previews
@@ -1789,3 +1826,24 @@ writes segment counts and a coarse remaining-time estimate to stderr after two
 segments; this estimate excludes final encoding and publication.
 CLI publication checks source, effective settings and active direction snapshots
 throughout rendering and before atomic replacement.
+The `--no-direction` preview is not free of profile instructions, pronunciation,
+speed or standard pauses; it also omits saved passage voice assignments and
+custom pauses. Separate previews can differ due to sampling or segmentation, so
+their audible difference alone does not prove the effect of a single setting.
+
+On current main, the existing `lixity.*` logger records audio job lifecycle and
+render events at INFO; `LIXITY_SPEECH_LOG_LEVEL=DEBUG` enables per-segment events
+without enabling debug for unrelated logger branches. A random operational ID
+correlates native jobs and their nested render; it is distinct from the job access
+identifier. Segment events include allowlisted requested engine and preset, cache
+outcome, duration, changes in effective instruction, voice description or
+reference selection and assembled PCM timeline
+positions, but no source text, instructions, path, reference ID or exception
+message. A separate worker logs model-load and request outcomes with its own IDs.
+Clients may pass the render ID through the optional `X-Lixity-Render-Id` HTTP
+header; the worker accepts only 16 lowercase hexadecimal characters and records
+`unknown` otherwise. This untrusted correlation hint is not authentication.
+The request JSON is unchanged. CLI stdout and versioned JSON
+are unchanged. Service stderr is captured by the managed service, while standalone
+CLI and worker stderr must be retained separately. These diagnostics do not prove
+speaker identity or the loaded model weights behind a cached segment.

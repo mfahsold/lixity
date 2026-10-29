@@ -12,6 +12,7 @@ from tests.locales import LOCALES
 from lixity.workspace_labels import WORKSPACE_LABELS
 from lixity.language import get_language_profile
 from lixity.pipeline import analyze_document, resolve_document_config
+from lixity.speech_profiles import audio_capabilities
 from lixity.style_fingerprint import FingerprintThresholds
 from lixity.ui import render_dashboard
 text = ("## Eins\\n\\n" + "Ich gehe. Ich sehe den Regen. Ich höre die Stadt. Ich trinke Kaffee. " * 8
@@ -34,7 +35,7 @@ for locale in LOCALES:
          enabled_actions=("analyze","nda-draft"), nda_project_name="Synthetic project"),
          "empty": render_dashboard([], [], controls=True, language_key=locale, labels=labels,
          enabled_actions=("analyze","nda-draft"))}
-print(json.dumps({"baseline":baseline,"fixtures":fixtures}))
+print(json.dumps({"baseline":baseline,"fixtures":fixtures,"audioCapabilities":audio_capabilities()}))
 `, {root});
 const identityArtifacts=require('node:fs').mkdtempSync('/tmp/lixity-project-identity-settings-');
 
@@ -170,11 +171,15 @@ server.serve_forever()
 
 async function verifyNativeSpeech(browser) {
   const artifacts=fs.mkdtempSync('/tmp/lixity-speech-native-');
+  let fixtureClosing = false;
   const server=await startNativeServer(`
 import json, sys, threading
 from pathlib import Path
 from http.server import ThreadingHTTPServer
 from lixity.server import LixityServerHandler
+import lixity.speech_status as speech_status
+speech_status.worker_health = lambda target: {'target':target, 'state':'unavailable',
+    'transport':'loopback' if target == 'local' else 'ssh', 'model':None}
 from tests.locales import LOCALES
 import lixity.speech_jobs as jobs
 from lixity.speech import SpeechCancelled, generate_silence_wav
@@ -251,6 +256,21 @@ server.serve_forever()
         };
       });
       page.on('pageerror',error=>errors.push(error.message));
+      let workerModel = data.audioCapabilities.qwen3.model;
+      let workerState = 'ready';
+      await page.route('**/api/speech?*', async route => {
+        try {
+          const response = await route.fetch(), payload = await response.json();
+          payload.workers = [
+            {target:'local', state:workerState, model:workerModel, transport:'loopback', model_matches:null},
+            {target:'jetson', state:'unavailable', model:null, transport:'ssh', model_matches:null},
+          ];
+          await route.fulfill({response, json:payload});
+        } catch (error) {
+          if (!fixtureClosing && !page.isClosed()) errors.push('Speech fixture request failed: ' + error.message);
+          await route.abort().catch(() => {});
+        }
+      });
       assert.equal((await page.request.post(server.fixture.url+'/api/project-open',{data:{path:project.root}})).status(),200);
       await page.goto(server.fixture.url);
       assert.equal(await page.locator('html').getAttribute('lang'),locale);
@@ -266,12 +286,90 @@ server.serve_forever()
       assert.equal(await page.locator('#speech-speed').inputValue(),'1', 'Saved profiles without speed retain their old rate');
       assert.equal(await page.locator('#speech-advanced_voice').count(),0);
       assert.equal(await page.locator('#speech-engine').inputValue(),'qwen3');
+      assert.equal(await page.locator('#speech-engine option[value=qwen3]').textContent(),labels.speech_model_preset);
+      assert.equal(await page.locator('#speech-engine option[value=qwen3-design]').textContent(),labels.speech_model_design);
+      assert.equal(await page.locator('#speech-engine option[value=qwen3-base]').textContent(),labels.speech_model_base);
+      assert.equal(await page.locator('#speech-engine').getAttribute('aria-describedby'),'speech-model-hint speech-worker-status');
+      assert.ok(await page.locator('#speech-worker-status').isVisible());
+      const workerText = (key, model) => labels['speech_worker_' + key]
+        .replace('{target}', labels.speech_target_local).replace('{model}', model);
+      assert.equal(await page.locator('#speech-worker-status').textContent(),workerText('match',data.audioCapabilities.qwen3.name));
+      assert.equal(await page.locator('#speech-target').isVisible(),true, 'Profile work can inspect either worker without changing saved settings');
+      await page.locator('#speech-target').selectOption('jetson');
+      assert.equal(await page.locator('#speech-worker-status').textContent(),labels.speech_worker_unavailable.replace('{target}', labels.speech_target_jetson));
+      await page.locator('#speech-target').selectOption('local');
+      if (locale === 'en' && width === 1440) {
+        let releaseRefresh, markRefresh;
+        const heldRefresh = new Promise(resolve => { markRefresh = resolve; });
+        const refreshGate = new Promise(resolve => { releaseRefresh = resolve; });
+        await page.route('**/api/speech?*', async route => { markRefresh(); await refreshGate; await route.fallback(); }, {times:1});
+        await page.locator('[data-speech-action=worker_refresh]').click();
+        await heldRefresh;
+        await page.locator('#speech-target').selectOption('jetson');
+        const response = page.waitForResponse(result=>new URL(result.url()).pathname.endsWith('/api/speech'));
+        releaseRefresh(); await response;
+        await page.waitForFunction(()=>!document.querySelector('[data-speech-action=worker_refresh]').disabled);
+        assert.equal(await page.locator('#speech-worker-status').textContent(),labels.speech_worker_unavailable.replace('{target}', labels.speech_target_jetson), 'Refresh follows the current target');
+        await page.locator('#speech-target').selectOption('local');
+      }
+      await page.locator('#speech-engine').evaluate(el=>el.scrollIntoView({block:'center'}));
+      await dialog.screenshot({path:path.join(artifacts,`voice-preset-${locale}-${width}.png`)});
       assert.equal(await page.locator('#speech-voice_description').isVisible(),false);
+      await page.locator('#speech-instructions').fill('A synthetic retained delivery.');
       await page.locator('#speech-engine').selectOption('qwen3-design');
       assert.equal(await page.locator('#speech-voice').isVisible(),false);
       assert.equal(await page.locator('#speech-voice_description').isVisible(),true);
+      assert.equal(await page.locator('#speech-voice_description').getAttribute('aria-describedby'),'speech-design-hint');
+      assert.equal(await page.locator('#speech-design-hint').textContent(), labels.speech_design_hint);
+      const beforeEmptyDescription = await page.locator('#speech-profile option').count();
+      await page.locator('[data-speech-action=create]').click();
+      assert.equal(await page.locator('#speech-profile option').count(),beforeEmptyDescription, 'An incomplete VoiceDesign profile cannot be stashed');
+      assert.equal(await dialog.locator('[role=status]').textContent(),labels.speech_model_need_description);
       await page.locator('#speech-voice_description').fill('A natural German narrator with a calm voice.');
       await dialog.screenshot({path:path.join(artifacts,`voice-design-${locale}-${width}.png`)});
+      await page.locator('#speech-engine').selectOption('qwen3-base');
+      assert.equal(await page.locator('#speech-worker-status').textContent(),workerText('mismatch',data.audioCapabilities.qwen3.name));
+      workerModel = data.audioCapabilities['qwen3-base'].model;
+      await page.locator('[data-speech-action=worker_refresh]').click();
+      await page.waitForFunction(expected => document.querySelector('#speech-worker-status').textContent === expected,
+        workerText('match',data.audioCapabilities['qwen3-base'].name));
+      if (locale === 'en' && width === 1440) {
+        for (const state of ['starting', 'unavailable', 'unknown']) {
+          workerState = state === 'unknown' ? 'ready' : state; workerModel = null;
+          await page.locator('[data-speech-action=worker_refresh]').click();
+          await page.waitForFunction(expected => document.querySelector('#speech-worker-status').textContent === expected, workerText(state, ''));
+        }
+        workerState = 'ready'; workerModel = data.audioCapabilities['qwen3-base'].model;
+        await page.locator('[data-speech-action=worker_refresh]').click();
+        await page.waitForFunction(expected => document.querySelector('#speech-worker-status').textContent === expected,
+          workerText('match',data.audioCapabilities['qwen3-base'].name));
+      }
+      assert.equal(await page.locator('#speech-voice').isVisible(),false, 'Base uses its reference rather than a preset');
+      assert.equal(await page.locator('#speech-voice_description').isVisible(),true, 'Incompatible draft stays visible until explicitly cleared');
+      assert.equal(await page.locator('#speech-voice_description').inputValue(),'A natural German narrator with a calm voice.');
+      assert.equal(await page.locator('#speech-instructions').inputValue(),'A synthetic retained delivery.');
+      assert.equal(await page.locator('#speech-voice_description').evaluate(el=>el.validity.customError),true);
+      assert.equal(await page.locator('#speech-instructions').evaluate(el=>el.validity.customError),true);
+      await page.locator('[data-speech-action=save]').click();
+      assert.equal(await dialog.isVisible(),true, 'Incompatible draft must be resolved before saving');
+      assert.equal(await page.locator('#speech-instructions').inputValue(),'A synthetic retained delivery.');
+      assert.deepEqual(fs.readFileSync(project.config), originalConfig, 'Invalid model switch cannot write project settings');
+      await page.locator('#speech-voice_description').fill('');
+      await page.locator('#speech-instructions').fill('');
+      assert.equal(await page.locator('#speech-instructions').isVisible(),false, 'Base hides unsupported text direction after the draft is cleared');
+      await page.locator('#speech-reference_id').fill('not-an-id');
+      const profileCount = await page.locator('#speech-profile option').count();
+      await page.locator('[data-speech-action=create]').click();
+      assert.equal(await page.locator('#speech-profile option').count(),profileCount, 'An incomplete Base profile cannot be stashed');
+      assert.equal(await dialog.locator('[role=status]').textContent(),labels.speech_model_need_reference);
+      assert.equal(await page.locator('#speech-reference_id').inputValue(),'not-an-id', 'The incomplete draft is retained');
+      await page.locator('#speech-reference_id').fill('a'.repeat(64));
+      await dialog.screenshot({path:path.join(artifacts,`voice-base-${locale}-${width}.png`)});
+      await page.locator('#speech-engine').selectOption('qwen3');
+      assert.equal(await page.locator('#speech-reference_id').isVisible(),true, 'An unused reference stays visible until explicitly removed');
+      assert.equal(await page.locator('#speech-reference_id').inputValue(),'a'.repeat(64));
+      assert.equal(await page.locator('#speech-reference_id').evaluate(el=>el.validity.customError),true);
+      await page.locator('#speech-reference_id').fill('');
       await page.locator('#speech-engine').selectOption('qwen3');
       assert.equal(await page.locator('#speech-voice').isVisible(),true);
       assert.equal(await dialog.getByText(/Piper/i).count(),0,
@@ -286,13 +384,43 @@ server.serve_forever()
       assert.equal(await page.locator('[data-pronunciation-row]:visible').count(), 1);
       await page.keyboard.press('Escape');
       assert.equal(await dialog.isVisible(),true,'Profile edits need an explicit save or discard');
+      let releaseOldRefresh;
+      if (locale === 'en' && width === 1440) {
+        let markOldRefresh;
+        const heldOldRefresh = new Promise(resolve => { markOldRefresh = resolve; });
+        const oldRefreshGate = new Promise(resolve => { releaseOldRefresh = resolve; });
+        await page.route('**/api/speech?*', async route => { markOldRefresh(); await oldRefreshGate; await route.fallback(); }, {times:1});
+        await page.locator('[data-speech-action=worker_refresh]').click();
+        await heldOldRefresh;
+      }
       await page.locator('[data-speech-action=profiles_discard]').click();
       await page.keyboard.press('Escape');
       await page.locator('#tab-view-analysis').click();
-      await page.locator('#reader-speech').click();
-      await page.waitForFunction(()=>document.querySelector('#speech-direction_text')?.value.includes('bird'));
+      let releaseSpeech, heldSpeech;
+      if (locale === 'en' && width === 1440) {
+        const held = new Promise(resolve => { heldSpeech = resolve; });
+        const gate = new Promise(resolve => { releaseSpeech = resolve; });
+        await page.route('**/api/speech?*', async route => { heldSpeech(); await gate; await route.fallback(); }, {times:1});
+        const opened = page.locator('#reader-speech').click();
+        await held;
+        await opened;
+        assert.equal(await page.locator('#speech-worker-status').textContent(),labels.speech_loading, 'Opening never presents an old worker status as current');
+        assert.equal(await page.locator('[data-speech-action=worker_refresh]').isDisabled(),true, 'Worker refresh waits for the current project snapshot');
+        const oldResponse = page.waitForResponse(response=>new URL(response.url()).pathname.endsWith('/api/speech'));
+        releaseOldRefresh();
+        await oldResponse;
+        await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 0)));
+        assert.equal(await page.locator('#speech-worker-status').textContent(),labels.speech_loading, 'A late refresh cannot replace the new loading state');
+        assert.equal(await page.locator('[data-speech-action=worker_refresh]').isDisabled(),true, 'A late refresh cannot enable the new dialog');
+        releaseSpeech();
+      } else await page.locator('#reader-speech').click();
+      await page.waitForFunction(()=>!document.querySelector('#speech-name')?.disabled && document.querySelector('#speech-direction_text')?.value.includes('bird'));
       assert.equal(await page.locator('#speech-name').isVisible(),false, 'Reader keeps the profile editor out of passage work');
       assert.equal(await page.locator('#speech-profile').isVisible(),true, 'Reader exposes the current project profile');
+      assert.equal(await page.locator('#speech-direction_instructions').getAttribute('aria-describedby'),'speech-direction-hint');
+      assert.equal(await page.locator('#speech-direction-hint').textContent(), labels.speech_direction_hint);
+      assert.equal(await page.locator('#speech-ignore-direction').isChecked(),false, 'Saved direction applies by default');
+      assert.ok((await page.locator('#speech-ignore-direction').locator('..').textContent()).includes(labels.speech_ignore_direction));
       assert.equal(await page.locator('[data-speech-action=chapter_render]').isVisible(),false);
       assert.equal(await page.locator('#speech-target').isDisabled(),false);
       assert.equal(await page.locator('#speech-runtime-hint').isVisible(),true);
@@ -302,6 +430,7 @@ server.serve_forever()
       await page.waitForFunction(()=>document.querySelector('#speech-direction_text')?.value.includes('bird'));
       assert.equal(await page.locator('#speech-direction_text').getAttribute('readonly'),'');
       await page.locator('#speech-direction_style').selectOption('tense');
+      assert.ok((await page.locator('#speech-direction_instructions').inputValue()).includes('same voice'), 'Style suggestions keep a single voice in mind');
       const originalPassage = await page.locator('#speech-direction_passage').inputValue();
       const draftInstructions = await page.locator('#speech-direction_instructions').inputValue();
       await dialog.locator('[data-speech-action=close]').click();
@@ -323,6 +452,15 @@ server.serve_forever()
       assert.equal(await page.locator('#speech-direction_instructions').inputValue(), draftInstructions);
       await page.locator('#speech-direction_text').evaluate(el=>el.setSelectionRange(2,6));
       await page.locator('[data-speech-action=direction_selection]').click();
+      await page.locator('#speech-ignore-direction').check();
+      const withoutDirection=page.waitForRequest(request=>request.url().endsWith('/api/speech-plan'));
+      await page.locator('[data-speech-action=direction_plan]').click();
+      const noDirectionPayload=(await withoutDirection).postDataJSON();
+      assert.equal(noDirectionPayload.ignore_direction,true);
+      assert.equal(Object.hasOwn(noDirectionPayload,'draft_direction'),false, 'Excluded directions do not send a draft');
+      assert.equal(await page.locator('#speech-direction_instructions').inputValue(),draftInstructions, 'The excluded draft remains editable');
+      await page.waitForFunction(()=>!document.querySelector('.speech-plan').hidden);
+      await page.locator('#speech-ignore-direction').uncheck();
       const directionPlanRequest=page.waitForRequest(request=>request.url().endsWith('/api/speech-plan'));
       await page.locator('[data-speech-action=direction_plan]').click();
       const draft=(await directionPlanRequest).postDataJSON().draft_direction;
@@ -330,6 +468,27 @@ server.serve_forever()
 
       await page.waitForFunction(()=>!document.querySelector('.speech-plan').hidden);
       assert.ok((await page.locator('.speech-plan').textContent()).includes('restrained tension'));
+      if (locale === 'en' && width === 1440) {
+        const extra = await browser.newPage({viewport:{width:1440,height:1000}});
+        await extra.goto(server.fixture.url);
+        await extra.locator('#tab-view-analysis').click();
+        await extra.locator('#reader-speech').click();
+        await extra.waitForFunction(()=>document.querySelector('#speech-direction_text')?.value.includes('bird'));
+        await extra.locator('#speech-direction_instructions').fill('A draft that must remain visible.');
+        await extra.locator('#speech-ignore-direction').check();
+        await extra.locator('#modal-speech [data-speech-action=output_title]').click();
+        assert.equal(await extra.locator('#speech-direction_instructions').isVisible(),true, 'The draft stays accessible in chapter output');
+        const chapterRequest=extra.waitForRequest(request=>request.url().endsWith('/api/speech-render'));
+        await extra.locator('[data-speech-action=chapter_render]').click();
+        const chapterPayload=(await chapterRequest).postDataJSON();
+        assert.equal(chapterPayload.ignore_direction,true);
+        assert.equal(Object.hasOwn(chapterPayload,'draft_direction'),false);
+        await extra.waitForFunction(()=>!document.querySelector('#modal-speech audio').hidden);
+        assert.equal(await extra.locator('#speech-direction_instructions').inputValue(),'A draft that must remain visible.');
+        await extra.locator('[data-speech-action=direction_discard]').click();
+        await extra.locator('#modal-speech [data-speech-action=close]').click();
+        await extra.close();
+      }
       await page.locator('#speech-direction_text').evaluate(el=>el.scrollIntoView({block:'center'}));
       await dialog.screenshot({path:path.join(artifacts,`direction-${locale}-${width}.png`)});
       let axePath; try { axePath=require.resolve('axe-core'); } catch (_) { axePath=path.join(require('node:os').homedir(),'rosts_services/node_modules/axe-core/axe.js'); }
@@ -541,6 +700,7 @@ server.serve_forever()
     await savedPage.locator('#speech-name').fill('Reference narrator');
     await savedPage.locator('#speech-engine').selectOption('qwen3-base');
     assert.ok(await savedPage.locator('#speech-reference_id').isVisible());
+    assert.equal(await savedPage.locator('#speech-reference_id').getAttribute('aria-describedby'), 'speech-reference-hint');
     await savedPage.locator('#speech-reference_id').fill(server.fixture.reference_id);
     assert.ok((await savedPage.locator('#modal-speech').textContent()).includes('Qwen Base'));
     await Promise.all([savedPage.waitForNavigation(),savedPage.locator('[data-speech-action=save]').click()]);
@@ -597,7 +757,7 @@ server.serve_forever()
       await page.close();
     }
     console.log(`Native Qwen audio: synthetic WAV over real HTTP, ${server.fixture.projects.length} locales at 1440/320, VoiceDesign profiles, paragraph previews, cache/target controls, cancellation, stale results, keyboard/Escape and unchanged sources passed. ${artifacts}`);
-  } finally {await server.close();}
+  } finally { fixtureClosing = true; await server.close(); }
 }
 
 (async () => {

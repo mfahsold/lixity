@@ -184,10 +184,14 @@ a shared inspectable CLI/UI speech plan. Optional Qwen3-TTS 1.7B
 CustomVoice provides preset voices and explicit style instructions through a
 local worker or a configured Jetson over SSH. Version 0.7.7 also supports the
 separately installed Qwen 1.7B VoiceDesign checkpoint for described voices;
-voice consistency across segments is not guaranteed. It also supports
+voice consistency across independently generated segments is not guaranteed,
+and role-specific delivery instructions can affect the perceived voice. Compare
+short listening previews before rendering a chapter. It also supports
 explicit project-local reference voices using the separately installed Base model;
 its reference and transcript need a project backup, and Base does not interpret
-free-form delivery instructions. Assign voice profiles to passages deliberately.
+free-form delivery instructions. The [reference-voice workflow](https://mfahsold.github.io/lixity/USAGE.md#experimental-reference-voices)
+explains recording and reviewing a short sample, its exact transcript and a first
+preview. Assign voice profiles to passages deliberately.
 Piper is removed; existing profiles
 require an explicit backed-up `audio-migrate` replacement. Select the
 execution target per render in the CLI or dialog. CPU generation can be slow;

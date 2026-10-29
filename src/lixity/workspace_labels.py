@@ -11396,13 +11396,13 @@ _ROWS.update(
             'ID de referencia de voz', 'ID del riferimento vocale', 'ID da referência de voz', 'Stemreferentie-ID',
         ),
         'speech_reference_hint': (
-            'Create a project-local reference with the CLI and enter its ID. Qwen Base cannot interpret delivery instructions.',
-            'Erstelle eine projektlokale Referenz über die CLI und trage ihre ID ein. Qwen Base verarbeitet keine Sprech- oder Regieanweisungen.',
-            'Créez une référence locale avec la CLI et saisissez son identifiant. Qwen Base ne traite pas les consignes vocales.',
-            'Crea una referencia local con la CLI e introduce su ID. Qwen Base no interpreta instrucciones de voz.',
-            'Crea un riferimento locale con la CLI e inserisci il suo ID. Qwen Base non interpreta istruzioni vocali.',
-            'Crie uma referência local com a CLI e informe seu ID. Qwen Base não interpreta instruções de voz.',
-            'Maak een lokale referentie met de CLI en voer de ID in. Qwen Base verwerkt geen voordrachtinstructies.',
+            'Create a project-local reference with the CLI and enter its ID. Reusing a reference can improve continuity, but does not guarantee it. Qwen Base accepts pauses, not text direction.',
+            'Erstelle eine projektlokale Referenz über die CLI und trage ihre ID ein. Dieselbe Referenz kann die Stimme stabilisieren, garantiert es aber nicht. Qwen Base erlaubt Pausen, aber keine Textregie.',
+            'Créez une référence locale avec la CLI et saisissez son identifiant. Une même référence peut stabiliser la voix, sans garantie. Qwen Base accepte les pauses, pas la direction textuelle.',
+            'Crea una referencia local con la CLI e introduce su ID. Usar la misma referencia puede estabilizar la voz, sin garantía. Qwen Base admite pausas, pero no dirección textual.',
+            'Crea un riferimento locale con la CLI e inserisci il suo ID. Lo stesso riferimento può stabilizzare la voce, senza garanzia. Qwen Base accetta pause, ma non regia testuale.',
+            'Crie uma referência local com a CLI e informe seu ID. Usar a mesma referência pode estabilizar a voz, sem garantia. Qwen Base aceita pausas, mas não direção textual.',
+            'Maak een lokale referentie met de CLI en voer de ID in. Dezelfde referentie kan de stem stabieler maken, zonder garantie. Qwen Base accepteert pauzes, maar geen tekstregie.',
         ),
         'speech_voice_hint': (
             'Qwen uses preset voices. Choose delivery instructions explicitly.',
@@ -11414,13 +11414,13 @@ _ROWS.update(
             'Qwen gebruikt vaste stemmen. Kies voordrachtinstructies expliciet.',
         ),
         'speech_instructions': (
-            'Delivery instructions (Qwen only)',
-            'Sprechweise (nur Qwen)',
-            'Consignes vocales (Qwen uniquement)',
-            'Instrucciones de voz (solo Qwen)',
-            'Istruzioni vocali (solo Qwen)',
-            'Instruções de voz (apenas Qwen)',
-            'Spreekinstructies (alleen Qwen)',
+            'Delivery instructions (VoiceDesign / CustomVoice)',
+            'Sprechweise (VoiceDesign / CustomVoice)',
+            'Consignes vocales (VoiceDesign / CustomVoice)',
+            'Instrucciones de voz (VoiceDesign / CustomVoice)',
+            'Istruzioni vocali (VoiceDesign / CustomVoice)',
+            'Instruções de voz (VoiceDesign / CustomVoice)',
+            'Spreekinstructies (VoiceDesign / CustomVoice)',
         ),
         'speech_speed': (
             'Playback tempo factor', 'Sprechtempo-Faktor', 'Facteur de tempo',
@@ -11696,6 +11696,12 @@ _ROWS["speech_target"] = (
     "Render on", "Berechnen auf", "Calculer sur", "Calcular en",
     "Calcola su", "Calcular em", "Berekenen op",
 )
+_ROWS["speech_target_scope"] = (
+    "This choice is not saved in the profile.", "Diese Auswahl wird nicht im Profil gespeichert.",
+    "Ce choix n’est pas enregistré dans le profil.", "Esta elección no se guarda en el perfil.",
+    "Questa scelta non viene salvata nel profilo.", "Esta escolha não é guardada no perfil.",
+    "Deze keuze wordt niet in het profiel opgeslagen.",
+)
 _ROWS["speech_target_local"] = (
     "This computer", "Diesem Computer", "Cet ordinateur", "Este ordenador",
     "Questo computer", "Este computador", "Deze computer",
@@ -11719,6 +11725,15 @@ _ROWS["speech_reuse"] = (
     "Réutiliser les segments de chapitre terminés", "Reutilizar los segmentos de capítulo completados",
     "Riutilizza i segmenti di capitolo completati", "Reutilizar segmentos de capítulo concluídos",
     "Voltooide hoofdstuksegmenten hergebruiken",
+)
+_ROWS["speech_ignore_direction"] = (
+    "Ignore passage direction for this render, including drafts, voice assignments and passage-specific pauses. Profile settings and standard pauses still apply.",
+    "Passagenregie für diese Ausgabe ignorieren – auch Entwürfe, Stimmzuordnungen und Passagenpausen. Profileinstellungen und Standardpausen bleiben wirksam.",
+    "Ignorer la direction des passages pour cette synthèse, y compris les brouillons, les voix attribuées et les pauses de passage. Le profil et les pauses standard restent actifs.",
+    "Ignorar la dirección de pasajes en esta generación, incluidos borradores, asignaciones de voz y pausas de pasaje. Se mantienen el perfil y las pausas estándar.",
+    "Ignora la regia dei passaggi per questa sintesi, incluse bozze, assegnazioni vocali e pause dei passaggi. Restano attivi profilo e pause standard.",
+    "Ignorar a direção dos trechos nesta geração, incluindo rascunhos, atribuições de voz e pausas dos trechos. Mantêm-se o perfil e as pausas padrão.",
+    "Negeer de regie voor passages bij deze uitvoer, inclusief concepten, stemtoewijzingen en passagepauzes. Profielinstellingen en standaardpauzes blijven gelden.",
 )
 
 _ROWS["speech_delivery"] = (
@@ -11753,7 +11768,15 @@ _ROWS["speech_profile_referenced"] = (
 # Authored speech direction uses the same seven-locale label pack.
 _ROWS.update({
     'speech_direction_title': ('Passage direction', 'Regie für Textstellen', 'Direction des passages', 'Dirección de pasajes', 'Regia dei passaggi', 'Direção de passagens', 'Regie voor passages'),
-    'speech_direction_hint': ('Direction guides the model; exact delivery is not guaranteed. Select text below for a smaller range. No IPA or SSML interpretation.', 'Regie leitet das Modell an; die Umsetzung ist nicht garantiert. Unten Text für einen kleineren Bereich markieren. Keine IPA- oder SSML-Auswertung.', 'La direction guide le modèle sans garantir le résultat. Sélectionnez du texte ci-dessous pour réduire la portée. Sans interprétation IPA ou SSML.', 'La dirección orienta al modelo sin garantizar el resultado. Selecciona texto abajo para un intervalo menor. Sin interpretación IPA ni SSML.', 'La regia guida il modello senza garantire il risultato. Seleziona il testo sotto per un intervallo minore. Nessuna interpretazione IPA o SSML.', 'A direção orienta o modelo sem garantir o resultado. Selecione texto abaixo para um intervalo menor. Sem interpretação IPA ou SSML.', 'Regie stuurt het model; de uitvoering is niet gegarandeerd. Selecteer hieronder tekst voor een kleiner bereik. Geen IPA- of SSML-verwerking.'),
+    'speech_direction_hint': (
+        'For one narrator, use restrained delivery cues rather than separate character voices. VoiceDesign generates segments separately; direction may change the voice, and its delivery is not guaranteed. Qwen Base accepts pauses, not text direction. Select text below for a smaller range; no IPA or SSML interpretation.',
+        'Für eine Erzählerstimme: zurückhaltende Sprechweise statt eigener Stimmen für Figuren. VoiceDesign erzeugt Abschnitte einzeln; Regie kann die Stimme verändern und wird nicht garantiert umgesetzt. Qwen Base erlaubt Pausen, aber keine Textregie. Text unten für einen kleineren Bereich markieren; kein IPA oder SSML.',
+        'Pour une seule voix, privilégiez une diction sobre aux voix de personnages. VoiceDesign génère les segments séparément ; la direction peut changer la voix et sa réalisation n’est pas garantie. Qwen Base accepte les pauses, pas la direction textuelle. Sélectionnez une plage ci-dessous ; sans IPA ni SSML.',
+        'Para una sola voz, usa indicaciones sobrias en vez de voces por personaje. VoiceDesign genera segmentos por separado; la dirección puede cambiar la voz y su aplicación no está garantizada. Qwen Base admite pausas, no dirección textual. Selecciona un intervalo abajo; sin IPA ni SSML.',
+        'Per una sola voce, usa indicazioni sobrie invece di voci per personaggio. VoiceDesign genera i segmenti separatamente; la regia può cambiare la voce e la sua realizzazione non è garantita. Qwen Base accetta pause, non regia testuale. Seleziona un intervallo sotto; niente IPA o SSML.',
+        'Para uma só voz, use instruções discretas em vez de vozes por personagem. VoiceDesign gera os segmentos separadamente; a direção pode alterar a voz e sua execução não é garantida. Qwen Base aceita pausas, não direção textual. Selecione um trecho abaixo; sem IPA nem SSML.',
+        'Gebruik voor één verteller rustige voordrachtaanwijzingen in plaats van aparte personagestemmen. VoiceDesign genereert segmenten afzonderlijk; regie kan de stem veranderen en uitvoering is niet gegarandeerd. Qwen Base accepteert pauzes, geen tekstregie. Selecteer hieronder een bereik; geen IPA of SSML.',
+    ),
     'speech_direction_passage': ('Passage', 'Textstelle', 'Passage', 'Pasaje', 'Passaggio', 'Passagem', 'Passage'),
     'speech_direction_entries': ('Saved direction / new range', 'Gespeicherte Regie / neuer Bereich', 'Direction enregistrée / nouvelle plage', 'Dirección guardada / nuevo intervalo', 'Regia salvata / nuovo intervallo', 'Direção guardada / novo intervalo', 'Opgeslagen regie / nieuw bereik'),
     'speech_direction_text': ('Spoken text (selectable, read-only)', 'Sprechtext (markierbar, schreibgeschützt)', 'Texte parlé (sélectionnable, lecture seule)', 'Texto hablado (seleccionable, solo lectura)', 'Testo parlato (selezionabile, sola lettura)', 'Texto falado (selecionável, só leitura)', 'Gesproken tekst (selecteerbaar, alleen-lezen)'),
@@ -11803,18 +11826,142 @@ _ROWS["speech_direction_context_changed"] = (
 )
 
 _ROWS["speech_engine"] = ("Voice model", "Stimmmodell", "Modèle vocal", "Modelo de voz", "Modello vocale", "Modelo de voz", "Stemmodel")
+_ROWS["speech_model_preset"] = (
+    "CustomVoice · preset voice", "CustomVoice · feste Stimme", "CustomVoice · voix prédéfinie",
+    "CustomVoice · voz predefinida", "CustomVoice · voce predefinita", "CustomVoice · voz predefinida", "CustomVoice · vaste stem",
+)
+_ROWS["speech_model_design"] = (
+    "VoiceDesign · describe a voice", "VoiceDesign · Stimme beschreiben", "VoiceDesign · décrire une voix",
+    "VoiceDesign · describir una voz", "VoiceDesign · descrivi una voce", "VoiceDesign · descrever uma voz", "VoiceDesign · beschrijf een stem",
+)
+_ROWS["speech_model_base"] = (
+    "Base · reference recording", "Base · Referenzaufnahme", "Base · enregistrement de référence",
+    "Base · grabación de referencia", "Base · registrazione di riferimento", "Base · gravação de referência", "Base · referentieopname",
+)
+_ROWS["speech_model_preset_hint"] = (
+    "The presets can speak German; none lists German as its native language. Listen for accent and continuity.",
+    "Die festen Stimmen können Deutsch sprechen; keine ist mit Deutsch als Muttersprache ausgewiesen. Höre Akzent und Stimmkontinuität an.",
+    "Les voix prédéfinies parlent allemand ; aucune n’indique l’allemand comme langue maternelle. Écoutez l’accent et la continuité.",
+    "Las voces predefinidas hablan alemán; ninguna indica el alemán como lengua materna. Escucha el acento y la continuidad.",
+    "Le voci predefinite parlano tedesco; nessuna indica il tedesco come lingua madre. Ascolta accento e continuità.",
+    "As vozes predefinidas falam alemão; nenhuma indica o alemão como língua materna. Ouça o sotaque e a continuidade.",
+    "De vaste stemmen spreken Duits; geen ervan vermeldt Duits als moedertaal. Beluister accent en continuïteit.",
+)
+_ROWS["speech_model_design_hint"] = (
+    "Describe the voice and accent. Each segment is generated separately, so the voice may vary.",
+    "Beschreibe Stimme und Akzent. Die Abschnitte werden einzeln erzeugt; die Stimme kann variieren.",
+    "Décrivez la voix et l’accent. Les segments sont générés séparément ; la voix peut varier.",
+    "Describe la voz y el acento. Cada segmento se genera por separado; la voz puede variar.",
+    "Descrivi voce e accento. I segmenti sono generati separatamente; la voce può variare.",
+    "Descreva a voz e o sotaque. Os segmentos são gerados separadamente; a voz pode variar.",
+    "Beschrijf stem en accent. Segmenten worden apart gegenereerd; de stem kan variëren.",
+)
+_ROWS["speech_model_base_hint"] = (
+    "Use a saved recording and its exact transcript. Base does not accept text direction.",
+    "Nutze eine gespeicherte Aufnahme mit ihrem genauen Transkript. Base unterstützt keine Textregie.",
+    "Utilisez un enregistrement et sa transcription exacte. Base n’accepte pas de direction textuelle.",
+    "Usa una grabación y su transcripción exacta. Base no admite dirección textual.",
+    "Usa una registrazione e la trascrizione esatta. Base non accetta regia testuale.",
+    "Use uma gravação e a transcrição exata. Base não aceita direção textual.",
+    "Gebruik een opname met de exacte transcriptie. Base accepteert geen tekstregie.",
+)
+_ROWS["speech_model_clear_instructions"] = (
+    "Base cannot use text direction. Copy or clear these instructions before saving or changing profile.",
+    "Base kann Textregie nicht verwenden. Kopiere oder entferne diese Anweisungen vor dem Speichern oder Profilwechsel.",
+    "Base ne prend pas en charge la direction textuelle. Copiez ou effacez ces consignes avant d’enregistrer ou de changer de profil.",
+    "Base no admite dirección textual. Copia o borra estas instrucciones antes de guardar o cambiar de perfil.",
+    "Base non accetta regia testuale. Copia o cancella le istruzioni prima di salvare o cambiare profilo.",
+    "Base não aceita direção textual. Copie ou limpe estas instruções antes de guardar ou mudar de perfil.",
+    "Base ondersteunt geen tekstregie. Kopieer of wis deze instructies voordat je opslaat of van profiel wisselt.",
+)
+_ROWS["speech_model_clear_description"] = (
+    "The voice description is only for VoiceDesign. Copy or clear it before saving or changing profile.",
+    "Die Stimmbeschreibung gehört zu VoiceDesign. Kopiere oder entferne sie vor dem Speichern oder Profilwechsel.",
+    "La description est réservée à VoiceDesign. Copiez-la ou effacez-la avant d’enregistrer ou de changer de profil.",
+    "La descripción es solo para VoiceDesign. Cópiala o bórrala antes de guardar o cambiar de perfil.",
+    "La descrizione è solo per VoiceDesign. Copiala o cancellala prima di salvare o cambiare profilo.",
+    "A descrição é apenas para VoiceDesign. Copie-a ou limpe-a antes de guardar ou mudar de perfil.",
+    "De stembeschrijving hoort bij VoiceDesign. Kopieer of wis deze voordat je opslaat of van profiel wisselt.",
+)
+_ROWS["speech_model_clear_reference"] = (
+    "The reference ID is only for Base. Copy or clear it before saving or changing profile.",
+    "Die Referenz-ID gehört zu Base. Kopiere oder entferne sie vor dem Speichern oder Profilwechsel.",
+    "L’identifiant de référence est réservé à Base. Copiez-le ou effacez-le avant d’enregistrer ou de changer de profil.",
+    "El ID de referencia es solo para Base. Cópialo o bórralo antes de guardar o cambiar de perfil.",
+    "L’ID di riferimento è solo per Base. Copialo o cancellalo prima di salvare o cambiare profilo.",
+    "O ID de referência é apenas para Base. Copie-o ou limpe-o antes de guardar ou mudar de perfil.",
+    "De referentie-ID hoort bij Base. Kopieer of wis deze voordat je opslaat of van profiel wisselt.",
+)
+_ROWS["speech_model_need_reference"] = (
+    "Enter a valid 64-character reference ID before changing profiles.",
+    "Gib vor dem Profilwechsel eine gültige Referenz-ID mit 64 Zeichen ein.",
+    "Saisissez un identifiant de référence valide de 64 caractères avant de changer de profil.",
+    "Introduce un ID de referencia válido de 64 caracteres antes de cambiar de perfil.",
+    "Inserisci un ID di riferimento valido di 64 caratteri prima di cambiare profilo.",
+    "Introduza um ID de referência válido de 64 caracteres antes de mudar de perfil.",
+    "Vul een geldige referentie-ID van 64 tekens in voordat je van profiel wisselt.",
+)
+_ROWS["speech_model_need_description"] = (
+    "Enter a voice description before changing profiles.", "Gib vor dem Profilwechsel eine Stimmbeschreibung ein.",
+    "Saisissez une description de voix avant de changer de profil.", "Introduce una descripción de voz antes de cambiar de perfil.",
+    "Inserisci una descrizione della voce prima di cambiare profilo.", "Introduza uma descrição de voz antes de mudar de perfil.",
+    "Vul een stembeschrijving in voordat je van profiel wisselt.",
+)
+_ROWS["speech_worker_match"] = (
+    "Last checked: {target} · {model} matches the selected model. The worker may be busy or its state may have changed.",
+    "Zuletzt geprüft: {target} · {model} passt zur Auswahl. Der Dienst kann beschäftigt sein oder sich inzwischen geändert haben.",
+    "Dernière vérification : {target} · {model} correspond au choix. Le service peut être occupé ou avoir changé.",
+    "Última comprobación: {target} · {model} coincide con la selección. El servicio puede estar ocupado o haber cambiado.",
+    "Ultima verifica: {target} · {model} corrisponde alla scelta. Il servizio può essere occupato o cambiato.",
+    "Última verificação: {target} · {model} corresponde à seleção. O serviço pode estar ocupado ou ter mudado.",
+    "Laatst gecontroleerd: {target} · {model} past bij de keuze. De dienst kan bezet zijn of intussen veranderd zijn.",
+)
+_ROWS["speech_worker_mismatch"] = (
+    "Last checked: {target} runs {model}, which does not match the selected model. Start the matching worker before rendering.",
+    "Zuletzt geprüft: {target} nutzt {model}; das passt nicht zur Auswahl. Starte vor der Vertonung den passenden Dienst.",
+    "Dernière vérification : {target} utilise {model}, différent du choix. Démarrez le service adapté avant la synthèse.",
+    "Última comprobación: {target} usa {model}, distinto de la selección. Inicia el servicio compatible antes de generar.",
+    "Ultima verifica: {target} usa {model}, diverso dalla scelta. Avvia il servizio corretto prima della sintesi.",
+    "Última verificação: {target} usa {model}, diferente da seleção. Inicie o serviço correspondente antes de gerar.",
+    "Laatst gecontroleerd: {target} gebruikt {model}, anders dan de keuze. Start de passende dienst vóór het genereren.",
+)
+_ROWS["speech_worker_starting"] = (
+    "Last checked: {target} is starting. Check again before rendering.", "Zuletzt geprüft: {target} startet. Vor der Vertonung erneut prüfen.",
+    "Dernière vérification : {target} démarre. Vérifiez avant la synthèse.", "Última comprobación: {target} se está iniciando. Comprueba antes de generar.",
+    "Ultima verifica: {target} si sta avviando. Controlla prima della sintesi.", "Última verificação: {target} está a iniciar. Verifique antes de gerar.",
+    "Laatst gecontroleerd: {target} start op. Controleer opnieuw vóór het genereren.",
+)
+_ROWS["speech_worker_unavailable"] = (
+    "Last checked: the worker on {target} was unavailable. Start a matching worker before rendering.",
+    "Zuletzt geprüft: Der Dienst auf {target} war nicht erreichbar. Starte vor der Vertonung den passenden Dienst.",
+    "Dernière vérification : le service sur {target} était indisponible. Démarrez le service adapté avant la synthèse.",
+    "Última comprobación: el servicio en {target} no estaba disponible. Inicia el servicio compatible antes de generar.",
+    "Ultima verifica: il servizio su {target} non era disponibile. Avvia il servizio corretto prima della sintesi.",
+    "Última verificação: o serviço em {target} estava indisponível. Inicie o serviço correspondente antes de gerar.",
+    "Laatst gecontroleerd: de dienst op {target} was niet bereikbaar. Start de passende dienst vóór het genereren.",
+)
+_ROWS["speech_worker_unknown"] = (
+    "Worker status on {target} is unknown. Check again before rendering.", "Dienststatus auf {target} unbekannt. Vor der Vertonung erneut prüfen.",
+    "État du service sur {target} inconnu. Vérifiez avant la synthèse.", "Estado del servicio en {target} desconocido. Comprueba antes de generar.",
+    "Stato del servizio su {target} sconosciuto. Controlla prima della sintesi.", "Estado do serviço em {target} desconhecido. Verifique antes de gerar.",
+    "Status van de dienst op {target} onbekend. Controleer vóór het genereren.",
+)
+_ROWS["speech_worker_refresh"] = (
+    "Check worker again", "Dienst erneut prüfen", "Revérifier le service", "Volver a comprobar el servicio",
+    "Ricontrolla il servizio", "Verificar serviço novamente", "Dienst opnieuw controleren",
+)
 _ROWS["speech_voice_description"] = (
     "Voice description", "Stimmbeschreibung", "Description de la voix", "Descripción de la voz",
     "Descrizione della voce", "Descrição da voz", "Stembeschrijving",
 )
 _ROWS["speech_design_hint"] = (
-    "Describe the voice and accent. Delivery instructions remain separate. VoiceDesign needs a matching worker; the voice may change between segments.",
-    "Beschreibe Stimme und Akzent. Die Sprechregie bleibt getrennt. VoiceDesign benötigt einen passenden Dienst; die Stimme kann zwischen Abschnitten variieren.",
-    "Décrivez la voix et l’accent. La direction reste séparée. VoiceDesign nécessite un service adapté ; la voix peut varier entre les passages.",
-    "Describe la voz y el acento. La dirección se mantiene separada. VoiceDesign necesita un servicio compatible; la voz puede variar entre segmentos.",
-    "Descrivi la voce e l’accento. La regia resta separata. VoiceDesign richiede un servizio compatibile; la voce può variare tra i segmenti.",
-    "Descreva a voz e o sotaque. A direção mantém-se separada. VoiceDesign precisa de um serviço compatível; a voz pode variar entre segmentos.",
-    "Beschrijf de stem en het accent. De regie blijft apart. VoiceDesign vereist een passende service; de stem kan per segment verschillen.",
+    "Describe voice and accent. VoiceDesign generates each segment separately; even the same description can yield a different voice. Direction can also affect it. Listen to a short preview first; a matching worker is required.",
+    "Beschreibe Stimme und Akzent. VoiceDesign erzeugt jeden Abschnitt einzeln; auch bei gleicher Beschreibung kann die Stimme wechseln. Regie kann sie ebenfalls verändern. Höre zuerst eine kurze Probe; ein passender Dienst ist nötig.",
+    "Décrivez la voix et l’accent. VoiceDesign génère chaque segment séparément ; une même description peut produire une autre voix. La direction peut aussi la modifier. Écoutez d’abord un court extrait ; un service adapté est nécessaire.",
+    "Describe voz y acento. VoiceDesign genera cada segmento por separado; incluso la misma descripción puede producir otra voz. La dirección también puede cambiarla. Escucha primero una muestra breve; se necesita un servicio compatible.",
+    "Descrivi voce e accento. VoiceDesign genera ogni segmento separatamente; anche la stessa descrizione può produrre un’altra voce. Anche la regia può cambiarla. Ascolta prima una breve prova; serve un servizio compatibile.",
+    "Descreva voz e sotaque. VoiceDesign gera cada segmento separadamente; a mesma descrição pode produzir outra voz. A direção também pode alterá-la. Ouça primeiro uma amostra curta; é preciso um serviço compatível.",
+    "Beschrijf stem en accent. VoiceDesign genereert elk segment apart; dezelfde beschrijving kan een andere stem opleveren. Ook regie kan de stem veranderen. Beluister eerst een kort voorbeeld; een passende service is nodig.",
 )
 
 _ROWS.update({

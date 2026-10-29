@@ -14,7 +14,9 @@ import inspect
 import io
 import json
 import os
+import re
 import threading
+import time
 import urllib.error
 import urllib.request
 from collections.abc import Callable
@@ -22,11 +24,13 @@ from dataclasses import asdict, dataclass
 from functools import partial
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from secrets import token_hex
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from .speech_references import SpeechReference
 
+from .log import get_logger, speech_diagnostic_id
 from .speech_profiles import (
     QWEN_BASE_MODEL,
     QWEN_DESIGN_MODEL,
@@ -46,6 +50,11 @@ MAX_RESPONSE_BYTES = 32 * 1024 * 1024
 SAMPLE_RATE = 24000
 # CPU synthesis can take substantially longer than the resulting audio.
 SYNTHESIS_TIMEOUT_SECONDS = 3600
+_RENDER_ID_HEADER = "X-Lixity-Render-Id"
+
+
+def _valid_render_id(value: object) -> str | None:
+    return value if isinstance(value, str) and re.fullmatch(r"[0-9a-f]{16}", value) else None
 
 
 @dataclass(frozen=True)
@@ -136,8 +145,12 @@ def synthesize_qwen(text: str, profile: AudioProfile, *, target: str = "local", 
     payload = json.dumps(request_data, ensure_ascii=False).encode("utf-8")
     if len(payload) > (MAX_BASE_REQUEST_BYTES if profile.engine == "qwen3-base" else MAX_REQUEST_BYTES):
         raise ValueError("Qwen synthesis request is too large")
+    headers = {"Content-Type": "application/json"}
+    render_id = _valid_render_id(speech_diagnostic_id())
+    if render_id is not None:
+        headers[_RENDER_ID_HEADER] = render_id
     request = urllib.request.Request(TARGET_ENDPOINTS[target], data=payload,  # noqa: S310 - fixed loopback allowlist
-                                     headers={"Content-Type": "application/json"})
+                                     headers=headers)
     # Ignore proxy environment variables, even for localhost.
     client = opener or urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
     try:
@@ -202,6 +215,7 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
     if model not in (QWEN_MODEL, QWEN_DESIGN_MODEL, QWEN_BASE_MODEL):
         raise ValueError("Unsupported worker model")
     engine = "qwen3-base" if model == QWEN_BASE_MODEL else "qwen3-design" if model == QWEN_DESIGN_MODEL else "qwen3"
+    logger = get_logger("speech.worker")
     lock = threading.Lock()
 
     class Handler(BaseHTTPRequestHandler):
@@ -220,24 +234,42 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
             self.end_headers()
             self.wfile.write(data)
 
+        def _send_reply(self, status: int, data: bytes, content_type: str = "application/json",
+                        voice: str | None = None, *, request_id: str | None = None,
+                        render_id: str = "unknown") -> bool:
+            try:
+                self.reply(status, data, content_type, voice)
+            except OSError:
+                if request_id is None:
+                    logger.warning("event=worker_transport status=failed category=transport")
+                else:
+                    logger.warning("event=worker_synthesis id=%s render_id=%s engine=%s status=failed category=transport",
+                                   request_id, render_id, engine)
+                return False
+            return True
+
         def do_GET(self) -> None:
             if self.path == "/health":
-                self.reply(200, json.dumps({"ready": True, "model": model,
-                                           **({"runtime": asdict(runtime_info)} if runtime_info is not None else {})}).encode())
+                self._send_reply(200, json.dumps({"ready": True, "model": model,
+                                                 **({"runtime": asdict(runtime_info)} if runtime_info is not None else {})}).encode())
             elif self.path == "/capabilities":
-                self.reply(200, json.dumps(audio_capabilities()[engine]).encode())
+                self._send_reply(200, json.dumps(audio_capabilities()[engine]).encode())
             else:
-                self.reply(404, b'{"error":"Not found"}')
+                self._send_reply(404, b'{"error":"Not found"}')
 
         def do_POST(self) -> None:
             from .speech import MAX_SEGMENT_CHARS, _read_pcm
 
             if self.path != "/v1/audio/speech":
-                self.reply(404, b'{"error":"Not found"}')
+                self._send_reply(404, b'{"error":"Not found"}')
                 return
+            request_id = token_hex(8)
+            render_id = _valid_render_id(self.headers.get(_RENDER_ID_HEADER)) or "unknown"
+            started = time.monotonic()
             # Browser pages cannot use this machine resource as a cross-origin API.
             if self.headers.get("Origin") or self.headers.get("Transfer-Encoding"):
-                self.reply(403, b'{"error":"Unsupported request"}')
+                logger.warning("event=worker_synthesis id=%s render_id=%s engine=%s status=rejected category=forbidden", request_id, render_id, engine)
+                self._send_reply(403, b'{"error":"Unsupported request"}', request_id=request_id, render_id=render_id)
                 return
             try:
                 size = int(self.headers.get("Content-Length", "0"))
@@ -270,19 +302,36 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
                     AudioProfile.model_validate({"name": "Worker", "engine": engine, "language": request["language"],
                                                  "voice": request["voice"], "instructions": request["instructions"],
                                                  "voice_description": request.get("voice_description", "")})
+            except OSError:
+                logger.warning("event=worker_synthesis id=%s render_id=%s engine=%s status=failed category=transport",
+                               request_id, render_id, engine)
+                return
             except (ValueError, TypeError):
-                self.reply(400, b'{"error":"Invalid synthesis request"}')
+                logger.warning("event=worker_synthesis id=%s render_id=%s engine=%s status=rejected category=validation", request_id, render_id, engine)
+                self._send_reply(400, b'{"error":"Invalid synthesis request"}', request_id=request_id, render_id=render_id)
                 return
             if not lock.acquire(blocking=False):
-                self.reply(503, b'{"error":"Worker is busy"}')
+                logger.warning("event=worker_synthesis id=%s render_id=%s engine=%s status=rejected category=busy", request_id, render_id, engine)
+                self._send_reply(503, b'{"error":"Worker is busy"}', request_id=request_id, render_id=render_id)
                 return
+            phase = "synthesis"
             try:
+                logger.info("event=worker_synthesis id=%s render_id=%s engine=%s status=started", request_id, render_id, engine)
                 data = synthesize(request)
                 if len(data) > MAX_RESPONSE_BYTES or _read_pcm(data)[0] != (1, 2, SAMPLE_RATE):
                     raise ValueError("Unexpected generated audio format")
-                self.reply(200, data, "audio/wav", request["voice"])
+                phase = "response"
+                if not self._send_reply(200, data, "audio/wav", request["voice"],
+                                        request_id=request_id, render_id=render_id):
+                    return
+                logger.info("event=worker_synthesis id=%s render_id=%s engine=%s status=success duration_ms=%d",
+                            request_id, render_id, engine, int((time.monotonic() - started) * 1000))
             except Exception:  # noqa: BLE001 - optional inference adapter failures are reported locally
-                self.reply(500, b'{"error":"Local synthesis failed"}')
+                category = "transport" if phase == "response" else "execution"
+                logger.warning("event=worker_synthesis id=%s render_id=%s engine=%s status=failed category=%s duration_ms=%d",
+                               request_id, render_id, engine, category, int((time.monotonic() - started) * 1000))
+                if phase != "response":
+                    self._send_reply(500, b'{"error":"Local synthesis failed"}', request_id=request_id, render_id=render_id)
             finally:
                 lock.release()
 
@@ -430,7 +479,17 @@ def main() -> None:
                "attention": args.attention, "codec_chunk_frames": args.codec_chunk_frames}
     if args.variant != "custom-voice":
         options["variant"] = args.variant
-    renderer = load_local_model(args.model, **options)
+    logger = get_logger("speech.worker")
+    started = time.monotonic()
+    logger.info("event=worker_model_load variant=%s device=%s status=started", args.variant, args.device)
+    try:
+        renderer = load_local_model(args.model, **options)
+    except Exception:
+        logger.warning("event=worker_model_load variant=%s device=%s status=failed duration_ms=%d",
+                       args.variant, args.device, int((time.monotonic() - started) * 1000))
+        raise
+    logger.info("event=worker_model_load variant=%s device=%s status=ready duration_ms=%d",
+                args.variant, args.device, int((time.monotonic() - started) * 1000))
     server_options: dict[str, Any] = {"port": args.port, "runtime_info": renderer.runtime_info}
     if args.variant == "voice-design":
         server_options["model"] = QWEN_DESIGN_MODEL
