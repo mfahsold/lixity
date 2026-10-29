@@ -17,6 +17,7 @@ from ..speech import MAX_SEGMENT_CHARS
 from ..speech_cache import project_audio_cache
 from ..speech_direction import (
     BaseDirectionConflict,
+    CoquiDirectionConflict,
     Direction,
     build_speech_plan,
     direction_id,
@@ -92,8 +93,9 @@ class SpeechRoutesMixin(ResponseMixin):
             if isinstance(exc, _SpeechStale)
             else 400
         )
-        message = (WORKSPACE_LABELS.get(self.language, WORKSPACE_LABELS["en"])["speech_base_direction_conflict"]
-                   if isinstance(exc, BaseDirectionConflict) else str(exc))
+        key = ("speech_base_direction_conflict" if isinstance(exc, BaseDirectionConflict) else
+               "speech_coqui_direction_conflict" if isinstance(exc, CoquiDirectionConflict) else None)
+        message = WORKSPACE_LABELS.get(self.language, WORKSPACE_LABELS["en"])[key] if key else str(exc)
         self._json({"ok": False, "message": message}, code)
 
     @classmethod
@@ -306,7 +308,7 @@ class SpeechRoutesMixin(ResponseMixin):
                         return False
 
                 cache_dir = (project_audio_cache(root) if root is not None and
-                             profile.engine in ("qwen3", "qwen3-design", "qwen3-base") and payload["mode"] == "chapter" else None)
+                             profile.engine in ("qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference") and payload["mode"] == "chapter" else None)
             reference_options = {"references": references} if references else {}
             job = self._speech_manager().start(key, prepared, profile, context, valid, cache_dir=cache_dir,
                                                fresh_audio=payload.get("fresh_audio", False),

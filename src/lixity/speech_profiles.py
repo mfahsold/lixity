@@ -22,6 +22,8 @@ from .speech_controls import speech_control_support, validate_pronunciation_keys
 QWEN_MODEL = "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice"
 QWEN_DESIGN_MODEL = "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign"
 QWEN_BASE_MODEL = "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
+COQUI_MODEL = "coqui/tts_models/de/thorsten/vits"
+COQUI_REFERENCE_MODEL = "coqui/tts_models/de/thorsten/vits+openvoice-v2"
 QWEN_LANGUAGES = {
     "zh": "Chinese", "en": "English", "ja": "Japanese", "ko": "Korean",
     "de": "German", "fr": "French", "ru": "Russian", "pt": "Portuguese",
@@ -52,7 +54,7 @@ class AudioProfile(BaseModel):
 
     model_config = ConfigDict(extra="forbid", strict=True, allow_inf_nan=False, hide_input_in_errors=True)
     name: str = Field(default="Narrator", min_length=1, max_length=100)
-    engine: Literal["qwen3", "qwen3-design", "qwen3-base"] = "qwen3"
+    engine: Literal["qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference"] = "qwen3"
     language: str = "en"
     voice: str = Field(default="Ryan", min_length=1, max_length=100)
     voice_description: str = Field(default="", max_length=2000)
@@ -106,6 +108,15 @@ class AudioProfile(BaseModel):
 
     @model_validator(mode="after")
     def supported_controls(self) -> AudioProfile:
+        if self.engine in ("coqui", "coqui-reference"):
+            if self.language != "de" or self.instructions or self.voice_description:
+                raise ValueError("Coqui supports German without delivery instructions or voice descriptions")
+            if self.engine == "coqui-reference":
+                if self.voice != "reference" or re.fullmatch(r"[0-9a-f]{64}", self.reference_id) is None:
+                    raise ValueError("Coqui reference requires a saved reference identity")
+            elif self.voice != "thorsten" or self.reference_id:
+                raise ValueError("Coqui requires the Thorsten voice without a reference")
+            return self
         if self.language not in QWEN_LANGUAGES:
             raise ValueError("Unsupported Qwen language")
         if self.engine == "qwen3-base":
@@ -137,7 +148,7 @@ class AudioSettings(BaseModel):
     """Versioned project profile collection with one existing selected narrator."""
 
     model_config = ConfigDict(extra="forbid", strict=True, hide_input_in_errors=True)
-    schema_name: Literal["lixity-audio-settings/1", "lixity-audio-settings/2"] = Field(default="lixity-audio-settings/1", alias="schema_version")
+    schema_name: Literal["lixity-audio-settings/1", "lixity-audio-settings/2", "lixity-audio-settings/3"] = Field(default="lixity-audio-settings/1", alias="schema_version")
     selected: str
     profiles: dict[str, AudioProfile] = Field(min_length=1, max_length=32)
     pronunciations: PronunciationMap = Field(default_factory=dict, max_length=200)
@@ -159,13 +170,15 @@ class AudioSettings(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def require_explicit_engine(cls, raw: Any) -> Any:
-        if isinstance(raw, Mapping) and ("pronunciations" in raw or "pronunciation_matching" in raw) and raw.get("schema_version", "lixity-audio-settings/1") != "lixity-audio-settings/2":
-            raise ValueError("Project pronunciations require audio schema lixity-audio-settings/2")
+        if isinstance(raw, Mapping) and ("pronunciations" in raw or "pronunciation_matching" in raw) and raw.get("schema_version", "lixity-audio-settings/1") not in ("lixity-audio-settings/2", "lixity-audio-settings/3"):
+            raise ValueError("Project pronunciations require audio schema lixity-audio-settings/2 or /3")
         if isinstance(raw, Mapping) and isinstance(raw.get("profiles"), Mapping):
             for profile in raw["profiles"].values():
                 if isinstance(profile, Mapping) and "engine" not in profile:
                     raise ValueError("Saved audio profiles require an explicit Qwen engine; "
                                      "review the old profile before replacing it")
+                if isinstance(profile, Mapping) and profile.get("engine") in ("coqui", "coqui-reference") and raw.get("schema_version") != "lixity-audio-settings/3":
+                    raise ValueError("Coqui profiles require audio schema lixity-audio-settings/3")
         return raw
 
     @model_validator(mode="after")
@@ -209,6 +222,18 @@ def audio_capabilities() -> dict[str, Any]:
     Qwen timbres are multilingual; native-language quality requires auditioning.
     """
     return {
+        **{engine: {
+            "name": name, "targets": ["local"], "languages": ["de"],
+            "voices": {voice: {"name": voice_name, "languages": ["de"]}},
+            "reference_required": engine == "coqui-reference", "instructions": False,
+            "control_support": speech_control_support(engine).as_dict(),
+            "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
+                      "default": DEFAULT_PLAYBACK_SPEED, "implementation": "ffmpeg-atempo"},
+            "model": model,
+        } for engine, name, voice, voice_name, model in (
+            ("coqui", "Coqui Thorsten VITS", "thorsten", "Thorsten", COQUI_MODEL),
+            ("coqui-reference", "Coqui Thorsten + OpenVoice V2", "reference", "Reference", COQUI_REFERENCE_MODEL),
+        )},
         "qwen3": {
             "name": "Qwen3-TTS 1.7B CustomVoice", "targets": ["local", "jetson"], "languages": list(QWEN_LANGUAGES),
             "voices": {voice: {"name": voice, "languages": list(QWEN_LANGUAGES)} for voice in QWEN_VOICES},

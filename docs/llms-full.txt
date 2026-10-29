@@ -1955,6 +1955,78 @@ and stops before synthesis when uncached segments require multiple variants.
 Use one variant throughout, or reuse previously cached segments.
 Cache entries can still be evicted while a render is in progress.
 
+### Experimental Coqui and OpenVoice audio (unreleased)
+
+Lixity can use the German Thorsten VITS voice with an optional OpenVoice V2
+conversion based on a saved project-local voice reference. These are separate
+optional inference dependencies; analysis does not depend on them. The model
+output and any voice similarity need human listening review. Thorsten VITS is
+Apache-2.0 licensed and OpenVoice V2 is MIT licensed; check the model terms for
+your use. OpenVoice does not list German among its native languages, so German
+conversion quality is not guaranteed.
+
+Set up a separate Python environment following the
+[maintained Coqui installation guide](https://coqui-tts.readthedocs.io/en/latest/installation.html).
+Install `coqui-tts`, matching CPU versions of `torch` and `torchaudio`,
+`gruut[de]`, and this Lixity checkout in that environment. For example, this
+isolated CPU setup was tested on Linux ARM64:
+
+```sh
+uv venv --python 3.11 /path/to/coqui-env
+uv pip install --python /path/to/coqui-env/bin/python --torch-backend cpu \
+  'torch==2.8.0' 'torchaudio==2.8.0' 'coqui-tts==0.28.0' 'gruut[de]' -e /path/to/lixity
+```
+
+For PyTorch 2.9 or newer, Coqui also requires `torchcodec`. Obtain the
+[Thorsten VITS model](https://huggingface.co/Thorsten-Voice/VITS) and the
+[OpenVoice V2 converter](https://huggingface.co/myshell-ai/OpenVoiceV2/tree/main/converter)
+and keep their complete local model directories. Model downloads are an explicit
+setup step. The worker does not download models or send manuscript text or
+references over the network.
+
+After ensuring no active audio job uses the local worker, start one of these
+workers on the same loopback port used by Qwen:
+
+```sh
+python -m lixity.speech_coqui --model /path/to/thorsten-vits
+python -m lixity.speech_coqui --model /path/to/thorsten-vits --converter /path/to/OpenVoiceV2/converter
+```
+
+The Thorsten directory must contain `model_file.pth` and `config.json`; the
+converter directory must contain `checkpoint.pth` and `config.json`. The first
+command serves `coqui`, the second `coqui-reference`. Start only one worker at
+a time. A reference profile uses `voice = "reference"` and an existing
+`reference_id`; a Thorsten profile uses `voice = "thorsten"`. Both require
+`language = "de"`. Select the matching profile in the UI or use `--engine` on
+the CLI. `audio-status --engine coqui-reference` checks the actual worker.
+
+Saved Coqui profiles require audio settings schema `/3`, which older versions
+cannot read. Before adding one to an existing project, preview the explicit
+migration, review its JSON snapshot, then apply it with a new backup outside
+the project (replace `TOKEN` with the reviewed snapshot):
+
+```sh
+lixity audio-migrate --project ./novel --to-schema-3
+lixity audio-migrate --project ./novel --to-schema-3 --apply \
+  --expected-snapshot TOKEN --backup /safe/location/novel-audio-backup.zip
+```
+
+The migration checks for changes and backs up the original project configuration
+before writing. Protect the backup; it does not contain the manuscript or the
+private voice references, which need separate backups. To recover the old
+configuration, stop writes, restore the configuration files from that backup,
+and check the project before resuming. Test the procedure on a restored copy
+before migrating a working project. CLI one-off engine overrides do not change
+project settings.
+
+Neither Coqui profile interprets free-text delivery instructions. Saved passage
+instructions fail explicitly; `--no-direction` also omits passage voice
+assignments and extra pauses. Pronunciation substitutions, explicit pauses and
+playback speed use the existing Lixity pipeline. The underlying phonemizer may
+discard unsupported phonetic characters; check worker warnings and listen to
+the resulting pronunciation. Profiles containing these new engine identifiers
+are not readable by older Lixity versions.
+
 ### Experimental reference voices
 
 Qwen's [Voice Design then Clone](https://github.com/QwenLM/Qwen3-TTS#voice-design-then-clone)
@@ -8427,6 +8499,12 @@ profile uses 1.2. Existing explicit and omitted saved values preserve 1.0 where
 applicable. CLI `--speed` overrides all profiles for that run without saving.
 Non-1.0 factors require FFmpeg on the render host. Structural pauses stay unchanged.
 Style instructions do not implement precise speed control.
+
+Unreleased main adds `coqui` (German Thorsten VITS) and `coqui-reference`
+(Thorsten plus OpenVoice V2) engines. Saved profiles require audio schema `/3`
+and a reviewed `audio-migrate --to-schema-3` upgrade. They require a matching optional local
+worker, reject free-text delivery instructions and use existing pronunciation,
+pause and reference mechanisms. Older versions cannot read these engine IDs.
 
 Current main additionally accepts schema `lixity-audio-settings/2`, which adds
 optional project-wide `pronunciations`. Each profile's same-key entries override

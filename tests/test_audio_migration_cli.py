@@ -75,3 +75,21 @@ def test_cli_apply_requires_review_token_and_backup(tmp_path):
     with pytest.raises(SystemExit) as error:
         main(["audio-migrate", "--project", str(project), "--replace", "narrator=Ryan", "--apply"])
     assert error.value.code == 2
+
+
+def test_cli_schema_upgrade_requires_preview_and_preserves_configuration(tmp_path, capsys):
+    project = tmp_path / "project"
+    project.mkdir()
+    config = project / "lixity.toml"
+    config.write_text('language = "de"\n', encoding="utf-8")
+    original = config.read_bytes()
+    arguments = ["audio-migrate", "--project", str(project), "--to-schema-3"]
+    assert main(arguments) == 0
+    preview = json.loads(capsys.readouterr().out)
+    assert preview["target_schema"] == "lixity-audio-settings/3"
+    assert config.read_bytes() == original
+    backup = tmp_path / "audio.zip"
+    assert main([*arguments, "--apply", "--backup", str(backup), "--expected-snapshot", preview["snapshot"]]) == 0
+    assert json.loads(capsys.readouterr().out)["applied"] is True
+    with zipfile.ZipFile(backup) as archive:
+        assert archive.read("lixity.toml") == original

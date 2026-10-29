@@ -123,7 +123,7 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "audio_status_base_hint": "Base reuses a voice reference but does not guarantee identical delivery; free-form direction is unsupported. Compare short listening samples.",
         "audio_no_direction_help": "Ignore saved passage direction; profile, pronunciation, speed and default pauses remain",
         "audio_instructions_help": "Explicit Qwen delivery instructions (not supported by Base)",
-        "audio_engine_help": "qwen3: preset voices; qwen3-design: described voice; qwen3-base: saved reference. The worker must serve the same model",
+        "audio_engine_help": "qwen3: preset voices; qwen3-design: described voice; qwen3-base: saved reference; coqui: Thorsten; coqui-reference: converted reference voice. Worker must match",
         "audio_voice_help": "CustomVoice presets: {voices}. Qwen lists no German-native preset; audition pronunciation. Base uses reference and VoiceDesign uses design",
         "audio_base_reference_required": "Qwen Base needs a saved reference: create one with 'lixity audio-reference create' and pass --reference-id ID",
         "audio_base_instructions_inherited": "Qwen Base cannot use the selected profile's delivery instructions; pass --instructions '' to clear them for this run or select a Base profile. --no-direction only excludes passage directions",
@@ -269,7 +269,7 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "audio_status_base_hint": "Base nutzt eine Stimmreferenz, garantiert aber keine gleichbleibende Darbietung; freie Regie wird nicht unterstützt. Kurze Hörproben vergleichen.",
         "audio_no_direction_help": "Gespeicherte Passagenregie ignorieren; Profil, Aussprache, Tempo und Standardpausen bleiben aktiv",
         "audio_instructions_help": "Ausdrückliche Qwen-Regieanweisungen (von Base nicht unterstützt)",
-        "audio_engine_help": "qwen3: feste Stimmen; qwen3-design: beschriebene Stimme; qwen3-base: gespeicherte Referenz. Der Worker muss dasselbe Modell nutzen",
+        "audio_engine_help": "qwen3: feste Stimmen; qwen3-design: beschriebene Stimme; qwen3-base: Referenz; coqui: Thorsten; coqui-reference: Thorsten mit Referenzstimme. Worker muss zum Modell passen",
         "audio_voice_help": "CustomVoice-Stimmen: {voices}. Qwen nennt keine deutschsprachige Mutterstimme; Aussprache anhören. Base verwendet reference, VoiceDesign design",
         "audio_base_reference_required": "Qwen Base benötigt eine gespeicherte Referenz: mit 'lixity audio-reference create' anlegen und --reference-id ID angeben",
         "audio_base_instructions_inherited": "Qwen Base unterstützt die Regieanweisung des gewählten Profils nicht; für diesen Lauf --instructions '' angeben oder ein Base-Profil wählen. --no-direction schaltet nur die Passagenregie aus",
@@ -494,8 +494,8 @@ _lixity_complete() {
             case "$prev" in
                 --language) COMPREPLY=( $(compgen -W "zh en ja ko de fr ru pt es it" -- "$cur") ) ;;
                 --speech-target) COMPREPLY=( $(compgen -W "local jetson" -- "$cur") ) ;;
-                --voice) COMPREPLY=( $(compgen -W "Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee design reference" -- "$cur") ) ;;
-                --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design qwen3-base" -- "$cur") ) ;;
+                --voice) COMPREPLY=( $(compgen -W "Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee design reference thorsten" -- "$cur") ) ;;
+                --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design qwen3-base coqui coqui-reference" -- "$cur") ) ;;
                 --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
                 -o|--output) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
                 --profile|--instructions|--voice-description|--reference-id|--chapter|--preview-line|--speed) ;;
@@ -509,7 +509,7 @@ _lixity_complete() {
         audio-status)
             case "$prev" in
                 --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
-                --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design qwen3-base" -- "$cur") ) ;;
+                --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design qwen3-base coqui coqui-reference" -- "$cur") ) ;;
                 *) COMPREPLY=( $(compgen -W "--help --project --engine --json" -- "$cur") ) ;;
             esac
             return 0
@@ -544,7 +544,7 @@ _lixity_complete() {
                     fi
                     ;;
                 --instructions|--expected-snapshot) ;;
-                *) COMPREPLY=( $(compgen -W "--help --project --replace --instructions --apply --backup --expected-snapshot" -- "$cur") ) ;;
+                *) COMPREPLY=( $(compgen -W "--help --project --to-schema-3 --replace --instructions --apply --backup --expected-snapshot" -- "$cur") ) ;;
             esac
             return 0
             ;;
@@ -684,8 +684,8 @@ __LIXITY_ZSH_COMMANDS__
             '--language[Qwen speech language]:language:(zh en ja ko de fr ru pt es it)' \
             '--profile[Saved narrator profile]:profile:' \
             '--instructions[Explicit Qwen delivery instructions]:text:' \
-            '--engine[Qwen model variant]:engine:(qwen3 qwen3-design qwen3-base)' \
-            '--voice[Qwen preset, design, or reference]:voice:(Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee design reference)' \
+            '--engine[Speech model variant]:engine:(qwen3 qwen3-design qwen3-base coqui coqui-reference)' \
+            '--voice[Speech voice]:voice:(Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee design reference thorsten)' \
             '--voice-description[VoiceDesign description]:text:' \
             '--reference-id[Saved project reference]:id:' \
             '--speed[Postprocessing tempo factor]:speed:' \
@@ -703,7 +703,7 @@ __LIXITY_ZSH_COMMANDS__
           _arguments \
             '--help[Help]' \
             '--project[Explicit project root]:directory:_files -/' \
-            '--engine[Compare a model variant]:engine:(qwen3 qwen3-design qwen3-base)' \
+            '--engine[Compare a model variant]:engine:(qwen3 qwen3-design qwen3-base coqui coqui-reference)' \
             '--json[Machine-readable status]'
           ;;
         audio-reference)
@@ -738,6 +738,7 @@ __LIXITY_ZSH_COMMANDS__
           _arguments \
             '--help[Help]' \
             '--project[Explicit project root]:directory:_files -/' \
+            '--to-schema-3[Prepare audio schema upgrade for Coqui]' \
             '*--replace[Explicit PROFILE=VOICE replacement]:profile=preset:' \
             '*--instructions[Explicit PROFILE=TEXT delivery]:profile=text:' \
             '--apply[Apply the reviewed candidate]' \
@@ -1448,13 +1449,15 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
             changes["voice"] = "design"
         if args.engine == "qwen3-base" and args.voice is None and profile.engine != "qwen3-base":
             changes["voice"] = "reference"
-        if args.engine in ("qwen3", "qwen3-base") and profile.engine == "qwen3-design" and args.voice_description is None:
+        if args.engine in ("coqui", "coqui-reference") and args.voice is None:
+            changes["voice"] = "reference" if args.engine == "coqui-reference" else "thorsten"
+        if args.engine in ("qwen3", "qwen3-base", "coqui", "coqui-reference") and profile.engine == "qwen3-design" and args.voice_description is None:
             changes.pop("voice_description", None)
-        if args.engine in ("qwen3", "qwen3-design") and profile.engine == "qwen3-base" and args.reference_id is None:
+        if args.engine in ("qwen3", "qwen3-design", "coqui") and profile.engine in ("qwen3-base", "coqui-reference") and args.reference_id is None:
             changes.pop("reference_id", None)
-        if changes["engine"] != "qwen3-base" and args.reference_id:
+        if changes["engine"] not in ("qwen3-base", "coqui-reference") and args.reference_id:
             raise ValueError(_m("audio_reference_wrong_engine"))
-        if changes["engine"] == "qwen3-base":
+        if changes["engine"] in ("qwen3-base", "coqui-reference"):
             if not changes.get("reference_id"):
                 raise ValueError(_m("audio_base_reference_required"))
             if changes.get("instructions"):
@@ -1929,7 +1932,7 @@ def _main(argv: list[str] | None = None) -> int:
         p = sub.add_parser(name, help=help_text, description=help_text)
         if name == "audio-status":
             p.add_argument("--project", help="Explicit project root; omit to inspect workers only")
-            p.add_argument("--engine", choices=("qwen3", "qwen3-design", "qwen3-base"), help="Compare this model variant instead of the selected profile")
+            p.add_argument("--engine", choices=("qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference"), help="Compare this model variant instead of the selected profile")
             p.add_argument("--json", action="store_true", help="Machine-readable status")
             continue
         if name == "audio-reference":
@@ -1945,6 +1948,7 @@ def _main(argv: list[str] | None = None) -> int:
             continue
         if name == "audio-migrate":
             p.add_argument("--project", required=True, help="Explicit project root")
+            p.add_argument("--to-schema-3", action="store_true", help="Prepare a backed-up upgrade for Coqui profiles")
             p.add_argument("--replace", action="append", default=[], metavar="PROFILE=VOICE",
                            help="Explicit Qwen preset for each removed engine profile; repeat for multiple profiles")
             p.add_argument("--instructions", action="append", default=[], metavar="PROFILE=TEXT",
@@ -2137,7 +2141,7 @@ def _main(argv: list[str] | None = None) -> int:
             p.add_argument("--progress", action="store_true", help="Report segment progress and estimated remaining time to stderr")
             p.add_argument("--no-direction", action="store_true", help=_m("audio_no_direction_help"))
             p.add_argument("--instructions", default=None, help=_m("audio_instructions_help"))
-            p.add_argument("--engine", choices=("qwen3", "qwen3-design", "qwen3-base"), default=None, help=_m("audio_engine_help"))
+            p.add_argument("--engine", choices=("qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference"), default=None, help=_m("audio_engine_help"))
             p.add_argument("--voice-description", default=None, help="VoiceDesign voice description")
             p.add_argument("--reference-id", default=None, help="Project-local Base voice reference identity")
             p.add_argument("--voice", default=None, help=_m("audio_voice_help", voices=", ".join(QWEN_VOICES)))
@@ -2405,7 +2409,7 @@ def _main(argv: list[str] | None = None) -> int:
             print(_json({"ok": False, "message": str(exc)}, indent=True))
             return EXIT_ERROR
     if args.command == "audio-migrate":
-        from .speech_migration import prepare_audio_migration
+        from .speech_migration import prepare_audio_migration, prepare_schema3_migration
 
         def pairs(values: list[str]) -> dict[str, str]:
             result: dict[str, str] = {}
@@ -2421,7 +2425,10 @@ def _main(argv: list[str] | None = None) -> int:
         if not args.apply and (args.backup or args.expected_snapshot):
             parser.error("Omit --backup and --expected-snapshot for a read-only preview")
         try:
-            prepared = prepare_audio_migration(args.project, pairs(args.replace), instructions=pairs(args.instructions))
+            if args.to_schema_3 and (args.replace or args.instructions):
+                raise ValueError("Schema upgrade cannot be combined with profile replacements")
+            prepared = (prepare_schema3_migration(args.project) if args.to_schema_3 else
+                        prepare_audio_migration(args.project, pairs(args.replace), instructions=pairs(args.instructions)))
             if args.apply and args.expected_snapshot != prepared.snapshot:
                 raise ValueError("Migration snapshot changed; prepare and review the migration again")
             result = prepared.apply(args.backup) if args.apply else prepared.public_dict()

@@ -11751,6 +11751,36 @@ _ROWS["speech_delivery"] = (
     "Interpretazione", "Interpretação", "Voordracht",
 )
 
+_ROWS["speech_coqui_schema_required"] = (
+    "Coqui profiles require audio schema /3. Back up and migrate this project before saving; see the Coqui setup guide.",
+    "Coqui-Profile benötigen Audio-Schema /3. Sichere und migriere dieses Projekt vor dem Speichern; siehe die Coqui-Anleitung.",
+    "Les profils Coqui nécessitent le schéma audio /3. Sauvegardez et migrez ce projet avant de l’enregistrer ; consultez le guide Coqui.",
+    "Los perfiles Coqui requieren el esquema de audio /3. Haga una copia de seguridad y migre el proyecto antes de guardar; consulte la guía de Coqui.",
+    "I profili Coqui richiedono lo schema audio /3. Esegui un backup e migra il progetto prima di salvare; consulta la guida Coqui.",
+    "Os perfis Coqui exigem o esquema de áudio /3. Faça um backup e migre o projeto antes de salvar; consulte o guia Coqui.",
+    "Coqui-profielen vereisen audioschema /3. Maak een back-up en migreer dit project vóór het opslaan; zie de Coqui-handleiding.",
+)
+
+_ROWS["speech_coqui_clear_instructions"] = (
+    "Coqui cannot use text direction. Copy or clear these instructions before saving or changing profile.",
+    "Coqui kann Textregie nicht verwenden. Kopiere oder entferne diese Anweisungen vor dem Speichern oder Profilwechsel.",
+    "Coqui ne prend pas en charge la direction textuelle. Copiez ou effacez ces consignes avant d’enregistrer ou de changer de profil.",
+    "Coqui no admite dirección textual. Copia o borra estas instrucciones antes de guardar o cambiar de perfil.",
+    "Coqui non accetta regia testuale. Copia o cancella le istruzioni prima di salvare o cambiare profilo.",
+    "Coqui não aceita direção textual. Copie ou limpe estas instruções antes de guardar ou mudar de perfil.",
+    "Coqui ondersteunt geen tekstregie. Kopieer of wis deze instructies voordat je opslaat of van profiel wisselt.",
+)
+
+_ROWS["speech_coqui_direction_conflict"] = (
+    "Coqui cannot use passage text direction. Remove those instructions or ignore passage direction for this render; this also ignores passage voice assignments and pauses.",
+    "Coqui kann Textanweisungen der Passagenregie nicht verwenden. Entferne sie oder ignoriere die Passagenregie für diese Ausgabe; dabei entfallen auch Stimmzuordnungen und Passagenpausen.",
+    "Coqui ne peut pas utiliser les consignes textuelles de passage. Supprimez-les ou ignorez la direction des passages ; les voix et pauses attribuées seront aussi ignorées.",
+    "Coqui no admite instrucciones de texto para pasajes. Elimínalas o ignora la dirección de pasajes; también se ignorarán las voces y pausas asignadas.",
+    "Coqui non accetta istruzioni testuali per i passaggi. Eliminale o ignora la regia dei passaggi; anche voci e pause assegnate saranno ignorate.",
+    "Coqui não aceita instruções textuais para trechos. Remova-as ou ignore a direção dos trechos; as vozes e pausas atribuídas também serão ignoradas.",
+    "Coqui ondersteunt geen tekstinstructies voor passages. Verwijder ze of negeer de passageregie; ook toegewezen stemmen en pauzes worden genegeerd.",
+)
+
 _ROWS["speech_remove_profile"] = (
     "Remove profile", "Profil entfernen", "Supprimer le profil", "Eliminar perfil",
     "Rimuovi profilo", "Remover perfil", "Profiel verwijderen",

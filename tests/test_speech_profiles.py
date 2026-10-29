@@ -60,7 +60,7 @@ def test_unsupported_profile_values_fail(changes):
 
 def test_capabilities_drive_multilingual_voice_validation():
     capabilities = audio_capabilities()
-    assert set(capabilities) == {"qwen3", "qwen3-design", "qwen3-base"}
+    assert set(capabilities) == {"qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference"}
     for language in ("en", "de", "fr", "es", "it", "pt", "ru", "zh", "ja", "ko"):
         profile = AudioProfile(engine="qwen3", language=language, voice="Ryan", instructions="Calm")
         assert profile.language == language

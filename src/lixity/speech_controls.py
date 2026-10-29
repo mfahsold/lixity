@@ -41,7 +41,7 @@ _QWEN_BASE_SUPPORT = SpeechControlSupport(
 
 def speech_control_support(engine: str) -> SpeechControlSupport:
     """Describe the actual Lixity adapter, not the model's theoretical features."""
-    if engine == "qwen3-base":
+    if engine in ("qwen3-base", "coqui", "coqui-reference"):
         return _QWEN_BASE_SUPPORT
     if engine not in ("qwen3", "qwen3-design"):
         raise ValueError("Unknown speech engine")

@@ -74,7 +74,8 @@
     fields.worker_status.textContent = uiFormat("speech_worker_" + key, args);
   }
   function updateModelFields() {
-    var designed = fields.engine.value === "qwen3-design", referenced = fields.engine.value === "qwen3-base";
+    var designed = fields.engine.value === "qwen3-design", referenced = !!capabilities[fields.engine.value].reference_required;
+    var noInstructions = !capabilities[fields.engine.value].instructions;
     var descriptionPresent = Boolean(fields.voice_description.value.trim());
     var referencePresent = Boolean(fields.reference_id.value.trim());
     var instructionPresent = Boolean(fields.instructions.value.trim());
@@ -86,9 +87,9 @@
     fields.reference_id.disabled = !referenced && !referencePresent;
     fields.reference_id.required = referenced;
     fields.reference_id.setCustomValidity(!referenced && referencePresent ? label("model_clear_reference") : "");
-    fields.instructions.closest("label").hidden = referenced && !instructionPresent;
-    fields.instructions.disabled = referenced && !instructionPresent;
-    fields.instructions.setCustomValidity(referenced && instructionPresent ? label("model_clear_instructions") : "");
+    fields.instructions.closest("label").hidden = noInstructions && !instructionPresent;
+    fields.instructions.disabled = noInstructions && !instructionPresent;
+    fields.instructions.setCustomValidity(noInstructions && instructionPresent ? label(fields.engine.value.startsWith("coqui") ? "coqui_clear_instructions" : "model_clear_instructions") : "");
     fields.model_conflict.textContent = [fields.voice_description, fields.reference_id, fields.instructions]
       .filter(function(input) { return input.validity.customError; }).map(function(input) { return input.validationMessage; }).join(" ");
     fields.model_conflict.hidden = !fields.model_conflict.textContent;
@@ -97,7 +98,7 @@
     var cap = capabilities[fields.engine.value];
     if (!cap) return;
     var designed = fields.engine.value === "qwen3-design";
-    var referenced = fields.engine.value === "qwen3-base";
+    var referenced = !!cap.reference_required;
     var language = fields.language.value, voice = fields.voice.value;
     options(fields.language, cap.languages.map(function(value) { return [value, languageName(value)]; }), language);
     var voices = Object.entries(cap.voices).filter(function(pair) { return pair[1].languages.includes(fields.language.value); });
@@ -105,12 +106,12 @@
     fields.voice.closest("label").hidden = designed || referenced;
     fields.voice.disabled = designed || referenced;
     updateModelFields();
-    fields.reference_hint.hidden = !referenced;
-    fields.voice_hint.hidden = designed || referenced;
+    fields.reference_hint.hidden = !referenced || fields.engine.value === "coqui-reference";
+    fields.voice_hint.hidden = designed || referenced || fields.engine.value === "coqui";
     fields.design_hint.hidden = !designed;
     fields.speed.min = String(cap.speed.minimum);
     fields.speed.max = String(cap.speed.maximum);
-    fields.model.textContent = label(designed ? "model_design_hint" : referenced ? "model_base_hint" : "model_preset_hint");
+    fields.model.textContent = fields.engine.value.startsWith("coqui") ? cap.name : label(designed ? "model_design_hint" : referenced ? "model_base_hint" : "model_preset_hint");
     options(fields.target, cap.targets.map(function(value) { return [value, label("target_" + value)]; }),
       cap.targets.includes(executionTarget) ? executionTarget : cap.targets[0]);
     fields.target.disabled = cap.targets.length < 2;
@@ -125,8 +126,8 @@
     var profile = settings.profiles[settings.selected];
     lastPreset = profile.engine === "qwen3" ? profile.voice : "Ryan";
     ["name", "instructions", "speed", "paragraph_pause", "scene_pause"].forEach(function(key) { fields[key].value = profile[key]; });
-    options(fields.engine, Object.keys(capabilities).filter(function(key) { return key === "qwen3" || key === "qwen3-design" || key === "qwen3-base"; }).map(function(key) {
-      return [key, label(key === "qwen3" ? "model_preset" : key === "qwen3-design" ? "model_design" : "model_base")];
+    options(fields.engine, Object.keys(capabilities).map(function(key) {
+      return [key, key.startsWith("coqui") ? capabilities[key].name : label(key === "qwen3" ? "model_preset" : key === "qwen3-design" ? "model_design" : "model_base")];
     }), profile.engine);
     fields.voice_description.value = profile.voice_description || "";
     fields.reference_id.value = profile.reference_id || "";
@@ -163,7 +164,7 @@
     if (pronunciationPending()) throw new Error(label("pronunciation_pending"));
     var conflict = [fields.voice_description, fields.reference_id, fields.instructions].find(function(input) { return input.validity.customError; });
     if (conflict) throw new Error(conflict.validationMessage);
-    if (fields.engine.value === "qwen3-base" && !fields.reference_id.checkValidity()) throw new Error(label("model_need_reference"));
+    if (capabilities[fields.engine.value].reference_required && !fields.reference_id.checkValidity()) throw new Error(label("model_need_reference"));
     if (fields.engine.value === "qwen3-design" && !fields.voice_description.value.trim()) throw new Error(label("model_need_description"));
     var replacements = pronunciationEntries();
     var profile = {name: fields.name.value.trim(), engine: fields.engine.value, language: fields.language.value,
@@ -171,7 +172,7 @@
       speed: Number(fields.speed.value), instructions: fields.instructions.value.trim(),
       paragraph_pause: Number(fields.paragraph_pause.value), scene_pause: Number(fields.scene_pause.value), pronunciations: replacements};
     if (profile.engine === "qwen3-design") profile.voice_description = fields.voice_description.value.trim();
-    if (profile.engine === "qwen3-base") profile.reference_id = fields.reference_id.value.trim();
+    if (capabilities[profile.engine].reference_required) profile.reference_id = fields.reference_id.value.trim();
     return profile;
   }
   function pronunciationPending() {
@@ -320,7 +321,11 @@
     if (openedContext !== context()) { status(label("pronunciation_context_changed")); return; }
     try {
       if (!Array.from(fields.editor.querySelectorAll("input, select, textarea")).every(function(input) { return input.reportValidity(); })) return;
-      stash(); invalidate(); var serial = generation; profileSaving = true;
+      stash();
+      if (settings.schema_version !== "lixity-audio-settings/3" && Object.values(settings.profiles).some(function(profile) { return profile.engine.startsWith("coqui"); })) {
+        status(label("coqui_schema_required")); return;
+      }
+      invalidate(); var serial = generation; profileSaving = true;
       fields.editor.disabled = fields.profile.disabled = fields.create.disabled = fields.remove_profile.disabled = fields.profile_discard.disabled = fields.save.disabled = true;
       status(label("saving"));
       await request("settings", {project_token: tokens().project_token, audio: settings});
@@ -464,7 +469,10 @@
     });
     fields.engine.addEventListener("change", function() {
       if (capabilities.qwen3.voices[fields.voice.value]) lastPreset = fields.voice.value;
-      options(fields.voice, [], fields.engine.value === "qwen3-design" ? "design" : fields.engine.value === "qwen3-base" ? "reference" : lastPreset);
+      var cap = capabilities[fields.engine.value];
+      if (!cap.languages.includes(fields.language.value)) options(fields.language, [[cap.languages[0], languageName(cap.languages[0])]], cap.languages[0]);
+      var voice = fields.engine.value === "qwen3-design" ? "design" : cap.reference_required ? "reference" : fields.engine.value === "coqui" ? "thorsten" : lastPreset;
+      options(fields.voice, [], voice);
       voiceControls(); invalidate();
     });
     fields.language.addEventListener("change", function() { fields.voice.value = ""; voiceControls(); status(label("voice_changed")); });

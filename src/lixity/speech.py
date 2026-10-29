@@ -108,8 +108,8 @@ def _observe_speech_segment(index: int, total: int, profile: AudioProfile,
     """Track timings and selected controls without recording text or paths."""
     logger = get_logger("speech")
     diagnostic_id = speech_diagnostic_id()
-    engine = profile.engine if profile.engine in ("qwen3", "qwen3-design", "qwen3-base") else "unknown"
-    voice = profile.voice if profile.voice in (*QWEN_VOICES, "design", "reference") else "unknown"
+    engine = profile.engine if profile.engine in ("qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference") else "unknown"
+    voice = profile.voice if profile.voice in (*QWEN_VOICES, "design", "reference", "thorsten") else "unknown"
     language = profile.language if profile.language in QWEN_LANGUAGES else "unknown"
     has_instruction = "true" if profile.instructions else "false"
     speed = (profile.speed if type(profile.speed) in (int, float) and math.isfinite(profile.speed)
@@ -395,7 +395,7 @@ def render_speech_audio(
         raise ValueError("No spoken text in the selected chapter")
     from .speech_references import validate_reference
     for reference_id in {cue.profile.reference_id for cue in cues
-                         if cue.text and cue.profile.engine == "qwen3-base"}:
+                         if cue.text and cue.profile.engine in ("qwen3-base", "coqui-reference")}:
         reference = (references or {}).get(reference_id)
         if reference is None or reference.id != reference_id:
             raise ValueError("A verified reference is required for every Qwen Base profile")
@@ -427,7 +427,7 @@ def render_speech_audio(
                                      "one model. Choose profiles using the same model or reuse previously "
                                      "cached segments")
     total = sum(bool(cue.text) for cue in cues)
-    requested_engines = sorted({cue.profile.engine if cue.profile.engine in ("qwen3", "qwen3-design", "qwen3-base") else "unknown"
+    requested_engines = sorted({cue.profile.engine if cue.profile.engine in ("qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference") else "unknown"
                                 for cue in cues if cue.text})
     cache_mode = "disabled" if segment_cache is None else "fresh" if fresh_audio else "enabled"
     get_logger("speech").info("event=render_plan id=%s target=%s requested_engines=%s segments=%d cache_mode=%s output_format=%s",
@@ -479,7 +479,7 @@ def render_speech_audio(
                     if data is None:
                         data = (synthesize_qwen(cue.text, effective, target=target,
                                                reference=(references or {})[effective.reference_id])
-                                if effective.engine == "qwen3-base" else
+                                if effective.engine in ("qwen3-base", "coqui-reference") else
                                 synthesize_qwen(cue.text, effective, target=target))
                         params, frames = _read_pcm(data)
                         if params != (1, 2, rate):

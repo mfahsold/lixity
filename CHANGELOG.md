@@ -8,6 +8,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Experimental local German Coqui Thorsten VITS audio and optional OpenVoice V2
+  reference-voice conversion, reusing project references and speech planning;
+  saved profiles require audio schema `/3` and a reviewed backed-up migration.
 - An explicit per-render control in the audio dialog to ignore passage direction
   for a preview or chapter without modifying saved direction.
 - Privacy-preserving audio diagnostics for job lifecycle and render segments,

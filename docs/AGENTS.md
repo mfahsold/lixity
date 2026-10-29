@@ -1588,6 +1588,12 @@ applicable. CLI `--speed` overrides all profiles for that run without saving.
 Non-1.0 factors require FFmpeg on the render host. Structural pauses stay unchanged.
 Style instructions do not implement precise speed control.
 
+Unreleased main adds `coqui` (German Thorsten VITS) and `coqui-reference`
+(Thorsten plus OpenVoice V2) engines. Saved profiles require audio schema `/3`
+and a reviewed `audio-migrate --to-schema-3` upgrade. They require a matching optional local
+worker, reject free-text delivery instructions and use existing pronunciation,
+pause and reference mechanisms. Older versions cannot read these engine IDs.
+
 Current main additionally accepts schema `lixity-audio-settings/2`, which adds
 optional project-wide `pronunciations`. Each profile's same-key entries override
 the project map when a speech plan is compiled; profile settings remain raw.

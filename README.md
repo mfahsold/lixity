@@ -192,6 +192,10 @@ its reference and transcript need a project backup, and Base does not interpret
 free-form delivery instructions. The [reference-voice workflow](https://mfahsold.github.io/lixity/USAGE.md#experimental-reference-voices)
 explains recording and reviewing a short sample, its exact transcript and a first
 preview. Assign voice profiles to passages deliberately.
+Unreleased: German Coqui Thorsten VITS and optional OpenVoice V2 conversion can
+use an existing project reference with a separately installed local worker.
+Free-text direction is unsupported; the output requires listening review. See
+the [Coqui setup](https://mfahsold.github.io/lixity/USAGE.md#experimental-coqui-and-openvoice-audio-unreleased).
 Piper is removed; existing profiles
 require an explicit backed-up `audio-migrate` replacement. Select the
 execution target per render in the CLI or dialog. CPU generation can be slow;

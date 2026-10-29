@@ -8,7 +8,14 @@ import re
 from pathlib import Path
 
 from .io import FileUtils
-from .speech_profiles import QWEN_BASE_MODEL, QWEN_DESIGN_MODEL, QWEN_MODEL, AudioProfile
+from .speech_profiles import (
+    COQUI_MODEL,
+    COQUI_REFERENCE_MODEL,
+    QWEN_BASE_MODEL,
+    QWEN_DESIGN_MODEL,
+    QWEN_MODEL,
+    AudioProfile,
+)
 from .speech_qwen import MAX_RESPONSE_BYTES
 
 CACHE_BYTES = 2 * 1024**3
@@ -49,6 +56,10 @@ class SpeechSegmentCache:
         elif profile.engine == "qwen3-base":
             request["model"] = QWEN_BASE_MODEL
             request["reference_id"] = profile.reference_id
+        elif profile.engine in ("coqui", "coqui-reference"):
+            request["model"] = COQUI_REFERENCE_MODEL if profile.engine == "coqui-reference" else COQUI_MODEL
+            if profile.engine == "coqui-reference":
+                request["reference_id"] = profile.reference_id
         key = hashlib.sha256(json.dumps(request, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
         audio, metadata = self.directory / (key + ".wav"), self.directory / (key + ".json")
         if audio.is_symlink() or metadata.is_symlink():

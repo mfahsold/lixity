@@ -40,6 +40,16 @@ class BaseDirectionConflict(ValueError):
         )
 
 
+class CoquiDirectionConflict(ValueError):
+    """Coqui cannot apply a passage's free-text delivery instructions."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Coqui cannot use passage text direction. Remove the affected instructions or "
+            "use --no-direction for this render; this also ignores passage voice assignments and pauses."
+        )
+
+
 class _Strict(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True, allow_inf_nan=False, hide_input_in_errors=True)
 
@@ -180,6 +190,8 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
             if selected is None:
                 raise ValueError('A saved direction references an unavailable voice profile')
             selected = effective_profile(selected)
+            if selected.engine in ('coqui', 'coqui-reference') and d.instructions:
+                raise CoquiDirectionConflict()
             if selected.engine == 'qwen3-base' and d.instructions:
                 raise BaseDirectionConflict()
             instructions = combine_delivery(selected.instructions, d.instructions)
@@ -212,7 +224,7 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
 
 
 def plan_json(plan: list[SpeechSegment]) -> dict[str, Any]:
-    support = speech_control_support('qwen3-base' if any(row.profile.engine == 'qwen3-base' for row in plan) else 'qwen3')
+    support = speech_control_support('qwen3-base' if any(speech_control_support(row.profile.engine).direction == 'unsupported' for row in plan) else 'qwen3')
     return {'schema_version': POLICY, 'controls': {'instructions': support.direction.replace('_', '-'),
             'pauses': support.pauses.replace('_', '-'), 'phonemes': support.phonemes, 'ssml': support.ssml},
             'segments': [{'text': row.text, 'profile': row.profile.model_dump(),

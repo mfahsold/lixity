@@ -15,10 +15,10 @@ READ_FLAGS = {
     "--plan-only", "--no-direction", "--engine", "--voice-description", "--reference-id", "--instructions", "--voice", "--speed", "--speech-target", "--no-audio-cache", "--fresh-audio", "--keep-markers", "--preview", "--preview-line", "--progress",
 }
 MIGRATION_FLAGS = {
-    "--help", "--project", "--replace", "--instructions", "--apply", "--backup", "--expected-snapshot",
+    "--help", "--project", "--to-schema-3", "--replace", "--instructions", "--apply", "--backup", "--expected-snapshot",
 }
 LANGUAGES = {"zh", "en", "ja", "ko", "de", "fr", "ru", "pt", "es", "it"}
-VOICES = {"Vivian", "Serena", "Uncle_Fu", "Dylan", "Eric", "Ryan", "Aiden", "Ono_Anna", "Sohee", "design", "reference"}
+VOICES = {"Vivian", "Serena", "Uncle_Fu", "Dylan", "Eric", "Ryan", "Aiden", "Ono_Anna", "Sohee", "design", "reference", "thorsten"}
 
 
 def bash_complete(tmp_path, *words):
@@ -42,7 +42,7 @@ def test_bash_audio_commands_offer_only_their_actual_options(tmp_path, command, 
 
 @pytest.mark.parametrize(("option", "expected"), [
     ("--language", LANGUAGES), ("--speech-target", {"local", "jetson"}), ("--voice", VOICES),
-    ("--engine", {"qwen3", "qwen3-design", "qwen3-base"}),
+    ("--engine", {"qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference"}),
 ])
 def test_bash_qwen_values_match_supported_model_controls(tmp_path, option, expected):
     assert bash_complete(tmp_path, "lixity", "read-aloud", option, "") == expected

@@ -17,7 +17,7 @@ from .config import (
     project_config_snapshot,
     read_explicit_project_config,
 )
-from .speech_profiles import migrate_audio_settings
+from .speech_profiles import migrate_audio_settings, parse_audio_settings
 from .workspace import discover
 
 _MAX_CONFIG_BYTES = 1024 * 1024
@@ -49,15 +49,19 @@ class PreparedAudioMigration:
     _source: tuple[str | None, tuple[int, ...] | None, str | None]
     _profiles: tuple[tuple[str, str], ...]
     snapshot: str
+    target_schema: str | None = None
 
     def public_dict(self, *, applied: bool = False) -> dict[str, Any]:
         """Expose replacement decisions and a token, never source or private style."""
-        return {
+        result: dict[str, Any] = {
             "schema_version": "lixity-audio-migration/1", "applied": applied,
             "snapshot": self.snapshot,
             "profiles": [{"profile_id": key, "engine": "qwen3", "voice": voice, "speed": 1.0}
                          for key, voice in self._profiles],
         }
+        if self.target_schema is not None:
+            result["target_schema"] = self.target_schema
+        return result
 
     def _unchanged(self) -> None:
         root = self._settings.path.parent
@@ -136,5 +140,35 @@ def prepare_audio_migration(
                    "candidate_sha256": hashlib.sha256(prepared.content).hexdigest()}
     token = hashlib.sha256(json.dumps(fingerprint, sort_keys=True).encode("utf-8")).hexdigest()
     result = PreparedAudioMigration(prepared, source, tuple(sorted(replacements.items())), token)
+    result._unchanged()
+    return result
+
+
+def prepare_schema3_migration(project: str | Path) -> PreparedAudioMigration:
+    """Prepare a reviewed, backed-up upgrade to the Coqui-capable schema."""
+    candidate = Path(project).expanduser()
+    if candidate.is_symlink() or not candidate.is_dir():
+        raise ValueError("Migration requires an existing nonsymlink project directory")
+    root = candidate.resolve()
+    original = project_config_snapshot(root / "lixity.toml", maximum_bytes=_MAX_CONFIG_BYTES)
+    pyproject = project_config_snapshot(root / "pyproject.toml", maximum_bytes=_MAX_CONFIG_BYTES)
+    settings = read_explicit_project_config(root, maximum_bytes=_MAX_CONFIG_BYTES)
+    language = settings.get("language", "en")
+    if not isinstance(language, str):
+        raise ValueError("Project language must be a language code")
+    audio = parse_audio_settings(settings.get("audio"), language=language)
+    if audio.schema_name == "lixity-audio-settings/3":
+        raise ValueError("Project already uses audio schema /3")
+    data = audio.model_dump(by_alias=True)
+    data["schema_version"] = "lixity-audio-settings/3"
+    source = _source_snapshot(root, settings)
+    prepared = prepare_project_settings(root, {"audio": data})
+    if prepared.original != original or prepared.pyproject_original != pyproject:
+        raise ValueError("Project configuration changed while preparing migration")
+    fingerprint = {"configs": [hashlib.sha256(item[1]).hexdigest() if item[0] is not None else None
+                               for item in (original, pyproject)], "source": source,
+                   "candidate_sha256": hashlib.sha256(prepared.content).hexdigest()}
+    token = hashlib.sha256(json.dumps(fingerprint, sort_keys=True).encode("utf-8")).hexdigest()
+    result = PreparedAudioMigration(prepared, source, (), token, "lixity-audio-settings/3")
     result._unchanged()
     return result

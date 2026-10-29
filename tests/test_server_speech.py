@@ -243,7 +243,7 @@ def test_preview_and_download_are_bound_to_actual_source_without_writes(speech_s
     assert response.status == 200, response.body
     data = json.loads(response.body)
     assert data["settings"]["selected"] == "narrator" and len(data["chapters"]) == 2
-    assert set(data["capabilities"]) == {"qwen3", "qwen3-design", "qwen3-base"}
+    assert set(data["capabilities"]) == {"qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference"}
     assert data["requires_migration"] is False
     assert data["capabilities"]["qwen3"]["instructions"] is True
     assert data["settings"]["profiles"]["narrator"]["engine"] == "qwen3"
@@ -539,7 +539,7 @@ voice = "en_US-lessac-medium"
     response = send(port, "/api/speech?" + urlencode(bound))
     assert response.status == 200, response.body
     data = json.loads(response.body)
-    assert data["settings"] is None and set(data["capabilities"]) == {"qwen3", "qwen3-design", "qwen3-base"}
+    assert data["settings"] is None and set(data["capabilities"]) == {"qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference"}
     assert "Piper" in data["configuration_error"] and "audio-migrate" in data["configuration_error"]
     response = send(port, "/api/speech-render", payload={**bound, "mode": "preview", "chapter": 1})
     assert response.status == 400, response.body

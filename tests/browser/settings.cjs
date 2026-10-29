@@ -289,6 +289,18 @@ server.serve_forever()
       assert.equal(await page.locator('#speech-engine option[value=qwen3]').textContent(),labels.speech_model_preset);
       assert.equal(await page.locator('#speech-engine option[value=qwen3-design]').textContent(),labels.speech_model_design);
       assert.equal(await page.locator('#speech-engine option[value=qwen3-base]').textContent(),labels.speech_model_base);
+      assert.equal(await page.locator('#speech-engine option[value=coqui]').textContent(),data.audioCapabilities.coqui.name);
+      assert.equal(await page.locator('#speech-engine option[value=coqui-reference]').textContent(),data.audioCapabilities['coqui-reference'].name);
+      const originalSpeechLanguage = await page.locator('#speech-language').inputValue();
+      await page.locator('#speech-engine').selectOption('coqui');
+      assert.equal(await page.locator('#speech-language').inputValue(),'de');
+      assert.equal(await page.locator('#speech-voice').inputValue(),'thorsten');
+      assert.equal(await page.locator('#speech-instructions').isVisible(),false);
+      await page.locator('#speech-engine').selectOption('coqui-reference');
+      assert.equal(await page.locator('#speech-voice').inputValue(),'reference');
+      assert.equal(await page.locator('#speech-reference_id').isVisible(),true);
+      await page.locator('#speech-engine').selectOption('qwen3');
+      await page.locator('#speech-language').selectOption(originalSpeechLanguage);
       assert.equal(await page.locator('#speech-engine').getAttribute('aria-describedby'),'speech-model-hint speech-worker-status');
       assert.ok(await page.locator('#speech-worker-status').isVisible());
       const workerText = (key, model) => labels['speech_worker_' + key]
