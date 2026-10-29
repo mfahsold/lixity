@@ -109,6 +109,8 @@ def build_server_dashboard(
             is_missing = True
             manuscript_name = os.path.basename(source_input)
 
+    token_root = project_root or (Path(source_input).parent if source_input else None)
+    settings_token = project_settings_token(token_root, source_input, config_bytes=project_config_bytes)
     source_is_file = bool(source_input and os.path.isfile(source_input))
     settings = (read_explicit_project_config(project_root) if project_root is not None else
                 load_project_config(source_input) if source_is_file else {})
@@ -229,10 +231,7 @@ def build_server_dashboard(
         site_publication_context_token=research_context_token(
             project_root or (Path(source_input).parent if source_input else None)),
         register_settings=settings,
-        project_token=project_settings_token(
-            project_root or (Path(source_input).parent if source_input else None), source_input,
-            config_bytes=project_config_bytes,
-        ),
+        project_token=settings_token,
         manuscript_source_sha256=manuscript_source_sha256,
         manuscript_pdf_token=manuscript_pdf_token(
             source_input, project_root=project_root, language=language,
@@ -241,6 +240,9 @@ def build_server_dashboard(
         ) if manuscript_readable and not is_empty else "",
         research_context_token=research_context_token(research_root or project_root),
     )
+
+    if project_settings_token(token_root, source_input, config_bytes=project_config_bytes) != settings_token:
+        raise ValueError("Project settings changed while rendering; retry")
 
     info = {
         "identity_check": identity_check,
@@ -254,5 +256,6 @@ def build_server_dashboard(
         "is_empty": is_empty,
         "is_missing": is_missing,
         "manuscript_source_sha256": manuscript_source_sha256,
+        "project_settings_token": settings_token,
     }
     return html_doc, info

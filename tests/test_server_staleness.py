@@ -1,16 +1,20 @@
 """The served dashboard rebuilds itself when the manuscript changed on disk."""
 
+import hashlib
+import json
+import re
 from concurrent.futures import ThreadPoolExecutor
 from html.parser import HTMLParser
 from pathlib import Path
 from threading import Event
+from urllib.parse import urlencode
 
 import pytest
 
 from lixity.server import _state
 from lixity.server.views import build_server_dashboard
 from tests.locales import LOCALES
-from tests.support import LoopbackServer, labels_for, make_handler, preserved_handler_state
+from tests.support import LoopbackServer, labels_for, make_handler, preserved_handler_state, send
 
 
 class _FreshnessNotice(HTMLParser):
@@ -102,6 +106,88 @@ def test_unchanged_manuscript_serves_the_cache(tmp_path: Path, monkeypatch) -> N
     with preserved_handler_state(), LoopbackServer(handler) as server:
         response = server.request("/")
         assert response.status == 200 and "Eins" in response.body.decode("utf-8")
+
+
+def test_reload_observes_externally_changed_audio_settings(tmp_path: Path, monkeypatch) -> None:
+    manuscript = tmp_path / "manuscript.md"
+    manuscript.write_text("## First\n\nA small bird sings.\n", encoding="utf-8")
+    settings = tmp_path / "lixity.toml"
+    settings.write_text('language = "en"\n', encoding="utf-8")
+    monkeypatch.setattr("lixity.speech_status.worker_health", lambda target: {
+        "target": target, "state": "unavailable", "transport": "loopback", "model": None,
+    })
+    handler = make_handler(tmp_path, source_input=manuscript, language="en")
+    handler.refresh()
+
+    def token(body: bytes) -> str:
+        match = re.search(rb'<form id="settings-form"[^>]*data-project-token="([0-9a-f]{64})"', body)
+        assert match
+        return match.group(1).decode("ascii")
+
+    with LoopbackServer(handler) as server:
+        old_token = token(server.request("/").body)
+        settings.write_text('language = "en"\n[audio]\nschema_version = "lixity-audio-settings/1"\n'
+                            'selected = "voice"\n[audio.profiles.voice]\nname = "Recorded voice"\n'
+                            'engine = "qwen3-base"\nlanguage = "de"\nvoice = "reference"\n'
+                            f'reference_id = "{"a" * 64}"\n', encoding="utf-8")
+        new_token = token(server.request("/").body)
+        assert new_token != old_token
+        query = urlencode({"project_token": new_token,
+                           "source_sha256": hashlib.sha256(manuscript.read_bytes()).hexdigest()})
+        response = send(server.port, "/api/speech?" + query)
+        assert response.status == 200
+        assert json.loads(response.body)["settings"]["selected"] == "voice"
+
+
+@pytest.mark.parametrize("filename", ["lixity.toml", "pyproject.toml"])
+def test_reload_observes_removed_project_configuration(tmp_path: Path, filename: str) -> None:
+    manuscript = tmp_path / "manuscript.md"
+    manuscript.write_text("## First\n\nA small bird sings.\n", encoding="utf-8")
+    settings = tmp_path / filename
+    settings.write_text(('[tool.lixity]\n' if filename == "pyproject.toml" else "")
+                        + 'title = "Synthetic title"\n', encoding="utf-8")
+    handler = make_handler(tmp_path, source_input=manuscript, language="en")
+    handler.refresh()
+    old_token = handler.dashboard_info["project_settings_token"]
+
+    with LoopbackServer(handler) as server:
+        settings.unlink()
+        assert server.request("/").status == 200
+        assert handler.dashboard_info["project_settings_token"] != old_token
+        assert not settings.exists()
+
+
+def test_configuration_changed_during_refresh_does_not_publish_mixed_dashboard(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    from lixity.server import views
+
+    manuscript = tmp_path / "manuscript.md"
+    manuscript.write_text("## First\n\nA small bird sings.\n", encoding="utf-8")
+    settings = tmp_path / "lixity.toml"
+    settings.write_text('title = "First"\n', encoding="utf-8")
+    handler = make_handler(tmp_path, source_input=manuscript, language="en")
+    handler.refresh()
+    old_html, old_info = handler.dashboard_html, handler.dashboard_info
+    settings.write_text('title = "Second"\n', encoding="utf-8")
+    real_read = views.read_explicit_project_config
+
+    def read_during_change(*args, **kwargs):
+        result = real_read(*args, **kwargs)
+        settings.write_text('title = "Third"\n', encoding="utf-8")
+        return result
+
+    with LoopbackServer(handler) as server:
+        with monkeypatch.context() as changing:
+            changing.setattr(views, "read_explicit_project_config", read_during_change)
+            response = server.request("/")
+            _assert_notice(response, "refresh-failed", "en", "status_refresh_failed")
+            assert handler.dashboard_html == old_html
+            assert handler.dashboard_info == old_info
+        response = server.request("/")
+        assert response.status == 200
+        assert settings.read_text(encoding="utf-8") == 'title = "Third"\n'
+        assert handler.dashboard_info["project_settings_token"] != old_info["project_settings_token"]
 
 
 @pytest.mark.parametrize("language", LOCALES)

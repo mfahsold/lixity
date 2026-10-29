@@ -422,6 +422,9 @@ server.serve_forever()
       assert.equal(await page.locator('#speech-ignore-direction').isChecked(),false, 'Saved direction applies by default');
       assert.ok((await page.locator('#speech-ignore-direction').locator('..').textContent()).includes(labels.speech_ignore_direction));
       assert.equal(await page.locator('[data-speech-action=chapter_render]').isVisible(),false);
+      assert.equal(await dialog.locator('[data-speech-action=output_title]').textContent(), labels.speech_open_output, 'Opening chapter output is labeled as navigation');
+      assert.notEqual(labels.speech_open_output, labels.speech_chapter_render, 'Navigation and rendering have distinct labels');
+      assert.equal(await dialog.locator('[role=status]').evaluate(el => el.parentElement.classList.contains('modal-card')), true, 'Audio status stays outside the scrolling body');
       assert.equal(await page.locator('#speech-target').isDisabled(),false);
       assert.equal(await page.locator('#speech-runtime-hint').isVisible(),true);
       assert.ok((await page.locator('#speech-runtime-hint').textContent()).includes(labels.speech_runtime_hint));
@@ -597,6 +600,10 @@ server.serve_forever()
       assert.equal((await page.request.get(server.fixture.url+'/test/render-hold')).status(),204);
       await page.locator('[data-speech-action=preview]').click();
       await page.waitForFunction(()=>!document.querySelector('[data-speech-action=cancel]').disabled);
+      await dialog.locator('.modal-body').evaluate(el=>{el.scrollTop=el.scrollHeight;});
+      const statusBounds=await dialog.locator('[role=status]').boundingBox(), dialogBounds=await dialog.boundingBox();
+      assert.ok(statusBounds && dialogBounds && statusBounds.y >= dialogBounds.y && statusBounds.y + statusBounds.height <= dialogBounds.y + dialogBounds.height, 'Render status remains visible after scrolling to the actions');
+      if (locale === 'de') await dialog.screenshot({path:path.join(artifacts,`status-running-${width}.png`)});
       const cancelledResponse=page.waitForResponse(response=>response.url().endsWith('/api/speech-cancel'));
       await page.locator('[data-speech-action=cancel]').click();
       assert.equal((await cancelledResponse).status(),200);
@@ -713,6 +720,11 @@ server.serve_forever()
     await savedPage.locator('#settings-speech-output').click();
     await savedPage.waitForFunction(()=>document.querySelector('#speech-profile')?.value);
     assert.equal(await savedPage.locator('#speech-target').inputValue(),'local','Execution target is not restored from saved audio settings');
+    await savedPage.locator('#speech-ignore-direction').check();
+    const baseStart=savedPage.waitForRequest(request=>request.url().endsWith('/api/speech-render'));
+    await savedPage.locator('[data-speech-action=chapter_render]').click();
+    assert.equal((await baseStart).postDataJSON().profile.engine,'qwen3-base', 'Chapter starts using the selected reference profile');
+    await savedPage.waitForFunction(()=>!document.querySelector('#modal-speech audio').hidden);
     assert.equal(/^target\s*=/m.test(fs.readFileSync(savedProject.config,'utf8')),false,'Project TOML excludes the per-render target');
     assert.ok(fs.readFileSync(savedProject.config,'utf8').includes('Saved synthetic narrator'));
     assert.deepEqual(fs.readFileSync(savedProject.source),original);

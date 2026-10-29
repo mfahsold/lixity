@@ -16,6 +16,7 @@ from ..pipeline import document_paragraph_texts, resolve_document_config
 from ..speech import MAX_SEGMENT_CHARS
 from ..speech_cache import project_audio_cache
 from ..speech_direction import (
+    BaseDirectionConflict,
     Direction,
     build_speech_plan,
     direction_id,
@@ -35,6 +36,7 @@ from ..speech_profiles import (
 )
 from ..speech_references import references_for_plan, references_unchanged
 from ..speech_status import audio_status
+from ..workspace_labels import WORKSPACE_LABELS
 from ._base import ResponseMixin
 from .pdf_context import project_settings_token
 
@@ -90,7 +92,9 @@ class SpeechRoutesMixin(ResponseMixin):
             if isinstance(exc, _SpeechStale)
             else 400
         )
-        self._json({"ok": False, "message": str(exc)}, code)
+        message = (WORKSPACE_LABELS.get(self.language, WORKSPACE_LABELS["en"])["speech_base_direction_conflict"]
+                   if isinstance(exc, BaseDirectionConflict) else str(exc))
+        self._json({"ok": False, "message": message}, code)
 
     @classmethod
     def _direction_view(cls) -> dict[str, Any]:

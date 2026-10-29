@@ -34,6 +34,14 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   emphasis control and comparison counts use descriptive, neutral labels.
 - Tense-pattern badges no longer overlap an active metric overlay; the passage
   inspector and chapter counts follow the configured tense severity threshold.
+- The audio dialog distinguishes opening chapter output from starting its render
+  and keeps progress and error messages visible while scrolling.
+
+### Fixed
+- Reloading a workspace notices external project configuration changes and
+  refreshes its context token without overwriting a concurrent change.
+- Qwen Base reports incompatible passage text direction with an actionable,
+  localized message; ignoring direction remains an explicit per-render choice.
 
 ## [0.7.7] - 2026-10-28
 

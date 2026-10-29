@@ -49,6 +49,47 @@ def context(source, handler):
     }
 
 
+@pytest.mark.parametrize("language", ["en", "de"])
+def test_base_direction_conflict_explains_opt_in_without_silencing_direction(speech_server, language, capsys):
+    from lixity.cli import main
+    from lixity.speech_direction import direction_state, save_direction
+    from lixity.speech_profiles import AudioProfile
+    from lixity.speech_references import save_reference
+
+    port, source, handler, _observed = speech_server
+    handler.language = language
+    reference = save_reference(source.parent, generate_silence_wav(1), "Synthetic reference.")
+    view = direction_state(source.parent, source, language=language)
+    entry = {"anchor": view["passages"][0]["anchor"], "instructions": "Read quietly."}
+    save_direction(source.parent, source, entry, expected_source_sha256=view["source_sha256"],
+                   expected_settings_sha256=view["settings_sha256"],
+                   expected_direction_sha256=view["direction_sha256"], language=language)
+    profile = AudioProfile(engine="qwen3-base", voice="reference", reference_id=reference.id, language=language)
+    payload = {**context(source, handler), "mode": "chapter", "chapter": 1, "profile": profile.model_dump()}
+
+    response = send(port, "/api/speech-plan", payload=payload)
+    assert response.status == 400
+    message = json.loads(response.body)["message"]
+    assert "Qwen Base" in message and "validation error" not in message
+    assert ("Passagenregie" if language == "de" else "passage direction") in message
+    assert ("Stimmzuordnungen" if language == "de" else "voice assignments") in message
+    assert ("Pausen" if language == "de" else "pauses") in message
+    # A deliberate choice ignores all passage controls, while leaving saved direction intact.
+    response = send(port, "/api/speech-plan", payload={**payload, "ignore_direction": True})
+    assert response.status == 200
+    assert len(direction_state(source.parent, source, language=language)["directions"]) == 1
+
+    args = ["read-aloud", "--project", str(source.parent), "--chapter", "1", "--plan-only",
+            "--engine", "qwen3-base", "--voice", "reference", "--reference-id", reference.id,
+            "--instructions", "", "--language", language]
+    assert main(args) != 0
+    cli_error = capsys.readouterr().err
+    assert "--no-direction" in cli_error
+    assert "voice assignments" in cli_error and "pauses" in cli_error
+    assert "validation error" not in cli_error
+    assert main([*args, "--no-direction"]) == 0
+
+
 @pytest.mark.parametrize("saved", [False, True], ids=["draft", "saved"])
 def test_first_paragraph_preview_keeps_all_directed_segments(speech_server, saved, capsys):
     from lixity.cli import main

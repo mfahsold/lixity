@@ -30,6 +30,16 @@ POLICY = 'lixity-speech-plan/1'
 MAX_BYTES = 4 * 1024 * 1024
 
 
+class BaseDirectionConflict(ValueError):
+    """The chosen Base voice cannot apply a passage's text direction."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Qwen Base cannot use passage text direction. Remove the affected instructions or "
+            "use --no-direction for this render; this also ignores passage voice assignments and pauses."
+        )
+
+
 class _Strict(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True, allow_inf_nan=False, hide_input_in_errors=True)
 
@@ -170,6 +180,8 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
             if selected is None:
                 raise ValueError('A saved direction references an unavailable voice profile')
             selected = effective_profile(selected)
+            if selected.engine == 'qwen3-base' and d.instructions:
+                raise BaseDirectionConflict()
             instructions = combine_delivery(selected.instructions, d.instructions)
             selected = AudioProfile.model_validate({**selected.model_dump(), 'instructions': instructions})
             end = d.end if d.end is not None else len(cue.text)

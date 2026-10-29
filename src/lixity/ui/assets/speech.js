@@ -350,8 +350,8 @@
       if (mode === "profiles" && profilesDirty) { status(label("profiles_unsaved")); return; }
       dialog.close();
     }); close.className = "ctl";
+    fields.status = node("p", card, "ctl-status modal-intro"); fields.status.setAttribute("role", "status"); fields.status.setAttribute("aria-live", "polite");
     var content = node("div", card, "modal-body");
-    fields.status = node("p", content, "ctl-status"); fields.status.setAttribute("role", "status"); fields.status.setAttribute("aria-live", "polite");
     var row = node("div", content, "row"); field(row, "profile", "select"); fields.create = button(row, "create", create);
     fields.remove_profile = button(row, "remove_profile", removeProfile);
     field(content, "target", "select"); fields.target.closest("label").hidden = true;
@@ -444,6 +444,7 @@
       fields.open_output.hidden = true; fields.chapter_render.hidden = false;
       fields.reuseLabel.hidden = false;
     });
+    fields.open_output.textContent = label("open_output");
     fields.cancel = button(actions, "cancel", cancel); fields.cancel.disabled = true;
     fields.context = node("p", content, "ctl-note"); fields.progress = node("progress", content); fields.progress.hidden = true; fields.progress.setAttribute("aria-label", label("progress"));
     fields.audio = node("audio", content, "media-player"); fields.audio.controls = true; fields.audio.hidden = true;

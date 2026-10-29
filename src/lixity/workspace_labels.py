@@ -11736,6 +11736,16 @@ _ROWS["speech_ignore_direction"] = (
     "Negeer de regie voor passages bij deze uitvoer, inclusief concepten, stemtoewijzingen en passagepauzes. Profielinstellingen en standaardpauzes blijven gelden.",
 )
 
+_ROWS["speech_base_direction_conflict"] = (
+    "Qwen Base cannot use the text instructions in the passage direction. Remove those instructions or select 'Ignore passage direction' for this render. This also ignores passage voice assignments and pauses.",
+    "Qwen Base kann die Textanweisungen der Passagenregie nicht verwenden. Entferne diese Anweisungen oder aktiviere für diese Ausgabe 'Passagenregie ignorieren'. Dabei werden auch Stimmzuordnungen und Pausen der Passagenregie ignoriert.",
+    "Qwen Base ne peut pas utiliser les consignes textuelles de direction des passages. Supprimez-les ou choisissez « Ignorer la direction des passages » pour cette synthèse. Les voix et pauses attribuées aux passages seront aussi ignorées.",
+    "Qwen Base no admite las instrucciones de texto de la dirección de pasajes. Elimínalas o selecciona «Ignorar la dirección de pasajes» para esta generación. También se ignorarán las voces y pausas asignadas a los pasajes.",
+    "Qwen Base non può usare le istruzioni testuali della regia dei passaggi. Eliminale o seleziona «Ignora la regia dei passaggi» per questa sintesi. Anche le voci e le pause assegnate ai passaggi saranno ignorate.",
+    "O Qwen Base não pode usar as instruções textuais da direção dos trechos. Remova-as ou selecione «Ignorar a direção dos trechos» nesta geração. As vozes e pausas atribuídas aos trechos também serão ignoradas.",
+    "Qwen Base kan de tekstinstructies van de passageregie niet gebruiken. Verwijder die instructies of kies 'Negeer de regie voor passages' voor deze uitvoer. Stemtoewijzingen en pauzes voor passages worden dan ook genegeerd.",
+)
+
 _ROWS["speech_delivery"] = (
     "Delivery", "Sprechweise", "Interprétation", "Interpretación",
     "Interpretazione", "Interpretação", "Voordracht",
@@ -11967,6 +11977,7 @@ _ROWS["speech_design_hint"] = (
 _ROWS.update({
     "speech_profiles_title": ("Voice profiles", "Hörprofile", "Profils vocaux", "Perfiles de voz", "Profili vocali", "Perfis de voz", "Stemprofielen"),
     "speech_output_title": ("Render chapter audio", "Kapitel vertonen", "Produire un chapitre audio", "Producir audio del capítulo", "Genera audio del capitolo", "Produzir áudio do capítulo", "Hoofdstuk inspreken"),
+    "speech_open_output": ("Open chapter output", "Kapitelvertonung öffnen", "Ouvrir la production du chapitre", "Abrir la producción del capítulo", "Apri produzione del capitolo", "Abrir produção do capítulo", "Hoofdstukuitvoer openen"),
     "speech_reader_title": ("Listen and direct", "Anhören und Regie", "Écouter et diriger", "Escuchar y dirigir", "Ascolta e dirigi", "Ouvir e dirigir", "Beluisteren en regisseren"),
     "speech_pronunciation_search": ("Find a term", "Begriff suchen", "Rechercher un terme", "Buscar un término", "Cerca un termine", "Procurar um termo", "Zoek een term"),
     "speech_pronunciation_term": ("Term", "Begriff", "Terme", "Término", "Termine", "Termo", "Term"),

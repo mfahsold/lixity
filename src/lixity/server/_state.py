@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from ..io import FileUtils
 from ..style_fingerprint import FingerprintThresholds
+from .pdf_context import project_settings_token
 from .views import build_server_dashboard
 
 if TYPE_CHECKING:
@@ -149,7 +150,7 @@ class WorkspaceState:
 
     @classmethod
     def refresh_when_source_changed(cls) -> RefreshOutcome:
-        """Validate source availability and rebuild only changed manuscript bytes.
+        """Validate source availability and rebuild changed manuscript or settings.
 
         Failures keep the last successful HTML and source digest intact. The
         separate outcome lets responses label that retained content truthfully.
@@ -158,20 +159,22 @@ class WorkspaceState:
         with cls._workspace_lock:
             source = cls.source_input
             rendered = cls.dashboard_info.get("manuscript_source_sha256")
-            if not source:
-                cls.refresh_outcome = RefreshOutcome.CURRENT
-                return cls.refresh_outcome
-            try:
-                _, current = FileUtils.read_source_snapshot(source)
-            except FileNotFoundError:
-                cls.refresh_outcome = RefreshOutcome.MISSING
-                return cls.refresh_outcome
-            except OSError:
-                cls.refresh_outcome = RefreshOutcome.UNREADABLE
-                return cls.refresh_outcome
+            settings_changed = cls.dashboard_info.get("project_settings_token", "") != project_settings_token(
+                cls.get_author_project_root(), source
+            )
+            current = rendered
+            if source:
+                try:
+                    _, current = FileUtils.read_source_snapshot(source)
+                except FileNotFoundError:
+                    cls.refresh_outcome = RefreshOutcome.MISSING
+                    return cls.refresh_outcome
+                except OSError:
+                    cls.refresh_outcome = RefreshOutcome.UNREADABLE
+                    return cls.refresh_outcome
             # A failed rebuild may concern settings or rendering, so matching
             # manuscript bytes alone cannot validate that failed operation.
-            if current == rendered and not cls._refresh_needs_validation:
+            if current == rendered and not settings_changed and not cls._refresh_needs_validation:
                 cls.refresh_outcome = RefreshOutcome.CURRENT
                 return cls.refresh_outcome
             try:

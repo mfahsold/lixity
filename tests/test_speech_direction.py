@@ -27,6 +27,27 @@ def test_passage_direction_compiles_separate_model_controls_and_exact_pauses():
     assert TEXT.count('A quiet river flows.') == 2
 
 
+def test_base_allows_passage_pauses_and_other_explicit_profiles():
+    from lixity.speech_direction import Direction, build_speech_plan, speech_passages
+
+    anchor = speech_passages(TEXT, 'en')[0]['anchor']
+    base = AudioProfile(engine='qwen3-base', voice='reference', reference_id='a' * 64)
+    pause = Direction(anchor=anchor, pause_before=0.4, pause_after=0.6)
+    spoken = [row for row in build_speech_plan(TEXT, base, directions=[pause], chapter=1) if row.anchor]
+    assert spoken[0].profile.engine == 'qwen3-base'
+    assert spoken[0].pause_before == 0.4 and spoken[-1].pause_after == 0.6
+
+    # A passage explicitly assigned to a supported non-Base profile may retain its instructions.
+    assigned = Direction(anchor=anchor, instructions='Quietly.', profile_id='preset')
+    spoken = [row for row in build_speech_plan(TEXT, base, directions=[assigned], chapter=1,
+              profiles={'preset': AudioProfile()}) if row.anchor]
+    assert spoken[0].profile.engine == 'qwen3' and spoken[0].profile.instructions == 'Quietly.'
+
+    # A conflict in a different chapter must not stop this chapter's plan.
+    other = Direction(anchor=speech_passages(TEXT, 'en')[1]['anchor'], instructions='Quietly.')
+    assert any(row.text for row in build_speech_plan(TEXT, base, directions=[other], chapter=1))
+
+
 def test_overlap_stale_anchor_and_unsupported_fields_fail_before_synthesis():
     from lixity.speech_direction import Direction, build_speech_plan, speech_passages
     anchor = speech_passages(TEXT, 'en')[0]['anchor']
