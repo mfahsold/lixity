@@ -92,7 +92,7 @@ def screenshot_manifest(source: Path) -> list[dict[str, str]]:
         if (not isinstance(item, dict)
                 or set(item) != {"file", "role", "question", "alt", "caption", "destination"}
                 or any(not isinstance(value, str) or not value.strip() for value in item.values())
-                or not re.fullmatch(r"[a-z0-9-]+\.png", item["file"])
+                or not re.fullmatch(r"[a-z0-9-]+\.(?:png|webp)", item["file"])
                 or item["file"] in names
                 or item["role"] not in {"lead", "support", "guide", "reference"}
                 or item["destination"].startswith(("/", "."))
