@@ -296,10 +296,13 @@ server.serve_forever()
       assert.equal(await page.locator('#speech-language').inputValue(),'de');
       assert.equal(await page.locator('#speech-voice').inputValue(),'thorsten');
       assert.equal(await page.locator('#speech-instructions').isVisible(),false);
+      assert.equal(await page.locator('#speech-runtime-hint').textContent(),labels.speech_coqui_runtime_hint);
+      assert.equal(await page.locator('#speech-direction-hint').textContent(),labels.speech_direction_coqui_hint);
       await page.locator('#speech-engine').selectOption('coqui-reference');
       assert.equal(await page.locator('#speech-voice').inputValue(),'reference');
       assert.equal(await page.locator('#speech-reference_id').isVisible(),true);
       await page.locator('#speech-engine').selectOption('qwen3');
+      assert.equal(await page.locator('#speech-direction-hint').textContent(),labels.speech_direction_hint);
       await page.locator('#speech-language').selectOption(originalSpeechLanguage);
       assert.equal(await page.locator('#speech-engine').getAttribute('aria-describedby'),'speech-model-hint speech-worker-status');
       assert.ok(await page.locator('#speech-worker-status').isVisible());

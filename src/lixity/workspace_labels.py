@@ -11692,6 +11692,16 @@ _ROWS["speech_runtime_hint"] = (
     "Qwen vereist de optionele lokale spraakdienst. Genereren op de CPU kan traag zijn; begin met een kort voorbeeld. Voltooide hoofdstuksegmenten blijven lokaal bewaard voor nieuwe pogingen; voorbeelden worden altijd opnieuw gegenereerd.",
 )
 
+_ROWS["speech_coqui_runtime_hint"] = (
+    "Coqui runs locally with its German Thorsten model; reference mode also needs local OpenVoice converter files. Install and start the matching worker before rendering. Completed chapter segments are saved locally; previews are always fresh.",
+    "Coqui läuft lokal mit dem deutschen Thorsten-Modell; der Referenzmodus benötigt zusätzlich lokale OpenVoice-Konverterdateien. Installiere und starte vor der Vertonung den passenden Dienst. Fertige Kapitelabschnitte bleiben lokal gespeichert; Vorschauen werden immer neu erzeugt.",
+    "Coqui fonctionne localement avec le modèle allemand Thorsten ; le mode référence nécessite aussi les fichiers locaux du convertisseur OpenVoice. Installez et démarrez le service adapté avant la synthèse. Les segments terminés restent en local ; les aperçus sont toujours régénérés.",
+    "Coqui funciona localmente con el modelo alemán Thorsten; el modo de referencia también necesita los archivos locales del conversor OpenVoice. Instala e inicia el servicio adecuado antes de generar. Los segmentos completados se guardan localmente; las vistas previas siempre se regeneran.",
+    "Coqui funziona localmente con il modello tedesco Thorsten; la modalità di riferimento richiede anche i file locali del convertitore OpenVoice. Installa e avvia il servizio corretto prima di generare. I segmenti completati restano in locale; le anteprime vengono sempre rigenerate.",
+    "O Coqui funciona localmente com o modelo alemão Thorsten; o modo de referência também precisa dos ficheiros locais do conversor OpenVoice. Instale e inicie o serviço correspondente antes de gerar. Os segmentos concluídos ficam guardados localmente; as prévias são sempre geradas de novo.",
+    "Coqui draait lokaal met het Duitse Thorsten-model; de referentiemodus heeft ook lokale OpenVoice-converterbestanden nodig. Installeer en start de passende dienst vóór het genereren. Voltooide hoofdstuksegmenten blijven lokaal; voorbeelden worden altijd opnieuw gegenereerd.",
+)
+
 _ROWS["speech_target"] = (
     "Render on", "Berechnen auf", "Calculer sur", "Calcular en",
     "Calcola su", "Calcular em", "Berekenen op",
@@ -11807,6 +11817,15 @@ _ROWS["speech_profile_referenced"] = (
 
 # Authored speech direction uses the same seven-locale label pack.
 _ROWS.update({
+    'speech_direction_coqui_hint': (
+        'Coqui supports German synthesis and structural pauses, not free-text passage direction. You can ignore saved directions for one render; this also skips passage-specific voice assignments and pauses without deleting them.',
+        'Coqui unterstützt deutsche Sprachausgabe und strukturelle Pausen, aber keine freie Textregie. Du kannst gespeicherte Regie für einen einzelnen Render ignorieren; dabei entfallen auch textstellenspezifische Stimmzuweisungen und Pausen, ohne dass sie gelöscht werden.',
+        'Coqui prend en charge la synthèse en allemand et les pauses structurelles, mais pas les consignes libres. Vous pouvez ignorer les consignes enregistrées pour un rendu ; cela omet aussi les voix et pauses propres aux passages, sans les supprimer.',
+        'Coqui admite síntesis en alemán y pausas estructurales, pero no instrucciones libres. Puedes ignorar las instrucciones guardadas para una generación; también se omiten las voces y pausas específicas de pasaje, sin borrarlas.',
+        'Coqui supporta la sintesi in tedesco e le pause strutturali, ma non le istruzioni testuali libere. Puoi ignorare le indicazioni salvate per una singola generazione; così si omettono anche le voci e le pause specifiche dei passaggi, senza eliminarle.',
+        'O Coqui suporta síntese em alemão e pausas estruturais, mas não instruções livres. Pode ignorar as instruções guardadas numa geração; isso também omite as vozes e pausas específicas dos trechos, sem as apagar.',
+        'Coqui ondersteunt Duitse spraaksynthese en structurele pauzes, maar geen vrije tekstregie. Je kunt opgeslagen regie voor één render negeren; daarbij vervallen ook passagegebonden stemtoewijzingen en pauzes, zonder ze te wissen.',
+    ),
     'speech_direction_title': ('Passage direction', 'Regie für Textstellen', 'Direction des passages', 'Dirección de pasajes', 'Regia dei passaggi', 'Direção de passagens', 'Regie voor passages'),
     'speech_direction_hint': (
         'For one narrator, use restrained delivery cues rather than separate character voices. VoiceDesign generates segments separately; direction may change the voice, and its delivery is not guaranteed. Qwen Base accepts pauses, not text direction. Select text below for a smaller range; no IPA or SSML interpretation.',

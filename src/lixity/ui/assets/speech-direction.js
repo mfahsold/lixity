@@ -5,6 +5,9 @@ window.LixitySpeechDirection = function(parent, h) {
   var section = h.node("fieldset", parent, "settings-section");
   h.node("legend", section, "", h.label("direction_title"));
   var hint = h.node("p", section, "ctl-note", h.label("direction_hint")); hint.id = "speech-direction-hint";
+  function setEngine(engine) {
+    hint.textContent = h.label(engine.startsWith("coqui") ? "direction_coqui_hint" : "direction_hint");
+  }
   var passage = h.field(section, "direction_passage", "select");
   var entries = h.field(section, "direction_entries", "select");
   var text = h.field(section, "direction_text", "textarea"); text.readOnly = true; text.rows = 4;
@@ -114,7 +117,7 @@ window.LixitySpeechDirection = function(parent, h) {
     }
     loadPassage();
   }
-  return {section:section, open:open, draft:function() { return dirty ? read() : null; },
+  return {section:section, open:open, setEngine:setEngine, draft:function() { return dirty ? read() : null; },
     dirty:function() { return dirty; }, busy:function() { return pending; }, replacement:function() { return dirty && selected ? selected.id : null; },
     stale:function() { ++revision; pending = false; section.disabled = false; save.disabled = remove.disabled = true; if (chapter) chapter.disabled = true; },
     disable:function() { pending = false; section.disabled = true; if (chapter) chapter.disabled = false; }};

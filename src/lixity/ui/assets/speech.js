@@ -73,6 +73,12 @@
     }
     fields.worker_status.textContent = uiFormat("speech_worker_" + key, args);
   }
+  function updateRuntimeHint() {
+    var engine = fields.engine.value;
+    var key = fields.target.value === "jetson" ? "jetson_hint" :
+      engine.startsWith("coqui") ? "coqui_runtime_hint" : "runtime_hint";
+    fields.runtime_hint.textContent = label(key);
+  }
   function updateModelFields() {
     var designed = fields.engine.value === "qwen3-design", referenced = !!capabilities[fields.engine.value].reference_required;
     var noInstructions = !capabilities[fields.engine.value].instructions;
@@ -112,11 +118,12 @@
     fields.speed.min = String(cap.speed.minimum);
     fields.speed.max = String(cap.speed.maximum);
     fields.model.textContent = fields.engine.value.startsWith("coqui") ? cap.name : label(designed ? "model_design_hint" : referenced ? "model_base_hint" : "model_preset_hint");
+    direction.setEngine(fields.engine.value);
     options(fields.target, cap.targets.map(function(value) { return [value, label("target_" + value)]; }),
       cap.targets.includes(executionTarget) ? executionTarget : cap.targets[0]);
     fields.target.disabled = cap.targets.length < 2;
     fields.target.closest("label").hidden = fields.target.disabled;
-    fields.runtime_hint.textContent = label(fields.target.value === "jetson" ? "jetson_hint" : "runtime_hint");
+    updateRuntimeHint();
     fields.reuse.closest("label").hidden = mode !== "output";
     updateWorkerStatus();
   }
@@ -364,7 +371,7 @@
     targetHint.id = "speech-target-hint"; fields.target.setAttribute("aria-describedby", targetHint.id);
     fields.target.addEventListener("change", function() {
       executionTarget = fields.target.value; invalidate();
-      fields.runtime_hint.textContent = label(executionTarget === "jetson" ? "jetson_hint" : "runtime_hint");
+      updateRuntimeHint();
       updateWorkerStatus();
     });
     fields.worker_status = node("p", content, "ctl-note"); fields.worker_status.id = "speech-worker-status";

@@ -22,6 +22,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   direction without manually supplying snapshot hashes.
 
 ### Changed
+- Audio guidance now follows the selected engine, distinguishing Coqui's local
+  runtime and direction limits from Qwen-specific behavior.
 - Native audio previews now include all planned segments of the first anchored
   paragraph, enforce the same 6,000-character preview limit as selected passages,
   and fail explicitly when no paragraph or list item can be selected. The
