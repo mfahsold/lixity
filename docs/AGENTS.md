@@ -1797,7 +1797,9 @@ POST `<prefix>/speech-plan` accepts the existing render scope and returns
 `ok`, `plan`, `context` without inference, a job, audio caching or file creation.
 The plan uses `lixity-speech-plan/1`, with effective text/profile/pauses/anchor per
 segment and explicit model-interpreted/exact-silence/unsupported capabilities.
-`read-aloud --plan-only` exposes the same compiler.
+On current main, POST `<prefix>/speech-plan` also returns `ssml` containing W3C-compliant
+SSML (`<speak>`, `<voice>`, `<prosody>`, `<break>`), and `read-aloud --plan-only --ssml`
+outputs the formatted markup directly to stdout for consumption by external pipelines.
 
 Render/plan accept `draft_direction` and optional original `draft_replace_id`
 only for preview, never chapter output;

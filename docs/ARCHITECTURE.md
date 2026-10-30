@@ -1341,22 +1341,30 @@ creating controls for another context. An author acknowledgement remains the
 existing explicit guarded mutation. No semantic diff, inferred affected passage,
 new archive schema or database authority is introduced.
 
-## Project audio profiles and rendering
+## Project audio direction, timeline export and external audio pipelines
 
 ```mermaid
 flowchart LR
-    CLI[CLI] --> Planner[Shared speech planning and rendering]
-    UI[Workspace audio routes] --> Planner
-    Project[Project profiles, direction and references] --> Planner
-    Planner --> Cache[Raw segment cache]
-    Planner --> Worker[Matching local or Jetson Qwen worker]
-    Worker --> Cache
-    Cache --> Output[Tempo, pauses and audio output]
+    Manuscript[Manuscript structure and scenes] --> Planner[Shared speech planning & direction engine]
+    Project[Project profiles, pronunciations and direction] --> Planner
+    Planner --> SSML[Standard W3C SSML & Timeline JSON]
+    Planner --> External[External OSS Audio/TTS Engines]
+    Planner --> Quality[Audio signal audit & reference inspection]
 ```
 
-The worker variant must match the profile; the Jetson connection uses an
-operator-configured SSH tunnel. References are retained project data, while
-cached segments are disposable. Tempo and pauses are applied after synthesis.
+Lixity's audio architecture separates manuscript dramaturgy, phonetic
+lexicons and passage-level direction from raw audio synthesis. Lixity compiles
+the manuscript, character voice assignments, pronunciation substitutions and
+pause rhythm into standard interchange formats (W3C SSML via `plan_to_ssml` and
+structured timeline JSON via `plan_json`). This allows authors to direct prose
+in Lixity and feed the resulting plan to specialized external open-source TTS
+runtimes (such as OpenedAI Speech, Kokoro, Chatterbox, AllTalk or F5-TTS) without
+burdening Lixity with heavy deep-learning inference stacks.
+
+**Signal diagnostics and quality inspection:** `speech_reference_quality.py`
+provides standard-library descriptive measurements (sample rate, peak, clipping ratio,
+speech level, noise floor, bandwidth) to evaluate audio references and exported
+materials before final rendering.
 
 **Since v0.7.6:** `speech_profiles.py` owns strict project-only audio
 settings and engine capabilities. Existing root-only atomic settings updates

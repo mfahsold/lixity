@@ -176,11 +176,13 @@ sources, existing outputs and read-only structure findings. They neither move
 files nor establish that an output matches the current manuscript; see
 [project inspection](https://mfahsold.github.io/lixity/USAGE.md#inspect-project-structure).
 
-The audio workflow shares saved project voice profiles between
-`lixity read-aloud` and the native interface. Version 0.7.7 separates project voice
+The audio workflow positions Lixity as an author's dramaturgy, phonetic
+direction and speech-timeline workbench, bridging manuscript structure with
+external open-source audio engines. Version 0.7.7 separates project voice
 profiles and chapter output from manuscript passage direction and preview. It adds
-separately saved passage direction, source-bound text ranges, explicit silence and
-a shared inspectable CLI/UI speech plan. Optional Qwen3-TTS 1.7B
+separately saved passage direction, source-bound text ranges, explicit silence,
+a shared inspectable CLI/UI speech plan, and standard W3C SSML export (`--ssml`
+or dialog download) for integration with external TTS pipelines. Optional Qwen3-TTS 1.7B
 CustomVoice provides preset voices and explicit style instructions through a
 local worker or a configured Jetson over SSH. Version 0.7.7 also supports the
 separately installed Qwen 1.7B VoiceDesign checkpoint for described voices;

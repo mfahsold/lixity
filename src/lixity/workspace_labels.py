@@ -11858,7 +11858,8 @@ _ROWS.update({
     'speech_direction_new': ('New range', 'Neuer Bereich', 'Nouvelle plage', 'Nuevo intervalo', 'Nuovo intervallo', 'Novo intervalo', 'Nieuw bereik'),
     'speech_direction_default': ('Use current voice profile', 'Aktuelles Stimmprofil verwenden', 'Utiliser le profil actuel', 'Usar perfil actual', 'Usa profilo attuale', 'Usar perfil atual', 'Huidig stemprofiel gebruiken'),
     'speech_direction_stale': ('Changed passages: review and remove outdated direction before rendering.', 'Veränderte Textstellen: veraltete Regie vor der Berechnung prüfen und entfernen.', 'Passages modifiés : vérifiez et supprimez les anciennes directions.', 'Pasajes modificados: revisa y elimina la dirección desactualizada.', 'Passaggi modificati: verifica e rimuovi la regia obsoleta.', 'Passagens alteradas: reveja e remova a direção desatualizada.', 'Gewijzigde passages: controleer en verwijder verouderde regie.'),
-    'speech_direction_plan': ('Inspect preview plan', 'Vorschauplan ansehen', 'Examiner le plan', 'Ver plan de vista previa', 'Esamina piano di anteprima', 'Ver plano da prévia', 'Voorbeeldplan bekijken'),
+    'speech_direction_plan': ('Inspect plan & timeline', 'Regieplan & Timeline', 'Examiner le plan', 'Ver plan y cronología', 'Esamina piano e timeline', 'Ver plano e cronograma', 'Regieplan & tijdlijn bekijken'),
+    'speech_export_ssml': ('Download SSML', 'SSML herunterladen', 'Télécharger SSML', 'Descargar SSML', 'Scarica SSML', 'Baixar SSML', 'SSML downloaden'),
     'speech_direction_pause': ('Silence', 'Stille', 'Silence', 'Silencio', 'Silenzio', 'Silêncio', 'Stilte'),
 })
 

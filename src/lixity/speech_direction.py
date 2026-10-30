@@ -232,6 +232,32 @@ def plan_json(plan: list[SpeechSegment]) -> dict[str, Any]:
                           'anchor': row.anchor} for row in plan]}
 
 
+def plan_to_ssml(plan: list[SpeechSegment], *, default_lang: str = 'de') -> str:
+    """Format an effective speech plan as standard W3C SSML for external speech engines."""
+    from xml.sax.saxutils import escape
+    lines = ['<speak xmlns="http://www.w3.org/2001/10/synthesis" version="1.0">']
+    for row in plan:
+        lang = row.profile.language or default_lang
+        voice_name = row.profile.voice or 'default'
+        # Emit leading pause if specified
+        if row.pause_before > 0:
+            lines.append(f'  <break time="{int(row.pause_before * 1000)}ms" />')
+        if row.text.strip():
+            escaped_text = escape(row.text.strip())
+            # Include voice and optional prosody / speed attributes
+            speed_pct = f'{round(row.profile.speed * 100)}%' if row.profile.speed != 1.0 else None
+            voice_tag = f'<voice name="{escape(voice_name)}" xml:lang="{escape(lang)}"'
+            if speed_pct:
+                lines.append(f'  {voice_tag}><prosody rate="{speed_pct}">{escaped_text}</prosody></voice>')
+            else:
+                lines.append(f'  {voice_tag}>{escaped_text}</voice>')
+        # Emit trailing pause if specified
+        if row.pause_after > 0:
+            lines.append(f'  <break time="{int(row.pause_after * 1000)}ms" />')
+    lines.append('</speak>')
+    return '\n'.join(lines)
+
+
 def _read(root: Path) -> tuple[_State, str]:
     repo = Repository(root)
     try:

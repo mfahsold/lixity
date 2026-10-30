@@ -242,3 +242,21 @@ def test_cli_can_preview_an_explicit_voice_design_profile_without_worker(tmp_pat
     plan=json.loads(capsys.readouterr().out)
     assert plan['segments'][0]['profile']['engine'] == 'qwen3-design'
     assert plan['segments'][0]['profile']['voice_description'] == 'A natural German voice.'
+
+
+def test_plan_to_ssml_formats_w3c_standard_tags_and_escapes_xml(tmp_path, capsys):
+    from lixity.cli import main
+    from lixity.speech_direction import build_speech_plan, plan_to_ssml
+    prof = AudioProfile(voice="Aiden", language="en", speed=1.15)
+    plan = build_speech_plan("Hello <World> & Friends.", prof)
+    ssml = plan_to_ssml(plan)
+    assert ssml.startswith('<speak xmlns="http://www.w3.org/2001/10/synthesis"')
+    assert '<voice name="Aiden" xml:lang="en"><prosody rate="115%">Hello &lt;World&gt; &amp; Friends.</prosody></voice>' in ssml
+    assert '<break time="450ms" />' in ssml
+
+    (tmp_path/'draft.md').write_text("Hello <World>.")
+    (tmp_path/'lixity.toml').write_text('language="en"\n')
+    assert main(['read-aloud', '--project', str(tmp_path), '--plan-only', '--ssml']) == 0
+    out = capsys.readouterr().out
+    assert out.startswith('<speak')
+    assert 'Hello &lt;World&gt;.' in out

@@ -8,6 +8,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Standard W3C SSML export (`plan_to_ssml`, `read-aloud --plan-only --ssml`, and
+  browser dialog SSML download) to position Lixity as an author's dramaturgy,
+  phonetic direction and speech-timeline workbench for external open-source TTS
+  engines (OpenedAI Speech, Kokoro, Chatterbox, AllTalk, F5-TTS).
 - `audio-reference inspect` and a `quality` object in `audio-reference create`
   report level, noise floor, clipping and spectral bandwidth of a voice
   reference (`lixity-audio-reference-quality/1`), with uncalibrated heuristic

@@ -1478,6 +1478,7 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
             direction_snapshot,
             direction_state,
             plan_json,
+            plan_to_ssml,
             saved_directions,
         )
         text, source_hash = FileUtils.read_source_snapshot(workspace.manuscript)
@@ -1524,7 +1525,10 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
         references = references_for_plan(workspace.root, plan)
         if args.plan_only:
             check_context()
-            print(_json(plan_json(plan), indent=True))
+            if getattr(args, "ssml", False):
+                print(plan_to_ssml(plan, default_lang=profile.language))
+            else:
+                print(_json(plan_json(plan), indent=True))
             return EXIT_OK
         render_options: dict[str, Any] = {"references": references} if references else {}
         out_path = render_speech_audio(
@@ -2141,6 +2145,7 @@ def _main(argv: list[str] | None = None) -> int:
             p.add_argument("--language", default=None, help="Speech language code (default: saved profile, then project setting)")
             p.add_argument("--profile", default=None, help="Saved project audio profile (default: selected project profile)")
             p.add_argument("--plan-only", action="store_true", help="Inspect effective speech text and direction as JSON; no synthesis or output")
+            p.add_argument("--ssml", action="store_true", help="When using --plan-only, output W3C SSML instead of JSON")
             previews = p.add_mutually_exclusive_group()
             previews.add_argument("--preview", action="store_true", help="Preview the first anchored paragraph or list item")
             previews.add_argument("--preview-line", type=int, help="Preview the anchored paragraph or list item containing this source line")

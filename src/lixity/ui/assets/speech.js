@@ -307,6 +307,18 @@
       if (planOnly) {
         if (!valid(serial)) return;
         fields.plan.replaceChildren();
+        if (data.ssml) {
+          var ssmlHeader = node("div", fields.plan, "row");
+          var ssmlBtn = button(ssmlHeader, "export_ssml", function() {
+            var blob = new Blob([data.ssml], {type: "application/ssml+xml;charset=utf-8"});
+            var u = URL.createObjectURL(blob);
+            var a = document.createElement("a");
+            a.href = u; a.download = "speech-timeline.ssml";
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            setTimeout(function() { URL.revokeObjectURL(u); }, 2000);
+          });
+          ssmlBtn.type = "button";
+        }
         data.plan.segments.forEach(function(row) {
           var item = node("li",fields.plan,"",row.text || label("direction_pause"));
           node("p",item,"ctl-note",(row.profile.voice_description || row.profile.voice) + " · " + (row.profile.instructions || label("direction_default")) + " · " + label("direction_before") + ": " + row.pause_before + " · " + label("direction_after") + ": " + row.pause_after);

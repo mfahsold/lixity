@@ -1460,13 +1460,17 @@ that the worker will remain available during a later render.
 
 ### `lixity read-aloud`
 
-**Development prototype:** create a listening copy using Qwen3-TTS 1.7B.
-Version 0.7.7 supports CustomVoice, VoiceDesign and Base references. The CLI and native preview/chapter dialog share the same project
-voice profiles, rendering controls and local/Jetson targets. The optional worker
-and its model require separate setup. This is not a production audiobook pipeline.
+**Speech planning, direction & audio generation:**
+Version 0.7.7 separates dramaturgy and passage direction from raw synthesis.
+The CLI and native dialog compile the manuscript, character voice assignments,
+pronunciation substitutions and timing into structured plans. Use `--plan-only`
+to output the compiled JSON timeline, or `--plan-only --ssml` to export standard
+W3C SSML for ingestion into external open-source speech systems (such as OpenedAI
+Speech, Kokoro, Chatterbox, or AllTalk). For local preview synthesis, optional
+Qwen and Coqui local workers remain available as reference implementations.
 
 ```bash
-lixity read-aloud manuscript.md --language en -o manuscript.wav
+lixity read-aloud manuscript.md --language en --plan-only --ssml > chapter.ssml
 lixity read-aloud manuscript.md --language de --chapter 2 --voice Ryan -o chapter-2.wav
 lixity read-aloud --project ./novel --language de -o reading-copy.wav
 ```

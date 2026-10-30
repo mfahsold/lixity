@@ -24,6 +24,7 @@ from ..speech_direction import (
     direction_snapshot,
     direction_state,
     plan_json,
+    plan_to_ssml,
     save_direction,
     saved_directions,
 )
@@ -274,7 +275,12 @@ class SpeechRoutesMixin(ResponseMixin):
                     raise ValueError("Open a manuscript project before using audio")
                 references = references_for_plan(root, plan)
                 if plan_only:
-                    self._json({"ok": True, "plan": plan_json(plan), "context": context})
+                    self._json({
+                        "ok": True,
+                        "plan": plan_json(plan),
+                        "ssml": plan_to_ssml(plan, default_lang=profile.language),
+                        "context": context,
+                    })
                     return
                 binding = {name: payload[name] for name in ("project_token", "source_sha256")}
                 handler = type(self)
