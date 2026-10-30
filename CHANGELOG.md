@@ -8,6 +8,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- `audio-reference inspect` and a `quality` object in `audio-reference create`
+  report level, noise floor, clipping and spectral bandwidth of a voice
+  reference (`lixity-audio-reference-quality/1`), with uncalibrated heuristic
+  notes for band-limited, gated, clipped or noisy recordings; formulas in
+  `docs/METHODS.md`, limits in `docs/STABILITY.md`.
 - Experimental local German Coqui Thorsten VITS audio and optional OpenVoice V2
   reference-voice conversion, reusing project references and speech planning;
   saved profiles require audio schema `/3` and a reviewed backed-up migration.
@@ -22,6 +27,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   direction without manually supplying snapshot hashes.
 
 ### Changed
+- Coqui/OpenVoice guidance states that the converter mainly changes timbre,
+  inherits the reference's bandwidth limit and that the 1.2 playback default is
+  not tuned for Thorsten.
+- Installation guidance explains same-version checkout/tool drift, verified local
+  wheel replacement, preservation of optional dependencies and scoped cleanup.
 - Audio guidance now follows the selected engine, distinguishing Coqui's local
   runtime and direction limits from Qwen-specific behavior.
 - Native audio previews now include all planned segments of the first anchored
@@ -43,6 +53,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and keeps progress and error messages visible while scrolling.
 
 ### Fixed
+- Coqui worker no longer warns about the expected discard of the phonetic tie
+  bar, non-syllabic mark and typographic quotation marks; other discarded
+  characters are reported by code point only.
+- CLI messages for `--reference-id`, missing references and delivery
+  instructions named only Qwen Base although `coqui-reference` uses the same
+  controls.
 - Reloading a workspace notices external project configuration changes and
   refreshes its context token without overwriting a concurrent change.
 - Qwen Base reports incompatible passage text direction with an actionable,

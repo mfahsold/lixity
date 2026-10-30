@@ -354,6 +354,20 @@ disagreements even when the quotation cue is correct. Excerpt boundaries,
 historical conventions, tokenization and annotation scope matter, and the
 inspected corpus is not a held-out or representative contemporary evaluation.
 
+### Voice-reference diagnostics limits
+
+`audio-reference inspect` measures level, noise floor, clipping and spectral
+bandwidth of a saved reference (formulas in [METHODS](METHODS.md)). The
+thresholds behind its notes were not calibrated on a corpus of recordings. They
+only flag recordings that are likely to limit a cloned voice. Absence of a note
+does not mean the reference is suitable, and a note does not prove audible
+harm: only listening decides. In one local check, the OpenVoice V2 converter
+kept content up to about 11 kHz when given a wideband target and lost all
+content above about 8 kHz when given a reference that had none; this is one
+reference and one converter, not a general result. Transcript accuracy, accent
+and speaker identity are not measured. The converter mainly changes timbre; the
+phrasing and intonation of the base voice, here Thorsten VITS, largely carry over.
+
 ### Manual manuscript association limits
 
 Manually selected quotes require explicit retention and exact source/paragraph/claim

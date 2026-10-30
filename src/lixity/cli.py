@@ -125,12 +125,14 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "audio_instructions_help": "Explicit Qwen delivery instructions (not supported by Base)",
         "audio_engine_help": "qwen3: preset voices; qwen3-design: described voice; qwen3-base: saved reference; coqui: Thorsten; coqui-reference: converted reference voice. Worker must match",
         "audio_voice_help": "CustomVoice presets: {voices}. Qwen lists no German-native preset; audition pronunciation. Base uses reference and VoiceDesign uses design",
-        "audio_base_reference_required": "Qwen Base needs a saved reference: create one with 'lixity audio-reference create' and pass --reference-id ID",
-        "audio_base_instructions_inherited": "Qwen Base cannot use the selected profile's delivery instructions; pass --instructions '' to clear them for this run or select a Base profile. --no-direction only excludes passage directions",
-        "audio_base_instructions_explicit": "Qwen Base does not support delivery instructions; pass --instructions '' or select another model",
+        "audio_base_reference_required": "Reference engines (qwen3-base, coqui-reference) need a saved reference: create one with 'lixity audio-reference create' and pass --reference-id ID",
+        "audio_base_instructions_inherited": "Reference engines (qwen3-base, coqui-reference) cannot use the selected profile's delivery instructions; pass --instructions '' to clear them for this run or select a reference profile. --no-direction only excludes passage directions",
+        "audio_base_instructions_explicit": "Reference engines (qwen3-base, coqui-reference) do not support delivery instructions; pass --instructions '' or select another model",
         "audio_design_description_required": "VoiceDesign needs a voice description: pass --voice-description TEXT or select a VoiceDesign profile",
         "audio_custom_voice_required": "CustomVoice needs a preset voice: pass --voice with a supported preset or select a CustomVoice profile",
-        "audio_reference_wrong_engine": "--reference-id is only supported by Qwen Base; select --engine qwen3-base or omit the reference",
+        "audio_reference_wrong_engine": "--reference-id is only supported by reference engines; select --engine qwen3-base or coqui-reference, or omit the reference",
+        "audio_reference_create_inputs": "audio-reference create needs --audio and --transcript-file",
+        "audio_reference_inspect_input": "audio-reference inspect needs --reference-id",
         "audio_read_help": "VoiceDesign generates segments independently; a voice description and direction can affect the perceived voice. For a consistent narrator, compare short --preview samples with fewer role-specific directions. Base reuses an explicit voice reference, but does not accept free-form direction; neither option guarantees continuity. --no-direction ignores saved passage direction only: the selected profile, pronunciation rules, tempo and default pauses remain active. Models and matching local workers are installed separately.",
         "audio_direction_help": "With VoiceDesign, role-specific instructions may change the perceived voice between independently generated segments. Use short listening previews; Base does not support free-form direction. Pauses and explicit saved profile choices remain separate.",
         "layer_reference": 'Reference: all measurable paragraphs within each chapter; median/MAD robust z. Requires at least 3 measurable paragraphs and nonzero MAD.',
@@ -271,12 +273,14 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "audio_instructions_help": "Ausdrückliche Qwen-Regieanweisungen (von Base nicht unterstützt)",
         "audio_engine_help": "qwen3: feste Stimmen; qwen3-design: beschriebene Stimme; qwen3-base: Referenz; coqui: Thorsten; coqui-reference: Thorsten mit Referenzstimme. Worker muss zum Modell passen",
         "audio_voice_help": "CustomVoice-Stimmen: {voices}. Qwen nennt keine deutschsprachige Mutterstimme; Aussprache anhören. Base verwendet reference, VoiceDesign design",
-        "audio_base_reference_required": "Qwen Base benötigt eine gespeicherte Referenz: mit 'lixity audio-reference create' anlegen und --reference-id ID angeben",
-        "audio_base_instructions_inherited": "Qwen Base unterstützt die Regieanweisung des gewählten Profils nicht; für diesen Lauf --instructions '' angeben oder ein Base-Profil wählen. --no-direction schaltet nur die Passagenregie aus",
-        "audio_base_instructions_explicit": "Qwen Base unterstützt keine Regieanweisungen; --instructions '' angeben oder ein anderes Modell wählen",
+        "audio_base_reference_required": "Referenz-Engines (qwen3-base, coqui-reference) benötigen eine gespeicherte Referenz: mit 'lixity audio-reference create' anlegen und --reference-id ID angeben",
+        "audio_base_instructions_inherited": "Referenz-Engines (qwen3-base, coqui-reference) unterstützen die Regieanweisung des gewählten Profils nicht; für diesen Lauf --instructions '' angeben oder ein Referenzprofil wählen. --no-direction schaltet nur die Passagenregie aus",
+        "audio_base_instructions_explicit": "Referenz-Engines (qwen3-base, coqui-reference) unterstützen keine Regieanweisungen; --instructions '' angeben oder ein anderes Modell wählen",
         "audio_design_description_required": "VoiceDesign benötigt eine Stimmbeschreibung: --voice-description TEXT angeben oder ein VoiceDesign-Profil wählen",
         "audio_custom_voice_required": "CustomVoice benötigt eine feste Stimme: mit --voice eine unterstützte Stimme angeben oder ein CustomVoice-Profil wählen",
-        "audio_reference_wrong_engine": "--reference-id wird nur von Qwen Base unterstützt; --engine qwen3-base wählen oder die Referenz weglassen",
+        "audio_reference_wrong_engine": "--reference-id wird nur von Referenz-Engines unterstützt; --engine qwen3-base oder coqui-reference wählen oder die Referenz weglassen",
+        "audio_reference_create_inputs": "audio-reference create benötigt --audio und --transcript-file",
+        "audio_reference_inspect_input": "audio-reference inspect benötigt --reference-id",
         "audio_read_help": "VoiceDesign erzeugt Abschnitte einzeln; Stimmbeschreibung und Regie können die wahrgenommene Stimme beeinflussen. Für eine einheitliche Erzählstimme kurze --preview-Hörproben mit weniger rollenspezifischer Regie vergleichen. Base verwendet eine ausdrückliche Stimmreferenz, unterstützt aber keine freie Regie; beide Wege garantieren keine Stimmkonstanz. --no-direction ignoriert nur gespeicherte Passagenregie: Profil, Ausspracheregeln, Tempo und Standardpausen bleiben aktiv. Modelle und passende lokale Worker werden separat installiert.",
         "audio_direction_help": "Bei VoiceDesign können rollenspezifische Anweisungen die wahrgenommene Stimme zwischen einzeln erzeugten Abschnitten verändern. Kurze Hörproben vergleichen; Base unterstützt keine freie Regie. Pausen und ausdrücklich gespeicherte Profilzuweisungen bleiben getrennt.",
         "layer_reference": 'Referenz: alle messbaren Absätze innerhalb jedes Kapitels; robuster z-Wert aus Median/MAD. Mindestens 3 messbare Absätze und MAD größer als 0 erforderlich.',
@@ -461,7 +465,7 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("pdf", "Compose a PDF for editing, reading, submission or analysis"),
     ("read-aloud", "Create a local listening copy with project voice profiles"),
     ("audio-status", "Inspect audio profiles and worker readiness"),
-    ("audio-reference", "Create a private project-local voice reference (JSON)"),
+    ("audio-reference", "Create or inspect a private project-local voice reference (JSON)"),
     ("audio-direction", "Inspect and save project-local passage speech direction (JSON)"),
     ("audio-migrate", "Preview or apply explicit backed-up Qwen profile replacements (JSON)"),
     ("serve", "Run local HTTP development server and interactive dashboard"),
@@ -518,7 +522,7 @@ _lixity_complete() {
             case "$prev" in
                 --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
                 --audio|--transcript-file) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
-                *) COMPREPLY=( $(compgen -W "create --help --project --audio --transcript-file" -- "$cur") ) ;;
+                *) COMPREPLY=( $(compgen -W "create inspect --help --project --audio --transcript-file --reference-id" -- "$cur") ) ;;
             esac
             return 0
             ;;
@@ -708,10 +712,11 @@ __LIXITY_ZSH_COMMANDS__
           ;;
         audio-reference)
           _arguments \
-            '1:action:(create)' \
+            '1:action:(create inspect)' \
             '--project[Explicit project root]:directory:_files -/' \
             '--audio[Reference WAV]:file:_files' \
-            '--transcript-file[Exact UTF-8 transcript]:file:_files'
+            '--transcript-file[Exact UTF-8 transcript]:file:_files' \
+            '--reference-id[Saved reference identity]'
           ;;
         audio-direction)
           _arguments \
@@ -1936,10 +1941,11 @@ def _main(argv: list[str] | None = None) -> int:
             p.add_argument("--json", action="store_true", help="Machine-readable status")
             continue
         if name == "audio-reference":
-            p.add_argument("action", choices=("create",))
+            p.add_argument("action", choices=("create", "inspect"))
             p.add_argument("--project", required=True, help="Explicit existing project root")
-            p.add_argument("--audio", required=True, help="Reference WAV, 1–30 seconds, mono PCM 24 kHz")
-            p.add_argument("--transcript-file", required=True, help="Exact UTF-8 transcript of the reference WAV")
+            p.add_argument("--audio", help="create: reference WAV, 1–30 seconds, mono PCM 24 kHz")
+            p.add_argument("--transcript-file", help="create: exact UTF-8 transcript of the reference WAV")
+            p.add_argument("--reference-id", help="inspect: saved reference identity to measure")
             continue
         if name == "audio-direction":
             from .speech_direction_cli import configure
@@ -2360,15 +2366,25 @@ def _main(argv: list[str] | None = None) -> int:
         return EXIT_ERROR
     if args.command == "audio-reference":
         from .speech_qwen import MAX_REFERENCE_BYTES
-        from .speech_references import read_reference_input, save_reference
+        from .speech_reference_quality import assess_reference
+        from .speech_references import load_reference, read_reference_input, save_reference
         try:
+            if args.action == "inspect":
+                if not args.reference_id:
+                    raise ValueError(_m("audio_reference_inspect_input"))
+                reference = load_reference(args.project, args.reference_id)
+                print(_json({**assess_reference(reference.audio), "reference_id": reference.id}, indent=True))
+                return EXIT_OK
+            if not args.audio or not args.transcript_file:
+                raise ValueError(_m("audio_reference_create_inputs"))
             audio = read_reference_input(args.audio, MAX_REFERENCE_BYTES)
             transcript = read_reference_input(args.transcript_file, 8000).decode("utf-8")
             reference = save_reference(args.project, audio, transcript)
+            quality = assess_reference(reference.audio)
         except (OSError, ValueError) as exc:
             print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
             return EXIT_ERROR
-        print(_json({"schema_version": "lixity-audio-reference-created/1", "id": reference.id}, indent=True))
+        print(_json({"schema_version": "lixity-audio-reference-created/1", "id": reference.id, "quality": quality}, indent=True))
         return EXIT_OK
     if args.command == "audio-status":
         from .format import safe_text

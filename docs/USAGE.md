@@ -1814,9 +1814,16 @@ project settings.
 Neither Coqui profile interprets free-text delivery instructions. Saved passage
 instructions fail explicitly; `--no-direction` also omits passage voice
 assignments and extra pauses. Pronunciation substitutions, explicit pauses and
-playback speed use the existing Lixity pipeline. The underlying phonemizer may
-discard unsupported phonetic characters; check worker warnings and listen to
-the resulting pronunciation. Profiles containing these new engine identifiers
+playback speed use the existing Lixity pipeline. Playback speed is applied after
+synthesis with FFmpeg; the 1.2 default is a product default, not a tuned value
+for Thorsten, so compare 1.0 with listening. The worker stays silent about the
+expected discards of the phonetic tie bar, the non-syllabic mark and
+typographic quotation marks, which Thorsten's vocabulary cannot represent, and
+warns with code points about any other discarded character. Listen to the
+resulting pronunciation either way. The OpenVoice step mainly changes timbre;
+phrasing and intonation come from Thorsten, and the converted voice inherits the
+channel of its reference, including a bandwidth limit. Check a reference
+before using it (see below). Profiles containing these new engine identifiers
 are not readable by older Lixity versions.
 
 ### Experimental reference voices
@@ -1869,7 +1876,16 @@ lixity audio-reference create --project ./novel --audio voice-work/reference.wav
 
 The returned JSON `id` identifies an immutable project-local record in
 `.lixity/audio-references/`; include the private reference audio and transcript
-in a protected project backup. The original working files are separate and may
+in a protected project backup. The same JSON contains a `quality` object with
+level, noise floor, clipping and bandwidth measurements. Check an existing
+reference with `lixity audio-reference inspect --project ./novel --reference-id ID`.
+A `band_limited` or `digitally_silent_pauses` note means the recording lacks
+high frequencies or room sound, for example because it was recorded at 16 kHz,
+low-passed, gated or denoised before conversion to 24 kHz; cloned voices reproduce
+that limit. Record the reference again at 44.1 or 48 kHz without gate, denoiser or
+low-pass and convert it only at the end. The notes are uncalibrated heuristics
+([methods](METHODS.md#12-voice-reference-signal-diagnostics-audio-reference-inspect));
+listen before deciding. The original working files are separate and may
 also contain sensitive voice data. Creating the same reference again is
 idempotent. The UI can edit the ID of an existing reference; creation is
 currently a CLI action.

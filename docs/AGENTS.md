@@ -1613,7 +1613,12 @@ only after backing up and updating the installation.
 Version 0.7.7 also supports `qwen3-base` profiles with `voice=reference` and a
 project-local `reference_id`. `audio-reference create --project PATH --audio WAV
 --transcript-file TXT` stores an immutable `lixity-audio-reference/1` object and
-returns only its ID. Reference bytes and transcript are private project data,
+returns its ID with a `quality` object (`lixity-audio-reference-quality/1`:
+descriptive level, noise, clipping and bandwidth measurements with
+uncalibrated heuristic notes, not a quality score). `audio-reference inspect
+--project PATH --reference-id ID` returns the same object plus `reference_id`
+for an existing reference; both are read-only. The `quality` field is additive
+to `lixity-audio-reference-created/1`. Reference bytes and transcript are private project data,
 not cache; they are validated and bound to job context and cache identity.
 Base profiles and passage ranges reject nonempty delivery instructions. A Base
 worker must be selected explicitly; it does not infer or assign character voices.

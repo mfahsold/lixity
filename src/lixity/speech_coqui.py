@@ -18,6 +18,18 @@ from typing import Any
 from .speech_profiles import COQUI_MODEL, COQUI_REFERENCE_MODEL
 from .speech_qwen import SAMPLE_RATE, _decode_reference, worker_server
 
+# The Thorsten vocabulary has no affricate tie bar, no non-syllabic mark and no
+# typographic quotation marks. gruut emits the first two and manuscripts contain
+# the rest; the tokenizer can only drop them, which leaves the plain IPA symbols
+# the model can represent. Whether that matches the training phonemization is
+# unverified, so only discards outside this set are reported as unexpected.
+_EXPECTED_DISCARDS = frozenset("\u0361\u032f\u201a\u201c\u201e\u2018\u2019\u201d\u00ab\u00bb\u2039\u203a")
+
+
+def unexpected_discards(discarded: list[str]) -> str:
+    """Describe discarded characters outside the expected set by code point only."""
+    return " ".join(f"U+{ord(char):04X}" for char in sorted(set(discarded) - _EXPECTED_DISCARDS))
+
 
 def load_renderer(model_dir: Path, converter_dir: Path | None = None, *, threads: int = 4) -> Callable[[dict[str, Any]], bytes]:
     """Load local checkpoints and return a serialized-worker renderer."""
@@ -54,8 +66,9 @@ def load_renderer(model_dir: Path, converter_dir: Path | None = None, *, threads
             tokenizer = tts.synthesizer.tts_model.tokenizer
             missing_before = len(tokenizer.not_found_characters)
             audio = numpy.asarray(tts.tts(text=request["input"]), dtype=numpy.float32)
-            if len(tokenizer.not_found_characters) > missing_before:
-                logging.getLogger("lixity.speech.worker").warning("Coqui discarded unsupported phonetic characters")
+            unexpected = unexpected_discards(tokenizer.not_found_characters[missing_before:])
+            if unexpected:
+                logging.getLogger("lixity.speech.worker").warning("Coqui discarded unexpected characters: %s", unexpected)
             rate = int(tts.synthesizer.output_sample_rate)
             if converter is not None:
                 reference, _ = _decode_reference(request["reference_audio"], request["reference_text"])

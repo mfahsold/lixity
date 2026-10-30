@@ -766,6 +766,30 @@ Cue patterns (including `dialogue_regex`) use the case-insensitive cue
 contract from §2 across the analysis core and the `dialogue`/`pacing` reports.
 - `python -W error` test run + `mypy --strict` + ruff gate every change.
 
+## 12. Voice-reference signal diagnostics (`audio-reference inspect`)
+
+Descriptive measurements of a saved mono 16-bit PCM reference, computed offline
+with the standard library (schema `lixity-audio-reference-quality/1`,
+`method = "heuristic-uncalibrated"`). They describe the recording; they are not
+a quality score and say nothing about transcript accuracy or voice identity.
+
+- Peak: `20·log10(max|x| / 32768)` dBFS; clipped ratio: share of samples with
+  `|x| ≥ 32760`.
+- Frame powers `P_f = mean(x²)/32768²` over 20 ms frames. Speech level is
+  `10·log10(mean P_f)` over frames at or above the median frame power; noise
+  floor is `10·log10` of the 5th-percentile frame power, floored at −120 dBFS.
+- Bandwidth: Hann-windowed 1024-sample frames (hop 512) at or above the median
+  frame energy, at most 64 evenly spaced, are averaged into a power spectrum.
+  With `B₀` the mean power below 1 kHz, the bandwidth is the upper edge of the
+  highest 500 Hz band whose mean power is at least `10⁻⁷·B₀` (−70 dB).
+- Notes (`clipping`, `low_level`, `high_noise`, `digitally_silent_pauses`,
+  `band_limited`, `silent`) apply fixed thresholds: clipped ratio > 0.1 %,
+  speech level < −35 dBFS, speech-to-floor gap < 30 dB, floor ≤ −90 dBFS and
+  bandwidth < 80 % of the Nyquist frequency. These thresholds are engineering
+  guesses, not validated limits.
+- A value that cannot be determined (for example for pure silence) is `null`
+  with a note.
+
 ## Where to plug new thresholds
 
 | Surface | Hook |

@@ -282,6 +282,49 @@ A non-editable tool installed from a local folder is a copy: changing the
 folder does not update the installed tool. Reinstall the chosen release or
 development source explicitly, verify its version, and restart its service.
 
+#### Refresh an existing local checkout installation
+
+For a machine deliberately testing unreleased checkout changes, update both
+installations explicitly. After all app jobs and separate CLI renders finish,
+stop the dashboard using its current installation. From the checkout:
+
+```sh
+.venv/bin/lixity service stop
+make install-dev
+make build
+```
+
+`make build` replaces the managed `dist/` archives only after comparing their
+modules and UI assets against the current source. Install that newly built wheel
+with `uv tool install --reinstall-package lixity` and its actual path, as in the
+[pinned-wheel instructions](#pinned-release-and-installation-scope). A development
+build is not a published release even when its filename matches one. Preserve
+the tool's recorded additional requirements and constraints when replacing it;
+do not silently remove language adapters or model packages.
+
+Compare `lixity doctor --json` with `.venv/bin/lixity doctor --json`: their
+`installation.module_path` and `installation.interpreter` identify the two
+environments. Matching version strings alone do not prove matching code, and
+`doctor` does not compare the installed files with a checkout. For an isolated
+wheel installation, compare packaged module and UI-asset bytes against source
+when exact parity is required. Do not mask an outdated installation with
+`PYTHONPATH` and then report the installed CLI as updated.
+
+Restart with the installation intended to own the dashboard, for example
+`lixity service restart`, then reload browser tabs and reopen project views.
+Optional audio workers retain their own environments; verify the selected
+engine using `lixity audio-status --project ./my-novel --json` and perform a short
+explicit synthesis check. A healthy app service does not establish worker readiness.
+See [experimental Coqui/OpenVoice setup](USAGE.md#experimental-coqui-and-openvoice-audio-unreleased)
+for the separate German synthesis and reference-conversion dependencies.
+
+Remove only specifically identified unused build/test environments or old
+unreferenced candidate wheels after verification. Do not use `make clean` as a
+general installation repair: it also removes current distribution artifacts.
+Retain backups, manuscript and research data, voice references, audio outputs,
+model checkpoints and environments still used by optional workers. Do not
+uninstall shared uv/Python runtimes or prune unrelated tools.
+
 <details>
 <summary>Alternative for existing pipx users</summary>
 

@@ -2022,9 +2022,16 @@ project settings.
 Neither Coqui profile interprets free-text delivery instructions. Saved passage
 instructions fail explicitly; `--no-direction` also omits passage voice
 assignments and extra pauses. Pronunciation substitutions, explicit pauses and
-playback speed use the existing Lixity pipeline. The underlying phonemizer may
-discard unsupported phonetic characters; check worker warnings and listen to
-the resulting pronunciation. Profiles containing these new engine identifiers
+playback speed use the existing Lixity pipeline. Playback speed is applied after
+synthesis with FFmpeg; the 1.2 default is a product default, not a tuned value
+for Thorsten, so compare 1.0 with listening. The worker stays silent about the
+expected discards of the phonetic tie bar, the non-syllabic mark and
+typographic quotation marks, which Thorsten's vocabulary cannot represent, and
+warns with code points about any other discarded character. Listen to the
+resulting pronunciation either way. The OpenVoice step mainly changes timbre;
+phrasing and intonation come from Thorsten, and the converted voice inherits the
+channel of its reference, including a bandwidth limit. Check a reference
+before using it (see below). Profiles containing these new engine identifiers
 are not readable by older Lixity versions.
 
 ### Experimental reference voices
@@ -2077,7 +2084,16 @@ lixity audio-reference create --project ./novel --audio voice-work/reference.wav
 
 The returned JSON `id` identifies an immutable project-local record in
 `.lixity/audio-references/`; include the private reference audio and transcript
-in a protected project backup. The original working files are separate and may
+in a protected project backup. The same JSON contains a `quality` object with
+level, noise floor, clipping and bandwidth measurements. Check an existing
+reference with `lixity audio-reference inspect --project ./novel --reference-id ID`.
+A `band_limited` or `digitally_silent_pauses` note means the recording lacks
+high frequencies or room sound, for example because it was recorded at 16 kHz,
+low-passed, gated or denoised before conversion to 24 kHz; cloned voices reproduce
+that limit. Record the reference again at 44.1 or 48 kHz without gate, denoiser or
+low-pass and convert it only at the end. The notes are uncalibrated heuristics
+([methods](METHODS.md#12-voice-reference-signal-diagnostics-audio-reference-inspect));
+listen before deciding. The original working files are separate and may
 also contain sensitive voice data. Creating the same reference again is
 idempotent. The UI can edit the ID of an existing reference; creation is
 currently a CLI action.
@@ -6078,6 +6094,30 @@ Cue patterns (including `dialogue_regex`) use the case-insensitive cue
 contract from §2 across the analysis core and the `dialogue`/`pacing` reports.
 - `python -W error` test run + `mypy --strict` + ruff gate every change.
 
+## 12. Voice-reference signal diagnostics (`audio-reference inspect`)
+
+Descriptive measurements of a saved mono 16-bit PCM reference, computed offline
+with the standard library (schema `lixity-audio-reference-quality/1`,
+`method = "heuristic-uncalibrated"`). They describe the recording; they are not
+a quality score and say nothing about transcript accuracy or voice identity.
+
+- Peak: `20·log10(max|x| / 32768)` dBFS; clipped ratio: share of samples with
+  `|x| ≥ 32760`.
+- Frame powers `P_f = mean(x²)/32768²` over 20 ms frames. Speech level is
+  `10·log10(mean P_f)` over frames at or above the median frame power; noise
+  floor is `10·log10` of the 5th-percentile frame power, floored at −120 dBFS.
+- Bandwidth: Hann-windowed 1024-sample frames (hop 512) at or above the median
+  frame energy, at most 64 evenly spaced, are averaged into a power spectrum.
+  With `B₀` the mean power below 1 kHz, the bandwidth is the upper edge of the
+  highest 500 Hz band whose mean power is at least `10⁻⁷·B₀` (−70 dB).
+- Notes (`clipping`, `low_level`, `high_noise`, `digitally_silent_pauses`,
+  `band_limited`, `silent`) apply fixed thresholds: clipped ratio > 0.1 %,
+  speech level < −35 dBFS, speech-to-floor gap < 30 dB, floor ≤ −90 dBFS and
+  bandwidth < 80 % of the Nyquist frequency. These thresholds are engineering
+  guesses, not validated limits.
+- A value that cannot be determined (for example for pure silence) is `null`
+  with a note.
+
 ## Where to plug new thresholds
 
 | Surface | Hook |
@@ -6507,6 +6547,20 @@ and direct-speech annotations: quoted thoughts or writing may be positive
 disagreements even when the quotation cue is correct. Excerpt boundaries,
 historical conventions, tokenization and annotation scope matter, and the
 inspected corpus is not a held-out or representative contemporary evaluation.
+
+### Voice-reference diagnostics limits
+
+`audio-reference inspect` measures level, noise floor, clipping and spectral
+bandwidth of a saved reference (formulas in [METHODS](METHODS.md)). The
+thresholds behind its notes were not calibrated on a corpus of recordings. They
+only flag recordings that are likely to limit a cloned voice. Absence of a note
+does not mean the reference is suitable, and a note does not prove audible
+harm: only listening decides. In one local check, the OpenVoice V2 converter
+kept content up to about 11 kHz when given a wideband target and lost all
+content above about 8 kHz when given a reference that had none; this is one
+reference and one converter, not a general result. Transcript accuracy, accent
+and speaker identity are not measured. The converter mainly changes timbre; the
+phrasing and intonation of the base voice, here Thorsten VITS, largely carry over.
 
 ### Manual manuscript association limits
 
@@ -8525,7 +8579,12 @@ only after backing up and updating the installation.
 Version 0.7.7 also supports `qwen3-base` profiles with `voice=reference` and a
 project-local `reference_id`. `audio-reference create --project PATH --audio WAV
 --transcript-file TXT` stores an immutable `lixity-audio-reference/1` object and
-returns only its ID. Reference bytes and transcript are private project data,
+returns its ID with a `quality` object (`lixity-audio-reference-quality/1`:
+descriptive level, noise, clipping and bandwidth measurements with
+uncalibrated heuristic notes, not a quality score). `audio-reference inspect
+--project PATH --reference-id ID` returns the same object plus `reference_id`
+for an existing reference; both are read-only. The `quality` field is additive
+to `lixity-audio-reference-created/1`. Reference bytes and transcript are private project data,
 not cache; they are validated and bound to job context and cache identity.
 Base profiles and passage ranges reject nonempty delivery instructions. A Base
 worker must be selected explicitly; it does not infer or assign character voices.
