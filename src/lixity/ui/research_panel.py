@@ -217,13 +217,13 @@ def render_research_panel(
     parts.append("</div>")
 
     parts.append(pane("search"))
-    parts.append('<div class="ctl-group">')
+    parts.append('<form class="ctl-group" id="research-search-form">')
     parts.append(
         f'<span class="ctl-label">{help_term(labels, "research_search", L("research_search_heading"))}</span>'
     )
     parts.append('<div class="row">')
     parts.append(
-        f'<input class="ctl" id="r-search-query" placeholder="{L("research_search_query")}"/>'
+        f'<input class="ctl" type="search" id="r-search-query" aria-label="{L("research_search_query")}" placeholder="{L("research_search_query")}"/>'
     )
     parts.append(
         f'<select class="ctl" id="r-search-scope" aria-label="{L("research_search_scope")}">'
@@ -238,10 +238,10 @@ def render_research_panel(
         parts.append(f'<option value="{scope}">{L(scope_label)}</option>')
     parts.append("</select>")
     parts.append(
-        f'<button class="ctl primary" id="r-search-btn">{L("research_search_action")}</button>'
+        f'<button type="submit" class="ctl primary" id="r-search-btn">{L("research_search_action")}</button>'
     )
     parts.append("</div>")
-    parts.append("</div>")
+    parts.append("</form>")
     parts.append(f'<p class="ctl-note">{L("research_search_hint")}</p>')
     parts.append('<div id="research-search-results"></div>')
     parts.append("</div>")

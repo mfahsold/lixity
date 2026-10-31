@@ -54,6 +54,11 @@ can retain independent project views in multiple tabs; tabs using the same view
 share its project context. Check the displayed path before saving. View URLs
 expire on restart; see [service management](USAGE.md#lixity-service).
 
+**Unreleased:** the import dialog accepts exactly one Markdown (`.md`,
+`.markdown`), plain-text (`.txt`) or Word (`.docx`) file. Unsupported files and
+multiple-file drops show an explanation and clear the previous preview. Choose
+a supported file again to continue; creating the project still requires confirmation.
+
 If configuration or Research setup fails while creating/importing a project,
 the app reports incomplete setup and keeps the previous project selected. Created
 files remain at the destination named in the message. Correct or save

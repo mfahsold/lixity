@@ -213,6 +213,84 @@ function showResearchTab(tabBtn) {
   });
 }
 
+function highlightSearchTerms(text, query) {
+  if (!text || !query) return escapeHtml(text || "");
+  var terms = query.trim().split(/\s+/).filter(function(t) { return t.length > 0; });
+  if (!terms.length) return escapeHtml(text);
+  var escapedTerms = terms.map(function(t) { return t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); });
+  var regex = new RegExp('(' + escapedTerms.join('|') + ')', 'gi');
+  return text.split(regex).map(function(part, index) {
+    var escaped = escapeHtml(part);
+    return index % 2 ? '<mark class="search-hit">' + escaped + '</mark>' : escaped;
+  }).join("");
+}
+
+async function searchResearch() {
+  var searchRead = ++researchSearchRead;
+  var searchContext = researchReadContext();
+  var qEl = document.getElementById("r-search-query");
+  var query = qEl ? qEl.value.trim() : "";
+  if (!query) { researchStatus(uiLabel("research_query_required"), false); return; }
+  var resultsHost = document.getElementById("research-search-results");
+  if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_searching")) + '</p>';
+  var scopeEl = document.getElementById("r-search-scope");
+  var sres = await researchApiPost("research-search", { query: query, scope: scopeEl ? scopeEl.value : "sources" });
+  if (searchRead !== researchSearchRead || !acceptResearchContext(searchContext, sres)) return;
+  if (!sres.ok) {
+    if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(sres.message || uiLabel("research_search_failed")) + '</p>';
+    researchStatus(sres.message || uiLabel("research_search_failed"), false);
+    return;
+  }
+  var hits = sres.hits || [];
+  if (!hits.length) {
+    var currentScope = scopeEl ? scopeEl.value : "sources";
+    var scopeHint = "";
+    if (currentScope !== "all") {
+      scopeHint = '<div class="mt-2">' +
+        '<span class="ctl-note">' + escapeHtml(uiLabel("research_search_scope_hint")) + ' </span>' +
+        '<button type="button" class="ctl ctl-sm" id="r-search-all-btn">' + escapeHtml(uiLabel("research_search_all_records")) + '</button>' +
+        '</div>';
+    }
+    if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiFormat("research_no_hits", { query: query })) + '</p>' + scopeHint;
+    researchStatus(uiFormat("research_no_hits", { query: query }), true);
+    return;
+  }
+  if (resultsHost) {
+    resultsHost.innerHTML = hits.map(function(h) {
+      if (["dossier", "claim", "decision"].indexOf(h.kind) !== -1) {
+        var statusLabel = h.kind === "claim"
+          ? uiLabel("research_confidence_" + h.confidence)
+          : h.kind === "decision" ? uiLabel(h.deviation_from_fact ? "research_deliberate_deviation" : "research_no_deviation_recorded") : "";
+        return '<div class="research-passage-card">' +
+          '<div class="research-card-title">' + escapeHtml(h.title || "") + '</div>' +
+          '<div class="ctl-note">' + escapeHtml(uiLabel("research_revision_kind_" + h.kind)) + ' · ' +
+            escapeHtml(uiFormat("research_revision_number", {revision: h.revision})) + '</div>' +
+          (statusLabel ? '<div class="ctl-note">' + escapeHtml(statusLabel) + '</div>' : '') +
+          '<p class="research-passage-quote">' + highlightSearchTerms(h.excerpt || "", query) + '</p>' +
+          '<button type="button" class="ctl" data-research-history="' + h.kind + '" data-record-id="' + escapeHtml(h.record_id) + '">' +
+            escapeHtml(uiLabel("research_revision_view")) + '</button></div>';
+      }
+      return '<div class="research-passage-card">' +
+        '<div class="research-passage-quote">„' + highlightSearchTerms(h.verbatim || "", query) + '“</div>' +
+        '<div class="research-passage-cite">' +
+          escapeHtml(uiLabel("research_source")) + ' <strong>' + escapeHtml(h.source_title || "") + '</strong> · ' +
+          escapeHtml(uiLabel("research_rank_score")) + ': ' + (h.rank_score !== undefined ? Number(h.rank_score).toFixed(2) : 'n/a') + ' · ' +
+          escapeHtml(uiLabel("research_id")) + ' <code class="select-code" title="' + escapeHtml(uiLabel("research_select_id")) + '">' + escapeHtml(h.passage_id || "") + '</code>' +
+        '</div>' +
+        researchPassageActions(h.passage_id, h) +
+      '</div>';
+    }).join("");
+  }
+  researchStatus(uiCountFormat("research_hits_count", hits.length), true);
+  return;
+}
+
+document.addEventListener("submit", function(event) {
+  if (event.target.id !== "research-search-form") return;
+  event.preventDefault();
+  searchResearch();
+});
+
 document.addEventListener("click", async function (event) {
   var comparisonClose = event.target.closest("[data-decision-review-close]");
   if (comparisonClose) {
@@ -644,77 +722,6 @@ document.addEventListener("click", async function (event) {
     } else {
       researchStatus(uiLabel("research_source_required"), false);
     }
-    return;
-  }
-
-function highlightSearchTerms(text, query) {
-  if (!text || !query) return escapeHtml(text || "");
-  var terms = query.trim().split(/\s+/).filter(function(t) { return t.length > 0; });
-  if (!terms.length) return escapeHtml(text);
-  var escapedTerms = terms.map(function(t) { return t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); });
-  var regex = new RegExp('(' + escapedTerms.join('|') + ')', 'gi');
-  var escaped = escapeHtml(text);
-  return escaped.replace(regex, '<mark class="search-hit">$1</mark>');
-}
-
-  var searchBtn = event.target.closest("#r-search-btn");
-  if (searchBtn) {
-    var searchRead = ++researchSearchRead;
-    var searchContext = researchReadContext();
-    var qEl = document.getElementById("r-search-query");
-    var query = qEl ? qEl.value.trim() : "";
-    if (!query) { researchStatus(uiLabel("research_query_required"), false); return; }
-    var resultsHost = document.getElementById("research-search-results");
-    if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_searching")) + '</p>';
-    var scopeEl = document.getElementById("r-search-scope");
-    var sres = await researchApiPost("research-search", { query: query, scope: scopeEl ? scopeEl.value : "sources" });
-    if (searchRead !== researchSearchRead || !acceptResearchContext(searchContext, sres)) return;
-    if (!sres.ok) {
-      if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(sres.message || uiLabel("research_search_failed")) + '</p>';
-      researchStatus(sres.message || uiLabel("research_search_failed"), false);
-      return;
-    }
-    var hits = sres.hits || [];
-    if (!hits.length) {
-      var currentScope = scopeEl ? scopeEl.value : "sources";
-      var scopeHint = "";
-      if (currentScope !== "all") {
-        scopeHint = '<div class="mt-2">' +
-          '<span class="ctl-note">' + escapeHtml(uiLabel("research_search_scope_hint")) + ' </span>' +
-          '<button type="button" class="ctl ctl-sm" id="r-search-all-btn">' + escapeHtml(uiLabel("research_search_all_records")) + '</button>' +
-          '</div>';
-      }
-      if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiFormat("research_no_hits", { query: query })) + '</p>' + scopeHint;
-      researchStatus(uiFormat("research_no_hits", { query: query }), true);
-      return;
-    }
-    if (resultsHost) {
-      resultsHost.innerHTML = hits.map(function(h) {
-        if (["dossier", "claim", "decision"].indexOf(h.kind) !== -1) {
-          var statusLabel = h.kind === "claim"
-            ? uiLabel("research_confidence_" + h.confidence)
-            : h.kind === "decision" ? uiLabel(h.deviation_from_fact ? "research_deliberate_deviation" : "research_no_deviation_recorded") : "";
-          return '<div class="research-passage-card">' +
-            '<div class="research-card-title">' + escapeHtml(h.title || "") + '</div>' +
-            '<div class="ctl-note">' + escapeHtml(uiLabel("research_revision_kind_" + h.kind)) + ' · ' +
-              escapeHtml(uiFormat("research_revision_number", {revision: h.revision})) + '</div>' +
-            (statusLabel ? '<div class="ctl-note">' + escapeHtml(statusLabel) + '</div>' : '') +
-            '<p class="research-passage-quote">' + highlightSearchTerms(h.excerpt || "", query) + '</p>' +
-            '<button type="button" class="ctl" data-research-history="' + h.kind + '" data-record-id="' + escapeHtml(h.record_id) + '">' +
-              escapeHtml(uiLabel("research_revision_view")) + '</button></div>';
-        }
-        return '<div class="research-passage-card">' +
-          '<div class="research-passage-quote">„' + highlightSearchTerms(h.verbatim || "", query) + '“</div>' +
-          '<div class="research-passage-cite">' +
-            escapeHtml(uiLabel("research_source")) + ' <strong>' + escapeHtml(h.source_title || "") + '</strong> · ' +
-            escapeHtml(uiLabel("research_rank_score")) + ': ' + (h.rank_score !== undefined ? Number(h.rank_score).toFixed(2) : 'n/a') + ' · ' +
-            escapeHtml(uiLabel("research_id")) + ' <code class="select-code" title="' + escapeHtml(uiLabel("research_select_id")) + '">' + escapeHtml(h.passage_id || "") + '</code>' +
-          '</div>' +
-          researchPassageActions(h.passage_id, h) +
-        '</div>';
-      }).join("");
-    }
-    researchStatus(uiCountFormat("research_hits_count", hits.length), true);
     return;
   }
 

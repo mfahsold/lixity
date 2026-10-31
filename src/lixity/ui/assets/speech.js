@@ -319,8 +319,9 @@
           });
           ssmlBtn.type = "button";
         }
+        var segments = node("ol", fields.plan);
         data.plan.segments.forEach(function(row) {
-          var item = node("li",fields.plan,"",row.text || label("direction_pause"));
+          var item = node("li",segments,"",row.text || label("direction_pause"));
           node("p",item,"ctl-note",(row.profile.voice_description || row.profile.voice) + " · " + (row.profile.instructions || label("direction_default")) + " · " + label("direction_before") + ": " + row.pause_before + " · " + label("direction_after") + ": " + row.pause_after);
         });
         fields.plan.hidden = false; finish(); return;
@@ -459,7 +460,7 @@
     var actions = node("div", content, "row");
     fields.preview = button(actions, "preview", function() { render("preview"); });
     fields.direction_plan = button(actions, "direction_plan", function() { render("preview", true); });
-    fields.plan = node("ol", content, "speech-plan"); fields.plan.hidden = true;
+    fields.plan = node("div", content, "speech-plan"); fields.plan.hidden = true;
     fields.chapter_render = button(actions, "chapter_render", function() { render("chapter"); });
     fields.open_output = button(actions, "output_title", function() {
       if (direction.dirty() && !fields.ignore_direction.checked) { status(label("direction_save_first")); return; }

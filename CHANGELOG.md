@@ -57,6 +57,16 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and keeps progress and error messages visible while scrolling.
 
 ### Fixed
+- The project import dialog rejects unsupported files and multiple-file drops
+  with guidance in all seven languages. Rejected selections clear the previous
+  preview and invalidate pending reads so an earlier manuscript cannot be
+  imported accidentally. Guidance appears beside the file picker, and the same
+  file can be selected again after a failed attempt.
+- Research search submits with Enter and preserves literal source text when
+  highlighting matches, including ampersands and HTML-like text. Result metadata
+  uses a readable foreground color in light and dark themes.
+- Audio plan previews keep the SSML export action outside the numbered segment
+  list so assistive technology receives a valid list structure.
 - Coqui worker no longer warns about the expected discard of the phonetic tie
   bar, non-syllabic mark and typographic quotation marks; other discarded
   characters are reported by code point only.

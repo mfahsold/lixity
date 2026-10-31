@@ -57,10 +57,16 @@ function updateImportLanguagePreview() {
   }
 }
 
-function processImportedFile(file) {
-  if (!file) return;
+function processImportedFiles(files) {
+  if (!files || !files.length) return;
   var submitBtn = document.getElementById("btn-submit-import-project");
   if (submitBtn && submitBtn.hasAttribute("aria-busy")) return;
+  var file = files[0];
+  var valid = files.length === 1 && (supportedManuscriptFile(file) || /\.docx$/i.test(file.name));
+  // Keep the File snapshot, but allow choosing the same file again after a
+  // failed read or a rejected drop (native pickers otherwise emit no change).
+  var fileInput = document.getElementById("import-file-input");
+  if (fileInput) fileInput.value = "";
   var read = ++importedFileRead;
   importedFileContent = "";
   if (submitBtn) submitBtn.disabled = true;
@@ -68,8 +74,17 @@ function processImportedFile(file) {
   if (previewBox) previewBox.style.display = "none";
   var lossEl = document.getElementById("import-fpc-loss");
   if (lossEl) { lossEl.replaceChildren(); lossEl.hidden = true; }
-  var isDocx = /\.docx$/i.test(file.name);
   var feedback = document.getElementById("import-project-status");
+  if (!valid) {
+    if (feedback) {
+      feedback.className = "ctl-status project-form-status err";
+      feedback.textContent = uiLabel("import_file_invalid");
+      feedback.hidden = false;
+      feedback.scrollIntoView({block: "nearest"});
+    }
+    return;
+  }
+  var isDocx = /\.docx$/i.test(file.name);
   if (feedback) {
     feedback.className = "ctl-status project-form-status loading";
     feedback.textContent = uiLabel(isDocx ? "import_docx_converting" : "research_ingesting_reading");
@@ -340,7 +355,7 @@ document.addEventListener("drop", function (e) {
   var importDrop = e.target.closest("#import-dropzone");
   if (importDrop && e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
     e.preventDefault();
-    processImportedFile(e.dataTransfer.files[0]);
+    processImportedFiles(e.dataTransfer.files);
     return;
   }
 });
@@ -354,7 +369,7 @@ document.addEventListener("change", function (event) {
     updateImportLanguagePreview();
   }
   if (event.target.id === "import-file-input" && event.target.files && event.target.files.length) {
-    processImportedFile(event.target.files[0]);
+    processImportedFiles(event.target.files);
     return;
   }
 
@@ -488,6 +503,7 @@ async function submitProjectForm(form, action, payload, button) {
       reason: (result && result.message) || uiLabel("wizard_unknown_error")
     });
     feedback.hidden = false;
+    feedback.scrollIntoView({block: "nearest"});
   }
 }
 

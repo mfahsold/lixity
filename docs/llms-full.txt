@@ -4709,6 +4709,9 @@ Python: `api.search("./novel", "inspector", scope="all")`.
 HTTP: `POST /api/research-search` with `{"query":"inspector","scope":"all"}`.
 The dashboard defaults to **All records** and offers the same type filters.
 Its details button opens the existing record history with the current revision.
+**Unreleased:** press Enter in the search field or use **Search** to submit the
+same query. Highlighted excerpts preserve the source's literal text, including
+ampersands and angle brackets.
 
 Source hits have `kind: "passage"` and retain their citation fields. Authored
 hits have `kind`, `record_id`, `revision`, `title` and a plain-text `excerpt`;

@@ -8061,6 +8061,15 @@ _ROWS = {
         "A importação cria um projeto separado após a confirmação. Use Abrir projeto para voltar a um manuscrito e ao arquivo de pesquisa.",
         "Importeren maakt na bevestiging een apart project. Gebruik Project openen om terug te gaan naar een bestaand manuscript en onderzoeksarchief.",
     ),
+    "import_file_invalid": (
+        "Choose exactly one Markdown (.md, .markdown), plain-text (.txt) or Word (.docx) file.",
+        "Wählen Sie genau eine Markdown-Datei (.md, .markdown), Textdatei (.txt) oder Word-Datei (.docx).",
+        "Choisissez un seul fichier Markdown (.md, .markdown), texte (.txt) ou Word (.docx).",
+        "Elija un solo archivo Markdown (.md, .markdown), de texto (.txt) o Word (.docx).",
+        "Scegli un solo file Markdown (.md, .markdown), di testo (.txt) o Word (.docx).",
+        "Escolha apenas um arquivo Markdown (.md, .markdown), de texto (.txt) ou Word (.docx).",
+        "Kies precies één Markdown-bestand (.md, .markdown), tekstbestand (.txt) of Word-bestand (.docx).",
+    ),
     "manuscript_file_invalid": (
         "Choose one Markdown (.md, .markdown) or plain-text (.txt) file.",
         "Wählen Sie eine Markdown-Datei (.md, .markdown) oder Textdatei (.txt).",

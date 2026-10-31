@@ -29,6 +29,8 @@ print(json.dumps({'fixtures': fixtures, 'standalone': render()}))
 `, {root});
 const screenshotDir = fs.mkdtempSync('/tmp/lixity-project-controls-');
 const syntheticContent = '## Synthetic chapter\r\n\r\nThe rain stopped.\r\nA café opened.\r\n';
+const retryFile = path.join(screenshotDir, 'accepted.MD');
+fs.writeFileSync(retryFile, syntheticContent);
 const hostileFilename = 'chapter-<img onerror=alert(1)>.markdown';
 const readStateOnly = process.argv.includes('--read-state-only');
 
@@ -140,10 +142,10 @@ async function chooseFile(page, name, content) {
   await page.locator('#import-file-input').setInputFiles({name, mimeType: 'text/markdown', buffer: Buffer.from(content)});
 }
 
-async function dropFiles(page, files) {
+async function dropFiles(page, files, target) {
   // Hosts that advertise `load` keep their project-view dropzone; the native
   // and standalone flows drop into the single project dialog instead.
-  let selector = '#manuscript-dropzone';
+  let selector = target || '#manuscript-dropzone';
   if (!(await page.locator(selector).count())) {
     await openImportDialog(page);
     selector = '#import-dropzone';
@@ -386,6 +388,53 @@ async function restoreFileReads(page) {
       await page.locator('#controls').screenshot({path: path.join(screenshotDir, `controls-${language}-320.png`)});
     }
 
+    // The new-project dialog must reject unsupported or ambiguous selections,
+    // including when a prior valid read has not finished yet.
+    for (language of readStateOnly ? ['en'] : Object.keys(fixtures)) {
+      for (const width of [1440, 320]) {
+        await page.setViewportSize({width, height: 900});
+        await page.goto('http://lixity.test/');
+        await openImportDialog(page);
+        await page.locator('#import-file-input').setInputFiles(retryFile);
+        await page.waitForFunction(() => document.querySelector('#import-fpc-filename').textContent === 'accepted.MD');
+        const beforeInvalid = posts.length;
+        for (const files of [
+          [{name: 'scan.pdf', content: '%PDF-synthetic'}],
+          [{name: 'one.md', content: syntheticContent}, {name: 'two.txt', content: 'Second manuscript'}],
+        ]) {
+          await dropFiles(page, files, '#import-dropzone');
+          await page.waitForFunction(() => document.querySelector('#import-project-status').classList.contains('err'));
+          assert.equal(await page.locator('#btn-submit-import-project').isDisabled(), true);
+          assert.equal(await page.locator('#import-preview-box').isVisible(), false);
+          assert.equal(await page.evaluate(() => importedFileContent), '');
+          assert.equal(await page.locator('#import-project-status').innerText(), fixtures[language].labels.import_file_invalid);
+          assert.ok(await page.locator('#import-project-status').evaluate(el => {
+            const box = el.getBoundingClientRect(), dialog = el.closest('dialog').getBoundingClientRect();
+            return box.top >= dialog.top && box.bottom <= dialog.bottom;
+          }), 'Rejected-file guidance is visible beside the file picker without scrolling');
+        }
+        await page.locator('#import-file-input').setInputFiles(retryFile);
+        await page.waitForFunction(() => !document.querySelector('#btn-submit-import-project').disabled);
+        assert.equal(await page.locator('#import-preview-box').isVisible(), true, 'The same file can be selected again after a rejected drop');
+        await holdFileReadCompletions(page);
+        await chooseFile(page, 'pending.md', syntheticContent);
+        await chooseFile(page, 'image.png', 'synthetic image bytes');
+        await releaseFileRead(page, 0);
+        assert.equal(await page.locator('#btn-submit-import-project').isDisabled(), true, 'A late valid read cannot undo a rejected selection');
+        assert.equal(await page.locator('#import-preview-box').isVisible(), false);
+        assert.equal(await page.evaluate(() => importedFileContent), '');
+        await restoreFileReads(page);
+        assert.equal(posts.length, beforeInvalid, 'Rejected selections cannot create a project or request conversion');
+        assert.ok(await page.locator('#import-project-status').isVisible());
+        assert.ok(await page.locator('#modal-project-create').evaluate(el => el.scrollWidth <= el.clientWidth));
+        if (language === 'de') await page.locator('#modal-project-create').screenshot({path: path.join(screenshotDir, `import-rejected-${width}.png`)});
+        await chooseFile(page, 'recovered.txt', syntheticContent);
+        await page.waitForFunction(() => document.querySelector('#import-fpc-filename').textContent === 'recovered.txt');
+        assert.equal(await page.locator('#btn-submit-import-project').isEnabled(), true);
+        assert.equal(await page.locator('#import-project-status').isVisible(), false);
+      }
+    }
+    language = 'en';
     isStandalone = true;
     for (const width of readStateOnly ? [] : [1440, 320]) {
       await page.setViewportSize({width, height: 900});
@@ -476,6 +525,10 @@ async function restoreFileReads(page) {
     releaseCreate();
     pendingCreate = null;
     await page.waitForFunction(() => document.querySelector('#import-project-status').textContent.includes('Synthetic import rejected'));
+    assert.ok(await page.locator('#import-project-status').evaluate(el => {
+      const box = el.getBoundingClientRect(), dialog = el.closest('dialog').getBoundingClientRect();
+      return box.top >= dialog.top && box.bottom <= dialog.bottom;
+    }), 'A failed save brings its explanation into view');
     assert.equal(await page.locator('#btn-submit-import-project').isDisabled(), false);
     await page.locator('#import-file-input').setInputFiles({name: 'retry-after-save.md', mimeType: 'text/markdown', buffer: Buffer.from(contentB)});
     await page.waitForFunction(() => document.querySelector('#import-fpc-filename').textContent === 'retry-after-save.md');

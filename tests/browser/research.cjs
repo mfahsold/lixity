@@ -59,6 +59,7 @@ server.serve_forever()
       server.once('exit', code => { clearTimeout(timeout); reject(new Error(`Fixture exited ${code}: ${stderr}`)); });
     });
     browser = await launchChromium();
+    await require('./support/research-search.cjs').checkResearchSearch(browser, artifacts);
     const page = await browser.newPage({viewport: {width: 1440, height: 1000}, hasTouch: true});
     await page.addInitScript(() => {
       // Preserve real intersection delivery while tracking diagram resources.
