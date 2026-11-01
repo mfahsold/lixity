@@ -434,6 +434,8 @@ Analysis Off and Focus hide both displays without resetting their preferences.
 | `#reader-inspector` / `#reader-inspector-body` / `#reader-inspector-close` | contextual Passage values inspector, its passage context, source lines/measurements, saved-research route when supported and close action; the manuscript text remains in its original DOM |
 | `#hero-btn-new-project` / `#analysis-empty-import` | native **Analyze a manuscript** action; opens the existing import dialog without submitting it |
 | `#analysis-review [data-review-passage]` | native passage link; clears search/paragraph filters, opens its `data-target` and focuses the paragraph panel |
+| `#analysis-review [data-jump="#dimensions"]` | unreleased: direct style-space route, present only when the rendered dimensions have chapter scores; reveals the existing dimensions tab |
+| `#dim-legend` / `#dim-legend-note` / `#dim-incomplete-axes` | unreleased: style-space point/selection/cutoff key, cutoff caveat, and optional display-only zero-coordinate disclosure |
 | `#analysis-sections a[data-section-link]` | section navigation; highlights the panel in view (scrollspy); only rendered panels are offered |
 | `#manuscript-pdf-form` / `data-project-token` | native PDF form and opaque selected-context token; the client submits `layout` and this token explicitly |
 | `#manuscript-pdf-layout` / `#manuscript-pdf-download` / `#manuscript-pdf-status` | layout selector, download button and live status region; native PDF menu starts collapsed |

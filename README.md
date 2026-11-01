@@ -52,6 +52,11 @@ reading and analysis controls, and direct overview links to quoted text, names,
 pacing and signal groups. Research capture and audio export have clearer action
 groups; analysis calculations remain unchanged.
 
+**Unreleased:** open the 3D style space directly from the analysis overview to
+compare measured chapter patterns. Separate shapes identify the selected chapter
+and an axis cutoff; neither is a quality verdict. Flat projections and a chapter
+table help inspect overlaps and exact values.
+
 <a href="https://mfahsold.github.io/lixity/screenshots/dashboard-measurement-focus.png"><img src="https://mfahsold.github.io/lixity/screenshots/dashboard-measurement-focus.png" width="560" alt="Sentence-length explanation: A board moved has three words; its paragraph averages 4.4 words per sentence, with a separate chapter comparison"/></a>
 
 **Why does chapter 2 feel faster?** With analysis on, inspect one sentence and

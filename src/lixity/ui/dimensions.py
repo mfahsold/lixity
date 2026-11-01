@@ -78,20 +78,31 @@ def style_dimensions(
             }.items()},
         }
         parts.append('<div class="dim-layout"><div class="dim-3d-box">')
-        parts.append(f'<div class="dim-3d-header"><span class="dim-3d-title">{translated("dim_3d_title")}</span><div class="dim-3d-actions">')
+        parts.append(f'<div class="dim-3d-header"><span class="dim-3d-title">{translated("dim_3d_title")}</span></div>')
+        parts.append(f'<div class="dim-view-control"><label for="dim-projection">{translated("dim_projection")}</label><select class="ctl dim-ctl" id="dim-projection" disabled><option value="3d">{translated("dim_3d")}</option>')
+        for a in range(len(axes_data)):
+            parts.extend(f'<option value="d{a + 1}-d{b + 1}">D{axes_data[a]["idx"]} / D{axes_data[b]["idx"]}</option>'
+                         for b in range(a + 1, len(axes_data)))
+        parts.append('</select></div>')
+        parts.append('<ul id="dim-legend" class="dim-legend">')
+        for glyph, key in (("chapter", "dim_legend_chapter"), ("threshold", "dim_legend_threshold"),
+                           ("selected", "dim_legend_selected")):
+            parts.append(f'<li><span class="dim-legend-{glyph}" aria-hidden="true"></span>{translated(key)}</li>')
+        parts.append('</ul>')
+        if len(axes_data) < 3:
+            incomplete_key = "dim_incomplete_axes_one" if len(axes_data) == 1 else "dim_incomplete_axes"
+            parts.append(f'<p class="dim-legend-note" id="dim-incomplete-axes">{translated(incomplete_key, count=len(axes_data))}</p>')
+        missing_axes_description = " dim-incomplete-axes" if len(axes_data) < 3 else ""
+        parts.append(f'<div class="dim-canvas-wrap"><canvas id="dim-3d-canvas" width="800" height="440" role="img" aria-label="{translated("dim_3d_title")}" aria-describedby="dim-legend dim-legend-note dim-scores-caption{missing_axes_description}" data-dim3d="{esc(json.dumps(payload, ensure_ascii=False))}"></canvas><div id="dim-3d-tooltip" class="dim-tooltip" style="display:none;"></div></div>')
+        parts.append(f'<p id="dim-legend-note" class="dim-legend-note">{translated("dim_legend_note")}</p>')
+        parts.append('<div class="dim-3d-actions dim-display-options">')
         for control_id, key, pressed in (
             ("dim-ctl-traj", "dim_ctl_trajectory", True),
             ("dim-ctl-corr", "dim_ctl_corridor", True),
             ("dim-ctl-spin", "dim_ctl_spin", False),
         ):
             parts.append(toggle_button(label(labels, key), control_id, pressed, "ctl ctl-sm dim-ctl"))
-        parts.append(f'<button type="button" class="ctl ctl-sm dim-ctl" id="dim-ctl-reset">{translated("dim_ctl_reset")}</button></div></div>')
-        parts.append(f'<div class="dim-view-control"><label for="dim-projection">{translated("dim_projection")}</label><select class="ctl dim-ctl" id="dim-projection" disabled><option value="3d">{translated("dim_3d")}</option>')
-        for a in range(len(axes_data)):
-            parts.extend(f'<option value="d{a + 1}-d{b + 1}">D{axes_data[a]["idx"]} / D{axes_data[b]["idx"]}</option>'
-                         for b in range(a + 1, len(axes_data)))
-        parts.append('</select></div>')
-        parts.append(f'<div class="dim-canvas-wrap"><canvas id="dim-3d-canvas" width="800" height="440" role="img" aria-label="{translated("dim_3d_title")}" aria-describedby="dim-scores-caption" data-dim3d="{esc(json.dumps(payload, ensure_ascii=False))}"></canvas><div id="dim-3d-tooltip" class="dim-tooltip" style="display:none;"></div></div>')
+        parts.append(f'<button type="button" class="ctl ctl-sm dim-ctl" id="dim-ctl-reset">{translated("dim_ctl_reset")}</button></div>')
         parts.append(f'<div class="dim-3d-actions dim-navigation" role="group" aria-label="{translated("dim_ctl_navigation")}">')
         for control_id, key in (
             ("dim-ctl-left", "dim_ctl_left"), ("dim-ctl-right", "dim_ctl_right"),

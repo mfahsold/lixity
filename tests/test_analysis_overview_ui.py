@@ -1,5 +1,6 @@
 """Analysis overview disclosure and measurement-availability regressions."""
 
+import copy
 import re
 import unittest
 
@@ -67,6 +68,23 @@ class TestAnalysisOverview(unittest.TestCase):
         self.assertIsNotNone(disclosure)
         self.assertRegex(disclosure[1], r"\bopen\b")
         self.assertIn('id="matrix"', html)
+
+    def test_style_space_review_route_requires_measured_chapter_scores(self):
+        analysis = self.analysis
+        for controls in (True, False):
+            with self.subTest(controls=controls):
+                html = self.render(controls=controls)
+                route = html.split('id="analysis-review"', 1)[1].split('</section>', 1)[0]
+                self.assertIn('href="#dimensions"', route)
+                self.assertIn('data-jump="#dimensions"', route)
+                fingerprint = copy.deepcopy(analysis.fingerprint)
+                fingerprint.dimensions[0]["scores"] = {}
+                unavailable = render_dashboard(
+                    analysis.chapters, analysis.paragraphs, metrics=analysis.metrics,
+                    fingerprint=fingerprint, controls=controls, title="Synthetic overview",
+                )
+                route = unavailable.split('id="analysis-review"', 1)[1].split('</section>', 1)[0]
+                self.assertNotIn('href="#dimensions"', route)
 
     def test_scrollable_tables_have_named_keyboard_regions_and_column_scopes(self):
         html = self.render()

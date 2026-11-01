@@ -22,6 +22,9 @@
   --analysis-evidence-color: light-dark(#6f45a5, #c9afff);
   /* z_color positions across the fixed -2.5 to +2.5 comparison range. */
   --analysis-comparison-gradient: linear-gradient(90deg in srgb, #2b6cb0 0%, #7ba7d0 30%, #e5e7eb 50%, #e8b07a 70%, #c05621 100%);
+  /* Binary axis cutoff in the style space; not the signed comparison scale. */
+  --style-space-threshold: light-dark(#b45309, #fbbf24);
+  --style-space-selection: var(--fg);
   --present: light-dark(#2d8664, #34d399);
   --present-light: light-dark(#e6f4ea, #064e3b);
   --past: light-dark(#b57635, #fbbf24);
@@ -1326,7 +1329,7 @@ body:not(.has-js-paragraphs) .ptext-inner { padding: .8rem 1rem; }
 
   & .load-track { flex: 0 0 3rem; }
   & i { display: block; flex: none; width: var(--w); max-width: 6rem; height: .3rem; border-radius: var(--radius-pill); background: var(--accent); }
-  &.neg i { background: #7ba7d0; }
+  & .load-sign { flex: none; min-width: .8em; font-weight: var(--weight-strong); text-align: center; }
   & b { flex: 1; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 
@@ -1476,7 +1479,7 @@ td.flag-excerpt {
 #dim-expert .table-wrap { max-height: 20rem; }
 .dim-layout {
   display: grid;
-  grid-template-columns: minmax(min(100%, 340px), 1.8fr) minmax(min(100%, 280px), 1fr);
+  grid-template-columns: minmax(min(100%, 340px), 2.3fr) minmax(min(100%, 250px), 1fr);
   gap: 1.25rem;
   align-items: start;
   margin-top: .5rem;
@@ -1503,8 +1506,17 @@ td.flag-excerpt {
   }
 }
 .dim-ctl { min-width: 24px; min-height: 24px; user-select: none; }
+.dim-3d-box .dim-display-options { padding: .6rem .85rem; border-top: 1px solid var(--line); }
 .dim-navigation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .35rem; padding: .5rem .85rem; border-top: 1px solid var(--line); }
 .dim-navigation .dim-ctl { min-width: 0; justify-content: center; white-space: normal; text-align: center; }
+.dim-legend { display: flex; flex-wrap: wrap; gap: .5rem 1.1rem; margin: 0; padding: .6rem .85rem .2rem; list-style: none; font-size: var(--text-small); }
+.dim-legend li { display: inline-flex; align-items: center; gap: .4rem; }
+.dim-legend li > span { display: inline-block; flex: none; width: 1.1rem; height: 1.1rem; border-radius: 50%; }
+.dim-legend-chapter { background: var(--surface); border: 2px solid var(--muted); transform: scale(.65); }
+.dim-legend-threshold { background: var(--surface); border: 2px dashed var(--style-space-threshold); }
+.dim-legend-selected { background: var(--surface); border: 2px solid var(--style-space-selection); }
+.dim-legend-threshold::after, .dim-legend-selected::after { content: ""; display: block; width: .35rem; height: .35rem; margin: .24rem auto; border: 1px solid var(--muted); border-radius: 50%; }
+.dim-legend-note { margin: 0; padding: .2rem .85rem .6rem; color: var(--fg-secondary); font-size: var(--text-small); }
 .dim-score-wrap { max-height: 20rem; margin-top: 1rem; border: 1px solid var(--line); border-radius: var(--radius); }
 .dim-score-wrap table { min-width: 32rem; }
 .dim-score-wrap caption { padding: .6rem; text-align: left; font-weight: var(--weight-strong); color: var(--fg); }
@@ -1513,7 +1525,7 @@ td.flag-excerpt {
 .dim-canvas-wrap {
   position: relative;
   width: 100%;
-  height: clamp(280px, 42vw, 440px);
+  height: clamp(300px, 45vw, 500px);
   min-height: 280px;
   background: var(--bg);
   cursor: grab;
@@ -1543,7 +1555,7 @@ td.flag-excerpt {
 
   & .dim-tt-title { font-weight: var(--weight-strong); margin-bottom: .2rem; color: var(--fg); border-bottom: 1px solid var(--line); padding-bottom: .15rem; }
   & .dim-tt-row { display: flex; justify-content: space-between; gap: .75rem; color: var(--muted); & b { color: var(--fg); font-variant-numeric: tabular-nums; } }
-  & .dim-tt-flag { margin-top: .2rem; color: #d97706; font-weight: var(--weight-semibold); font-size: var(--text-micro); }
+  & .dim-tt-flag { margin-top: .2rem; color: var(--style-space-threshold); font-weight: var(--weight-semibold); font-size: var(--text-micro); }
 }
 .dim-cards-col {
   min-width: 0;

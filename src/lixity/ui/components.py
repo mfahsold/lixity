@@ -390,7 +390,7 @@ def loading_bars(
     features: Mapping[str, str] | None = None,
     dimension: int | None = None,
 ) -> str:
-    """Diverging mini-bars for dimension loadings (positive accent, negative blue).
+    """Mini-bars with explicit signs for dimension loadings.
 
     ``features`` identifies chapter measurements; ``layers`` supplies applicable
     paragraph layers for the existing reading action.
@@ -417,7 +417,8 @@ def loading_bars(
             )
         bars.append(
             f'<span class="load {sign}" style="--w:{width:.1f}%" title="{esc(name)}"{attrs}>'
-            f'<span class="load-track"><i></i></span><b>{esc(name)}</b></span>'
+            f'<span class="load-track"><i></i></span><span class="load-sign">{"+" if value >= 0 else "−"}</span>'
+            f'<b>{esc(name)}</b></span>'
         )
     return '<div class="loadings">' + "".join(bars) + "</div>"
 

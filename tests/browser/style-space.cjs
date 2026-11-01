@@ -41,6 +41,29 @@ print(json.dumps({language: dashboard(text, language=language, title="Browser re
     window.frameCount = 0;
     const frame = window.requestAnimationFrame.bind(window);
     window.requestAnimationFrame = callback => frame(time => { window.frameCount++; callback(time); });
+    window.styleSpaceStrokes = [];
+    const originalClear = CanvasRenderingContext2D.prototype.clearRect;
+    const originalBegin = CanvasRenderingContext2D.prototype.beginPath;
+    const originalArc = CanvasRenderingContext2D.prototype.arc;
+    const originalStroke = CanvasRenderingContext2D.prototype.stroke;
+    CanvasRenderingContext2D.prototype.clearRect = function(...args) {
+      if (this.canvas.id === 'dim-3d-canvas') window.styleSpaceStrokes = [];
+      return originalClear.apply(this, args);
+    };
+    CanvasRenderingContext2D.prototype.beginPath = function(...args) {
+      this._styleSpaceArc = null;
+      return originalBegin.apply(this, args);
+    };
+    CanvasRenderingContext2D.prototype.arc = function(x, y, radius, ...rest) {
+      this._styleSpaceArc = {x, y, radius};
+      return originalArc.call(this, x, y, radius, ...rest);
+    };
+    CanvasRenderingContext2D.prototype.stroke = function(...args) {
+      if (this.canvas.id === 'dim-3d-canvas' && this._styleSpaceArc) {
+        window.styleSpaceStrokes.push({...this._styleSpaceArc, color: this.strokeStyle});
+      }
+      return originalStroke.apply(this, args);
+    };
   });
   await page.route('http://lixity.test/**', route => route.fulfill({contentType: 'text/html', body: html}));
   await page.goto('http://lixity.test/');
@@ -51,6 +74,47 @@ print(json.dumps({language: dashboard(text, language=language, title="Browser re
     try { await run(); results.push({name, passed: true}); }
     catch (error) { results.push({name, passed: false, error: error.message}); }
   }
+  await check('legend and independent selection for a chapter beyond the cutoff', async () => {
+    const legend = page.locator('#dim-legend');
+    assert.equal(await legend.isVisible(), true);
+    assert.equal(await legend.locator('li').count(), 3);
+    const descriptions = (await page.locator('#dim-3d-canvas').getAttribute('aria-describedby')).split(/\s+/);
+    assert.ok(descriptions.includes('dim-legend'));
+    assert.ok(descriptions.includes('dim-legend-note'), 'The canvas describes its cutoff caveat for assistive technology');
+    assert.equal(await page.evaluate(() => {
+      const plot = document.querySelector('.dim-canvas-wrap');
+      return Boolean(document.getElementById('dim-legend').compareDocumentPosition(plot) & Node.DOCUMENT_POSITION_FOLLOWING) &&
+        Boolean(plot.compareDocumentPosition(document.getElementById('dim-legend-note')) & Node.DOCUMENT_POSITION_FOLLOWING);
+    }), true, 'The plot follows its legend while the fuller cutoff note stays available below');
+    await page.locator('#dim-chapter-select').selectOption('2');
+    assert.equal(await page.locator('#dim-selection').getAttribute('data-chapter'), '2');
+    const originalTheme = await page.locator('html').getAttribute('data-theme');
+    try {
+      for (const theme of ['light', 'dark']) {
+        const rings = await page.evaluate(async theme => {
+          document.documentElement.setAttribute('data-theme', theme);
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          const probe = document.createElement('span'); document.body.append(probe);
+          const normalize = property => {
+            probe.style.color = `var(${property})`;
+            const color = getComputedStyle(probe).color;
+            const ctx = document.createElement('canvas').getContext('2d');
+            ctx.strokeStyle = color; return ctx.strokeStyle;
+          };
+          const cutoff = normalize('--style-space-threshold'), selection = normalize('--style-space-selection');
+          probe.remove();
+          const strokes = window.styleSpaceStrokes;
+          return {cutoff, selection, matched: strokes.some(outer => outer.color === selection &&
+            strokes.some(inner => inner.color === cutoff && inner.x === outer.x && inner.y === outer.y && inner.radius < outer.radius))};
+        }, theme);
+        assert.notEqual(rings.cutoff, rings.selection, `${theme}: cutoff and selected states need distinct semantic colors`);
+        assert.equal(rings.matched, true, `${theme}: the selected flagged chapter retains both outlines`);
+      }
+    } finally {
+      await page.evaluate(value => value === null ? document.documentElement.removeAttribute('data-theme') :
+        document.documentElement.setAttribute('data-theme', value), originalTheme);
+    }
+  });
   async function settledScreenshot(target, name) {
     await target.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     await target.screenshot({path:path.join(artifacts,name), animations:'disabled'});
@@ -201,7 +265,8 @@ print(json.dumps({language: dashboard(text, language=language, title="Browser re
     const radius = Math.min(box.width,box.height)*0.4;
     const normalized = 3/(2.5*1.35)*radius*zoom;
     const depth = -normalized*Math.sin(0.55)*Math.cos(0.35);
-    const scale = 520/(700+depth);
+    const cameraDistance = Math.max(700, radius * zoom * 2);
+    const scale = 520/(cameraDistance+depth);
     const screenX = box.x+box.width/2+normalized*Math.cos(0.55)*scale;
     const screenY = box.y+box.height/2-normalized*Math.sin(0.55)*Math.sin(0.35)*scale;
     await page.mouse.move(screenX,screenY);
@@ -315,6 +380,11 @@ print(json.dumps({language: dashboard(text, language=language, title="Browser re
           await localizedPage.locator('#style-tab-dimensions').click();
           const dimensions = localizedPage.locator('#dimensions');
           assert.ok((await dimensions.locator('.dim-guide').textContent()).length > 50);
+          const legend = dimensions.locator('#dim-legend');
+          assert.equal(await legend.locator('li').count(), 3);
+          assert.equal(await legend.textContent().then(text => text.includes('dim_legend_')), false,
+            'Every language has readable chapter, cutoff and selection labels');
+          assert.ok((await dimensions.locator('#dim-legend-note').textContent()).includes('FDR'));
           assert.ok((await dimensions.locator('.dim-coverage').textContent()).includes('3 / 3'));
           await localizedPage.locator('#dim-chapter-select').selectOption('2');
           assert.equal(await localizedPage.locator('#dim-selection').getAttribute('data-chapter'), '2');

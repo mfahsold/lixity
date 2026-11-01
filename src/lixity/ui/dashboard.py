@@ -1012,6 +1012,15 @@ def render_dashboard(
             review_routes.append(
                 ("review_rhythm", "review_rhythm_hint", "review_rhythm_action", "dist")
             )
+        if (
+            fingerprint is not None and metrics is not None and metrics.chapters
+            and fingerprint.dimensions
+            and any(all(ch.num in dimension["scores"] for dimension in fingerprint.dimensions)
+                    for ch in chapters)
+        ):
+            review_routes.append(
+                ("review_style_space", "review_style_space_hint", "review_style_space_action", "dimensions")
+            )
         for _title_key, hint_key, action_key, target in review_routes:
             parts.append(
                 f'<article class="review-route"><a class="ctl" href="#{target}" '

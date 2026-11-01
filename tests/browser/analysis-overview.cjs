@@ -111,6 +111,24 @@ async function pinnedIdentity(page, panel, cellIndex) {
       assert.ok(orientation.links.every(rect=>rect.left>=orientation.bounds.left-1 && rect.right<=orientation.bounds.right+1),
         'Every label is wholly visible inside the overview navigation');
       if (width<=390) assert.ok(new Set(orientation.links.map(rect=>Math.round(rect.top))).size>1, 'Mobile section links wrap');
+      if ((locale === 'en' || locale === 'de') && [1440, 320].includes(width)) {
+        const entry = page.locator('#analysis-review a[data-jump="#dimensions"]');
+        assert.equal(await page.locator('#dimensions').isVisible(), false, 'Another style tab starts selected');
+        await entry.click();
+        assert.equal(await page.locator('#dimensions').isVisible(), true, 'The direct route reveals the style space');
+        assert.equal(await page.locator('#style-tab-dimensions').getAttribute('aria-selected'), 'true');
+        for (const [kind, sign] of [['pos', '+'], ['neg', '−']]) {
+          const loading = page.locator(`#dimensions .load.${kind}[role=button]`).first();
+          assert.ok(await loading.count(), `The fixture contains a ${kind} loading`);
+          assert.equal((await loading.locator('.load-sign').textContent()).trim(), sign,
+            'Loading direction remains visible independently of its color');
+          assert.ok((await loading.ariaSnapshot()).includes(sign), 'Loading direction is present in its accessible name');
+        }
+        await page.locator('#workbench-overview-back').click();
+        assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'false',
+          'Returning restores the previous reading choice');
+        await page.locator('#workbench-overview-open').click();
+      }
       if (locale === 'en' || locale === 'de') await page.locator('#manuscript-reader-controls').screenshot({
         path:path.join(artifacts, `navigation-${locale}-${width}.png`)});
       for (const target of ['flags','dist','dialogue','characters','pacing','scenes','motifs','showing','style','matrix']) {

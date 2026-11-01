@@ -80,6 +80,10 @@
       colorProbe.style.color = "var(--" + role + ")";
       palette[role] = getComputedStyle(colorProbe).color;
     });
+    ["threshold", "selection"].forEach(function(role) {
+      colorProbe.style.color = "var(--style-space-" + role + ")";
+      palette[role] = getComputedStyle(colorProbe).color;
+    });
     // Canvas text follows the same UI/technical roles as the surrounding DOM.
     colorProbe.style.font = "var(--text-note) var(--font)";
     palette.axisFont = getComputedStyle(colorProbe).font;
@@ -250,7 +254,6 @@
     var fg = colors.fg, line = colors.line, muted = colors.muted;
     var accent = colors.accent, surface = colors.surface, isDark = colors.dark;
 
-    var flagColor = isDark ? "#f59e0b" : "#d97706";
     var gridColor = isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)";
 
     // Rank-space reference grid; planar views use their selected axes.
@@ -296,7 +299,8 @@
         isSelected: selectedPoint && selectedPoint.ch === point.ch};
     });
     var pointBoxes = projectedPoints.map(function(point) {
-      var size = nodeRadius(point) + (point.orig.flagged ? 5 : 2);
+      var ringExtent = point.isSelected ? (point.orig.flagged ? 8 : 5) : point.orig.flagged ? 4 : 1;
+      var size = nodeRadius(point) + ringExtent + 2;
       return {left: point.x - size, right: point.x + size, top: point.y - size, bottom: point.y + size};
     });
     var labelBoxes = [];
@@ -436,29 +440,28 @@
       ctx.beginPath();
       ctx.arc(spt.x, spt.y, nodeR, 0, Math.PI * 2);
 
-      if (orig.flagged) {
-        ctx.fillStyle = flagColor;
-        ctx.fill();
-        ctx.lineWidth = 1.5;
-        ctx.strokeStyle = surface;
-        ctx.stroke();
+      ctx.fillStyle = spt.isHovered ? accent : surface;
+      ctx.fill();
+      ctx.lineWidth = 1.8;
+      ctx.strokeStyle = muted;
+      ctx.stroke();
 
+      // A threshold mark and a selection are independent: both must remain
+      // visible when the selected chapter is also beyond an axis cutoff.
+      if (orig.flagged) {
         ctx.beginPath();
         ctx.arc(spt.x, spt.y, nodeR + 3, 0, Math.PI * 2);
-        ctx.strokeStyle = flagColor;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      } else if (spt.isHovered || spt.isSelected) {
-        ctx.fillStyle = accent;
-        ctx.fill();
+        ctx.strokeStyle = colors.threshold;
         ctx.lineWidth = 2;
-        ctx.strokeStyle = surface;
+        ctx.setLineDash([2, 2]);
         ctx.stroke();
-      } else {
-        ctx.fillStyle = surface;
-        ctx.fill();
-        ctx.lineWidth = 1.8;
-        ctx.strokeStyle = accent;
+        ctx.setLineDash([]);
+      }
+      if (spt.isSelected) {
+        ctx.beginPath();
+        ctx.arc(spt.x, spt.y, nodeR + (orig.flagged ? 7 : 4), 0, Math.PI * 2);
+        ctx.strokeStyle = colors.selection;
+        ctx.lineWidth = 2;
         ctx.stroke();
       }
 

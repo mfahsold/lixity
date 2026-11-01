@@ -99,6 +99,9 @@ metadata; it does not establish output provenance or archive integrity.
 Unreleased UI refinements group reading, analysis, research capture and audio
 export actions by task. Shorter help retains the same measurement boundaries;
 analysis algorithms and public command/JSON contracts are unchanged.
+The analysis overview links directly to available 3D chapter dimensions.
+Selection and axis-cutoff rings are distinct; cutoff marks are not FDR results
+or a blue–orange signed-deviation scale. Missing dimensions are disclosed.
 
 Research requires an initialized, explicitly selected project. Its usage guide
 owns available commands; RFC command sketches are not executable contracts.
@@ -1586,6 +1589,15 @@ mathematical definitions; [Stability](STABILITY.md) describes inference limits.
 Select a chapter in the style space, inspect its
 values and open its passage. The view and CLI explain their coverage, axes,
 cutoffs and unavailable values in place; JSON exposes `dimension_diagnostics`.
+
+**Unreleased:** when dimension scores are available, **Start your review → Open
+3D style space** opens this view directly. A dashed ring marks an axis cutoff;
+a separate solid outer ring marks the selected chapter, including when both
+apply. These cutoff marks include axes hidden in a flat projection and are not
+the FDR selection. The blue–orange comparison scale elsewhere shows signed
+deviations, not this binary cutoff. Loading bars use `+` and `−` for direction;
+their lengths are relative within each axis. When fewer than three dimensions
+are available, zero coordinates fill the display only; they are not measurements.
 
 Compare scenes within their intended register and read the passages. A
 deliberate change of voice can explain a deviation; the style reference does
@@ -7669,6 +7681,8 @@ Analysis Off and Focus hide both displays without resetting their preferences.
 | `#reader-inspector` / `#reader-inspector-body` / `#reader-inspector-close` | contextual Passage values inspector, its passage context, source lines/measurements, saved-research route when supported and close action; the manuscript text remains in its original DOM |
 | `#hero-btn-new-project` / `#analysis-empty-import` | native **Analyze a manuscript** action; opens the existing import dialog without submitting it |
 | `#analysis-review [data-review-passage]` | native passage link; clears search/paragraph filters, opens its `data-target` and focuses the paragraph panel |
+| `#analysis-review [data-jump="#dimensions"]` | unreleased: direct style-space route, present only when the rendered dimensions have chapter scores; reveals the existing dimensions tab |
+| `#dim-legend` / `#dim-legend-note` / `#dim-incomplete-axes` | unreleased: style-space point/selection/cutoff key, cutoff caveat, and optional display-only zero-coordinate disclosure |
 | `#analysis-sections a[data-section-link]` | section navigation; highlights the panel in view (scrollspy); only rendered panels are offered |
 | `#manuscript-pdf-form` / `data-project-token` | native PDF form and opaque selected-context token; the client submits `layout` and this token explicitly |
 | `#manuscript-pdf-layout` / `#manuscript-pdf-download` / `#manuscript-pdf-status` | layout selector, download button and live status region; native PDF menu starts collapsed |

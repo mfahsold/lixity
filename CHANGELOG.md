@@ -40,6 +40,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   direction without manually supplying snapshot hashes.
 
 ### Changed
+- The analysis overview links directly to the 3D style space when chapter
+  scores are available. A legend distinguishes the axis cutoff from the
+  selected chapter, even when both apply; loading directions show explicit
+  signs. Incomplete dimensions identify display-only zero coordinates.
 - The app and audio dialog groups speech services, queue and open projects,
   distinguishes a successful status refresh from worker readiness, and uses
   the shared dialog footer spacing. The demo's reading guide stays with the

@@ -1361,6 +1361,15 @@ Select a chapter in the style space, inspect its
 values and open its passage. The view and CLI explain their coverage, axes,
 cutoffs and unavailable values in place; JSON exposes `dimension_diagnostics`.
 
+**Unreleased:** when dimension scores are available, **Start your review → Open
+3D style space** opens this view directly. A dashed ring marks an axis cutoff;
+a separate solid outer ring marks the selected chapter, including when both
+apply. These cutoff marks include axes hidden in a flat projection and are not
+the FDR selection. The blue–orange comparison scale elsewhere shows signed
+deviations, not this binary cutoff. Loading bars use `+` and `−` for direction;
+their lengths are relative within each axis. When fewer than three dimensions
+are available, zero coordinates fill the display only; they are not measurements.
+
 Compare scenes within their intended register and read the passages. A
 deliberate change of voice can explain a deviation; the style reference does
 not prescribe a writing target or decide whether to edit.

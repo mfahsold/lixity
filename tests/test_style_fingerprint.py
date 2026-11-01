@@ -539,6 +539,17 @@ class TestFingerprintDashboard(unittest.TestCase):
             names = re.findall(r'<b>(.*?)</b>', group)
             self.assertEqual(len(names), len(set(names)))
 
+    def test_loading_bars_expose_sign_without_color(self):
+        from lixity.ui.components import loading_bars
+
+        html = loading_bars([("Short sentences", 0.8), ("Long words", -0.4)], 0.8,
+                            features={"Short sentences": "staccato", "Long words": "long_words"},
+                            dimension=1)
+        self.assertIn('<span class="load-sign">+</span><b>Short sentences</b>', html)
+        self.assertIn('<span class="load-sign">−</span><b>Long words</b>', html)
+        self.assertEqual(html.count('role="button" tabindex="0"'), 2)
+        self.assertIn('data-loading="-0.4"', html)
+
     def test_dimension_canvas_omits_unmeasured_chapters(self):
         from lixity.ui.dimensions import style_dimensions
 
@@ -886,6 +897,36 @@ class TestDimensionInformation(unittest.TestCase):
         self.assertIn('id="dim-expert"', rendered)
         self.assertIn("Not flagged", rendered)
         self.assertNotIn('"flagged": true', html_module.unescape(rendered))
+
+    def test_incomplete_axes_are_disclosed_as_display_coordinates_not_measurements(self):
+        from lixity.language import get_language_profile
+        from lixity.ui.dimensions import style_dimensions
+
+        _, chapters = ParagraphProfiler(CorpusConfig(language="en")).profile_blocks(
+            parse_markdown_blocks(DIMENSION_SAMPLE))
+        for count in (1, 2, 3):
+            dimensions = [{"index": index, "variance": 1 / count, "loadings": {"asl": 1.0},
+                           "scores": {1: float(index)}, "flagged": []} for index in range(1, count + 1)]
+            for language in LOCALES:
+                with self.subTest(count=count, language=language):
+                    labels = get_language_profile(language).labels
+                    rendered = style_dimensions(chapters, StyleFingerprint(dimensions=dimensions), labels, language)
+                    match = re.search(r'data-dim3d="([^"]*)"', rendered)
+                    payload = json.loads(html_module.unescape(match.group(1)))
+                    self.assertEqual(len(payload["axes"]), count)
+                    self.assertEqual(len(re.findall(r'<dt>D[123]<span class="dim-axis-meaning">', rendered)), count)
+                    if count < 3:
+                        key = "dim_incomplete_axes_one" if count == 1 else "dim_incomplete_axes"
+                        self.assertIn(labels[key].format(count=count), html_module.unescape(rendered))
+                        if language == "en":
+                            verb = "is" if count == 1 else "are"
+                            self.assertIn(f"Only {count} of 3 dimensions {verb} calculated", rendered)
+                        self.assertIn("dim-incomplete-axes", rendered)
+                        self.assertEqual(payload["points"][0]["z"], 0.0)
+                        if count == 1:
+                            self.assertEqual(payload["points"][0]["y"], 0.0)
+                    else:
+                        self.assertNotIn('id="dim-incomplete-axes"', rendered)
 
     def test_missing_diagnostics_do_not_invent_an_unavailability_reason(self):
         from lixity.ui.dimensions import style_dimensions
