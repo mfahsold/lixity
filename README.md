@@ -47,6 +47,11 @@ Source evidence, authored claims and creative decisions stay distinct. A saved
 source records the evidence used; it does not guarantee that a claim is true.
 Reading copies are fixed exports, not a live co-editing service.
 
+**Unreleased:** shorter help across all seven interface languages, grouped
+reading and analysis controls, and direct overview links to quoted text, names,
+pacing and signal groups. Research capture and audio export have clearer action
+groups; analysis calculations remain unchanged.
+
 <a href="https://mfahsold.github.io/lixity/screenshots/dashboard-measurement-focus.png"><img src="https://mfahsold.github.io/lixity/screenshots/dashboard-measurement-focus.png" width="560" alt="Sentence-length explanation: A board moved has three words; its paragraph averages 4.4 words per sentence, with a separate chapter comparison"/></a>
 
 **Why does chapter 2 feel faster?** With analysis on, inspect one sentence and
@@ -54,12 +59,15 @@ its paragraph's rhythm, then read the scene before deciding whether to revise.
 This current-main capture shows the actual explanation, not a writing target.
 [See the reading view](https://mfahsold.github.io/lixity/screenshots/dashboard-reader-focus.png).
 
-The read-only example follows a suspicious harbour delivery through six invented
-English chapters, linked case notes and credited research images. It needs no
-account or upload and cannot import, edit or save.
-Try one question first: **does chapter 2's shorter rhythm fit its action?**
-The demo's **Inspect chapter 2** action opens the actual manuscript with the
-shared sentence-length controls, not a separate presentation.
+The [read-only demo](https://mfahsold.github.io/lixity/demo/report.html) follows
+a suspicious harbour delivery through six invented English chapters, linked case
+notes and credited research images. Try one question: **does chapter 2's shorter
+rhythm fit its action?** Choose **Inspect chapter 2**, then use the paragraph
+menu to explain the measurement; turn on **Counted text** if marks are hidden.
+Open **Research** to follow a dossier and its sources.
+The demo uses the shared Lixity workspace and needs no account or upload; it
+cannot import, edit or save. It follows current development, so it can show
+unreleased interface changes that are not yet in the installed package.
 
 **One question, one dossier, back to the scene.** A preliminary log puts a crate's
 opening on the quay; its correction moves it to the customs station. The fictional
@@ -124,6 +132,13 @@ model dependencies. See [grammatical tense setup](https://mfahsold.github.io/lix
 The browser app, CLI and Python API share one analysis pipeline;
 `lixity --help` and `lixity about --json` describe installed capabilities.
 
+**Unreleased audio workflow:** export a passage, chapter or manuscript as a
+direction plan in JSON or SSML without generating speech. A configured
+OpenAI-compatible service can generate audio separately. You can also inspect
+an existing recording locally and compare a supplied, timestamped transcript
+with the plan; Lixity does not transcribe the recording for you. See the
+[audio workflow and setup](https://mfahsold.github.io/lixity/USAGE.md#audio-export-and-external-providers-unreleased).
+
 Try the same fictional project as a
 [novel with companion notes](https://mfahsold.github.io/lixity/demo/reader/index.html)
 or a [standalone companion](https://mfahsold.github.io/lixity/demo/companion/index.html).
@@ -176,13 +191,25 @@ sources, existing outputs and read-only structure findings. They neither move
 files nor establish that an output matches the current manuscript; see
 [project inspection](https://mfahsold.github.io/lixity/USAGE.md#inspect-project-structure).
 
-The audio workflow positions Lixity as an author's dramaturgy, phonetic
-direction and speech-timeline workbench, bridging manuscript structure with
-external open-source audio engines. Version 0.7.7 separates project voice
-profiles and chapter output from manuscript passage direction and preview. It adds
-separately saved passage direction, source-bound text ranges, explicit silence,
-a shared inspectable CLI/UI speech plan, and standard W3C SSML export (`--ssml`
-or dialog download) for integration with external TTS pipelines. Optional Qwen3-TTS 1.7B
+The audio workflow shares manuscript direction, pronunciation rules and structural
+pauses between CLI and browser. **Unreleased:** `audio-export-plan` exports a
+`lixity-audio-timeline/1` JSON plan or SSML, with explicit limitations where SSML
+cannot carry a control. `read-aloud --ssml` and `--timeline` only export; they
+never synthesize. Passage, chapter and manuscript exports do not require a local
+voice-reference recording or a running worker. An explicitly configured
+OpenAI-compatible provider can render through its HTTP speech endpoint, using
+saved model/voice bindings and an optional API-key environment-variable name.
+Rendering sends the selected text to that configured service. Exported JSON can
+include provider URLs, model IDs and credential variable names, but not key values;
+review the plan before sharing it.
+Project settings schema `/4` requires a reviewed, backed-up upgrade; existing
+profiles remain unchanged. `audio-inspect` measures local WAV/FLAC/MP3 files;
+`audio-verify` compares a plan with an optional timestamped transcript tied to
+the audio hash. No speech recognition runs, so missing transcription evidence
+stays unknown and a supplied transcript may contain recognition errors. See the
+[audio workflow](https://mfahsold.github.io/lixity/USAGE.md#audio-export-and-external-providers-unreleased).
+
+Existing native synthesis remains available. Optional Qwen3-TTS 1.7B
 CustomVoice provides preset voices and explicit style instructions through a
 local worker or a configured Jetson over SSH. Version 0.7.7 also supports the
 separately installed Qwen 1.7B VoiceDesign checkpoint for described voices;
@@ -201,7 +228,7 @@ the [Coqui setup](https://mfahsold.github.io/lixity/USAGE.md#experimental-coqui-
 Piper is removed; existing profiles
 require an explicit backed-up `audio-migrate` replacement. Select the
 execution target per render in the CLI or dialog. CPU generation can be slow;
-completed Qwen segments can be reused when retrying long renders. Audio remains
+completed segments can be reused when retrying long renders. Audio remains
 a prototype requiring listening review. Version 0.7.7 adds an optional FFmpeg
 post-synthesis tempo factor; it is not native model rate control. See the
 [read-aloud scope](https://mfahsold.github.io/lixity/USAGE.md#lixity-read-aloud)

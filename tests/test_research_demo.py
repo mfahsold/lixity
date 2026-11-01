@@ -214,7 +214,7 @@ def test_public_demo_externalizes_image_bytes_and_preserves_source_records(tmp_p
     assert provenance is not None
     assert not re.search(r'(?:^|\s)open(?:\s|=|$)', provenance["attributes"])
     assert '<summary id="example-heading">About this read-only demo</summary>' in provenance["body"]
-    assert f"Generated with Lixity {__version__}." in provenance["body"]
+    assert f"development checkout (base version {__version__})" in provenance["body"]
     assert "cannot import, edit or save" in provenance["body"]
     assert "fictional demonstration records" in provenance["body"]
     assert "Hamburg free-port area, circa 1900" in document

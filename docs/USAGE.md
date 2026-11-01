@@ -372,6 +372,12 @@ analyzed paragraph's **Values** opens the **Passage values** inspector independe
 of the Analysis On/Off choice. **Analysis overview** opens chapter comparisons and other dense views;
 **Back to passage** restores the earlier analysis choice and document context.
 
+**Unreleased:** the reading controls group chapter, text settings and focus
+together. The analysis measure explains what its marks and paragraph comparison
+show; comparison arrows sit with that switch. **Analysis help → Inspect the
+count** examines a visible manuscript passage. Overview navigation includes
+quoted text, names, pacing and signal groups in document order.
+
 A tense review card names its actual trigger:
 present/past cues in one paragraph, a dominant-tense change from the previous
 paragraph, or both. Original counted forms appear as buttons grouped by present
@@ -1447,6 +1453,158 @@ There is no EPUB/DOCX export, custom trim size, bleed/crop marks, print color ma
 PDF/UA/PDF/X certification. Searchable text, metadata and bookmarks alone do
 not establish accessibility or production compliance.
 
+### Audio export and external providers (unreleased)
+
+Export a direction plan without synthesis or reading saved voice-reference bytes:
+
+```bash
+lixity audio-export-plan --project ./novel > manuscript.timeline.json
+lixity audio-export-plan --project ./novel --chapter 2 --ssml > chapter-2.ssml
+lixity read-aloud --project ./novel --preview-line 42 --timeline > passage.timeline.json
+```
+
+`audio-export-plan` defaults to `lixity-audio-timeline/1` JSON. `--ssml` selects
+SSML. `read-aloud --timeline` and `--ssml` imply export-only behavior;
+`read-aloud --plan-only` keeps the existing `lixity-speech-plan/1` JSON contract.
+The browser offers JSON/SSML downloads for a passage, chapter or manuscript.
+Under **Project → Audio export and recordings**, **Export direction → Preview
+export** prepares the downloads before the separate **Generate audio** controls.
+Export does not require a running speech service. Audio actions have their own
+section outside the project settings form.
+JSON retains effective text, original spoken text, pronunciation substitutions,
+direction, profile choices and pause values. Speech start times and durations
+are unknown before synthesis; planned pauses are not measured timestamps.
+Profile metadata includes configured provider URLs/model IDs and credential
+environment-variable names, never resolved key values. Review that metadata when
+sharing a plan outside the project.
+SSML is a projection: inspect its warnings for controls without portable
+representation, including free-form delivery, reference voices and provider
+voice mappings. Export does not guarantee that a particular engine accepts all
+SSML features. No export starts a worker or contacts a provider.
+
+An external speech profile uses an explicit provider binding. Upgrade existing
+settings through the backed-up migration before saving schema `/4`:
+
+```bash
+lixity audio-migrate --project ./novel --to-schema-4
+# Review the preview; use its exact snapshot token and a new backup path:
+lixity audio-migrate --project ./novel --to-schema-4 --apply \
+  --expected-snapshot TOKEN_FROM_PREVIEW --backup ../novel-audio-schema4.zip
+```
+
+The browser offers the same review/apply step in voice profiles. Its preview
+identifies retained profiles and whether an implicit narrator will become saved.
+For an unconfigured project whose language has no native default, schema `/4`
+keeps an explicit empty selection; create an external profile and enter its
+endpoint/model/voice without changing the project language. Explicit external
+CLI overrides can also export before any audio settings are saved.
+
+Example project settings, with an explicitly chosen model and provider voice:
+
+```toml
+[audio]
+schema_version = "lixity-audio-settings/4"
+selected = "narrator"
+
+[audio.profiles.narrator]
+engine = "openai-compatible"
+language = "de"
+base_url = "http://127.0.0.1:8000/v1"
+model = "your-installed-model"
+voice = "your-provider-voice"
+speed = 1.0
+supports_instructions = false
+# Optional: the name of an environment variable, never its secret value.
+api_key_env = "LIXITY_SPEECH_API_KEY"
+```
+
+Omit `api_key_env` for a service without authentication. The rendering process
+must have the named variable set; absence fails before sending a request.
+For the managed browser app, use a name beginning with `LIXITY_`: the systemd
+launcher forwards these variables by name. Start or restart the service from
+the environment containing that variable; exporting it in a different terminal
+does not update an already running process. CLI renders use their own environment.
+HTTPS is supported for remote services. Plain HTTP requires localhost, loopback
+or a private LAN IP. Credential-bearing URLs, queries, fragments and redirects
+are rejected. Provider status reports configured/unknown without contacting the
+service. Only an explicit render sends the effective spoken text. A remote
+provider therefore changes the privacy boundary for that render.
+
+```bash
+lixity read-aloud --project ./novel --profile narrator --chapter 2 -o chapter-2.wav
+# Per-invocation binding; does not save project settings:
+lixity read-aloud --project ./novel --engine openai-compatible \
+  --base-url http://127.0.0.1:8000/v1 --model your-installed-model \
+  --voice your-provider-voice --language de --speed 1.0 -o reading-copy.wav
+```
+
+The adapter sends standard `model`, `input`, `voice` and `response_format="wav"`
+fields. It sends `instructions` only when the profile explicitly declares
+`supports_instructions=true`; this is an operator declaration, not a verified
+provider capability. Unsupported direction, local reference identities and
+voice descriptions fail explicitly. Voice names and model IDs are provider
+values; Qwen's preset/language restrictions do not apply. The selected language
+still controls Lixity's text planning; provider pronunciation support requires
+auditioning. `--speech-target jetson` applies to native workers, not these URLs.
+
+Responses are bounded to 32 MiB per segment with a 300-second request timeout.
+Mono 16-bit 24 kHz WAV is accepted directly; other WAV sample formats require
+FFmpeg normalization. Invalid or truncated PCM fails without publishing output.
+The adapter requires no Lixity-specific response headers. External cache entries
+include endpoint, model, voice, adapter identity and credential-variable name;
+they never contain the key value. Request fresh audio after changing the model
+behind an existing provider model ID. Existing native workers, profiles,
+reference data and cache keys retain their behavior.
+
+### Inspect and compare externally generated audio (unreleased)
+
+```bash
+lixity audio-inspect chapter-2.wav
+lixity audio-verify chapter-2.wav --plan chapter-2.timeline.json --language de
+lixity audio-verify chapter-2.wav --plan chapter-2.timeline.json \
+  --transcript chapter-2.words.json --language de
+```
+
+Both commands emit `lixity-audio-audit/1` JSON and read the supplied files locally.
+`audio-inspect` accepts optional `--plan` and `--transcript`; `audio-verify`
+requires `--plan`. WAV, FLAC and MP3 are supported, with FFmpeg required for
+compressed formats and WAV formats outside the standard-library PCM reader.
+No recognizer or remote transcription request runs. Signal observations include
+duration, sample format, per-channel/aggregate level, clipping, DC offset and
+heuristic silence intervals. They are not a quality score.
+
+Text comparison requires a supplied word-timing transcript whose `audio_sha256`
+matches the exact original audio bytes:
+
+```json
+{
+  "schema_version": "lixity-audio-transcript/1",
+  "audio_sha256": "SHA256_OF_EXACT_AUDIO_FILE_BYTES",
+  "model": "external-recognizer-id",
+  "words": [
+    {"text": "Hello", "start": 0.10, "end": 0.30},
+    {"text": "world", "start": 0.40, "end": 0.80}
+  ]
+}
+```
+
+`model` is optional; absence means unknown provenance. Each `text` is one token
+in the explicitly selected language. Times are finite seconds within the audio
+duration, ordered and nonoverlapping. Transcript differences describe the
+supplied recognition evidence, not proven missing spoken words. A missing word
+has no known audio timestamp; neighboring timings only bracket its possible
+location. Pause comparisons require aligned adjacent segments with no extra
+transcript words between them. An observed gap can contain breathing or noise;
+measured silence overlap is reported separately.
+
+Without a transcript, text alignment and plan-pause verification remain unknown,
+even when signal inspection succeeds. Source/audio mismatch, unsupported decoding
+and exceeded limits fail explicitly. Core limits include 2 GiB source audio,
+six hours, 500 million decoded samples, 1 GiB temporary decoded data, 16 MiB JSON,
+100,000 transcript words and 10,000 plan segments; decoding has a 120-second
+deadline. The browser uses smaller upload limits. See [Methods](METHODS.md) and
+[Stability](STABILITY.md) for thresholds and interpretation.
+
 ### Audio status
 
 `lixity audio-status [--project PATH] [--engine qwen3|qwen3-design|qwen3-base] [--json]` inspects the actual fixed local
@@ -1456,18 +1614,20 @@ even without a saved profile. `model_matches: null` means no model identity or s
 is not a successful or failed match. It does not output manuscript prose, voice
 descriptions, pronunciation replacements or delivery instructions. Missing or
 invalid project settings fail explicitly. This is a snapshot, not a guarantee
-that the worker will remain available during a later render.
+that the worker will remain available during a later render. For a selected
+external profile, status reports `configured: true`, `state: unknown` and
+`model_matches: null`; it does not probe either the provider or native workers.
 
 ### `lixity read-aloud`
 
 **Speech planning, direction & audio generation:**
 Version 0.7.7 separates dramaturgy and passage direction from raw synthesis.
 The CLI and native dialog compile the manuscript, character voice assignments,
-pronunciation substitutions and timing into structured plans. Use `--plan-only`
-to output the compiled JSON timeline, or `--plan-only --ssml` to export standard
-W3C SSML for ingestion into external open-source speech systems (such as OpenedAI
-Speech, Kokoro, Chatterbox, or AllTalk). For local preview synthesis, optional
-Qwen and Coqui local workers remain available as reference implementations.
+pronunciation substitutions and timing into structured plans. On unreleased
+main, use `audio-export-plan` for the exchange timeline, or `--ssml` for an SSML
+projection with explicit limitations. `--plan-only` retains the native speech
+plan JSON contract. Explicit external providers and optional Qwen/Coqui workers
+share rendering, pauses and atomic audio publication.
 
 ```bash
 lixity read-aloud manuscript.md --language en --plan-only --ssml > chapter.ssml
@@ -1504,10 +1664,10 @@ CLI do not automatically write into the managed app's log; see
 
 `--chapter` selects a one-based chapter number. Without an explicit file, the
 command uses the selected project's configured manuscript or folder discovery.
-Without saved audio settings, the default is one Qwen narrator using preset
+For native synthesis without saved audio settings, the default is one Qwen narrator using preset
 `Ryan`, the project language and empty delivery instructions. English remains the
 language default. `--voice` selects a Qwen preset, such as `Ryan` or `Aiden`.
-The supported languages are `en`, `de`, `fr`, `es`, `it`, `pt`, `ru`, `zh`, `ja`
+The Qwen-supported languages are `en`, `de`, `fr`, `es`, `it`, `pt`, `ru`, `zh`, `ja`
 and `ko`: six of the seven analysis languages, with Dutch (`nl`) unsupported.
 Choose a supported speech language explicitly for a Dutch project; there is no
 automatic language or backend fallback. Preset language support does not certify
@@ -1580,13 +1740,14 @@ ssh -N -T -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 \
 
 Use your normal verified SSH host key and account. The local CPU worker continues
 to use port `8769`; selecting Jetson uses only the fixed loopback forward `8770`.
-The browser cannot supply a host address or arbitrary inference URL. Lixity does
+These native target values cannot supply a host address or inference URL; external
+providers use their separately validated explicit profile bindings. Lixity does
 not install or start the remote worker or SSH connection. GPU compatibility and
 available shared memory must be checked on the actual device; 8 GB does not
 guarantee that every input fits.
 
 Long CPU renders can be retried without recomputing every completed segment.
-Qwen chapter jobs in the native UI and CLI renders retain verified segments in
+Chapter jobs in the native UI and CLI renders retain verified segments in
 `$XDG_CACHE_HOME/lixity/speech/<project-hash>/` (default
 `~/.cache/lixity/speech/<project-hash>/`), bounded to 2 GiB per project.
 The manuscript folder need not be writable.

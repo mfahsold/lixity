@@ -279,7 +279,8 @@ def render_dashboard(
     def action_enabled(action: str) -> bool:
         return not read_only and (allowed_actions is None or action in allowed_actions)
 
-    speech_enabled = controls and allowed_actions is not None and action_enabled("speech-render")
+    speech_enabled = controls and allowed_actions is not None and (
+        action_enabled("speech-plan") or action_enabled("speech-render"))
 
     reader_enabled = (
         controls and allowed_actions is not None and "research-reader" in allowed_actions
@@ -411,6 +412,7 @@ def render_dashboard(
         f'<body id="top" class="{body_class}" data-api="{esc(api_base)}" data-ui-labels="{workspace_labels_json}" '
         f'data-read-only="{str(read_only).lower()}" '
         f'data-speech-capable="{str(speech_enabled).lower()}" '
+        f'data-speech-render-capable="{str(speech_enabled and action_enabled("speech-render")).lower()}" '
         f'data-manuscript-source-sha256="{esc(manuscript_source_sha256)}" '
         f'data-manuscript-project-token="{esc(manuscript_pdf_token)}" '
         f'data-manuscript-links="{manuscript_links_mode}" '
@@ -914,7 +916,8 @@ def render_dashboard(
         metric_control = (
             '<label class="metric-layer-control">'
             f'<span>{L("analysis_measure") if controls else help_term(labels, "layer", L("style_layer"))}</span> '
-            '<select class="ctl" id="style-layer">'
+            f'<select class="ctl" id="style-layer" aria-label="{L("analysis_measure")}" '
+            f'data-help="{L("reading_help_measure")}">'
             f'<option value="">{L("layer_off")}</option>'
             + "".join(grouped_layer_options)
             + "</select></label>"
@@ -924,10 +927,18 @@ def render_dashboard(
     available = {"flags"} if has_chapters else set()
     if metrics is not None:
         available.add("dist")
+    if dialogue:
+        available.add("dialogue")
+    if characters and (characters.get("figures") or characters.get("error")):
+        available.add("characters")
+    if pacing and pacing.get("chapter_list"):
+        available.add("pacing")
     if scenes:
         available.add("scenes")
     if motifs:
         available.add("motifs")
+    if showing and showing.get("chapter_list"):
+        available.add("showing")
     if has_house_style or (fingerprint is not None and metrics is not None and metrics.chapters):
         available.add("style")
     if chapters:
@@ -942,13 +953,16 @@ def render_dashboard(
             f'<div class="reader-analysis-controls" id="reader-analysis-settings" role="group" '
             f'aria-label="{L("reading_text_analysis")}">'
             f'{metric_control}'
-            f'{layer_navigation}'
             '<div class="reader-analysis-switches">'
-            f'<label class="reader-evidence-toggle"><input type="checkbox" id="analysis-evidence-enabled"/> '
+            f'<label class="reader-evidence-toggle"><input type="checkbox" id="analysis-evidence-enabled" '
+            f'data-help="{L("reading_help_counted")}"/> '
             f'<span class="analysis-evidence-key">{L("legend_counted_text")}</span></label>'
-            f'<label class="reader-comparison-toggle"><input type="checkbox" id="analysis-comparison-enabled" checked/> '
+            '<div class="reader-comparison-controls">'
+            f'<label class="reader-comparison-toggle"><input type="checkbox" id="analysis-comparison-enabled" checked '
+            f'data-help="{L("reading_help_comparison")}"/> '
             f'<span class="analysis-comparison-key">{L("legend_paragraph_comparison")}</span></label>'
-            '</div></div>'
+            f'{layer_navigation}'
+            '</div></div></div>'
         ) if paragraphs else ""
         parts.append(reading_controls(chapters, labels, reader_document, companion_controls=reader_controls,
                                       analysis_controls=analysis_controls, overview_navigation=overview_navigation))
@@ -978,7 +992,6 @@ def render_dashboard(
             passage_hint = "review_passage_flagged" if candidates else "review_passage_unflagged"
             parts.append(
                 f'<article class="review-route"><a class="ctl primary" href="#p-{first_index}" '
-                f'data-help="{L(passage_hint)}" '
                 'aria-describedby="review-passage-reason" '
                 f'data-review-passage="1" data-line="{first.start_line}" data-target="p-{first_index}">'
                 f"{L('review_passage_action')}</a>"
@@ -1602,7 +1615,8 @@ def render_dashboard(
             f'<section class="panel style-panel" id="style">'
             f'<div class="style-header"><h2>{L("group_style")}</h2>'
             f'<div class="cohesion-summary-badge">'
-            f'<span>{L("cockpit_cohesion_summary")}: <strong>{P(fingerprint.consistency * 100, 0)}</strong></span>'
+            f'<span>{L("cockpit_cohesion_summary")}: <strong>{P(fingerprint.consistency * 100, 0) if fingerprint.measured_cells else "–"}</strong>'
+            f' · {round(fingerprint.consistency * fingerprint.measured_cells)} / {fingerprint.measured_cells}</span>'
             f'</div></div>'
         )
         parts.append(

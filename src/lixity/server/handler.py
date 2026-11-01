@@ -91,6 +91,8 @@ class LixityServerHandler(
         "workspace-close": "_handle_workspace_close",
         "speech-render": "_handle_speech_render",
         "speech-plan": "_handle_speech_plan",
+        "audio-audit": "_handle_audio_audit",
+        "audio-schema": "_handle_audio_schema",
         "speech-direction": "_handle_speech_direction",
         "speech-cancel": "_handle_speech_cancel",
         "nda-draft": "_handle_nda_draft",
@@ -335,7 +337,8 @@ class LixityServerHandler(
             return
 
         action = path[len("/api/"):].strip("/")
-        maximum = (MAX_MEDIA_PAYLOAD_BYTES if action in {"research-media-ingest", "research-dossier-media"}
+        maximum = (138 * 1024**2 if action == "audio-audit"
+                   else MAX_MEDIA_PAYLOAD_BYTES if action in {"research-media-ingest", "research-dossier-media"}
                    else MAX_IMAGE_PAYLOAD_BYTES if action in {"research-image-ingest", "research-dossier-image"}
                    else MAX_PAYLOAD_BYTES)
         payload = self._read_json_body(maximum=maximum)

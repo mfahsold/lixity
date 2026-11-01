@@ -45,51 +45,6 @@ def render_research_panel(
     parts.append("</div>")
 
     parts.append(
-        '<details class="settings-advanced" id="research-setup-guide" data-requires-write>'
-    )
-    parts.append(f'<summary>{L("setup_title")}</summary><div class="ctl-group">')
-    parts.append(f'<p class="ctl-note">{L("setup_intro")}</p>')
-    parts.append(
-        f'<button type="button" class="ctl" id="research-setup-check">{L("setup_check")}</button>'
-    )
-    parts.append(
-        f'<p id="setup-ocr-reading" class="ctl-note" aria-live="polite">OCR: {L("setup_not_checked")}</p>'
-    )
-    parts.append(
-        f'<p id="setup-zotero-reading" class="ctl-note" aria-live="polite">Zotero: {L("setup_not_checked")}</p>'
-    )
-    # The steps are grouped so a successful check can hide the guidance for the
-    # component it just found working. Leaving it visible next to "reachable"
-    # read as if the check had failed.
-    parts.append('<div id="setup-zotero-steps">')
-    parts.append(
-        f'<h3 class="section-heading">Zotero</h3><p class="ctl-note">{L("setup_zotero_steps")}</p>'
-    )
-    parts.append(
-        '<p><a class="ctl-link" href="https://www.zotero.org/support/" target="_blank" rel="noopener">Zotero</a></p>'
-    )
-    parts.append("</div>")
-    parts.append('<div id="setup-ocr-steps">')
-    parts.append(
-        f'<h3 class="section-heading">OCR</h3><p class="ctl-note">{L("setup_ocr_steps")}</p>'
-    )
-    parts.append(
-        '<p><a class="ctl-link" href="https://tesseract-ocr.github.io/tessdoc/Installation.html" target="_blank" rel="noopener">Tesseract</a> · '
-        f'<a class="ctl-link" href="{docs_url("INSTALLATION.md#server-environment-and-project-access")}" target="_blank" rel="noopener">Poppler</a></p>'
-    )
-    parts.append("</div>")
-    parts.append(f'<p class="ctl-note">{L("setup_language_example")}</p>')
-    parts.append(
-        '<pre class="research-dossier-body-source">LIXITY_OCR_BACKEND=tesseract\nLIXITY_OCR_LANGUAGES=deu+eng</pre>'
-    )
-    parts.append(f'<p class="ctl-note">{L("setup_restart")}</p>')
-    parts.append(f'<p class="ctl-note">{L("setup_large_scans")}</p>')
-    parts.append(
-        f'<details><summary>{L("setup_advanced")}</summary><pre class="research-dossier-body-source" id="setup-diagnostics"></pre></details>'
-    )
-    parts.append("</div></details>")
-
-    parts.append(
         f'<button type="button" class="ctl" id="research-revision-batch-review" data-requires-write hidden>{L("research_revision_batch_review")}</button>'
     )
     parts.append('<div class="research-navigation" id="research-navigation">')
@@ -137,13 +92,6 @@ def render_research_panel(
     parts.append(f'<h3 class="section-heading">{L("zotero_retained")}</h3>')
     parts.append(
         f'<p class="ctl-note">{L("site_research_hint" if read_only else "research_captures_hint")}</p>'
-    )
-    parts.append(
-        f'<input class="ctl full-width mb-2" type="search" id="r-filter-sources" aria-label="{L("research_filter_sources")}" placeholder="{L("research_filter_sources")}"/>'
-    )
-    parts.append('<p class="ctl-note" id="r-filter-sources-status" aria-live="polite" hidden></p>')
-    parts.append(
-        f'<div id="research-sources-list">{loading_state(label(labels, "research_loading"))}</div>'
     )
     parts.append('<details class="settings-advanced" id="zotero-box" data-requires-write>')
     parts.append(f'<summary>{L("research_capture_zotero")}</summary><div class="ctl-group">')
@@ -214,6 +162,13 @@ def render_research_panel(
     parts.append("</div>")
     parts.append("</div>")
     parts.append("</details>")
+    parts.append(
+        f'<input class="ctl full-width mb-2" type="search" id="r-filter-sources" aria-label="{L("research_filter_sources")}" placeholder="{L("research_filter_sources")}"/>'
+    )
+    parts.append('<p class="ctl-note" id="r-filter-sources-status" aria-live="polite" hidden></p>')
+    parts.append(
+        f'<div id="research-sources-list">{loading_state(label(labels, "research_loading"))}</div>'
+    )
     parts.append("</div>")
 
     parts.append(pane("search"))
@@ -297,6 +252,23 @@ def render_research_panel(
     parts.append("</div>")
     parts.append("</div>")
     parts.append("</details>")
+    parts.append('<div class="row mb-2" id="r-dos-collection-bar" hidden>')
+    parts.append(
+        form_field(
+            "r-dos-collection-select",
+            "research_dossier_collection",
+            f'<select class="ctl" id="r-dos-collection-select"><option value="all">{L("research_dossier_collection_all")}</option></select>',
+        )
+    )
+    parts.append('<span class="ctl-note" id="r-dos-collection-note" hidden></span>')
+    parts.append("</div>")
+    parts.append(
+        f'<input class="ctl full-width mb-2" type="search" id="r-filter-dossiers" aria-label="{L("research_filter_dossiers")}" placeholder="{L("research_filter_dossiers")}"/>'
+    )
+    parts.append('<p class="ctl-note" id="r-filter-dossiers-status" aria-live="polite" hidden></p>')
+    parts.append(
+        f'<div id="research-dossiers-list">{loading_state(label(labels, "research_loading"))}</div>'
+    )
     parts.append(
         '<details class="research-details mb-2" id="r-dos-collection-manage" data-requires-write>'
     )
@@ -337,39 +309,27 @@ def render_research_panel(
     )
     parts.append("</div>")
     parts.append("</div></details>")
-    parts.append('<div class="row mb-2" id="r-dos-collection-bar" hidden>')
-    parts.append(
-        form_field(
-            "r-dos-collection-select",
-            "research_dossier_collection",
-            f'<select class="ctl" id="r-dos-collection-select"><option value="all">{L("research_dossier_collection_all")}</option></select>',
-        )
-    )
-    parts.append('<span class="ctl-note" id="r-dos-collection-note" hidden></span>')
-    parts.append("</div>")
-    parts.append(
-        f'<input class="ctl full-width mb-2" type="search" id="r-filter-dossiers" aria-label="{L("research_filter_dossiers")}" placeholder="{L("research_filter_dossiers")}"/>'
-    )
-    parts.append('<p class="ctl-note" id="r-filter-dossiers-status" aria-live="polite" hidden></p>')
-    parts.append(
-        f'<div id="research-dossiers-list">{loading_state(label(labels, "research_loading"))}</div>'
-    )
     parts.append("</div>")
 
     # Tab Pane: Claims & Evidence Links
     parts.append(pane("claims"))
     parts.append(f'<p class="ctl-note" id="research-claims-intro">{L("research_claims_intro")}</p>')
-    parts.append('<div class="research-views" id="r-claim-views" role="group">')
+    parts.append('<div class="row row-between research-claim-toolbar">')
+    parts.append(
+        '<div class="research-views" id="r-claim-views" role="group" aria-describedby="research-claims-intro">'
+    )
     parts.append(
         f'<button type="button" class="ctl active" data-claim-view="list" aria-pressed="true">{L("research_claim_view_list")}</button>'
     )
     parts.append(
-        f'<button type="button" class="ctl" data-claim-view="timeline" aria-pressed="false">{L("research_claim_timeline")}</button>'
+        f'<button type="button" class="ctl" id="r-open-timeline" data-claim-view="timeline" aria-pressed="false">{L("research_claim_timeline")}</button>'
     )
+    parts.append("</div>")
     parts.append(
         f'<button type="button" class="ctl" id="r-claim-matrix-btn">{L("research_export_matrix")}</button>'
     )
     parts.append("</div>")
+    parts.append('<p class="ctl-note" id="r-timeline-callout" hidden></p>')
     parts.append('<div id="rtab-claims-list">')
     parts.append('<details class="research-composer" id="r-claim-composer" data-requires-write>')
     parts.append(
@@ -492,12 +452,6 @@ def render_research_panel(
     parts.append("    </div>")
     parts.append("  </div>")
     parts.append("</details>")
-    parts.append('<div class="ctl-group research-timeline-entry">')
-    parts.append('<p class="ctl-note" id="r-timeline-callout" hidden></p>')
-    parts.append(
-        f'<button type="button" class="ctl" id="r-open-timeline">{L("research_timeline_open")}</button>'
-    )
-    parts.append("</div>")
     parts.append(
         f'  <div id="research-claims-list">{loading_state(label(labels, "research_loading"))}</div>'
     )
@@ -706,12 +660,13 @@ def render_research_panel(
 
     parts.append(pane("grounding"))
     parts.append('<div class="ctl-group">')
+    parts.append(f'<span class="ctl-label">{L("research_ground_heading")}</span>')
     parts.append(
-        f'<span class="ctl-label">{help_term(labels, "research_comparison", L("research_ground_heading"))}</span>'
+        f'<p class="ctl-note" id="research-comparison-help">{L("help_research_comparison")}</p>'
     )
     parts.append('<div class="row">')
     parts.append(
-        f'<select class="ctl field-wide" id="r-ground-source-select" aria-label="{L("research_select_source")}"><option value="">{L("research_select_source")}</option></select>'
+        f'<select class="ctl field-wide" id="r-ground-source-select" aria-describedby="research-comparison-help" aria-label="{L("research_select_source")}"><option value="">{L("research_select_source")}</option></select>'
     )
     parts.append(
         f'<button class="ctl primary" id="r-ground-btn">{L("research_ground_action")}</button>'
@@ -720,6 +675,51 @@ def render_research_panel(
     parts.append("</div>")
     parts.append('<div id="research-grounding-results"></div>')
     parts.append("</div>")
+
+    parts.append(
+        '<details class="settings-advanced" id="research-setup-guide" data-requires-write>'
+    )
+    parts.append(f'<summary>{L("setup_title")}</summary><div class="ctl-group">')
+    parts.append(f'<p class="ctl-note">{L("setup_intro")}</p>')
+    parts.append(
+        f'<button type="button" class="ctl" id="research-setup-check">{L("setup_check")}</button>'
+    )
+    parts.append(
+        f'<p id="setup-ocr-reading" class="ctl-note" aria-live="polite">OCR: {L("setup_not_checked")}</p>'
+    )
+    parts.append(
+        f'<p id="setup-zotero-reading" class="ctl-note" aria-live="polite">Zotero: {L("setup_not_checked")}</p>'
+    )
+    # The steps are grouped so a successful check can hide the guidance for the
+    # component it just found working. Leaving it visible next to "reachable"
+    # read as if the check had failed.
+    parts.append('<div id="setup-zotero-steps">')
+    parts.append(
+        f'<h3 class="section-heading">Zotero</h3><p class="ctl-note">{L("setup_zotero_steps")}</p>'
+    )
+    parts.append(
+        '<p><a class="ctl-link" href="https://www.zotero.org/support/" target="_blank" rel="noopener">Zotero</a></p>'
+    )
+    parts.append("</div>")
+    parts.append('<div id="setup-ocr-steps">')
+    parts.append(
+        f'<h3 class="section-heading">OCR</h3><p class="ctl-note">{L("setup_ocr_steps")}</p>'
+    )
+    parts.append(
+        '<p><a class="ctl-link" href="https://tesseract-ocr.github.io/tessdoc/Installation.html" target="_blank" rel="noopener">Tesseract</a> · '
+        f'<a class="ctl-link" href="{docs_url("INSTALLATION.md#server-environment-and-project-access")}" target="_blank" rel="noopener">Poppler</a></p>'
+    )
+    parts.append("</div>")
+    parts.append(f'<p class="ctl-note">{L("setup_language_example")}</p>')
+    parts.append(
+        '<pre class="research-dossier-body-source">LIXITY_OCR_BACKEND=tesseract\nLIXITY_OCR_LANGUAGES=deu+eng</pre>'
+    )
+    parts.append(f'<p class="ctl-note">{L("setup_restart")}</p>')
+    parts.append(f'<p class="ctl-note">{L("setup_large_scans")}</p>')
+    parts.append(
+        f'<details><summary>{L("setup_advanced")}</summary><pre class="research-dossier-body-source" id="setup-diagnostics"></pre></details>'
+    )
+    parts.append("</div></details>")
 
     parts.append(
         '<div class="ctl-status" id="research-status-bar" role="status" aria-live="polite"></div>'

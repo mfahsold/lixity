@@ -17,7 +17,12 @@ from .config import (
     project_config_snapshot,
     read_explicit_project_config,
 )
-from .speech_profiles import migrate_audio_settings, parse_audio_settings
+from .speech_profiles import (
+    QWEN_LANGUAGES,
+    AudioSettings,
+    migrate_audio_settings,
+    parse_audio_settings,
+)
 from .workspace import discover
 
 _MAX_CONFIG_BYTES = 1024 * 1024
@@ -50,6 +55,10 @@ class PreparedAudioMigration:
     _profiles: tuple[tuple[str, str], ...]
     snapshot: str
     target_schema: str | None = None
+    source_schema: str | None = None
+    retained_profile_count: int = 0
+    creates_default_profile: bool = False
+    configuration_required: bool = False
 
     def public_dict(self, *, applied: bool = False) -> dict[str, Any]:
         """Expose replacement decisions and a token, never source or private style."""
@@ -61,6 +70,10 @@ class PreparedAudioMigration:
         }
         if self.target_schema is not None:
             result["target_schema"] = self.target_schema
+            result["source_schema"] = self.source_schema
+            result["retained_profile_count"] = self.retained_profile_count
+            result["creates_default_profile"] = self.creates_default_profile
+            result["configuration_required"] = self.configuration_required
         return result
 
     def _unchanged(self) -> None:
@@ -146,6 +159,15 @@ def prepare_audio_migration(
 
 def prepare_schema3_migration(project: str | Path) -> PreparedAudioMigration:
     """Prepare a reviewed, backed-up upgrade to the Coqui-capable schema."""
+    return _prepare_schema_migration(project, 3)
+
+
+def prepare_schema4_migration(project: str | Path) -> PreparedAudioMigration:
+    """Prepare an explicit provider-capable schema without changing saved voices."""
+    return _prepare_schema_migration(project, 4)
+
+
+def _prepare_schema_migration(project: str | Path, version: int) -> PreparedAudioMigration:
     candidate = Path(project).expanduser()
     if candidate.is_symlink() or not candidate.is_dir():
         raise ValueError("Migration requires an existing nonsymlink project directory")
@@ -156,11 +178,15 @@ def prepare_schema3_migration(project: str | Path) -> PreparedAudioMigration:
     language = settings.get("language", "en")
     if not isinstance(language, str):
         raise ValueError("Project language must be a language code")
-    audio = parse_audio_settings(settings.get("audio"), language=language)
-    if audio.schema_name == "lixity-audio-settings/3":
-        raise ValueError("Project already uses audio schema /3")
+    raw_audio = settings.get("audio")
+    if raw_audio is None and version == 4 and language not in QWEN_LANGUAGES:
+        audio = AudioSettings(schema_version="lixity-audio-settings/4", selected="", profiles={})
+    else:
+        audio = parse_audio_settings(raw_audio, language=language)
+    if raw_audio is not None and int(audio.schema_name.rsplit("/", 1)[1]) >= version:
+        raise ValueError(f"Project already uses audio schema /{version} or later")
     data = audio.model_dump(by_alias=True)
-    data["schema_version"] = "lixity-audio-settings/3"
+    data["schema_version"] = f"lixity-audio-settings/{version}"
     source = _source_snapshot(root, settings)
     prepared = prepare_project_settings(root, {"audio": data})
     if prepared.original != original or prepared.pyproject_original != pyproject:
@@ -169,6 +195,12 @@ def prepare_schema3_migration(project: str | Path) -> PreparedAudioMigration:
                                for item in (original, pyproject)], "source": source,
                    "candidate_sha256": hashlib.sha256(prepared.content).hexdigest()}
     token = hashlib.sha256(json.dumps(fingerprint, sort_keys=True).encode("utf-8")).hexdigest()
-    result = PreparedAudioMigration(prepared, source, (), token, "lixity-audio-settings/3")
+    result = PreparedAudioMigration(
+        prepared, source, (), token, f"lixity-audio-settings/{version}",
+        source_schema=audio.schema_name if raw_audio is not None else None,
+        retained_profile_count=len(audio.profiles) if raw_audio is not None else 0,
+        creates_default_profile=raw_audio is None and bool(audio.profiles),
+        configuration_required=not audio.profiles,
+    )
     result._unchanged()
     return result

@@ -30,6 +30,7 @@ SUITE_DIR = ROOT / "tests" / "browser"
 # Everyday coverage for UI work; run every suite before a release.
 GROUPS: dict[str, tuple[str, ...]] = {
     "fast": (
+        "audio-export.cjs",
         "anchor-navigation.cjs",
         "analysis-navigation.cjs",
         "analysis-overview.cjs",
@@ -77,6 +78,7 @@ AREAS: dict[str, tuple[str, ...]] = {
         "visual-consistency.cjs",
     ),
     "analysis": (
+        "audio-export.cjs",
         "structural-coverage.cjs",
         "analysis-triage.cjs",
         "analysis-triage-layout.cjs",

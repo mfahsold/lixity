@@ -313,7 +313,7 @@ def build_classic(root: Path, example: ClassicExample) -> tuple[Path, Path]:
         f"Public-domain example: {example.title}",
         [
             (
-                f"<strong>Generated with Lixity {__version__}.</strong> The dashboard shows "
+                f"<strong>Development checkout, base version {__version__}.</strong> The dashboard shows "
                 f"the first {example.chapters} chapters of {example.title} "
                 f"({example.author}); the complete work is available as a "
                 f'<a href="{example.slug}-report.pdf">PDF analysis report</a>.'

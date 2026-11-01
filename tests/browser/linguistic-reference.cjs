@@ -276,6 +276,8 @@ async function checkBrowser(browser, caseData, form, width) {
       if (index === 0) await page.screenshot({path:path.join(artifacts, `${language}-${form}-${width}-sentence.png`)});
       await page.keyboard.press('Escape');
       await selectMetric(page, 'nominal');
+      // Evidence visibility is a separate saved choice for each metric.
+      await page.locator('#analysis-evidence-enabled').check();
       await panel.scrollIntoViewIfNeeded();
       const nominal = nominalGold[language][index];
       await waitForRanges(page, id, nominal);
@@ -299,6 +301,7 @@ async function checkBrowser(browser, caseData, form, width) {
       await checkComparison(card, fixture);
       await page.keyboard.press('Escape');
       await selectMetric(page, 'asl');
+      await page.locator('#analysis-evidence-enabled').check();
     }
     assert.deepEqual(await identity(page), before, 'analysis and inspection preserve prose, anchors, and identity');
     assert.equal(await page.locator('#chapters .ptext-inner > p').evaluateAll(nodes => nodes.every((node, index) =>

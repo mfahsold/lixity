@@ -162,6 +162,38 @@ for all readers and writers. Installing Lixity does not download an OCR model.
 
 </details>
 
+### External speech providers and local audio inspection (unreleased)
+
+Direction/timeline and SSML export need no speech model, worker or API key.
+For synthesis, run a separately managed service that implements
+`POST /v1/audio/speech`, then explicitly configure its base URL, model and voice
+in an `openai-compatible` profile. The minimal Lixity installation adds no
+inference dependency and does not install or start that service. HTTPS endpoints
+and explicitly configured local HTTP addresses (localhost, loopback or private
+LAN IPs) are supported. URLs cannot contain credentials, query parameters or
+fragments. Optional authentication refers to an environment-variable name via
+`api_key_env`; set the actual key in the environment of the process that renders.
+For `lixity service start`/`restart`, prefer `LIXITY_SPEECH_API_KEY` or another
+`LIXITY_`-prefixed name: the managed systemd launcher forwards that prefix by
+name without putting values in its command line or service record. Supply the
+variable in the new start/restart environment; an already running service does
+not inherit later terminal changes. Direct CLI rendering can use any valid name.
+Opening a dialog, exporting a plan or checking provider status sends no text.
+Provider readiness remains unknown until an explicit render.
+
+Existing settings require the reviewed `audio-migrate --to-schema-4` workflow
+before saving an external profile. Keep its backup and use a compatible reader;
+older releases cannot read schema `/4`. Existing native profiles and retained
+reference recordings need no conversion to keep their current behavior.
+
+Providers return WAV. Mono 16-bit PCM at 24 kHz needs no decoder; other supported
+WAV formats require FFmpeg on the Lixity host for normalization. MP3 output and
+non-1.0 playback speed also require FFmpeg. Local `audio-inspect` reads PCM WAV
+with the standard library; other WAV formats, FLAC and MP3 require FFmpeg.
+`audio-verify` does not install or run speech recognition. Supply a timestamped
+transcript explicitly when text or pause comparison is wanted. See the
+[audio usage guide](USAGE.md#audio-export-and-external-providers-unreleased).
+
 ### Optional Qwen audio worker
 
 Version 0.7.7 supports `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` and also

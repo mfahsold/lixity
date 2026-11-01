@@ -24,10 +24,10 @@ from ..speech_direction import (
     direction_snapshot,
     direction_state,
     plan_json,
-    plan_to_ssml,
     save_direction,
     saved_directions,
 )
+from ..speech_export import ssml_export, timeline_json
 from ..speech_jobs import SpeechJobs, prepare_speech_source
 from ..speech_profiles import (
     AudioProfile,
@@ -49,6 +49,110 @@ class _SpeechStale(ValueError):
 
 class SpeechRoutesMixin(ResponseMixin):
     _speech_manager_lock = threading.Lock()
+
+    def _handle_audio_schema(self, payload: dict[str, Any]) -> None:
+        """Preview or explicitly apply the backed-up provider schema upgrade."""
+        import os
+        from contextlib import nullcontext
+        from secrets import token_hex
+
+        from ..research.repository import Repository
+        from ..speech_migration import prepare_schema4_migration
+
+        try:
+            if set(payload) - {"project_token", "source_sha256", "apply", "snapshot"}:
+                raise ValueError("Supply the selected project and reviewed migration snapshot")
+            apply = payload.get("apply", False)
+            if type(apply) is not bool:
+                raise ValueError("Apply must be a boolean")
+            with self._workspace_lock:
+                self._speech_bound(payload)
+                root = self.get_author_project_root()
+                if root is None:
+                    raise ValueError("Open a manuscript project first")
+                with Repository(root).locked() if apply else nullcontext():
+                    prepared = prepare_schema4_migration(root)
+                    if not apply:
+                        self._json({"ok": True, "migration": prepared.public_dict()})
+                        return
+                    if payload.get("snapshot") != prepared.snapshot:
+                        raise ValueError("Migration snapshot changed; preview the upgrade again")
+                    data_root = Path(os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share")))
+                    backup_dir = data_root / "lixity" / "audio-backups"
+                    backup_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+                    backup = backup_dir / f"audio-schema-{token_hex(12)}.zip"
+                    result = prepared.apply(backup)
+                self.refresh()
+                self._json({"ok": True, "migration": result, "backup": str(backup)})
+        except (OSError, ValueError, RuntimeError, UserWarning) as exc:
+            self._speech_error(exc)
+
+    def _handle_audio_audit(self, payload: dict[str, Any]) -> None:
+        """Inspect an explicitly selected upload without retaining source bytes."""
+        import base64
+        import binascii
+        import tempfile
+
+        from ..audio_audit import inspect_audio
+
+        try:
+            allowed = {"project_token", "source_sha256", "audio", "filename", "transcript",
+                       "mode", "chapter", "profile", "ignore_direction"}
+            if set(payload) - allowed:
+                raise ValueError("Supply an audio file and the selected manuscript scope")
+            encoded = payload.get("audio")
+            name = payload.get("filename")
+            if not isinstance(encoded, str) or len(encoded) > 128 * 1024**2 or not isinstance(name, str):
+                raise ValueError("Choose an audio file of at most 96 MiB; use the CLI for larger files")
+            suffix = Path(name).suffix.lower()
+            if suffix not in {".wav", ".flac", ".mp3"}:
+                raise ValueError("Choose a WAV, FLAC or MP3 file")
+            content = base64.b64decode(encoded, validate=True)
+            if not content or len(content) > 96 * 1024**2:
+                raise ValueError("Choose a nonempty audio file of at most 96 MiB")
+            if type(payload.get("ignore_direction", False)) is not bool:
+                raise ValueError("Ignore direction must be a boolean")
+            with self._workspace_lock:
+                text, _digest, settings, _key = self._speech_bound(payload)
+                if payload.get("mode") == "manuscript":
+                    if payload.get("chapter") is not None:
+                        raise ValueError("Manuscript audit cannot select a chapter")
+                elif payload.get("mode") == "chapter":
+                    chapter = payload.get("chapter")
+                    if type(chapter) is not int:
+                        raise ValueError("Choose an existing chapter")
+                    prepare_speech_source(text, language=self.language, mode="chapter",
+                                          chapter=chapter, project_config=settings, for_export=True)
+                else:
+                    raise ValueError("Choose a chapter or manuscript audit")
+                plan = None
+                direction_hash = None
+                if payload.get("transcript") is not None:
+                    profile = (AudioProfile.model_validate(payload["profile"]) if "profile" in payload
+                               else resolve_audio_profile(settings, language=self.language))
+                    view = None if payload.get("ignore_direction") else self._direction_view()
+                    direction_hash = view["direction_sha256"] if view else None
+                    profiles = ({"narrator": profile} if settings.get("audio") is None and profile.engine == "openai-compatible"
+                                else parse_audio_settings(settings.get("audio"), language=self.language).profiles)
+                    plan = build_speech_plan(text, profile, directions=saved_directions(view) if view else [],
+                        profiles=profiles,
+                        chapter=payload.get("chapter"), project_config=settings, for_export=True)
+                language = self.language
+            with tempfile.TemporaryDirectory(prefix="lixity-audio-audit-") as folder:
+                audio = Path(folder) / ("chapter" + suffix)
+                audio.write_bytes(content)
+                result = inspect_audio(audio, expected_plan=plan, transcript=payload.get("transcript"), language=language)
+            with self._workspace_lock:
+                self._speech_bound(payload)
+                root = self.get_author_project_root()
+                if direction_hash is not None and (root is None or direction_snapshot(root) != direction_hash):
+                    raise _SpeechStale("Speech direction changed during the audit; retry")
+                result["context"] = {"source_sha256": payload["source_sha256"],
+                                     "direction_sha256": direction_hash,
+                                     "mode": payload["mode"], "chapter": payload.get("chapter")}
+                self._json({"ok": True, "audit": result})
+        except (OSError, ValueError, RuntimeError, UserWarning, binascii.Error) as exc:
+            self._speech_error(exc)
 
     def _speech_manager(self) -> SpeechJobs:
         with self._speech_manager_lock:
@@ -113,11 +217,13 @@ class SpeechRoutesMixin(ResponseMixin):
             with self._workspace_lock:
                 text, digest, config, _key = self._speech_bound(query)
                 settings = None
+                selected_profile = None
                 configuration_error = ""
                 try:
                     settings = parse_audio_settings(
                         config.get("audio"), language=self.language
                     ).model_dump(by_alias=True)
+                    selected_profile = resolve_audio_profile(config, language=self.language)
                 except ValueError as exc:
                     configuration_error = str(exc)
                 document, _resolved = resolve_document_config(
@@ -151,7 +257,11 @@ class SpeechRoutesMixin(ResponseMixin):
                 }
             # Probe fixed loopback endpoints without holding the workspace lock.
             # A worker status is a snapshot, not a promise of later readiness.
-            response["workers"] = audio_status()["targets"]
+            if selected_profile is not None and selected_profile.engine == "openai-compatible":
+                from ..speech_providers import external_provider_status
+                response["workers"] = [external_provider_status(selected_profile)]
+            else:
+                response["workers"] = audio_status()["targets"]
             with self._workspace_lock:
                 self._speech_bound(query)
                 self._json(response)
@@ -227,14 +337,21 @@ class SpeechRoutesMixin(ResponseMixin):
                     payload["paragraph"], dict
                 ):
                     raise ValueError("Supply a displayed paragraph identity")
-                prepared, context = prepare_speech_source(
-                    text,
-                    language=self.language,
-                    mode=payload["mode"],
-                    chapter=payload["chapter"],
-                    paragraph=payload.get("paragraph"),
-                    project_config=settings,
-                )
+                context: dict[str, Any]
+                if plan_only and payload["mode"] == "manuscript":
+                    if payload["chapter"] is not None or payload.get("paragraph") is not None:
+                        raise ValueError("Manuscript export cannot select a chapter or paragraph")
+                    prepared, context = text, {"mode": "manuscript", "chapter": None, "title": ""}
+                else:
+                    prepared, context = prepare_speech_source(
+                        text,
+                        language=self.language,
+                        mode=payload["mode"],
+                        chapter=payload["chapter"],
+                        paragraph=payload.get("paragraph"),
+                        project_config=settings,
+                        for_export=plan_only,
+                    )
                 view = self._direction_view()
                 if type(payload.get("ignore_direction", False)) is not bool:
                     raise ValueError("Ignore direction must be a boolean")
@@ -249,9 +366,10 @@ class SpeechRoutesMixin(ResponseMixin):
                     if "draft_replace_id" in payload and not any(direction_id(d) == replacement for d in directions):
                         raise ValueError("Choose an existing direction to replace")
                     directions = [d for d in directions if direction_id(d) != replacement] + [draft]
-                profiles = parse_audio_settings(settings.get("audio"), language=self.language).profiles
+                profiles = ({"narrator": profile} if settings.get("audio") is None and profile.engine == "openai-compatible"
+                            else parse_audio_settings(settings.get("audio"), language=self.language).profiles)
                 plan = build_speech_plan(text, profile, directions=directions, profiles=profiles,
-                                         chapter=payload["chapter"], project_config=settings)
+                                         chapter=payload["chapter"], project_config=settings, for_export=plan_only)
                 if payload["mode"] == "preview":
                     selected = payload.get("paragraph")
                     if not selected:
@@ -267,21 +385,36 @@ class SpeechRoutesMixin(ResponseMixin):
                     context["excerpt"] = (passage[:MAX_SEGMENT_CHARS].rstrip() + "…"
                                           if len(passage) > MAX_SEGMENT_CHARS else passage)
                     context["truncated"] = False
-                    if sum(len(row.text) for row in plan) > 6000:
+                    if not plan_only and sum(len(row.text) for row in plan) > 6000:
                         raise ValueError("Passage preview exceeds 6000 characters; render the chapter")
                 context["direction_sha256"] = view["direction_sha256"]
                 root = self.get_author_project_root()
                 if root is None:
                     raise ValueError("Open a manuscript project before using audio")
-                references = references_for_plan(root, plan)
                 if plan_only:
+                    timeline = timeline_json(plan)
+                    timeline["source"] = {"sha256": _digest, "mode": payload["mode"], "chapter": payload["chapter"]}
+                    try:
+                        exported = ssml_export(plan, default_lang=profile.language)
+                    except ValueError as exc:
+                        exported = {"ssml": None, "warnings": [{"code": "ssml_unavailable", "message": str(exc)}]}
+                    legacy_error = None
+                    try:
+                        legacy_plan = plan_json(plan)
+                    except ValueError as exc:
+                        legacy_plan = None
+                        legacy_error = str(exc)
                     self._json({
                         "ok": True,
-                        "plan": plan_json(plan),
-                        "ssml": plan_to_ssml(plan, default_lang=profile.language),
+                        "plan": legacy_plan,
+                        "legacy_plan_error": legacy_error,
+                        "timeline": timeline,
+                        "ssml": exported["ssml"],
+                        "export_warnings": exported["warnings"],
                         "context": context,
                     })
                     return
+                references = references_for_plan(root, plan)
                 binding = {name: payload[name] for name in ("project_token", "source_sha256")}
                 handler = type(self)
                 registry = getattr(self.server, "workspaces", None)
@@ -313,8 +446,7 @@ class SpeechRoutesMixin(ResponseMixin):
                     except (OSError, ValueError):
                         return False
 
-                cache_dir = (project_audio_cache(root) if root is not None and
-                             profile.engine in ("qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference") and payload["mode"] == "chapter" else None)
+                cache_dir = project_audio_cache(root) if root is not None and payload["mode"] == "chapter" else None
             reference_options = {"references": references} if references else {}
             job = self._speech_manager().start(key, prepared, profile, context, valid, cache_dir=cache_dir,
                                                fresh_audio=payload.get("fresh_audio", False),

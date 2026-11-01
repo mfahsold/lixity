@@ -6,7 +6,7 @@ window.LixitySpeechDirection = function(parent, h) {
   h.node("legend", section, "", h.label("direction_title"));
   var hint = h.node("p", section, "ctl-note", h.label("direction_hint")); hint.id = "speech-direction-hint";
   function setEngine(engine) {
-    hint.textContent = h.label(engine.startsWith("coqui") ? "direction_coqui_hint" : "direction_hint");
+    hint.textContent = h.label(engine === "openai-compatible" ? "direction_provider_hint" : engine.startsWith("coqui") ? "direction_coqui_hint" : "direction_hint");
   }
   var passage = h.field(section, "direction_passage", "select");
   var entries = h.field(section, "direction_entries", "select");

@@ -1347,44 +1347,64 @@ new archive schema or database authority is introduced.
 flowchart LR
     Manuscript[Manuscript structure and scenes] --> Planner[Shared speech planning & direction engine]
     Project[Project profiles, pronunciations and direction] --> Planner
-    Planner --> SSML[Standard W3C SSML & Timeline JSON]
-    Planner --> External[External OSS Audio/TTS Engines]
-    Planner --> Quality[Audio signal audit & reference inspection]
+    Planner --> Export[Timeline JSON and SSML projection]
+    Planner --> Provider[Explicit HTTP speech provider]
+    Planner --> Native[Existing optional native workers]
+    Provider --> Output[Normalized PCM, tempo, pauses and atomic output]
+    Native --> Output
+    Audio[Imported audio and optional timed transcript] --> Quality[Local signal and plan comparison]
+    Export --> Quality
 ```
 
 Lixity's audio architecture separates manuscript dramaturgy, phonetic
-lexicons and passage-level direction from raw audio synthesis. Lixity compiles
-the manuscript, character voice assignments, pronunciation substitutions and
-pause rhythm into standard interchange formats (W3C SSML via `plan_to_ssml` and
-structured timeline JSON via `plan_json`). This allows authors to direct prose
-in Lixity and feed the resulting plan to specialized external open-source TTS
-runtimes (such as OpenedAI Speech, Kokoro, Chatterbox, AllTalk or F5-TTS) without
-burdening Lixity with heavy deep-learning inference stacks.
+lexicons and passage-level direction from synthesis. **Unreleased:** the shared
+planner has an export mode that retains direction even when a synthesis adapter
+cannot honor it. `speech_export.py` produces `lixity-audio-timeline/1` and an SSML
+projection with explicit limitations. The existing `plan_json` contract remains
+`lixity-speech-plan/1`. Export reads neither reference audio nor API keys and
+does not probe providers. Planned silence is known; spoken durations and start
+times are unknown until measured. Substitution spans share the pronunciation
+matcher, preserving original text and replacement provenance.
 
-**Signal diagnostics and quality inspection:** `speech_reference_quality.py`
-provides standard-library descriptive measurements (sample rate, peak, clipping ratio,
-speech level, noise floor, bandwidth) to evaluate audio references and exported
-materials before final rendering.
+`speech_providers.py` adds a minimal explicit `/v1/audio/speech` HTTP client.
+Settings schema `/4` binds a provider URL, model, voice and optional environment
+variable name for authentication. HTTPS and local HTTP are accepted after URL
+validation; credentials in URLs, queries, fragments and redirects are rejected.
+Only rendering sends text or reads the key. There is no service discovery,
+automatic readiness request, model download or inference dependency. Bounded WAV
+responses are validated and, if necessary, normalized with FFmpeg to the shared
+mono 16-bit 24 kHz pipeline. Endpoint, model and adapter identity distinguish
+external cache entries; existing native cache identities stay unchanged.
+
+`audio_audit.py` reads chapter audio locally, computes level, clipping, DC offset
+and heuristic silence observations, and optionally compares the direction plan
+with an explicitly supplied timestamped transcript. The transcript must identify
+the exact original audio hash. Missing alignment evidence stays unknown;
+comparison is not speech recognition or a quality verdict. The existing
+`speech_reference_quality.py` remains a separate bounded voice-reference
+inspection API. Neither API edits audio or manuscripts.
 
 **Since v0.7.6:** `speech_profiles.py` owns strict project-only audio
 settings and engine capabilities. Existing root-only atomic settings updates
 persist `audio`; the CLI and native dialog share profile resolution and rendering
 controls. Version 0.7.7 supports Qwen3-TTS 1.7B CustomVoice, VoiceDesign and Base
-profiles. Qwen is the sole supported model family; synthesis requires a matching
-worker for the selected variant.
+profiles. Existing Qwen synthesis requires a matching worker for the selected
+variant. Unreleased Coqui and explicit external-provider paths extend that set;
+the native inference implementations remain available and are not removed by
+the export/provider change.
 In 0.7.7, the `speed` field is a post-synthesis FFmpeg `atempo` factor
 from 0.5 to 2.0, not native model rate control. Fresh implicit profiles use 1.2;
 previously saved explicit or omitted values retain 1.0 where applicable. Cached
 model segments remain unmodified and are tempo-adjusted before explicit silence
 is inserted. Delivery instructions do not establish an exact speaking rate. Ten
 explicit speech languages include six of the seven
-analysis languages; Dutch is unsupported. Explicit pronunciation substitutions
+analysis languages; Dutch is unsupported by the Qwen adapter. Explicit pronunciation substitutions
 do not edit source bytes. Optional inference dependencies remain outside the core
 installation.
 
 For Base, explicitly created immutable project-local reference records bind the
 exact PCM WAV and transcript to a content identity. The identity is checked when
-planning, rendering and accepting a job result, and participates in the raw audio
+preparing synthesis, rendering and accepting a job result, and participates in the raw audio
 cache key. References are private project data, not disposable cache; their bytes
 and transcripts are not returned by the plan. The Base worker accepts bounded
 reference data over the existing fixed transport and caches at most one prompt.
@@ -1419,7 +1439,9 @@ device, dtype, threads, attention, codec placement and chunk size without paths.
 Per-render `local|jetson` selection chooses fixed loopback ports 8769 or 8770.
 The latter is an operator-configured authenticated SSH forward; the remote worker
 remains loopback-only. Location is not part of portable project voice settings,
-and neither browser input nor project configuration can supply an inference URL.
+and these native target selectors cannot supply an inference URL. Explicit
+external profiles instead carry their validated provider URL; this choice is
+project configuration and is never inferred from manuscript text.
 
 `speech_migration.py` prepares explicit replacements for removed Piper profiles.
 The `lixity-audio-settings/1` wire version remains valid for existing Qwen records;
@@ -1525,8 +1547,8 @@ they are not SSML XML or portable acoustic parameters. The Qwen adapter retains
 its existing text/speaker/instruct interface. Backend capability limits remain
 explicit: natural-language delivery is probabilistic; silence is generated by
 Lixity; IPA, calibrated pitch/rate/emotion and native inline event tags are not
-implemented. No second engine, model download or implicit acting inference is
-introduced.
+implemented. Authored direction introduces no model download or implicit acting
+inference.
 
 Design sources checked 2026-10-28: [W3C SSML 1.1](https://www.w3.org/TR/speech-synthesis11/),
 [Qwen CustomVoice](https://github.com/QwenLM/Qwen3-TTS#custom-voice-generate),

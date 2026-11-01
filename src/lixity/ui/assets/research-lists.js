@@ -456,12 +456,6 @@ document.addEventListener("change", function(event) {
   if (event.target.id === "r-relation-retracted") refreshResearchClaimProjections();
 });
 document.addEventListener("click", function(event) {
-  if (event.target.id === "r-open-timeline") {
-    var claimsTab = document.querySelector('.research-tabs [data-rtab="claims"]');
-    if (claimsTab && !claimsTab.classList.contains("active")) claimsTab.click();
-    var timelineView = document.querySelector('[data-claim-view="timeline"]');
-    if (timelineView) timelineView.click();
-  }
   if (event.target.id === "r-find-passage") {
     researchEvidenceReview = reviewedEvidenceClaim();
     document.getElementById("r-search-scope").value = "sources";

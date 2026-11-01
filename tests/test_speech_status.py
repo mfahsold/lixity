@@ -109,3 +109,53 @@ def test_status_can_compare_unsaved_engine_override_without_project(monkeypatch)
     status = audio_status(engine='qwen3-design')
     assert status['comparison_engine'] == 'qwen3-design'
     assert [row['model_matches'] for row in status['targets']] == [False, True]
+
+
+@pytest.mark.parametrize('engine', [None, 'qwen3-design', 'openai-compatible'])
+def test_empty_schema4_status_has_no_selected_profile_or_invented_model(tmp_path, monkeypatch, engine):
+    from lixity.speech_status import audio_status
+
+    config = 'language = "nl"\n[audio]\nschema_version = "lixity-audio-settings/4"\nselected = ""\nprofiles = {}\n'
+    settings = tmp_path / 'lixity.toml'
+    settings.write_text(config)
+    probes = []
+
+    def probe(target):
+        probes.append(target)
+        return {'target': target, 'state': 'ready', 'transport': 'loopback' if target == 'local' else 'ssh',
+                'model': QWEN_MODEL if target == 'local' else QWEN_DESIGN_MODEL}
+
+    monkeypatch.setattr('lixity.speech_status.worker_health', probe)
+    status = audio_status(tmp_path, engine=engine)
+    assert status['project'] == {'root': str(tmp_path), 'selected_profile': None,
+        'settings_source': 'configured', 'profiles': [], 'profile_issue': 'speech_profile_unconfigured'}
+    assert status['comparison_engine'] == engine
+    assert settings.read_text() == config
+    if engine == 'openai-compatible':
+        assert probes == []
+        assert status['targets'][0]['configured'] is False
+        assert status['targets'][0]['model'] is None
+        assert status['targets'][0]['model_matches'] is None
+    else:
+        assert sorted(probes) == ['jetson', 'local']
+        assert [row['model_matches'] for row in status['targets']] == (
+            [False, True] if engine == 'qwen3-design' else [None, None])
+
+
+@pytest.mark.parametrize('engine', [None, 'qwen3-design', 'openai-compatible'])
+def test_cli_status_json_accepts_unconfigured_schema4_project(tmp_path, monkeypatch, capsys, engine):
+    from lixity.cli import main
+
+    (tmp_path / 'lixity.toml').write_text(
+        'language = "nl"\n[audio]\nschema_version = "lixity-audio-settings/4"\nselected = ""\nprofiles = {}\n')
+    monkeypatch.setattr('lixity.speech_status.worker_health', lambda target: {
+        'target': target, 'state': 'unavailable', 'transport': 'loopback', 'model': None})
+    args = ['audio-status', '--project', str(tmp_path), '--json']
+    if engine:
+        args.extend(['--engine', engine])
+    assert main(args) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data['project']['selected_profile'] is None
+    assert data['project']['profile_issue'] == 'speech_profile_unconfigured'
+    assert data['comparison_engine'] == engine
+    assert all(row['model_matches'] is None for row in data['targets'])

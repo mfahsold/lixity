@@ -217,6 +217,9 @@ def settings_form(
     parts.extend([
         '</select>',
         f'<p id="flag-severity-help">{translated("help_flag_min_severity")}</p></div>',
+        '</div>',
+        '<div class="settings-actions">',
+        f'<button type="button" class="ctl" id="settings-reset">{translated("reset_thresholds")}</button>',
         '</div></details>',
         checkbox_field(
             '<input type="checkbox" id="set-save-analysis-defaults" '
@@ -227,15 +230,14 @@ def settings_form(
         '<p class="ctl-note" id="save-analysis-defaults-help">'
         f'{translated("settings_save_analysis_hint" if author_setting_enabled and project_token else "settings_save_analysis_unavailable")}</p>',
         '</fieldset>',
-        *publication_parts,
         register_editor(labels, register_settings or {}, editable=author_setting_enabled and bool(project_token),
                         language_key=language_key or current_language),
+        *publication_parts,
         site_publication_editor(labels, site_publications if site_publications is not None else {},
                                 editable=author_setting_enabled and bool(project_token),
                                 context_token=site_publication_context_token),
         '<div class="settings-actions">',
         f'<button type="submit" class="ctl primary" data-action="settings" data-payload="settings">{translated("apply")}</button>',
-        f'<button type="button" class="ctl" id="settings-reset">{translated("reset_thresholds")}</button>',
         f'<span class="ctl-note">{translated("settings_apply_hint")}</span>',
         f'<span hidden id="settings-order-error">{translated("threshold_order")}</span>',
         '</div></form>',

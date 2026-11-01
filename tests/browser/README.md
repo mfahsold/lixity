@@ -5,6 +5,12 @@ with Chromium. FFmpeg creates synthetic media for the dossier-media suite;
 install `axe-core` as well to run the audio direction accessibility audit.
 Playwright and axe-core are optional tooling, not Lixity runtime dependencies.
 
+`audio-export.cjs` covers passage/chapter/manuscript JSON/SSML downloads,
+reviewed settings migration, configurable external profiles, synthetic HTTP
+speech responses, local recording/transcript comparison, export-only controls
+and first-time Dutch provider configuration at desktop/mobile widths. It never
+calls a real provider or uses private manuscript/audio fixtures.
+
 ```sh
 make browser          # everyday core surfaces (fast group, 3 workers)
 make browser-changed  # only the suites affected by modified git paths

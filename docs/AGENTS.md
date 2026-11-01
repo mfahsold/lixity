@@ -1573,6 +1573,92 @@ source/revision bytes, and supports interrupted-cleanup retry. Normal old-layout
 access fails with a migration requirement. Portable exports remain canonical
 `.json` transport and restore converts staging before publication.
 
+## External audio exchange and inspection (unreleased)
+
+`audio-export-plan --project PATH [--chapter N]` emits
+`lixity-audio-timeline/1`; add `--ssml` for the SSML projection. `read-aloud
+--timeline` and `--ssml` imply plan-only behavior, while `--plan-only` alone
+retains `lixity-speech-plan/1`. Export does not invoke synthesis, read local
+voice-reference bytes or inspect credential values. JSON retains effective
+spoken text and source/substitution provenance, direction, voice-profile choices
+and pause values. Unmeasured speech timing is null/unknown. SSML limitations are
+explicit; a provider voice name is not a portable voice identity, and free-form
+direction and reference recordings do not have a standard SSML equivalent.
+
+`lixity-audio-settings/4` adds `engine="openai-compatible"` with required
+`base_url`, `model`, `voice`, optional `api_key_env` and boolean
+`supports_instructions` (default false). `api_key_env` is an environment-variable
+name, never a secret value. Existing schemas `/1`–`/3` and native serialization
+remain valid; adding an external profile requires an explicit schema `/4`
+upgrade through `audio-migrate --to-schema-4` and the existing snapshot/backup
+apply contract. Retained references are not migrated or deleted.
+
+Only an explicit render sends a bounded JSON request to `/v1/audio/speech`.
+The payload is `model`, `input`, `voice`, `response_format="wav"`, plus
+`instructions` only with declared support. Model/voice values are not Qwen
+presets. Local reference identities and voice descriptions are unsupported and
+rejected for this adapter. HTTPS or explicitly configured localhost/private-IP
+HTTP is allowed; URL credentials, queries, fragments and redirects are rejected.
+The request timeout is 300 seconds and each response is limited to 32 MiB.
+No native identity headers are required. WAV normalization uses FFmpeg when the
+response is not mono 16-bit 24 kHz PCM. Missing decoders, invalid/truncated audio,
+HTTP failures and absent configured key variables fail explicitly, without
+returning credential values or provider response bodies. Provider readiness is
+`unknown` until rendering, even when configuration is valid.
+
+`audio-inspect FILE [--plan JSON] [--transcript JSON] [--language CODE]` and
+`audio-verify FILE --plan JSON [--transcript JSON] [--language CODE]` return
+`lixity-audio-audit/1`. Audio and JSON are read locally; no speech recognizer runs.
+The audit contains `audio`, `signal`, `alignment` and `pauses`. Signal metrics
+preserve channel observations. Text comparison is `compared`, not `verified`;
+missing transcript evidence is unknown. Supplied `lixity-audio-transcript/1`
+has exact `audio_sha256`, `words` entries `{text,start,end}`, and optional
+`model`. Each entry is one token in the selected language, with ordered,
+nonoverlapping finite second timestamps within the recording. Wrong hashes
+and malformed timing fail. Missing expected words have no invented timestamp;
+neighboring transcript timings only provide bounds. An inter-word gap is not
+necessarily silence. See [Usage](USAGE.md#audio-export-and-external-providers-unreleased),
+[Methods](METHODS.md) and [Stability](STABILITY.md) for limits.
+
+The native `POST <prefix>/speech-plan` response keeps `plan` and adds `timeline`,
+`ssml` and `export_warnings`. `mode="manuscript"` is export-only and does not
+select a chapter; preview and chapter scopes retain their source binding.
+The timeline includes the source SHA-256 and requested scope. If the legacy
+render plan cannot represent export text, `plan` is null with `legacy_plan_error`;
+the complete timeline remains available. Invalid XML text or an unsupported
+SSML language tag yields null `ssml` and an `ssml_unavailable` warning without
+discarding the JSON timeline.
+Warnings use stable codes such as `voice_binding_required`,
+`unsupported_instructions`, `rate_is_advisory` and
+`pronunciation_markup_unavailable`. CLI SSML output stays on stdout; limitation
+messages go to stderr. Timeline segment `start_seconds`, `end_seconds` and
+`duration_seconds` are null with a reason. `substitutions` address original spoken
+projection text with Unicode-codepoint offsets, not raw Markdown byte offsets.
+
+`POST <prefix>/audio-audit` accepts the usual `project_token` and `source_sha256`,
+base64 `audio`, a `filename` supplying only its supported extension, `mode`
+(`chapter` or `manuscript`), a chapter when applicable, optional draft `profile`,
+boolean `ignore_direction` and optional parsed `transcript`. With a transcript it
+builds the plan from the current project source; signal-only inspection needs no
+voice profile. It audits a temporary upload, rechecks source/settings/direction
+context and returns `{ok,audit}`. It does not retain the uploaded audio or transcript.
+The browser limits audio to 96 MiB and transcript JSON to 8 MiB; larger bounded
+jobs use the CLI. No arbitrary server file path or browser-supplied prose is an
+audit input.
+
+`POST <prefix>/audio-schema` previews schema `/4` with the usual source/project
+binding and returns `{ok,migration}`. Apply additionally requires `apply=true`
+and the exact preview `snapshot`. It writes a new private configuration backup
+under `$XDG_DATA_HOME/lixity/audio-backups` (default `~/.local/share`), performs
+the existing guarded migration, and returns its backup path. It neither replaces
+native profile identities nor edits retained source/reference bytes.
+Schema upgrade previews include `source_schema`, `retained_profile_count`,
+`creates_default_profile` and `configuration_required`. Schema `/4` permits
+only the explicit unconfigured pair `selected=""`, `profiles={}` when no voice
+has been chosen; older schemas retain their nonempty-profile invariant.
+Unconfigured projects require a profile before export/render. Explicit external
+CLI or HTTP draft profiles do not need a valid implicit native narrator.
+
 ## Native speech
 
 `audio` is a project-only setting with schema `lixity-audio-settings/1`, selected
@@ -1598,7 +1684,7 @@ Current main additionally accepts schema `lixity-audio-settings/2`, which adds
 optional project-wide `pronunciations`. Each profile's same-key entries override
 the project map when a speech plan is compiled; profile settings remain raw.
 Matching defaults to case-sensitive literal substitution, including within words.
-Only `/2` accepts optional `pronunciation_matching` with boolean `case_sensitive`
+Schemas `/2`–`/4` accept optional `pronunciation_matching` with boolean `case_sensitive`
 (default true) and `whole_words` (default false), applying to both project and
 profile terms. Case-insensitive matching follows Python Unicode regex semantics;
 regex-equivalent distinct keys within an effective profile are rejected. Whole
@@ -1662,16 +1748,17 @@ configuration error), backend capabilities and source chapter bounds. A
 model-interpreted delivery and explicit silence, and reports unsupported
 phonemes, SSML and precise rate. It describes the Lixity adapter rather than
 promising model compliance. Existing speech-plan version 1 remains unchanged.
-On current main, the additive `workers` list gives a point-in-time probe for
+For native profiles, the additive `workers` list gives a point-in-time probe for
 `local` and `jetson`, in that order. Each entry contains `target`, `state`
 (`ready`, `starting` or `unavailable`), `transport` (`loopback` or `ssh`),
-`model` (an allowlisted Qwen checkpoint name or null) and `model_matches`
+`model` (an allowlisted native model name or null) and `model_matches`
 (always null in this endpoint because it does not supply a comparison model).
 The native UI compares the returned model with the currently selected profile;
 unknown identities stay unknown. A snapshot does not guarantee future readiness,
 and the UI does not switch or download a worker. After validating the workspace,
 the server probes both targets concurrently outside the workspace lock, with a
-1.5-second timeout per target.
+1.5-second timeout per target. For a selected external profile, the list instead
+contains the configured provider with unknown readiness and no network probe.
 The strict `requires_migration` boolean identifies retained Piper profiles: normal settings
 saves cannot replace them, and the dialog disables replacement controls until
 explicit migration. Unrelated settings saves remain available.
@@ -1797,14 +1884,17 @@ POST `<prefix>/speech-plan` accepts the existing render scope and returns
 `ok`, `plan`, `context` without inference, a job, audio caching or file creation.
 The plan uses `lixity-speech-plan/1`, with effective text/profile/pauses/anchor per
 segment and explicit model-interpreted/exact-silence/unsupported capabilities.
-On current main, POST `<prefix>/speech-plan` also returns `ssml` containing W3C-compliant
-SSML (`<speak>`, `<voice>`, `<prosody>`, `<break>`), and `read-aloud --plan-only --ssml`
-outputs the formatted markup directly to stdout for consumption by external pipelines.
+On unreleased main, POST `<prefix>/speech-plan` also provides the exchange
+timeline and SSML projection with explicit limitations. Export supports passage,
+chapter and manuscript scope; render remains preview/chapter. `read-aloud --ssml`
+outputs markup directly to stdout without synthesis; `--timeline` outputs the
+exchange JSON. The existing `plan` field retains its version 1 contract.
 
 Render/plan accept `draft_direction` and optional original `draft_replace_id`
 only for preview, never chapter output;
 `ignore_direction` is an optional strict boolean for an explicit baseline.
-No browser-supplied synthesis text, filename or inference URL is accepted.
+No browser-supplied synthesis text or manuscript filename is accepted. External
+provider URLs belong only to validated, explicitly selected profile bindings.
 Saving direction changes its ledger snapshot and makes pending/completed jobs
 from the old snapshot stale. Profile-only drafts and per-render hardware targets
 remain distinct. CLI `--no-direction` ignores saved direction for that render,

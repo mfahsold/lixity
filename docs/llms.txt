@@ -74,6 +74,10 @@ inspection does not save a link or rewrite text. Current entries and explicitly
 linked earlier versions remain distinct. Project inspection observes bounded
 metadata; it does not establish output provenance or archive integrity.
 
+Unreleased UI refinements group reading, analysis, research capture and audio
+export actions by task. Shorter help retains the same measurement boundaries;
+analysis algorithms and public command/JSON contracts are unchanged.
+
 Research requires an initialized, explicitly selected project. Its usage guide
 owns available commands; RFC command sketches are not executable contracts.
 The Zotero bridge is read-only and captures selected eligible attachments with
@@ -135,14 +139,28 @@ metadata in `.lixity/audio-directions.json`. `audio-direction inspect` is read-o
 save/remove require source/settings/ledger snapshots. `read-aloud --plan-only`
 and native preview inspection expose the shared effective speech plan without
 inference. CustomVoice and VoiceDesign interpret local direction; Lixity generates exact silence.
+Unreleased audio exchange adds `audio-export-plan` (timeline JSON by default,
+`--ssml` for an SSML projection). `read-aloud --ssml`/`--timeline` never synthesize;
+`--plan-only` alone preserves the existing speech-plan contract. JSON retains
+source/substitution provenance, direction and pause values; actual speech timing
+is unknown before synthesis. SSML has explicit portability limitations.
+Explicit `openai-compatible` profiles in settings schema `/4` use a configured
+HTTP speech endpoint, model, voice and optional API-key environment-variable name.
+Only rendering sends prose or reads the key; provider readiness stays unknown
+without a render. Existing native profiles/workers/references remain supported.
+Schema upgrades require the reviewed backup transaction. `audio-inspect` reads
+local WAV/FLAC/MP3; `audio-verify` compares an exported plan with an optional
+audio-hash-bound timestamped transcript. No recognizer runs, missing evidence
+stays unknown, and comparisons do not certify correctness or audio quality.
+
 Current main adds `audio-direction add` with chapter and source line and guarded
 automatic snapshots. Audio settings `/2` optionally add project-wide pronunciation
 rules, profile overrides and explicit whole-word/case-insensitive matching;
 version 0.7.7 cannot read `/2` and existing `/1` settings keep their behavior.
-This is not SSML/IPA support, native inline emotion tags or a new audio backend.
+Native text substitutions are not IPA phonemes or inline emotion tags.
 Shared `control_support` describes actual Qwen adapter capabilities: literal
 spoken-form substitutions, model-interpreted direction and explicit silence;
-phonemes, SSML and precise rate are not implemented.
+native phonemes, native SSML rendering and precise model rate are not implemented.
 Version 0.7.7 can apply a 0.5–2.0 FFmpeg tempo factor to synthesized speech,
 without changing explicit pauses or cached raw audio. `read-aloud --speed`
 overrides all profile rates for one run. New implicit profiles default to 1.2;

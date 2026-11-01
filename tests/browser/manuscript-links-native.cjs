@@ -302,6 +302,8 @@ server.serve_forever()
       }
       await page.locator('#style-layer').selectOption('asl');
       await page.locator('#analysis-evidence-enabled').check();
+      // Mobile controls can scroll all prose offscreen; evidence is viewport-scoped.
+      await paragraph.scrollIntoViewIfNeeded();
       await expect.poll(() => page.evaluate(() => CSS.highlights.get('lixity-analysis-evidence')?.size || 0)).toBeGreaterThan(0);
       assert.equal(await paragraph.locator('mark.manuscript-claim-hit').evaluate(node => getComputedStyle(node).borderBottomStyle), 'dotted',
         'Saved research stays distinct when counted-text analysis is enabled');

@@ -1,9 +1,9 @@
-"""Create local listening copies with stable delivery and structural pauses.
+"""Create listening copies through explicit providers with structural pauses.
 
 Statistical measurements and words in the manuscript do not establish an
 actor's intention. Use one explicit profile throughout a render; headings,
-sentences, paragraphs and scene breaks supply the pause structure. Qwen3-TTS
-CustomVoice provides the selected preset throughout a render.
+sentences, paragraphs and scene breaks supply the pause structure. Native
+workers and configured external providers share the same output pipeline.
 """
 
 from __future__ import annotations
@@ -108,7 +108,7 @@ def _observe_speech_segment(index: int, total: int, profile: AudioProfile,
     """Track timings and selected controls without recording text or paths."""
     logger = get_logger("speech")
     diagnostic_id = speech_diagnostic_id()
-    engine = profile.engine if profile.engine in ("qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference") else "unknown"
+    engine = profile.engine if profile.engine in ("qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "openai-compatible") else "unknown"
     voice = profile.voice if profile.voice in (*QWEN_VOICES, "design", "reference", "thorsten") else "unknown"
     language = profile.language if profile.language in QWEN_LANGUAGES else "unknown"
     has_instruction = "true" if profile.instructions else "false"
@@ -377,7 +377,7 @@ def render_speech_audio(
                else resolve_audio_profile(None, language=language))
     language = profile.language
     if target not in ("local", "jetson"):
-        raise ValueError("Unknown Qwen execution target")
+        raise ValueError("Unknown speech execution target")
     source = Path(manuscript_path).expanduser().resolve()
     output = Path(output_path).expanduser().resolve()
     if not source.is_file():
@@ -393,6 +393,10 @@ def render_speech_audio(
         source.read_text(encoding="utf-8"), profile, chapter=chapter, skip_markers=skip_markers)
     if not any(cue.text for cue in cues):
         raise ValueError("No spoken text in the selected chapter")
+    for cue in cues:
+        AudioProfile.model_validate(cue.profile.model_dump())
+    if target != "local" and any(cue.text and cue.profile.engine == "openai-compatible" for cue in cues):
+        raise ValueError("External speech uses its configured provider URL, not the Jetson execution target")
     from .speech_references import validate_reference
     for reference_id in {cue.profile.reference_id for cue in cues
                          if cue.text and cue.profile.engine in ("qwen3-base", "coqui-reference")}:
@@ -411,8 +415,8 @@ def render_speech_audio(
         from .speech_cache import SpeechSegmentCache
 
         segment_cache = SpeechSegmentCache(Path(cache_dir))
-    # One target serves one model variant. A mixed plan can still succeed if
-    # all missing segments use the same variant and the rest are cached.
+    # One native target serves one model variant. External segments have their
+    # own bindings; only uncached native variants compete for that worker.
     if len({cue.profile.engine for cue in cues if cue.text}) > 1:
         missing_engines: set[str] = set()
         for cue in cues:
@@ -421,13 +425,14 @@ def render_speech_audio(
                 continue
             cached = None if fresh_audio or segment_cache is None else segment_cache.get(cue.text, cue.profile)
             if cached is None:
-                missing_engines.add(cue.profile.engine)
+                if cue.profile.engine != "openai-compatible":
+                    missing_engines.add(cue.profile.engine)
                 if len(missing_engines) > 1:
                     raise ValueError("The audio plan needs multiple uncached model variants; one worker serves "
                                      "one model. Choose profiles using the same model or reuse previously "
                                      "cached segments")
     total = sum(bool(cue.text) for cue in cues)
-    requested_engines = sorted({cue.profile.engine if cue.profile.engine in ("qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference") else "unknown"
+    requested_engines = sorted({cue.profile.engine if cue.profile.engine in ("qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "openai-compatible") else "unknown"
                                 for cue in cues if cue.text})
     cache_mode = "disabled" if segment_cache is None else "fresh" if fresh_audio else "enabled"
     get_logger("speech").info("event=render_plan id=%s target=%s requested_engines=%s segments=%d cache_mode=%s output_format=%s",
@@ -477,13 +482,18 @@ def render_speech_audio(
                     diagnostic["cache"] = ("disabled" if segment_cache is None else "fresh" if fresh_audio else
                                            "hit" if data is not None else "miss")
                     if data is None:
-                        data = (synthesize_qwen(cue.text, effective, target=target,
-                                               reference=(references or {})[effective.reference_id])
-                                if effective.engine in ("qwen3-base", "coqui-reference") else
-                                synthesize_qwen(cue.text, effective, target=target))
+                        if effective.engine == "openai-compatible":
+                            from .speech_providers import synthesize_external
+
+                            data = synthesize_external(cue.text, effective)
+                        else:
+                            data = (synthesize_qwen(cue.text, effective, target=target,
+                                                   reference=(references or {})[effective.reference_id])
+                                    if effective.engine in ("qwen3-base", "coqui-reference") else
+                                    synthesize_qwen(cue.text, effective, target=target))
                         params, frames = _read_pcm(data)
                         if params != (1, 2, rate):
-                            raise ValueError("Unexpected Qwen audio format")
+                            raise ValueError("Unexpected synthesized audio format")
                         _check_cancelled(cancelled)
                         if segment_cache is not None:
                             segment_cache.put(cue.text, effective, data)

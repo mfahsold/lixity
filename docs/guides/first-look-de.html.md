@@ -46,19 +46,15 @@ Quellenpassage, Behauptung und kreative Entscheidung sind getrennte Einträge. E
 
 Der Prüfschritt ist gelungen, wenn sich der Unterschied am Text erklären lässt. Dafür sind weder alle Messgrößen noch eine „Korrektur“ nötig. Das kurze Beispiel demonstriert den Arbeitsgang, nicht die statistische Zuverlässigkeit für jedes Manuskript.
 
-## Das Studiomonitor-Prinzip: Warum Lixity deinen Text nicht glättet
+## Hinweise zum Lesen, keine Schreibziele
 
-Lixity ist für Autorinnen, Autoren und Lektorat das Äquivalent zu einem **hochauflösenden Studiomonitor in der Tontechnik**:
+Lixity zeigt Muster, die du im Zusammenhang prüfen kannst. Eine Wiederholung, eine kurze Satzfolge oder ein Wechsel der Zeitform kann beabsichtigt sein. Die Entscheidung über den Text bleibt bei dir.
 
-- Ein Studiomonitor lässt Musik nicht automatisch gefälliger klingen. Er deckt Phasenverschiebungen, Resonanzspitzen und Knackser unbestechlich auf – damit die Ohren entscheiden können, ob eine Verzerrung gewolltes Stilmittel (Röhrenwärme, Overdrive) oder ein handwerklicher Fehler ist.
-
-- **Gefahr der sterilen Glättung vermeiden:** Literatur lebt von gewollten Regelbrüchen, von gezielter Redundanz, von Stauungen und rhythmischen Stolpersteinen. Wer jede Markierung abarbeitet wie eine Checkliste im Flugzeugcockpit, glättet die eigene Erzählstimme tot. Lixity ist ein diagnostischer Spiegel, niemals eine Zensurbehörde.
-
-- **Wann Lixity hilft (und wann es ausgeschaltet bleibt):** Im ersten Rohentwurf bleibt die Analyse am besten ausgeschaltet (`Analyse Aus`). Der schöpferische Fluss braucht Rausch, Trance und Unvernunft. Seine volle Stärke entfaltet Lixity in der Überarbeitungsphase (zweite bis vierte Fassung), um unbewusste Wortechos, Tempussprünge und Registerbrüche aufzudecken.
-
-- **Figurenstimme vs. Erzählstimme:** Wenn eine Figur bildungsfern spricht, stottert, Dialekt verwendet oder in Rage gerät, schlagen Satzlängen- und Grammatikmetriken aus. Das ist kein Mangel, sondern Figurenzeichnung. Lixity isoliert Redespannen deshalb getrennt von der Erzählstimme.
+Tempushinweise beruhen auf Wortmustern und sind keine grammatische Prüfung: Auch Infinitive, Hilfsverben, Zitate und Rückblicke können Hinweise auslösen. Der Anteil von Text in erkannten Anführungszeichen ist keine vollständige Erkennung von Dialog oder Figurenstimmen. Mehr zu [Markierungen und ihren Grenzen](interpretation.html#analysis-marks).
 
 ## Mit einem eigenen Manuskript arbeiten
+
+**Noch unveröffentlicht:** Unter **Projekt → Audioexport und Aufnahmen → Regie exportieren** wählst du eine Textstelle, ein Kapitel oder das ganze Manuskript. **Exportvorschau öffnen** bereitet die Downloads als JSON und SSML vor. Dafür ist kein Sprachdienst nötig. JSON erhält Stimmen und Regie; SSML nennt Grenzen der Übertragbarkeit. Im getrennten Bereich **Audio erzeugen** startest du die Vertonung mit einem eingerichteten Sprachdienst. Externe WAV-, FLAC- oder MP3-Aufnahmen lassen sich lokal prüfen; der Textvergleich benötigt zusätzlich ein zeitlich zugeordnetes Transkript. Die [Audioanleitung](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#audio-export-and-external-providers-unreleased) beschreibt Einrichtung und Dateiformate.
 
 Der Manuskriptimport unterstützt Markdown (`.md`, `.markdown`) und reinen Text (`.txt`). Word/DOCX- oder Scrivener-Dokumente müssen vorher konvertiert werden. PDFs lassen sich getrennt als Recherchequellen aufnehmen.
 

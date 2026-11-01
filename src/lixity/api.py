@@ -475,8 +475,22 @@ def about() -> dict[str, Any]:
             },
             {
                 "name": "read-aloud",
-                "purpose": "synthesize spoken audio with explicit project profiles using local Qwen3-TTS 1.7B CustomVoice",
+                "purpose": "render explicit project direction through configured speech providers, or export without synthesis",
                 "output": "audio",
+                "export_formats": ["lixity-speech-plan/1", "lixity-audio-timeline/1", "ssml-1.0"],
+            },
+            {
+                "name": "audio-export-plan", "purpose": "export source-bound direction without synthesis or reference recordings",
+                "output": "json-or-ssml", "schema_version": "lixity-audio-timeline/1",
+            },
+            {
+                "name": "audio-inspect", "purpose": "read-only local diagnostics for an explicit WAV, FLAC or MP3 file",
+                "output": "json", "schema_version": "lixity-audio-audit/1",
+            },
+            {
+                "name": "audio-verify", "purpose": "compare a direction plan with externally transcribed, timestamped audio; no built-in recognition",
+                "output": "json", "schema_version": "lixity-audio-audit/1",
+                "transcript_schema_version": "lixity-audio-transcript/1",
             },
             {
                 "name": "audio-migrate",

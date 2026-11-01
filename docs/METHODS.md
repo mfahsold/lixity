@@ -790,6 +790,57 @@ a quality score and say nothing about transcript accuracy or voice identity.
 - A value that cannot be determined (for example for pure silence) is `null`
   with a note.
 
+## 13. Chapter audio audit (unreleased)
+
+`audio-inspect` and `audio-verify` use `audio_audit.py` and emit
+`lixity-audio-audit/1`. These are descriptive signal measurements and an optional
+comparison against externally supplied word-timing evidence, not speech
+recognition or a quality score. The separate voice-reference API above keeps its
+existing schema and formulas.
+
+For integer PCM of width $b$ bits, center unsigned 8-bit samples first and
+normalize each sample as $x=s/2^{b-1}$. Duration is frame count divided by sample
+rate. For each channel and across all channel samples:
+
+- Peak is $20\log_{10}(\max |x|)$ dBFS.
+- RMS level is $20\log_{10}(\sqrt{\frac{1}{N}\sum_{i=1}^{N}x_i^2})$ dBFS.
+- DC offset is $\frac{1}{N}\sum_{i=1}^{N}x_i$ in full-scale units.
+- Clipped-sample fraction counts samples at either integer endpoint,
+  $-2^{b-1}$ or $2^{b-1}-1$, divided by the number of samples.
+
+Aggregate RMS pools channel samples; channels are not averaged into a mono
+waveform, so opposite-polarity stereo does not cancel. A zero level is negative
+infinity dBFS, represented by `null` with an explicit limitation. Compressed or
+floating-point inputs are measured after decoding to integer PCM. Bandwidth and
+noise floor are unknown in this chapter audit, with reasons; it does not separate
+speech from background noise or infer a long-recording bandwidth limit.
+
+Silence is a level heuristic. Each approximately 20 ms window is silent only if
+every channel's RMS is at or below −50 dBFS. Consecutive qualifying windows form
+an interval when their duration is at least 0.1 seconds. Actual window duration
+is reported. The first 10,000 intervals are returned; total interval count and
+silent duration remain complete, and a truncation flag marks the omitted list.
+These thresholds are uncalibrated and do not classify natural pauses.
+
+Comparison requires a transcript tied by SHA-256 to the exact input audio bytes.
+Plan and transcript words use the explicitly selected language's word tokenizer,
+with NFC normalization and lowercase matching. `SequenceMatcher(autojunk=False)` compares
+token sequences after equal prefix/suffix trimming; its alignment is not a
+phonetic alignment or a minimum edit-distance guarantee. Coverage is matched
+expected tokens divided by all expected tokens. A transcript replacement or
+extra word uses its supplied timestamps; missing expected words have no measured
+timestamp and retain only neighboring bounds. No comparable tokens or missing
+transcript evidence yields unknown rather than a perfect score.
+
+For fully matching adjacent spoken segments with no intervening transcript
+words, observed pause is next first-word start minus preceding last-word end.
+Planned pause is the preceding segment's `pause_after`, the following segment's
+`pause_before`, and all pauses on intervening silence-only segments. Difference
+is observed minus planned seconds. Detected silence overlap is a separate value;
+when the interval list is truncated, overlap is unknown rather than understated.
+Comparison status is `compared`, not a claim that recording or transcript is
+correct.
+
 ## Where to plug new thresholds
 
 | Surface | Hook |

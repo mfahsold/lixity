@@ -198,6 +198,8 @@ print(json.dumps(documents))
         await expect(page.locator('#site-export-analysis-full')).not.toBeChecked();
         await page.locator('#site-export-analysis-language').check();
         if (locale === 'de') await page.locator('#modal-site-export').screenshot({path:path.join(artifacts, `website-analysis-de-${width}.png`)});
+        // Native selection focuses this control before hiding the checked option.
+        await page.locator('#site-export-mode').focus();
         await page.locator('#site-export-mode').selectOption('companion');
         await expect(page.locator('#site-export-analysis-options')).toBeHidden();
         await page.locator('#site-export-profile').selectOption('public');

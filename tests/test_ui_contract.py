@@ -240,6 +240,14 @@ class TestJsDomContract(unittest.TestCase):
         self.assertLess(html.index('id="analysis-sections"'), html.index('id="analysis-review"'))
         self.assertLess(html.index('id="analysis-sections"'), html.index('id="text-search"'))
 
+    def test_analysis_navigation_omits_unavailable_narrative_panels(self):
+        """An empty optional report must not create a dead navigation target."""
+        html = render_dashboard([], [], characters={"figures": []},
+                                pacing={"chapter_list": []}, showing={"chapter_list": []})
+        targets = re.findall(r'data-section-link="([^"]+)"', html)
+        for target in ("characters", "pacing", "showing"):
+            self.assertNotIn(target, targets)
+
 
     def test_analysis_section_nav_follows_the_registry(self):
         """The nav order and labels come from the central registry."""

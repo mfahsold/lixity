@@ -108,9 +108,15 @@ class TestLocalization(unittest.TestCase):
                             "help_research_init", "help_research_ingest", "help_research_search",
                             "help_research_dossier", "help_research_claim", "help_research_confidence",
                             "help_research_evidence", "help_research_passage", "help_research_relation",
-                            "help_research_decision", "help_research_deviation",
-                            "help_research_comparison"):
+                            "help_research_decision", "help_research_deviation"):
                     self.assertIn(labels[key], parser.help_texts, key)
+                comparison_help = labels["help_research_comparison"]
+                self.assertNotIn(comparison_help, parser.help_texts)
+                self.assertEqual(rendered.count(
+                    '<p class="ctl-note" id="research-comparison-help">'
+                    + escape(comparison_help) + '</p>'), 1)
+                self.assertEqual(parser.elements["r-ground-source-select"]["aria-describedby"],
+                                 "research-comparison-help")
                 self.assertEqual(parser.elements["r-claim-confidence"]["aria-label"],
                                  labels["research_confidence_field"])
                 self.assertEqual(parser.elements["r-link-relation"]["aria-label"],

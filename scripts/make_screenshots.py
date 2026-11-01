@@ -176,38 +176,6 @@ def build_research_demo(root: Path, project: Path) -> Path:
                           description="Does chapter 2's shorter rhythm fit its action? Read a passage, inspect the counted sentences and make your own judgment in this fictional, read-only project.",
                           language="en", preview_image=("screenshots/dashboard-dossier-image.png",
                               "Historical Hamburg map retained with source provenance in a research dossier"))
-    policy = (
-        '<style>'
-        '#example-context { margin-block: 1rem; }'
-        '.demo-quick-start { display: flex; align-items: center; justify-content: space-between; '
-        'gap: var(--space-3); margin-block: var(--space-2); padding: var(--space-2) var(--space-3); '
-        'border-inline-start: 3px solid var(--accent); background: var(--surface); }'
-        '.demo-quick-start-copy { min-width: 0; }'
-        '.demo-quick-start h2 { margin: 0 0 var(--space-1); font-size: var(--text-body); }'
-        '.demo-quick-start p { margin: 0; color: var(--fg-secondary); }'
-        '.demo-quick-start-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); flex-shrink: 0; }'
-        '.demo-install-banner { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); '
-        'padding: var(--space-2) var(--space-3); background: var(--surface-alt); border-radius: var(--radius-sm); '
-        'font-size: var(--text-small); border: 1px solid var(--border-subtle); margin-top: var(--space-2); }'
-        '.demo-install-banner code { font-family: var(--font-mono); font-size: 0.9em; background: var(--surface); '
-        'padding: 0.12rem 0.35rem; border-radius: var(--radius-xs); border: 1px solid var(--border-subtle); color: var(--fg-primary); }'
-        '.demo-install-banner .demo-install-link { margin-inline-start: auto; font-weight: 500; color: var(--accent); text-decoration: none; }'
-        '.demo-install-banner .demo-install-link:hover { text-decoration: underline; }'
-        '#demo-task-guide { margin-top: var(--space-1); }'
-        '#demo-task-guide summary { font-weight: 500; cursor: pointer; color: var(--accent); }'
-        '#demo-task-guide summary:hover { text-decoration: underline; }'
-        '.demo-feature-hints { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-2); margin-top: var(--space-2); }'
-        '.demo-feature-box { background: var(--surface); padding: var(--space-2); border-radius: var(--radius-xs); border: 1px solid var(--border-subtle); }'
-        '.demo-feature-box strong { display: block; margin-bottom: 0.2rem; font-size: var(--text-small); color: var(--fg-primary); }'
-        '.demo-feature-box p { font-size: var(--text-note); color: var(--fg-secondary); margin: 0; }'
-        '@media (max-width: 600px) { .demo-quick-start { align-items: stretch; flex-direction: column; '
-        'gap: var(--space-2); padding: var(--space-2); margin-block: var(--space-2); } '
-        '.demo-quick-start-actions { flex-wrap: wrap; gap: var(--space-1); } '
-        '.demo-quick-start-actions > .ctl { width: auto; min-height: 2rem; padding: .25rem .45rem; '
-        'font-size: var(--text-small); } '
-        '.demo-install-banner .demo-install-link { margin-inline-start: 0; width: 100%; } }'
-        '</style>'
-    )
     counter = _analytics_endpoint(root)
     counter_source = f" {counter}" if counter else ""
     site_code = counter.removeprefix("https://").split(".", 1)[0] if counter else None
@@ -218,7 +186,7 @@ def build_research_demo(root: Path, project: Path) -> Path:
                     'script-src \'self\' \'unsafe-inline\'; style-src \'unsafe-inline\'; '
                     f'img-src \'self\' data: blob:{counter_source}; '
                     'connect-src \'none\'; font-src data:; base-uri \'none\'; form-action \'none\'"/>')
-    document = document.replace("</head>", restrictions + head + policy + "</head>", 1)
+    document = document.replace("</head>", restrictions + head + "</head>", 1)
     pdf_links = [(f"warehouse-4-{layout}.pdf", label) for layout, label in (
         ("editor", "Editorial manuscript PDF"), ("book", "Reading manuscript PDF"),
         ("sheet", "Submission manuscript PDF"), ("report", "Analysis report PDF"),
@@ -239,7 +207,7 @@ def build_research_demo(root: Path, project: Path) -> Path:
         "No route or line of sight is calculated.",
         "These short synthetic chapters and language-dependent heuristics support human review; "
         "they are not a benchmark, calibration corpus or writing-quality verdict.",
-        f"Generated with Lixity {__version__}. This page cannot import, edit or save records.",
+        f"Generated from the development checkout (base version {__version__}). This page cannot import, edit or save records.",
     ]
     notice = (
         '<details class="panel" id="example-context" aria-labelledby="example-heading">'
@@ -259,8 +227,13 @@ def build_research_demo(root: Path, project: Path) -> Path:
                 '<a href="../guides/installation.html">Install the full local app</a>.</p></section></noscript>')
     document = _insert_notice(document, fallback)
     quick_start = (
-        '<section class="panel demo-quick-start" id="demo-quick-start" aria-labelledby="demo-quick-start-title">'
-        '<div class="demo-quick-start-copy"><h2 id="demo-quick-start-title">Why the short sentences?</h2>'
+        '<section class="panel" id="demo-quick-start" aria-labelledby="demo-quick-start-title">'
+        '<h2 id="demo-quick-start-title">Why the short sentences?</h2>'
+        '<p class="ctl-note">Development preview · Read a passage or explore its research.</p>'
+        '<div class="row">'
+        '<a class="ctl primary" href="#ch-2" data-jump="#ch-2" data-layer="asl">Inspect chapter 2</a>'
+        '<button class="ctl" type="button" data-switch-view="research">Explore research</button>'
+        '</div>'
         '<details id="demo-task-guide"><summary>Try one reading check</summary>'
         '<p>Does its shorter rhythm fit the action? No score tells you whether to rewrite.</p>'
         '<ol><li>Choose <strong>Inspect chapter 2</strong>. Read “A board moved. Mara turned.”</li>'
@@ -271,21 +244,7 @@ def build_research_demo(root: Path, project: Path) -> Path:
         'You may keep that contrast, or reread it for an unintended choppy effect.</li></ol>'
         '<p>The result is a reason to read, not a correction. '
         '<a href="../guides/installation.html">Try the same question with your own manuscript</a>.</p>'
-        '<div class="demo-install-banner">'
-        '<span><strong>Analyze your own manuscript locally:</strong></span>'
-        '<code>uv tool install lixity</code> <span aria-hidden="true">·</span> <code>lixity service start</code>'
-        '<a class="demo-install-link" href="../guides/installation.html">Install guide &amp; CLI commands →</a>'
-        '</div>'
-        '<div class="demo-feature-hints">'
-        '<div class="demo-feature-box"><strong>Studio monitor principle</strong><p>Lixity never flattens prose or writes generic AI text. It shows syntactic cadence, dialog ratio, and word echoes as neutral diagnostic signals.</p></div>'
-        '<div class="demo-feature-box"><strong>Split research dossier</strong><p>Explore customs logs, historical map coordinates, and photos linked directly to exact manuscript sentences via <em>Dossier alongside</em>.</p></div>'
-        '<div class="demo-feature-box"><strong>Local work, explicit sharing</strong><p>No account or manuscript upload is needed for local analysis. You choose optional connections, remote audio processing and the contents of shared exports.</p></div>'
-        '</div>'
-        '</details></div>'
-        '<div class="demo-quick-start-actions">'
-        '<a class="ctl primary" href="#ch-2" data-jump="#ch-2" data-layer="asl">Inspect chapter 2</a>'
-        '<button class="ctl" type="button" data-switch-view="research">Explore research</button>'
-        '</div></section>'
+        '</details></section>'
     )
     navigation_content = '<div id="workspace-navigation-content">'
     if document.count(navigation_content) != 1:

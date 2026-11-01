@@ -461,12 +461,17 @@ async function finish(page, errors, writes) {
           const controls = await page.locator('#manuscript-reader-controls').boundingBox();
           if (width === 320) assert.ok(controls.height <= 480 * .45 + 1,
             'Compact analysis leaves most of the short viewport available for manuscript prose');
+          const documentScroll = await page.evaluate(() => scrollY);
           for (const selector of ['#style-layer', '.reader-outlier-navigation', '.reader-evidence-toggle',
             '.reader-comparison-toggle', '#reader-settings > summary', '#reader-focus', '#workbench-overview-open',
             '#workspace-reader-toggle']) {
+            await page.locator(selector).evaluate(node => node.scrollIntoView({block:'nearest', inline:'nearest'}));
+            await settle(page);
             const box = await page.locator(selector).boundingBox();
             assert.ok(box && box.y >= controls.y - 1 && box.y + box.height <= controls.y + controls.height + 1,
-              `${selector} stays visible in compact localized reading controls: ${JSON.stringify({box, controls})}`);
+              `${selector} remains reachable within the compact controls: ${JSON.stringify({box, controls})}`);
+            assert.ok(Math.abs(await page.evaluate(() => scrollY) - documentScroll) <= 1,
+              'Reaching wrapped toolbar actions scrolls only the controls, preserving the manuscript position');
           }
           await page.screenshot({path: path.join(artifacts, `analysis-controls-${locale}-${width}.png`)});
           if (width === 320) await page.setViewportSize({width, height: 900});

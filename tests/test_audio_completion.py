@@ -11,10 +11,12 @@ import pytest
 from lixity.cli import _completion_scripts
 
 READ_FLAGS = {
+    "--ssml", "--timeline", "--base-url", "--model", "--api-key-env", "--supports-instructions",
     "--help", "--project", "-o", "--output", "--chapter", "--language", "--profile",
     "--plan-only", "--no-direction", "--engine", "--voice-description", "--reference-id", "--instructions", "--voice", "--speed", "--speech-target", "--no-audio-cache", "--fresh-audio", "--keep-markers", "--preview", "--preview-line", "--progress",
 }
 MIGRATION_FLAGS = {
+    "--to-schema-4",
     "--help", "--project", "--to-schema-3", "--replace", "--instructions", "--apply", "--backup", "--expected-snapshot",
 }
 LANGUAGES = {"zh", "en", "ja", "ko", "de", "fr", "ru", "pt", "es", "it"}
@@ -35,14 +37,19 @@ def bash_complete(tmp_path, *words):
     return set(result.stdout.split())
 
 
-@pytest.mark.parametrize(("command", "expected"), [("read-aloud", READ_FLAGS), ("audio-migrate", MIGRATION_FLAGS)])
+@pytest.mark.parametrize(("command", "expected"), [
+    ("read-aloud", READ_FLAGS), ("audio-export-plan", READ_FLAGS),
+    ("audio-migrate", MIGRATION_FLAGS),
+    ("audio-inspect", {"--help", "--plan", "--transcript", "--language", "--json"}),
+    ("audio-verify", {"--help", "--plan", "--transcript", "--language", "--json"}),
+])
 def test_bash_audio_commands_offer_only_their_actual_options(tmp_path, command, expected):
     assert bash_complete(tmp_path, "lixity", command, "--") == {flag for flag in expected if flag.startswith("--")}
 
 
 @pytest.mark.parametrize(("option", "expected"), [
     ("--language", LANGUAGES), ("--speech-target", {"local", "jetson"}), ("--voice", VOICES),
-    ("--engine", {"qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference"}),
+    ("--engine", {"qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "openai-compatible"}),
 ])
 def test_bash_qwen_values_match_supported_model_controls(tmp_path, option, expected):
     assert bash_complete(tmp_path, "lixity", "read-aloud", option, "") == expected
@@ -88,9 +95,10 @@ def test_bash_audio_output_paths_complete_existing_files(tmp_path, command, opti
 
 def zsh_arguments(command):
     script = _completion_scripts()[1]
-    branch = re.search(r"\n        " + re.escape(command) + r"\)\n(.*?)\n          ;;", script, re.S)
+    branch = next((body for names, body in re.findall(r"\n        ([a-z0-9|_-]+)\)\n(.*?)\n          ;;", script, re.S)
+                   if command in names.split("|")), None)
     assert branch is not None, f"Dedicated Zsh command branch missing: {command}"
-    arguments = shlex.split(branch[1].replace("\\\n", " "))
+    arguments = shlex.split(branch.replace("\\\n", " "))
     assert arguments.pop(0) == "_arguments"
     return arguments
 

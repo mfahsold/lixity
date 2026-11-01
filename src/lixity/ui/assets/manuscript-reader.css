@@ -14,6 +14,7 @@
   }
 }
 .reader-secondary-controls { display: none; }
+.reader-analysis-toggle-controls { display: inline-flex; align-items: center; gap: .35rem; }
 .reader-analysis-guide > summary { width: 2.75rem; min-height: 2.75rem; justify-content: center; padding: .4rem; }
 .reader-analysis-guide > summary::after { display: none; }
 .reader-analysis-guide .reader-settings-body { font-size: var(--text-small); }
@@ -60,11 +61,12 @@
 .reader-settings:not([open]) > .reader-settings-body { display: none; }
 .reader-analysis-controls { display: none; }
 .workbench-analysis:not(.reader-focus):not(.workbench-overview) .reader-analysis-controls { display: grid; }
-.reader-analysis-controls { flex: 1 1 100%; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-1) var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--line); }
+.reader-analysis-controls { flex: 1 1 100%; grid-template-columns: minmax(0, 1fr); align-items: center; gap: var(--space-1) var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--line); }
 .reader-analysis-controls .metric-layer-control { display: flex; align-items: center; gap: .5rem; min-width: 0; flex: 1 1 16rem; }
 .reader-analysis-controls .metric-layer-control > span { flex-shrink: 0; font-size: var(--text-note); color: var(--fg-secondary); }
 .reader-analysis-controls select { flex: 1 1 auto; width: 100%; min-width: 0; }
 .reader-analysis-switches { display: flex; grid-column: 1 / -1; flex-wrap: wrap; gap: .35rem .65rem; min-width: 0; align-items: center; margin-top: .15rem; }
+.reader-comparison-controls { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; min-width: 0; }
 .reader-outlier-navigation { display: inline-flex; align-items: center; gap: .25rem; }
 .reader-outlier-navigation .ctl { min-width: 32px; min-height: 32px; padding: .25rem .5rem; border-radius: var(--radius-sm); }
 .reader-outlier-navigation output { min-width: 4.5ch; text-align: center; color: var(--fg-secondary); font: var(--text-note)/var(--line-control) var(--font); font-variant-numeric: tabular-nums; font-weight: 500; }
@@ -196,7 +198,7 @@ body.lixity-workspace.reader-focus { padding-left: 1.5rem; }
   .reader-analysis-controls { padding-top: var(--space-1); }
   .reader-analysis-controls .metric-layer-control { position: relative; }
   .reader-analysis-controls .metric-layer-control > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .reader-analysis-switches { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-1) var(--space-2); }
+  .reader-analysis-switches { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-1) var(--space-2); align-items: start; }
   .reader-evidence-toggle, .reader-comparison-toggle { min-width: 0; gap: var(--space-1); line-height: var(--line-control); }
   .reader-evidence-toggle > span, .reader-comparison-toggle > span { min-width: 0; overflow-wrap: normal; }
   .manuscript-reading .chapter { padding: .5rem calc(var(--reader-action-gutter) + .5rem) 2rem .15rem; }
@@ -207,7 +209,7 @@ body.lixity-workspace.reader-focus { padding-left: 1.5rem; }
 }
 @media (hover: none) { .manuscript-reading .reader-paragraph-actions { opacity: .7; } }
 @media (pointer: coarse) {
-  .manuscript-reader-controls > button.ctl, .reader-settings > summary { min-height: 2.75rem; }
+  .manuscript-reader-controls > button.ctl, .reader-analysis-toggle-controls > button.ctl, .reader-settings > summary { min-height: 2.75rem; }
 }
 @media print {
   .manuscript-reader-controls, .reader-paragraph-actions, .manuscript-context-menu,
@@ -362,7 +364,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 }
 
 .workbench-surface-label { font-size: var(--text-control); color: var(--accent); padding: .4rem .6rem; border-left: 3px solid var(--accent); }
-.workbench-overview .reader-settings, .workbench-overview #reader-focus, .workbench-overview .reader-chapter, .workbench-overview .analysis-toggle, .workbench-overview .reader-analysis-guide, .workbench-overview #workspace-reader-toggle, .workbench-overview [data-context-tool="dossier"] { display: none !important; }
+.workbench-overview .reader-settings, .workbench-overview #reader-focus, .workbench-overview .reader-chapter, .workbench-overview .reader-analysis-toggle-controls, .workbench-overview #workspace-reader-toggle, .workbench-overview [data-context-tool="dossier"] { display: none !important; }
 .manuscript-reading .reader-preface:has(> .reader-heading):not(:has(.ptext, .reader-coverage)) { padding-top: .35rem; padding-bottom: .35rem; }
 .manuscript-reading .reader-preface:has(> .reader-heading):not(:has(.ptext, .reader-coverage)) > .reader-heading { margin: .5rem 0; }
 @media (max-width: 600px) {

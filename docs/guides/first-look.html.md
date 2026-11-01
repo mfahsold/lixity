@@ -80,6 +80,8 @@ Manuscript input supports Markdown (`.md`, `.markdown`) and plain text (`.txt`).
 
 [Install the local app](installation.html), then open your project or preview a manuscript import. Analysis runs on your computer. JavaScript enables the demo's interactive controls; manuscript text, tables, credits and PDF links remain readable without it.
 
+**Unreleased:** In the local app, **Project → Audio export and recordings → Export direction** prepares JSON and SSML for a passage, chapter or manuscript without contacting a speech service. JSON retains direction details; SSML reports controls it cannot carry portably. The separate **Generate audio** section uses a configured speech service. Locally inspecting an external recording can compare text only when a timestamped transcript for that recording is supplied. See the [audio guide](../USAGE.md#audio-export-and-external-providers-unreleased) for setup and limits.
+
 In the local app, open **Project** for a read-only overview of the selected manuscript, research folder and existing outputs. It inspects metadata without rebuilding analysis; output source and generation history remain unknown. The exported demo has no local project-folder view. [Project inspection and CLI](../USAGE.md#inspect-project-structure).
 
 Lixity is open source under AGPL-3.0-or-later. Writing and self-publishing need no extra permission; a separate written commercial license exists for closed-source integrations. See [licensing](../LICENSING.md).

@@ -464,6 +464,9 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("export-site", "Export a static read-only project website"),
     ("pdf", "Compose a PDF for editing, reading, submission or analysis"),
     ("read-aloud", "Create a local listening copy with project voice profiles"),
+    ("audio-export-plan", "Export manuscript direction as JSON timeline or SSML without synthesis"),
+    ("audio-inspect", "Inspect a chapter audio file locally (JSON; no speech recognition)"),
+    ("audio-verify", "Compare chapter audio with a direction plan and optional timestamped transcript (JSON)"),
     ("audio-status", "Inspect audio profiles and worker readiness"),
     ("audio-reference", "Create or inspect a private project-local voice reference (JSON)"),
     ("audio-direction", "Inspect and save project-local passage speech direction (JSON)"),
@@ -494,26 +497,34 @@ _lixity_complete() {
         return 0
     fi
     case "${COMP_WORDS[1]}" in
-        read-aloud)
+        read-aloud|audio-export-plan)
             case "$prev" in
                 --language) COMPREPLY=( $(compgen -W "zh en ja ko de fr ru pt es it" -- "$cur") ) ;;
                 --speech-target) COMPREPLY=( $(compgen -W "local jetson" -- "$cur") ) ;;
                 --voice) COMPREPLY=( $(compgen -W "Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee design reference thorsten" -- "$cur") ) ;;
-                --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design qwen3-base coqui coqui-reference" -- "$cur") ) ;;
+                --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design qwen3-base coqui coqui-reference openai-compatible" -- "$cur") ) ;;
                 --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
                 -o|--output) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
-                --profile|--instructions|--voice-description|--reference-id|--chapter|--preview-line|--speed) ;;
+                --profile|--instructions|--voice-description|--reference-id|--chapter|--preview-line|--speed|--base-url|--model|--api-key-env) ;;
                 *)
-                    COMPREPLY=( $(compgen -W "--help --project -o --output --chapter --language --profile --engine --instructions --voice --voice-description --reference-id --speed --speech-target --no-audio-cache --fresh-audio --keep-markers --plan-only --no-direction --preview --preview-line --progress" -- "$cur") )
+                    COMPREPLY=( $(compgen -W "--help --project -o --output --chapter --language --profile --engine --instructions --voice --voice-description --reference-id --speed --speech-target --no-audio-cache --fresh-audio --keep-markers --plan-only --ssml --timeline --base-url --model --api-key-env --supports-instructions --no-direction --preview --preview-line --progress" -- "$cur") )
                     COMPREPLY+=( $(compgen -f -- "$cur") )
                     ;;
+            esac
+            return 0
+            ;;
+        audio-inspect|audio-verify)
+            case "$prev" in
+                --plan|--transcript) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
+                --language) COMPREPLY=( $(compgen -W "en de fr es it pt nl generic" -- "$cur") ) ;;
+                *) COMPREPLY=( $(compgen -W "--help --plan --transcript --language --json" -- "$cur") ); COMPREPLY+=( $(compgen -f -- "$cur") ) ;;
             esac
             return 0
             ;;
         audio-status)
             case "$prev" in
                 --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
-                --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design qwen3-base coqui coqui-reference" -- "$cur") ) ;;
+                --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design qwen3-base coqui coqui-reference openai-compatible" -- "$cur") ) ;;
                 *) COMPREPLY=( $(compgen -W "--help --project --engine --json" -- "$cur") ) ;;
             esac
             return 0
@@ -548,7 +559,7 @@ _lixity_complete() {
                     fi
                     ;;
                 --instructions|--expected-snapshot) ;;
-                *) COMPREPLY=( $(compgen -W "--help --project --to-schema-3 --replace --instructions --apply --backup --expected-snapshot" -- "$cur") ) ;;
+                *) COMPREPLY=( $(compgen -W "--help --project --to-schema-3 --to-schema-4 --replace --instructions --apply --backup --expected-snapshot" -- "$cur") ) ;;
             esac
             return 0
             ;;
@@ -677,7 +688,7 @@ __LIXITY_ZSH_COMMANDS__
       ;;
     args)
       case $words[1] in
-        read-aloud)
+        read-aloud|audio-export-plan)
           _arguments \
             '1:manuscript:_files' \
             '--help[Help]' \
@@ -688,12 +699,18 @@ __LIXITY_ZSH_COMMANDS__
             '--language[Qwen speech language]:language:(zh en ja ko de fr ru pt es it)' \
             '--profile[Saved narrator profile]:profile:' \
             '--instructions[Explicit Qwen delivery instructions]:text:' \
-            '--engine[Speech model variant]:engine:(qwen3 qwen3-design qwen3-base coqui coqui-reference)' \
+            '--engine[Speech model variant]:engine:(qwen3 qwen3-design qwen3-base coqui coqui-reference openai-compatible)' \
             '--voice[Speech voice]:voice:(Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee design reference thorsten)' \
             '--voice-description[VoiceDesign description]:text:' \
             '--reference-id[Saved project reference]:id:' \
             '--speed[Postprocessing tempo factor]:speed:' \
             '--speech-target[Execution target]:target:(local jetson)' \
+            '--ssml[Export SSML without synthesis]' \
+            '--timeline[Export lossless JSON timeline without synthesis]' \
+            '--base-url[Explicit provider URL]:url:' \
+            '--model[External model identifier]:model:' \
+            '--api-key-env[Credential environment variable name]:name:' \
+            '--supports-instructions[Provider supports free-text instructions]' \
             '--plan-only[Inspect the effective speech plan without synthesis]' \
             '--no-direction[Explicitly ignore saved passage direction]' \
             '--preview[Preview the first spoken paragraph]' \
@@ -703,11 +720,20 @@ __LIXITY_ZSH_COMMANDS__
             '--fresh-audio[Recompute completed audio segments]' \
             '--keep-markers[Read editorial markers aloud]'
           ;;
+        audio-inspect|audio-verify)
+          _arguments \
+            '1:audio:_files' \
+            '--help[Help]' \
+            '--plan[Exported direction timeline]:file:_files' \
+            '--transcript[Timestamped transcript]:file:_files' \
+            '--language[Explicit analysis language]:language:(en de fr es it pt nl generic)' \
+            '--json[JSON output]'
+          ;;
         audio-status)
           _arguments \
             '--help[Help]' \
             '--project[Explicit project root]:directory:_files -/' \
-            '--engine[Compare a model variant]:engine:(qwen3 qwen3-design qwen3-base coqui coqui-reference)' \
+            '--engine[Compare a model variant]:engine:(qwen3 qwen3-design qwen3-base coqui coqui-reference openai-compatible)' \
             '--json[Machine-readable status]'
           ;;
         audio-reference)
@@ -744,6 +770,7 @@ __LIXITY_ZSH_COMMANDS__
             '--help[Help]' \
             '--project[Explicit project root]:directory:_files -/' \
             '--to-schema-3[Prepare audio schema upgrade for Coqui]' \
+            '--to-schema-4[Prepare audio schema upgrade for external providers]' \
             '*--replace[Explicit PROFILE=VOICE replacement]:profile=preset:' \
             '*--instructions[Explicit PROFILE=TEXT delivery]:profile=text:' \
             '--apply[Apply the reviewed candidate]' \
@@ -1422,10 +1449,16 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
 
     from .speech import render_speech_audio
     from .speech_cache import project_audio_cache
-    from .speech_profiles import AudioProfile, parse_audio_settings, resolve_audio_profile
+    from .speech_profiles import (
+        DEFAULT_PLAYBACK_SPEED,
+        AudioProfile,
+        parse_audio_settings,
+        resolve_audio_profile,
+    )
     from .speech_references import SpeechReference, references_for_plan, references_unchanged
 
     workspace = args._workspace
+    args.plan_only = args.plan_only or args.ssml or args.timeline
     preview = args.preview or args.preview_line is not None
     output = args.output or os.path.join(
         workspace.root,
@@ -1439,27 +1472,49 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
         return EXIT_ERROR
 
     try:
-        profile = resolve_audio_profile(args._project_config, args.profile, language=args.language)
-        changes = profile.model_dump()
+        raw_audio = args._project_config.get("audio")
+        saved_audio = parse_audio_settings(raw_audio, language=args.language) if raw_audio is not None else None
+        external_bootstrap = args.engine == "openai-compatible" and (
+            (saved_audio is None and args.profile in (None, "narrator"))
+            or (saved_audio is not None and not saved_audio.profiles and args.profile is None)
+        )
+        previous_engine = None
+        if external_bootstrap:
+            # Validate the requested provider directly, without an unrelated native language gate.
+            changes = {"language": args.language, "speed": DEFAULT_PLAYBACK_SPEED}
+        else:
+            profile = resolve_audio_profile(args._project_config, args.profile, language=args.language)
+            changes = profile.model_dump()
+            previous_engine = profile.engine
         for name, value in (("engine", args.engine),
                             ("voice", args.voice),
                             ("voice_description", args.voice_description),
                             ("reference_id", args.reference_id),
                             ("instructions", args.instructions),
                             ("speed", args.speed),
+                            ("base_url", args.base_url),
+                            ("model", args.model),
+                            ("api_key_env", args.api_key_env),
+                            ("supports_instructions", args.supports_instructions),
                             ("language", getattr(args, "_speech_explicit_language", None))):
             if value is not None:
                 changes[name] = value
-        if args.engine == "qwen3-design" and args.voice is None and profile.engine != "qwen3-design":
+        if args.engine == "qwen3-design" and args.voice is None and previous_engine != "qwen3-design":
             changes["voice"] = "design"
-        if args.engine == "qwen3-base" and args.voice is None and profile.engine != "qwen3-base":
+        if args.engine == "qwen3-base" and args.voice is None and previous_engine != "qwen3-base":
             changes["voice"] = "reference"
         if args.engine in ("coqui", "coqui-reference") and args.voice is None:
             changes["voice"] = "reference" if args.engine == "coqui-reference" else "thorsten"
-        if args.engine in ("qwen3", "qwen3-base", "coqui", "coqui-reference") and profile.engine == "qwen3-design" and args.voice_description is None:
+        if args.engine and args.engine != "qwen3-design" and previous_engine == "qwen3-design" and args.voice_description is None:
             changes.pop("voice_description", None)
-        if args.engine in ("qwen3", "qwen3-design", "coqui") and profile.engine in ("qwen3-base", "coqui-reference") and args.reference_id is None:
+        if args.engine and args.engine not in ("qwen3-base", "coqui-reference") and previous_engine in ("qwen3-base", "coqui-reference") and args.reference_id is None:
             changes.pop("reference_id", None)
+        if args.engine and args.engine != "openai-compatible" and previous_engine == "openai-compatible":
+            for key in ("base_url", "model", "api_key_env", "supports_instructions"):
+                if getattr(args, key) is None:
+                    changes.pop(key, None)
+        if args.engine == "openai-compatible" and previous_engine != "openai-compatible" and args.voice is None:
+            raise ValueError("Choose an explicit --voice identifier supported by the external provider")
         if changes["engine"] not in ("qwen3-base", "coqui-reference") and args.reference_id:
             raise ValueError(_m("audio_reference_wrong_engine"))
         if changes["engine"] in ("qwen3-base", "coqui-reference"):
@@ -1470,7 +1525,7 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
                                     else "audio_base_instructions_explicit"))
         if changes["engine"] == "qwen3-design" and not changes.get("voice_description"):
             raise ValueError(_m("audio_design_description_required"))
-        if args.engine == "qwen3" and profile.engine != "qwen3" and args.voice is None:
+        if args.engine == "qwen3" and previous_engine != "qwen3" and args.voice is None:
             raise ValueError(_m("audio_custom_voice_required"))
         profile = AudioProfile.model_validate(changes)
         from .speech_direction import (
@@ -1478,9 +1533,9 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
             direction_snapshot,
             direction_state,
             plan_json,
-            plan_to_ssml,
             saved_directions,
         )
+        from .speech_export import ssml_export, timeline_json
         text, source_hash = FileUtils.read_source_snapshot(workspace.manuscript)
         view = None if args.no_direction else direction_state(workspace.root, workspace.manuscript, language=profile.language)
         if view is not None and view["source_sha256"] != source_hash:
@@ -1506,13 +1561,15 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
             return False
 
         check_context()
-        profiles = parse_audio_settings(args._project_config.get("audio"), language=profile.language).profiles
+        profiles = (saved_audio.profiles if saved_audio is not None else {"narrator": profile}
+                    if external_bootstrap else parse_audio_settings(None, language=profile.language).profiles)
         if args.speed is not None:
             profiles = {key: AudioProfile.model_validate({**item.model_dump(), "speed": args.speed})
                         for key, item in profiles.items()}
         plan = build_speech_plan(text, profile,
             directions=saved_directions(view) if view is not None else [], profiles=profiles,
-            chapter=args.chapter, project_config=args._project_config, skip_markers=not args.keep_markers)
+            chapter=args.chapter, project_config=args._project_config, skip_markers=not args.keep_markers,
+            for_export=args.plan_only)
         if preview:
             anchors = [row.anchor for row in plan if row.text and row.anchor]
             selected = next((anchor for anchor in anchors if args.preview_line is None or
@@ -1520,16 +1577,24 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
             if selected is None:
                 raise ValueError("No anchored paragraph or list item found at the selected line or chapter; quote blocks cannot currently be selected for preview")
             plan = [row for row in plan if row.anchor == selected]
-            if sum(len(row.text) for row in plan) > 6000:
+            if not args.plan_only and sum(len(row.text) for row in plan) > 6000:
                 raise ValueError("Passage preview exceeds 6000 characters; render the chapter")
-        references = references_for_plan(workspace.root, plan)
         if args.plan_only:
             check_context()
             if getattr(args, "ssml", False):
-                print(plan_to_ssml(plan, default_lang=profile.language))
+                exported = ssml_export(plan, default_lang=profile.language)
+                print(exported["ssml"])
+                for warning in exported["warnings"]:
+                    print(f"[export] {warning}", file=sys.stderr)
+            elif args.timeline:
+                timeline = timeline_json(plan)
+                timeline["source"] = {"sha256": source_hash, "mode": "preview" if preview else "chapter" if args.chapter else "manuscript",
+                                      "chapter": args.chapter}
+                print(_json(timeline, indent=True))
             else:
                 print(_json(plan_json(plan), indent=True))
             return EXIT_OK
+        references = references_for_plan(workspace.root, plan)
         render_options: dict[str, Any] = {"references": references} if references else {}
         out_path = render_speech_audio(
             manuscript_path=workspace.manuscript,
@@ -1939,9 +2004,16 @@ def _main(argv: list[str] | None = None) -> int:
             configure_service(sub.add_parser(name, help=help_text))
             continue
         p = sub.add_parser(name, help=help_text, description=help_text)
+        if name in ("audio-inspect", "audio-verify"):
+            p.add_argument("audio", help="WAV, FLAC or MP3 audio file (read-only)")
+            p.add_argument("--plan", required=name == "audio-verify", help="Exported JSON direction timeline")
+            p.add_argument("--transcript", help="Timestamped lixity-audio-transcript/1 JSON tied to this audio SHA-256")
+            p.add_argument("--language", default="en", help="Explicit tokenization language (default: en)")
+            p.add_argument("--json", action="store_true", help="JSON output (also the default)")
+            continue
         if name == "audio-status":
             p.add_argument("--project", help="Explicit project root; omit to inspect workers only")
-            p.add_argument("--engine", choices=("qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference"), help="Compare this model variant instead of the selected profile")
+            p.add_argument("--engine", choices=("qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "openai-compatible"), help="Compare this model variant instead of the selected profile")
             p.add_argument("--json", action="store_true", help="Machine-readable status")
             continue
         if name == "audio-reference":
@@ -1958,7 +2030,9 @@ def _main(argv: list[str] | None = None) -> int:
             continue
         if name == "audio-migrate":
             p.add_argument("--project", required=True, help="Explicit project root")
-            p.add_argument("--to-schema-3", action="store_true", help="Prepare a backed-up upgrade for Coqui profiles")
+            schemas = p.add_mutually_exclusive_group()
+            schemas.add_argument("--to-schema-3", action="store_true", help="Prepare a backed-up upgrade for Coqui profiles")
+            schemas.add_argument("--to-schema-4", action="store_true", help="Prepare a backed-up upgrade for external speech providers")
             p.add_argument("--replace", action="append", default=[], metavar="PROFILE=VOICE",
                            help="Explicit Qwen preset for each removed engine profile; repeat for multiple profiles")
             p.add_argument("--instructions", action="append", default=[], metavar="PROFILE=TEXT",
@@ -2077,7 +2151,7 @@ def _main(argv: list[str] | None = None) -> int:
                 default=None,
                 help="Minimum chapters required for a style baseline (default: 2)",
             )
-        if name not in ("motifs", "characters", "read-aloud"):
+        if name not in ("motifs", "characters", "read-aloud", "audio-export-plan"):
             _add_threshold_arguments(p)
         if name == "build":
             p.epilog = (
@@ -2135,7 +2209,7 @@ def _main(argv: list[str] | None = None) -> int:
             p.add_argument("--names", help="Comma-separated figure names (character panel)")
             p.add_argument("-o", "--output", help="HTML target file (default: lixity-dashboard.html)")
             continue
-        if name == "read-aloud":
+        if name in ("read-aloud", "audio-export-plan"):
             from .speech_profiles import QWEN_VOICES
 
             p.epilog = _m("audio_read_help")
@@ -2145,14 +2219,20 @@ def _main(argv: list[str] | None = None) -> int:
             p.add_argument("--language", default=None, help="Speech language code (default: saved profile, then project setting)")
             p.add_argument("--profile", default=None, help="Saved project audio profile (default: selected project profile)")
             p.add_argument("--plan-only", action="store_true", help="Inspect effective speech text and direction as JSON; no synthesis or output")
-            p.add_argument("--ssml", action="store_true", help="When using --plan-only, output W3C SSML instead of JSON")
+            exports = p.add_mutually_exclusive_group()
+            exports.add_argument("--ssml", action="store_true", help="Export W3C SSML; implies --plan-only; unsupported controls are reported on stderr")
+            exports.add_argument("--timeline", action="store_true", help="Export a lossless direction timeline as JSON; implies --plan-only")
+            p.add_argument("--base-url", help="Explicit OpenAI-compatible service URL; only contacted when rendering")
+            p.add_argument("--model", help="External provider model identifier")
+            p.add_argument("--api-key-env", help="Environment variable containing the provider credential (never the credential itself)")
+            p.add_argument("--supports-instructions", action="store_true", default=None, help="Declare that this external provider accepts delivery instructions")
             previews = p.add_mutually_exclusive_group()
             previews.add_argument("--preview", action="store_true", help="Preview the first anchored paragraph or list item")
             previews.add_argument("--preview-line", type=int, help="Preview the anchored paragraph or list item containing this source line")
             p.add_argument("--progress", action="store_true", help="Report segment progress and estimated remaining time to stderr")
             p.add_argument("--no-direction", action="store_true", help=_m("audio_no_direction_help"))
             p.add_argument("--instructions", default=None, help=_m("audio_instructions_help"))
-            p.add_argument("--engine", choices=("qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference"), default=None, help=_m("audio_engine_help"))
+            p.add_argument("--engine", choices=("qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "openai-compatible"), default=None, help=_m("audio_engine_help"))
             p.add_argument("--voice-description", default=None, help="VoiceDesign voice description")
             p.add_argument("--reference-id", default=None, help="Project-local Base voice reference identity")
             p.add_argument("--voice", default=None, help=_m("audio_voice_help", voices=", ".join(QWEN_VOICES)))
@@ -2161,6 +2241,8 @@ def _main(argv: list[str] | None = None) -> int:
             p.add_argument("--no-audio-cache", action="store_true", help="Render without reading or retaining reusable audio segments")
             p.add_argument("--fresh-audio", action="store_true", help="Recompute Qwen segments instead of reusing completed project audio")
             p.add_argument("--keep-markers", action="store_true", help="Read editorial markers aloud instead of omitting them")
+            if name == "audio-export-plan":
+                p.set_defaults(plan_only=True, timeline=True)
             continue
         if name == "serve":
             p.epilog = (
@@ -2279,6 +2361,8 @@ def _main(argv: list[str] | None = None) -> int:
                 "--sans-bold-font", default=None, help="TrueType file for report headings"
             )
     args = parser.parse_args(argv)
+    if args.command == "audio-export-plan":
+        args.command = "read-aloud"
     if args.command == "analysis-review":
         from .analysis_review import record_analysis_review, review_analysis
         from .format import safe_text
@@ -2369,6 +2453,18 @@ def _main(argv: list[str] | None = None) -> int:
         # argparse choices already rejected unknown shells; keep a defensive path
         print(f"{_m('err_prefix')} {_m('err_shell', shell=args.shell)}", file=sys.stderr)
         return EXIT_ERROR
+    if args.command in ("audio-inspect", "audio-verify"):
+        from .audio_audit import inspect_audio, load_audit_json
+        try:
+            result = inspect_audio(args.audio,
+                expected_plan=load_audit_json(args.plan) if args.plan else None,
+                transcript=load_audit_json(args.transcript) if args.transcript else None,
+                language=args.language)
+        except (OSError, ValueError, RuntimeError) as exc:
+            print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+            return EXIT_ERROR
+        print(_json(result, indent=True))
+        return EXIT_OK
     if args.command == "audio-reference":
         from .speech_qwen import MAX_REFERENCE_BYTES
         from .speech_reference_quality import assess_reference
@@ -2430,7 +2526,11 @@ def _main(argv: list[str] | None = None) -> int:
             print(_json({"ok": False, "message": str(exc)}, indent=True))
             return EXIT_ERROR
     if args.command == "audio-migrate":
-        from .speech_migration import prepare_audio_migration, prepare_schema3_migration
+        from .speech_migration import (
+            prepare_audio_migration,
+            prepare_schema3_migration,
+            prepare_schema4_migration,
+        )
 
         def pairs(values: list[str]) -> dict[str, str]:
             result: dict[str, str] = {}
@@ -2446,9 +2546,10 @@ def _main(argv: list[str] | None = None) -> int:
         if not args.apply and (args.backup or args.expected_snapshot):
             parser.error("Omit --backup and --expected-snapshot for a read-only preview")
         try:
-            if args.to_schema_3 and (args.replace or args.instructions):
+            if (args.to_schema_3 or args.to_schema_4) and (args.replace or args.instructions):
                 raise ValueError("Schema upgrade cannot be combined with profile replacements")
-            prepared = (prepare_schema3_migration(args.project) if args.to_schema_3 else
+            prepared = (prepare_schema4_migration(args.project) if args.to_schema_4 else
+                        prepare_schema3_migration(args.project) if args.to_schema_3 else
                         prepare_audio_migration(args.project, pairs(args.replace), instructions=pairs(args.instructions)))
             if args.apply and args.expected_snapshot != prepared.snapshot:
                 raise ValueError("Migration snapshot changed; prepare and review the migration again")

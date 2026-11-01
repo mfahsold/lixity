@@ -241,8 +241,12 @@ def help_term(
 ANALYSIS_SECTIONS: tuple[tuple[str, str], ...] = (
     ("flags", "panel_flags"),
     ("dist", "sentence_dist"),
+    ("dialogue", "analysis_nav_dialogue"),
+    ("characters", "analysis_nav_characters"),
+    ("pacing", "analysis_nav_pacing"),
     ("scenes", "panel_scenes"),
     ("motifs", "panel_motifs"),
+    ("showing", "analysis_nav_showing"),
     ("style", "group_style"),
     ("matrix", "chapter_table"),
 )

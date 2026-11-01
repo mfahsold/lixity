@@ -1,4 +1,4 @@
-"""Model-independent, source-bound speech direction and Qwen plan compilation.
+"""Source-bound speech direction, export planning and synthesis compilation.
 
 Directions are author choices, never inferred from prose or diagnostic scores.
 Offsets address Unicode code points in the advertised spoken projection.
@@ -16,14 +16,19 @@ from itertools import pairwise
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from .config import read_explicit_project_config
 from .io import FileUtils
 from .markdown_parser import counting_inline_text
 from .pipeline import document_paragraph_texts, paragraph_identity, resolve_document_config
 from .research.repository import Repository, ResearchConflictError
-from .speech_controls import apply_pronunciation, combine_delivery, speech_control_support
+from .speech_controls import (
+    apply_pronunciation,
+    combine_delivery,
+    pronunciation_spans,
+    speech_control_support,
+)
 from .speech_profiles import AudioProfile, parse_audio_settings
 
 POLICY = 'lixity-speech-plan/1'
@@ -86,12 +91,34 @@ class _State(_Strict):
 
 
 @dataclass(frozen=True)
+class SpeechExportInfo:
+    """Provenance in the existing spoken projection, before substitutions.
+
+    Export keeps authored ranges intact rather than splitting them for a model's
+    transport limit. Offsets in substitutions are local to ``original_text``;
+    ``start`` and ``end`` address the source paragraph's spoken projection.
+    """
+
+    original_text: str
+    start: int
+    end: int
+    instructions: str
+    direction: Direction | None
+    substitutions: tuple[tuple[int, int, str], ...]
+    kind: str
+    chapter: int
+    left_context: str = ''
+    right_context: str = ''
+
+
+@dataclass(frozen=True)
 class SpeechSegment:
     text: str
     profile: AudioProfile
     pause_before: float = 0.0
     pause_after: float = 0.0
     anchor: dict[str, Any] | None = None
+    export_info: SpeechExportInfo | None = None
 
 
 def _digest(value: Any) -> str:
@@ -149,8 +176,12 @@ def _ranges(passages: list[dict[str, Any]], directions: list[Direction]) -> dict
 def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Direction] | None = None,
                       profiles: Mapping[str, AudioProfile] | None = None, chapter: int | str | None = None,
                       project_config: Mapping[str, Any] | None = None,
-                      skip_markers: bool = True) -> list[SpeechSegment]:
-    """Compile explicit ranges to effective per-segment controls, never spoken tags."""
+                      skip_markers: bool = True, for_export: bool = False) -> list[SpeechSegment]:
+    """Compile explicit ranges without interpreting author direction as prose.
+
+    Export preserves source ranges and instructions independently of whether a
+    selected synthesis adapter can render them. Render validation is unchanged.
+    """
     from .speech import _speech_segments, extract_audio_cues
     audio_settings = parse_audio_settings(project_config.get('audio'), language=profile.language) if project_config and project_config.get('audio') is not None else None
     common = audio_settings.pronunciations if audio_settings else {}
@@ -182,27 +213,37 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
             matched.add(key)
         default_pause = profile.scene_pause if cue.kind == 'scene_break' else profile.paragraph_pause if cue.kind != 'heading' and cue.pause_after else cue.pause_after
         cursor = 0
-        chunks: list[tuple[str, AudioProfile, float, float | None]] = []
+        chunks: list[tuple[str, AudioProfile, float, float | None, Direction | None, str]] = []
         for d in records:
             if cursor < d.start:
-                chunks.append((cue.text[cursor:d.start], profile, 0.0, None))
+                chunks.append((cue.text[cursor:d.start], profile, 0.0, None, None, profile.instructions))
             selected = (profiles or {}).get(d.profile_id) if d.profile_id else profile
             if selected is None:
                 raise ValueError('A saved direction references an unavailable voice profile')
             selected = effective_profile(selected)
-            if selected.engine in ('coqui', 'coqui-reference') and d.instructions:
+            if not for_export and selected.engine in ('coqui', 'coqui-reference') and d.instructions:
                 raise CoquiDirectionConflict()
-            if selected.engine == 'qwen3-base' and d.instructions:
+            if not for_export and selected.engine == 'qwen3-base' and d.instructions:
                 raise BaseDirectionConflict()
             instructions = combine_delivery(selected.instructions, d.instructions)
-            selected = AudioProfile.model_validate({**selected.model_dump(), 'instructions': instructions})
+            if not for_export or speech_control_support(
+                selected.engine, supports_instructions=selected.supports_instructions,
+            ).direction != 'unsupported':
+                try:
+                    selected = AudioProfile.model_validate({**selected.model_dump(), 'instructions': instructions})
+                except ValidationError:
+                    if not for_export:
+                        raise
+                    # Two valid authored instructions can exceed a render
+                    # profile's combined length limit. Export retains both in
+                    # metadata and keeps the original profile fully validated.
             end = d.end if d.end is not None else len(cue.text)
-            chunks.append((cue.text[d.start:end], selected, d.pause_before, d.pause_after))
+            chunks.append((cue.text[d.start:end], selected, d.pause_before, d.pause_after, d, instructions))
             cursor = end
         if cursor < len(cue.text) or not chunks:
-            chunks.append((cue.text[cursor:], profile, 0.0, None))
+            chunks.append((cue.text[cursor:], profile, 0.0, None, None, profile.instructions))
         chunk_start = 0
-        for index, (raw_content, effective, before, after) in enumerate(chunks):
+        for index, (raw_content, effective, before, after, direction, instructions) in enumerate(chunks):
             content = raw_content
             matching = audio_settings.pronunciation_matching if audio_settings else None
             content = apply_pronunciation(content, effective.pronunciations,
@@ -210,12 +251,28 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
                                           whole_words=matching.whole_words if matching else False,
                                           left_context=cue.text[chunk_start - 1:chunk_start] if chunk_start else "",
                                           right_context=cue.text[chunk_start + len(raw_content):chunk_start + len(raw_content) + 1])
+            info = None
+            if for_export:
+                substitutions = pronunciation_spans(
+                    raw_content, effective.pronunciations,
+                    case_sensitive=matching.case_sensitive if matching else True,
+                    whole_words=matching.whole_words if matching else False,
+                    left_context=cue.text[chunk_start - 1:chunk_start] if chunk_start else '',
+                    right_context=cue.text[chunk_start + len(raw_content):chunk_start + len(raw_content) + 1],
+                )
+                info = SpeechExportInfo(
+                    original_text=raw_content, start=chunk_start, end=chunk_start + len(raw_content),
+                    instructions=instructions,
+                    direction=direction, substitutions=tuple(substitutions), kind=cue.kind, chapter=cue.chapter_num,
+                    left_context=cue.text[chunk_start - 1:chunk_start] if chunk_start else '',
+                    right_context=cue.text[chunk_start + len(raw_content):chunk_start + len(raw_content) + 1],
+                )
             chunk_start += len(raw_content)
-            pieces = _speech_segments(content, effective.language) or ['']
+            pieces = [content] if for_export else _speech_segments(content, effective.language) or ['']
             for n, piece in enumerate(pieces):
                 pause = after if after is not None else (effective.paragraph_pause if cue.kind not in ('heading', 'scene_break') else default_pause) if index == len(chunks)-1 else 0.0
                 plan.append(SpeechSegment(piece, effective, before if n == 0 else 0.0,
-                                          pause if n == len(pieces)-1 else 0.0, anchor))
+                                          pause if n == len(pieces)-1 else 0.0, anchor, info))
     # A valid anchor must never silently disappear due to a projection mismatch.
     selected_keys = {_digest(p['anchor']) for p in passages if chapter is None or p['chapter'] in {cue.chapter_num for cue in cues}}
     if (set(ranges) & selected_keys) - matched:
@@ -224,38 +281,30 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
 
 
 def plan_json(plan: list[SpeechSegment]) -> dict[str, Any]:
-    support = speech_control_support('qwen3-base' if any(speech_control_support(row.profile.engine).direction == 'unsupported' for row in plan) else 'qwen3')
+    """Preserve the existing transport-segmented speech-plan/1 representation."""
+    from .speech import _speech_segments
+
+    support = speech_control_support('qwen3-base' if any(speech_control_support(row.profile.engine, supports_instructions=row.profile.supports_instructions).direction == 'unsupported' for row in plan) else 'qwen3')
+    segments = []
+    for row in plan:
+        pieces = (_speech_segments(row.text, row.profile.language) or ['']) if row.export_info else [row.text]
+        for index, piece in enumerate(pieces):
+            segments.append({'text': piece, 'profile': row.profile.model_dump(),
+                             'pause_before': row.pause_before if index == 0 else 0.0,
+                             'pause_after': row.pause_after if index == len(pieces) - 1 else 0.0,
+                             'anchor': row.anchor,
+                             **({'instructions': row.export_info.instructions}
+                                if row.export_info and row.export_info.instructions != row.profile.instructions else {})})
     return {'schema_version': POLICY, 'controls': {'instructions': support.direction.replace('_', '-'),
             'pauses': support.pauses.replace('_', '-'), 'phonemes': support.phonemes, 'ssml': support.ssml},
-            'segments': [{'text': row.text, 'profile': row.profile.model_dump(),
-                          'pause_before': row.pause_before, 'pause_after': row.pause_after,
-                          'anchor': row.anchor} for row in plan]}
+            'segments': segments}
 
 
-def plan_to_ssml(plan: list[SpeechSegment], *, default_lang: str = 'de') -> str:
-    """Format an effective speech plan as standard W3C SSML for external speech engines."""
-    from xml.sax.saxutils import escape
-    lines = ['<speak xmlns="http://www.w3.org/2001/10/synthesis" version="1.0">']
-    for row in plan:
-        lang = row.profile.language or default_lang
-        voice_name = row.profile.voice or 'default'
-        # Emit leading pause if specified
-        if row.pause_before > 0:
-            lines.append(f'  <break time="{int(row.pause_before * 1000)}ms" />')
-        if row.text.strip():
-            escaped_text = escape(row.text.strip())
-            # Include voice and optional prosody / speed attributes
-            speed_pct = f'{round(row.profile.speed * 100)}%' if row.profile.speed != 1.0 else None
-            voice_tag = f'<voice name="{escape(voice_name)}" xml:lang="{escape(lang)}"'
-            if speed_pct:
-                lines.append(f'  {voice_tag}><prosody rate="{speed_pct}">{escaped_text}</prosody></voice>')
-            else:
-                lines.append(f'  {voice_tag}>{escaped_text}</voice>')
-        # Emit trailing pause if specified
-        if row.pause_after > 0:
-            lines.append(f'  <break time="{int(row.pause_after * 1000)}ms" />')
-    lines.append('</speak>')
-    return '\n'.join(lines)
+def plan_to_ssml(plan: list[SpeechSegment], *, default_lang: str = 'en') -> str:
+    """Return SSML markup; use ``ssml_export`` to also inspect export warnings."""
+    from .speech_export import ssml_export
+
+    return str(ssml_export(plan, default_lang=default_lang)['ssml'])
 
 
 def _read(root: Path) -> tuple[_State, str]:

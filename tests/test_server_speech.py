@@ -68,6 +68,10 @@ def test_base_direction_conflict_explains_opt_in_without_silencing_direction(spe
     payload = {**context(source, handler), "mode": "chapter", "chapter": 1, "profile": profile.model_dump()}
 
     response = send(port, "/api/speech-plan", payload=payload)
+    assert response.status == 200
+    exported = json.loads(response.body)
+    assert any(row["instructions"] == "Read quietly." for row in exported["timeline"]["segments"])
+    response = send(port, "/api/speech-render", payload=payload)
     assert response.status == 400
     message = json.loads(response.body)["message"]
     assert "Qwen Base" in message and "validation error" not in message
@@ -82,7 +86,9 @@ def test_base_direction_conflict_explains_opt_in_without_silencing_direction(spe
     args = ["read-aloud", "--project", str(source.parent), "--chapter", "1", "--plan-only",
             "--engine", "qwen3-base", "--voice", "reference", "--reference-id", reference.id,
             "--instructions", "", "--language", language]
-    assert main(args) != 0
+    assert main(args) == 0
+    capsys.readouterr()
+    assert main([value for value in args if value != "--plan-only"]) != 0
     cli_error = capsys.readouterr().err
     assert "--no-direction" in cli_error
     assert "voice assignments" in cli_error and "pauses" in cli_error
@@ -169,6 +175,9 @@ def test_first_paragraph_preview_rejects_over_limit_for_both_entry_points(speech
     if explicit_paragraph:
         payload["paragraph"] = speech_passages(source.read_text(), "en")[0]["anchor"]
     response = send(port, "/api/speech-plan", payload=payload)
+    assert response.status == 200
+    assert sum(len(row["text"]) for row in json.loads(response.body)["timeline"]["segments"]) > 6000
+    response = send(port, "/api/speech-render", payload=payload)
     assert response.status == 400
     assert "exceeds 6000 characters" in json.loads(response.body)["message"]
 
@@ -243,7 +252,7 @@ def test_preview_and_download_are_bound_to_actual_source_without_writes(speech_s
     assert response.status == 200, response.body
     data = json.loads(response.body)
     assert data["settings"]["selected"] == "narrator" and len(data["chapters"]) == 2
-    assert set(data["capabilities"]) == {"qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference"}
+    assert set(data["capabilities"]) == {"qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "openai-compatible"}
     assert data["requires_migration"] is False
     assert data["capabilities"]["qwen3"]["instructions"] is True
     assert data["settings"]["profiles"]["narrator"]["engine"] == "qwen3"
@@ -539,7 +548,7 @@ voice = "en_US-lessac-medium"
     response = send(port, "/api/speech?" + urlencode(bound))
     assert response.status == 200, response.body
     data = json.loads(response.body)
-    assert data["settings"] is None and set(data["capabilities"]) == {"qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference"}
+    assert data["settings"] is None and set(data["capabilities"]) == {"qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "openai-compatible"}
     assert "Piper" in data["configuration_error"] and "audio-migrate" in data["configuration_error"]
     response = send(port, "/api/speech-render", payload={**bound, "mode": "preview", "chapter": 1})
     assert response.status == 400, response.body

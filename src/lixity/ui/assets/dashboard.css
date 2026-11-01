@@ -68,6 +68,11 @@ h1 {
   &[open] > summary { margin-bottom: .5rem; }
 }
 .settings-actions, .matrix-tools { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; margin-top: .8rem; }
+.project-audio-actions > h3 { margin: 0 0 .6rem; }
+.speech-export-section, .speech-render-section {
+  display: grid; gap: .75rem;
+  & > p { margin: 0; }
+}
 .publication-field-multiline { grid-column: 1 / -1; }
 .publication-settings {
   & .settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1061,7 +1066,6 @@ mark.search-hit {
     & span { display: inline-block; padding: .08rem .5rem; border: 1px solid var(--line); border-radius: var(--radius-pill); font-variant-numeric: tabular-nums; font-size: var(--text-small); }
   }
   & .research-timeline-reason { margin: .35rem 0 0; font-weight: var(--weight-semibold); }
-  & .research-timeline-entry { display: flex; flex-wrap: wrap; gap: .4rem .8rem; align-items: center; & .ctl-note { margin: 0; } }
 }
 .research-timeline-strip {
   margin: .7rem 0 1rem;

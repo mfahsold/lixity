@@ -232,7 +232,11 @@
     if (metric && metric.value) preferences.evidenceByMetric[metric.value] = evidenceToggle.checked;
     rememberAnalysis();
   });
-  if (comparisonToggle) comparisonToggle.addEventListener("change", rememberAnalysis);
+  if (comparisonToggle) {
+    // Capture before the dashboard changes comparison badges and paragraph height.
+    comparisonToggle.addEventListener("change", function() { restore(captureForRestore()); }, true);
+    comparisonToggle.addEventListener("change", rememberAnalysis);
+  }
   var clearMetric = document.getElementById("layer-clear");
   if (clearMetric) clearMetric.addEventListener("click", function() {
     selectMetricPreference();
@@ -768,6 +772,19 @@
     }
   }
   controls.hidden = false; appearance();
+  var search = document.getElementById("text-search");
+  function fitSearchScrollMargin() {
+    if (search) setPassageScrollMargin(search);
+  }
+  // Native focus and scrollIntoView must expose search below the sticky controls.
+  if (typeof ResizeObserver === "function") {
+    var readerChromeObserver = new ResizeObserver(fitSearchScrollMargin);
+    [controls, document.getElementById("workbench-thread")].filter(Boolean).forEach(function(node) {
+      readerChromeObserver.observe(node);
+    });
+  }
+  window.addEventListener("resize", fitSearchScrollMargin);
+  fitSearchScrollMargin();
   function placeSettings() {
     settingsPanels.forEach(function(panel) {
       if (!panel.open) return;

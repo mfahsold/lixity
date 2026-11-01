@@ -50,15 +50,19 @@ def _text(value: str, *, empty: bool = False) -> str:
 
 
 class AudioProfile(BaseModel):
-    """One narrator's explicit synthesis controls; no executable or remote paths."""
+    """One narrator's controls and, when explicit, an external provider binding."""
 
     model_config = ConfigDict(extra="forbid", strict=True, allow_inf_nan=False, hide_input_in_errors=True)
     name: str = Field(default="Narrator", min_length=1, max_length=100)
-    engine: Literal["qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference"] = "qwen3"
+    engine: Literal["qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "openai-compatible"] = "qwen3"
     language: str = "en"
     voice: str = Field(default="Ryan", min_length=1, max_length=100)
     voice_description: str = Field(default="", max_length=2000)
     reference_id: str = ""
+    base_url: str = Field(default="", max_length=2048)
+    model: str = Field(default="", max_length=200)
+    api_key_env: str | None = Field(default=None, pattern=r"^[A-Za-z_][A-Za-z0-9_]{0,127}$")
+    supports_instructions: bool = False
     # Preserve older explicit and omitted profile values. Only a new implicit
     # profile uses DEFAULT_PLAYBACK_SPEED in parse_audio_settings below.
     speed: float = Field(default=1.0, ge=MIN_PLAYBACK_SPEED, le=MAX_PLAYBACK_SPEED)
@@ -74,6 +78,11 @@ class AudioProfile(BaseModel):
             data.pop("voice_description", None)
         if not self.reference_id:
             data.pop("reference_id", None)
+        if self.engine != "openai-compatible":
+            for key in ("base_url", "model", "api_key_env", "supports_instructions"):
+                data.pop(key, None)
+        elif self.api_key_env is None:
+            data.pop("api_key_env", None)
         return data
 
     @field_validator("name", "voice", "language")
@@ -104,10 +113,25 @@ class AudioProfile(BaseModel):
     def reject_removed_engine(cls, raw: Any) -> Any:
         if isinstance(raw, Mapping) and raw.get("engine") == "piper":
             raise ValueError(_REMOVED_ENGINE)
+        if (isinstance(raw, Mapping) and raw.get("engine") == "openai-compatible"
+                and any(not raw.get(key) for key in ("voice", "model", "base_url"))):
+            raise ValueError("External speech profiles require an explicit base URL, model and voice")
         return raw
 
     @model_validator(mode="after")
     def supported_controls(self) -> AudioProfile:
+        if self.engine == "openai-compatible":
+            from .speech_providers import speech_endpoint
+
+            speech_endpoint(self.base_url)
+            _text(self.model)
+            if self.voice_description or self.reference_id:
+                raise ValueError("External speech does not support voice descriptions or local reference identities")
+            if self.instructions and not self.supports_instructions:
+                raise ValueError("External speech instructions require explicit provider support")
+            return self
+        if self.base_url or self.model or self.api_key_env is not None or self.supports_instructions:
+            raise ValueError("Provider settings require the openai-compatible engine")
         if self.engine in ("coqui", "coqui-reference"):
             if self.language != "de" or self.instructions or self.voice_description:
                 raise ValueError("Coqui supports German without delivery instructions or voice descriptions")
@@ -145,12 +169,12 @@ class PronunciationMatching(BaseModel):
 
 
 class AudioSettings(BaseModel):
-    """Versioned project profile collection with one existing selected narrator."""
+    """Versioned profiles; schema /4 also permits explicit unconfigured audio."""
 
     model_config = ConfigDict(extra="forbid", strict=True, hide_input_in_errors=True)
-    schema_name: Literal["lixity-audio-settings/1", "lixity-audio-settings/2", "lixity-audio-settings/3"] = Field(default="lixity-audio-settings/1", alias="schema_version")
+    schema_name: Literal["lixity-audio-settings/1", "lixity-audio-settings/2", "lixity-audio-settings/3", "lixity-audio-settings/4"] = Field(default="lixity-audio-settings/1", alias="schema_version")
     selected: str
-    profiles: dict[str, AudioProfile] = Field(min_length=1, max_length=32)
+    profiles: dict[str, AudioProfile] = Field(max_length=32)
     pronunciations: PronunciationMap = Field(default_factory=dict, max_length=200)
     pronunciation_matching: PronunciationMatching = Field(default_factory=PronunciationMatching)
 
@@ -170,19 +194,30 @@ class AudioSettings(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def require_explicit_engine(cls, raw: Any) -> Any:
-        if isinstance(raw, Mapping) and ("pronunciations" in raw or "pronunciation_matching" in raw) and raw.get("schema_version", "lixity-audio-settings/1") not in ("lixity-audio-settings/2", "lixity-audio-settings/3"):
-            raise ValueError("Project pronunciations require audio schema lixity-audio-settings/2 or /3")
+        if isinstance(raw, Mapping) and ("pronunciations" in raw or "pronunciation_matching" in raw) and raw.get("schema_version", "lixity-audio-settings/1") not in ("lixity-audio-settings/2", "lixity-audio-settings/3", "lixity-audio-settings/4"):
+            raise ValueError("Project pronunciations require audio schema lixity-audio-settings/2, /3 or /4")
         if isinstance(raw, Mapping) and isinstance(raw.get("profiles"), Mapping):
             for profile in raw["profiles"].values():
                 if isinstance(profile, Mapping) and "engine" not in profile:
                     raise ValueError("Saved audio profiles require an explicit Qwen engine; "
                                      "review the old profile before replacing it")
-                if isinstance(profile, Mapping) and profile.get("engine") in ("coqui", "coqui-reference") and raw.get("schema_version") != "lixity-audio-settings/3":
-                    raise ValueError("Coqui profiles require audio schema lixity-audio-settings/3")
+                if isinstance(profile, Mapping) and profile.get("engine") in ("coqui", "coqui-reference") and raw.get("schema_version") not in ("lixity-audio-settings/3", "lixity-audio-settings/4"):
+                    raise ValueError("Coqui profiles require audio schema lixity-audio-settings/3 or /4")
+                if isinstance(profile, Mapping) and profile.get("engine") == "openai-compatible" and raw.get("schema_version") != "lixity-audio-settings/4":
+                    raise ValueError("External speech profiles require audio schema lixity-audio-settings/4")
         return raw
 
     @model_validator(mode="after")
     def valid_selection(self) -> AudioSettings:
+        if not self.profiles:
+            if self.schema_name != "lixity-audio-settings/4" or self.selected:
+                raise ValueError("Empty audio profiles require schema /4 and an empty selection")
+            if not self.pronunciation_matching.case_sensitive:
+                validate_pronunciation_keys(self.pronunciations, case_sensitive=False)
+            return self
+        if (self.schema_name != "lixity-audio-settings/4"
+                and any(profile.engine == "openai-compatible" for profile in self.profiles.values())):
+            raise ValueError("External speech profiles require audio schema lixity-audio-settings/4")
         if any(not _PROFILE_ID.fullmatch(key) for key in self.profiles):
             raise ValueError("Audio profile IDs must be safe identifiers of at most 64 characters")
         if self.selected not in self.profiles:
@@ -209,7 +244,12 @@ def resolve_audio_profile(
     config: Mapping[str, Any] | None, profile_id: str | None = None, *, language: str = "en",
 ) -> AudioProfile:
     """Resolve an explicit or saved selection without backend fallback."""
-    settings = parse_audio_settings(config.get("audio") if config is not None else None, language=language)
+    raw = config.get("audio") if config is not None else None
+    if raw is None and profile_id not in (None, "narrator"):
+        raise ValueError(f"Unknown audio profile: {profile_id}")
+    settings = parse_audio_settings(raw, language=language)
+    if not settings.profiles and profile_id is None:
+        raise ValueError("No audio profile is configured; create a voice profile before exporting or rendering")
     selected = profile_id if profile_id is not None else settings.selected
     if selected not in settings.profiles:
         raise ValueError(f"Unknown audio profile: {selected}")
@@ -222,6 +262,16 @@ def audio_capabilities() -> dict[str, Any]:
     Qwen timbres are multilingual; native-language quality requires auditioning.
     """
     return {
+        "openai-compatible": {
+            "name": "OpenAI-compatible speech provider", "targets": ["local"],
+            "languages": [], "voices": {}, "configurable_model": True,
+            "configurable_voice": True, "configurable_language": True,
+            "instructions": False, "configurable_instructions": True,
+            "control_support": speech_control_support("openai-compatible").as_dict(),
+            "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
+                      "default": DEFAULT_PLAYBACK_SPEED, "implementation": "ffmpeg-atempo"},
+            "model": None,
+        },
         **{engine: {
             "name": name, "targets": ["local"], "languages": ["de"],
             "voices": {voice: {"name": voice_name, "languages": ["de"]}},

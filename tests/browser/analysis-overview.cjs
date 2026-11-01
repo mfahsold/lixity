@@ -17,6 +17,7 @@ from lixity.models import CorpusConfig
 from lixity.motifs import motif_report
 from lixity.pacing import pacing_report
 from lixity.scenes import scene_report_for_display
+from lixity.showing import showing_report
 from lixity.pipeline import analyze_document
 from lixity.style_fingerprint import FingerprintThresholds
 from lixity.ui import render_dashboard
@@ -39,7 +40,8 @@ reports = dict(dialogue=dialogue_report(text, config).to_dict(),
                motifs=motif_report(text, {"Gate": r"\\bgate\\b"}, config).to_dict(),
                scenes=scene_report_for_display(text, config, None),
                characters=presence_report(text, ["Mara", "Tomas", "Unmentioned name"], config),
-               pacing=pacing_report(text, config).to_dict())
+               pacing=pacing_report(text, config).to_dict(),
+               showing=showing_report(text, config, metrics=analysis.metrics).to_dict())
 def render(language, controls):
     return render_dashboard(analysis.chapters, analysis.paragraphs, metrics=analysis.metrics,
         fingerprint=analysis.fingerprint, labels=LANGUAGE_PROFILES[language].labels,
@@ -94,7 +96,7 @@ async function pinnedIdentity(page, panel, cellIndex) {
       await page.locator('#workbench-overview-open').click();
       const navigation = page.locator('#analysis-sections');
       assert.deepEqual(await navigation.locator('[data-section-link]').evaluateAll(nodes => nodes.map(n => n.dataset.sectionLink)),
-        ['flags','dist','scenes','motifs','style','matrix']);
+        ['flags','dist','dialogue','characters','pacing','scenes','motifs','showing','style','matrix']);
       assert.equal(await navigation.locator('svg').count(), 0, 'Overview section links are not a progress timeline');
       const orientation = await navigation.evaluate(nav => {
         const bounds = nav.getBoundingClientRect();
@@ -111,11 +113,12 @@ async function pinnedIdentity(page, panel, cellIndex) {
       if (width<=390) assert.ok(new Set(orientation.links.map(rect=>Math.round(rect.top))).size>1, 'Mobile section links wrap');
       if (locale === 'en' || locale === 'de') await page.locator('#manuscript-reader-controls').screenshot({
         path:path.join(artifacts, `navigation-${locale}-${width}.png`)});
-      for (const target of ['flags','dist','scenes','motifs','style','matrix']) {
+      for (const target of ['flags','dist','dialogue','characters','pacing','scenes','motifs','showing','style','matrix']) {
         await navigation.locator(`[data-section-link=${target}]`).click();
         await page.waitForFunction(target=>document.querySelector('#analysis-sections [aria-current=true]')?.dataset.sectionLink===target,target);
-        assert.ok(await navigation.evaluate(nav=>nav.getBoundingClientRect().top>=-1 && nav.getBoundingClientRect().bottom<=innerHeight),
-          'Overview navigation remains reachable after a section jump');
+        const destinationNavigation = await navigation.boundingBox();
+        assert.ok(destinationNavigation.y >= -1 && destinationNavigation.y + destinationNavigation.height <= 900,
+          `Overview navigation remains reachable after a section jump: ${JSON.stringify({locale,width,target,bounds:destinationNavigation})}`);
       }
       await navigation.locator('[data-section-link=flags]').click();
       const measurements = page.locator('#analysis-measurements');
@@ -197,7 +200,7 @@ async function pinnedIdentity(page, panel, cellIndex) {
     await report.goto('http://lixity.test/');
     assert.equal(await report.locator('#analysis-measurements').getAttribute('open'), '');
     assert.ok(await report.locator('#analysis-measurements .kpi').first().isVisible(), 'Standalone reports retain visible measurements without JavaScript');
-    assert.equal(await report.locator('#analysis-sections a').count(),6);
+    assert.equal(await report.locator('#analysis-sections a').count(),10);
     assert.ok(await report.locator('#analysis-sections').isVisible(), 'Static reports retain the same real section links without JavaScript');
     await report.close();
     assert.deepEqual(errors, []);

@@ -35,6 +35,7 @@ def prepare_speech_source(
     chapter: int,
     paragraph: Mapping[str, Any] | None = None,
     project_config: Mapping[str, Any] | None = None,
+    for_export: bool = False,
 ) -> tuple[str, dict[str, Any]]:
     """Select actual manuscript prose, verifying a requested displayed anchor."""
     if mode not in ("preview", "chapter") or type(chapter) is not int or chapter < 1:
@@ -49,7 +50,7 @@ def prepare_speech_source(
     if mode == "chapter":
         if paragraph is not None:
             raise ValueError("A paragraph selection is only valid for previews")
-        if len(body) > 250000:
+        if not for_export and len(body) > 250000:
             raise ValueError("Chapter exceeds the native audio limit; use the CLI")
         return f"## {title}\n\n{body}" if title else body, context
     if paragraph is not None:

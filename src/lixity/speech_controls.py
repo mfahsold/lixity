@@ -39,8 +39,10 @@ _QWEN_BASE_SUPPORT = SpeechControlSupport(
 )
 
 
-def speech_control_support(engine: str) -> SpeechControlSupport:
+def speech_control_support(engine: str, *, supports_instructions: bool = False) -> SpeechControlSupport:
     """Describe the actual Lixity adapter, not the model's theoretical features."""
+    if engine == "openai-compatible":
+        return _QWEN_SUPPORT if supports_instructions else _QWEN_BASE_SUPPORT
     if engine in ("qwen3-base", "coqui", "coqui-reference"):
         return _QWEN_BASE_SUPPORT
     if engine not in ("qwen3", "qwen3-design"):
@@ -71,27 +73,40 @@ def _pronunciation_pattern(terms: tuple[str, ...], case_sensitive: bool,
     return keys, pattern
 
 
-def apply_pronunciation(text: str, substitutions: Mapping[str, str], *,
+def pronunciation_spans(text: str, substitutions: Mapping[str, str], *,
                         case_sensitive: bool = True, whole_words: bool = False,
-                        left_context: str = "", right_context: str = "") -> str:
-    """Apply longest-first literal replacements, with optional matching constraints."""
+                        left_context: str = "", right_context: str = "") -> list[tuple[int, int, str]]:
+    """Return actual longest-first matches in original text, including identity replacements."""
     if not substitutions:
-        return text
+        return []
     keys, pattern = _pronunciation_pattern(tuple(substitutions), case_sensitive, whole_words)
-
-    def replace(match: re.Match[str]) -> str:
+    result: list[tuple[int, int, str]] = []
+    for match in pattern.finditer(text):
         if whole_words:
             before = text[match.start() - 1] if match.start() else left_context[-1:]
             after = text[match.end()] if match.end() < len(text) else right_context[:1]
             if any(char and (char.isalnum() or char == "_" or unicodedata.category(char).startswith("M"))
                    for char in (before, after)):
-                return match[0]
+                continue
         group = match.lastgroup
         if group is None:  # All alternatives are named and exactly one must match.
             raise RuntimeError("Pronunciation match has no rule")
-        return substitutions[keys[int(group[4:])]]
+        result.append((match.start(), match.end(), substitutions[keys[int(group[4:])]]))
+    return result
 
-    return pattern.sub(replace, text)
+
+def apply_pronunciation(text: str, substitutions: Mapping[str, str], *,
+                        case_sensitive: bool = True, whole_words: bool = False,
+                        left_context: str = "", right_context: str = "") -> str:
+    """Apply longest-first literal replacements without recursively matching replacements."""
+    pieces: list[str] = []
+    previous = 0
+    for start, end, replacement in pronunciation_spans(text, substitutions, case_sensitive=case_sensitive,
+            whole_words=whole_words, left_context=left_context, right_context=right_context):
+        pieces.extend((text[previous:start], replacement))
+        previous = end
+    pieces.append(text[previous:])
+    return "".join(pieces)
 
 
 def combine_delivery(profile_instruction: str, passage_instruction: str) -> str:

@@ -202,6 +202,9 @@
           (clipY && (rect.bottom <= top || rect.top >= top + parent.clientHeight))) {
         hide(); return;
       }
+      // The fixed popup may sit outside the reader toolbar's bounded scrollport.
+      // Only its trigger must remain visible inside those compact controls.
+      if (parent.matches(".manuscript-reader-controls")) continue;
       if (clipX && parent.scrollWidth > parent.clientWidth) {
         visible.left = Math.max(visible.left, left);
         visible.right = Math.min(visible.right, left + parent.clientWidth);
@@ -224,7 +227,8 @@
       anchorTop = bar.top; anchorBottom = bar.bottom;
       // Wrapped actions and their adjacent search row form one control area.
       // A popup below only its trigger would cover the next row's buttons.
-      Array.from(toolbar.parentElement.children).forEach(function(sibling) {
+      var toolbarScope = toolbar.closest(".view-pane") || toolbar.parentElement;
+      Array.from(toolbarScope.querySelectorAll(toolbarSelector)).forEach(function(sibling) {
         if (!sibling.matches(toolbarSelector) || !sibling.getClientRects().length) return;
         var bounds = sibling.getBoundingClientRect();
         if (bounds.right > bar.left && bounds.left < bar.right &&

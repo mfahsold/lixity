@@ -375,7 +375,7 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   const notice = page.locator('#example-context');
   const credits = page.locator('#research-source-credits');
   await expect(notice).toContainText('read-only');
-  await expect(notice).toContainText('Generated with Lixity');
+  await expect(notice).toContainText('development checkout (base version');
   await expect(notice).toContainText('fictional');
   await expect(notice).toContainText('no live Zotero connection');
   await expect(notice).toContainText('retained passage, authored claim and manuscript quote are separate records');
@@ -922,6 +922,12 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   await expect(page.locator('#ch-2')).toContainText('A board moved. Mara turned.');
   await quickStart.locator('#demo-task-guide > summary').click();
   await expect(quickStart.locator('#demo-task-guide')).toContainText('The result is a reason to read, not a correction.');
+  const actionAndGuide = await quickStart.evaluate(node => ({
+    actionBottom: node.querySelector('[data-jump="#ch-2"]').getBoundingClientRect().bottom,
+    guideTop: node.querySelector('#demo-task-guide').getBoundingClientRect().top,
+  }));
+  assert.ok(actionAndGuide.actionBottom <= actionAndGuide.guideTop,
+    'Opening the instructions keeps primary actions before the expanded guide');
   await quickStart.getByRole('link', {name: 'opening chapter', exact: true}).click();
   await expect(page.locator('#style-layer')).toHaveValue('asl');
   await quickStart.locator('#demo-task-guide > summary').click();

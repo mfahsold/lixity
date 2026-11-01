@@ -350,7 +350,31 @@ async function adjacentToolbarActions(page, locale, width) {
   await page.locator('#text-search').click({timeout: 2000});
   assert.equal(await page.locator('#text-search').evaluate(node => node === document.activeElement), true,
     'Search remains directly clickable while a neighboring reading hint is open');
+  assert.ok(await page.locator('#text-search').evaluate(node =>
+    node.getBoundingClientRect().top >= document.getElementById('manuscript-reader-controls').getBoundingClientRect().bottom),
+  'Native search scrolling clears the sticky reader controls');
   await page.keyboard.press('Escape');
+}
+
+async function searchWithReturnThread(page) {
+  try {
+    await page.evaluate(() => LixityReadingThread.rememberPassage({
+      description:'Synthetic source chapter · paragraph 12', valid:()=>true, restore:()=>{},
+    }));
+    await expect(page.locator('#workbench-thread')).toBeVisible();
+    await settle(page);
+    const search = page.locator('#text-search');
+    await search.evaluate(node => node.scrollIntoView({block:'start', behavior:'instant'}));
+    await settle(page);
+    assert.ok(await search.evaluate(node => node.getBoundingClientRect().top >=
+      document.getElementById('manuscript-reader-controls').getBoundingClientRect().bottom),
+    'Search clears a mobile return thread that appeared without changing views');
+    await search.click({timeout:2000});
+    await expect(search).toBeFocused();
+  } finally {
+    await page.evaluate(() => LixityReadingThread.rememberPassage(null));
+    await page.keyboard.press('Escape');
+  }
 }
 
 async function shortcutReference(page, labels, locale, width, height = 900) {
@@ -454,6 +478,23 @@ async function settingsGeometry(page, locale, width) {
       for (const selector of ['#style-layer', '#analysis-evidence-enabled', '#analysis-comparison-enabled']) {
         const control = page.locator(selector);
         await expect(control).toBeVisible();
+        const help = await control.getAttribute('data-help');
+        assert.ok(help && help.trim(), 'Each analysis choice explains its effect before activation');
+        const initialValue = selector === '#style-layer' ? await control.inputValue() : await control.isChecked();
+        await control.press('Tab');
+        await page.keyboard.press('Shift+Tab');
+        await expect(control).toBeFocused();
+        await expect(page.locator('#lixity-tooltip')).toHaveAttribute('aria-hidden', 'false');
+        await expect(page.locator('#lixity-tooltip .tooltip-copy')).toHaveText(help);
+        await expect(control).toHaveAccessibleDescription(help);
+        if (selector === '#style-layer') {
+          await expect(control).toHaveAccessibleName(fixtures[locale].labels.analysis_measure);
+          await expect(page.locator('#lixity-tooltip .tooltip-heading')).toHaveText(fixtures[locale].labels.analysis_measure);
+        }
+        await page.keyboard.press('Escape');
+        await expect(page.locator('#lixity-tooltip')).toHaveAttribute('aria-hidden', 'true');
+        assert.equal(selector === '#style-layer' ? await control.inputValue() : await control.isChecked(), initialValue,
+          'Reading and dismissing help preserves the selected analysis choice');
         const geometry = await control.evaluate(node => {
           const bounds = (node.closest('label') || node).getBoundingClientRect();
           return {left:bounds.left, right:bounds.right, scroll:node.scrollWidth, client:node.clientWidth};
@@ -584,6 +625,7 @@ async function nativeControls(page, width, labels) {
         await check(`${locale} ${width} contextual help`, () => helpControls(page, fixture.labels, locale, width));
         await hoverIntent(page);
         await check(`${locale} ${width} adjacent toolbar actions`, () => adjacentToolbarActions(page, locale, width));
+        if (width === 320) await check(`${locale} ${width} return thread search`, () => searchWithReturnThread(page));
         await check(`${locale} ${width} keyboard actions`, () => keyboardActions(page));
         await check(`${locale} ${width} keyboard reference`, () => shortcutReference(page, fixture.labels, locale, width));
         await check(`${locale} ${width} native controls`, () => nativeControls(page, width, fixture.labels));

@@ -251,7 +251,7 @@ def test_plan_to_ssml_formats_w3c_standard_tags_and_escapes_xml(tmp_path, capsys
     plan = build_speech_plan("Hello <World> & Friends.", prof)
     ssml = plan_to_ssml(plan)
     assert ssml.startswith('<speak xmlns="http://www.w3.org/2001/10/synthesis"')
-    assert '<voice name="Aiden" xml:lang="en"><prosody rate="115%">Hello &lt;World&gt; &amp; Friends.</prosody></voice>' in ssml
+    assert '<voice name="Aiden" xml:lang="en"><prosody rate="1.15">Hello &lt;World&gt; &amp; Friends.</prosody></voice>' in ssml
     assert '<break time="450ms" />' in ssml
 
     (tmp_path/'draft.md').write_text("Hello <World>.")

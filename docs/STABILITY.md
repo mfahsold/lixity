@@ -368,6 +368,38 @@ reference and one converter, not a general result. Transcript accuracy, accent
 and speaker identity are not measured. The converter mainly changes timbre; the
 phrasing and intonation of the base voice, here Thorsten VITS, largely carry over.
 
+### Chapter audio comparison limits (unreleased)
+
+`audio-inspect` and `audio-verify` add local chapter-level observations and
+optional plan/transcript comparison; [METHODS](METHODS.md#13-chapter-audio-audit-unreleased)
+defines their formulas. Synthetic fixtures test PCM arithmetic, stereo handling,
+silence boundaries, malformed input and transcript identity. They do not establish
+perceptual quality, natural rhythm, recognition accuracy or speaker consistency.
+Full-scale samples indicate possible clipping, not proven audible distortion.
+The 20 ms/−50 dBFS/0.1 second silence rule is uncalibrated: quiet speech can fall
+below it, and breath or room noise can remain above it. Bandwidth and noise floor
+are explicitly unknown for this audit. Zero-amplitude dBFS is negative infinity,
+represented as null, not a finite noise-floor estimate.
+
+There is no automatic speech recognition. An audio hash binds a supplied
+transcript to a file but cannot establish that its words or timestamps are true.
+Comparison misses may be recognizer errors, tokenization differences or actual
+speech differences. Coverage is alignment coverage, not an accuracy probability.
+Repeated wording can create alternative alignments. Missing expected words have
+no known timestamp; neighboring timestamps only bracket a possible location.
+Pause differences are available only at fully aligned boundaries and use external
+word timing. A time gap may contain breath or noise. Absence of a discrepancy is
+not proof that every spoken word or pause matches the plan. Missing transcript,
+unanchored boundaries and exhausted measurement scope remain unknown.
+
+External synthesis is an explicit configured operation, while analysis and audio
+inspection remain local. Provider instruction support is declared by the operator;
+Lixity does not establish that a model obeys it. SSML syntax does not establish
+portable voice identity or exact rate, and exported delivery instructions can
+require provider-specific handling. Neither cached output nor a successful HTTP
+response certifies audio quality. Existing native synthesis implementations remain
+optional and require listening review.
+
 ### Manual manuscript association limits
 
 Manually selected quotes require explicit retention and exact source/paragraph/claim

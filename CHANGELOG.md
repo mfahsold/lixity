@@ -8,10 +8,19 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
-- Standard W3C SSML export (`plan_to_ssml`, `read-aloud --plan-only --ssml`, and
-  browser dialog SSML download) to position Lixity as an author's dramaturgy,
-  phonetic direction and speech-timeline workbench for external open-source TTS
-  engines (OpenedAI Speech, Kokoro, Chatterbox, AllTalk, F5-TTS).
+- `audio-export-plan` and scoped browser JSON/SSML downloads share the manuscript
+  direction planner. `lixity-audio-timeline/1` retains source/substitution
+  provenance, voice choices, delivery and pauses; SSML reports unsupported
+  portable controls and does not invent speech timestamps.
+- Explicit OpenAI-compatible HTTP speech providers with model/voice bindings,
+  optional credential environment-variable names and declared instruction
+  support. Settings schema `/4` uses the reviewed backup migration; existing
+  native profiles, references and cache keys retain their behavior. Bounded WAV
+  responses share normalization, tempo, pauses, caching and atomic publication.
+- Local `audio-inspect` and `audio-verify` for chapter WAV/FLAC/MP3 signal
+  observations and optional plan comparison using an audio-hash-bound timed
+  transcript (`lixity-audio-audit/1`). No speech recognition runs; missing text
+  or pause evidence remains unknown.
 - `audio-reference inspect` and a `quality` object in `audio-reference create`
   report level, noise floor, clipping and spectral bandwidth of a voice
   reference (`lixity-audio-reference-quality/1`), with uncalibrated heuristic
@@ -31,6 +40,18 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   direction without manually supplying snapshot hashes.
 
 ### Changed
+- Workspace guidance and metric tooltips are shorter in all seven languages,
+  while preserving counting definitions and heuristic limits. Reading and
+  analysis controls are grouped by task; the overview now links to quoted text,
+  names, pacing and signal groups. Research capture precedes the source catalogue,
+  setup follows the working views, and claims use one list/timeline switch.
+  Threshold reset stays with its controls; audio export and synthesis have
+  separate groups, with audio actions outside the project settings form.
+- Analysis labels describe the observed share of feature comparisons within the
+  threshold, replacing the unsupported "stylistic cohesion" claim. Tense review
+  guidance explains lexical patterns, auxiliary/infinitive ambiguity and the
+  effects of quotations and retrospection in all seven interface languages.
+  Underlying counts and statistical calculations are unchanged.
 - Coqui/OpenVoice guidance states that the converter mainly changes timbre,
   inherits the reference's bandwidth limit and that the 1.2 playback default is
   not tuned for Thorsten.
@@ -57,6 +78,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and keeps progress and error messages visible while scrolling.
 
 ### Fixed
+- `read-aloud --ssml` and `--timeline` imply export-only behavior, preventing
+  accidental synthesis. Exports do not require retained native reference audio
+  or worker readiness; unsupported synthesis controls still fail explicitly.
 - The project import dialog rejects unsupported files and multiple-file drops
   with guidance in all seven languages. Rejected selections clear the previous
   preview and invalidate pending reads so an earlier manuscript cannot be

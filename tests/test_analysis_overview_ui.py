@@ -8,6 +8,7 @@ from lixity.pipeline import analyze_document
 from lixity.style_fingerprint import FingerprintThresholds
 from lixity.ui import render_dashboard
 from lixity.workspace_labels import WORKSPACE_LABELS
+from tests.support import HtmlControls
 
 
 class TestAnalysisOverview(unittest.TestCase):
@@ -88,7 +89,10 @@ class TestAnalysisOverview(unittest.TestCase):
 
     def test_style_layer_is_grouped_with_optgroups_and_preserves_attributes(self):
         html = self.render()
-        match = re.search(r'<select class="ctl" id="style-layer">(.*?)</select>', html, re.DOTALL)
+        controls = HtmlControls(html)
+        self.assertEqual(controls.elements["style-layer"]["tag"], "select")
+        self.assertTrue(controls.elements["style-layer"].get("data-help"))
+        match = re.search(r'<select\b[^>]*\bid="style-layer"[^>]*>(.*?)</select>', html, re.DOTALL)
         self.assertIsNotNone(match, "Expected #style-layer select element")
         select_body = match.group(1)
         # Check first top-level option is the empty/off value
@@ -121,8 +125,14 @@ class TestAnalysisOverview(unittest.TestCase):
         self.assertIn('class="reader-comparison-toggle"', html)
         self.assertIn('id="analysis-comparison-enabled"', html)
         # Sentence evidence can cover the entire manuscript, so opt in to it.
-        self.assertIn('<input type="checkbox" id="analysis-evidence-enabled"/>', html)
-        self.assertRegex(html, r'<input type="checkbox" id="analysis-comparison-enabled" checked\s*/?>')
+        controls = HtmlControls(html)
+        evidence = controls.inputs["analysis-evidence-enabled"]
+        comparison = controls.inputs["analysis-comparison-enabled"]
+        self.assertNotIn("checked", evidence)
+        self.assertIn("checked", comparison)
+        for attributes in (evidence, comparison):
+            self.assertEqual(attributes["type"], "checkbox")
+            self.assertTrue(attributes.get("data-help"))
 
     def test_comparison_labels_describe_the_visible_effect(self):
         html = self.render()

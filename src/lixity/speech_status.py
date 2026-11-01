@@ -20,6 +20,7 @@ def audio_status(project: str | Path | None = None, *, engine: str | None = None
     project_view: dict[str, Any] | None = None
     expected_model: str | None = None
     comparison_engine = engine
+    provider_profile = None
     if engine is not None and engine not in audio_capabilities():
         raise ValueError("Unknown audio engine")
     if project is not None:
@@ -39,16 +40,26 @@ def audio_status(project: str | Path | None = None, *, engine: str | None = None
                             if language == "auto" else "speech_language_unsupported"}
         else:
             settings = parse_audio_settings(raw_settings, language=language)
-            selected = settings.profiles[settings.selected]
-            comparison_engine = engine or selected.engine
+            selected = settings.profiles.get(settings.selected)
+            if selected is not None:
+                comparison_engine = engine or selected.engine
+                if selected.engine == "openai-compatible":
+                    provider_profile = selected
             project_view = {
                 "root": str(root),
-                "selected_profile": settings.selected,
+                "selected_profile": settings.selected if selected is not None else None,
                 "settings_source": "configured" if raw_settings is not None else "default",
                 "profiles": [{"id": key, "name": profile.name, "engine": profile.engine,
                               "voice": profile.voice, "language": profile.language}
                              for key, profile in settings.profiles.items()],
             }
+            if selected is None:
+                project_view["profile_issue"] = "speech_profile_unconfigured"
+    if comparison_engine == "openai-compatible":
+        from .speech_providers import external_provider_status
+
+        return {"schema_version": "lixity-audio-status/1", "project": project_view,
+                "comparison_engine": comparison_engine, "targets": [external_provider_status(provider_profile)]}
     if comparison_engine is not None:
         expected_model = audio_capabilities()[comparison_engine]["model"]
     with ThreadPoolExecutor(max_workers=2) as pool:

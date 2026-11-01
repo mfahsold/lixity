@@ -313,7 +313,7 @@ async function companionOverviewReturn(browser, motion) {
    await page.evaluate(dark=>document.documentElement.dataset.theme=dark?'dark':'light',width===1024||motion==='no-preference');
    await page.locator('#workbench-overview-open').click();
    const analysis=page.locator('#analysis-sections');
-   await expect(analysis.locator('[data-section-link]')).toHaveCount(6);
+   await expect(analysis.locator('[data-section-link]')).toHaveCount(10);
    await expect(analysis.locator('[data-section-indicator]')).toHaveCount(0);
    await analysis.locator('[data-section-link=matrix]').click();
 

@@ -482,13 +482,13 @@ api.create_dossier(p, title='Gamma dossier', body='A newly retained dossier.')
       nl: ['Bronnen filteren…', 'Dossiers filteren…', 'Geen resultaten'],
     };
     const captureLabels = {
-      en: ['Source copies', 'Capture from Zotero', 'Alternative: import a local source'],
-      de: ['Quellenkopien', 'Aus Zotero übernehmen', 'Alternative: lokale Quelle importieren'],
-      fr: ['Sources conservées', 'Conserver depuis Zotero', 'Alternative : importer une source locale'],
-      es: ['Fuentes conservadas', 'Conservar desde Zotero', 'Alternativa: importar una fuente local'],
-      it: ['Fonti conservate', 'Acquisisci da Zotero', 'Alternativa: importa una fonte locale'],
-      pt: ['Fontes preservadas', 'Preservar do Zotero', 'Alternativa: importar uma fonte local'],
-      nl: ['Bewaarde bronnen', 'Uit Zotero bewaren', 'Alternatief: lokale bron importeren'],
+      en: ['Source copies', 'Capture from Zotero', 'Add local source'],
+      de: ['Quellenkopien', 'Aus Zotero übernehmen', 'Lokale Quelle hinzufügen'],
+      fr: ['Sources conservées', 'Conserver depuis Zotero', 'Ajouter une source locale'],
+      es: ['Fuentes conservadas', 'Conservar desde Zotero', 'Añadir fuente local'],
+      it: ['Fonti conservate', 'Acquisisci da Zotero', 'Aggiungi fonte locale'],
+      pt: ['Fontes preservadas', 'Preservar do Zotero', 'Adicionar fonte local'],
+      nl: ['Bewaarde bronnen', 'Uit Zotero bewaren', 'Lokale bron toevoegen'],
     };
     for (const [language, [sourcesName, dossiersName, noResults]] of Object.entries(languages)) {
       assert.equal((await (await page.request.post(fixture.url + '/api/settings', {data: {language}})).json()).ok, true);

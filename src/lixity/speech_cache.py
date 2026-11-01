@@ -1,4 +1,4 @@
-"""Private bounded Qwen segment reuse; no manuscript text in cache metadata."""
+"""Private bounded speech segment reuse; no manuscript text in cache metadata."""
 from __future__ import annotations
 
 import hashlib
@@ -36,8 +36,9 @@ def project_audio_cache(project_root: str | Path) -> Path:
 class SpeechSegmentCache:
     """Reuse verified PCM for the same named model, voice, language and delivery.
 
-    The model family is fixed. Replace/clear derived data after changing local
-    checkpoint bytes within that family; cached audio is not a quality verdict.
+    External entries also bind the endpoint, adapter and credential environment
+    name. Clear derived data after changing checkpoint bytes or a provider's
+    named model in place; cached audio is not a quality verdict.
     """
 
     def __init__(self, directory: Path, *, max_bytes: int = CACHE_BYTES) -> None:
@@ -50,7 +51,12 @@ class SpeechSegmentCache:
         request = {"schema_version": _SCHEMA, "model": QWEN_MODEL, "text": text,
                    "language": profile.language, "voice": profile.voice,
                    "instructions": profile.instructions}
-        if profile.engine == "qwen3-design":
+        if profile.engine == "openai-compatible":
+            from .speech_providers import ADAPTER_ID, speech_endpoint
+
+            request.update(model=profile.model, endpoint=speech_endpoint(profile.base_url), adapter=ADAPTER_ID,
+                           api_key_env=profile.api_key_env or "")
+        elif profile.engine == "qwen3-design":
             request["model"] = QWEN_DESIGN_MODEL
             request["voice_description"] = profile.voice_description
         elif profile.engine == "qwen3-base":
@@ -94,7 +100,7 @@ class SpeechSegmentCache:
 
     def put(self, text: str, profile: AudioProfile, data: bytes) -> None:
         if not self._valid_audio(data):
-            raise ValueError("Only complete Qwen PCM can be retained")
+            raise ValueError("Only complete mono 24 kHz PCM can be retained")
         key, audio, metadata = self._paths(text, profile)
         record = json.dumps({"schema_version": _SCHEMA, "request_sha256": key,
                              "audio_sha256": hashlib.sha256(data).hexdigest(), "byte_length": len(data)})

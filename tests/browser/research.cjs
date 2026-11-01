@@ -229,8 +229,11 @@ server.serve_forever()
     await expect(page.locator('#zotero-box')).toBeVisible();
     await expect(page.locator('#r-zotero-browse')).not.toBeVisible();
     await expect(page.locator('#r-ingest-text')).not.toBeVisible();
-    assert.ok(await page.locator('#research-sources-list').evaluate(element => element.getBoundingClientRect().bottom <=
-      document.getElementById('zotero-box').getBoundingClientRect().top), 'Retained evidence precedes capture controls');
+    for (const selector of ['#zotero-box', '#r-local-import']) {
+      assert.ok(await page.locator(selector).evaluate(element => element.getBoundingClientRect().bottom <=
+        document.getElementById('r-filter-sources').getBoundingClientRect().top),
+      'Collapsed capture controls remain reachable before filtering and retained evidence');
+    }
     await page.locator('#zotero-box > summary').click();
     let zoteroCapture = null;
     const zoteroWarning = 'Synthetic OCR fallback: <img src=x onerror=alert(1)> review native text.';
