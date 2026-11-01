@@ -309,7 +309,7 @@ class TestJsDomContract(unittest.TestCase):
         for target in targets:
             self.assertIn(f'id="{target}"', html, f"Section nav has no target: {target}")
             self.assertRegex(nav, rf'<a href="\#{target}" data-jump="\#{target}" '
-                             rf'data-section-link="{target}">[^<]+</a>')
+                             rf'data-section-link="{target}"[^>]*>[^<]+</a>')
         self.assertNotIn('role="tab', nav)
         self.assertIn('data-section-nav="analysis"', nav)
 

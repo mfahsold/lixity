@@ -78,6 +78,7 @@
   var touchFocusEl = null;
   var activatedEl = null;
   var activatedHover = false;
+  var activatingAction = false;
   var dismissedHover = null;
   var pointerX = null, pointerY = null;
   var hideTimer = null;
@@ -307,6 +308,7 @@
   });
 
   document.addEventListener("focusin", function(e) {
+    if (activatingAction && dismissAction(e.target)) return;
     var el = e.target.closest("[data-help], [data-tip], [title]");
     if (Date.now() >= touchUntil) touchFocusEl = null;
     // Touch can restore button focus without requesting another explanation.
@@ -336,14 +338,23 @@
     else if (!el && !tip.contains(e.target)) cancelPending();
   }, {passive: true});
 
-  function dismissAction(target) {
+  function isActionControl(target) {
+    if (!target || !target.closest) return false;
     var action = target.closest("button, a, [role=button], input[type=button], input[type=submit]");
     var trigger = target.closest("[data-help], [data-tip], [title]");
-    if (!action || !trigger) return;
-    if (trigger.matches(".help[data-help]") && !trigger.closest("button, a")) return;
+    if (!action) return false;
+    if (trigger && trigger.matches(".help[data-help]") && !trigger.closest("button, a")) return false;
+    return true;
+  }
+
+  function dismissAction(target) {
+    if (!isActionControl(target)) return false;
+    var trigger = target.closest("[data-help], [data-tip], [title]");
+    if (!trigger) return false;
     activatedEl = trigger;
     activatedHover = trigger.matches(":hover");
     hide();
+    return true;
   }
 
   document.addEventListener("pointerdown", function(e) {
@@ -372,9 +383,14 @@
       e.preventDefault();
       e.stopPropagation();
     }
+    activatingAction = isActionControl(e.target);
+    if (activatingAction) setTimeout(function() { activatingAction = false; }, 0);
     dismissAction(e.target);
     touchHelp = null;
   }, true);
+  document.addEventListener("click", function() {
+    activatingAction = false;
+  });
 
   document.addEventListener("close", function(e) {
     if (activeEl && e.target.contains(activeEl)) hide();
@@ -402,7 +418,11 @@
   // Handle help before the reader's capture-phase Escape shortcuts.
   document.addEventListener("keydown", function (e) {
     if (touchFocusEl && touchFocusEl.contains(e.target)) touchFocusEl = null;
-    if (e.key === "Enter" || e.key === " ") dismissAction(e.target);
+    if (e.key === "Enter" || e.key === " ") {
+      activatingAction = isActionControl(e.target);
+      if (activatingAction) setTimeout(function() { activatingAction = false; }, 0);
+      dismissAction(e.target);
+    }
     if (e.key === "Escape" && (activeEl || pendingEl)) {
       var visibleHelp = Boolean(activeEl);
       var helpOwnsFocus = visibleHelp && (activeEl.contains(e.target) || tip.contains(e.target) ||

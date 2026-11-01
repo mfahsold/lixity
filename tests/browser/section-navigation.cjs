@@ -21,7 +21,7 @@ for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
     labels = {**get_language_profile(locale).labels, **WORKSPACE_LABELS[locale]}
     def localized(*args, **kwargs):
         return original(*args, **{**kwargs, 'labels': labels, 'language_key': locale,
-          'enabled_actions': ['analyze', 'manuscript-pdf', 'research-reader'],
+          'enabled_actions': ['analyze', 'manuscript-pdf', 'research-reader', 'speech-plan'],
           'scenes': scene_report_for_display(render.__globals__['SAMPLE'], CorpusConfig(language='de'), None),
           'manuscript_pdf_token': 'synthetic-manuscript', 'research_context_token': 'synthetic-root'})
     render.__globals__['render_dashboard'] = localized
@@ -315,7 +315,46 @@ async function companionOverviewReturn(browser, motion) {
    const analysis=page.locator('#analysis-sections');
    await expect(analysis.locator('[data-section-link]')).toHaveCount(10);
    await expect(analysis.locator('[data-section-indicator]')).toHaveCount(0);
-   await analysis.locator('[data-section-link=matrix]').click();
+   assert.equal(await analysis.locator('[data-section-link]').evaluateAll(links=>links.every(link=>
+    !!link.dataset.help && link.dataset.help.trim() && !link.hasAttribute('tabindex'))),true);
+   assert.equal(await page.locator('#workbench-overview-back').getAttribute('data-help')!==null,true);
+   assert.equal(await page.locator('#reader-speech').getAttribute('data-help'),
+    await page.evaluate(()=>uiLabel('speech_reader_help_plan')),
+    'Export-only workspaces must not promise audio rendering');
+   const outline = page.locator('#analysis-outline-nav');
+   for(const target of ['flags','dist','dialogue','characters','pacing','scenes','motifs','showing','style','matrix']) {
+    assert.equal(await outline.locator(`[data-section-link=${target}]`).getAttribute('data-help'),
+     await analysis.locator(`[data-section-link=${target}]`).getAttribute('data-help'));
+   }
+   if(locale==='de' && width===1440 && motion==='reduce' && !touch) {
+    const link=analysis.locator('[data-section-link=flags]'), tip=page.locator('#lixity-tooltip');
+    const help=await link.getAttribute('data-help');
+    await page.mouse.move(0,0); await link.focus();
+    await expect(tip.locator('.tooltip-copy')).toHaveText(help);
+    await expect(tip).toHaveAttribute('aria-hidden','false');
+    assert.match(await link.getAttribute('aria-describedby'),/\blixity-tooltip\b/);
+    await page.keyboard.press('Escape');
+    await expect(tip).toHaveAttribute('aria-hidden','true');
+    await expect(link).toBeFocused();
+    await link.evaluate(node=>node.blur());
+    await page.mouse.move(0,0); await link.hover();
+    await expect(tip.locator('.tooltip-copy')).toHaveText(help);
+    await expect(tip).toHaveAttribute('aria-hidden','false');
+    await tip.hover();
+    await expect(tip).toHaveAttribute('aria-hidden','false');
+    await page.mouse.move(0,0);
+    await expect(tip).toHaveAttribute('aria-hidden','true');
+    for(const selector of ['#workbench-overview-back','#reader-speech']) {
+     const button=page.locator(selector);
+     await button.focus();
+     await expect(tip.locator('.tooltip-copy')).toHaveText(await button.getAttribute('data-help'));
+     await expect(tip).toHaveAttribute('aria-hidden','false');
+     assert.match(await button.getAttribute('aria-describedby'),/\blixity-tooltip\b/);
+     await page.keyboard.press('Escape');
+     await expect(tip).toHaveAttribute('aria-hidden','true');
+    }
+   }
+   await analysis.locator('[data-section-link=matrix]')[touch?'tap':'click']();
 
    await expect(analysis.locator('[aria-current=true]')).toHaveAttribute('data-section-link','matrix');
    await expect(analysis.locator('[aria-current=true]')).toHaveCSS('text-decoration-line','underline');

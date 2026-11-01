@@ -780,7 +780,11 @@
   button(audioActions, "output_title", function() { open("output"); }).id = "settings-speech-output";
   settingsForm.after(audioLinks);
   var toolbar = document.getElementById("manuscript-reader-controls");
-  if (toolbar) button(toolbar, "reader_title", function() { open("reader"); }).id = "reader-speech";
+  if (toolbar) {
+    var readerSpeech = button(toolbar, "reader_title", function() { open("reader"); });
+    readerSpeech.id = "reader-speech";
+    readerSpeech.dataset.help = label(canRender ? "reader_help" : "reader_help_plan");
+  }
   document.addEventListener("lixity:workbench-change", function() {
     if (!dialog || !dialog.open) return;
     if (profileSaving) { status(label("saving")); return; }

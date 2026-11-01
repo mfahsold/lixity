@@ -53,6 +53,9 @@ server.serve_forever()
       const before = fs.readFileSync(server.fixture.source);
       try {
         await page.goto(server.fixture.url);
+        assert.equal(await page.locator('#reader-speech').getAttribute('data-help'),
+          await page.evaluate(() => uiLabel('speech_reader_help')),
+          'Audio-capable workspaces describe rendering and plan export');
         await page.locator('#tab-view-project').click();
         await page.locator('#settings-speech-output').click();
         await page.waitForFunction(() => document.querySelector('#speech-name')?.value === 'Narrator');

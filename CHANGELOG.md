@@ -40,6 +40,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   direction without manually supplying snapshot hashes.
 
 ### Changed
+- Analysis navigation links and the return and audio controls offer localized
+  contextual help on hover or keyboard focus, reusing the shared tooltip.
 - Project creation rejects invalid or automatic language values with HTTP 400
   before writing files instead of silently selecting English. An omitted
   language still inherits a concrete server language; an automatic session

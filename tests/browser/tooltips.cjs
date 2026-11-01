@@ -251,6 +251,15 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
       await expect(tip).toHaveAttribute('aria-hidden', 'false');
       await expect(copy).toHaveText('Native action explanation.');
       await page.keyboard.press('Escape');
+      await page.locator('#second-action').evaluate(el => { el.dataset.help = 'Second action explanation.'; });
+      await page.evaluate(() => {
+        const nav = document.querySelector('#navigation'), other = document.querySelector('#second-action');
+        nav.addEventListener('click', () => other.focus({preventScroll: true}), {once: true});
+      });
+      await page.locator('#navigation').click();
+      await expect(page.locator('#second-action')).toBeFocused();
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
+      await page.locator('#second-action').evaluate(el => { el.removeAttribute('data-help'); });
       await page.locator('#navigation').evaluate(el => { el.removeAttribute('data-help'); });
 
       await page.locator('#vendor-viewer').evaluate(el => { el.hidden = false; });

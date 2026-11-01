@@ -261,6 +261,12 @@ ANALYSIS_SECTIONS: tuple[tuple[str, str], ...] = (
 )
 
 
+def _section_help_attr(target: str, labels: Mapping[str, str] | None) -> str:
+    help_key = "analysis_nav_help_" + target
+    tip = label(labels, help_key)
+    return f' data-help="{esc(tip)}"' if tip and tip != help_key else ""
+
+
 def section_nav(links: Sequence[tuple[str, str]], labels: Mapping[str, str] | None) -> str:
     """Analysis section navigation for the given ``(panel id, label key)`` pairs."""
     if not links:
@@ -270,9 +276,10 @@ def section_nav(links: Sequence[tuple[str, str]], labels: Mapping[str, str] | No
         f'aria-label="{esc(label(labels, "sections"))}">'
     ]
     for target, label_key in links:
+        help_attr = _section_help_attr(target, labels)
         parts.append(
             f'<a href="#{esc(target)}" data-jump="#{esc(target)}" '
-            f'data-section-link="{esc(target)}">{esc(label(labels, label_key))}</a>'
+            f'data-section-link="{esc(target)}"{help_attr}>{esc(label(labels, label_key))}</a>'
         )
     parts.append("</nav>")
     return "".join(parts)
@@ -293,7 +300,8 @@ def analysis_outline_nav(links: Sequence[tuple[str, str]], labels: Mapping[str, 
     for target, label_key in links:
         parts.append(
             f'<li><a href="#{esc(target)}" data-jump="#{esc(target)}" '
-            f'data-section-link="{esc(target)}">{esc(label(labels, label_key))}</a></li>'
+            f'data-section-link="{esc(target)}"{_section_help_attr(target, labels)}>'
+            f'{esc(label(labels, label_key))}</a></li>'
         )
     parts.append("</ul></nav></details>")
     return "".join(parts)
