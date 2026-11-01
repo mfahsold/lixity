@@ -1019,7 +1019,7 @@ def render_dashboard(
                     for ch in chapters)
         ):
             review_routes.append(
-                ("review_style_space", "review_style_space_hint", "review_style_space_action", "dimensions")
+                ("review_style_space", "review_style_space_hint", "review_style_space_action", "dim-3d-view")
             )
         for _title_key, hint_key, action_key, target in review_routes:
             parts.append(

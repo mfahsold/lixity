@@ -77,7 +77,7 @@ def style_dimensions(
                 "retained": "dim_retained",
             }.items()},
         }
-        parts.append('<div class="dim-layout"><div class="dim-3d-box">')
+        parts.append('<div class="dim-layout"><div class="dim-3d-box" id="dim-3d-view">')
         parts.append(f'<div class="dim-3d-header"><span class="dim-3d-title">{translated("dim_3d_title")}</span></div>')
         parts.append(f'<div class="dim-view-control"><label for="dim-projection">{translated("dim_projection")}</label><select class="ctl dim-ctl" id="dim-projection" disabled><option value="3d">{translated("dim_3d")}</option>')
         for a in range(len(axes_data)):

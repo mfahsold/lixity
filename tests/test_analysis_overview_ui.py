@@ -75,8 +75,8 @@ class TestAnalysisOverview(unittest.TestCase):
             with self.subTest(controls=controls):
                 html = self.render(controls=controls)
                 route = html.split('id="analysis-review"', 1)[1].split('</section>', 1)[0]
-                self.assertIn('href="#dimensions"', route)
-                self.assertIn('data-jump="#dimensions"', route)
+                self.assertIn('href="#dim-3d-view"', route)
+                self.assertIn('data-jump="#dim-3d-view"', route)
                 fingerprint = copy.deepcopy(analysis.fingerprint)
                 fingerprint.dimensions[0]["scores"] = {}
                 unavailable = render_dashboard(
@@ -84,7 +84,7 @@ class TestAnalysisOverview(unittest.TestCase):
                     fingerprint=fingerprint, controls=controls, title="Synthetic overview",
                 )
                 route = unavailable.split('id="analysis-review"', 1)[1].split('</section>', 1)[0]
-                self.assertNotIn('href="#dimensions"', route)
+                self.assertNotIn('href="#dim-3d-view"', route)
 
     def test_scrollable_tables_have_named_keyboard_regions_and_column_scopes(self):
         html = self.render()
