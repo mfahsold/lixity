@@ -170,6 +170,87 @@ print(json.dumps({language: dashboard(text, language=language, title="Browser re
     await page.locator('#dim-read-chapter').click();
     await page.waitForFunction(() => document.querySelector('#ch-2').classList.contains('flash'));
   });
+  await check('cutoff navigation cycles measured chapter marks without ranking', async () => {
+    const review = await browser.newPage({viewport: {width: 320, height: 900}, reducedMotion: 'reduce'});
+    const reviewPayload = {...payload, points: [payload.points[0], payload.points[1],
+      {ch:3, title:'Third chapter', x:0, y:0, z:-3, flagged:true}]};
+    const reviewEncoded = JSON.stringify(reviewPayload).replaceAll('&','&amp;').replaceAll('"','&quot;')
+      .replaceAll('<','&lt;').replaceAll('>','&gt;');
+    const reviewHtml = original.replace(/data-dim3d="[^"]*"/, () => `data-dim3d="${reviewEncoded}"`);
+    try {
+      await review.route('http://lixity.test/**', route => route.fulfill({contentType:'text/html', body:reviewHtml}));
+      await review.goto('http://lixity.test/');
+      await review.locator('#style-tab-dimensions').click();
+      const next = review.locator('#dim-next-threshold');
+      assert.equal(await next.isVisible(), true);
+      await next.focus();
+      for (const chapter of ['2', '3', '2']) {
+        await review.keyboard.press('Enter');
+        assert.equal(await review.locator('#dim-selection').getAttribute('data-chapter'), chapter);
+        assert.equal(await review.locator('#dim-chapter-select').inputValue(), chapter);
+        assert.equal(await review.locator('#dim-read-chapter').getAttribute('href'), '#ch-' + chapter);
+        assert.equal(await next.evaluate(node => node === document.activeElement), true);
+      }
+    } finally { await review.close(); }
+  });
+  await check('cutoff navigation keeps the graph visible on desktop and mobile', async () => {
+    for (const language of ['de', 'en']) for (const width of [320, 1280]) {
+      const review = await browser.newPage({viewport: {width, height: 900}, reducedMotion: 'reduce'});
+      const reviewPayload = {...payload, points: [payload.points[0], payload.points[1],
+        {ch:3, title:'Third chapter', x:0, y:0, z:-3, flagged:true}]};
+      const reviewEncoded = JSON.stringify(reviewPayload).replaceAll('&','&amp;').replaceAll('"','&quot;')
+        .replaceAll('<','&lt;').replaceAll('>','&gt;');
+      const reviewHtml = locales[language].replace(/data-dim3d="[^"]*"/, () => `data-dim3d="${reviewEncoded}"`);
+      try {
+        await review.route('http://lixity.test/**', route => route.fulfill({contentType:'text/html', body:reviewHtml}));
+        await review.goto('http://lixity.test/');
+        await review.locator('#analysis-review [data-jump="#dim-3d-view"]').click();
+        const next = review.locator('#dim-next-threshold');
+        await review.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        const beforeScroll = await review.evaluate(() => scrollY);
+        await next.click();
+        assert.equal(await review.evaluate(() => scrollY), beforeScroll, 'Selecting a point does not force scrolling');
+        assert.equal(await review.locator('#dim-selection').getAttribute('data-chapter'), '2');
+        assert.equal(await next.evaluate(node => node === document.activeElement), true);
+        const visible = await review.locator('#dim-3d-canvas').evaluate(canvas => {
+          const box = canvas.getBoundingClientRect();
+          return Math.max(0, Math.min(box.bottom, innerHeight) - Math.max(box.top, 0)) / box.height;
+        });
+        assert.ok(visible > 0.9, `${language} ${width}: plot remains visible during cutoff navigation (${visible})`);
+      } finally { await review.close(); }
+    }
+  });
+  await check('static reports provide chapter values instead of inert plot controls', async () => {
+    const report = await browser.newPage({javaScriptEnabled:false, viewport:{width:320, height:900}});
+    try {
+      await report.route('http://lixity.test/**', route => route.fulfill({contentType:'text/html', body:locales.de}));
+      await report.goto('http://lixity.test/');
+      assert.equal(await report.locator('#dim-3d-canvas').isVisible(), false);
+      assert.equal(await report.locator('#dim-ctl-traj').isDisabled(), true);
+      assert.equal(await report.locator('#dim-ctl-traj').isVisible(), false);
+      assert.ok((await report.locator('#dim-3d-view').innerText()).includes('JavaScript'));
+      assert.ok(await report.locator('#dim-scores tbody tr').count() > 0);
+      assert.equal(await report.locator('#dim-scores').isVisible(), true);
+    } finally { await report.close(); }
+  });
+  await check('unavailable canvas keeps its fallback and controls inactive', async () => {
+    const report = await browser.newPage({viewport:{width:320, height:900}});
+    try {
+      await report.addInitScript(() => {
+        const original = HTMLCanvasElement.prototype.getContext;
+        HTMLCanvasElement.prototype.getContext = function(...args) {
+          return this.id === 'dim-3d-canvas' ? null : original.apply(this, args);
+        };
+      });
+      await report.route('http://lixity.test/**', route => route.fulfill({contentType:'text/html', body:locales.en}));
+      await report.goto('http://lixity.test/');
+      await report.locator('#style-tab-dimensions').click();
+      assert.equal(await report.locator('#dim-fallback').isVisible(), true);
+      assert.equal(await report.locator('#dim-3d-canvas').isVisible(), false);
+      assert.equal(await report.locator('#dim-ctl-traj').isDisabled(), true);
+      assert.equal(await report.locator('#dim-scores').isVisible(), true);
+    } finally { await report.close(); }
+  });
   await check('planar projection retains scores and exposes its state', async () => {
     await page.locator('#dim-projection').selectOption('d1-d2');
     assert.equal(await page.locator('#dim-3d-canvas').getAttribute('data-projection'), 'd1-d2');

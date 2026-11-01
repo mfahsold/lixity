@@ -61,9 +61,9 @@ print(json.dumps(documents))
         assert.ok((await rows.last().locator('.val').textContent()).endsWith('0 ' + fixture.turns));
         await chart.scrollIntoViewIfNeeded();
         assert.equal(await chart.evaluate(element => element.scrollHeight > element.clientHeight), true);
-        await rows.first().focus(); await page.keyboard.press('PageDown');
+        await rows.first().locator('a[href^="#ch-"]').focus(); await page.keyboard.press('PageDown');
         await page.waitForFunction(() => document.querySelector('#dialogue .dist.scrollable').scrollTop > 0);
-        await rows.last().focus();
+        await rows.last().locator('a[href^="#ch-"]').focus();
         assert.equal(await chart.evaluate(element => {
           const box = element.getBoundingClientRect(), last = element.lastElementChild.getBoundingClientRect();
           return last.bottom <= box.bottom + 1 && last.top >= box.top - 1;

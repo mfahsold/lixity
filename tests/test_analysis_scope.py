@@ -36,6 +36,41 @@ class ScopeMarkup(HTMLParser):
             self.select = None
 
 
+class HeatmapCells(HTMLParser):
+    def __init__(self, html):
+        super().__init__(convert_charrefs=True)
+        self.cells = {}
+        self.feed(html)
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag == "td" and attrs.get("data-metric-feature"):
+            self.cells[(int(attrs["data-chapter"]), attrs["data-metric-feature"])] = attrs
+
+
+def test_heatmap_accessible_names_distinguish_fdr_selection_and_exemption():
+    from lixity.language import resolve_language
+    from tests.locales import LOCALES
+
+    _, _, metrics, fingerprint = comparison()
+    fingerprint.fdr_flagged = {1: ["asl"]}
+    for language in LOCALES:
+        labels = resolve_language(CorpusConfig(language=language)).labels
+        cells = HeatmapCells(render_heatmap_panel(fingerprint, metrics, labels=labels)).cells
+        assert labels["fdr_flagged"] in cells[(1, "asl")]["aria-label"]
+        assert labels["research_value_yes"] in cells[(1, "asl")]["aria-label"]
+        assert labels["research_value_no"] in cells[(3, "asl")]["aria-label"]
+        assert labels["analysis_scope_exemption"] in cells[(2, "asl")]["aria-label"]
+        unavailable = next(cell for cell in cells.values() if cell["aria-label"].find("z*") < 0)
+        assert labels["research_value_no"] not in unavailable["aria-label"]
+
+
+def test_heatmap_fdr_filter_is_inert_until_initialized():
+    _, _, metrics, fingerprint = comparison()
+    markup = ScopeMarkup(render_heatmap_panel(fingerprint, metrics))
+    assert "disabled" in markup.elements["heatmap-fdr-only"]
+
+
 def comparison(*, registered=True):
     text = "\n\n".join(
         f"## Chapter {number}\n\n" + (("moss " * length).strip() + ". ") * 20

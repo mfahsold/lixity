@@ -52,7 +52,8 @@ def test_project_patterns_agree_in_metrics_api_cli_native_and_build(tmp_path, ca
     assert panel is not None
     root = ElementTree.fromstring(panel[0])  # noqa: S314
     rows = root.findall("./div/table/tbody/tr")
-    assert {row.find("td").text: int(row.findall("td")[1].text) for row in rows} == expected
+    assert {"".join(row.find("td").itertext()): int("".join(row.findall("td")[1].itertext()))
+            for row in rows} == expected
     assert {path.name: path.read_bytes() for path in tmp_path.iterdir()} == before
 
     assert main(["build", str(manuscript), "--project", str(tmp_path)]) == 0

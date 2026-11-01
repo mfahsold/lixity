@@ -1141,7 +1141,7 @@ server.serve_forever()
     await page.locator('#r-ingest-text').fill('A synthetic source for a new local project.');
     await page.locator('#r-ingest-retention').check();
     await page.locator('#r-ingest-btn').click();
-    await expect(page.locator('#research-status-bar')).toContainText('HTTP(S)');
+    await expect(page.locator('#r-ingest-btn-status')).toContainText('HTTP(S)');
     await expect(page.locator('#r-ingest-title')).toHaveValue('Scratch source');
     await expect(page.locator('#r-ingest-text')).toHaveValue('A synthetic source for a new local project.');
     await page.locator('#r-ingest-origin-url').fill('https://example.org/source?a=1&b=2');
@@ -1153,13 +1153,13 @@ server.serve_forever()
     });
     await page.locator('#r-ingest-btn').click();
     await expect(page.locator('#r-ingest-origin-url')).toHaveValue('');
-    await expect(page.locator('#research-status-bar.ok')).toContainText(localWarning);
-    assert.equal(await page.locator('#research-status-bar img').count(), 0, 'Warning markup must remain text');
+    await expect(page.locator('#r-ingest-btn-status.ok')).toContainText(localWarning);
+    assert.equal(await page.locator('#r-ingest-btn-status img').count(), 0, 'Warning markup must remain text');
     await page.unroute('**/api/research-ingest');
     for (const width of [1440, 390]) {
       await page.setViewportSize({width, height: 1000});
-      await page.locator('#research-status-bar').screenshot({path: path.join(artifacts, `local-warning-${width}.png`)});
-      assert.ok(await page.locator('#research-status-bar').evaluate(e => e.getBoundingClientRect().right <= innerWidth));
+      await page.locator('#r-ingest-btn-status').screenshot({path: path.join(artifacts, `local-warning-${width}.png`)});
+      assert.ok(await page.locator('#r-ingest-btn-status').evaluate(e => e.getBoundingClientRect().right <= innerWidth));
     }
     await page.setViewportSize({width: 1440, height: 1000});
     await expect(page.locator('#research-sources-list')).toContainText('Scratch source');
@@ -1183,7 +1183,7 @@ api.ingest(project, text, source_id=source['id'], allow_retention=True, context=
 `, scratchProject], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}});
     await page.reload();
     await page.locator('[data-rtab=sources]').click();
-    await expect(page.locator('#r-local-import')).not.toBeVisible();
+    await expect(page.locator('#r-local-import')).toBeVisible();
     await expect(page.locator('#research-sources-list')).toContainText('Scratch source');
     await expect(page.locator('#research-sources-list a[href="zotero://select/library/items/ABCDEFGH"]')).toBeVisible();
     await expect(page.locator('#research-sources-list a[href="zotero://select/library/items/ABCDEFGH"]')).toHaveText('Open in Zotero ↗');

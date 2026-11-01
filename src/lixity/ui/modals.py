@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from ..language import LANGUAGE_CHOICES, LANGUAGE_PROFILES
 from .components import checkbox_field, esc, help_term, panel_label
 
 
@@ -12,10 +13,29 @@ def render_project_modals(
     labels: Mapping[str, str] | None = None,
     language_key: str = "generic",
     language_options: Sequence[Any] | None = None,
+    *,
+    current_language: str | None = None,
 ) -> str:
     """Renders the project wizard and research revision modal dialogs."""
 
     L = panel_label(labels)
+
+    # Project creation cannot preserve `auto`: the server currently converts
+    # it to English. Require an explicit supported choice instead of silently
+    # selecting the first language when the current choice is unavailable.
+    choices = language_options if language_options is not None else [
+        (key, profile.name) for key, profile in LANGUAGE_PROFILES.items()
+    ]
+    project_languages = [(code, name) for code, name in choices if code in LANGUAGE_CHOICES and code != "auto"]
+    configured = current_language if current_language is not None else language_key
+    selected = configured if any(code == configured for code, _name in project_languages) else ""
+
+    def project_language_options() -> str:
+        placeholder = f'<option value="" disabled{" selected" if not selected else ""}>{L("wizard_choose_language")}</option>'
+        return placeholder + "".join(
+            f'<option value="{esc(code)}"{" selected" if code == selected else ""}>{esc(name)}</option>'
+            for code, name in project_languages
+        )
 
     parts: list[str] = []
     parts.append('<dialog class="lixity-modal" id="modal-runtime" closedby="any" aria-labelledby="runtime-title">'
@@ -99,6 +119,7 @@ def render_project_modals(
     parts.append(f'            <div class="fpc-stat"><span class="fpc-label">{L("wizard_scope")}</span> <strong id="import-fpc-stats"></strong></div>')
     parts.append(f'            <div class="fpc-stat"><span class="fpc-label">{L("wizard_analysis_language")}</span> <span id="import-fpc-lang"></span></div>')
     parts.append('          </div>')
+    parts.append(f'          <p class="ctl-note">{L("wizard_preview_estimate_hint")}</p>')
     parts.append('          <div class="fpc-loss" id="import-fpc-loss" hidden></div>')
     parts.append('        </div>')
     parts.append('        <div class="project-structure-hint">')
@@ -111,10 +132,8 @@ def render_project_modals(
     parts.append('        <div class="form-row">')
     parts.append('          <div class="grow">')
     parts.append(f'            <label for="import-proj-lang" class="form-label">{help_term(labels, "language", L("language"))}</label>')
-    parts.append('            <select class="ctl full-width" id="import-proj-lang">')
-    for code, name in (("de", "Deutsch"), ("en", "English"), ("fr", "Français"), ("es", "Español"), ("it", "Italiano"), ("pt", "Português"), ("nl", "Nederlands")):
-        sel = ' selected' if code == language_key else ''
-        parts.append(f'              <option value="{code}"{sel}>{name}</option>')
+    parts.append('            <select class="ctl full-width" id="import-proj-lang" required>')
+    parts.append(project_language_options())
     parts.append('            </select>')
     parts.append(f'            <span class="ctl-note wizard-hint">{L("wizard_language_hint")}</span>')
     parts.append('          </div>')
@@ -155,10 +174,8 @@ def render_project_modals(
     parts.append('        <div class="form-row">')
     parts.append('          <div class="grow">')
     parts.append(f'            <label for="new-proj-lang" class="form-label">{help_term(labels, "language", L("language"))}</label>')
-    parts.append('            <select class="ctl full-width" id="new-proj-lang">')
-    for code, name in (("de", "Deutsch"), ("en", "English"), ("fr", "Français"), ("es", "Español"), ("it", "Italiano"), ("pt", "Português"), ("nl", "Nederlands")):
-        sel = ' selected' if code == language_key else ''
-        parts.append(f'              <option value="{code}"{sel}>{name}</option>')
+    parts.append('            <select class="ctl full-width" id="new-proj-lang" required>')
+    parts.append(project_language_options())
     parts.append('            </select>')
     parts.append(f'            <span class="ctl-note wizard-hint">{L("wizard_language_hint")}</span>')
     parts.append('          </div>')

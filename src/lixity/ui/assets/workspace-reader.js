@@ -151,7 +151,10 @@
   });
   toggle.disabled = false;
   toggle.addEventListener("click", function() { setEnabled(!enabled); });
-  if (close) close.addEventListener("click", function() { setEnabled(false); toggle.focus(); });
+  function focusToggleUnlessReturning() {
+    if (!window.LixityReader || !window.LixityReader.contextFocusReturnPending()) toggle.focus();
+  }
+  if (close) close.addEventListener("click", function() { setEnabled(false); focusToggleUnlessReturning(); });
   if (colSelect) colSelect.addEventListener("change", function() {
     if (!lastCatalogue) return;
     var previousDossier = select.value;
@@ -165,7 +168,7 @@
     if (event.target.closest("details[open]")) return;
     event.preventDefault();
     setEnabled(false);
-    toggle.focus();
+    focusToggleUnlessReturning();
   });
   document.addEventListener("click", function(event) {
     var pin = event.target.closest("[data-workspace-dossier]");

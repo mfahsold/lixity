@@ -145,6 +145,32 @@ class _PaneOwnership(HTMLParser):
 
 
 class TestJsDomContract(unittest.TestCase):
+    def test_project_creation_requires_an_explicit_supported_language(self):
+        from lixity.ui.modals import render_project_modals
+
+        choices = [("auto", "automatic"), ("en", "English"), ("generic", "Generic"), ("de", "Deutsch")]
+        for configured, expected in (("en", "en"), ("generic", "generic"), ("auto", ""), ("unknown", "")):
+            with self.subTest(configured=configured):
+                html = render_project_modals(WORKSPACE_LABELS["en"], "de", choices, current_language=configured)
+                for element_id in ("import-proj-lang", "new-proj-lang"):
+                    select = re.search(rf'<select\b([^>]*\bid="{element_id}"[^>]*)>(.*?)</select>', html, re.S)
+                    self.assertIsNotNone(select)
+                    self.assertRegex(select[1], r'\brequired\b')
+                    self.assertNotIn('value="auto"', select[2])
+                    self.assertIn('value="generic"', select[2])
+                    selected = re.search(r'<option\b[^>]*value="([^"]*)"[^>]*\bselected\b', select[2])
+                    self.assertIsNotNone(selected)
+                    self.assertEqual(selected[1], expected)
+
+    def test_import_preview_discloses_that_its_counts_are_estimates(self):
+        from lixity.ui.modals import render_project_modals
+
+        for language in LANGUAGES:
+            with self.subTest(language=language):
+                labels = WORKSPACE_LABELS[language]
+                html = render_project_modals(labels, language)
+                self.assertIn(labels["wizard_preview_estimate_hint"], unescape(html))
+
     def test_optional_diagram_library_stays_inert_and_preserves_raw_text_delimiters(self):
         import json
         from unittest.mock import patch
@@ -185,6 +211,60 @@ class TestJsDomContract(unittest.TestCase):
                 self.assertIn('<td>2</td>', panel)
                 self.assertIn('tabindex="0" role="region"', panel)
                 self.assertNotIn('data-jump=', panel)
+
+    def test_character_table_explains_ambiguous_columns_in_every_locale(self):
+        from lixity.language import resolve_language
+        from lixity.ui.narration import render_characters_panel
+
+        report = {"chapters": 5, "figures": [{"name": "Mara", "mentions": 3,
+                  "chapters_present": [1, 4, 5], "first_chapter": 1,
+                  "last_chapter": 5, "longest_gap": 2, "presence_ratio": 0.6}]}
+        for language in LOCALES:
+            with self.subTest(language=language):
+                labels = resolve_language(CorpusConfig(language=language)).labels
+                panel = unescape(render_characters_panel(report, [], labels))
+                self.assertIn(labels["chr_hint"], panel)
+                for key in ("chr_span", "chr_gap", "chr_share"):
+                    self.assertIn(f'data-help="{labels[f"help_{key}"]}" tabindex="0">{labels[key]}', panel)
+                self.assertIn('<td class="num" title="">1–5</td>', panel)
+                self.assertIn('<td class="num">2</td>', panel)
+                self.assertIn('60 %', panel)
+
+    def test_signal_group_summary_retains_limits_outside_method_disclosure(self):
+        from lixity.language import resolve_language
+        from lixity.ui.narration import render_showing_panel
+
+        report = {"chapter_list": [{"chapter_num": 1, "balance": 0.2, "tell_z": 0.0,
+                                   "show_z": 0.2}, {"chapter_num": 2, "balance": -0.2,
+                                   "tell_z": 0.2, "show_z": 0.0}, {"chapter_num": 3,
+                                   "balance": 0.0, "tell_z": 0.0, "show_z": 0.0}]}
+        for language in LOCALES:
+            with self.subTest(language=language):
+                labels = resolve_language(CorpusConfig(language=language)).labels
+                panel = unescape(render_showing_panel(report, labels, language))
+                before, details = panel.split('<details class="signal-method">', 1)
+                self.assertIn(labels["showing_brief_note"].replace("{min_words}", "100"), before)
+                self.assertIn(f'<summary>{labels["showing_method"]}</summary>', details)
+                self.assertIn(labels["showing_context_note"].replace("{min_words}", "100"), details)
+                self.assertIn(labels["showing_axis_note"], panel)
+
+    def test_signal_difference_bars_show_sign_and_preserve_unavailable(self):
+        from lixity.ui.narration import render_showing_panel
+
+        report = {"chapter_list": [
+            {"chapter_num": 1, "balance": -1.0, "tell_z": 1.0, "show_z": 0.0},
+            {"chapter_num": 2, "balance": 2.0, "tell_z": 0.0, "show_z": 2.0},
+            {"chapter_num": 3, "balance": 0.0, "tell_z": 0.0, "show_z": 0.0},
+            {"chapter_num": 4, "comparable": False},
+        ]}
+        panel = render_showing_panel(report, language_key="en")
+        self.assertIn('class="signal-negative" style="width:25.0%"', panel)
+        self.assertIn('class="signal-positive" style="width:50.0%"', panel)
+        self.assertIn('class="signal-positive" style="width:0.0%"', panel)
+        self.assertIn('<span class="val">-1.00</span>', panel)
+        self.assertIn('<span class="val">+2.00</span>', panel)
+        self.assertRegex(panel, r'class="row unavailable"[^>]*>.*?<span class="val">–</span>')
+        self.assertIn('class="signal-scale"', panel)
 
     def test_review_routes_only_offer_existing_analysis_targets(self):
         config = CorpusConfig(language="en")
@@ -274,7 +354,7 @@ class TestJsDomContract(unittest.TestCase):
             "new-proj-research",
         ):
             pattern = re.compile(
-                r'<label class="form-checkbox"[^>]*>(?:(?!</label>).)*?id="'
+                r'<label class="form-checkbox(?:\s[^"]*)?"[^>]*>(?:(?!</label>).)*?id="'
                 + re.escape(control_id)
                 + r'"',
                 re.DOTALL,
@@ -361,6 +441,29 @@ class TestJsDomContract(unittest.TestCase):
             "import-project-options",
         ):
             self.assertRegex(html, rf'<details[^>]*id="{identifier}"')
+
+    def test_research_capture_fields_have_persistent_localized_labels(self):
+        from lixity.language import get_language_profile
+        from lixity.ui.research_panel import render_research_panel
+
+        for language in LOCALES:
+            with self.subTest(language=language):
+                labels = get_language_profile(language).labels
+                html = unescape(render_research_panel(labels))
+                for identifier, key in (
+                    ("r-init-title", "research_project_title"),
+                    ("r-ingest-file", "research_source_file"),
+                    ("r-ingest-title", "research_source_title"),
+                    ("r-ingest-tags", "research_tags"),
+                    ("r-ingest-text", "research_source_text"),
+                    ("r-link-rationale", "research_link_rationale"),
+                ):
+                    self.assertIn(f'for="{identifier}"', html)
+                    self.assertIn(labels[key], html)
+                for key in ("research_clear_file", "research_source_choose_one",
+                            "research_file_read_failed", "research_file_selection_changed"):
+                    self.assertTrue(labels[key].strip())
+                    self.assertNotEqual(labels[key], key)
 
     def test_minimal_workflow_labels_cover_every_locale(self):
         """New native controls have translated labels in every label pack."""
@@ -903,7 +1006,7 @@ class TestShowDontTellComponents(unittest.TestCase):
                 rendered = render_showing_panel(report, labels, "en")
                 self.assertNotIn('class="kpi-row"', rendered)
                 self.assertNotIn('class="dist scrollable"', rendered)
-                self.assertNotIn('<i style="width:', rendered)
+                self.assertNotIn('class="signal-bar"', rendered)
                 for note in labels.values():
                     self.assertIn(f'<p class="ctl-note">{note}</p>', rendered)
 
@@ -918,7 +1021,7 @@ class TestShowDontTellComponents(unittest.TestCase):
             self.assertRegex(value, r"^[+-]\d+\.\d{2}$")
         self.assertNotIn(labels["showing_unavailable_note"], rendered)
         self.assertIn(labels["showing_context_note"], rendered)
-        self.assertIn('<i style="width:', rendered)
+        self.assertIn('class="bar signal-bar"', rendered)
 
     def test_status_strip_renders_component_states(self):
         text = SAMPLE

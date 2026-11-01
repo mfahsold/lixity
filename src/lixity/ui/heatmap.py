@@ -218,7 +218,7 @@ def render_heatmap_panel(
         .replace("{min_sentences}", str(MIN_COMPARABLE_SENTENCES))
     )
     parts.append(f'<p class="panel-guide">{esc(reading)}</p>')
-    fdr_only = checkbox_field('<input type="checkbox" id="heatmap-fdr-only"/>', L("matrix_fdr_only"))
+    fdr_only = checkbox_field('<input type="checkbox" id="heatmap-fdr-only" disabled/>', L("matrix_fdr_only"))
     parts.append(
         f'<div class="matrix-tools">{fdr_only}'
         f'<a href="#matrix" class="ctl cockpit-switch" data-jump="#matrix">{L("cockpit_switch_matrix")} →</a>'
@@ -318,13 +318,15 @@ def render_heatmap_panel(
             cliff = fingerprint.cliffs_delta.get(chapter.num, {}).get(field_name)
             if cliff is not None:
                 tooltip += f" · Cliff’s δ {N(cliff, 2, signed=True)}"
-            marker = (
-                f'<span class="fdr-marker" aria-label="{L("fdr_flagged")}">●</span>'
-                if field_name in confirmed else ""
-            )
+            marker = '<span class="fdr-marker" aria-hidden="true">●</span>' if field_name in confirmed else ""
+            if chapter.num in fingerprint.chapter_registers:
+                fdr_status = label(labels, "analysis_scope_exemption")
+            else:
+                selected = "research_value_yes" if field_name in confirmed else "research_value_no"
+                fdr_status = f'{label(labels, "fdr_flagged")}: {label(labels, selected)}'
             cell_attrs += (
                 f' aria-label="{esc(label(labels, label_key))} · '
-                f'{L("chapter")} {chapter.num} · z* {N(z, 1, signed=True)}"'
+                f'{L("chapter")} {chapter.num} · z* {N(z, 1, signed=True)} · {esc(fdr_status, quote=True)}"'
             )
             if abs(z) < 0.05:
                 parts.append(

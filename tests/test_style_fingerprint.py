@@ -761,6 +761,23 @@ class TestStyleDimensions(unittest.TestCase):
 
 
 class TestDimensionInformation(unittest.TestCase):
+    def test_style_space_controls_are_disabled_until_canvas_initializes(self):
+        from lixity.ui.dimensions import style_dimensions
+
+        _, chapters = ParagraphProfiler(CorpusConfig(language="en")).profile_blocks(
+            parse_markdown_blocks(DIMENSION_SAMPLE))
+        fingerprint = StyleFingerprint(dimensions=[{
+            "index": 1, "variance": 1.0, "loadings": {"asl": 1.0},
+            "scores": {1: -1.0, 2: 1.0}, "flagged": [],
+        }])
+        rendered = style_dimensions(chapters, fingerprint)
+        for control in ("dim-ctl-traj", "dim-ctl-corr", "dim-ctl-spin", "dim-ctl-reset",
+                        "dim-ctl-left", "dim-ctl-right", "dim-ctl-up", "dim-ctl-down",
+                        "dim-ctl-zoom-in", "dim-ctl-zoom-out"):
+            self.assertRegex(rendered, rf'<button\b[^>]*id="{control}"[^>]*disabled')
+        self.assertIn('id="dim-fallback"', rendered)
+        self.assertIn('JavaScript', rendered)
+
     def fingerprint(self, values):
         fp = StyleFingerprint(
             values=values,
@@ -897,6 +914,45 @@ class TestDimensionInformation(unittest.TestCase):
         self.assertIn('id="dim-expert"', rendered)
         self.assertIn("Not flagged", rendered)
         self.assertNotIn('"flagged": true', html_module.unescape(rendered))
+
+    def test_style_space_highlights_actual_cutoff_membership_not_rounded_scores(self):
+        from lixity.ui.dimensions import style_dimensions
+
+        _, chapters = ParagraphProfiler(CorpusConfig(language="en")).profile_blocks(
+            parse_markdown_blocks(DIMENSION_SAMPLE))
+        fingerprint = StyleFingerprint(dimensions=[{
+            "index": 1, "variance": 1.0, "loadings": {"asl": 1.0},
+            "scores": {1: 2.499, 2: 2.501}, "flagged": [2],
+        }])
+        rendered = style_dimensions(chapters, fingerprint)
+        self.assertIn('id="dim-threshold-summary"', rendered)
+        self.assertIn('1 / 2 chapter reaches an axis cutoff', rendered)
+        self.assertIn('id="dim-next-threshold"', rendered)
+        self.assertRegex(rendered, r'<button\b[^>]*id="dim-next-threshold"[^>]*hidden')
+        self.assertRegex(rendered, r'<select\b[^>]*id="dim-chapter-select"[^>]*data-help="[^"]+"')
+        self.assertNotIn('<p class="hint">Select a point or chapter', rendered)
+        match = re.search(r'data-dim3d="([^"]*)"', rendered)
+        payload = json.loads(html_module.unescape(match.group(1)))
+        self.assertEqual([point["flagged"] for point in payload["points"]], [False, True])
+        self.assertEqual([point["x"] for point in payload["points"]], [2.5, 2.5])
+
+    def test_style_space_threshold_summary_localizes_singular_and_plural(self):
+        from lixity.language import get_language_profile
+        from lixity.ui.dimensions import style_dimensions
+
+        _, chapters = ParagraphProfiler(CorpusConfig(language="en")).profile_blocks(
+            parse_markdown_blocks(DIMENSION_SAMPLE))
+        for count in (0, 1, 3):
+            fingerprint = StyleFingerprint(dimensions=[{
+                "index": 1, "variance": 1.0, "loadings": {"asl": 1.0},
+                "scores": {1: 1.0, 2: 2.0, 3: 3.0}, "flagged": list(range(1, count + 1)),
+            }])
+            for language in LOCALES:
+                with self.subTest(count=count, language=language):
+                    labels = get_language_profile(language).labels
+                    rendered = html_module.unescape(style_dimensions(chapters, fingerprint, labels, language))
+                    key = "dim_threshold_summary_one" if count == 1 else "dim_threshold_summary"
+                    self.assertIn(labels[key].format(count=count, total=3), rendered)
 
     def test_incomplete_axes_are_disclosed_as_display_coordinates_not_measurements(self):
         from lixity.language import get_language_profile

@@ -101,7 +101,8 @@ export actions by task. Shorter help retains the same measurement boundaries;
 analysis algorithms and public command/JSON contracts are unchanged.
 The analysis overview links directly to available 3D chapter dimensions.
 Selection and axis-cutoff rings are distinct; cutoff marks are not FDR results
-or a blue–orange signed-deviation scale. Missing dimensions are disclosed.
+or a blue–orange signed-deviation scale. Missing dimensions are disclosed;
+the cutoff count and next-chapter control support review without ranking quality.
 
 Research requires an initialized, explicitly selected project. Its usage guide
 owns available commands; RFC command sketches are not executable contracts.
@@ -888,7 +889,9 @@ briefly for deliberate hovering, then switch faster between neighboring tools.
 They appear beside the hovered control near the pointer;
 keyboard and touch hints keep room for adjacent toolbar actions. They show the control name, its explanation and any declared
 shortcut. Moving away or starting an action cancels a pending hint. Keyboard
-focus and explicit touch explanations do not wait for mouse dwell. Essential actions
+focus and explicit touch explanations do not wait for mouse dwell. An open hint
+stays available while its trigger retains focus or the pointer remains over
+the trigger or hint; Escape dismisses it. Essential actions
 remain labeled and work without hovering. In manuscript search, `Enter` selects
 the next match, `Shift+Enter` selects the previous match and Escape clears the
 query. These keys apply in the search field, not throughout the application.
@@ -979,6 +982,8 @@ Tabs group the heatmap, style reference, dimensions and structural diagnostics.
 `ArrowLeft`/`ArrowRight` moves between tabs; `Home`/`End` selects the first/last.
 Links to `#heatmap`, `#bands`, `#dimensions`, `#structural` and `#feat-<field>`
 select the relevant tab. All available panels remain readable without JavaScript.
+**Unreleased:** static reports keep native chapter links and the dimension-score
+table; interactive filters and the 3D plot are unavailable without scripting.
 
 Keep the three comparison scopes separate:
 
@@ -1076,6 +1081,15 @@ scores beside the plot. Choose a flat axis pair in **View** when points overlap;
 return to 3D to rotate the same data. The line follows chapter order, including
 gaps where a chapter has no measured position. **Reset** restores the view,
 without changing chapter scores or analysis settings.
+
+**Unreleased:** the count beside the plot shows how many measured chapters
+reach an axis cutoff. **Next chapter at cutoff** cycles through those chapters
+in manuscript order. The cutoff uses unrounded scores and is a prompt for
+contextual review, not a quality ranking or an FDR selection.
+
+In the signal-group comparison, the centered bars show the signed difference
+between the standardized groups, scaled to the largest absolute chapter value.
+The method disclosure explains the underlying signals and their limits.
 
 The box represents independent axis cutoffs, not a confidence ellipsoid.
 Canvas points are pointer-operated; native controls and chapter-score links
@@ -2582,6 +2596,9 @@ their own bounded retention window. **Ready** for a target means its expected
 model answered the health probe, not merely that the tunnel port accepted TCP.
 The existing external worker and SSH-forward lifecycle remains separate; status
 does not install models, start a tunnel or establish that GPU acceleration works.
+**Unreleased:** the worker checks cover the local and configured Jetson workers,
+not external providers. The queue does not identify where an external or mixed
+job runs; its processing location is shown as unknown.
 
 Start the installed workspace without keeping a terminal open:
 
@@ -5184,8 +5201,11 @@ lixity research ingest --project ./novel --file ./notes.txt --allow-retention \
 The URL must be absolute HTTP(S), at most 2,000 characters, without credentials,
 whitespace or control characters. It is stored as submitted, never requested or
 used to accept a claim. Prefer stable source addresses over signed links with
-private query tokens. The browser displays it as escaped text. Failed validation
-keeps the draft; successful import clears the field with the rest of the form.
+private query tokens. The browser displays it as escaped text. **Unreleased:**
+choose either a local file or pasted text for each import; if both contain data,
+the form asks for a choice and retains both. Failed imports and edits made while
+an import is in progress remain in the form. On success, only an unchanged
+submitted form is cleared. The local importer remains available alongside Zotero.
 
 On refresh, an omitted `origin_url` retains the context selected by the existing
 API: supplied `context`, or the latest capture's context when omitted. An explicit
@@ -7683,6 +7703,8 @@ Analysis Off and Focus hide both displays without resetting their preferences.
 | `#analysis-review [data-review-passage]` | native passage link; clears search/paragraph filters, opens its `data-target` and focuses the paragraph panel |
 | `#analysis-review [data-jump="#dim-3d-view"]` | unreleased: direct style-space route, present only when the rendered dimensions have chapter scores; reveals the existing dimensions tab |
 | `#dim-legend` / `#dim-legend-note` / `#dim-incomplete-axes` | unreleased: style-space point/selection/cutoff key, cutoff caveat, and optional display-only zero-coordinate disclosure |
+| `#dim-fallback` | unreleased: visible when the plot cannot initialize; the chapter-score table remains readable |
+| `#dim-threshold-summary` / `#dim-next-threshold` | unreleased: count of scored chapters at an axis cutoff and, when available with JavaScript, a control cycling through them in manuscript order |
 | `#analysis-sections a[data-section-link]` | section navigation; highlights the panel in view (scrollspy); only rendered panels are offered |
 | `#manuscript-pdf-form` / `data-project-token` | native PDF form and opaque selected-context token; the client submits `layout` and this token explicitly |
 | `#manuscript-pdf-layout` / `#manuscript-pdf-download` / `#manuscript-pdf-status` | layout selector, download button and live status region; native PDF menu starts collapsed |
@@ -7693,7 +7715,8 @@ Analysis Off and Focus hide both displays without resetting their preferences.
 | `.research-dossier-actions > summary` | open supplemental dossier creation and project-wide record navigation below the reading content |
 | `data-action="<name>"` + `data-payload="<form-id>"` | control-server action |
 | `data-marker-kind="<kind>"` / `data-marker-resolve="<id>"` | set/resolve a work marker (inline note field); **never scrolls** – marker controls are excluded from jump activation |
-| `role="button" tabindex="0"` | every clickable non-native target (KPI tile, band row, loading bar, table row, heatmap cell) |
+| `.chapter-link` | unreleased: native keyboard-accessible chapter link in matrix and narrative rows; the surrounding row retains its pointer jump when scripts are active |
+| `role="button" tabindex="0"` | keyboard-accessible non-native targets such as KPI tiles, band rows, loading bars and heatmap cells |
 | `:focus-visible` | visible focus ring for all of the above (CSS covers `[role="button"]`) |
 
 Marker controls are excluded from jump activation. Marker writes use the host

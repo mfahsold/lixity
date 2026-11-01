@@ -27,7 +27,7 @@ capture variant.
 | Task | View | Role and scope |
 | --- | --- | --- |
 | Why does this passage feel faster? | [dashboard-measurement-focus.png](dashboard-measurement-focus.png) | lead: Inspect the literal count and its separate paragraph comparison, then read the scene. |
-| Where should I look next? | [dashboard-heatmap.png](dashboard-heatmap.png) | support: Compare chapters within this invented manuscript; colors do not grade writing. |
+| Where should I look next? | [dashboard-heatmap.png](dashboard-heatmap.png) | support: Compare chapters within this invented manuscript; the table continues horizontally and colors do not grade writing. |
 | What does the saved source say? | [dashboard-research-search.png](dashboard-research-search.png) | support: Read the retained source passage before following its claim and authored decision. |
 | What did the author decide? | [dashboard-research-decisions.png](dashboard-research-decisions.png) | support: An authored creative choice, not an automatically verified fact. |
 | Does the rhythm fit the scene? | [dashboard-reader-focus.png](dashboard-reader-focus.png) | support: Return to prose to make the editorial decision; this view does not demonstrate analysis. |

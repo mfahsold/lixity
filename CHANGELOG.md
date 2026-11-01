@@ -40,6 +40,23 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   direction without manually supplying snapshot hashes.
 
 ### Changed
+- The local source importer preserves new drafts during pending operations,
+  rejects an ambiguous file plus pasted text, and remains available alongside
+  Zotero sources. It uses shared form labels and inline status feedback.
+- Project creation requires an explicit supported language when the configured
+  choice cannot be preserved. Import-preview counts are labeled estimates;
+  runtime audio job locations stay unknown when the API cannot determine them.
+- Static reports offer native chapter links and avoid advertising unavailable
+  JavaScript controls. FDR selection and register exemptions are included in
+  heatmap accessible names; scene errors retain their technical detail behind
+  a localized explanation. Overlapping name patterns are disclosed.
+- The style space counts chapters reaching an axis cutoff and can cycle through
+  those points without ranking literary quality. Name-mention columns provide
+  contextual definitions, and the signal-group method is available on demand;
+  signed signal-group differences use a centered blue–orange scale.
+  Shared tooltips remain visible while their trigger has focus or is hovered.
+  Touch-opened evidence cards wait for the originating click before appearing;
+  mobile dock focus restoration respects newer focus choices.
 - The analysis overview links directly to the 3D style space when chapter
   scores are available. A legend distinguishes the axis cutoff from the
   selected chapter, even when both apply; loading directions show explicit

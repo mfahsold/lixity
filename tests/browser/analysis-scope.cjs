@@ -18,7 +18,10 @@ settings = {"register_profiles": {'Letters <img src=x onerror="window.scopeInjec
             "characters": {'Alex <script>': {"pov_in_chapters": [1, 3]},
                            "Robin": {"pov_in_chapters": [3, 5]}, "Mention only": {"aliases": ["moss"]}}}
 print(json.dumps({locale: {"html": dashboard(text, language=locale, title="Synthetic chapter groups", project_config=settings),
-                         "status": get_language_profile(locale).labels["analysis_scope_status"]}
+                         "status": get_language_profile(locale).labels["analysis_scope_status"],
+                         "fdr_label": get_language_profile(locale).labels["fdr_flagged"],
+                         "fdr_yes": get_language_profile(locale).labels["research_value_yes"],
+                         "exemption": get_language_profile(locale).labels["analysis_scope_exemption"]}
                   for locale in LOCALES}))
 `, {root});
 
@@ -44,6 +47,13 @@ print(json.dumps({locale: {"html": dashboard(text, language=locale, title="Synth
         assert.equal(await page.locator('#analysis-scope').isVisible(), true);
         const register = page.locator('#analysis-scope-register'), pov = page.locator('#analysis-scope-pov');
         const fdr = page.locator('#heatmap-fdr-only');
+        assert.equal(await fdr.isEnabled(), true, 'The initialized filter is interactive');
+        const selectedCell = page.locator('#heatmap td.z').filter({has:page.locator('.fdr-marker')}).first();
+        assert.ok(await selectedCell.count(), 'The fixture includes an FDR selection');
+        assert.ok((await selectedCell.getAttribute('aria-label')).includes(fixture.fdr_label));
+        assert.ok((await selectedCell.getAttribute('aria-label')).includes(fixture.fdr_yes));
+        const exemptCell = page.locator('#heatmap-ch-2 td.z[aria-label*="z*"]').first();
+        assert.ok((await exemptCell.getAttribute('aria-label')).includes(fixture.exemption));
         const rows = page.locator('#heatmap tbody tr[data-chapter-num]');
         const visible = () => rows.evaluateAll(nodes => nodes.filter(node => !node.hidden).map(node => Number(node.dataset.chapterNum)));
         const measured = () => page.evaluate(() => ({
@@ -108,6 +118,17 @@ print(json.dumps({locale: {"html": dashboard(text, language=locale, title="Synth
         await page.close();
       }
     }
+    const nojs = await browser.newPage({javaScriptEnabled: false});
+    await nojs.route('http://lixity.test/**', route => route.fulfill({contentType: 'text/html', body: fixtures.en.html}));
+    await nojs.goto('http://lixity.test/');
+    assert.equal(await nojs.locator('#heatmap-fdr-only').isDisabled(), true,
+      'A static report cannot claim to filter when scripting is unavailable');
+    assert.equal(await nojs.locator('#text-search').isVisible(), false);
+    assert.equal(await nojs.locator('#filter-flags').isVisible(), false);
+    assert.equal(await nojs.locator('#paragraph-filter-reset').isVisible(), false);
+    assert.equal(await nojs.locator('[data-chapter-toggle]').first().isVisible(), false);
+    assert.equal(await nojs.locator('#heatmap tbody tr[data-chapter-num]').count(), 5);
+    await nojs.close();
     console.log(`Analysis scope: ${Object.keys(fixtures).length} locales × desktop/short mobile, declared groups/FDR/reset/fragment/jump/source/reference checks passed; ${artifacts}`);
   } finally {
     await browser.close();

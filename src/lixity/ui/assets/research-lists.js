@@ -104,8 +104,6 @@ async function refreshResearchSources(overview, changedId, freshRead) {
   }
   var sources = data.sources;
   reading.state.count = sources.length;
-  var localImport = document.getElementById("r-local-import");
-  if (localImport) localImport.hidden = sources.length > 0 && sources.every(function(s) { return s.context && s.context.external_reference; });
   var external = sources.find(function(s) { return s.context && s.context.external_reference; });
   var libraryInput = document.getElementById("r-zotero-library");
   if (external && libraryInput && !zoteroSelection) libraryInput.value = external.context.external_reference.library;

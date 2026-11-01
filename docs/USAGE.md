@@ -659,7 +659,9 @@ briefly for deliberate hovering, then switch faster between neighboring tools.
 They appear beside the hovered control near the pointer;
 keyboard and touch hints keep room for adjacent toolbar actions. They show the control name, its explanation and any declared
 shortcut. Moving away or starting an action cancels a pending hint. Keyboard
-focus and explicit touch explanations do not wait for mouse dwell. Essential actions
+focus and explicit touch explanations do not wait for mouse dwell. An open hint
+stays available while its trigger retains focus or the pointer remains over
+the trigger or hint; Escape dismisses it. Essential actions
 remain labeled and work without hovering. In manuscript search, `Enter` selects
 the next match, `Shift+Enter` selects the previous match and Escape clears the
 query. These keys apply in the search field, not throughout the application.
@@ -750,6 +752,8 @@ Tabs group the heatmap, style reference, dimensions and structural diagnostics.
 `ArrowLeft`/`ArrowRight` moves between tabs; `Home`/`End` selects the first/last.
 Links to `#heatmap`, `#bands`, `#dimensions`, `#structural` and `#feat-<field>`
 select the relevant tab. All available panels remain readable without JavaScript.
+**Unreleased:** static reports keep native chapter links and the dimension-score
+table; interactive filters and the 3D plot are unavailable without scripting.
 
 Keep the three comparison scopes separate:
 
@@ -847,6 +851,15 @@ scores beside the plot. Choose a flat axis pair in **View** when points overlap;
 return to 3D to rotate the same data. The line follows chapter order, including
 gaps where a chapter has no measured position. **Reset** restores the view,
 without changing chapter scores or analysis settings.
+
+**Unreleased:** the count beside the plot shows how many measured chapters
+reach an axis cutoff. **Next chapter at cutoff** cycles through those chapters
+in manuscript order. The cutoff uses unrounded scores and is a prompt for
+contextual review, not a quality ranking or an FDR selection.
+
+In the signal-group comparison, the centered bars show the signed difference
+between the standardized groups, scaled to the largest absolute chapter value.
+The method disclosure explains the underlying signals and their limits.
 
 The box represents independent axis cutoffs, not a confidence ellipsoid.
 Canvas points are pointer-operated; native controls and chapter-score links
@@ -2353,6 +2366,9 @@ their own bounded retention window. **Ready** for a target means its expected
 model answered the health probe, not merely that the tunnel port accepted TCP.
 The existing external worker and SSH-forward lifecycle remains separate; status
 does not install models, start a tunnel or establish that GPU acceleration works.
+**Unreleased:** the worker checks cover the local and configured Jetson workers,
+not external providers. The queue does not identify where an external or mixed
+job runs; its processing location is shown as unknown.
 
 Start the installed workspace without keeping a terminal open:
 

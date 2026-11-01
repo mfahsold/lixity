@@ -89,6 +89,69 @@ async function point(page) {
     return {x:rect.left + rect.width / 2, y:rect.top + rect.height / 2};
   });
 }
+async function touchArrivalAndCancellation(browser) {
+  const page = await browser.newPage({viewport:{width:320,height:480},hasTouch:true,reducedMotion:'reduce'});
+  try {
+    await page.route('**/*', route => route.fulfill({contentType:'text/html',body:fixtures.en}));
+    await page.goto('http://localhost/');
+    await page.locator('#manuscript-analysis-toggle').click();
+    await selected(page, 'filter');
+    const at = await point(page);
+    async function startWithoutClick() {
+      await page.evaluate(({x,y}) => {
+        const paragraph = document.elementFromPoint(x,y).closest('.ptext-inner > p');
+        const options = {bubbles:true, pointerType:'touch', pointerId:7, clientX:x, clientY:y};
+        paragraph.dispatchEvent(new PointerEvent('pointerdown', options));
+        paragraph.dispatchEvent(new PointerEvent('pointerup', options));
+      }, at);
+    }
+    await startWithoutClick();
+    await page.locator('#analysis-evidence-card').waitFor({state:'visible',timeout:2000});
+    assert.equal(await page.locator('.analysis-evidence-guide').evaluate(node => node.open), false,
+      'a missing compatibility click still opens a closed explanation');
+    await page.evaluate(({x,y}) => {
+      document.elementFromPoint(x,y).dispatchEvent(new MouseEvent('click',
+        {bubbles:true,cancelable:true,detail:1,clientX:x,clientY:y}));
+    }, at);
+    assert.equal(await page.locator('.analysis-evidence-guide').evaluate(node => node.open), false,
+      'a late compatibility click cannot activate a control in the fallback card');
+    await page.keyboard.press('Escape');
+
+    await startWithoutClick();
+    await page.evaluate(() => document.dispatchEvent(new Event('lixity:workbench-change')));
+    await page.waitForTimeout(650);
+    assert.equal(await page.locator('#analysis-evidence-card').isVisible(), false,
+      'a view change cancels a pending touch fallback');
+
+    await selected(page, 'filter');
+    await startWithoutClick();
+    await page.evaluate(() => window.scrollBy({top:-50,behavior:'instant'}));
+    await page.waitForTimeout(650);
+    assert.equal(await page.locator('#analysis-evidence-card').isVisible(), false,
+      'scrolling cancels a pending touch fallback');
+
+    await selected(page, 'filter');
+    await startWithoutClick();
+    await page.evaluate(({x,y}) => document.body.dispatchEvent(new MouseEvent('click',
+      {bubbles:true,cancelable:true,detail:1,clientX:x,clientY:y})), at);
+    await page.waitForTimeout(650);
+    assert.equal(await page.locator('#analysis-evidence-card').isVisible(), false,
+      'a click delivered elsewhere cancels a pending touch fallback');
+
+    await selected(page, 'filter');
+    await startWithoutClick();
+    await startWithoutClick();
+    await page.evaluate(({x,y}) => {
+      document.elementFromPoint(x,y).dispatchEvent(new MouseEvent('click',
+        {bubbles:true,cancelable:true,detail:1,clientX:x,clientY:y}));
+    }, at);
+    await page.locator('#analysis-evidence-card').waitFor({state:'visible'});
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(650);
+    assert.equal(await page.locator('#analysis-evidence-card').isVisible(), false,
+      'a later tap supersedes the earlier fallback and does not reopen the card');
+  } finally {await page.close();}
+}
 async function explainFromMenu(page, keyboard = false) {
   const explore = page.locator('#manuscript-context-menu [data-reader-action="values"]');
   if (keyboard) {await explore.focus(); await page.keyboard.press('Enter');}
@@ -257,6 +320,22 @@ server.serve_forever()
       assert.deepEqual(await ranges(page), [], 'explicit inspection works without enabling global marks');
       assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false, 'inspection keeps the default preference');
       await page.keyboard.press('Escape');
+      if (width === 320) {
+        await page.locator('#reader-inspector-close').focus();
+        const scheduled = await page.evaluate(() => {
+          const original = window.requestAnimationFrame, frames = [];
+          window.requestAnimationFrame = callback => { frames.push(callback); return frames.length; };
+          try {
+            document.getElementById('reader-inspector-close').click();
+            document.getElementById('style-layer').focus();
+          } finally { window.requestAnimationFrame = original; }
+          for (const callback of frames) callback(performance.now());
+          return frames.length;
+        });
+        assert.ok(scheduled > 0, 'closing the narrow inspector schedules its return layout');
+        assert.equal(await page.locator('#style-layer').evaluate(node => node === document.activeElement), true,
+          'a queued dock return does not steal focus the user moved to another control');
+      }
       if (await page.locator('#workspace-reader-close').isVisible()) await page.locator('#workspace-reader-close').click();
       await page.keyboard.press('Escape');
       // Direct analysis controls support keyboard input without opening a popup.
@@ -483,6 +562,7 @@ async function metricPreferences(browser) {
 (async () => {
   const browser = await launchChromium();
   try {
+    await touchArrivalAndCancellation(browser);
     await metricPreferences(browser);
     const proximity = await browser.newPage({viewport:{width:1440,height:950}, reducedMotion:'reduce'});
     await proximity.route('**/*', route => route.fulfill({contentType:'text/html',body:fixtures.native}));
@@ -656,8 +736,23 @@ async function metricPreferences(browser) {
         await page.locator('#analysis-evidence-card').waitFor({state:'visible'});
         assert.equal(await page.evaluate(() => document.activeElement.id), focus, 'hover does not steal focus');
       } else {
+        if (locale === 'en') await page.evaluate(() => {
+          // A frame can run between pointerup and the compatibility click.
+          // Force that ordering to verify the tap cannot activate the card.
+          document.addEventListener('pointerup', event => {
+            if (event.pointerType !== 'touch') return;
+            const original = window.requestAnimationFrame;
+            window.requestAnimationFrame = callback => {
+              window.requestAnimationFrame = original;
+              callback(performance.now());
+              return 0;
+            };
+          }, {capture:true, once:true});
+        });
         await page.touchscreen.tap(at.x, at.y);
         await page.locator('#analysis-evidence-card').waitFor({state:'visible'});
+        assert.equal(await page.locator('.analysis-evidence-guide').evaluate(node => node.open), false,
+          'opening on touch does not activate the card with the same tap');
       }
       assert.equal(await page.locator('#analysis-evidence-card blockquote').textContent(), 'feel');
       assert.equal(await page.evaluate(() => {

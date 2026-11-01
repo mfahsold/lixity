@@ -214,6 +214,32 @@ async function main() {
       const bytes = fs.readFileSync(target);
       results.push({file: path.basename(target), width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20)});
     }
+    async function alignHeatmapExcerpt() {
+      // Keep the real horizontal scrollport and all measurements intact. Size
+      // the browser window so this excerpt ends at a complete feature column.
+      const geometry = () => page.locator('#heatmap').evaluate(panel => {
+        const wrapper = panel.querySelector('.heatmap-wrap');
+        const bounds = wrapper.getBoundingClientRect();
+        const columns = Array.from(wrapper.querySelectorAll('thead th')).map(cell => {
+          const rect = cell.getBoundingClientRect();
+          return {left: rect.left - bounds.left, right: rect.right - bounds.left};
+        });
+        const visible = columns.filter(column => column.right <= bounds.width - 2);
+        return {width: bounds.width, last: visible.at(-1), next: columns[visible.length]};
+      });
+      const before = await geometry();
+      assert.ok(before.last && before.next, 'Heatmap capture must show a meaningful horizontal excerpt');
+      const excess = Math.max(0, Math.floor(before.width - before.last.right - 2));
+      if (excess) {
+        const size = page.viewportSize();
+        await page.setViewportSize({width: size.width - excess, height: size.height});
+        await settle();
+      }
+      const after = await geometry();
+      assert.ok(after.last && after.next && after.last.right <= after.width - 1 &&
+        after.next.left >= after.width - 2,
+      `Heatmap excerpt must end at a full column boundary: ${JSON.stringify(after)}`);
+    }
     async function saveDialog(target, selector) {
       const dialog = page.locator(selector);
       // Keep the real modal's bounded scrolling and show its confirmation
@@ -302,6 +328,7 @@ async function main() {
           const rows = document.querySelectorAll('table.heatmap tbody tr');
           for (let i = 20; i < rows.length; i++) rows[i].remove();
         });
+        await alignHeatmapExcerpt();
         await save(capture.target, '#heatmap');
       } else if (name.startsWith('dashboard-project-settings')) {
         await selectView('project');

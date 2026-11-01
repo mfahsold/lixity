@@ -39,6 +39,7 @@ from .components import (
     ANALYSIS_SECTIONS,
     analysis_outline_nav,
     artifact_href,
+    chapter_link,
     checkbox_field,
     help_term,
     kpi,
@@ -804,7 +805,7 @@ def render_dashboard(
             )
 
         parts.append("</div>")
-        parts.append(render_project_modals(labels, language_key, language_options))
+        parts.append(render_project_modals(labels, language_key, language_options, current_language=current_language))
 
         # --- PANE 3: MANUSCRIPT & ANALYSIS ---
         parts.append(
@@ -1053,10 +1054,11 @@ def render_dashboard(
         '<span class="ctl-note" id="text-search-status" role="status" aria-live="polite"></span>'
     )
     parts.append("</span>")
-    parts.append(checkbox_field('<input type="checkbox" id="filter-flags"/>', L("filter_flags")))
+    parts.append(checkbox_field('<input type="checkbox" id="filter-flags"/>', L("filter_flags"),
+                                extra_class="js-analysis-control"))
     if paragraphs:
         parts.append(
-            f'<button type="button" class="ctl" id="paragraph-filter-reset">{L("paragraph_filter_reset")}</button>'
+            f'<button type="button" class="ctl js-analysis-control" id="paragraph-filter-reset">{L("paragraph_filter_reset")}</button>'
         )
         if not controls:
             parts.append(metric_control)
@@ -1696,9 +1698,10 @@ def render_dashboard(
         for c in chapters:
             chapter_flagged = sum(p.severity >= flag_min_severity for _, p in by_chapter.get(c.num, []))
             row_hint = ' data-flags="1"' if chapter_flagged else ""
+            chapter_title = c.title if c.title.strip() else f'{label(labels, "chapter")} {c.num}'
             parts.append(
-                f'<tr class="row-link" data-jump="#ch-{c.num}"{row_hint} role="button" tabindex="0">'
-                f"<td>{c.num}</td><td>{esc(c.title)}</td>"
+                f'<tr class="row-link" data-jump="#ch-{c.num}"{row_hint}>'
+                f'<td>{c.num}</td><td>{chapter_link(c.num, chapter_title, flags=bool(chapter_flagged))}</td>'
                 f'<td class="num">{N(c.words, 0)}</td>'
                 f'<td class="num bar-cell"><i style="--v:{c.asl / max_asl * 100:.0f}%"></i>'
                 f"{N(c.asl, 1)}</td>"

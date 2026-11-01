@@ -56,6 +56,14 @@ def esc(value: object, quote: bool = True) -> str:
     return html.escape(str(value), quote=quote)
 
 
+def chapter_link(chapter: int, text: object, *, flags: bool = False, css_class: str = "") -> str:
+    """Link to a chapter with the same optional flag context as JS navigation."""
+    target = f"#ch-{int(chapter)}"
+    classes = f' class="chapter-link{(" " + esc(css_class)) if css_class else ""}"'
+    context = ' data-flags="1"' if flags else ""
+    return f'<a{classes} href="{target}" data-jump="{target}"{context}>{esc(text)}</a>'
+
+
 def panel_label(
     labels: Mapping[str, str] | None,
 ) -> Callable[[str], str]:
@@ -187,11 +195,12 @@ def manuscript_pdf_controls(
     )
 
 
-def toggle_button(text: str, control_id: str, pressed: bool, css_class: str = "ctl") -> str:
+def toggle_button(text: str, control_id: str, pressed: bool, css_class: str = "ctl", *, disabled: bool = False) -> str:
     classes = f"{css_class} active" if pressed else css_class
     return (
         f'<button type="button" class="{esc(classes)}" id="{esc(control_id)}" '
-        f'aria-pressed="{str(pressed).lower()}" title="{esc(text)}">{esc(text)}</button>'
+        f'aria-pressed="{str(pressed).lower()}" title="{esc(text)}"'
+        f'{" disabled" if disabled else ""}>{esc(text)}</button>'
     )
 
 

@@ -43,7 +43,7 @@ def test_global_phrase_total_and_local_cluster_count_remain_separate():
     global_table = panel.find("./div[@class='table-wrap motif-phrases']/table")
     local_table = panel.find("./div[@class='table-wrap motif-echoes']/table")
     assert global_table is not None and local_table is not None
-    assert [cell.text for cell in global_table.findall("./tbody/tr/td")] == ["silver lantern shines", "3", "1, 2"]
+    assert ["".join(cell.itertext()) for cell in global_table.findall("./tbody/tr/td")] == ["silver lantern shines", "3", "1, 2"]
     assert ["".join(cell.itertext()) for cell in local_table.findall("./tbody/tr/td")] == ["silver lantern shines", "1", "2", "1–9"]
     assert "Manuscript count" in "".join(global_table.itertext())
     assert "Local count" in "".join(local_table.itertext())

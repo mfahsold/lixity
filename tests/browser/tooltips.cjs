@@ -31,6 +31,10 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
         </style><body>
         <button id="navigation" type="button" title="Show sources">Sources</button>
         <button id="second-action" type="button" data-help="Second action explanation." style="position:fixed;top:150px;left:120px">Other</button>
+        <button id="plain-one" type="button" style="position:fixed;top:100px;left:20px">First</button>
+        <button id="plain-two" type="button" style="position:fixed;top:100px;left:120px">Second</button>
+        <button id="menu-owner" type="button" aria-haspopup="menu" aria-controls="owned-menu" aria-expanded="true" data-help="Menu explanation." style="position:fixed;top:600px;left:20px">Menu</button>
+        <div id="owned-menu" role="menu" style="position:fixed;top:650px;left:20px"><button id="owned-menu-action" role="menuitem">Menu action</button></div>
         <details id="composer"><summary id="help" data-help="${explanation}" aria-describedby="hint">Create dossier</summary></details>
         <span id="hint" hidden>Preserved description</span>
         <div id="scroll-panel" style="position:fixed;top:350px;left:20px;height:80px;overflow:auto">
@@ -42,6 +46,8 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
         <div role="button" style="position:fixed;top:460px;left:20px"><span class="help" id="nested-help" tabindex="0" data-help="Nested term explanation.">Term</span></div>
         <script>
           window.navigationClicks=0;document.querySelector('#navigation').addEventListener('click',()=>window.navigationClicks++);
+          window.plainEscapes=0;document.querySelector('#plain-one').addEventListener('keydown',event=>{if(event.key==='Escape')window.plainEscapes++});
+          window.menuEscapes=0;document.querySelector('#owned-menu').addEventListener('keydown',event=>{if(event.key==='Escape')window.menuEscapes++});
           document.querySelector('#modal').addEventListener('keydown',event=>{
             if(event.key==='Escape'&&event.target.id==='modal-input')event.currentTarget.close();
           });
@@ -83,12 +89,106 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
       await expect(tip).toHaveCSS('backdrop-filter', 'blur(4px)');
       await page.locator('html').evaluate(node => node.style.removeProperty('--glass-blur'));
       assert.equal(await help.getAttribute('aria-describedby'), 'hint lixity-tooltip');
+      await help.hover();
+      await page.mouse.move(0, 0);
+      await page.waitForTimeout(250);
+      assert.equal(await page.evaluate(() => document.activeElement.id), 'help');
+      await expect(tip).toHaveAttribute('aria-hidden', 'false',
+        {timeout: 1000});
+      await help.hover();
+      await tip.hover();
+      await page.mouse.move(0, 0);
+      await page.waitForTimeout(250);
+      await expect(tip).toHaveAttribute('aria-hidden', 'false', {timeout: 1000});
+      const other = page.locator('#second-action');
+      await other.hover();
+      await page.waitForTimeout(750);
+      assert.equal(await page.evaluate(() => document.activeElement.id), 'help');
+      await expect(copy).toHaveText(explanation);
+      await expect(tip).toHaveAttribute('aria-hidden', 'false');
+      await help.evaluate(el => el.blur());
+      const otherBox = await other.boundingBox();
+      await page.mouse.move(otherBox.x + 2, otherBox.y + 2);
+      await expect(copy).toHaveText('Second action explanation.');
+      await page.mouse.move(0, 0);
+      await help.focus();
+      await expect(copy).toHaveText(explanation);
       await page.keyboard.press('Escape');
       await expect(tip).toHaveAttribute('aria-hidden', 'true');
       assert.equal(await help.getAttribute('aria-describedby'), 'hint');
       assert.equal(await page.evaluate(() => document.activeElement.id), 'help');
       assert.equal(await page.locator('#composer').getAttribute('open'), null,
         'Showing or dismissing help must preserve the native disclosure');
+
+      await page.locator('#plain-one').focus();
+      await help.hover();
+      await expect(tip).toHaveAttribute('aria-hidden', 'false');
+      await page.keyboard.press('Escape');
+      assert.equal(await page.evaluate(() => window.plainEscapes), 1,
+        'Hover help must not consume Escape belonging to another focused control');
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
+      await page.locator('#owned-menu-action').focus();
+      await page.locator('#menu-owner').hover();
+      await expect(copy).toHaveText('Menu explanation.');
+      await page.keyboard.press('Escape');
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
+      assert.equal(await page.evaluate(() => window.menuEscapes), 0,
+        'A trigger-owned menu waits until its tooltip is dismissed');
+      await page.keyboard.press('Escape');
+      assert.equal(await page.evaluate(() => window.menuEscapes), 1);
+      await page.mouse.move(0, 0);
+      await page.locator('#menu-owner').evaluate(node => node.setAttribute('aria-expanded', 'false'));
+      await page.locator('#menu-owner').hover();
+      await expect(tip).toHaveAttribute('aria-hidden', 'false');
+      await page.keyboard.press('Escape');
+      assert.equal(await page.evaluate(() => window.menuEscapes), 2,
+        'A closed or unrelated controlled menu does not give hover help focus priority');
+      await page.mouse.move(0, 0);
+      await help.focus();
+      await expect(tip).toHaveAttribute('aria-hidden', 'false');
+      await page.keyboard.press('Escape');
+
+      await help.hover();
+      await expect(tip).toHaveAttribute('aria-hidden', 'false');
+      await page.keyboard.press('Escape');
+      const helpBox = await help.boundingBox();
+      await page.mouse.move(helpBox.x + 2, helpBox.y + 2);
+      await page.waitForTimeout(750);
+      await expect(tip).toHaveAttribute('aria-hidden', 'true', {timeout: 1000});
+      await page.mouse.move(0, 0);
+      await help.hover();
+      await expect(tip).toHaveAttribute('aria-hidden', 'false');
+      await page.keyboard.press('Escape');
+
+      await help.evaluate(el => el.blur());
+      await help.focus();
+      await help.hover();
+      await help.evaluate(el => el.blur());
+      await expect(tip).toHaveAttribute('aria-hidden', 'false', {timeout: 1000});
+      await page.mouse.move(0, 0);
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
+
+      await help.focus();
+      await help.hover();
+      await tip.hover();
+      await help.evaluate(el => el.blur());
+      await expect(tip).toHaveAttribute('aria-hidden', 'false', {timeout: 1000});
+      await page.mouse.move(0, 0);
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
+
+      // Unrelated focus changes must not dismiss a still-hovered popup.
+      await page.locator('#plain-one').focus();
+      await help.hover();
+      await expect(copy).toHaveText(explanation);
+      await expect(tip).toHaveAttribute('aria-hidden', 'false');
+      await page.keyboard.press('Tab');
+      assert.equal(await page.evaluate(() => document.activeElement.id), 'plain-two');
+      await expect(tip).toHaveAttribute('aria-hidden', 'false');
+      await page.locator('#second-action').focus();
+      await expect(copy).toHaveText('Second action explanation.');
+      await page.keyboard.press('Escape');
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
+      await page.mouse.move(0, 0);
 
       for (const event of ['lixity:viewchange', 'lixity:workbench-change']) {
         await help.evaluate(el => el.blur());
@@ -182,6 +282,12 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
       await help.tap();
       await expect(tip).toHaveAttribute('aria-hidden', 'true');
       assert.equal(await page.locator('#composer').getAttribute('open'), null);
+      await page.waitForTimeout(1100);
+      await page.mouse.move(0, 0);
+      await help.hover();
+      await expect(tip).toHaveAttribute('aria-hidden', 'false');
+      await page.mouse.move(0, 0);
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
 
       const nested = page.locator('#nested-help');
       await nested.focus();

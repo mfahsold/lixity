@@ -113,6 +113,68 @@ async function finish(page, errors, writes) {
     catch (error) { failures.push(new Error(name + ': ' + error.message, {cause: error})); }
   }
   try {
+    await check('comparison restoration coordinates with later reading actions', async () => {
+      for (const scenario of ['larger', 'focus', 'comparison', 'jump', 'scroll']) {
+        const {page, errors, writes} = await createPage(browser, 'en', 320);
+        try {
+          await page.locator('#manuscript-analysis-toggle').click();
+          const metric = await page.locator('#style-layer').evaluate(select => {
+            const cutoff = Number(document.getElementById('layer-legend').dataset.cutoff);
+            return Array.from(select.options).map(option => ({key: option.value,
+              ids: Array.from(document.querySelectorAll('#chapters .chip')).filter(chip => {
+                const info = JSON.parse(chip.dataset.layers || '{}')[option.value];
+                return info && Math.abs(info[2]) >= cutoff;
+              }).map(chip => chip.dataset.target),
+            })).find(candidate => candidate.ids.length >= 5);
+          });
+          assert.ok(metric);
+          await page.locator('#style-layer').selectOption(metric.key);
+          const index = Math.floor(metric.ids.length / 2) + 1;
+          await page.evaluate(id => scrollAndFlash(document.getElementById(id)), metric.ids[index]);
+          await settle(page);
+          await page.locator('#reader-settings').evaluate(details => { details.open = true; });
+          await settle(page);
+          const initial = await page.evaluate(() => LixityReader.capture().panel.id);
+          const target = metric.ids[index + 1];
+          const result = await page.evaluate(({kind, targetId}) => {
+            const original = window.requestAnimationFrame, frames = [];
+            window.requestAnimationFrame = callback => { frames.push(callback); return frames.length; };
+            let intendedScroll;
+            try {
+              const comparison = document.getElementById('analysis-comparison-enabled');
+              comparison.click(); comparison.click();
+              const action = document.getElementById(kind === 'focus' ? 'reader-focus' : 'reader-text-larger');
+              action.focus({preventScroll: true});
+              action.dispatchEvent(new KeyboardEvent('keydown', {key: ' ', bubbles: true}));
+              action.click();
+              if (kind === 'comparison') { comparison.click(); comparison.click(); }
+              if (kind === 'jump') {
+                const target = document.getElementById(targetId);
+                rememberPassageLocation(target); scrollAndFlash(target);
+              }
+              if (kind === 'scroll') {
+                window.dispatchEvent(new WheelEvent('wheel', {deltaY: 250}));
+                window.scrollBy(0, 250); intendedScroll = window.scrollY;
+              }
+            } finally { window.requestAnimationFrame = original; }
+            for (const callback of frames) callback(performance.now());
+            return {frames: frames.length, intendedScroll};
+          }, {kind: scenario, targetId: target});
+          assert.ok(result.frames > 0);
+          await settle(page);
+          if (scenario === 'scroll') {
+            assert.ok(Math.abs(await page.evaluate(() => window.scrollY) - result.intendedScroll) <= 1,
+              'a later user scroll supersedes queued layout restorations');
+          } else {
+            const expected = scenario === 'jump' ? target : initial;
+            assert.equal(await page.evaluate(() => LixityReader.capture()?.panel.id), expected,
+              scenario + ': later reading actions retain the intended passage');
+            if (scenario === 'jump') assert.equal(new URL(page.url()).hash, '#' + target);
+          }
+          await finish(page, errors, writes);
+        } finally { await page.close(); }
+      }
+    });
     for (const width of [1440, 320]) {
       await check('compact abnormal paragraph navigation ' + width, async () => {
         const {page, errors, writes} = await createPage(browser, 'en', width);
@@ -148,6 +210,30 @@ async function finish(page, errors, writes) {
             'Reapplying the same metric does not reset abnormal navigation to the first paragraph');
           assert.equal(await page.locator('#style-layer').inputValue(), metric.key);
           assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'true');
+          if (width === 320) {
+            for (const [direction, index] of [['next', middle + 1], ['prev', middle]]) {
+              const scheduled = await page.evaluate(which => {
+                const original = window.requestAnimationFrame, frames = [];
+                window.requestAnimationFrame = callback => { frames.push(callback); return frames.length; };
+                try {
+                  const comparison = document.getElementById('analysis-comparison-enabled');
+                  comparison.click(); comparison.click();
+                  const control = document.getElementById('layer-' + which);
+                  control.focus({preventScroll: true}); control.click();
+                } finally { window.requestAnimationFrame = original; }
+                for (const callback of frames) callback(performance.now());
+                return frames.length;
+              }, direction);
+              assert.ok(scheduled > 0, 'the comparison changes queued a layout restoration');
+              await settle(page);
+              assert.equal(new URL(page.url()).hash, '#' + metric.ids[index],
+                'a pending comparison layout must not change the navigation origin');
+              assert.equal(await page.evaluate(() => LixityReader.capture()?.panel.id), metric.ids[index],
+                'the selected passage remains visible after queued restoration frames');
+              assert.equal(await page.locator('#layer-' + direction).evaluate(node => node === document.activeElement), true,
+                'navigation keeps focus on its control');
+            }
+          }
           await page.evaluate(({focused, current}) => {
             const panel = document.getElementById(focused); panel.tabIndex = -1;
             panel.focus({preventScroll: true}); scrollAndFlash(document.getElementById(current));
@@ -301,6 +387,23 @@ async function finish(page, errors, writes) {
           assert.equal(await page.locator(target).isVisible(), true);
           assert.equal(await page.evaluate(() => document.activeElement.id), target.slice(1),
             'A keyboard matrix drill focuses its revealed chapter');
+          for (const activation of ['click', 'keyboard']) {
+            await openOverview(page);
+            await page.evaluate(() => {
+              const filter = document.getElementById('filter-flags');
+              filter.checked = false;
+              filter.dispatchEvent(new Event('change', {bubbles: true}));
+            });
+            const flagged = page.locator('#matrix tbody tr[data-flags="1"] a[data-flags="1"]').first();
+            assert.equal(await flagged.count(), 1, 'The fixture provides a flagged chapter link');
+            if (activation === 'click') await flagged.click();
+            else { await flagged.focus(); await flagged.press('Enter'); }
+            await settle(page);
+            assert.equal(await page.locator('#filter-flags').isChecked(), true,
+              `Flag context survives native chapter link ${activation}`);
+            assert.equal(await page.locator('#ch-1').isVisible(), true,
+              `Flagged chapter is revealed through ${activation}`);
+          }
           await finish(page, errors, writes);
         } finally { await page.close(); }
       });

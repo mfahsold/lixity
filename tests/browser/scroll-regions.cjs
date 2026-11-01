@@ -117,7 +117,10 @@ async function scrollInput(chart, action) {
             'All six rows fit: there is no hidden content or need for a scrollbar');
           if (count === 24) {
             assert.ok(dimensions.content > dimensions.height);
-            await chart.locator('.row').first().focus();
+            const firstChapter = chart.locator('.row a.chapter-link').first();
+            await firstChapter.focus();
+            assert.equal(await firstChapter.evaluate(element => element === document.activeElement), true,
+              'The chapter link is the keyboard focus target inside the chart');
             await scrollInput(chart, () => page.keyboard.press('PageDown'));
             assert.ok(await chart.evaluate(element => element.scrollTop > 0), 'Keyboard scroll moves the chart');
             await scrollInput(chart, () => chart.evaluate(element => { element.scrollTop = 0; }));
@@ -141,10 +144,10 @@ async function scrollInput(chart, action) {
               await scrollInput(chart, () => touchScroll(page, chart));
               await page.waitForFunction(selector => document.querySelector(selector).scrollTop > 0,
                 `#${panel} .dist.scrollable`);
-              await chart.locator('.row').last().focus();
+              await chart.locator('.row a.chapter-link').last().focus();
             }
           }
-          await chart.locator('.row').last().focus();
+          await chart.locator('.row a.chapter-link').last().focus();
           await page.evaluate(() => document.activeElement.blur());
           await page.mouse.move(0, 0);
           await lastBarIsFullyPainted(chart, `${panel}-${count}-${locale}-${width}-${theme}`);

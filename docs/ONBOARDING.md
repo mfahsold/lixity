@@ -58,6 +58,9 @@ expire on restart; see [service management](USAGE.md#lixity-service).
 `.markdown`), plain-text (`.txt`) or Word (`.docx`) file. Unsupported files and
 multiple-file drops show an explanation and clear the previous preview. Choose
 a supported file again to continue; creating the project still requires confirmation.
+The preview's word and chapter counts are rough estimates; the analysis can count
+them differently. If the current language setting cannot be preserved for a new
+project, choose a supported analysis language explicitly before continuing.
 
 If configuration or Research setup fails while creating/importing a project,
 the app reports incomplete setup and keeps the previous project selected. Created

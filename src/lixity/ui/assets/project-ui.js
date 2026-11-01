@@ -517,7 +517,8 @@ if (formImport) {
     if (!title) return;
 
     var langEl = document.getElementById("import-proj-lang");
-    var lang = langEl ? langEl.value : "de";
+    var lang = langEl ? langEl.value : "";
+    if (!lang) return;
     var pathEl = document.getElementById("import-proj-path");
     var folder = pathEl ? pathEl.value.trim() : "";
     var researchEl = document.getElementById("import-proj-research");
@@ -546,7 +547,8 @@ if (formCreate) {
     var title = titleEl ? titleEl.value.trim() : "";
     if (!title) return;
     var langEl = document.getElementById("new-proj-lang");
-    var lang = langEl ? langEl.value : "en";
+    var lang = langEl ? langEl.value : "";
+    if (!lang) return;
     var pathEl = document.getElementById("new-proj-path");
     var folder = pathEl ? pathEl.value.trim() : "";
     var templateEl = document.querySelector('input[name="proj_template"]:checked');
@@ -996,6 +998,9 @@ window.LixityManuscriptLinks = {
       content.replaceChildren(); status.textContent = uiLabel("runtime_status_updated");
       var workers = section("runtime_workers"), targets = document.createElement("dl");
       targets.className = "runtime-targets";
+      var serviceScope = document.createElement("p");
+      serviceScope.className = "ctl-note"; serviceScope.id = "runtime-services-scope";
+      serviceScope.textContent = uiLabel("runtime_services_scope"); workers.appendChild(serviceScope);
       data.audio.targets.forEach(function(target) {
         var row = document.createElement("div"), title = document.createElement("dt"), value = document.createElement("dd");
         row.className = "runtime-target";
@@ -1011,9 +1016,12 @@ window.LixityManuscriptLinks = {
       jobs.className = "runtime-list";
       data.audio.jobs.forEach(function(job) {
         var item = document.createElement("li");
-        item.textContent = uiLabel("speech_target_" + job.target) + " · " +
-          (job.state === "pending" ? uiFormat("runtime_queued", {position: job.queue_position}) :
-           uiLabel("speech_state_" + ({ready:"completed", error:"failed", stale:"failed"}[job.state] || job.state)));
+        var jobState = document.createElement("span"), location = document.createElement("span");
+        jobState.textContent = (job.state === "pending" ? uiFormat("runtime_queued", {position: job.queue_position}) :
+          uiLabel("speech_state_" + ({ready:"completed", error:"failed", stale:"failed"}[job.state] || job.state))) + " · ";
+        location.className = "runtime-job-location";
+        location.textContent = uiLabel("runtime_job_location_unknown");
+        item.append(jobState, location);
         jobs.appendChild(item);
       });
       if (!jobs.children.length) {var empty = document.createElement("li"); empty.textContent = uiLabel("runtime_empty"); jobs.appendChild(empty);}

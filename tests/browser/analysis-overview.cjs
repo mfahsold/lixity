@@ -21,6 +21,7 @@ from lixity.showing import showing_report
 from lixity.pipeline import analyze_document
 from lixity.style_fingerprint import FingerprintThresholds
 from lixity.ui import render_dashboard
+from lixity.ui.narration import render_showing_panel
 from tests.locales import LOCALES
 prose = [
     "Mara walks to the gate. She watches the street. I see the light. I go to the house. I see the tree. I went to the house. I saw the tree. I heard the bell. I saw the light. I went to the gate. ",
@@ -47,6 +48,8 @@ def render(language, controls):
         fingerprint=analysis.fingerprint, labels=LANGUAGE_PROFILES[language].labels,
         language_key=language, controls=controls, title="Synthetic analysis overview", **reports)
 print(json.dumps({"locales": {language: render(language, True) for language in LOCALES}, "standalone": render("en", False),
+    "unavailable": {language: render_showing_panel({"chapter_list": [{"chapter_num": 1, "balance": 0.0}]},
+        LANGUAGE_PROFILES[language].labels, language) for language in LOCALES},
     "flags": sum(paragraph.is_flagged for paragraph in analysis.paragraphs)}))
 `, {root});
 
@@ -138,6 +141,45 @@ async function pinnedIdentity(page, panel, cellIndex) {
         assert.ok(destinationNavigation.y >= -1 && destinationNavigation.y + destinationNavigation.height <= 900,
           `Overview navigation remains reachable after a section jump: ${JSON.stringify({locale,width,target,bounds:destinationNavigation})}`);
       }
+      await navigation.locator('[data-section-link=showing]').click();
+      const signalPanel = page.locator('#showing');
+      const signalMethod = signalPanel.locator('details.signal-method');
+      const signalSummary = signalMethod.locator('summary');
+      const signalBrief = signalPanel.locator(':scope > p.ctl-note').first();
+      const measurementsBefore = await signalPanel.locator('.kpi-row').textContent();
+      assert.equal(await signalMethod.evaluate(element=>element.open), false);
+      assert.ok(await signalBrief.isVisible(), `${locale}: comparison limits remain visible`);
+      assert.equal(await signalMethod.locator('p').isVisible(), false);
+      if ((locale === 'de' || locale === 'en') && (width === 1440 || width === 320))
+        await signalPanel.screenshot({path:path.join(artifacts, `signals-${locale}-${width}.png`)});
+      if (width === 320) await signalSummary.tap();
+      else { await signalSummary.focus(); await page.keyboard.press('Enter'); }
+      assert.equal(await signalMethod.evaluate(element=>element.open), true);
+      assert.ok(await signalMethod.locator('p').isVisible(), `${locale}: method is available on demand`);
+      assert.ok(await signalBrief.isVisible());
+      assert.equal(await signalPanel.locator('.kpi-row').textContent(), measurementsBefore,
+        'Opening help does not alter measurements');
+      if (width === 320) await signalSummary.tap();
+      else { await signalSummary.focus(); await page.keyboard.press('Enter'); }
+      assert.equal(await signalMethod.evaluate(element=>element.open), false);
+      const neg = signalPanel.locator('.signal-bar .signal-negative').first();
+      const pos = signalPanel.locator('.signal-bar .signal-positive').first();
+      assert.ok(await neg.count() && await pos.count(), 'Synthetic values cover both directions');
+      for (const scheme of ['light', 'dark']) {
+        await page.emulateMedia({colorScheme: scheme});
+        const bars = await Promise.all([neg, pos].map(locator=>locator.evaluate(element=>{
+          const bar = element.parentElement.getBoundingClientRect();
+          const part = element.getBoundingClientRect();
+          return {left:part.left, right:part.right, middle:bar.left + bar.width/2,
+            color:getComputedStyle(element).backgroundColor};
+        })));
+        assert.ok(Math.abs(bars[0].right-bars[0].middle) < 1 && Math.abs(bars[1].left-bars[1].middle) < 1,
+          `${locale}/${width}/${scheme}: negative and positive meet at zero`);
+        assert.notEqual(bars[0].color, bars[1].color, 'Directions use distinct comparison colors');
+        if (scheme === 'dark' && locale === 'de' && (width === 320 || width === 1440))
+          await signalPanel.screenshot({path:path.join(artifacts, `signals-${locale}-${width}-dark.png`)});
+      }
+      await page.emulateMedia({colorScheme:'light'});
       await navigation.locator('[data-section-link=flags]').click();
       const measurements = page.locator('#analysis-measurements');
       assert.equal(await measurements.getAttribute('open'), null, 'Dense measurements initially stay folded');
@@ -196,6 +238,13 @@ async function pinnedIdentity(page, panel, cellIndex) {
       assert.deepEqual(counts, [...Array(16).fill('0'), '–'], 'Measured zero and unavailable comparisons remain distinct');
       if (locale === 'en' || locale === 'de') await page.locator('#matrix').screenshot({path: path.join(artifacts, `matrix-${locale}-${width}.png`)});
       await pinnedIdentity(page, 'characters', 0);
+      const characterHelp = page.locator('#characters th .help[data-help]').last();
+      assert.equal(await page.locator('#characters th .help[data-help]').count(), 3);
+      await characterHelp.focus();
+      await page.waitForFunction(() => document.querySelector('#lixity-tooltip').classList.contains('visible'));
+      assert.equal(await page.locator('#lixity-tooltip .tooltip-copy').textContent(), await characterHelp.getAttribute('data-help'),
+        `${locale}: focused column help explains coverage`);
+      await page.keyboard.press('Escape');
       if (locale === 'en' || locale === 'de') await page.locator('#characters').screenshot({path: path.join(artifacts, `characters-${locale}-${width}.png`)});
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${locale} at ${width}: no horizontal page overflow`);
       if (width===320 && (locale==='en'||locale==='de')) {
@@ -220,7 +269,56 @@ async function pinnedIdentity(page, panel, cellIndex) {
     assert.ok(await report.locator('#analysis-measurements .kpi').first().isVisible(), 'Standalone reports retain visible measurements without JavaScript');
     assert.equal(await report.locator('#analysis-sections a').count(),10);
     assert.ok(await report.locator('#analysis-sections').isVisible(), 'Static reports retain the same real section links without JavaScript');
+    for (const selector of [
+      '#matrix tbody tr a[href^="#ch-"]', '#characters tbody tr a[href^="#ch-"]',
+      '#motifs tbody tr a[href^="#ch-"]', '#dialogue .row a[href^="#ch-"]',
+      '#pacing .row a[href^="#ch-"]', '#showing .row a[href^="#ch-"]',
+    ]) {
+      const link = report.locator(selector).first();
+      assert.equal(await link.count(), 1, `${selector}: native chapter link exists`);
+      const target = await link.getAttribute('href');
+      await link.click();
+      assert.equal(new URL(report.url()).hash, target, `${selector}: native link navigates without JavaScript`);
+      assert.equal(await report.locator(target).isVisible(), true);
+    }
+    assert.equal(await report.locator('#matrix tbody tr[role="button"]').count(), 0,
+      'The chapter table keeps row semantics and exposes links inside its identity cells');
+    assert.equal(await report.locator('#characters tbody tr[role="button"]').count(), 0,
+      'The character table keeps row semantics');
+    for (const scheme of ['light', 'dark']) {
+      await report.emulateMedia({colorScheme: scheme});
+      const style = await report.locator('#matrix tbody a.chapter-link').first().evaluate(link => {
+        const probe = document.createElement('span');
+        probe.style.color = 'var(--accent)'; document.body.appendChild(probe);
+        const expected = getComputedStyle(probe).color;
+        probe.style.color = 'var(--surface)';
+        const background = getComputedStyle(probe).color;
+        probe.remove();
+        const rgb = value => value.match(/\d+/g).slice(0, 3).map(Number);
+        const luminance = value => rgb(value).map(v => v / 255)
+          .map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4)
+          .reduce((sum, v, index) => sum + v * [.2126, .7152, .0722][index], 0);
+        const foreground = getComputedStyle(link).color;
+        const levels = [luminance(foreground), luminance(background)].sort((a, b) => a - b);
+        return {foreground, expected, underline: getComputedStyle(link).textDecorationLine,
+          contrast: (levels[1] + .05) / (levels[0] + .05)};
+      });
+      assert.equal(style.foreground, style.expected, `${scheme}: chapter links use the central accent`);
+      assert.ok(style.underline.includes('underline'), `${scheme}: chapter links remain visibly identifiable`);
+      assert.ok(style.contrast >= 4.5, `${scheme}: chapter link contrast is ${style.contrast}`);
+    }
     await report.close();
+    for (const [locale, html] of Object.entries(fixtures.unavailable)) {
+      const page = await browser.newPage({viewport: {width: 320, height: 900}, hasTouch: true});
+      await page.setContent(html);
+      assert.equal(await page.locator('#showing .kpi-row').count(), 0, `${locale}: no fabricated comparison`);
+      assert.equal(await page.locator('#showing > p.ctl-note').count(), 2, `${locale}: limits and unavailable explanation remain visible`);
+      assert.ok(await page.locator('#showing > p.ctl-note').last().isVisible());
+      await page.locator('#showing .signal-method summary').tap();
+      assert.ok(await page.locator('#showing .signal-method p').isVisible());
+      assert.ok(await page.locator('#showing > p.ctl-note').last().isVisible());
+      await page.close();
+    }
     assert.deepEqual(errors, []);
     assert.equal(writes, 0, 'Overview browsing performs no writes');
     console.log(`Analysis overview: native disclosure, complete measurements, long flags, readable anchors, pinned table identity and unavailable values in ${Object.keys(fixtures.locales).length} desktop/mobile locales passed. Screenshots: ${artifacts}`);

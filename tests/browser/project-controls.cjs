@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
 
 const {pythonFixture} = require('./support/python-fixture.cjs');
 const root = path.resolve(__dirname, '../..');
-const {fixtures, standalone} = pythonFixture(`
+const {fixtures, standalone, languageCases} = pythonFixture(`
 import json
 from lixity.language import get_language_profile
 from lixity.workspace_labels import WORKSPACE_LABELS
@@ -25,7 +25,14 @@ def standalone(*args, **kwargs):
     return original(*args, **kwargs, language_key='en', current_language='en',
                     enabled_actions=['analyze', 'rebuild'])
 render.__globals__['render_dashboard'] = standalone
-print(json.dumps({'fixtures': fixtures, 'standalone': render()}))
+standalone_html = render()
+language_cases = {}
+for configured in ('generic', 'auto', 'unknown'):
+    def current_language_case(*args, **kwargs):
+        return original(*args, **{**kwargs, 'language_key': 'en', 'current_language': configured})
+    render.__globals__['render_dashboard'] = current_language_case
+    language_cases[configured] = render()
+print(json.dumps({'fixtures': fixtures, 'standalone': standalone_html, 'languageCases': language_cases}))
 `, {root});
 const screenshotDir = fs.mkdtempSync('/tmp/lixity-project-controls-');
 const syntheticContent = '## Synthetic chapter\r\n\r\nThe rain stopped.\r\nA café opened.\r\n';
@@ -56,6 +63,55 @@ async function checkProjectNavigationOrder(browser) {
     assert.equal(new URL(page.url()).pathname, latest, 'Only the latest explicit project selection may navigate');
     assert.deepEqual(arrivals, [latest], 'An older selection must not trigger an intermediate navigation');
   } finally {await page.close();}
+}
+
+async function checkExplicitProjectLanguage(browser) {
+  for (const [configured, html] of Object.entries(languageCases)) {
+    const page = await browser.newPage({viewport:{width:320,height:900}});
+    const submissions = [];
+    try {
+      await page.route('http://lixity.test/**', route => {
+        if (route.request().method() === 'POST') {
+          submissions.push(route.request().postDataJSON());
+          return route.fulfill({status:400, json:{ok:false,message:'Synthetic test'}});
+        }
+        return route.fulfill({contentType:'text/html',body:html});
+      });
+      await page.goto('http://lixity.test/');
+      await openProjectActions(page);
+      await page.locator('#btn-modal-new-project').click();
+      const importLanguage = page.locator('#import-proj-lang');
+      assert.equal(await importLanguage.inputValue(), configured === 'generic' ? 'generic' : '');
+      await page.locator('#import-file-input').setInputFiles({name:'synthetic.md',mimeType:'text/markdown',
+        buffer:Buffer.from('# Synthetic\n\n## First\n\nHello world.\n\n```\n## Fake\n```\n')});
+      await page.waitForFunction(() => document.querySelector('#import-fpc-filename').textContent === 'synthetic.md');
+      assert.ok(await page.locator('#import-fpc-stats').textContent().then(text => text.includes('Rough estimate')));
+      assert.ok(await page.locator('#import-preview-box').textContent().then(text => text.includes('may count words and chapters differently')));
+      if (configured !== 'generic') {
+        await page.locator('#btn-submit-import-project').click();
+        assert.equal(submissions.length, 0, 'Import also requires a deliberate choice');
+        await importLanguage.selectOption('generic');
+      }
+      await page.locator('#btn-submit-import-project').click();
+      await page.waitForFunction(() => document.querySelector('#import-project-status')?.textContent.includes('Synthetic test'));
+      assert.equal(submissions.length, 1);
+      assert.equal(submissions[0].language, 'generic');
+      submissions.length = 0;
+      await page.locator('#tab-btn-scratch').click();
+      const select = page.locator('#new-proj-lang');
+      assert.equal(await select.inputValue(), configured === 'generic' ? 'generic' : '');
+      await page.locator('#new-proj-title').fill('Synthetic project');
+      if (configured !== 'generic') {
+        await page.locator('#btn-submit-create-project').click();
+        assert.equal(submissions.length, 0, 'Automatic or unknown language needs an explicit choice');
+        await select.selectOption('generic');
+      }
+      await page.locator('#btn-submit-create-project').click();
+      await page.waitForFunction(() => document.querySelector('#new-project-status')?.textContent.includes('Synthetic test'));
+      assert.equal(submissions.length, 1);
+      assert.equal(submissions[0].language, 'generic', 'The explicitly selected generic profile reaches the API unchanged');
+    } finally { await page.close(); }
+  }
 }
 
 async function checkNativeWorkspaceTabs(browser) {
@@ -112,6 +168,9 @@ server.serve_forever()
         assert.equal(await second.locator('#runtime-content .runtime-section h4').first().textContent(), fixtures.de.labels.runtime_workers,
           'The status section identifies speech services without assuming a particular engine');
         assert.equal(await second.locator('#runtime-content .runtime-target').count(), 2);
+        assert.equal(await second.locator('#runtime-services-scope').count(), 1);
+        assert.equal(await second.locator('#runtime-services-scope').textContent(), fixtures.de.labels.runtime_services_scope,
+          'The runtime overview explicitly says external providers are not checked');
         const footerGeometry = await second.locator('#modal-runtime > .modal-card > .modal-footer').evaluate(node => {
           const footer = node.getBoundingClientRect(), button = node.querySelector('button').getBoundingClientRect();
           return {left: button.left - footer.left, right: footer.right - button.right,
@@ -136,6 +195,11 @@ server.serve_forever()
         const queue = second.locator('#runtime-content .runtime-section').nth(1);
         assert.match(await queue.textContent(), /Vertonung läuft/);
         assert.match(await queue.textContent(), /Warteposition 1/);
+        assert.equal(await queue.locator('.runtime-job-location').count(), 2);
+        assert.deepEqual(await queue.locator('.runtime-job-location').allTextContents(),
+          [fixtures.de.labels.runtime_job_location_unknown, fixtures.de.labels.runtime_job_location_unknown],
+          'The worker target cannot be presented as the processing location of a possibly external job');
+        assert.doesNotMatch(await queue.textContent(), /Diesem Computer|Konfiguriertem Jetson/);
         assert.match(await models.nth(1).textContent(), /Qwen\/Qwen3-TTS-12Hz-1\.7B-VoiceDesign/);
         assert.equal(await second.locator('#modal-runtime').evaluate(modal => modal.scrollWidth <= modal.clientWidth), true);
         assert.equal(await second.locator('.runtime-target').nth(1).evaluate(node => node.scrollWidth <= node.clientWidth), true,
@@ -221,6 +285,7 @@ async function restoreFileReads(page) {
   const browser = await launchChromium();
   try {
     if (process.argv.includes('--runtime-only')) {await checkNativeWorkspaceTabs(browser); return;}
+    if (process.argv.includes('--language-only')) {await checkExplicitProjectLanguage(browser); return;}
     const page = await browser.newPage({viewport: {width: 1440, height: 900}});
     // Keep chooser interception enabled between waits: removing the last listener
     // makes Playwright toggle it asynchronously and race the next activation.
@@ -587,6 +652,6 @@ async function restoreFileReads(page) {
     console.log(readStateOnly
       ? 'Project controls: pending reads/imports, latest-selection protection, read-error recovery and modal file-picker keyboard access passed'
       : `Project controls: explicit selection/drop/load, keyboard access, pending reads/imports, retry, NDA capability gating and seven mobile locales passed; screenshots: ${screenshotDir}`);
-    if (!readStateOnly) {await checkProjectNavigationOrder(browser); await checkNativeWorkspaceTabs(browser);}
+    if (!readStateOnly) {await checkProjectNavigationOrder(browser); await checkNativeWorkspaceTabs(browser); await checkExplicitProjectLanguage(browser);}
   } finally { await browser.close(); }
 })().catch(error => {console.error(error); process.exitCode = 1;});

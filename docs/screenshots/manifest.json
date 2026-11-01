@@ -13,8 +13,8 @@
       "file": "dashboard-heatmap.png",
       "role": "support",
       "question": "Where should I look next?",
-      "alt": "Warehouse 4 chapter comparison with measurements in their own units.",
-      "caption": "Compare chapters within this invented manuscript; colors do not grade writing.",
+      "alt": "Excerpt of the Warehouse 4 chapter comparison, with signed z* values and FDR markers.",
+      "caption": "Compare chapters within this invented manuscript; the table continues horizontally and colors do not grade writing.",
       "destination": "guides/first-look.html"
     },
     {

@@ -581,6 +581,10 @@ async function checkStyleInsights(page, javaScriptEnabled, width, colorScheme) {
   if (!javaScriptEnabled) {
     await expect(select).toBeDisabled();
     await expect(projection).toBeDisabled();
+    await expect(dimensions.locator('#dim-3d-canvas')).toBeHidden();
+    await expect(dimensions.locator('#dim-ctl-traj')).toBeDisabled();
+    await expect(dimensions.locator('#dim-3d-view')).toContainText('requires JavaScript');
+    await expect(page.locator('#heatmap-fdr-only')).toBeDisabled();
     await expect(dimensions.locator('#dim-scores tbody tr')).toHaveCount(6);
     return;
   }

@@ -191,7 +191,7 @@ function scrollAndFlash(target, options) {
 }
 
 function setPassageScrollMargin(target) {
-  var bars = document.querySelectorAll("#workbench-thread, #manuscript-reader-controls, #view-pane-analysis .toolbar, .research-dossier-location");
+  var bars = document.querySelectorAll("#workbench-thread, #manuscript-reader-controls, .toolbar, .research-dossier-location");
   var height = 0, rect = target.getBoundingClientRect();
   var container = passageScrollContainers(target)[0];
   bars.forEach(function(bar) {

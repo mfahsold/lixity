@@ -79,7 +79,8 @@ export actions by task. Shorter help retains the same measurement boundaries;
 analysis algorithms and public command/JSON contracts are unchanged.
 The analysis overview links directly to available 3D chapter dimensions.
 Selection and axis-cutoff rings are distinct; cutoff marks are not FDR results
-or a blue–orange signed-deviation scale. Missing dimensions are disclosed.
+or a blue–orange signed-deviation scale. Missing dimensions are disclosed;
+the cutoff count and next-chapter control support review without ranking quality.
 
 Research requires an initialized, explicitly selected project. Its usage guide
 owns available commands; RFC command sketches are not executable contracts.

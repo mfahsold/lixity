@@ -291,6 +291,25 @@ document.addEventListener("submit", function(event) {
   searchResearch();
 });
 
+document.addEventListener("change", function(event) {
+  if (event.target.id !== "r-ingest-file") return;
+  var clear = document.getElementById("r-ingest-file-clear");
+  if (clear) clear.hidden = clear.disabled = !event.target.files || !event.target.files.length;
+});
+
+function readResearchSourceFile(file, isPdf) {
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onload = function() {
+      var value = String(reader.result || "");
+      resolve(isPdf ? value.split(",")[1] || "" : value);
+    };
+    reader.onerror = reader.onabort = function() { reject(new Error("source_read_failed")); };
+    try { if (isPdf) reader.readAsDataURL(file); else reader.readAsText(file); }
+    catch (_) { reject(new Error("source_read_failed")); }
+  });
+}
+
 document.addEventListener("click", async function (event) {
   var comparisonClose = event.target.closest("[data-decision-review-close]");
   if (comparisonClose) {
@@ -637,90 +656,103 @@ document.addEventListener("click", async function (event) {
     return;
   }
 
+  var clearFile = event.target.closest("#r-ingest-file-clear");
+  if (clearFile) {
+    var chosenFile = document.getElementById("r-ingest-file");
+    if (chosenFile) chosenFile.value = "";
+    clearFile.hidden = clearFile.disabled = true;
+    return;
+  }
+
   var ingestBtn = event.target.closest("#r-ingest-btn");
   if (ingestBtn) {
+    if (ingestBtn.dataset.pending === "true") return;
     var retCheck = document.getElementById("r-ingest-retention");
+    var originEl = document.getElementById("r-ingest-origin-url");
+    var titleEl = document.getElementById("r-ingest-title");
+    var tagsEl = document.getElementById("r-ingest-tags");
+    var textEl = document.getElementById("r-ingest-text");
+    var fileEl = document.getElementById("r-ingest-file");
+    var file = fileEl && fileEl.files && fileEl.files[0];
+    var enteredText = textEl ? textEl.value : "";
     if (!retCheck || !retCheck.checked) {
-      researchStatus(uiLabel("research_retention_required"), false);
+      researchFormStatus(ingestBtn, uiLabel("research_retention_required"), "err");
       return;
     }
-    var originEl = document.getElementById("r-ingest-origin-url");
+    if (file && enteredText) {
+      researchFormStatus(ingestBtn, uiLabel("research_source_choose_one"), "err");
+      return;
+    }
+    if (!file && !enteredText.trim()) {
+      researchFormStatus(ingestBtn, uiLabel("research_source_required"), "err");
+      return;
+    }
     var originUrl = originEl ? originEl.value.trim() : "";
     if (originUrl) {
       try {
         var parsedOrigin = new URL(originUrl);
         if (!["http:", "https:"].includes(parsedOrigin.protocol) || parsedOrigin.username || parsedOrigin.password || /[\s\\]/.test(originUrl)) throw new Error("invalid");
       } catch (_) {
-        researchStatus(uiLabel("research_origin_url_invalid"), false);
+        researchFormStatus(ingestBtn, uiLabel("research_origin_url_invalid"), "err");
         if (originEl) originEl.focus();
         return;
       }
     }
-    var titleEl = document.getElementById("r-ingest-title");
-    var tagsEl = document.getElementById("r-ingest-tags");
-    var textEl = document.getElementById("r-ingest-text");
-    var fileEl = document.getElementById("r-ingest-file");
-    var tags = (tagsEl && tagsEl.value) ? tagsEl.value.split(",").map(function(t){ return t.trim(); }).filter(Boolean) : [];
-
-    function sendIngest(content, filename, isBase64) {
-      researchStatus(uiLabel("research_ingesting_extracting") || uiLabel("research_ingesting"), true);
-      if (ingestBtn) ingestBtn.disabled = true;
-      var payload = {
-        title: (titleEl && titleEl.value.trim()) || filename || uiLabel("research_tab_sources"),
-        filename: filename,
-        origin_url: originUrl || null,
-        tags: tags,
-        allow_retention: true
-      };
-      if (isBase64) {
-        payload.content_base64 = content;
-      } else {
-        payload.content = content;
+    var fields = ["r-ingest-title", "r-ingest-tags", "r-ingest-origin-url", "r-ingest-text", "r-ingest-file", "r-ingest-retention"];
+    var submitted = fieldSnapshot(fields), context = researchReadContext();
+    var filename = file ? file.name : "", isPdf = Boolean(file && filename.toLowerCase().endsWith(".pdf"));
+    var payload = {
+      title: (titleEl && titleEl.value.trim()) || filename || uiLabel("research_tab_sources"),
+      filename: filename, origin_url: originUrl || null,
+      tags: (tagsEl && tagsEl.value) ? tagsEl.value.split(",").map(function(t) {return t.trim();}).filter(Boolean) : [],
+      allow_retention: true
+    };
+    ingestBtn.dataset.pending = "true";
+    ingestBtn.disabled = true;
+    ingestBtn.classList.add("busy");
+    ingestBtn.setAttribute("aria-busy", "true");
+    researchFormStatus(ingestBtn, uiLabel(file ? "research_ingesting_reading" : "research_ingesting_extracting"), "loading");
+    try {
+      var content = file ? await readResearchSourceFile(file, isPdf) : enteredText;
+      if (!ingestBtn.isConnected) return;
+      if (!acceptResearchContext(context, {})) { researchFormStatus(ingestBtn, "", ""); return; }
+      if (!retCheck.checked) {
+        researchFormStatus(ingestBtn, uiLabel("research_retention_required"), "err");
+        return;
       }
-      researchApiPost("research-ingest", payload).then(function(res) {
-        if (ingestBtn) ingestBtn.disabled = false;
-        var msg = res.ok
-          ? (uiLabel("research_ingest_complete") + (res.passages ? " (" + res.passages + " passages)" : ""))
-          : (res.message || "Failed");
-        if (res.ok && Array.isArray(res.warnings) && res.warnings.length) {
-          msg += " " + res.warnings.join(" ");
-        }
-        researchStatus(msg, res.ok);
-        if (res.ok) {
-          if (titleEl) titleEl.value = "";
-          if (originEl) originEl.value = "";
-          if (tagsEl) tagsEl.value = "";
-          if (textEl) textEl.value = "";
-          if (fileEl) fileEl.value = "";
+      if (file && (!fileEl.files || fileEl.files[0] !== file)) {
+        researchFormStatus(ingestBtn, uiLabel("research_file_selection_changed"), "err");
+        return;
+      }
+      payload[isPdf ? "content_base64" : "content"] = content;
+      researchFormStatus(ingestBtn, uiLabel("research_ingesting_extracting"), "loading");
+      var res = await researchApiPost("research-ingest", payload);
+      if (!ingestBtn.isConnected) return;
+      if (!acceptResearchContext(context, res)) { researchFormStatus(ingestBtn, "", ""); return; }
+      var msg = res.ok ? uiLabel("research_ingest_complete") : (res.message || uiLabel("research_status_unavailable"));
+      if (res.ok && res.passages) msg += " (" + uiCountFormat("research_passages_count", res.passages) + ")";
+      if (res.ok && Array.isArray(res.warnings) && res.warnings.length) msg += " " + res.warnings.join(" ");
+      researchFormStatus(ingestBtn, msg, res.ok ? "ok" : "err");
+      if (res.ok) {
+        if (JSON.stringify(fieldSnapshot(fields)) === JSON.stringify(submitted) &&
+            (!file || (fileEl.files && fileEl.files[0] === file))) {
+          [titleEl, tagsEl, originEl, textEl, fileEl].forEach(function(field) {if (field) field.value = "";});
           retCheck.checked = false;
-          refreshResearchSources(null, null, true);
+          var clear = document.getElementById("r-ingest-file-clear");
+          if (clear) clear.hidden = clear.disabled = true;
         }
-      }).catch(function(err) {
-        if (ingestBtn) ingestBtn.disabled = false;
-        researchStatus(String(err), false);
-      });
-    }
-
-    if (fileEl && fileEl.files && fileEl.files.length) {
-      var file = fileEl.files[0];
-      researchStatus(uiLabel("research_ingesting_reading") || "Reading file…", true);
-      var isPdf = file.name.toLowerCase().endsWith(".pdf");
-      var reader = new FileReader();
-      if (isPdf) {
-        reader.onload = function() {
-          var dataUrl = String(reader.result || "");
-          var base64 = dataUrl.split(",")[1] || "";
-          sendIngest(base64, file.name, true);
-        };
-        reader.readAsDataURL(file);
-      } else {
-        reader.onload = function() { sendIngest(reader.result, file.name, false); };
-        reader.readAsText(file);
+        refreshResearchSources(null, null, true);
       }
-    } else if (textEl && textEl.value.trim()) {
-      sendIngest(textEl.value, "", false);
-    } else {
-      researchStatus(uiLabel("research_source_required"), false);
+    } catch (error) {
+      if (ingestBtn.isConnected && acceptResearchContext(context, {})) {
+        researchFormStatus(ingestBtn, error && error.message === "source_read_failed" ?
+          uiLabel("research_file_read_failed") : (error && error.message || uiLabel("research_status_unavailable")), "err");
+      }
+    } finally {
+      ingestBtn.dataset.pending = "false";
+      ingestBtn.disabled = false;
+      ingestBtn.classList.remove("busy");
+      ingestBtn.removeAttribute("aria-busy");
     }
     return;
   }

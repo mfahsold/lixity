@@ -79,9 +79,8 @@ def render_research_panel(
     )
     parts.append(f'<p class="ctl-note">{L("research_init_note")}</p>')
     parts.append('<div class="row">')
-    parts.append(
-        f'<input class="ctl" id="r-init-title" placeholder="{L("research_project_title")}"/>'
-    )
+    parts.append(form_field("r-init-title", "research_project_title",
+                            f'<input class="ctl" id="r-init-title" placeholder="{L("research_project_title")}"/>'))
     parts.append(
         f'<button class="ctl primary" id="r-init-btn">{L("research_init_action")}</button>'
     )
@@ -124,16 +123,16 @@ def render_research_panel(
 
     parts.append('<div class="ctl-group">')
     parts.append('<div class="row mb-2">')
-    parts.append('<input class="ctl" type="file" id="r-ingest-file" accept=".txt,.md,.text,.pdf"/>')
+    parts.append(form_field("r-ingest-file", "research_source_file",
+                            '<input class="ctl" type="file" id="r-ingest-file" accept=".txt,.md,.text,.pdf"/>'))
+    parts.append(f'<button type="button" class="ctl" id="r-ingest-file-clear" hidden disabled>{L("research_clear_file")}</button>')
     parts.append("</div>")
     parts.append('<details class="research-details" id="r-ingest-options">')
     parts.append(f'<summary>{L("optional_details")}</summary><div class="row">')
-    parts.append(
-        f'<input class="ctl field-narrow" id="r-ingest-title" placeholder="{L("research_source_title")}"/>'
-    )
-    parts.append(
-        f'<input class="ctl field-narrow" id="r-ingest-tags" placeholder="{L("research_tags_example")}"/>'
-    )
+    parts.append(form_field("r-ingest-title", "research_source_title",
+                            f'<input class="ctl field-narrow" id="r-ingest-title" placeholder="{L("research_source_title")}"/>'))
+    parts.append(form_field("r-ingest-tags", "research_tags",
+                            f'<input class="ctl field-narrow" id="r-ingest-tags" placeholder="{L("research_tags_example")}"/>'))
     parts.append("</div>")
     parts.append(f'<label for="r-ingest-origin-url">{L("ctx_origin_url")}</label>')
     parts.append(
@@ -145,9 +144,8 @@ def render_research_panel(
     parts.append("</details>")
     parts.append('<div class="row mb-2" id="r-ocr-diagnostic-box" style="display:none;"></div>')
     parts.append('<div class="row mb-2">')
-    parts.append(
-        f'<textarea class="ctl full-width" id="r-ingest-text" placeholder="{L("research_source_text")}" rows="3"></textarea>'
-    )
+    parts.append(form_field("r-ingest-text", "research_source_text",
+                            f'<textarea class="ctl full-width" id="r-ingest-text" placeholder="{L("research_source_text")}" rows="3"></textarea>'))
     parts.append("</div>")
     parts.append('<div class="row">')
     parts.append(
@@ -443,9 +441,8 @@ def render_research_panel(
     parts.append("      </select>")
     parts.append("    </div>")
     parts.append('    <div class="row mb-2">')
-    parts.append(
-        f'      <input class="ctl grow" id="r-link-rationale" placeholder="{L("research_link_rationale")}"/>'
-    )
+    parts.append(form_field("r-link-rationale", "research_link_rationale",
+                            f'<input class="ctl grow" id="r-link-rationale" placeholder="{L("research_link_rationale")}"/>'))
     parts.append(
         f'      <button class="ctl primary" id="r-link-evidence-btn">{L("research_link_action")}</button>'
     )

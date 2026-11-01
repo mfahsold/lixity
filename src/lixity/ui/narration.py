@@ -11,7 +11,16 @@ from ..pacing import HOOK_SHORT_SENTENCE
 from ..showing import MIN_COMPARISON_CHAPTERS
 from ..style_fingerprint import FEATURE_UNITS, FEATURES, MIN_COMPARABLE_WORDS
 from ..style_profile import ChapterProfile
-from .components import esc, help_term, kpi, label, panel_formatters, panel_label, panel_start
+from .components import (
+    chapter_link,
+    esc,
+    help_term,
+    kpi,
+    label,
+    panel_formatters,
+    panel_label,
+    panel_start,
+)
 
 
 def render_scenes_panel(
@@ -23,7 +32,9 @@ def render_scenes_panel(
         return ""
     if scenes.get("error"):
         return (panel_start("scenes", labels, "panel_scenes") +
-                f'<p role="status">{esc(scenes["error"])}</p></section>')
+                f'<p role="status">{esc(label(labels, "scene_error_summary"))}</p>'
+                f'<details><summary>{esc(label(labels, "scene_error_details"))}</summary>'
+                f'<p>{esc(scenes["error"])}</p></details></section>')
     if not scenes.get("items") and not scenes.get("planned_items"):
         return ""
 
@@ -175,10 +186,11 @@ def render_dialogue_panel(
             turns_label = L("dlg_turns_one" if turns == 1 else "dlg_turns")
             share = float(chapter.get("dialogue_pct", 0.0))
             title_attr = esc(chapter.get("title", ""))
+            chapter_label = f'{label(labels, "chapter")} {num} · {chapter.get("title", "")}'
             parts.append(
-                f'<div class="row" data-jump="#ch-{num}" role="button" tabindex="0" '
+                f'<div class="row" data-jump="#ch-{num}" '
                 f'title="{title_attr}">'
-                f'<span class="label">{L("chapter")} {num} · {esc(chapter.get("title", ""))}</span>'
+                f'{chapter_link(num, chapter_label, css_class="label")}'
                 f'<span class="bar"><i style="width:{min(100.0, share):.1f}%"></i></span>'
                 f'<span class="val">{P(share)} · {turns} {turns_label}</span>'
                 f"</div>"
@@ -207,7 +219,7 @@ def render_characters_panel(
     has_pov = any("declared_pov_chapters" in figure for figure in characters["figures"])
     parts.append(f'<div class="table-wrap" tabindex="0" role="region" aria-label="{L("panel_characters")}"><table><thead><tr>')
     parts.extend(
-        f"<th>{L(key)}</th>"
+        f'<th scope="col">{help_term(labels, key, L(key)) if key in {"chr_span", "chr_gap", "chr_share"} else L(key)}</th>'
         for key in (
             "chr_name",
             "chr_mentions",
@@ -218,12 +230,15 @@ def render_characters_panel(
         )
     )
     if has_pov:
-        parts.append(f'<th>{L("chr_pov")}</th>')
+        parts.append(f'<th scope="col">{L("chr_pov")}</th>')
     parts.append("</tr></thead><tbody>")
     total = int(characters.get("chapters", 0))
     for figure in characters["figures"]:
         first = figure.get("first_chapter")
-        jump = f' data-jump="#ch-{int(first)}" role="button" tabindex="0"' if first else ""
+        jump = f' data-jump="#ch-{int(first)}"' if first else ""
+        row_class = ' class="row-link"' if first else ""
+        name = figure.get("name", "")
+        name_link = chapter_link(int(first), name) if first else esc(name)
         share = float(figure.get("presence_ratio", 0.0)) * 100.0
         chapter_span = f"{first}–{figure.get('last_chapter')}" if first else "–"
         first_chapter = next((c for c in chapters if c.num == first), None)
@@ -233,8 +248,8 @@ def render_characters_panel(
             else ""
         )
         parts.append(
-            f'<tr class="row-link"{jump}>'
-            f'<td class="name">{esc(figure.get("name", ""))}</td>'
+            f'<tr{row_class}{jump}>'
+            f'<td class="name">{name_link}</td>'
             f'<td class="num">{int(figure.get("mentions", 0))}</td>'
             f'<td class="num">{len(figure.get("chapters_present", []))} / {total}</td>'
             f'<td class="num" title="{span_title}">{esc(chapter_span)}</td>'
@@ -282,10 +297,11 @@ def render_pacing_panel(
         asl = float(chapter.get("asl", 0.0))
         hook = int(chapter.get("hook_score", 0))
         title_attr = esc(chapter.get("title", ""))
+        chapter_label = f'{label(labels, "chapter")} {num} · {chapter.get("title", "")}'
         parts.append(
-            f'<div class="row" data-jump="#ch-{num}" role="button" tabindex="0" '
+            f'<div class="row" data-jump="#ch-{num}" '
             f'title="{title_attr}">'
-            f'<span class="label">{L("chapter")} {num} · {esc(chapter.get("title", ""))}</span>'
+            f'{chapter_link(num, chapter_label, css_class="label")}'
             f'<span class="bar"><i style="width:{min(100.0, asl / max_asl * 100.0):.1f}%"></i></span>'
             f'<span class="val">{L("feat_asl")} {N(asl, 1)} · {L("pac_hook")} {hook}</span>'
             f"</div>"
@@ -313,11 +329,14 @@ def render_motifs_panel(
         parts.append("</tr></thead><tbody>")
         for motif in motifs["motifs"]:
             first = motif.get("first_chapter")
-            jump = f' data-jump="#ch-{int(first)}" role="button" tabindex="0"' if first else ""
+            jump = f' data-jump="#ch-{int(first)}"' if first else ""
+            row_class = ' class="row-link"' if first else ""
+            name = motif.get("name", "")
+            name_link = chapter_link(int(first), name) if first else esc(name)
             motif_span = f"{first}–{motif.get('last_chapter')}" if first else "–"
             parts.append(
-                f'<tr class="row-link"{jump}>'
-                f'<td class="name">{esc(motif.get("name", ""))}</td>'
+                f'<tr{row_class}{jump}>'
+                f'<td class="name">{name_link}</td>'
                 f'<td class="num">{int(motif.get("mentions", 0))}</td>'
                 f'<td class="num">{esc(motif_span)}</td>'
                 f'<td class="num">{int(motif.get("longest_gap", 0))}</td>'
@@ -335,10 +354,13 @@ def render_motifs_panel(
         for phrase in motifs["repeated_phrases"]:
             chapter_list_text = ", ".join(str(c) for c in phrase.get("chapters", []))
             first = phrase.get("chapters", [None])[0]
-            jump = f' data-jump="#ch-{int(first)}" role="button" tabindex="0"' if first else ""
+            jump = f' data-jump="#ch-{int(first)}"' if first else ""
+            row_class = ' class="row-link"' if first else ""
+            text = phrase.get("phrase", "")
+            phrase_link = chapter_link(int(first), text) if first else esc(text)
             parts.append(
-                f'<tr class="row-link"{jump}>'
-                f'<td class="name">{esc(phrase.get("phrase", ""))}</td>'
+                f'<tr{row_class}{jump}>'
+                f'<td class="name">{phrase_link}</td>'
                 f'<td class="num">{int(phrase.get("count", 0))}</td>'
                 f'<td class="num">{esc(chapter_list_text)}</td>'
                 f"</tr>"
@@ -387,10 +409,15 @@ def render_showing_panel(
         for chapter in comparable_chapters
     )
     parts: list[str] = [panel_start("showing", labels, "panel_showing")]
+    brief_note = esc(
+        label(labels, "showing_brief_note").replace("{min_words}", str(MIN_COMPARABLE_WORDS))
+    )
     context_note = esc(
         label(labels, "showing_context_note").replace("{min_words}", str(MIN_COMPARABLE_WORDS))
     )
-    parts.append(f'<p class="ctl-note">{context_note}</p>')
+    parts.append(f'<p class="ctl-note">{brief_note}</p>'
+                 f'<details class="signal-method"><summary>{L("showing_method")}</summary>'
+                 f'<p class="ctl-note">{context_note}</p></details>')
     if not comparable:
         note = L("showing_unavailable_note").replace("{min_chapters}", str(MIN_COMPARISON_CHAPTERS))
         parts.append(f'<p class="ctl-note">{note}</p></section>')
@@ -406,6 +433,8 @@ def render_showing_panel(
         N(float(showing.get("balance_mean") or 0.0), 2, signed=True), L("show_balance")
     ))
     parts.append("</div>")
+    parts.append(f'<p class="signal-scale">{L("showing_axis_note")} '
+                 '<span class="signal-scale-key" aria-hidden="true"><span>−</span><span>0</span><span>+</span></span></p>')
 
     max_abs = (
         max((abs(float(c.get("balance") or 0.0)) for c in comparable_chapters), default=0.0) or 1.0
@@ -414,25 +443,26 @@ def render_showing_panel(
     for chapter in showing_chapters:
         num = int(chapter.get("chapter_num", 0))
         title_attr = esc(chapter.get("title", ""))
-        label_html = f'{L("chapter")} {num} · {esc(chapter.get("title", ""))}'
+        label_text = f'{label(labels, "chapter")} {num} · {chapter.get("title", "")}'
         if not chapter.get("comparable", True):
             parts.append(
                 f'<div class="row unavailable" title="{title_attr}">'
-                f'<span class="label">{label_html}</span>'
+                f'<span class="label">{esc(label_text)}</span>'
                 f'<span class="bar"></span>'
                 f'<span class="val">–</span>'
                 f"</div>"
             )
             continue
         balance = float(chapter.get("balance") or 0.0)
-        width = min(100.0, abs(balance) / max_abs * 100.0)
-        bar = f'<i style="width:{width:.1f}%"></i>'
+        width = min(50.0, abs(balance) / max_abs * 50.0)
+        sign = "signal-negative" if balance < 0 else "signal-positive"
+        bar = f'<i class="{sign}" style="width:{width:.1f}%"></i>'
         value = N(balance, 2, signed=True)
         parts.append(
-            f'<div class="row" data-jump="#ch-{num}" role="button" tabindex="0" '
+            f'<div class="row" data-jump="#ch-{num}" '
             f'title="{title_attr}">'
-            f'<span class="label">{label_html}</span>'
-            f'<span class="bar">{bar}</span>'
+            f'{chapter_link(num, label_text, css_class="label")}'
+            f'<span class="bar signal-bar" aria-hidden="true">{bar}</span>'
             f'<span class="val">{value}</span>'
             f"</div>"
         )

@@ -1914,8 +1914,11 @@ lixity research ingest --project ./novel --file ./notes.txt --allow-retention \
 The URL must be absolute HTTP(S), at most 2,000 characters, without credentials,
 whitespace or control characters. It is stored as submitted, never requested or
 used to accept a claim. Prefer stable source addresses over signed links with
-private query tokens. The browser displays it as escaped text. Failed validation
-keeps the draft; successful import clears the field with the rest of the form.
+private query tokens. The browser displays it as escaped text. **Unreleased:**
+choose either a local file or pasted text for each import; if both contain data,
+the form asks for a choice and retains both. Failed imports and edits made while
+an import is in progress remain in the form. On success, only an unchanged
+submitted form is cleared. The local importer remains available alongside Zotero.
 
 On refresh, an omitted `origin_url` retains the context selected by the existing
 API: supplied `context`, or the latest capture's context when omitted. An explicit

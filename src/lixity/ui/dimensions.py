@@ -79,6 +79,7 @@ def style_dimensions(
         }
         parts.append('<div class="dim-layout"><div class="dim-3d-box" id="dim-3d-view">')
         parts.append(f'<div class="dim-3d-header"><span class="dim-3d-title">{translated("dim_3d_title")}</span></div>')
+        parts.append(f'<p class="dim-legend-note" id="dim-fallback">{translated("dim_nojs")}</p>')
         parts.append(f'<div class="dim-view-control"><label for="dim-projection">{translated("dim_projection")}</label><select class="ctl dim-ctl" id="dim-projection" disabled><option value="3d">{translated("dim_3d")}</option>')
         for a in range(len(axes_data)):
             parts.extend(f'<option value="d{a + 1}-d{b + 1}">D{axes_data[a]["idx"]} / D{axes_data[b]["idx"]}</option>'
@@ -89,6 +90,10 @@ def style_dimensions(
                            ("selected", "dim_legend_selected")):
             parts.append(f'<li><span class="dim-legend-{glyph}" aria-hidden="true"></span>{translated(key)}</li>')
         parts.append('</ul>')
+        flagged_count = sum(1 for item in points_data if item["flagged"])
+        summary_key = "dim_threshold_summary_one" if flagged_count == 1 else "dim_threshold_summary"
+        parts.append(f'<div class="dim-threshold-controls"><p class="dim-threshold-summary" id="dim-threshold-summary">{translated(summary_key, count=flagged_count, total=len(points_data))}</p>')
+        parts.append(f'<button type="button" class="ctl dim-ctl" id="dim-next-threshold" aria-describedby="dim-threshold-summary" hidden>{translated("dim_next_threshold")}</button></div>')
         if len(axes_data) < 3:
             incomplete_key = "dim_incomplete_axes_one" if len(axes_data) == 1 else "dim_incomplete_axes"
             parts.append(f'<p class="dim-legend-note" id="dim-incomplete-axes">{translated(incomplete_key, count=len(axes_data))}</p>')
@@ -101,23 +106,24 @@ def style_dimensions(
             ("dim-ctl-corr", "dim_ctl_corridor", True),
             ("dim-ctl-spin", "dim_ctl_spin", False),
         ):
-            parts.append(toggle_button(label(labels, key), control_id, pressed, "ctl ctl-sm dim-ctl"))
-        parts.append(f'<button type="button" class="ctl ctl-sm dim-ctl" id="dim-ctl-reset">{translated("dim_ctl_reset")}</button></div>')
+            parts.append(toggle_button(label(labels, key), control_id, pressed, "ctl ctl-sm dim-ctl", disabled=True))
+        parts.append(f'<button type="button" class="ctl ctl-sm dim-ctl" id="dim-ctl-reset" disabled>{translated("dim_ctl_reset")}</button></div>')
         parts.append(f'<div class="dim-3d-actions dim-navigation" role="group" aria-label="{translated("dim_ctl_navigation")}">')
         for control_id, key in (
             ("dim-ctl-left", "dim_ctl_left"), ("dim-ctl-right", "dim_ctl_right"),
             ("dim-ctl-up", "dim_ctl_up"), ("dim-ctl-down", "dim_ctl_down"),
             ("dim-ctl-zoom-in", "dim_ctl_zoom_in"), ("dim-ctl-zoom-out", "dim_ctl_zoom_out"),
         ):
-            parts.append(f'<button type="button" class="ctl ctl-sm dim-ctl" id="{control_id}">{translated(key)}</button>')
+            parts.append(f'<button type="button" class="ctl ctl-sm dim-ctl" id="{control_id}" disabled>{translated(key)}</button>')
         parts.append(f'</div><div class="dim-3d-footer"><span>{translated("dim_3d_hint")}</span><span>{len(points_data)} / {len(chapters)} {translated("chapters")}</span></div>')
         parts.append(f'<details class="dim-cutoff"><summary>{translated("dim_score_threshold")}: |score| ≥ {threshold_label}</summary><p>{translated("dim_cutoff", threshold=threshold_label)}</p></details>')
         parts.append('</div>')
         point = points_data[0]
-        parts.append(f'<div class="dim-selection-panel"><label for="dim-chapter-select">{translated("dim_choose_chapter")}</label><select class="ctl dim-ctl" id="dim-chapter-select" disabled>')
+        parts.append('<div class="dim-selection-panel">')
+        parts.append(f'<label for="dim-chapter-select">{translated("dim_choose_chapter")}</label><select class="ctl dim-ctl" id="dim-chapter-select" data-help="{translated("dim_selection_help")}" disabled>')
         parts.extend(f'<option value="{option["ch"]}">{option["ch"]}. {esc(option["title"])}</option>'
                      for option in points_data)
-        parts.append(f'</select><p class="hint">{translated("dim_selection_help")}</p><div id="dim-selection" aria-live="polite" aria-atomic="true" data-chapter="{point["ch"]}"><strong>{point["ch"]}. {esc(point["title"])}</strong><dl class="dim-selected-scores">')
+        parts.append(f'</select><div id="dim-selection" aria-live="polite" aria-atomic="true" data-chapter="{point["ch"]}"><strong>{point["ch"]}. {esc(point["title"])}</strong><dl class="dim-selected-scores">')
         for axis, coordinate in zip(axes_data, ("x", "y", "z"), strict=False):
             score = cast(float, point[coordinate]) or 0.0
             meaning = " / ".join(("+ " if side == "pos" else "− ") + axis[side]

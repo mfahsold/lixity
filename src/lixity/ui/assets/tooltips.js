@@ -75,8 +75,10 @@
   var activeEl = null;
   var touchUntil = 0;
   var touchHelp = null;
+  var touchFocusEl = null;
   var activatedEl = null;
   var activatedHover = false;
+  var dismissedHover = null;
   var pointerX = null, pointerY = null;
   var hideTimer = null;
   var showTimer = null, pendingEl = null, warmUntil = 0;
@@ -97,12 +99,30 @@
     return text;
   }
 
+  function hasPersistentFocus(el) {
+    // Standalone touch help focuses its trigger for assistive technology, but
+    // that synthetic focus must not pin a later mouse-only explanation.
+    return el && el.contains(document.activeElement) &&
+      (!touchFocusEl || !el.contains(touchFocusEl));
+  }
+
+  function controlsFocusedMenu(el, target) {
+    if (!el || el.getAttribute("aria-expanded") !== "true") return false;
+    return (el.getAttribute("aria-controls") || "").split(/\s+/).some(function(id) {
+      var menu = id && document.getElementById(id);
+      return menu && menu.getAttribute("role") === "menu" && menu.contains(target);
+    });
+  }
+
   function hover(el) {
     if (el === activeEl) {
       clearTimeout(hideTimer);
       if (!pointerHelp) { pointerAnchor(el); updatePos(el); }
       return;
     }
+    // A pointer passing over another control must not replace the help that
+    // remains associated with the current keyboard focus.
+    if (hasPersistentFocus(activeEl)) return;
     if (el === pendingEl || el === activatedEl || el.closest(".pswp")) return;
     if (activeEl) hide();
     cancelPending();
@@ -266,27 +286,39 @@
 
   document.addEventListener("mouseout", function (e) {
     if (Date.now() < touchUntil) return;
+    if (dismissedHover && dismissedHover.contains(e.target) && !dismissedHover.contains(e.relatedTarget)) {
+      dismissedHover = null;
+    }
     var el = e.target.closest("[data-help], [data-tip], [title]");
     if (el && el === pendingEl && !el.contains(e.relatedTarget)) cancelPending();
     if (el && el === activeEl && !el.contains(e.relatedTarget) && !tip.contains(e.relatedTarget)) {
       // Reflow can emit departures from inactive help. One owned timer must
       // never outlive a later explicit touch or keyboard explanation.
       clearTimeout(hideTimer);
-      hideTimer = setTimeout(function() { if (activeEl === el) hide(); }, 160);
+      hideTimer = setTimeout(function() {
+        if (activeEl === el && !hasPersistentFocus(el)) hide();
+      }, 160);
     }
   }, { passive: true });
   tip.addEventListener("mouseenter", function() { clearTimeout(hideTimer); });
   tip.addEventListener("mouseleave", function(e) {
-    if (!activeEl || !activeEl.contains(e.relatedTarget)) hide();
+    if (activeEl && !activeEl.contains(e.relatedTarget) &&
+        !hasPersistentFocus(activeEl)) hide();
   });
 
   document.addEventListener("focusin", function(e) {
     var el = e.target.closest("[data-help], [data-tip], [title]");
+    if (Date.now() >= touchUntil) touchFocusEl = null;
     // Touch can restore button focus without requesting another explanation.
     if (el && (Date.now() >= touchUntil || e.target.matches(":focus-visible"))) show(el);
   });
   document.addEventListener("focusout", function(e) {
+    if (touchFocusEl && touchFocusEl.contains(e.target)) touchFocusEl = null;
     if (activatedEl && activatedEl.contains(e.target)) activatedEl = null;
+    // Hover and keyboard focus are independent owners of the same help.
+    // Keep it open while a real pointer remains over the trigger or popup.
+    if (activeEl && Date.now() >= touchUntil &&
+        (activeEl.matches(":hover") || tip.matches(":hover"))) return;
     hide();
   });
   document.addEventListener("pointermove", function(e) {
@@ -296,6 +328,8 @@
     // movement requests hover help; focus and explicit touch keep their owners.
     if (!moved || e.pointerType === "touch" || Date.now() < touchUntil ||
         activatedEl && activatedHover && activatedEl.contains(e.target)) return;
+    if (dismissedHover && !dismissedHover.contains(e.target)) dismissedHover = null;
+    if (dismissedHover && dismissedHover.contains(e.target)) return;
     activatedEl = null;
     var el = e.target.closest("[data-help], [data-tip], [title]");
     if (el && !el.closest(".tooltip-popup")) hover(el);
@@ -317,7 +351,10 @@
     pointerX = e.clientX; pointerY = e.clientY;
     if (activatedEl && !activatedEl.contains(e.target)) activatedEl = null;
     dismissAction(e.target);
-    if (e.pointerType === "touch") touchUntil = Date.now() + 1000;
+    if (e.pointerType === "touch") {
+      touchUntil = Date.now() + 1000;
+      touchFocusEl = e.target.closest("[data-help], [data-tip], [title]");
+    }
     var el = e.target.closest(".help[data-help]");
     if (e.pointerType === "touch" && el && !el.closest("button, a")) {
       touchHelp = el;
@@ -364,12 +401,20 @@
 
   // Handle help before the reader's capture-phase Escape shortcuts.
   document.addEventListener("keydown", function (e) {
+    if (touchFocusEl && touchFocusEl.contains(e.target)) touchFocusEl = null;
     if (e.key === "Enter" || e.key === " ") dismissAction(e.target);
     if (e.key === "Escape" && (activeEl || pendingEl)) {
       var visibleHelp = Boolean(activeEl);
-      if (visibleHelp) e.preventDefault();
-      // Help is the innermost layer; manuscript search still clears its query.
-      if (visibleHelp && e.target.id !== "text-search") e.stopImmediatePropagation();
+      var helpOwnsFocus = visibleHelp && (activeEl.contains(e.target) || tip.contains(e.target) ||
+        controlsFocusedMenu(activeEl, e.target) ||
+        e.target === document.body || e.target === document.documentElement);
+      // A dismissed hover must not reappear on small movements within the
+      // same trigger. Leaving and returning can request it again.
+      if (activeEl && activeEl.matches(":hover")) dismissedHover = activeEl;
+      if (helpOwnsFocus) e.preventDefault();
+      // A hovered hint must not steal Escape from an unrelated focused control.
+      // Focused help is the innermost layer; search still clears its query.
+      if (helpOwnsFocus && e.target.id !== "text-search") e.stopImmediatePropagation();
       hide();
     } else if ((e.key === "Enter" || e.key === " ") &&
         e.target.matches(".help[data-help]") && !e.target.closest("button, a")) {

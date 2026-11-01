@@ -364,6 +364,21 @@ class SceneContracts(unittest.TestCase):
         self.assertTrue("Scene assignments no longer match" in html)
         self.assertTrue('id="ch-1"' in html)
 
+    def test_scene_error_has_localized_summary_and_retains_technical_detail(self):
+        from lixity.language import get_language_profile
+        from lixity.ui.narration import render_scenes_panel
+        from tests.locales import LOCALES
+
+        error = 'Scene assignments no longer match: 11:3 <unsafe>'
+        for language in LOCALES:
+            with self.subTest(language=language):
+                labels = get_language_profile(language).labels
+                html = render_scenes_panel({"error": error}, labels, language)
+                summary, details = html.split('<details', 1)
+                self.assertIn(labels["scene_error_summary"], summary)
+                self.assertIn(labels["scene_error_details"], details)
+                self.assertIn('11:3 &lt;unsafe&gt;', details)
+
     def test_custom_chapter_markers_end_list_and_footnote_continuations(self):
         settings = {"chapter_regex": r"(?m)^CHAPTER\s+"}
         for continuation in ("- A door closes.", "[^note]: A source note."):

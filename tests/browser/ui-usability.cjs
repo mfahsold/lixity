@@ -68,8 +68,8 @@ server.serve_forever()
       assert.ok((await page.locator('#characters th').first().boundingBox()).width>=50,
         'Character headers must remain readable instead of wrapping into single letters');
       assert.ok(await page.locator('#characters th').first().evaluate(element=>{
-        const style=getComputedStyle(element);
-        return element.getBoundingClientRect().height-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom)<=parseFloat(style.lineHeight)+1;
+        const range=document.createRange();range.selectNodeContents(element);
+        return new Set(Array.from(range.getClientRects(),rect=>Math.round(rect.top))).size===1;
       }),'Short character headings keep whole words on mobile');
       await table.focus();await page.keyboard.press('ArrowRight');
       await expect.poll(()=>table.evaluate(element=>element.scrollLeft)).toBeGreaterThan(0);

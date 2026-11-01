@@ -248,6 +248,8 @@ if (paragraphReset) paragraphReset.addEventListener("click", function() {
   setFilter(layerOnly, "layer-only", false);
   if (layer) { layer.value = ""; applyLayer(); }
 });
+// Do not advertise filters or chapter toggles in a static, uninitialized report.
+document.body.classList.add("has-js-dashboard-controls");
 var microhint = document.getElementById("microhint");
 if (microhint) {
   var dismissHint = function () {
@@ -296,6 +298,8 @@ function currentOutlierPassage() {
     var boundary = controls ? controls.getBoundingClientRect().bottom : 0;
     if (bounds.height > 0 && bounds.bottom > boundary && bounds.top < innerHeight) return focused;
   }
+  var pending = window.LixityReader && window.LixityReader.pendingComparisonPassage();
+  if (pending) return pending;
   var anchor = window.LixityReader && window.LixityReader.capture();
   if (anchor) return anchor.panel;
   // Standalone reports use the same navigation without the continuous reader.
@@ -1155,6 +1159,7 @@ if (fdrFilter) {
     });
     document.getElementById("heatmap-empty").hidden = visible > 0;
   });
+  fdrFilter.disabled = false;
 }
 var projectSelectionRevision = 0;
 async function runAction(action, payload, button, canReload, acceptResponse) {

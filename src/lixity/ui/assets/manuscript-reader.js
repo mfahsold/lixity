@@ -136,7 +136,8 @@
   var layout = document.getElementById("workspace-reader-layout");
   var overviewAnchor = null, inspectorTarget = null, contextPassage = null, inspectorTrigger = null, origin = null;
   var retainedAnchor = null, requestedAnchor = null, dockOrigin = null, arrangementRevision = 0;
-  var pendingDockAnchor = null, clampedAnchor = null, scrollIntentRevision = 0;
+  var pendingDockAnchor = null, pendingDockFocusRevision = null, clampedAnchor = null, scrollIntentRevision = 0;
+  var pendingComparisonRestore = null, comparisonRestoreRevision = 0, passageNavigationRevision = 0;
   var narrowContext = window.matchMedia("(max-width: 900px)");
   var dockFitFrame = 0;
   function fitContextDock() {
@@ -234,7 +235,7 @@
   });
   if (comparisonToggle) {
     // Capture before the dashboard changes comparison badges and paragraph height.
-    comparisonToggle.addEventListener("change", function() { restore(captureForRestore()); }, true);
+    comparisonToggle.addEventListener("change", queueComparisonRestore, true);
     comparisonToggle.addEventListener("change", rememberAnalysis);
   }
   var clearMetric = document.getElementById("layer-clear");
@@ -261,11 +262,39 @@
   // Geometry capture stays literal for navigation. A layout-preserving action
   // may instead retry a position which the previous layout could not reach.
   function captureForRestore() {
+    if (pendingComparisonPassage()) return pendingComparisonRestore.anchor;
     if (clampedAnchor && clampedAnchor.anchor.panel.isConnected && clampedAnchor.context === sourceContext() &&
         clampedAnchor.hash === clampedAnchor.anchor.panel.dataset.paragraphSha256 &&
         Math.abs(window.scrollY - clampedAnchor.scrollY) < 1) return clampedAnchor.anchor;
     clampedAnchor = null;
     return capture();
+  }
+  function cancelComparisonRestore() {
+    pendingComparisonRestore = null;
+    ++comparisonRestoreRevision;
+  }
+  function pendingComparisonPassage() {
+    var pending = pendingComparisonRestore;
+    if (!pending) return null;
+    var panel = pending.anchor.panel;
+    if (!panel.isConnected || sourceContext() !== pending.context ||
+        panel.dataset.paragraphSha256 !== pending.hash ||
+        (scrollIntentRevision !== pending.intent && Math.abs(window.scrollY - pending.scrollY) >= 1)) {
+      cancelComparisonRestore(); return null;
+    }
+    return panel;
+  }
+  function queueComparisonRestore() {
+    var previous = pendingComparisonPassage() && pendingComparisonRestore;
+    var anchor = previous ? previous.anchor : captureForRestore();
+    if (!anchor) { cancelComparisonRestore(); return; }
+    if (!previous) anchor = Object.assign({}, anchor, {comparisonBoundary: controls.getBoundingClientRect().bottom});
+    var revision = ++comparisonRestoreRevision;
+    pendingComparisonRestore = previous || {anchor: anchor, context: sourceContext(),
+      hash: anchor.panel.dataset.paragraphSha256, intent: scrollIntentRevision, scrollY: window.scrollY};
+    restore(anchor, false, function() {
+      return revision === comparisonRestoreRevision && Boolean(pendingComparisonPassage());
+    }, function() { pendingComparisonRestore = null; });
   }
   // A real window scroll supersedes a pending target even if the reader
   // subsequently returns to the same position. Nested panels do not affect it.
@@ -280,6 +309,10 @@
   window.addEventListener("wheel", scrollIntent, {passive:true});
   window.addEventListener("touchmove", scrollIntent, {passive:true});
   document.addEventListener("keydown", function(event) {
+    // Space activates controls or edits text; it is not a document scroll.
+    if (event.key === " " && event.target.closest && event.target.closest(
+      'button, input, textarea, select, summary, [role="button"], [role="menuitem"], [role="checkbox"], [role="switch"], [role="tab"], [role="radio"], [contenteditable="true"]'
+    )) return;
     if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) scrollIntent();
   });
   document.addEventListener("pointerdown", function(event) {
@@ -325,14 +358,18 @@
     });
     updateGuideActions();
   }
-  function restore(anchor, arrival) {
+  function restore(anchor, arrival, stillCurrent, didBegin) {
     if (!anchor) return;
     if (clampedAnchor && clampedAnchor.anchor !== anchor) clampedAnchor = null;
     var revision = arrangementRevision;
+    var scheduledNavigationRevision = passageNavigationRevision;
     var scheduledScrollY = window.scrollY;
     var scheduledScrollIntent = scrollIntentRevision;
     var scheduledContext = sourceContext(), scheduledHash = anchor.panel.dataset.paragraphSha256;
     requestAnimationFrame(function() {
+      if (stillCurrent && !stillCurrent()) return;
+      if (didBegin) didBegin();
+      if (scheduledNavigationRevision !== passageNavigationRevision) return;
       if (revision !== arrangementRevision) return;
       if (!anchor.panel.isConnected || sourceContext() !== scheduledContext ||
           anchor.panel.dataset.paragraphSha256 !== scheduledHash) {
@@ -353,7 +390,11 @@
       var prose = anchor.panel.querySelector(".ptext-inner > p");
       // Inline analysis controls may disappear while the prose stays in view.
       if (prose && Number.isFinite(anchor.proseOffset)) top = prose.getBoundingClientRect().top - anchor.proseOffset;
-      var offset = top - anchor.top, before = window.scrollY;
+      var intendedTop = anchor.top;
+      if (Number.isFinite(anchor.comparisonBoundary)) {
+        intendedTop += controls.getBoundingClientRect().bottom - anchor.comparisonBoundary;
+      }
+      var offset = top - intendedTop, before = window.scrollY;
       window.scrollBy(0, offset);
       // A changed layout can temporarily make the requested position
       // unreachable. Retry it on the next preserving transition only if
@@ -443,6 +484,8 @@
   }
   function leavePassage(target) {
     if (!target || !target.closest("#chapters")) return;
+    ++passageNavigationRevision;
+    cancelComparisonRestore();
     var owner = contextPassage || dockOrigin && dockOrigin.panel || inspectorTarget;
     if (owner && (target === owner || owner.contains(target))) return;
     // Explicit navigation owns the destination. Do not restore the old tool's
@@ -656,12 +699,18 @@
     if (toolChanged && narrowContext.matches) {
       var destination = open ? null : dockOrigin;
       var returnDockFocus = dock.contains(document.activeElement);
+      pendingDockFocusRevision = !open && destination && returnDockFocus ? revision : null;
       requestAnimationFrame(function() {
+        if (pendingDockFocusRevision === revision) pendingDockFocusRevision = null;
         if (revision !== arrangementRevision) return;
         if (open) dock.scrollIntoView({block: "start", behavior: "instant"});
         else if (destination && destination.panel.isConnected) {
           window.scrollBy(0, destination.panel.getBoundingClientRect().top - destination.top);
-          if (returnDockFocus) {
+          // The return runs on the next frame. Do not override a new focus
+          // choice made after the dock started closing.
+          var currentFocus = document.activeElement;
+          if (returnDockFocus && (currentFocus === document.body || dock.contains(currentFocus) ||
+              currentFocus === destination.trigger || currentFocus === destination.panel)) {
             var trigger = destination.trigger;
             if (!trigger || !trigger.isConnected || !trigger.getClientRects().length || trigger.disabled) {
               trigger = destination.panel.querySelector(".reader-paragraph-actions") || destination.panel;
@@ -1054,6 +1103,8 @@
     readingThread.rememberPassage({description: passageContext(anchor.panel), valid: validOrigin, restore: returnToPassage});
   }
   window.LixityReader = {fitContext: fitContextDock, requestTool: requestTool, leavePassage: leavePassage, capture: capture, captureForRestore: captureForRestore, restore: restore, retain: retain,
+    contextFocusReturnPending: function() { return pendingDockFocusRevision === arrangementRevision; },
+    pendingComparisonPassage: pendingComparisonPassage,
     enableEvidence: function() { retain(function() {defaultMetric(true); workbench.dispatch({type:"analysis", value:true});}); },
     inspect: function() { setMode("inspect", true); },
     inspectPassage: function(panel, point) {

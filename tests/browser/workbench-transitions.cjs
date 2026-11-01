@@ -238,6 +238,24 @@ async function assertToolbarDossierReturn(page, paragraph, width) {
       await assertPassageReturn(page, dossierOrigin, width, 'Dossier close',
         width > 900 ? page.locator('#workspace-reader-toggle') : null);
 
+      if (width === 390) {
+        await openFromPassage(page, 'companion');
+        await page.locator('#workspace-reader-close').focus();
+        const scheduled = await page.evaluate(() => {
+          const original = window.requestAnimationFrame, frames = [];
+          window.requestAnimationFrame = callback => { frames.push(callback); return frames.length; };
+          try {
+            document.getElementById('workspace-reader-close').click();
+            document.getElementById('reader-focus').focus();
+          } finally { window.requestAnimationFrame = original; }
+          for (const callback of frames) callback(performance.now());
+          return frames.length;
+        });
+        assert.ok(scheduled > 0, 'closing the mobile dossier schedules a return');
+        assert.equal(await page.locator('#reader-focus').evaluate(node => document.activeElement === node), true,
+          'dossier return does not override a later explicit focus choice');
+      }
+
       await assertToolbarDossierReturn(page, dossierOrigin.paragraph, width);
 
       if (width <= 900) {

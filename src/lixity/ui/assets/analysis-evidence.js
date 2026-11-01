@@ -8,6 +8,7 @@
   var supported = Boolean(window.CSS && CSS.highlights && window.Highlight);
   var visible = new Set(), records = new Map(), epoch = 0, frame = 0, request = 0;
   var card = null, opening = null, dismissTimer = 0, down = null, hoverFrame = 0, pointer = null, hoverTimer = 0, candidate = null;
+  var touchTap = null, touchFallback = 0, lateTouchClick = null;
   var host = document.createElement("div");
   host.id = "analysis-evidence-card"; host.className = "analysis-evidence-card"; host.hidden = true;
   document.body.appendChild(host);
@@ -35,7 +36,11 @@
     if (!supported) return;
     CSS.highlights.delete("lixity-analysis-evidence"); CSS.highlights.delete("lixity-analysis-current");
   }
+  function cancelTouchTap() {
+    clearTimeout(touchFallback); touchFallback = 0; touchTap = null;
+  }
   function close(restore, scrolling) {
+    cancelTouchTap();
     request++; clearTimeout(dismissTimer); clearTimeout(hoverTimer); candidate = null;
     var previous = card || opening; card = null; host.hidden = true;
     if (!scrolling) opening = null;
@@ -397,25 +402,53 @@
     var start = down; down = null;
     if (start && start.id === event.pointerId && Date.now() - start.time < 500 && window.scrollY === start.scroll &&
         Math.hypot(event.clientX - start.x, event.clientY - start.y) < 8 && window.getSelection().isCollapsed) {
-      // Finish the tap's synthetic click before inserting a card beneath the finger.
-      requestAnimationFrame(function() {hover(event, true);});
+      var tap = touchTap = {event:event, x:event.clientX, y:event.clientY, scrollX:scrollX, scrollY:scrollY};
+      // Some environments suppress the compatibility click. A bounded fallback
+      // still opens the card unless a later interaction cancels the request.
+      touchFallback = setTimeout(function() {finishTouchTap(tap, true);}, 500);
     }
   }, {passive:true});
-  chapters.addEventListener("pointercancel", function() {down = null;}, {passive:true});
+  function finishTouchTap(tap, fallback) {
+    if (tap !== touchTap) return;
+    cancelTouchTap();
+    if (scrollX !== tap.scrollX || scrollY !== tap.scrollY) return;
+    if (fallback) lateTouchClick = {x:tap.x, y:tap.y, until:Date.now() + 1500};
+    hover(tap.event, true);
+  }
+  // Open only after the matching click has acquired its original target. A
+  // frame after pointerup alone can precede touchend and retarget that click.
+  document.addEventListener("click", function(event) {
+    if (lateTouchClick) {
+      var late = lateTouchClick; lateTouchClick = null;
+      if (Date.now() <= late.until && event.detail !== 0 &&
+          Math.hypot(event.clientX - late.x, event.clientY - late.y) < 8) {
+        event.preventDefault(); event.stopImmediatePropagation(); return;
+      }
+    }
+    var tap = touchTap;
+    if (!tap || event.detail === 0) return;
+    if (!chapters.contains(event.target) || Math.hypot(event.clientX - tap.x, event.clientY - tap.y) >= 8) {
+      cancelTouchTap(); return;
+    }
+    clearTimeout(touchFallback); touchFallback = 0;
+    requestAnimationFrame(function() {finishTouchTap(tap, false);});
+  }, true);
+  chapters.addEventListener("pointercancel", function() {down = null; cancelTouchTap();}, {passive:true});
   host.addEventListener("pointerenter", function() {clearTimeout(dismissTimer);});
   host.addEventListener("pointerleave", function() {if (card && !card.pinned) dismissTimer = setTimeout(function() {close(false);}, 180);});
   host.addEventListener("focusin", function() {if (card) card.pinned = true;});
   host.addEventListener("focusout", function(event) {if (event.relatedTarget && !host.contains(event.relatedTarget)) close(false);});
-  document.addEventListener("pointerdown", function(event) {clearTense(); if (!host.contains(event.target)) close(false);}, {passive:true});
+  document.addEventListener("pointerdown", function(event) {lateTouchClick = null; cancelTouchTap(); clearTense(); if (!host.contains(event.target)) close(false);}, {passive:true});
   document.addEventListener("focusin", function(event) {if (event.target.closest("dialog[open]")) close(false);});
   window.addEventListener("keydown", function(event) {
+    cancelTouchTap();
     if (event.key === "Escape") clearTense();
     if (opening && !event.defaultPrevented && !event.isComposing &&
         ["PageDown", "PageUp", "ArrowDown", "ArrowUp", "Home", "End", " "].includes(event.key) &&
         !event.target.isContentEditable && !event.target.closest("input, textarea, select")) close(false);
     if (event.key === "Escape" && (card || opening)) {event.preventDefault(); event.stopImmediatePropagation(); close(true);}
   }, true);
-  document.addEventListener("wheel", function(event) {if (opening && !host.contains(event.target)) close(false);}, {passive:true});
+  document.addEventListener("wheel", function(event) {if ((opening || touchTap) && !host.contains(event.target)) close(false);}, {passive:true});
   document.addEventListener("scroll", function(event) {
     if (host.contains(event.target)) return;
     down = null;

@@ -8,6 +8,7 @@
   var btnSpin = document.getElementById("dim-ctl-spin");
   var btnReset = document.getElementById("dim-ctl-reset");
   var chapterSelect = document.getElementById("dim-chapter-select");
+  var nextThreshold = document.getElementById("dim-next-threshold");
   var selection = document.getElementById("dim-selection");
   var readChapter = document.getElementById("dim-read-chapter");
   var projectionSelect = document.getElementById("dim-projection");
@@ -47,6 +48,14 @@
     if (window.LixityLog) window.LixityLog.error("style-space: failed to obtain canvas 2D context");
     return;
   }
+  // Interactive controls become available only after the plot can render.
+  var panel = canvas.closest("#dimensions");
+  if (panel) panel.classList.add("dim-ready");
+  var fallback = document.getElementById("dim-fallback");
+  if (fallback) fallback.hidden = true;
+  document.querySelectorAll("#dim-3d-view button.dim-ctl").forEach(function(button) {
+    button.disabled = false;
+  });
   if (window.LixityLog) {
     window.LixityLog.debug("style-space: initialized with " + points.length + " points, threshold " + threshold);
   }
@@ -141,6 +150,15 @@
     chapterSelect.addEventListener("change", function() {
       var point = points.find(function(candidate) { return String(candidate.ch) === chapterSelect.value; });
       if (point) selectChapter(point);
+    });
+  }
+
+  var thresholdPoints = points.filter(function(point) { return point.flagged; });
+  if (nextThreshold && thresholdPoints.length) {
+    nextThreshold.hidden = false;
+    nextThreshold.addEventListener("click", function() {
+      var current = thresholdPoints.findIndex(function(point) { return point.ch === selectedPoint.ch; });
+      selectChapter(thresholdPoints[(current + 1) % thresholdPoints.length]);
     });
   }
 

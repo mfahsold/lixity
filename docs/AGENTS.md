@@ -436,6 +436,8 @@ Analysis Off and Focus hide both displays without resetting their preferences.
 | `#analysis-review [data-review-passage]` | native passage link; clears search/paragraph filters, opens its `data-target` and focuses the paragraph panel |
 | `#analysis-review [data-jump="#dim-3d-view"]` | unreleased: direct style-space route, present only when the rendered dimensions have chapter scores; reveals the existing dimensions tab |
 | `#dim-legend` / `#dim-legend-note` / `#dim-incomplete-axes` | unreleased: style-space point/selection/cutoff key, cutoff caveat, and optional display-only zero-coordinate disclosure |
+| `#dim-fallback` | unreleased: visible when the plot cannot initialize; the chapter-score table remains readable |
+| `#dim-threshold-summary` / `#dim-next-threshold` | unreleased: count of scored chapters at an axis cutoff and, when available with JavaScript, a control cycling through them in manuscript order |
 | `#analysis-sections a[data-section-link]` | section navigation; highlights the panel in view (scrollspy); only rendered panels are offered |
 | `#manuscript-pdf-form` / `data-project-token` | native PDF form and opaque selected-context token; the client submits `layout` and this token explicitly |
 | `#manuscript-pdf-layout` / `#manuscript-pdf-download` / `#manuscript-pdf-status` | layout selector, download button and live status region; native PDF menu starts collapsed |
@@ -446,7 +448,8 @@ Analysis Off and Focus hide both displays without resetting their preferences.
 | `.research-dossier-actions > summary` | open supplemental dossier creation and project-wide record navigation below the reading content |
 | `data-action="<name>"` + `data-payload="<form-id>"` | control-server action |
 | `data-marker-kind="<kind>"` / `data-marker-resolve="<id>"` | set/resolve a work marker (inline note field); **never scrolls** – marker controls are excluded from jump activation |
-| `role="button" tabindex="0"` | every clickable non-native target (KPI tile, band row, loading bar, table row, heatmap cell) |
+| `.chapter-link` | unreleased: native keyboard-accessible chapter link in matrix and narrative rows; the surrounding row retains its pointer jump when scripts are active |
+| `role="button" tabindex="0"` | keyboard-accessible non-native targets such as KPI tiles, band rows, loading bars and heatmap cells |
 | `:focus-visible` | visible focus ring for all of the above (CSS covers `[role="button"]`) |
 
 Marker controls are excluded from jump activation. Marker writes use the host
