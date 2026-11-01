@@ -835,7 +835,18 @@ document.addEventListener("click", function(event) {
   }
   var switchBtn = event.target.closest("[data-switch-view]");
   if (switchBtn) {
+    var hadFocus = switchBtn.contains(document.activeElement);
     switchActiveView(switchBtn.dataset.switchView);
+    // A control inside the previous view can disappear during navigation.
+    // Preserve any destination focus established by a view-change handler.
+    var hidden = !switchBtn.isConnected || !switchBtn.getClientRects().length ||
+      getComputedStyle(switchBtn).visibility === "hidden";
+    var focused = document.activeElement;
+    if (hadFocus && hidden && (!focused || focused === document.body || focused === switchBtn ||
+        !focused.isConnected || !focused.getClientRects().length)) {
+      var activeTab = document.querySelector('.view-nav-tab.active[aria-selected="true"]');
+      if (activeTab && activeTab.getClientRects().length) activeTab.focus({preventScroll: true});
+    }
     return;
   }
 });
@@ -971,27 +982,33 @@ window.LixityManuscriptLinks = {
   var open = document.getElementById("runtime-open"), modal = document.getElementById("modal-runtime");
   if (!open || !modal || !API) return;
   var content = document.getElementById("runtime-content"), status = document.getElementById("runtime-status"), revision = 0;
-  function heading(key) {var node = document.createElement("h4"); node.textContent = uiLabel(key); content.appendChild(node);}
+  function section(key) {
+    var group = document.createElement("section"), title = document.createElement("h4");
+    group.className = "runtime-section"; title.textContent = uiLabel(key);
+    group.appendChild(title); content.appendChild(group); return group;
+  }
   async function refresh() {
     var serial = ++revision; status.textContent = "…";
     try {
       var response = await fetch(API + "/runtime"), data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.message || uiLabel("runtime_unavailable"));
       if (serial !== revision || !modal.open) return;
-      content.replaceChildren(); status.textContent = uiLabel("runtime_ready");
-      var modelTitle = document.createElement("h4"); modelTitle.textContent = "Qwen3-TTS"; content.appendChild(modelTitle);
-      var targets = document.createElement("dl");
+      content.replaceChildren(); status.textContent = uiLabel("runtime_status_updated");
+      var workers = section("runtime_workers"), targets = document.createElement("dl");
+      targets.className = "runtime-targets";
       data.audio.targets.forEach(function(target) {
-        var title = document.createElement("dt"), value = document.createElement("dd");
+        var row = document.createElement("div"), title = document.createElement("dt"), value = document.createElement("dd");
+        row.className = "runtime-target";
         title.textContent = uiLabel("speech_target_" + target.target);
         value.textContent = uiLabel("runtime_" + target.state);
         var model = document.createElement("div");
         model.textContent = uiLabel("runtime_model") + ": " +
           (typeof target.model === "string" && target.model.trim() ? target.model : uiLabel("runtime_model_unknown"));
-        value.appendChild(model); targets.append(title, value);
-      }); content.appendChild(targets);
-      heading("runtime_jobs");
+        value.appendChild(model); row.append(title, value); targets.appendChild(row);
+      }); workers.appendChild(targets);
+      var queue = section("runtime_jobs");
       var jobs = document.createElement("ul");
+      jobs.className = "runtime-list";
       data.audio.jobs.forEach(function(job) {
         var item = document.createElement("li");
         item.textContent = uiLabel("speech_target_" + job.target) + " · " +
@@ -1000,8 +1017,9 @@ window.LixityManuscriptLinks = {
         jobs.appendChild(item);
       });
       if (!jobs.children.length) {var empty = document.createElement("li"); empty.textContent = uiLabel("runtime_empty"); jobs.appendChild(empty);}
-      content.appendChild(jobs); heading("runtime_workspaces");
+      queue.appendChild(jobs); var workspaces = section("runtime_workspaces");
       var projects = document.createElement("ul");
+      projects.className = "runtime-list";
       data.workspaces.forEach(function(project) {
         if (!/^\/w\/[a-f0-9]{32}\/$/.test(project.url)) return;
         var item = document.createElement("li"), link = document.createElement("a");
@@ -1021,8 +1039,10 @@ window.LixityManuscriptLinks = {
           }); controls.appendChild(close);
         }
         projects.appendChild(item);
-      }); content.appendChild(projects);
-    } catch (error) {if (serial === revision && modal.open) status.textContent = error.message;}
+      }); workspaces.appendChild(projects);
+    } catch (error) {
+      if (serial === revision && modal.open) { content.replaceChildren(); status.textContent = error.message; }
+    }
   }
   open.addEventListener("click", function() {modal.showModal(); refresh();});
   document.getElementById("runtime-refresh").addEventListener("click", refresh);

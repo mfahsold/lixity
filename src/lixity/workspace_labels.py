@@ -61,6 +61,15 @@ _ROWS = {
         'Aplicação e áudio',
         'App en audio',
     ),
+    'runtime_workers': (
+        'Speech services',
+        'Sprachdienste',
+        'Services vocaux',
+        'Servicios de voz',
+        'Servizi vocali',
+        'Serviços de voz',
+        'Spraakdiensten',
+    ),
     'runtime_workspaces': (
         'Open projects',
         'Geöffnete Projekte',
@@ -87,6 +96,15 @@ _ROWS = {
         'Pronto',
         'Pronto',
         'Gereed',
+    ),
+    'runtime_status_updated': (
+        'Status updated',
+        'Status aktualisiert',
+        'Statut actualisé',
+        'Estado actualizado',
+        'Stato aggiornato',
+        'Estado atualizado',
+        'Status bijgewerkt',
     ),
     'runtime_starting': (
         'Starting',

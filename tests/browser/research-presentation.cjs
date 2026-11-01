@@ -71,6 +71,11 @@ server.serve_forever()
       await page.locator('#tab-view-research').click();
       await page.waitForFunction(() => Boolean(researchSelectionProjectId));
       const labels = server.fixture.labels[locale];
+      await page.locator('[data-rtab=decisions]').click();
+      const decisionCard = page.locator('#research-decisions-list .research-card').filter({hasText:'Synthetic decision'});
+      await expect(decisionCard).toContainText('Synthetic plot effect.');
+      await expect(decisionCard.locator('.ctl-note > strong').first()).toHaveText(labels.research_decision_impact,
+        {useInnerText: false});
       const warning = await page.evaluate(() => researchDossierDetailHtml({
         id:'synthetic-warning-dossier', title:'Synthetic context', revision:1,
         body:'## Context\n\nSynthetic dossier text.', citations:[], sections:['Context'],

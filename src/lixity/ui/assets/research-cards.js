@@ -76,7 +76,7 @@
         ? html`<div class="research-decision-rationale research-prose markdown-body my-2"
             dangerouslySetInnerHTML=${{__html: item.rationaleHtml}} />` : null}
       ${item.impactHtml
-        ? html`<div class="ctl-note my-1 text-small"><strong>${item.impactLabel}:</strong>
+        ? html`<div class="ctl-note my-1 text-small"><strong>${item.impactLabel}</strong>
             <span class="research-prose markdown-body" dangerouslySetInnerHTML=${{__html: item.impactHtml}} /></div>` : null}
       ${item.scopeText ? html`<div class="ctl-note research-claim-scope">${item.scopeText}</div>` : null}
       ${item.idLine ? html`<div class="ctl-note research-record-id">${item.idLine}</div>` : null}

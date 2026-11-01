@@ -85,8 +85,8 @@
       "file": "dashboard-project-settings.png",
       "role": "guide",
       "question": "Where do I configure chapter registers?",
-      "alt": "Project settings including chapter registers and Apply.",
-      "caption": "Setup reference; a chapter label is not a literary judgment.",
+      "alt": "A synthetic, unsaved chapter register draft with a sentence-length range, chapter assignment and Apply button.",
+      "caption": "An unsaved example draft; ranges and chapter labels are not literary judgments.",
       "destination": "blog/intentional-registers.html"
     },
     {

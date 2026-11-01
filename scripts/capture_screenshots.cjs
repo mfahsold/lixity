@@ -142,15 +142,29 @@ async function main() {
       await page.locator('#import-preview-box').waitFor({state: 'visible'});
       assert.equal(await page.locator('#btn-submit-import-project').isEnabled(), true);
     }
-    async function captureThrough(capture, selector, lastSelector) {
+    async function captureThrough(capture, selector, lastSelector, {firstSelector = null} = {}) {
       const last = typeof lastSelector === 'string' ? page.locator(lastSelector) : lastSelector;
       await last.waitFor({state: 'visible'});
       await settle();
-      capture.maxHeight = Math.ceil(await last.evaluate((last, selector) => {
+      const bounds = await last.evaluate((last, options) => {
+        const {selector, firstSelector} = options;
         const target = document.querySelector(selector);
-        return last.getBoundingClientRect().bottom - target.getBoundingClientRect().top
-          + parseFloat(getComputedStyle(target).paddingBottom);
-      }, selector));
+        const targetBox = target.getBoundingClientRect();
+        const first = firstSelector ? document.querySelector(firstSelector) : null;
+        const top = first ? Math.max(0, first.getBoundingClientRect().top - targetBox.top - 12) : 0;
+        const lastBox = last.getBoundingClientRect();
+        // End in the space after this task, never through the next item.
+        let bottom = lastBox.bottom + 16;
+        let next = last.nextElementSibling;
+        while (next && !next.getClientRects().length) next = next.nextElementSibling;
+        if (next) bottom = Math.min(bottom, (lastBox.bottom + next.getBoundingClientRect().top) / 2);
+        return {top, height: bottom - targetBox.top - top,
+          lastBottom: lastBox.bottom - targetBox.top, targetHeight: targetBox.height};
+      }, {selector, firstSelector});
+      assert.ok(bounds.top + bounds.height >= bounds.lastBottom && bounds.targetHeight >= bounds.lastBottom,
+        'Capture must retain the complete final task element');
+      capture.topOffset = Math.floor(bounds.top);
+      capture.maxHeight = Math.ceil(bounds.height);
     }
     async function save(target, selector, {visibleMap = false} = {}) {
       await settle();
@@ -175,6 +189,10 @@ async function main() {
           const rect = node.getBoundingClientRect();
           return {x: rect.x + scrollX, y: rect.y + scrollY, width: rect.width, height: rect.height};
         });
+        if (job.topOffset) {
+          clip.y += job.topOffset;
+          clip.height -= job.topOffset;
+        }
         // Explicit excerpts end at a complete task boundary supplied by the
         // capture definition. Do not reshape native widgets to fit a camera.
         if (job.maxHeight) clip.height = Math.min(clip.height, job.maxHeight);
@@ -245,6 +263,23 @@ async function main() {
         await page.locator('#analysis-evidence-card').screenshot({path: capture.target, animations:'disabled'});
         const bytes = fs.readFileSync(capture.target);
         results.push({file:name,width:bytes.readUInt32BE(16),height:bytes.readUInt32BE(20)});
+      } else if (name === 'dashboard-mobile.png') {
+        // Finish after the first complete paragraph instead of cutting a line
+        // of the next paragraph at an arbitrary viewport height.
+        const paragraphs = page.locator('#ch-1 .ptext');
+        const end = await paragraphs.nth(0).evaluate(first => {
+          const second = first.nextElementSibling;
+          const bottom = first.getBoundingClientRect().bottom + scrollY;
+          return Math.floor(second ? Math.min(bottom + 20, (bottom + second.getBoundingClientRect().top + scrollY) / 2) : bottom + 20);
+        });
+        await page.setViewportSize({width: capture.width, height: end});
+        assert.ok(await paragraphs.first().evaluate(node => node.getBoundingClientRect().bottom <= innerHeight),
+          'Mobile capture must contain the complete first paragraph');
+        if (await paragraphs.count() > 1) {
+          assert.ok(await paragraphs.nth(1).evaluate(node => node.getBoundingClientRect().top >= innerHeight),
+            'Mobile capture must not clip the next paragraph');
+        }
+        await save(capture.target);
       } else if (name === 'dashboard-light.png' || name === 'dashboard-dark.png') {
         // A complete opening chapter makes the entrance image a coherent
         // reading task. Use a real viewport; preserve the native shell.
@@ -260,8 +295,8 @@ async function main() {
         await paragraph.locator('[data-reader-paragraph]').click();
         await page.locator('[data-reader-action=todo]').click();
         await paragraph.locator('.marker-note').fill('Check the gate observation');
-        await captureThrough(capture, '#workspace-reader-layout', paragraph);
-        await save(capture.target, '#workspace-reader-layout');
+        await captureThrough(capture, '#ch-1', paragraph);
+        await save(capture.target, '#ch-1');
       } else if (name.startsWith('dashboard-heatmap')) {
         await page.evaluate(() => {
           const rows = document.querySelectorAll('table.heatmap tbody tr');
@@ -276,6 +311,24 @@ async function main() {
         await page.locator('#modal-project-create').waitFor({state: 'hidden'});
         assert.equal(await page.locator('#set-author-name').isVisible(), true);
         assert.equal(await page.locator('#nda-draft-form input, #nda-draft-form textarea').count(), 5);
+        await page.locator('#settings-registers > summary').click();
+        // Show a real unsaved example through the same editor authors use.
+        const requestsBeforeDraft = await page.evaluate(() => captureRequests.length);
+        await page.locator('[data-register-add-profile]').click();
+        const profile = page.locator('[data-register-profile]').last();
+        await profile.locator('[data-register-field=register_name]').fill('Chapter contrast');
+        await profile.locator('[data-register-add-target]').click();
+        await profile.locator('[data-register-field=register_target]').selectOption('asl');
+        await profile.locator('[data-register-field=register_lower]').fill('8');
+        await profile.locator('[data-register-field=register_upper]').fill('15');
+        await page.locator('[data-register-add-assignment]').click();
+        const assignment = page.locator('[data-register-assignment]').last();
+        await assignment.locator('[data-register-field=register_selector]').fill('2');
+        await assignment.locator('[data-register-field=register_name]').fill('Chapter contrast');
+        assert.equal(await page.evaluate(() => captureRequests.length), requestsBeforeDraft,
+          'Framing a register draft must not save project settings');
+        await captureThrough(capture, '#controls', '#settings-form > .settings-actions',
+          {firstSelector: '#settings-registers'});
         await save(capture.target, '#controls');
       } else if (name.startsWith('dashboard-project-import')) {
         await selectView('project');
@@ -370,6 +423,7 @@ async function main() {
         await page.locator('#r-search-scope').selectOption('sources');
         await page.locator('#r-search-btn').click();
         await page.locator('#research-search-results .research-passage-card').first().waitFor();
+        await captureThrough(capture, '#research-manager', '#research-search-results .research-passage-card:first-child');
         await save(capture.target, '#research-manager');
       } else {
         await save(capture.target);

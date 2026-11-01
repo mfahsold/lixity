@@ -40,6 +40,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   direction without manually supplying snapshot hashes.
 
 ### Changed
+- The app and audio dialog groups speech services, queue and open projects,
+  distinguishes a successful status refresh from worker readiness, and uses
+  the shared dialog footer spacing. The demo's reading guide stays with the
+  manuscript view, and documentation screenshots end at complete task boundaries.
 - Workspace guidance and metric tooltips are shorter in all seven languages,
   while preserving counting definitions and heuristic limits. Reading and
   analysis controls are grouped by task; the overview now links to quoted text,

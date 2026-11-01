@@ -36,7 +36,7 @@ capture variant.
 | Can I read on a narrow screen? | [dashboard-mobile.png](dashboard-mobile.png) | reference: A responsive reading example; prose continues below the viewport. |
 | How do I leave an editorial note? | [dashboard-editorial.png](dashboard-editorial.png) | guide: The note is written by the user, not inferred by the analysis. |
 | How do I start with a manuscript? | [dashboard-project-import.png](dashboard-project-import.png) | guide: Previewing a file and creating a project are separate actions. |
-| Where do I configure chapter registers? | [dashboard-project-settings.png](dashboard-project-settings.png) | guide: Setup reference; a chapter label is not a literary judgment. |
+| Where do I configure chapter registers? | [dashboard-project-settings.png](dashboard-project-settings.png) | guide: An unsaved example draft; ranges and chapter labels are not literary judgments. |
 | Where does a scene keep its research? | [dashboard-research-dossiers.png](dashboard-research-dossiers.png) | guide: Dossier orientation; follow a concrete passage for the evidence workflow. |
 | How is a claim linked to evidence? | [dashboard-research-claims.png](dashboard-research-claims.png) | guide: A claim is an authored assertion, separate from its evidence. |
 | What changed after an edit? | [dashboard-research-review.png](dashboard-research-review.png) | reference: Detailed full-size reference, unsuitable as a small social card. |

@@ -106,21 +106,51 @@ server.serve_forever()
         await first.reload(); assert.equal(await first.locator('#chapters').textContent(), sourceText);
         await second.locator('#runtime-open').click();
         await second.waitForFunction(() => document.querySelector('#runtime-content a'));
+        assert.equal(await second.locator('#runtime-status').textContent(), fixtures.de.labels.runtime_status_updated,
+          'A successful status request is distinct from a worker being ready');
         assert.ok(await second.locator('#runtime-content').textContent().then(text => text.includes('First') && text.includes('Second')));
+        assert.equal(await second.locator('#runtime-content .runtime-section h4').first().textContent(), fixtures.de.labels.runtime_workers,
+          'The status section identifies speech services without assuming a particular engine');
+        assert.equal(await second.locator('#runtime-content .runtime-target').count(), 2);
+        const footerGeometry = await second.locator('#modal-runtime > .modal-card > .modal-footer').evaluate(node => {
+          const footer = node.getBoundingClientRect(), button = node.querySelector('button').getBoundingClientRect();
+          return {left: button.left - footer.left, right: footer.right - button.right,
+            bottom: footer.bottom - button.bottom, visible: button.bottom <= innerHeight && button.top >= 0};
+        });
+        assert.ok(footerGeometry.left >= 8 && footerGeometry.right >= 8 && footerGeometry.bottom >= 8 && footerGeometry.visible,
+          `The pinned refresh action has a visible inset: ${JSON.stringify(footerGeometry)}`);
         const models = second.locator('#runtime-content dl dd');
         assert.match(await models.nth(0).textContent(), /Qwen\/Qwen3-TTS-12Hz-1\.7B-CustomVoice/);
         assert.match(await models.nth(1).textContent(), /Modell: Unbekannt/);
+        let failRuntime = false;
         await second.route('**/api/runtime', async route => {
+          if (failRuntime) return route.fulfill({status: 503, json: {ok:false, message:'Synthetic status unavailable'}});
           const response = await route.fetch();
           const data = await response.json();
-          data.audio.targets[1] = {target:'jetson', state:'ready', transport:'ssh', model:'Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign'};
+          data.audio.targets[1] = {target:'jetson', state:'ready', transport:'ssh', model:'Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign' + 'x'.repeat(80)};
+          data.audio.jobs = [{target:'local', state:'running'}, {target:'jetson', state:'pending', queue_position:1}];
           await route.fulfill({json:data});
         });
         await second.locator('#runtime-refresh').click();
         await second.waitForFunction(() => document.querySelectorAll('#runtime-content dl dd')[1]?.textContent.includes('VoiceDesign'));
+        const queue = second.locator('#runtime-content .runtime-section').nth(1);
+        assert.match(await queue.textContent(), /Vertonung läuft/);
+        assert.match(await queue.textContent(), /Warteposition 1/);
         assert.match(await models.nth(1).textContent(), /Qwen\/Qwen3-TTS-12Hz-1\.7B-VoiceDesign/);
         assert.equal(await second.locator('#modal-runtime').evaluate(modal => modal.scrollWidth <= modal.clientWidth), true);
+        assert.equal(await second.locator('.runtime-target').nth(1).evaluate(node => node.scrollWidth <= node.clientWidth), true,
+          'Long model identities wrap inside their status card');
         await second.locator('#modal-runtime').screenshot({path:path.join(screenshotDir, `runtime-${width}.png`)});
+        failRuntime = true;
+        await second.locator('#runtime-refresh').click();
+        await second.waitForFunction(() => document.querySelector('#runtime-status')?.textContent === 'Synthetic status unavailable');
+        assert.equal(await second.locator('#runtime-content').textContent(), '',
+          'Failed refresh must not present old worker or project data as current');
+        failRuntime = false;
+        await second.locator('#runtime-refresh').click();
+        await second.waitForFunction(() => document.querySelectorAll('#runtime-content .runtime-target').length === 2);
+        assert.equal(await second.locator('#runtime-status').textContent(), fixtures.de.labels.runtime_status_updated,
+          'Retry restores the observed status');
         await second.keyboard.press('Escape');
         assert.equal(await second.locator('#runtime-open').evaluate(button => button === document.activeElement), true);
       } finally {await context.close();}

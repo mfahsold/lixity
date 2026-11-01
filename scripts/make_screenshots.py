@@ -246,10 +246,12 @@ def build_research_demo(root: Path, project: Path) -> Path:
         '<a href="../guides/installation.html">Try the same question with your own manuscript</a>.</p>'
         '</details></section>'
     )
-    navigation_content = '<div id="workspace-navigation-content">'
-    if document.count(navigation_content) != 1:
-        raise ValueError("The demo must retain one native workspace navigation container")
-    document = document.replace(navigation_content, quick_start + navigation_content, 1)
+    # Keep the example prompt inside the real Manuscript view so the existing
+    # workspace navigation hides it in Research and restores its disclosure state.
+    document, count = re.subn(r'(<div\b[^>]*\bid="view-pane-analysis"[^>]*>)',
+                              lambda match: match.group(1) + quick_start, document)
+    if count != 1:
+        raise ValueError("The demo must retain one native Manuscript view")
     credits = ['<section class="panel" id="research-source-credits"><h2>Image source credits</h2>']
     for item, _content in reviewed_visual_sources():
         credits.append(f'<h3>{html.escape(item["title"])}</h3><p>{html.escape(item["created_period"])}. '
