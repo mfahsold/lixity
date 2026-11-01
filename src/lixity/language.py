@@ -5,7 +5,7 @@ lexicons, tense markers, and register signals via function-word distribution vec
 """
 
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, replace
 from unicodedata import normalize
 
@@ -141,6 +141,17 @@ def compile_pattern(pattern: str) -> "re.Pattern[str]":
 def compile_word_pattern(pattern: str) -> "re.Pattern[str]":
     """Compile tokens with only the flags explicitly supplied by the pattern."""
     return re.compile(pattern)
+
+
+def quotation_capture_group(pattern: "re.Pattern[str]") -> int:
+    """Use the first capture for quoted text, or the entire match without captures."""
+    return 1 if pattern.groups else 0
+
+
+def quotation_texts(pattern: "re.Pattern[str]", text: str) -> Iterator[str]:
+    """Yield one quote text per match, preserving unmatched optional captures."""
+    group = quotation_capture_group(pattern)
+    return (match.group(group) or "" for match in pattern.finditer(text))
 
 
 def count_nominal_matches(

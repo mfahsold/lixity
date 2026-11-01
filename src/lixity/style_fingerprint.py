@@ -1145,6 +1145,9 @@ class StyleFingerprint:
     baseline_diagnostics: dict[str, Any] = field(default_factory=dict)
     structural_diagnostics: dict[str, Any] = field(default_factory=dict)
     thresholds: FingerprintThresholds = field(default_factory=FingerprintThresholds)
+    # Internal, unrounded axis scales for interpretation; the passport contract
+    # and its raw scores/flags are intentionally unchanged.
+    dimension_axis_scales: list[float | None] = field(default_factory=list, repr=False, compare=False)
 
     @property
     def measured_cells(self) -> int:
@@ -1469,6 +1472,7 @@ class StyleFingerprint:
         chapters and three varying features are required, but do not establish
         statistical reliability. Jacobi rotations and signs are deterministic.
         """
+        self.dimension_axis_scales = []
         fields = self._usable_features()
         chapter_ids = sorted({ch for column in self.values.values() for ch in column})
         common = [ch for ch in chapter_ids if fields and all(
@@ -1513,6 +1517,7 @@ class StyleFingerprint:
             for x in fields
         ]
         eigenvalues, eigenvectors = jacobi_eigh(matrix)
+        leading_scale = math.sqrt(max(0.0, eigenvalues[0]))
         dims: list[dict[str, Any]] = []
         for dim_index in range(min(N_DIMENSIONS, len(fields))):
             loading_vector = eigenvectors[dim_index]
@@ -1523,14 +1528,21 @@ class StyleFingerprint:
             loadings = {fields[k]: round(loading_vector[k], 3) for k in range(len(fields))}
             scores: dict[int, float] = {}
             flagged: list[int] = []
+            raw_scores: list[float] = []
             for row, chapter_num in enumerate(common):
                 score = math.fsum(
                     loading_vector[k] * columns[field_name][row]
                     for k, field_name in enumerate(fields)
                 )
+                raw_scores.append(score)
                 scores[chapter_num] = round(score, 2)
                 if abs(score) >= self.thresholds.dim_score_threshold:
                     flagged.append(chapter_num)
+            mean = math.fsum(raw_scores) / len(raw_scores)
+            scale = math.sqrt(math.fsum((score - mean) ** 2 for score in raw_scores) / (len(raw_scores) - 1))
+            # Below the eigensolver's 1e-12 covariance tolerance, division by
+            # an axis scale can amplify numerical noise rather than explain it.
+            self.dimension_axis_scales.append(scale if scale > leading_scale * 1e-6 else None)
             dims.append(
                 {
                     "index": dim_index + 1,

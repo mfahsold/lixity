@@ -74,6 +74,56 @@ class TestDialogueReport(unittest.TestCase):
         self.assertGreater(report.dialogue_paragraph_pct, 0.0)
         self.assertLessEqual(report.dialogue_paragraph_pct, 100.0)
 
+    def test_quotation_crossing_paragraphs_counts_in_each_paragraph(self):
+        text = "## Kapitel\n\n„Alpha beta.\n\nGamma delta.“\n"
+        report = dialogue_report(text, DE)
+        self.assertEqual(report.dialogue_words, 4)
+        self.assertEqual(report.dialogue_pct, 100.0)
+        self.assertEqual(report.chapters[0].dialogue_paragraphs, 2)
+        self.assertEqual(report.dialogue_paragraph_pct, 100.0)
+
+    def test_quote_paragraph_share_uses_multiple_matches_and_inclusive_half(self):
+        text = "## Kapitel\n\n„Alpha“ und „Beta“ bleiben.\n\n„Gamma“ und noch mehr.\n"
+        report = dialogue_report(text, DE)
+        self.assertEqual(report.turns, 3)
+        self.assertEqual(report.chapters[0].dialogue_paragraphs, 1)
+        self.assertEqual(report.dialogue_paragraph_pct, 50.0)
+
+    def test_unclosed_quotation_does_not_count_as_quoted_paragraph(self):
+        text = "## Kapitel\n\n„Alpha beta.\n\nGamma delta.\n"
+        report = dialogue_report(text, DE)
+        self.assertEqual(report.turns, 0)
+        self.assertEqual(report.chapters[0].dialogue_paragraphs, 0)
+
+    def test_overlapping_lookahead_spans_do_not_extend_into_next_paragraph(self):
+        text = "## Kapitel\n\n„AA »b«\n\nc“ d e f g h i\n"
+        config = CorpusConfig(language="de", dialogue_regex=r"(?=(„[^“]+“|»[^«]+«))")
+        report = dialogue_report(text, config)
+        self.assertEqual(report.turns, 2)
+        self.assertEqual(report.dialogue_words, 4)  # Legacy span-based total.
+        self.assertEqual(report.chapters[0].dialogue_paragraphs, 1)
+
+    def test_quotation_patterns_without_capture_and_with_unmatched_optional_capture(self):
+        no_capture = CorpusConfig(language="de", dialogue_regex=r"«[^»]+»")
+        text = "## Kapitel\n\n«Alpha beta» bleiben hier.\n\nAußen ohne Zitat.\n"
+        report = dialogue_report(text, no_capture)
+        self.assertEqual(report.dialogue_words, 2)
+        self.assertEqual(report.chapters[0].dialogue_paragraphs, 1)
+
+        optional = CorpusConfig(language="de", dialogue_regex=r"Q(?:\[([^\]]+)\])?")
+        text = "## Kapitel\n\nQ\n\nQ[Alpha beta]\n"
+        report = dialogue_report(text, optional)
+        self.assertEqual(report.dialogue_words, 2)
+        self.assertEqual(report.chapters[0].dialogue_paragraphs, 1)
+
+    def test_overlapping_matches_are_unioned_for_paragraph_share(self):
+        text = "## Kapitel\n\n„a »b« x“ c d e f g\n"
+        config = CorpusConfig(language="de", dialogue_regex=r"(?=(„[^“]+“|»[^«]+«))")
+        report = dialogue_report(text, config)
+        self.assertEqual(report.turns, 2)
+        self.assertEqual(report.dialogue_words, 4)
+        self.assertEqual(report.chapters[0].dialogue_paragraphs, 0)
+
     def test_appendix_is_excluded(self):
         report = dialogue_report(MANUSCRIPT, DE)
         self.assertEqual(len(report.chapters), 2)

@@ -20,6 +20,10 @@ are fixed by convention, and per-axis thresholds are not simultaneous confidence
 regions. Native rotation/zoom buttons and a chapter-score table provide keyboard and touch access to the displayed scores,
 flag status and chapter navigation. Individual canvas points remain pointer-operated.
 These targeted checks do not establish full assistive-technology coverage.
+The same raw-score cutoff represents different multiples of the sample
+standard deviation on axes with different spreads. The dashboard reports those
+multiples to aid interpretation; this is not a calibrated significance test.
+The relative threshold is withheld for numerically negligible axis spreads.
 
 Engine tests use synthetic/public samples. Project adapters and optional local
 servers have separate trust boundaries and need their own tests; core test
@@ -309,7 +313,8 @@ The audit also reproduces unresolved weaknesses:
 | --- | --- |
 | Unicode | NFC equivalence is corrected, preserving source bytes and offsets. Combining sequences without a precomposed letter can still exceed the word patterns' coverage; the mapper does not claim full grapheme segmentation. See [Unicode UAX #29](https://www.unicode.org/reports/tr29/). |
 | Tense | Curated present-only forms no longer also count as productive past candidates. Listed German perfect/pluperfect pairs count as one construction across chapter, scene and paragraph analysis, with bounded intervening words. Unlicensed auxiliary/participle combinations retain both cues; regional/transitive variants, unlisted forms and other languages can still produce spurious mixed classifications. A `mixed` result is not proof of a grammatical tense switch. English `read` and Portuguese `falamos` require context. |
-| Dialogue | Quoted-segment patterns miss conventional dialogue dashes and some single-quote styles. Zero detected quotation words does not establish absence of speech. |
+| Spanish compound cues | Under the default lexical patterns, adjacent present-tense `haber` plus a detected regular `-ado/-ido` candidate is counted once as past, not again as present. This remains a surface pattern: irregular participles and intervening adverbs may be missed, and the broad past bucket does not establish the construction's temporal reference. French, Italian and Dutch compound cues may still count auxiliary and participle in both categories. Custom patterns and optional contextual models are unchanged. |
+| Dialogue | Quoted-segment patterns miss conventional dialogue dashes and some single-quote styles. Zero detected quotation words does not establish absence of speech. Overlapping custom matches can count the same words more than once in turn and quote-word totals, although paragraph shares use their union. |
 | Syllables | Italian rising diphthongs such as `fiore`/`buono` remain overcounted; `paura` is undercounted. Broadly merging vowels would introduce other hiatus errors. French `vraiment`/`moment` are undercounted by the final `-ent` rule, which also serves silent verb endings; neither issue is resolved by spelling alone. The corrected Dutch `ij` rule is not a complete pronunciation model. |
 | Sentence spans | Sentence-final abbreviations can merge sentences. Paired spaced closers and German single `‚…‘` closers have direct boundary/evidence controls, but quotation pairing and abbreviation tables are incomplete; a matching total does not guarantee correct boundaries. |
 | Nominal/passive cues | Word endings and auxiliary patterns do not resolve lexical category, adjectival participles or syntactic voice. Short regular and selected irregular passive forms have positive/negative controls; German `ist geöffnet` state passive remains outside the event-passive cue pattern. Coverage is improved, not complete. |

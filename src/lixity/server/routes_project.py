@@ -301,11 +301,14 @@ class ProjectRoutesMixin(ResponseMixin):
 
     def _handle_project_create(self, payload: dict[str, Any]) -> None:
         title = str(payload.get("title") or "Untitled Project").strip()
-        lang = str(payload.get("language") or self.language or "en").strip().lower()
-        if lang not in LANGUAGE_CHOICES and lang != "auto":
-            lang = "en"
-        if lang == "auto":
-            lang = "en"
+        language_value = payload.get("language", self.language or "en")
+        if not isinstance(language_value, str):
+            self._json({"ok": False, "message": "Choose a supported project language"}, 400)
+            return
+        lang = language_value.strip().lower()
+        if lang not in LANGUAGE_CHOICES or lang == "auto":
+            self._json({"ok": False, "message": "Choose a supported project language other than auto"}, 400)
+            return
 
         author_value = ""
         author_input = payload.get("author_name")

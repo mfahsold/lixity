@@ -444,6 +444,16 @@ rank space:
    2.5) puts a chapter in `flagged` on that axis. Scores are stored rounded to
    two decimals; the cutoff remains descriptive, not a calibrated probability.
 
+The dashboard also reports each axis's sample standard deviation, calculated
+from the unrounded chapter scores with an $n-1$ denominator, and expresses the
+same raw-score cutoff as a multiple of that deviation. This exposes that a
+common raw cutoff is not equally selective on axes with different variances;
+it does not change the scores, flags or configured cutoff. An axis with score
+standard deviation at most $10^{-6}$ times that of the leading axis is treated
+as numerically too small for this conversion, so its relative cutoff is
+unavailable. Neither the scale nor the cutoff is a confidence interval or a
+test of literary quality.
+
 Fewer than three complete chapters or varying features yields no dimensions.
 Incomplete chapters remain available in the other measured-feature views but
 do not receive dimension scores. The complete-case subset can be small or
@@ -664,8 +674,8 @@ restating formulas.
 | Heuristic | Rule | Limits |
 | :--- | :--- | :--- |
 | Sentence bins | ≤ 6 / 7–15 / 16–25 / > 25 words (`analyzer.py`, `pacing.py`) | Bins describe the supplied text; tokenless fragments distort ASL |
-| Hook | Closing sentence ≤ `HOOK_SHORT_SENTENCE` (8) words, ending in `?`, `!` or `…`, or containing detected dialogue (`pacing.py`) | Each condition adds one point; this is not a validated suspense measure. Only the ellipsis character scores; `...` does not |
-| Dialogue paragraph | ≥ 50 % of the paragraph's words inside dialogue spans (`dialogue.py`) | Quotation conventions differ per language |
+| Hook | Closing sentence ≤ `HOOK_SHORT_SENTENCE` (8) words, ending in `?`, `!` or `…`, or containing detected dialogue (`pacing.py`) | Each condition adds one point; the displayed mean is over chapter endings, not scenes. This is not a validated suspense measure. Only the ellipsis character scores; `...` does not |
+| Dialogue paragraph | ≥ 50 % of the paragraph's words inside chapter-wide recognized dialogue spans (`dialogue.py`); a span may cover multiple paragraphs | Quotation conventions differ per language; an unrecognized or unclosed quotation is not counted |
 | Tense mixed/switch | `mixed`: ≥ 2 present and ≥ 2 past markers and minority share ≥ 25 %; `switch`: the dominant tense changes between consecutive paragraphs (`style_profile.py`) | Lexical cues and language-specific patterns are incomplete and can be ambiguous; they are not grammatical parses. Since v0.7.7, an unknown German `-te/-ten/-test` ending alone is not a past cue; no productive present pattern |
 | Sentence splitter | Language abbreviation tables, digit and initial guards; utterance `no.`/`co.` split; prose splits keep blank-line block boundaries (`split_prose_sentences`) | Tables are curated and incomplete; tokenless fragments are not sentences; an unterminated block stays one fragment unit with its token length |
 | Severity | `classify_severity` truth table; defaults: 3 = switch + mixed + minority ≥ 3, 2 = (switch + minority ≥ 2) or (mixed + minority ≥ 3), 1 = either, 0 = neither | Only `flag_min_severity` reaches CLI/API/config; other `ProfileThresholds` fields need direct `ParagraphProfiler` construction |
@@ -749,6 +759,21 @@ independent pattern counting, including empty patterns. The review-policy identi
 changes with these semantics, so saved decisions require renewed review rather
 than silently carrying over to a changed measurement.
 
+**Unreleased:** With the default Spanish lexical patterns, an adjacent
+`he/has/ha/hemos/habéis/han` plus a detected regular `-ado/-ido` participle
+candidate counts as one past cue, without a separate present cue for the same
+auxiliary. A blank paragraph boundary prevents that suppression; the pre-existing
+past regex can still span such a boundary when whole text is counted. RAE's
+[verb tables](https://www.rae.es/sites/default/files/biblioteca/pdf/23_VII_50/23_VII_50.pdf)
+describe `haber` plus a participle as a compound form. The rule remains a
+surface-pattern heuristic: irregular participles, intervening adverbs (see
+[Felíu Arquiola and Pato, 2015, p. 69](https://revistas.rae.es/brae/article/view/37/113)),
+regional interpretation and other constructions are not resolved by
+this rule. A detected compound is assigned to Lixity's broad past bucket, not
+an assertion that its temporal reference is always past. Custom patterns and
+contextual models keep their own behavior. The Spanish review context changes
+when the default lexical rule is used; saved decisions then require renewed review.
+
 Passive patterns retain auxiliary context while allowing shorter regular stems
 and selected irregular forms (`rotas`, `rotte`, `lette`, `lues`, `lidas`) and
 Spanish accented `leídas`. Irregulars need lexical coverage; lowering a stem
@@ -764,6 +789,10 @@ passive metric. A zero remains zero detected cues, not proof of active voice.
 
 Cue patterns (including `dialogue_regex`) use the case-insensitive cue
 contract from §2 across the analysis core and the `dialogue`/`pacing` reports.
+For a configured quotation pattern, word counts use the full match when there
+are no capture groups and the first capture group otherwise. An unmatched
+optional first group contributes no words. Overlapping matches can count words
+more than once in quote-word and turn totals; paragraph shares use their union.
 - `python -W error` test run + `mypy --strict` + ruff gate every change.
 
 ## 12. Voice-reference signal diagnostics (`audio-reference inspect`)

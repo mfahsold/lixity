@@ -425,3 +425,57 @@ def test_reapplying_view_settings_preserves_grammar_and_source_bytes(model_proje
         assert reapplied.status == 200, reapplied.body
         assert handler.dashboard_html == first
     assert files(model_project) == before
+
+
+@pytest.mark.parametrize("pattern", ['praesens_regex = "custom"', 'praeteritum_regex = "custom"'])
+def test_spanish_review_identity_changes_only_for_default_lexical_analysis(project, monkeypatch, pattern):
+    import lixity.analysis_review as review_module
+    from lixity.analysis_review import review_analysis
+
+    settings = project / "lixity.toml"
+    settings.write_text('manuscript = "manuscript.md"\nlanguage = "es"\n')
+    with monkeypatch.context() as old:
+        old.setattr(review_module, "_SPANISH_LEXICAL_POLICY", None)
+        previous = review_analysis(project)
+    assert review_analysis(project)["analysis_sha256"] != previous["analysis_sha256"]
+
+    settings.write_text('manuscript = "manuscript.md"\nlanguage = "es"\n' + pattern + "\n")
+    with monkeypatch.context() as old:
+        old.setattr(review_module, "_SPANISH_LEXICAL_POLICY", None)
+        previous = review_analysis(project)
+    assert review_analysis(project)["analysis_sha256"] == previous["analysis_sha256"]
+
+
+def test_spanish_contextual_model_does_not_use_lexical_policy(project, monkeypatch):
+    import lixity.analysis_review as review_module
+    import lixity.grammatical_tense as grammatical_tense
+
+    (project / "lixity.toml").write_text('manuscript = "manuscript.md"\nlanguage = "es"\n')
+    monkeypatch.setattr(review_module, "profile_document", lambda *args: ([], []))
+    monkeypatch.setattr(grammatical_tense, "model_identity", lambda name: {"model": name})
+    with monkeypatch.context() as old:
+        old.setattr(review_module, "_SPANISH_LEXICAL_POLICY", None)
+        previous = review_analysis(project, tense_model="es_test")
+    assert review_analysis(project, tense_model="es_test")["analysis_sha256"] == previous["analysis_sha256"]
+
+
+
+def test_spanish_default_policy_marks_saved_decision_stale_without_rewriting_it(project, monkeypatch):
+    import lixity.analysis_review as review_module
+
+    (project / "manuscript.md").write_text(
+        "## Uno\n\nElla vive. Ella tiene tiempo. Él vive. "
+        "Ella habló. Él habló. Ella habló.\n"
+    )
+    (project / "lixity.toml").write_text('manuscript = "manuscript.md"\nlanguage = "es"\n')
+    with monkeypatch.context() as old:
+        old.setattr(review_module, "_SPANISH_LEXICAL_POLICY", None)
+        previous = review_analysis(project)
+        save(project, previous)
+    state = (project / ".lixity/analysis-review.json").read_bytes()
+    current = review_analysis(project)
+    assert current["observations"][0]["status"] == "stale"
+    assert current["observations"][0]["previous_status"] == "kept"
+    assert (project / ".lixity/analysis-review.json").read_bytes() == state
+    with pytest.raises(ResearchConflictError):
+        save(project, previous)

@@ -1516,6 +1516,9 @@ lixity audio-migrate --project ./novel --to-schema-4 --apply \
 
 The browser offers the same review/apply step in voice profiles. Its preview
 identifies retained profiles and whether an implicit narrator will become saved.
+Keep the backup and follow the [audio configuration recovery procedure](#experimental-coqui-and-openvoice-audio-unreleased)
+on a project copy before relying on a rollback. An older application may not read
+schema `/4` or profiles saved after the upgrade.
 For an unconfigured project whose language has no native default, schema `/4`
 keeps an explicit empty selection; create an external profile and enter its
 endpoint/model/voice without changing the project language. Explicit external
@@ -1992,11 +1995,15 @@ lixity audio-migrate --project ./novel --to-schema-3 --apply \
 
 The migration checks for changes and backs up the original project configuration
 before writing. Protect the backup; it does not contain the manuscript or the
-private voice references, which need separate backups. To recover the old
-configuration, stop writes, restore the configuration files from that backup,
-and check the project before resuming. Test the procedure on a restored copy
-before migrating a working project. CLI one-off engine overrides do not change
-project settings.
+private voice references, which need separate backups. To recover, stop writes,
+preserve the current configuration and work on a separate project copy. Restore
+the configuration files listed in the backup's `manifest.json` `files` object.
+If `lixity.toml` is absent from that list, it did not exist before migration:
+after preserving and reviewing any later edits, remove the migration-created
+`lixity.toml` from the recovery copy as well. Otherwise it overrides the restored
+`pyproject.toml` settings. Check the recovered project with a compatible version
+before resuming. Test the procedure on a restored copy before migrating a working
+project. CLI one-off engine overrides do not change project settings.
 
 Neither Coqui profile interprets free-text delivery instructions. Saved passage
 instructions fail explicitly; `--no-direction` also omits passage voice
@@ -2266,9 +2273,9 @@ files and a verification manifest, with private file permissions (`0600` on POSI
 It contains no manuscript bytes. Keep it in private project storage: configuration
 can contain private metadata and pronunciation text. Source/configuration changes
 or changed replacement/style choices invalidate the reviewed snapshot. Apply verifies the backup before the atomic
-settings update and never edits the manuscript. For recovery, preserve the current
-configuration, then restore the original root configuration files from the backup;
-do not replace manuscript or retained research files. Rendering restored Piper
+settings update and never edits the manuscript. For recovery, use the
+[audio configuration recovery procedure](#experimental-coqui-and-openvoice-audio-unreleased), including the check for a
+newly created `lixity.toml`; do not replace manuscript or retained research files. Rendering restored Piper
 settings requires a compatible prior application version.
 
 Qwen runs in an optional isolated Python 3.12 environment with `qwen-tts` and a

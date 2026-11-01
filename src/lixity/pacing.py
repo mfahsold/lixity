@@ -26,7 +26,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from .language import compile_pattern, compile_word_pattern, resolve_language
+from .language import compile_pattern, compile_word_pattern, quotation_texts, resolve_language
 from .markdown_parser import SCENE_BREAK_RE as SCENE_BREAK_RE
 from .markdown_parser import prose_text, split_chapters, split_scenes
 from .models import CorpusConfig
@@ -143,7 +143,7 @@ def _scene_stats(
         return None
     sentences = [s for s in split_prose_sentences(scene_text, language_key) if word_re.findall(s)]
     sentence_lengths = [len(word_re.findall(s)) for s in sentences]
-    dialogue_words = sum(len(word_re.findall(m)) for m in dialogue_re.findall(scene_text))
+    dialogue_words = sum(len(word_re.findall(m)) for m in quotation_texts(dialogue_re, scene_text))
     short = sum(1 for length in sentence_lengths if length <= SHORT_SENTENCE_MAX)
     return SceneStats(
         index=index,

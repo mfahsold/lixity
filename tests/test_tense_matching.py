@@ -79,7 +79,7 @@ def test_known_present_only_forms_are_not_also_productive_past(language, sentenc
     ("de", "Wir haben gesprochen.", 0, 2),
     ("fr", "Nous avons parlé.", 2, 2),
     ("it", "Noi abbiamo parlato.", 2, 2),
-    ("es", "Nosotros hemos hablado.", 2, 2),
+    ("es", "Nosotros hemos hablado.", 0, 2),
     ("nl", "Wij hebben gesproken.", 2, 2),
     ("en", "We have worked.", 2, 2),
     ("pt", "Nós falamos.", 2, 2),

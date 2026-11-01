@@ -40,6 +40,24 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   direction without manually supplying snapshot hashes.
 
 ### Changed
+- Project creation rejects invalid or automatic language values with HTTP 400
+  before writing files instead of silently selecting English. An omitted
+  language still inherits a concrete server language; an automatic session
+  requires an explicit concrete choice.
+- The mean number of ending cues is labeled per chapter ending, its actual
+  denominator, in the dashboard and CLI.
+- Style-dimension cards explain the raw axis cutoff relative to each axis's
+  sample standard deviation; scores, flags and the passport contract are
+  unchanged, and numerically degenerate axes are reported as unknown.
+- With the default Spanish tense patterns, an adjacent detected present `haber`
+  and regular past participle contributes one past cue instead of also counting
+  the auxiliary as present. Existing Spanish review decisions are invalidated
+  when their analysis context changes; custom tense patterns are unaffected.
+- Quote-paragraph shares now use the same chapter-wide recognized quotation
+  spans as quote-word counts, including quotations that cross paragraph breaks;
+  overlapping spans count once within each paragraph. Configured patterns with
+  multiple capture groups use their first group consistently across analysis
+  instead of failing during quote-word counting.
 - The local source importer preserves new drafts during pending operations,
   rejects an ambiguous file plus pasted text, and remains available alongside
   Zotero sources. It uses shared form labels and inline status feedback.
@@ -76,7 +94,7 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   threshold, replacing the unsupported "stylistic cohesion" claim. Tense review
   guidance explains lexical patterns, auxiliary/infinitive ambiguity and the
   effects of quotations and retrospection in all seven interface languages.
-  Underlying counts and statistical calculations are unchanged.
+  Those presentation changes do not alter the underlying calculations.
 - Coqui/OpenVoice guidance states that the converter mainly changes timbre,
   inherits the reference's bandwidth limit and that the 1.2 playback default is
   not tuned for Thorsten.

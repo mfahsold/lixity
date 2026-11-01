@@ -717,6 +717,42 @@ class TestStyleDimensions(unittest.TestCase):
             self.assertAlmostEqual(sample_variance / len(fields), dimension["variance"], delta=0.01)
             self.assertAlmostEqual(mean, 0.0, delta=0.01)
 
+    def test_axis_scale_explains_raw_cutoff_without_reclassifying_flags(self):
+        from lixity.language import get_language_profile
+        from lixity.ui.dimensions import style_dimensions
+
+        fields = ("asl", "staccato_pct", "hd_d")
+        self.fp.baseline = {field: {"n": 4, "median": 0.0, "sigma": 1.0} for field in fields}
+        self.fp.values = {field: dict(enumerate([1.0, 2.0, 3.0, 4.0], 1)) for field in fields}
+        self.fp.dimensions = self.fp._derive_dimensions()
+        self.assertAlmostEqual(self.fp.dimension_axis_scales[0], 3 ** 0.5, places=10)
+        self.assertIsNone(self.fp.dimension_axis_scales[1])
+        self.assertIsNone(self.fp.dimension_axis_scales[2])
+        self.assertEqual(self.fp.dimensions[0]["flagged"], [])
+        _, chapters = ParagraphProfiler(CorpusConfig(language="de")).profile_blocks(
+            parse_markdown_blocks(DIMENSION_SAMPLE))
+        rendered = html_module.unescape(style_dimensions(
+            chapters, self.fp, get_language_profile("de").labels, "de"))
+        self.assertIn("Standardabweichung 1,73", rendered)
+        self.assertIn("Schwelle 1,44 \u00d7 Standardabweichung", rendered)
+        self.assertIn("Relative Schwelle bei sehr geringer Streuung nicht aussagekräftig", rendered)
+        self.fp.thresholds = FingerprintThresholds(dim_score_threshold=1e-100)
+        tiny = html_module.unescape(style_dimensions(
+            chapters, self.fp, get_language_profile("de").labels, "de"))
+        self.assertIn("5,77e-101 \u00d7 Standardabweichung", tiny)
+        self.fp.thresholds = FingerprintThresholds(dim_score_threshold=1e308)
+        self.fp.dimension_axis_scales[0] = 0.1
+        huge = html_module.unescape(style_dimensions(
+            chapters, self.fp, get_language_profile("de").labels, "de"))
+        self.assertIn("> 1e308 \u00d7 Standardabweichung", huge)
+
+    def test_axis_scale_is_cleared_for_unavailable_recomputation(self):
+        self.fp._derive_dimensions()
+        self.assertTrue(self.fp.dimension_axis_scales)
+        self.fp.values = {}
+        self.assertEqual(self.fp._derive_dimensions(), [])
+        self.assertEqual(self.fp.dimension_axis_scales, [])
+
     def test_dimensions_require_three_complete_nonconstant_features(self):
         for field in self.fp.values:
             self.fp.values[field][3] = None

@@ -216,3 +216,44 @@ def test_project_creation_initializes_or_reuses_a_valid_archive(
             encoding="utf-8"
         ) == 'title = "Retained metadata"\nlanguage = "en"\n# Preserved comment\n'
     assert api.audit(project)["ok"]
+
+
+@pytest.mark.parametrize("value", ["auto", "xx", "", None, False, 9, [], {}])
+def test_project_create_rejects_explicit_invalid_language_without_writes(
+    research_endpoint, tmp_path, value
+):
+    project, _, _, server = research_endpoint
+    before = Repository(project).snapshot().digest
+    target = tmp_path / "invalid-language-project"
+    response = server.request(
+        "/api/project-create",
+        payload={"title": "Synthetic project", "path": str(target), "language": value},
+    )
+    assert response.status == 400, response.body
+    assert response.json["ok"] is False and "language" in response.json["message"].lower()
+    assert not target.exists()
+    assert Repository(project).snapshot().digest == before
+
+
+def test_project_create_requires_explicit_language_when_session_is_auto(tmp_path):
+    target = tmp_path / "project"
+    handler = make_handler(tmp_path, language="auto")
+    with LoopbackServer(handler) as server:
+        response = server.request(
+            "/api/project-create", payload={"title": "Synthetic project", "path": str(target)}
+        )
+    assert response.status == 400, response.body
+    assert "language" in response.json["message"].lower()
+    assert not target.exists()
+
+
+def test_project_create_accepts_normalized_generic_language(tmp_path):
+    target = tmp_path / "generic-project"
+    handler = make_handler(tmp_path, language="auto")
+    with LoopbackServer(handler) as server:
+        response = server.request(
+            "/api/project-create",
+            payload={"title": "Synthetic project", "path": str(target), "language": " GENERIC "},
+        )
+    assert response.status == 200, response.body
+    assert 'language = "generic"' in (target / "lixity.toml").read_text(encoding="utf-8")

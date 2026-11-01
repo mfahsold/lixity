@@ -25,6 +25,7 @@ _WORD = re.compile(r"\w+")
 _BLANK_LINE = re.compile(r"\n\s*\n")
 _PERFECT_MAX_GAP_WORDS = 3
 _CLAUSE_END = re.compile(r"[.!?,;:]")
+_SPANISH_HABER = frozenset({"he", "has", "ha", "hemos", "habéis", "han"})
 
 
 class TenseMatcher:
@@ -42,6 +43,7 @@ class TenseMatcher:
         self._pronouns = frozenset(word.lower() for word in language.lexicon.get("pronouns", ()))
         self._auxiliaries = frozenset(word.lower() for word in language.lexicon.get("auxiliaries", ()))
         self._german = language.key == "de"
+        self._spanish = language.key == "es"
         self._model = config.tense_model
         self._scope = config.tense_scope
         self._quotation = compile_pattern(language.dialogue_regex)
@@ -160,9 +162,8 @@ class TenseMatcher:
             return (index >= 0 and end <= constructions[index][1]
                     and (not licensed_only or constructions[index][2]))
 
-        present = [match.span() for match in self._present.finditer(text)
-                   if not consumed(match.start(), match.end(), licensed_only=True)]
         past = [(start, end) for start, end, _ in constructions]
+        spanish_auxiliary_starts: set[int] = set()
         for match in self._past.finditer(text):
             if consumed(match.start(), match.end()):
                 continue
@@ -188,4 +189,14 @@ class TenseMatcher:
                     and not self._curated_past.fullmatch(words[-1])):
                 continue
             past.append(match.span())
+            # The Spanish default past pattern includes adjacent haber + regular
+            # participle candidates. Count the detected group once, not also
+            # as an isolated present auxiliary. The regex is still lexical, not
+            # a POS tagger, and other languages' have/be ambiguities stay intact.
+            if (self._spanish and len(words) == 2 and words[0].lower() in _SPANISH_HABER
+                    and not _BLANK_LINE.search(match.group())):
+                spanish_auxiliary_starts.add(match.start())
+        present = [match.span() for match in self._present.finditer(text)
+                   if match.start() not in spanish_auxiliary_starts
+                   and not consumed(match.start(), match.end(), licensed_only=True)]
         return present, sorted(past)

@@ -466,7 +466,9 @@ deterministic proxies, with the following scope and availability rules.
   speaker attribution**), `avg_turn_words`, `median_turn_words`,
   `longest_turn_words`, `turns_per_1000`, `dialogue_paragraph_pct` (a
   paragraph counts as dialogue paragraph when ≥ 50 % of its words sit inside
-  quotation marks), `chapters[]` with the same per chapter.
+  recognized chapter-wide quotation spans, including spans crossing paragraph
+  boundaries), `chapters[]` with the same per chapter. Unclosed or unrecognized
+  quotations remain uncounted.
 - `characters`: whole-word, case-insensitive matching of curated names or
   alias patterns (`{"Matthias|Matze": "Matthias"}`); `mentions`,
   `chapters_present`, `first_chapter`/`last_chapter`, `longest_gap` (chapters
@@ -1086,7 +1088,7 @@ changed selected context returns HTTP 409. Successful downloads use
 selection metadata; file edits alone do not create a content-version lock.
 
 - `GET /api/project-paths?path=<URL-encoded path>`: read-only browsing on the server computer. Omit `path` for the server user's home; a supported manuscript file lists its parent. Returns `{ok, path, parent, project, entries: [{name, path, kind, project?}], truncated}`, where `kind` is `directory` or `manuscript`. `project` on the listed folder is a minimal probe (`detected`, `config`, `research`, `title`, `language`, `manuscript`, `manuscripts`); directories additionally carry a boolean `project` marker so the chooser can badge known project folders. Reading the probe never changes the folder. Listings exclude hidden names, include at most 200 entries, and do not change the workspace. Use a typed path when a large listing is truncated. Host and Origin checks apply.
-- `POST /api/project-create`: `{"title": "...", "language": "de", "author_name": "...", "template": "three_act", "init_research": true}`. Optional `author_name` is validated with the shared author rules (single line, at most 500 characters, 400 on failure before any write) and is written into a newly created `lixity.toml`; an existing project config is never overwritten.
+- `POST /api/project-create`: `{"title": "...", "language": "de", "author_name": "...", "template": "three_act", "init_research": true}`. **Unreleased change:** a supplied `language` must be a supported concrete code, including `generic`, but excluding `auto`; invalid values return HTTP 400 before any write instead of silently becoming English. If omitted, the server's current concrete language is used; an `auto` session requires an explicit choice. Optional `author_name` is validated with the shared author rules (single line, at most 500 characters, 400 on failure before any write) and is written into a newly created `lixity.toml`; an existing project config is never overwritten.
   Configuration or requested Research setup failures return `{ok:false,message}`
   with HTTP 400 for invalid setup or 500 for I/O failure, without `reload:true`.
   Created files remain at the reported destination and the prior workspace stays

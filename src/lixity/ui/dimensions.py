@@ -1,6 +1,7 @@
 """Reusable style-dimension panel and its canvas data contract."""
 
 import json
+import math
 from collections.abc import Mapping, Sequence
 from typing import Any, cast
 
@@ -138,6 +139,20 @@ def style_dimensions(
             chip_layers = {feature_name(name): feature_layers[name]
                            for name, _ in positive + negative if name in feature_layers}
             parts.append(f'<div class="dim-card"><div class="dim-header"><span class="dim-title">{translated("style_dimensions")} {dim["index"]}</span><span class="badge">{format_pct(dim["variance"] * 100, language_key, 0)} {translated("dim_variance")}</span></div>')
+            axis_index = int(dim["index"]) - 1
+            if 0 <= axis_index < len(fingerprint.dimension_axis_scales):
+                scale = fingerprint.dimension_axis_scales[axis_index]
+                ratio = threshold / scale if scale else None
+                if scale is not None and ratio is not None:
+                    def scale_number(value: float) -> str:
+                        if value and (value < 0.005 or value >= 1e6):
+                            return precise_num(float(f"{value:.3g}"), language_key)
+                        return number(value)
+
+                    ratio_label = scale_number(ratio) if math.isfinite(ratio) else "> 1e308"
+                    parts.append(f'<p class="dim-meta">{translated("dim_axis_scale", scale=scale_number(scale), cutoff=ratio_label)}</p>')
+                else:
+                    parts.append(f'<p class="dim-meta">{translated("dim_axis_scale_unknown")}</p>')
             chip_features = {feature_name(name): name for name, _ in positive + negative}
             parts.append(loading_bars(entries, max((abs(value) for _, value in entries), default=1),
                                       layers=chip_layers, features=chip_features, dimension=dim["index"]))

@@ -16,7 +16,13 @@ from dataclasses import dataclass, field
 from statistics import median
 from typing import Any
 
-from .language import compile_pattern, compile_word_pattern, resolve_language
+from .language import (
+    compile_pattern,
+    compile_word_pattern,
+    quotation_capture_group,
+    quotation_texts,
+    resolve_language,
+)
 from .markdown_parser import prose_paragraphs, split_chapters  # shared segmentation (re-export)
 from .models import CorpusConfig
 
@@ -97,19 +103,42 @@ def _turn_stats(
     """(turn word counts, dialogue words, words, dialogue paragraphs, paragraphs)."""
     paragraphs = prose_paragraphs(body, _front_matter=False)
     clean = "\n\n".join(paragraphs)
-    matches = dialogue_re.findall(clean)
+    matches = quotation_texts(dialogue_re, clean)
     turn_word_counts = [len(word_re.findall(m)) for m in matches]
     dialogue_words = sum(turn_word_counts)
     words = len(word_re.findall(clean))
 
+    # A recognized quoted span may continue across paragraph boundaries.
+    # Reuse the same chapter-wide matches for paragraph shares instead of
+    # requiring both quote delimiters to occur inside each paragraph.
+    capture = quotation_capture_group(dialogue_re)
+    spans = sorted(match.span(capture) for match in dialogue_re.finditer(clean)
+                   if match.start(capture) >= 0 and match.end(capture) > match.start(capture))
+    quoted_spans: list[tuple[int, int]] = []
+    for start, end in spans:
+        if quoted_spans and start <= quoted_spans[-1][1]:
+            quoted_spans[-1] = (quoted_spans[-1][0], max(end, quoted_spans[-1][1]))
+        else:
+            quoted_spans.append((start, end))
     dialogue_paragraphs = 0
+    paragraph_start = 0
+    first_span = 0
     for paragraph in paragraphs:
+        paragraph_end = paragraph_start + len(paragraph)
+        while first_span < len(quoted_spans) and quoted_spans[first_span][1] <= paragraph_start:
+            first_span += 1
         paragraph_words = len(word_re.findall(paragraph))
-        if not paragraph_words:
-            continue
-        quoted = sum(len(word_re.findall(m)) for m in dialogue_re.findall(paragraph))
-        if quoted / paragraph_words >= DIALOGUE_PARAGRAPH_SHARE:
-            dialogue_paragraphs += 1
+        if paragraph_words:
+            quoted = 0
+            index = first_span
+            while index < len(quoted_spans) and quoted_spans[index][0] < paragraph_end:
+                start, end = quoted_spans[index]
+                fragment = paragraph[max(0, start - paragraph_start):min(len(paragraph), end - paragraph_start)]
+                quoted += len(word_re.findall(fragment))
+                index += 1
+            if quoted / paragraph_words >= DIALOGUE_PARAGRAPH_SHARE:
+                dialogue_paragraphs += 1
+        paragraph_start = paragraph_end + 2  # separator inserted in clean
 
     return (
         turn_word_counts,

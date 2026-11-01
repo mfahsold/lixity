@@ -1746,6 +1746,9 @@ lixity audio-migrate --project ./novel --to-schema-4 --apply \
 
 The browser offers the same review/apply step in voice profiles. Its preview
 identifies retained profiles and whether an implicit narrator will become saved.
+Keep the backup and follow the [audio configuration recovery procedure](#experimental-coqui-and-openvoice-audio-unreleased)
+on a project copy before relying on a rollback. An older application may not read
+schema `/4` or profiles saved after the upgrade.
 For an unconfigured project whose language has no native default, schema `/4`
 keeps an explicit empty selection; create an external profile and enter its
 endpoint/model/voice without changing the project language. Explicit external
@@ -2222,11 +2225,15 @@ lixity audio-migrate --project ./novel --to-schema-3 --apply \
 
 The migration checks for changes and backs up the original project configuration
 before writing. Protect the backup; it does not contain the manuscript or the
-private voice references, which need separate backups. To recover the old
-configuration, stop writes, restore the configuration files from that backup,
-and check the project before resuming. Test the procedure on a restored copy
-before migrating a working project. CLI one-off engine overrides do not change
-project settings.
+private voice references, which need separate backups. To recover, stop writes,
+preserve the current configuration and work on a separate project copy. Restore
+the configuration files listed in the backup's `manifest.json` `files` object.
+If `lixity.toml` is absent from that list, it did not exist before migration:
+after preserving and reviewing any later edits, remove the migration-created
+`lixity.toml` from the recovery copy as well. Otherwise it overrides the restored
+`pyproject.toml` settings. Check the recovered project with a compatible version
+before resuming. Test the procedure on a restored copy before migrating a working
+project. CLI one-off engine overrides do not change project settings.
 
 Neither Coqui profile interprets free-text delivery instructions. Saved passage
 instructions fail explicitly; `--no-direction` also omits passage voice
@@ -2496,9 +2503,9 @@ files and a verification manifest, with private file permissions (`0600` on POSI
 It contains no manuscript bytes. Keep it in private project storage: configuration
 can contain private metadata and pronunciation text. Source/configuration changes
 or changed replacement/style choices invalidate the reviewed snapshot. Apply verifies the backup before the atomic
-settings update and never edits the manuscript. For recovery, preserve the current
-configuration, then restore the original root configuration files from the backup;
-do not replace manuscript or retained research files. Rendering restored Piper
+settings update and never edits the manuscript. For recovery, use the
+[audio configuration recovery procedure](#experimental-coqui-and-openvoice-audio-unreleased), including the check for a
+newly created `lixity.toml`; do not replace manuscript or retained research files. Rendering restored Piper
 settings requires a compatible prior application version.
 
 Qwen runs in an optional isolated Python 3.12 environment with `qwen-tts` and a
@@ -5990,6 +5997,16 @@ rank space:
    2.5) puts a chapter in `flagged` on that axis. Scores are stored rounded to
    two decimals; the cutoff remains descriptive, not a calibrated probability.
 
+The dashboard also reports each axis's sample standard deviation, calculated
+from the unrounded chapter scores with an $n-1$ denominator, and expresses the
+same raw-score cutoff as a multiple of that deviation. This exposes that a
+common raw cutoff is not equally selective on axes with different variances;
+it does not change the scores, flags or configured cutoff. An axis with score
+standard deviation at most $10^{-6}$ times that of the leading axis is treated
+as numerically too small for this conversion, so its relative cutoff is
+unavailable. Neither the scale nor the cutoff is a confidence interval or a
+test of literary quality.
+
 Fewer than three complete chapters or varying features yields no dimensions.
 Incomplete chapters remain available in the other measured-feature views but
 do not receive dimension scores. The complete-case subset can be small or
@@ -6210,8 +6227,8 @@ restating formulas.
 | Heuristic | Rule | Limits |
 | :--- | :--- | :--- |
 | Sentence bins | ≤ 6 / 7–15 / 16–25 / > 25 words (`analyzer.py`, `pacing.py`) | Bins describe the supplied text; tokenless fragments distort ASL |
-| Hook | Closing sentence ≤ `HOOK_SHORT_SENTENCE` (8) words, ending in `?`, `!` or `…`, or containing detected dialogue (`pacing.py`) | Each condition adds one point; this is not a validated suspense measure. Only the ellipsis character scores; `...` does not |
-| Dialogue paragraph | ≥ 50 % of the paragraph's words inside dialogue spans (`dialogue.py`) | Quotation conventions differ per language |
+| Hook | Closing sentence ≤ `HOOK_SHORT_SENTENCE` (8) words, ending in `?`, `!` or `…`, or containing detected dialogue (`pacing.py`) | Each condition adds one point; the displayed mean is over chapter endings, not scenes. This is not a validated suspense measure. Only the ellipsis character scores; `...` does not |
+| Dialogue paragraph | ≥ 50 % of the paragraph's words inside chapter-wide recognized dialogue spans (`dialogue.py`); a span may cover multiple paragraphs | Quotation conventions differ per language; an unrecognized or unclosed quotation is not counted |
 | Tense mixed/switch | `mixed`: ≥ 2 present and ≥ 2 past markers and minority share ≥ 25 %; `switch`: the dominant tense changes between consecutive paragraphs (`style_profile.py`) | Lexical cues and language-specific patterns are incomplete and can be ambiguous; they are not grammatical parses. Since v0.7.7, an unknown German `-te/-ten/-test` ending alone is not a past cue; no productive present pattern |
 | Sentence splitter | Language abbreviation tables, digit and initial guards; utterance `no.`/`co.` split; prose splits keep blank-line block boundaries (`split_prose_sentences`) | Tables are curated and incomplete; tokenless fragments are not sentences; an unterminated block stays one fragment unit with its token length |
 | Severity | `classify_severity` truth table; defaults: 3 = switch + mixed + minority ≥ 3, 2 = (switch + minority ≥ 2) or (mixed + minority ≥ 3), 1 = either, 0 = neither | Only `flag_min_severity` reaches CLI/API/config; other `ProfileThresholds` fields need direct `ParagraphProfiler` construction |
@@ -6295,6 +6312,21 @@ independent pattern counting, including empty patterns. The review-policy identi
 changes with these semantics, so saved decisions require renewed review rather
 than silently carrying over to a changed measurement.
 
+**Unreleased:** With the default Spanish lexical patterns, an adjacent
+`he/has/ha/hemos/habéis/han` plus a detected regular `-ado/-ido` participle
+candidate counts as one past cue, without a separate present cue for the same
+auxiliary. A blank paragraph boundary prevents that suppression; the pre-existing
+past regex can still span such a boundary when whole text is counted. RAE's
+[verb tables](https://www.rae.es/sites/default/files/biblioteca/pdf/23_VII_50/23_VII_50.pdf)
+describe `haber` plus a participle as a compound form. The rule remains a
+surface-pattern heuristic: irregular participles, intervening adverbs (see
+[Felíu Arquiola and Pato, 2015, p. 69](https://revistas.rae.es/brae/article/view/37/113)),
+regional interpretation and other constructions are not resolved by
+this rule. A detected compound is assigned to Lixity's broad past bucket, not
+an assertion that its temporal reference is always past. Custom patterns and
+contextual models keep their own behavior. The Spanish review context changes
+when the default lexical rule is used; saved decisions then require renewed review.
+
 Passive patterns retain auxiliary context while allowing shorter regular stems
 and selected irregular forms (`rotas`, `rotte`, `lette`, `lues`, `lidas`) and
 Spanish accented `leídas`. Irregulars need lexical coverage; lowering a stem
@@ -6310,6 +6342,10 @@ passive metric. A zero remains zero detected cues, not proof of active voice.
 
 Cue patterns (including `dialogue_regex`) use the case-insensitive cue
 contract from §2 across the analysis core and the `dialogue`/`pacing` reports.
+For a configured quotation pattern, word counts use the full match when there
+are no capture groups and the first capture group otherwise. An unmatched
+optional first group contributes no words. Overlapping matches can count words
+more than once in quote-word and turn totals; paragraph shares use their union.
 - `python -W error` test run + `mypy --strict` + ruff gate every change.
 
 ## 12. Voice-reference signal diagnostics (`audio-reference inspect`)
@@ -6483,6 +6519,10 @@ are fixed by convention, and per-axis thresholds are not simultaneous confidence
 regions. Native rotation/zoom buttons and a chapter-score table provide keyboard and touch access to the displayed scores,
 flag status and chapter navigation. Individual canvas points remain pointer-operated.
 These targeted checks do not establish full assistive-technology coverage.
+The same raw-score cutoff represents different multiples of the sample
+standard deviation on axes with different spreads. The dashboard reports those
+multiples to aid interpretation; this is not a calibrated significance test.
+The relative threshold is withheld for numerically negligible axis spreads.
 
 Engine tests use synthetic/public samples. Project adapters and optional local
 servers have separate trust boundaries and need their own tests; core test
@@ -6772,7 +6812,8 @@ The audit also reproduces unresolved weaknesses:
 | --- | --- |
 | Unicode | NFC equivalence is corrected, preserving source bytes and offsets. Combining sequences without a precomposed letter can still exceed the word patterns' coverage; the mapper does not claim full grapheme segmentation. See [Unicode UAX #29](https://www.unicode.org/reports/tr29/). |
 | Tense | Curated present-only forms no longer also count as productive past candidates. Listed German perfect/pluperfect pairs count as one construction across chapter, scene and paragraph analysis, with bounded intervening words. Unlicensed auxiliary/participle combinations retain both cues; regional/transitive variants, unlisted forms and other languages can still produce spurious mixed classifications. A `mixed` result is not proof of a grammatical tense switch. English `read` and Portuguese `falamos` require context. |
-| Dialogue | Quoted-segment patterns miss conventional dialogue dashes and some single-quote styles. Zero detected quotation words does not establish absence of speech. |
+| Spanish compound cues | Under the default lexical patterns, adjacent present-tense `haber` plus a detected regular `-ado/-ido` candidate is counted once as past, not again as present. This remains a surface pattern: irregular participles and intervening adverbs may be missed, and the broad past bucket does not establish the construction's temporal reference. French, Italian and Dutch compound cues may still count auxiliary and participle in both categories. Custom patterns and optional contextual models are unchanged. |
+| Dialogue | Quoted-segment patterns miss conventional dialogue dashes and some single-quote styles. Zero detected quotation words does not establish absence of speech. Overlapping custom matches can count the same words more than once in turn and quote-word totals, although paragraph shares use their union. |
 | Syllables | Italian rising diphthongs such as `fiore`/`buono` remain overcounted; `paura` is undercounted. Broadly merging vowels would introduce other hiatus errors. French `vraiment`/`moment` are undercounted by the final `-ent` rule, which also serves silent verb endings; neither issue is resolved by spelling alone. The corrected Dutch `ij` rule is not a complete pronunciation model. |
 | Sentence spans | Sentence-final abbreviations can merge sentences. Paired spaced closers and German single `‚…‘` closers have direct boundary/evidence controls, but quotation pairing and abbreviation tables are incomplete; a matching total does not guarantee correct boundaries. |
 | Nominal/passive cues | Word endings and auxiliary patterns do not resolve lexical category, adjectival participles or syntactic voice. Short regular and selected irregular passive forms have positive/negative controls; German `ist geöffnet` state passive remains outside the event-passive cue pattern. Coverage is improved, not complete. |
@@ -7733,7 +7774,9 @@ deterministic proxies, with the following scope and availability rules.
   speaker attribution**), `avg_turn_words`, `median_turn_words`,
   `longest_turn_words`, `turns_per_1000`, `dialogue_paragraph_pct` (a
   paragraph counts as dialogue paragraph when ≥ 50 % of its words sit inside
-  quotation marks), `chapters[]` with the same per chapter.
+  recognized chapter-wide quotation spans, including spans crossing paragraph
+  boundaries), `chapters[]` with the same per chapter. Unclosed or unrecognized
+  quotations remain uncounted.
 - `characters`: whole-word, case-insensitive matching of curated names or
   alias patterns (`{"Matthias|Matze": "Matthias"}`); `mentions`,
   `chapters_present`, `first_chapter`/`last_chapter`, `longest_gap` (chapters
@@ -8353,7 +8396,7 @@ changed selected context returns HTTP 409. Successful downloads use
 selection metadata; file edits alone do not create a content-version lock.
 
 - `GET /api/project-paths?path=<URL-encoded path>`: read-only browsing on the server computer. Omit `path` for the server user's home; a supported manuscript file lists its parent. Returns `{ok, path, parent, project, entries: [{name, path, kind, project?}], truncated}`, where `kind` is `directory` or `manuscript`. `project` on the listed folder is a minimal probe (`detected`, `config`, `research`, `title`, `language`, `manuscript`, `manuscripts`); directories additionally carry a boolean `project` marker so the chooser can badge known project folders. Reading the probe never changes the folder. Listings exclude hidden names, include at most 200 entries, and do not change the workspace. Use a typed path when a large listing is truncated. Host and Origin checks apply.
-- `POST /api/project-create`: `{"title": "...", "language": "de", "author_name": "...", "template": "three_act", "init_research": true}`. Optional `author_name` is validated with the shared author rules (single line, at most 500 characters, 400 on failure before any write) and is written into a newly created `lixity.toml`; an existing project config is never overwritten.
+- `POST /api/project-create`: `{"title": "...", "language": "de", "author_name": "...", "template": "three_act", "init_research": true}`. **Unreleased change:** a supplied `language` must be a supported concrete code, including `generic`, but excluding `auto`; invalid values return HTTP 400 before any write instead of silently becoming English. If omitted, the server's current concrete language is used; an `auto` session requires an explicit choice. Optional `author_name` is validated with the shared author rules (single line, at most 500 characters, 400 on failure before any write) and is written into a newly created `lixity.toml`; an existing project config is never overwritten.
   Configuration or requested Research setup failures return `{ok:false,message}`
   with HTTP 400 for invalid setup or 500 for I/O failure, without `reload:true`.
   Created files remain at the reported destination and the prior workspace stays

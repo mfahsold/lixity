@@ -27,7 +27,13 @@ from .diversity import (
 from .diversity import (
     yules_k as yules_k_value,
 )
-from .language import compile_pattern, compile_word_pattern, count_nominal_matches, resolve_language
+from .language import (
+    compile_pattern,
+    compile_word_pattern,
+    count_nominal_matches,
+    quotation_texts,
+    resolve_language,
+)
 from .language_data import READABILITY
 from .markdown_parser import chapter_heading_spans, prose_paragraphs, prose_text, split_chapters
 from .math_core import binomial_se_percent, per_mille, poisson_se_per_mille
@@ -316,7 +322,7 @@ class CorpusAnalyzer:
         c_sentences = split_prose_sentences(cl_b, self.lang.key)
         stats = self._sentence_stats(c_sentences)
 
-        c_dial = self._dialogue_re.findall(cl_b)
+        c_dial = quotation_texts(self._dialogue_re, cl_b)
         c_dial_words = sum(len(self._word_re.findall(m)) for m in c_dial)
         c_dial_pct = (c_dial_words / n_cw) * 100.0 if n_cw else 0.0
         c_ttr = len(set(c_lower)) / n_cw if n_cw else 0.0
@@ -475,7 +481,7 @@ class CorpusAnalyzer:
             lix = stats.asl + pct_long_words
 
         # 6. Dialogue ratio
-        dialog_matches = self._dialogue_re.findall(prose_main)
+        dialog_matches = quotation_texts(self._dialogue_re, prose_main)
         dialog_words = sum(len(self._word_re.findall(m)) for m in dialog_matches)
         dialog_ratio = (dialog_words / n_tokens) * 100.0 if n_tokens else 0.0
 

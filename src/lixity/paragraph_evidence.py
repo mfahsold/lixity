@@ -15,6 +15,8 @@ from .language import (
     compile_pattern,
     compile_word_pattern,
     count_nominal_matches,
+    quotation_capture_group,
+    quotation_texts,
     resolve_language,
 )
 from .markdown_parser import counting_inline_text, parse_markdown_blocks, strip_inline_markup
@@ -138,7 +140,7 @@ class ParagraphMatcher:
                      if self.word.findall(sentence)]
         return ParagraphCounts(
             words=len(tokens), sentences=sentences,
-            dialogue=sum(len(self.word.findall(part)) for part in self.dialogue.findall(clean)),
+            dialogue=sum(len(self.word.findall(part)) for part in quotation_texts(self.dialogue, clean)),
             function=sum(token in self.language.function_words for token in tokens),
             filter=len(self.filter.findall(clean)),
             modal=sum(token in self.modals for token in tokens),
@@ -188,7 +190,7 @@ class ParagraphMatcher:
                     continue
                 spans[key].append({"start": match.start(), "end": match.end(), "count": 1})
         for match in self.dialogue.finditer(clean):
-            group = 1 if self.dialogue.groups == 1 else 0
+            group = quotation_capture_group(self.dialogue)
             count = len(self.word.findall(match.group(group) or ""))
             start, end = match.span(group)
             if count:
