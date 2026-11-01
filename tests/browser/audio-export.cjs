@@ -114,6 +114,8 @@ server.serve_forever()
         await page.locator('#settings-speech').click();
         await page.waitForFunction(() => document.querySelector('#speech-name')?.value === 'Narrator');
         await page.locator('#speech-engine').selectOption('openai-compatible');
+        assert.equal(await page.locator('#speech-worker-guide').isVisible(), false,
+          'The native worker setup guide is hidden for external providers');
         await page.locator('#speech-base_url').fill(server.fixture.provider);
         await page.locator('#speech-provider_model').fill('synthetic-model');
         await page.locator('#speech-provider_voice').fill('synthetic-voice');

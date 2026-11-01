@@ -11986,13 +11986,17 @@ _ROWS["speech_worker_match"] = (
     "Laatst gecontroleerd: {target} · {model} past bij de keuze. De dienst kan bezet zijn of intussen veranderd zijn.",
 )
 _ROWS["speech_worker_mismatch"] = (
-    "Last checked: {target} runs {model}, which does not match the selected model. Start the matching worker before rendering.",
-    "Zuletzt geprüft: {target} nutzt {model}; das passt nicht zur Auswahl. Starte vor der Vertonung den passenden Dienst.",
-    "Dernière vérification : {target} utilise {model}, différent du choix. Démarrez le service adapté avant la synthèse.",
-    "Última comprobación: {target} usa {model}, distinto de la selección. Inicia el servicio compatible antes de generar.",
-    "Ultima verifica: {target} usa {model}, diverso dalla scelta. Avvia il servizio corretto prima della sintesi.",
-    "Última verificação: {target} usa {model}, diferente da seleção. Inicie o serviço correspondente antes de gerar.",
-    "Laatst gecontroleerd: {target} gebruikt {model}, anders dan de keuze. Start de passende dienst vóór het genereren.",
+    "Last checked: {target} runs {model}, not the selected model. Changing profiles does not switch the service. Qwen and Coqui share the local port. Select a matching profile or start the matching worker before rendering.",
+    "Zuletzt geprüft: {target} nutzt {model}, nicht das gewählte Modell. Ein Profilwechsel startet keinen anderen Dienst. Qwen und Coqui teilen sich den lokalen Port. Wähle ein passendes Profil oder starte vor der Vertonung den passenden Dienst.",
+    "Dernière vérification : {target} utilise {model}, pas le modèle choisi. Changer de profil ne change pas le service. Qwen et Coqui partagent le port local. Choisissez un profil adapté ou démarrez le service correspondant avant la synthèse.",
+    "Última comprobación: {target} usa {model}, no el modelo elegido. Cambiar de perfil no cambia el servicio. Qwen y Coqui comparten el puerto local. Elige un perfil compatible o inicia el servicio correspondiente antes de generar.",
+    "Ultima verifica: {target} usa {model}, non il modello scelto. Cambiare profilo non cambia il servizio. Qwen e Coqui condividono la porta locale. Scegli un profilo compatibile o avvia il servizio corrispondente prima della sintesi.",
+    "Última verificação: {target} usa {model}, não o modelo escolhido. Mudar de perfil não muda o serviço. Qwen e Coqui partilham a porta local. Escolha um perfil compatível ou inicie o serviço correspondente antes de gerar.",
+    "Laatst gecontroleerd: {target} gebruikt {model}, niet het gekozen model. Een ander profiel wisselt de dienst niet. Qwen en Coqui delen de lokale poort. Kies een passend profiel of start de passende dienst vóór het genereren.",
+)
+_ROWS["speech_worker_guide"] = (
+    "Speech service setup", "Sprachdienst einrichten", "Configurer le service vocal", "Configurar el servicio de voz",
+    "Configura il servizio vocale", "Configurar o serviço de voz", "Spraakdienst instellen",
 )
 _ROWS["speech_worker_starting"] = (
     "Last checked: {target} is starting. Check again before rendering.", "Zuletzt geprüft: {target} startet. Vor der Vertonung erneut prüfen.",

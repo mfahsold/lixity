@@ -140,6 +140,8 @@
   }
   function updateWorkerStatus() {
     if (!fields.worker_status || !fields.engine || !capabilities) return;
+    fields.worker_guide.hidden = fields.engine.value === "openai-compatible";
+    fields.worker_guide.href = fields.engine.value.startsWith("coqui") ? settingsForm.dataset.speechCoquiGuide : settingsForm.dataset.speechQwenGuide;
     if (fields.engine.value === "openai-compatible") { fields.worker_status.textContent = label("provider_status"); return; }
     var target = fields.target.value || "local", cap = capabilities[fields.engine.value];
     var worker = Array.isArray(workers) ? workers.find(function(item) { return item.target === target; }) : null;
@@ -532,6 +534,9 @@
     });
     fields.worker_status = node("p", content, "ctl-note"); fields.worker_status.id = "speech-worker-status";
     fields.worker_status.setAttribute("aria-live", "polite");
+    fields.worker_guide = node("a", content, "ctl-link", label("worker_guide"));
+    fields.worker_guide.id = "speech-worker-guide"; fields.worker_guide.target = "_blank";
+    fields.worker_guide.rel = "noopener noreferrer"; fields.worker_guide.hidden = true;
     fields.worker_refresh = button(content, "worker_refresh", async function() {
       var sequence = openSequence; fields.worker_refresh.disabled = true;
       function currentOpen() { return sequence === openSequence && dialog.open && openedContext === context(); }
@@ -648,7 +653,7 @@
     fields.export_section.append(fields.export_scope.closest("label"), fields.direction_plan, fields.plan);
     fields.render_section = node("fieldset", content, "settings-section speech-render-section");
     fields.render_heading = node("legend", fields.render_section);
-    fields.render_section.append(fields.target.closest("label"), fields.worker_status, fields.worker_refresh,
+    fields.render_section.append(fields.target.closest("label"), fields.worker_status, fields.worker_guide, fields.worker_refresh,
       fields.runtime_hint, reuse, actions, fields.context, fields.progress, fields.audio, fields.download);
     arrangeSections();
     fields.reuseLabel = reuse;

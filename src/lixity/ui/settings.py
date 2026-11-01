@@ -44,7 +44,9 @@ def settings_form(
         f'<form id="settings-form" class="settings-form ctl-group" novalidate '
         f'data-project-token="{esc(project_token)}" data-publication-initial="{initial_publication}" '
         f'data-publication-editable="{str(author_setting_enabled).lower()}" '
-        f'data-title-initial="{esc(title)}" data-author-initial="{esc(project_author)}">',
+        f'data-title-initial="{esc(title)}" data-author-initial="{esc(project_author)}" '
+        f'data-speech-qwen-guide="{esc(docs_url("USAGE.md#lixity-read-aloud"))}" '
+        f'data-speech-coqui-guide="{esc(docs_url("USAGE.md#experimental-coqui-and-openvoice-audio-unreleased"))}">',
         f'<h3>{translated("settings")}</h3>',
         f'<p class="panel-guide" id="settings-scope-help">{translated("settings_intro")}</p>',
         '<fieldset class="settings-section" id="settings-project-details">',

@@ -286,6 +286,9 @@ server.serve_forever()
       assert.equal(await page.locator('#speech-speed').inputValue(),'1', 'Saved profiles without speed retain their old rate');
       assert.equal(await page.locator('#speech-advanced_voice').count(),0);
       assert.equal(await page.locator('#speech-engine').inputValue(),'qwen3');
+      assert.equal(await page.locator('#speech-worker-guide').textContent(),labels.speech_worker_guide);
+      assert.ok((await page.locator('#speech-worker-guide').getAttribute('href')).endsWith('/USAGE.md#lixity-read-aloud'));
+      assert.equal(await page.locator('#speech-worker-guide').getAttribute('rel'),'noopener noreferrer');
       assert.equal(await page.locator('#speech-engine option[value=qwen3]').textContent(),labels.speech_model_preset);
       assert.equal(await page.locator('#speech-engine option[value=qwen3-design]').textContent(),labels.speech_model_design);
       assert.equal(await page.locator('#speech-engine option[value=qwen3-base]').textContent(),labels.speech_model_base);
@@ -293,6 +296,7 @@ server.serve_forever()
       assert.equal(await page.locator('#speech-engine option[value=coqui-reference]').textContent(),data.audioCapabilities['coqui-reference'].name);
       const originalSpeechLanguage = await page.locator('#speech-language').inputValue();
       await page.locator('#speech-engine').selectOption('coqui');
+      assert.ok((await page.locator('#speech-worker-guide').getAttribute('href')).endsWith('/USAGE.md#experimental-coqui-and-openvoice-audio-unreleased'));
       assert.equal(await page.locator('#speech-language').inputValue(),'de');
       assert.equal(await page.locator('#speech-voice').inputValue(),'thorsten');
       assert.equal(await page.locator('#speech-instructions').isVisible(),false);
@@ -302,6 +306,7 @@ server.serve_forever()
       assert.equal(await page.locator('#speech-voice').inputValue(),'reference');
       assert.equal(await page.locator('#speech-reference_id').isVisible(),true);
       await page.locator('#speech-engine').selectOption('qwen3');
+      assert.ok((await page.locator('#speech-worker-guide').getAttribute('href')).endsWith('/USAGE.md#lixity-read-aloud'));
       assert.equal(await page.locator('#speech-direction-hint').textContent(),labels.speech_direction_hint);
       await page.locator('#speech-language').selectOption(originalSpeechLanguage);
       assert.equal(await page.locator('#speech-engine').getAttribute('aria-describedby'),'speech-model-hint speech-worker-status');
