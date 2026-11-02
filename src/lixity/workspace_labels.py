@@ -8878,6 +8878,15 @@ _ROWS = {
         "Seções",
         "Secties",
     ),
+    "research_sections_more": (
+        "more…",
+        "weitere…",
+        "de plus…",
+        "más…",
+        "altro…",
+        "mais…",
+        "meer…",
+    ),
     "research_search_scope_hint": (
         "No results in this scope.",
         "Keine Treffer in diesem Bereich.",

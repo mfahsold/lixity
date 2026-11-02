@@ -15,7 +15,7 @@
   "use strict";
   var html = LixityComponents.html;
 
-  function excerptText(value) {
+  function excerptText(value, title) {
     // API excerpts may end inside a fenced block. Keep the saved text untouched
     // and derive only a plain reading preview; never mount diagram markup here.
     var prose = value.replace(/```[\s\S]*?(?:```|$)/g, "");
@@ -27,7 +27,16 @@
     preview.querySelectorAll("p, h1, h2, h3, h4, h5, h6, li, blockquote, th, td").forEach(function(block) {
       block.appendChild(document.createTextNode(" "));
     });
-    return preview.textContent.replace(/\s+/g, " ").trim();
+    var text = preview.textContent.replace(/\s+/g, " ").trim();
+    if (title) {
+      var cleanTitle = title.replace(/^Dossier:\s*/i, "").trim();
+      if (text.toLowerCase().startsWith(title.toLowerCase())) {
+        text = text.slice(title.length).replace(/^[:\s–—-]+/, "").trim();
+      } else if (cleanTitle && text.toLowerCase().startsWith(cleanTitle.toLowerCase())) {
+        text = text.slice(cleanTitle.length).replace(/^[:\s–—-]+/, "").trim();
+      }
+    }
+    return text;
   }
 
   function CatalogueLink(props) {
@@ -53,6 +62,30 @@
       title=${uiLabel("research_filter_tag")}>${props.value}</button>`;
   }
 
+  function DossierSections(props) {
+    var sections = props.sections || [];
+    if (!sections.length) return null;
+    var limit = 4;
+    var visible = sections.slice(0, limit);
+    var remaining = sections.slice(limit);
+    return html`<div class="research-dossier-sections">
+      <span class="ctl-note text-note">${uiLabel("research_sections")}:</span>
+      ${visible.map(function (section) {
+        return html`<${SectionTag} key=${section} value=${section} />`;
+      })}
+      ${remaining.length ? html`<details class="research-sections-disclosure">
+        <summary class="research-tag research-tag-more" title=${uiLabel("research_sections")}>
+          +${remaining.length} ${uiLabel("research_sections_more")}
+        </summary>
+        <div class="research-dossier-sections-expanded">
+          ${remaining.map(function (section) {
+            return html`<${SectionTag} key=${section} value=${section} />`;
+          })}
+        </div>
+      </details>` : null}
+    </div>`;
+  }
+
   function Card(props) {
     var item = props.item;
     var filterAttr = item.filterText ? {"data-filter-text": item.filterText} : {};
@@ -63,12 +96,14 @@
           var extra = badge.title ? {title: badge.title} : {};
           return html`<span key=${"b" + index} class=${"research-badge " + badge.cls} ...${extra}>${badge.label}</span>`;
         })}
-        ${(item.metaRight || []).map(function (text, index) {
-          return html`<span key=${"m" + index} class="ctl-note">${text}</span>`;
-        })}
+        ${(item.metaRight && item.metaRight.length) ? html`<div class="research-card-meta">
+          ${item.metaRight.map(function (text, index) {
+            return html`<span key=${"m" + index} class="ctl-note research-card-meta-pill">${text}</span>`;
+          })}
+        </div>` : null}
       </div>
       ${item.zotero ? html`<${CatalogueLink} library=${item.zotero.library} itemKey=${item.zotero.key} />` : null}
-      ${item.excerpt ? html`<p class="ctl-note research-excerpt">${excerptText(item.excerpt)}</p>` : null}
+      ${item.excerpt ? html`<p class="ctl-note research-excerpt">${excerptText(item.excerpt, item.title)}</p>` : null}
       ${item.statementHtml
         ? html`<div class="research-claim-statement research-prose markdown-body my-2"
             dangerouslySetInnerHTML=${{__html: item.statementHtml}} />` : null}
@@ -81,12 +116,7 @@
       ${item.scopeText ? html`<div class="ctl-note research-claim-scope">${item.scopeText}</div>` : null}
       ${item.idLine ? html`<div class="ctl-note research-record-id">${item.idLine}</div>` : null}
       ${item.dossierLine ? html`<div class="ctl-note">${item.dossierLine}</div>` : null}
-      ${item.sections && item.sections.length ? html`<div class="research-dossier-sections">
-        <span class="ctl-note text-note">${uiLabel("research_sections")}:</span>
-        ${item.sections.map(function (section) {
-          return html`<${SectionTag} key=${section} value=${section} />`;
-        })}
-      </div>` : null}
+      ${item.sections && item.sections.length ? html`<${DossierSections} sections=${item.sections} />` : null}
       ${item.tags && item.tags.length ? html`<div class="research-tags">
         ${item.tags.map(function (tag) {
           return html`<${Tag} key=${tag} value=${tag} interactive=${Boolean(item.tagsInteractive)} />`;
@@ -100,7 +130,6 @@
         <summary data-decision-impact=${item.id}>${uiLabel("research_decision_affected")}</summary>
         <div class="research-details-body"></div>
       </details>` : null}
-      ${item.reader ? html`<button type="button" class="ctl" data-workspace-dossier=${item.id}>${uiLabel("reader_toggle")}</button>` : null}
       ${item.evidence ? (item.evidenceHtml
         ? html`<div class="claim-evidence-subpanel research-subpanel" id=${"claim-evidence-" + item.id}>
             <details class="research-details" open>
@@ -111,9 +140,12 @@
         : html`<div class="claim-evidence-subpanel research-subpanel" id=${"claim-evidence-" + item.id}>
             <button type="button" class="ctl ctl-compact" data-load-evidence=${item.id}>${uiLabel("research_load_evidence")}</button>
           </div>`) : null}
-      ${item.revision ? html`<div class="research-record-actions">
-        <button type="button" class="ctl" data-research-history=${item.revision} data-record-id=${item.id}>${uiLabel("research_revision_view")}</button>
-        ${!window.LixitySite.readOnly ? html`<button type="button" class="ctl" data-research-revise=${item.revision} data-record-id=${item.id}>${uiLabel("research_revision_edit")}</button>` : null}
+      ${(item.reader || item.revision) ? html`<div class="research-card-actions">
+        ${item.reader ? html`<button type="button" class="ctl ctl-compact" data-workspace-dossier=${item.id}>${uiLabel("reader_toggle")}</button>` : null}
+        ${item.revision ? html`<div class="research-record-actions">
+          <button type="button" class="ctl ctl-compact" data-research-history=${item.revision} data-record-id=${item.id}>${uiLabel("research_revision_view")}</button>
+          ${!window.LixitySite.readOnly ? html`<button type="button" class="ctl ctl-compact" data-research-revise=${item.revision} data-record-id=${item.id}>${uiLabel("research_revision_edit")}</button>` : null}
+        </div>` : null}
       </div>` : null}
     </div>`;
   }
