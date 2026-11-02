@@ -211,6 +211,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and keeps progress and error messages visible while scrolling.
 
 ### Fixed
+- Unified project settings layout and eliminated inconsistent spacing:
+  - Standardized `#controls` with a clean 1.5rem (`var(--space-5)`) vertical rhythm across the Project panel.
+  - Flattened nested NDA draft panel into a cohesive card, eliminating double-margin and double-border collisions.
+  - Harmonized `.settings-section` fieldsets and `.settings-advanced` disclosure accordions into consistent enclosed cards with subtle hover feedback and clean spacing.
+  - Aligned `.setting-field` labels, full-width controls, and hints (`.ctl-note`) with consistent 1.45 line-height and muted tone.
+  - Added dedicated top-border breathing room (`padding-top: 1rem`) above form actions (`.settings-actions`) so the save button is distinct from settings fields.
 - `read-aloud --ssml` and `--timeline` imply export-only behavior, preventing
   accidental synthesis. Exports do not require retained native reference audio
   or worker readiness; unsupported synthesis controls still fail explicitly.

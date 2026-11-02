@@ -490,11 +490,25 @@ details.nda .row { margin-top: .5rem; }
 .select-code { user-select: all; cursor: pointer; }
 
 /* Shared field groups and interaction states. */
-.settings-section { min-width: 0; margin: 0; padding: var(--space-4) 0 0; border: 0; border-top: 1px solid var(--line); }
-.settings-section > legend { padding-inline: 0 var(--space-2); font-weight: var(--weight-semibold); font-size: var(--text-control); }
-.settings-section > * + * { margin-top: var(--space-3); }
-.settings-section > .ctl-note { margin-top: 0; }
-.settings-section > .settings-advanced { margin-top: var(--space-3); }
+.settings-section {
+  min-width: 0;
+  margin: 0;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.settings-section > legend {
+  padding-inline: var(--space-2);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-control);
+  color: var(--fg);
+}
+.settings-section > .ctl-note { margin: 0; }
+.settings-section > .settings-advanced { margin: 0; }
 .site-export-analysis-choices { display: flex; flex-wrap: wrap; gap: .5rem 1rem; }
 
 .ctl:disabled { opacity: .6; cursor: default; }
