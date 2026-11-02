@@ -324,12 +324,12 @@ th.sortable::after, th[data-sort]::after, table[data-sortable] th:not(.no-sort):
 th[aria-sort="ascending"]::after {
   content: " ↑";
   opacity: 1;
-  color: var(--action-bg, #3b82f6);
+  color: var(--accent);
 }
 th[aria-sort="descending"]::after {
   content: " ↓";
   opacity: 1;
-  color: var(--action-bg, #3b82f6);
+  color: var(--accent);
 }
 .table-bar-cell {
   display: inline-flex;
@@ -350,7 +350,7 @@ th[aria-sort="descending"]::after {
 }
 .table-bar-fill {
   height: 100%;
-  background: var(--action-bg, #3b82f6);
+  background: var(--accent);
   border-radius: var(--radius-pill);
   transition: width 0.25s ease;
 }
@@ -367,6 +367,8 @@ tbody tr.clickable-row:hover, tbody tr[data-action]:hover {
   background: var(--surface-hover);
 }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.val-positive, .delta-positive { color: var(--analysis-comparison-positive); font-variant-numeric: tabular-nums; font-weight: var(--weight-medium, 500); }
+.val-negative, .delta-negative { color: var(--analysis-comparison-negative); font-variant-numeric: tabular-nums; font-weight: var(--weight-medium, 500); }
 
 /* --- Badges & Dimension cards ----------------------------------------- */
 /* One badge family for every panel: compact text on a pill. Tone
@@ -387,10 +389,17 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   &.badge-success { background: var(--status-success-bg); color: var(--status-success-fg); border-color: var(--status-success-border); }
   &.badge-warning, &.badge-warn { background: var(--status-warning-bg); color: var(--status-warning-fg); border-color: var(--status-warning-border); }
   &.badge-neutral { background: var(--status-neutral-bg); color: var(--status-neutral-fg); border-color: var(--status-neutral-border); }
-  &.marker-pruefen { background: var(--marker-pruefen-bg); color: var(--marker-pruefen-fg); }
-  &.marker-sachcheck, &.sev-2 { background: var(--marker-sachcheck-bg); color: var(--marker-sachcheck-fg); }
-  &.marker-todo { background: var(--marker-todo-bg); color: var(--marker-todo-fg); }
-  &.marker-achtung, &.sev-3 { background: var(--marker-achtung-bg); color: var(--marker-achtung-fg); }
+  &.badge-present, &.tense-present { background: var(--present-light); color: var(--present); border-color: color-mix(in srgb, var(--present) 25%, transparent); }
+  &.badge-past, &.tense-past { background: var(--past-light); color: var(--past); border-color: color-mix(in srgb, var(--past) 25%, transparent); }
+  &.badge-mixed, &.tense-mixed { background: color-mix(in srgb, var(--mixed) 15%, var(--surface)); color: var(--mixed); border-color: color-mix(in srgb, var(--mixed) 28%, transparent); }
+  &.badge-neutral-tense, &.tense-neutral { background: var(--neutral); color: var(--status-neutral-fg); border-color: color-mix(in srgb, var(--neutral) 35%, transparent); }
+  &.badge-flag, &.badge-danger { background: var(--flag-light); color: var(--flag); border-color: color-mix(in srgb, var(--flag) 28%, transparent); font-weight: var(--weight-bold, 700); }
+  &.badge-deviation { background: var(--status-warning-bg); color: var(--status-warning-fg); border-color: var(--status-warning-border); font-weight: var(--weight-bold, 700); }
+  &.badge-register { background: var(--surface-raised); color: var(--accent); border-color: var(--line); font-weight: var(--weight-medium); }
+  &.marker-pruefen { background: var(--marker-pruefen-bg); color: var(--marker-pruefen-fg); border-color: color-mix(in srgb, currentColor 22%, transparent); }
+  &.marker-sachcheck, &.sev-2 { background: var(--marker-sachcheck-bg); color: var(--marker-sachcheck-fg); border-color: color-mix(in srgb, currentColor 22%, transparent); }
+  &.marker-todo { background: var(--marker-todo-bg); color: var(--marker-todo-fg); border-color: color-mix(in srgb, currentColor 22%, transparent); }
+  &.marker-achtung, &.sev-3 { background: var(--marker-achtung-bg); color: var(--marker-achtung-fg); border-color: color-mix(in srgb, currentColor 22%, transparent); }
 }
 
 /* --- Controls (local server mode) ------------------------------------- */
@@ -635,12 +644,15 @@ details.nda .row { margin-top: .5rem; }
   font-weight: var(--weight-semibold);
   white-space: nowrap;
   cursor: pointer;
+  transition: background-color .15s ease, color .15s ease, border-color .15s ease;
 }
 :is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"]:hover {
   background: var(--surface-raised);
   color: var(--fg);
+  border-color: var(--line);
 }
 :is(.style-tabs, .research-tabs, .modal-tabs) > button[aria-selected="true"] {
+  border-color: var(--line);
   border-bottom-color: var(--accent);
   background: var(--accent-light);
   color: var(--accent);
@@ -922,9 +934,15 @@ h1 {
 }
 .research-form-field { flex: 1 1 12rem; min-width: 0; }
 .settings-advanced {
-  margin: 0;
+  margin-top: .75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: .35rem .75rem;
+  transition: border-color .15s ease, background-color .15s ease;
   & summary { cursor: pointer; font-weight: var(--weight-semibold); font-size: var(--text-control); padding-block: .4rem; }
-  &[open] > summary { margin-bottom: .5rem; }
+  &[open] { padding-bottom: .85rem; }
+  &[open] > summary { margin-bottom: .5rem; border-bottom: 1px solid var(--line); padding-bottom: .55rem; }
 }
 .settings-actions, .matrix-tools { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; margin-top: .8rem; }
 .project-audio-actions > h3 { margin: 0 0 .6rem; }
@@ -1425,8 +1443,8 @@ body:not(.has-js-paragraphs) .ptext-inner { padding: .8rem 1rem; }
   position: relative;
   & i {
     position: absolute; inset-inline-end: .4rem; inset-block-end: .3rem;
-    height: 2px; width: var(--v); max-width: 3.4rem; background: var(--accent);
-    opacity: .35; border-radius: var(--radius-xs);
+    height: 3px; width: var(--v); max-width: 3.4rem; background: var(--accent);
+    opacity: .75; border-radius: var(--radius-pill);
   }
 }
 
@@ -3081,11 +3099,16 @@ button.research-tag {
   font-size: var(--text-micro);
   padding: 0.12rem 0.5rem;
   border-radius: var(--radius-pill);
-  background: var(--bg-subtle, rgba(0, 0, 0, 0.04));
-  color: var(--fg-muted, #555);
-  border: 1px solid var(--line-subtle, var(--line));
+  background: var(--surface-raised);
+  color: var(--muted);
+  border: 1px solid var(--line);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+.research-card-meta-pill:hover {
+  color: var(--fg);
+  border-color: var(--accent);
 }
 .research-card-actions {
   display: flex;
@@ -5140,7 +5163,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 .project-overview-heading h3 { margin: 0; }
 .project-overview-heading .ctl { flex-shrink: 0; }
 .project-overview-workflow h4, .project-overview-outputs h4 { font-size: .9rem; margin: .9rem 0 .6rem; }
-.project-overview-actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: flex-start; }
+.project-overview-actions { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
 .project-overview-action { min-width: 0; }
 .project-overview-action .ctl-note { max-width: 24rem; margin: .25rem 0; }
 .project-overview-technical { margin-top: 1rem; }
@@ -5161,8 +5184,20 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 .project-overview-row .ctl { margin-top: .35rem; }
 .project-overview-artifacts { margin-top: .75rem; }
 .project-overview-artifacts .project-overview-row-heading strong { overflow-wrap: anywhere; }
-.project-overview-browser, .project-overview-output-group { margin-top: .65rem; }
+.project-overview-browser {
+  margin-top: .65rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: .5rem .75rem;
+  background: var(--surface);
+}
+.project-overview-browser[open] { padding-bottom: .85rem; }
 .project-overview-browser summary, .project-overview-output-group summary { cursor: pointer; font-size: .9rem; font-weight: 600; }
+.project-overview-output-group {
+  margin-top: .65rem;
+  border-top: 1px solid var(--line);
+  padding-top: .45rem;
+}
 .project-overview-search { display: flex; flex-direction: column; gap: .3rem; margin: .75rem 0; font-size: .85rem; }
 .project-overview-search input { max-width: 100%; }
 .project-overview-findings { margin-top: 1.25rem; }
@@ -5549,7 +5584,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 </section>
 
 
-<section class="panel" id="scenes"><h2>Szenen &amp; Stilregister</h2><p class="hint">Jede Szene wird einzeln gemessen. Register und Zielbereiche sind Vorgaben des Projekts, keine Qualitätsurteile. Ohne Szenentrenner dienen Kapitel als Szenen. Zuordnungen und Ziele werden in lixity.toml festgelegt.</p><p class="hint">Wort- und Satzzahlen zeigen die Datenbasis. HD-D fehlt unter 100 Wörtern; Satzvariation fehlt bei nur einem Satz. Standardfehler sind Näherungen, keine validierten Konfidenzintervalle. Ein Strich bedeutet nicht verfügbar; auch ein beobachteter Nullwert belegt keine Sicherheit.</p><div class="table-wrap scene-overview" tabindex="0" role="region" aria-label="Szenen &amp; Stilregister"><table><thead><tr><th>Szenen &amp; Stilregister</th><th>Wörter</th><th>Sätze</th><th>ASL</th><th>Text in Anführungszeichen</th></tr></thead><tbody><tr><th><a href="#scene-metrics-1-1" data-jump="#scene-metrics-1-1">Erstes Kapitel · Szene 1</a> <small>Ohne Register</small></th><td>2572</td><td>174</td><td>14,78</td><td>59,8 %</td></tr><tr><th><a href="#scene-metrics-2-1" data-jump="#scene-metrics-2-1">Zweites Kapitel · Szene 1</a> <small>Ohne Register</small></th><td>1180</td><td>68</td><td>17,35</td><td>59,4 %</td></tr><tr><th><a href="#scene-metrics-3-1" data-jump="#scene-metrics-3-1">Drittes Kapitel · Szene 1</a> <small>Ohne Register</small></th><td>1779</td><td>85</td><td>20,93</td><td>19,2 %</td></tr></tbody></table></div><details class="scene-measurements"><summary>Szenenmesswerte (3)</summary><details class="scene-detail" data-scene="1:1"><summary>Erstes Kapitel · Szene 1 · Ohne Register · Wörter: 2572 · Sätze: 174</summary><p><a class="ctl-link" href="#ch-1" data-jump="#ch-1">Zugehöriges Kapitel öffnen: Erstes Kapitel→</a></p><div class="table-wrap" id="scene-metrics-1-1" tabindex="0" role="region" aria-label="Szenenmesswerte · 1:1"><table><thead><tr><th>Szenen &amp; Stilregister</th><th>Messwert</th><th>Standardfehler</th></tr></thead><tbody><tr><th>ASL <small>Wörter je Satz</small></th><td>14,78</td><td>1,15</td></tr><tr><th>Staccato <small>% der Sätze</small></th><td>35,06</td><td>3,62</td></tr><tr><th>Lange Sätze <small>% der Sätze</small></th><td>17,24</td><td>2,86</td></tr><tr><th>Satzlängen-Var. <small>Koeffizient</small></th><td>1,03</td><td>0,10</td></tr><tr><th>Text in Anführungszeichen <small>% der Wörter</small></th><td>59,84</td><td>0,97</td></tr><tr><th>Funktionswörter <small>% der Wörter</small></th><td>43,00</td><td>0,98</td></tr><tr><th>Perzeptionsfilter <small>je 1.000 Wörter</small></th><td>1,17</td><td>0,67</td></tr><tr><th>Modalverben <small>je 1.000 Wörter</small></th><td>11,28</td><td>2,09</td></tr><tr><th>Passivmuster <small>je 1.000 Wörter</small></th><td>9,33</td><td>1,90</td></tr><tr><th>Nomen-Endungen <small>je 1.000 Wörter</small></th><td>11,66</td><td>2,13</td></tr><tr><th>Adjektiv-Endungen <small>je 1.000 Wörter</small></th><td>22,55</td><td>2,96</td></tr><tr><th>Langwörter <small>% der Wörter</small></th><td>20,92</td><td>0,80</td></tr><tr><th>Satzanfangs-Entropie <small>bit</small></th><td>5,58</td><td>0,13</td></tr><tr><th>Ich-Anfänge <small>% der Sätze</small></th><td>4,60</td><td>1,59</td></tr><tr><th>Guiraud R <small>Index</small></th><td>19,01</td><td>0,19</td></tr><tr><th>HD-D <small>Index (0–1)</small></th><td>0,90</td><td>—</td></tr></tbody></table></div></details><details class="scene-detail" data-scene="2:1"><summary>Zweites Kapitel · Szene 1 · Ohne Register · Wörter: 1180 · Sätze: 68</summary><p><a class="ctl-link" href="#ch-2" data-jump="#ch-2">Zugehöriges Kapitel öffnen: Zweites Kapitel→</a></p><div class="table-wrap" id="scene-metrics-2-1" tabindex="0" role="region" aria-label="Szenenmesswerte · 2:1"><table><thead><tr><th>Szenen &amp; Stilregister</th><th>Messwert</th><th>Standardfehler</th></tr></thead><tbody><tr><th>ASL <small>Wörter je Satz</small></th><td>17,35</td><td>1,94</td></tr><tr><th>Staccato <small>% der Sätze</small></th><td>33,82</td><td>5,74</td></tr><tr><th>Lange Sätze <small>% der Sätze</small></th><td>22,06</td><td>5,03</td></tr><tr><th>Satzlängen-Var. <small>Koeffizient</small></th><td>0,92</td><td>0,13</td></tr><tr><th>Text in Anführungszeichen <small>% der Wörter</small></th><td>59,41</td><td>1,43</td></tr><tr><th>Funktionswörter <small>% der Wörter</small></th><td>45,34</td><td>1,45</td></tr><tr><th>Perzeptionsfilter <small>je 1.000 Wörter</small></th><td>3,39</td><td>1,69</td></tr><tr><th>Modalverben <small>je 1.000 Wörter</small></th><td>15,25</td><td>3,60</td></tr><tr><th>Passivmuster <small>je 1.000 Wörter</small></th><td>8,47</td><td>2,68</td></tr><tr><th>Nomen-Endungen <small>je 1.000 Wörter</small></th><td>9,32</td><td>2,81</td></tr><tr><th>Adjektiv-Endungen <small>je 1.000 Wörter</small></th><td>22,03</td><td>4,32</td></tr><tr><th>Langwörter <small>% der Wörter</small></th><td>17,37</td><td>1,10</td></tr><tr><th>Satzanfangs-Entropie <small>bit</small></th><td>5,06</td><td>0,13</td></tr><tr><th>Ich-Anfänge <small>% der Sätze</small></th><td>10,29</td><td>3,69</td></tr><tr><th>Guiraud R <small>Index</small></th><td>14,85</td><td>0,22</td></tr><tr><th>HD-D <small>Index (0–1)</small></th><td>0,90</td><td>—</td></tr></tbody></table></div></details><details class="scene-detail" data-scene="3:1"><summary>Drittes Kapitel · Szene 1 · Ohne Register · Wörter: 1779 · Sätze: 85</summary><p><a class="ctl-link" href="#ch-3" data-jump="#ch-3">Zugehöriges Kapitel öffnen: Drittes Kapitel→</a></p><div class="table-wrap" id="scene-metrics-3-1" tabindex="0" role="region" aria-label="Szenenmesswerte · 3:1"><table><thead><tr><th>Szenen &amp; Stilregister</th><th>Messwert</th><th>Standardfehler</th></tr></thead><tbody><tr><th>ASL <small>Wörter je Satz</small></th><td>20,93</td><td>1,72</td></tr><tr><th>Staccato <small>% der Sätze</small></th><td>18,82</td><td>4,24</td></tr><tr><th>Lange Sätze <small>% der Sätze</small></th><td>31,76</td><td>5,05</td></tr><tr><th>Satzlängen-Var. <small>Koeffizient</small></th><td>0,76</td><td>0,09</td></tr><tr><th>Text in Anführungszeichen <small>% der Wörter</small></th><td>19,17</td><td>0,93</td></tr><tr><th>Funktionswörter <small>% der Wörter</small></th><td>42,95</td><td>1,17</td></tr><tr><th>Perzeptionsfilter <small>je 1.000 Wörter</small></th><td>1,69</td><td>0,97</td></tr><tr><th>Modalverben <small>je 1.000 Wörter</small></th><td>7,31</td><td>2,03</td></tr><tr><th>Passivmuster <small>je 1.000 Wörter</small></th><td>6,18</td><td>1,86</td></tr><tr><th>Nomen-Endungen <small>je 1.000 Wörter</small></th><td>15,18</td><td>2,92</td></tr><tr><th>Adjektiv-Endungen <small>je 1.000 Wörter</small></th><td>24,73</td><td>3,73</td></tr><tr><th>Langwörter <small>% der Wörter</small></th><td>23,33</td><td>1,00</td></tr><tr><th>Satzanfangs-Entropie <small>bit</small></th><td>5,39</td><td>0,11</td></tr><tr><th>Ich-Anfänge <small>% der Sätze</small></th><td>0,00</td><td>—</td></tr><tr><th>Guiraud R <small>Index</small></th><td>18,07</td><td>0,21</td></tr><tr><th>HD-D <small>Index (0–1)</small></th><td>0,91</td><td>—</td></tr></tbody></table></div></details></details></section>
+<section class="panel" id="scenes"><h2>Szenen &amp; Stilregister</h2><p class="hint">Jede Szene wird einzeln gemessen. Register und Zielbereiche sind Vorgaben des Projekts, keine Qualitätsurteile. Ohne Szenentrenner dienen Kapitel als Szenen. Zuordnungen und Ziele werden in lixity.toml festgelegt.</p><p class="hint">Wort- und Satzzahlen zeigen die Datenbasis. HD-D fehlt unter 100 Wörtern; Satzvariation fehlt bei nur einem Satz. Standardfehler sind Näherungen, keine validierten Konfidenzintervalle. Ein Strich bedeutet nicht verfügbar; auch ein beobachteter Nullwert belegt keine Sicherheit.</p><div class="table-wrap scene-overview" tabindex="0" role="region" aria-label="Szenen &amp; Stilregister"><table><thead><tr><th scope="col">Szenen &amp; Stilregister</th><th scope="col" class="num">Wörter</th><th scope="col" class="num">Sätze</th><th scope="col" class="num">ASL</th><th scope="col" class="num">Text in Anführungszeichen</th></tr></thead><tbody><tr><th><a href="#scene-metrics-1-1" data-jump="#scene-metrics-1-1">Erstes Kapitel · Szene 1</a> <span class="badge badge-neutral">Ohne Register</span></th><td class="num">2572</td><td class="num">174</td><td class="num">14,78</td><td class="num">59,8 %</td></tr><tr><th><a href="#scene-metrics-2-1" data-jump="#scene-metrics-2-1">Zweites Kapitel · Szene 1</a> <span class="badge badge-neutral">Ohne Register</span></th><td class="num">1180</td><td class="num">68</td><td class="num">17,35</td><td class="num">59,4 %</td></tr><tr><th><a href="#scene-metrics-3-1" data-jump="#scene-metrics-3-1">Drittes Kapitel · Szene 1</a> <span class="badge badge-neutral">Ohne Register</span></th><td class="num">1779</td><td class="num">85</td><td class="num">20,93</td><td class="num">19,2 %</td></tr></tbody></table></div><details class="scene-measurements"><summary>Szenenmesswerte (3)</summary><details class="scene-detail" data-scene="1:1"><summary>Erstes Kapitel · Szene 1 · Ohne Register · Wörter: 2572 · Sätze: 174</summary><p><a class="ctl-link" href="#ch-1" data-jump="#ch-1">Zugehöriges Kapitel öffnen: Erstes Kapitel→</a></p><div class="table-wrap" id="scene-metrics-1-1" tabindex="0" role="region" aria-label="Szenenmesswerte · 1:1"><table><thead><tr><th scope="col">Szenen &amp; Stilregister</th><th scope="col" class="num">Messwert</th><th scope="col" class="num">Standardfehler</th></tr></thead><tbody><tr><th scope="row">ASL <small>Wörter je Satz</small></th><td class="num">14,78</td><td class="num">1,15</td></tr><tr><th scope="row">Staccato <small>% der Sätze</small></th><td class="num">35,06</td><td class="num">3,62</td></tr><tr><th scope="row">Lange Sätze <small>% der Sätze</small></th><td class="num">17,24</td><td class="num">2,86</td></tr><tr><th scope="row">Satzlängen-Var. <small>Koeffizient</small></th><td class="num">1,03</td><td class="num">0,10</td></tr><tr><th scope="row">Text in Anführungszeichen <small>% der Wörter</small></th><td class="num">59,84</td><td class="num">0,97</td></tr><tr><th scope="row">Funktionswörter <small>% der Wörter</small></th><td class="num">43,00</td><td class="num">0,98</td></tr><tr><th scope="row">Perzeptionsfilter <small>je 1.000 Wörter</small></th><td class="num">1,17</td><td class="num">0,67</td></tr><tr><th scope="row">Modalverben <small>je 1.000 Wörter</small></th><td class="num">11,28</td><td class="num">2,09</td></tr><tr><th scope="row">Passivmuster <small>je 1.000 Wörter</small></th><td class="num">9,33</td><td class="num">1,90</td></tr><tr><th scope="row">Nomen-Endungen <small>je 1.000 Wörter</small></th><td class="num">11,66</td><td class="num">2,13</td></tr><tr><th scope="row">Adjektiv-Endungen <small>je 1.000 Wörter</small></th><td class="num">22,55</td><td class="num">2,96</td></tr><tr><th scope="row">Langwörter <small>% der Wörter</small></th><td class="num">20,92</td><td class="num">0,80</td></tr><tr><th scope="row">Satzanfangs-Entropie <small>bit</small></th><td class="num">5,58</td><td class="num">0,13</td></tr><tr><th scope="row">Ich-Anfänge <small>% der Sätze</small></th><td class="num">4,60</td><td class="num">1,59</td></tr><tr><th scope="row">Guiraud R <small>Index</small></th><td class="num">19,01</td><td class="num">0,19</td></tr><tr><th scope="row">HD-D <small>Index (0–1)</small></th><td class="num">0,90</td><td class="num">—</td></tr></tbody></table></div></details><details class="scene-detail" data-scene="2:1"><summary>Zweites Kapitel · Szene 1 · Ohne Register · Wörter: 1180 · Sätze: 68</summary><p><a class="ctl-link" href="#ch-2" data-jump="#ch-2">Zugehöriges Kapitel öffnen: Zweites Kapitel→</a></p><div class="table-wrap" id="scene-metrics-2-1" tabindex="0" role="region" aria-label="Szenenmesswerte · 2:1"><table><thead><tr><th scope="col">Szenen &amp; Stilregister</th><th scope="col" class="num">Messwert</th><th scope="col" class="num">Standardfehler</th></tr></thead><tbody><tr><th scope="row">ASL <small>Wörter je Satz</small></th><td class="num">17,35</td><td class="num">1,94</td></tr><tr><th scope="row">Staccato <small>% der Sätze</small></th><td class="num">33,82</td><td class="num">5,74</td></tr><tr><th scope="row">Lange Sätze <small>% der Sätze</small></th><td class="num">22,06</td><td class="num">5,03</td></tr><tr><th scope="row">Satzlängen-Var. <small>Koeffizient</small></th><td class="num">0,92</td><td class="num">0,13</td></tr><tr><th scope="row">Text in Anführungszeichen <small>% der Wörter</small></th><td class="num">59,41</td><td class="num">1,43</td></tr><tr><th scope="row">Funktionswörter <small>% der Wörter</small></th><td class="num">45,34</td><td class="num">1,45</td></tr><tr><th scope="row">Perzeptionsfilter <small>je 1.000 Wörter</small></th><td class="num">3,39</td><td class="num">1,69</td></tr><tr><th scope="row">Modalverben <small>je 1.000 Wörter</small></th><td class="num">15,25</td><td class="num">3,60</td></tr><tr><th scope="row">Passivmuster <small>je 1.000 Wörter</small></th><td class="num">8,47</td><td class="num">2,68</td></tr><tr><th scope="row">Nomen-Endungen <small>je 1.000 Wörter</small></th><td class="num">9,32</td><td class="num">2,81</td></tr><tr><th scope="row">Adjektiv-Endungen <small>je 1.000 Wörter</small></th><td class="num">22,03</td><td class="num">4,32</td></tr><tr><th scope="row">Langwörter <small>% der Wörter</small></th><td class="num">17,37</td><td class="num">1,10</td></tr><tr><th scope="row">Satzanfangs-Entropie <small>bit</small></th><td class="num">5,06</td><td class="num">0,13</td></tr><tr><th scope="row">Ich-Anfänge <small>% der Sätze</small></th><td class="num">10,29</td><td class="num">3,69</td></tr><tr><th scope="row">Guiraud R <small>Index</small></th><td class="num">14,85</td><td class="num">0,22</td></tr><tr><th scope="row">HD-D <small>Index (0–1)</small></th><td class="num">0,90</td><td class="num">—</td></tr></tbody></table></div></details><details class="scene-detail" data-scene="3:1"><summary>Drittes Kapitel · Szene 1 · Ohne Register · Wörter: 1779 · Sätze: 85</summary><p><a class="ctl-link" href="#ch-3" data-jump="#ch-3">Zugehöriges Kapitel öffnen: Drittes Kapitel→</a></p><div class="table-wrap" id="scene-metrics-3-1" tabindex="0" role="region" aria-label="Szenenmesswerte · 3:1"><table><thead><tr><th scope="col">Szenen &amp; Stilregister</th><th scope="col" class="num">Messwert</th><th scope="col" class="num">Standardfehler</th></tr></thead><tbody><tr><th scope="row">ASL <small>Wörter je Satz</small></th><td class="num">20,93</td><td class="num">1,72</td></tr><tr><th scope="row">Staccato <small>% der Sätze</small></th><td class="num">18,82</td><td class="num">4,24</td></tr><tr><th scope="row">Lange Sätze <small>% der Sätze</small></th><td class="num">31,76</td><td class="num">5,05</td></tr><tr><th scope="row">Satzlängen-Var. <small>Koeffizient</small></th><td class="num">0,76</td><td class="num">0,09</td></tr><tr><th scope="row">Text in Anführungszeichen <small>% der Wörter</small></th><td class="num">19,17</td><td class="num">0,93</td></tr><tr><th scope="row">Funktionswörter <small>% der Wörter</small></th><td class="num">42,95</td><td class="num">1,17</td></tr><tr><th scope="row">Perzeptionsfilter <small>je 1.000 Wörter</small></th><td class="num">1,69</td><td class="num">0,97</td></tr><tr><th scope="row">Modalverben <small>je 1.000 Wörter</small></th><td class="num">7,31</td><td class="num">2,03</td></tr><tr><th scope="row">Passivmuster <small>je 1.000 Wörter</small></th><td class="num">6,18</td><td class="num">1,86</td></tr><tr><th scope="row">Nomen-Endungen <small>je 1.000 Wörter</small></th><td class="num">15,18</td><td class="num">2,92</td></tr><tr><th scope="row">Adjektiv-Endungen <small>je 1.000 Wörter</small></th><td class="num">24,73</td><td class="num">3,73</td></tr><tr><th scope="row">Langwörter <small>% der Wörter</small></th><td class="num">23,33</td><td class="num">1,00</td></tr><tr><th scope="row">Satzanfangs-Entropie <small>bit</small></th><td class="num">5,39</td><td class="num">0,11</td></tr><tr><th scope="row">Ich-Anfänge <small>% der Sätze</small></th><td class="num">0,00</td><td class="num">—</td></tr><tr><th scope="row">Guiraud R <small>Index</small></th><td class="num">18,07</td><td class="num">0,21</td></tr><tr><th scope="row">HD-D <small>Index (0–1)</small></th><td class="num">0,91</td><td class="num">—</td></tr></tbody></table></div></details></details></section>
 
 <section class="panel" id="dist"><h2>Satzlängen</h2><div class="dist"><div class="row"><span>≤ 6</span><span class="bar"><i style="width:30.8%"></i></span><span class="val">101 · 30,8 %</span></div><div class="row"><span>7–15</span><span class="bar"><i style="width:32.3%"></i></span><span class="val">106 · 32,3 %</span></div><div class="row"><span>16–25</span><span class="bar"><i style="width:14.9%"></i></span><span class="val">49 · 14,9 %</span></div><div class="row"><span>> 25</span><span class="bar"><i style="width:22.0%"></i></span><span class="val">72 · 22,0 %</span></div></div></section>
 
@@ -5577,14 +5612,14 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 <th scope="col"><span class="help" data-help="Öffnet das Kapitel. Auffällige Zeilen aktivieren zusätzlich den Absatzfilter." tabindex="0">#</span></th><th scope="col"><span class="help" data-help="Öffnet das Kapitel. Auffällige Zeilen aktivieren zusätzlich den Absatzfilter." tabindex="0">Kapitel</span></th><th scope="col" class="num"><span class="help" data-help="Wörter der hier gezeigten Absätze und Listen. Zitatblöcke zählen nur in der getrennten Korpusanalyse mit." tabindex="0">Wörter</span></th><th scope="col" class="num"><span class="help" data-help="Mittlere Wortzahl je erkanntem Satz. Beschreibt Satzlänge, nicht Spannung oder Erzähltempo." tabindex="0">ASL</span></th><th scope="col" class="num"><span class="help" data-help="Anteil der Wörter in erkannten Anführungszeichen. Zitate sind nicht immer Dialog; andere Zitatformen können unerkannt bleiben." tabindex="0">Text in Anführungszeichen</span></th><th scope="col" class="num"><span class="help" data-help="Anteil der Wörter aus der sprachspezifischen Funktionswortliste, etwa Artikel und Pronomen. Höher = mehr Listentreffer, nicht weniger Inhalt." tabindex="0">Funktionswörter</span></th><th scope="col"><span class="help" data-help="Vorherrschendes Tempus nach Sprachmarkern: Vergangenheit, Präsens, gemischt oder neutral. Heuristik, kein grammatisches Urteil." tabindex="0">Vergangenheit/Präsens</span></th><th scope="col" class="num"><span class="help" data-help="Anzahl der Absätze ab der aktiven Schwereschwelle. Prüfhinweise, keine Fehlerzahl und keine FDR-Ergebnisse." tabindex="0">Auffällig</span></th>
 <th scope="col" class="num"><span class="help" data-help="Anzahl der Merkmale über der Abweichungsschwelle. 0 = keine Überschreitung; – = kein Vergleich. Keine FDR-Auswahl oder Qualitätsbewertung." tabindex="0">Abweichung</span></th>
 </tr></thead><tbody>
-<tr class="row-link" data-jump="#ch-1" data-flags="1"><td>1</td><td><a class="chapter-link" href="#ch-1" data-jump="#ch-1" data-flags="1">Erstes Kapitel</a></td><td class="num">2.572</td><td class="num bar-cell"><i style="--v:71%"></i>14,8</td><td class="num bar-cell"><i style="--v:99%"></i>58,8 %</td><td class="num">43,0 %</td><td>Gemischt</td><td class="num">7</td>
+<tr class="row-link" data-jump="#ch-1" data-flags="1"><td>1</td><td><a class="chapter-link" href="#ch-1" data-jump="#ch-1" data-flags="1">Erstes Kapitel</a></td><td class="num">2.572</td><td class="num bar-cell"><i style="--v:71%"></i>14,8</td><td class="num bar-cell"><i style="--v:99%"></i>58,8 %</td><td class="num">43,0 %</td><td><span class="badge tense-mixed">Gemischt</span></td><td class="num"><span class="badge badge-flag">7</span></td>
 <td class="num">0</td>
 </tr>
-<tr class="row-link" data-jump="#ch-2" data-flags="1"><td>2</td><td><a class="chapter-link" href="#ch-2" data-jump="#ch-2" data-flags="1">Zweites Kapitel</a></td><td class="num">1.180</td><td class="num bar-cell"><i style="--v:83%"></i>17,4</td><td class="num bar-cell"><i style="--v:100%"></i>59,4 %</td><td class="num">45,3 %</td><td>Präsens</td><td class="num">5</td>
+<tr class="row-link" data-jump="#ch-2" data-flags="1"><td>2</td><td><a class="chapter-link" href="#ch-2" data-jump="#ch-2" data-flags="1">Zweites Kapitel</a></td><td class="num">1.180</td><td class="num bar-cell"><i style="--v:83%"></i>17,4</td><td class="num bar-cell"><i style="--v:100%"></i>59,4 %</td><td class="num">45,3 %</td><td><span class="badge tense-present">Präsens</span></td><td class="num"><span class="badge badge-flag">5</span></td>
 <td class="num">0</td>
 </tr>
-<tr class="row-link" data-jump="#ch-3" data-flags="1"><td>3</td><td><a class="chapter-link" href="#ch-3" data-jump="#ch-3" data-flags="1">Drittes Kapitel</a></td><td class="num">1.779</td><td class="num bar-cell"><i style="--v:100%"></i>20,9</td><td class="num bar-cell"><i style="--v:32%"></i>19,2 %</td><td class="num">42,9 %</td><td>Vergangenheit</td><td class="num">4</td>
-<td class="num" title="Staccato: z* = -3,2, Text in Anführungszeichen: z* = -35,6, HD-D: z* = +3,9">3</td>
+<tr class="row-link" data-jump="#ch-3" data-flags="1"><td>3</td><td><a class="chapter-link" href="#ch-3" data-jump="#ch-3" data-flags="1">Drittes Kapitel</a></td><td class="num">1.779</td><td class="num bar-cell"><i style="--v:100%"></i>20,9</td><td class="num bar-cell"><i style="--v:32%"></i>19,2 %</td><td class="num">42,9 %</td><td><span class="badge tense-past">Vergangenheit</span></td><td class="num"><span class="badge badge-flag">4</span></td>
+<td class="num" title="Staccato: z* = -3,2, Text in Anführungszeichen: z* = -35,6, HD-D: z* = +3,9"><span class="badge badge-deviation">3</span></td>
 </tr>
 </tbody></table></div></section>
 </div>
@@ -6049,7 +6084,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
       }
       // The fixed popup may sit outside the reader toolbar's bounded scrollport.
       // Only its trigger must remain visible inside those compact controls.
-      if (parent.matches(".manuscript-reader-controls")) continue;
+      if (parent.matches(".manuscript-reader-controls, .workspace-shell")) continue;
       if (clipX && parent.scrollWidth > parent.clientWidth) {
         visible.left = Math.max(visible.left, left);
         visible.right = Math.min(visible.right, left + parent.clientWidth);
@@ -6102,6 +6137,11 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
     // across the trigger (which also made touch dismissal unreachable).
     tip.style.maxHeight = available + "px";
     tipH = tip.offsetHeight;
+    if (el.closest(".workspace-shell") && rect.right + tipW + 16 < innerWidth) {
+      tip.style.left = (rect.right + 10) + "px";
+      tip.style.top = Math.max(10, Math.min(innerHeight - tipH - 10, rect.top + (rect.height - tipH) / 2)) + "px";
+      return;
+    }
     var left = rect.left + (pointerHelp ? pointerOffsetX + 12 : 0);
     left = Math.max(visible.left, Math.min(visible.right - tipW, left));
     var top = useBelow ? anchorBottom + 6 : anchorTop - tipH - 6;
@@ -9052,8 +9092,11 @@ document.querySelectorAll("[data-action]").forEach(function (btn) {
           return html`<span key=${"b" + index} class=${"research-badge " + badge.cls} ...${extra}>${badge.label}</span>`;
         })}
         ${(item.metaRight && item.metaRight.length) ? html`<div class="research-card-meta">
-          ${item.metaRight.map(function (text, index) {
-            return html`<span key=${"m" + index} class="ctl-note research-card-meta-pill">${text}</span>`;
+          ${item.metaRight.map(function (meta, index) {
+            var text = (typeof meta === "object" && meta !== null) ? meta.text : meta;
+            var title = (typeof meta === "object" && meta !== null) ? meta.title : null;
+            var attrs = title ? {title: title, "data-help": title} : {};
+            return html`<span key=${"m" + index} class="ctl-note research-card-meta-pill" ...${attrs}>${text}</span>`;
           })}
         </div>` : null}
       </div>
@@ -10526,12 +10569,18 @@ async function refreshResearchSources(overview, changedId, freshRead) {
   }
   LixityResearchCards.render(listHost, {items: sources.map(function(s) {
     var external = s.context && s.context.external_reference;
+    var mediaOrPassages = ["image/png", "image/jpeg", "video/mp4", "video/webm"].includes(s.media_type)
+      ? s.media_type
+      : uiCountFormat("research_passages_count", s.passages);
+    var sizeKb = Math.round((s.byte_length || 0) / 1024) + " KB";
     return {
       key: JSON.stringify(s),
       id: s.id,
       title: s.title,
-      metaRight: [(["image/png", "image/jpeg", "video/mp4", "video/webm"].includes(s.media_type) ? s.media_type
-        : uiCountFormat("research_passages_count", s.passages)) + " · " + Math.round((s.byte_length || 0) / 1024) + " KB"],
+      metaRight: [{
+        text: mediaOrPassages + " · " + sizeKb,
+        title: uiLabel("research_tab_sources_help") || "Gespeicherte Quellenkopie"
+      }],
       idLine: s.id,
       tags: s.tags || [],
       tagsInteractive: true,
@@ -10595,10 +10644,21 @@ function renderResearchDossiersView(data) {
     var badges = d.review_needed
       ? [{label: uiLabel("research_review_needed"), cls: "badge-warning ml-2", title: uiLabel("research_review_needed_hint")}]
       : [];
-    var metaRight = [uiCountFormat("research_evidence_count", d.evidence_count)];
-    if (d.revision) metaRight.push(uiFormat("research_revision_number", { revision: d.revision }));
+    var metaRight = [{
+      text: uiCountFormat("research_evidence_count", d.evidence_count),
+      title: uiLabel("research_tab_claims_help") || "Belegverknüpfungen mit Manuskriptstellen und Quellen"
+    }];
+    if (d.revision) {
+      metaRight.push({
+        text: uiFormat("research_revision_number", { revision: d.revision }),
+        title: "Revisionsstand und Fassungsnummer dieses Dossiers"
+      });
+    }
     if (Array.isArray(d.collections) && d.collections.length) {
-      metaRight.push(d.collections.map(function(m) { return m.name + " #" + m.position; }).join(", "));
+      metaRight.push({
+        text: d.collections.map(function(m) { return m.name + " #" + m.position; }).join(", "),
+        title: uiLabel("research_dossier_collection") + " · Zugeordnete Sammlung und Reihenfolge"
+      });
     }
     return {
       key: JSON.stringify(d),
@@ -10962,7 +11022,12 @@ async function refreshResearchClaims(overview) {
       if (c.scope.actors && c.scope.actors.length) scopeParts.push(uiLabel("research_scope_actors") + " " + c.scope.actors.join(", "));
     }
     var metaRight = [];
-    if (c.revision) metaRight.push(uiFormat("research_revision_number", { revision: c.revision }));
+    if (c.revision) {
+      metaRight.push({
+        text: uiFormat("research_revision_number", { revision: c.revision }),
+        title: "Revisionsstand und Fassungsnummer dieser These"
+      });
+    }
     var dossierLine = null;
     if (c.dossier_id) {
       dossierLine = uiLabel("research_dossier") + ": " + c.dossier_id +
@@ -11011,7 +11076,12 @@ async function refreshResearchDecisions(overview) {
       ? {label: uiLabel("research_deliberate_deviation"), cls: "badge-warning"}
       : {label: uiLabel("research_no_deviation_recorded"), cls: "badge-neutral"}];
     var metaRight = [];
-    if (d.revision) metaRight.push(uiFormat("research_revision_number", { revision: d.revision }));
+    if (d.revision) {
+      metaRight.push({
+        text: uiFormat("research_revision_number", { revision: d.revision }),
+        title: "Revisionsstand und Fassungsnummer dieser Entscheidung"
+      });
+    }
     var claimLine = null;
     if (d.claim_id) {
       claimLine = uiLabel("research_decision_claim") + " " + d.claim_id +
@@ -12266,10 +12336,19 @@ document.addEventListener("click", async function (event) {
         '<div class="table-wrap mt-2"><table class="research-table">' +
           '<thead><tr><th>Merkmal</th><th class="num-right">Quelle</th><th class="num-right">Manuskript</th><th class="num-right">Differenz (Δ)</th></tr></thead>' +
           '<tbody>' +
-            '<tr><td>Mittlere Satzlänge (ASL)</td><td class="num-right">' + (reg.asl ? reg.asl.source : '–') + '</td><td class="num-right">' + (reg.asl ? reg.asl.manuscript : '–') + '</td><td class="num-right"><strong>' + (reg.asl ? (reg.asl.delta > 0 ? '+' : '') + reg.asl.delta : '–') + '</strong></td></tr>' +
-            '<tr><td>Dialoganteil (%)</td><td class="num-right">' + (reg.dialogue_pct ? (reg.dialogue_pct.source * 100).toFixed(1) + '%' : '–') + '</td><td class="num-right">' + (reg.dialogue_pct ? (reg.dialogue_pct.manuscript * 100).toFixed(1) + '%' : '–') + '</td><td class="num-right"><strong>' + (reg.dialogue_pct ? (reg.dialogue_pct.delta > 0 ? '+' : '') + (reg.dialogue_pct.delta * 100).toFixed(1) + '%' : '–') + '</strong></td></tr>' +
-            '<tr><td>Wortschatzreichtum (Guiraud R)</td><td class="num-right">' + (reg.guiraud_r ? reg.guiraud_r.source : '–') + '</td><td class="num-right">' + (reg.guiraud_r ? reg.guiraud_r.manuscript : '–') + '</td><td class="num-right"><strong>' + (reg.guiraud_r ? (reg.guiraud_r.delta > 0 ? '+' : '') + reg.guiraud_r.delta : '–') + '</strong></td></tr>' +
-            '<tr><td>Vokabularwiederholung (Yule’s K)</td><td class="num-right">' + (reg.yules_k ? reg.yules_k.source : '–') + '</td><td class="num-right">' + (reg.yules_k ? reg.yules_k.manuscript : '–') + '</td><td class="num-right"><strong>' + (reg.yules_k ? (reg.yules_k.delta > 0 ? '+' : '') + reg.yules_k.delta : '–') + '</strong></td></tr>' +
+            (function() {
+              function diffCell(obj, isPct) {
+                if (!obj || obj.delta === undefined || obj.delta === null) return '–';
+                var d = obj.delta;
+                var cls = d > 0 ? 'delta-positive' : (d < 0 ? 'delta-negative' : '');
+                var formatted = isPct ? ((d > 0 ? '+' : '') + (d * 100).toFixed(1) + '%') : ((d > 0 ? '+' : '') + d);
+                return '<strong class="' + cls + '">' + formatted + '</strong>';
+              }
+              return '<tr><td>Mittlere Satzlänge (ASL)</td><td class="num-right">' + (reg.asl ? reg.asl.source : '–') + '</td><td class="num-right">' + (reg.asl ? reg.asl.manuscript : '–') + '</td><td class="num-right">' + diffCell(reg.asl, false) + '</td></tr>' +
+                '<tr><td>Dialoganteil (%)</td><td class="num-right">' + (reg.dialogue_pct ? (reg.dialogue_pct.source * 100).toFixed(1) + '%' : '–') + '</td><td class="num-right">' + (reg.dialogue_pct ? (reg.dialogue_pct.manuscript * 100).toFixed(1) + '%' : '–') + '</td><td class="num-right">' + diffCell(reg.dialogue_pct, true) + '</td></tr>' +
+                '<tr><td>Wortschatzreichtum (Guiraud R)</td><td class="num-right">' + (reg.guiraud_r ? reg.guiraud_r.source : '–') + '</td><td class="num-right">' + (reg.guiraud_r ? reg.guiraud_r.manuscript : '–') + '</td><td class="num-right">' + diffCell(reg.guiraud_r, false) + '</td></tr>' +
+                '<tr><td>Vokabularwiederholung (Yule’s K)</td><td class="num-right">' + (reg.yules_k ? reg.yules_k.source : '–') + '</td><td class="num-right">' + (reg.yules_k ? reg.yules_k.manuscript : '–') + '</td><td class="num-right">' + diffCell(reg.yules_k, false) + '</td></tr>';
+            })() +
           '</tbody>' +
         '</table></div>' +
       '</details>';
@@ -15070,10 +15149,11 @@ window.LixityManuscriptLinks = {
   function audioAction(id, kind, label) {
     var target = document.getElementById(id);
     if (!target) return null;
-    var button = node("button", "ctl", text(label));
-    button.type = "button"; button.dataset.projectAudio = kind;
-    button.addEventListener("click", function () { target.click(); });
-    return button;
+    target.dataset.projectAudio = kind;
+    if (label) target.textContent = text(label);
+    var container = target.closest(".project-audio-actions");
+    if (container) container.hidden = true;
+    return target;
   }
   function outputRow(artifact, token) {
     var row = node("li", "project-overview-row"), heading = node("div", "project-overview-row-heading");

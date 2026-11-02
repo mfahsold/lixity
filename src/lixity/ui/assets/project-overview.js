@@ -92,10 +92,11 @@
   function audioAction(id, kind, label) {
     var target = document.getElementById(id);
     if (!target) return null;
-    var button = node("button", "ctl", text(label));
-    button.type = "button"; button.dataset.projectAudio = kind;
-    button.addEventListener("click", function () { target.click(); });
-    return button;
+    target.dataset.projectAudio = kind;
+    if (label) target.textContent = text(label);
+    var container = target.closest(".project-audio-actions");
+    if (container) container.hidden = true;
+    return target;
   }
   function outputRow(artifact, token) {
     var row = node("li", "project-overview-row"), heading = node("div", "project-overview-row-heading");

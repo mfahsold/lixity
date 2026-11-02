@@ -8730,7 +8730,6 @@ _ROWS = {
         "Falha ao carregar evidências",
         "Bewijs laden mislukt",
     ),
-    "open": ("Open", "Öffnen", "Ouvrir", "Abrir", "Apri", "Abrir", "Open"),
     "action": ("Action", "Aktion", "Action", "Acción", "Azione", "Ação", "Actie"),
     "research_overlap_coefficient": (
         "Overlap coefficient (Simpson)",

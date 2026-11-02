@@ -324,12 +324,12 @@ th.sortable::after, th[data-sort]::after, table[data-sortable] th:not(.no-sort):
 th[aria-sort="ascending"]::after {
   content: " ↑";
   opacity: 1;
-  color: var(--action-bg, #3b82f6);
+  color: var(--accent);
 }
 th[aria-sort="descending"]::after {
   content: " ↓";
   opacity: 1;
-  color: var(--action-bg, #3b82f6);
+  color: var(--accent);
 }
 .table-bar-cell {
   display: inline-flex;
@@ -350,7 +350,7 @@ th[aria-sort="descending"]::after {
 }
 .table-bar-fill {
   height: 100%;
-  background: var(--action-bg, #3b82f6);
+  background: var(--accent);
   border-radius: var(--radius-pill);
   transition: width 0.25s ease;
 }
@@ -367,6 +367,8 @@ tbody tr.clickable-row:hover, tbody tr[data-action]:hover {
   background: var(--surface-hover);
 }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.val-positive, .delta-positive { color: var(--analysis-comparison-positive); font-variant-numeric: tabular-nums; font-weight: var(--weight-medium, 500); }
+.val-negative, .delta-negative { color: var(--analysis-comparison-negative); font-variant-numeric: tabular-nums; font-weight: var(--weight-medium, 500); }
 
 /* --- Badges & Dimension cards ----------------------------------------- */
 /* One badge family for every panel: compact text on a pill. Tone
@@ -387,10 +389,17 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   &.badge-success { background: var(--status-success-bg); color: var(--status-success-fg); border-color: var(--status-success-border); }
   &.badge-warning, &.badge-warn { background: var(--status-warning-bg); color: var(--status-warning-fg); border-color: var(--status-warning-border); }
   &.badge-neutral { background: var(--status-neutral-bg); color: var(--status-neutral-fg); border-color: var(--status-neutral-border); }
-  &.marker-pruefen { background: var(--marker-pruefen-bg); color: var(--marker-pruefen-fg); }
-  &.marker-sachcheck, &.sev-2 { background: var(--marker-sachcheck-bg); color: var(--marker-sachcheck-fg); }
-  &.marker-todo { background: var(--marker-todo-bg); color: var(--marker-todo-fg); }
-  &.marker-achtung, &.sev-3 { background: var(--marker-achtung-bg); color: var(--marker-achtung-fg); }
+  &.badge-present, &.tense-present { background: var(--present-light); color: var(--present); border-color: color-mix(in srgb, var(--present) 25%, transparent); }
+  &.badge-past, &.tense-past { background: var(--past-light); color: var(--past); border-color: color-mix(in srgb, var(--past) 25%, transparent); }
+  &.badge-mixed, &.tense-mixed { background: color-mix(in srgb, var(--mixed) 15%, var(--surface)); color: var(--mixed); border-color: color-mix(in srgb, var(--mixed) 28%, transparent); }
+  &.badge-neutral-tense, &.tense-neutral { background: var(--neutral); color: var(--status-neutral-fg); border-color: color-mix(in srgb, var(--neutral) 35%, transparent); }
+  &.badge-flag, &.badge-danger { background: var(--flag-light); color: var(--flag); border-color: color-mix(in srgb, var(--flag) 28%, transparent); font-weight: var(--weight-bold, 700); }
+  &.badge-deviation { background: var(--status-warning-bg); color: var(--status-warning-fg); border-color: var(--status-warning-border); font-weight: var(--weight-bold, 700); }
+  &.badge-register { background: var(--surface-raised); color: var(--accent); border-color: var(--line); font-weight: var(--weight-medium); }
+  &.marker-pruefen { background: var(--marker-pruefen-bg); color: var(--marker-pruefen-fg); border-color: color-mix(in srgb, currentColor 22%, transparent); }
+  &.marker-sachcheck, &.sev-2 { background: var(--marker-sachcheck-bg); color: var(--marker-sachcheck-fg); border-color: color-mix(in srgb, currentColor 22%, transparent); }
+  &.marker-todo { background: var(--marker-todo-bg); color: var(--marker-todo-fg); border-color: color-mix(in srgb, currentColor 22%, transparent); }
+  &.marker-achtung, &.sev-3 { background: var(--marker-achtung-bg); color: var(--marker-achtung-fg); border-color: color-mix(in srgb, currentColor 22%, transparent); }
 }
 
 /* --- Controls (local server mode) ------------------------------------- */
@@ -635,12 +644,15 @@ details.nda .row { margin-top: .5rem; }
   font-weight: var(--weight-semibold);
   white-space: nowrap;
   cursor: pointer;
+  transition: background-color .15s ease, color .15s ease, border-color .15s ease;
 }
 :is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"]:hover {
   background: var(--surface-raised);
   color: var(--fg);
+  border-color: var(--line);
 }
 :is(.style-tabs, .research-tabs, .modal-tabs) > button[aria-selected="true"] {
+  border-color: var(--line);
   border-bottom-color: var(--accent);
   background: var(--accent-light);
   color: var(--accent);
@@ -922,9 +934,15 @@ h1 {
 }
 .research-form-field { flex: 1 1 12rem; min-width: 0; }
 .settings-advanced {
-  margin: 0;
+  margin-top: .75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: .35rem .75rem;
+  transition: border-color .15s ease, background-color .15s ease;
   & summary { cursor: pointer; font-weight: var(--weight-semibold); font-size: var(--text-control); padding-block: .4rem; }
-  &[open] > summary { margin-bottom: .5rem; }
+  &[open] { padding-bottom: .85rem; }
+  &[open] > summary { margin-bottom: .5rem; border-bottom: 1px solid var(--line); padding-bottom: .55rem; }
 }
 .settings-actions, .matrix-tools { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; margin-top: .8rem; }
 .project-audio-actions > h3 { margin: 0 0 .6rem; }
@@ -1425,8 +1443,8 @@ body:not(.has-js-paragraphs) .ptext-inner { padding: .8rem 1rem; }
   position: relative;
   & i {
     position: absolute; inset-inline-end: .4rem; inset-block-end: .3rem;
-    height: 2px; width: var(--v); max-width: 3.4rem; background: var(--accent);
-    opacity: .35; border-radius: var(--radius-xs);
+    height: 3px; width: var(--v); max-width: 3.4rem; background: var(--accent);
+    opacity: .75; border-radius: var(--radius-pill);
   }
 }
 
@@ -3081,11 +3099,16 @@ button.research-tag {
   font-size: var(--text-micro);
   padding: 0.12rem 0.5rem;
   border-radius: var(--radius-pill);
-  background: var(--bg-subtle, rgba(0, 0, 0, 0.04));
-  color: var(--fg-muted, #555);
-  border: 1px solid var(--line-subtle, var(--line));
+  background: var(--surface-raised);
+  color: var(--muted);
+  border: 1px solid var(--line);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+.research-card-meta-pill:hover {
+  color: var(--fg);
+  border-color: var(--accent);
 }
 .research-card-actions {
   display: flex;
@@ -5140,7 +5163,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 .project-overview-heading h3 { margin: 0; }
 .project-overview-heading .ctl { flex-shrink: 0; }
 .project-overview-workflow h4, .project-overview-outputs h4 { font-size: .9rem; margin: .9rem 0 .6rem; }
-.project-overview-actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: flex-start; }
+.project-overview-actions { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
 .project-overview-action { min-width: 0; }
 .project-overview-action .ctl-note { max-width: 24rem; margin: .25rem 0; }
 .project-overview-technical { margin-top: 1rem; }
@@ -5161,8 +5184,20 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 .project-overview-row .ctl { margin-top: .35rem; }
 .project-overview-artifacts { margin-top: .75rem; }
 .project-overview-artifacts .project-overview-row-heading strong { overflow-wrap: anywhere; }
-.project-overview-browser, .project-overview-output-group { margin-top: .65rem; }
+.project-overview-browser {
+  margin-top: .65rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: .5rem .75rem;
+  background: var(--surface);
+}
+.project-overview-browser[open] { padding-bottom: .85rem; }
 .project-overview-browser summary, .project-overview-output-group summary { cursor: pointer; font-size: .9rem; font-weight: 600; }
+.project-overview-output-group {
+  margin-top: .65rem;
+  border-top: 1px solid var(--line);
+  padding-top: .45rem;
+}
 .project-overview-search { display: flex; flex-direction: column; gap: .3rem; margin: .75rem 0; font-size: .85rem; }
 .project-overview-search input { max-width: 100%; }
 .project-overview-findings { margin-top: 1.25rem; }
@@ -5530,7 +5565,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 </section>
 
 
-<section class="panel" id="scenes"><h2>Scenes &amp; style registers</h2><p class="hint">Each scene is measured separately. Registers and target ranges are project choices, not quality judgments. Chapters serve as scenes when no dividers are present. Set assignments and targets in lixity.toml.</p><p class="hint">Word and sentence counts show the sample size. HD-D is unavailable below 100 words; sentence variation needs at least two sentences. Standard errors are approximations, not validated confidence intervals. A dash means unavailable; even an observed zero does not establish certainty.</p><div class="table-wrap scene-overview" tabindex="0" role="region" aria-label="Scenes &amp; style registers"><table><thead><tr><th>Scenes &amp; style registers</th><th>words</th><th>sentences</th><th>ASL</th><th>Quoted words</th></tr></thead><tbody><tr><th><a href="#scene-metrics-1-1" data-jump="#scene-metrics-1-1">Chapter I · Scene 1</a> <small>Unassigned</small></th><td>849</td><td>59</td><td>14.39</td><td>78.8 %</td></tr><tr><th><a href="#scene-metrics-2-1" data-jump="#scene-metrics-2-1">Chapter II · Scene 1</a> <small>Unassigned</small></th><td>798</td><td>53</td><td>15.06</td><td>71.2 %</td></tr><tr><th><a href="#scene-metrics-3-1" data-jump="#scene-metrics-3-1">Chapter III · Scene 1</a> <small>Unassigned</small></th><td>1698</td><td>85</td><td>19.98</td><td>34.0 %</td></tr></tbody></table></div><details class="scene-measurements"><summary>Scene measurements (3)</summary><details class="scene-detail" data-scene="1:1"><summary>Chapter I · Scene 1 · Unassigned · words: 849 · sentences: 59</summary><p><a class="ctl-link" href="#ch-1" data-jump="#ch-1">Open containing chapter: Chapter I→</a></p><div class="table-wrap" id="scene-metrics-1-1" tabindex="0" role="region" aria-label="Scene measurements · 1:1"><table><thead><tr><th>Scenes &amp; style registers</th><th>Value</th><th>Standard error</th></tr></thead><tbody><tr><th>ASL <small>words per sentence</small></th><td>14.39</td><td>1.75</td></tr><tr><th>Staccato <small>% of sentences</small></th><td>28.81</td><td>5.90</td></tr><tr><th>Long sentences <small>% of sentences</small></th><td>13.56</td><td>4.46</td></tr><tr><th>Sentence CV <small>coefficient</small></th><td>0.93</td><td>0.14</td></tr><tr><th>Quoted words <small>% of words</small></th><td>78.80</td><td>1.40</td></tr><tr><th>Function words <small>% of words</small></th><td>52.65</td><td>1.71</td></tr><tr><th>Perception filters <small>per 1,000 words</small></th><td>2.36</td><td>1.67</td></tr><tr><th>Modals <small>per 1,000 words</small></th><td>22.38</td><td>5.13</td></tr><tr><th>Passive patterns <small>per 1,000 words</small></th><td>7.07</td><td>2.89</td></tr><tr><th>Noun endings <small>per 1,000 words</small></th><td>23.56</td><td>5.27</td></tr><tr><th>Adjective endings <small>per 1,000 words</small></th><td>9.42</td><td>3.33</td></tr><tr><th>Long words <small>% of words</small></th><td>12.96</td><td>1.15</td></tr><tr><th>Starter entropy <small>bit</small></th><td>4.56</td><td>0.14</td></tr><tr><th>I-starts <small>% of sentences</small></th><td>10.17</td><td>3.93</td></tr><tr><th>Guiraud R <small>index</small></th><td>11.02</td><td>0.19</td></tr><tr><th>HD-D <small>index (0–1)</small></th><td>0.86</td><td>—</td></tr></tbody></table></div></details><details class="scene-detail" data-scene="2:1"><summary>Chapter II · Scene 1 · Unassigned · words: 798 · sentences: 53</summary><p><a class="ctl-link" href="#ch-2" data-jump="#ch-2">Open containing chapter: Chapter II→</a></p><div class="table-wrap" id="scene-metrics-2-1" tabindex="0" role="region" aria-label="Scene measurements · 2:1"><table><thead><tr><th>Scenes &amp; style registers</th><th>Value</th><th>Standard error</th></tr></thead><tbody><tr><th>ASL <small>words per sentence</small></th><td>15.06</td><td>1.29</td></tr><tr><th>Staccato <small>% of sentences</small></th><td>15.09</td><td>4.92</td></tr><tr><th>Long sentences <small>% of sentences</small></th><td>13.21</td><td>4.65</td></tr><tr><th>Sentence CV <small>coefficient</small></th><td>0.63</td><td>0.08</td></tr><tr><th>Quoted words <small>% of words</small></th><td>71.18</td><td>1.60</td></tr><tr><th>Function words <small>% of words</small></th><td>51.38</td><td>1.77</td></tr><tr><th>Perception filters <small>per 1,000 words</small></th><td>1.25</td><td>1.25</td></tr><tr><th>Modals <small>per 1,000 words</small></th><td>15.04</td><td>4.34</td></tr><tr><th>Passive patterns <small>per 1,000 words</small></th><td>0.00</td><td>—</td></tr><tr><th>Noun endings <small>per 1,000 words</small></th><td>21.30</td><td>5.17</td></tr><tr><th>Adjective endings <small>per 1,000 words</small></th><td>7.52</td><td>3.07</td></tr><tr><th>Long words <small>% of words</small></th><td>13.41</td><td>1.21</td></tr><tr><th>Starter entropy <small>bit</small></th><td>4.81</td><td>0.16</td></tr><tr><th>I-starts <small>% of sentences</small></th><td>16.98</td><td>5.16</td></tr><tr><th>Guiraud R <small>index</small></th><td>10.94</td><td>0.19</td></tr><tr><th>HD-D <small>index (0–1)</small></th><td>0.86</td><td>—</td></tr></tbody></table></div></details><details class="scene-detail" data-scene="3:1"><summary>Chapter III · Scene 1 · Unassigned · words: 1698 · sentences: 85</summary><p><a class="ctl-link" href="#ch-3" data-jump="#ch-3">Open containing chapter: Chapter III→</a></p><div class="table-wrap" id="scene-metrics-3-1" tabindex="0" role="region" aria-label="Scene measurements · 3:1"><table><thead><tr><th>Scenes &amp; style registers</th><th>Value</th><th>Standard error</th></tr></thead><tbody><tr><th>ASL <small>words per sentence</small></th><td>19.98</td><td>1.61</td></tr><tr><th>Staccato <small>% of sentences</small></th><td>17.65</td><td>4.13</td></tr><tr><th>Long sentences <small>% of sentences</small></th><td>32.94</td><td>5.10</td></tr><tr><th>Sentence CV <small>coefficient</small></th><td>0.74</td><td>0.08</td></tr><tr><th>Quoted words <small>% of words</small></th><td>34.04</td><td>1.15</td></tr><tr><th>Function words <small>% of words</small></th><td>48.41</td><td>1.21</td></tr><tr><th>Perception filters <small>per 1,000 words</small></th><td>1.77</td><td>1.02</td></tr><tr><th>Modals <small>per 1,000 words</small></th><td>10.60</td><td>2.50</td></tr><tr><th>Passive patterns <small>per 1,000 words</small></th><td>14.72</td><td>2.94</td></tr><tr><th>Noun endings <small>per 1,000 words</small></th><td>28.86</td><td>4.12</td></tr><tr><th>Adjective endings <small>per 1,000 words</small></th><td>17.08</td><td>3.17</td></tr><tr><th>Long words <small>% of words</small></th><td>19.32</td><td>0.96</td></tr><tr><th>Starter entropy <small>bit</small></th><td>5.00</td><td>0.13</td></tr><tr><th>I-starts <small>% of sentences</small></th><td>10.59</td><td>3.34</td></tr><tr><th>Guiraud R <small>index</small></th><td>13.78</td><td>0.17</td></tr><tr><th>HD-D <small>index (0–1)</small></th><td>0.86</td><td>—</td></tr></tbody></table></div></details></details></section>
+<section class="panel" id="scenes"><h2>Scenes &amp; style registers</h2><p class="hint">Each scene is measured separately. Registers and target ranges are project choices, not quality judgments. Chapters serve as scenes when no dividers are present. Set assignments and targets in lixity.toml.</p><p class="hint">Word and sentence counts show the sample size. HD-D is unavailable below 100 words; sentence variation needs at least two sentences. Standard errors are approximations, not validated confidence intervals. A dash means unavailable; even an observed zero does not establish certainty.</p><div class="table-wrap scene-overview" tabindex="0" role="region" aria-label="Scenes &amp; style registers"><table><thead><tr><th scope="col">Scenes &amp; style registers</th><th scope="col" class="num">words</th><th scope="col" class="num">sentences</th><th scope="col" class="num">ASL</th><th scope="col" class="num">Quoted words</th></tr></thead><tbody><tr><th><a href="#scene-metrics-1-1" data-jump="#scene-metrics-1-1">Chapter I · Scene 1</a> <span class="badge badge-neutral">Unassigned</span></th><td class="num">849</td><td class="num">59</td><td class="num">14.39</td><td class="num">78.8 %</td></tr><tr><th><a href="#scene-metrics-2-1" data-jump="#scene-metrics-2-1">Chapter II · Scene 1</a> <span class="badge badge-neutral">Unassigned</span></th><td class="num">798</td><td class="num">53</td><td class="num">15.06</td><td class="num">71.2 %</td></tr><tr><th><a href="#scene-metrics-3-1" data-jump="#scene-metrics-3-1">Chapter III · Scene 1</a> <span class="badge badge-neutral">Unassigned</span></th><td class="num">1698</td><td class="num">85</td><td class="num">19.98</td><td class="num">34.0 %</td></tr></tbody></table></div><details class="scene-measurements"><summary>Scene measurements (3)</summary><details class="scene-detail" data-scene="1:1"><summary>Chapter I · Scene 1 · Unassigned · words: 849 · sentences: 59</summary><p><a class="ctl-link" href="#ch-1" data-jump="#ch-1">Open containing chapter: Chapter I→</a></p><div class="table-wrap" id="scene-metrics-1-1" tabindex="0" role="region" aria-label="Scene measurements · 1:1"><table><thead><tr><th scope="col">Scenes &amp; style registers</th><th scope="col" class="num">Value</th><th scope="col" class="num">Standard error</th></tr></thead><tbody><tr><th scope="row">ASL <small>words per sentence</small></th><td class="num">14.39</td><td class="num">1.75</td></tr><tr><th scope="row">Staccato <small>% of sentences</small></th><td class="num">28.81</td><td class="num">5.90</td></tr><tr><th scope="row">Long sentences <small>% of sentences</small></th><td class="num">13.56</td><td class="num">4.46</td></tr><tr><th scope="row">Sentence CV <small>coefficient</small></th><td class="num">0.93</td><td class="num">0.14</td></tr><tr><th scope="row">Quoted words <small>% of words</small></th><td class="num">78.80</td><td class="num">1.40</td></tr><tr><th scope="row">Function words <small>% of words</small></th><td class="num">52.65</td><td class="num">1.71</td></tr><tr><th scope="row">Perception filters <small>per 1,000 words</small></th><td class="num">2.36</td><td class="num">1.67</td></tr><tr><th scope="row">Modals <small>per 1,000 words</small></th><td class="num">22.38</td><td class="num">5.13</td></tr><tr><th scope="row">Passive patterns <small>per 1,000 words</small></th><td class="num">7.07</td><td class="num">2.89</td></tr><tr><th scope="row">Noun endings <small>per 1,000 words</small></th><td class="num">23.56</td><td class="num">5.27</td></tr><tr><th scope="row">Adjective endings <small>per 1,000 words</small></th><td class="num">9.42</td><td class="num">3.33</td></tr><tr><th scope="row">Long words <small>% of words</small></th><td class="num">12.96</td><td class="num">1.15</td></tr><tr><th scope="row">Starter entropy <small>bit</small></th><td class="num">4.56</td><td class="num">0.14</td></tr><tr><th scope="row">I-starts <small>% of sentences</small></th><td class="num">10.17</td><td class="num">3.93</td></tr><tr><th scope="row">Guiraud R <small>index</small></th><td class="num">11.02</td><td class="num">0.19</td></tr><tr><th scope="row">HD-D <small>index (0–1)</small></th><td class="num">0.86</td><td class="num">—</td></tr></tbody></table></div></details><details class="scene-detail" data-scene="2:1"><summary>Chapter II · Scene 1 · Unassigned · words: 798 · sentences: 53</summary><p><a class="ctl-link" href="#ch-2" data-jump="#ch-2">Open containing chapter: Chapter II→</a></p><div class="table-wrap" id="scene-metrics-2-1" tabindex="0" role="region" aria-label="Scene measurements · 2:1"><table><thead><tr><th scope="col">Scenes &amp; style registers</th><th scope="col" class="num">Value</th><th scope="col" class="num">Standard error</th></tr></thead><tbody><tr><th scope="row">ASL <small>words per sentence</small></th><td class="num">15.06</td><td class="num">1.29</td></tr><tr><th scope="row">Staccato <small>% of sentences</small></th><td class="num">15.09</td><td class="num">4.92</td></tr><tr><th scope="row">Long sentences <small>% of sentences</small></th><td class="num">13.21</td><td class="num">4.65</td></tr><tr><th scope="row">Sentence CV <small>coefficient</small></th><td class="num">0.63</td><td class="num">0.08</td></tr><tr><th scope="row">Quoted words <small>% of words</small></th><td class="num">71.18</td><td class="num">1.60</td></tr><tr><th scope="row">Function words <small>% of words</small></th><td class="num">51.38</td><td class="num">1.77</td></tr><tr><th scope="row">Perception filters <small>per 1,000 words</small></th><td class="num">1.25</td><td class="num">1.25</td></tr><tr><th scope="row">Modals <small>per 1,000 words</small></th><td class="num">15.04</td><td class="num">4.34</td></tr><tr><th scope="row">Passive patterns <small>per 1,000 words</small></th><td class="num">0.00</td><td class="num">—</td></tr><tr><th scope="row">Noun endings <small>per 1,000 words</small></th><td class="num">21.30</td><td class="num">5.17</td></tr><tr><th scope="row">Adjective endings <small>per 1,000 words</small></th><td class="num">7.52</td><td class="num">3.07</td></tr><tr><th scope="row">Long words <small>% of words</small></th><td class="num">13.41</td><td class="num">1.21</td></tr><tr><th scope="row">Starter entropy <small>bit</small></th><td class="num">4.81</td><td class="num">0.16</td></tr><tr><th scope="row">I-starts <small>% of sentences</small></th><td class="num">16.98</td><td class="num">5.16</td></tr><tr><th scope="row">Guiraud R <small>index</small></th><td class="num">10.94</td><td class="num">0.19</td></tr><tr><th scope="row">HD-D <small>index (0–1)</small></th><td class="num">0.86</td><td class="num">—</td></tr></tbody></table></div></details><details class="scene-detail" data-scene="3:1"><summary>Chapter III · Scene 1 · Unassigned · words: 1698 · sentences: 85</summary><p><a class="ctl-link" href="#ch-3" data-jump="#ch-3">Open containing chapter: Chapter III→</a></p><div class="table-wrap" id="scene-metrics-3-1" tabindex="0" role="region" aria-label="Scene measurements · 3:1"><table><thead><tr><th scope="col">Scenes &amp; style registers</th><th scope="col" class="num">Value</th><th scope="col" class="num">Standard error</th></tr></thead><tbody><tr><th scope="row">ASL <small>words per sentence</small></th><td class="num">19.98</td><td class="num">1.61</td></tr><tr><th scope="row">Staccato <small>% of sentences</small></th><td class="num">17.65</td><td class="num">4.13</td></tr><tr><th scope="row">Long sentences <small>% of sentences</small></th><td class="num">32.94</td><td class="num">5.10</td></tr><tr><th scope="row">Sentence CV <small>coefficient</small></th><td class="num">0.74</td><td class="num">0.08</td></tr><tr><th scope="row">Quoted words <small>% of words</small></th><td class="num">34.04</td><td class="num">1.15</td></tr><tr><th scope="row">Function words <small>% of words</small></th><td class="num">48.41</td><td class="num">1.21</td></tr><tr><th scope="row">Perception filters <small>per 1,000 words</small></th><td class="num">1.77</td><td class="num">1.02</td></tr><tr><th scope="row">Modals <small>per 1,000 words</small></th><td class="num">10.60</td><td class="num">2.50</td></tr><tr><th scope="row">Passive patterns <small>per 1,000 words</small></th><td class="num">14.72</td><td class="num">2.94</td></tr><tr><th scope="row">Noun endings <small>per 1,000 words</small></th><td class="num">28.86</td><td class="num">4.12</td></tr><tr><th scope="row">Adjective endings <small>per 1,000 words</small></th><td class="num">17.08</td><td class="num">3.17</td></tr><tr><th scope="row">Long words <small>% of words</small></th><td class="num">19.32</td><td class="num">0.96</td></tr><tr><th scope="row">Starter entropy <small>bit</small></th><td class="num">5.00</td><td class="num">0.13</td></tr><tr><th scope="row">I-starts <small>% of sentences</small></th><td class="num">10.59</td><td class="num">3.34</td></tr><tr><th scope="row">Guiraud R <small>index</small></th><td class="num">13.78</td><td class="num">0.17</td></tr><tr><th scope="row">HD-D <small>index (0–1)</small></th><td class="num">0.86</td><td class="num">—</td></tr></tbody></table></div></details></details></section>
 
 <section class="panel" id="dist"><h2>Sentence lengths</h2><div class="dist"><div class="row"><span>≤ 6</span><span class="bar"><i style="width:20.7%"></i></span><span class="val">41 · 20.7%</span></div><div class="row"><span>7–15</span><span class="bar"><i style="width:37.4%"></i></span><span class="val">74 · 37.4%</span></div><div class="row"><span>16–25</span><span class="bar"><i style="width:20.2%"></i></span><span class="val">40 · 20.2%</span></div><div class="row"><span>> 25</span><span class="bar"><i style="width:21.7%"></i></span><span class="val">43 · 21.7%</span></div></div></section>
 
@@ -5558,14 +5593,14 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 <th scope="col"><span class="help" data-help="Opens the chapter. Flagged rows also enable the paragraph filter." tabindex="0">#</span></th><th scope="col"><span class="help" data-help="Opens the chapter. Flagged rows also enable the paragraph filter." tabindex="0">Chapter</span></th><th scope="col" class="num"><span class="help" data-help="Words in the paragraphs and lists shown here. Blockquotes count only in the separate corpus analysis." tabindex="0">words</span></th><th scope="col" class="num"><span class="help" data-help="Average words per detected sentence. Describes length, not suspense or narrative pace." tabindex="0">ASL</span></th><th scope="col" class="num"><span class="help" data-help="Share of words inside recognized quotation marks. Quotes are not always dialogue; other quotation forms may be missed." tabindex="0">Quoted words</span></th><th scope="col" class="num"><span class="help" data-help="Share of words on the language-specific function-word list, such as articles and pronouns. Higher = more listed words, not less meaning." tabindex="0">function words</span></th><th scope="col"><span class="help" data-help="Dominant tense from language markers: past, present, mixed or neutral. A heuristic, not a grammatical verdict." tabindex="0">Past/Present</span></th><th scope="col" class="num"><span class="help" data-help="Number of paragraphs meeting the active severity threshold. These are review hints, not errors or FDR results." tabindex="0">flagged</span></th>
 <th scope="col" class="num"><span class="help" data-help="Number of features above the deviation threshold. 0 = none above it; – = no comparison. Not an FDR count or quality rating." tabindex="0">deviation</span></th>
 </tr></thead><tbody>
-<tr class="row-link" data-jump="#ch-1" data-flags="1"><td>1</td><td><a class="chapter-link" href="#ch-1" data-jump="#ch-1" data-flags="1">Chapter I</a></td><td class="num">849</td><td class="num bar-cell"><i style="--v:72%"></i>14.4</td><td class="num bar-cell"><i style="--v:100%"></i>78.8%</td><td class="num">52.6%</td><td>Present</td><td class="num">3</td>
+<tr class="row-link" data-jump="#ch-1" data-flags="1"><td>1</td><td><a class="chapter-link" href="#ch-1" data-jump="#ch-1" data-flags="1">Chapter I</a></td><td class="num">849</td><td class="num bar-cell"><i style="--v:72%"></i>14.4</td><td class="num bar-cell"><i style="--v:100%"></i>78.8%</td><td class="num">52.6%</td><td><span class="badge tense-present">Present</span></td><td class="num"><span class="badge badge-flag">3</span></td>
 <td class="num">0</td>
 </tr>
-<tr class="row-link" data-jump="#ch-2" data-flags="1"><td>2</td><td><a class="chapter-link" href="#ch-2" data-jump="#ch-2" data-flags="1">Chapter II</a></td><td class="num">798</td><td class="num bar-cell"><i style="--v:75%"></i>15.1</td><td class="num bar-cell"><i style="--v:90%"></i>71.2%</td><td class="num">51.4%</td><td>Mixed</td><td class="num">4</td>
+<tr class="row-link" data-jump="#ch-2" data-flags="1"><td>2</td><td><a class="chapter-link" href="#ch-2" data-jump="#ch-2" data-flags="1">Chapter II</a></td><td class="num">798</td><td class="num bar-cell"><i style="--v:75%"></i>15.1</td><td class="num bar-cell"><i style="--v:90%"></i>71.2%</td><td class="num">51.4%</td><td><span class="badge tense-mixed">Mixed</span></td><td class="num"><span class="badge badge-flag">4</span></td>
 <td class="num">0</td>
 </tr>
-<tr class="row-link" data-jump="#ch-3" data-flags="1"><td>3</td><td><a class="chapter-link" href="#ch-3" data-jump="#ch-3" data-flags="1">Chapter III</a></td><td class="num">1,698</td><td class="num bar-cell"><i style="--v:100%"></i>20.0</td><td class="num bar-cell"><i style="--v:43%"></i>34.0%</td><td class="num">48.4%</td><td>Past</td><td class="num">7</td>
-<td class="num" title="ASL: z* = +2.6, Long sentences: z* = +3.8, Quoted words: z* = -3.3, Long words: z* = +5.1, Guiraud R: z* = +13.6">5</td>
+<tr class="row-link" data-jump="#ch-3" data-flags="1"><td>3</td><td><a class="chapter-link" href="#ch-3" data-jump="#ch-3" data-flags="1">Chapter III</a></td><td class="num">1,698</td><td class="num bar-cell"><i style="--v:100%"></i>20.0</td><td class="num bar-cell"><i style="--v:43%"></i>34.0%</td><td class="num">48.4%</td><td><span class="badge tense-past">Past</span></td><td class="num"><span class="badge badge-flag">7</span></td>
+<td class="num" title="ASL: z* = +2.6, Long sentences: z* = +3.8, Quoted words: z* = -3.3, Long words: z* = +5.1, Guiraud R: z* = +13.6"><span class="badge badge-deviation">5</span></td>
 </tr>
 </tbody></table></div></section>
 </div>
@@ -6030,7 +6065,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
       }
       // The fixed popup may sit outside the reader toolbar's bounded scrollport.
       // Only its trigger must remain visible inside those compact controls.
-      if (parent.matches(".manuscript-reader-controls")) continue;
+      if (parent.matches(".manuscript-reader-controls, .workspace-shell")) continue;
       if (clipX && parent.scrollWidth > parent.clientWidth) {
         visible.left = Math.max(visible.left, left);
         visible.right = Math.min(visible.right, left + parent.clientWidth);
@@ -6083,6 +6118,11 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
     // across the trigger (which also made touch dismissal unreachable).
     tip.style.maxHeight = available + "px";
     tipH = tip.offsetHeight;
+    if (el.closest(".workspace-shell") && rect.right + tipW + 16 < innerWidth) {
+      tip.style.left = (rect.right + 10) + "px";
+      tip.style.top = Math.max(10, Math.min(innerHeight - tipH - 10, rect.top + (rect.height - tipH) / 2)) + "px";
+      return;
+    }
     var left = rect.left + (pointerHelp ? pointerOffsetX + 12 : 0);
     left = Math.max(visible.left, Math.min(visible.right - tipW, left));
     var top = useBelow ? anchorBottom + 6 : anchorTop - tipH - 6;
@@ -9033,8 +9073,11 @@ document.querySelectorAll("[data-action]").forEach(function (btn) {
           return html`<span key=${"b" + index} class=${"research-badge " + badge.cls} ...${extra}>${badge.label}</span>`;
         })}
         ${(item.metaRight && item.metaRight.length) ? html`<div class="research-card-meta">
-          ${item.metaRight.map(function (text, index) {
-            return html`<span key=${"m" + index} class="ctl-note research-card-meta-pill">${text}</span>`;
+          ${item.metaRight.map(function (meta, index) {
+            var text = (typeof meta === "object" && meta !== null) ? meta.text : meta;
+            var title = (typeof meta === "object" && meta !== null) ? meta.title : null;
+            var attrs = title ? {title: title, "data-help": title} : {};
+            return html`<span key=${"m" + index} class="ctl-note research-card-meta-pill" ...${attrs}>${text}</span>`;
           })}
         </div>` : null}
       </div>
@@ -10507,12 +10550,18 @@ async function refreshResearchSources(overview, changedId, freshRead) {
   }
   LixityResearchCards.render(listHost, {items: sources.map(function(s) {
     var external = s.context && s.context.external_reference;
+    var mediaOrPassages = ["image/png", "image/jpeg", "video/mp4", "video/webm"].includes(s.media_type)
+      ? s.media_type
+      : uiCountFormat("research_passages_count", s.passages);
+    var sizeKb = Math.round((s.byte_length || 0) / 1024) + " KB";
     return {
       key: JSON.stringify(s),
       id: s.id,
       title: s.title,
-      metaRight: [(["image/png", "image/jpeg", "video/mp4", "video/webm"].includes(s.media_type) ? s.media_type
-        : uiCountFormat("research_passages_count", s.passages)) + " · " + Math.round((s.byte_length || 0) / 1024) + " KB"],
+      metaRight: [{
+        text: mediaOrPassages + " · " + sizeKb,
+        title: uiLabel("research_tab_sources_help") || "Gespeicherte Quellenkopie"
+      }],
       idLine: s.id,
       tags: s.tags || [],
       tagsInteractive: true,
@@ -10576,10 +10625,21 @@ function renderResearchDossiersView(data) {
     var badges = d.review_needed
       ? [{label: uiLabel("research_review_needed"), cls: "badge-warning ml-2", title: uiLabel("research_review_needed_hint")}]
       : [];
-    var metaRight = [uiCountFormat("research_evidence_count", d.evidence_count)];
-    if (d.revision) metaRight.push(uiFormat("research_revision_number", { revision: d.revision }));
+    var metaRight = [{
+      text: uiCountFormat("research_evidence_count", d.evidence_count),
+      title: uiLabel("research_tab_claims_help") || "Belegverknüpfungen mit Manuskriptstellen und Quellen"
+    }];
+    if (d.revision) {
+      metaRight.push({
+        text: uiFormat("research_revision_number", { revision: d.revision }),
+        title: "Revisionsstand und Fassungsnummer dieses Dossiers"
+      });
+    }
     if (Array.isArray(d.collections) && d.collections.length) {
-      metaRight.push(d.collections.map(function(m) { return m.name + " #" + m.position; }).join(", "));
+      metaRight.push({
+        text: d.collections.map(function(m) { return m.name + " #" + m.position; }).join(", "),
+        title: uiLabel("research_dossier_collection") + " · Zugeordnete Sammlung und Reihenfolge"
+      });
     }
     return {
       key: JSON.stringify(d),
@@ -10943,7 +11003,12 @@ async function refreshResearchClaims(overview) {
       if (c.scope.actors && c.scope.actors.length) scopeParts.push(uiLabel("research_scope_actors") + " " + c.scope.actors.join(", "));
     }
     var metaRight = [];
-    if (c.revision) metaRight.push(uiFormat("research_revision_number", { revision: c.revision }));
+    if (c.revision) {
+      metaRight.push({
+        text: uiFormat("research_revision_number", { revision: c.revision }),
+        title: "Revisionsstand und Fassungsnummer dieser These"
+      });
+    }
     var dossierLine = null;
     if (c.dossier_id) {
       dossierLine = uiLabel("research_dossier") + ": " + c.dossier_id +
@@ -10992,7 +11057,12 @@ async function refreshResearchDecisions(overview) {
       ? {label: uiLabel("research_deliberate_deviation"), cls: "badge-warning"}
       : {label: uiLabel("research_no_deviation_recorded"), cls: "badge-neutral"}];
     var metaRight = [];
-    if (d.revision) metaRight.push(uiFormat("research_revision_number", { revision: d.revision }));
+    if (d.revision) {
+      metaRight.push({
+        text: uiFormat("research_revision_number", { revision: d.revision }),
+        title: "Revisionsstand und Fassungsnummer dieser Entscheidung"
+      });
+    }
     var claimLine = null;
     if (d.claim_id) {
       claimLine = uiLabel("research_decision_claim") + " " + d.claim_id +
@@ -12247,10 +12317,19 @@ document.addEventListener("click", async function (event) {
         '<div class="table-wrap mt-2"><table class="research-table">' +
           '<thead><tr><th>Merkmal</th><th class="num-right">Quelle</th><th class="num-right">Manuskript</th><th class="num-right">Differenz (Δ)</th></tr></thead>' +
           '<tbody>' +
-            '<tr><td>Mittlere Satzlänge (ASL)</td><td class="num-right">' + (reg.asl ? reg.asl.source : '–') + '</td><td class="num-right">' + (reg.asl ? reg.asl.manuscript : '–') + '</td><td class="num-right"><strong>' + (reg.asl ? (reg.asl.delta > 0 ? '+' : '') + reg.asl.delta : '–') + '</strong></td></tr>' +
-            '<tr><td>Dialoganteil (%)</td><td class="num-right">' + (reg.dialogue_pct ? (reg.dialogue_pct.source * 100).toFixed(1) + '%' : '–') + '</td><td class="num-right">' + (reg.dialogue_pct ? (reg.dialogue_pct.manuscript * 100).toFixed(1) + '%' : '–') + '</td><td class="num-right"><strong>' + (reg.dialogue_pct ? (reg.dialogue_pct.delta > 0 ? '+' : '') + (reg.dialogue_pct.delta * 100).toFixed(1) + '%' : '–') + '</strong></td></tr>' +
-            '<tr><td>Wortschatzreichtum (Guiraud R)</td><td class="num-right">' + (reg.guiraud_r ? reg.guiraud_r.source : '–') + '</td><td class="num-right">' + (reg.guiraud_r ? reg.guiraud_r.manuscript : '–') + '</td><td class="num-right"><strong>' + (reg.guiraud_r ? (reg.guiraud_r.delta > 0 ? '+' : '') + reg.guiraud_r.delta : '–') + '</strong></td></tr>' +
-            '<tr><td>Vokabularwiederholung (Yule’s K)</td><td class="num-right">' + (reg.yules_k ? reg.yules_k.source : '–') + '</td><td class="num-right">' + (reg.yules_k ? reg.yules_k.manuscript : '–') + '</td><td class="num-right"><strong>' + (reg.yules_k ? (reg.yules_k.delta > 0 ? '+' : '') + reg.yules_k.delta : '–') + '</strong></td></tr>' +
+            (function() {
+              function diffCell(obj, isPct) {
+                if (!obj || obj.delta === undefined || obj.delta === null) return '–';
+                var d = obj.delta;
+                var cls = d > 0 ? 'delta-positive' : (d < 0 ? 'delta-negative' : '');
+                var formatted = isPct ? ((d > 0 ? '+' : '') + (d * 100).toFixed(1) + '%') : ((d > 0 ? '+' : '') + d);
+                return '<strong class="' + cls + '">' + formatted + '</strong>';
+              }
+              return '<tr><td>Mittlere Satzlänge (ASL)</td><td class="num-right">' + (reg.asl ? reg.asl.source : '–') + '</td><td class="num-right">' + (reg.asl ? reg.asl.manuscript : '–') + '</td><td class="num-right">' + diffCell(reg.asl, false) + '</td></tr>' +
+                '<tr><td>Dialoganteil (%)</td><td class="num-right">' + (reg.dialogue_pct ? (reg.dialogue_pct.source * 100).toFixed(1) + '%' : '–') + '</td><td class="num-right">' + (reg.dialogue_pct ? (reg.dialogue_pct.manuscript * 100).toFixed(1) + '%' : '–') + '</td><td class="num-right">' + diffCell(reg.dialogue_pct, true) + '</td></tr>' +
+                '<tr><td>Wortschatzreichtum (Guiraud R)</td><td class="num-right">' + (reg.guiraud_r ? reg.guiraud_r.source : '–') + '</td><td class="num-right">' + (reg.guiraud_r ? reg.guiraud_r.manuscript : '–') + '</td><td class="num-right">' + diffCell(reg.guiraud_r, false) + '</td></tr>' +
+                '<tr><td>Vokabularwiederholung (Yule’s K)</td><td class="num-right">' + (reg.yules_k ? reg.yules_k.source : '–') + '</td><td class="num-right">' + (reg.yules_k ? reg.yules_k.manuscript : '–') + '</td><td class="num-right">' + diffCell(reg.yules_k, false) + '</td></tr>';
+            })() +
           '</tbody>' +
         '</table></div>' +
       '</details>';
@@ -15051,10 +15130,11 @@ window.LixityManuscriptLinks = {
   function audioAction(id, kind, label) {
     var target = document.getElementById(id);
     if (!target) return null;
-    var button = node("button", "ctl", text(label));
-    button.type = "button"; button.dataset.projectAudio = kind;
-    button.addEventListener("click", function () { target.click(); });
-    return button;
+    target.dataset.projectAudio = kind;
+    if (label) target.textContent = text(label);
+    var container = target.closest(".project-audio-actions");
+    if (container) container.hidden = true;
+    return target;
   }
   function outputRow(artifact, token) {
     var row = node("li", "project-overview-row"), heading = node("div", "project-overview-row-heading");

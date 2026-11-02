@@ -273,7 +273,7 @@
       }
       // The fixed popup may sit outside the reader toolbar's bounded scrollport.
       // Only its trigger must remain visible inside those compact controls.
-      if (parent.matches(".manuscript-reader-controls")) continue;
+      if (parent.matches(".manuscript-reader-controls, .workspace-shell")) continue;
       if (clipX && parent.scrollWidth > parent.clientWidth) {
         visible.left = Math.max(visible.left, left);
         visible.right = Math.min(visible.right, left + parent.clientWidth);
@@ -326,6 +326,11 @@
     // across the trigger (which also made touch dismissal unreachable).
     tip.style.maxHeight = available + "px";
     tipH = tip.offsetHeight;
+    if (el.closest(".workspace-shell") && rect.right + tipW + 16 < innerWidth) {
+      tip.style.left = (rect.right + 10) + "px";
+      tip.style.top = Math.max(10, Math.min(innerHeight - tipH - 10, rect.top + (rect.height - tipH) / 2)) + "px";
+      return;
+    }
     var left = rect.left + (pointerHelp ? pointerOffsetX + 12 : 0);
     left = Math.max(visible.left, Math.min(visible.right - tipW, left));
     var top = useBelow ? anchorBottom + 6 : anchorTop - tipH - 6;

@@ -126,12 +126,18 @@ async function refreshResearchSources(overview, changedId, freshRead) {
   }
   LixityResearchCards.render(listHost, {items: sources.map(function(s) {
     var external = s.context && s.context.external_reference;
+    var mediaOrPassages = ["image/png", "image/jpeg", "video/mp4", "video/webm"].includes(s.media_type)
+      ? s.media_type
+      : uiCountFormat("research_passages_count", s.passages);
+    var sizeKb = Math.round((s.byte_length || 0) / 1024) + " KB";
     return {
       key: JSON.stringify(s),
       id: s.id,
       title: s.title,
-      metaRight: [(["image/png", "image/jpeg", "video/mp4", "video/webm"].includes(s.media_type) ? s.media_type
-        : uiCountFormat("research_passages_count", s.passages)) + " · " + Math.round((s.byte_length || 0) / 1024) + " KB"],
+      metaRight: [{
+        text: mediaOrPassages + " · " + sizeKb,
+        title: uiLabel("research_tab_sources_help") || "Gespeicherte Quellenkopie"
+      }],
       idLine: s.id,
       tags: s.tags || [],
       tagsInteractive: true,
@@ -195,10 +201,21 @@ function renderResearchDossiersView(data) {
     var badges = d.review_needed
       ? [{label: uiLabel("research_review_needed"), cls: "badge-warning ml-2", title: uiLabel("research_review_needed_hint")}]
       : [];
-    var metaRight = [uiCountFormat("research_evidence_count", d.evidence_count)];
-    if (d.revision) metaRight.push(uiFormat("research_revision_number", { revision: d.revision }));
+    var metaRight = [{
+      text: uiCountFormat("research_evidence_count", d.evidence_count),
+      title: uiLabel("research_tab_claims_help") || "Belegverknüpfungen mit Manuskriptstellen und Quellen"
+    }];
+    if (d.revision) {
+      metaRight.push({
+        text: uiFormat("research_revision_number", { revision: d.revision }),
+        title: "Revisionsstand und Fassungsnummer dieses Dossiers"
+      });
+    }
     if (Array.isArray(d.collections) && d.collections.length) {
-      metaRight.push(d.collections.map(function(m) { return m.name + " #" + m.position; }).join(", "));
+      metaRight.push({
+        text: d.collections.map(function(m) { return m.name + " #" + m.position; }).join(", "),
+        title: uiLabel("research_dossier_collection") + " · Zugeordnete Sammlung und Reihenfolge"
+      });
     }
     return {
       key: JSON.stringify(d),
@@ -562,7 +579,12 @@ async function refreshResearchClaims(overview) {
       if (c.scope.actors && c.scope.actors.length) scopeParts.push(uiLabel("research_scope_actors") + " " + c.scope.actors.join(", "));
     }
     var metaRight = [];
-    if (c.revision) metaRight.push(uiFormat("research_revision_number", { revision: c.revision }));
+    if (c.revision) {
+      metaRight.push({
+        text: uiFormat("research_revision_number", { revision: c.revision }),
+        title: "Revisionsstand und Fassungsnummer dieser These"
+      });
+    }
     var dossierLine = null;
     if (c.dossier_id) {
       dossierLine = uiLabel("research_dossier") + ": " + c.dossier_id +
@@ -611,7 +633,12 @@ async function refreshResearchDecisions(overview) {
       ? {label: uiLabel("research_deliberate_deviation"), cls: "badge-warning"}
       : {label: uiLabel("research_no_deviation_recorded"), cls: "badge-neutral"}];
     var metaRight = [];
-    if (d.revision) metaRight.push(uiFormat("research_revision_number", { revision: d.revision }));
+    if (d.revision) {
+      metaRight.push({
+        text: uiFormat("research_revision_number", { revision: d.revision }),
+        title: "Revisionsstand und Fassungsnummer dieser Entscheidung"
+      });
+    }
     var claimLine = null;
     if (d.claim_id) {
       claimLine = uiLabel("research_decision_claim") + " " + d.claim_id +

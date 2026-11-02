@@ -210,12 +210,12 @@ th.sortable::after, th[data-sort]::after, table[data-sortable] th:not(.no-sort):
 th[aria-sort="ascending"]::after {
   content: " ↑";
   opacity: 1;
-  color: var(--action-bg, #3b82f6);
+  color: var(--accent);
 }
 th[aria-sort="descending"]::after {
   content: " ↓";
   opacity: 1;
-  color: var(--action-bg, #3b82f6);
+  color: var(--accent);
 }
 .table-bar-cell {
   display: inline-flex;
@@ -236,7 +236,7 @@ th[aria-sort="descending"]::after {
 }
 .table-bar-fill {
   height: 100%;
-  background: var(--action-bg, #3b82f6);
+  background: var(--accent);
   border-radius: var(--radius-pill);
   transition: width 0.25s ease;
 }
@@ -253,6 +253,8 @@ tbody tr.clickable-row:hover, tbody tr[data-action]:hover {
   background: var(--surface-hover);
 }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.val-positive, .delta-positive { color: var(--analysis-comparison-positive); font-variant-numeric: tabular-nums; font-weight: var(--weight-medium, 500); }
+.val-negative, .delta-negative { color: var(--analysis-comparison-negative); font-variant-numeric: tabular-nums; font-weight: var(--weight-medium, 500); }
 
 /* --- Badges & Dimension cards ----------------------------------------- */
 /* One badge family for every panel: compact text on a pill. Tone
@@ -273,10 +275,17 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   &.badge-success { background: var(--status-success-bg); color: var(--status-success-fg); border-color: var(--status-success-border); }
   &.badge-warning, &.badge-warn { background: var(--status-warning-bg); color: var(--status-warning-fg); border-color: var(--status-warning-border); }
   &.badge-neutral { background: var(--status-neutral-bg); color: var(--status-neutral-fg); border-color: var(--status-neutral-border); }
-  &.marker-pruefen { background: var(--marker-pruefen-bg); color: var(--marker-pruefen-fg); }
-  &.marker-sachcheck, &.sev-2 { background: var(--marker-sachcheck-bg); color: var(--marker-sachcheck-fg); }
-  &.marker-todo { background: var(--marker-todo-bg); color: var(--marker-todo-fg); }
-  &.marker-achtung, &.sev-3 { background: var(--marker-achtung-bg); color: var(--marker-achtung-fg); }
+  &.badge-present, &.tense-present { background: var(--present-light); color: var(--present); border-color: color-mix(in srgb, var(--present) 25%, transparent); }
+  &.badge-past, &.tense-past { background: var(--past-light); color: var(--past); border-color: color-mix(in srgb, var(--past) 25%, transparent); }
+  &.badge-mixed, &.tense-mixed { background: color-mix(in srgb, var(--mixed) 15%, var(--surface)); color: var(--mixed); border-color: color-mix(in srgb, var(--mixed) 28%, transparent); }
+  &.badge-neutral-tense, &.tense-neutral { background: var(--neutral); color: var(--status-neutral-fg); border-color: color-mix(in srgb, var(--neutral) 35%, transparent); }
+  &.badge-flag, &.badge-danger { background: var(--flag-light); color: var(--flag); border-color: color-mix(in srgb, var(--flag) 28%, transparent); font-weight: var(--weight-bold, 700); }
+  &.badge-deviation { background: var(--status-warning-bg); color: var(--status-warning-fg); border-color: var(--status-warning-border); font-weight: var(--weight-bold, 700); }
+  &.badge-register { background: var(--surface-raised); color: var(--accent); border-color: var(--line); font-weight: var(--weight-medium); }
+  &.marker-pruefen { background: var(--marker-pruefen-bg); color: var(--marker-pruefen-fg); border-color: color-mix(in srgb, currentColor 22%, transparent); }
+  &.marker-sachcheck, &.sev-2 { background: var(--marker-sachcheck-bg); color: var(--marker-sachcheck-fg); border-color: color-mix(in srgb, currentColor 22%, transparent); }
+  &.marker-todo { background: var(--marker-todo-bg); color: var(--marker-todo-fg); border-color: color-mix(in srgb, currentColor 22%, transparent); }
+  &.marker-achtung, &.sev-3 { background: var(--marker-achtung-bg); color: var(--marker-achtung-fg); border-color: color-mix(in srgb, currentColor 22%, transparent); }
 }
 
 /* --- Controls (local server mode) ------------------------------------- */
@@ -521,12 +530,15 @@ details.nda .row { margin-top: .5rem; }
   font-weight: var(--weight-semibold);
   white-space: nowrap;
   cursor: pointer;
+  transition: background-color .15s ease, color .15s ease, border-color .15s ease;
 }
 :is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"]:hover {
   background: var(--surface-raised);
   color: var(--fg);
+  border-color: var(--line);
 }
 :is(.style-tabs, .research-tabs, .modal-tabs) > button[aria-selected="true"] {
+  border-color: var(--line);
   border-bottom-color: var(--accent);
   background: var(--accent-light);
   color: var(--accent);

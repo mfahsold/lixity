@@ -941,10 +941,19 @@ document.addEventListener("click", async function (event) {
         '<div class="table-wrap mt-2"><table class="research-table">' +
           '<thead><tr><th>Merkmal</th><th class="num-right">Quelle</th><th class="num-right">Manuskript</th><th class="num-right">Differenz (Δ)</th></tr></thead>' +
           '<tbody>' +
-            '<tr><td>Mittlere Satzlänge (ASL)</td><td class="num-right">' + (reg.asl ? reg.asl.source : '–') + '</td><td class="num-right">' + (reg.asl ? reg.asl.manuscript : '–') + '</td><td class="num-right"><strong>' + (reg.asl ? (reg.asl.delta > 0 ? '+' : '') + reg.asl.delta : '–') + '</strong></td></tr>' +
-            '<tr><td>Dialoganteil (%)</td><td class="num-right">' + (reg.dialogue_pct ? (reg.dialogue_pct.source * 100).toFixed(1) + '%' : '–') + '</td><td class="num-right">' + (reg.dialogue_pct ? (reg.dialogue_pct.manuscript * 100).toFixed(1) + '%' : '–') + '</td><td class="num-right"><strong>' + (reg.dialogue_pct ? (reg.dialogue_pct.delta > 0 ? '+' : '') + (reg.dialogue_pct.delta * 100).toFixed(1) + '%' : '–') + '</strong></td></tr>' +
-            '<tr><td>Wortschatzreichtum (Guiraud R)</td><td class="num-right">' + (reg.guiraud_r ? reg.guiraud_r.source : '–') + '</td><td class="num-right">' + (reg.guiraud_r ? reg.guiraud_r.manuscript : '–') + '</td><td class="num-right"><strong>' + (reg.guiraud_r ? (reg.guiraud_r.delta > 0 ? '+' : '') + reg.guiraud_r.delta : '–') + '</strong></td></tr>' +
-            '<tr><td>Vokabularwiederholung (Yule’s K)</td><td class="num-right">' + (reg.yules_k ? reg.yules_k.source : '–') + '</td><td class="num-right">' + (reg.yules_k ? reg.yules_k.manuscript : '–') + '</td><td class="num-right"><strong>' + (reg.yules_k ? (reg.yules_k.delta > 0 ? '+' : '') + reg.yules_k.delta : '–') + '</strong></td></tr>' +
+            (function() {
+              function diffCell(obj, isPct) {
+                if (!obj || obj.delta === undefined || obj.delta === null) return '–';
+                var d = obj.delta;
+                var cls = d > 0 ? 'delta-positive' : (d < 0 ? 'delta-negative' : '');
+                var formatted = isPct ? ((d > 0 ? '+' : '') + (d * 100).toFixed(1) + '%') : ((d > 0 ? '+' : '') + d);
+                return '<strong class="' + cls + '">' + formatted + '</strong>';
+              }
+              return '<tr><td>Mittlere Satzlänge (ASL)</td><td class="num-right">' + (reg.asl ? reg.asl.source : '–') + '</td><td class="num-right">' + (reg.asl ? reg.asl.manuscript : '–') + '</td><td class="num-right">' + diffCell(reg.asl, false) + '</td></tr>' +
+                '<tr><td>Dialoganteil (%)</td><td class="num-right">' + (reg.dialogue_pct ? (reg.dialogue_pct.source * 100).toFixed(1) + '%' : '–') + '</td><td class="num-right">' + (reg.dialogue_pct ? (reg.dialogue_pct.manuscript * 100).toFixed(1) + '%' : '–') + '</td><td class="num-right">' + diffCell(reg.dialogue_pct, true) + '</td></tr>' +
+                '<tr><td>Wortschatzreichtum (Guiraud R)</td><td class="num-right">' + (reg.guiraud_r ? reg.guiraud_r.source : '–') + '</td><td class="num-right">' + (reg.guiraud_r ? reg.guiraud_r.manuscript : '–') + '</td><td class="num-right">' + diffCell(reg.guiraud_r, false) + '</td></tr>' +
+                '<tr><td>Vokabularwiederholung (Yule’s K)</td><td class="num-right">' + (reg.yules_k ? reg.yules_k.source : '–') + '</td><td class="num-right">' + (reg.yules_k ? reg.yules_k.manuscript : '–') + '</td><td class="num-right">' + diffCell(reg.yules_k, false) + '</td></tr>';
+            })() +
           '</tbody>' +
         '</table></div>' +
       '</details>';

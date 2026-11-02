@@ -1719,6 +1719,11 @@ def render_dashboard(
             chapter_flagged = sum(p.severity >= flag_min_severity for _, p in by_chapter.get(c.num, []))
             row_hint = ' data-flags="1"' if chapter_flagged else ""
             chapter_title = c.title if c.title.strip() else f'{label(labels, "chapter")} {c.num}'
+            flag_markup = (
+                f'<span class="badge badge-flag">{chapter_flagged}</span>'
+                if chapter_flagged
+                else '<span class="text-muted">0</span>'
+            )
             parts.append(
                 f'<tr class="row-link" data-jump="#ch-{c.num}"{row_hint}>'
                 f'<td>{c.num}</td><td>{chapter_link(c.num, chapter_title, flags=bool(chapter_flagged))}</td>'
@@ -1728,7 +1733,8 @@ def render_dashboard(
                 f'<td class="num bar-cell"><i style="--v:{c.dialog_pct / max_dialog * 100:.0f}%"></i>'
                 f"{P(c.dialog_pct)}</td>"
                 f'<td class="num">{P(c.function_word_pct)}</td>'
-                f'<td>{esc(tense_label(labels, c.dominant))}</td><td class="num">{chapter_flagged}</td>'
+                f'<td><span class="badge {tense_class(c.dominant)}">{esc(tense_label(labels, c.dominant))}</span></td>'
+                f'<td class="num">{flag_markup}</td>'
             )
             if fingerprint is not None:
                 dev = fingerprint.deviations.get(c.num, {})
@@ -1739,7 +1745,7 @@ def render_dashboard(
                         if (z := dev.get(field_name)) is not None
                     )
                     parts.append(
-                        f'<td class="num" title="{esc(named, quote=True)}">{len(dev)}</td>'
+                        f'<td class="num" title="{esc(named, quote=True)}"><span class="badge badge-deviation">{len(dev)}</span></td>'
                     )
                 elif any(z is not None for z in fingerprint.z_scores.get(c.num, {}).values()):
                     parts.append('<td class="num">0</td>')

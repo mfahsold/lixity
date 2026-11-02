@@ -3,7 +3,7 @@
 .project-overview-heading h3 { margin: 0; }
 .project-overview-heading .ctl { flex-shrink: 0; }
 .project-overview-workflow h4, .project-overview-outputs h4 { font-size: .9rem; margin: .9rem 0 .6rem; }
-.project-overview-actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: flex-start; }
+.project-overview-actions { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
 .project-overview-action { min-width: 0; }
 .project-overview-action .ctl-note { max-width: 24rem; margin: .25rem 0; }
 .project-overview-technical { margin-top: 1rem; }
@@ -24,8 +24,20 @@
 .project-overview-row .ctl { margin-top: .35rem; }
 .project-overview-artifacts { margin-top: .75rem; }
 .project-overview-artifacts .project-overview-row-heading strong { overflow-wrap: anywhere; }
-.project-overview-browser, .project-overview-output-group { margin-top: .65rem; }
+.project-overview-browser {
+  margin-top: .65rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: .5rem .75rem;
+  background: var(--surface);
+}
+.project-overview-browser[open] { padding-bottom: .85rem; }
 .project-overview-browser summary, .project-overview-output-group summary { cursor: pointer; font-size: .9rem; font-weight: 600; }
+.project-overview-output-group {
+  margin-top: .65rem;
+  border-top: 1px solid var(--line);
+  padding-top: .45rem;
+}
 .project-overview-search { display: flex; flex-direction: column; gap: .3rem; margin: .75rem 0; font-size: .85rem; }
 .project-overview-search input { max-width: 100%; }
 .project-overview-findings { margin-top: 1.25rem; }

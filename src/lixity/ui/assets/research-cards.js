@@ -97,8 +97,11 @@
           return html`<span key=${"b" + index} class=${"research-badge " + badge.cls} ...${extra}>${badge.label}</span>`;
         })}
         ${(item.metaRight && item.metaRight.length) ? html`<div class="research-card-meta">
-          ${item.metaRight.map(function (text, index) {
-            return html`<span key=${"m" + index} class="ctl-note research-card-meta-pill">${text}</span>`;
+          ${item.metaRight.map(function (meta, index) {
+            var text = (typeof meta === "object" && meta !== null) ? meta.text : meta;
+            var title = (typeof meta === "object" && meta !== null) ? meta.title : null;
+            var attrs = title ? {title: title, "data-help": title} : {};
+            return html`<span key=${"m" + index} class="ctl-note research-card-meta-pill" ...${attrs}>${text}</span>`;
           })}
         </div>` : null}
       </div>

@@ -120,6 +120,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   direction without manually supplying snapshot hashes.
 
 ### Changed
+- Restructured Project Settings & Overview: Reorganized project settings into elevated, distinct cards sorted by editorial workflow priority. Deduplicated audio actions by consolidating configuration into the primary workflow panel and cleanly collapsing large output file inventories into compact disclosures.
+- Sidebar Tooltip Ergonomics: Fixed sidebar tooltips (`.workspace-shell`) position smoothly to the right of the trigger button, preventing overlap with vertically stacked navigation tabs and eliminating pointer interception seams.
+- Screenshot Framing: Expanded `dashboard-reader-focus.png` capture frame to display complete paragraphs with balanced margins, eliminating cropped text in documentation and website walkthroughs.
 - Analysis overview sections, KPI groups, and work markers are ordered by
   editorial workflow relevance: flagged passages and open work markers first,
   followed by pacing and scenes, dialogue and sentence craft, character

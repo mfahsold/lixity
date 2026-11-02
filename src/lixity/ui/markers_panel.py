@@ -24,14 +24,14 @@ def render_markers_panel(
     parts: list[str] = ['<section class="panel" id="markers">']
     parts.append(f"<h2>{help_term(labels, 'markers', L('markers'))}</h2>")
     if markers:
-        parts.append('<div class="table-wrap">')
+        parts.append(f'<div class="table-wrap" tabindex="0" role="region" aria-label="{L("markers")}">')
         parts.append("<table><thead><tr>")
         parts.append(
-            f"<th>{L('status')}</th><th>{L('chapter')}</th>"
-            f'<th class="num">{L("line")}</th><th>{L("notes")}</th>'
+            f"<th scope=\"col\">{L('status')}</th><th scope=\"col\">{L('chapter')}</th>"
+            f'<th scope="col" class="num">{L("line")}</th><th scope="col">{L("notes")}</th>'
         )
         if controls:
-            parts.append("<th></th>")
+            parts.append('<th scope="col"></th>')
         parts.append("</tr></thead><tbody>")
         for m in markers:
             kind_label = label(labels, "marker_" + m.kind)

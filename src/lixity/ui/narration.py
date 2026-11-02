@@ -55,17 +55,19 @@ def render_scenes_panel(
     if scenes["items"]:
         parts.append('<div class="table-wrap scene-overview" tabindex="0" role="region" '
                      f'aria-label="{L("panel_scenes")}"><table><thead><tr>'
-                     f'<th>{L("panel_scenes")}</th><th>{L("words")}</th><th>{L("sentences")}</th>'
-                     f'<th>{L(asl_key)}</th><th>{L(dialog_key)}</th></tr></thead><tbody>')
+                     f'<th scope="col">{L("panel_scenes")}</th><th scope="col" class="num">{L("words")}</th>'
+                     f'<th scope="col" class="num">{L("sentences")}</th>'
+                     f'<th scope="col" class="num">{L(asl_key)}</th><th scope="col" class="num">{L(dialog_key)}</th></tr></thead><tbody>')
     for item in scenes["items"]:
         group = esc(item["group"]) if item["group"] else L("scene_unassigned")
+        group_badge = f'<span class="badge badge-register">{group}</span>' if item["group"] else f'<span class="badge badge-neutral">{group}</span>'
         dialog = item["features"].get("dialog_pct")
         dialog_text = "—" if dialog is None else f"{format_num(dialog, language_key, 1)} %"
         target = f'scene-metrics-{item["chapter"]}-{item["scene"]}'
         parts.append(
             f'<tr><th><a href="#{esc(target)}" data-jump="#{esc(target)}">'
             f'{esc(item["chapter_title"])} · {L("scene_unit")} {item["scene"]}'
-            f'</a> <small>{group}</small></th>'
+            f'</a> {group_badge}</th>'
             f'<td>{item["words"]}</td><td>{item["sentences"]}</td>'
             f'<td>{N(item["features"].get("asl"))}</td><td>{dialog_text}</td></tr>'
         )
@@ -115,7 +117,7 @@ def render_scenes_panel(
                 row += f'<td>{comparison}</td>'
             if has_baseline:
                 reference = baseline.get(field, {})
-                row += f'<td>{N(reference.get("median"))} (n={reference.get("n", 0)})</td>'
+                row += f'<td>{N(reference.get("median"))} <small class="text-muted">(n={reference.get("n", 0)})</small></td>'
             parts.append(row + "</tr>")
         parts.append('</tbody></table></div></details>')
     if scenes["items"]:
@@ -269,6 +271,12 @@ def render_dialogue_panel(
                 nar_asl = float(chapter.get("narration_asl", 0.0))
                 ch_contrast = chapter.get("asl_contrast")
                 chapter_label = f'{label(labels, "chapter")} {num} · {chapter.get("title", "")}'
+                if ch_contrast is not None:
+                    cval = float(ch_contrast)
+                    cls = "val-positive" if cval > 0 else ("val-negative" if cval < 0 else "")
+                    contrast_cell = f'<span class="{cls}">{N(cval, 1, signed=True)}</span>'
+                else:
+                    contrast_cell = '<span class="text-muted">–</span>'
                 parts.append(
                     f"<tr>"
                     f'<th scope="row">{chapter_link(num, chapter_label)}</th>'
@@ -277,7 +285,7 @@ def render_dialogue_panel(
                     f'<td class="num">{N(long_turns, 0)}</td>'
                     f'<td class="num">{N(dlg_asl, 1) if turns > 0 else "–"}</td>'
                     f'<td class="num">{N(nar_asl, 1) if nar_asl > 0 else "–"}</td>'
-                    f'<td class="num">{N(float(ch_contrast), 1, signed=True) if ch_contrast is not None else "–"}</td>'
+                    f'<td class="num">{contrast_cell}</td>'
                     f"</tr>"
                 )
             parts.append("</tbody></table></div></details>")
@@ -303,17 +311,17 @@ def render_characters_panel(
     parts.append(f'<p class="hint">{L("chr_hint")}</p>')
     has_pov = any("declared_pov_chapters" in figure for figure in characters["figures"])
     parts.append(f'<div class="table-wrap" tabindex="0" role="region" aria-label="{L("panel_characters")}"><table><thead><tr>')
-    parts.extend(
-        f'<th scope="col">{help_term(labels, key, L(key)) if key in {"chr_span", "chr_gap", "chr_share"} else L(key)}</th>'
-        for key in (
-            "chr_name",
-            "chr_mentions",
-            "chr_chapters",
-            "chr_span",
-            "chr_gap",
-            "chr_share",
-        )
-    )
+    for key in (
+        "chr_name",
+        "chr_mentions",
+        "chr_chapters",
+        "chr_span",
+        "chr_gap",
+        "chr_share",
+    ):
+        num_cls = ' class="num"' if key != "chr_name" else ""
+        th_content = help_term(labels, key, L(key)) if key in {"chr_span", "chr_gap", "chr_share"} else L(key)
+        parts.append(f'<th scope="col"{num_cls}>{th_content}</th>')
     if has_pov:
         parts.append(f'<th scope="col">{L("chr_pov")}</th>')
     parts.append("</tr></thead><tbody>")
@@ -442,9 +450,10 @@ def render_motifs_panel(
 
     parts: list[str] = [panel_start("motifs", labels, "panel_motifs")]
     if motifs.get("motifs"):
-        parts.append('<div class="table-wrap"><table><thead><tr>')
+        parts.append(f'<div class="table-wrap" tabindex="0" role="region" aria-label="{L("panel_motifs")}"><table><thead><tr>')
         parts.extend(
-            f"<th>{L(key)}</th>" for key in ("mot_name", "mot_count", "mot_chapters", "chr_gap")
+            (f'<th scope="col">{L(key)}</th>' if key == "mot_name" else f'<th scope="col" class="num">{L(key)}</th>')
+            for key in ("mot_name", "mot_count", "mot_chapters", "chr_gap")
         )
         parts.append("</tr></thead><tbody>")
         for motif in motifs["motifs"]:
@@ -468,7 +477,8 @@ def render_motifs_panel(
         parts.append('<div class="table-wrap motif-phrases" tabindex="0" role="region" '
                      f'aria-label="{L("mot_phrase")}"><table><thead><tr>')
         parts.extend(
-            f"<th>{L(key)}</th>" for key in ("mot_phrase", "mot_global_count", "mot_chapters")
+            (f'<th scope="col">{L(key)}</th>' if key == "mot_phrase" else f'<th scope="col" class="num">{L(key)}</th>')
+            for key in ("mot_phrase", "mot_global_count", "mot_chapters")
         )
         parts.append("</tr></thead><tbody>")
         for phrase in motifs["repeated_phrases"]:
@@ -492,7 +502,8 @@ def render_motifs_panel(
         parts.append('<div class="table-wrap motif-echoes" tabindex="0" role="region" '
                      f'aria-label="{L("mot_echoes")}"><table><thead><tr>')
         parts.extend(
-            f"<th>{L(key)}</th>" for key in ("mot_phrase", "mot_echo_chapter", "mot_echo_count", "mot_echo_words")
+            (f'<th scope="col">{L(key)}</th>' if key == "mot_phrase" else f'<th scope="col" class="num">{L(key)}</th>')
+            for key in ("mot_phrase", "mot_echo_chapter", "mot_echo_count", "mot_echo_words")
         )
         parts.append("</tr></thead><tbody>")
         for echo in motifs["echoes"]:

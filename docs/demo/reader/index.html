@@ -323,12 +323,12 @@ th.sortable::after, th[data-sort]::after, table[data-sortable] th:not(.no-sort):
 th[aria-sort="ascending"]::after {
   content: " ↑";
   opacity: 1;
-  color: var(--action-bg, #3b82f6);
+  color: var(--accent);
 }
 th[aria-sort="descending"]::after {
   content: " ↓";
   opacity: 1;
-  color: var(--action-bg, #3b82f6);
+  color: var(--accent);
 }
 .table-bar-cell {
   display: inline-flex;
@@ -349,7 +349,7 @@ th[aria-sort="descending"]::after {
 }
 .table-bar-fill {
   height: 100%;
-  background: var(--action-bg, #3b82f6);
+  background: var(--accent);
   border-radius: var(--radius-pill);
   transition: width 0.25s ease;
 }
@@ -366,6 +366,8 @@ tbody tr.clickable-row:hover, tbody tr[data-action]:hover {
   background: var(--surface-hover);
 }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.val-positive, .delta-positive { color: var(--analysis-comparison-positive); font-variant-numeric: tabular-nums; font-weight: var(--weight-medium, 500); }
+.val-negative, .delta-negative { color: var(--analysis-comparison-negative); font-variant-numeric: tabular-nums; font-weight: var(--weight-medium, 500); }
 
 /* --- Badges & Dimension cards ----------------------------------------- */
 /* One badge family for every panel: compact text on a pill. Tone
@@ -386,10 +388,17 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   &.badge-success { background: var(--status-success-bg); color: var(--status-success-fg); border-color: var(--status-success-border); }
   &.badge-warning, &.badge-warn { background: var(--status-warning-bg); color: var(--status-warning-fg); border-color: var(--status-warning-border); }
   &.badge-neutral { background: var(--status-neutral-bg); color: var(--status-neutral-fg); border-color: var(--status-neutral-border); }
-  &.marker-pruefen { background: var(--marker-pruefen-bg); color: var(--marker-pruefen-fg); }
-  &.marker-sachcheck, &.sev-2 { background: var(--marker-sachcheck-bg); color: var(--marker-sachcheck-fg); }
-  &.marker-todo { background: var(--marker-todo-bg); color: var(--marker-todo-fg); }
-  &.marker-achtung, &.sev-3 { background: var(--marker-achtung-bg); color: var(--marker-achtung-fg); }
+  &.badge-present, &.tense-present { background: var(--present-light); color: var(--present); border-color: color-mix(in srgb, var(--present) 25%, transparent); }
+  &.badge-past, &.tense-past { background: var(--past-light); color: var(--past); border-color: color-mix(in srgb, var(--past) 25%, transparent); }
+  &.badge-mixed, &.tense-mixed { background: color-mix(in srgb, var(--mixed) 15%, var(--surface)); color: var(--mixed); border-color: color-mix(in srgb, var(--mixed) 28%, transparent); }
+  &.badge-neutral-tense, &.tense-neutral { background: var(--neutral); color: var(--status-neutral-fg); border-color: color-mix(in srgb, var(--neutral) 35%, transparent); }
+  &.badge-flag, &.badge-danger { background: var(--flag-light); color: var(--flag); border-color: color-mix(in srgb, var(--flag) 28%, transparent); font-weight: var(--weight-bold, 700); }
+  &.badge-deviation { background: var(--status-warning-bg); color: var(--status-warning-fg); border-color: var(--status-warning-border); font-weight: var(--weight-bold, 700); }
+  &.badge-register { background: var(--surface-raised); color: var(--accent); border-color: var(--line); font-weight: var(--weight-medium); }
+  &.marker-pruefen { background: var(--marker-pruefen-bg); color: var(--marker-pruefen-fg); border-color: color-mix(in srgb, currentColor 22%, transparent); }
+  &.marker-sachcheck, &.sev-2 { background: var(--marker-sachcheck-bg); color: var(--marker-sachcheck-fg); border-color: color-mix(in srgb, currentColor 22%, transparent); }
+  &.marker-todo { background: var(--marker-todo-bg); color: var(--marker-todo-fg); border-color: color-mix(in srgb, currentColor 22%, transparent); }
+  &.marker-achtung, &.sev-3 { background: var(--marker-achtung-bg); color: var(--marker-achtung-fg); border-color: color-mix(in srgb, currentColor 22%, transparent); }
 }
 
 /* --- Controls (local server mode) ------------------------------------- */
@@ -634,12 +643,15 @@ details.nda .row { margin-top: .5rem; }
   font-weight: var(--weight-semibold);
   white-space: nowrap;
   cursor: pointer;
+  transition: background-color .15s ease, color .15s ease, border-color .15s ease;
 }
 :is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"]:hover {
   background: var(--surface-raised);
   color: var(--fg);
+  border-color: var(--line);
 }
 :is(.style-tabs, .research-tabs, .modal-tabs) > button[aria-selected="true"] {
+  border-color: var(--line);
   border-bottom-color: var(--accent);
   background: var(--accent-light);
   color: var(--accent);
@@ -921,9 +933,15 @@ h1 {
 }
 .research-form-field { flex: 1 1 12rem; min-width: 0; }
 .settings-advanced {
-  margin: 0;
+  margin-top: .75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: .35rem .75rem;
+  transition: border-color .15s ease, background-color .15s ease;
   & summary { cursor: pointer; font-weight: var(--weight-semibold); font-size: var(--text-control); padding-block: .4rem; }
-  &[open] > summary { margin-bottom: .5rem; }
+  &[open] { padding-bottom: .85rem; }
+  &[open] > summary { margin-bottom: .5rem; border-bottom: 1px solid var(--line); padding-bottom: .55rem; }
 }
 .settings-actions, .matrix-tools { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; margin-top: .8rem; }
 .project-audio-actions > h3 { margin: 0 0 .6rem; }
@@ -1424,8 +1442,8 @@ body:not(.has-js-paragraphs) .ptext-inner { padding: .8rem 1rem; }
   position: relative;
   & i {
     position: absolute; inset-inline-end: .4rem; inset-block-end: .3rem;
-    height: 2px; width: var(--v); max-width: 3.4rem; background: var(--accent);
-    opacity: .35; border-radius: var(--radius-xs);
+    height: 3px; width: var(--v); max-width: 3.4rem; background: var(--accent);
+    opacity: .75; border-radius: var(--radius-pill);
   }
 }
 
@@ -3080,11 +3098,16 @@ button.research-tag {
   font-size: var(--text-micro);
   padding: 0.12rem 0.5rem;
   border-radius: var(--radius-pill);
-  background: var(--bg-subtle, rgba(0, 0, 0, 0.04));
-  color: var(--fg-muted, #555);
-  border: 1px solid var(--line-subtle, var(--line));
+  background: var(--surface-raised);
+  color: var(--muted);
+  border: 1px solid var(--line);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+.research-card-meta-pill:hover {
+  color: var(--fg);
+  border-color: var(--accent);
 }
 .research-card-actions {
   display: flex;
@@ -5139,7 +5162,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 .project-overview-heading h3 { margin: 0; }
 .project-overview-heading .ctl { flex-shrink: 0; }
 .project-overview-workflow h4, .project-overview-outputs h4 { font-size: .9rem; margin: .9rem 0 .6rem; }
-.project-overview-actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: flex-start; }
+.project-overview-actions { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
 .project-overview-action { min-width: 0; }
 .project-overview-action .ctl-note { max-width: 24rem; margin: .25rem 0; }
 .project-overview-technical { margin-top: 1rem; }
@@ -5160,8 +5183,20 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 .project-overview-row .ctl { margin-top: .35rem; }
 .project-overview-artifacts { margin-top: .75rem; }
 .project-overview-artifacts .project-overview-row-heading strong { overflow-wrap: anywhere; }
-.project-overview-browser, .project-overview-output-group { margin-top: .65rem; }
+.project-overview-browser {
+  margin-top: .65rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: .5rem .75rem;
+  background: var(--surface);
+}
+.project-overview-browser[open] { padding-bottom: .85rem; }
 .project-overview-browser summary, .project-overview-output-group summary { cursor: pointer; font-size: .9rem; font-weight: 600; }
+.project-overview-output-group {
+  margin-top: .65rem;
+  border-top: 1px solid var(--line);
+  padding-top: .45rem;
+}
 .project-overview-search { display: flex; flex-direction: column; gap: .3rem; margin: .75rem 0; font-size: .85rem; }
 .project-overview-search input { max-width: 100%; }
 .project-overview-findings { margin-top: 1.25rem; }
@@ -5360,7 +5395,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 <div id="publication-entries"></div>
 <noscript><p>Enable JavaScript to select reading progress and open the context.</p></noscript></aside></div>
 <details class="panel"><summary>About this synthetic reading example</summary><p>The people, records and incident are invented. Reveal context deliberately with the reading-progress control. All content included in a static file remains inspectable; chapter caps remove later material before export.</p><p>Choose <strong>Analysis</strong> above the reading view for a chapter overview, then <strong>Back to reading copy</strong> to return. This example includes all six chapters; the analysis is not hidden by reading progress.</p><p>The map and harbour view are public-domain setting references from circa 1900, not evidence of the fictional 1923 incident. <a href="../../assets/research/sources.json">Image credits and reviewed provenance</a>. The ordinary product export has the same reading interface and no visitor counter.</p></details><footer><span class="version-badge">Version 0.7.7</span><a class="license-badge" href="#license-terms">Open source · AGPL-3.0</a></footer></div>
-<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3A3b0e2022-ea7a-455a-91bb-92e162f15add\u0026version_id=urn%3Auuid%3A0acb8f44-cd09-486c-90f1-fe6bb28034be":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3A9ea3ad6b-8bff-4f4b-bf26-e8952abfd1a2\u0026source_id=urn%3Auuid%3A3b0e2022-ea7a-455a-91bb-92e162f15add\u0026version_id=urn%3Auuid%3A0acb8f44-cd09-486c-90f1-fe6bb28034be":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3A0c8fbb08-3519-423d-8df5-79bb198f8ce7\u0026version_id=urn%3Auuid%3A439cc1cd-bd25-4721-8bae-d7533cff9bbf":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3A9ea3ad6b-8bff-4f4b-bf26-e8952abfd1a2\u0026source_id=urn%3Auuid%3A0c8fbb08-3519-423d-8df5-79bb198f8ce7\u0026version_id=urn%3Auuid%3A439cc1cd-bd25-4721-8bae-d7533cff9bbf":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/1","mode":"reader","profile":"readers","project_id":"urn:uuid:9ea3ad6b-8bff-4f4b-bf26-e8952abfd1a2","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":6,"chapters":[{"number":1},{"number":2},{"number":3},{"number":4},{"number":5},{"number":6}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:5e33f47d-0d24-45ca-b9c2-a9fdfa1adb76","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:06bf8138-c29c-4b84-a929-50609d17a283","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:3b0e2022-ea7a-455a-91bb-92e162f15add/urn:uuid:0acb8f44-cd09-486c-90f1-fe6bb28034be)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:9ea3ad6b-8bff-4f4b-bf26-e8952abfd1a2","source_id":"urn:uuid:3b0e2022-ea7a-455a-91bb-92e162f15add","source_version_id":"urn:uuid:0acb8f44-cd09-486c-90f1-fe6bb28034be","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3A9ea3ad6b-8bff-4f4b-bf26-e8952abfd1a2\u0026source_id=urn%3Auuid%3A3b0e2022-ea7a-455a-91bb-92e162f15add\u0026version_id=urn%3Auuid%3A0acb8f44-cd09-486c-90f1-fe6bb28034be","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:06bf8138-c29c-4b84-a929-50609d17a283","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:0c8fbb08-3519-423d-8df5-79bb198f8ce7/urn:uuid:439cc1cd-bd25-4721-8bae-d7533cff9bbf)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:9ea3ad6b-8bff-4f4b-bf26-e8952abfd1a2","source_id":"urn:uuid:0c8fbb08-3519-423d-8df5-79bb198f8ce7","source_version_id":"urn:uuid:439cc1cd-bd25-4721-8bae-d7533cff9bbf","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3A9ea3ad6b-8bff-4f4b-bf26-e8952abfd1a2\u0026source_id=urn%3Auuid%3A0c8fbb08-3519-423d-8df5-79bb198f8ce7\u0026version_id=urn%3Auuid%3A439cc1cd-bd25-4721-8bae-d7533cff9bbf","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:5e33f47d-0d24-45ca-b9c2-a9fdfa1adb76","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:5e33f47d-0d24-45ca-b9c2-a9fdfa1adb76","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-6","dossier_id":"urn:uuid:5e33f47d-0d24-45ca-b9c2-a9fdfa1adb76","revision":1,"section":"Reader final clue","title":"The receiving signature","body":"A blank signature is an absence, not a name. The two ledger entries, reused board and torn paper leave several possible connections. The morning handover preserves the question instead of identifying a culprit.","reveal_after_chapter":6,"citations":[],"images":[],"media":[],"geography":null}],"identity":"576dbb2651b57323e82a7dffad4b26f941cb9dbe75c3b9ce8593e8eb170db340"}}</script>
+<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3Af6488e5f-ec21-498c-a45e-72a7d12ccfb6\u0026version_id=urn%3Auuid%3Abdb02bad-eb2e-41b9-ac5f-056d6020f8e5":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3A3219fba4-206e-4680-a59b-ea138db26c74\u0026source_id=urn%3Auuid%3Af6488e5f-ec21-498c-a45e-72a7d12ccfb6\u0026version_id=urn%3Auuid%3Abdb02bad-eb2e-41b9-ac5f-056d6020f8e5":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3A821f4c5f-dd85-4857-b500-70c2222b93b4\u0026version_id=urn%3Auuid%3A80159dd4-34dd-4b62-a379-c655741cd091":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3A3219fba4-206e-4680-a59b-ea138db26c74\u0026source_id=urn%3Auuid%3A821f4c5f-dd85-4857-b500-70c2222b93b4\u0026version_id=urn%3Auuid%3A80159dd4-34dd-4b62-a379-c655741cd091":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/1","mode":"reader","profile":"readers","project_id":"urn:uuid:3219fba4-206e-4680-a59b-ea138db26c74","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":6,"chapters":[{"number":1},{"number":2},{"number":3},{"number":4},{"number":5},{"number":6}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:27cf4730-1ac4-4075-80d2-e44396373ee9","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:28a83a0f-f219-46f0-9a74-5b78d0d7ee60","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:f6488e5f-ec21-498c-a45e-72a7d12ccfb6/urn:uuid:bdb02bad-eb2e-41b9-ac5f-056d6020f8e5)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:3219fba4-206e-4680-a59b-ea138db26c74","source_id":"urn:uuid:f6488e5f-ec21-498c-a45e-72a7d12ccfb6","source_version_id":"urn:uuid:bdb02bad-eb2e-41b9-ac5f-056d6020f8e5","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3A3219fba4-206e-4680-a59b-ea138db26c74\u0026source_id=urn%3Auuid%3Af6488e5f-ec21-498c-a45e-72a7d12ccfb6\u0026version_id=urn%3Auuid%3Abdb02bad-eb2e-41b9-ac5f-056d6020f8e5","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:28a83a0f-f219-46f0-9a74-5b78d0d7ee60","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:821f4c5f-dd85-4857-b500-70c2222b93b4/urn:uuid:80159dd4-34dd-4b62-a379-c655741cd091)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:3219fba4-206e-4680-a59b-ea138db26c74","source_id":"urn:uuid:821f4c5f-dd85-4857-b500-70c2222b93b4","source_version_id":"urn:uuid:80159dd4-34dd-4b62-a379-c655741cd091","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3A3219fba4-206e-4680-a59b-ea138db26c74\u0026source_id=urn%3Auuid%3A821f4c5f-dd85-4857-b500-70c2222b93b4\u0026version_id=urn%3Auuid%3A80159dd4-34dd-4b62-a379-c655741cd091","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:27cf4730-1ac4-4075-80d2-e44396373ee9","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:27cf4730-1ac4-4075-80d2-e44396373ee9","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-6","dossier_id":"urn:uuid:27cf4730-1ac4-4075-80d2-e44396373ee9","revision":1,"section":"Reader final clue","title":"The receiving signature","body":"A blank signature is an absence, not a name. The two ledger entries, reused board and torn paper leave several possible connections. The morning handover preserves the question instead of identifying a culprit.","reveal_after_chapter":6,"citations":[],"images":[],"media":[],"geography":null}],"identity":"a2d898ff988b6d926aaf7d53ab20b389d7c3b2478abcf32d9f00ab5e4690cd10"}}</script>
 <script>// A prepared website has no server: every API read belongs to its inline snapshot.
 (function () {
   "use strict";
@@ -5816,7 +5851,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
       }
       // The fixed popup may sit outside the reader toolbar's bounded scrollport.
       // Only its trigger must remain visible inside those compact controls.
-      if (parent.matches(".manuscript-reader-controls")) continue;
+      if (parent.matches(".manuscript-reader-controls, .workspace-shell")) continue;
       if (clipX && parent.scrollWidth > parent.clientWidth) {
         visible.left = Math.max(visible.left, left);
         visible.right = Math.min(visible.right, left + parent.clientWidth);
@@ -5869,6 +5904,11 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
     // across the trigger (which also made touch dismissal unreachable).
     tip.style.maxHeight = available + "px";
     tipH = tip.offsetHeight;
+    if (el.closest(".workspace-shell") && rect.right + tipW + 16 < innerWidth) {
+      tip.style.left = (rect.right + 10) + "px";
+      tip.style.top = Math.max(10, Math.min(innerHeight - tipH - 10, rect.top + (rect.height - tipH) / 2)) + "px";
+      return;
+    }
     var left = rect.left + (pointerHelp ? pointerOffsetX + 12 : 0);
     left = Math.max(visible.left, Math.min(visible.right - tipW, left));
     var top = useBelow ? anchorBottom + 6 : anchorTop - tipH - 6;
@@ -8303,8 +8343,11 @@ document.querySelectorAll("[data-action]").forEach(function (btn) {
           return html`<span key=${"b" + index} class=${"research-badge " + badge.cls} ...${extra}>${badge.label}</span>`;
         })}
         ${(item.metaRight && item.metaRight.length) ? html`<div class="research-card-meta">
-          ${item.metaRight.map(function (text, index) {
-            return html`<span key=${"m" + index} class="ctl-note research-card-meta-pill">${text}</span>`;
+          ${item.metaRight.map(function (meta, index) {
+            var text = (typeof meta === "object" && meta !== null) ? meta.text : meta;
+            var title = (typeof meta === "object" && meta !== null) ? meta.title : null;
+            var attrs = title ? {title: title, "data-help": title} : {};
+            return html`<span key=${"m" + index} class="ctl-note research-card-meta-pill" ...${attrs}>${text}</span>`;
           })}
         </div>` : null}
       </div>
@@ -9777,12 +9820,18 @@ async function refreshResearchSources(overview, changedId, freshRead) {
   }
   LixityResearchCards.render(listHost, {items: sources.map(function(s) {
     var external = s.context && s.context.external_reference;
+    var mediaOrPassages = ["image/png", "image/jpeg", "video/mp4", "video/webm"].includes(s.media_type)
+      ? s.media_type
+      : uiCountFormat("research_passages_count", s.passages);
+    var sizeKb = Math.round((s.byte_length || 0) / 1024) + " KB";
     return {
       key: JSON.stringify(s),
       id: s.id,
       title: s.title,
-      metaRight: [(["image/png", "image/jpeg", "video/mp4", "video/webm"].includes(s.media_type) ? s.media_type
-        : uiCountFormat("research_passages_count", s.passages)) + " · " + Math.round((s.byte_length || 0) / 1024) + " KB"],
+      metaRight: [{
+        text: mediaOrPassages + " · " + sizeKb,
+        title: uiLabel("research_tab_sources_help") || "Gespeicherte Quellenkopie"
+      }],
       idLine: s.id,
       tags: s.tags || [],
       tagsInteractive: true,
@@ -9846,10 +9895,21 @@ function renderResearchDossiersView(data) {
     var badges = d.review_needed
       ? [{label: uiLabel("research_review_needed"), cls: "badge-warning ml-2", title: uiLabel("research_review_needed_hint")}]
       : [];
-    var metaRight = [uiCountFormat("research_evidence_count", d.evidence_count)];
-    if (d.revision) metaRight.push(uiFormat("research_revision_number", { revision: d.revision }));
+    var metaRight = [{
+      text: uiCountFormat("research_evidence_count", d.evidence_count),
+      title: uiLabel("research_tab_claims_help") || "Belegverknüpfungen mit Manuskriptstellen und Quellen"
+    }];
+    if (d.revision) {
+      metaRight.push({
+        text: uiFormat("research_revision_number", { revision: d.revision }),
+        title: "Revisionsstand und Fassungsnummer dieses Dossiers"
+      });
+    }
     if (Array.isArray(d.collections) && d.collections.length) {
-      metaRight.push(d.collections.map(function(m) { return m.name + " #" + m.position; }).join(", "));
+      metaRight.push({
+        text: d.collections.map(function(m) { return m.name + " #" + m.position; }).join(", "),
+        title: uiLabel("research_dossier_collection") + " · Zugeordnete Sammlung und Reihenfolge"
+      });
     }
     return {
       key: JSON.stringify(d),
@@ -10213,7 +10273,12 @@ async function refreshResearchClaims(overview) {
       if (c.scope.actors && c.scope.actors.length) scopeParts.push(uiLabel("research_scope_actors") + " " + c.scope.actors.join(", "));
     }
     var metaRight = [];
-    if (c.revision) metaRight.push(uiFormat("research_revision_number", { revision: c.revision }));
+    if (c.revision) {
+      metaRight.push({
+        text: uiFormat("research_revision_number", { revision: c.revision }),
+        title: "Revisionsstand und Fassungsnummer dieser These"
+      });
+    }
     var dossierLine = null;
     if (c.dossier_id) {
       dossierLine = uiLabel("research_dossier") + ": " + c.dossier_id +
@@ -10262,7 +10327,12 @@ async function refreshResearchDecisions(overview) {
       ? {label: uiLabel("research_deliberate_deviation"), cls: "badge-warning"}
       : {label: uiLabel("research_no_deviation_recorded"), cls: "badge-neutral"}];
     var metaRight = [];
-    if (d.revision) metaRight.push(uiFormat("research_revision_number", { revision: d.revision }));
+    if (d.revision) {
+      metaRight.push({
+        text: uiFormat("research_revision_number", { revision: d.revision }),
+        title: "Revisionsstand und Fassungsnummer dieser Entscheidung"
+      });
+    }
     var claimLine = null;
     if (d.claim_id) {
       claimLine = uiLabel("research_decision_claim") + " " + d.claim_id +
@@ -11517,10 +11587,19 @@ document.addEventListener("click", async function (event) {
         '<div class="table-wrap mt-2"><table class="research-table">' +
           '<thead><tr><th>Merkmal</th><th class="num-right">Quelle</th><th class="num-right">Manuskript</th><th class="num-right">Differenz (Δ)</th></tr></thead>' +
           '<tbody>' +
-            '<tr><td>Mittlere Satzlänge (ASL)</td><td class="num-right">' + (reg.asl ? reg.asl.source : '–') + '</td><td class="num-right">' + (reg.asl ? reg.asl.manuscript : '–') + '</td><td class="num-right"><strong>' + (reg.asl ? (reg.asl.delta > 0 ? '+' : '') + reg.asl.delta : '–') + '</strong></td></tr>' +
-            '<tr><td>Dialoganteil (%)</td><td class="num-right">' + (reg.dialogue_pct ? (reg.dialogue_pct.source * 100).toFixed(1) + '%' : '–') + '</td><td class="num-right">' + (reg.dialogue_pct ? (reg.dialogue_pct.manuscript * 100).toFixed(1) + '%' : '–') + '</td><td class="num-right"><strong>' + (reg.dialogue_pct ? (reg.dialogue_pct.delta > 0 ? '+' : '') + (reg.dialogue_pct.delta * 100).toFixed(1) + '%' : '–') + '</strong></td></tr>' +
-            '<tr><td>Wortschatzreichtum (Guiraud R)</td><td class="num-right">' + (reg.guiraud_r ? reg.guiraud_r.source : '–') + '</td><td class="num-right">' + (reg.guiraud_r ? reg.guiraud_r.manuscript : '–') + '</td><td class="num-right"><strong>' + (reg.guiraud_r ? (reg.guiraud_r.delta > 0 ? '+' : '') + reg.guiraud_r.delta : '–') + '</strong></td></tr>' +
-            '<tr><td>Vokabularwiederholung (Yule’s K)</td><td class="num-right">' + (reg.yules_k ? reg.yules_k.source : '–') + '</td><td class="num-right">' + (reg.yules_k ? reg.yules_k.manuscript : '–') + '</td><td class="num-right"><strong>' + (reg.yules_k ? (reg.yules_k.delta > 0 ? '+' : '') + reg.yules_k.delta : '–') + '</strong></td></tr>' +
+            (function() {
+              function diffCell(obj, isPct) {
+                if (!obj || obj.delta === undefined || obj.delta === null) return '–';
+                var d = obj.delta;
+                var cls = d > 0 ? 'delta-positive' : (d < 0 ? 'delta-negative' : '');
+                var formatted = isPct ? ((d > 0 ? '+' : '') + (d * 100).toFixed(1) + '%') : ((d > 0 ? '+' : '') + d);
+                return '<strong class="' + cls + '">' + formatted + '</strong>';
+              }
+              return '<tr><td>Mittlere Satzlänge (ASL)</td><td class="num-right">' + (reg.asl ? reg.asl.source : '–') + '</td><td class="num-right">' + (reg.asl ? reg.asl.manuscript : '–') + '</td><td class="num-right">' + diffCell(reg.asl, false) + '</td></tr>' +
+                '<tr><td>Dialoganteil (%)</td><td class="num-right">' + (reg.dialogue_pct ? (reg.dialogue_pct.source * 100).toFixed(1) + '%' : '–') + '</td><td class="num-right">' + (reg.dialogue_pct ? (reg.dialogue_pct.manuscript * 100).toFixed(1) + '%' : '–') + '</td><td class="num-right">' + diffCell(reg.dialogue_pct, true) + '</td></tr>' +
+                '<tr><td>Wortschatzreichtum (Guiraud R)</td><td class="num-right">' + (reg.guiraud_r ? reg.guiraud_r.source : '–') + '</td><td class="num-right">' + (reg.guiraud_r ? reg.guiraud_r.manuscript : '–') + '</td><td class="num-right">' + diffCell(reg.guiraud_r, false) + '</td></tr>' +
+                '<tr><td>Vokabularwiederholung (Yule’s K)</td><td class="num-right">' + (reg.yules_k ? reg.yules_k.source : '–') + '</td><td class="num-right">' + (reg.yules_k ? reg.yules_k.manuscript : '–') + '</td><td class="num-right">' + diffCell(reg.yules_k, false) + '</td></tr>';
+            })() +
           '</tbody>' +
         '</table></div>' +
       '</details>';

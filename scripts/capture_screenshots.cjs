@@ -270,7 +270,7 @@ async function main() {
         await page.locator('#reader-settings > summary').click();
         await page.locator('#reader-text-larger').click();
         await page.locator('#reader-settings > summary').click();
-        await captureThrough(capture, '#workspace-reader', page.locator('#ch-1 .ptext').first());
+        await captureThrough(capture, '#workspace-reader', page.locator('#ch-1 .ptext').nth(1));
         await save(capture.target, '#workspace-reader');
       } else if (name.startsWith('dashboard-measurement-focus')) {
         await selectView('analysis');
