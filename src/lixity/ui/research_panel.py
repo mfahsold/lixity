@@ -51,7 +51,8 @@ def render_research_panel(
     parts.append(
         f'<button type="button" class="ctl research-navigation-control" '
         f'id="research-navigation-previous" aria-controls="research-tabs" '
-        f'aria-label="{L("research_navigation_previous")}" hidden>&lsaquo;</button>'
+        f'aria-label="{L("research_navigation_previous")}" title="{L("research_navigation_previous")}" '
+        f'data-help="{L("research_navigation_previous")}" hidden>&lsaquo;</button>'
     )
     parts.append(
         '<div class="row research-tabs" id="research-tabs" role="tablist" aria-labelledby="research-panel-title">'
@@ -62,13 +63,15 @@ def render_research_panel(
             f'<button type="button" class="ctl{" active" if selected else ""}" '
             f'id="research-tab-{key}" data-rtab="{key}" role="tab" '
             f'{"data-requires-live " if key in ("search", "grounding") else ""}aria-controls="rtab-{key}" aria-selected="{str(selected).lower()}" '
+            f'data-help="{L("research_tab_" + key + "_help")}" title="{L("research_tab_" + key)}" '
             f'tabindex="{0 if selected else -1}">{L("research_tab_" + key)}</button>'
         )
     parts.append("</div>")
     parts.append(
         f'<button type="button" class="ctl research-navigation-control" '
         f'id="research-navigation-next" aria-controls="research-tabs" '
-        f'aria-label="{L("research_navigation_next")}" hidden>&rsaquo;</button></div>'
+        f'aria-label="{L("research_navigation_next")}" title="{L("research_navigation_next")}" '
+        f'data-help="{L("research_navigation_next")}" hidden>&rsaquo;</button></div>'
     )
 
     parts.append(
@@ -161,7 +164,9 @@ def render_research_panel(
     parts.append("</div>")
     parts.append("</details>")
     parts.append(
-        f'<input class="ctl full-width mb-2" type="search" id="r-filter-sources" aria-label="{L("research_filter_sources")}" placeholder="{L("research_filter_sources")}" aria-keyshortcuts="Escape"/>'
+        f'<input class="ctl full-width mb-2" type="search" id="r-filter-sources" '
+        f'aria-label="{L("research_filter_sources")}" placeholder="{L("research_filter_sources")}" '
+        f'data-help="{L("research_filter_sources_help")}" title="{L("research_filter_sources")}" aria-keyshortcuts="Escape"/>'
     )
     parts.append('<p class="ctl-note" id="r-filter-sources-status" aria-live="polite" hidden></p>')
     parts.append(
@@ -255,13 +260,15 @@ def render_research_panel(
         form_field(
             "r-dos-collection-select",
             "research_dossier_collection",
-            f'<select class="ctl" id="r-dos-collection-select"><option value="all">{L("research_dossier_collection_all")}</option></select>',
+            f'<select class="ctl" id="r-dos-collection-select" data-help="{L("research_filter_collection_help")}" title="{L("research_dossier_collection")}"><option value="all">{L("research_dossier_collection_all")}</option></select>',
         )
     )
     parts.append('<span class="ctl-note" id="r-dos-collection-note" hidden></span>')
     parts.append("</div>")
     parts.append(
-        f'<input class="ctl full-width mb-2" type="search" id="r-filter-dossiers" aria-label="{L("research_filter_dossiers")}" placeholder="{L("research_filter_dossiers")}" aria-keyshortcuts="Escape"/>'
+        f'<input class="ctl full-width mb-2" type="search" id="r-filter-dossiers" '
+        f'aria-label="{L("research_filter_dossiers")}" placeholder="{L("research_filter_dossiers")}" '
+        f'data-help="{L("research_filter_dossiers_help")}" title="{L("research_filter_dossiers")}" aria-keyshortcuts="Escape"/>'
     )
     parts.append('<p class="ctl-note" id="r-filter-dossiers-status" aria-live="polite" hidden></p>')
     parts.append(
@@ -317,14 +324,17 @@ def render_research_panel(
         '<div class="research-views" id="r-claim-views" role="group" aria-describedby="research-claims-intro">'
     )
     parts.append(
-        f'<button type="button" class="ctl active" data-claim-view="list" aria-pressed="true">{L("research_claim_view_list")}</button>'
+        f'<button type="button" class="ctl active" data-claim-view="list" aria-pressed="true" '
+        f'title="{L("research_claim_view_list")}" data-help="{L("research_claims_intro")}">{L("research_claim_view_list")}</button>'
     )
     parts.append(
-        f'<button type="button" class="ctl" id="r-open-timeline" data-claim-view="timeline" aria-pressed="false">{L("research_claim_timeline")}</button>'
+        f'<button type="button" class="ctl" id="r-open-timeline" data-claim-view="timeline" aria-pressed="false" '
+        f'title="{L("research_claim_timeline")}" data-help="{L("research_claims_intro")}">{L("research_claim_timeline")}</button>'
     )
     parts.append("</div>")
     parts.append(
-        f'<button type="button" class="ctl" id="r-claim-matrix-btn">{L("research_export_matrix")}</button>'
+        f'<button type="button" class="ctl" id="r-claim-matrix-btn" '
+        f'title="{L("research_export_matrix")}" data-help="{L("research_export_matrix")}">{L("research_export_matrix")}</button>'
     )
     parts.append("</div>")
     parts.append('<p class="ctl-note" id="r-timeline-callout" hidden></p>')

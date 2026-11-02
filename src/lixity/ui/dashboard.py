@@ -439,13 +439,16 @@ def render_dashboard(
     if controls:
         parts.append(
             '<nav class="view-navigation" role="tablist" aria-label="' + L("workspace") + '">'
-            f'<button type="button" class="view-nav-tab{" active" if default_view == "analysis" else ""}" data-view="analysis" role="tab" id="tab-view-analysis" aria-controls="view-pane-analysis" aria-selected="{"true" if default_view == "analysis" else "false"}">'
+            f'<button type="button" class="view-nav-tab{" active" if default_view == "analysis" else ""}" data-view="analysis" role="tab" id="tab-view-analysis" '
+            f'data-help="{L("workspace_analysis_help")}" title="{L("workspace_analysis")}" aria-controls="view-pane-analysis" aria-selected="{"true" if default_view == "analysis" else "false"}">'
             f"<span>{L('workspace_analysis')}</span>"
             "</button>"
-            f'<button type="button" class="view-nav-tab{" active" if default_view == "research" else ""}" data-view="research" role="tab" id="tab-view-research" {"data-requires-live " if read_only and not research_context_token else ""}aria-controls="view-pane-research" aria-selected="{"true" if default_view == "research" else "false"}">'
+            f'<button type="button" class="view-nav-tab{" active" if default_view == "research" else ""}" data-view="research" role="tab" id="tab-view-research" {"data-requires-live " if read_only and not research_context_token else ""}'
+            f'data-help="{L("workspace_research_help")}" title="{L("workspace_research")}" aria-controls="view-pane-research" aria-selected="{"true" if default_view == "research" else "false"}">'
             f"<span>{L('workspace_research')}</span>"
             "</button>"
-            f'<button type="button" class="view-nav-tab" data-view="project" role="tab" id="tab-view-project" data-requires-write aria-controls="view-pane-project" aria-selected="false">'
+            f'<button type="button" class="view-nav-tab" data-view="project" role="tab" id="tab-view-project" data-requires-write '
+            f'data-help="{L("workspace_project_help")}" title="{L("workspace_project")}" aria-controls="view-pane-project" aria-selected="false">'
             f"<span>{L('workspace_project')}</span>"
             "</button>"
             "</nav>"
@@ -462,20 +465,23 @@ def render_dashboard(
         )
         parts.append('<div class="row">')
         parts.append(
-            f'<button type="button" class="ctl{"" if has_chapters else " primary"}" id="btn-modal-new-project">{L("new_project")}</button>'
+            f'<button type="button" class="ctl{"" if has_chapters else " primary"}" id="btn-modal-new-project" '
+            f'data-help="{L("new_project_help")}" title="{L("new_project")}">{L("new_project")}</button>'
         )
         parts.append(
-            f'<button type="button" class="ctl" id="btn-modal-open-project">{L("open_project")}</button>'
+            f'<button type="button" class="ctl" id="btn-modal-open-project" '
+            f'data-help="{L("open_project_help")}" title="{L("open_project")}">{L("open_project")}</button>'
         )
         if allowed_actions is not None and action_enabled("site-export"):
             parts.append(
                 '<button type="button" class="ctl" id="btn-site-export"'
                 + ("" if manuscript_pdf_token else " disabled")
-                + f'>{L("site_export")}</button>'
+                + f' data-help="{L("site_export_help")}" title="{L("site_export")}">{L("site_export")}</button>'
             )
         show_guidance_hidden = "" if chapters else " hidden"
         parts.append(
-            f'<button type="button" class="ctl" id="welcome-show" aria-controls="welcome-hero" aria-expanded="false"{show_guidance_hidden}>{L("welcome_show")}</button>'
+            f'<button type="button" class="ctl" id="welcome-show" aria-controls="welcome-hero" aria-expanded="false"{show_guidance_hidden} '
+            f'data-help="{L("welcome_show_help")}" title="{L("welcome_show")}">{L("welcome_show")}</button>'
         )
         parts.append("</div>")
         if allowed_actions is not None and "manuscript-pdf" in allowed_actions:
@@ -489,7 +495,7 @@ def render_dashboard(
             )
         parts.append("</nav></details>")
         if not read_only:
-            parts.append(f'<button type="button" class="ctl" id="runtime-open">{L("runtime_title")}</button>')
+            parts.append(f'<button type="button" class="ctl" id="runtime-open" data-help="{L("runtime_open_help")}" title="{L("runtime_title")}">{L("runtime_title")}</button>')
         parts.append('<p class="workspace-product-details">' + product_details(labels) + '</p>')
         parts.append("</div></div>")
 
@@ -1641,11 +1647,19 @@ def render_dashboard(
         parts.append(
             f'<div class="style-tabs" id="style-tabs" role="tablist" aria-label="{L("group_style")}" hidden>'
         )
+        style_tab_helps = {
+            "heatmap": "analysis_nav_help_style",
+            "bands": "style_tab_passport_help",
+            "dimensions": "style_tab_dimensions_help",
+            "structural": "style_tab_structural_help",
+        }
         for view_id, label_key, content in style_views:
             if content:
+                help_key = style_tab_helps.get(view_id, label_key)
                 parts.append(
                     f'<button type="button" class="ctl" id="style-tab-{view_id}" role="tab" '
-                    f'aria-controls="{view_id}" data-style-view="{view_id}">{L(label_key)}</button>'
+                    f'aria-controls="{view_id}" data-style-view="{view_id}" '
+                    f'data-help="{L(help_key)}" title="{L(label_key)}">{L(label_key)}</button>'
                 )
         parts.append('</div><div id="style-panels">')
         parts.extend(content for _, _, content in style_views if content)
