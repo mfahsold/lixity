@@ -7,7 +7,7 @@ import sys
 import time
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Any, Literal, NoReturn, cast
 
 from pydantic import ValidationError
 
@@ -104,6 +104,20 @@ def _add_manuscript_argument(command: argparse.ArgumentParser) -> None:
         metavar="PATH",
         help="Same manuscript path as positional PATH",
     )
+    orig_error = command.error
+
+    def _manuscript_error(message: str) -> NoReturn:
+        if (
+            "PATH: not allowed with argument --manuscript" in message
+            or "--manuscript: not allowed with argument PATH" in message
+        ):
+            message = (
+                "Supply manuscript as either positional PATH or --manuscript, not both. "
+                "In configured projects, PATH may be omitted entirely."
+            )
+        orig_error(message)
+
+    command.error = _manuscript_error  # type: ignore[method-assign]
 
 
 COMMAND_DEFINITIONS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
@@ -722,6 +736,11 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 "--accept-moved",
                 action="store_true",
                 help="Accept uniquely moved/adjusted passages with unchanged quotes, or the explicit replacement quote",
+            )
+            command.add_argument(
+                "--accept-all-moved",
+                action="store_true",
+                help="Batch-accept all uniquely resolved, relocated or adjusted links to the current manuscript source",
             )
             command.add_argument(
                 "--accept-claim-updates",
@@ -2945,7 +2964,11 @@ def run(args: argparse.Namespace) -> int:
                         }
                     ],
                 }
-            elif not (args.accept_moved or args.accept_claim_updates):
+            elif not (
+                args.accept_moved
+                or args.accept_claim_updates
+                or getattr(args, "accept_all_moved", False)
+            ):
                 movable = [
                     row
                     for row in link_review["links"]
@@ -3014,10 +3037,12 @@ def run(args: argparse.Namespace) -> int:
                         reason=args.reason,
                     )
             else:
+                accept_all = getattr(args, "accept_all_moved", False)
                 candidates = [
                     row
                     for row in link_review["links"]
-                    if (args.accept_moved and row["anchor_state"] in ("moved", "adjusted"))
+                    if (accept_all and row["anchor_state"] in ("resolved", "moved", "adjusted"))
+                    or (args.accept_moved and row["anchor_state"] in ("moved", "adjusted"))
                     or (args.accept_claim_updates and row["claim_changed"])
                 ]
                 batch_snapshot = (
@@ -3030,8 +3055,9 @@ def run(args: argparse.Namespace) -> int:
                     expected_source_sha256=source_sha256,
                     actor=args.actor,
                     language=args.language,
-                    accept_moved=args.accept_moved,
+                    accept_moved=args.accept_moved or accept_all,
                     accept_claim_updates=args.accept_claim_updates,
+                    accept_all_moved=accept_all,
                     reason=args.reason,
                     expected_project_id=link_review["project_id"] if batch_snapshot else None,
                     expected_snapshot=batch_snapshot,

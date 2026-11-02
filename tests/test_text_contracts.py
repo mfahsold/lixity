@@ -264,6 +264,21 @@ class TestProseScope(unittest.TestCase):
             nested = f"[{nested}](https://example.org/Mara)"
         self.assertEqual(presence_report("## Main\n\n" + nested, ["Mara"], config)["figures"][0]["mentions"], 1)
 
+    def test_characters_cli_output_flag(self):
+        import json
+        import tempfile
+        from pathlib import Path
+
+        from lixity.cli import main
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            manuscript = Path(tmp_dir) / "novel.md"
+            out = Path(tmp_dir) / "characters.json"
+            manuscript.write_text("## Chapter 1\n\nMara walked to the pier.\n", encoding="utf-8")
+            self.assertEqual(main(["characters", str(manuscript), "--names", "Mara", "--json", "-o", str(out)]), 0)
+            data = json.loads(out.read_text(encoding="utf-8"))
+            self.assertEqual(data["figures"][0]["name"], "Mara")
+
     def test_code_is_excluded_and_visible_front_matter_stays_global(self):
         config = CorpusConfig(language="en")
         text = ('# Book title\n\nAuthor metadata.\n\n## Main\n\n'

@@ -320,6 +320,7 @@ lixity research manuscript-links --project ./novel
 lixity research review-manuscript --project ./novel novel.md
 lixity research reconcile-manuscript --project ./novel novel.md            # preview
 lixity research reconcile-manuscript --project ./novel novel.md --accept-moved
+lixity research reconcile-manuscript --project ./novel novel.md --accept-all-moved # batch refresh
 ```
 
 #### Find a quote copied from Markdown
@@ -394,6 +395,7 @@ Use each command's `--help` for flags and formats.
 | Check current locations and claim versions | `review-manuscript` | No |
 | Preview moved/adjusted links | `reconcile-manuscript` | No |
 | Accept unique moved/adjusted passages | `reconcile-manuscript --accept-moved` | Yes |
+| Batch-accept all uniquely resolved links to current text | `reconcile-manuscript --accept-all-moved` | Yes; updates source hash and line anchors |
 | Accept newer claim versions | `reconcile-manuscript --accept-claim-updates` | Yes; text anchors stay unchanged |
 | Limit the operation to one association | Add `--link-id ID` | Follows the chosen operation |
 

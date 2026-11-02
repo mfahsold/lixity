@@ -29,14 +29,21 @@ def scene_report_for_display(
         return {"error": str(exc)}
 
 
-def _settings(settings: Any) -> tuple[dict[str, str], dict[str, dict[str, list[float | None]]], set[str]]:
+def _settings(
+    settings: Any,
+) -> tuple[dict[str, str], dict[str, dict[str, list[float | None]]], set[str], dict[str, str]]:
     """Validate author-supplied targets; no genre prescriptions are built in."""
-    if not isinstance(settings, Mapping) or set(settings) - {"assignments", "groups", "planned"}:
-        raise ValueError("scene_analysis accepts only assignments, groups and planned")
+    if not isinstance(settings, Mapping) or set(settings) - {"assignments", "groups", "planned", "titles"}:
+        raise ValueError("scene_analysis accepts only assignments, groups, planned and titles")
     assignments = settings.get("assignments", {})
     groups = settings.get("groups", {})
-    if not isinstance(assignments, Mapping) or not isinstance(groups, Mapping):
-        raise ValueError("Scene assignments and groups must be tables")
+    raw_titles = settings.get("titles", {})
+    if (
+        not isinstance(assignments, Mapping)
+        or not isinstance(groups, Mapping)
+        or not isinstance(raw_titles, Mapping)
+    ):
+        raise ValueError("Scene assignments, groups and titles must be tables")
     targets: dict[str, dict[str, list[float | None]]] = {}
     fields = {f[0] for f in FEATURES}
     for name, group in groups.items():
@@ -50,12 +57,19 @@ def _settings(settings: Any) -> tuple[dict[str, str], dict[str, dict[str, list[f
             raise ValueError("Scene assignment keys must be chapter:scene numbers, for example 1:2")
         if not isinstance(group_name, str) or group_name not in targets:
             raise ValueError(f"Unknown register for scene {identifier}")
+    titles: dict[str, str] = {}
+    for identifier, title_text in raw_titles.items():
+        if not isinstance(identifier, str) or not re.fullmatch(r"[1-9][0-9]*:[1-9][0-9]*", identifier):
+            raise ValueError("Scene title keys must be chapter:scene numbers, for example 1:2")
+        if not isinstance(title_text, str) or not title_text.strip():
+            raise ValueError(f"Scene title for {identifier} must be a nonempty string")
+        titles[identifier] = title_text.strip()
     planned = settings.get("planned", [])
     if (not isinstance(planned, list)
             or any(not isinstance(identifier, str) or identifier not in assignments for identifier in planned)
             or len(set(planned)) != len(planned)):
         raise ValueError("Planned scenes must be a unique list of scene assignment IDs")
-    return dict(assignments), targets, set(planned)
+    return dict(assignments), targets, set(planned), titles
 
 
 def scene_report(
@@ -70,7 +84,7 @@ def scene_report(
     no population uncertainty is estimated for it. Group medians and MAD are
     descriptive and include the measured scene, not external quality baselines.
     """
-    assignments, targets, planned = _settings({} if settings is None else settings)
+    assignments, targets, planned, titles = _settings({} if settings is None else settings)
     analyzer = CorpusAnalyzer(config, sample_text=text)
     measured_chapters = {chapter.num: chapter for chapter in (_premeasured_chapters or ())}
     items: list[dict[str, Any]] = []
@@ -89,6 +103,18 @@ def scene_report(
                 continue
             identifier = f"{chapter_num}:{index}"
             group = assignments.get(identifier)
+            scene_heading = titles.get(identifier)
+            if not scene_heading:
+                for line in part.splitlines():
+                    stripped = line.strip()
+                    if not stripped:
+                        continue
+                    m = re.match(r"^#{1,6}\s+(.+?)(?:\s+#+)?$", stripped)
+                    if m:
+                        scene_heading = m.group(1).strip()
+                    break
+            if not scene_heading:
+                scene_heading = title if not scene_breaks else f"{title} · {index}"
             features = {field: getattr(measured, field) for field, _, _ in FEATURES}
             if measured.sentences < 2:
                 features["sentence_cv"] = None
@@ -103,7 +129,7 @@ def scene_report(
                 comparisons[field] = {"lower": bounds[0], "upper": bounds[1], "position": position}
             items.append({
                 "id": identifier, "chapter": chapter_num, "chapter_title": title,
-                "scene": index, "group": group, "words": measured.words,
+                "scene": index, "scene_title": scene_heading, "group": group, "words": measured.words,
                 "sentences": measured.sentences, "features": features,
                 "standard_errors": errors, "targets": comparisons,
                 "data_support": {"diversity_min_tokens": MIN_TOKENS_LD,

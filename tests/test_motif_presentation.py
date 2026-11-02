@@ -91,3 +91,13 @@ def test_absent_local_echoes_do_not_invent_a_zero_result(tmp_path, monkeypatch, 
     assert render_motifs_panel(report) == ""
     assert main(["motifs", str(path)]) == 0
     assert "Local phrase echoes" not in capsys.readouterr().out
+
+
+def test_motifs_output_flag_writes_file(tmp_path):
+    path = tmp_path / "synthetic.md"
+    out = tmp_path / "motifs.json"
+    path.write_text("## One\n\nsilver lantern shines.\n", encoding="utf-8")
+    assert main(["motifs", str(path), "--json", "-o", str(out)]) == 0
+    data = json.loads(out.read_text(encoding="utf-8"))
+    assert "top_words" in data
+

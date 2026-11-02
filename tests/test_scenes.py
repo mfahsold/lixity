@@ -438,6 +438,48 @@ class SceneContracts(unittest.TestCase):
         self.assertEqual(item["targets"]["asl"]["position"], "above")
         self.assertEqual(item["targets"]["hd_d"]["position"], "unavailable")
 
+    def test_scene_title_derived_from_headings_or_explicit_settings(self):
+        text = (
+            "## Chapter One\n\n"
+            "Introductory scene text.\n\n"
+            "---\n\n"
+            "### The Secret Stash\n\n"
+            "Second scene with heading.\n\n"
+            "---\n\n"
+            "Third scene without heading.\n"
+        )
+        report = api.scenes(text)["scenes"]
+        self.assertEqual(report["items"][0]["scene_title"], "Chapter One · 1")
+        self.assertEqual(report["items"][1]["scene_title"], "The Secret Stash")
+        self.assertEqual(report["items"][2]["scene_title"], "Chapter One · 3")
+
+        # Explicit titles in scene_analysis
+        explicit_settings = {
+            "scene_analysis": {
+                "assignments": {"1:1": "action", "1:2": "action", "1:3": "action"},
+                "groups": {"action": {"targets": {"asl": [1, 20]}}},
+                "titles": {"1:1": "Arrival at Pier", "1:3": "Escape by Sea"},
+            }
+        }
+        explicit_report = api.scenes(text, project_config=explicit_settings)["scenes"]
+        self.assertEqual(explicit_report["items"][0]["scene_title"], "Arrival at Pier")
+        self.assertEqual(explicit_report["items"][1]["scene_title"], "The Secret Stash")
+        self.assertEqual(explicit_report["items"][2]["scene_title"], "Escape by Sea")
+
+    def test_scenes_cli_output_flag(self, tmp_path_factory=None):
+        import tempfile
+        from pathlib import Path
+
+        from lixity.cli import main
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            manuscript = Path(tmp_dir) / "novel.md"
+            out = Path(tmp_dir) / "scenes_report.json"
+            manuscript.write_text("## Chapter 1\n\nA short sentence here.\n", encoding="utf-8")
+            self.assertEqual(main(["scenes", str(manuscript), "--json", "-o", str(out)]), 0)
+            data = json.loads(out.read_text(encoding="utf-8"))
+            self.assertEqual(data["scenes"]["items"][0]["scene_title"], "Chapter 1")
+
 
 if __name__ == "__main__":
     unittest.main()

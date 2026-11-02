@@ -1,6 +1,8 @@
 """Explicit manuscript selections retain only reviewed quotes and exact claim pins."""
 
+import contextlib
 import hashlib
+import io
 import json
 from dataclasses import replace
 from datetime import datetime, timezone
@@ -1289,4 +1291,35 @@ aliases = ["coffee"]
     cli_out = json.loads(capsys.readouterr().out)
     assert "manuscript_evidence" in cli_out
     assert cli_out["manuscript_evidence"]["dossier_id"] == dossier_id
+
+
+def test_reconcile_manuscript_accept_all_moved_updates_source_changed(manuscript_archive):
+    project, manuscript, _claim, _dossier = manuscript_archive
+    save_link(manuscript_archive)
+    review_before = api.review_manuscript_links(project, "draft.md")
+    assert review_before["links"][0]["flags"] == []
+
+    # Modify manuscript elsewhere (adding another paragraph at the end)
+    manuscript.write_text(manuscript.read_text(encoding="utf-8") + "\n\nA new unrelated paragraph.\n", encoding="utf-8")
+    review_after = api.review_manuscript_links(project, "draft.md")
+    assert "source_changed" in review_after["links"][0]["flags"]
+    assert review_after["links"][0]["anchor_state"] == "resolved"
+
+    parser = research_parser()
+    args = parser.parse_args(["reconcile-manuscript", "--project", str(project), "draft.md", "--accept-all-moved"])
+    assert cli.run(args) == 0
+
+    review_reconciled = api.review_manuscript_links(project, "draft.md")
+    assert review_reconciled["links"][0]["flags"] == []
+
+
+def test_find_anchor_two_explicit_paths_reports_helpful_guidance():
+    parser = research_parser()
+    errors = io.StringIO()
+    with contextlib.redirect_stderr(errors), pytest.raises(SystemExit) as error:
+        parser.parse_args(["find-anchor", "--project", "/synthetic", "draft.md", "--manuscript", "draft.md", "--quote", "Room"])
+    assert error.value.code == 2
+    assert "Supply manuscript as either positional PATH or --manuscript, not both" in errors.getvalue()
+    assert "In configured projects, PATH may be omitted entirely" in errors.getvalue()
+
 

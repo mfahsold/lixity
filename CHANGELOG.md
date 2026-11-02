@@ -8,6 +8,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Explicit scene titles and project-configured titles in `scenes` JSON exports:
+  - Each item in `scenes.items` and `scenes.planned_items` now includes an explicit `scene_title` field alongside `chapter_title`.
+  - Automatically derives scene titles from leading Markdown headings (`##`, `###`), explicit `scene_analysis.titles` table definitions in project configuration, or clean fallbacks (`Chapter · Scene`).
+- Universal `-o` / `--output` file export support across all analysis commands:
+  - `lixity scenes`, `lixity motifs`, and `lixity characters` now accept optional `-o` / `--output` flags to atomically write reports or JSON directly to target files, harmonizing them with `pacing`, `dialogue`, `analyze`, and `style`.
+- Batch reconciliation for manuscript research links:
+  - Added `--accept-all-moved` to `lixity research reconcile-manuscript` to batch-accept all uniquely resolved, relocated, or adjusted link anchors in one single atomic transaction when manuscript source hashes update after prose edits.
 - Rich LaTeX math and formatting rendering engine in dossiers and markdown prose:
   - Offline, zero-dependency LaTeX parser converting math expressions (`$...$` and `$$...$$`) into clean, accessible mathematical typography. Supports fractions (`\frac`, `\dfrac`), square roots (`\sqrt`), sub- and superscripts (`^`, `_`), Greek letters (both lowercase and uppercase), mathematical operators (`\sum`, `\prod`, `\int`, `\times`, `\cdot`, `\approx`, `\le`, `\ge`, `\ne`, `\in`, `\infty`, `\partial`), mathematical functions (`\ln`, `\log`, `\sin`, `\cos`, `\exp`, `\det`), matrix and alignment environments (`\begin{aligned}`, `\begin{matrix}`), blackboard bold (`\mathbb{R}`, `\mathbb{N}`), and variable italics.
   - Full support for LaTeX prose styling: `\textbf{...}`, `\textit{...}`, `\emph{...}`, `\underline{...}`, `\texttt{...}`, `\sout{...}`, `\textsc{...}` alongside standard CommonMark markers.
@@ -211,6 +218,7 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and keeps progress and error messages visible while scrolling.
 
 ### Fixed
+- `lixity research find-anchor` and manuscript commands report helpful guidance instead of confusing mutually exclusive errors when positional `PATH` and `--manuscript` are both provided or project defaults apply.
 - Unified project settings layout and eliminated inconsistent spacing:
   - Standardized `#controls` with a clean 1.5rem (`var(--space-5)`) vertical rhythm across the Project panel.
   - Flattened nested NDA draft panel into a cohesive card, eliminating double-margin and double-border collisions.

@@ -2163,6 +2163,7 @@ def _main(argv: list[str] | None = None) -> int:
                 "--language", default=None, help="Language profile (default: project setting or en)"
             )
             p.add_argument("--json", action="store_true", help="JSON output (scene schema v1)")
+            p.add_argument("-o", "--output", help="Write report text or JSON to a file instead of stdout")
             p.add_argument("--chapter", type=_positive_chapter, metavar="N",
                            help="Select a canonical chapter number; comparisons retain the full manuscript")
             scene_selector = p.add_mutually_exclusive_group()
@@ -2207,6 +2208,7 @@ def _main(argv: list[str] | None = None) -> int:
                 "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)"
             )
             p.add_argument("--json", action="store_true", help="JSON output")
+            p.add_argument("-o", "--output", help="Write report text or JSON to a file instead of stdout")
             continue
         if name == "characters":
             p.add_argument("file", nargs="?", help="Markdown manuscript (default: manuscript in root-local project config)")
@@ -2221,6 +2223,7 @@ def _main(argv: list[str] | None = None) -> int:
                 "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)"
             )
             p.add_argument("--json", action="store_true", help="JSON output")
+            p.add_argument("-o", "--output", help="Write report text or JSON to a file instead of stdout")
             continue
         if name == "dashboard":
             p.description = "Generate a self-contained offline HTML report containing manuscript text, measurements and work-marker notes."
@@ -2750,13 +2753,13 @@ def _main(argv: list[str] | None = None) -> int:
         return _run_text_report(args, lambda: _cmd_dialogue(args))
 
     if args.command == "characters":
-        return _cmd_characters(args)
+        return _run_text_report(args, lambda: _cmd_characters(args))
 
     if args.command == "pacing":
         return _run_text_report(args, lambda: _cmd_pacing(args))
 
     if args.command == "motifs":
-        return _cmd_motifs(args)
+        return _run_text_report(args, lambda: _cmd_motifs(args))
 
     if args.command == "showing":
         return _run_text_report(args, lambda: _cmd_showing(args))

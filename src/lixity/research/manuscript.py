@@ -781,21 +781,26 @@ def _prepare_reanchored_link(
         and start == record.anchor.start
         and end == record.anchor.end
     )
-    if anchor_unchanged and claim is None:
+    source_bytes_changed = record.anchor.source_sha256 != source_sha256
+    if anchor_unchanged and claim is None and not (source_bytes_changed and accept_moved):
         raise ResearchError("The anchor still resolves at its recorded lines; nothing to re-pin")
     change_kind: Literal["correction", "supersession"] = (
         "supersession" if quote_changed else "correction"
     )
     default_reason = (
         "Accept current claim revision"
-        if anchor_unchanged
+        if (anchor_unchanged and not source_bytes_changed)
         else (
-            "Update quote to the revised manuscript text"
-            if quote_changed
+            "Re-anchor to current manuscript version (quote and lines confirmed)"
+            if anchor_unchanged
             else (
-                "Re-anchor to the uniquely moved paragraph"
-                if unchanged_identity
-                else "Re-anchor to the adjusted paragraph (quote unchanged)"
+                "Update quote to the revised manuscript text"
+                if quote_changed
+                else (
+                    "Re-anchor to the uniquely moved paragraph"
+                    if unchanged_identity
+                    else "Re-anchor to the adjusted paragraph (quote unchanged)"
+                )
             )
         )
     )
@@ -919,6 +924,7 @@ def reconcile_manuscript_links(
     language: str | None = None,
     accept_moved: bool = False,
     accept_claim_updates: bool = False,
+    accept_all_moved: bool = False,
     reason: str | None = None,
     expected_project_id: str | None = None,
     expected_snapshot: str | None = None,
@@ -962,7 +968,10 @@ def reconcile_manuscript_links(
                 raise ResearchConflictError(
                     "Manuscript source bytes changed; review the current text before saving"
                 )
-            move_this = bool(accept_moved and row.get("anchor_state") in ("moved", "adjusted"))
+            move_this = bool(
+                (accept_all_moved and row.get("anchor_state") in ("resolved", "moved", "adjusted"))
+                or (accept_moved and row.get("anchor_state") in ("moved", "adjusted"))
+            )
             claim_revision = (
                 row["claim_current_revision"]
                 if accept_claim_updates and row.get("claim_changed")
