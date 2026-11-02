@@ -1,35 +1,37 @@
-# Willkommen im Lixity Wiki 📚
+# Welcome to the Lixity Wiki 📚
 
-**Lixity** ist eine lokale, offline-fähige Workbench für Autorinnen, Autoren, Verlagslektorate und Manuskriptprüfende. Es verbindet **genaues Lesen (Close Reading)**, **quantitative Manuskriptanalyse** und **quellenbasierte Recherche** in einer fokussierten Browser-Arbeitsumgebung.
+**Lixity** is a local, offline computational workbench for authors, editors, and manuscript reviewers. It brings **close reading**, **quantitative manuscript analysis**, and **documented research** into one focused workspace.
 
 > [!NOTE]
-> **Das Prinzip:** Das Manuskript steht immer im Mittelpunkt. Lixity bewertet weder literarische Qualität noch nimmt es automatisierte Textänderungen vor. Statistische Messwerte unterstützen das menschliche Urteil und laden zum bewussten Nachprüfen ein.
+> **Core Principle:** The manuscript stays at the center. Lixity neither grades literary quality nor rewrites your prose. Statistical measurements highlight structural patterns to support human editorial judgment and invite intentional revision.
+
+[🇩🇪 Einstieg auf Deutsch](Schnelleinstieg-DE.md)
 
 ---
 
-## 🗺️ Schnellübersicht der Themen
+## 🗺️ Documentation Overview
 
-| Bereich | Beschreibung | Link |
+| Guide | Description | Link |
 | :--- | :--- | :--- |
-| **🚀 Schnelleinstieg** | Installation, Projekt anlegen und Manuskript analysieren. | [Schnelleinstieg](Schnelleinstieg.md) |
-| **📊 Metriken verstehen** | ASL, Rhythmus, Tempusmuster, MTLD, FDR und Signal-Z-Werte im Lektorat. | [Lektorats-Metriken](Lektorats-Metriken.md) |
-| **📂 Recherche & Dossiers** | Recherchearchive, Thesen, Zotero-Kopplung und Textabgleich (Jaccard / Dunning G²). | [Recherche & Dossiers](Recherche-und-Dossiers.md) |
-| **⌨️ Tastaturkürzel** | Effiziente Steuerung, Suchnavigation, Split-Pane und Barrierefreiheit. | [Tastaturkürzel & Navigation](Tastaturkuerzel-und-Navigation.md) |
-| **🎙️ Audio & Regie** | Lokale Sprachsynthese, Kapitelregie und Text-zu-Sprache für Gegenlesungen. | [Audio & Regie](Audio-und-Regie.md) |
+| **🚀 Quickstart** | Installation, creating a project, and importing your first manuscript. | [Quickstart](Quickstart.md) |
+| **📊 Editorial Metrics** | Interpreting sentence lengths (ASL), tense patterns, dialogue cadence, repetitions, and FDR. | [Editorial Metrics](Editorial-Metrics.md) |
+| **📂 Research & Dossiers** | Research archives, claims, Zotero integration, and manuscript vocabulary grounding. | [Research & Dossiers](Research-and-Dossiers.md) |
+| **⌨️ Keyboard Shortcuts** | Full keyboard navigation, text search, split-pane layout, and accessibility. | [Keyboard Shortcuts](Keyboard-Shortcuts-and-Navigation.md) |
+| **🎙️ Audio & Direction** | Offline speech synthesis, pause timelines, and acoustic listening for copy editing. | [Audio & Direction](Audio-and-Direction.md) |
 
 ---
 
-## 💡 Zentrale Merkmale von Lixity
+## 💡 Key Principles
 
-* **100 % lokal & offline:** Keine Cloud-Abhängigkeiten, keine Datenübertragung an Dritte. Ihre Texte bleiben strikt auf Ihrer Maschine.
-* **Deterministisch & reproduzierbar:** Berechnungen erfolgen ausschließlich mit Python-Standardbibliotheken; keine intransparenten heuristischen Zufallsergebnisse.
-* **Multilingual:** Vollständige Lokalisierung und sprachspezifische Grammatik- und Silbenregeln für **Deutsch, Englisch, Französisch, Spanisch, Italienisch, Portugiesisch und Niederländisch**.
-* **Offene Standards:** Manuskripte in reinem Markdown (`.md`) oder Text (`.txt`). Direkte Integration mit Zotero für Literatur- und Quellenverwaltung.
+* **100% Local & Offline:** No cloud dependencies, no remote servers, no analytics, and no third-party AI transmission. Your manuscript text and research stay strictly on your machine.
+* **Deterministic & Reproducible:** Computations use standard Python statistics without opaque heuristic random seeds.
+* **Multilingual:** Full UI localization and dedicated grammar/syllable tokenizers for **English, German, French, Spanish, Italian, Portuguese, and Dutch**.
+* **Open Standards:** Input format is standard CommonMark Markdown (`.md`) or plain text (`.txt`). Direct Zotero library synchronization for archival sources.
 
 ---
 
 ## 🤝 Community & Support
 
-* Haben Sie Fragen zur Interpretation von Signalen? Besuchen Sie unsere **[GitHub Discussions](https://github.com/mfahsold/lixity/discussions)** (insb. [Q&A](https://github.com/mfahsold/lixity/discussions/categories/q-a)).
-* Fehlerberichte und Feature-Anfragen können direkt als **[Issue](https://github.com/mfahsold/lixity/issues)** eingereicht werden.
-* Folgen Sie den Neuigkeiten auf **[Mastodon](https://mastodon.social/@lixity)** und **[Bluesky](https://bsky.app/profile/lixity.bsky.social)**.
+* Have questions or want to discuss metrics? Join our **[GitHub Discussions](https://github.com/mfahsold/lixity/discussions)** (especially the [Q&A](https://github.com/mfahsold/lixity/discussions/categories/q-a) category).
+* Bug reports and feature proposals can be opened via **[GitHub Issues](https://github.com/mfahsold/lixity/issues)**.
+* Follow project updates on **[Bluesky](https://bsky.app/profile/lixity.bsky.social)** and **[Mastodon](https://mastodon.social/@lixity)**.

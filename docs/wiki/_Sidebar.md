@@ -1,17 +1,23 @@
 ### 📖 [Lixity Wiki](Home.md)
 
-* **[Startseite](Home.md)**
-* **[Schnelleinstieg (Quickstart)](Schnelleinstieg.md)**
-* **[Lektorats-Metriken verstehen](Lektorats-Metriken.md)**
-* **[Recherche & Dossiers](Recherche-und-Dossiers.md)**
-* **[Tastaturkürzel & Navigation](Tastaturkuerzel-und-Navigation.md)**
-* **[Audio & Regie](Audio-und-Regie.md)**
+* **[Home](Home.md)**
+* **[Quickstart](Quickstart.md)**
+* **[Editorial Metrics](Editorial-Metrics.md)**
+* **[Research & Dossiers](Research-and-Dossiers.md)**
+* **[Keyboard Shortcuts](Keyboard-Shortcuts-and-Navigation.md)**
+* **[Audio & Direction](Audio-and-Direction.md)**
 
 ---
 
-### 🔗 Externe Ressourcen
-* 🌐 [Offizielle Website](https://mfahsold.github.io/lixity/)
-* 💻 [Interaktive Demo](https://mfahsold.github.io/lixity/demo/report.html)
+### 🇩🇪 Deutsch
+* **[Schnelleinstieg (DE)](Schnelleinstieg-DE.md)**
+* **[Lektorats-Metriken (DE)](Lektorats-Metriken-DE.md)**
+
+---
+
+### 🔗 External Resources
+* 🌐 [Official Website](https://mfahsold.github.io/lixity/)
+* 💻 [Interactive Demo](https://mfahsold.github.io/lixity/demo/report.html)
 * 💬 [GitHub Discussions](https://github.com/mfahsold/lixity/discussions)
-* 📦 [PyPI Paket](https://pypi.org/project/lixity/)
-* 🐘 [Mastodon](https://mastodon.social/@lixity) · 🦋 [Bluesky](https://bsky.app/profile/lixity.bsky.social)
+* 📦 [PyPI Package](https://pypi.org/project/lixity/)
+* 🦋 [Bluesky](https://bsky.app/profile/lixity.bsky.social) · 🐘 [Mastodon](https://mastodon.social/@lixity)
