@@ -6,10 +6,10 @@ from typing import Any
 
 from .analyzer import CorpusAnalyzer
 from .diversity import MIN_TOKENS_LD
-from .markdown_parser import split_chapters, split_scenes
+from .markdown_parser import split_chapters, split_scenes, strip_html_comments
 from .math_core import mad, median
 from .models import ChapterMetrics, CorpusConfig
-from .registers import validate_target_ranges
+from .registers import MAX_REGISTER_NAME_CHARS, validate_target_ranges
 from .style_fingerprint import FEATURES
 
 
@@ -40,8 +40,8 @@ def _settings(settings: Any) -> tuple[dict[str, str], dict[str, dict[str, list[f
     targets: dict[str, dict[str, list[float | None]]] = {}
     fields = {f[0] for f in FEATURES}
     for name, group in groups.items():
-        if not isinstance(name, str) or not name.strip() or len(name) > 100:
-            raise ValueError("Register names must contain 1–100 characters")
+        if not isinstance(name, str) or not name.strip() or len(name) > MAX_REGISTER_NAME_CHARS:
+            raise ValueError(f"Register names must contain 1–{MAX_REGISTER_NAME_CHARS} characters")
         if not isinstance(group, Mapping) or set(group) - {"targets"}:
             raise ValueError("Each scene group accepts only a targets table")
         targets[name] = validate_target_ranges(group.get("targets", {}), fields)
@@ -77,7 +77,7 @@ def scene_report(
     chapter_dividers: dict[int, int] = {}
     breaks = 0
     for chapter_num, title, body in split_chapters(text, config):
-        clean = re.sub(r"<!--.*?-->", "", body, flags=re.DOTALL)
+        clean = strip_html_comments(body)
         parts, scene_breaks = split_scenes(clean)
         chapter_dividers[chapter_num] = scene_breaks
         breaks += scene_breaks

@@ -27,6 +27,12 @@ from .markdown_parser import prose_text, split_chapters
 from .models import CorpusConfig
 
 MIN_PHRASE_COUNT = 3  # a repeated n-gram must occur at least this often
+DEFAULT_PHRASE_SIZE = 3
+DEFAULT_TOP_WORDS = 15
+DEFAULT_TOP_PHRASES = 10
+DEFAULT_ECHO_WINDOW = 300
+DEFAULT_ECHO_MIN_COUNT = 2
+DEFAULT_TOP_ECHOES = 20
 
 
 def resolve_motif_settings(
@@ -149,12 +155,12 @@ def motif_report(
     text: str,
     motifs: Mapping[str, str] | None = None,
     config: CorpusConfig | None = None,
-    phrase_size: int = 3,
-    top_words: int = 15,
-    top_phrases: int = 10,
-    echo_window: int = 300,
-    echo_min_count: int = 2,
-    top_echoes: int = 20,
+    phrase_size: int = DEFAULT_PHRASE_SIZE,
+    top_words: int = DEFAULT_TOP_WORDS,
+    top_phrases: int = DEFAULT_TOP_PHRASES,
+    echo_window: int = DEFAULT_ECHO_WINDOW,
+    echo_min_count: int = DEFAULT_ECHO_MIN_COUNT,
+    top_echoes: int = DEFAULT_TOP_ECHOES,
 ) -> MotifReport:
     """Motif presence and repetition signals (deterministic, offline).
 

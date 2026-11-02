@@ -105,7 +105,7 @@ def render_metric_context(
         f'aria-labelledby="metric-context-title" data-metric-context="{payload}">'
         '<div class="modal-card"><div class="modal-header">'
         f'<h2 id="metric-context-title" tabindex="-1">{esc(label(labels, "metric_context_title"))}</h2>'
-        f'<button type="button" class="modal-close" data-metric-close aria-label="{esc(label(labels, "modal_close"))}">✕</button>'
+        f'<button type="button" class="modal-close" data-metric-close aria-label="{esc(label(labels, "modal_close"))}" title="{esc(label(labels, "modal_close"))}" aria-keyshortcuts="Escape">✕</button>'
         '</div><div class="modal-body">'
         '<p id="metric-context-chapter"></p><p class="ctl-note" id="metric-context-sample"></p>'
         '<p id="metric-context-origin" hidden></p>'
@@ -121,7 +121,7 @@ def render_metric_context(
         f'<th scope="col">{esc(label(labels, "metric_context_reference"))}</th>'
         '<th scope="col">z*</th></tr></thead><tbody id="metric-context-values"></tbody></table></div>'
         '</div><div class="modal-footer">'
-        f'<button type="button" class="ctl" data-metric-close>{esc(label(labels, "modal_close"))}</button>'
+        f'<button type="button" class="ctl" data-metric-close aria-label="{esc(label(labels, "modal_close"))}" title="{esc(label(labels, "modal_close"))}" aria-keyshortcuts="Escape">{esc(label(labels, "modal_close"))}</button>'
         f'<a class="ctl primary" id="metric-context-read">{esc(label(labels, "dim_read_chapter"))}</a>'
         '</div></div></dialog>'
     )

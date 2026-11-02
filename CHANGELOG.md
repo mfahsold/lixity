@@ -8,6 +8,31 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Global keyboard shortcut recognition and formatting in the central tooltip engine:
+  interactive controls declaring `aria-keyshortcuts` or parenthesized shortcut
+  conventions now render crisp `<kbd>` key badges in the tooltip header across
+  desktop and touch viewports. Shortcut triggers without extra `data-help`
+  gracefully display their accessible name alongside formatted keys without
+  duplicate copy stutter.
+- Wired explicit `aria-keyshortcuts` and localized tooltips across core interactive
+  surfaces: manuscript text search (`Enter` next, `Shift+Enter` previous, `Escape`
+  clear), modal close and cancel dialogs (`Escape`), manuscript inspector close,
+  workspace split divider (`←`/`→`/`Home`/`End`), claim link action (`Alt+L`),
+  and reader focus toggle (`Escape`).
+- Central consolidation of repetitive patterns and hardcoded values across the engine:
+  - Unified Markdown HTML comment stripping through `COMMENT_STRIP_RE` and
+    `strip_html_comments` across `markdown_parser`, `analyzer`, and `scenes`.
+  - Canonicalized character and register name/alias length bounds
+    (`MAX_CHARACTER_NAME_CHARS`, `MAX_CHARACTER_ALIAS_CHARS`, `MAX_REGISTER_NAME_CHARS`)
+    across `characters`, `registers`, and `scenes`.
+  - Harmonized structural defaults between `models.py` (`CorpusConfig`),
+    `sentences.py`, `dialogue.py`, and `pacing.py` (`SHORT_SENTENCE_MAX`,
+    `MEDIUM_SENTENCE_MAX`, `LONG_SENTENCE_MAX`, `DEFAULT_SHORT_TURN_MAX_WORDS`,
+    `DEFAULT_LONG_TURN_MIN_WORDS`, `DEFAULT_DIALOGUE_PARAGRAPH_SHARE`,
+    `DEFAULT_HOOK_SHORT_SENTENCE`, `DEFAULT_MONOTONY_MIN_RUN`).
+  - Standardized module defaults for lexical diversity (`DEFAULT_MTLD_THRESHOLD`,
+    `DEFAULT_MATTR_WINDOW`) in `diversity.py` and repetition analysis in `motifs.py`.
+  - Dynamically resolved UI settings preset choices from `FingerprintThresholds.presets`.
 - Streamlined research record cards across dossiers, sources, claims, and decisions:
   dossier section headings over four entries collapse into a compact expandable
   disclosure (`+N more…`), excerpts clamp cleanly to two lines without title

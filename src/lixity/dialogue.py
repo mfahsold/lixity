@@ -24,17 +24,22 @@ from .language import (
     resolve_language,
 )
 from .markdown_parser import prose_paragraphs, split_chapters  # shared segmentation (re-export)
-from .models import CorpusConfig
+from .models import (
+    DEFAULT_DIALOGUE_PARAGRAPH_SHARE,
+    DEFAULT_LONG_TURN_MIN_WORDS,
+    DEFAULT_SHORT_TURN_MAX_WORDS,
+    CorpusConfig,
+)
 from .sentences import split_prose_sentences
 
 # A paragraph counts as dialogue paragraph when at least this share of its
 # words sits inside quotation marks.
-DIALOGUE_PARAGRAPH_SHARE = 0.5
+DIALOGUE_PARAGRAPH_SHARE = DEFAULT_DIALOGUE_PARAGRAPH_SHARE
 
 # Turn-length cadence thresholds (words per recognized quoted span):
 # rapid back-and-forth exchange (stichomythia proxy) vs. extended speech/monologue.
-SHORT_TURN_MAX_WORDS = 12
-LONG_TURN_MIN_WORDS = 80
+SHORT_TURN_MAX_WORDS = DEFAULT_SHORT_TURN_MAX_WORDS
+LONG_TURN_MIN_WORDS = DEFAULT_LONG_TURN_MIN_WORDS
 
 
 @dataclass(frozen=True)

@@ -91,13 +91,32 @@
     showTimer = null; pendingEl = null;
   }
 
+  var HELP_TRIGGER_SELECTOR = "[data-help], [data-tip], [title], [aria-keyshortcuts]";
+
+  function formatShortcutKey(key) {
+    if (!key) return "";
+    var k = key.trim();
+    var lower = k.toLowerCase();
+    if (lower === "escape") return "Esc";
+    if (lower === "arrowleft") return "←";
+    if (lower === "arrowright") return "→";
+    if (lower === "arrowup") return "↑";
+    if (lower === "arrowdown") return "↓";
+    return k;
+  }
+
   function helpText(el) {
     var text = el.getAttribute("data-help") || el.getAttribute("title") || el.getAttribute("data-tip");
     // Suppress the browser's separate title bubble even during dwell.
     if (text && el.hasAttribute("title")) {
       el.setAttribute("data-tip", text); el.removeAttribute("title");
     }
-    return text;
+    if (!text && el.hasAttribute("aria-keyshortcuts")) {
+      text = el.getAttribute("aria-label") ||
+        (el.labels && el.labels.length ? el.labels[0].textContent :
+          el.matches("button, a, summary, .help") ? el.textContent : "");
+    }
+    return text ? text.trim() : "";
   }
 
   function hasPersistentFocus(el) {
@@ -166,17 +185,44 @@
       (el.labels && el.labels.length ? el.labels[0].textContent :
         el.matches("button, a, summary, .help") ? el.textContent : "");
     name = (name || "").trim();
+
+    var shortcut = el.getAttribute("aria-keyshortcuts") || "";
+    var shortcutMatch = !shortcut && (
+      (text && text.match(/\s*\((Alt\+[A-Za-z0-9]|Shift\+[A-Za-z0-9]|Ctrl\+[A-Za-z0-9]|Strg\+[A-Za-z0-9]|Cmd\+[A-Za-z0-9]|Meta\+[A-Za-z0-9]|Esc|Escape|Enter|Shift\+Enter)\)\s*$/i)) ||
+      (name && name.match(/\s*\((Alt\+[A-Za-z0-9]|Shift\+[A-Za-z0-9]|Ctrl\+[A-Za-z0-9]|Strg\+[A-Za-z0-9]|Cmd\+[A-Za-z0-9]|Meta\+[A-Za-z0-9]|Esc|Escape|Enter|Shift\+Enter)\)\s*$/i))
+    );
+    if (!shortcut && shortcutMatch) {
+      shortcut = shortcutMatch[1];
+      if (text) text = text.replace(shortcutMatch[0], "").trim();
+      if (name) name = name.replace(shortcutMatch[0], "").trim();
+    }
+
+    var hasShortcut = Boolean(shortcut && shortcut.trim());
+    var showHeading = hasShortcut || (name && name !== text.trim() && name.length <= 120);
     heading.replaceChildren();
-    heading.hidden = !name || name === text.trim() || name.length > 120;
-    if (!heading.hidden) {
-      heading.appendChild(document.createTextNode(name));
-      var shortcut = el.getAttribute("aria-keyshortcuts");
-      if (shortcut) {
-        var key = document.createElement("kbd"); key.textContent = shortcut;
-        heading.appendChild(key);
+    heading.hidden = !showHeading;
+    if (showHeading) {
+      var displayName = (name && name.length <= 120) ? name : (text && text.length <= 60 ? text : "");
+      if (displayName) {
+        heading.appendChild(document.createTextNode(displayName));
+      }
+      if (hasShortcut) {
+        var combos = shortcut.trim().split(/\s+/);
+        combos.forEach(function(combo) {
+          if (!combo) return;
+          var key = document.createElement("kbd");
+          key.textContent = formatShortcutKey(combo);
+          heading.appendChild(key);
+        });
       }
     }
-    copy.textContent = text;
+    if (hasShortcut && name && text && text.trim() === name) {
+      copy.textContent = "";
+      copy.hidden = true;
+    } else {
+      copy.textContent = text;
+      copy.hidden = !text || !text.trim();
+    }
     tip.setAttribute("aria-hidden", "false");
     tip.classList.add("visible");
     warmUntil = Date.now() + 1000;
@@ -290,7 +336,7 @@
     if (dismissedHover && dismissedHover.contains(e.target) && !dismissedHover.contains(e.relatedTarget)) {
       dismissedHover = null;
     }
-    var el = e.target.closest("[data-help], [data-tip], [title]");
+    var el = e.target.closest(HELP_TRIGGER_SELECTOR);
     if (el && el === pendingEl && !el.contains(e.relatedTarget)) cancelPending();
     if (el && el === activeEl && !el.contains(e.relatedTarget) && !tip.contains(e.relatedTarget)) {
       // Reflow can emit departures from inactive help. One owned timer must
@@ -309,7 +355,7 @@
 
   document.addEventListener("focusin", function(e) {
     if (activatingAction && dismissAction(e.target)) return;
-    var el = e.target.closest("[data-help], [data-tip], [title]");
+    var el = e.target.closest(HELP_TRIGGER_SELECTOR);
     if (Date.now() >= touchUntil) touchFocusEl = null;
     // Touch can restore button focus without requesting another explanation.
     if (el && (Date.now() >= touchUntil || e.target.matches(":focus-visible"))) show(el);
@@ -333,7 +379,7 @@
     if (dismissedHover && !dismissedHover.contains(e.target)) dismissedHover = null;
     if (dismissedHover && dismissedHover.contains(e.target)) return;
     activatedEl = null;
-    var el = e.target.closest("[data-help], [data-tip], [title]");
+    var el = e.target.closest(HELP_TRIGGER_SELECTOR);
     if (el && !el.closest(".tooltip-popup")) hover(el);
     else if (!el && !tip.contains(e.target)) cancelPending();
   }, {passive: true});
@@ -341,7 +387,7 @@
   function isActionControl(target) {
     if (!target || !target.closest) return false;
     var action = target.closest("button, a, [role=button], input[type=button], input[type=submit]");
-    var trigger = target.closest("[data-help], [data-tip], [title]");
+    var trigger = target.closest(HELP_TRIGGER_SELECTOR);
     if (!action) return false;
     if (trigger && trigger.matches(".help[data-help]") && !trigger.closest("button, a")) return false;
     return true;
@@ -349,7 +395,7 @@
 
   function dismissAction(target) {
     if (!isActionControl(target)) return false;
-    var trigger = target.closest("[data-help], [data-tip], [title]");
+    var trigger = target.closest(HELP_TRIGGER_SELECTOR);
     if (!trigger) return false;
     activatedEl = trigger;
     activatedHover = trigger.matches(":hover");
@@ -364,7 +410,7 @@
     dismissAction(e.target);
     if (e.pointerType === "touch") {
       touchUntil = Date.now() + 1000;
-      touchFocusEl = e.target.closest("[data-help], [data-tip], [title]");
+      touchFocusEl = e.target.closest(HELP_TRIGGER_SELECTOR);
     }
     var el = e.target.closest(".help[data-help]");
     if (e.pointerType === "touch" && el && !el.closest("button, a")) {
@@ -374,7 +420,7 @@
       el.focus({preventScroll: true});
       if (wasOpen) hide();
       else show(el);
-    } else if (!e.target.closest("[data-help], [data-tip], [title], .tooltip-popup")) {
+    } else if (!e.target.closest(HELP_TRIGGER_SELECTOR + ", .tooltip-popup")) {
       hide();
     }
   });

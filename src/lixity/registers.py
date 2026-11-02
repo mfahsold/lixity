@@ -10,6 +10,8 @@ from typing import Any
 
 from .publication import validate_metadata_text
 
+MAX_REGISTER_NAME_CHARS = 100
+
 #: Curated starter register templates for common chapter and scene forms.
 #: These ranges are optional review starting points, never statistical norms.
 REGISTER_PROFILE_TEMPLATES: dict[str, dict[str, dict[str, float]]] = {
@@ -98,9 +100,9 @@ def validate_register_settings(
 
         fields = {feature for feature, _label, _unit in FEATURES}
         for name, targets in profiles.items():
-            if not isinstance(name, str) or not name.strip() or len(name) > 100:
-                raise ValueError("Register names must contain 1–100 characters")
-            validate_metadata_text(name, "Register name", 100)
+            if not isinstance(name, str) or not name.strip() or len(name) > MAX_REGISTER_NAME_CHARS:
+                raise ValueError(f"Register names must contain 1–{MAX_REGISTER_NAME_CHARS} characters")
+            validate_metadata_text(name, "Register name", MAX_REGISTER_NAME_CHARS)
             try:
                 normalized_profiles[name] = validate_target_ranges(targets, fields, allow_scalar=True)
             except ValueError as exc:

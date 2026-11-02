@@ -84,7 +84,12 @@
     dialog.id = "manuscript-link-dialog"; dialog.setAttribute("aria-labelledby", "manuscript-link-title");
     var card = element("div", "", "modal-card"), header = element("div", "", "modal-header");
     var title = element("h3", label("manuscript_link_action")); title.id = "manuscript-link-title";
-    header.appendChild(title); card.appendChild(header);
+    var closeBtn = element("button", "✕", "modal-close"); closeBtn.type = "button";
+    closeBtn.setAttribute("aria-label", label("modal_close"));
+    closeBtn.title = label("modal_close");
+    closeBtn.setAttribute("aria-keyshortcuts", "Escape");
+    closeBtn.addEventListener("click", function() { dialog.close(); });
+    header.append(title, closeBtn); card.appendChild(header);
     var body = element("div", "", "modal-body");
     quotation = element("blockquote"); quotation.id = "manuscript-link-quote"; body.appendChild(quotation);
     var choose = element("label", label("manuscript_link_choose")); choose.htmlFor = "manuscript-link-claim"; body.appendChild(choose);
@@ -107,6 +112,7 @@
     card.appendChild(body);
     var footer = element("div", "", "modal-footer");
     var cancel = element("button", label("modal_cancel"), "ctl"); cancel.type = "button";
+    cancel.setAttribute("aria-keyshortcuts", "Escape");
     cancel.addEventListener("click", function() { dialog.close(); });
     save = element("button", label("manuscript_link_save"), "ctl"); save.type = "button"; save.id = "manuscript-link-save";
     save.addEventListener("click", saveDraft); footer.append(cancel, save); card.appendChild(footer); dialog.appendChild(card); document.body.appendChild(dialog);

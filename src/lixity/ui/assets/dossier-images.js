@@ -274,7 +274,7 @@
     dialog.id = "modal-dossier-image"; dialog.className = "lixity-modal";
     dialog.setAttribute("aria-labelledby", "dossier-image-title");
     dialog.innerHTML = '<div class="modal-card"><div class="modal-header"><h3 id="dossier-image-title">' + safe(label("add")) +
-      '</h3><button type="button" class="modal-close" data-image-close aria-label="' + safe(label("close")) + '">×</button></div>' +
+      '</h3><button type="button" class="modal-close" data-image-close title="' + safe(label("close")) + '" aria-keyshortcuts="Escape" aria-label="' + safe(label("close")) + '">×</button></div>' +
       '<form id="dossier-image-form" class="modal-body"><p id="dossier-image-target" class="ctl-note"></p>' +
       '<p id="dossier-image-replacement" class="ctl-note" hidden><strong>' + safe(label("replace")) + '</strong><code></code></p>' +
       '<label class="form-label" for="dossier-image-file">' + safe(label("file")) + '</label><input class="ctl" id="dossier-image-file" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg">' +
@@ -290,7 +290,7 @@
       '<div id="dossier-image-status" class="ctl-status" role="status" aria-live="polite"></div>' +
       '<div id="dossier-image-conflict" hidden><button type="button" class="ctl" id="dossier-image-review">' + safe(label("review")) + '</button>' +
       '<div id="dossier-image-current"></div><button type="button" class="ctl" id="dossier-image-accept-current" hidden>' + safe(label("accept_current")) + '</button></div>' +
-      '<div class="modal-actions"><button type="button" class="ctl" data-image-close>' + safe(label("cancel")) + '</button><button type="submit" class="ctl primary" id="dossier-image-save" disabled>' + safe(label("save")) + '</button></div></form></div>';
+      '<div class="modal-actions"><button type="button" class="ctl" data-image-close aria-keyshortcuts="Escape">' + safe(label("cancel")) + '</button><button type="submit" class="ctl primary" id="dossier-image-save" disabled>' + safe(label("save")) + '</button></div></form></div>';
     document.body.appendChild(dialog); form = field("form");
     dialog.addEventListener("cancel", function(event) { if (state.pending) event.preventDefault(); });
     dialog.addEventListener("close", function() {

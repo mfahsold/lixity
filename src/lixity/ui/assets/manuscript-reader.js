@@ -496,6 +496,10 @@
     if (workbench.state().contextTool !== "none") workbench.dispatch({type: "tool", value: "none"});
   }
   function setFocus(value) {
+    if (focus) {
+      if (value) focus.setAttribute("aria-keyshortcuts", "Escape");
+      else focus.removeAttribute("aria-keyshortcuts");
+    }
     retain(function() { workbench.dispatch({type: "focus", value: value}); });
   }
   // Compatibility callers request an analysis overview, without replacing prose.
@@ -767,7 +771,10 @@
     }
     if (panel.querySelector("[data-manuscript-link-selection]")) {
       var hasSub = savedRange && Array.from(savedRange.toString()).length > 0 && Array.from(savedRange.toString()).length <= 10000;
-      fragment.appendChild(actionButton("link", hasSub ? "manuscript_link_action" : "manuscript_link_paragraph_action", !compact));
+      var linkBtn = actionButton("link", hasSub ? "manuscript_link_action" : "manuscript_link_paragraph_action", !compact);
+      linkBtn.setAttribute("aria-keyshortcuts", "Alt+L");
+      linkBtn.title = uiLabel("manuscript_link_hint");
+      fragment.appendChild(linkBtn);
     }
     if (panel.dataset.markers === "1") {
       (compact ? ["pruefen"] : ["pruefen", "sachcheck", "todo", "achtung"]).forEach(function(kind) {

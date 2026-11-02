@@ -161,7 +161,7 @@ def render_research_panel(
     parts.append("</div>")
     parts.append("</details>")
     parts.append(
-        f'<input class="ctl full-width mb-2" type="search" id="r-filter-sources" aria-label="{L("research_filter_sources")}" placeholder="{L("research_filter_sources")}"/>'
+        f'<input class="ctl full-width mb-2" type="search" id="r-filter-sources" aria-label="{L("research_filter_sources")}" placeholder="{L("research_filter_sources")}" aria-keyshortcuts="Escape"/>'
     )
     parts.append('<p class="ctl-note" id="r-filter-sources-status" aria-live="polite" hidden></p>')
     parts.append(
@@ -176,7 +176,7 @@ def render_research_panel(
     )
     parts.append('<div class="row">')
     parts.append(
-        f'<input class="ctl" type="search" id="r-search-query" aria-label="{L("research_search_query")}" placeholder="{L("research_search_query")}"/>'
+        f'<input class="ctl" type="search" id="r-search-query" aria-label="{L("research_search_query")}" placeholder="{L("research_search_query")}" aria-keyshortcuts="Enter"/>'
     )
     parts.append(
         f'<select class="ctl" id="r-search-scope" aria-label="{L("research_search_scope")}">'
@@ -191,7 +191,7 @@ def render_research_panel(
         parts.append(f'<option value="{scope}">{L(scope_label)}</option>')
     parts.append("</select>")
     parts.append(
-        f'<button type="submit" class="ctl primary" id="r-search-btn">{L("research_search_action")}</button>'
+        f'<button type="submit" class="ctl primary" id="r-search-btn" aria-keyshortcuts="Enter">{L("research_search_action")}</button>'
     )
     parts.append("</div>")
     parts.append("</form>")
@@ -261,7 +261,7 @@ def render_research_panel(
     parts.append('<span class="ctl-note" id="r-dos-collection-note" hidden></span>')
     parts.append("</div>")
     parts.append(
-        f'<input class="ctl full-width mb-2" type="search" id="r-filter-dossiers" aria-label="{L("research_filter_dossiers")}" placeholder="{L("research_filter_dossiers")}"/>'
+        f'<input class="ctl full-width mb-2" type="search" id="r-filter-dossiers" aria-label="{L("research_filter_dossiers")}" placeholder="{L("research_filter_dossiers")}" aria-keyshortcuts="Escape"/>'
     )
     parts.append('<p class="ctl-note" id="r-filter-dossiers-status" aria-live="polite" hidden></p>')
     parts.append(

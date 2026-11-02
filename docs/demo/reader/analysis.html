@@ -1743,10 +1743,21 @@ footer {
   color: var(--fg-heading);
   &[hidden] { display: none; }
   & kbd {
-    flex-shrink: 0; color: var(--muted); font-size: 0.7rem; font-weight: 500;
-    padding: 1px 4px; border-radius: var(--radius-xs);
-    background: light-dark(rgba(0, 0, 0, .05), rgba(255, 255, 255, .1));
-    border: 1px solid light-dark(rgba(0, 0, 0, .1), rgba(255, 255, 255, .15));
+    flex-shrink: 0;
+    font-family: var(--font-mono, monospace);
+    color: var(--fg);
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 1.2;
+    padding: 1px 5px;
+    border-radius: var(--radius-xs);
+    background: light-dark(rgba(0, 0, 0, .06), rgba(255, 255, 255, .12));
+    border: 1px solid light-dark(rgba(0, 0, 0, .14), rgba(255, 255, 255, .2));
+    box-shadow: 0 1px 0 light-dark(rgba(0, 0, 0, .08), rgba(0, 0, 0, .3));
+    margin-left: 0.25rem;
+  }
+  & kbd + kbd {
+    margin-left: 0.2rem;
   }
 }
 .tooltip-copy {

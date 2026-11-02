@@ -30,15 +30,15 @@ from typing import Any
 from .language import compile_pattern, compile_word_pattern, quotation_texts, resolve_language
 from .markdown_parser import SCENE_BREAK_RE as SCENE_BREAK_RE
 from .markdown_parser import prose_paragraphs, prose_text, split_chapters, split_scenes
-from .models import CorpusConfig
+from .models import DEFAULT_HOOK_SHORT_SENTENCE, DEFAULT_MONOTONY_MIN_RUN, CorpusConfig
 from .sentences import SHORT_SENTENCE_MAX, split_prose_sentences
 
 # Hook heuristic: a closing sentence counts as punchy up to this length.
-HOOK_SHORT_SENTENCE = 8
+HOOK_SHORT_SENTENCE = DEFAULT_HOOK_SHORT_SENTENCE
 
 # Rhythm monotony heuristic: consecutive sentences in one paragraph starting
 # with the identical lowercased word token.
-MONOTONY_MIN_RUN = 3
+MONOTONY_MIN_RUN = DEFAULT_MONOTONY_MIN_RUN
 
 # Fallback content-word length floor when a language profile has no function-word
 # lexicon (e.g. "generic").

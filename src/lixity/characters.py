@@ -22,13 +22,15 @@ from .models import CorpusConfig
 from .publication import validate_metadata_text
 
 Names = Mapping[str, str] | Sequence[str]
+MAX_CHARACTER_NAME_CHARS = 100
+MAX_CHARACTER_ALIAS_CHARS = 100
 
 
 class CharacterProfile(BaseModel):
     """Explicit literal aliases and author-declared chapter perspective."""
 
     model_config = ConfigDict(extra="forbid", strict=True)
-    aliases: list[Annotated[str, Field(min_length=1, max_length=100)]] = Field(
+    aliases: list[Annotated[str, Field(min_length=1, max_length=MAX_CHARACTER_ALIAS_CHARS)]] = Field(
         default_factory=list, description="Literal name variants; the profile name is also matched.")
     pov_in_chapters: list[Annotated[int, Field(strict=True, ge=1)]] = Field(
         default_factory=list,
@@ -39,7 +41,7 @@ class CharacterProfile(BaseModel):
     def valid_aliases(cls, values: list[str]) -> list[str]:
         result = []
         for value in values:
-            name = validate_metadata_text(value, "Character alias", 100)
+            name = validate_metadata_text(value, "Character alias", MAX_CHARACTER_ALIAS_CHARS)
             if not name:
                 raise ValueError("Character aliases must not be empty")
             if name not in result:
@@ -64,7 +66,7 @@ class ResolvedCharacters:
 
 def character_configuration_schema() -> dict[str, Any]:
     """Describe the same profile model used by the configuration resolver."""
-    return {"type": "object", "propertyNames": {"minLength": 1, "maxLength": 100},
+    return {"type": "object", "propertyNames": {"minLength": 1, "maxLength": MAX_CHARACTER_NAME_CHARS},
             "additionalProperties": CharacterProfile.model_json_schema(),
             "description": "Project-local display names mapped to literal aliases and declared POV chapters."}
 
@@ -78,7 +80,7 @@ def resolve_character_settings(explicit: Names | None, settings: Mapping[str, An
         patterns: dict[str, str] = {}
         declared: dict[str, tuple[int, ...]] = {}
         for label, values in profiles.items():
-            name = validate_metadata_text(label, "Character name", 100)
+            name = validate_metadata_text(label, "Character name", MAX_CHARACTER_NAME_CHARS)
             if not name or name != label:
                 raise ValueError("Character names must be nonempty and have no surrounding whitespace")
             profile = CharacterProfile.model_validate(values)

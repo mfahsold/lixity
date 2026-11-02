@@ -8,11 +8,22 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from .sentences import LONG_SENTENCE_MAX, MEDIUM_SENTENCE_MAX, SHORT_SENTENCE_MAX
 from .status import SCHEMA_VERSION_ANALYZE
 
 # Version of the machine-readable JSON contracts (analyze/profile).
 # v2: tense values are language-neutral (present/past/mixed/neutral).
 SCHEMA_VERSION = SCHEMA_VERSION_ANALYZE
+
+DEFAULT_MIN_PARAGRAPH_LENGTH_FOR_ONELINER = 25
+DEFAULT_SHORT_SENTENCE_MAX = SHORT_SENTENCE_MAX
+DEFAULT_MEDIUM_SENTENCE_MAX = MEDIUM_SENTENCE_MAX
+DEFAULT_LONG_SENTENCE_MAX = LONG_SENTENCE_MAX
+DEFAULT_SHORT_TURN_MAX_WORDS = 12
+DEFAULT_LONG_TURN_MIN_WORDS = 80
+DEFAULT_DIALOGUE_PARAGRAPH_SHARE = 0.5
+DEFAULT_HOOK_SHORT_SENTENCE = 8
+DEFAULT_MONOTONY_MIN_RUN = 3
 
 
 class CorpusConfig(BaseModel):
@@ -42,39 +53,39 @@ class CorpusConfig(BaseModel):
         ),
     )
     min_paragraph_length_for_oneliner: int = Field(
-        default=25,
+        default=DEFAULT_MIN_PARAGRAPH_LENGTH_FOR_ONELINER,
         description="Word threshold below which a paragraph is classified as a potential one-liner.",
     )
     short_sentence_max: int = Field(
-        default=6,
+        default=DEFAULT_SHORT_SENTENCE_MAX,
         description="Word threshold up to which a sentence is classified as short/staccato.",
     )
     medium_sentence_max: int = Field(
-        default=15,
+        default=DEFAULT_MEDIUM_SENTENCE_MAX,
         description="Word threshold up to which a sentence is classified as medium length.",
     )
     long_sentence_max: int = Field(
-        default=25,
+        default=DEFAULT_LONG_SENTENCE_MAX,
         description="Word threshold up to which a sentence is classified as long (above this is complex/kaskade).",
     )
     short_turn_max_words: int = Field(
-        default=12,
+        default=DEFAULT_SHORT_TURN_MAX_WORDS,
         description="Word threshold up to which a dialogue turn is classified as a short/rapid turn.",
     )
     long_turn_min_words: int = Field(
-        default=80,
+        default=DEFAULT_LONG_TURN_MIN_WORDS,
         description="Word threshold from which a dialogue turn is classified as an extended monologue/turn.",
     )
     dialogue_paragraph_share: float = Field(
-        default=0.5,
+        default=DEFAULT_DIALOGUE_PARAGRAPH_SHARE,
         description="Minimum share of quoted words for a paragraph to count as a dialogue paragraph.",
     )
     hook_short_sentence: int = Field(
-        default=8,
+        default=DEFAULT_HOOK_SHORT_SENTENCE,
         description="Word threshold up to which a chapter closing sentence counts as punchy hook.",
     )
     monotony_min_run: int = Field(
-        default=3,
+        default=DEFAULT_MONOTONY_MIN_RUN,
         description="Minimum consecutive sentences starting with the same word to count as a rhythm monotony run.",
     )
     motif_regexes: dict[str, str] = Field(

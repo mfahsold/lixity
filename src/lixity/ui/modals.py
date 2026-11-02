@@ -41,7 +41,7 @@ def render_project_modals(
     parts.append('<dialog class="lixity-modal" id="modal-runtime" closedby="any" aria-labelledby="runtime-title">'
                  '<div class="modal-card"><div class="modal-header">'
                  f'<h3 id="runtime-title">{L("runtime_title")}</h3>'
-                 f'<button type="button" class="modal-close" data-close-modal aria-label="{L("modal_close")}">✕</button></div>'
+                 f'<button type="button" class="modal-close" data-close-modal aria-label="{L("modal_close")}" title="{L("modal_close")}" aria-keyshortcuts="Escape">✕</button></div>'
                  '<div class="modal-body"><p id="runtime-status" role="status" aria-live="polite"></p>'
                  '<div id="runtime-content"></div>'
                  f'<p class="ctl-note">{L("runtime_scope_note")}</p></div><div class="modal-footer">'
@@ -51,7 +51,7 @@ def render_project_modals(
     parts.append('<dialog class="lixity-modal" id="modal-site-export" data-requires-write closedby="any" aria-labelledby="site-export-title">')
     parts.append('<div class="modal-card"><div class="modal-header">')
     parts.append(f'<h3 id="site-export-title">{L("site_export")}</h3>')
-    parts.append(f'<button type="button" class="modal-close" data-close-modal aria-label="{L("modal_close")}">✕</button></div>')
+    parts.append(f'<button type="button" class="modal-close" data-close-modal aria-label="{L("modal_close")}" title="{L("modal_close")}" aria-keyshortcuts="Escape">✕</button></div>')
     parts.append('<form id="site-export-form" class="modal-body" method="dialog">')
     parts.append(f'<p class="ctl-note">{L("site_export_intro")}</p>')
     parts.append(f'<label class="form-label" for="site-export-mode">{L("publication_export_mode")}</label>')
@@ -79,7 +79,7 @@ def render_project_modals(
     parts.append(checkbox_field('<input type="checkbox" id="site-export-sources" disabled/>', L("site_export_sources")))
     parts.append('<div id="site-export-preflight" role="status" aria-live="polite" hidden></div>')
     parts.append('<p class="ctl-status" id="site-export-status" role="status" aria-live="polite"></p>')
-    parts.append(f'<div class="modal-footer"><button type="button" class="ctl" data-close-modal>{L("modal_cancel")}</button>')
+    parts.append(f'<div class="modal-footer"><button type="button" class="ctl" data-close-modal aria-keyshortcuts="Escape">{L("modal_cancel")}</button>')
     parts.append(f'<button type="submit" class="ctl" id="site-export-check">{L("site_export_check")}</button>')
     parts.append(f'<button type="submit" class="ctl primary" id="site-export-download">{L("site_export_download")}</button></div></form></div></dialog>')
 
@@ -88,7 +88,7 @@ def render_project_modals(
     parts.append('  <div class="modal-card">')
     parts.append('    <div class="modal-header">')
     parts.append(f'      <h3 id="modal-create-title">{L("create_project")}</h3>')
-    parts.append(f'      <button type="button" class="modal-close" data-close-modal aria-label="{L("modal_close")}">✕</button>')
+    parts.append(f'      <button type="button" class="modal-close" data-close-modal aria-label="{L("modal_close")}" title="{L("modal_close")}" aria-keyshortcuts="Escape">✕</button>')
     parts.append('    </div>')
     parts.append('    <div class="modal-tabs" role="tablist" aria-labelledby="modal-create-title">')
     parts.append(f'      <button type="button" class="modal-tab-btn active" role="tab" id="tab-btn-import" aria-controls="tab-pane-import" aria-selected="true" data-tab-target="tab-pane-import">{L("wizard_import_tab")}</button>')
@@ -155,7 +155,7 @@ def render_project_modals(
     parts.append('        </div>')
     parts.append('</details>')
     parts.append('        <div class="modal-footer">')
-    parts.append(f'          <button type="button" class="ctl" data-close-modal>{L("modal_cancel")}</button>')
+    parts.append(f'          <button type="button" class="ctl" data-close-modal aria-keyshortcuts="Escape">{L("modal_cancel")}</button>')
     parts.append(f'          <button type="submit" class="ctl primary" id="btn-submit-import-project" disabled>{L("wizard_import_action")}</button>')
     parts.append('        </div>')
     parts.append('      </form>')
@@ -216,7 +216,7 @@ def render_project_modals(
     parts.append('        </div>')
     parts.append('        <p class="ctl-status project-form-status" id="new-project-status" role="alert" aria-live="assertive" hidden></p>')
     parts.append('        <div class="modal-footer">')
-    parts.append(f'          <button type="button" class="ctl" data-close-modal>{L("modal_cancel")}</button>')
+    parts.append(f'          <button type="button" class="ctl" data-close-modal aria-keyshortcuts="Escape">{L("modal_cancel")}</button>')
     parts.append(f'          <button type="submit" class="ctl primary" id="btn-submit-create-project">{L("create_project")}</button>')
     parts.append('        </div>')
     parts.append('      </form>')
@@ -229,7 +229,7 @@ def render_project_modals(
     parts.append('  <div class="modal-card">')
     parts.append('    <div class="modal-header">')
     parts.append(f'      <h3 id="modal-open-title">{help_term(labels, "open_existing", L("open_project"))}</h3>')
-    parts.append(f'      <button type="button" class="modal-close" data-close-modal aria-label="{L("modal_close")}">✕</button>')
+    parts.append(f'      <button type="button" class="modal-close" data-close-modal aria-label="{L("modal_close")}" title="{L("modal_close")}" aria-keyshortcuts="Escape">✕</button>')
     parts.append('    </div>')
     parts.append('    <form id="form-project-open" class="modal-body" method="dialog">')
     parts.append('      <div class="form-group">')
@@ -267,7 +267,7 @@ def render_project_modals(
     parts.append('      </div>')
     parts.append('      <p class="ctl-status project-form-status" id="open-project-status" role="alert" aria-live="assertive" hidden></p>')
     parts.append('      <div class="modal-footer">')
-    parts.append(f'        <button type="button" class="ctl" data-close-modal>{L("modal_cancel")}</button>')
+    parts.append(f'        <button type="button" class="ctl" data-close-modal aria-keyshortcuts="Escape">{L("modal_cancel")}</button>')
     parts.append(f'        <button type="submit" class="ctl primary" id="btn-submit-open-project">{L("open")}</button>')
     parts.append('      </div>')
     parts.append('    </form>')
@@ -279,7 +279,7 @@ def render_project_modals(
     parts.append('  <div class="modal-card">')
     parts.append('    <div class="modal-header">')
     parts.append(f'      <h3 id="research-revision-title">{L("research_revision_title")}</h3>')
-    parts.append(f'      <button type="button" class="modal-close" data-close-modal aria-label="{L("modal_close")}">✕</button>')
+    parts.append(f'      <button type="button" class="modal-close" data-close-modal aria-label="{L("modal_close")}" title="{L("modal_close")}" aria-keyshortcuts="Escape">✕</button>')
     parts.append('    </div>')
     parts.append('    <div class="modal-scroll">')
     parts.append('    <div class="modal-tabs" role="tablist" aria-labelledby="research-revision-title">')
@@ -310,7 +310,7 @@ def render_project_modals(
     parts.append('      </details>')
     parts.append('      <div class="modal-footer">')
     parts.append(f'        <button type="button" class="ctl" id="research-revision-reload" hidden>{L("research_revision_reload")}</button>')
-    parts.append(f'        <button type="button" class="ctl" data-close-modal>{L("modal_cancel")}</button>')
+    parts.append(f'        <button type="button" class="ctl" data-close-modal aria-keyshortcuts="Escape">{L("modal_cancel")}</button>')
     parts.append(f'        <button type="button" class="ctl" id="research-revision-batch-add">{L("research_revision_batch_add")}</button>')
     parts.append(f'        <button type="submit" class="ctl primary" id="research-revision-save">{L("research_revision_save")}</button>')
     parts.append('      </div>')
@@ -338,7 +338,7 @@ def render_project_modals(
     parts.append('  <div class="modal-card">')
     parts.append('    <div class="modal-header">')
     parts.append(f'      <h3 id="research-revision-batch-title">{L("research_revision_batch_title")}</h3>')
-    parts.append(f'      <button type="button" class="modal-close" data-close-modal aria-label="{L("modal_close")}">✕</button>')
+    parts.append(f'      <button type="button" class="modal-close" data-close-modal aria-label="{L("modal_close")}" title="{L("modal_close")}" aria-keyshortcuts="Escape">✕</button>')
     parts.append('    </div>')
     parts.append('    <div class="modal-body">')
     parts.append(f'      <p class="ctl-note">{L("research_revision_batch_help")}</p>')
@@ -346,7 +346,7 @@ def render_project_modals(
     parts.append('      <p class="ctl-status" id="research-revision-batch-status" role="status" aria-live="polite" hidden></p>')
     parts.append('      <div class="modal-footer">')
     parts.append(f'        <button type="button" class="ctl" id="research-revision-batch-clear">{L("research_revision_batch_clear")}</button>')
-    parts.append(f'        <button type="button" class="ctl" data-close-modal>{L("research_revision_batch_close")}</button>')
+    parts.append(f'        <button type="button" class="ctl" data-close-modal aria-keyshortcuts="Escape">{L("research_revision_batch_close")}</button>')
     parts.append(f'        <button type="button" class="ctl" id="research-revision-batch-check">{L("research_revision_batch_check")}</button>')
     parts.append(f'        <button type="button" class="ctl primary" id="research-revision-batch-apply" disabled>{L("research_revision_batch_apply")}</button>')
     parts.append('      </div>')

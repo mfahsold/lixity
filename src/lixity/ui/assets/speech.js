@@ -494,7 +494,7 @@
       if (mode === "profiles" && pronunciationPending()) { status(label("pronunciation_pending")); return; }
       if (mode === "profiles" && profilesDirty) { status(label("profiles_unsaved")); return; }
       dialog.close();
-    }); close.className = "ctl";
+    }); close.className = "ctl"; close.setAttribute("aria-keyshortcuts", "Escape"); close.setAttribute("title", label("close"));
     fields.status = node("p", card, "ctl-status modal-intro"); fields.status.setAttribute("role", "status"); fields.status.setAttribute("aria-live", "polite");
     var content = node("div", card, "modal-body");
     var row = node("div", content, "row"); field(row, "profile", "select"); fields.create = button(row, "create", create);

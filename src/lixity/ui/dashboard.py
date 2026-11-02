@@ -836,7 +836,7 @@ def render_dashboard(
             'aria-labelledby="workspace-reader-title" hidden>'
             '<div class="workspace-reader-head">'
             f'<h2 id="workspace-reader-title">{L("reader_title")}</h2>'
-            f'<button type="button" class="ctl" id="workspace-reader-close" aria-label="{esc(L("modal_close"), quote=True)}">✕</button>'
+            f'<button type="button" class="ctl" id="workspace-reader-close" aria-label="{esc(L("modal_close"), quote=True)}" aria-keyshortcuts="Escape">✕</button>'
             "</div>"
             '<div class="row workspace-reader-controls" id="workspace-reader-collection-field" hidden>'
             '<div class="setting-field grow">'
@@ -851,7 +851,7 @@ def render_dashboard(
             '<div id="workspace-reader-body"></div></aside></div>'
             '<div id="workspace-reader-divider" class="workspace-reader-divider" role="separator" '
             'tabindex="0" aria-orientation="vertical" aria-valuemin="35" aria-valuemax="75" '
-            f'aria-valuenow="62" aria-label="{L("reading_split")}" '
+            f'aria-valuenow="62" aria-label="{L("reading_split")}" aria-keyshortcuts="ArrowLeft ArrowRight Home End" '
             'aria-controls="workspace-analysis-body workspace-context-panel" hidden></div>'
             '<div id="workspace-analysis-body">'
         )
@@ -1040,14 +1040,15 @@ def render_dashboard(
     )
     parts.append(
         f'<button type="button" class="ctl" id="text-search-prev" hidden '
-        f'aria-label="{L("text_search_prev")}" title="{L("text_search_prev")}">↑</button>'
+        f'aria-label="{L("text_search_prev")}" title="{L("text_search_prev")}" aria-keyshortcuts="Shift+Enter">↑</button>'
     )
     parts.append(
         f'<button type="button" class="ctl" id="text-search-next" hidden '
-        f'aria-label="{L("text_search_next")}" title="{L("text_search_next")}">↓</button>'
+        f'aria-label="{L("text_search_next")}" title="{L("text_search_next")}" aria-keyshortcuts="Enter">↓</button>'
     )
     parts.append(
-        f'<button type="button" class="ctl" id="text-search-clear" hidden>'
+        f'<button type="button" class="ctl" id="text-search-clear" hidden '
+        f'aria-label="{L("text_search_clear")}" title="{L("text_search_clear")}" aria-keyshortcuts="Escape">'
         f"{L('text_search_clear')}</button>"
     )
     parts.append(

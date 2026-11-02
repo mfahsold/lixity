@@ -25,6 +25,8 @@ from typing import Any
 # Local minimum length for HD-D, MTLD and Maas; not a universal validity boundary.
 MIN_TOKENS_LD = 100
 HD_D_DRAW_SIZE = 42
+DEFAULT_MTLD_THRESHOLD = 0.72
+DEFAULT_MATTR_WINDOW = 50
 
 
 _UNSET: Any = object()
@@ -98,7 +100,7 @@ def hd_d_stats(
             probability = -math.expm1(log_absence)
         presence.append(type_count * probability)
     return math.fsum(presence) / HD_D_DRAW_SIZE, 0.0
-def mtld(tokens: list[str], threshold: float = 0.72) -> float | None:
+def mtld(tokens: list[str], threshold: float = DEFAULT_MTLD_THRESHOLD) -> float | None:
     """
     Original-style MTLD: arithmetic mean of forward and reverse N/F scores.
 
@@ -143,7 +145,7 @@ def mtld(tokens: list[str], threshold: float = 0.72) -> float | None:
     if fwd <= 0.0 or bwd <= 0.0:
         return None
     return (n / fwd + n / bwd) / 2.0
-def mattr(tokens: list[str], window: int = 50) -> float | None:
+def mattr(tokens: list[str], window: int = DEFAULT_MATTR_WINDOW) -> float | None:
     """
     MATTR: moving-average type-token ratio (Covington & McFall 2010).
 

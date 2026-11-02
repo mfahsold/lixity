@@ -155,12 +155,9 @@ def settings_form(
             publication_parts.append(f'<input type="text" {attrs} value="{value}"/>')
         publication_parts.append('</div>')
     publication_parts.append('</div></details>')
-    preset_choices = (
-        ("balanced", "settings_preset_balanced"),
-        ("developmental", "settings_preset_developmental"),
-        ("line_editing", "settings_preset_line_editing"),
-        ("conservative_by", "settings_preset_conservative_by"),
-        ("custom", "settings_preset_custom"),
+    preset_choices = tuple(
+        (preset, f"settings_preset_{preset}")
+        for preset in (*FingerprintThresholds.presets, "custom")
     )
     active_preset = thresholds.preset_name()
     presets_json = esc(json.dumps(

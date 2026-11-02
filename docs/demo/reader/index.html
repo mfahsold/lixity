@@ -1743,10 +1743,21 @@ footer {
   color: var(--fg-heading);
   &[hidden] { display: none; }
   & kbd {
-    flex-shrink: 0; color: var(--muted); font-size: 0.7rem; font-weight: 500;
-    padding: 1px 4px; border-radius: var(--radius-xs);
-    background: light-dark(rgba(0, 0, 0, .05), rgba(255, 255, 255, .1));
-    border: 1px solid light-dark(rgba(0, 0, 0, .1), rgba(255, 255, 255, .15));
+    flex-shrink: 0;
+    font-family: var(--font-mono, monospace);
+    color: var(--fg);
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 1.2;
+    padding: 1px 5px;
+    border-radius: var(--radius-xs);
+    background: light-dark(rgba(0, 0, 0, .06), rgba(255, 255, 255, .12));
+    border: 1px solid light-dark(rgba(0, 0, 0, .14), rgba(255, 255, 255, .2));
+    box-shadow: 0 1px 0 light-dark(rgba(0, 0, 0, .08), rgba(0, 0, 0, .3));
+    margin-left: 0.25rem;
+  }
+  & kbd + kbd {
+    margin-left: 0.2rem;
   }
 }
 .tooltip-copy {
@@ -4946,7 +4957,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 <div id="publication-entries"></div>
 <noscript><p>Enable JavaScript to select reading progress and open the context.</p></noscript></aside></div>
 <details class="panel"><summary>About this synthetic reading example</summary><p>The people, records and incident are invented. Reveal context deliberately with the reading-progress control. All content included in a static file remains inspectable; chapter caps remove later material before export.</p><p>Choose <strong>Analysis</strong> above the reading view for a chapter overview, then <strong>Back to reading copy</strong> to return. This example includes all six chapters; the analysis is not hidden by reading progress.</p><p>The map and harbour view are public-domain setting references from circa 1900, not evidence of the fictional 1923 incident. <a href="../../assets/research/sources.json">Image credits and reviewed provenance</a>. The ordinary product export has the same reading interface and no visitor counter.</p></details><footer><span class="version-badge">Version 0.7.7</span><a class="license-badge" href="#license-terms">Open source · AGPL-3.0</a></footer></div>
-<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3Afbb0ed98-6f7d-414c-b9e9-0a3b91b83274\u0026version_id=urn%3Auuid%3A2ccb6276-7823-4bb0-800c-ea9e3cd0804a":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3A3b7fc86f-557d-4e05-94a4-99249b3dc31c\u0026source_id=urn%3Auuid%3Afbb0ed98-6f7d-414c-b9e9-0a3b91b83274\u0026version_id=urn%3Auuid%3A2ccb6276-7823-4bb0-800c-ea9e3cd0804a":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3Ae66dde6c-14a5-45da-b510-471ea81d9c42\u0026version_id=urn%3Auuid%3A8bfb2fdb-3021-4fc5-b4cc-b992d63ff240":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3A3b7fc86f-557d-4e05-94a4-99249b3dc31c\u0026source_id=urn%3Auuid%3Ae66dde6c-14a5-45da-b510-471ea81d9c42\u0026version_id=urn%3Auuid%3A8bfb2fdb-3021-4fc5-b4cc-b992d63ff240":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/1","mode":"reader","profile":"readers","project_id":"urn:uuid:3b7fc86f-557d-4e05-94a4-99249b3dc31c","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":6,"chapters":[{"number":1},{"number":2},{"number":3},{"number":4},{"number":5},{"number":6}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:6963326a-51d4-48b2-a0b5-5a7956b11815","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:437969f3-2f9f-4b84-a4e7-162b3f2f52b7","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:fbb0ed98-6f7d-414c-b9e9-0a3b91b83274/urn:uuid:2ccb6276-7823-4bb0-800c-ea9e3cd0804a)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:3b7fc86f-557d-4e05-94a4-99249b3dc31c","source_id":"urn:uuid:fbb0ed98-6f7d-414c-b9e9-0a3b91b83274","source_version_id":"urn:uuid:2ccb6276-7823-4bb0-800c-ea9e3cd0804a","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3A3b7fc86f-557d-4e05-94a4-99249b3dc31c\u0026source_id=urn%3Auuid%3Afbb0ed98-6f7d-414c-b9e9-0a3b91b83274\u0026version_id=urn%3Auuid%3A2ccb6276-7823-4bb0-800c-ea9e3cd0804a","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:437969f3-2f9f-4b84-a4e7-162b3f2f52b7","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:e66dde6c-14a5-45da-b510-471ea81d9c42/urn:uuid:8bfb2fdb-3021-4fc5-b4cc-b992d63ff240)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:3b7fc86f-557d-4e05-94a4-99249b3dc31c","source_id":"urn:uuid:e66dde6c-14a5-45da-b510-471ea81d9c42","source_version_id":"urn:uuid:8bfb2fdb-3021-4fc5-b4cc-b992d63ff240","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3A3b7fc86f-557d-4e05-94a4-99249b3dc31c\u0026source_id=urn%3Auuid%3Ae66dde6c-14a5-45da-b510-471ea81d9c42\u0026version_id=urn%3Auuid%3A8bfb2fdb-3021-4fc5-b4cc-b992d63ff240","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:6963326a-51d4-48b2-a0b5-5a7956b11815","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:6963326a-51d4-48b2-a0b5-5a7956b11815","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-6","dossier_id":"urn:uuid:6963326a-51d4-48b2-a0b5-5a7956b11815","revision":1,"section":"Reader final clue","title":"The receiving signature","body":"A blank signature is an absence, not a name. The two ledger entries, reused board and torn paper leave several possible connections. The morning handover preserves the question instead of identifying a culprit.","reveal_after_chapter":6,"citations":[],"images":[],"media":[],"geography":null}],"identity":"fb4a5ff5410e0fd73de96fff6c3fa759402ce58e5d6857581422d9c4d99aff61"}}</script>
+<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3A3e0f7967-6dda-49c9-96b8-10e324436213\u0026version_id=urn%3Auuid%3Ae61d3d3a-30e2-40aa-9c71-828a2ad4272a":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3A617009f9-176a-4bb2-87f0-afada374a6a4\u0026source_id=urn%3Auuid%3A3e0f7967-6dda-49c9-96b8-10e324436213\u0026version_id=urn%3Auuid%3Ae61d3d3a-30e2-40aa-9c71-828a2ad4272a":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3Af0e3ac3d-0073-4c60-92ec-559b20b6c65c\u0026version_id=urn%3Auuid%3Aefa83ee8-d149-424f-85c8-7c6769ea3f59":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3A617009f9-176a-4bb2-87f0-afada374a6a4\u0026source_id=urn%3Auuid%3Af0e3ac3d-0073-4c60-92ec-559b20b6c65c\u0026version_id=urn%3Auuid%3Aefa83ee8-d149-424f-85c8-7c6769ea3f59":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/1","mode":"reader","profile":"readers","project_id":"urn:uuid:617009f9-176a-4bb2-87f0-afada374a6a4","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":6,"chapters":[{"number":1},{"number":2},{"number":3},{"number":4},{"number":5},{"number":6}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:212216ab-eaeb-44ed-9854-fde312664716","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:cd9fe8e7-1e7e-453b-8ab3-175375f29838","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:3e0f7967-6dda-49c9-96b8-10e324436213/urn:uuid:e61d3d3a-30e2-40aa-9c71-828a2ad4272a)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:617009f9-176a-4bb2-87f0-afada374a6a4","source_id":"urn:uuid:3e0f7967-6dda-49c9-96b8-10e324436213","source_version_id":"urn:uuid:e61d3d3a-30e2-40aa-9c71-828a2ad4272a","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3A617009f9-176a-4bb2-87f0-afada374a6a4\u0026source_id=urn%3Auuid%3A3e0f7967-6dda-49c9-96b8-10e324436213\u0026version_id=urn%3Auuid%3Ae61d3d3a-30e2-40aa-9c71-828a2ad4272a","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:cd9fe8e7-1e7e-453b-8ab3-175375f29838","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:f0e3ac3d-0073-4c60-92ec-559b20b6c65c/urn:uuid:efa83ee8-d149-424f-85c8-7c6769ea3f59)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:617009f9-176a-4bb2-87f0-afada374a6a4","source_id":"urn:uuid:f0e3ac3d-0073-4c60-92ec-559b20b6c65c","source_version_id":"urn:uuid:efa83ee8-d149-424f-85c8-7c6769ea3f59","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3A617009f9-176a-4bb2-87f0-afada374a6a4\u0026source_id=urn%3Auuid%3Af0e3ac3d-0073-4c60-92ec-559b20b6c65c\u0026version_id=urn%3Auuid%3Aefa83ee8-d149-424f-85c8-7c6769ea3f59","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:212216ab-eaeb-44ed-9854-fde312664716","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:212216ab-eaeb-44ed-9854-fde312664716","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-6","dossier_id":"urn:uuid:212216ab-eaeb-44ed-9854-fde312664716","revision":1,"section":"Reader final clue","title":"The receiving signature","body":"A blank signature is an absence, not a name. The two ledger entries, reused board and torn paper leave several possible connections. The morning handover preserves the question instead of identifying a culprit.","reveal_after_chapter":6,"citations":[],"images":[],"media":[],"geography":null}],"identity":"752a8fb0a165079046ec48e54da5485734f18365ac97cab7db83cfc8235f87ce"}}</script>
 <script>// A prepared website has no server: every API read belongs to its inline snapshot.
 (function () {
   "use strict";
@@ -5220,13 +5231,32 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
     showTimer = null; pendingEl = null;
   }
 
+  var HELP_TRIGGER_SELECTOR = "[data-help], [data-tip], [title], [aria-keyshortcuts]";
+
+  function formatShortcutKey(key) {
+    if (!key) return "";
+    var k = key.trim();
+    var lower = k.toLowerCase();
+    if (lower === "escape") return "Esc";
+    if (lower === "arrowleft") return "←";
+    if (lower === "arrowright") return "→";
+    if (lower === "arrowup") return "↑";
+    if (lower === "arrowdown") return "↓";
+    return k;
+  }
+
   function helpText(el) {
     var text = el.getAttribute("data-help") || el.getAttribute("title") || el.getAttribute("data-tip");
     // Suppress the browser's separate title bubble even during dwell.
     if (text && el.hasAttribute("title")) {
       el.setAttribute("data-tip", text); el.removeAttribute("title");
     }
-    return text;
+    if (!text && el.hasAttribute("aria-keyshortcuts")) {
+      text = el.getAttribute("aria-label") ||
+        (el.labels && el.labels.length ? el.labels[0].textContent :
+          el.matches("button, a, summary, .help") ? el.textContent : "");
+    }
+    return text ? text.trim() : "";
   }
 
   function hasPersistentFocus(el) {
@@ -5295,17 +5325,44 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
       (el.labels && el.labels.length ? el.labels[0].textContent :
         el.matches("button, a, summary, .help") ? el.textContent : "");
     name = (name || "").trim();
+
+    var shortcut = el.getAttribute("aria-keyshortcuts") || "";
+    var shortcutMatch = !shortcut && (
+      (text && text.match(/\s*\((Alt\+[A-Za-z0-9]|Shift\+[A-Za-z0-9]|Ctrl\+[A-Za-z0-9]|Strg\+[A-Za-z0-9]|Cmd\+[A-Za-z0-9]|Meta\+[A-Za-z0-9]|Esc|Escape|Enter|Shift\+Enter)\)\s*$/i)) ||
+      (name && name.match(/\s*\((Alt\+[A-Za-z0-9]|Shift\+[A-Za-z0-9]|Ctrl\+[A-Za-z0-9]|Strg\+[A-Za-z0-9]|Cmd\+[A-Za-z0-9]|Meta\+[A-Za-z0-9]|Esc|Escape|Enter|Shift\+Enter)\)\s*$/i))
+    );
+    if (!shortcut && shortcutMatch) {
+      shortcut = shortcutMatch[1];
+      if (text) text = text.replace(shortcutMatch[0], "").trim();
+      if (name) name = name.replace(shortcutMatch[0], "").trim();
+    }
+
+    var hasShortcut = Boolean(shortcut && shortcut.trim());
+    var showHeading = hasShortcut || (name && name !== text.trim() && name.length <= 120);
     heading.replaceChildren();
-    heading.hidden = !name || name === text.trim() || name.length > 120;
-    if (!heading.hidden) {
-      heading.appendChild(document.createTextNode(name));
-      var shortcut = el.getAttribute("aria-keyshortcuts");
-      if (shortcut) {
-        var key = document.createElement("kbd"); key.textContent = shortcut;
-        heading.appendChild(key);
+    heading.hidden = !showHeading;
+    if (showHeading) {
+      var displayName = (name && name.length <= 120) ? name : (text && text.length <= 60 ? text : "");
+      if (displayName) {
+        heading.appendChild(document.createTextNode(displayName));
+      }
+      if (hasShortcut) {
+        var combos = shortcut.trim().split(/\s+/);
+        combos.forEach(function(combo) {
+          if (!combo) return;
+          var key = document.createElement("kbd");
+          key.textContent = formatShortcutKey(combo);
+          heading.appendChild(key);
+        });
       }
     }
-    copy.textContent = text;
+    if (hasShortcut && name && text && text.trim() === name) {
+      copy.textContent = "";
+      copy.hidden = true;
+    } else {
+      copy.textContent = text;
+      copy.hidden = !text || !text.trim();
+    }
     tip.setAttribute("aria-hidden", "false");
     tip.classList.add("visible");
     warmUntil = Date.now() + 1000;
@@ -5419,7 +5476,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
     if (dismissedHover && dismissedHover.contains(e.target) && !dismissedHover.contains(e.relatedTarget)) {
       dismissedHover = null;
     }
-    var el = e.target.closest("[data-help], [data-tip], [title]");
+    var el = e.target.closest(HELP_TRIGGER_SELECTOR);
     if (el && el === pendingEl && !el.contains(e.relatedTarget)) cancelPending();
     if (el && el === activeEl && !el.contains(e.relatedTarget) && !tip.contains(e.relatedTarget)) {
       // Reflow can emit departures from inactive help. One owned timer must
@@ -5438,7 +5495,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 
   document.addEventListener("focusin", function(e) {
     if (activatingAction && dismissAction(e.target)) return;
-    var el = e.target.closest("[data-help], [data-tip], [title]");
+    var el = e.target.closest(HELP_TRIGGER_SELECTOR);
     if (Date.now() >= touchUntil) touchFocusEl = null;
     // Touch can restore button focus without requesting another explanation.
     if (el && (Date.now() >= touchUntil || e.target.matches(":focus-visible"))) show(el);
@@ -5462,7 +5519,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
     if (dismissedHover && !dismissedHover.contains(e.target)) dismissedHover = null;
     if (dismissedHover && dismissedHover.contains(e.target)) return;
     activatedEl = null;
-    var el = e.target.closest("[data-help], [data-tip], [title]");
+    var el = e.target.closest(HELP_TRIGGER_SELECTOR);
     if (el && !el.closest(".tooltip-popup")) hover(el);
     else if (!el && !tip.contains(e.target)) cancelPending();
   }, {passive: true});
@@ -5470,7 +5527,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   function isActionControl(target) {
     if (!target || !target.closest) return false;
     var action = target.closest("button, a, [role=button], input[type=button], input[type=submit]");
-    var trigger = target.closest("[data-help], [data-tip], [title]");
+    var trigger = target.closest(HELP_TRIGGER_SELECTOR);
     if (!action) return false;
     if (trigger && trigger.matches(".help[data-help]") && !trigger.closest("button, a")) return false;
     return true;
@@ -5478,7 +5535,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 
   function dismissAction(target) {
     if (!isActionControl(target)) return false;
-    var trigger = target.closest("[data-help], [data-tip], [title]");
+    var trigger = target.closest(HELP_TRIGGER_SELECTOR);
     if (!trigger) return false;
     activatedEl = trigger;
     activatedHover = trigger.matches(":hover");
@@ -5493,7 +5550,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
     dismissAction(e.target);
     if (e.pointerType === "touch") {
       touchUntil = Date.now() + 1000;
-      touchFocusEl = e.target.closest("[data-help], [data-tip], [title]");
+      touchFocusEl = e.target.closest(HELP_TRIGGER_SELECTOR);
     }
     var el = e.target.closest(".help[data-help]");
     if (e.pointerType === "touch" && el && !el.closest("button, a")) {
@@ -5503,7 +5560,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
       el.focus({preventScroll: true});
       if (wasOpen) hide();
       else show(el);
-    } else if (!e.target.closest("[data-help], [data-tip], [title], .tooltip-popup")) {
+    } else if (!e.target.closest(HELP_TRIGGER_SELECTOR + ", .tooltip-popup")) {
       hide();
     }
   });
@@ -13605,7 +13662,7 @@ window.LixityManuscriptLinks = {
     dialog.id = "modal-dossier-image"; dialog.className = "lixity-modal";
     dialog.setAttribute("aria-labelledby", "dossier-image-title");
     dialog.innerHTML = '<div class="modal-card"><div class="modal-header"><h3 id="dossier-image-title">' + safe(label("add")) +
-      '</h3><button type="button" class="modal-close" data-image-close aria-label="' + safe(label("close")) + '">×</button></div>' +
+      '</h3><button type="button" class="modal-close" data-image-close title="' + safe(label("close")) + '" aria-keyshortcuts="Escape" aria-label="' + safe(label("close")) + '">×</button></div>' +
       '<form id="dossier-image-form" class="modal-body"><p id="dossier-image-target" class="ctl-note"></p>' +
       '<p id="dossier-image-replacement" class="ctl-note" hidden><strong>' + safe(label("replace")) + '</strong><code></code></p>' +
       '<label class="form-label" for="dossier-image-file">' + safe(label("file")) + '</label><input class="ctl" id="dossier-image-file" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg">' +
@@ -13621,7 +13678,7 @@ window.LixityManuscriptLinks = {
       '<div id="dossier-image-status" class="ctl-status" role="status" aria-live="polite"></div>' +
       '<div id="dossier-image-conflict" hidden><button type="button" class="ctl" id="dossier-image-review">' + safe(label("review")) + '</button>' +
       '<div id="dossier-image-current"></div><button type="button" class="ctl" id="dossier-image-accept-current" hidden>' + safe(label("accept_current")) + '</button></div>' +
-      '<div class="modal-actions"><button type="button" class="ctl" data-image-close>' + safe(label("cancel")) + '</button><button type="submit" class="ctl primary" id="dossier-image-save" disabled>' + safe(label("save")) + '</button></div></form></div>';
+      '<div class="modal-actions"><button type="button" class="ctl" data-image-close aria-keyshortcuts="Escape">' + safe(label("cancel")) + '</button><button type="submit" class="ctl primary" id="dossier-image-save" disabled>' + safe(label("save")) + '</button></div></form></div>';
     document.body.appendChild(dialog); form = field("form");
     dialog.addEventListener("cancel", function(event) { if (state.pending) event.preventDefault(); });
     dialog.addEventListener("close", function() {

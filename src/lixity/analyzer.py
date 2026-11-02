@@ -35,7 +35,13 @@ from .language import (
     resolve_language,
 )
 from .language_data import READABILITY
-from .markdown_parser import chapter_heading_spans, prose_paragraphs, prose_text, split_chapters
+from .markdown_parser import (
+    COMMENT_STRIP_RE,
+    chapter_heading_spans,
+    prose_paragraphs,
+    prose_text,
+    split_chapters,
+)
 from .math_core import binomial_se_percent, per_mille, poisson_se_per_mille
 from .models import (
     ChapterMetrics,
@@ -48,7 +54,7 @@ from .style_profile import dominance_from_hits
 from .syllables import count_syllables as count_syllables_for
 from .tense import TenseMatcher
 
-_RE_HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
+_RE_HTML_COMMENT = COMMENT_STRIP_RE
 _RE_HEADING_LINE = re.compile(r"(?m)^#+.*$")
 _RE_DASHES = re.compile(r"[–—]")
 _RE_ELLIPSES = re.compile(r"(?:…|\.{3})")
