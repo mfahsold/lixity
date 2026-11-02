@@ -97,9 +97,16 @@ linked earlier versions remain distinct. Project inspection observes bounded
 metadata; it does not establish output provenance or archive integrity.
 
 Unreleased UI refinements group reading, analysis, research capture and audio
-export actions by task. Shorter help retains the same measurement boundaries;
-analysis algorithms and public command/JSON contracts are unchanged.
-The analysis overview links directly to available 3D chapter dimensions.
+export actions by task, with localized tooltips across analysis navigation,
+the section outline, Back to passage and the reader speech control. Shorter help
+retains the same measurement boundaries; analysis algorithms and public
+command/JSON contracts are unchanged.
+The analysis overview links directly to available 3D chapter dimensions, where
+each axis reports its raw cutoff alongside its sample standard-deviation
+multiple. Cross-paragraph quotation spans attribute covered quoted words to each
+overlapping paragraph, and default Spanish lexical tense heuristics avoid
+double-counting adjacent present-tense `haber` auxiliaries before regular past
+participles.
 Selection and axis-cutoff rings are distinct; cutoff marks are not FDR results
 or a blue–orange signed-deviation scale. Missing dimensions are disclosed;
 the cutoff count and next-chapter control support review without ranking quality.

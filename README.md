@@ -34,30 +34,31 @@ Manuscript input is Markdown or plain text; Word/DOCX and Scrivener need convers
 | How can an editorial observation be explained? | Keep the manuscript in view while moving between the measurement explanation and linked research; prepare an editorial PDF or a fixed review copy for the discussion. |
 | What belongs in a reader's copy? | Choose a manuscript with selected companion notes, a standalone companion, a review workspace or a PDF, and check what the copy includes. |
 
-**Since v0.7.6:** one local app address now retains independent
-project views in multiple tabs. **App and audio** shows open views, actual
-local/Jetson model readiness and a shared bounded audio queue. View URLs expire
-when the app restarts; reopen projects from the app home.
+One local app address retains independent project views in multiple tabs.
+**App and audio** shows open views, actual local/Jetson model readiness and a
+shared bounded audio queue. View URLs expire when the app restarts; reopen
+projects from the app home.
 
-**Since v0.7.6:** tense review cards show the original counted forms
-and their exact manuscript locations before optional counts and heuristic help.
-These cues explain a mark; they do not establish an author error.
+Tense review cards show the original counted forms and their exact manuscript
+locations before optional counts and heuristic help. These cues explain a mark;
+they do not establish an author error.
 
 Source evidence, authored claims and creative decisions stay distinct. A saved
 source records the evidence used; it does not guarantee that a claim is true.
 Reading copies are fixed exports, not a live co-editing service.
 
-**Unreleased:** shorter help across all seven interface languages, grouped
-reading and analysis controls, and direct overview links to quoted text, names,
-pacing and signal groups. Research capture and audio export have clearer action
-groups; source imports preserve newer drafts and require a choice between file
-and pasted text. Analysis calculations remain unchanged.
+Grouped reading and analysis controls provide concise help across all seven
+interface languages, with direct overview links to quoted text, names, pacing
+and signal groups. Research capture and audio export use clear action groups;
+source imports preserve newer drafts and require an explicit choice between file
+and pasted text.
 
-**Unreleased:** open the 3D style space directly from the analysis overview to
-compare measured chapter patterns. Separate shapes identify the selected chapter
-and an axis cutoff; neither is a quality verdict. Flat projections and a chapter
-table help inspect overlaps and exact values. A chapter count and next-chapter
-control make the cutoff-marked points easier to review.
+Open the 3D style space directly from the analysis overview to compare measured
+chapter patterns. Separate shapes identify the selected chapter and an axis
+cutoff, and each dimension card shows the raw cutoff alongside its multiple of
+that axis's sample standard deviation; neither is a quality verdict. Flat
+projections and a chapter table help inspect overlaps and exact values, with a
+chapter count and next-chapter control to step through cutoff-marked points.
 
 <a href="https://mfahsold.github.io/lixity/screenshots/dashboard-measurement-focus.png"><img src="https://mfahsold.github.io/lixity/screenshots/dashboard-measurement-focus.png" width="560" alt="Sentence-length explanation: A board moved has three words; its paragraph averages 4.4 words per sentence, with a separate chapter comparison"/></a>
 
@@ -121,14 +122,13 @@ the passage, follow a source or an earlier linked version, then return to the
 text. For an editor, that gives a concrete starting point for an observation;
 for an author, it keeps the question and its supporting material together.
 
-**Since v0.7.6:** configured terms and props add another route into the
-manuscript. Declare a name, object or alternative term, inspect its occurrences
-and chapter scopes, and connect it to a dossier. Dossier manuscript evidence
-brings its linked quotations together; ordered collections organise related
-notes. These are declared lexical checks and explicit links, not automatic
-continuity checking or character understanding. See
-[terms and props](https://mfahsold.github.io/lixity/research/USAGE.md#configured-terms-props-and-boundary-policies)
-and the [release notes](https://mfahsold.github.io/lixity/releases/v0.7.7.md).
+Configured terms and props add another route into the manuscript. Declare a
+name, object or alternative term, inspect its occurrences and chapter scopes,
+and connect it to a dossier. Dossier manuscript evidence brings its linked
+quotations together; ordered collections organise related notes. These are
+declared lexical checks and explicit links, not automatic continuity checking or
+character understanding. See
+[terms and props](https://mfahsold.github.io/lixity/research/USAGE.md#configured-terms-props-and-boundary-policies).
 
 Optional grammatical tense analysis covers all seven interface languages using
 explicitly installed local syntax models and shared language-specific verb-group rules. It distinguishes perfect, passive,
@@ -139,11 +139,11 @@ model dependencies. See [grammatical tense setup](https://mfahsold.github.io/lix
 The browser app, CLI and Python API share one analysis pipeline;
 `lixity --help` and `lixity about --json` describe installed capabilities.
 
-**Unreleased audio workflow:** export a passage, chapter or manuscript as a
-direction plan in JSON or SSML without generating speech. A configured
-OpenAI-compatible service can generate audio separately. You can also inspect
-an existing recording locally and compare a supplied, timestamped transcript
-with the plan; Lixity does not transcribe the recording for you. See the
+For spoken review and external speech workflows, export a passage, chapter or
+manuscript as a direction plan in JSON or SSML without generating speech. A
+configured OpenAI-compatible service can generate audio separately. You can also
+inspect an existing recording locally and compare a supplied, timestamped
+transcript with the plan; Lixity does not transcribe the recording for you. See the
 [audio workflow and setup](https://mfahsold.github.io/lixity/USAGE.md#audio-export-and-external-providers-unreleased).
 
 Try the same fictional project as a
@@ -151,17 +151,13 @@ Try the same fictional project as a
 or a [standalone companion](https://mfahsold.github.io/lixity/demo/companion/index.html).
 These curated reading copies are different from the analysis/research workspace:
 they contain selected material, not the full archive.
-Since v0.7.7, reading copies can optionally include selected chapter or language measurements,
+Reading copies can optionally include selected chapter or language measurements,
 or a fuller analysis of the exported chapters, in a reader copy. Its figures use
 standard settings and may differ from project-specific analysis; later chapters
 and internal work markers remain outside that copy.
 
 <details>
 <summary>Analysis controls, revision-aware research and other project tools</summary>
-
-**Version scope:** these controls are included in v0.7.6. Verify the installed
-package separately from the running app with `lixity doctor`; the public demo is a
-read-only example, not your local installation.
 
 Turn **Analysis** on beside the text and choose the visible metric. Switch
 **Counted text** and **Paragraph comparison** independently. Violet underlines identify
@@ -170,7 +166,7 @@ with their chapter. Both preferences persist in the browser. Hover, touch and th
 paragraph menu explain the concrete text; the CLI exposes the same evidence with
 `lixity profile manuscript.md --layer asl --evidence`.
 
-**Since v0.7.6:** matrix cells and style-space loadings share
+Matrix cells and style-space loadings share
 chapter measurements: meaning, units, manuscript reference and the other
 metrics of the same chapter. Reading the text is an explicit next action;
 chapter-only measurements do not invent word-level highlights.
@@ -199,7 +195,7 @@ files nor establish that an output matches the current manuscript; see
 [project inspection](https://mfahsold.github.io/lixity/USAGE.md#inspect-project-structure).
 
 The audio workflow shares manuscript direction, pronunciation rules and structural
-pauses between CLI and browser. **Unreleased:** `audio-export-plan` exports a
+pauses between CLI and browser. `audio-export-plan` exports a
 `lixity-audio-timeline/1` JSON plan or SSML, with explicit limitations where SSML
 cannot carry a control. `read-aloud --ssml` and `--timeline` only export; they
 never synthesize. Passage, chapter and manuscript exports do not require a local
@@ -216,28 +212,27 @@ the audio hash. No speech recognition runs, so missing transcription evidence
 stays unknown and a supplied transcript may contain recognition errors. See the
 [audio workflow](https://mfahsold.github.io/lixity/USAGE.md#audio-export-and-external-providers-unreleased).
 
-Existing native synthesis remains available. Optional Qwen3-TTS 1.7B
+Local synthesis is also available. Optional Qwen3-TTS 1.7B
 CustomVoice provides preset voices and explicit style instructions through a
-local worker or a configured Jetson over SSH. Version 0.7.7 also supports the
-separately installed Qwen 1.7B VoiceDesign checkpoint for described voices;
+local worker or a configured Jetson over SSH. A
+separately installed Qwen 1.7B VoiceDesign checkpoint supports described voices;
 voice consistency across independently generated segments is not guaranteed,
 and role-specific delivery instructions can affect the perceived voice. Compare
-short listening previews before rendering a chapter. It also supports
-explicit project-local reference voices using the separately installed Base model;
+short listening previews before rendering a chapter. Explicit
+project-local reference voices use the separately installed Base model;
 its reference and transcript need a project backup, and Base does not interpret
 free-form delivery instructions. The [reference-voice workflow](https://mfahsold.github.io/lixity/USAGE.md#experimental-reference-voices)
 explains recording and reviewing a short sample, its exact transcript and a first
 preview. Assign voice profiles to passages deliberately.
-Unreleased: German Coqui Thorsten VITS and optional OpenVoice V2 conversion can
+German Coqui Thorsten VITS and optional OpenVoice V2 conversion can
 use an existing project reference with a separately installed local worker.
 Free-text direction is unsupported; the output requires listening review. See
 the [Coqui setup](https://mfahsold.github.io/lixity/USAGE.md#experimental-coqui-and-openvoice-audio-unreleased).
-Piper is removed; existing profiles
-require an explicit backed-up `audio-migrate` replacement. Select the
+Select the
 execution target per render in the CLI or dialog. CPU generation can be slow;
 completed segments can be reused when retrying long renders. Audio remains
-a prototype requiring listening review. Version 0.7.7 adds an optional FFmpeg
-post-synthesis tempo factor; it is not native model rate control. See the
+a prototype requiring listening review, with an optional FFmpeg
+post-synthesis tempo factor that does not alter explicit pauses. See the
 [read-aloud scope](https://mfahsold.github.io/lixity/USAGE.md#lixity-read-aloud)
 before relying on an export. NDA generation produces a draft, not consent or
 signatures. Dossier Markdown edits require explicit preview and apply.

@@ -2,23 +2,29 @@
 
 Practical articles for authors, editors and manuscript reviewers: investigate a passage, examine the research behind a scene detail and prepare the right reading copy. Each article connects a concrete question to a reading decision. All examples use public-domain or synthetic texts.
 
+## [From chapter comparisons to spoken direction: 3D style space and speech-plan export](speech-direction-and-style-space.html)
+
+Published 2 November 2026 · 6 minutes
+
+Read per-axis standard-deviation labels in the 3D style-space projection, keep cross-paragraph quotations attributed cleanly, and export deterministic JSON or SSML speech-direction plans for local or external listening workflows.
+
 ## [Why is this passage marked?](why-this-passage.html)
 
-Updated 27 October 2026 · Lixity 0.7.6 · 5 minutes
+Updated 2 November 2026 · 5 minutes
 
 Inspect a tense signal, keep research attached to the chosen passage, and distinguish a current record from the exact version used. A practical review loop for authors and editors, with explicit grammatical-model limits.
 
-## [What's new in Lixity 0.7.5: clearer marks and project structure](whats-new-lixity.html)
+## [What's new in Lixity: speech direction, clearer marks and project structure](whats-new-lixity.html)
 
-Updated 22 October 2026 · 8 minutes
+Updated 2 November 2026 · 8 minutes
 
-Interpret two separate analysis layers, inspect sources and outputs without moving files, and edit dossier sections safely. Reading-website workflows and earlier release history remain available.
+Prepare passage-anchored speech direction and JSON/SSML plans, interpret two separate analysis layers, and inspect sources and outputs without moving files.
 
 ## [Give the manuscript room to read](manuscript-reading-workbench.html)
 
-Updated 22 October 2026 · 7 minutes
+Updated 2 November 2026 · 7 minutes
 
-Distinguish counted text from paragraph comparison, follow passage research and return, then share a reading copy. Try the complete loop in the invented Warehouse 4 manuscript.
+Distinguish counted text from paragraph comparison, follow passage research and return with contextual navigation tooltips, then share a reading copy. Try the complete loop in the invented Warehouse 4 manuscript.
 
 ## [When a chapter is meant to sound different](intentional-registers.html)
 

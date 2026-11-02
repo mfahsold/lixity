@@ -1,8 +1,8 @@
 # Give the manuscript room to read
 
-By [Matthias Fahsold](https://github.com/mfahsold) · Published 20 October 2026 · Updated 22 October 2026 · 7 minutes
+By [Matthias Fahsold](https://github.com/mfahsold) · Published 20 October 2026 · Updated 2 November 2026 · 7 minutes
 
-**Lixity 0.7.5:** this walkthrough follows the released app and its generated demo, including the direct analysis controls and revised marks described below. [Read the release notes](../releases/v0.7.5.md).
+This walkthrough follows Lixity’s workspace and its generated demo, including separated analysis layers, passage-anchored speech-direction preparation, and contextual tooltips across chapter navigation, overview return routes and speech controls. [Explore the 3D style-space and speech-direction workflow](speech-direction-and-style-space.html).
 
 A manuscript analysis tool can show you so much about a paragraph that the paragraph becomes awkward to read. Sentence patterns, source lines, markers and research links all have a purpose. They also compete with the next sentence.
 

@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>What's new in Lixity 0.7.5: clearer marks and project structure — Lixity blog</title>
-<meta name="description" content="Interpret two separate analysis layers, inspect sources and outputs without moving files, and edit dossier sections safely in Lixity 0.7.5."/>
+<title>What's new in Lixity: speech direction, clearer marks and project structure — Lixity blog</title>
+<meta name="description" content="Prepare passage-anchored speech direction and JSON/SSML plans, interpret two separate analysis layers, and inspect project structure in Lixity."/>
 <link rel="canonical" href="https://mfahsold.github.io/lixity/blog/whats-new-lixity.html"/>
 <link rel="stylesheet" href="../assets/site.css"/>
 <script src="../assets/site.js" defer></script>
 <meta property="og:type" content="article"/>
-<meta property="og:title" content="What's new in Lixity 0.7.5: clearer marks and project structure"/>
-<meta property="og:description" content="Interpret two separate analysis layers, inspect sources and outputs without moving files, and edit dossier sections safely in Lixity 0.7.5."/>
+<meta property="og:title" content="What's new in Lixity: speech direction, clearer marks and project structure"/>
+<meta property="og:description" content="Prepare passage-anchored speech direction and JSON/SSML plans, interpret two separate analysis layers, and inspect project structure in Lixity."/>
 <meta property="og:url" content="https://mfahsold.github.io/lixity/blog/whats-new-lixity.html"/>
 <meta property="og:site_name" content="Lixity"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
@@ -18,8 +18,8 @@
 <meta property="og:image:height" content="2090"/>
 <meta property="og:image:alt" content="Lixity continuous manuscript reader with chapter navigation and contextual tools"/>
 <meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:title" content="What's new in Lixity 0.7.5: clearer marks and project structure"/>
-<meta name="twitter:description" content="Interpret two separate analysis layers, inspect sources and outputs without moving files, and edit dossier sections safely in Lixity 0.7.5."/>
+<meta name="twitter:title" content="What's new in Lixity: speech direction, clearer marks and project structure"/>
+<meta name="twitter:description" content="Prepare passage-anchored speech direction and JSON/SSML plans, interpret two separate analysis layers, and inspect project structure in Lixity."/>
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta name="twitter:image:alt" content="Lixity continuous manuscript reader with chapter navigation and contextual tools"/>
 <link rel="alternate" type="text/markdown" href="whats-new-lixity.html.md" title="Markdown version of this page"/>
@@ -29,12 +29,12 @@
 {
   "@context": "https://schema.org",
   "@type": "TechArticle",
-  "headline": "What's new in Lixity 0.7.5: clearer marks and project structure",
-  "description": "Interpret two separate analysis layers, inspect sources and outputs without moving files, and edit dossier sections safely in Lixity 0.7.5.",
+  "headline": "What's new in Lixity: speech direction, clearer marks and project structure",
+  "description": "Prepare passage-anchored speech direction and JSON/SSML plans, interpret two separate analysis layers, and inspect project structure in Lixity.",
   "url": "https://mfahsold.github.io/lixity/blog/whats-new-lixity.html",
   "inLanguage": "en",
   "datePublished": "2026-10-16",
-  "dateModified": "2026-10-22",
+  "dateModified": "2026-11-02",
   "author": {
     "@type": "Person",
     "name": "Matthias Fahsold",
@@ -65,10 +65,16 @@
 </div></header>
 <main class="guide" id="content">
 <nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="index.html">Articles</a></li><li><span aria-current="page">What&#x27;s new in Lixity</span></li></ol></nav>
-<h1>What's new in Lixity 0.7.5: clearer marks and project structure</h1>
-<p class="updated">Updated <time datetime="2026-10-22">22 October 2026</time> · First posted <time datetime="2026-10-16">16 October 2026</time> · 8 minutes</p>
+<h1>What's new in Lixity: speech direction, clearer marks and project structure</h1>
+<p class="updated">Updated <time datetime="2026-11-02">2 November 2026</time> · First posted <time datetime="2026-10-16">16 October 2026</time> · 8 minutes</p>
 
-<p>Lixity 0.7.5 separates the words a measurement counted from a paragraph's chapter comparison. A local project overview identifies sources, output locations and structural findings without reorganizing files. Section drafts now complete a read/edit/diff/update roundtrip, while research reads avoid unnecessary repeated work. See the <a href="../releases/v0.7.5.md">release notes and upgrade details</a>.</p>
+<p>Lixity combines separated analysis layers and read-only project inspection with project-local passage direction, provider-independent JSON and SSML speech-plan export, per-axis standard-deviation labels in the 3D style-space projection, cross-paragraph quotation attribution, and contextual navigation tooltips. See the <a href="speech-direction-and-style-space.html">detailed walkthrough</a> and <a href="../releases/v0.7.7.md">release notes</a>.</p>
+
+<h2 id="speech-direction">Passage speech direction and provider-independent plan export</h2>
+<p>In a local project, <code>lixity audio-direction inspect --project /path/to/book</code> inspects paragraph anchors and saved delivery ranges in <code>.lixity/audio-directions.json</code>, and <code>lixity read-aloud --plan-only</code> previews the effective speech plan without synthesis. <code>lixity audio-export-plan</code> (or <code>read-aloud --timeline</code> / <code>--ssml</code>) exports a deterministic <code>lixity-audio-timeline/1</code> JSON plan or W3C SSML projection, and <code>lixity audio-inspect</code> / <code>audio-verify</code> inspect local recordings and optional hash-bound transcripts. See <a href="../USAGE.md#audio-export-and-external-providers-unreleased">audio export and speech direction</a>.</p>
+
+<h2 id="development-preview">Clearer style-space spreads and multi-paragraph quotes</h2>
+<p>Each 3D style-dimension card and cutoff explanation reports the raw coordinate threshold alongside its multiple of that axis’s sample standard deviation (for example, <code>|Score| &ge; 2.5 (&approx; 1.18 SD)</code>), keeping the exploratory PCA ring distinct from noise-adjusted <code>z*</code> and FDR results. When a recognized quotation span crosses a paragraph break, each overlapping paragraph receives its covered quoted words in the paragraph quotation-share calculation. Contextual tooltips across the seven interface languages also explain analysis navigation, section outline items, <strong>Back to passage</strong> and the reader speech control.</p>
 
 <h2 id="project-overview">Sources and outputs in one local view</h2>
 <p>Open <strong>Project</strong> or run <code>lixity project --project /path/to/book</code> for a read-only metadata inspection. Source locations, existing output files and structural findings stay distinct. A file's presence is not proof of freshness, and output provenance remains unknown. The overview moves nothing and is absent from exported reading websites. See <a href="../USAGE.md#inspect-project-structure">project inspection</a>.</p>

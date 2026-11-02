@@ -20,7 +20,7 @@ and
 
 Open **PDF export** above the workspace views, choose a purpose and select **Download PDF**. The same composer serves the browser and CLI; downloads create no server export files and change no manuscript. Standalone HTML has no download action.
 
-**Since v0.7.0:** the initial choice is an A4 editorial copy with line numbers and a correction margin. Compare the same six chapters of *The Crate at Warehouse 4* in all five prepared files below; these are exports from the shared demo project.
+The initial choice is an A4 editorial copy with line numbers and a correction margin. Compare the same six chapters of *The Crate at Warehouse 4* in all five prepared files below; these are exports from the shared demo project.
 
 - **Neutral document:** plain A4 for an exposé or everyday text, with authored headings and no added title page, header, footer or line numbers. [Example PDF](../demo/warehouse-4-document.pdf).
 
@@ -38,7 +38,7 @@ lixity pdf expose.md --layout document -o expose.pdf
 lixity pdf --help
 ```
 
-**Since v0.7.4:** the neutral document keeps the manuscript's own title and structure; configured title and author are PDF metadata only. It adds no analysis, byline or control notice. CLI PDF and dashboard outputs must differ from the source, including symbolic and hard-link aliases; the guard runs again immediately before atomic replacement.
+The neutral document keeps the manuscript's own title and structure; configured title and author are PDF metadata only. It adds no analysis, byline or control notice. CLI PDF and dashboard outputs must differ from the source, including symbolic and hard-link aliases; the guard runs again immediately before atomic replacement.
 
 Manuscript copies retain subheadings, scene breaks, lists, quotations, inline emphasis and endnotes. A bounded set of embedded LaTeX text commands is supported without executing TeX. Unsupported TeX constructs fail explicitly; mathematics and image placement are unavailable. Host TrueType fonts keep supported text searchable and copyable. Missing glyphs identify the font role and Unicode codepoint; there is no mixed-script fallback, contextual shaping, bidirectional layout or PDF/X preflight. See [options and limits](../USAGE.md#lixity-pdf).
 
@@ -70,7 +70,7 @@ Digital provider/website duties are separate. [MStV § 18](https://www.gesetze-b
 
 [BFSG § 1](https://www.gesetze-im-internet.de/bfsg/__1.html) covers consumer e-book services provided after 28 June 2025; [§ 3(3)](https://www.gesetze-im-internet.de/bfsg/__3.html) exempts microenterprises providing services. Scope and exceptions must be checked for the publication. Lixity exports fixed-layout A4 document/editorial/sheet/report and A5 book PDFs, without EPUB, DOCX, custom trim sizes or PDF/UA/PDF/X certification. Searchable text, metadata and bookmarks do not establish BFSG compliance.
 
-**Since v0.3.0:** PDFs share title/author/language metadata and corrected font subsets. A5 chapters have bookmarks; body pages have bounded running headers and physical folios. Title/imprint pages have no running decorations but still count toward folios. A4 sheets and reports show current/total page counts outside the body grid.
+PDFs share title/author/language metadata and corrected font subsets. A5 chapters have bookmarks; body pages have bounded running headers and physical folios. Title/imprint pages have no running decorations but still count toward folios. A4 sheets and reports show current/total page counts outside the body grid.
 
 ## Import a local source
 
@@ -100,7 +100,7 @@ Matching URLs do not merge sources. Refreshing a named source with a new URL cre
 
 Zotero owns bibliographic metadata, ordinary reading, annotations and general notes. Lixity's attachment selector captures only the evidence versions needed for your project; **Open in Zotero** returns to the source for further work.
 
-Run Zotero on the same computer and download the attachments you need. Open **Research → Evidence captures → Capture from Zotero**, choose a library and collection, inspect an item, select an eligible attachment and confirm retention. Lixity reads the local API without changing the Zotero library. Since v0.7.0, eligible attachments include PNG/JPEG alongside PDF/text. Audio, video and unsupported attachments remain in Zotero.
+Run Zotero on the same computer and download the attachments you need. Open **Research → Evidence captures → Capture from Zotero**, choose a library and collection, inspect an item, select an eligible attachment and confirm retention. Lixity reads the local API without changing the Zotero library. Eligible attachments include PNG/JPEG alongside PDF/text. Audio, video and unsupported attachments remain in Zotero.
 
 Captured evidence stays readable when Zotero is closed. Refresh linked sources explicitly when they change; old quotations stay intact. There is no background synchronization. Zotero captures need the v3 archive format, which older readers cannot open.
 
@@ -190,15 +190,15 @@ lixity research search --query "reading room"
 lixity research link urn:uuid:YOUR-PASSAGE-UUID urn:uuid:YOUR-CLAIM-UUID --relation contextualizes
 ```
 
-Use returned IDs, passage first and claim second. v0.7.1 also accepts complete bare UUIDv4 selectors and exposes plural aliases in grouped help. The short command creates an evidence link; `link-evidence` retains inspection and revision operations. See [scope and compatibility](../research/USAGE.md#reading-and-cli-workflows-since-v240).
+Use returned IDs, passage first and claim second. Complete bare UUIDv4 selectors and plural aliases in grouped help are also supported. The short command creates an evidence link; `link-evidence` retains inspection and revision operations. See [scope and compatibility](../research/USAGE.md#reading-and-cli-workflows-since-v240).
 
 ## Associate manuscript text with a claim
 
-**Since v0.3.0:** select text within one opened manuscript paragraph, choose **Link selection to claim**, choose a current claim, permit local retention of the quote and select **Save association**. Previewing writes nothing. Saving keeps a manual association to the exact claim version, with the quote and paragraph anchor; it does not import the complete manuscript or edit prose.
+Select text within one opened manuscript paragraph, choose **Link selection to claim**, choose a current claim, permit local retention of the quote and select **Save association**. Previewing writes nothing. Saving keeps a manual association to the exact claim version, with the quote and paragraph anchor; it does not import the complete manuscript or edit prose.
 
 Exact resolved quotes are marked when their paragraph opens. Changed text or claim versions request review; an edit outside the quote resolves as *adjusted* and can be re-pinned explicitly in the review tab (or with `reconcile-manuscript --accept-moved`), while edited quotes and ambiguous paragraphs remain unresolved. Saved associations are listed in the research **Review** tab with their anchor state and review flags; listing them never writes or repins. These flags do not establish a contradiction or factual support. Both dossier readers show current linked claims with saved-version history and active saved quote counts. Zero saved links does not establish that a claim is unused in prose.
 
-**Since v0.7.4:** choose **Explore passage → Research for this passage**, a passage association count or a marked quotation to open its linked context beside the manuscript. Quotations of the same claim share a compact card; current dossier decisions have a separate count. Titles open current entries; **Linked version** opens the exact earlier claim or dossier version retained by the association. Current decisions do not reconstruct the quotation's historical state. **Review** opens the dedicated anchor review. Opening context writes nothing, and an empty summary means only that this passage has no saved associations.
+Choose **Explore passage → Research for this passage**, a passage association count or a marked quotation to open its linked context beside the manuscript. Quotations of the same claim share a compact card; current dossier decisions have a separate count. Titles open current entries; **Linked version** opens the exact earlier claim or dossier version retained by the association. Current decisions do not reconstruct the quotation's historical state. **Review** opens the dedicated anchor review. Opening context writes nothing, and an empty summary means only that this passage has no saved associations.
 
 **Before the first save:**
 
@@ -257,7 +257,7 @@ Restore into a new, empty target. Restoration checks paths, checksums and record
 
 ## Command-line example: sources to decisions
 
-**Since v0.7.1:** for authored notes, use the explicit [Markdown export → edit → preview → apply workflow](../research/USAGE.md#edit-an-exported-markdown-dossier). The archive stays authoritative; a reviewed packet binds its project and snapshot. Exact update dry runs validate a proposed write, historical diffs compare saved revisions, and three-way preparation reconciles a draft. Source ingest is separate and does not create authored notes from Markdown exports.
+For authored notes, use the explicit [Markdown export → edit → preview → apply workflow](../research/USAGE.md#edit-an-exported-markdown-dossier). The archive stays authoritative; a reviewed packet binds its project and snapshot. Exact update dry runs validate a proposed write, historical diffs compare saved revisions, and three-way preparation reconciles a draft. Source ingest is separate and does not create authored notes from Markdown exports.
 
 This optional example uses authorized local source files. Replace paths and UUID placeholders with the files and identifiers returned by earlier commands. Initialize the archive only once, and prepare `./sources/harbor-dossier.md` before importing that dossier.
 

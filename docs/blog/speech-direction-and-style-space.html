@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>From chapter comparisons to spoken direction: 3D style space and speech-plan export — Lixity blog</title>
+<meta name="description" content="Explore chapter differences in Lixity's 3D style space with per-axis spread context, inspect refined quotation and tense heuristics, and export speech direction as JSON or SSML."/>
+<link rel="canonical" href="https://mfahsold.github.io/lixity/blog/speech-direction-and-style-space.html"/>
+<link rel="icon" href="../assets/mark.svg" type="image/svg+xml"/>
+<link rel="stylesheet" href="../assets/site.css"/>
+<script src="../assets/site.js" defer></script>
+<meta property="og:type" content="article"/>
+<meta property="og:title" content="From chapter comparisons to spoken direction: 3D style space and speech-plan export"/>
+<meta property="og:description" content="Explore chapter differences in Lixity's 3D style space with per-axis spread context, inspect refined quotation and tense heuristics, and export speech direction as JSON or SSML."/>
+<meta property="og:url" content="https://mfahsold.github.io/lixity/blog/speech-direction-and-style-space.html"/>
+<meta property="og:site_name" content="Lixity"/>
+<meta property="article:author" content="https://github.com/mfahsold"/>
+<meta property="article:published_time" content="2026-11-02"/>
+<meta property="article:modified_time" content="2026-11-02"/>
+<meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-heatmap.png"/>
+<meta property="og:image:width" content="2194"/>
+<meta property="og:image:height" content="1054"/>
+<meta property="og:image:alt" content="Excerpt of the Warehouse 4 chapter comparison table with signed z* values and FDR markers"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="From chapter comparisons to spoken direction: 3D style space and speech-plan export"/>
+<meta name="twitter:description" content="Explore chapter differences in Lixity's 3D style space with per-axis spread context, inspect refined quotation and tense heuristics, and export speech direction as JSON or SSML."/>
+<meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-heatmap.png"/>
+<meta name="twitter:image:alt" content="Excerpt of the Warehouse 4 chapter comparison table with signed z* values and FDR markers"/>
+<link rel="alternate" type="text/markdown" href="speech-direction-and-style-space.html.md" title="Markdown version of this page"/>
+<link rel="alternate" type="text/plain" href="../llms.txt" title="Automation summary"/>
+<link rel="help" href="../AGENTS.md" title="CLI, Python and HTTP interface contracts"/>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": [
+    "BlogPosting",
+    "TechArticle"
+  ],
+  "headline": "From chapter comparisons to spoken direction: 3D style space and speech-plan export",
+  "description": "Explore chapter differences in Lixity's 3D style space with per-axis spread context, inspect refined quotation and tense heuristics, and export speech direction as JSON or SSML.",
+  "url": "https://mfahsold.github.io/lixity/blog/speech-direction-and-style-space.html",
+  "mainEntityOfPage": "https://mfahsold.github.io/lixity/blog/speech-direction-and-style-space.html",
+  "inLanguage": "en",
+  "datePublished": "2026-11-02",
+  "dateModified": "2026-11-02",
+  "author": {
+    "@type": "Person",
+    "name": "Matthias Fahsold",
+    "url": "https://github.com/mfahsold"
+  },
+  "isPartOf": {
+    "@type": "Blog",
+    "name": "Lixity blog",
+    "url": "https://mfahsold.github.io/lixity/blog/index.html"
+  },
+  "image": {
+    "@type": "ImageObject",
+    "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-heatmap.png",
+    "width": 2194,
+    "height": 1054,
+    "caption": "Excerpt of the Warehouse 4 chapter comparison table with signed z* values and FDR markers"
+  }
+}
+</script>
+</head>
+<body id="top" tabindex="-1" class="site-page">
+<a class="skip-link" href="#content">Skip to article</a>
+<header class="site-header"><div class="header-inner">
+<a class="brand" href="../"><span class="brand-name">Lixity</span></a>
+<nav class="site-return" aria-label="Lixity navigation"><a href="../#guides">Guides</a><a href="../guides/installation.html">Install</a></nav>
+<button class="ctl theme-btn" id="themeToggle" type="button" hidden>Theme: system</button>
+</div></header>
+<main class="guide" id="content">
+<nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="index.html">Articles</a></li><li><span aria-current="page">Style space and speech plans</span></li></ol></nav>
+<h1>From chapter comparisons to spoken direction: 3D style space and speech-plan export</h1>
+<p class="updated">By <a href="https://github.com/mfahsold">Matthias Fahsold</a> · Published <time datetime="2026-11-02">2 November 2026</time> · 6 minutes</p>
+
+<p>When an author revises a long draft, two questions often meet in the same chapter: why does this chapter stand apart in the book's own style comparison, and how does the passage sound when read aloud with deliberate pacing and voice direction?</p>
+<p>Lixity makes both steps inspectable without turning exploratory statistics or synthetic audio into automated verdicts. Every number points back to a specific chapter or paragraph so a human reader can decide whether the difference belongs to the scene.</p>
+
+<h2 id="style-space-spread">1. Read 3D chapter coordinates alongside each axis's spread</h2>
+<p>In the <strong>Analysis overview</strong>, the review entry links directly to the exploratory 3D style space when chapter dimension scores are available. Each point represents one eligible chapter projected onto the first three principal axes of standardized low-to-high feature ranks. A solid ring identifies the currently selected chapter; a dashed ring marks chapters whose absolute score reaches the active raw coordinate cutoff (<code>|Score| &ge; 2.5</code> by default) on any computed axis, including axes beyond the first three.</p>
+<p>Because principal components have different eigenvalues, a raw coordinate of <code>2.5</code> does not represent the same relative distance on every axis. On the first dimension, whose variance across chapters is larger, <code>2.5</code> may sit little more than one sample standard deviation from zero; on a third dimension with tighter spread, the same <code>2.5</code> cutoff can sit more than two sample standard deviations out.</p>
+<p>Each style-dimension card and the cutoff explanation report the raw threshold together with its multiple of that axis's sample standard deviation—for example, <code>|Score| &ge; 2.5 (&approx; 1.18 SD)</code> on Dimension 1 versus <code>|Score| &ge; 2.5 (&approx; 2.09 SD)</code> on Dimension 3. That context shows why a chapter crosses the raw threshold on one axis more readily than on another, while keeping the exploratory coordinate ring separate from the noise-adjusted <code>z*</code> heatmap and Benjamini–Hochberg FDR selections. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md#5-exploratory-style-dimensions">methods reference</a> and <a href="../guides/interpretation.html#visuals">interpretation guide</a>.</p>
+
+<h2 id="quotation-and-tense-boundaries">2. Cleaner boundaries for quotations and lexical tense cues</h2>
+<p>When you follow a chapter from the overview back into the manuscript, paragraph-level highlights and counts agree with what is on the page:</p>
+<ul>
+<li><strong>Cross-paragraph quotation spans:</strong> when a recognized quotation span crosses a paragraph break, each overlapping paragraph receives its covered quoted words in the paragraph quotation-share calculation. Configured <code>dialogue_regex</code> patterns with multiple capture groups also use the first group consistently across corpus, chapter and paragraph views. Quotation detection remains a punctuation heuristic and does not identify speakers.</li>
+<li><strong>Lexical tense refinements:</strong> Lixity's default paragraph tense signal is a fast lexical heuristic rather than a syntactic parser. German past-tense suffix matching avoids counting arbitrary <code>-te/-ten/-test</code> endings on nouns or adjectives as preterite verbs, and the default Spanish tense heuristic avoids double-counting an adjacent present-tense <code>haber</code> auxiliary (<code>he</code>, <code>has</code>, <code>ha</code>, <code>hemos</code>, <code>hab&eacute;is</code>, <code>han</code>) followed by a regular past participle (<code>-ado</code>, <code>-ido</code>) as a separate present-tense marker. Compound forms with intervening adverbs or irregular participles remain heuristic; optional installed grammar models provide contextual verb-group analysis when needed (<a href="https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md#grammatical-tense">validation limits</a>).</li>
+<li><strong>Contextual navigation help:</strong> every destination in the top analysis navigation bar, the right-hand section outline, the <strong>Back to passage</strong> control and the reader speech button provides a localized tooltip across all seven interface languages. Activating an action control that transfers focus to a replacement button suppresses incidental tooltip popups so keyboard and pointer navigation stay unobstructed.</li>
+</ul>
+
+<h2 id="speech-plan-export">3. Export speech direction without locking into one audio engine</h2>
+<p>Reading a scene aloud is one of the oldest ways to test sentence rhythm, dialogue turns and local word echoes. Lixity stores project-local passage direction in <code>.lixity/audio-directions.json</code>, shares voice profiles between the CLI and browser workbench, supports FFmpeg tempo post-processing (<code>--speed</code>) without altering explicit pauses, and connects to optional local Qwen3-TTS 1.7B VoiceDesign and Base reference workers.</p>
+<p>At the same time, Lixity's core strength is understanding manuscript structure—scenes, paragraphs, pronunciation rules, pause timing and authored delivery notes—not bundling every neural TTS stack inside the analysis engine:</p>
+<ol>
+<li><strong>Provider-independent JSON and SSML export:</strong> in <strong>Project &rarr; Audio export and recordings &rarr; Export direction</strong> (or via <code>lixity audio-export-plan</code> and <code>lixity read-aloud --timeline</code> / <code>--ssml</code>), you can export the effective speech plan for a passage, a chapter or the entire manuscript without contacting any synthesis service. The <code>lixity-audio-timeline/1</code> JSON format preserves source-line provenance, spoken-form pronunciation substitutions, authored passage direction, voice bindings and explicit pause durations. The W3C SSML export projects supported breaks and substitutions while listing explicit portability warnings for controls that portable SSML cannot represent.</li>
+<li><strong>Configurable OpenAI-compatible HTTP speech providers:</strong> projects using audio settings schema <code>/4</code> (via the reviewed, backed-up <code>audio-migrate --to-schema-4</code> workflow) can bind a profile to an explicit HTTP speech endpoint, model and voice, referencing an environment-variable name for any API key. Credentials are never written into project files, and prose is sent only when you explicitly start a render.</li>
+<li><strong>Local recording inspection and transcript-bound verification:</strong> <code>lixity audio-inspect</code> measures local WAV, FLAC or MP3 recordings (duration, peak/RMS levels, clipping and silence spans). When you also supply a timestamped transcript bound to the recording's SHA-256 hash, <code>lixity audio-verify</code> compares planned words and pause spans against the transcript. Lixity runs no automatic speech recognizer; missing transcript evidence is reported as unknown rather than as a passed check.</li>
+</ol>
+<pre><code># Export a chapter's speech plan as JSON or portable SSML without synthesis
+lixity audio-export-plan manuscript.md --project ./novel --chapter 2 -o ch2-plan.json
+lixity audio-export-plan manuscript.md --project ./novel --chapter 2 --ssml -o ch2-plan.ssml
+
+# Inspect a rendered WAV/FLAC/MP3 recording locally
+lixity audio-inspect ./ch2-recording.wav --json</code></pre>
+<p>See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#audio-export-and-external-providers-unreleased">audio export and provider guide</a> for exact schema migration steps, privacy boundaries and recovery instructions.</p>
+
+<h2 id="try">Try the workflow in the updated demo</h2>
+<p>The read-only <a href="../demo/report.html">Warehouse 4 demo workspace</a> has been regenerated from the current development checkout. Open <strong>Analysis overview</strong>, follow the direct link into the <strong>3D style space</strong> to inspect the per-axis standard-deviation labels, test the localized tooltips along the analysis bar, or follow a saved quotation into its <a href="../guides/first-look.html#decision">linked research dossier</a>.</p>
+<p>For your own manuscript, install the published release or test the development branch locally via the <a href="../guides/installation.html#development-builds">installation guide</a>.</p>
+
+<footer class="site-footer"><nav aria-label="Project resources"><a href="../#guides">All guides</a><a href="index.html">Articles</a><a href="https://github.com/mfahsold/lixity">Source code</a><a href="../LICENSING.md">License</a><a href="../#website-measurement">Website measurement</a><a href="../#impressum">Legal notice</a></nav></footer>
+</main>
+<a class="site-back-top" href="#top">Back to top ↑</a>
+</body>
+</html>

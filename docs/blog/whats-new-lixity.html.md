@@ -1,8 +1,16 @@
-# What's new in Lixity 0.7.5: clearer marks and project structure
+# What's new in Lixity: speech direction, clearer marks and project structure
 
-Updated 22 October 2026 · First posted 16 October 2026 · 8 minutes
+Updated 2 November 2026 · First posted 16 October 2026 · 8 minutes
 
-Lixity 0.7.5 separates the words a measurement counted from a paragraph's chapter comparison. A local project overview identifies sources, output locations and structural findings without reorganizing files. Section drafts now complete a read/edit/diff/update roundtrip, while research reads avoid unnecessary repeated work. See the [release notes and upgrade details](../releases/v0.7.5.md).
+Lixity combines separated analysis layers and read-only project inspection with project-local passage direction, provider-independent JSON and SSML speech-plan export, per-axis standard-deviation labels in the 3D style-space projection, cross-paragraph quotation attribution, and contextual navigation tooltips. See the [detailed walkthrough](speech-direction-and-style-space.html) and [release notes](../releases/v0.7.7.md).
+
+## Passage speech direction and provider-independent plan export
+
+In a local project, `lixity audio-direction inspect --project /path/to/book` inspects paragraph anchors and saved delivery ranges in `.lixity/audio-directions.json`, and `lixity read-aloud --plan-only` previews the effective speech plan without synthesis. `lixity audio-export-plan` (or `read-aloud --timeline` / `--ssml`) exports a deterministic `lixity-audio-timeline/1` JSON plan or W3C SSML projection, and `lixity audio-inspect` / `audio-verify` inspect local recordings and optional hash-bound transcripts. See [audio export and speech direction](../USAGE.md#audio-export-and-external-providers-unreleased).
+
+## Clearer style-space spreads and multi-paragraph quotes
+
+Each 3D style-dimension card and cutoff explanation reports the raw coordinate threshold alongside its multiple of that axis’s sample standard deviation (for example, `|Score| ≥ 2.5 (≈ 1.18 SD)`), keeping the exploratory PCA ring distinct from noise-adjusted `z*` and FDR results. When a recognized quotation span crosses a paragraph break, each overlapping paragraph receives its covered quoted words in the paragraph quotation-share calculation. Contextual tooltips across the seven interface languages also explain analysis navigation, section outline items, **Back to passage** and the reader speech control.
 
 ## Sources and outputs in one local view
 

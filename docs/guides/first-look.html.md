@@ -16,7 +16,7 @@ This walkthrough follows the generated demo. It uses the same reading website ex
 
 [Video walkthrough](../videos/analysis-review.mp4)
 
-*Warehouse 4: explore a passage and compare its chapter. Recorded with v0.7.5 using the same app controls as the demo; annotation styling in the demo may differ.*
+*Warehouse 4: explore a passage and compare its chapter using the same app controls as the demo.*
 
 ## 2. Inspect one difference
 
@@ -38,11 +38,11 @@ Choose a paragraph's **… → Explore passage** to open its right context. **Ex
 
 **In the read-only demo:** turn **Analysis** on. The first switch-on selects **Sentence length** unless you already saved a metric choice. Choose the metric with the directly visible **Measure** selector; **Counted text** and **Paragraph comparison** are independent switches. Violet underlines identify counted spans. Blue/orange raw-value markers with down/up arrows compare notable paragraphs with their chapter, adding only a subtle paragraph-edge wash. Hover or tap a mark for its explanation; the compact card puts the quotation/count before a separate paragraph comparison. **Read these marks** keeps the method collapsed until opened.
 
-**Since v0.7.6:** neutral dotted marks and a book-icon **Research** count identify saved research links. Their pattern stays distinct from solid counted-text underlines and the paragraph comparison colors, including with Analysis Off. Open the Research control to follow the exact saved connection; this is an author association, not an automatic fact check.
+Neutral dotted marks and a book-icon **Research** count identify saved research links. Their pattern stays distinct from solid counted-text underlines and the paragraph comparison colors, including with Analysis Off. Open the Research control to follow the exact saved connection; this is an author association, not an automatic fact check.
 
 **Explore passage → Explain measurement** also works by keyboard or right-click with Analysis Off; it enables Analysis while preserving both display-switch preferences. Escape closes the explanation. A sentence's word count and its paragraph's comparison are different measurements. Deliberate **None** and either disabled switch survive Off/On and reload. **Focus reading** hides both displays temporarily and restores the previous choices on exit.
 
-**Since v0.7.3:** expand **Manuscript measurements** for the secondary numbers, then collapse the same summary to return to the compact overview. A linked scene title reveals its detailed **Scene measurements**; both disclosure levels can be closed again. The passage return keeps your earlier reading context.
+Expand **Manuscript measurements** for the secondary numbers, then collapse the same summary to return to the compact overview. A linked scene title reveals its detailed **Scene measurements**; both disclosure levels can be closed again. The passage return keeps your earlier reading context.
 
 Ask what changed: the kind of scene, what the character is doing, or how the sentences are arranged. These short chapters demonstrate a workflow; their numbers are not a quality verdict. [The mark key](interpretation.html#analysis-marks) explains the colors and scopes. [Reader controls and coverage](../USAGE.md#reading-paragraphs) covers text size, focus, keyboard access and supported formatting.
 
@@ -80,7 +80,7 @@ Manuscript input supports Markdown (`.md`, `.markdown`) and plain text (`.txt`).
 
 [Install the local app](installation.html), then open your project or preview a manuscript import. Analysis runs on your computer. JavaScript enables the demo's interactive controls; manuscript text, tables, credits and PDF links remain readable without it.
 
-**Unreleased:** In the local app, **Project → Audio export and recordings → Export direction** prepares JSON and SSML for a passage, chapter or manuscript without contacting a speech service. JSON retains direction details; SSML reports controls it cannot carry portably. The separate **Generate audio** section uses a configured speech service. Locally inspecting an external recording can compare text only when a timestamped transcript for that recording is supplied. See the [audio guide](../USAGE.md#audio-export-and-external-providers-unreleased) for setup and limits.
+In the local app, **Project → Audio export and recordings → Export direction** prepares JSON and SSML for a passage, chapter or manuscript without contacting a speech service. JSON retains direction details; SSML reports controls it cannot carry portably. The separate **Generate audio** section uses a configured speech service. Locally inspecting an external recording can compare text only when a timestamped transcript for that recording is supplied. See the [audio guide](../USAGE.md#audio-export-and-external-providers-unreleased) for setup and limits.
 
 In the local app, open **Project** for a read-only overview of the selected manuscript, research folder and existing outputs. It inspects metadata without rebuilding analysis; output source and generation history remain unknown. The exported demo has no local project-folder view. [Project inspection and CLI](../USAGE.md#inspect-project-structure).
 

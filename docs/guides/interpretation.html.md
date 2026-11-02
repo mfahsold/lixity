@@ -18,7 +18,7 @@ Blue/down and orange/up markers identify notable lower and higher paragraph valu
 
 A selected sentence's word count and its paragraph's comparison have different scopes. The explanation card shows them separately; **Read these marks** opens the counting and method details. **Focus reading** temporarily hides both displays and restores your choices on exit. [Try the marks in the short tour](first-look.html#passage).
 
-**Since v0.7.6:** Saved research uses neutral dotted marks and a book-icon **Research** control with its association count. It records an explicit connection to claims, dossiers and decisions. It stays visible with Analysis Off; counted-text marks and search backgrounds can appear on the same words. Use the Research control by keyboard or click an exact mark while no selection is active. A saved link does not establish factual truth or a statistical difference. [Visual roles and architecture](../ARCHITECTURE.md#annotation-semantics-and-visual-identity).
+Saved research uses neutral dotted marks and a book-icon **Research** control with its association count. It records an explicit connection to claims, dossiers and decisions. It stays visible with Analysis Off; counted-text marks and search backgrounds can appear on the same words. Use the Research control by keyboard or click an exact mark while no selection is active. A saved link does not establish factual truth or a statistical difference. [Visual roles and architecture](../ARCHITECTURE.md#annotation-semantics-and-visual-identity).
 
 ## What does “Comparisons within the limit” measure?
 
@@ -66,7 +66,7 @@ The showing/telling panel displays “–” with an explanation when there are 
 
 An opened paragraph shows the passage first, followed by a compact **Values** disclosure (**Werte** in German). Expand it to inspect the measurements. The matrix, reference bands, dimensions and structural diagnostics share one style area with tabs; links to their existing anchors select the relevant panel. Without JavaScript, all available style panels remain readable.
 
-**Unreleased:** Open the 3D style space directly from the analysis overview when chapter scores are available. Each point is a chapter; nearby points have similar scores only on the displayed axes. A dashed ring marks an axis cutoff and a separate solid ring the selected chapter. The cutoff includes hidden axes and is not an FDR selection. The blue–orange scale elsewhere shows direction of comparison, not this cutoff. Use the 2D projections or chapter table when points overlap, then read the passage.
+Open the 3D style space directly from the analysis overview when chapter scores are available. Each point is a chapter; nearby points have similar scores only on the displayed axes. A dashed ring marks an axis cutoff and a separate solid ring the selected chapter. Each dimension card reports the raw cutoff alongside its multiple of that axis's sample standard deviation so unequal axis spreads remain visible. The cutoff includes hidden axes and is not an FDR selection. The blue–orange scale elsewhere shows direction of comparison, not this cutoff. Use the 2D projections or chapter table when points overlap, then read the passage.
 
 Signs on the loading bars describe each feature’s direction within an axis, not quality. When fewer than three dimensions are available, coordinates set to zero solely for display are not measurements.
 
@@ -98,15 +98,15 @@ Use this reference to connect a measurement with a question to investigate. None
 
 No. Benjamini–Hochberg and Benjamini–Yekutieli require valid input probabilities to control false discoveries. Lixity's normal-tail probabilities have not been calibrated for comparisons against a baseline estimated from the same chapters. The configured q is therefore not a guarantee of the manuscript's false-alarm rate. A dot is a selection for review, not statistical confirmation or a judgment of prose quality.
 
-**Unreleased:** the style summary now labels the share of feature comparisons within the threshold and shows its numerator and denominator. For example, 407 of 416 comparisons is about 98%; this is not a measurement of stylistic cohesion. Missing comparisons are excluded. When no comparison is available, the summary remains unknown.
+The style summary labels the share of feature comparisons within the threshold and shows its numerator and denominator. For example, 407 of 416 comparisons is about 98%; this is not a measurement of stylistic cohesion. Missing comparisons are excluded. When no comparison is available, the summary remains unknown.
 
 ## What can tense and pacing labels tell me?
 
-**Since v0.7.6:** the passage card distinguishes mixed tense cues from a dominant-tense change since the previous paragraph. Open an original counted form to locate it in the manuscript; repeated forms have separate locations. Counts, other paragraph values and general heuristic help start collapsed. If a cue cannot be mapped reliably, Lixity says so. Mixed cues alone do not establish a tense switch.
+The passage card distinguishes mixed tense cues from a dominant-tense change since the previous paragraph. Open an original counted form to locate it in the manuscript; repeated forms have separate locations. Counts, other paragraph values and general heuristic help start collapsed. If a cue cannot be mapped reliably, Lixity says so. Mixed cues alone do not establish a tense switch.
 
 Tense labels, dialogue detection, pacing indicators and showing/telling patterns are language-dependent heuristics. Quoted speech, ambiguous word forms and unconventional punctuation can affect them. A friction rating locates mixed signals; it does not determine whether a flashback or tense change is mistaken. Read the original paragraph before making an editorial decision.
 
-**Unreleased:** the review overview makes these limits explicit. Tense cues are word-pattern counts, not a grammatical parse: infinitives and auxiliary forms can be ambiguous, and quoted recollections can mix present and past cues intentionally. The counting algorithm is unchanged.
+The review overview makes these limits explicit. Tense cues are word-pattern counts, not a grammatical parse: infinitives and auxiliary forms can be ambiguous, and quoted recollections can mix present and past cues intentionally.
 
 Without explicit scene dividers, `scenes_are_chapters` is true: scene counts are chapter placeholders, not detected narrative transitions. Dialogue shares count quoted and total words with the same configured token regex; quotation marks still do not identify a speaker.
 
@@ -116,7 +116,7 @@ Use the labels, numerical values and selected thresholds alongside a chart's col
 
 Style axes summarize patterns in ranked chapter measurements. Their variance labels describe this rank space, not the variance of raw word counts or a quality score. Only chapters with all required measurements appear in the plot; its footer shows coverage. At least three complete chapters and three varying features are needed, which does not establish a reliable narrator or register classification. See the [methods notes](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md#5-exploratory-style-dimensions).
 
-**Since v0.7.6:** heatmap cells, reference cutoff-hit counts and all style-space loadings open the same chapter measurement view. Read the definition, unit, sample and manuscript reference alongside the other metrics of that chapter. Switching metrics does not change manuscript marks. **Read chapter** deliberately opens the text; chapter-only metrics clear unsupported paragraph layers. An axis loading is not a chapter contribution, and comparing metrics does not establish causality.
+Heatmap cells, reference cutoff-hit counts and all style-space loadings open the same chapter measurement view. Read the definition, unit, sample and manuscript reference alongside the other metrics of that chapter. Switching metrics does not change manuscript marks. **Read chapter** deliberately opens the text; chapter-only metrics clear unsupported paragraph layers. An axis loading is not a chapter contribution, and comparing metrics does not establish causality.
 
 Display label keys such as `feat_asl` are not API functions or result fields. Read actual model keys: corpus metrics use `asl`, `dialog_ratio` and `filter_density`; chapter metrics use `asl`, `dialog_pct` and `filter_density`. Style feature identifiers appear in `features[].feature` and deviation/FDR entries. Keep the scope and units with each reported value.
 

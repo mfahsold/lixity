@@ -1,8 +1,8 @@
 # Why is this passage marked?
 
-By [Matthias Fahsold](https://github.com/mfahsold) · Published 26 October 2026 · Updated 27 October 2026 · 5 minutes
+By [Matthias Fahsold](https://github.com/mfahsold) · Published 26 October 2026 · Updated 2 November 2026 · 5 minutes
 
-**Lixity 0.7.6:** this walkthrough follows the current manuscript and research review workflow. The local app keeps independent project views; optional installed grammar models extend tense analysis, and the optional Qwen3-TTS 1.7B worker shares listening profiles with the CLI. Existing Piper profiles require explicit, backed-up migration. See the [release notes](../releases/v0.7.6.md), [validation limits](../STABILITY.md#grammatical-tense) and [installation guide](../guides/installation.html).
+This walkthrough follows Lixity’s manuscript and research review workflow: optional installed grammar models extend tense analysis, the optional Qwen3-TTS 1.7B worker shares listening profiles with the CLI, passage-anchored direction in `.lixity/audio-directions.json` exports deterministic JSON or SSML speech plans, cross-paragraph quotation spans attribute covered quoted words across paragraph boundaries, and Spanish compound-past auxiliaries are deduplicated against present-tense markers. See [3D style space and speech-plan export](speech-direction-and-style-space.html), [validation limits](../STABILITY.md#grammatical-tense) and the [installation guide](../guides/installation.html).
 
 A paragraph is marked while the toolbar shows a different measurement. A research panel still refers to a scene that has already scrolled away. The reader has to work out what the software means before returning to the manuscript.
 

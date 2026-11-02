@@ -107,7 +107,7 @@ Open `warehouse-4.html` in your browser. This generates an analysis report from 
 
 ## Optional audio export and speech providers
 
-**Unreleased audio workflow:** timeline JSON and SSML export need no synthesis engine. Explicit OpenAI-compatible providers use a configured endpoint, model and voice; authentication can reference an environment variable. Imported WAV/FLAC/MP3 inspection stays local, with FFmpeg required for compressed or non-PCM input. Text comparison additionally needs an audio-hash-bound timed transcript. Existing audio settings require a reviewed, backed-up schema upgrade before saving an external profile. See the [audio setup and commands](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#audio-export-and-external-providers-unreleased).
+**Audio workflow:** timeline JSON and SSML export need no synthesis engine. Explicit OpenAI-compatible providers use a configured endpoint, model and voice; authentication can reference an environment variable. Imported WAV/FLAC/MP3 inspection stays local, with FFmpeg required for compressed or non-PCM input. Text comparison additionally needs an audio-hash-bound timed transcript. Existing audio settings require a reviewed, backed-up schema upgrade before saving an external profile. See the [audio setup and commands](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#audio-export-and-external-providers-unreleased).
 
 ## Optional Zotero Desktop
 
