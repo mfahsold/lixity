@@ -431,3 +431,66 @@ function revealStyleTarget(target) {
   initKeyboardTabs(list, "[data-style-view]", false);
 })();
 
+// --- Universal Accessible Table Sorting -------------------------------
+function sortTableByColumn(th) {
+  var table = th.closest("table");
+  if (!table) return;
+  var tbody = table.querySelector("tbody");
+  if (!tbody) return;
+  var row = th.parentElement;
+  if (!row) return;
+  var colIndex = Array.prototype.indexOf.call(row.children, th);
+  if (colIndex < 0) return;
+
+  var currentSort = th.getAttribute("aria-sort");
+  var newDirection = currentSort === "ascending" ? "descending" : "ascending";
+
+  row.querySelectorAll("th").forEach(function(header) {
+    if (header === th) header.setAttribute("aria-sort", newDirection);
+    else header.removeAttribute("aria-sort");
+  });
+
+  var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
+  rows.sort(function(a, b) {
+    var cellA = a.children[colIndex];
+    var cellB = b.children[colIndex];
+    var valA = cellA ? (cellA.dataset.sortValue || cellA.textContent).trim() : "";
+    var valB = cellB ? (cellB.dataset.sortValue || cellB.textContent).trim() : "";
+
+    var cleanA = valA.replace(/[^0-9.-]+/g, "");
+    var cleanB = valB.replace(/[^0-9.-]+/g, "");
+    var numA = parseFloat(cleanA);
+    var numB = parseFloat(cleanB);
+    var isNum = !isNaN(numA) && !isNaN(numB) && valA.match(/[0-9]/) && valB.match(/[0-9]/);
+
+    var cmp = 0;
+    if (isNum) {
+      cmp = numA - numB;
+    } else {
+      var lang = document.documentElement.lang || "de";
+      cmp = valA.localeCompare(valB, lang, { numeric: true, sensitivity: "base" });
+    }
+    return newDirection === "ascending" ? cmp : -cmp;
+  });
+
+  rows.forEach(function(r) { tbody.appendChild(r); });
+  table.dispatchEvent(new CustomEvent("lixity:table-sorted", {
+    bubbles: true,
+    detail: { column: colIndex, direction: newDirection }
+  }));
+}
+
+document.addEventListener("click", function(event) {
+  var th = event.target.closest("th.sortable, th[data-sort], table[data-sortable] th:not(.no-sort)");
+  if (!th) return;
+  sortTableByColumn(th);
+});
+
+document.addEventListener("keydown", function(event) {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  var th = event.target.closest("th.sortable, th[data-sort], table[data-sortable] th:not(.no-sort)");
+  if (!th || document.activeElement !== th) return;
+  event.preventDefault();
+  sortTableByColumn(th);
+});
+

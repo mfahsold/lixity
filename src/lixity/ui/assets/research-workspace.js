@@ -792,6 +792,63 @@ document.addEventListener("click", async function (event) {
     return;
   }
 
+  var groundTabBtn = event.target.closest("[data-ground-tab]");
+  if (groundTabBtn) {
+    var tabKey = groundTabBtn.dataset.groundTab;
+    var gCard = groundTabBtn.closest("#research-grounding-results");
+    if (gCard) {
+      gCard.querySelectorAll(".grounding-tab-btn").forEach(function(b) {
+        b.classList.toggle("active", b === groundTabBtn);
+      });
+      gCard.querySelectorAll(".grounding-term-panel").forEach(function(p) {
+        p.hidden = p.id !== "ground-terms-" + tabKey;
+      });
+    }
+    return;
+  }
+
+  var termSearchBtn = event.target.closest("[data-term-search]");
+  if (termSearchBtn) {
+    var termToSearch = termSearchBtn.dataset.termSearch;
+    if (termToSearch) {
+      if (typeof switchActiveView === "function") switchActiveView("analysis");
+      else {
+        var aTab = document.querySelector('[data-view="analysis"]');
+        if (aTab) aTab.click();
+      }
+      setTimeout(function() {
+        var searchInput = document.getElementById("text-search");
+        if (searchInput) {
+          searchInput.value = termToSearch;
+          searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+          searchInput.focus();
+        }
+      }, 120);
+    }
+    return;
+  }
+
+  var jumpChBtn = event.target.closest("[data-jump-chapter]");
+  if (jumpChBtn) {
+    var chNumToJump = jumpChBtn.dataset.jumpChapter;
+    if (chNumToJump) {
+      if (typeof switchActiveView === "function") switchActiveView("analysis");
+      else {
+        var aTab2 = document.querySelector('[data-view="analysis"]');
+        if (aTab2) aTab2.click();
+      }
+      setTimeout(function() {
+        var targetCh = document.getElementById("ch-" + chNumToJump);
+        if (targetCh) {
+          if (typeof revealChapter === "function") revealChapter(targetCh);
+          if (typeof scrollAndFlash === "function") scrollAndFlash(targetCh, { analysisVisible: true });
+          else targetCh.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 120);
+    }
+    return;
+  }
+
   var groundBtn = event.target.closest("#r-ground-btn");
   if (groundBtn) {
     var srcSelect = document.getElementById("r-ground-source-select");
@@ -809,36 +866,163 @@ document.addEventListener("click", async function (event) {
     var comparisonMeta = gres.meta || {};
     var crossLanguage = comparisonMeta.source_language && comparisonMeta.manuscript_language &&
       comparisonMeta.source_language !== comparisonMeta.manuscript_language;
+
+    var jaccardVal = sum.jaccard_similarity !== undefined ? sum.jaccard_similarity : 0;
+    var jaccardPct = (jaccardVal * 100).toFixed(1);
+    var overlapVal = sum.overlap_coefficient !== undefined ? sum.overlap_coefficient : 0;
+    var overlapPct = (overlapVal * 100).toFixed(1);
+
     var topShared = (gres.lexical_overlap && gres.lexical_overlap.top_shared_terms) || [];
-    var sharedWordsHtml = topShared.slice(0, 15).map(function(w) {
-      return '<span class="research-tag">' + escapeHtml(w.word) + ' (' + w.total_count + ')</span>';
-    }).join(" ");
+    var sharedChipsHtml = topShared.slice(0, 25).map(function(w) {
+      var sc = w.source_count !== undefined ? w.source_count : "?";
+      var mc = w.manuscript_count !== undefined ? w.manuscript_count : "?";
+      var tip = escapeHtml(w.word) + ': ' + w.total_count + 'x (' + escapeHtml(uiLabel("sources") || "Quelle") + ': ' + sc + 'x, ' + escapeHtml(uiLabel("workspace_analysis") || "Manuskript") + ': ' + mc + 'x) · ' + escapeHtml(uiLabel("research_term_click_help"));
+      return '<button type="button" class="grounding-chip" data-term-search="' + escapeHtml(w.word) + '" data-help="' + tip + '" title="' + escapeHtml(w.word) + '">' +
+        '<span>' + escapeHtml(w.word) + '</span>' +
+        '<span class="grounding-badge-count">' + w.total_count + '</span>' +
+      '</button>';
+    }).join("");
 
     var sourceKeyTerms = (gres.keyness && gres.keyness.source_key_terms) || [];
-    var keyTermsHtml = sourceKeyTerms.slice(0, 15).map(function(k) {
-      return '<span class="research-tag" style="border-color:var(--accent);">' + escapeHtml(k.word) + ' (G² ' + k.g2 + ')</span>';
-    }).join(" ");
+    var keyTermsHtml = sourceKeyTerms.slice(0, 25).map(function(k) {
+      var sc = k.source_count !== undefined ? k.source_count : "?";
+      var mc = k.manuscript_count !== undefined ? k.manuscript_count : "?";
+      var tip = escapeHtml(k.word) + ' (Dunning-G² ' + k.g2 + '): ' + escapeHtml(uiLabel("sources") || "Quelle") + ' ' + sc + 'x vs ' + escapeHtml(uiLabel("workspace_analysis") || "Manuskript") + ' ' + mc + 'x · ' + escapeHtml(uiLabel("research_term_click_help"));
+      return '<button type="button" class="grounding-chip keyness" data-term-search="' + escapeHtml(k.word) + '" data-help="' + tip + '" title="' + escapeHtml(k.word) + '">' +
+        '<span>' + escapeHtml(k.word) + '</span>' +
+        '<span class="grounding-badge-count">G² ' + k.g2 + '</span>' +
+      '</button>';
+    }).join("");
+
+    var topExclusive = (gres.lexical_overlap && gres.lexical_overlap.top_source_exclusive) || [];
+    var exclusiveTermsHtml = topExclusive.slice(0, 25).map(function(e) {
+      var tip = escapeHtml(e.word) + ': ' + e.count + 'x (' + escapeHtml(uiLabel("research_exclusive_terms")) + ')';
+      return '<button type="button" class="grounding-chip exclusive" data-term-search="' + escapeHtml(e.word) + '" data-help="' + tip + '" title="' + escapeHtml(e.word) + '">' +
+        '<span>' + escapeHtml(e.word) + '</span>' +
+        '<span class="grounding-badge-count">' + e.count + '</span>' +
+      '</button>';
+    }).join("");
 
     var chapters = gres.chapter_grounding || [];
+    var maxDensity = 1;
+    chapters.forEach(function(c) {
+      if (c.grounding_density > maxDensity) maxDensity = c.grounding_density;
+    });
+
     var chRows = chapters.map(function(c) {
-      return '<tr>' +
-        '<td>' + escapeHtml(uiLabel("research_chapter_prefix")) + ' ' + c.chapter + ' (' + escapeHtml(c.title || "") + ')</td>' +
-        '<td class="num-right">' + c.overlap_tokens + '</td>' +
-        '<td class="num-right">' + (c.grounding_density ? c.grounding_density.toFixed(1) : '0') + '‰</td>' +
+      var densityVal = c.grounding_density || 0;
+      var densityPercent = Math.min(100, Math.round((densityVal / (maxDensity || 1)) * 100));
+      var topTermsList = (c.top_terms || []).slice(0, 3).map(function(t) {
+        return '<span class="grounding-top-term-badge" data-term-search="' + escapeHtml(t.word) + '" title="' + escapeHtml(uiLabel("research_term_click_help")) + '">' + escapeHtml(t.word) + ' (' + t.count + ')</span>';
+      }).join(" ");
+
+      return '<tr class="clickable-row" data-jump-chapter="' + c.chapter + '">' +
+        '<td data-sort-value="' + c.chapter + '"><strong>' + escapeHtml(uiLabel("research_chapter_prefix")) + ' ' + c.chapter + '</strong> <span class="muted-note">(' + escapeHtml(c.title || "") + ')</span></td>' +
+        '<td class="num-right" data-sort-value="' + (c.words || 0) + '">' + (c.words || 0).toLocaleString() + '</td>' +
+        '<td class="num-right" data-sort-value="' + (c.overlap_tokens || 0) + '">' + (c.overlap_tokens || 0).toLocaleString() + '</td>' +
+        '<td class="num-right" data-sort-value="' + densityVal.toFixed(2) + '">' +
+          '<div class="table-bar-cell">' +
+            '<div class="table-bar-track"><div class="table-bar-fill" style="width:' + densityPercent + '%;"></div></div>' +
+            '<span class="table-bar-val">' + densityVal.toFixed(1) + '‰</span>' +
+          '</div>' +
+        '</td>' +
+        '<td>' + (topTermsList || '<span class="muted-note">–</span>') + '</td>' +
+        '<td class="num-right">' +
+          '<button type="button" class="ctl grounding-jump-btn" data-jump-chapter="' + c.chapter + '" title="' + escapeHtml(uiLabel("research_jump_chapter")) + '" data-help="' + escapeHtml(uiLabel("research_jump_chapter")) + '">↗ ' + escapeHtml(uiLabel("open") || "Öffnen") + '</button>' +
+        '</td>' +
       '</tr>';
     }).join("");
 
+    var reg = gres.register_contrast;
+    var registerContrastHtml = "";
+    if (reg) {
+      registerContrastHtml = '<details class="research-accordion mt-3" id="grounding-register-details">' +
+        '<summary data-help="' + escapeHtml(uiLabel("research_register_contrast_help")) + '">' + escapeHtml(uiLabel("research_register_contrast")) + '</summary>' +
+        '<div class="table-wrap mt-2"><table class="research-table">' +
+          '<thead><tr><th>Merkmal</th><th class="num-right">Quelle</th><th class="num-right">Manuskript</th><th class="num-right">Differenz (Δ)</th></tr></thead>' +
+          '<tbody>' +
+            '<tr><td>Mittlere Satzlänge (ASL)</td><td class="num-right">' + (reg.asl ? reg.asl.source : '–') + '</td><td class="num-right">' + (reg.asl ? reg.asl.manuscript : '–') + '</td><td class="num-right"><strong>' + (reg.asl ? (reg.asl.delta > 0 ? '+' : '') + reg.asl.delta : '–') + '</strong></td></tr>' +
+            '<tr><td>Dialoganteil (%)</td><td class="num-right">' + (reg.dialogue_pct ? (reg.dialogue_pct.source * 100).toFixed(1) + '%' : '–') + '</td><td class="num-right">' + (reg.dialogue_pct ? (reg.dialogue_pct.manuscript * 100).toFixed(1) + '%' : '–') + '</td><td class="num-right"><strong>' + (reg.dialogue_pct ? (reg.dialogue_pct.delta > 0 ? '+' : '') + (reg.dialogue_pct.delta * 100).toFixed(1) + '%' : '–') + '</strong></td></tr>' +
+            '<tr><td>Wortschatzreichtum (Guiraud R)</td><td class="num-right">' + (reg.guiraud_r ? reg.guiraud_r.source : '–') + '</td><td class="num-right">' + (reg.guiraud_r ? reg.guiraud_r.manuscript : '–') + '</td><td class="num-right"><strong>' + (reg.guiraud_r ? (reg.guiraud_r.delta > 0 ? '+' : '') + reg.guiraud_r.delta : '–') + '</strong></td></tr>' +
+            '<tr><td>Vokabularwiederholung (Yule’s K)</td><td class="num-right">' + (reg.yules_k ? reg.yules_k.source : '–') + '</td><td class="num-right">' + (reg.yules_k ? reg.yules_k.manuscript : '–') + '</td><td class="num-right"><strong>' + (reg.yules_k ? (reg.yules_k.delta > 0 ? '+' : '') + reg.yules_k.delta : '–') + '</strong></td></tr>' +
+          '</tbody>' +
+        '</table></div>' +
+      '</details>';
+    }
+
     if (gHost) {
+      var prov = gres.provenance || {};
+      var srcTitle = prov.source_title || "";
+      var shaSnippet = prov.source_sha256 ? prov.source_sha256.slice(0, 8) : "";
+      var langLabel = (comparisonMeta.source_language || "") + ' ↔ ' + (comparisonMeta.manuscript_language || "");
+
       gHost.innerHTML = '<div class="research-card mt-3">' +
-        '<div class="research-card-title mb-2">' + escapeHtml(uiLabel("research_results_for")) + ' ' + escapeHtml(gres.provenance ? gres.provenance.source_title : "") + '</div>' +
+        '<div class="grounding-header-bar">' +
+          '<div class="research-card-title">' + escapeHtml(uiLabel("research_results_for")) + ': <strong>' + escapeHtml(srcTitle) + '</strong></div>' +
+          '<div class="grounding-meta-chips">' +
+            (shaSnippet ? '<span class="badge badge-neutral" title="SHA-256">' + escapeHtml(shaSnippet) + '</span>' : '') +
+            '<span class="badge ' + (crossLanguage ? 'badge-warn' : 'badge-neutral') + '" title="' + escapeHtml(uiLabel("status_freshness") || "") + '">' + escapeHtml(langLabel) + '</span>' +
+          '</div>' +
+        '</div>' +
         '<p class="ctl-note">' + escapeHtml(uiLabel("research_comparison_limit")) + '</p>' +
         (crossLanguage ? '<p class="ctl-note research-comparison-warning" role="status">' + escapeHtml(uiLabel("research_cross_language_limit")) + '</p>' : '') +
-        '<div class="research-compare-metric"><span>' + escapeHtml(uiLabel("research_similarity")) + '</span><strong>' + (sum.jaccard_similarity !== undefined ? (sum.jaccard_similarity * 100).toFixed(1) + '%' : 'n/a') + '</strong></div>' +
-        '<div class="research-compare-metric"><span>' + escapeHtml(uiLabel("research_shared_types")) + '</span><strong>' + (sum.shared_types || 0) + '</strong></div>' +
-        '<div class="research-compare-metric"><span>' + escapeHtml(uiLabel("research_word_counts")) + '</span><span>' + (sum.source_content_words || 0) + ' / ' + (sum.manuscript_content_words || 0) + '</span></div>' +
-        (sharedWordsHtml ? '<div class="mt-2"><div class="ctl-label mb-1">' + escapeHtml(uiLabel("research_shared_words")) + '</div><div class="research-tags">' + sharedWordsHtml + '</div></div>' : '') +
-        (keyTermsHtml ? '<div class="mt-2"><div class="ctl-label mb-1">' + escapeHtml(uiLabel("research_source_key_terms")) + '</div><div class="research-tags">' + keyTermsHtml + '</div></div>' : '') +
-        (chRows ? '<div class="mt-3"><div class="ctl-label mb-1">' + escapeHtml(uiLabel("research_chapter_density")) + '</div><table class="research-chapter-table"><thead><tr><th class="num-left">' + escapeHtml(uiLabel("research_chapter")) + '</th><th class="num-right">' + escapeHtml(uiLabel("research_tokens")) + '</th><th class="num-right">' + escapeHtml(uiLabel("research_density")) + '</th></tr></thead><tbody>' + chRows + '</tbody></table></div>' : '') +
+
+        '<div class="grounding-kpis">' +
+          '<div class="grounding-kpi-card" data-help="' + escapeHtml(uiLabel("research_jaccard_help")) + '" title="' + escapeHtml(uiLabel("research_similarity")) + '">' +
+            '<div class="grounding-kpi-label"><span>' + escapeHtml(uiLabel("research_similarity")) + '</span><span>ℹ</span></div>' +
+            '<div class="grounding-kpi-val">' + jaccardPct + '%</div>' +
+            '<div class="grounding-mini-bar-track"><div class="grounding-mini-bar-fill" style="width:' + Math.min(100, Math.round(jaccardVal * 500)) + '%;"></div></div>' +
+          '</div>' +
+          '<div class="grounding-kpi-card" data-help="' + escapeHtml(uiLabel("research_overlap_help")) + '" title="' + escapeHtml(uiLabel("research_overlap_coefficient")) + '">' +
+            '<div class="grounding-kpi-label"><span>' + escapeHtml(uiLabel("research_overlap_coefficient")) + '</span><span>ℹ</span></div>' +
+            '<div class="grounding-kpi-val">' + overlapPct + '%</div>' +
+            '<div class="grounding-mini-bar-track"><div class="grounding-mini-bar-fill" style="width:' + Math.min(100, Math.round(overlapVal * 100)) + '%;"></div></div>' +
+          '</div>' +
+          '<div class="grounding-kpi-card" data-help="' + escapeHtml(uiLabel("research_shared_types_help")) + '" title="' + escapeHtml(uiLabel("research_shared_types")) + '">' +
+            '<div class="grounding-kpi-label"><span>' + escapeHtml(uiLabel("research_shared_types")) + '</span><span>ℹ</span></div>' +
+            '<div class="grounding-kpi-val">' + (sum.shared_types || 0).toLocaleString() + '</div>' +
+          '</div>' +
+          '<div class="grounding-kpi-card" data-help="' + escapeHtml(uiLabel("research_word_counts_help")) + '" title="' + escapeHtml(uiLabel("research_word_counts")) + '">' +
+            '<div class="grounding-kpi-label"><span>' + escapeHtml(uiLabel("research_word_counts")) + '</span><span>ℹ</span></div>' +
+            '<div class="grounding-kpi-val">' + (sum.source_content_words || 0).toLocaleString() + ' <span class="grounding-subval">/ ' + (sum.manuscript_content_words || 0).toLocaleString() + '</span></div>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="grounding-term-toolbar">' +
+          '<div class="ctl-label">' + escapeHtml(uiLabel("research_top_terms_col")) + '</div>' +
+          '<div class="grounding-term-tabs" role="tablist">' +
+            '<button type="button" class="grounding-tab-btn active" data-ground-tab="shared" role="tab" aria-selected="true">' + escapeHtml(uiLabel("research_shared_words")) + ' (' + topShared.length + ')</button>' +
+            '<button type="button" class="grounding-tab-btn" data-ground-tab="keyness" role="tab" aria-selected="false">' + escapeHtml(uiLabel("research_source_key_terms")) + ' (' + sourceKeyTerms.length + ')</button>' +
+            '<button type="button" class="grounding-tab-btn" data-ground-tab="exclusive" role="tab" aria-selected="false">' + escapeHtml(uiLabel("research_exclusive_terms")) + ' (' + topExclusive.length + ')</button>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="grounding-term-panel" id="ground-terms-shared">' +
+          '<div class="grounding-chips">' + (sharedChipsHtml || '<span class="muted-note">–</span>') + '</div>' +
+        '</div>' +
+        '<div class="grounding-term-panel" id="ground-terms-keyness" hidden>' +
+          '<div class="grounding-chips">' + (keyTermsHtml || '<span class="muted-note">–</span>') + '</div>' +
+        '</div>' +
+        '<div class="grounding-term-panel" id="ground-terms-exclusive" hidden>' +
+          '<div class="grounding-chips">' + (exclusiveTermsHtml || '<span class="muted-note">–</span>') + '</div>' +
+        '</div>' +
+
+        (chRows ? '<div class="mt-4">' +
+          '<div class="ctl-label mb-2">' + escapeHtml(uiLabel("research_chapter_density")) + '</div>' +
+          '<div class="table-wrap"><table class="research-chapter-table" data-sortable="true">' +
+            '<thead><tr>' +
+              '<th class="sortable" data-sort="chapter" tabindex="0" role="columnheader" aria-sort="ascending" data-help="' + escapeHtml(uiLabel("table_sort_help")) + '" aria-keyshortcuts="Enter">' + escapeHtml(uiLabel("research_chapter")) + '</th>' +
+              '<th class="sortable num-right" data-sort="words" tabindex="0" role="columnheader" data-help="' + escapeHtml(uiLabel("table_sort_help")) + '" aria-keyshortcuts="Enter">Wörter</th>' +
+              '<th class="sortable num-right" data-sort="tokens" tabindex="0" role="columnheader" data-help="' + escapeHtml(uiLabel("table_sort_help")) + '" aria-keyshortcuts="Enter">' + escapeHtml(uiLabel("research_tokens")) + '</th>' +
+              '<th class="sortable num-right" data-sort="density" tabindex="0" role="columnheader" data-help="' + escapeHtml(uiLabel("table_sort_help")) + '" aria-keyshortcuts="Enter">' + escapeHtml(uiLabel("research_density")) + '</th>' +
+              '<th>' + escapeHtml(uiLabel("research_top_terms_col")) + '</th>' +
+              '<th class="num-right">' + escapeHtml(uiLabel("action")) + '</th>' +
+            '</tr></thead>' +
+            '<tbody>' + chRows + '</tbody>' +
+          '</table></div>' +
+        '</div>' : '') +
+
+        registerContrastHtml +
       '</div>';
     }
     researchStatus(uiLabel("research_ground_complete"), true);

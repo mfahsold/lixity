@@ -8,6 +8,16 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Interactive Research Grounding ("Abgleich") dashboard:
+  - Replaced the previous plain text comparison output with a clean, structured KPI card grid showing Jaccard similarity index, Szymkiewicz-Simpson overlap coefficient, unique shared lexeme types, and filtered content word counts.
+  - Interactive segmented vocabulary explorer for shared terms, Dunning G² keyness terms, and exclusive source terms. Term chips feature detailed frequency tooltips and click-to-search integration that immediately reveals occurrences in the manuscript.
+  - Interactive, sortable per-chapter evidence grounding table featuring sticky headers, sortable columns (chapter, words, tokens, density), proportional micro progress bars for grounding density (‰), chapter top terms, and one-click jump-to-chapter navigation in the reader view.
+  - Collapsible style and register contrast breakdown comparing Average Sentence Length (ASL), Dialogue Ratio, Guiraud R, and Yule's K between source and manuscript.
+  - Shifted static statistical disclaimer walls into contextual tooltips with localized descriptions across all seven supported languages.
+- Universal table consolidation & interactive sorting:
+  - Consolidated `.table-wrap` components across all views with sticky headers (`position: sticky`), accessible sortable headers (`th.sortable`, `aria-sort`, Enter/Space keyboard activation), proportional visual bar cells (`.table-bar-cell`), tabular numeric alignment (`.num-right`), and hover row highlights.
+- Global tooltip and keyboard shortcut coverage across research surfaces:
+  - Added localized tooltips, titles, and keyboard shortcuts (`Enter`, `Escape`) to all research filter inputs, search fields, grounding selectors, and refresh controls across German, English, French, Spanish, Italian, Portuguese, and Dutch.
 - Global keyboard shortcut recognition and formatting in the central tooltip engine:
   interactive controls declaring `aria-keyshortcuts` or parenthesized shortcut
   conventions now render crisp `<kbd>` key badges in the tooltip header across

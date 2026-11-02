@@ -243,6 +243,8 @@
     }
     activeEl = null;
     pointerHelp = false;
+    tip.style.left = "";
+    tip.style.top = "";
     tip.setAttribute("aria-hidden", "true");
     tip.classList.remove("visible");
   }

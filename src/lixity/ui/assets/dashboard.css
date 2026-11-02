@@ -935,6 +935,8 @@ footer {
   opacity: 0;
   transform: translateY(2px);
   visibility: hidden;
+  left: 0;
+  top: 0;
   transition: opacity .15s cubic-bezier(0.16, 1, 0.3, 1), transform .15s cubic-bezier(0.16, 1, 0.3, 1), visibility .15s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: normal;
   text-transform: none;
@@ -1142,6 +1144,171 @@ mark.search-hit {
   .research-relation-endpoints { flex-direction: column; }
 }
 .research-compare-metric { display: flex; justify-content: space-between; border-bottom: 1px dashed var(--line); padding: .3rem 0; font-size: var(--text-control); }
+
+/* --- Grounding & Lexical Comparison ----------------------------------- */
+.grounding-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: var(--space-2);
+  margin-block: var(--space-3);
+}
+.grounding-kpi-card {
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  cursor: help;
+}
+.grounding-kpi-card:hover {
+  border-color: var(--action-bg, #3b82f6);
+  background: var(--surface-hover);
+}
+.grounding-kpi-label {
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.grounding-kpi-val {
+  font-size: 1.3rem;
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+  line-height: 1.2;
+}
+.grounding-subval {
+  font-size: var(--text-small);
+  font-weight: var(--weight-normal);
+  color: var(--muted);
+}
+.grounding-mini-bar-track {
+  width: 100%;
+  height: 0.35rem;
+  background: var(--line);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  margin-top: 0.2rem;
+}
+.grounding-mini-bar-fill {
+  height: 100%;
+  background: var(--action-bg, #3b82f6);
+  border-radius: var(--radius-pill);
+  transition: width 0.3s ease;
+}
+.grounding-term-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block: var(--space-3) var(--space-2);
+}
+.grounding-term-tabs {
+  display: inline-flex;
+  gap: 0.25rem;
+  background: var(--neutral);
+  padding: 2px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+}
+.grounding-tab-btn {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.grounding-tab-btn.active {
+  background: var(--surface);
+  color: var(--fg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.grounding-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-block: 0.4rem 0.8rem;
+}
+.grounding-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: var(--text-small);
+  color: var(--fg);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.grounding-chip:hover {
+  background: var(--surface-hover);
+  border-color: var(--action-bg, #3b82f6);
+  transform: translateY(-1px);
+}
+.grounding-chip.keyness {
+  border-color: rgba(59, 130, 246, 0.4);
+}
+.grounding-badge-count {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  color: var(--muted);
+  background: var(--neutral);
+  padding: 0.05rem 0.35rem;
+  border-radius: var(--radius-pill);
+}
+.grounding-top-term-badge {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  margin: 0.1rem 0.2rem 0.1rem 0;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  font-size: var(--text-micro);
+  background: var(--neutral);
+  color: var(--fg);
+  cursor: pointer;
+}
+.grounding-top-term-badge:hover {
+  border-color: var(--action-bg, #3b82f6);
+  background: var(--surface-hover);
+}
+.grounding-jump-btn {
+  padding: 0.2rem 0.55rem;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+.muted-note {
+  color: var(--muted);
+  font-size: var(--text-micro);
+}
+.grounding-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+.grounding-meta-chips {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
 
 
 /* --- Welcome Hero & Workspace Management ------------------------------ */

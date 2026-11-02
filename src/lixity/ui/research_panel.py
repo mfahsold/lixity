@@ -181,10 +181,13 @@ def render_research_panel(
     )
     parts.append('<div class="row">')
     parts.append(
-        f'<input class="ctl" type="search" id="r-search-query" aria-label="{L("research_search_query")}" placeholder="{L("research_search_query")}" aria-keyshortcuts="Enter"/>'
+        f'<input class="ctl" type="search" id="r-search-query" aria-label="{L("research_search_query")}" '
+        f'placeholder="{L("research_search_query")}" title="{L("research_search_query")}" '
+        f'data-help="{L("research_search_query_help")}" aria-keyshortcuts="Enter"/>'
     )
     parts.append(
-        f'<select class="ctl" id="r-search-scope" aria-label="{L("research_search_scope")}">'
+        f'<select class="ctl" id="r-search-scope" aria-label="{L("research_search_scope")}" '
+        f'title="{L("research_search_scope")}" data-help="{L("research_search_scope_help")}">'
     )
     for scope, scope_label in (
         ("all", "research_search_all"),
@@ -196,7 +199,9 @@ def render_research_panel(
         parts.append(f'<option value="{scope}">{L(scope_label)}</option>')
     parts.append("</select>")
     parts.append(
-        f'<button type="submit" class="ctl primary" id="r-search-btn" aria-keyshortcuts="Enter">{L("research_search_action")}</button>'
+        f'<button type="submit" class="ctl primary" id="r-search-btn" '
+        f'title="{L("research_search_action")}" data-help="{L("research_search_action_help")}" '
+        f'aria-keyshortcuts="Enter">{L("research_search_action")}</button>'
     )
     parts.append("</div>")
     parts.append("</form>")
@@ -428,7 +433,8 @@ def render_research_panel(
         f'<summary data-help="{L("help_research_evidence")}">{L("research_link_heading")}</summary><div class="ctl-group research-composer-body">'
     )
     parts.append(
-        f'<button type="button" class="ctl" id="r-find-passage">{L("research_find_passage")}</button>'
+        f'<button type="button" class="ctl" id="r-find-passage" '
+        f'title="{L("research_find_passage")}" data-help="{L("research_find_passage_help")}">{L("research_find_passage")}</button>'
     )
     parts.append('    <div class="row mb-2">')
     parts.append(
@@ -584,7 +590,8 @@ def render_research_panel(
     parts.append(f'<h3 class="section-heading">{L("research_editorial_heading")}</h3>')
     parts.append(f'<p class="ctl-note">{L("research_editorial_help")}</p>')
     parts.append(
-        f'<button type="button" class="ctl" id="r-review-refresh">{L("research_editorial_refresh")}</button>'
+        f'<button type="button" class="ctl" id="r-review-refresh" '
+        f'title="{L("research_editorial_refresh")}" data-help="{L("research_review_refresh_help")}">{L("research_editorial_refresh")}</button>'
     )
     parts.append('<div id="research-editorial-review" aria-live="polite"></div>')
     parts.append('<section id="research-manuscript-review-section" hidden>')
@@ -657,7 +664,8 @@ def render_research_panel(
     parts.append("</div>")
     parts.append("</div></details>")
     parts.append(
-        f'<button type="button" class="ctl mb-2" id="r-terms-refresh">{L("research_editorial_refresh")}</button>'
+        f'<button type="button" class="ctl mb-2" id="r-terms-refresh" '
+        f'title="{L("research_editorial_refresh")}" data-help="{L("research_terms_refresh_help")}">{L("research_editorial_refresh")}</button>'
     )
     parts.append(
         '<div id="research-manuscript-terms" class="manuscript-link-review-list" aria-live="polite"></div>'
@@ -673,10 +681,15 @@ def render_research_panel(
     )
     parts.append('<div class="row">')
     parts.append(
-        f'<select class="ctl field-wide" id="r-ground-source-select" aria-describedby="research-comparison-help" aria-label="{L("research_select_source")}"><option value="">{L("research_select_source")}</option></select>'
+        f'<select class="ctl field-wide" id="r-ground-source-select" '
+        f'aria-describedby="research-comparison-help" aria-label="{L("research_select_source")}" '
+        f'title="{L("research_select_source")}" data-help="{L("research_ground_source_help")}">'
+        f'<option value="">{L("research_select_source")}</option></select>'
     )
     parts.append(
-        f'<button class="ctl primary" id="r-ground-btn">{L("research_ground_action")}</button>'
+        f'<button class="ctl primary" id="r-ground-btn" '
+        f'title="{L("research_ground_action")}" data-help="{L("research_ground_action_help")}" '
+        f'aria-keyshortcuts="Enter">{L("research_ground_action")}</button>'
     )
     parts.append("</div>")
     parts.append("</div>")
