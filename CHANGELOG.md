@@ -11,8 +11,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Streamlined research record cards across dossiers, sources, claims, and decisions:
   dossier section headings over four entries collapse into a compact expandable
   disclosure (`+N more…`), excerpts clamp cleanly to two lines without title
-  stutter, and cards feature distinct borders, subtle elevation, and structured
-  metadata pills to replace unformatted text walls with a scannable catalogue.
+  stutter, claim scope badges and monospace record IDs provide scannable hierarchy,
+  and cards feature distinct borders and subtle elevation to replace unformatted text
+  walls with a structured workspace catalogue.
+- Interactive public demo expansion: configured dossier collections (`Warehouse Case Files`,
+  `Atmosphere & Geography`) and register target profiles (`harbour_investigation`, `quay_action`)
+  in the live demo project to showcase collection filtering and chapter register target corridors.
 - Editorial threshold presets (`balanced`, `developmental`, `line_editing`,
   `conservative_by`) accessible via `--preset` on analysis commands (`analyze`,
   `profile`, `style`, `dashboard`, `pdf`, `build`) and through the native Settings

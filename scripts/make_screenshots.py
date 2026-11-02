@@ -727,18 +727,45 @@ The watchman saw the two figures leave towards the basin. Mara saw a launch ligh
     from lixity.config import prepare_project_settings
 
     current_case = research_api.get_dossier(research_proj, dossier_res["dossier_id"])
-    prepare_project_settings(research_proj, {"site_publications": {"readers": {
-        "title": "Warehouse 4 — a reader's companion",
-        "introduction": "Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.",
-        "entries": [
-            {"dossier_id": weather_dossier["dossier_id"], "revision": 1, "section": "Reader introduction", "title": "The harbour around the story", "reveal_after_chapter": 0},
-            {"dossier_id": dossier_res["dossier_id"], "revision": current_case["revision"], "section": "Historical map", "title": "A map from another time", "reveal_after_chapter": 0},
-            {"dossier_id": dossier_res["dossier_id"], "revision": current_case["revision"], "section": "Historical harbour view", "title": "The harbour in colour", "reveal_after_chapter": 0},
-            {"dossier_id": weather_dossier["dossier_id"], "revision": 1, "section": "Reader weather", "title": "Light and sound", "reveal_after_chapter": 1},
-            {"dossier_id": weather_dossier["dossier_id"], "revision": 1, "section": "Reader witness limits", "title": "What a witness can tell", "reveal_after_chapter": 3},
-            {"dossier_id": weather_dossier["dossier_id"], "revision": 1, "section": "Reader final clue", "title": "The receiving signature", "reveal_after_chapter": 6},
-        ],
-    }}}).commit()
+    prepare_project_settings(research_proj, {
+        "site_publications": {"readers": {
+            "title": "Warehouse 4 — a reader's companion",
+            "introduction": "Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.",
+            "entries": [
+                {"dossier_id": weather_dossier["dossier_id"], "revision": 1, "section": "Reader introduction", "title": "The harbour around the story", "reveal_after_chapter": 0},
+                {"dossier_id": dossier_res["dossier_id"], "revision": current_case["revision"], "section": "Historical map", "title": "A map from another time", "reveal_after_chapter": 0},
+                {"dossier_id": dossier_res["dossier_id"], "revision": current_case["revision"], "section": "Historical harbour view", "title": "The harbour in colour", "reveal_after_chapter": 0},
+                {"dossier_id": weather_dossier["dossier_id"], "revision": 1, "section": "Reader weather", "title": "Light and sound", "reveal_after_chapter": 1},
+                {"dossier_id": weather_dossier["dossier_id"], "revision": 1, "section": "Reader witness limits", "title": "What a witness can tell", "reveal_after_chapter": 3},
+                {"dossier_id": weather_dossier["dossier_id"], "revision": 1, "section": "Reader final clue", "title": "The receiving signature", "reveal_after_chapter": 6},
+            ],
+        }},
+        "dossier_collections": {
+            "case_records": {
+                "name": "Warehouse Case Files",
+                "dossier_ids": [dossier_res["dossier_id"]],
+            },
+            "setting": {
+                "name": "Atmosphere & Geography",
+                "dossier_ids": [weather_dossier["dossier_id"]],
+            },
+        },
+        "register_profiles": {
+            "harbour_investigation": {
+                "asl": [12.0, 22.0],
+                "dialog_pct": [35.0, 65.0],
+            },
+            "quay_action": {
+                "asl": [8.0, 16.0],
+                "staccato_pct": [20.0, 50.0],
+            },
+        },
+        "chapter_registers": {
+            "1": "harbour_investigation",
+            "2": "quay_action",
+            "3": "harbour_investigation",
+        },
+    }).commit()
     sources_data = research_api.list_sources(research_proj)
     dossiers_data = research_api.list_dossiers(research_proj)
     claims_data = research_api.list_claims(research_proj)

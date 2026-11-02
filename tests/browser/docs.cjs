@@ -172,7 +172,7 @@ async function checkReturnNavigation(page, route, exercise) {
       await expect(demo).not.toHaveAttribute('aria-current', /.+/);
     } else {
       await expect(page.locator('.site-header .brand')).toHaveAttribute('href', '../');
-      const german = route === 'guides/first-look-de.html';
+      const german = route === 'guides/first-look-de.html' || route.endsWith('-de.html');
       await expect(navigation.getByRole('link', {name: german ? 'Anleitungen' : 'Guides', exact: true})).toHaveAttribute('href', '../#guides');
       await expect(navigation.getByRole('link', {name: german ? 'Installieren' : 'Install', exact: true})).toHaveAttribute('href', route.startsWith('blog/') ? '../guides/installation.html' : 'installation.html');
       await expect(navigation.getByRole('link', {name: 'Demo', exact: true})).toHaveCount(0);

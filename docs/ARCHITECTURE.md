@@ -1053,6 +1053,11 @@ and [C39 reduced-motion technique](https://www.w3.org/WAI/WCAG22/Techniques/css/
 Research tab buttons and panels have explicit IDs, `aria-controls` and
 `aria-labelledby`; the existing manual keyboard tab behavior remains shared.
 Overflow controls reveal narrow-screen destinations without activating a view.
+Research card overviews prioritize visual scannability: cards present a
+bounded excerpt (two-line clamp) and limit initial dossier section links
+(up to 4 items) with a collapsible disclosure (`+N more…` / `+N weitere…`)
+for remaining sections, preventing unbounded vertical expansion on extensive
+editorial dossiers while preserving direct deep-link navigation.
 Mermaid retains its lazy visible-context renderer, with a visible localized
 pending status as well as `aria-busy`; success/failure removes that pending state.
 

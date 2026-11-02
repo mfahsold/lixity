@@ -435,6 +435,12 @@ details, so a long title does not push Manuscript, Research and Project out of
 reach. **Project actions** keeps New, Open, guidance and available PDF exports
 together; version and license information follow those controls.
 
+In the **Research** workspace, dossier cards offer a structured, scannable overview
+with clean metadata pills (evidence links, revision numbers), a two-line preview
+clamp, and direct section links. When a dossier contains more than 4 sections, an
+accessible disclosure (`+N more…`) displays the remaining section links in a
+scrollable container, keeping extensive editorial reports compact and readable.
+
 <a id="link-a-manuscript-quote-to-a-claim-v030"></a>
 
 ### Link a manuscript quote to a claim
