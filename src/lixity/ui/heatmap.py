@@ -20,6 +20,7 @@ from ..style_fingerprint import (
 )
 from .components import (
     band_chart,
+    chapter_link,
     checkbox_field,
     contrast_text,
     esc,
@@ -152,8 +153,9 @@ def render_register_targets(
     for number, targets in sorted(fingerprint.register_targets.items()):
         register = fingerprint.chapter_registers[number]
         for feature, comparison in targets.items():
+            chapter_title = f"{number}. {esc(titles.get(number, ''))}"
             parts.append(f'<tr data-register="{esc(register)}">'
-                         f'<th scope="row">{number}. {esc(titles.get(number, ""))}</th>'
+                         f'<th scope="row">{chapter_link(number, chapter_title)}</th>'
                          f'<td>{esc(register)}</td><td>{esc(features.get(feature, feature))} '
                          f'<small>{esc(units.get(feature, ""))}</small></td>')
             for key in ("lower", "upper", "value"):

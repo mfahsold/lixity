@@ -171,6 +171,23 @@ class TestReportSurface(unittest.TestCase):
         self.assertEqual(report.adjacent_sentence_pairs, 3)
         self.assertAlmostEqual(report.sentence_overlap_pct, 2 / 3 * 100.0, places=4)
 
+    def test_configurable_hook_and_monotony_thresholds(self):
+        text = (
+            "## Eins\n\n"
+            "Er ging schnell. Er ging weiter. Er ging heim.\n"
+        )
+        custom_strict = CorpusConfig(language="de", hook_short_sentence=2, monotony_min_run=4)
+        report_strict = pacing_report(text, custom_strict)
+        # Closing sentence has 3 words > hook_short_sentence(2) -> hook_score 0
+        self.assertEqual(report_strict.chapter_list[0].hook_score, 0)
+        # 3 identical sentence starts < monotony_min_run(4) -> 0 runs
+        self.assertEqual(report_strict.chapter_list[0].repeated_start_runs, 0)
+
+        custom_relaxed = CorpusConfig(language="de", hook_short_sentence=5, monotony_min_run=2)
+        report_relaxed = pacing_report(text, custom_relaxed)
+        self.assertEqual(report_relaxed.chapter_list[0].hook_score, 1)
+        self.assertEqual(report_relaxed.chapter_list[0].repeated_start_runs, 1)
+
 
 if __name__ == "__main__":
     unittest.main()

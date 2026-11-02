@@ -136,6 +136,8 @@ def _turn_stats(
     dialogue_re: re.Pattern[str],
     word_re: re.Pattern[str],
     language_key: str = "en",
+    *,
+    dialogue_paragraph_share: float = DIALOGUE_PARAGRAPH_SHARE,
 ) -> tuple[list[int], int, int, int, int, int, int, int]:
     """(turn word counts, dialogue words, words, dialogue paragraphs, paragraphs, dialogue sentences, narration words, narration sentences)."""
     paragraphs = prose_paragraphs(body, _front_matter=False)
@@ -198,7 +200,7 @@ def _turn_stats(
                 fragment = paragraph[max(0, start - paragraph_start):min(len(paragraph), end - paragraph_start)]
                 quoted += len(word_re.findall(fragment))
                 index += 1
-            if quoted / paragraph_words >= DIALOGUE_PARAGRAPH_SHARE:
+            if quoted / paragraph_words >= dialogue_paragraph_share:
                 dialogue_paragraphs += 1
         paragraph_start = paragraph_end + 2  # separator inserted in clean
 
@@ -241,12 +243,18 @@ def dialogue_report(text: str, config: CorpusConfig | None = None) -> DialogueRe
             dialogue_sentences,
             narration_words,
             narration_sentences,
-        ) = _turn_stats(body, dialogue_re, word_re, resolved.key)
+        ) = _turn_stats(
+            body,
+            dialogue_re,
+            word_re,
+            resolved.key,
+            dialogue_paragraph_share=config.dialogue_paragraph_share,
+        )
         if not words:
             continue
         turns = len(turn_lengths)
-        short_turns = sum(1 for w in turn_lengths if 1 <= w <= SHORT_TURN_MAX_WORDS)
-        long_turns = sum(1 for w in turn_lengths if w >= LONG_TURN_MIN_WORDS)
+        short_turns = sum(1 for w in turn_lengths if 1 <= w <= config.short_turn_max_words)
+        long_turns = sum(1 for w in turn_lengths if w >= config.long_turn_min_words)
         dialogue_asl = (dialogue_words / dialogue_sentences) if dialogue_sentences else 0.0
         narration_asl = (narration_words / narration_sentences) if narration_sentences else 0.0
         asl_contrast = (
@@ -285,8 +293,8 @@ def dialogue_report(text: str, config: CorpusConfig | None = None) -> DialogueRe
         all_narration_sentences += narration_sentences
 
     turns = len(all_turn_lengths)
-    short_turns = sum(1 for w in all_turn_lengths if 1 <= w <= SHORT_TURN_MAX_WORDS)
-    long_turns = sum(1 for w in all_turn_lengths if w >= LONG_TURN_MIN_WORDS)
+    short_turns = sum(1 for w in all_turn_lengths if 1 <= w <= config.short_turn_max_words)
+    long_turns = sum(1 for w in all_turn_lengths if w >= config.long_turn_min_words)
     corpus_dialogue_asl = (
         (all_dialogue_words / all_dialogue_sentences) if all_dialogue_sentences else 0.0
     )

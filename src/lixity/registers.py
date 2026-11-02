@@ -10,6 +10,35 @@ from typing import Any
 
 from .publication import validate_metadata_text
 
+#: Curated starter register templates for common chapter and scene forms.
+#: These ranges are optional review starting points, never statistical norms.
+REGISTER_PROFILE_TEMPLATES: dict[str, dict[str, dict[str, float]]] = {
+    "dialogue_scene": {
+        "dialog_pct": {"lower": 45.0, "upper": 85.0},
+        "asl": {"lower": 8.0, "upper": 16.0},
+        "staccato_pct": {"lower": 20.0, "upper": 55.0},
+    },
+    "action_scene": {
+        "asl": {"lower": 7.0, "upper": 14.0},
+        "staccato_pct": {"lower": 25.0, "upper": 60.0},
+        "passive_density": {"upper": 4.0},
+    },
+    "reflective_narration": {
+        "asl": {"lower": 16.0, "upper": 28.0},
+        "dialog_pct": {"upper": 25.0},
+        "hd_d": {"lower": 0.82, "upper": 0.95},
+    },
+    "epistolary": {
+        "asl": {"lower": 16.0, "upper": 32.0},
+        "first_person_start_rate": {"lower": 8.0, "upper": 35.0},
+    },
+    "technical_record": {
+        "asl": {"lower": 14.0, "upper": 28.0},
+        "passive_density": {"lower": 5.0, "upper": 18.0},
+        "nominalization_density": {"lower": 15.0, "upper": 45.0},
+    },
+}
+
 
 def validate_target_ranges(
     values: Any, fields: Collection[str], *, allow_scalar: bool = False,

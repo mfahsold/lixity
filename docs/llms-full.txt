@@ -55,7 +55,9 @@ Python consumers use `from lixity import api` and
 English is the default analysis language; detection requires `--language auto`.
 `LIXITY_LANG` selects presentation independently. Mathematical identifiers and
 JSON keys stay language-neutral. Read active thresholds, coverage, warnings and
-unavailable values from results rather than assuming default settings.
+unavailable values from results rather than assuming default settings. Threshold
+presets (`balanced`, `developmental`, `line_editing`, `conservative_by`) and
+configurable structural thresholds in `CorpusConfig` adapt sensitivity to review needs.
 
 ## Choose a maintained reference
 
@@ -1360,13 +1362,26 @@ lixity dialogue manuscript.md
 ```
 
 A turn is a quotation segment, without speaker attribution. A dialogue paragraph
-has at least half its words inside detected quotations. `--json` returns these
-summary and per-chapter measurements for automation.
+has at least half its words inside detected quotations (configurable via
+`dialogue_paragraph_share`). `--json` returns these summary and per-chapter
+measurements for automation.
+
+Beyond turn counts, `lixity dialogue` measures interaction cadence and voice separation:
+- **Short turns** (≤ 12 words by default, configurable via `short_turn_max_words`):
+  captures stichomythia and rapid back-and-forth exchange (empirical corridor: ~45–50%
+  in *Effi Briest* and *Pride and Prejudice*).
+- **Long turns** (≥ 80 words by default, configurable via `long_turn_min_words`):
+  captures extended speech and monologues.
+- **Voice contrast (`ASL Δ`)**: difference between dialogue sentence length and narration
+  sentence length (`dialogue_asl − narration_asl`). In literary novels, dialogue sentences
+  are typically 8–12 words shorter than narration (`~−10` words/sentence); a zero or positive
+  contrast indicates highly elevated or rhetorical characters.
 
 The browser dialogue chart retains every
 measured chapter in manuscript order, including chapters with zero detected
 turns. Long charts scroll within their bounded area rather than showing only
-the chapters with the most dialogue.
+the chapters with the most dialogue. Click any chapter row to jump directly to
+that chapter in the manuscript reader.
 
 ### `lixity characters`
 
@@ -1396,9 +1411,18 @@ lixity pacing manuscript.md
 Explicit Markdown dividers split scenes. With no dividers,
 `explicit_scene_breaks=0` and `scenes_are_chapters=true`: scene counts are chapter
 placeholders and give no independent pacing evidence. Tempo proxies are sentence
-length, staccato share, dialogue share and scene length. The hook score (0–3)
-adds one for each closing cue: at most eight words, terminal `?`/`!`/`…`, and
-closing dialogue. It measures these cues, not suspense or reader response.
+length, staccato share (sentences ≤ `short_sentence_max`), dialogue share and scene length.
+The hook score (0–3) adds one for each closing cue: at most eight words (configurable via
+`hook_short_sentence`), terminal `?`/`!`/`…`, and closing dialogue. It measures these cues,
+not suspense or reader response.
+
+Pacing analysis also examines paragraph-local coherence and rhythmic monotony:
+- **Adjacent sentence overlap (`sentence_overlap_pct`)**: share of consecutive within-paragraph
+  sentence pairs that share at least one content word (empirical baseline: ~24% in literary reference novels).
+  Narrows the gap between developmental macro-flow and line editing.
+- **Repeated start runs (`repeated_start_runs`)**: runs of 3 or more consecutive sentences
+  in a single paragraph opening with the identical word token (configurable via `monotony_min_run`),
+  surfacing unintentional grammatical repetition or deliberate anaphora.
 
 Text summaries identify the chapters with the shortest and
 longest mean sentence length. The historical JSON keys `fastest_chapter` and
@@ -3077,9 +3101,37 @@ the manuscript or infer character presence.
 In the native workspace, **Project → Settings → Chapter registers** edits named
 registers, optional feature bounds and chapter assignments. Since v0.7.4,
 feature choices and target rows show the shared units, including per-1,000-word
-densities and HD-D's 0–1 scale. Scene groups remain configured separately in
-`scene_analysis`; the style-table display filters do not change the whole-book
-reference. **Apply** validates,
+densities and HD-D's 0–1 scale. The register comparison table links directly
+to chapter headings in the manuscript reader (`#ch-N`).
+
+Authors and editors can insert curated starter register templates with one click:
+- **Dialogue scene (`dialogue_scene`)**: quoted text 45–85%, ASL 8–16, staccato share 20–55%.
+- **Action scene (`action_scene`)**: ASL 7–14, staccato share 25–60%, passive density ≤ 4 / 1,000 words.
+- **Reflective narration (`reflective_narration`)**: ASL 16–28, quoted text ≤ 25%, HD-D 0.82–0.95.
+- **Epistolary (`epistolary`)**: ASL 16–32, first-person starts 8–35%.
+- **Technical / institutional record (`technical_record`)**: ASL 14–28, passive density 5–18 / 1,000 words, nominal style 15–45 / 1,000 words.
+
+#### Editorial threshold presets
+
+Under **Project → Settings → Detection thresholds**, choose from four pre-calibrated editorial profiles or keep individual custom values:
+- **Balanced review (`balanced`, default)**: `|z*| ≥ 2.5`, `z_strong = 3.5`, Benjamini–Hochberg `q = 0.05`, paragraph severity floor ≥ 2.
+- **Developmental editing (`developmental`)**: `|z*| ≥ 3.0`, `z_strong = 4.0`, `q = 0.02`, severity floor 3 (focuses on macro-structural chapter shifts and severe tense friction).
+- **Line editing (`line_editing`)**: `|z*| ≥ 2.0`, `z_strong = 3.0`, `q = 0.10`, severity floor ≥ 1 (fine pass surfacing subtle chapter deviations and all paragraph tense notes).
+- **Conservative multiplicity (`conservative_by`)**: `|z*| ≥ 2.5`, Benjamini–Yekutieli FDR under arbitrary dependence (`fdr_method = "by"`).
+
+In the CLI, select presets via `--preset {balanced,developmental,line_editing,conservative_by}` across `analyze`, `profile`, `style`, `dashboard`, `pdf`, and `build`. Explicit CLI flags (such as `--z-mild`) override preset values.
+
+#### Configurable structural thresholds (`[tool.lixity]` / `lixity.toml`)
+
+To eliminate hardcoded assumptions during genre-specific fine-tuning, the following thresholds can be configured in root `lixity.toml` or `pyproject.toml`:
+- `short_sentence_max` (default `6`): upper word limit for staccato sentences.
+- `medium_sentence_max` (default `15`): upper word limit for medium sentences.
+- `long_sentence_max` (default `25`): threshold above which sentences count as long/complex.
+- `short_turn_max_words` (default `12`): upper word limit for rapid dialogue turns.
+- `long_turn_min_words` (default `80`): lower word limit for extended monologue turns.
+- `dialogue_paragraph_share` (default `0.5`): share of quoted words to classify a paragraph as dialogue.
+- `hook_short_sentence` (default `8`): word limit for punchy chapter-closing sentences.
+- `monotony_min_run` (default `3`): minimum consecutive sentences with identical start token.
 rebuilds and saves both tables together in the selected project's `lixity.toml`.
 It requires the current project token and preserves newer browser drafts during
 pending saves. Resetting detection thresholds does not reset registers.
@@ -7877,11 +7929,12 @@ workflows, not authorization to edit the manuscript.
   available SE shrinks the deviation. This reduces one source of noise;
   false alarms and model misspecification remain possible.
 - **Thresholds**: the active `z_mild` and `z_strong` values define the
-  corresponding deviation bands (injectable via `--z-mild` / `--z-strong` /
+  corresponding deviation bands (injectable via `--preset` / `--z-mild` / `--z-strong` /
   `--fdr-q` / `--fdr-method` /
   `--dim-threshold` / `--flag-min-severity`, API kwargs, the control-server
   settings, or `[tool.lixity]`; always re-read them from `passport.meta`,
-  never assume the defaults). `expected_false_positives` is a reference count
+  never assume the defaults). Available threshold presets are `balanced`,
+  `developmental`, `line_editing`, and `conservative_by`. `expected_false_positives` is a reference count
   under a standard-normal null, not a measured false-alarm rate for this
   manuscript. Same-sample median/MAD residuals need not have that distribution.
 - **FDR**: `fdr_flagged` is the Benjamini–Hochberg set by default,
@@ -8754,8 +8807,11 @@ reference = api.fingerprint(
 )
 ```
 
-`project_config` supplies thresholds and known `CorpusConfig`
-settings to `profile`, `fingerprint`, `passport` and `dashboard`. Explicit
+`project_config` supplies thresholds, editorial presets, and known `CorpusConfig`
+settings (such as `short_sentence_max`, `medium_sentence_max`, `long_sentence_max`,
+`short_turn_max_words`, `long_turn_min_words`, `dialogue_paragraph_share`,
+`hook_short_sentence`, and `monotony_min_run`) to `profile`, `fingerprint`,
+`passport` and `dashboard`. Explicit
 language/pattern arguments win. `{}` prevents current-directory threshold lookup;
 `None` retains threshold lookup for compatibility. Scene/register settings are
 explicit: `api.scenes(text, language="de", project_config=settings)` does not

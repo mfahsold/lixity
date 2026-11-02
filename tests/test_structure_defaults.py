@@ -38,3 +38,42 @@ def test_character_defaults_preserve_english_chapter_identity(report):
     assert mentioned_chapters(None) == [2]
     assert mentioned_chapters(CorpusConfig()) == [2]
     assert mentioned_chapters(CorpusConfig(language="auto")) == [1]
+
+
+def test_configurable_dialogue_and_sentence_bins():
+    from lixity.analyzer import CorpusAnalyzer
+
+    dialogue_text = '## Chapter 1\n\n"Hello," she said. "This is a slightly longer sentence than before."\n\n"Yes."\n'
+    default_rep = dialogue_report(dialogue_text)
+    # Default short_turn_max_words = 12: all 3 turns (1 word, 8 words, 1 word) are <= 12
+    assert default_rep.short_turns == 3
+    assert default_rep.long_turns == 0
+
+    tight_config = CorpusConfig(short_turn_max_words=1, long_turn_min_words=5)
+    tight_rep = dialogue_report(dialogue_text, tight_config)
+    # 2 turns with 1 word ("Hello", "Yes") are <= 1; the 8-word turn is >= 5 (long_turns)
+    assert tight_rep.short_turns == 2
+    assert tight_rep.long_turns == 1
+
+    sample = "## One\n\nOne two three four. One two three four five six seven eight nine ten.\n"
+    analyzer_default = CorpusAnalyzer(CorpusConfig())
+    metrics_default = analyzer_default.analyze_text(sample)
+    # default short_sentence_max = 6 (sentence 1 is short, sentence 2 is medium)
+    assert metrics_default.chapters[0].staccato_pct == 50.0
+
+    analyzer_tuned = CorpusAnalyzer(CorpusConfig(short_sentence_max=3, medium_sentence_max=8, long_sentence_max=15))
+    metrics_tuned = analyzer_tuned.analyze_text(sample)
+    # sentence 1 has 4 words > 3 -> medium; sentence 2 has 10 words > 8 -> long
+    assert metrics_tuned.chapters[0].staccato_pct == 0.0
+
+
+@pytest.mark.parametrize("kwargs", [
+    {"short_sentence_max": 10, "medium_sentence_max": 5},
+    {"short_turn_max_words": 100, "long_turn_min_words": 50},
+    {"dialogue_paragraph_share": 1.5},
+    {"hook_short_sentence": 0},
+    {"monotony_min_run": 1},
+])
+def test_invalid_corpus_config_thresholds_rejected(kwargs):
+    with pytest.raises(ValueError):
+        CorpusConfig(**kwargs)

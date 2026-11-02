@@ -219,3 +219,30 @@ def test_partial_register_save_preserves_explicit_root_pyproject_profiles(tmp_pa
     assert saved["register_profiles"] == {"voice": {"asl": [4, 8]}}
     assert saved["chapter_registers"] == {"2": "voice"}
     assert pyproject.read_bytes() == original
+
+
+def test_register_profile_templates_validate_and_render_with_chapter_links():
+    from lixity.registers import REGISTER_PROFILE_TEMPLATES, validate_register_settings
+
+    normalized, assignments = validate_register_settings(
+        REGISTER_PROFILE_TEMPLATES,
+        {str(index): name for index, name in enumerate(REGISTER_PROFILE_TEMPLATES, start=1)},
+    )
+    assert set(normalized) == set(REGISTER_PROFILE_TEMPLATES)
+    assert len(assignments) == len(REGISTER_PROFILE_TEMPLATES)
+    markup = settings_form(labels_for("de"), "Synthetic project", "de", [("de", "Deutsch")],
+                           FingerprintThresholds(), language_key="de")
+    editor = HtmlControls(markup).elements["register-editor"]
+    templates = json.loads(editor["data-templates"])
+    assert set(templates) == set(REGISTER_PROFILE_TEMPLATES)
+    assert 'data-register-add-template' in markup
+    assert 'id="register-template-select"' in markup
+    metrics = CorpusAnalyzer(CorpusConfig(language="en")).analyze_text("\n\n".join(
+        f"## Chapter {number}\n\n" + "The rain falls across the quiet garden. " * 30
+        for number in range(1, 4)))
+    registered = StyleFingerprint.from_metrics(metrics, config=CorpusConfig(
+        chapter_registers={"1": "dialogue_scene"},
+        register_profiles={"dialogue_scene": REGISTER_PROFILE_TEMPLATES["dialogue_scene"]},
+    ))
+    rendered_targets = render_register_targets(registered, metrics, labels_for("en"), "en")
+    assert 'href="#ch-1"' in rendered_targets

@@ -202,6 +202,30 @@
             <td>Read passages in context; these constructions can be deliberate and their counts do not measure immersion. Densities count matches per 1,000 words, not percentages; a few hits in a very short paragraph can produce a large value. Default nominal-suffix counts exclude known function words.</td>
           </tr>
           <tr>
+            <td><strong>Dialogue Cadence &amp; Voice Contrast</strong></td>
+            <td><span class="tech-metric">Short turns (&le;12w), long turns (&ge;80w), ASL contrast (&Delta; dialogue vs. narration)</span></td>
+            <td class="editorial-callout">
+              <strong>Scene Rhythm &amp; Character Voice:</strong> Rapid dialogue exchange (&sim;45&ndash;50% short turns in literary references like <em>Effi Briest</em> and <em>Pride &amp; Prejudice</em>) speeds up scene tempo, while voice contrast reflects stylistic separation between narrator and character speech.
+            </td>
+            <td>Dialogue ASL is typically 8&ndash;12 words shorter than narration in 19th&ndash;20th century prose. A zero or positive contrast signals stylised speeches or monologues, not an error. Both thresholds are configurable in <code>CorpusConfig</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>Paragraph Cohesion &amp; Sentence Starts</strong></td>
+            <td><span class="tech-metric">Adjacent sentence overlap (%), repeated start runs (&ge;3 runs)</span></td>
+            <td class="editorial-callout">
+              <strong>Local Flow &amp; Line Editing:</strong> Within-paragraph adjacent content overlap (&sim;24% baseline in English/German literary references) tracks thematic continuity without surface monotony.
+            </td>
+            <td>Runs of 3 or more consecutive sentences starting with the identical token flag potential anaphora or accidental monotony for editorial review. Configurable via <code>monotony_min_run</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>Editorial Presets &amp; Register Profiles</strong></td>
+            <td><span class="tech-metric">balanced, developmental, line_editing, conservative_by; 5 starter templates</span></td>
+            <td class="editorial-callout">
+              <strong>Curated Workflows:</strong> Select threshold presets in Settings or CLI (<code>--preset</code>) to tune Lixity for macro structural editing vs. close prose line passes without manual arithmetic.
+            </td>
+            <td>Presets prefill threshold fields as review filters; they are never prescriptive quality grades. Register templates provide empirical target ranges for dialogue scenes, action scenes, reflective narration, letters and records.</td>
+          </tr>
+          <tr>
             <td><strong>FDR Heatmap</strong></td>
             <td><span class="tech-metric">Noise-aware z* shrinkage, Benjamini-Hochberg (●), Cliff's &delta;</span></td>
             <td class="editorial-callout">

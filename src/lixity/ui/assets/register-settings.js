@@ -98,6 +98,25 @@
   Object.keys(initial.chapter_registers).forEach(function(key) { assignment(key, initial.chapter_registers[key]); });
   updateNames(); editor.addEventListener("input", updateNames);
   editor.querySelector("[data-register-add-profile]").addEventListener("click", function() { profile("").querySelector("input").focus(); });
+  var templateButton = editor.querySelector("[data-register-add-template]");
+  var templateSelect = editor.querySelector("[data-register-template-select]");
+  if (templateButton && templateSelect && editor.dataset.templates) {
+    var templates = JSON.parse(editor.dataset.templates);
+    templateButton.addEventListener("click", function() {
+      var key = templateSelect.value;
+      var ranges = templates[key];
+      if (!ranges) return;
+      var existing = new Set();
+      profiles.querySelectorAll('[data-register-field="register_name"]').forEach(function(input) {
+        existing.add(input.value.trim());
+      });
+      var candidate = key, suffix = 2;
+      while (existing.has(candidate)) { candidate = key + "_" + (suffix++); }
+      var card = profile(candidate, ranges);
+      updateNames();
+      card.querySelector("input").focus();
+    });
+  }
   editor.querySelector("[data-register-add-assignment]").addEventListener("click", function() { assignment("").querySelector("input").focus(); });
   function field(node, key) { return node.querySelector('[data-register-field="' + key + '"]'); }
   function invalid(input) { input.setCustomValidity(labels.register_invalid); }

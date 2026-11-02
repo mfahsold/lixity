@@ -157,6 +157,8 @@ def _scene_stats(
     word_re: re.Pattern[str],
     dialogue_re: re.Pattern[str],
     language_key: str,
+    *,
+    short_sentence_max: int = SHORT_SENTENCE_MAX,
 ) -> SceneStats | None:
     scene_text = prose_text(scene_text, _front_matter=False)
     words = len(word_re.findall(scene_text))
@@ -165,7 +167,7 @@ def _scene_stats(
     sentences = [s for s in split_prose_sentences(scene_text, language_key) if word_re.findall(s)]
     sentence_lengths = [len(word_re.findall(s)) for s in sentences]
     dialogue_words = sum(len(word_re.findall(m)) for m in quotation_texts(dialogue_re, scene_text))
-    short = sum(1 for length in sentence_lengths if length <= SHORT_SENTENCE_MAX)
+    short = sum(1 for length in sentence_lengths if length <= short_sentence_max)
     return SceneStats(
         index=index,
         words=words,
@@ -184,12 +186,18 @@ def _closing_sentence(body: str, language_key: str) -> str:
     return ""
 
 
-def _hook_score(closing: str, is_dialogue: bool, word_re: re.Pattern[str]) -> tuple[int, int, str]:
+def _hook_score(
+    closing: str,
+    is_dialogue: bool,
+    word_re: re.Pattern[str],
+    *,
+    hook_short_sentence: int = HOOK_SHORT_SENTENCE,
+) -> tuple[int, int, str]:
     """(score, closing sentence words, terminal character) – documented heuristic."""
     words = len(word_re.findall(closing))
     terminal = closing.rstrip("\"'»«“”\u2018\u2019)]")[-1:] if closing else ""
     score = 0
-    if words and words <= HOOK_SHORT_SENTENCE:
+    if words and words <= hook_short_sentence:
         score += 1
     if terminal in {"?", "!", "…"}:
         score += 1
@@ -203,6 +211,8 @@ def _chapter_flow_stats(
     word_re: re.Pattern[str],
     language_key: str,
     function_words: frozenset[str],
+    *,
+    monotony_min_run: int = MONOTONY_MIN_RUN,
 ) -> tuple[int, int, int]:
     """(repeated sentence-start runs, adjacent sentence pairs, linked sentence pairs)."""
     repeated_runs = 0
@@ -238,10 +248,10 @@ def _chapter_flow_stats(
             if curr_start == prev_start:
                 run_len += 1
             else:
-                if run_len >= MONOTONY_MIN_RUN:
+                if run_len >= monotony_min_run:
                     repeated_runs += 1
                 run_len = 1
-        if run_len >= MONOTONY_MIN_RUN:
+        if run_len >= monotony_min_run:
             repeated_runs += 1
         for prev_set, curr_set in pairwise(content_sets):
             if prev_set and curr_set:
@@ -277,7 +287,14 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
         explicit_breaks += scene_breaks
         scenes: list[SceneStats] = []
         for index, scene_text in enumerate(raw_scenes, start=1):
-            stats = _scene_stats(scene_text, index, word_re, dialogue_re, resolved.key)
+            stats = _scene_stats(
+                scene_text,
+                index,
+                word_re,
+                dialogue_re,
+                resolved.key,
+                short_sentence_max=config.short_sentence_max,
+            )
             if stats is not None:
                 scenes.append(stats)
         scene_words = sum(scene.words for scene in scenes)
@@ -296,9 +313,18 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
 
         closing = _closing_sentence(clean, resolved.key)
         closing_is_dialogue = bool(dialogue_re.search(closing))
-        hook, closing_words, terminal = _hook_score(closing, closing_is_dialogue, word_re)
+        hook, closing_words, terminal = _hook_score(
+            closing,
+            closing_is_dialogue,
+            word_re,
+            hook_short_sentence=config.hook_short_sentence,
+        )
         repeated_runs, adjacent_pairs, linked_pairs = _chapter_flow_stats(
-            body, word_re, resolved.key, resolved.function_words
+            body,
+            word_re,
+            resolved.key,
+            resolved.function_words,
+            monotony_min_run=config.monotony_min_run,
         )
         overlap_pct = (linked_pairs / adjacent_pairs * 100.0) if adjacent_pairs else 0.0
 

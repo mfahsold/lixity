@@ -33,7 +33,9 @@ Python consumers use `from lixity import api` and
 English is the default analysis language; detection requires `--language auto`.
 `LIXITY_LANG` selects presentation independently. Mathematical identifiers and
 JSON keys stay language-neutral. Read active thresholds, coverage, warnings and
-unavailable values from results rather than assuming default settings.
+unavailable values from results rather than assuming default settings. Threshold
+presets (`balanced`, `developmental`, `line_editing`, `conservative_by`) and
+configurable structural thresholds in `CorpusConfig` adapt sensitivity to review needs.
 
 ## Choose a maintained reference
 

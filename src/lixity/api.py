@@ -415,7 +415,7 @@ def about() -> dict[str, Any]:
             },
             {
                 "name": "dialogue",
-                "purpose": "dialogue turn structure (turns, lengths, per chapter)",
+                "purpose": "dialogue turn structure, short/long turn cadence and dialogue-vs-narration ASL contrast",
                 "output": "text|json",
                 "schema_version": SCHEMA_VERSION,
             },
@@ -427,7 +427,7 @@ def about() -> dict[str, Any]:
             },
             {
                 "name": "pacing",
-                "purpose": "scene structure, sentence-length signals and chapter-ending cues",
+                "purpose": "scene structure, sentence-length signals, paragraph-local cohesion and chapter-ending cues",
                 "output": "text|json",
                 "schema_version": SCHEMA_VERSION,
             },

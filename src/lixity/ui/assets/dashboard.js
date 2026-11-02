@@ -1133,6 +1133,51 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
 })();
 var settingsForm = document.getElementById("settings-form");
 if (settingsForm) {
+  var presetSelect = document.getElementById("set-threshold-preset");
+  var presets = presetSelect && presetSelect.dataset.presets ? JSON.parse(presetSelect.dataset.presets) : null;
+  var thresholdControlMap = {
+    z_mild: "set-z-mild",
+    z_strong: "set-z-strong",
+    fdr_q: "set-fdr-q",
+    fdr_method: "set-fdr-method",
+    dim_score_threshold: "set-dim-threshold",
+    flag_min_severity: "set-flag-min-sev"
+  };
+  function syncThresholdPreset() {
+    if (!presetSelect || !presets) return;
+    var matched = "custom";
+    Object.keys(presets).some(function(name) {
+      var target = presets[name];
+      var ok = Object.keys(thresholdControlMap).every(function(key) {
+        var el = document.getElementById(thresholdControlMap[key]);
+        if (!el) return true;
+        return key === "fdr_method" ? el.value === String(target[key]) : Number(el.value) === Number(target[key]);
+      });
+      if (ok) { matched = name; return true; }
+      return false;
+    });
+    presetSelect.value = matched;
+  }
+  if (presetSelect && presets) {
+    presetSelect.addEventListener("change", function() {
+      var chosen = presets[presetSelect.value];
+      if (!chosen) return;
+      Object.keys(thresholdControlMap).forEach(function(key) {
+        var el = document.getElementById(thresholdControlMap[key]);
+        if (el && chosen[key] != null) {
+          el.value = String(chosen[key]);
+          el.setCustomValidity("");
+        }
+      });
+    });
+    Object.keys(thresholdControlMap).forEach(function(key) {
+      var el = document.getElementById(thresholdControlMap[key]);
+      if (el) {
+        el.addEventListener("input", syncThresholdPreset);
+        el.addEventListener("change", syncThresholdPreset);
+      }
+    });
+  }
   settingsForm.addEventListener("input", function() {
     settingsForm.querySelectorAll("input").forEach(function(input) { input.setCustomValidity(""); });
   });

@@ -6,8 +6,9 @@ from typing import Any
 
 from ..config import MAX_AUTHOR_NAME_CHARS, MAX_PROJECT_TITLE_CHARS
 from ..publication import PUBLICATION_FIELDS
+from ..registers import REGISTER_PROFILE_TEMPLATES
 from ..site import docs_url
-from ..style_fingerprint import FEATURE_UNITS, FEATURES, FingerprintThresholds
+from ..style_fingerprint import FEATURE_UNITS, FEATURES, THRESHOLD_PRESETS, FingerprintThresholds
 from .components import checkbox_field, esc, help_term, label
 
 
@@ -154,11 +155,33 @@ def settings_form(
             publication_parts.append(f'<input type="text" {attrs} value="{value}"/>')
         publication_parts.append('</div>')
     publication_parts.append('</div></details>')
+    preset_choices = (
+        ("balanced", "settings_preset_balanced"),
+        ("developmental", "settings_preset_developmental"),
+        ("line_editing", "settings_preset_line_editing"),
+        ("conservative_by", "settings_preset_conservative_by"),
+        ("custom", "settings_preset_custom"),
+    )
+    active_preset = thresholds.preset_name()
+    presets_json = esc(json.dumps(
+        {name: dict(values) for name, values in THRESHOLD_PRESETS.items()},
+        ensure_ascii=False, sort_keys=True,
+    ))
     parts.extend([
         '<details class="settings-advanced settings-thresholds" id="settings-thresholds">',
         f'<summary>{translated("settings_thresholds_optional")}</summary>',
         f'<p class="panel-guide">{translated("settings_thresholds_hint")}</p>',
         '<div class="settings-grid">',
+        '<div class="setting-field">',
+        f'<label for="set-threshold-preset">{translated("settings_preset_label")}</label>',
+        f'<select class="ctl" id="set-threshold-preset" data-default="balanced" '
+        f'data-presets="{presets_json}" aria-describedby="set-threshold-preset-help settings-scope-help">',
+        *(
+            f'<option value="{key}"{" selected" if key == active_preset else ""}>{translated(label_key)}</option>'
+            for key, label_key in preset_choices
+        ),
+        '</select>',
+        f'<p id="set-threshold-preset-help">{translated("settings_preset_hint")}</p></div>',
     ])
     fields = (
         ("z_mild", "set-z-mild"),
@@ -288,6 +311,10 @@ def register_editor(
         "register_selector", "register_invalid", "remove_recent_project")}
     units = FEATURE_UNITS.get(language_key, {})
     features = [(name, f"{label(labels, key)} · {units.get(name, unit)}") for name, key, unit in FEATURES]
+    template_options = "".join(
+        f'<option value="{esc(name)}">{esc(label(labels, "register_template_" + name))}</option>'
+        for name in REGISTER_PROFILE_TEMPLATES
+    )
     return (
         '<details class="settings-advanced" id="settings-registers">'
         f'<summary id="settings-registers-summary">{esc(label(labels, "register_title"))}</summary>'
@@ -295,11 +322,20 @@ def register_editor(
         f'<p class="ctl-note">{esc(label(labels, "register_scope_hint"))}</p>'
         + ("" if editable else f'<p class="ctl-note">{esc(label(labels, "register_unavailable"))}</p>')
         + f'<fieldset class="register-editor" id="register-editor" data-initial="{esc(json.dumps(initial, ensure_ascii=False))}" '
-        f'data-labels="{esc(json.dumps(terms, ensure_ascii=False))}" data-features="{esc(json.dumps(features, ensure_ascii=False))}"'
+        f'data-labels="{esc(json.dumps(terms, ensure_ascii=False))}" data-features="{esc(json.dumps(features, ensure_ascii=False))}" '
+        f'data-templates="{esc(json.dumps(REGISTER_PROFILE_TEMPLATES, ensure_ascii=False))}"'
         f'{"" if editable else " disabled"}>'
         f'<legend>{esc(label(labels, "register_title"))}</legend>'
         '<div data-register-profiles></div>'
+        '<div class="settings-grid register-template-controls">'
+        '<div class="setting-field">'
+        f'<label for="register-template-select">{esc(label(labels, "register_template_label"))}</label>'
+        f'<select class="ctl" id="register-template-select" data-register-template-select>{template_options}</select>'
+        '</div></div>'
+        '<div class="settings-actions">'
         f'<button type="button" class="ctl" data-register-add-profile>{esc(label(labels, "register_add_profile"))}</button>'
+        f'<button type="button" class="ctl" data-register-add-template>{esc(label(labels, "register_template_apply"))}</button>'
+        '</div>'
         f'<h4>{esc(label(labels, "register_assignments"))}</h4>'
         f'<p class="ctl-note">{esc(label(labels, "register_selector_hint"))}</p>'
         '<div data-register-assignments></div>'

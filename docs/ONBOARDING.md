@@ -89,7 +89,9 @@ opens chapter comparisons; **Back to passage** restores your place and prior
 Analysis On/Off choice.
 The opening candidate is not a quality ranking; read the text before
 deciding whether a difference matters. Settings explain saved versus session-only
-choices. A standalone analysis report is read-only. To share manuscript,
+choices, and offer editorial threshold presets (`balanced`, `developmental`,
+`line_editing`, `conservative_by`) as well as chapter register starter templates.
+A standalone analysis report is read-only. To share manuscript,
 analysis and optional research together, choose **Project actions → Reading
 website**. The ZIP copy opens in a browser without a running Lixity server;
 project writes and new PDF generation require the local app. See

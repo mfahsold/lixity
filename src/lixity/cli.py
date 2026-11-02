@@ -85,6 +85,7 @@ def _thresholds_from_args(
     """
     return resolve_thresholds(
         project_config=config,
+        preset=getattr(args, "preset", None),
         z_mild=getattr(args, "z_mild", None),
         z_strong=getattr(args, "z_strong", None),
         fdr_q=getattr(args, "fdr_q", None),
@@ -1838,6 +1839,14 @@ def _threshold_number(key: str) -> Callable[[str], float]:
 def _add_threshold_arguments(parser: argparse.ArgumentParser) -> None:
     """Use the backend's defaults and bounds for CLI help and scalar validation."""
     defaults = FingerprintThresholds()
+    parser.add_argument(
+        "--preset", choices=FingerprintThresholds.presets, default=None,
+        help=(
+            "Optional editorial review preset: balanced (default), "
+            "developmental (macro chapter shifts), line_editing (close prose pass), "
+            "or conservative_by (arbitrary-dependence FDR); explicit threshold flags override preset values"
+        ),
+    )
     for key, flag, description in (
         ("z_mild", "--z-mild", "Notable |z*| threshold"),
         ("z_strong", "--z-strong", "Strong |z*| threshold"),

@@ -551,11 +551,12 @@ workflows, not authorization to edit the manuscript.
   available SE shrinks the deviation. This reduces one source of noise;
   false alarms and model misspecification remain possible.
 - **Thresholds**: the active `z_mild` and `z_strong` values define the
-  corresponding deviation bands (injectable via `--z-mild` / `--z-strong` /
+  corresponding deviation bands (injectable via `--preset` / `--z-mild` / `--z-strong` /
   `--fdr-q` / `--fdr-method` /
   `--dim-threshold` / `--flag-min-severity`, API kwargs, the control-server
   settings, or `[tool.lixity]`; always re-read them from `passport.meta`,
-  never assume the defaults). `expected_false_positives` is a reference count
+  never assume the defaults). Available threshold presets are `balanced`,
+  `developmental`, `line_editing`, and `conservative_by`. `expected_false_positives` is a reference count
   under a standard-normal null, not a measured false-alarm rate for this
   manuscript. Same-sample median/MAD residuals need not have that distribution.
 - **FDR**: `fdr_flagged` is the Benjamini–Hochberg set by default,
@@ -1428,8 +1429,11 @@ reference = api.fingerprint(
 )
 ```
 
-`project_config` supplies thresholds and known `CorpusConfig`
-settings to `profile`, `fingerprint`, `passport` and `dashboard`. Explicit
+`project_config` supplies thresholds, editorial presets, and known `CorpusConfig`
+settings (such as `short_sentence_max`, `medium_sentence_max`, `long_sentence_max`,
+`short_turn_max_words`, `long_turn_min_words`, `dialogue_paragraph_share`,
+`hook_short_sentence`, and `monotony_min_run`) to `profile`, `fingerprint`,
+`passport` and `dashboard`. Explicit
 language/pattern arguments win. `{}` prevents current-directory threshold lookup;
 `None` retains threshold lookup for compatibility. Scene/register settings are
 explicit: `api.scenes(text, language="de", project_config=settings)` does not

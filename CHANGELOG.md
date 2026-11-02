@@ -8,6 +8,21 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Editorial threshold presets (`balanced`, `developmental`, `line_editing`,
+  `conservative_by`) accessible via `--preset` on analysis commands (`analyze`,
+  `profile`, `style`, `dashboard`, `pdf`, `build`) and through the native Settings
+  dialog (`#set-threshold-preset`), tailoring deviation cutoffs (`z_mild`,
+  `z_strong`, `fdr_q`, `fdr_method`) to macro-editing (developmental), line
+  polishing, or conservative exploratory review.
+- Chapter register starter templates (`dialogue_scene`, `action_scene`,
+  `reflective_narration`, `epistolary`, `technical_record`) accessible through the
+  Settings register editor (`#register-template-select`), pre-populating target
+  corridors for dialogue share, ASL, TTR, and nominal density.
+- Configurable structural and cadence thresholds in `CorpusConfig` / `[tool.lixity]`
+  (`short_sentence_max`, `medium_sentence_max`, `long_sentence_max`,
+  `short_turn_max_words`, `long_turn_min_words`, `dialogue_paragraph_share`,
+  `hook_short_sentence`, `monotony_min_run`), reducing hardcoded limits and
+  allowing fine-tuning per project or genre.
 - Dialogue cadence and voice-contrast measurements in `dialogue_report`, CLI
   `dialogue`, and the Quoted passages overview panel: short quoted spans
   (`1–12` words, `short_turns`, `short_turn_pct`), long monologue spans

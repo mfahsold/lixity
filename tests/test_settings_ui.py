@@ -253,3 +253,30 @@ class TestSettingsUi(unittest.TestCase):
                                     language_key="en")
         self.assertIn('class="z-gradient"></span> −2.5 … +2.5', rendered)
         self.assertIn('|z*| ≥ 1.5', rendered)
+
+    def test_editorial_threshold_presets_round_trip_and_render_selected_state(self):
+        from lixity.config import resolve_thresholds
+        from lixity.style_fingerprint import THRESHOLD_PRESETS
+
+        for preset_name, expected in THRESHOLD_PRESETS.items():
+            with self.subTest(preset=preset_name):
+                built = FingerprintThresholds.from_preset(preset_name)
+                self.assertEqual(built.preset_name(), preset_name)
+                resolved = resolve_thresholds(preset=preset_name, use_project_config=False)
+                self.assertEqual(resolved, built)
+                for key, value in expected.items():
+                    self.assertEqual(getattr(built, key), value)
+                rendered = settings_form(
+                    labels_for("en"), "Synthetic project", "en",
+                    [(code, code) for code in LANGUAGE_CHOICES], built,
+                )
+                self.assertIn(f'<option value="{preset_name}" selected>', rendered)
+        overridden = resolve_thresholds(z_mild=2.2, preset="developmental", use_project_config=False)
+        self.assertEqual(overridden.z_mild, 2.2)
+        self.assertEqual(overridden.z_strong, 4.0)
+        self.assertEqual(overridden.preset_name(), "custom")
+        custom_rendered = settings_form(
+            labels_for("en"), "Synthetic project", "en",
+            [(code, code) for code in LANGUAGE_CHOICES], overridden,
+        )
+        self.assertIn('<option value="custom" selected>', custom_rendered)

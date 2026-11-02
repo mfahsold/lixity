@@ -45,6 +45,38 @@ class CorpusConfig(BaseModel):
         default=25,
         description="Word threshold below which a paragraph is classified as a potential one-liner.",
     )
+    short_sentence_max: int = Field(
+        default=6,
+        description="Word threshold up to which a sentence is classified as short/staccato.",
+    )
+    medium_sentence_max: int = Field(
+        default=15,
+        description="Word threshold up to which a sentence is classified as medium length.",
+    )
+    long_sentence_max: int = Field(
+        default=25,
+        description="Word threshold up to which a sentence is classified as long (above this is complex/kaskade).",
+    )
+    short_turn_max_words: int = Field(
+        default=12,
+        description="Word threshold up to which a dialogue turn is classified as a short/rapid turn.",
+    )
+    long_turn_min_words: int = Field(
+        default=80,
+        description="Word threshold from which a dialogue turn is classified as an extended monologue/turn.",
+    )
+    dialogue_paragraph_share: float = Field(
+        default=0.5,
+        description="Minimum share of quoted words for a paragraph to count as a dialogue paragraph.",
+    )
+    hook_short_sentence: int = Field(
+        default=8,
+        description="Word threshold up to which a chapter closing sentence counts as punchy hook.",
+    )
+    monotony_min_run: int = Field(
+        default=3,
+        description="Minimum consecutive sentences starting with the same word to count as a rhythm monotony run.",
+    )
     motif_regexes: dict[str, str] = Field(
         default_factory=dict,
         description=(
@@ -79,6 +111,27 @@ class CorpusConfig(BaseModel):
         profiles, assignments = validate_register_settings(self.register_profiles, self.chapter_registers)
         self.register_profiles = dict(profiles)
         self.chapter_registers = assignments
+        return self
+
+    @model_validator(mode="after")
+    def validate_thresholds(self) -> "CorpusConfig":
+        """Validate structural thresholds and sentence bins."""
+        if self.min_paragraph_length_for_oneliner < 1:
+            raise ValueError("min_paragraph_length_for_oneliner must be at least 1")
+        if not (0 < self.short_sentence_max < self.medium_sentence_max < self.long_sentence_max):
+            raise ValueError(
+                "Sentence bins must satisfy 0 < short_sentence_max < medium_sentence_max < long_sentence_max"
+            )
+        if not (0 < self.short_turn_max_words < self.long_turn_min_words):
+            raise ValueError(
+                "Dialogue turn thresholds must satisfy 0 < short_turn_max_words < long_turn_min_words"
+            )
+        if not (0.0 < self.dialogue_paragraph_share <= 1.0):
+            raise ValueError("dialogue_paragraph_share must be in the interval (0, 1]")
+        if self.hook_short_sentence < 1:
+            raise ValueError("hook_short_sentence must be at least 1")
+        if self.monotony_min_run < 2:
+            raise ValueError("monotony_min_run must be at least 2")
         return self
 
     # Optional language overrides (None = language profile default)

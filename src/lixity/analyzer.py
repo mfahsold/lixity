@@ -43,12 +43,7 @@ from .models import (
     CorpusMetrics,
     SentenceDistribution,
 )
-from .sentences import (
-    LONG_SENTENCE_MAX,
-    MEDIUM_SENTENCE_MAX,
-    SHORT_SENTENCE_MAX,
-    split_prose_sentences,
-)
+from .sentences import split_prose_sentences
 from .style_profile import dominance_from_hits
 from .syllables import count_syllables as count_syllables_for
 from .tense import TenseMatcher
@@ -246,10 +241,14 @@ class CorpusAnalyzer:
         )
         variance = sum((x - asl) ** 2 for x in lengths) / total if total else 0.0
         std = math.sqrt(variance)
-        short = sum(1 for x in lengths if x <= SHORT_SENTENCE_MAX)
-        medium = sum(1 for x in lengths if SHORT_SENTENCE_MAX < x <= MEDIUM_SENTENCE_MAX)
-        long_ = sum(1 for x in lengths if MEDIUM_SENTENCE_MAX < x <= LONG_SENTENCE_MAX)
-        complex_ = sum(1 for x in lengths if x > LONG_SENTENCE_MAX)
+        short = sum(1 for x in lengths if x <= self.config.short_sentence_max)
+        medium = sum(
+            1 for x in lengths if self.config.short_sentence_max < x <= self.config.medium_sentence_max
+        )
+        long_ = sum(
+            1 for x in lengths if self.config.medium_sentence_max < x <= self.config.long_sentence_max
+        )
+        complex_ = sum(1 for x in lengths if x > self.config.long_sentence_max)
 
         def _pct(count: int) -> float:
             return (count / total * 100.0) if total else 0.0

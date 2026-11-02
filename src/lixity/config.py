@@ -504,9 +504,10 @@ def configuration_metadata() -> dict[str, Any]:
     """
     from .characters import character_configuration_schema
     from .dossier_collections import dossier_collections_schema
+    from .registers import REGISTER_PROFILE_TEMPLATES
     from .site_publications import site_publications_schema
     from .speech_profiles import AudioSettings
-    from .style_fingerprint import FingerprintThresholds
+    from .style_fingerprint import THRESHOLD_PRESETS, FingerprintThresholds
     from .terms import terms_configuration_schema
 
     corpus_schema = CorpusConfig.model_json_schema()
@@ -555,6 +556,11 @@ def configuration_metadata() -> dict[str, Any]:
                 "defaults; this cross-field rule is not encoded in JSON Schema."
             ),
         },
+        "threshold_presets": {name: dict(values) for name, values in THRESHOLD_PRESETS.items()},
+        "register_templates": {
+            name: {feature: dict(bounds) for feature, bounds in profile.items()}
+            for name, profile in REGISTER_PROFILE_TEMPLATES.items()
+        },
         "native_settings": {
             "persisted_keys": list(PERSISTED_SETTINGS_KEYS),
             "session_keys": list(ANALYSIS_SETTINGS_KEYS),
@@ -592,16 +598,19 @@ def resolve_thresholds(
     flag_min_severity: int | None = None,
     min_chapters: int | None = None,
     *,
+    preset: str | None = None,
     use_project_config: bool = True,
     project_config: Mapping[str, Any] | None = None,
 ) -> FingerprintThresholds:
     """Single threshold builder for CLI, API and embedders.
 
     Precedence (first wins per key): explicit non-``None`` argument →
-    project/user config (``[tool.lixity]`` / ``lixity.toml`` /
-    ``~/.config/lixity.toml``) → ``FingerprintThresholds`` code default.
+    explicit ``preset`` → project/user config (``[tool.lixity]`` /
+    ``lixity.toml`` / ``~/.config/lixity.toml``) → ``FingerprintThresholds``
+    code default.
     Local imports avoid a module-level cycle with ``style_fingerprint``.
     """
+    from .style_fingerprint import THRESHOLD_PRESETS
     from .style_fingerprint import FingerprintThresholds as _FT
 
     defaults = _FT()
@@ -618,6 +627,10 @@ def resolve_thresholds(
         values.update(apply_config_to_thresholds(dict(project_config)))
     elif use_project_config:
         values.update(apply_config_to_thresholds(load_project_config()))
+    if preset is not None:
+        if preset not in THRESHOLD_PRESETS:
+            raise ValueError(f"Unknown threshold preset: {preset}")
+        values.update(THRESHOLD_PRESETS[preset])
     overrides = {
         "z_mild": z_mild,
         "z_strong": z_strong,

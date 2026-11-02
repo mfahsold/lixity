@@ -281,6 +281,42 @@ class ThresholdInputPolicy:
             raise ValueError(f"{name} must be {relation} {self.maximum}")
 
 
+THRESHOLD_PRESETS: Mapping[str, Mapping[str, Any]] = MappingProxyType({
+    "balanced": MappingProxyType({
+        "z_mild": 2.5,
+        "z_strong": 3.5,
+        "fdr_q": DEFAULT_FDR_Q,
+        "fdr_method": "bh",
+        "dim_score_threshold": DIM_SCORE_THRESHOLD,
+        "flag_min_severity": 2,
+    }),
+    "developmental": MappingProxyType({
+        "z_mild": 3.0,
+        "z_strong": 4.0,
+        "fdr_q": 0.02,
+        "fdr_method": "bh",
+        "dim_score_threshold": 3.0,
+        "flag_min_severity": 3,
+    }),
+    "line_editing": MappingProxyType({
+        "z_mild": 2.0,
+        "z_strong": 3.0,
+        "fdr_q": 0.10,
+        "fdr_method": "bh",
+        "dim_score_threshold": 2.0,
+        "flag_min_severity": 1,
+    }),
+    "conservative_by": MappingProxyType({
+        "z_mild": 2.5,
+        "z_strong": 3.5,
+        "fdr_q": DEFAULT_FDR_Q,
+        "fdr_method": "by",
+        "dim_score_threshold": DIM_SCORE_THRESHOLD,
+        "flag_min_severity": 2,
+    }),
+})
+
+
 @dataclass(frozen=True)
 class FingerprintThresholds:
     """Thresholds of the consistency heuristic (injectable, documented)."""
@@ -296,6 +332,7 @@ class FingerprintThresholds:
     fdr_methods: ClassVar[tuple[str, ...]] = ("bh", "by")
     minimum_chapters: ClassVar[int] = 2
     flag_severities: ClassVar[tuple[int, ...]] = (1, 2, 3)
+    presets: ClassVar[tuple[str, ...]] = tuple(THRESHOLD_PRESETS)
 
     numeric_inputs: ClassVar[Mapping[str, ThresholdInputPolicy]] = MappingProxyType({
         "z_mild": ThresholdInputPolicy(0),
@@ -315,6 +352,21 @@ class FingerprintThresholds:
             raise ValueError("min_chapters must be an integer of at least 2")
         if isinstance(self.flag_min_severity, bool) or not isinstance(self.flag_min_severity, int) or self.flag_min_severity not in self.flag_severities:
             raise ValueError("flag_min_severity must be 1, 2 or 3")
+
+    def preset_name(self) -> str:
+        """Return the matching threshold preset key or 'custom'."""
+        for name, preset in THRESHOLD_PRESETS.items():
+            if all(getattr(self, key) == value for key, value in preset.items()):
+                return name
+        return "custom"
+
+    @classmethod
+    def from_preset(cls, preset: str, **overrides: Any) -> "FingerprintThresholds":
+        """Build thresholds from an editorial review preset plus explicit overrides."""
+        if preset not in THRESHOLD_PRESETS:
+            raise ValueError(f"Unknown threshold preset: {preset}")
+        values = {**THRESHOLD_PRESETS[preset], **overrides}
+        return cls(**values)
 
 
 # Robust primitives live in lixity.math_core; re-exported for callers
