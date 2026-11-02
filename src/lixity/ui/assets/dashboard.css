@@ -1919,25 +1919,186 @@ button.research-tag {
   vertical-align: middle;
   cursor: default;
 }
+/* GitHub Alert Callouts */
+.markdown-alert {
+  margin: 0.9rem 0;
+  padding: 0.65rem 0.9rem;
+  border-left: 4px solid var(--alert-border, var(--accent));
+  background: var(--alert-bg, var(--bg-subtle, rgba(0, 0, 0, 0.02)));
+  border-radius: var(--radius-xs) var(--radius) var(--radius) var(--radius-xs);
+  color: var(--fg);
+}
+.markdown-alert-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 0.35rem 0;
+  font-weight: var(--weight-semibold, 600);
+  font-size: var(--text-small, 0.9em);
+  color: var(--alert-color, var(--accent));
+  line-height: 1.2;
+}
+.markdown-alert-icon {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  fill: currentColor;
+}
+.markdown-alert-content {
+  font-size: var(--text-body);
+  line-height: var(--line-reading);
+}
+.markdown-alert-content p {
+  margin: 0;
+}
+.markdown-alert-content p + p {
+  margin-top: 0.5rem;
+}
+
+.markdown-alert-note {
+  --alert-border: #0969da;
+  --alert-color: #0969da;
+  --alert-bg: rgba(9, 105, 218, 0.06);
+}
+.markdown-alert-tip {
+  --alert-border: #1a7f37;
+  --alert-color: #1a7f37;
+  --alert-bg: rgba(26, 127, 55, 0.06);
+}
+.markdown-alert-important {
+  --alert-border: #8250df;
+  --alert-color: #8250df;
+  --alert-bg: rgba(130, 80, 223, 0.06);
+}
+.markdown-alert-warning {
+  --alert-border: #9a6700;
+  --alert-color: #9a6700;
+  --alert-bg: rgba(154, 103, 0, 0.07);
+}
+.markdown-alert-caution {
+  --alert-border: #cf222e;
+  --alert-color: #cf222e;
+  --alert-bg: rgba(207, 34, 46, 0.06);
+}
+
+[data-theme="dark"] .markdown-alert-note {
+  --alert-border: #2f81f7;
+  --alert-color: #2f81f7;
+  --alert-bg: rgba(47, 129, 247, 0.12);
+}
+[data-theme="dark"] .markdown-alert-tip {
+  --alert-border: #3fb950;
+  --alert-color: #3fb950;
+  --alert-bg: rgba(63, 185, 80, 0.12);
+}
+[data-theme="dark"] .markdown-alert-important {
+  --alert-border: #a371f7;
+  --alert-color: #a371f7;
+  --alert-bg: rgba(163, 113, 247, 0.12);
+}
+[data-theme="dark"] .markdown-alert-warning {
+  --alert-border: #d29922;
+  --alert-color: #d29922;
+  --alert-bg: rgba(210, 153, 34, 0.12);
+}
+[data-theme="dark"] .markdown-alert-caution {
+  --alert-border: #f85149;
+  --alert-color: #f85149;
+  --alert-bg: rgba(248, 81, 73, 0.12);
+}
+
+/* Math & LaTeX formatting */
 .math-inline {
   font-family: "Cambria Math", "STIX Two Math", "KaTeX_Math", Georgia, serif;
-  font-style: italic;
-  padding: 0.1rem 0.3rem;
+  font-size: 0.95em;
+  padding: 0.1rem 0.35rem;
   background: var(--bg-subtle, rgba(0, 0, 0, 0.04));
   border-radius: var(--radius-xs);
-  font-size: 0.92em;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.15rem;
+  white-space: nowrap;
 }
 .math-display {
-  display: block;
-  text-align: center;
-  margin: 0.8rem 0;
-  padding: 0.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.85rem 0;
+  padding: 0.75rem 1rem;
   background: var(--bg-subtle, rgba(0, 0, 0, 0.03));
   border: 1px solid var(--line-subtle, var(--line));
   border-radius: var(--radius);
   overflow-x: auto;
   font-family: "Cambria Math", "STIX Two Math", "KaTeX_Math", Georgia, serif;
-  font-style: italic;
+  font-size: 1.05em;
+}
+.math-frac {
+  display: inline-flex;
+  flex-direction: column;
+  vertical-align: -0.55em;
+  text-align: center;
+  padding: 0 0.2rem;
+  font-size: 0.9em;
+  line-height: 1.1;
+}
+.math-num {
+  border-bottom: 1.2px solid currentColor;
+  padding-bottom: 0.12rem;
+  display: block;
+}
+.math-denom {
+  padding-top: 0.12rem;
+  display: block;
+}
+.math-sqrt {
+  display: inline-flex;
+  align-items: baseline;
+  vertical-align: baseline;
+}
+.math-surd {
+  font-size: 1.15em;
+  margin-right: 0.05rem;
+}
+.math-radicand {
+  border-top: 1.2px solid currentColor;
+  padding-top: 0.08rem;
+}
+.math-root {
+  font-size: 0.65em;
+  margin-right: -0.2rem;
+  vertical-align: 0.6em;
+}
+.math-func {
+  font-style: normal;
+  font-family: var(--font-sans, inherit);
+  font-weight: 500;
+  margin: 0 0.15rem;
+}
+.math-text {
+  font-style: normal;
+  font-family: var(--font-sans, inherit);
+}
+.math-matrix-wrap {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  padding: 0 0.15rem;
+}
+.math-matrix {
+  border-collapse: collapse;
+  margin: 0 0.2rem;
+}
+.math-matrix td {
+  padding: 0.2rem 0.4rem;
+  text-align: center;
+  border: none !important;
+}
+.math-delim {
+  font-size: 1.4em;
+  line-height: 1;
+  font-weight: 300;
 }
 .research-source-view-bar {
   display: flex;

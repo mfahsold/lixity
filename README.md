@@ -3,6 +3,8 @@
 [![Checks: local-first](https://img.shields.io/badge/checks-local--first-blue)](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#development-setup)
 [![PyPI](https://img.shields.io/pypi/v/lixity)](https://pypi.org/project/lixity/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23390297.svg)](https://doi.org/10.5281/zenodo.23390297)
+[![Mastodon](https://img.shields.io/badge/Mastodon-@lixity-6364ff?logo=mastodon&logoColor=white)](https://mastodon.social/@lixity)
+[![Bluesky](https://img.shields.io/badge/Bluesky-@lixity.bsky.social-0285ff?logo=bluesky&logoColor=white)](https://bsky.app/profile/lixity.bsky.social)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
@@ -20,7 +22,9 @@ Manuscript input is Markdown or plain text; Word/DOCX and Scrivener need convers
 
 [Open the example manuscript](https://mfahsold.github.io/lixity/demo/report.html) ·
 [Take the short tour](https://mfahsold.github.io/lixity/guides/first-look.html) ·
-[Install Lixity](https://mfahsold.github.io/lixity/guides/installation.html)
+[Install Lixity](https://mfahsold.github.io/lixity/guides/installation.html) ·
+[Mastodon](https://mastodon.social/@lixity) ·
+[Bluesky](https://bsky.app/profile/lixity.bsky.social)
 
 [Einstieg auf Deutsch](https://mfahsold.github.io/lixity/guides/first-look-de.html)
 

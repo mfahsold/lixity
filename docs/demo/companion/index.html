@@ -2777,25 +2777,186 @@ button.research-tag {
   vertical-align: middle;
   cursor: default;
 }
+/* GitHub Alert Callouts */
+.markdown-alert {
+  margin: 0.9rem 0;
+  padding: 0.65rem 0.9rem;
+  border-left: 4px solid var(--alert-border, var(--accent));
+  background: var(--alert-bg, var(--bg-subtle, rgba(0, 0, 0, 0.02)));
+  border-radius: var(--radius-xs) var(--radius) var(--radius) var(--radius-xs);
+  color: var(--fg);
+}
+.markdown-alert-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 0.35rem 0;
+  font-weight: var(--weight-semibold, 600);
+  font-size: var(--text-small, 0.9em);
+  color: var(--alert-color, var(--accent));
+  line-height: 1.2;
+}
+.markdown-alert-icon {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  fill: currentColor;
+}
+.markdown-alert-content {
+  font-size: var(--text-body);
+  line-height: var(--line-reading);
+}
+.markdown-alert-content p {
+  margin: 0;
+}
+.markdown-alert-content p + p {
+  margin-top: 0.5rem;
+}
+
+.markdown-alert-note {
+  --alert-border: #0969da;
+  --alert-color: #0969da;
+  --alert-bg: rgba(9, 105, 218, 0.06);
+}
+.markdown-alert-tip {
+  --alert-border: #1a7f37;
+  --alert-color: #1a7f37;
+  --alert-bg: rgba(26, 127, 55, 0.06);
+}
+.markdown-alert-important {
+  --alert-border: #8250df;
+  --alert-color: #8250df;
+  --alert-bg: rgba(130, 80, 223, 0.06);
+}
+.markdown-alert-warning {
+  --alert-border: #9a6700;
+  --alert-color: #9a6700;
+  --alert-bg: rgba(154, 103, 0, 0.07);
+}
+.markdown-alert-caution {
+  --alert-border: #cf222e;
+  --alert-color: #cf222e;
+  --alert-bg: rgba(207, 34, 46, 0.06);
+}
+
+[data-theme="dark"] .markdown-alert-note {
+  --alert-border: #2f81f7;
+  --alert-color: #2f81f7;
+  --alert-bg: rgba(47, 129, 247, 0.12);
+}
+[data-theme="dark"] .markdown-alert-tip {
+  --alert-border: #3fb950;
+  --alert-color: #3fb950;
+  --alert-bg: rgba(63, 185, 80, 0.12);
+}
+[data-theme="dark"] .markdown-alert-important {
+  --alert-border: #a371f7;
+  --alert-color: #a371f7;
+  --alert-bg: rgba(163, 113, 247, 0.12);
+}
+[data-theme="dark"] .markdown-alert-warning {
+  --alert-border: #d29922;
+  --alert-color: #d29922;
+  --alert-bg: rgba(210, 153, 34, 0.12);
+}
+[data-theme="dark"] .markdown-alert-caution {
+  --alert-border: #f85149;
+  --alert-color: #f85149;
+  --alert-bg: rgba(248, 81, 73, 0.12);
+}
+
+/* Math & LaTeX formatting */
 .math-inline {
   font-family: "Cambria Math", "STIX Two Math", "KaTeX_Math", Georgia, serif;
-  font-style: italic;
-  padding: 0.1rem 0.3rem;
+  font-size: 0.95em;
+  padding: 0.1rem 0.35rem;
   background: var(--bg-subtle, rgba(0, 0, 0, 0.04));
   border-radius: var(--radius-xs);
-  font-size: 0.92em;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.15rem;
+  white-space: nowrap;
 }
 .math-display {
-  display: block;
-  text-align: center;
-  margin: 0.8rem 0;
-  padding: 0.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.85rem 0;
+  padding: 0.75rem 1rem;
   background: var(--bg-subtle, rgba(0, 0, 0, 0.03));
   border: 1px solid var(--line-subtle, var(--line));
   border-radius: var(--radius);
   overflow-x: auto;
   font-family: "Cambria Math", "STIX Two Math", "KaTeX_Math", Georgia, serif;
-  font-style: italic;
+  font-size: 1.05em;
+}
+.math-frac {
+  display: inline-flex;
+  flex-direction: column;
+  vertical-align: -0.55em;
+  text-align: center;
+  padding: 0 0.2rem;
+  font-size: 0.9em;
+  line-height: 1.1;
+}
+.math-num {
+  border-bottom: 1.2px solid currentColor;
+  padding-bottom: 0.12rem;
+  display: block;
+}
+.math-denom {
+  padding-top: 0.12rem;
+  display: block;
+}
+.math-sqrt {
+  display: inline-flex;
+  align-items: baseline;
+  vertical-align: baseline;
+}
+.math-surd {
+  font-size: 1.15em;
+  margin-right: 0.05rem;
+}
+.math-radicand {
+  border-top: 1.2px solid currentColor;
+  padding-top: 0.08rem;
+}
+.math-root {
+  font-size: 0.65em;
+  margin-right: -0.2rem;
+  vertical-align: 0.6em;
+}
+.math-func {
+  font-style: normal;
+  font-family: var(--font-sans, inherit);
+  font-weight: 500;
+  margin: 0 0.15rem;
+}
+.math-text {
+  font-style: normal;
+  font-family: var(--font-sans, inherit);
+}
+.math-matrix-wrap {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  padding: 0 0.15rem;
+}
+.math-matrix {
+  border-collapse: collapse;
+  margin: 0 0.2rem;
+}
+.math-matrix td {
+  padding: 0.2rem 0.4rem;
+  text-align: center;
+  border: none !important;
+}
+.math-delim {
+  font-size: 1.4em;
+  line-height: 1;
+  font-weight: 300;
 }
 .research-source-view-bar {
   display: flex;
@@ -4289,6 +4450,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .workspace-reader-panel h3 { font-size: var(--text-body); }
 .workspace-reader-panel .research-dossier-body-source { white-space: pre-wrap; overflow-wrap: anywhere; }
 .workspace-reader-panel .research-passage-quote { overflow-wrap: anywhere; }
+.workspace-reader-panel .table-wrap { max-width: 100%; overflow-x: auto; margin: 0.75rem 0; }
+.workspace-reader-panel .research-table { width: 100%; min-width: 100%; }
+.workspace-reader-panel .markdown-alert { margin: 0.65rem 0; }
+.workspace-reader-panel .math-display { max-width: 100%; overflow-x: auto; }
+.workspace-reader-panel .math-inline { white-space: nowrap; max-width: 100%; overflow-x: auto; }
 @media (max-width: 900px) {
   .workspace-reader-layout.is-open { grid-template-columns: minmax(0, 1fr); }
   .workspace-reader-layout.is-open #workspace-analysis-body { grid-column: 1; grid-row: 2; }
@@ -5113,7 +5279,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 <div id="publication-entries"></div>
 <noscript><p>Enable JavaScript to select reading progress and open the context.</p></noscript></aside></div>
 <details class="panel"><summary>About this synthetic reading example</summary><p>The people, records and incident are invented. Reveal context deliberately with the reading-progress control. All content included in a static file remains inspectable; chapter caps remove later material before export.</p><p>The map and harbour view are public-domain setting references from circa 1900, not evidence of the fictional 1923 incident. <a href="../../assets/research/sources.json">Image credits and reviewed provenance</a>. The ordinary product export has the same reading interface and no visitor counter.</p></details><footer><span class="version-badge">Version 0.7.7</span><a class="license-badge" href="#license-terms">Open source · AGPL-3.0</a></footer></div>
-<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3Ac01d2b13-784a-42c9-8130-f70e28549e6e\u0026version_id=urn%3Auuid%3A8fb3db9a-7c2a-4ae3-93fa-be68b9f63211":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3A9a971a1b-b838-4f39-b820-02b37128a5e0\u0026source_id=urn%3Auuid%3Ac01d2b13-784a-42c9-8130-f70e28549e6e\u0026version_id=urn%3Auuid%3A8fb3db9a-7c2a-4ae3-93fa-be68b9f63211":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3A21dd2ca1-4b3a-400e-8a65-2b9a384cf7af\u0026version_id=urn%3Auuid%3A9bde61ae-4844-4c28-a94c-2d5986b12ac2":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3A9a971a1b-b838-4f39-b820-02b37128a5e0\u0026source_id=urn%3Auuid%3A21dd2ca1-4b3a-400e-8a65-2b9a384cf7af\u0026version_id=urn%3Auuid%3A9bde61ae-4844-4c28-a94c-2d5986b12ac2":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/1","mode":"companion","profile":"readers","project_id":"urn:uuid:9a971a1b-b838-4f39-b820-02b37128a5e0","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":3,"chapters":[{"number":1},{"number":2},{"number":3}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:8bd3938a-ee39-4142-8386-b12297a97e36","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:54e163fa-9448-404a-8e18-480c807d0731","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:c01d2b13-784a-42c9-8130-f70e28549e6e/urn:uuid:8fb3db9a-7c2a-4ae3-93fa-be68b9f63211)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:9a971a1b-b838-4f39-b820-02b37128a5e0","source_id":"urn:uuid:c01d2b13-784a-42c9-8130-f70e28549e6e","source_version_id":"urn:uuid:8fb3db9a-7c2a-4ae3-93fa-be68b9f63211","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3A9a971a1b-b838-4f39-b820-02b37128a5e0\u0026source_id=urn%3Auuid%3Ac01d2b13-784a-42c9-8130-f70e28549e6e\u0026version_id=urn%3Auuid%3A8fb3db9a-7c2a-4ae3-93fa-be68b9f63211","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:54e163fa-9448-404a-8e18-480c807d0731","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:21dd2ca1-4b3a-400e-8a65-2b9a384cf7af/urn:uuid:9bde61ae-4844-4c28-a94c-2d5986b12ac2)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:9a971a1b-b838-4f39-b820-02b37128a5e0","source_id":"urn:uuid:21dd2ca1-4b3a-400e-8a65-2b9a384cf7af","source_version_id":"urn:uuid:9bde61ae-4844-4c28-a94c-2d5986b12ac2","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3A9a971a1b-b838-4f39-b820-02b37128a5e0\u0026source_id=urn%3Auuid%3A21dd2ca1-4b3a-400e-8a65-2b9a384cf7af\u0026version_id=urn%3Auuid%3A9bde61ae-4844-4c28-a94c-2d5986b12ac2","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:8bd3938a-ee39-4142-8386-b12297a97e36","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:8bd3938a-ee39-4142-8386-b12297a97e36","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null}],"identity":"6bce7ff86ffbf29a296cd4e22e2298c4cb2ddae80a6d632def1b15ded06e85c7"}}</script>
+<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3A3b0e2022-ea7a-455a-91bb-92e162f15add\u0026version_id=urn%3Auuid%3A0acb8f44-cd09-486c-90f1-fe6bb28034be":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3A9ea3ad6b-8bff-4f4b-bf26-e8952abfd1a2\u0026source_id=urn%3Auuid%3A3b0e2022-ea7a-455a-91bb-92e162f15add\u0026version_id=urn%3Auuid%3A0acb8f44-cd09-486c-90f1-fe6bb28034be":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3A0c8fbb08-3519-423d-8df5-79bb198f8ce7\u0026version_id=urn%3Auuid%3A439cc1cd-bd25-4721-8bae-d7533cff9bbf":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3A9ea3ad6b-8bff-4f4b-bf26-e8952abfd1a2\u0026source_id=urn%3Auuid%3A0c8fbb08-3519-423d-8df5-79bb198f8ce7\u0026version_id=urn%3Auuid%3A439cc1cd-bd25-4721-8bae-d7533cff9bbf":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/1","mode":"companion","profile":"readers","project_id":"urn:uuid:9ea3ad6b-8bff-4f4b-bf26-e8952abfd1a2","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":3,"chapters":[{"number":1},{"number":2},{"number":3}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:5e33f47d-0d24-45ca-b9c2-a9fdfa1adb76","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:06bf8138-c29c-4b84-a929-50609d17a283","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:3b0e2022-ea7a-455a-91bb-92e162f15add/urn:uuid:0acb8f44-cd09-486c-90f1-fe6bb28034be)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:9ea3ad6b-8bff-4f4b-bf26-e8952abfd1a2","source_id":"urn:uuid:3b0e2022-ea7a-455a-91bb-92e162f15add","source_version_id":"urn:uuid:0acb8f44-cd09-486c-90f1-fe6bb28034be","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3A9ea3ad6b-8bff-4f4b-bf26-e8952abfd1a2\u0026source_id=urn%3Auuid%3A3b0e2022-ea7a-455a-91bb-92e162f15add\u0026version_id=urn%3Auuid%3A0acb8f44-cd09-486c-90f1-fe6bb28034be","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:06bf8138-c29c-4b84-a929-50609d17a283","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:0c8fbb08-3519-423d-8df5-79bb198f8ce7/urn:uuid:439cc1cd-bd25-4721-8bae-d7533cff9bbf)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:9ea3ad6b-8bff-4f4b-bf26-e8952abfd1a2","source_id":"urn:uuid:0c8fbb08-3519-423d-8df5-79bb198f8ce7","source_version_id":"urn:uuid:439cc1cd-bd25-4721-8bae-d7533cff9bbf","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3A9ea3ad6b-8bff-4f4b-bf26-e8952abfd1a2\u0026source_id=urn%3Auuid%3A0c8fbb08-3519-423d-8df5-79bb198f8ce7\u0026version_id=urn%3Auuid%3A439cc1cd-bd25-4721-8bae-d7533cff9bbf","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:5e33f47d-0d24-45ca-b9c2-a9fdfa1adb76","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:5e33f47d-0d24-45ca-b9c2-a9fdfa1adb76","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null}],"identity":"5b502b7fea1429c19bc4ab4473a8b4bcdafa65582793459ec7e9c0e6c18d0eff"}}</script>
 <script>// A prepared website has no server: every API read belongs to its inline snapshot.
 (function () {
   "use strict";
@@ -8389,6 +8555,150 @@ function renderMermaidSvg(escapedCode) {
   });
 })();
 
+function formatMathFormula(latex, isDisplay) {
+  if (!latex) return "";
+  var math = latex.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+
+  math = math.replace(/\\begin\{(matrix|pmatrix|bmatrix|vmatrix|aligned|cases)\}([\s\S]*?)\\end\{\1\}/g, function(_, env, body) {
+    var rows = body.trim().split(/\\\\|\n/).map(function(r) { return r.trim(); }).filter(Boolean);
+    var openBrack = env === "pmatrix" ? "(" : env === "bmatrix" ? "[" : env === "vmatrix" ? "|" : env === "cases" ? "{" : "";
+    var closeBrack = env === "pmatrix" ? ")" : env === "bmatrix" ? "]" : env === "vmatrix" ? "|" : env === "cases" ? "" : "";
+    var tableRows = rows.map(function(row) {
+      var cells = row.split("&").map(function(c) { return '<td class="math-cell">' + formatMathFormula(c.trim(), false) + '</td>'; }).join("");
+      return '<tr>' + cells + '</tr>';
+    }).join("");
+    return '<span class="math-matrix-wrap' + (openBrack ? ' math-delimited' : '') + '">' +
+      (openBrack ? '<span class="math-delim">' + openBrack + '</span>' : '') +
+      '<table class="math-matrix"><tbody>' + tableRows + '</tbody></table>' +
+      (closeBrack ? '<span class="math-delim">' + closeBrack + '</span>' : '') +
+      '</span>';
+  });
+
+  math = math.replace(/\\(?:text|mathrm|operatorname)\{([^{}]+)\}/g, '<span class="math-text">$1</span>');
+  math = math.replace(/\\mathbf\{([^{}]+)\}/g, '<strong>$1</strong>');
+  math = math.replace(/\\mathit\{([^{}]+)\}/g, '<em>$1</em>');
+  math = math.replace(/\\mathbb\{([^{}]+)\}/g, function(_, char) {
+    var bbMap = {R:"ℝ", N:"ℕ", Z:"ℤ", Q:"ℚ", C:"ℂ", P:"ℙ", E:"𝔼", H:"ℍ"};
+    return bbMap[char] || char;
+  });
+
+  for (var iter = 0; iter < 4; iter++) {
+    if (!/\\(?:d)?frac\{/.test(math)) break;
+    math = math.replace(/\\(?:d)?frac\{([^{}]+)\}\{([^{}]+)\}/g,
+      '<span class="math-frac"><span class="math-num">$1</span><span class="math-denom">$2</span></span>');
+  }
+
+  math = math.replace(/\\sqrt\[([^\]]+)\]\{([^{}]+)\}/g,
+    '<span class="math-sqrt"><sup class="math-root">$1</sup><span class="math-surd">√</span><span class="math-radicand">$2</span></span>');
+  math = math.replace(/\\sqrt\{([^{}]+)\}/g,
+    '<span class="math-sqrt"><span class="math-surd">√</span><span class="math-radicand">$1</span></span>');
+
+  var greekMap = {
+    "alpha": "α", "beta": "β", "gamma": "γ", "delta": "δ", "epsilon": "ε", "varepsilon": "ε",
+    "zeta": "ζ", "eta": "η", "theta": "θ", "vartheta": "ϑ", "iota": "ι", "kappa": "κ",
+    "lambda": "λ", "mu": "μ", "nu": "ν", "xi": "ξ", "pi": "π", "varpi": "ϖ",
+    "rho": "ρ", "varrho": "ϱ", "sigma": "σ", "varsigma": "ς", "tau": "τ", "upsilon": "υ",
+    "phi": "φ", "varphi": "ϕ", "chi": "χ", "psi": "ψ", "omega": "ω",
+    "Gamma": "Γ", "Delta": "Δ", "Theta": "Θ", "Lambda": "Λ", "Xi": "Ξ", "Pi": "Π",
+    "Sigma": "Σ", "Upsilon": "Υ", "Phi": "Φ", "Psi": "Ψ", "Omega": "Ω"
+  };
+  math = math.replace(/\\(alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|vartheta|iota|kappa|lambda|mu|nu|xi|pi|varpi|rho|varrho|sigma|varsigma|tau|upsilon|phi|varphi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega)\b/g, function(_, g) {
+    return greekMap[g] || g;
+  });
+
+  var opMap = {
+    "sum": "∑", "prod": "∏", "coprod": "∐", "int": "∫", "oint": "∮", "iint": "∬", "iiint": "∭",
+    "times": "×", "cdot": "·", "pm": "±", "mp": "∓", "div": "÷", "ast": "∗", "star": "★",
+    "approx": "≈", "sim": "∼", "simeq": "≃", "cong": "≅", "equiv": "≡", "ne": "≠", "neq": "≠",
+    "le": "≤", "leq": "≤", "ge": "≥", "geq": "≥", "ll": "≪", "gg": "≫",
+    "in": "∈", "notin": "∉", "ni": "∋", "subset": "⊂", "supset": "⊃", "subseteq": "⊆", "supseteq": "⊇",
+    "cap": "∩", "cup": "∪", "setminus": "∖", "emptyset": "∅",
+    "to": "→", "rightarrow": "→", "leftarrow": "←", "leftrightarrow": "↔",
+    "Rightarrow": "⇒", "Leftarrow": "⇐", "Leftrightarrow": "⇔", "mapsto": "↦",
+    "partial": "∂", "nabla": "∇", "infty": "∞", "forall": "∀", "exists": "∃", "nexists": "∄", "neg": "¬",
+    "dots": "…", "ldots": "…", "cdots": "⋯", "vdots": "⋮", "ddots": "⋱"
+  };
+  math = math.replace(/\\(sum|prod|coprod|int|oint|iint|iiint|times|cdot|pm|mp|div|ast|star|approx|sim|simeq|cong|equiv|ne|neq|le|leq|ge|geq|ll|gg|in|notin|ni|subset|supset|subseteq|supseteq|cap|cup|setminus|emptyset|to|rightarrow|leftarrow|leftrightarrow|Rightarrow|Leftarrow|Leftrightarrow|mapsto|partial|nabla|infty|forall|exists|nexists|neg|dots|ldots|cdots|vdots|ddots)\b/g, function(_, op) {
+    return opMap[op] || op;
+  });
+
+  math = math.replace(/\\(sin|cos|tan|arcsin|arccos|arctan|sinh|cosh|tanh|ln|log|exp|min|max|lim|sup|inf|det|gcd|deg|dim|ker|hom|arg|Pr)\b/g,
+    '<span class="math-func">$1</span>');
+
+  math = math.replace(/\\quad/g, " &emsp; ");
+  math = math.replace(/\\qquad/g, " &emsp;&emsp; ");
+  math = math.replace(/\\[,;:!]/g, " ");
+  math = math.replace(/\\([#$%&_{}])/g, "$1");
+
+  math = math.replace(/\\left\(/g, "(").replace(/\\right\)/g, ")");
+  math = math.replace(/\\left\[/g, "[").replace(/\\right\]/g, "]");
+  math = math.replace(/\\left\\\{/g, "{").replace(/\\right\\\}/g, "}");
+  math = math.replace(/\\left\|/g, "|").replace(/\\right\|/g, "|");
+  math = math.replace(/\\langle/g, "⟨").replace(/\\rangle/g, "⟩");
+  math = math.replace(/\\lceil/g, "⌈").replace(/\\rceil/g, "⌉");
+  math = math.replace(/\\lfloor/g, "⌊").replace(/\\rfloor/g, "⌋");
+
+  math = math.replace(/\^\{([^{}]+)\}/g, "<sup>$1</sup>");
+  math = math.replace(/\_\{([^{}]+)\}/g, "<sub>$1</sub>");
+  math = math.replace(/\^([0-9a-zA-Zα-ωΑ-Ω+-])/g, "<sup>$1</sup>");
+  math = math.replace(/\_([0-9a-zA-Zα-ωΑ-Ω+-])/g, "<sub>$1</sub>");
+
+  var tagTokens = [], tagPrefix = "@@@MATHTAG_";
+  math = math.replace(/<[^>]+>/g, function(tag) {
+    var tok = tagPrefix + tagTokens.length + "END";
+    tagTokens.push(tag);
+    return tok;
+  });
+  math = math.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  math = math.replace(/\b([a-zA-Z])\b/g, "<i>$1</i>");
+  tagTokens.forEach(function(tag, i) {
+    math = math.replace(tagPrefix + i + "END", tag);
+  });
+
+  var cls = isDisplay ? "math-display" : "math-inline";
+  var tag = isDisplay ? "div" : "span";
+  return '<' + tag + ' class="' + cls + '" role="math" aria-label="' + escapeHtml(latex).replace(/"/g, '&quot;') + '">' + math + '</' + tag + '>';
+}
+
+function renderAlertBox(type, content, inlineParser) {
+  var alertType = type.toUpperCase();
+  var typeLower = alertType.toLowerCase();
+  var titleMap = {
+    NOTE: {de: "Hinweis", en: "Note", fr: "Remarque", es: "Nota", it: "Nota", pt: "Nota", nl: "Opmerking"},
+    TIP: {de: "Tipp", en: "Tip", fr: "Conseil", es: "Consejo", it: "Consiglio", pt: "Dica", nl: "Tip"},
+    IMPORTANT: {de: "Wichtig", en: "Important", fr: "Important", es: "Importante", it: "Importante", pt: "Importante", nl: "Belangrijk"},
+    WARNING: {de: "Warnung", en: "Warning", fr: "Avertissement", es: "Advertencia", it: "Avviso", pt: "Aviso", nl: "Waarschuwing"},
+    CAUTION: {de: "Achtung", en: "Caution", fr: "Attention", es: "Atención", it: "Attenzione", pt: "Atenção", nl: "Let op"}
+  };
+  var lang = (window.LixitySite && window.LixitySite.language) || "de";
+  var titles = titleMap[alertType] || {de: alertType, en: alertType};
+  var defaultTitle = titles[lang] || titles.de || titles.en;
+
+  var icons = {
+    NOTE: '<svg class="markdown-alert-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/></svg>',
+    TIP: '<svg class="markdown-alert-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 1.5c-2.36 0-4.25 1.9-4.25 4.25 0 1.45.71 2.73 1.8 3.52.4.29.65.74.65 1.23v.5a.75.75 0 0 0 .75.75h2.1a.75.75 0 0 0 .75-.75v-.5c0-.49.25-.94.65-1.23 1.09-.79 1.8-2.07 1.8-3.52 0-2.35-1.89-4.25-4.25-4.25Zm-1.25 12a.75.75 0 0 1 .75-.75h1a.75.75 0 0 1 0 1.5h-1a.75.75 0 0 1-.75-.75Zm.25 1.75a.5.5 0 0 1 .5-.5h.98a.5.5 0 0 1 0 1H7.5a.5.5 0 0 1-.5-.5Z"/></svg>',
+    IMPORTANT: '<svg class="markdown-alert-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM8 3.75a.75.75 0 0 0-.75.75v4a.75.75 0 0 0 1.5 0v-4A.75.75 0 0 0 8 3.75Zm0 7.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/></svg>',
+    WARNING: '<svg class="markdown-alert-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM8 10.75a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/></svg>',
+    CAUTION: '<svg class="markdown-alert-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M4.47.04c.37-.04.74.08 1.03.32L15.64 10.5a1.5 1.5 0 0 1 .42 1.48 1.5 1.5 0 0 1-1.04 1.04l-10.14 2.9a1.5 1.5 0 0 1-1.48-.42L.36 5.36A1.5 1.5 0 0 1 .28 3.9L3.44.42A1.5 1.5 0 0 1 4.47.04ZM8 4a.75.75 0 0 0-.75.75v3.5a.75.75 0 0 0 1.5 0v-3.5A.75.75 0 0 0 8 4Zm0 6.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/></svg>'
+  };
+  var icon = icons[alertType] || icons.NOTE;
+
+  var bodyLines = content.trim().split("\n");
+  var titleOverride = null;
+  if (bodyLines.length && /^\*\*([^*]+)\*\*:?$/.test(bodyLines[0].trim())) {
+    titleOverride = bodyLines[0].trim().replace(/^\*\*|\*\*:?$/g, "").trim();
+    bodyLines.shift();
+  }
+  var alertTitle = titleOverride || defaultTitle;
+  var parse = inlineParser || function(s) { return s; };
+  var bodyHtml = parse(bodyLines.join("\n").trim()).replace(/\n/g, '<br>');
+
+  return '<div class="markdown-alert markdown-alert-' + typeLower + '" role="region" aria-label="' + alertTitle + '">' +
+    '<p class="markdown-alert-title">' + icon + '<span>' + alertTitle + '</span></p>' +
+    '<div class="markdown-alert-content">' + (bodyHtml ? '<p>' + bodyHtml + '</p>' : '') + '</div>' +
+    '</div>';
+}
+
 function renderSafeMarkdown(rawText, dossierContext) {
   if (!rawText) return "";
   var imageRender = window.LixityDossierImages && dossierContext ? window.LixityDossierImages.prepareMarkdown(rawText, dossierContext) : null;
@@ -8422,7 +8732,12 @@ function renderSafeMarkdown(rawText, dossierContext) {
         indented.push(codeLines[lineIndex].replace(/^(    |\t)/, "")); lineIndex++;
       }
       lineIndex--;
-      protectedLines.push(protectCode(indented.join("\n").replace(/\n+$/, ""), ""));
+      var firstNonEmpty = indented.find(function(l) { return l.trim(); }) || "";
+      if (/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/i.test(firstNonEmpty.trim())) {
+        protectedLines.push.apply(protectedLines, indented);
+      } else {
+        protectedLines.push(protectCode(indented.join("\n").replace(/\n+$/, ""), ""));
+      }
     } else protectedLines.push(line);
   }
   text = protectedLines.join("\n");
@@ -8453,8 +8768,8 @@ function renderSafeMarkdown(rawText, dossierContext) {
     }
     str = str.replace(/`([^`]+)`|\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$|\[([^\]]+)\]\(([^)]+)\)/g, function(m, code, displayMath, math, label, url) {
       if (code !== undefined) return protect('<code>' + code + '</code>');
-      if (displayMath !== undefined) return protect('<div class="math-display">' + displayMath + '</div>');
-      if (math !== undefined) return protect('<span class="math-inline">' + math + '</span>');
+      if (displayMath !== undefined) return protect(formatMathFormula(displayMath, true));
+      if (math !== undefined) return protect(formatMathFormula(math, false));
       if (noLinks) return m;
       var cleanUrl = url.trim();
       if (/^lixity:/i.test(cleanUrl)) {
@@ -8475,6 +8790,14 @@ function renderSafeMarkdown(rawText, dossierContext) {
       return protect(visibleLabel + ' (' + cleanUrl + ')');
     });
 
+    str = str.replace(/\\textbf\{([^{}]+)\}/g, '<strong>$1</strong>');
+    str = str.replace(/\\textit\{([^{}]+)\}/g, '<em>$1</em>');
+    str = str.replace(/\\emph\{([^{}]+)\}/g, '<em>$1</em>');
+    str = str.replace(/\\underline\{([^{}]+)\}/g, '<u>$1</u>');
+    str = str.replace(/\\texttt\{([^{}]+)\}/g, '<code>$1</code>');
+    str = str.replace(/\\sout\{([^{}]+)\}/g, '<del>$1</del>');
+    str = str.replace(/\\textsc\{([^{}]+)\}/g, '<span style="font-variant: small-caps;">$1</span>');
+
     str = str.replace(/~~(.+?)~~/g, '<del>$1</del>');
     str = str.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
     str = str.replace(/___(.+?)___/g, '<strong><em>$1</em></strong>');
@@ -8482,6 +8805,8 @@ function renderSafeMarkdown(rawText, dossierContext) {
     str = str.replace(/__(.+?)__/g, '<strong>$1</strong>');
     str = str.replace(/\*([^*]+)\*/g, '<em>$1</em>');
     str = str.replace(/_([^_]+)_/g, '<em>$1</em>');
+    str = str.replace(/\^([0-9a-zA-Z+-]+)\^/g, '<sup>$1</sup>');
+    str = str.replace(/~([0-9a-zA-Z+-]+)~/g, '<sub>$1</sub>');
 
     str = str.replace(new RegExp(prefix + "([0-9]+)@@@", "g"), function(_, i) {
       return protectedHtml[Number(i)];
@@ -8516,34 +8841,57 @@ function renderSafeMarkdown(rawText, dossierContext) {
     var isBlockquote = lines.every(function(l) { return /^\s*&gt;/.test(l); });
     if (isBlockquote) {
       var bqContent = lines.map(function(l) { return l.replace(/^\s*&gt;\s?/, ""); }).join("\n");
+      var alertMatch = bqContent.match(/^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*\n?([\s\S]*)$/i);
+      if (alertMatch) {
+        htmlBlocks.push(renderAlertBox(alertMatch[1], alertMatch[2], parseInline));
+        continue;
+      }
       htmlBlocks.push('<blockquote><p>' + parseInline(bqContent).replace(/\n/g, '<br>') + '</p></blockquote>');
       continue;
     }
 
-    if (lines.length >= 2 && lines[1].includes("-") && lines[1].includes("|")) {
-      var sepCells = lines[1].trim().replace(/^\||\|$/g, "").split("|");
-      var isTable = sepCells.every(function(c) { return /^[\s:-]+$/.test(c) && c.includes("-"); });
-      if (isTable) {
-        var alignments = sepCells.map(function(c) {
-          var trimmed = c.trim();
-          var left = trimmed.startsWith(":");
-          var right = trimmed.endsWith(":");
-          if (left && right) return "center";
-          if (right) return "right";
-          if (left) return "left";
-          return "";
-        });
+    var bareAlertMatch = block.match(/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*\n?([\s\S]*)$/i);
+    if (bareAlertMatch) {
+      htmlBlocks.push(renderAlertBox(bareAlertMatch[1], bareAlertMatch[2], parseInline));
+      continue;
+    }
 
-        var headerCells = lines[0].trim().replace(/^\||\|$/g, "").split("|");
+    var cleanLines = lines.filter(function(l) { return l.trim(); });
+    var isTsv = cleanLines.length >= 2 && cleanLines.every(function(l) { return l.includes("\t"); });
+    if (isTsv) {
+      var headCells = cleanLines[0].split("\t").map(function(c) { return '<th>' + parseInline(c.trim()) + '</th>'; }).join("");
+      var rowHtml = cleanLines.slice(1).map(function(line) {
+        var cells = line.split("\t").map(function(c) { return '<td>' + parseInline(c.trim()) + '</td>'; }).join("");
+        return '<tr>' + cells + '</tr>';
+      }).join("");
+      htmlBlocks.push('<div class="table-wrap"><table class="research-table"><thead><tr>' + headCells + '</tr></thead><tbody>' + rowHtml + '</tbody></table></div>');
+      continue;
+    }
+
+    if (lines.length >= 2 && lines[0].includes("|")) {
+      var hasDelimiter = cleanLines.length >= 2 && cleanLines[1].includes("-") && cleanLines[1].includes("|");
+      var isPipeTable = hasDelimiter || (cleanLines.length >= 2 && cleanLines.every(function(l) { return (l.match(/\|/g) || []).length >= 2; }));
+      if (isPipeTable) {
+        var dataStart = hasDelimiter ? 2 : 1;
+        var alignments = [];
+        if (hasDelimiter) {
+          var sepCells = cleanLines[1].trim().replace(/^\||\|$/g, "").split("|");
+          alignments = sepCells.map(function(c) {
+            var trimmed = c.trim(), left = trimmed.startsWith(":"), right = trimmed.endsWith(":");
+            return left && right ? "center" : right ? "right" : left ? "left" : "";
+          });
+        }
+
+        var headerCells = cleanLines[0].trim().replace(/^\||\|$/g, "").split("|");
         var thHtml = headerCells.map(function(cell, idx) {
           var align = alignments[idx] ? ' style="text-align:' + alignments[idx] + '"' : '';
           return '<th' + align + '>' + parseInline(cell.trim()) + '</th>';
         }).join("");
 
         var tbRowsHtml = [];
-        for (var r = 2; r < lines.length; r++) {
-          if (!lines[r].trim()) continue;
-          var rowCells = lines[r].trim().replace(/^\||\|$/g, "").split("|");
+        for (var r = dataStart; r < cleanLines.length; r++) {
+          if (!cleanLines[r].trim()) continue;
+          var rowCells = cleanLines[r].trim().replace(/^\||\|$/g, "").split("|");
           var tdHtml = rowCells.map(function(cell, idx) {
             var align = alignments[idx] ? ' style="text-align:' + alignments[idx] + '"' : '';
             return '<td' + align + '>' + parseInline(cell.trim()) + '</td>';
@@ -8556,33 +8904,40 @@ function renderSafeMarkdown(rawText, dossierContext) {
       }
     }
 
-    var isUnordered = lines.every(function(l) { return /^\s*[-*+]\s+/.test(l); });
-    var isOrdered = lines.every(function(l) { return /^\s*\d+\.\s+/.test(l); });
-    if (isUnordered) {
-      var liHtml = lines.map(function(l) {
-        var rawContent = l.replace(/^\s*[-*+]\s+/, "");
-        var isTask = false;
-        var content = rawContent;
-        if (/^\[\s\]\s+/.test(rawContent)) {
-          content = '<input type="checkbox" disabled class="task-list-item-checkbox"> ' + parseInline(rawContent.replace(/^\[\s\]\s+/, ""));
-          isTask = true;
-        } else if (/^\[[xX]\]\s+/.test(rawContent)) {
-          content = '<input type="checkbox" checked disabled class="task-list-item-checkbox"> ' + parseInline(rawContent.replace(/^\[[xX]\]\s+/, ""));
-          isTask = true;
-        } else {
-          content = parseInline(rawContent);
+    var startsUnordered = /^\s*[-*+]\s+/.test(lines[0]);
+    var startsOrdered = /^\s*\d+\.\s+/.test(lines[0]);
+    if (startsUnordered || startsOrdered) {
+      var isOrd = startsOrdered;
+      var items = [], currentItem = null;
+      var itemRegex = isOrd ? /^\s*\d+\.\s+(.*)$/ : /^\s*[-*+]\s+(.*)$/;
+      for (var li = 0; li < lines.length; li++) {
+        var lMatch = lines[li].match(itemRegex);
+        if (lMatch) {
+          if (currentItem !== null) items.push(currentItem);
+          currentItem = lMatch[1];
+        } else if (currentItem !== null) {
+          currentItem += "\n" + lines[li].replace(/^\s{2,4}/, "");
         }
-        return '<li' + (isTask ? ' class="task-list-item"' : '') + '>' + content + '</li>';
-      }).join("");
-      htmlBlocks.push('<ul>' + liHtml + '</ul>');
-      continue;
-    }
-    if (isOrdered) {
-      var liOrdHtml = lines.map(function(l) {
-        return '<li>' + parseInline(l.replace(/^\s*\d+\.\s+/, "")) + '</li>';
-      }).join("");
-      htmlBlocks.push('<ol>' + liOrdHtml + '</ol>');
-      continue;
+      }
+      if (currentItem !== null) items.push(currentItem);
+      if (items.length) {
+        var liItemsHtml = items.map(function(itemText) {
+          var isTask = false;
+          var content = itemText;
+          if (/^\[\s\]\s+/.test(content)) {
+            content = '<input type="checkbox" disabled class="task-list-item-checkbox"> ' + parseInline(content.replace(/^\[\s\]\s+/, ""));
+            isTask = true;
+          } else if (/^\[[xX]\]\s+/.test(content)) {
+            content = '<input type="checkbox" checked disabled class="task-list-item-checkbox"> ' + parseInline(content.replace(/^\[[xX]\]\s+/, ""));
+            isTask = true;
+          } else {
+            content = parseInline(content).replace(/\n/g, '<br>');
+          }
+          return '<li' + (isTask ? ' class="task-list-item"' : '') + '>' + content + '</li>';
+        }).join("");
+        htmlBlocks.push(isOrd ? ('<ol>' + liItemsHtml + '</ol>') : ('<ul>' + liItemsHtml + '</ul>'));
+        continue;
+      }
     }
 
     htmlBlocks.push('<p>' + parseInline(lines.join("\n")).replace(/\n/g, '<br>') + '</p>');

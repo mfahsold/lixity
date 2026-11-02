@@ -121,6 +121,150 @@ function renderMermaidSvg(escapedCode) {
   });
 })();
 
+function formatMathFormula(latex, isDisplay) {
+  if (!latex) return "";
+  var math = latex.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+
+  math = math.replace(/\\begin\{(matrix|pmatrix|bmatrix|vmatrix|aligned|cases)\}([\s\S]*?)\\end\{\1\}/g, function(_, env, body) {
+    var rows = body.trim().split(/\\\\|\n/).map(function(r) { return r.trim(); }).filter(Boolean);
+    var openBrack = env === "pmatrix" ? "(" : env === "bmatrix" ? "[" : env === "vmatrix" ? "|" : env === "cases" ? "{" : "";
+    var closeBrack = env === "pmatrix" ? ")" : env === "bmatrix" ? "]" : env === "vmatrix" ? "|" : env === "cases" ? "" : "";
+    var tableRows = rows.map(function(row) {
+      var cells = row.split("&").map(function(c) { return '<td class="math-cell">' + formatMathFormula(c.trim(), false) + '</td>'; }).join("");
+      return '<tr>' + cells + '</tr>';
+    }).join("");
+    return '<span class="math-matrix-wrap' + (openBrack ? ' math-delimited' : '') + '">' +
+      (openBrack ? '<span class="math-delim">' + openBrack + '</span>' : '') +
+      '<table class="math-matrix"><tbody>' + tableRows + '</tbody></table>' +
+      (closeBrack ? '<span class="math-delim">' + closeBrack + '</span>' : '') +
+      '</span>';
+  });
+
+  math = math.replace(/\\(?:text|mathrm|operatorname)\{([^{}]+)\}/g, '<span class="math-text">$1</span>');
+  math = math.replace(/\\mathbf\{([^{}]+)\}/g, '<strong>$1</strong>');
+  math = math.replace(/\\mathit\{([^{}]+)\}/g, '<em>$1</em>');
+  math = math.replace(/\\mathbb\{([^{}]+)\}/g, function(_, char) {
+    var bbMap = {R:"ℝ", N:"ℕ", Z:"ℤ", Q:"ℚ", C:"ℂ", P:"ℙ", E:"𝔼", H:"ℍ"};
+    return bbMap[char] || char;
+  });
+
+  for (var iter = 0; iter < 4; iter++) {
+    if (!/\\(?:d)?frac\{/.test(math)) break;
+    math = math.replace(/\\(?:d)?frac\{([^{}]+)\}\{([^{}]+)\}/g,
+      '<span class="math-frac"><span class="math-num">$1</span><span class="math-denom">$2</span></span>');
+  }
+
+  math = math.replace(/\\sqrt\[([^\]]+)\]\{([^{}]+)\}/g,
+    '<span class="math-sqrt"><sup class="math-root">$1</sup><span class="math-surd">√</span><span class="math-radicand">$2</span></span>');
+  math = math.replace(/\\sqrt\{([^{}]+)\}/g,
+    '<span class="math-sqrt"><span class="math-surd">√</span><span class="math-radicand">$1</span></span>');
+
+  var greekMap = {
+    "alpha": "α", "beta": "β", "gamma": "γ", "delta": "δ", "epsilon": "ε", "varepsilon": "ε",
+    "zeta": "ζ", "eta": "η", "theta": "θ", "vartheta": "ϑ", "iota": "ι", "kappa": "κ",
+    "lambda": "λ", "mu": "μ", "nu": "ν", "xi": "ξ", "pi": "π", "varpi": "ϖ",
+    "rho": "ρ", "varrho": "ϱ", "sigma": "σ", "varsigma": "ς", "tau": "τ", "upsilon": "υ",
+    "phi": "φ", "varphi": "ϕ", "chi": "χ", "psi": "ψ", "omega": "ω",
+    "Gamma": "Γ", "Delta": "Δ", "Theta": "Θ", "Lambda": "Λ", "Xi": "Ξ", "Pi": "Π",
+    "Sigma": "Σ", "Upsilon": "Υ", "Phi": "Φ", "Psi": "Ψ", "Omega": "Ω"
+  };
+  math = math.replace(/\\(alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|vartheta|iota|kappa|lambda|mu|nu|xi|pi|varpi|rho|varrho|sigma|varsigma|tau|upsilon|phi|varphi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega)\b/g, function(_, g) {
+    return greekMap[g] || g;
+  });
+
+  var opMap = {
+    "sum": "∑", "prod": "∏", "coprod": "∐", "int": "∫", "oint": "∮", "iint": "∬", "iiint": "∭",
+    "times": "×", "cdot": "·", "pm": "±", "mp": "∓", "div": "÷", "ast": "∗", "star": "★",
+    "approx": "≈", "sim": "∼", "simeq": "≃", "cong": "≅", "equiv": "≡", "ne": "≠", "neq": "≠",
+    "le": "≤", "leq": "≤", "ge": "≥", "geq": "≥", "ll": "≪", "gg": "≫",
+    "in": "∈", "notin": "∉", "ni": "∋", "subset": "⊂", "supset": "⊃", "subseteq": "⊆", "supseteq": "⊇",
+    "cap": "∩", "cup": "∪", "setminus": "∖", "emptyset": "∅",
+    "to": "→", "rightarrow": "→", "leftarrow": "←", "leftrightarrow": "↔",
+    "Rightarrow": "⇒", "Leftarrow": "⇐", "Leftrightarrow": "⇔", "mapsto": "↦",
+    "partial": "∂", "nabla": "∇", "infty": "∞", "forall": "∀", "exists": "∃", "nexists": "∄", "neg": "¬",
+    "dots": "…", "ldots": "…", "cdots": "⋯", "vdots": "⋮", "ddots": "⋱"
+  };
+  math = math.replace(/\\(sum|prod|coprod|int|oint|iint|iiint|times|cdot|pm|mp|div|ast|star|approx|sim|simeq|cong|equiv|ne|neq|le|leq|ge|geq|ll|gg|in|notin|ni|subset|supset|subseteq|supseteq|cap|cup|setminus|emptyset|to|rightarrow|leftarrow|leftrightarrow|Rightarrow|Leftarrow|Leftrightarrow|mapsto|partial|nabla|infty|forall|exists|nexists|neg|dots|ldots|cdots|vdots|ddots)\b/g, function(_, op) {
+    return opMap[op] || op;
+  });
+
+  math = math.replace(/\\(sin|cos|tan|arcsin|arccos|arctan|sinh|cosh|tanh|ln|log|exp|min|max|lim|sup|inf|det|gcd|deg|dim|ker|hom|arg|Pr)\b/g,
+    '<span class="math-func">$1</span>');
+
+  math = math.replace(/\\quad/g, " &emsp; ");
+  math = math.replace(/\\qquad/g, " &emsp;&emsp; ");
+  math = math.replace(/\\[,;:!]/g, " ");
+  math = math.replace(/\\([#$%&_{}])/g, "$1");
+
+  math = math.replace(/\\left\(/g, "(").replace(/\\right\)/g, ")");
+  math = math.replace(/\\left\[/g, "[").replace(/\\right\]/g, "]");
+  math = math.replace(/\\left\\\{/g, "{").replace(/\\right\\\}/g, "}");
+  math = math.replace(/\\left\|/g, "|").replace(/\\right\|/g, "|");
+  math = math.replace(/\\langle/g, "⟨").replace(/\\rangle/g, "⟩");
+  math = math.replace(/\\lceil/g, "⌈").replace(/\\rceil/g, "⌉");
+  math = math.replace(/\\lfloor/g, "⌊").replace(/\\rfloor/g, "⌋");
+
+  math = math.replace(/\^\{([^{}]+)\}/g, "<sup>$1</sup>");
+  math = math.replace(/\_\{([^{}]+)\}/g, "<sub>$1</sub>");
+  math = math.replace(/\^([0-9a-zA-Zα-ωΑ-Ω+-])/g, "<sup>$1</sup>");
+  math = math.replace(/\_([0-9a-zA-Zα-ωΑ-Ω+-])/g, "<sub>$1</sub>");
+
+  var tagTokens = [], tagPrefix = "@@@MATHTAG_";
+  math = math.replace(/<[^>]+>/g, function(tag) {
+    var tok = tagPrefix + tagTokens.length + "END";
+    tagTokens.push(tag);
+    return tok;
+  });
+  math = math.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  math = math.replace(/\b([a-zA-Z])\b/g, "<i>$1</i>");
+  tagTokens.forEach(function(tag, i) {
+    math = math.replace(tagPrefix + i + "END", tag);
+  });
+
+  var cls = isDisplay ? "math-display" : "math-inline";
+  var tag = isDisplay ? "div" : "span";
+  return '<' + tag + ' class="' + cls + '" role="math" aria-label="' + escapeHtml(latex).replace(/"/g, '&quot;') + '">' + math + '</' + tag + '>';
+}
+
+function renderAlertBox(type, content, inlineParser) {
+  var alertType = type.toUpperCase();
+  var typeLower = alertType.toLowerCase();
+  var titleMap = {
+    NOTE: {de: "Hinweis", en: "Note", fr: "Remarque", es: "Nota", it: "Nota", pt: "Nota", nl: "Opmerking"},
+    TIP: {de: "Tipp", en: "Tip", fr: "Conseil", es: "Consejo", it: "Consiglio", pt: "Dica", nl: "Tip"},
+    IMPORTANT: {de: "Wichtig", en: "Important", fr: "Important", es: "Importante", it: "Importante", pt: "Importante", nl: "Belangrijk"},
+    WARNING: {de: "Warnung", en: "Warning", fr: "Avertissement", es: "Advertencia", it: "Avviso", pt: "Aviso", nl: "Waarschuwing"},
+    CAUTION: {de: "Achtung", en: "Caution", fr: "Attention", es: "Atención", it: "Attenzione", pt: "Atenção", nl: "Let op"}
+  };
+  var lang = (window.LixitySite && window.LixitySite.language) || "de";
+  var titles = titleMap[alertType] || {de: alertType, en: alertType};
+  var defaultTitle = titles[lang] || titles.de || titles.en;
+
+  var icons = {
+    NOTE: '<svg class="markdown-alert-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/></svg>',
+    TIP: '<svg class="markdown-alert-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 1.5c-2.36 0-4.25 1.9-4.25 4.25 0 1.45.71 2.73 1.8 3.52.4.29.65.74.65 1.23v.5a.75.75 0 0 0 .75.75h2.1a.75.75 0 0 0 .75-.75v-.5c0-.49.25-.94.65-1.23 1.09-.79 1.8-2.07 1.8-3.52 0-2.35-1.89-4.25-4.25-4.25Zm-1.25 12a.75.75 0 0 1 .75-.75h1a.75.75 0 0 1 0 1.5h-1a.75.75 0 0 1-.75-.75Zm.25 1.75a.5.5 0 0 1 .5-.5h.98a.5.5 0 0 1 0 1H7.5a.5.5 0 0 1-.5-.5Z"/></svg>',
+    IMPORTANT: '<svg class="markdown-alert-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM8 3.75a.75.75 0 0 0-.75.75v4a.75.75 0 0 0 1.5 0v-4A.75.75 0 0 0 8 3.75Zm0 7.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/></svg>',
+    WARNING: '<svg class="markdown-alert-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM8 10.75a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/></svg>',
+    CAUTION: '<svg class="markdown-alert-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M4.47.04c.37-.04.74.08 1.03.32L15.64 10.5a1.5 1.5 0 0 1 .42 1.48 1.5 1.5 0 0 1-1.04 1.04l-10.14 2.9a1.5 1.5 0 0 1-1.48-.42L.36 5.36A1.5 1.5 0 0 1 .28 3.9L3.44.42A1.5 1.5 0 0 1 4.47.04ZM8 4a.75.75 0 0 0-.75.75v3.5a.75.75 0 0 0 1.5 0v-3.5A.75.75 0 0 0 8 4Zm0 6.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/></svg>'
+  };
+  var icon = icons[alertType] || icons.NOTE;
+
+  var bodyLines = content.trim().split("\n");
+  var titleOverride = null;
+  if (bodyLines.length && /^\*\*([^*]+)\*\*:?$/.test(bodyLines[0].trim())) {
+    titleOverride = bodyLines[0].trim().replace(/^\*\*|\*\*:?$/g, "").trim();
+    bodyLines.shift();
+  }
+  var alertTitle = titleOverride || defaultTitle;
+  var parse = inlineParser || function(s) { return s; };
+  var bodyHtml = parse(bodyLines.join("\n").trim()).replace(/\n/g, '<br>');
+
+  return '<div class="markdown-alert markdown-alert-' + typeLower + '" role="region" aria-label="' + alertTitle + '">' +
+    '<p class="markdown-alert-title">' + icon + '<span>' + alertTitle + '</span></p>' +
+    '<div class="markdown-alert-content">' + (bodyHtml ? '<p>' + bodyHtml + '</p>' : '') + '</div>' +
+    '</div>';
+}
+
 function renderSafeMarkdown(rawText, dossierContext) {
   if (!rawText) return "";
   var imageRender = window.LixityDossierImages && dossierContext ? window.LixityDossierImages.prepareMarkdown(rawText, dossierContext) : null;
@@ -154,7 +298,12 @@ function renderSafeMarkdown(rawText, dossierContext) {
         indented.push(codeLines[lineIndex].replace(/^(    |\t)/, "")); lineIndex++;
       }
       lineIndex--;
-      protectedLines.push(protectCode(indented.join("\n").replace(/\n+$/, ""), ""));
+      var firstNonEmpty = indented.find(function(l) { return l.trim(); }) || "";
+      if (/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/i.test(firstNonEmpty.trim())) {
+        protectedLines.push.apply(protectedLines, indented);
+      } else {
+        protectedLines.push(protectCode(indented.join("\n").replace(/\n+$/, ""), ""));
+      }
     } else protectedLines.push(line);
   }
   text = protectedLines.join("\n");
@@ -185,8 +334,8 @@ function renderSafeMarkdown(rawText, dossierContext) {
     }
     str = str.replace(/`([^`]+)`|\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$|\[([^\]]+)\]\(([^)]+)\)/g, function(m, code, displayMath, math, label, url) {
       if (code !== undefined) return protect('<code>' + code + '</code>');
-      if (displayMath !== undefined) return protect('<div class="math-display">' + displayMath + '</div>');
-      if (math !== undefined) return protect('<span class="math-inline">' + math + '</span>');
+      if (displayMath !== undefined) return protect(formatMathFormula(displayMath, true));
+      if (math !== undefined) return protect(formatMathFormula(math, false));
       if (noLinks) return m;
       var cleanUrl = url.trim();
       if (/^lixity:/i.test(cleanUrl)) {
@@ -207,6 +356,14 @@ function renderSafeMarkdown(rawText, dossierContext) {
       return protect(visibleLabel + ' (' + cleanUrl + ')');
     });
 
+    str = str.replace(/\\textbf\{([^{}]+)\}/g, '<strong>$1</strong>');
+    str = str.replace(/\\textit\{([^{}]+)\}/g, '<em>$1</em>');
+    str = str.replace(/\\emph\{([^{}]+)\}/g, '<em>$1</em>');
+    str = str.replace(/\\underline\{([^{}]+)\}/g, '<u>$1</u>');
+    str = str.replace(/\\texttt\{([^{}]+)\}/g, '<code>$1</code>');
+    str = str.replace(/\\sout\{([^{}]+)\}/g, '<del>$1</del>');
+    str = str.replace(/\\textsc\{([^{}]+)\}/g, '<span style="font-variant: small-caps;">$1</span>');
+
     str = str.replace(/~~(.+?)~~/g, '<del>$1</del>');
     str = str.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
     str = str.replace(/___(.+?)___/g, '<strong><em>$1</em></strong>');
@@ -214,6 +371,8 @@ function renderSafeMarkdown(rawText, dossierContext) {
     str = str.replace(/__(.+?)__/g, '<strong>$1</strong>');
     str = str.replace(/\*([^*]+)\*/g, '<em>$1</em>');
     str = str.replace(/_([^_]+)_/g, '<em>$1</em>');
+    str = str.replace(/\^([0-9a-zA-Z+-]+)\^/g, '<sup>$1</sup>');
+    str = str.replace(/~([0-9a-zA-Z+-]+)~/g, '<sub>$1</sub>');
 
     str = str.replace(new RegExp(prefix + "([0-9]+)@@@", "g"), function(_, i) {
       return protectedHtml[Number(i)];
@@ -248,34 +407,57 @@ function renderSafeMarkdown(rawText, dossierContext) {
     var isBlockquote = lines.every(function(l) { return /^\s*&gt;/.test(l); });
     if (isBlockquote) {
       var bqContent = lines.map(function(l) { return l.replace(/^\s*&gt;\s?/, ""); }).join("\n");
+      var alertMatch = bqContent.match(/^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*\n?([\s\S]*)$/i);
+      if (alertMatch) {
+        htmlBlocks.push(renderAlertBox(alertMatch[1], alertMatch[2], parseInline));
+        continue;
+      }
       htmlBlocks.push('<blockquote><p>' + parseInline(bqContent).replace(/\n/g, '<br>') + '</p></blockquote>');
       continue;
     }
 
-    if (lines.length >= 2 && lines[1].includes("-") && lines[1].includes("|")) {
-      var sepCells = lines[1].trim().replace(/^\||\|$/g, "").split("|");
-      var isTable = sepCells.every(function(c) { return /^[\s:-]+$/.test(c) && c.includes("-"); });
-      if (isTable) {
-        var alignments = sepCells.map(function(c) {
-          var trimmed = c.trim();
-          var left = trimmed.startsWith(":");
-          var right = trimmed.endsWith(":");
-          if (left && right) return "center";
-          if (right) return "right";
-          if (left) return "left";
-          return "";
-        });
+    var bareAlertMatch = block.match(/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*\n?([\s\S]*)$/i);
+    if (bareAlertMatch) {
+      htmlBlocks.push(renderAlertBox(bareAlertMatch[1], bareAlertMatch[2], parseInline));
+      continue;
+    }
 
-        var headerCells = lines[0].trim().replace(/^\||\|$/g, "").split("|");
+    var cleanLines = lines.filter(function(l) { return l.trim(); });
+    var isTsv = cleanLines.length >= 2 && cleanLines.every(function(l) { return l.includes("\t"); });
+    if (isTsv) {
+      var headCells = cleanLines[0].split("\t").map(function(c) { return '<th>' + parseInline(c.trim()) + '</th>'; }).join("");
+      var rowHtml = cleanLines.slice(1).map(function(line) {
+        var cells = line.split("\t").map(function(c) { return '<td>' + parseInline(c.trim()) + '</td>'; }).join("");
+        return '<tr>' + cells + '</tr>';
+      }).join("");
+      htmlBlocks.push('<div class="table-wrap"><table class="research-table"><thead><tr>' + headCells + '</tr></thead><tbody>' + rowHtml + '</tbody></table></div>');
+      continue;
+    }
+
+    if (lines.length >= 2 && lines[0].includes("|")) {
+      var hasDelimiter = cleanLines.length >= 2 && cleanLines[1].includes("-") && cleanLines[1].includes("|");
+      var isPipeTable = hasDelimiter || (cleanLines.length >= 2 && cleanLines.every(function(l) { return (l.match(/\|/g) || []).length >= 2; }));
+      if (isPipeTable) {
+        var dataStart = hasDelimiter ? 2 : 1;
+        var alignments = [];
+        if (hasDelimiter) {
+          var sepCells = cleanLines[1].trim().replace(/^\||\|$/g, "").split("|");
+          alignments = sepCells.map(function(c) {
+            var trimmed = c.trim(), left = trimmed.startsWith(":"), right = trimmed.endsWith(":");
+            return left && right ? "center" : right ? "right" : left ? "left" : "";
+          });
+        }
+
+        var headerCells = cleanLines[0].trim().replace(/^\||\|$/g, "").split("|");
         var thHtml = headerCells.map(function(cell, idx) {
           var align = alignments[idx] ? ' style="text-align:' + alignments[idx] + '"' : '';
           return '<th' + align + '>' + parseInline(cell.trim()) + '</th>';
         }).join("");
 
         var tbRowsHtml = [];
-        for (var r = 2; r < lines.length; r++) {
-          if (!lines[r].trim()) continue;
-          var rowCells = lines[r].trim().replace(/^\||\|$/g, "").split("|");
+        for (var r = dataStart; r < cleanLines.length; r++) {
+          if (!cleanLines[r].trim()) continue;
+          var rowCells = cleanLines[r].trim().replace(/^\||\|$/g, "").split("|");
           var tdHtml = rowCells.map(function(cell, idx) {
             var align = alignments[idx] ? ' style="text-align:' + alignments[idx] + '"' : '';
             return '<td' + align + '>' + parseInline(cell.trim()) + '</td>';
@@ -288,33 +470,40 @@ function renderSafeMarkdown(rawText, dossierContext) {
       }
     }
 
-    var isUnordered = lines.every(function(l) { return /^\s*[-*+]\s+/.test(l); });
-    var isOrdered = lines.every(function(l) { return /^\s*\d+\.\s+/.test(l); });
-    if (isUnordered) {
-      var liHtml = lines.map(function(l) {
-        var rawContent = l.replace(/^\s*[-*+]\s+/, "");
-        var isTask = false;
-        var content = rawContent;
-        if (/^\[\s\]\s+/.test(rawContent)) {
-          content = '<input type="checkbox" disabled class="task-list-item-checkbox"> ' + parseInline(rawContent.replace(/^\[\s\]\s+/, ""));
-          isTask = true;
-        } else if (/^\[[xX]\]\s+/.test(rawContent)) {
-          content = '<input type="checkbox" checked disabled class="task-list-item-checkbox"> ' + parseInline(rawContent.replace(/^\[[xX]\]\s+/, ""));
-          isTask = true;
-        } else {
-          content = parseInline(rawContent);
+    var startsUnordered = /^\s*[-*+]\s+/.test(lines[0]);
+    var startsOrdered = /^\s*\d+\.\s+/.test(lines[0]);
+    if (startsUnordered || startsOrdered) {
+      var isOrd = startsOrdered;
+      var items = [], currentItem = null;
+      var itemRegex = isOrd ? /^\s*\d+\.\s+(.*)$/ : /^\s*[-*+]\s+(.*)$/;
+      for (var li = 0; li < lines.length; li++) {
+        var lMatch = lines[li].match(itemRegex);
+        if (lMatch) {
+          if (currentItem !== null) items.push(currentItem);
+          currentItem = lMatch[1];
+        } else if (currentItem !== null) {
+          currentItem += "\n" + lines[li].replace(/^\s{2,4}/, "");
         }
-        return '<li' + (isTask ? ' class="task-list-item"' : '') + '>' + content + '</li>';
-      }).join("");
-      htmlBlocks.push('<ul>' + liHtml + '</ul>');
-      continue;
-    }
-    if (isOrdered) {
-      var liOrdHtml = lines.map(function(l) {
-        return '<li>' + parseInline(l.replace(/^\s*\d+\.\s+/, "")) + '</li>';
-      }).join("");
-      htmlBlocks.push('<ol>' + liOrdHtml + '</ol>');
-      continue;
+      }
+      if (currentItem !== null) items.push(currentItem);
+      if (items.length) {
+        var liItemsHtml = items.map(function(itemText) {
+          var isTask = false;
+          var content = itemText;
+          if (/^\[\s\]\s+/.test(content)) {
+            content = '<input type="checkbox" disabled class="task-list-item-checkbox"> ' + parseInline(content.replace(/^\[\s\]\s+/, ""));
+            isTask = true;
+          } else if (/^\[[xX]\]\s+/.test(content)) {
+            content = '<input type="checkbox" checked disabled class="task-list-item-checkbox"> ' + parseInline(content.replace(/^\[[xX]\]\s+/, ""));
+            isTask = true;
+          } else {
+            content = parseInline(content).replace(/\n/g, '<br>');
+          }
+          return '<li' + (isTask ? ' class="task-list-item"' : '') + '>' + content + '</li>';
+        }).join("");
+        htmlBlocks.push(isOrd ? ('<ol>' + liItemsHtml + '</ol>') : ('<ul>' + liItemsHtml + '</ul>'));
+        continue;
+      }
     }
 
     htmlBlocks.push('<p>' + parseInline(lines.join("\n")).replace(/\n/g, '<br>') + '</p>');

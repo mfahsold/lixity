@@ -112,6 +112,43 @@ const detail = {id:'synthetic-dossier', project_id:'synthetic-project', revision
       });
       assert.equal(dollars.actual, dollars.expected);
       assert.equal(dollars.blocks, 1);
+      const enhancedFormatting = await page.evaluate(() => {
+        const doc = [
+          '> [!NOTE]',
+          '> **Arbeitsbegriff:** Conservazione senza decoro.',
+          '',
+          '[!IMPORTANT]',
+          'Substanzerhaltung ohne jeden Zierrat.',
+          '',
+          'Abschnitt\tFrage',
+          '1. Prinzip\tWas heißt das?',
+          '',
+          'Formula: $\\sigma^2 = \\frac{1}{N} \\sum (x_i - \\mu)^2$ and text \\textbf{fett} und \\textit{kursiv}.'
+        ].join('\n');
+        const host = document.createElement('div');
+        host.innerHTML = renderSafeMarkdown(doc);
+        return {
+          alerts: host.querySelectorAll('.markdown-alert').length,
+          alertTypes: Array.from(host.querySelectorAll('.markdown-alert')).map(el => el.className),
+          tables: host.querySelectorAll('table.research-table').length,
+          thCount: host.querySelectorAll('table.research-table th').length,
+          tdCount: host.querySelectorAll('table.research-table td').length,
+          mathInline: host.querySelectorAll('.math-inline').length,
+          mathFrac: host.querySelectorAll('.math-frac').length,
+          strong: Array.from(host.querySelectorAll('strong')).map(el => el.textContent),
+          em: Array.from(host.querySelectorAll('em')).map(el => el.textContent)
+        };
+      });
+      assert.equal(enhancedFormatting.alerts, 2);
+      assert.ok(enhancedFormatting.alertTypes[0].includes('markdown-alert-note'));
+      assert.ok(enhancedFormatting.alertTypes[1].includes('markdown-alert-important'));
+      assert.equal(enhancedFormatting.tables, 1);
+      assert.equal(enhancedFormatting.thCount, 2);
+      assert.equal(enhancedFormatting.tdCount, 2);
+      assert.equal(enhancedFormatting.mathInline, 1);
+      assert.equal(enhancedFormatting.mathFrac, 1);
+      assert.ok(enhancedFormatting.strong.includes('fett'));
+      assert.ok(enhancedFormatting.em.includes('kursiv'));
       await page.locator('#current-document').screenshot({path:path.join(artifacts,`document-${locale}-${width}.png`)});
       assert.deepEqual(errors, []);
       assert.deepEqual(writes, []);

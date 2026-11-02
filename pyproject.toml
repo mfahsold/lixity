@@ -81,6 +81,8 @@ Documentation-Source = "https://github.com/mfahsold/lixity/blob/main/docs/USAGE.
 Changelog = "https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md"
 Issues = "https://github.com/mfahsold/lixity/issues"
 Security = "https://github.com/mfahsold/lixity/security/policy"
+Mastodon = "https://mastodon.social/@lixity"
+Bluesky = "https://bsky.app/profile/lixity.bsky.social"
 
 [project.scripts]
 lixity = "lixity.cli:main"

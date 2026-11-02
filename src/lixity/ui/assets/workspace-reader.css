@@ -24,6 +24,11 @@
 .workspace-reader-panel h3 { font-size: var(--text-body); }
 .workspace-reader-panel .research-dossier-body-source { white-space: pre-wrap; overflow-wrap: anywhere; }
 .workspace-reader-panel .research-passage-quote { overflow-wrap: anywhere; }
+.workspace-reader-panel .table-wrap { max-width: 100%; overflow-x: auto; margin: 0.75rem 0; }
+.workspace-reader-panel .research-table { width: 100%; min-width: 100%; }
+.workspace-reader-panel .markdown-alert { margin: 0.65rem 0; }
+.workspace-reader-panel .math-display { max-width: 100%; overflow-x: auto; }
+.workspace-reader-panel .math-inline { white-space: nowrap; max-width: 100%; overflow-x: auto; }
 @media (max-width: 900px) {
   .workspace-reader-layout.is-open { grid-template-columns: minmax(0, 1fr); }
   .workspace-reader-layout.is-open #workspace-analysis-body { grid-column: 1; grid-row: 2; }

@@ -8,6 +8,16 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Rich LaTeX math and formatting rendering engine in dossiers and markdown prose:
+  - Offline, zero-dependency LaTeX parser converting math expressions (`$...$` and `$$...$$`) into clean, accessible mathematical typography. Supports fractions (`\frac`, `\dfrac`), square roots (`\sqrt`), sub- and superscripts (`^`, `_`), Greek letters (both lowercase and uppercase), mathematical operators (`\sum`, `\prod`, `\int`, `\times`, `\cdot`, `\approx`, `\le`, `\ge`, `\ne`, `\in`, `\infty`, `\partial`), mathematical functions (`\ln`, `\log`, `\sin`, `\cos`, `\exp`, `\det`), matrix and alignment environments (`\begin{aligned}`, `\begin{matrix}`), blackboard bold (`\mathbb{R}`, `\mathbb{N}`), and variable italics.
+  - Full support for LaTeX prose styling: `\textbf{...}`, `\textit{...}`, `\emph{...}`, `\underline{...}`, `\texttt{...}`, `\sout{...}`, `\textsc{...}` alongside standard CommonMark markers.
+  - GitHub-style alert callout boxes (`[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`) with distinct semantic accents, SVG icons, dark-mode tints, and localized titles (`Hinweis`, `Tipp`, `Wichtig`, `Warnung`, `Achtung`).
+  - Tab-separated values (TSV) and pipe table auto-detection rendering formatted, responsive tables with sticky headers.
+  - Responsive companion reader styles in `.workspace-reader-panel` preventing horizontal overflow while preserving mathematical expressions and tables during side-by-side manuscript reading.
+- Central social presence cross-linking and discovery:
+  - Added official Mastodon (`@lixity@mastodon.social`) and Bluesky (`@lixity.bsky.social`) profiles to `pyproject.toml` (`[project.urls]`) for PyPI presentation and `README.md` community badges.
+  - Connected Schema.org JSON-LD `sameAs` entity metadata across `SoftwareApplication` and `WebSite` in `docs/index.html` linking Mastodon, Bluesky, GitHub, and DEV.to.
+  - Interlinked social resource navigation in `docs/blog/index.html` and markdown alternates.
 - Interactive Research Grounding ("Abgleich") dashboard:
   - Replaced the previous plain text comparison output with a clean, structured KPI card grid showing Jaccard similarity index, Szymkiewicz-Simpson overlap coefficient, unique shared lexeme types, and filtered content word counts.
   - Interactive segmented vocabulary explorer for shared terms, Dunning G² keyness terms, and exclusive source terms. Term chips feature detailed frequency tooltips and click-to-search integration that immediately reveals occurrences in the manuscript.

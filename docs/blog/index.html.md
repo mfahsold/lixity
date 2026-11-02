@@ -78,4 +78,4 @@ show finished analyses without installation.
 
 - [Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) — the estimators behind every number.
 
-[All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](../LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)
+[All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](../LICENSING.md)[Mastodon](https://mastodon.social/@lixity)[Bluesky](https://bsky.app/profile/lixity.bsky.social)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

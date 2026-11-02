@@ -43,7 +43,7 @@ LICENSE_URL = "https://github.com/mfahsold/lixity/blob/main/LICENSE"
 #: chapter inspection, media, export, review, literal-code handling, research
 #: identity, terminology, localized diagnostics, contextual hints, association
 #: review, dossier collections, glassmorphism, table components, lexical grounding and modern UI transitions.
-MAX_PAGE_BYTES = 1_680_000
+MAX_PAGE_BYTES = 1_695_000
 
 
 @dataclass(frozen=True)

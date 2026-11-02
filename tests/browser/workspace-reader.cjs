@@ -24,7 +24,7 @@ for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
 print(json.dumps(fixtures))
 `, {root});
 const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title: 'Synthetic dossier', revision: 2,
-  body: '## Context\n\nA synthetic dossier with <img src=x onerror=window.readerInjected=true> as text.\n\n' + 'Historical source notes. '.repeat(100),
+  body: '## Context\n\n> [!NOTE]\n> **Working term:** Conservazione.\n\nFormula: $\\sigma^2 = \\frac{1}{N} \\sum (x_i - \\mu)^2$.\n\nA synthetic dossier with <img src=x onerror=window.readerInjected=true> as text.\n\n' + 'Historical source notes. '.repeat(100),
   editable_sections: ['Context'], citations: [], sections: ['Context'], tags: [], evidence_count: 0};
 (async () => {
   const browser = await launchChromium();
@@ -266,6 +266,9 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
         'The companion view is read-only');
       assert.equal(await page.evaluate(() => Boolean(window.readerInjected)), false);
       assert.equal(await body.locator('img').count(), 0, 'Source-like markup remains data');
+      assert.ok(await body.locator('.markdown-alert-note').count() >= 1, 'Alert callouts render in companion panel');
+      assert.ok(await body.locator('.math-inline').count() >= 1, 'LaTeX math renders in companion panel');
+      assert.ok(await body.locator('.math-frac').count() >= 1, 'LaTeX fractions render in companion panel');
       const boxes = await page.evaluate(() => {
         const a = document.querySelector('#workspace-analysis-body').getBoundingClientRect();
         const b = document.querySelector('#workspace-reader-panel').getBoundingClientRect();
