@@ -244,18 +244,19 @@ def help_term(
     )
 
 
-# Central registry: analysis section id -> label key, in display order. Every
-# surface renders only the sections it actually provides, so a new panel adds
-# one navigation entry here instead of touching the renderer and the nav.
+# Central registry: analysis section id -> label key, in display order (sorted
+# by editorial workflow relevance for authors, Lektoren and editors: immediate
+# flagged passages -> dramaturgy/pacing/scenes -> voice/dialogue/sentence
+# craft -> character & echo continuity -> corpus style & chapter matrix).
 ANALYSIS_SECTIONS: tuple[tuple[str, str], ...] = (
     ("flags", "panel_flags"),
-    ("dist", "sentence_dist"),
-    ("dialogue", "analysis_nav_dialogue"),
-    ("characters", "analysis_nav_characters"),
     ("pacing", "analysis_nav_pacing"),
     ("scenes", "panel_scenes"),
-    ("motifs", "panel_motifs"),
+    ("dialogue", "analysis_nav_dialogue"),
+    ("dist", "sentence_dist"),
     ("showing", "analysis_nav_showing"),
+    ("characters", "analysis_nav_characters"),
+    ("motifs", "panel_motifs"),
     ("style", "group_style"),
     ("matrix", "chapter_table"),
 )

@@ -1327,6 +1327,25 @@ def render_dashboard(
         )
         language_tiles.append(
             kpi(
+                P(metrics.first_person_start_rate) if has_tokens else "–",
+                help_term(labels, "first_start", L("feat_ich_start")),
+                bar=metrics.first_person_start_rate if has_tokens else None,
+                jump="#heatmap",
+            )
+        )
+    language_tiles.append(
+        kpi(
+            P(function_pct) if (metrics is not None and metrics.tokens) else "–",
+            help_term(labels, "function_words", L("function_words")),
+            bar=function_pct if (metrics is not None and metrics.tokens) else None,
+            jump="#chapters",
+            layer="function",
+        )
+    )
+    if metrics is not None:
+        has_tokens = bool(metrics.tokens)
+        language_tiles.append(
+            kpi(
                 N(metrics.flesch_de, 1) if has_tokens else "–",
                 help_term(labels, "flesch", esc(metrics.flesch_variant or "Flesch")),
                 jump="#bands",
@@ -1384,32 +1403,15 @@ def render_dashboard(
             else "–"
         )
         lexis_secondary_tiles.append(kpi(maas_value, help_term(labels, "maas", "Maas a²"), jump="#bands"))
-        language_tiles.append(
-            kpi(
-                P(metrics.first_person_start_rate) if has_tokens else "–",
-                help_term(labels, "first_start", L("feat_ich_start")),
-                bar=metrics.first_person_start_rate if has_tokens else None,
-                jump="#heatmap",
-            )
-        )
-    language_tiles.append(
+    style_tiles.append(
         kpi(
-            P(function_pct) if (metrics is not None and metrics.tokens) else "–",
-            help_term(labels, "function_words", L("function_words")),
-            bar=function_pct if (metrics is not None and metrics.tokens) else None,
-            jump="#chapters",
-            layer="function",
+            str(total_flagged),
+            help_term(labels, "flagged", L("flagged")),
+            jump="#flags",
+            flags=True,
         )
     )
     if fingerprint is not None:
-        style_tiles.append(
-            kpi(
-                P(fingerprint.consistency * 100, 0) if fingerprint.measured_cells else "–",
-                help_term(labels, "consistency", L("consistency")),
-                bar=fingerprint.consistency * 100 if fingerprint.measured_cells else None,
-                jump="#heatmap",
-            )
-        )
         drifters = fingerprint.top_deviants(1)
         if drifters:
             num, mean_abs = drifters[0]
@@ -1432,14 +1434,14 @@ def render_dashboard(
                     only=bool(devs),
                 )
             )
-    style_tiles.append(
-        kpi(
-            str(total_flagged),
-            help_term(labels, "flagged", L("flagged")),
-            jump="#flags",
-            flags=True,
+        style_tiles.append(
+            kpi(
+                P(fingerprint.consistency * 100, 0) if fingerprint.measured_cells else "–",
+                help_term(labels, "consistency", L("consistency")),
+                bar=fingerprint.consistency * 100 if fingerprint.measured_cells else None,
+                jump="#heatmap",
+            )
         )
-    )
 
     p_unit = L("paragraphs_one") if len(paragraphs) == 1 else L("paragraphs")
     scope_narrative = f"{N(total_words, 0)} {L('words_prose')} · {len(chapters)} {L('chapter')} · {len(paragraphs)} {p_unit}"
@@ -1473,10 +1475,10 @@ def render_dashboard(
         parts.append(f'<p class="hint" role="note">{support}</p>')
     for caption_key, tiles, narrative, *extra in (
         ("group_scope", scope_tiles, scope_narrative),
+        ("group_style", style_tiles, style_narrative),
         ("group_rhythm", rhythm_tiles, rhythm_narrative),
         ("group_language", language_tiles, language_narrative),
         ("group_lexis", lexis_tiles, lexis_narrative, lexis_secondary_tiles),
-        ("group_style", style_tiles, style_narrative),
     ):
         if not tiles:
             continue
@@ -1589,14 +1591,19 @@ def render_dashboard(
         parts.append(f'<p class="hint">{label(labels, "flags_empty")}</p>')
     parts.append("</section>")
 
-    # --- Narrative panels (sentence distribution, dialogue, characters, pacing, motifs, showing) ---
-    parts.append(render_sentence_dist_panel(metrics, labels, language_key))
-    parts.append(render_dialogue_panel(dialogue, labels, language_key))
-    parts.append(render_characters_panel(characters, chapters, labels))
+    # --- Work markers (editor-visible, right after flagged passages) -------
+    parts.append(render_markers_panel(markers, chapters, labels, can_edit))
+
+    # --- Narrative panels (ordered by editorial workflow relevance:
+    #     pacing & scenes -> dialogue, sentence craft & signal groups ->
+    #     character presence & local echoes) -------------------------------
     parts.append(render_pacing_panel(pacing, labels, language_key))
     parts.append(render_scenes_panel(scenes, labels, language_key))
-    parts.append(render_motifs_panel(motifs, labels))
+    parts.append(render_dialogue_panel(dialogue, labels, language_key))
+    parts.append(render_sentence_dist_panel(metrics, labels, language_key))
     parts.append(render_showing_panel(showing, labels, language_key))
+    parts.append(render_characters_panel(characters, chapters, labels))
+    parts.append(render_motifs_panel(motifs, labels))
 
     # --- Style heatmap & passport (self-calibrated house style) -----------
     if has_house_style and fingerprint is not None and metrics is not None and metrics.chapters:
@@ -1658,9 +1665,7 @@ def render_dashboard(
             + "</section>"
         )
 
-    # --- Work markers (editor-visible, set from the dashboard) -------
     parts.append(render_register_targets(fingerprint, metrics, labels, language_key, settings_available=can_edit))
-    parts.append(render_markers_panel(markers, chapters, labels, can_edit))
 
     # --- Chapter matrix ---------------------------------------------------
     if chapters:

@@ -64,6 +64,9 @@ def test_dialogue_keeps_every_chapter_in_manuscript_order_including_zero_turns(c
     assert [row.attrib["data-jump"] for row in chart] == [f"#ch-{number}" for number in range(1, count + 1)]
     assert chart[0].findtext("./span[@class='val']").endswith(" · 1 Quoted span")
     assert chart[-1].findtext("./span[@class='val']") == "0.0% · 0 Quoted spans"
+    details = panel.find("./details[@class='dialogue-measurements']")
+    assert details is not None and "open" not in details.attrib
+    assert len(details.findall(".//tbody/tr")) == count
 
 
 @pytest.mark.parametrize("locale", LOCALES)
@@ -74,6 +77,11 @@ def test_pacing_names_the_bar_measurement_and_explains_the_existing_hook_heurist
     panel = ElementTree.fromstring(render_pacing_panel(report, labels, locale))  # noqa: S314
     help_texts = [span.attrib["data-help"] for span in panel.findall(".//span[@class='help']")]
     assert labels.get("help_pacing_hook") and labels["help_pacing_hook"].replace("{max_words}", "8") in help_texts
+    assert labels.get("help_pacing_cohesion") in help_texts
+    assert labels.get("help_pacing_monotony") in help_texts
+    details = panel.find("./details[@class='pacing-measurements']")
+    assert details is not None and "open" not in details.attrib
+    assert len(details.findall(".//tbody/tr")) == 1
     guide = panel.find("./p[@class='panel-guide']")
     assert guide is not None and "ASL" in "".join(guide.itertext())
     assert labels["pacing_scale"] in "".join(guide.itertext())

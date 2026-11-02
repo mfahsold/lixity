@@ -2,6 +2,12 @@
 
 Practical articles for authors, editors and manuscript reviewers: investigate a passage, examine the research behind a scene detail and prepare the right reading copy. Each article connects a concrete question to a reading decision. All examples use public-domain or synthetic texts.
 
+## [What makes a novel read well? Literary research, editorial craft and manuscript data](literary-quality-and-editorial-metrics.html)
+
+Published 2 November 2026 · 10 minutes · [Deutsche Fassung](leseguete-und-lektoratsmetriken-de.html)
+
+Compare empirical findings from computational literary studies with chapter-level measurements from Fontane's *Effi Briest* and Austen's *Pride and Prejudice*: how dialogue cadence, voice contrast between speech and narration, and paragraph-local cohesion support concrete editorial revision without turning prose into a score.
+
 ## [From chapter comparisons to spoken direction: 3D style space and speech-plan export](speech-direction-and-style-space.html)
 
 Published 2 November 2026 · 6 minutes

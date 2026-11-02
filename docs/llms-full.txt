@@ -6235,7 +6235,9 @@ restating formulas.
 | :--- | :--- | :--- |
 | Sentence bins | ≤ 6 / 7–15 / 16–25 / > 25 words (`analyzer.py`, `pacing.py`) | Bins describe the supplied text; tokenless fragments distort ASL |
 | Hook | Closing sentence ≤ `HOOK_SHORT_SENTENCE` (8) words, ending in `?`, `!` or `…`, or containing detected dialogue (`pacing.py`) | Each condition adds one point; the displayed mean is over chapter endings, not scenes. This is not a validated suspense measure. Only the ellipsis character scores; `...` does not |
+| Sentence-start monotony & adjacent overlap | `repeated_start_runs`: count of runs of ≥ `MONOTONY_MIN_RUN` (3) consecutive sentences in the same paragraph starting with the identical lowercased word token; `sentence_overlap_pct`: share of within-paragraph adjacent sentence pairs sharing at least one lowercased content word (tokens of length ≥ 2 not in `function_words`, or length ≥ `COHESION_FALLBACK_MIN_LEN` = 4 when `function_words` is empty) (`pacing.py`) | Repeated starts can be deliberate anaphora or unwitting monotony; lexical overlap ignores synonyms, pronouns, morphology and cross-paragraph links |
 | Dialogue paragraph | ≥ 50 % of the paragraph's words inside chapter-wide recognized dialogue spans (`dialogue.py`); a span may cover multiple paragraphs | Quotation conventions differ per language; an unrecognized or unclosed quotation is not counted |
+| Dialogue cadence & voice contrast | `short_turns` / `short_turn_pct`: quoted spans with 1–`SHORT_TURN_MAX_WORDS` (12) words; `long_turns`: quoted spans with ≥ `LONG_TURN_MIN_WORDS` (80) words; `dialogue_asl` vs. `narration_asl` and `asl_contrast = dialogue_asl - narration_asl` over recognized quoted spans vs. chapter prose outside unioned quoted spans (`dialogue.py`) | Split quotes around a reporting clause count as separate spans (`"Alpha," she said, "and beta."`); `asl_contrast` is `null` when either quoted speech or unquoted narration is absent |
 | Tense mixed/switch | `mixed`: ≥ 2 present and ≥ 2 past markers and minority share ≥ 25 %; `switch`: the dominant tense changes between consecutive paragraphs (`style_profile.py`) | Lexical cues and language-specific patterns are incomplete and can be ambiguous; they are not grammatical parses. Since v0.7.7, an unknown German `-te/-ten/-test` ending alone is not a past cue; no productive present pattern |
 | Sentence splitter | Language abbreviation tables, digit and initial guards; utterance `no.`/`co.` split; prose splits keep blank-line block boundaries (`split_prose_sentences`) | Tables are curated and incomplete; tokenless fragments are not sentences; an unterminated block stays one fragment unit with its token length |
 | Severity | `classify_severity` truth table; defaults: 3 = switch + mixed + minority ≥ 3, 2 = (switch + minority ≥ 2) or (mixed + minority ≥ 3), 1 = either, 0 = neither | Only `flag_min_severity` reaches CLI/API/config; other `ProfileThresholds` fields need direct `ParagraphProfiler` construction |
@@ -7023,7 +7025,16 @@ Showing/telling is a composite of those visible signals. Empty rankings and
 zero fallback scores do not establish equal artistic effect. Without explicit
 dividers, pacing scenes are chapter placeholders. Short sentences, perception
 verbs and vocabulary contrast do not establish immersion, tension or a reason
-to rewrite. Scene/register targets are explicit author preferences, never
+to rewrite. Repeated sentence-start runs (`repeated_start_runs`) do not
+distinguish rhetorical anaphora from unintentional repetition, and adjacent
+sentence content-word overlap (`sentence_overlap_pct`) measures exact
+lowercased surface-token sharing within paragraphs rather than semantic
+coherence, coreference or inflected lemmas. Similarly, dialogue cadence
+(`short_turns`, `long_turns`) and quoted-versus-narration sentence length
+contrast (`dialogue_asl`, `narration_asl`, `asl_contrast`) operate on
+recognized quotation spans rather than speaker turns: a single utterance
+interrupted by an unquoted reporting clause counts as two shorter quoted spans
+and leaves the reporting clause in unquoted narration. Scene/register targets are explicit author preferences, never
 hardcoded genre norms. [Underwood's expert discussion](https://tedunderwood.com/2024/01/05/can-language-models-predict-the-next-twist-in-a-story/)
 illustrates why surface predictability and narrative experience differ.
 

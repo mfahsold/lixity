@@ -24,16 +24,25 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from itertools import pairwise
 from typing import Any
 
 from .language import compile_pattern, compile_word_pattern, quotation_texts, resolve_language
 from .markdown_parser import SCENE_BREAK_RE as SCENE_BREAK_RE
-from .markdown_parser import prose_text, split_chapters, split_scenes
+from .markdown_parser import prose_paragraphs, prose_text, split_chapters, split_scenes
 from .models import CorpusConfig
 from .sentences import SHORT_SENTENCE_MAX, split_prose_sentences
 
 # Hook heuristic: a closing sentence counts as punchy up to this length.
 HOOK_SHORT_SENTENCE = 8
+
+# Rhythm monotony heuristic: consecutive sentences in one paragraph starting
+# with the identical lowercased word token.
+MONOTONY_MIN_RUN = 3
+
+# Fallback content-word length floor when a language profile has no function-word
+# lexicon (e.g. "generic").
+COHESION_FALLBACK_MIN_LEN = 4
 
 
 @dataclass(frozen=True)
@@ -75,6 +84,9 @@ class ChapterPacing:
     closing_is_dialogue: bool
     hook_score: int
     scene_list: list[SceneStats] = field(default_factory=list)
+    repeated_start_runs: int = 0
+    adjacent_sentence_pairs: int = 0
+    sentence_overlap_pct: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -90,6 +102,9 @@ class ChapterPacing:
             "closing_terminal": self.closing_terminal,
             "closing_is_dialogue": self.closing_is_dialogue,
             "hook_score": self.hook_score,
+            "repeated_start_runs": self.repeated_start_runs,
+            "adjacent_sentence_pairs": self.adjacent_sentence_pairs,
+            "sentence_overlap_pct": round(self.sentence_overlap_pct, 2),
             "scene_list": [scene.to_dict() for scene in self.scene_list],
         }
 
@@ -108,6 +123,9 @@ class PacingReport:
     fastest_chapter: int | None
     slowest_chapter: int | None
     chapter_list: list[ChapterPacing] = field(default_factory=list)
+    repeated_start_runs: int = 0
+    adjacent_sentence_pairs: int = 0
+    sentence_overlap_pct: float = 0.0
 
     @property
     def scenes_are_chapters(self) -> bool:
@@ -124,6 +142,9 @@ class PacingReport:
             "avg_scene_words": round(self.avg_scene_words, 2),
             "avg_chapter_scenes": round(self.avg_chapter_scenes, 2),
             "hook_score_mean": round(self.hook_score_mean, 2),
+            "repeated_start_runs": self.repeated_start_runs,
+            "adjacent_sentence_pairs": self.adjacent_sentence_pairs,
+            "sentence_overlap_pct": round(self.sentence_overlap_pct, 2),
             "fastest_chapter": self.fastest_chapter,
             "slowest_chapter": self.slowest_chapter,
             "chapter_list": [chapter.to_dict() for chapter in self.chapter_list],
@@ -177,6 +198,59 @@ def _hook_score(closing: str, is_dialogue: bool, word_re: re.Pattern[str]) -> tu
     return score, words, terminal
 
 
+def _chapter_flow_stats(
+    body: str,
+    word_re: re.Pattern[str],
+    language_key: str,
+    function_words: frozenset[str],
+) -> tuple[int, int, int]:
+    """(repeated sentence-start runs, adjacent sentence pairs, linked sentence pairs)."""
+    repeated_runs = 0
+    adjacent_pairs = 0
+    linked_pairs = 0
+    has_function_lexicon = bool(function_words)
+    for paragraph in prose_paragraphs(body, _front_matter=False):
+        sentences = [
+            s
+            for s in split_prose_sentences(paragraph, language_key)
+            if word_re.search(s)
+        ]
+        if len(sentences) < 2:
+            continue
+        starts: list[str] = []
+        content_sets: list[set[str]] = []
+        for sentence in sentences:
+            tokens = [w.lower() for w in word_re.findall(sentence)]
+            if not tokens:
+                continue
+            starts.append(tokens[0])
+            if has_function_lexicon:
+                content = {
+                    t for t in tokens if len(t) >= 2 and t not in function_words
+                }
+            else:
+                content = {
+                    t for t in tokens if len(t) >= COHESION_FALLBACK_MIN_LEN
+                }
+            content_sets.append(content)
+        run_len = 1
+        for prev_start, curr_start in pairwise(starts):
+            if curr_start == prev_start:
+                run_len += 1
+            else:
+                if run_len >= MONOTONY_MIN_RUN:
+                    repeated_runs += 1
+                run_len = 1
+        if run_len >= MONOTONY_MIN_RUN:
+            repeated_runs += 1
+        for prev_set, curr_set in pairwise(content_sets):
+            if prev_set and curr_set:
+                adjacent_pairs += 1
+                if prev_set & curr_set:
+                    linked_pairs += 1
+    return repeated_runs, adjacent_pairs, linked_pairs
+
+
 def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport:
     """Scene structure, pacing signals and chapter hooks (deterministic)."""
     config = config or CorpusConfig()
@@ -190,6 +264,9 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
     explicit_breaks = 0
     hook_scores: list[int] = []
     pace: dict[int, float] = {}
+    total_repeated_runs = 0
+    total_adjacent_pairs = 0
+    total_linked_pairs = 0
 
     for number, title, body in split_chapters(text, config):
         clean = prose_text(body, _front_matter=False)
@@ -220,6 +297,10 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
         closing = _closing_sentence(clean, resolved.key)
         closing_is_dialogue = bool(dialogue_re.search(closing))
         hook, closing_words, terminal = _hook_score(closing, closing_is_dialogue, word_re)
+        repeated_runs, adjacent_pairs, linked_pairs = _chapter_flow_stats(
+            body, word_re, resolved.key, resolved.function_words
+        )
+        overlap_pct = (linked_pairs / adjacent_pairs * 100.0) if adjacent_pairs else 0.0
 
         chapter_list.append(
             ChapterPacing(
@@ -236,12 +317,18 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
                 closing_is_dialogue=closing_is_dialogue,
                 hook_score=hook,
                 scene_list=scenes,
+                repeated_start_runs=repeated_runs,
+                adjacent_sentence_pairs=adjacent_pairs,
+                sentence_overlap_pct=overlap_pct,
             )
         )
         total_scenes += len(scenes)
         total_scene_words += scene_words
         hook_scores.append(hook)
         pace[number] = asl
+        total_repeated_runs += repeated_runs
+        total_adjacent_pairs += adjacent_pairs
+        total_linked_pairs += linked_pairs
 
     fastest = min(pace, key=lambda key: pace[key]) if pace else None
     slowest = max(pace, key=lambda key: pace[key]) if pace else None
@@ -256,4 +343,11 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
         fastest_chapter=fastest,
         slowest_chapter=slowest,
         chapter_list=chapter_list,
+        repeated_start_runs=total_repeated_runs,
+        adjacent_sentence_pairs=total_adjacent_pairs,
+        sentence_overlap_pct=(
+            (total_linked_pairs / total_adjacent_pairs * 100.0)
+            if total_adjacent_pairs
+            else 0.0
+        ),
     )

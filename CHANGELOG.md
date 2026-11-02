@@ -8,6 +8,17 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Dialogue cadence and voice-contrast measurements in `dialogue_report`, CLI
+  `dialogue`, and the Quoted passages overview panel: short quoted spans
+  (`1–12` words, `short_turns`, `short_turn_pct`), long monologue spans
+  (`>= 80` words, `long_turns`), and sentence-length contrast between recognized
+  quoted spans and unquoted narration (`dialogue_asl`, `narration_asl`,
+  `asl_contrast`, reported as `null`/`–` when either side is absent).
+- Paragraph-local flow and cohesion signals in `pacing_report`, CLI `pacing`,
+  and the Pacing & scenes overview panel: consecutive repeated sentence-start
+  runs within paragraphs (`>= 3` sentences starting with the same word,
+  `repeated_start_runs`) and adjacent-sentence content-word overlap
+  (`adjacent_sentence_pairs`, `sentence_overlap_pct`).
 - `audio-export-plan` and scoped browser JSON/SSML downloads share the manuscript
   direction planner. `lixity-audio-timeline/1` retains source/substitution
   provenance, voice choices, delivery and pauses; SSML reports unsupported
@@ -40,6 +51,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   direction without manually supplying snapshot hashes.
 
 ### Changed
+- Analysis overview sections, KPI groups, and work markers are ordered by
+  editorial workflow relevance: flagged passages and open work markers first,
+  followed by pacing and scenes, dialogue and sentence craft, character
+  mentions and local phrase echoes, and corpus style comparison and the chapter
+  matrix.
 - Analysis navigation links and the return and audio controls offer localized
   contextual help on hover or keyboard focus, reusing the shared tooltip.
 - Project creation rejects invalid or automatic language values with HTTP 400

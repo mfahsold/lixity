@@ -517,7 +517,16 @@ Showing/telling is a composite of those visible signals. Empty rankings and
 zero fallback scores do not establish equal artistic effect. Without explicit
 dividers, pacing scenes are chapter placeholders. Short sentences, perception
 verbs and vocabulary contrast do not establish immersion, tension or a reason
-to rewrite. Scene/register targets are explicit author preferences, never
+to rewrite. Repeated sentence-start runs (`repeated_start_runs`) do not
+distinguish rhetorical anaphora from unintentional repetition, and adjacent
+sentence content-word overlap (`sentence_overlap_pct`) measures exact
+lowercased surface-token sharing within paragraphs rather than semantic
+coherence, coreference or inflected lemmas. Similarly, dialogue cadence
+(`short_turns`, `long_turns`) and quoted-versus-narration sentence length
+contrast (`dialogue_asl`, `narration_asl`, `asl_contrast`) operate on
+recognized quotation spans rather than speaker turns: a single utterance
+interrupted by an unquoted reporting clause counts as two shorter quoted spans
+and leaves the reporting clause in unquoted narration. Scene/register targets are explicit author preferences, never
 hardcoded genre norms. [Underwood's expert discussion](https://tedunderwood.com/2024/01/05/can-language-models-predict-the-next-twist-in-a-story/)
 illustrates why surface predictability and narrative experience differ.
 

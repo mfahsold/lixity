@@ -154,6 +154,23 @@ class TestReportSurface(unittest.TestCase):
         self.assertFalse(report.scenes_are_chapters)
         self.assertIs(report.to_dict()["scenes_are_chapters"], False)
 
+    def test_repeated_start_runs_and_sentence_overlap(self):
+        text = (
+            "## Eins\n\n"
+            "Er öffnete die schwere Eisentür. "
+            "Er blickte hinter die Eisentür in den Gang. "
+            "Er betrat den dunklen Gang.\n\n"
+            "Mara wartete draußen. Tomas schwieg.\n"
+        )
+        report = pacing_report(text, DE)
+        chapter = report.chapter_list[0]
+        self.assertEqual(chapter.repeated_start_runs, 1)
+        self.assertEqual(chapter.adjacent_sentence_pairs, 3)
+        self.assertAlmostEqual(chapter.sentence_overlap_pct, 2 / 3 * 100.0, places=4)
+        self.assertEqual(report.repeated_start_runs, 1)
+        self.assertEqual(report.adjacent_sentence_pairs, 3)
+        self.assertAlmostEqual(report.sentence_overlap_pct, 2 / 3 * 100.0, places=4)
+
 
 if __name__ == "__main__":
     unittest.main()

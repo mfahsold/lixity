@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from ..dialogue import LONG_TURN_MIN_WORDS, SHORT_TURN_MAX_WORDS
 from ..diversity import MIN_TOKENS_LD
 from ..format import num as format_num
 from ..pacing import HOOK_SHORT_SENTENCE
@@ -175,6 +176,47 @@ def render_dialogue_panel(
     parts.append(kpi(P(dialogue.get("dialogue_pct", 0.0)), L("dialogue")))
     parts.append(kpi(N(dialogue.get("avg_turn_words", 0.0), 1), L("dlg_avg_turn"), jump="#chapters"))
     parts.append(kpi(N(dialogue.get("turns_per_1000", 0.0), 1), L("dlg_turns_per_1000"), jump="#chapters"))
+    if "short_turn_pct" in dialogue:
+        short_label = esc(
+            label(labels, "dlg_short_turns").replace("{max_words}", str(SHORT_TURN_MAX_WORDS))
+        )
+        parts.append(
+            kpi(
+                P(float(dialogue.get("short_turn_pct", 0.0))),
+                help_term(
+                    labels,
+                    "dlg_short_turns",
+                    short_label,
+                    fields={"max_words": str(SHORT_TURN_MAX_WORDS)},
+                ),
+            )
+        )
+    if "long_turns" in dialogue:
+        long_label = esc(
+            label(labels, "dlg_long_turns").replace("{min_words}", str(LONG_TURN_MIN_WORDS))
+        )
+        parts.append(
+            kpi(
+                N(int(dialogue.get("long_turns", 0)), 0),
+                help_term(
+                    labels,
+                    "dlg_long_turns",
+                    long_label,
+                    fields={"min_words": str(LONG_TURN_MIN_WORDS)},
+                ),
+            )
+        )
+    if "asl_contrast" in dialogue or "dialogue_asl" in dialogue:
+        contrast_raw = dialogue.get("asl_contrast")
+        contrast_val = (
+            N(float(contrast_raw), 1, signed=True) if contrast_raw is not None else "–"
+        )
+        parts.append(
+            kpi(
+                contrast_val,
+                help_term(labels, "dlg_voice_contrast", L("dlg_voice_contrast")),
+            )
+        )
     parts.append("</div>")
 
     dialogue_chapters = dialogue.get("chapters", [])
@@ -196,6 +238,49 @@ def render_dialogue_panel(
                 f"</div>"
             )
         parts.append("</div>")
+        if any("short_turn_pct" in ch or "dialogue_asl" in ch for ch in dialogue_chapters):
+            short_col = esc(
+                label(labels, "dlg_short_turns").replace("{max_words}", str(SHORT_TURN_MAX_WORDS))
+            )
+            long_col = esc(
+                label(labels, "dlg_long_turns").replace("{min_words}", str(LONG_TURN_MIN_WORDS))
+            )
+            parts.append(
+                f'<details class="dialogue-measurements"><summary>{L("dlg_chapter_details")} '
+                f"({len(dialogue_chapters)})</summary>"
+                f'<div class="table-wrap" tabindex="0" role="region" aria-label="{L("dlg_chapter_details")}">'
+                "<table><thead><tr>"
+                f'<th scope="col">{L("chapter")}</th>'
+                f'<th scope="col" class="num">{L("dlg_turns")}</th>'
+                f'<th scope="col" class="num">{short_col}</th>'
+                f'<th scope="col" class="num">{long_col}</th>'
+                f'<th scope="col" class="num">{L("dlg_dialogue_asl")}</th>'
+                f'<th scope="col" class="num">{L("dlg_narration_asl")}</th>'
+                f'<th scope="col" class="num">{L("dlg_voice_contrast")}</th>'
+                "</tr></thead><tbody>"
+            )
+            for chapter in dialogue_chapters:
+                num = int(chapter.get("chapter_num", 0))
+                turns = int(chapter.get("turns", 0))
+                short_turns = int(chapter.get("short_turns", 0))
+                short_pct = float(chapter.get("short_turn_pct", 0.0))
+                long_turns = int(chapter.get("long_turns", 0))
+                dlg_asl = float(chapter.get("dialogue_asl", 0.0))
+                nar_asl = float(chapter.get("narration_asl", 0.0))
+                ch_contrast = chapter.get("asl_contrast")
+                chapter_label = f'{label(labels, "chapter")} {num} · {chapter.get("title", "")}'
+                parts.append(
+                    f"<tr>"
+                    f'<th scope="row">{chapter_link(num, chapter_label)}</th>'
+                    f'<td class="num">{N(turns, 0)}</td>'
+                    f'<td class="num">{N(short_turns, 0)} ({P(short_pct)})</td>'
+                    f'<td class="num">{N(long_turns, 0)}</td>'
+                    f'<td class="num">{N(dlg_asl, 1) if turns > 0 else "–"}</td>'
+                    f'<td class="num">{N(nar_asl, 1) if nar_asl > 0 else "–"}</td>'
+                    f'<td class="num">{N(float(ch_contrast), 1, signed=True) if ch_contrast is not None else "–"}</td>'
+                    f"</tr>"
+                )
+            parts.append("</tbody></table></div></details>")
     parts.append("</section>")
     return "".join(parts)
 
@@ -273,7 +358,7 @@ def render_pacing_panel(
     if not (pacing and pacing.get("chapter_list")):
         return ""
 
-    L, N, _ = panel_formatters(labels, language_key)
+    L, N, P = panel_formatters(labels, language_key)
 
     parts: list[str] = [panel_start("pacing", labels, "panel_pacing")]
     if pacing.get("scenes_are_chapters", False):
@@ -284,6 +369,10 @@ def render_pacing_panel(
     parts.append(kpi(N(pacing.get("hook_score_mean", 0.0), 2),
                      help_term(labels, "pacing_hook", L("pac_hook_mean"),
                                fields={"max_words": str(HOOK_SHORT_SENTENCE)})))
+    if "sentence_overlap_pct" in pacing:
+        parts.append(kpi(P(float(pacing.get("sentence_overlap_pct", 0.0))), L("pac_cohesion")))
+    if "repeated_start_runs" in pacing:
+        parts.append(kpi(N(int(pacing.get("repeated_start_runs", 0)), 0), L("pac_monotony")))
     parts.append("</div>")
     units = FEATURE_UNITS.get(language_key, {}).get("asl", "words per sentence")
     parts.append(f'<p class="panel-guide">{help_term(labels, "asl", L("feat_asl"))} '
@@ -306,7 +395,38 @@ def render_pacing_panel(
             f'<span class="val">{L("feat_asl")} {N(asl, 1)} · {L("pac_hook")} {hook}</span>'
             f"</div>"
         )
-    parts.append("</div></section>")
+    parts.append("</div>")
+    if any("sentence_overlap_pct" in ch or "repeated_start_runs" in ch for ch in chapters_pacing):
+        parts.append(
+            f'<details class="pacing-measurements"><summary>{L("pac_chapter_details")} '
+            f"({len(chapters_pacing)})</summary>"
+            f'<div class="table-wrap" tabindex="0" role="region" aria-label="{L("pac_chapter_details")}">'
+            "<table><thead><tr>"
+            f'<th scope="col">{L("chapter")}</th>'
+            f'<th scope="col" class="num">{L("feat_asl")}</th>'
+            f'<th scope="col" class="num">{L("pac_hook")}</th>'
+            f'<th scope="col" class="num">{help_term(labels, "pacing_cohesion", L("pac_cohesion"))}</th>'
+            f'<th scope="col" class="num">{help_term(labels, "pacing_monotony", L("pac_monotony"))}</th>'
+            "</tr></thead><tbody>"
+        )
+        for chapter in chapters_pacing:
+            num = int(chapter.get("chapter_num", 0))
+            asl = float(chapter.get("asl", 0.0))
+            hook = int(chapter.get("hook_score", 0))
+            overlap = float(chapter.get("sentence_overlap_pct", 0.0))
+            monotony = int(chapter.get("repeated_start_runs", 0))
+            chapter_label = f'{label(labels, "chapter")} {num} · {chapter.get("title", "")}'
+            parts.append(
+                f"<tr>"
+                f'<th scope="row">{chapter_link(num, chapter_label)}</th>'
+                f'<td class="num">{N(asl, 1)}</td>'
+                f'<td class="num">{N(hook, 0)}</td>'
+                f'<td class="num">{P(overlap)}</td>'
+                f'<td class="num">{N(monotony, 0)}</td>'
+                f"</tr>"
+            )
+        parts.append("</tbody></table></div></details>")
+    parts.append("</section>")
     return "".join(parts)
 
 

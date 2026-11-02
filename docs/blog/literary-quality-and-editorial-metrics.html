@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>What makes a novel read well? Literary research, editorial craft and manuscript data — Lixity blog</title>
+<meta name="description" content="What large-scale empirical studies of novels and editorial practice reveal about voice contrast, sentence cohesion, pacing and vocabulary — demonstrated with Lixity measurements on public-domain classics."/>
+<link rel="canonical" href="https://mfahsold.github.io/lixity/blog/literary-quality-and-editorial-metrics.html"/>
+<link rel="stylesheet" href="../assets/site.css"/>
+<script src="../assets/site.js" defer></script>
+<meta property="og:type" content="article"/>
+<meta property="og:title" content="What makes a novel read well? Literary research, editorial craft and manuscript data"/>
+<meta property="og:description" content="How empirical findings from computational literary studies and developmental editing translate into concrete manuscript checks in Lixity, with data from Effi Briest and Pride and Prejudice."/>
+<meta property="og:url" content="https://mfahsold.github.io/lixity/blog/literary-quality-and-editorial-metrics.html"/>
+<meta property="og:site_name" content="Lixity"/>
+<meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-heatmap.png"/>
+<meta property="og:image:width" content="2194"/>
+<meta property="og:image:height" content="1054"/>
+<meta property="og:image:alt" content="Chapter comparison map showing differences from the manuscript's own style"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="What makes a novel read well? Literary research, editorial craft and manuscript data"/>
+<meta name="twitter:description" content="How empirical findings from computational literary studies and developmental editing translate into concrete manuscript checks in Lixity."/>
+<meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-heatmap.png"/>
+<meta name="twitter:image:alt" content="Chapter comparison map showing differences from the manuscript's own style"/>
+<link rel="alternate" type="text/markdown" href="literary-quality-and-editorial-metrics.html.md" title="Markdown version of this page"/>
+<link rel="alternate" type="text/plain" href="../llms.txt" title="Automation summary"/>
+<link rel="help" href="../AGENTS.md" title="CLI, Python and HTTP interface contracts"/>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "What makes a novel read well? Literary research, editorial craft and manuscript data",
+  "description": "What large-scale empirical studies of novels and editorial practice reveal about voice contrast, sentence cohesion, pacing and vocabulary — demonstrated with Lixity measurements on public-domain classics.",
+  "url": "https://mfahsold.github.io/lixity/blog/literary-quality-and-editorial-metrics.html",
+  "inLanguage": "en",
+  "datePublished": "2026-11-02",
+  "dateModified": "2026-11-02",
+  "author": {
+    "@type": "Person",
+    "name": "Matthias Fahsold",
+    "url": "https://github.com/mfahsold"
+  },
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "Lixity",
+    "url": "https://mfahsold.github.io/lixity/"
+  },
+  "mainEntityOfPage": "https://mfahsold.github.io/lixity/blog/literary-quality-and-editorial-metrics.html",
+  "image": {
+    "@type": "ImageObject",
+    "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-heatmap.png",
+    "width": 2194,
+    "height": 1054,
+    "caption": "Chapter comparison map showing differences from the manuscript's own style"
+  }
+}
+</script>
+</head>
+<body id="top" tabindex="-1" class="site-page">
+<a class="skip-link" href="#content">Skip to article</a>
+<header class="site-header"><div class="header-inner">
+<a class="brand" href="../"><span class="brand-name">Lixity</span></a>
+<nav class="site-return" aria-label="Lixity navigation"><a href="../#guides">Guides</a><a href="../guides/installation.html">Install</a></nav>
+<button class="ctl theme-btn" id="themeToggle" type="button" hidden>Theme: system</button>
+</div></header>
+<main class="guide" id="content">
+<nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="index.html">Articles</a></li><li><span aria-current="page">Literary research and manuscript data</span></li></ol></nav>
+<h1>What makes a novel read well? Literary research, editorial craft and manuscript data</h1>
+<p class="updated">Published <time datetime="2026-11-02">2 November 2026</time> · 10 minutes · <a href="leseguete-und-lektoratsmetriken-de.html">Deutsche Fassung</a></p>
+
+<p>When an author and an editor sit down with a 350-page manuscript, they rarely argue about a single Flesch readability number. Developmental and line editors ask structural and rhythmic questions instead: <em>Do the characters sound distinct from the narrator, or does every dialogue turn read like an essay? Where does a chapter's tempo stall because four sentences in a row open with the same pronoun? When a chapter shifts into a long letter or an internal reckoning, is that shift deliberate?</em></p>
+
+<p>Over the past decade, empirical literary studies, cognitive reading research and publishing scholarship have investigated how these craft questions relate to perceived literary quality and reader engagement. None of those studies justify reducing a novel to a single score. What they do show is which observable text signals are worth inspecting during revision — and why a manuscript must be compared against its own baseline rather than a generic rulebook.</p>
+
+<h2 id="research">1. What empirical studies of novels and editing actually found</h2>
+
+<p>Four research traditions inform how Lixity structures its manuscript overview:</p>
+
+<ul>
+<li><strong>Developmental vs. line editing (Ginna, 2017; Greenberg, 2018).</strong> Editorial practice separates macro-work (scene economy, chapter pacing, character presence, perspective) from paragraph-level line craft (tense continuity, sentence-to-sentence cohesion, unintentional phrase echoes, and rhythm monotony). Most writing tools stop at sentence-level grammar or a single readability formula; authors and editors need a map that connects chapter-level shifts directly back to the exact paragraph in the manuscript.</li>
+<li><strong>The complexity vs. pace trade-off (<em>The Riddle of Literary Quality</em>, Koolen, van Dalen-Oskam &amp; van Cranenburgh, 2020).</strong> In the Dutch National Reader Survey (401 novels rated by more than 13,800 readers), high literary prestige correlated with higher lexical diversity (such as MTLD and HD-D) and longer, more varied syntactic structures, whereas fast-moving genre fiction relied on tighter local sentence-to-sentence cohesion and brisk dialogue cadence. A single “good writing” score is therefore a category error: a literary novel and a thriller optimize different dimensions.</li>
+<li><strong>Pacing cadence and thematic focus (Archer &amp; Jockers, 2016; Boyd, Blackburn &amp; Pennebaker, 2020).</strong> Large-scale corpus studies of commercial and literary fiction highlight regular alternation between conversational immediacy and reflective narration, alongside clear transitions between scene-setting exposition and active conflict.</li>
+<li><strong>Local referential cohesion and voice separation (Graesser et al., 2004; Burrows, 2002).</strong> Psycholinguistic work on reading flow (Coh-Metrix) shows that readers perceive prose as cohesive when adjacent sentences share topical content words, and perceive dialogue as natural when spoken turns differ in length and cadence from surrounding narrative description.</li>
+</ul>
+
+<h2 id="classic-data">2. Measuring two complete public-domain novels with Lixity</h2>
+
+<p>To see how these signals behave on real books rather than toy paragraphs, we can run Lixity on the two complete public-domain novels bundled in the repository: Theodor Fontane's <em>Effi Briest</em> (1895, Project Gutenberg #5323, 36 chapters) and Jane Austen's <em>Pride and Prejudice</em> (1813, Project Gutenberg #1342, 61 chapters).</p>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Corpus-level comparison of Effi Briest and Pride and Prejudice">
+<table>
+<thead>
+<tr>
+<th scope="col">Observable measurement</th>
+<th scope="col"><em>Effi Briest</em> (Fontane, 1895, DE)</th>
+<th scope="col"><em>Pride and Prejudice</em> (Austen, 1813, EN)</th>
+<th scope="col">What an author or editor checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th scope="row">Chapters / prose words</th>
+<td>36 chapters · 95,449 words</td>
+<td>61 chapters · 117,916 words</td>
+<td>Overall manuscript scale and chapter granularity</td>
+</tr>
+<tr>
+<th scope="row">Lexical diversity (MTLD / HD-D)</th>
+<td>132.4 / 0.901</td>
+<td>102.3 / 0.872</td>
+<td>Vocabulary breadth independent of chapter length</td>
+</tr>
+<tr>
+<th scope="row">Overall mean sentence length (ASL)</th>
+<td>15.31 words/sentence</td>
+<td>20.15 words/sentence</td>
+<td>Baseline sentence span across the whole book</td>
+</tr>
+<tr>
+<th scope="row">Short-sentence share (staccato ≤ 6 words)</th>
+<td>31.7%</td>
+<td>15.6%</td>
+<td>Share of brief utterances and rapid beats</td>
+</tr>
+<tr>
+<th scope="row">Quoted-word share &amp; span count</th>
+<td>55.4% (1,875 quoted spans)</td>
+<td>45.2% (1,731 quoted spans)</td>
+<td>Balance between quoted speech and narration</td>
+</tr>
+<tr>
+<th scope="row">Short quoted spans (≤ 12 words)</th>
+<td>49.9% of spans (936)</td>
+<td>45.2% of spans (783)</td>
+<td>Rapid back-and-forth exchange vs. extended speeches</td>
+</tr>
+<tr>
+<th scope="row">Long quoted spans (≥ 80 words)</th>
+<td>58 spans</td>
+<td>138 spans</td>
+<td>Extended monologues or letters inside quotation marks</td>
+</tr>
+<tr>
+<th scope="row">Quoted ASL vs. Narration ASL</th>
+<td>11.20 vs. 21.10 words/sentence</td>
+<td>13.67 vs. 23.39 words/sentence</td>
+<td>Whether characters speak in shorter sentences than the narrator</td>
+</tr>
+<tr>
+<th scope="row">Voice contrast (ASL Δ = quotes − narration)</th>
+<td><strong>−9.90 words/sentence</strong></td>
+<td><strong>−9.73 words/sentence</strong></td>
+<td>Separation between spoken cadence and narrative prose</td>
+</tr>
+<tr>
+<th scope="row">Adjacent sentence overlap (cohesion)</th>
+<td>23.7% of adjacent pairs</td>
+<td>23.6% of adjacent pairs</td>
+<td>Within-paragraph content-word chaining from sentence to sentence</td>
+</tr>
+<tr>
+<th scope="row">Repeated sentence starts (runs ≥ 3)</th>
+<td>5 runs across 36 chapters</td>
+<td>21 runs across 61 chapters</td>
+<td>Candidates for deliberate anaphora or unintended start monotony</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<p>Look at the <strong>Voice contrast (ASL Δ)</strong> row in both novels. Although Fontane writes in late-19th-century German and Austen writes in Regency English, both novelists maintain an almost identical structural separation of nearly <strong>10 words per sentence</strong> between their narrative prose and their characters' spoken dialogue:</p>
+
+<ul>
+<li>In <em>Effi Briest</em>, unquoted narration averages <strong>21.10 words per sentence</strong>, while recognized quoted spans average <strong>11.20 words per sentence</strong> (<code>ASL Δ = −9.90</code>), and half of all quoted spans (<code>49.9%</code>) are 12 words or shorter.</li>
+<li>In <em>Pride and Prejudice</em>, unquoted narration averages <strong>23.39 words per sentence</strong>, while quoted spans average <strong>13.67 words per sentence</strong> (<code>ASL Δ = −9.73</code>), with <code>45.2%</code> short spans.</li>
+</ul>
+
+<p>When a draft manuscript feels wooden in dialogue scenes, one of the most common causes is that <code>ASL Δ</code> hovers near zero: the characters are speaking in the exact same 20-word syntactic periods as the narrator.</p>
+
+<h2 id="chapter-drills">3. How chapter-level outliers reveal narrative structure</h2>
+
+<p>Corpus averages only set the stage. The real editorial value appears when we inspect individual chapters where dialogue cadence, voice contrast or local sentence overlap breaks away from the novel's own baseline.</p>
+
+<h3>Case A: <em>Pride and Prejudice</em> — banter, pompous monologue, and Darcy's letter</h3>
+
+<p>In Austen's novel, jumping from the <strong>Pacing &amp; scenes</strong> panel to the <strong>Quoted passages</strong> chapter disclosure immediately highlights four famous dramaturgical shifts:</p>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Selected chapter measurements in Pride and Prejudice">
+<table>
+<thead>
+<tr>
+<th scope="col">Chapter &amp; narrative moment</th>
+<th scope="col">Quoted share</th>
+<th scope="col">Short spans (≤ 12 w.)</th>
+<th scope="col">Quoted ASL</th>
+<th scope="col">Narration ASL</th>
+<th scope="col">ASL Δ</th>
+<th scope="col">Adjacent overlap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th scope="row">Ch. 1–2 — Mr. &amp; Mrs. Bennet's opening banter</th>
+<td>78.8% / 71.2%</td>
+<td>40.6% / 59.4%</td>
+<td>12.87 / 11.36</td>
+<td>12.00 / 10.45</td>
+<td>+0.87 / +0.91</td>
+<td>16.0% / 11.5%</td>
+</tr>
+<tr>
+<th scope="row">Ch. 15 — Mr. Collins's introduction and courtship</th>
+<td>3.0%</td>
+<td>50.0%</td>
+<td>25.50</td>
+<td>36.62</td>
+<td>−11.12</td>
+<td><strong>47.1%</strong></td>
+</tr>
+<tr>
+<th scope="row">Ch. 35 — Darcy's letter to Elizabeth</th>
+<td>87.6%</td>
+<td>0.0%</td>
+<td><strong>27.39</strong></td>
+<td>26.57</td>
+<td><strong>+0.81</strong></td>
+<td>31.7%</td>
+</tr>
+<tr>
+<th scope="row">Ch. 49 — Family reaction to Lydia's settlement</th>
+<td>62.5%</td>
+<td><strong>69.5%</strong></td>
+<td><strong>9.21</strong></td>
+<td>13.27</td>
+<td>−4.06</td>
+<td>12.1%</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<ul>
+<li><strong>Why Chapter 35 stands out:</strong> In Chapter 35, 87.6% of the words sit inside quotation marks, yet <code>short_turn_pct</code> drops to <strong>0.0%</strong> and <code>Quoted ASL</code> doubles to <strong>27.39 words per sentence</strong> (<code>ASL Δ = +0.81</code>). Why? Because the entire quoted span is Mr. Darcy's formal letter explaining Wickham and Jane. In Lixity, an author writing an epistolary chapter like Chapter 35 can assign it to an explicit <code>epistolary</code> <a href="intentional-registers.html">chapter register</a> so its formal sentence length is evaluated against letter targets rather than flagged as a dialogue anomaly.</li>
+<li><strong>Why Chapter 15 chains almost every sentence:</strong> In Chapter 15, where Austen summarizes Mr. Collins's self-important logic and his designs on Longbourn, narration ASL climbs to <strong>36.62 words</strong> and within-paragraph adjacent sentence overlap reaches <strong>47.1%</strong> — nearly double the novel's 23.6% mean — as each clauseelaborates the same social premise.</li>
+<li><strong>Why Chapter 49 accelerates:</strong> When news of Lydia and Wickham's marriage terms arrives in Chapter 49, nearly 70% of the 59 quoted spans are 12 words or fewer, and quoted ASL drops to <strong>9.21 words</strong>.</li>
+</ul>
+
+<h3>Case B: <em>Effi Briest</em> — conversational parlor vs. Innstetten's discovery of the letters</h3>
+
+<p>The same measurements trace Fontane's famous contrast between light social conversation (*Plauderton*) and psychological pressure:</p>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Selected chapter measurements in Effi Briest">
+<table>
+<thead>
+<tr>
+<th scope="col">Chapter &amp; narrative moment</th>
+<th scope="col">Quoted share</th>
+<th scope="col">Short spans (≤ 12 w.)</th>
+<th scope="col">Quoted ASL</th>
+<th scope="col">Narration ASL</th>
+<th scope="col">ASL Δ</th>
+<th scope="col">Adjacent overlap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th scope="row">Ch. 3 — Garden preparations and brief exchanges at Hohen-Cremmen</th>
+<td>19.2%</td>
+<td>64.3%</td>
+<td>7.26</td>
+<td>27.65</td>
+<td><strong>−20.40</strong></td>
+<td>33.8%</td>
+</tr>
+<tr>
+<th scope="row">Ch. 10 — Arrival in Kessin; Innstetten explains the house</th>
+<td>85.8%</td>
+<td>39.3%</td>
+<td>12.02</td>
+<td>11.63</td>
+<td><strong>+0.40</strong></td>
+<td>22.2%</td>
+</tr>
+<tr>
+<th scope="row">Ch. 26 — Discovery of Crampas's letters and duel decision</th>
+<td>25.7%</td>
+<td>66.7%</td>
+<td>9.29</td>
+<td>29.16</td>
+<td>−19.87</td>
+<td><strong>46.6%</strong></td>
+</tr>
+<tr>
+<th scope="row">Ch. 33 — Late Berlin scenes and medical advice</th>
+<td>62.5%</td>
+<td><strong>68.4%</strong></td>
+<td>9.62</td>
+<td>22.13</td>
+<td>−12.51</td>
+<td>25.0%</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<p>In <strong>Chapter 26</strong> — the turning point where Innstetten finds Major Crampas's letters in Effi's sewing table — dialogue drops to 25.7% (brief, clipped exchanges with Wüllersdorf at 9.29 words per sentence), while the narrative sentences lengthen to <strong>29.16 words</strong> and adjacent sentence content-word overlap surges to <strong>46.6%</strong>, the highest in the entire novel. Every paragraph hammers on the same recurring nouns as Innstetten talks himself into the duel.</p>
+
+<h2 id="workflow">4. An editorial workflow ordered by how authors and editors actually work</h2>
+
+<p>To make these signals practical during daily revision, Lixity organizes the <strong>Analysis overview</strong> in the order an author or editor moves through a draft:</p>
+
+<ol>
+<li><strong>Immediate passage triage (<em>Flagged passages</em> &amp; <em>Work markers</em>).</strong> Start with paragraphs that exhibit severe tense friction or open editorial notes, and record whether a passage was kept on purpose, revised, or deferred.</li>
+<li><strong>Dramaturgy, tempo &amp; registers (<em>Pacing &amp; scenes</em>, <em>Scenes &amp; style registers</em>).</strong> Inspect chapter ASL, closing hooks (0–3 heuristic), within-paragraph adjacent sentence overlap (<code>sentence_overlap_pct</code>), and runs of 3+ identical sentence openings (<code>repeated_start_runs</code>), then compare intentional registers (letters, diaries, flashbacks) against their own targets.</li>
+<li><strong>Voice, dialogue &amp; sentence craft (<em>Quoted passages</em>, <em>Sentence lengths</em>, <em>Signal-group comparison</em>).</strong> Check whether spoken turns have a distinct cadence from narration (<code>dialogue_asl</code>, <code>narration_asl</code>, <code>asl_contrast</code>), inspect short rapid turns (≤ 12 words) versus monologue blocks (≥ 80 words), and review perception filters, modal verbs, passive cues and noun endings.</li>
+<li><strong>Cast &amp; continuity (<em>Character name mentions</em>, <em>Motifs &amp; repetition</em>).</strong> Track character presence gaps across chapters and catch unintentional 300-word local phrase echoes.</li>
+<li><strong>Corpus baseline &amp; reference (<em>Style</em> heatmap, Style Passport, 3D Style Space, and <em>Chapter matrix</em>).</strong> Compare all chapters side by side against the manuscript's self-calibrated median/MAD corridor.</li>
+</ol>
+
+<p>You can run the new dialogue and pacing reports directly from the CLI or inspect them in the browser dashboard:</p>
+
+<pre><code>lixity dialogue samples/effi-briest.md --language de
+lixity pacing samples/pride-and-prejudice.md --language en</code></pre>
+
+<h2 id="limits">5. Methodological boundaries: what these numbers do not claim</h2>
+
+<p>Every measurement in Lixity is a deterministic rule over surface text, documented in <a href="https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md">METHODS.md</a> and bounded in <a href="https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md">STABILITY.md</a>:</p>
+
+<ul>
+<li><strong>Quoted spans are not speaker turns.</strong> Lixity detects quotation marks using the active language profile. A single utterance interrupted by an unquoted reporting clause (<code>"Come here," she said, "and shut the gate."</code>) counts as two shorter quoted spans and leaves the reporting clause in unquoted narration. Quoted letters or quoted thoughts also count as quoted spans unless you inspect them via chapter registers.</li>
+<li><strong>Lexical overlap is surface token sharing, not semantic coherence.</strong> Adjacent sentence overlap (<code>sentence_overlap_pct</code>) checks whether consecutive sentences in a paragraph share at least one lowercased content word (excluding the profile's function-word list). It does not resolve pronouns, synonyms or inflected stems across languages.</li>
+<li><strong>Repeated sentence openings can be deliberate art.</strong> A run of three or more sentences starting with the same word (<code>repeated_start_runs</code>) marks a passage for human inspection; only the author or editor can decide whether it is rhetorical anaphora or unintended monotony.</li>
+<li><strong>No score is a verdict.</strong> Neither voice contrast, nor lexical diversity, nor cohesion predicts commercial sales or literary merit on its own. They exist to point your eye to the exact chapter and paragraph where your manuscript's voice or rhythm shifts.</li>
+</ul>
+
+<div class="notice-box"><strong>Explore the live reports:</strong> Open the interactive <a href="../examples/effi-briest.html">Effi Briest</a> and <a href="../examples/pride-and-prejudice.html">Pride and Prejudice</a> examples or the <a href="../demo/report.html">Warehouse 4 demo</a> directly in your browser.</div>
+
+<footer class="site-footer"><nav aria-label="Project resources"><a href="../#guides">All guides</a><a href="../blog/index.html">Articles</a><a href="https://github.com/mfahsold/lixity">Source code</a><a href="../LICENSING.md">License</a><a href="../#website-measurement">Website measurement</a><a href="../#impressum">Legal notice</a></nav></footer>
+</main>
+<a class="site-back-top" href="#top">Back to top ↑</a>
+</body>
+</html>

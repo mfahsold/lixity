@@ -145,6 +145,35 @@ class TestDialogueReport(unittest.TestCase):
         report = dialogue_report(text, CorpusConfig(language="en"))
         self.assertEqual(report.turns, 1)
         self.assertEqual(report.dialogue_words, 2)
+        self.assertEqual(report.short_turns, 1)
+        self.assertEqual(report.short_turn_pct, 100.0)
+        self.assertEqual(report.long_turns, 0)
+        self.assertAlmostEqual(report.dialogue_asl, 2.0)
+        self.assertAlmostEqual(report.narration_asl, 5.0)
+        self.assertAlmostEqual(report.asl_contrast or 0.0, -3.0)
+
+    def test_turn_cadence_and_voice_contrast(self):
+        long_speech = " ".join(["Wort"] * 85) + "."
+        text = (
+            "## Eins\n\n"
+            "Er wartete lange am dunklen Bahnhof und blickte auf die Uhr. "
+            "»Ja!« "
+            f"»{long_speech}«\n\n"
+            "## Zwei\n\n"
+            "Nur Stille im Saal.\n"
+        )
+        report = dialogue_report(text, DE)
+        first, second = report.chapters
+        self.assertEqual(first.turns, 2)
+        self.assertEqual(first.short_turns, 1)
+        self.assertEqual(first.short_turn_pct, 50.0)
+        self.assertEqual(first.long_turns, 1)
+        self.assertIsNotNone(first.asl_contrast)
+        self.assertEqual(second.turns, 0)
+        self.assertIsNone(second.asl_contrast)
+        self.assertEqual(report.short_turns, 1)
+        self.assertEqual(report.long_turns, 1)
+        self.assertIsNotNone(report.asl_contrast)
 
 
 class TestCharacterPresence(unittest.TestCase):

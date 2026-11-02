@@ -99,7 +99,7 @@ async function pinnedIdentity(page, panel, cellIndex) {
       await page.locator('#workbench-overview-open').click();
       const navigation = page.locator('#analysis-sections');
       assert.deepEqual(await navigation.locator('[data-section-link]').evaluateAll(nodes => nodes.map(n => n.dataset.sectionLink)),
-        ['flags','dist','dialogue','characters','pacing','scenes','motifs','showing','style','matrix']);
+        ['flags','pacing','scenes','dialogue','dist','showing','characters','motifs','style','matrix']);
       assert.equal(await navigation.locator('svg').count(), 0, 'Overview section links are not a progress timeline');
       const orientation = await navigation.evaluate(nav => {
         const bounds = nav.getBoundingClientRect();
@@ -134,7 +134,7 @@ async function pinnedIdentity(page, panel, cellIndex) {
       }
       if (locale === 'en' || locale === 'de') await page.locator('#manuscript-reader-controls').screenshot({
         path:path.join(artifacts, `navigation-${locale}-${width}.png`)});
-      for (const target of ['flags','dist','dialogue','characters','pacing','scenes','motifs','showing','style','matrix']) {
+      for (const target of ['flags','pacing','scenes','dialogue','dist','showing','characters','motifs','style','matrix']) {
         await navigation.locator(`[data-section-link=${target}]`).click();
         await page.waitForFunction(target=>document.querySelector('#analysis-sections [aria-current=true]')?.dataset.sectionLink===target,target);
         const destinationNavigation = await navigation.boundingBox();
