@@ -88,27 +88,17 @@
     var toolbar = document.createElement("header");
     toolbar.className = "teleprompter-toolbar";
 
+    // 1. Left Group: Brand & Chapter Selector
     var leftGroup = document.createElement("div");
-    leftGroup.className = "teleprompter-toolbar-group";
+    leftGroup.className = "teleprompter-toolbar-group teleprompter-left-group";
 
-    var closeBtn = document.createElement("button");
-    closeBtn.type = "button";
-    closeBtn.className = "teleprompter-btn";
-    closeBtn.textContent = "✕ " + label("reading_shortcut_close", "Schließen");
-    closeBtn.setAttribute("aria-label", label("reading_shortcut_close", "Schließen"));
-    closeBtn.addEventListener("click", closeTeleprompter);
-    leftGroup.appendChild(closeBtn);
-
-    playBtn = document.createElement("button");
-    playBtn.type = "button";
-    playBtn.className = "teleprompter-btn teleprompter-btn-primary";
-    playBtn.textContent = "▶ " + label("teleprompter_play", "Lauf starten");
-    playBtn.setAttribute("aria-label", label("teleprompter_play", "Lauf starten"));
-    playBtn.addEventListener("click", togglePlay);
-    leftGroup.appendChild(playBtn);
+    var brand = document.createElement("div");
+    brand.className = "teleprompter-brand";
+    brand.innerHTML = '<span aria-hidden="true">📜</span> <strong class="teleprompter-title-text">' + label("reading_teleprompter", "Teleprompter") + "</strong>";
+    leftGroup.appendChild(brand);
 
     chapterSelect = document.createElement("select");
-    chapterSelect.className = "teleprompter-btn";
+    chapterSelect.className = "teleprompter-select";
     chapterSelect.setAttribute("aria-label", label("reading_chapter", "Kapitel"));
     chapterSelect.addEventListener("change", function() {
       var targetId = chapterSelect.value;
@@ -120,15 +110,21 @@
 
     toolbar.appendChild(leftGroup);
 
-    // Center Group: Speed & Size
+    // 2. Center Group: Play/Pause, Speed Slider, Font Sizing
     var centerGroup = document.createElement("div");
-    centerGroup.className = "teleprompter-toolbar-group";
+    centerGroup.className = "teleprompter-toolbar-group teleprompter-center-group";
+
+    playBtn = document.createElement("button");
+    playBtn.type = "button";
+    playBtn.className = "teleprompter-btn teleprompter-btn-primary";
+    playBtn.innerHTML = '▶ <span class="teleprompter-btn-label">' + label("teleprompter_play", "Lauf starten") + "</span>";
+    playBtn.setAttribute("aria-label", label("teleprompter_play", "Lauf starten"));
+    playBtn.title = label("teleprompter_play", "Lauf starten") + " (Leertaste)";
+    playBtn.addEventListener("click", togglePlay);
+    centerGroup.appendChild(playBtn);
 
     var speedWrapper = document.createElement("div");
     speedWrapper.className = "teleprompter-speed-control";
-    var speedLabel = document.createElement("span");
-    speedLabel.textContent = label("teleprompter_speed", "Tempo") + ":";
-    speedWrapper.appendChild(speedLabel);
 
     speedSlider = document.createElement("input");
     speedSlider.type = "range";
@@ -137,65 +133,85 @@
     speedSlider.value = String(wordsPerMinute);
     speedSlider.step = "5";
     speedSlider.setAttribute("aria-label", label("teleprompter_speed", "Tempo"));
+    speedSlider.title = label("teleprompter_speed", "Tempo");
     speedSlider.addEventListener("input", function() {
       wordsPerMinute = parseInt(speedSlider.value, 10);
-      speedVal.textContent = wordsPerMinute + " WpM";
+      speedVal.textContent = wordsPerMinute + " WPM";
     });
     speedWrapper.appendChild(speedSlider);
 
     speedVal = document.createElement("span");
     speedVal.className = "teleprompter-speed-val";
-    speedVal.textContent = wordsPerMinute + " WpM";
+    speedVal.textContent = wordsPerMinute + " WPM";
     speedWrapper.appendChild(speedVal);
 
     centerGroup.appendChild(speedWrapper);
 
-    // Font Size Controls
+    var fontGroup = document.createElement("div");
+    fontGroup.className = "teleprompter-btn-group";
+
     var sizeMinus = document.createElement("button");
     sizeMinus.type = "button";
     sizeMinus.className = "teleprompter-btn";
     sizeMinus.textContent = "A−";
+    sizeMinus.title = label("reading_smaller", "Schrift verkleinern");
     sizeMinus.setAttribute("aria-label", label("reading_smaller", "Schrift verkleinern"));
     sizeMinus.addEventListener("click", function() {
       fontSize = Math.max(20, fontSize - 4);
       modal.style.setProperty("--teleprompter-font-size", fontSize + "px");
     });
-    centerGroup.appendChild(sizeMinus);
+    fontGroup.appendChild(sizeMinus);
 
     var sizePlus = document.createElement("button");
     sizePlus.type = "button";
     sizePlus.className = "teleprompter-btn";
     sizePlus.textContent = "A+";
+    sizePlus.title = label("reading_larger", "Schrift vergrößern");
     sizePlus.setAttribute("aria-label", label("reading_larger", "Schrift vergrößern"));
     sizePlus.addEventListener("click", function() {
       fontSize = Math.min(56, fontSize + 4);
       modal.style.setProperty("--teleprompter-font-size", fontSize + "px");
     });
-    centerGroup.appendChild(sizePlus);
+    fontGroup.appendChild(sizePlus);
 
+    centerGroup.appendChild(fontGroup);
     toolbar.appendChild(centerGroup);
 
-    // Right Group: Dossier Toggle & Recording
+    // 3. Right Group: Dossiers Toggle, Audio Recording, Close Modal
     var rightGroup = document.createElement("div");
-    rightGroup.className = "teleprompter-toolbar-group";
+    rightGroup.className = "teleprompter-toolbar-group teleprompter-right-group";
 
     sidebarToggleBtn = document.createElement("button");
     sidebarToggleBtn.type = "button";
-    sidebarToggleBtn.className = "teleprompter-btn";
-    sidebarToggleBtn.textContent = "🏛 " + label("teleprompter_dossier_context", "Dossiers");
-    sidebarToggleBtn.setAttribute("aria-label", label("teleprompter_dossier_context", "Dossiers"));
+    sidebarToggleBtn.className = "teleprompter-btn teleprompter-dossier-toggle";
+    sidebarToggleBtn.innerHTML = '🏛 <span class="teleprompter-btn-label">' + label("teleprompter_dossiers", "Dossiers") + "</span>";
+    sidebarToggleBtn.title = label("teleprompter_dossier_context", "Historischer Kontext & Dossier-Bilder") + " (D)";
+    sidebarToggleBtn.setAttribute("aria-label", label("teleprompter_dossier_context", "Historischer Kontext & Dossier-Bilder"));
     sidebarToggleBtn.addEventListener("click", function() {
-      if (sidebar) sidebar.classList.toggle("is-open");
+      if (sidebar) {
+        sidebar.classList.toggle("is-open");
+        sidebarToggleBtn.classList.toggle("is-active", sidebar.classList.contains("is-open"));
+      }
     });
     rightGroup.appendChild(sidebarToggleBtn);
 
     recordBtn = document.createElement("button");
     recordBtn.type = "button";
     recordBtn.className = "teleprompter-btn teleprompter-btn-record";
-    recordBtn.textContent = "🎙 " + label("teleprompter_record", "Aufnahme");
+    recordBtn.innerHTML = '🎙 <span class="teleprompter-btn-label">' + label("teleprompter_record", "Aufnahme") + "</span>";
+    recordBtn.title = label("teleprompter_record", "Aufnahme") + " (R)";
     recordBtn.setAttribute("aria-label", label("teleprompter_record", "Aufnahme"));
     recordBtn.addEventListener("click", toggleRecording);
     rightGroup.appendChild(recordBtn);
+
+    var closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.className = "teleprompter-btn teleprompter-btn-close";
+    closeBtn.innerHTML = '<span aria-hidden="true">✕</span>';
+    closeBtn.title = label("modal_close", "Schließen") + " (Esc)";
+    closeBtn.setAttribute("aria-label", label("modal_close", "Schließen") + " (Esc)");
+    closeBtn.addEventListener("click", closeTeleprompter);
+    rightGroup.appendChild(closeBtn);
 
     toolbar.appendChild(rightGroup);
     modal.appendChild(toolbar);
@@ -208,10 +224,6 @@
     var runwayContainer = document.createElement("div");
     runwayContainer.className = "teleprompter-runway-container";
 
-    var ribbon = document.createElement("div");
-    ribbon.className = "teleprompter-focus-ribbon";
-    runwayContainer.appendChild(ribbon);
-
     scrollPane = document.createElement("main");
     scrollPane.className = "teleprompter-scroll-pane";
     scrollPane.addEventListener("scroll", handleScrollSync);
@@ -219,7 +231,7 @@
 
     body.appendChild(runwayContainer);
 
-    // Sidebar: Historical Dossiers & Context
+    // Sidebar: Historical Dossiers & Context (slide-over drawer)
     sidebar = document.createElement("aside");
     sidebar.className = "teleprompter-sidebar";
 
@@ -231,13 +243,13 @@
 
     var sidebarClose = document.createElement("button");
     sidebarClose.type = "button";
-    sidebarClose.className = "teleprompter-btn";
-    sidebarClose.style.padding = "0.2rem 0.4rem";
-    sidebarClose.style.fontSize = "0.75rem";
-    sidebarClose.textContent = "✕";
-    sidebarClose.setAttribute("aria-label", label("reading_shortcut_close", "Schließen"));
+    sidebarClose.className = "teleprompter-btn teleprompter-btn-close";
+    sidebarClose.innerHTML = '<span aria-hidden="true">✕</span>';
+    sidebarClose.title = label("modal_close", "Schließen");
+    sidebarClose.setAttribute("aria-label", label("modal_close", "Schließen"));
     sidebarClose.addEventListener("click", function() {
       sidebar.classList.remove("is-open");
+      if (sidebarToggleBtn) sidebarToggleBtn.classList.remove("is-active");
     });
     sidebarHeader.appendChild(sidebarClose);
     sidebar.appendChild(sidebarHeader);
@@ -265,12 +277,12 @@
         e.preventDefault();
         wordsPerMinute = Math.min(240, wordsPerMinute + 10);
         speedSlider.value = String(wordsPerMinute);
-        speedVal.textContent = wordsPerMinute + " WpM";
+        speedVal.textContent = wordsPerMinute + " WPM";
       } else if (e.code === "ArrowDown") {
         e.preventDefault();
         wordsPerMinute = Math.max(60, wordsPerMinute - 10);
         speedSlider.value = String(wordsPerMinute);
-        speedVal.textContent = wordsPerMinute + " WpM";
+        speedVal.textContent = wordsPerMinute + " WPM";
       } else if (e.key === "+" || e.key === "=") {
         e.preventDefault();
         fontSize = Math.min(56, fontSize + 4);
@@ -281,7 +293,13 @@
         modal.style.setProperty("--teleprompter-font-size", fontSize + "px");
       } else if (e.code === "KeyD" && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
-        if (sidebar) sidebar.classList.toggle("is-open");
+        if (sidebar) {
+          sidebar.classList.toggle("is-open");
+          if (sidebarToggleBtn) sidebarToggleBtn.classList.toggle("is-active", sidebar.classList.contains("is-open"));
+        }
+      } else if (e.code === "KeyR" && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        toggleRecording();
       }
     });
   }
@@ -334,12 +352,6 @@
       var chHeading = document.createElement("div");
       chHeading.className = "teleprompter-chapter-heading";
       chHeading.setAttribute("data-chapter-id", chId);
-      chHeading.style.fontSize = "0.75em";
-      chHeading.style.color = "#f0883e";
-      chHeading.style.textTransform = "uppercase";
-      chHeading.style.letterSpacing = "0.08em";
-      chHeading.style.margin = "2.5rem 0 1rem 0";
-      chHeading.style.fontWeight = "bold";
       chHeading.textContent = chTitle;
       scrollPane.appendChild(chHeading);
 
@@ -484,19 +496,24 @@
 
   function handleScrollSync() {
     if (!scrollPane) return;
-    var ribbonTop = window.innerHeight * 0.30;
     var paragraphs = Array.from(scrollPane.querySelectorAll(".teleprompter-paragraph"));
-    var closest = null;
-    var minDiff = Infinity;
+    if (!paragraphs.length) return;
 
-    paragraphs.forEach(function(p) {
-      var rect = p.getBoundingClientRect();
-      var diff = Math.abs(rect.top - ribbonTop);
-      if (diff < minDiff) {
-        minDiff = diff;
-        closest = p;
-      }
-    });
+    var closest = null;
+    if (scrollPane.scrollTop <= 20) {
+      closest = paragraphs[0];
+    } else {
+      var targetY = window.innerHeight * 0.28;
+      var minDiff = Infinity;
+      paragraphs.forEach(function(p) {
+        var rect = p.getBoundingClientRect();
+        var diff = Math.abs(rect.top - targetY);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closest = p;
+        }
+      });
+    }
 
     if (closest) {
       updateDossierSidebar(closest);
@@ -522,13 +539,17 @@
   function togglePlay() {
     isPlaying = !isPlaying;
     if (isPlaying) {
-      playBtn.textContent = "⏸ " + label("teleprompter_pause", "Pause");
+      playBtn.classList.add("is-active");
+      playBtn.innerHTML = '⏸ <span class="teleprompter-btn-label">' + label("teleprompter_pause", "Pause") + "</span>";
       playBtn.setAttribute("aria-label", label("teleprompter_pause", "Pause"));
+      playBtn.title = label("teleprompter_pause", "Pause") + " (Leertaste)";
       lastTimestamp = 0;
       animFrameId = requestAnimationFrame(scrollLoop);
     } else {
-      playBtn.textContent = "▶ " + label("teleprompter_play", "Lauf starten");
+      playBtn.classList.remove("is-active");
+      playBtn.innerHTML = '▶ <span class="teleprompter-btn-label">' + label("teleprompter_play", "Lauf starten") + "</span>";
       playBtn.setAttribute("aria-label", label("teleprompter_play", "Lauf starten"));
+      playBtn.title = label("teleprompter_play", "Lauf starten") + " (Leertaste)";
       if (animFrameId) cancelAnimationFrame(animFrameId);
     }
   }
@@ -679,6 +700,7 @@
       sidebarContent.prepend(card);
       if (sidebar && !sidebar.classList.contains("is-open")) {
         sidebar.classList.add("is-open");
+        if (sidebarToggleBtn) sidebarToggleBtn.classList.add("is-active");
       }
     }
   }
@@ -687,23 +709,25 @@
     isRecording = !isRecording;
     if (isRecording) {
       recordBtn.classList.add("is-active");
-      recordBtn.textContent = "⏹ " + label("teleprompter_recording", "Aufnahme läuft...");
+      recordBtn.innerHTML = '⏹ <span class="teleprompter-btn-label">' + label("teleprompter_recording", "Aufnahme...") + "</span>";
       recordBtn.setAttribute("aria-label", label("teleprompter_recording", "Aufnahme läuft..."));
+      recordBtn.title = label("teleprompter_recording", "Aufnahme läuft...") + " (R)";
       if (recordStatusAnnouncer) recordStatusAnnouncer.textContent = "Audioaufnahme gestartet";
       recordStartTime = Date.now();
       recordTimerId = setInterval(function() {
         var elapsed = Math.floor((Date.now() - recordStartTime) / 1000);
         var m = String(Math.floor(elapsed / 60)).padStart(2, "0");
         var s = String(elapsed % 60).padStart(2, "0");
-        recordBtn.textContent = "⏹ " + m + ":" + s;
+        recordBtn.innerHTML = '⏹ <span class="teleprompter-btn-label">' + m + ":" + s + "</span>";
       }, 1000);
 
       startAudioCapture();
       if (!isPlaying) togglePlay();
     } else {
       recordBtn.classList.remove("is-active");
-      recordBtn.textContent = "🎙 " + label("teleprompter_record", "Aufnahme");
+      recordBtn.innerHTML = '🎙 <span class="teleprompter-btn-label">' + label("teleprompter_record", "Aufnahme") + "</span>";
       recordBtn.setAttribute("aria-label", label("teleprompter_record", "Aufnahme"));
+      recordBtn.title = label("teleprompter_record", "Aufnahme") + " (R)";
       if (recordStatusAnnouncer) recordStatusAnnouncer.textContent = "Audioaufnahme gestoppt";
       if (recordTimerId) clearInterval(recordTimerId);
       stopAudioCapture();
@@ -714,11 +738,13 @@
   function openTeleprompter(startParagraphSha) {
     previousActiveElement = document.activeElement;
     createModal();
+    if (sidebar) sidebar.classList.remove("is-open");
+    if (sidebarToggleBtn) sidebarToggleBtn.classList.remove("is-active");
     buildRunwayContent();
     modal.hidden = false;
     document.body.classList.add("teleprompter-open");
 
-    // Scroll to initial paragraph
+    // Scroll to initial paragraph or synchronize top paragraph
     if (startParagraphSha) {
       setTimeout(function() {
         var el = scrollPane.querySelector('[data-sha="' + startParagraphSha + '"]');
@@ -728,7 +754,9 @@
         }
       }, 50);
     } else {
-      handleScrollSync();
+      setTimeout(function() {
+        handleScrollSync();
+      }, 50);
     }
 
     if (playBtn) playBtn.focus();

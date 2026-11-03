@@ -6998,6 +6998,15 @@ _ROWS = {
         "Contexto histórico e imagens",
         "Historische context en beelden",
     ),
+    "teleprompter_dossiers": (
+        "Dossiers",
+        "Dossiers",
+        "Dossiers",
+        "Expedientes",
+        "Dossier",
+        "Dossiês",
+        "Dossiers",
+    ),
     "teleprompter_record": (
         "Record",
         "Aufnahme",
