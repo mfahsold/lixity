@@ -58,6 +58,13 @@
 .passage-research-open .context-tool-tabs .ctl { flex: 1 1 0; min-width: 0; overflow-wrap: normal; }
 
 /* Research context keeps a document identity beside statistical inspection. */
+.ptext.reader-audio-active {
+  background: var(--accent-light);
+  border-left: 3px solid var(--accent);
+  padding-left: calc(var(--space-2) - 3px);
+  border-radius: var(--radius-xs);
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
 .passage-research .workspace-reader-head h2 { display: flex; align-items: center; gap: var(--space-2); }
 .context-tool-tabs [data-context-tool="research"][aria-pressed="true"] { color: var(--fg); background: var(--surface); box-shadow: inset 0 -2px var(--fg-secondary); }
 .passage-research blockquote { border-inline-start-color: var(--line-strong); }

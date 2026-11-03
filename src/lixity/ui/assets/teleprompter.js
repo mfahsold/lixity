@@ -533,58 +533,153 @@
     }
   }
 
+  var pcmAudioContext = null;
+  var pcmMediaStream = null;
+  var pcmProcessorNode = null;
+  var pcmSourceNode = null;
+  var pcmRecordedChunks = [];
+  var pcmTotalSamples = 0;
+
   function startAudioCapture() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
-    recordedAudioChunks = [];
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
-      try {
-        var options = { mimeType: "audio/webm" };
-        if (!MediaRecorder.isTypeSupported("audio/webm")) {
-          options = MediaRecorder.isTypeSupported("audio/ogg") ? { mimeType: "audio/ogg" } : {};
-        }
-        mediaRecorder = new MediaRecorder(stream, options);
-        mediaRecorder.ondataavailable = function(e) {
-          if (e.data && e.data.size > 0) recordedAudioChunks.push(e.data);
-        };
-        mediaRecorder.onstop = function() {
-          stream.getTracks().forEach(function(track) { track.stop(); });
-          if (recordedAudioChunks.length > 0) {
-            var blob = new Blob(recordedAudioChunks, { type: mediaRecorder.mimeType || "audio/webm" });
-            if (lastRecordedBlobUrl) URL.revokeObjectURL(lastRecordedBlobUrl);
-            lastRecordedBlobUrl = URL.createObjectURL(blob);
-            offerRecordingDownload(blob);
-          }
-        };
-        mediaRecorder.start(250);
-      } catch (err) {
-        stream.getTracks().forEach(function(track) { track.stop(); });
+    pcmRecordedChunks = [];
+    pcmTotalSamples = 0;
+
+    var AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtxClass) return;
+
+    navigator.mediaDevices.getUserMedia({
+      audio: {
+        channelCount: 1,
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false
       }
+    }).then(function(stream) {
+      pcmMediaStream = stream;
+      pcmAudioContext = new AudioCtxClass();
+      pcmSourceNode = pcmAudioContext.createMediaStreamSource(stream);
+      pcmProcessorNode = pcmAudioContext.createScriptProcessor(4096, 1, 1);
+
+      pcmProcessorNode.onaudioprocess = function(e) {
+        if (!isRecording) return;
+        var inputData = e.inputBuffer.getChannelData(0);
+        var copy = new Float32Array(inputData.length);
+        copy.set(inputData);
+        pcmRecordedChunks.push(copy);
+        pcmTotalSamples += copy.length;
+      };
+
+      pcmSourceNode.connect(pcmProcessorNode);
+      pcmProcessorNode.connect(pcmAudioContext.destination);
     }).catch(function() {});
   }
 
   function stopAudioCapture() {
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
-      try {
-        mediaRecorder.stop();
-      } catch (err) {}
+    if (pcmProcessorNode) {
+      pcmProcessorNode.disconnect();
+      pcmProcessorNode = null;
+    }
+    if (pcmSourceNode) {
+      pcmSourceNode.disconnect();
+      pcmSourceNode = null;
+    }
+    if (pcmMediaStream) {
+      pcmMediaStream.getTracks().forEach(function(track) { track.stop(); });
+      pcmMediaStream = null;
+    }
+
+    var sampleRate = (pcmAudioContext && pcmAudioContext.sampleRate) || 48000;
+    if (pcmAudioContext) {
+      pcmAudioContext.close().catch(function() {});
+      pcmAudioContext = null;
+    }
+
+    if (pcmTotalSamples > 0) {
+      var wavBlob = encodeWav(pcmRecordedChunks, pcmTotalSamples, sampleRate);
+      offerRecordingDownload(wavBlob);
     }
   }
 
+  function encodeWav(chunks, totalSamples, sampleRate) {
+    var buffer = new ArrayBuffer(44 + totalSamples * 2);
+    var view = new DataView(buffer);
+
+    function writeString(offset, str) {
+      for (var i = 0; i < str.length; i++) {
+        view.setUint8(offset + i, str.charCodeAt(i));
+      }
+    }
+
+    writeString(0, "RIFF");
+    view.setUint32(4, 36 + totalSamples * 2, true);
+    writeString(8, "WAVE");
+    writeString(12, "fmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeString(36, "data");
+    view.setUint32(40, totalSamples * 2, true);
+
+    var offset = 44;
+    for (var c = 0; c < chunks.length; c++) {
+      var chunk = chunks[c];
+      for (var i = 0; i < chunk.length; i++) {
+        var s = Math.max(-1, Math.min(1, chunk[i]));
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        offset += 2;
+      }
+    }
+
+    return new Blob([view], { type: "audio/wav" });
+  }
+
   function offerRecordingDownload(blob) {
+    if (lastRecordedBlobUrl) URL.revokeObjectURL(lastRecordedBlobUrl);
+    lastRecordedBlobUrl = URL.createObjectURL(blob);
+
+    var card = document.createElement("div");
+    card.className = "teleprompter-dossier-card";
+    card.style.padding = "0.85rem";
+    card.style.display = "flex";
+    card.style.flexDirection = "column";
+    card.style.gap = "0.5rem";
+    card.style.background = "#1c2128";
+    card.style.borderColor = "#2ea043";
+
+    var title = document.createElement("div");
+    title.style.fontWeight = "600";
+    title.style.fontSize = "0.875rem";
+    title.style.color = "#3fb950";
+    title.textContent = "🎙 " + label("teleprompter_take_ready", "Aufnahme abgeschlossen (WAV)");
+    card.appendChild(title);
+
+    var player = document.createElement("audio");
+    player.controls = true;
+    player.src = lastRecordedBlobUrl;
+    player.style.width = "100%";
+    card.appendChild(player);
+
     var a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "teleprompter-recording-" + (new Date().toISOString().replace(/[:.]/g, "-")) + ".webm";
+    a.href = lastRecordedBlobUrl;
+    var timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    a.download = "teleprompter-take-" + timestamp + ".wav";
     a.className = "teleprompter-btn";
     a.style.background = "#238636";
     a.style.color = "#ffffff";
-    a.textContent = "💾 " + label("speech_download", "Aufnahme herunterladen");
+    a.style.justifyContent = "center";
+    a.textContent = "💾 " + label("speech_download", "WAV-Take herunterladen");
+    card.appendChild(a);
+
     if (sidebarContent) {
-      var note = document.createElement("div");
-      note.className = "teleprompter-dossier-card";
-      note.style.padding = "0.75rem";
-      note.style.textAlign = "center";
-      note.appendChild(a);
-      sidebarContent.prepend(note);
+      sidebarContent.prepend(card);
+      if (sidebar && !sidebar.classList.contains("is-open")) {
+        sidebar.classList.add("is-open");
+      }
     }
   }
 

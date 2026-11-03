@@ -1595,9 +1595,16 @@ Its architecture coordinates four concurrent streams:
    - Fallback: Current chapter context.
    An adaptive off-canvas drawer layout collapses the sidebar on screens under 960px to
    preserve the reading runway.
-5. **Integrated In-Browser Audio Capture:** Connects directly to the Web Audio
-   `MediaRecorder` API to capture clean narrator takes during prompter playback, offering
-   instant take downloads and session duration tracking.
+5. **Native 16-Bit PCM WAV Audio Capture and Instant Re-Listening:** Captures
+   uncompressed PCM audio directly via the Web Audio API and encodes standard broadcast-quality
+   16-bit mono WAV files with RIFF headers entirely client-side. The narrator can immediately
+   listen back to the take via an embedded player in the prompter sidebar and download pristine
+   `.wav` takes for immediate ingestion into `audio-inspect`, `audio-reference create`, or
+   external digital audio workstations without requiring FFmpeg.
+6. **Synchronous Audio-Karaoke in the Manuscript Reader:** During chapter audio playback,
+   a proportional timing interpolator maps playback `currentTime` across timeline segment anchors,
+   smoothly illuminating the active spoken paragraph (`.reader-audio-active`) and keeping eyes
+   and ears in exact alignment for editorial proof-listening.
 
 ### Microphone hardware calibration and voice reference acquisition
 

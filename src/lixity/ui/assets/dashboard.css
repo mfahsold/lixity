@@ -156,7 +156,14 @@ h1 {
   }
   & > nav { align-items: center; }
 }
-.panel-guide { max-width: 78ch; font-size: var(--text-small); color: var(--muted); line-height: 1.65; margin: .6rem 0 1rem; }
+.panel-guide {
+  max-width: 78ch;
+  font-size: var(--text-small);
+  color: var(--fg-secondary);
+  line-height: var(--line-compact);
+  margin: .35rem 0 .75rem;
+  opacity: 0.88;
+}
 .matrix-tools { justify-content: space-between; margin-bottom: .9rem; font-size: var(--text-small); }
 .matrix-tools label { display: inline-flex; align-items: center; gap: .45rem; }
 .analysis-method { font-variant-numeric: tabular-nums; color: var(--muted); }

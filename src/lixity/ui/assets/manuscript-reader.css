@@ -1,9 +1,11 @@
 /* One manuscript surface: restrained document reading with optional tools. */
 .manuscript-reader-controls {
   position: sticky; top: 0; z-index: 12; display: flex; flex-wrap: wrap;
-  align-items: center; gap: .5rem; padding: .5rem 0;
+  align-items: center; gap: .45rem; padding: .45rem var(--space-2);
   max-height: 45dvh; overflow-y: auto; overscroll-behavior: contain;
-  background: var(--bg);
+  background: var(--surface-glass-header);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   border-bottom: 1px solid var(--line);
 }
 .manuscript-reader-controls[hidden] { display: none; }
@@ -15,7 +17,7 @@
 }
 .reader-secondary-controls { display: none; }
 .reader-analysis-toggle-controls { display: inline-flex; align-items: center; gap: .35rem; }
-.reader-analysis-guide > summary { width: 2.75rem; min-height: 2.75rem; justify-content: center; padding: .4rem; }
+.reader-analysis-guide > summary { width: 2.5rem; min-height: 2.25rem; justify-content: center; padding: .35rem; }
 .reader-analysis-guide > summary::after { display: none; }
 .reader-analysis-guide .reader-settings-body { font-size: var(--text-small); }
 .reader-analysis-guide p, .reader-analysis-guide li { line-height: var(--line-reading); }
@@ -24,7 +26,14 @@
 .reader-analysis-guide[hidden], .reader-focus .reader-analysis-guide { display: none; }
 .manuscript-reading.workbench-analysis:not(.reader-focus) .reader-secondary-controls { display: flex; flex-wrap: wrap; gap: .5rem; padding-block: .5rem; }
 .reader-focus .reader-secondary-controls { display: none !important; }
-.reader-control-icon { display: none; }
+.reader-control-icon { display: inline-flex; align-items: center; font-size: 0.95rem; line-height: 1; }
+.reader-compact-control { display: inline-flex; align-items: center; gap: .35rem; padding: .35rem .65rem; font-size: var(--text-control); font-weight: 500; border-radius: var(--radius-sm); background: var(--surface-raised); border: 1px solid var(--line); color: var(--fg); cursor: pointer; transition: background .15s ease, border-color .15s ease, color .15s ease; }
+.reader-compact-control:hover { background: var(--surface-hover); border-color: var(--line-strong); }
+.reader-compact-control[aria-pressed="true"] { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+@media (max-width: 900px) {
+  .reader-control-label { display: none; }
+  .reader-compact-control { padding: .35rem .5rem; min-width: 2.25rem; justify-content: center; }
+}
 .reader-chapter { max-width: 18rem; min-width: 0; flex: 1 1 10rem; }
 .reader-size-controls { display: inline-flex; align-items: center; gap: .35rem; }
 .reader-size-controls output { min-width: 2ch; text-align: center; font-size: var(--text-small); }

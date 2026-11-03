@@ -919,6 +919,48 @@ results depend on the candidate set, the domain and the generator version.
 Lixity describes the observable patterns of one manuscript. Every signal stays a
 prompt for reading, never a verdict about authorship, quality or machine origin.
 
+## 13. Acoustic staging, pacing and empirical reading rates
+
+The speech and teleprompter subsystems connect statistical chapter descriptors
+with acoustic performance. Spoken delivery differs systematically from silent reading;
+the pipeline formalizes this connection through three empirical models:
+
+### 13.1. Syntactic pacing and target reading rates
+
+Reading rates in words per minute (WPM) vary with syntactic complexity and average
+sentence length (ASL). In literary prose narration, baseline conversational delivery
+averages 130 WPM (Carver 1990; Rayner et al. 2016). When a chapter exhibits high
+syntactic subordination (hypotaxis, high ASL), oral comprehension requires broader
+rhythmic spacing; conversely, staccato action passages (low ASL) compress naturally.
+
+The target WPM pacing function maps measured chapter ASL to a bounded delivery rate:
+
+$$\text{WPM}_{\text{target}} = \text{clamp}\left(130.0 + 1.2 \cdot (16.0 - \text{ASL}_{\text{chapter}}), 85.0, 185.0\right)$$
+
+- Baseline chapter ($\text{ASL} = 16.0$ words): $\text{WPM} = 130$ WPM.
+- Compressed staccato ($\text{ASL} = 8.5$ words): $\text{WPM} \approx 139$ WPM.
+- Elaborated hypotaxis ($\text{ASL} = 28.0$ words): $\text{WPM} \approx 116$ WPM.
+
+Detected dialogue turns (`dialog_pct`) introduce conversational turn-taking boundaries;
+dialogue paragraphs preserve distinct paragraph pacing intervals while narrator passages
+follow the chapter's syntactic baseline.
+
+### 13.2. Acoustic crest factor and microphone gain staging
+
+Human speech exhibits a high crest factor ($C = 20 \log_{10} \frac{x_{\text{peak}}}{x_{\text{rms}}} \approx 12\text{--}18\text{ dB}$),
+driven by unvoiced plosive consonants (/p/, /t/, /k/) and dramatic vocal dynamics.
+Aligning nominal conversational speech near $0\text{ dBFS}$ inevitably induces non-linear
+clipping on plosive bursts.
+
+Lixity's 8-second acoustic calibration protocol measures maximum burst peaks ($x_{\text{burst}}$)
+relative to digital full scale:
+- Optimal recording window: $-13\text{ dBFS} \le x_{\text{burst}} \le -7\text{ dBFS}$.
+- Overdriven signal ($x_{\text{burst}} > -7\text{ dBFS}$): classifies as `ZU HEISS` and recommends
+  decreasing analog/ALSA mixer gain by $\Delta G = -1.0 \cdot (x_{\text{burst}} - (-10.0))\text{ dB}$.
+- Underdriven signal ($x_{\text{burst}} < -13\text{ dBFS}$): classifies as `MEHR LUFT ALS NÖTIG`
+  and recommends increasing gain to maximize converter dynamic range while preserving $\ge 7\text{ dB}$
+  headroom against inter-sample peaks.
+
 References:
 
 - Bestgen, Y. (2024). *Measuring lexical diversity in texts: The twofold length

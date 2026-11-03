@@ -7025,6 +7025,15 @@ _ROWS = {
         "Nenhuma imagem de dossiê vinculada a esta passagem.",
         "Geen dossierafbeeldingen gekoppeld aan deze passage.",
     ),
+    "teleprompter_take_ready": (
+        "Recording ready (WAV)",
+        "Aufnahme abgeschlossen (WAV)",
+        "Enregistrement terminé (WAV)",
+        "Grabación lista (WAV)",
+        "Registrazione completata (WAV)",
+        "Gravação concluída (WAV)",
+        "Opname voltooid (WAV)",
+    ),
     "reading_focus_exit": (
         "Leave focus",
         "Fokus verlassen",
