@@ -8,6 +8,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Single-narrator listening core and delivery reference modeling:
+  - Enforced single-narrator integrity in `read-aloud` and `audio-direction`: passage directions shape delivery, pauses, and pacing, but cannot switch to an entirely different voice or cast foreign speakers.
+  - Added `same_narrator` validation in `speech_direction.py`: reference engines (`qwen3-base`, `coqui-reference`) permit switching between distinct attitude and delivery references of the same speaker without triggering multi-voice casting conflicts.
+  - Added localized `speech_narrator_conflict` error across all seven supported languages when a direction attempts to cast a different narrator.
 - `audio-import-transcript` CLI command and ASR bridge:
   - Added `lixity audio-import-transcript` to convert external speech recognizer outputs (OpenAI Whisper JSON segments/words, faster-whisper, or raw timestamped word arrays) into valid, SHA-256 bound `lixity-audio-transcript/1` objects.
   - Automatically handles tokenization by language profile, sub-token proportional timing allocation, and non-overlapping monotonic timestamp sanitization for seamless `audio-verify` intake.

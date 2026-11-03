@@ -12246,6 +12246,16 @@ _ROWS["speech_base_direction_conflict"] = (
     "Qwen Base kan de tekstinstructies van de passageregie niet gebruiken. Verwijder die instructies of kies 'Negeer de regie voor passages' voor deze uitvoer. Stemtoewijzingen en pauzes voor passages worden dan ook genegeerd.",
 )
 
+_ROWS["speech_narrator_conflict"] = (
+    "Read-aloud uses one narrator. A passage direction can change delivery, pauses and tempo, but not the voice. Choose a profile with the same voice; for a reference voice, use another delivery recording of the same speaker.",
+    "Die Vorlesefunktion nutzt eine einzige Erzählstimme. Passagenregie kann Sprechweise, Pausen und Tempo ändern, nicht die Stimme. Wähle ein Profil mit derselben Stimme; bei einer Referenzstimme eine weitere Haltungsaufnahme derselben Person.",
+    "La lecture à voix haute utilise une seule voix narrative. La direction d’un passage peut modifier l’interprétation, les pauses et le tempo, mais pas la voix. Choisissez un profil avec la même voix ; pour une voix de référence, un autre enregistrement de la même personne.",
+    "La lectura en voz alta usa una sola voz narradora. La dirección de un pasaje puede cambiar la interpretación, las pausas y el tempo, pero no la voz. Elige un perfil con la misma voz; para una voz de referencia, otra grabación de la misma persona.",
+    "La lettura ad alta voce usa un’unica voce narrante. La regia di un passaggio può cambiare interpretazione, pause e tempo, ma non la voce. Scegli un profilo con la stessa voce; per una voce di riferimento, un’altra registrazione della stessa persona.",
+    "A leitura em voz alta usa uma única voz narradora. A direção de um trecho pode mudar a interpretação, as pausas e o tempo, mas não a voz. Escolha um perfil com a mesma voz; para uma voz de referência, outra gravação da mesma pessoa.",
+    "Voorlezen gebruikt één vertellersstem. Passageregie kan voordracht, pauzes en tempo wijzigen, maar niet de stem. Kies een profiel met dezelfde stem; gebruik bij een referentiestem een andere opname van dezelfde spreker.",
+)
+
 _ROWS["speech_delivery"] = (
     "Delivery", "Sprechweise", "Interprétation", "Interpretación",
     "Interpretazione", "Interpretação", "Voordracht",

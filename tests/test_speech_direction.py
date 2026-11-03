@@ -14,12 +14,12 @@ def test_passage_direction_compiles_separate_model_controls_and_exact_pauses():
     anchor = passages[0]['anchor']
     directive = Direction(anchor=anchor, start=0, end=20, instructions='Restrained tension.',
                           pause_after=0.8, profile_id='other')
-    profiles = {'other': AudioProfile(voice='Aiden', instructions='Clear narration.')}
+    profiles = {'other': AudioProfile(voice='Ryan', instructions='Clear narration.')}
     plan = build_speech_plan(TEXT, AudioProfile(), directions=[directive], profiles=profiles, chapter=1)
     assert plan[0].text == 'First'
     spoken = [row for row in plan if row.anchor]
     assert spoken[0].text == 'A quiet river flows.'
-    assert spoken[0].profile.voice == 'Aiden'
+    assert spoken[0].profile.voice == 'Ryan'
     assert spoken[0].profile.instructions == 'Clear narration. Restrained tension.'
     assert spoken[0].pause_after == 0.8
     assert spoken[1].text == 'A bird calls.'
@@ -37,11 +37,11 @@ def test_base_allows_passage_pauses_and_other_explicit_profiles():
     assert spoken[0].profile.engine == 'qwen3-base'
     assert spoken[0].pause_before == 0.4 and spoken[-1].pause_after == 0.6
 
-    # A passage explicitly assigned to a supported non-Base profile may retain its instructions.
+    # Read-aloud keeps one narrator: another voice is refused, not cast.
+    from lixity.speech_direction import NarratorConflict
     assigned = Direction(anchor=anchor, instructions='Quietly.', profile_id='preset')
-    spoken = [row for row in build_speech_plan(TEXT, base, directions=[assigned], chapter=1,
-              profiles={'preset': AudioProfile()}) if row.anchor]
-    assert spoken[0].profile.engine == 'qwen3' and spoken[0].profile.instructions == 'Quietly.'
+    with pytest.raises(NarratorConflict, match='one narrator'):
+        build_speech_plan(TEXT, base, directions=[assigned], chapter=1, profiles={'preset': AudioProfile()})
 
     # A conflict in a different chapter must not stop this chapter's plan.
     other = Direction(anchor=speech_passages(TEXT, 'en')[1]['anchor'], instructions='Quietly.')

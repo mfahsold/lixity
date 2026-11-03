@@ -40,9 +40,40 @@ class BaseDirectionConflict(ValueError):
 
     def __init__(self) -> None:
         super().__init__(
-            "Qwen Base cannot use passage text direction. Remove the affected instructions or "
-            "use --no-direction for this render; this also ignores passage voice assignments and pauses."
+            "Qwen Base cannot use passage text direction. To vary delivery with the same voice, assign a "
+            "profile with a delivery reference of the same narrator instead of instructions, remove the "
+            "affected instructions, or use --no-direction for this render; this also ignores passage "
+            "voice assignments and pauses."
         )
+
+
+class NarratorConflict(ValueError):
+    """A passage direction would replace the narrator instead of shaping delivery."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Read-aloud uses one narrator: a passage direction may change delivery, pauses or tempo, "
+            "not the voice. Assign only profiles with the same engine, language and voice; Base and "
+            "Coqui reference profiles may use another delivery reference of the same speaker."
+        )
+
+
+def same_narrator(narrator: AudioProfile, delivery: AudioProfile) -> bool:
+    """Whether ``delivery`` keeps the narrator's voice identity.
+
+    Reference engines cannot verify who speaks in a recording; for them a
+    different reference is accepted as a delivery recording of the same
+    speaker, which remains the author's responsibility.
+    """
+    if (narrator.engine, narrator.language) != (delivery.engine, delivery.language):
+        return False
+    if narrator.engine in ('qwen3-base', 'coqui-reference', 'coqui'):
+        return True
+    if narrator.engine == 'qwen3-design':
+        return narrator.voice_description == delivery.voice_description
+    if narrator.engine == 'openai-compatible':
+        return (narrator.base_url, narrator.model, narrator.voice) == (delivery.base_url, delivery.model, delivery.voice)
+    return narrator.voice == delivery.voice
 
 
 class CoquiDirectionConflict(ValueError):
@@ -221,6 +252,8 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
             if selected is None:
                 raise ValueError('A saved direction references an unavailable voice profile')
             selected = effective_profile(selected)
+            if not same_narrator(profile, selected):
+                raise NarratorConflict()
             if not for_export and selected.engine in ('coqui', 'coqui-reference') and d.instructions:
                 raise CoquiDirectionConflict()
             if not for_export and selected.engine == 'qwen3-base' and d.instructions:
@@ -390,9 +423,13 @@ def save_direction(project: str | Path, source: str | Path, value: Mapping[str, 
         if value is not None:
             d = Direction.model_validate(value)
             settings = read_explicit_project_config(root)
-            profiles = parse_audio_settings(settings.get('audio'), language=language).profiles
+            audio = parse_audio_settings(settings.get('audio'), language=language)
+            profiles = audio.profiles
             if d.profile_id is not None and d.profile_id not in profiles:
                 raise ValueError('Choose an existing saved voice profile')
+            if (d.profile_id is not None and audio.selected in profiles
+                    and not same_narrator(profiles[audio.selected], profiles[d.profile_id])):
+                raise NarratorConflict()
             if replace_id is not None and not any(e.source_path == current['source_path'] and direction_id(e.direction) == replace_id for e in state.entries):
                 raise ValueError('Choose an existing direction to replace')
             target_id = replace_id if replace_id is not None else direction_id(d)

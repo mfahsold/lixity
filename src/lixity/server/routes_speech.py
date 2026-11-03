@@ -19,6 +19,7 @@ from ..speech_direction import (
     BaseDirectionConflict,
     CoquiDirectionConflict,
     Direction,
+    NarratorConflict,
     build_speech_plan,
     direction_id,
     direction_snapshot,
@@ -199,7 +200,8 @@ class SpeechRoutesMixin(ResponseMixin):
             else 400
         )
         key = ("speech_base_direction_conflict" if isinstance(exc, BaseDirectionConflict) else
-               "speech_coqui_direction_conflict" if isinstance(exc, CoquiDirectionConflict) else None)
+               "speech_coqui_direction_conflict" if isinstance(exc, CoquiDirectionConflict) else
+               "speech_narrator_conflict" if isinstance(exc, NarratorConflict) else None)
         message = WORKSPACE_LABELS.get(self.language, WORKSPACE_LABELS["en"])[key] if key else str(exc)
         self._json({"ok": False, "message": message}, code)
 

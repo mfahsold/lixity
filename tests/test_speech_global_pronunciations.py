@@ -13,7 +13,7 @@ def settings():
         "pronunciations": {"river": "riwer", "bird": "birrd"},
         "profiles": {
             "narrator": {"engine": "qwen3", "pronunciations": {"river": "rivver"}},
-            "other": {"engine": "qwen3", "voice": "Aiden", "pronunciations": {"bird": "berd"}},
+            "other": {"engine": "qwen3", "voice": "Ryan", "pronunciations": {"bird": "berd"}},
         },
     }
 
