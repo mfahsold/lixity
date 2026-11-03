@@ -1719,8 +1719,12 @@ descriptive level, noise, clipping and bandwidth measurements with
 uncalibrated heuristic notes, not a quality score). `audio-reference inspect
 --project PATH --reference-id ID` returns the same object plus `reference_id`
 for an existing reference; both are read-only. `audio-reference record --project PATH
-[--duration SEC] [--gain N] [--transcript TXT | --transcript-file FILE] [-o OUT.wav]` records directly
+[--duration SEC] [--gain N] [--calibration-text] [--variant phonetic|short] [--language de|en] [--transcript TXT | --transcript-file FILE] [-o OUT.wav]` records directly
 from hardware via OSS tools (`arecord`, `pw-record`, `ffmpeg`) and stores verified reference bytes.
+When `--calibration-text` is passed, a live teleprompter prints the phonetically balanced text ("Nordwind und Sonne").
+`audio-reference generate --project PATH [--language de|en] [--variant phonetic|short] [--voice-description DESC]` generates
+a synthetic reference audio from the calibration text via VoiceDesign.
+`audio-reference calibration-text [--language de|en] [--variant phonetic|short]` prints the calibration passage.
 `audio-calibrate [--gain N] [--duration SEC] [--json]` performs an automated input level burst calibration
 returning `lixity-audio-calibration/1` with peak dBFS, clipping, noise floor and headroom verdicts.
 The `quality` field is additive

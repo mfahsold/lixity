@@ -2136,21 +2136,46 @@ components (`arecord`, `amixer`, `ffmpeg` or `pw-record`):
    - **`ZU HEISS`** (Peaks above −7 dBFS): Danger of clipping; lowers gain recommendation.
    - **`MEHR LUFT ALS NÖTIG`** (Peaks below −13 dBFS): Room for higher level.
 
-2. **Record reference voice directly:**
-   Record and automatically create the immutable project reference in one step:
+2. **Option A: Record reference voice directly (Self-record with teleprompter):**
+   Authors can record their own voice using a phonetically balanced calibration text (standard
+   IPA reference passage "Der Nordwind und die Sonne" / "The North Wind and the Sun"):
 
+   ```sh
+   # Display teleprompter, count down 2s, and record phonetically balanced reference:
+   lixity audio-reference record --project ./novel --calibration-text --gain 35
+   ```
+
+   The teleprompter displays the exact text to read aloud in the terminal. The duration automatically
+   matches the passage (~24 seconds), and upon completion, the immutable reference is saved directly to
+   `.lixity/audio-references/`.
+
+   You can also pass custom transcripts:
    ```sh
    lixity audio-reference record --project ./novel --duration 15 --gain 35 \
      --transcript "Hier spricht die Autorin mit ruhiger Erzählstimme."
    ```
 
-   Alternatively, record to a file first and transcribe afterwards:
-
+   Or record to a raw WAV file first:
    ```sh
    lixity audio-reference record --project ./novel --duration 15 --gain 35 -o voice-work/reference.wav
    ```
 
-   The recording is automatically formatted to 24 kHz mono 16-bit PCM WAV.
+3. **Option B: Generate synthetic reference from calibration text:**
+   If an author prefers not to use their own voice recording, Lixity can synthetically generate a
+   reference voice from the phonetically balanced text using VoiceDesign:
+
+   ```sh
+   lixity audio-reference generate --project ./novel --language de \
+     --voice-description "A calm, warm German narrator voice with natural pacing."
+   ```
+
+4. **Inspect calibration texts:**
+   To view the calibration texts directly or pipe them into scripts:
+
+   ```sh
+   lixity audio-reference calibration-text --language de --variant phonetic
+   lixity audio-reference calibration-text --language de --variant short
+   ```
 
 ### Audio and video playback
 

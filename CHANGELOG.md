@@ -8,6 +8,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Phonetically balanced voice calibration texts and dual reference acquisition:
+  - Added `lixity audio-reference calibration-text` providing standard international phonetic reference texts (IPA standard "Der Nordwind und die Sonne" / "The North Wind and the Sun" and compact pangrams) covering the complete phonemic and prosodic space.
+  - Option A (Direct Recording with Teleprompter): `lixity audio-reference record --project PATH --calibration-text` displays the calibration text live in the terminal as a teleprompter, counts down 2 seconds, and automatically bounds and stores verified reference audio.
+  - Option B (Synthetic Reference Generation): `lixity audio-reference generate --project PATH [--voice-description "..."]` synthesizes a reference sample from the phonetically balanced calibration text using VoiceDesign and registers it as an immutable project reference.
 - Microphone calibration and direct recording (`audio-calibrate`, `audio-reference record`):
   - Added `lixity audio-calibrate` for automated microphone gain calibration and dynamic range analysis using pure stdlib arithmetic and ALSA/amixer hardware controls.
   - Implemented the 4-second prep / 8-second burst evaluation loop (3× POPP, 2× claps, 1× speech) with automated verdicts (`CALIBRIERT FÜR AUFNAHMEN!`, `ZU HEISS`, `MEHR LUFT ALS NÖTIG`) and recommended gain adjustments.

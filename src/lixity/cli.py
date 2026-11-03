@@ -561,8 +561,10 @@ _lixity_complete() {
             case "$prev" in
                 --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
                 --audio|--transcript-file|-o|--output) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
-                --gain|--duration|--device|--transcript|--reference-id) ;;
-                *) COMPREPLY=( $(compgen -W "create inspect record --help --project --audio --transcript-file --transcript --reference-id --duration --gain --device -o --output" -- "$cur") ) ;;
+                --language) COMPREPLY=( $(compgen -W "de en" -- "$cur") ) ;;
+                --variant) COMPREPLY=( $(compgen -W "phonetic short" -- "$cur") ) ;;
+                --gain|--duration|--device|--transcript|--reference-id|--voice-description) ;;
+                *) COMPREPLY=( $(compgen -W "create inspect record generate calibration-text --help --project --audio --transcript-file --transcript --reference-id --duration --gain --device --calibration-text --variant --language --voice-description -o --output" -- "$cur") ) ;;
             esac
             return 0
             ;;
@@ -776,7 +778,7 @@ __LIXITY_ZSH_COMMANDS__
           ;;
         audio-reference)
           _arguments \
-            '1:action:(create inspect record)' \
+            '1:action:(create inspect record generate calibration-text)' \
             '--project[Explicit project root]:directory:_files -/' \
             '--audio[Reference WAV]:file:_files' \
             '--transcript-file[Exact UTF-8 transcript]:file:_files' \
@@ -785,6 +787,10 @@ __LIXITY_ZSH_COMMANDS__
             '--duration[Record length in seconds]:duration:' \
             '--gain[ALSA capture gain 0-50]:gain:' \
             '--device[Capture device]:device:' \
+            '--calibration-text[Record standard calibration text]' \
+            '--variant[Calibration text variant]:variant:(phonetic short)' \
+            '--language[Language code]:language:(de en)' \
+            '--voice-description[Voice description for synthetic generation]:text:' \
             '-o[Save raw recorded WAV]:file:_files' \
             '--output[Save raw recorded WAV]:file:_files'
           ;;
@@ -2104,15 +2110,19 @@ def _main(argv: list[str] | None = None) -> int:
             p.add_argument("--json", action="store_true", help="Machine-readable JSON calibration result")
             continue
         if name == "audio-reference":
-            p.add_argument("action", choices=("create", "inspect", "record"))
-            p.add_argument("--project", required=True, help="Explicit existing project root")
+            p.add_argument("action", choices=("create", "inspect", "record", "generate", "calibration-text"))
+            p.add_argument("--project", default=None, help="Explicit existing project root")
             p.add_argument("--audio", help="create: reference WAV, 1–30 seconds, mono PCM 24 kHz")
             p.add_argument("--transcript-file", help="create/record: exact UTF-8 transcript file of the reference WAV")
-            p.add_argument("--transcript", default=None, help="record: exact inline transcript text of the reference WAV")
+            p.add_argument("--transcript", default=None, help="record/generate: exact inline transcript text")
             p.add_argument("--reference-id", help="inspect: saved reference identity to measure")
             p.add_argument("--duration", type=float, default=15.0, help="record: length in seconds (1–30, default: 15)")
             p.add_argument("--gain", type=int, default=None, help="record: ALSA capture gain (0–50)")
             p.add_argument("--device", default=None, help="record: hardware capture device")
+            p.add_argument("--calibration-text", action="store_true", help="record: read the standard phonetically balanced calibration text")
+            p.add_argument("--variant", choices=("phonetic", "short"), default="phonetic", help="calibration text variant (default: phonetic)")
+            p.add_argument("--language", default="de", choices=("de", "en"), help="generate/calibration-text: language (default: de)")
+            p.add_argument("--voice-description", default=None, help="generate: description of the voice to synthesize")
             p.add_argument("-o", "--output", help="record: optional file to save recorded WAV")
             continue
         if name == "audio-direction":
@@ -2618,8 +2628,30 @@ def _main(argv: list[str] | None = None) -> int:
     if args.command == "audio-reference":
         from .speech_qwen import MAX_REFERENCE_BYTES
         from .speech_reference_quality import assess_reference
-        from .speech_references import load_reference, read_reference_input, save_reference
+        from .speech_references import (
+            get_calibration_text,
+            load_reference,
+            read_reference_input,
+            save_reference,
+        )
         try:
+            if args.action == "calibration-text":
+                print(get_calibration_text(args.language, args.variant))
+                return EXIT_OK
+            if not args.project:
+                raise ValueError(f"audio-reference {args.action} requires --project")
+            if args.action == "generate":
+                from .speech_references import generate_reference
+
+                reference = generate_reference(
+                    args.project,
+                    text=args.transcript,
+                    language=args.language,
+                    voice_description=args.voice_description,
+                )
+                quality = assess_reference(reference.audio)
+                print(_json({"schema_version": "lixity-audio-reference-created/1", "id": reference.id, "quality": quality}, indent=True))
+                return EXIT_OK
             if args.action == "inspect":
                 if not args.reference_id:
                     raise ValueError(_m("audio_reference_inspect_input"))
@@ -2630,14 +2662,29 @@ def _main(argv: list[str] | None = None) -> int:
                 from pathlib import Path
 
                 from .speech_record import analyze_signal, record_audio
-                print(f"Aufnahme ({args.duration}s) startet in 2 Sekunden... Sprechen Sie Ihren Referenztext.", file=sys.stderr)
-                audio = record_audio(args.duration, gain=args.gain, device=args.device, countdown=2.0)
-                if args.output:
-                    Path(args.output).write_bytes(audio)
-                    print(f"Aufnahmedatei gespeichert: {args.output}", file=sys.stderr)
+
                 transcript = args.transcript
                 if not transcript and args.transcript_file:
                     transcript = read_reference_input(args.transcript_file, 8000).decode("utf-8")
+                if not transcript and args.calibration_text:
+                    transcript = get_calibration_text(args.language, args.variant)
+
+                duration = args.duration
+                if args.calibration_text and duration == 15.0 and args.variant == "phonetic":
+                    duration = 24.0
+
+                if args.calibration_text and transcript:
+                    print("\n================== KALIBRIERUNGSTEXT (TELEPROMPTER) ==================", file=sys.stderr)
+                    print(f"Sprache: {args.language} | Variante: {args.variant} | Dauer: {duration:.0f}s", file=sys.stderr)
+                    print("Bitte nach dem Countdown laut, ruhig und deutlich vorlesen:\n", file=sys.stderr)
+                    print(transcript, file=sys.stderr)
+                    print("=======================================================================\n", file=sys.stderr)
+
+                print(f"Aufnahme ({duration:.0f}s) startet in 2 Sekunden... Sprechen Sie Ihren Referenztext.", file=sys.stderr)
+                audio = record_audio(duration, gain=args.gain, device=args.device, countdown=2.0)
+                if args.output:
+                    Path(args.output).write_bytes(audio)
+                    print(f"Aufnahmedatei gespeichert: {args.output}", file=sys.stderr)
                 if transcript:
                     reference = save_reference(args.project, audio, transcript)
                     quality = assess_reference(reference.audio)
@@ -2646,7 +2693,7 @@ def _main(argv: list[str] | None = None) -> int:
                 signal_stats = analyze_signal(audio)
                 print(_json({
                     "status": "recorded",
-                    "duration_seconds": args.duration,
+                    "duration_seconds": duration,
                     "quality": signal_stats,
                     "action_required": f"Referenz anlegen mit: lixity audio-reference create --project {args.project} --audio {args.output or 'recording.wav'} --transcript-file TEXT.txt",
                 }, indent=True))

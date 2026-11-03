@@ -13,7 +13,7 @@ import re
 import stat
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from .speech_direction import SpeechSegment
@@ -157,3 +157,71 @@ def save_reference(project: str | Path, audio: bytes, transcript: str) -> Speech
             if existing != reference:
                 raise ValueError("Existing audio reference identity does not match")
     return reference
+
+
+CALIBRATION_TEXTS: dict[str, dict[str, str]] = {
+    "de": {
+        "phonetic": (
+            "Einst stritten sich Nordwind und Sonne, wer von ihnen beiden wohl der Stärkere wäre, "
+            "als ein Wanderer, der in einen warmen Mantel gehüllt war, des Weges daherkam. "
+            "Sie wurden einig, dass derjenige für den Stärkeren gelten sollte, der den Wanderer zwingen würde, "
+            "seinen Mantel abzulegen. Der Nordwind blies mit aller Macht, aber je mehr er blies, desto fester "
+            "hüllte sich der Wanderer in seinen Mantel ein. Endlich gab der Nordwind den Kampf auf. "
+            "Da erwärmte die Sonne die Luft mit ihren freundlichen Strahlen, und schon nach wenigen Augenblicken "
+            "zog der Wanderer seinen Mantel aus."
+        ),
+        "short": (
+            "Zwölf Boxkämpfer jagen Viktor quer über den großen Sylter Deich. "
+            "Ein kluger Richter prüft jede Aussage gewissenhaft und ruhig."
+        ),
+    },
+    "en": {
+        "phonetic": (
+            "The North Wind and the Sun were disputing which was the stronger, "
+            "when a traveler came along wrapped in a warm cloak. "
+            "They agreed that the one who first succeeded in making the traveler take his cloak off "
+            "should be considered stronger than the other. Then the North Wind blew as hard as he could, "
+            "but the more he blew the more closely did the traveler fold his cloak around him; "
+            "and at last the North Wind gave up the attempt. Then the Sun shone out warmly, "
+            "and immediately the traveler took off his cloak."
+        ),
+        "short": (
+            "The quick brown fox jumps over the lazy dog while sphinx of black quartz judges my vow. "
+            "Every voice needs careful listening review."
+        ),
+    },
+}
+
+
+def get_calibration_text(language: str = "de", variant: str = "phonetic") -> str:
+    """Return a standard phonetically balanced calibration text for voice references."""
+    lang_map = CALIBRATION_TEXTS.get(language, CALIBRATION_TEXTS["de"])
+    return lang_map.get(variant, lang_map["phonetic"])
+
+
+def generate_reference(
+    project: str | Path,
+    *,
+    text: str | None = None,
+    language: str = "de",
+    voice_description: str | None = None,
+    target: str = "local",
+    opener: Any = None,
+) -> SpeechReference:
+    """Generate a synthetic voice reference from a calibration text and store it."""
+    from .speech_profiles import AudioProfile
+    from .speech_qwen import synthesize_qwen
+
+    spoken_text = text.strip() if text and text.strip() else get_calibration_text(language)
+    description = voice_description.strip() if voice_description and voice_description.strip() else (
+        "A clear, natural German narrator voice with calm pacing and warmth." if language == "de"
+        else "A clear, natural English narrator voice with calm pacing and warmth."
+    )
+    profile = AudioProfile(
+        engine="qwen3-design",
+        voice="design",
+        language=language,
+        voice_description=description,
+    )
+    audio = synthesize_qwen(spoken_text, profile, target=target, opener=opener)
+    return save_reference(project, audio, spoken_text)

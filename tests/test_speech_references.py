@@ -87,3 +87,83 @@ def test_reference_rejects_oversized_stored_data(tmp_path):
     record.write_bytes(b"x" * (3 * 1024 * 1024))
     with pytest.raises(ValueError, match="bounded"):
         load_reference(tmp_path, saved.id)
+
+
+def test_calibration_texts_and_retrieval():
+    from lixity.speech_references import CALIBRATION_TEXTS, get_calibration_text
+
+    assert "Nordwind" in CALIBRATION_TEXTS["de"]["phonetic"]
+    assert "Boxkämpfer" in CALIBRATION_TEXTS["de"]["short"]
+    assert "North Wind" in CALIBRATION_TEXTS["en"]["phonetic"]
+    assert "quick brown fox" in CALIBRATION_TEXTS["en"]["short"]
+
+    assert get_calibration_text("de", "phonetic") == CALIBRATION_TEXTS["de"]["phonetic"]
+    assert get_calibration_text("de", "short") == CALIBRATION_TEXTS["de"]["short"]
+    assert get_calibration_text("en", "phonetic") == CALIBRATION_TEXTS["en"]["phonetic"]
+    assert get_calibration_text("unknown", "invalid") == CALIBRATION_TEXTS["de"]["phonetic"]
+
+
+def test_generate_reference(tmp_path, monkeypatch):
+    import lixity.speech_qwen
+    from lixity.speech_references import generate_reference
+
+    dummy_audio = generate_silence_wav(2)
+    monkeypatch.setattr(lixity.speech_qwen, "synthesize_qwen", lambda text, profile, **kw: dummy_audio)
+
+    ref = generate_reference(tmp_path, language="de")
+    assert ref.audio == dummy_audio
+    assert "Nordwind" in ref.transcript
+    loaded = load_reference(tmp_path, ref.id)
+    assert loaded == ref
+
+
+def test_cli_calibration_text_and_generate(tmp_path, capsys, monkeypatch):
+    import lixity.speech_qwen
+    from lixity.cli import main
+
+    # 1. calibration-text command doesn't need --project
+    assert main(["audio-reference", "calibration-text", "--language", "de", "--variant", "phonetic"]) == 0
+    out = capsys.readouterr().out
+    assert "Nordwind" in out
+
+    assert main(["audio-reference", "calibration-text", "--language", "en", "--variant", "short"]) == 0
+    out = capsys.readouterr().out
+    assert "quick brown fox" in out
+
+    # 2. generate command
+    dummy_audio = generate_silence_wav(2)
+    monkeypatch.setattr(lixity.speech_qwen, "synthesize_qwen", lambda text, profile, **kw: dummy_audio)
+
+    assert main([
+        "audio-reference", "generate",
+        "--project", str(tmp_path),
+        "--language", "de",
+        "--voice-description", "Warm narrative voice",
+    ]) == 0
+    out = capsys.readouterr().out
+    res = json.loads(out)
+    assert res["schema_version"] == "lixity-audio-reference-created/1"
+    assert "id" in res
+
+
+def test_cli_record_with_calibration_text(tmp_path, capsys, monkeypatch):
+    import lixity.speech_record
+    from lixity.cli import main
+
+    dummy_audio = generate_silence_wav(2)
+    monkeypatch.setattr(lixity.speech_record, "record_audio", lambda duration, **kw: dummy_audio)
+
+    assert main([
+        "audio-reference", "record",
+        "--project", str(tmp_path),
+        "--calibration-text",
+        "--language", "de",
+        "--variant", "short",
+    ]) == 0
+    captured = capsys.readouterr()
+    assert "KALIBRIERUNGSTEXT (TELEPROMPTER)" in captured.err
+    assert "Boxkämpfer" in captured.err
+    res = json.loads(captured.out)
+    assert res["schema_version"] == "lixity-audio-reference-created/1"
+    assert "id" in res
+
