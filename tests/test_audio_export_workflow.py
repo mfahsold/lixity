@@ -222,3 +222,50 @@ def test_cli_engine_switch_discards_only_inapplicable_inherited_bindings(export_
     assert main([*args, "--engine", "qwen3", "--voice", "Ryan"]) == 0
     native = json.loads(capsys.readouterr().out)
     assert "base_url" not in native["segments"][0]["profile"]
+
+
+def test_audio_export_plan_output_flag(export_project, tmp_path):
+    target_timeline = tmp_path / "plan.json"
+    assert main(["audio-export-plan", "--project", str(export_project.parent), "--chapter", "1", "-o", str(target_timeline)]) == 0
+    assert target_timeline.is_file()
+    data = json.loads(target_timeline.read_text(encoding="utf-8"))
+    assert data["schema_version"] == "lixity-audio-timeline/1"
+    assert len(data["segments"]) > 0
+
+    target_ssml = tmp_path / "plan.ssml"
+    assert main(["audio-export-plan", "--project", str(export_project.parent), "--chapter", "1", "--ssml", "-o", str(target_ssml)]) == 0
+    assert target_ssml.is_file()
+    assert "<speak" in target_ssml.read_text(encoding="utf-8")
+
+
+def test_audio_import_transcript_whisper_conversion(tmp_path):
+    from lixity.speech import generate_silence_wav
+
+    audio_bytes = generate_silence_wav(1)
+    audio_path = tmp_path / "test.wav"
+    audio_path.write_bytes(audio_bytes)
+
+    whisper_json = tmp_path / "whisper.json"
+    whisper_json.write_text(json.dumps({
+        "model": "whisper-large-v3",
+        "segments": [
+            {
+                "id": 0,
+                "words": [
+                    {"word": "The", "start": 0.1, "end": 0.3},
+                    {"word": "red", "start": 0.35, "end": 0.6},
+                    {"word": "bird.", "start": 0.65, "end": 0.95},
+                ]
+            }
+        ]
+    }), encoding="utf-8")
+
+    out_transcript = tmp_path / "transcript.json"
+    assert main(["audio-import-transcript", str(audio_path), str(whisper_json), "-o", str(out_transcript), "--language", "en"]) == 0
+    assert out_transcript.is_file()
+    result = json.loads(out_transcript.read_text(encoding="utf-8"))
+    assert result["schema_version"] == "lixity-audio-transcript/1"
+    assert result["audio_sha256"] == hashlib.sha256(audio_bytes).hexdigest()
+    assert result["model"] == "whisper-large-v3"
+    assert [w["text"] for w in result["words"]] == ["the", "red", "bird"]
+

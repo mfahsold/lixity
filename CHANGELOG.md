@@ -8,6 +8,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- `audio-import-transcript` CLI command and ASR bridge:
+  - Added `lixity audio-import-transcript` to convert external speech recognizer outputs (OpenAI Whisper JSON segments/words, faster-whisper, or raw timestamped word arrays) into valid, SHA-256 bound `lixity-audio-transcript/1` objects.
+  - Automatically handles tokenization by language profile, sub-token proportional timing allocation, and non-overlapping monotonic timestamp sanitization for seamless `audio-verify` intake.
+- Direct `-o` / `--output` atomic file writes in `audio-export-plan`:
+  - `lixity audio-export-plan` and `read-aloud --ssml / --timeline` now respect `-o` / `--output` to directly and atomically write timeline JSON or W3C SSML to target files instead of routing solely to standard output.
 - Explicit scene titles and project-configured titles in `scenes` JSON exports:
   - Each item in `scenes.items` and `scenes.planned_items` now includes an explicit `scene_title` field alongside `chapter_title`.
   - Automatically derives scene titles from leading Markdown headings (`##`, `###`), explicit `scene_analysis.titles` table definitions in project configuration, or clean fallbacks (`Chapter · Scene`).

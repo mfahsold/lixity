@@ -478,6 +478,7 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("audio-export-plan", "Export manuscript direction as JSON timeline or SSML without synthesis"),
     ("audio-inspect", "Inspect a chapter audio file locally (JSON; no speech recognition)"),
     ("audio-verify", "Compare chapter audio with a direction plan and optional timestamped transcript (JSON)"),
+    ("audio-import-transcript", "Convert external ASR word timestamps (e.g. Whisper) to lixity-audio-transcript/1"),
     ("audio-status", "Inspect audio profiles and worker readiness"),
     ("audio-reference", "Create or inspect a private project-local voice reference (JSON)"),
     ("audio-direction", "Inspect and save project-local passage speech direction (JSON)"),
@@ -529,6 +530,14 @@ _lixity_complete() {
                 --plan|--transcript) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
                 --language) COMPREPLY=( $(compgen -W "en de fr es it pt nl generic" -- "$cur") ) ;;
                 *) COMPREPLY=( $(compgen -W "--help --plan --transcript --language --json" -- "$cur") ); COMPREPLY+=( $(compgen -f -- "$cur") ) ;;
+            esac
+            return 0
+            ;;
+        audio-import-transcript)
+            case "$prev" in
+                -o|--output) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
+                --language) COMPREPLY=( $(compgen -W "en de fr es it pt nl generic" -- "$cur") ) ;;
+                *) COMPREPLY=( $(compgen -W "--help -o --output --model --language" -- "$cur") ); COMPREPLY+=( $(compgen -f -- "$cur") ) ;;
             esac
             return 0
             ;;
@@ -1602,16 +1611,27 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
             check_context()
             if getattr(args, "ssml", False):
                 exported = ssml_export(plan, default_lang=profile.language)
-                print(exported["ssml"])
+                if args.output:
+                    _run_text_report(args, lambda: print(exported["ssml"]) or EXIT_OK)
+                else:
+                    print(exported["ssml"])
                 for warning in exported["warnings"]:
                     print(f"[export] {warning}", file=sys.stderr)
             elif args.timeline:
                 timeline = timeline_json(plan)
                 timeline["source"] = {"sha256": source_hash, "mode": "preview" if preview else "chapter" if args.chapter else "manuscript",
                                       "chapter": args.chapter}
-                print(_json(timeline, indent=True))
+                text_content = _json(timeline, indent=True)
+                if args.output:
+                    _run_text_report(args, lambda: print(text_content) or EXIT_OK)
+                else:
+                    print(text_content)
             else:
-                print(_json(plan_json(plan), indent=True))
+                text_content = _json(plan_json(plan), indent=True)
+                if args.output:
+                    _run_text_report(args, lambda: print(text_content) or EXIT_OK)
+                else:
+                    print(text_content)
             return EXIT_OK
         references = references_for_plan(workspace.root, plan)
         render_options: dict[str, Any] = {"references": references} if references else {}
@@ -1871,13 +1891,15 @@ def _add_threshold_arguments(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def _run_text_report(args: argparse.Namespace, render: Callable[[], int]) -> int:
+def _run_text_report(args: argparse.Namespace, render: Callable[[], int], *, source_file: str | None = None) -> int:
     """Write successful report data atomically, leaving diagnostics on stderr."""
     output = getattr(args, "output", None)
+    source = source_file or getattr(args, "file", None) or getattr(args, "audio", None)
     try:
         if output is None:
             return render()
-        FileUtils.require_distinct_output(args.file, output)
+        if source:
+            FileUtils.require_distinct_output(source, output)
         with StringIO() as captured, redirect_stdout(captured):
             status = render()
             content = captured.getvalue()
@@ -1885,7 +1907,7 @@ def _run_text_report(args: argparse.Namespace, render: Callable[[], int]) -> int
             return status
         FileUtils.atomic_write_if_changed(
             output, content,
-            before_replace=lambda: FileUtils.require_distinct_output(args.file, output),
+            before_replace=(lambda: FileUtils.require_distinct_output(source, output)) if source else None,
         )
     except (OSError, ValueError) as exc:
         print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
@@ -2037,6 +2059,13 @@ def _main(argv: list[str] | None = None) -> int:
             p.add_argument("--transcript", help="Timestamped lixity-audio-transcript/1 JSON tied to this audio SHA-256")
             p.add_argument("--language", default="en", help="Explicit tokenization language (default: en)")
             p.add_argument("--json", action="store_true", help="JSON output (also the default)")
+            continue
+        if name == "audio-import-transcript":
+            p.add_argument("audio", help="Reference WAV, FLAC or MP3 file for SHA-256 binding")
+            p.add_argument("transcript", help="External ASR transcript JSON (e.g. OpenAI Whisper or word-timing list)")
+            p.add_argument("-o", "--output", help="Target output file (default: stdout)")
+            p.add_argument("--model", help="Declared speech recognizer model name (optional)")
+            p.add_argument("--language", default="en", help="Explicit tokenization language (default: en)")
             continue
         if name == "audio-status":
             p.add_argument("--project", help="Explicit project root; omit to inspect workers only")
@@ -2494,6 +2523,31 @@ def _main(argv: list[str] | None = None) -> int:
             print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
             return EXIT_ERROR
         print(_json(result, indent=True))
+        return EXIT_OK
+    if args.command == "audio-import-transcript":
+        from .audio_audit import (
+            build_transcript_from_words,
+            load_audit_json,
+            parse_external_transcript,
+        )
+        try:
+            raw_data = load_audit_json(args.transcript)
+            words, model = parse_external_transcript(raw_data)
+            effective_model = args.model or model
+            transcript_obj = build_transcript_from_words(
+                args.audio,
+                words,
+                model=effective_model,
+                language=args.language,
+            )
+            content = _json(transcript_obj, indent=True)
+            if args.output:
+                _run_text_report(args, lambda: print(content) or EXIT_OK)
+            else:
+                print(content)
+        except (OSError, ValueError, RuntimeError) as exc:
+            print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+            return EXIT_ERROR
         return EXIT_OK
     if args.command == "audio-reference":
         from .speech_qwen import MAX_REFERENCE_BYTES

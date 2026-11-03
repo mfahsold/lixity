@@ -567,3 +567,105 @@ def inspect_audio(audio_path: str | Path, *,
             "alignment": alignment, "pauses": pauses,
             "limitations": ["This audit does not run speech recognition or contact an external service.",
                             "It does not establish acoustic quality, intelligibility, voice identity or text correctness."]}
+
+
+def build_transcript_from_words(
+    audio_path: str | Path,
+    words: Sequence[Mapping[str, Any]],
+    *,
+    model: str | None = None,
+    language: str = "en",
+) -> dict[str, Any]:
+    """Convert external word-level timestamps (e.g. from Whisper or ASR) into valid lixity-audio-transcript/1.
+
+    Calculates the exact SHA-256 hash of the audio file, validates and splits tokens
+    according to the specified language profile, and enforces non-overlapping bounds.
+    """
+    if language not in LANGUAGE_PROFILES:
+        raise ValueError("Choose an explicit registered language for audio transcript tokenization")
+    pattern = compile_word_pattern(LANGUAGE_PROFILES[language].word_regex)
+    path = Path(audio_path)
+    if not path.is_file():
+        raise FileNotFoundError(f"Audio file not found: {path}")
+
+    with _input(path, MAX_INPUT_BYTES) as stream:
+        digest = _digest(stream)
+
+    cleaned_words: list[dict[str, Any]] = []
+    previous_end = 0.0
+
+    for item in words:
+        if not isinstance(item, Mapping):
+            continue
+        raw_text = item.get("word") or item.get("text") or ""
+        if not isinstance(raw_text, str) or not raw_text.strip():
+            continue
+        try:
+            start = _number(item.get("start"), "Word start")
+            end = _number(item.get("end"), "Word end")
+        except ValueError:
+            continue
+        if end <= start:
+            continue
+
+        tokens = _tokens(raw_text, pattern)
+        if not tokens:
+            continue
+
+        # If a single item contained multiple language tokens (e.g. hyphenated or punctuation-separated),
+        # allocate timestamps proportionally across sub-tokens.
+        token_count = len(tokens)
+        duration_per_token = (end - start) / token_count
+        for i, token in enumerate(tokens):
+            w_start = start + (i * duration_per_token)
+            w_end = w_start + duration_per_token
+            # Ensure strict non-overlapping ordering
+            if w_start < previous_end:
+                w_start = previous_end
+            if w_end <= w_start:
+                w_end = w_start + 0.001
+            previous_end = w_end
+            cleaned_words.append({
+                "text": token,
+                "start": round(w_start, 3),
+                "end": round(w_end, 3),
+            })
+            if len(cleaned_words) >= MAX_WORDS:
+                break
+        if len(cleaned_words) >= MAX_WORDS:
+            break
+
+    result: dict[str, Any] = {
+        "schema_version": TRANSCRIPT_SCHEMA,
+        "audio_sha256": digest,
+        "model": model or None,
+        "words": cleaned_words,
+    }
+    return result
+
+
+def parse_external_transcript(
+    data: Mapping[str, Any] | Sequence[Any],
+) -> tuple[list[dict[str, Any]], str | None]:
+    """Extract word timestamps and optional model name from standard ASR formats (Whisper, faster-whisper, etc.)."""
+    model = None
+    words: list[dict[str, Any]] = []
+
+    if isinstance(data, Mapping):
+        model = data.get("model") or data.get("asr_model")
+        if not isinstance(model, str):
+            model = None
+
+        # Format 1: Direct words list (e.g. faster-whisper word list or existing word array)
+        if isinstance(data.get("words"), list):
+            words.extend(dict(w) for w in data["words"] if isinstance(w, Mapping))
+        # Format 2: Standard OpenAI Whisper JSON with segments[].words[]
+        elif isinstance(data.get("segments"), list):
+            for seg in data["segments"]:
+                if isinstance(seg, Mapping) and isinstance(seg.get("words"), list):
+                    words.extend(dict(w) for w in seg["words"] if isinstance(w, Mapping))
+    elif isinstance(data, Sequence):
+        # Format 3: Raw array of word objects
+        words.extend(dict(item) for item in data if isinstance(item, Mapping))
+
+    return words, model

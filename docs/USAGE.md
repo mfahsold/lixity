@@ -1616,6 +1616,9 @@ lixity audio-inspect chapter-2.wav
 lixity audio-verify chapter-2.wav --plan chapter-2.timeline.json --language de
 lixity audio-verify chapter-2.wav --plan chapter-2.timeline.json \
   --transcript chapter-2.words.json --language de
+
+# Convert external ASR output (e.g. OpenAI Whisper or faster-whisper) to lixity-audio-transcript/1:
+lixity audio-import-transcript chapter-2.wav whisper-output.json -o chapter-2.words.json --language de
 ```
 
 Both commands emit `lixity-audio-audit/1` JSON and read the supplied files locally.
