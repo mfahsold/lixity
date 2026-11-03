@@ -1383,7 +1383,10 @@ external cache entries; existing native cache identities stay unchanged.
 
 `audio_audit.py` reads chapter audio locally, computes level, clipping, DC offset
 and heuristic silence observations, and optionally compares the direction plan
-with an explicitly supplied timestamped transcript. The transcript must identify
+with an explicitly supplied timestamped transcript. External speech recognizer
+outputs (e.g. OpenAI Whisper or word timestamp arrays) are bridged into the
+`lixity-audio-transcript/1` schema via `audio-import-transcript`, tying word
+boundaries directly to the audio recording's SHA-256 hash. The transcript must identify
 the exact original audio hash. Missing alignment evidence stays unknown;
 comparison is not speech recognition or a quality verdict. The existing
 `speech_reference_quality.py` remains a separate bounded voice-reference

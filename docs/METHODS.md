@@ -854,6 +854,9 @@ silent duration remain complete, and a truncation flag marks the omitted list.
 These thresholds are uncalibrated and do not classify natural pauses.
 
 Comparison requires a transcript tied by SHA-256 to the exact input audio bytes.
+The companion command `lixity audio-import-transcript` converts external word-timestamped
+ASR representations (e.g., OpenAI Whisper segments/words or arbitrary timestamped word lists)
+into validated `lixity-audio-transcript/1` documents while computing the cryptographic binding.
 Plan and transcript words use the explicitly selected language's word tokenizer,
 with NFC normalization and lowercase matching. `SequenceMatcher(autojunk=False)` compares
 token sequences after equal prefix/suffix trimming; its alignment is not a

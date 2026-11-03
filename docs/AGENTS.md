@@ -1622,8 +1622,10 @@ returning credential values or provider response bodies. Provider readiness is
 `lixity-audio-audit/1`. Audio and JSON are read locally; no speech recognizer runs.
 The audit contains `audio`, `signal`, `alignment` and `pauses`. Signal metrics
 preserve channel observations. Text comparison is `compared`, not `verified`;
-missing transcript evidence is unknown. Supplied `lixity-audio-transcript/1`
-has exact `audio_sha256`, `words` entries `{text,start,end}`, and optional
+missing transcript evidence is unknown. `audio-import-transcript AUDIO TRANSCRIPT [-o OUTPUT] [--model MODEL] [--language CODE]`
+converts external ASR word timestamps (e.g. OpenAI Whisper segments/words or timestamped word lists)
+into a valid `lixity-audio-transcript/1` JSON document cryptographically bound to the audio's SHA-256.
+Supplied `lixity-audio-transcript/1` has exact `audio_sha256`, `words` entries `{text,start,end}`, and optional
 `model`. Each entry is one token in the selected language, with ordered,
 nonoverlapping finite second timestamps within the recording. Wrong hashes
 and malformed timing fail. Missing expected words have no invented timestamp;
