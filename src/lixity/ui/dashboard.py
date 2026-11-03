@@ -567,17 +567,23 @@ def render_dashboard(
                 f"{L('welcome_example')} ↗</a></p>"
             )
             parts.append(
-                '    <section id="welcome-project-recent" data-recent-projects hidden aria-labelledby="welcome-project-recent-heading">'
+                '    <section id="welcome-project-recent" class="recent-projects-panel" data-recent-projects hidden aria-labelledby="welcome-project-recent-heading">'
             )
             parts.append(
-                f'      <h3 id="welcome-project-recent-heading">{L("recent_projects_heading")}</h3>'
+                '      <div class="recent-projects-header">'
+            )
+            parts.append(
+                f'        <h3 id="welcome-project-recent-heading" class="recent-projects-heading">{L("recent_projects_heading")}</h3>'
+            )
+            parts.append(
+                f'        <button type="button" class="ctl-link recent-projects-clear" data-clear-recent-projects>{L("clear_recent_projects")}</button>'
+            )
+            parts.append(
+                '      </div>'
             )
             parts.append(f'      <p class="ctl-note">{L("recent_projects_help")}</p>')
             parts.append(
-                '      <ul id="welcome-project-recent-list" class="project-chooser-list" data-recent-project-list></ul>'
-            )
-            parts.append(
-                f'      <button type="button" class="ctl" data-clear-recent-projects>{L("clear_recent_projects")}</button>'
+                '      <ul id="welcome-project-recent-list" class="recent-projects-list" data-recent-project-list></ul>'
             )
             parts.append(
                 '      <p class="ctl-status" data-recent-project-status role="status" hidden></p>'

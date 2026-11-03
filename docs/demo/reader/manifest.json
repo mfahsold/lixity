@@ -18,7 +18,7 @@
     "research": false,
     "source_files": true
   },
-  "created_at": "2026-11-03T20:46:59.864928+00:00",
+  "created_at": "2026-11-03T21:04:38.437496+00:00",
   "disclosures": [
     "Contains only the selected publication profile, approved dossier content and explicitly selected citations/maps.",
     "Reading progress hides content already included in this file; it is not access control.",
@@ -33,8 +33,8 @@
   "entrypoint": "index.html",
   "files": {
     "analysis.html": {
-      "byte_length": 244931,
-      "sha256": "0d29847eec8bf7825f12aa4aa7c68986d80181808c3ef7c265432af5accc97fe"
+      "byte_length": 246245,
+      "sha256": "252d7fa207a744c0da37d151df83180e4a34cb86fc7369b5933ae7e2c41678c5"
     },
     "assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg": {
       "byte_length": 2515979,
@@ -45,8 +45,8 @@
       "sha256": "993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64"
     },
     "index.html": {
-      "byte_length": 1206627,
-      "sha256": "9432007f9cfa7e37dc5f49e258d9798299547a07e9dffa4231e43302c44d1009"
+      "byte_length": 1208855,
+      "sha256": "84e319ffe4bb1790e9ce9ddf67b378c1e4dce14d19387e1fc19ecfcc64e4df6e"
     },
     "licenses/Lixity-LICENSE": {
       "byte_length": 34523,
@@ -79,7 +79,7 @@
   "mode": "reader",
   "product_version": "0.7.7",
   "project": {
-    "id": "urn:uuid:17b4a2c1-3a8c-47dc-8592-bf33a36efa20",
+    "id": "urn:uuid:9a71c382-f3a7-49a2-84ac-cc4151ca7a15",
     "language": "en",
     "title": "Warehouse 4 — a reader's companion"
   },
@@ -88,7 +88,7 @@
       "chapters"
     ],
     "entry_count": 6,
-    "identity": "322e44ca5d2f818363c66744051427babf1656e60ed403626fc4ca2075a3daec",
+    "identity": "3474fbed76e0e77b3d1f23395ba8e152576f6ebcf7434813e44f0c9e72d3d2aa",
     "max_chapter": 6,
     "profile": "readers"
   },

@@ -440,27 +440,55 @@ function renderRecentProjects() {
     var list = wrap.querySelector("[data-recent-project-list]");
     var status = wrap.querySelector("[data-recent-project-status]");
     wrap.hidden = !recents.length;
+    if (!list) return;
     list.replaceChildren();
     if (status) status.hidden = true;
     recents.forEach(function(path) {
       var item = document.createElement("li");
-      item.className = "project-chooser-toolbar";
+      item.className = "recent-project-item";
+
       var btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "ctl project-chooser-entry";
-      btn.style.cssText = "flex:1;width:auto;min-width:0;";
+      btn.className = "recent-project-btn";
       btn.dataset.recentProjectPath = path;
-      btn.textContent = path;
+      btn.title = path;
+
+      var isFile = /\.(md|markdown|txt|docx|pdf|html|epub)$/i.test(path);
+      var icon = document.createElement("span");
+      icon.className = "recent-project-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.textContent = isFile ? "📄" : "📁";
+
+      var textWrap = document.createElement("div");
+      textWrap.className = "recent-project-text";
+
+      var parts = path.replace(/[\\/]+$/, "").split(/[\\/]/);
+      var name = parts[parts.length - 1] || path;
+      var dir = parts.length > 1 ? parts.slice(0, -1).join("/") : "";
+
+      var nameEl = document.createElement("span");
+      nameEl.className = "recent-project-name";
+      nameEl.textContent = name;
+
+      var dirEl = document.createElement("span");
+      dirEl.className = "recent-project-dir";
+      dirEl.textContent = dir;
+
+      textWrap.append(nameEl, dirEl);
+      btn.append(icon, textWrap);
+
       var del = document.createElement("button");
       del.type = "button";
-      del.className = "ctl";
-      del.textContent = "×";
+      del.className = "recent-project-del";
+      del.innerHTML = '<span aria-hidden="true">✕</span>';
       del.setAttribute("aria-label", uiLabel("remove_recent_project") + " " + path);
       del.title = uiLabel("remove_recent_project");
-      del.addEventListener("click", function() {
+      del.addEventListener("click", function(e) {
+        e.stopPropagation();
         removeRecentProject(path);
         renderRecentProjects();
       });
+
       item.append(btn, del);
       list.appendChild(item);
     });

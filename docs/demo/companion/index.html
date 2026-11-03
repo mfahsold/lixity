@@ -1119,75 +1119,10 @@ h2, .section-heading, .settings-form h3 {
 .kpi-drawer-btn { background: transparent; border: 0; cursor: pointer; font-size: var(--text-micro); color: var(--accent); padding: .25rem 0; user-select: none; text-align: left; &:hover { color: var(--fg); } }
 .kpi-drawer-row { margin-top: .35rem; }
 
-.kpi-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
-  gap: var(--space-2);
-}
-.kpi {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: .65rem .85rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  min-height: 4.2rem;
-  position: relative;
-  overflow: hidden;
-  min-width: 0;
-  transition: border-color .18s var(--ease), box-shadow .18s var(--ease), transform .18s var(--ease);
-
-  &:hover { border-color: var(--accent); box-shadow: var(--shadow-lift); transform: translateY(-1px); }
-  & .kpi-bar {
-    position: absolute;
-    inset-inline-start: 0;
-    inset-block-end: 0;
-    height: 2px;
-    width: var(--v);
-    background: var(--accent);
-    opacity: .55;
-    border-radius: 0 var(--radius-xs) 0 0;
-    transition: width .3s var(--ease);
-  }
-  & b {
-    display: block;
-    font-size: 1.25rem;
-    font-weight: var(--weight-strong);
-    letter-spacing: -.02em;
-    font-variant-numeric: tabular-nums;
-    line-height: 1.2;
-  }
-  & span {
-    color: var(--muted);
-    font-size: var(--text-micro);
-    line-height: 1.35;
-    margin-top: .25rem;
-    text-wrap: balance;
-    overflow-wrap: anywhere;
-  }
-}
-.kpi-link {
-  cursor: pointer;
-  user-select: none;
-  &:hover b { color: var(--accent); }
-  &:active { transform: translateY(0); }
-}
-
-/* Secondary measurements share one native, reversible disclosure recipe. */
-:is(#analysis-measurements, .scene-measurements) {
-  border-block: 1px solid var(--line);
-  padding-block: .25rem;
-  & > summary {
-    cursor: pointer;
-    min-height: 2.75rem;
-    padding: .6rem .25rem;
-    font-size: var(--text-control);
-    font-weight: var(--weight-semibold);
-  }
-  &[open] > summary { margin-bottom: var(--space-3); }
-  & > .kpis { padding-bottom: var(--space-4); }
-}
+.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr)); gap: var(--space-2); }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: .65rem .85rem; display: flex; flex-direction: column; justify-content: space-between; min-height: 4.2rem; position: relative; overflow: hidden; min-width: 0; transition: border-color .18s var(--ease), box-shadow .18s var(--ease), transform .18s var(--ease); &:hover { border-color: var(--accent); box-shadow: var(--shadow-lift); transform: translateY(-1px); } & .kpi-bar { position: absolute; inset-inline-start: 0; inset-block-end: 0; height: 2px; width: var(--v); background: var(--accent); opacity: .55; border-radius: 0 var(--radius-xs) 0 0; transition: width .3s var(--ease); } & b { display: block; font-size: 1.25rem; font-weight: var(--weight-strong); letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.2; } & span { color: var(--muted); font-size: var(--text-micro); line-height: 1.35; margin-top: .25rem; text-wrap: balance; overflow-wrap: anywhere; } }
+.kpi-link { cursor: pointer; user-select: none; &:hover b { color: var(--accent); } &:active { transform: translateY(0); } }
+:is(#analysis-measurements, .scene-measurements) { border-block: 1px solid var(--line); padding-block: .25rem; & > summary { cursor: pointer; min-height: 2.75rem; padding: .6rem .25rem; font-size: var(--text-control); font-weight: var(--weight-semibold); } &[open] > summary { margin-bottom: var(--space-3); } & > .kpis { padding-bottom: var(--space-4); } }
 
 /* --- Sentence-length architecture ------------------------------------- */
 .dist {
@@ -2058,7 +1993,18 @@ mark.search-hit {
 .research-details-body dd { margin: 0 0 .4rem; overflow-wrap: anywhere; }
 .research-passage-actions { margin-top: .5rem; }
 .empty-state-note { max-width: 60ch; margin: 0 auto 1.2rem; line-height: 1.5; }
-.recent-projects-heading { display: block; font-size: var(--text-small); font-weight: var(--weight-semibold); margin-bottom: .3rem; }
+.recent-projects-panel { margin-top: .6rem; padding-top: .6rem; border-top: 1px solid var(--line); }
+.recent-projects-header { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .4rem; }
+.recent-projects-heading { font-size: var(--text-small); font-weight: var(--weight-semibold); color: var(--fg); margin: 0; }
+.recent-projects-clear { font-size: var(--text-micro); color: var(--muted); text-decoration: underline; cursor: pointer; background: 0; border: 0; padding: 0; &:hover { color: var(--flag); } }
+.recent-projects-list { list-style: none; margin: 0; padding: 0; max-height: min(28vh, 12rem); overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-raised); }
+.recent-project-item { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .4rem .6rem; transition: background-color .15s ease; & + .recent-project-item { border-top: 1px solid var(--line); } &:hover { background: var(--surface-hover); } }
+.recent-project-btn { display: flex; align-items: center; gap: .5rem; flex: 1; min-width: 0; background: 0; border: 0; padding: 0; margin: 0; text-align: left; cursor: pointer; color: inherit; font: inherit; overflow: hidden; &:hover .recent-project-name { color: var(--accent); } }
+.recent-project-icon { font-size: 1rem; flex: none; line-height: 1; }
+.recent-project-text { display: flex; flex-direction: column; min-width: 0; flex: 1; gap: .1rem; }
+.recent-project-name { font-size: var(--text-small); font-weight: var(--weight-semibold); color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent-project-dir { font-size: var(--text-micro); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); }
+.recent-project-del { flex: none; width: 1.5rem; height: 1.5rem; display: inline-flex; align-items: center; justify-content: center; background: 0; border: 1px solid transparent; border-radius: var(--radius-xs); color: var(--muted); font-size: .85rem; cursor: pointer; padding: 0; transition: all .15s ease; &:hover { color: var(--flag); background: rgba(248, 81, 73, .12); border-color: rgba(248, 81, 73, .25); } }
 .ctl { max-width: 100%; }
 #r-init-title { min-width: 200px; }
 #r-search-query { flex: 1; min-width: 240px; }
@@ -5404,68 +5350,47 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 #teleprompter-modal { position: fixed; inset: 0; z-index: 10000; background: #0a0c10; color: #e6edf3; display: flex; flex-direction: column; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
 #teleprompter-modal[hidden] { display: none !important; }
 .teleprompter-toolbar { flex: 0 0 auto; height: 3.5rem; min-height: 3.5rem; display: flex; align-items: center; justify-content: space-between; padding: 0 1.25rem; background: rgba(13, 17, 23, 0.94); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255, 255, 255, 0.08); gap: 1rem; z-index: 40; }
-.teleprompter-toolbar-group { display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0; white-space: nowrap; }
-.teleprompter-brand { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.875rem; font-weight: 600; color: #f0f6fc; margin-right: 0.25rem; }
-.teleprompter-select { background: #161b22; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; padding: 0.35rem 0.65rem; font-size: 0.8125rem; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; outline: none; cursor: pointer; }
-.teleprompter-select:focus-visible { border-color: #58a6ff; box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2); }
-.teleprompter-btn { background: #21262d; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; padding: 0.35rem 0.75rem; font-size: 0.8125rem; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; white-space: nowrap; flex-shrink: 0; text-decoration: none; transition: all 0.15s ease; }
-.teleprompter-btn:hover { background: #30363d; border-color: #8b949e; color: #ffffff; }
-.teleprompter-btn:focus-visible { outline: 2px solid #58a6ff; outline-offset: 2px; }
-.teleprompter-btn-primary { background: #238636; border-color: #2ea043; color: #ffffff; font-weight: 600; }
-.teleprompter-btn-primary:hover { background: #2ea043; border-color: #3fb950; }
-.teleprompter-btn-primary.is-active { background: #d29922; border-color: #e3b341; color: #ffffff; }
-.teleprompter-btn-record { background: rgba(218, 54, 51, 0.15); border-color: rgba(218, 54, 51, 0.4); color: #f85149; font-weight: 600; }
-.teleprompter-btn-record:hover { background: rgba(218, 54, 51, 0.25); border-color: #f85149; color: #ffffff; }
-.teleprompter-btn-record.is-active { background: #da3633; border-color: #f85149; color: #ffffff; animation: tp-pulse 1.5s infinite; }
-.teleprompter-btn-close { width: 2.1rem; height: 2.1rem; padding: 0; font-size: 1rem; border-radius: 6px; color: #8b949e; }
-.teleprompter-btn-close:hover { background: rgba(218, 54, 51, 0.18); border-color: rgba(218, 54, 51, 0.4); color: #f85149; }
-.teleprompter-btn-group { display: inline-flex; align-items: center; border-radius: 6px; flex-shrink: 0; }
-.teleprompter-btn-group .teleprompter-btn { border-radius: 0; margin: 0; }
-.teleprompter-btn-group .teleprompter-btn:first-child { border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
-.teleprompter-btn-group .teleprompter-btn:last-child { border-top-right-radius: 6px; border-bottom-right-radius: 6px; border-left: none; }
+.teleprompter-toolbar-group { display: flex; align-items: center; gap: .6rem; flex-shrink: 0; white-space: nowrap; }
+.teleprompter-brand { display: inline-flex; align-items: center; gap: .4rem; font-size: .875rem; font-weight: 600; color: #f0f6fc; margin-right: .25rem; }
+.teleprompter-select { background: #161b22; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; padding: .35rem .65rem; font-size: .8125rem; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; outline: none; cursor: pointer; &:focus-visible { border-color: #58a6ff; box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2); } }
+.teleprompter-btn { background: #21262d; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; padding: .35rem .75rem; font-size: .8125rem; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: .4rem; white-space: nowrap; flex-shrink: 0; text-decoration: none; transition: all .15s ease; &:hover { background: #30363d; border-color: #8b949e; color: #fff; } &:focus-visible { outline: 2px solid #58a6ff; outline-offset: 2px; } }
+.teleprompter-btn-primary { background: #238636; border-color: #2ea043; color: #fff; font-weight: 600; &:hover { background: #2ea043; border-color: #3fb950; } &.is-active { background: #d29922; border-color: #e3b341; color: #fff; } }
+.teleprompter-btn-record { background: rgba(218, 54, 51, 0.15); border-color: rgba(218, 54, 51, 0.4); color: #f85149; font-weight: 600; &:hover { background: rgba(218, 54, 51, 0.25); border-color: #f85149; color: #fff; } &.is-active { background: #da3633; border-color: #f85149; color: #fff; animation: tp-pulse 1.5s infinite; } }
+.teleprompter-btn-close { width: 2.1rem; height: 2.1rem; padding: 0; font-size: 1rem; border-radius: 6px; color: #8b949e; &:hover { background: rgba(218, 54, 51, 0.18); border-color: rgba(218, 54, 51, 0.4); color: #f85149; } }
+.teleprompter-btn-group { display: inline-flex; align-items: center; border-radius: 6px; flex-shrink: 0; & .teleprompter-btn { border-radius: 0; margin: 0; } & .teleprompter-btn:first-child { border-top-left-radius: 6px; border-bottom-left-radius: 6px; } & .teleprompter-btn:last-child { border-top-right-radius: 6px; border-bottom-right-radius: 6px; border-left: none; } }
 .teleprompter-dossier-toggle.is-active { background: rgba(88, 166, 255, 0.15); border-color: #58a6ff; color: #58a6ff; }
 @keyframes tp-pulse { 0% { box-shadow: 0 0 0 0 rgba(218, 54, 51, .7); } 70% { box-shadow: 0 0 0 10px rgba(218, 54, 51, 0); } 100% { box-shadow: 0 0 0 0 rgba(218, 54, 51, 0); } }
-.teleprompter-speed-control { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0.65rem; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; font-size: 0.8125rem; color: #8b949e; white-space: nowrap; flex-shrink: 0; }
-.teleprompter-speed-control input[type="range"] { width: 90px; cursor: pointer; accent-color: #58a6ff; }
+.teleprompter-speed-control { display: inline-flex; align-items: center; gap: .5rem; padding: .2rem .65rem; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; font-size: .8125rem; color: #8b949e; white-space: nowrap; flex-shrink: 0; & input[type="range"] { width: 90px; cursor: pointer; accent-color: #58a6ff; } }
 .teleprompter-speed-val { min-width: 4.8rem; font-variant-numeric: tabular-nums; font-weight: 600; color: #f0f6fc; text-align: right; }
 .teleprompter-body { flex: 1 1 auto; display: flex; position: relative; overflow: hidden; }
-.teleprompter-runway-container { flex: 1 1 auto; position: relative; overflow: hidden; display: flex; flex-direction: column; width: 100%; }
-.teleprompter-runway-container::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4rem; background: linear-gradient(180deg, #0a0c10 0%, rgba(10, 12, 16, 0) 100%); pointer-events: none; z-index: 10; }
-.teleprompter-runway-container::after { content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 6rem; background: linear-gradient(0deg, #0a0c10 0%, rgba(10, 12, 16, 0) 100%); pointer-events: none; z-index: 10; }
-.teleprompter-scroll-pane { flex: 1 1 auto; overflow-y: scroll; padding: 6vh 3rem 55vh; max-width: 900px; margin: 0 auto; width: 100%; scroll-behavior: smooth; }
-.teleprompter-scroll-pane::-webkit-scrollbar { width: 8px; }
-.teleprompter-scroll-pane::-webkit-scrollbar-track { background: #0a0c10; }
-.teleprompter-scroll-pane::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
-.teleprompter-chapter-heading { font-size: 0.85rem; color: #f0883e; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; margin: 3.5rem 0 1.25rem 0; opacity: 0.85; }
-.teleprompter-chapter-heading:first-child { margin-top: 0; }
-.teleprompter-paragraph { font-size: var(--teleprompter-font-size, 32px); line-height: 1.7; margin-bottom: 2.75rem; color: #6e7681; opacity: 0.42; transition: color 0.25s ease, opacity 0.25s ease, transform 0.25s ease, background 0.25s ease; position: relative; padding: 0.6rem 1.25rem; border-left: 3px solid transparent; border-radius: 6px; }
-.teleprompter-paragraph.is-active { color: #ffffff; opacity: 1; background: rgba(240, 136, 62, 0.06); border-left-color: #f0883e; transform: translateX(4px); }
-.teleprompter-cue { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.75rem; margin-bottom: 0.6rem; background: rgba(240, 136, 62, 0.14); border-left: 3px solid #f0883e; border-radius: 4px; font-size: 0.55em; line-height: 1.3; color: #f0883e; font-weight: 600; letter-spacing: 0.02em; }
-.teleprompter-cue-pause { font-size: 0.85em; background: rgba(240, 136, 62, 0.25); padding: 0.1rem 0.4rem; border-radius: 3px; margin-left: 0.4rem; font-weight: 700; }
-ruby.teleprompter-phonetic { ruby-position: over; color: #ffd166; font-weight: 500; }
-ruby.teleprompter-phonetic rt { font-size: 0.48em; color: #3fb950; font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace; font-weight: 600; }
-.teleprompter-sidebar { position: absolute; top: 0; right: 0; bottom: 0; width: 380px; max-width: calc(100vw - 2rem); background: rgba(18, 22, 28, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-left: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; overflow: hidden; z-index: 50; box-shadow: -8px 0 32px rgba(0, 0, 0, 0.6); transform: translateX(100%); transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
-.teleprompter-sidebar.is-open { transform: translateX(0); }
-.teleprompter-sidebar-header { padding: 0.75rem 1rem; font-size: 0.875rem; font-weight: 600; color: #e6edf3; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.teleprompter-runway-container { flex: 1 1 auto; position: relative; overflow: hidden; display: flex; flex-direction: column; width: 100%; &::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4rem; background: linear-gradient(180deg, #0a0c10 0%, rgba(10, 12, 16, 0) 100%); pointer-events: none; z-index: 10; } &::after { content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 6rem; background: linear-gradient(0deg, #0a0c10 0%, rgba(10, 12, 16, 0) 100%); pointer-events: none; z-index: 10; } }
+.teleprompter-scroll-pane { flex: 1 1 auto; overflow-y: scroll; padding: 6vh 3rem 55vh; max-width: 900px; margin: 0 auto; width: 100%; scroll-behavior: smooth; &::-webkit-scrollbar { width: 8px; } &::-webkit-scrollbar-track { background: #0a0c10; } &::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; } }
+.teleprompter-chapter-heading { font-size: .85rem; color: #f0883e; text-transform: uppercase; letter-spacing: .1em; font-weight: 700; margin: 3.5rem 0 1.25rem; opacity: .85; &:first-child { margin-top: 0; } }
+.teleprompter-paragraph { font-size: var(--teleprompter-font-size, 32px); line-height: 1.7; margin-bottom: 2.75rem; color: #6e7681; opacity: .42; transition: color .25s ease, opacity .25s ease, transform .25s ease, background .25s ease; position: relative; padding: .6rem 1.25rem; border-left: 3px solid transparent; border-radius: 6px; &.is-active { color: #fff; opacity: 1; background: rgba(240, 136, 62, 0.06); border-left-color: #f0883e; transform: translateX(4px); } }
+.teleprompter-cue { display: inline-flex; align-items: center; gap: .5rem; padding: .35rem .75rem; margin-bottom: .6rem; background: rgba(240, 136, 62, 0.14); border-left: 3px solid #f0883e; border-radius: 4px; font-size: .55em; line-height: 1.3; color: #f0883e; font-weight: 600; letter-spacing: .02em; }
+.teleprompter-cue-pause { font-size: .85em; background: rgba(240, 136, 62, 0.25); padding: .1rem .4rem; border-radius: 3px; margin-left: .4rem; font-weight: 700; }
+ruby.teleprompter-phonetic { ruby-position: over; color: #ffd166; font-weight: 500; & rt { font-size: .48em; color: #3fb950; font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace; font-weight: 600; } }
+.teleprompter-sidebar { position: absolute; top: 0; right: 0; bottom: 0; width: 380px; max-width: calc(100vw - 2rem); background: rgba(18, 22, 28, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-left: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; overflow: hidden; z-index: 50; box-shadow: -8px 0 32px rgba(0, 0, 0, 0.6); transform: translateX(100%); transition: transform .25s cubic-bezier(0.16, 1, 0.3, 1); &.is-open { transform: translateX(0); } }
+.teleprompter-sidebar-header { padding: .75rem 1rem; font-size: .875rem; font-weight: 600; color: #e6edf3; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
 .teleprompter-sidebar-content { flex: 1 1 auto; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1.25rem; }
 .teleprompter-dossier-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,.4); }
 .teleprompter-dossier-img { width: 100%; max-height: 280px; object-fit: contain; background: #090b0d; display: block; }
-.teleprompter-dossier-meta { padding: 0.85rem 1rem; }
-.teleprompter-dossier-title { font-size: 0.95rem; font-weight: 600; color: #e6edf3; margin: 0 0 0.35rem; }
-.teleprompter-dossier-caption { font-size: 0.825rem; color: #8b949e; line-height: 1.45; margin: 0; }
-.teleprompter-sidebar-empty { color: #6e7681; font-size: 0.85rem; text-align: center; padding: 2.5rem 1rem; }
+.teleprompter-dossier-meta { padding: .85rem 1rem; }
+.teleprompter-dossier-title { font-size: .95rem; font-weight: 600; color: #e6edf3; margin: 0 0 .35rem; }
+.teleprompter-dossier-caption { font-size: .825rem; color: #8b949e; line-height: 1.45; margin: 0; }
+.teleprompter-sidebar-empty { color: #6e7681; font-size: .85rem; text-align: center; padding: 2.5rem 1rem; }
 body.teleprompter-open { overflow: hidden !important; }
 @media (max-width: 900px) {
   .teleprompter-title-text, .teleprompter-btn-label { display: none; }
   .teleprompter-select { max-width: 140px; }
   .teleprompter-scroll-pane { padding: 4vh 1.5rem 50vh; }
-  .teleprompter-paragraph { padding: 0.5rem 0.75rem; }
+  .teleprompter-paragraph { padding: .5rem .75rem; }
 }
 @media (max-width: 640px) {
-  .teleprompter-toolbar { padding: 0 0.5rem; gap: 0.4rem; height: 3.25rem; min-height: 3.25rem; }
+  .teleprompter-toolbar { padding: 0 .5rem; gap: .4rem; height: 3.25rem; min-height: 3.25rem; }
   .teleprompter-speed-control input[type="range"] { width: 60px; }
-  .teleprompter-btn { padding: 0.3rem 0.5rem; font-size: 0.8rem; }
-  .teleprompter-speed-val { min-width: 3.8rem; font-size: 0.75rem; }
+  .teleprompter-btn { padding: .3rem .5rem; font-size: .8rem; }
+  .teleprompter-speed-val { min-width: 3.8rem; font-size: .75rem; }
 }
 </style><link rel="canonical" href="https://mfahsold.github.io/lixity/demo/companion/index.html"/>
 <meta name="description" content="Explore a fictional harbour&#x27;s setting beside your book; this companion contains no novel text and stops at chapter three."/>
@@ -5574,7 +5499,7 @@ body.teleprompter-open { overflow: hidden !important; }
 <div id="publication-entries"></div>
 <noscript><p>Enable JavaScript to select reading progress and open the context.</p></noscript></aside></div>
 <details class="panel"><summary>About this synthetic reading example</summary><p>The people, records and incident are invented. Reveal context deliberately with the reading-progress control. All content included in a static file remains inspectable; chapter caps remove later material before export.</p><p>The map and harbour view are public-domain setting references from circa 1900, not evidence of the fictional 1923 incident. <a href="../../assets/research/sources.json">Image credits and reviewed provenance</a>. The ordinary product export has the same reading interface and no visitor counter.</p></details><footer><span class="version-badge">Version 0.7.7</span><a class="license-badge" href="#license-terms">Open source · AGPL-3.0</a></footer></div>
-<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3A9cccf548-d5de-40de-949f-18c3ee9dccdf\u0026version_id=urn%3Auuid%3A7caeb6e0-a884-4d28-ad88-808af9a6c85e":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3A17b4a2c1-3a8c-47dc-8592-bf33a36efa20\u0026source_id=urn%3Auuid%3A9cccf548-d5de-40de-949f-18c3ee9dccdf\u0026version_id=urn%3Auuid%3A7caeb6e0-a884-4d28-ad88-808af9a6c85e":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3Ac8075184-68a6-4b7b-a823-6505b1c671b2\u0026version_id=urn%3Auuid%3A86809555-eda4-4d21-afc9-a02a15766c3e":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3A17b4a2c1-3a8c-47dc-8592-bf33a36efa20\u0026source_id=urn%3Auuid%3Ac8075184-68a6-4b7b-a823-6505b1c671b2\u0026version_id=urn%3Auuid%3A86809555-eda4-4d21-afc9-a02a15766c3e":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/1","mode":"companion","profile":"readers","project_id":"urn:uuid:17b4a2c1-3a8c-47dc-8592-bf33a36efa20","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":3,"chapters":[{"number":1},{"number":2},{"number":3}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:8dfa17bd-630a-4a0e-ab8d-f2fc734a2172","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:8e5b2bff-3690-4058-9fe3-47ad958eacb4","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:9cccf548-d5de-40de-949f-18c3ee9dccdf/urn:uuid:7caeb6e0-a884-4d28-ad88-808af9a6c85e)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:17b4a2c1-3a8c-47dc-8592-bf33a36efa20","source_id":"urn:uuid:9cccf548-d5de-40de-949f-18c3ee9dccdf","source_version_id":"urn:uuid:7caeb6e0-a884-4d28-ad88-808af9a6c85e","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3A17b4a2c1-3a8c-47dc-8592-bf33a36efa20\u0026source_id=urn%3Auuid%3A9cccf548-d5de-40de-949f-18c3ee9dccdf\u0026version_id=urn%3Auuid%3A7caeb6e0-a884-4d28-ad88-808af9a6c85e","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:8e5b2bff-3690-4058-9fe3-47ad958eacb4","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:c8075184-68a6-4b7b-a823-6505b1c671b2/urn:uuid:86809555-eda4-4d21-afc9-a02a15766c3e)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:17b4a2c1-3a8c-47dc-8592-bf33a36efa20","source_id":"urn:uuid:c8075184-68a6-4b7b-a823-6505b1c671b2","source_version_id":"urn:uuid:86809555-eda4-4d21-afc9-a02a15766c3e","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3A17b4a2c1-3a8c-47dc-8592-bf33a36efa20\u0026source_id=urn%3Auuid%3Ac8075184-68a6-4b7b-a823-6505b1c671b2\u0026version_id=urn%3Auuid%3A86809555-eda4-4d21-afc9-a02a15766c3e","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:8dfa17bd-630a-4a0e-ab8d-f2fc734a2172","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:8dfa17bd-630a-4a0e-ab8d-f2fc734a2172","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null}],"identity":"259a4cecdb4b5397dd6ca2a249d9fb88454c1c9409eba343d6cf633f8b95fcf4"}}</script>
+<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3A6d9833a6-2b35-4d7e-84db-20d6aad51ae5\u0026version_id=urn%3Auuid%3A5d46fb49-d603-4302-9ffd-a6a8477cf1ad":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3A9a71c382-f3a7-49a2-84ac-cc4151ca7a15\u0026source_id=urn%3Auuid%3A6d9833a6-2b35-4d7e-84db-20d6aad51ae5\u0026version_id=urn%3Auuid%3A5d46fb49-d603-4302-9ffd-a6a8477cf1ad":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3Ab337d5e1-c062-4816-b633-5b98c97da630\u0026version_id=urn%3Auuid%3A3b3aa35d-36a1-47fd-96bd-52fea43250ca":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3A9a71c382-f3a7-49a2-84ac-cc4151ca7a15\u0026source_id=urn%3Auuid%3Ab337d5e1-c062-4816-b633-5b98c97da630\u0026version_id=urn%3Auuid%3A3b3aa35d-36a1-47fd-96bd-52fea43250ca":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/1","mode":"companion","profile":"readers","project_id":"urn:uuid:9a71c382-f3a7-49a2-84ac-cc4151ca7a15","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":3,"chapters":[{"number":1},{"number":2},{"number":3}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:a0a2d133-a099-4f6f-acb9-186d7800db09","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:38e77333-1dc1-41b4-ba19-65b5f060c992","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:6d9833a6-2b35-4d7e-84db-20d6aad51ae5/urn:uuid:5d46fb49-d603-4302-9ffd-a6a8477cf1ad)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:9a71c382-f3a7-49a2-84ac-cc4151ca7a15","source_id":"urn:uuid:6d9833a6-2b35-4d7e-84db-20d6aad51ae5","source_version_id":"urn:uuid:5d46fb49-d603-4302-9ffd-a6a8477cf1ad","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3A9a71c382-f3a7-49a2-84ac-cc4151ca7a15\u0026source_id=urn%3Auuid%3A6d9833a6-2b35-4d7e-84db-20d6aad51ae5\u0026version_id=urn%3Auuid%3A5d46fb49-d603-4302-9ffd-a6a8477cf1ad","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:38e77333-1dc1-41b4-ba19-65b5f060c992","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:b337d5e1-c062-4816-b633-5b98c97da630/urn:uuid:3b3aa35d-36a1-47fd-96bd-52fea43250ca)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:9a71c382-f3a7-49a2-84ac-cc4151ca7a15","source_id":"urn:uuid:b337d5e1-c062-4816-b633-5b98c97da630","source_version_id":"urn:uuid:3b3aa35d-36a1-47fd-96bd-52fea43250ca","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3A9a71c382-f3a7-49a2-84ac-cc4151ca7a15\u0026source_id=urn%3Auuid%3Ab337d5e1-c062-4816-b633-5b98c97da630\u0026version_id=urn%3Auuid%3A3b3aa35d-36a1-47fd-96bd-52fea43250ca","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:a0a2d133-a099-4f6f-acb9-186d7800db09","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:a0a2d133-a099-4f6f-acb9-186d7800db09","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null}],"identity":"92b367274f507b5fc9703a2b002309a97de26d3863b4faa2be37cf965e8d809c"}}</script>
 <script>// A prepared website has no server: every API read belongs to its inline snapshot.
 (function () {
   "use strict";
@@ -13868,27 +13793,55 @@ function renderRecentProjects() {
     var list = wrap.querySelector("[data-recent-project-list]");
     var status = wrap.querySelector("[data-recent-project-status]");
     wrap.hidden = !recents.length;
+    if (!list) return;
     list.replaceChildren();
     if (status) status.hidden = true;
     recents.forEach(function(path) {
       var item = document.createElement("li");
-      item.className = "project-chooser-toolbar";
+      item.className = "recent-project-item";
+
       var btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "ctl project-chooser-entry";
-      btn.style.cssText = "flex:1;width:auto;min-width:0;";
+      btn.className = "recent-project-btn";
       btn.dataset.recentProjectPath = path;
-      btn.textContent = path;
+      btn.title = path;
+
+      var isFile = /\.(md|markdown|txt|docx|pdf|html|epub)$/i.test(path);
+      var icon = document.createElement("span");
+      icon.className = "recent-project-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.textContent = isFile ? "📄" : "📁";
+
+      var textWrap = document.createElement("div");
+      textWrap.className = "recent-project-text";
+
+      var parts = path.replace(/[\\/]+$/, "").split(/[\\/]/);
+      var name = parts[parts.length - 1] || path;
+      var dir = parts.length > 1 ? parts.slice(0, -1).join("/") : "";
+
+      var nameEl = document.createElement("span");
+      nameEl.className = "recent-project-name";
+      nameEl.textContent = name;
+
+      var dirEl = document.createElement("span");
+      dirEl.className = "recent-project-dir";
+      dirEl.textContent = dir;
+
+      textWrap.append(nameEl, dirEl);
+      btn.append(icon, textWrap);
+
       var del = document.createElement("button");
       del.type = "button";
-      del.className = "ctl";
-      del.textContent = "×";
+      del.className = "recent-project-del";
+      del.innerHTML = '<span aria-hidden="true">✕</span>';
       del.setAttribute("aria-label", uiLabel("remove_recent_project") + " " + path);
       del.title = uiLabel("remove_recent_project");
-      del.addEventListener("click", function() {
+      del.addEventListener("click", function(e) {
+        e.stopPropagation();
         removeRecentProject(path);
         renderRecentProjects();
       });
+
       item.append(btn, del);
       list.appendChild(item);
     });
