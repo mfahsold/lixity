@@ -116,6 +116,7 @@
         if ([audit.alignment.missing_words, audit.alignment.extra_words, audit.alignment.replacements, audit.pauses.comparisons].some(function(rows) { return rows.length > 100; })) node("p", details, "ctl-note", label("audit_more_results"));
       }
       auditAudioUrl = URL.createObjectURL(file); fields.audio.src = auditAudioUrl; fields.audio.hidden = false;
+      if (fields.player_controls) fields.player_controls.hidden = false;
       button(fields.audit_result, "audit_download", function() { downloadText(JSON.stringify(audit, null, 2), "audio-audit.json", "application/json"); });
       status(label("audit_ready"));
     } catch (error) { if (valid(serial)) status(error.message); }
@@ -123,6 +124,7 @@
   }
   function clearAudio() {
     fields.audio.pause(); fields.audio.removeAttribute("src"); fields.audio.load(); fields.audio.hidden = true;
+    if (fields.player_controls) fields.player_controls.hidden = true;
     if (auditAudioUrl) { URL.revokeObjectURL(auditAudioUrl); auditAudioUrl = null; }
     fields.download.hidden = true; fields.download.removeAttribute("href");
   }
@@ -377,6 +379,7 @@
       }
       if (result.state === "ready") {
         fields.audio.src = url("speech-audio", {id: active.id}); fields.audio.hidden = false;
+        if (fields.player_controls) fields.player_controls.hidden = false;
         fields.context.textContent += result.context && result.context.excerpt ? " · " + result.context.excerpt : "";
         if (result.context && result.context.truncated) fields.context.textContent += " · " + label("truncated");
         fields.download.href = fields.audio.src; fields.download.hidden = false; finish();
@@ -638,6 +641,21 @@
     fields.cancel = button(actions, "cancel", cancel); fields.cancel.disabled = true;
     fields.context = node("p", content, "ctl-note"); fields.progress = node("progress", content); fields.progress.hidden = true; fields.progress.setAttribute("aria-label", label("progress"));
     fields.audio = node("audio", content, "media-player"); fields.audio.controls = true; fields.audio.hidden = true;
+    fields.player_controls = node("div", content, "speech-player-controls"); fields.player_controls.hidden = true;
+    var skipBack = button(fields.player_controls, "skip_back", function() { fields.audio.currentTime = Math.max(0, fields.audio.currentTime - 5); });
+    skipBack.textContent = "−5s"; skipBack.title = label("audio_skip_back") || "5s back";
+    var skipForward = button(fields.player_controls, "skip_forward", function() { fields.audio.currentTime = Math.min(fields.audio.duration || 0, fields.audio.currentTime + 5); });
+    skipForward.textContent = "+5s"; skipForward.title = label("audio_skip_forward") || "5s forward";
+    [0.8, 1.0, 1.25, 1.5].forEach(function(rate) {
+      var rateBtn = button(fields.player_controls, "rate_" + rate, function() {
+        fields.audio.playbackRate = rate;
+        fields.player_controls.querySelectorAll(".speech-rate-btn").forEach(function(b) { b.classList.remove("active"); });
+        rateBtn.classList.add("active");
+      });
+      rateBtn.textContent = rate + "×";
+      rateBtn.classList.add("speech-rate-btn");
+      if (rate === 1.0) rateBtn.classList.add("active");
+    });
     fields.download = node("a", content, "ctl", label("download")); fields.download.download = "speech.wav"; fields.download.hidden = true;
     fields.save = button(content, "save", save);
     fields.profile_discard = button(content, "profiles_discard", function() {
@@ -654,7 +672,7 @@
     fields.render_section = node("fieldset", content, "settings-section speech-render-section");
     fields.render_heading = node("legend", fields.render_section);
     fields.render_section.append(fields.target.closest("label"), fields.worker_status, fields.worker_guide, fields.worker_refresh,
-      fields.runtime_hint, reuse, actions, fields.context, fields.progress, fields.audio, fields.download);
+      fields.runtime_hint, reuse, actions, fields.context, fields.progress, fields.audio, fields.player_controls, fields.download);
     arrangeSections();
     fields.reuseLabel = reuse;
     fields.editor.addEventListener("input", function(event) {

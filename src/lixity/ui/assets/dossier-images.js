@@ -98,13 +98,17 @@
     }
     if (media) {
       var video = image.media_type.startsWith("video/");
-      return '<figure class="dossier-image dossier-retained-media">' +
-        (video ? '<video controls preload="none" playsinline aria-label="' + safe(alt || image.title) +
-          '" src="' + safe(url) + '"></video>' : '<div class="dossier-document-type">PDF</div>') +
+      var audio = image.media_type.startsWith("audio/");
+      var player = video
+        ? '<video controls preload="none" playsinline aria-label="' + safe(alt || image.title) + '" src="' + safe(url) + '"></video>'
+        : (audio
+            ? '<audio controls preload="none" class="media-player" aria-label="' + safe(alt || image.title) + '" src="' + safe(url) + '"></audio>'
+            : '<div class="dossier-document-type">PDF</div>');
+      return '<figure class="dossier-image dossier-retained-media">' + player +
         '<figcaption><strong>' + safe(image.title || alt || uiLabel("media_add")) +
         '</strong><p class="ctl-note">' + safe(alt) + '</p><a class="ctl" download href="' + safe(url) +
         '">' + safe(uiLabel("media_download")) + '</a>' +
-        (video ? '<p class="ctl-note">' + safe(uiLabel("media_playback")) + '</p>' : '') +
+        (video || audio ? '<p class="ctl-note">' + safe(uiLabel("media_playback")) + '</p>' : '') +
         sourceContextHtml(image, true) + '</figcaption></figure>';
     }
     return '<figure class="dossier-image"><button type="button" class="dossier-image-enlarge" data-dossier-enlarge aria-label="' +

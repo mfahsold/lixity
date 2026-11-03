@@ -1718,7 +1718,12 @@ returns its ID with a `quality` object (`lixity-audio-reference-quality/1`:
 descriptive level, noise, clipping and bandwidth measurements with
 uncalibrated heuristic notes, not a quality score). `audio-reference inspect
 --project PATH --reference-id ID` returns the same object plus `reference_id`
-for an existing reference; both are read-only. The `quality` field is additive
+for an existing reference; both are read-only. `audio-reference record --project PATH
+[--duration SEC] [--gain N] [--transcript TXT | --transcript-file FILE] [-o OUT.wav]` records directly
+from hardware via OSS tools (`arecord`, `pw-record`, `ffmpeg`) and stores verified reference bytes.
+`audio-calibrate [--gain N] [--duration SEC] [--json]` performs an automated input level burst calibration
+returning `lixity-audio-calibration/1` with peak dBFS, clipping, noise floor and headroom verdicts.
+The `quality` field is additive
 to `lixity-audio-reference-created/1`. Reference bytes and transcript are private project data,
 not cache; they are validated and bound to job context and cache identity.
 Base profiles and passage ranges reject nonempty delivery instructions. A Base

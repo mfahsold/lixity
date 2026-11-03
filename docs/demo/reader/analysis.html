@@ -682,6 +682,35 @@ details.nda .row { margin-top: .5rem; }
 /* --- Native Modals & Template Cards ----------------------------------- */
 audio.media-player { width: 100%; max-width: 100%; }
 
+.speech-player-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+.speech-player-controls button {
+  padding: 0.2rem 0.55rem;
+  font-size: 0.8rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.speech-player-controls button:hover {
+  background: var(--surface-hover);
+  border-color: var(--line-active);
+}
+.speech-player-controls button.speech-rate-btn.active {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
 dialog.lixity-modal {
   position: fixed;
   inset: 0;

@@ -8,6 +8,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Microphone calibration and direct recording (`audio-calibrate`, `audio-reference record`):
+  - Added `lixity audio-calibrate` for automated microphone gain calibration and dynamic range analysis using pure stdlib arithmetic and ALSA/amixer hardware controls.
+  - Implemented the 4-second prep / 8-second burst evaluation loop (3× POPP, 2× claps, 1× speech) with automated verdicts (`CALIBRIERT FÜR AUFNAHMEN!`, `ZU HEISS`, `MEHR LUFT ALS NÖTIG`) and recommended gain adjustments.
+  - Added `lixity audio-reference record` to capture voice references directly from hardware via OSS capture tools (`arecord`, `pw-record`, `ffmpeg`), automatically normalizing to 24 kHz mono 16-bit PCM WAV and storing content-addressed reference records.
+- Enhanced OSS media playback across UI and Research:
+  - Added dedicated speech player controls with quick-access playback speed toggles (`0.8×`, `1.0×`, `1.25×`, `1.5×`) and ±5-second scrub buttons in the browser listening interface.
+  - Added native HTML5 audio player rendering for research dossier evidence attachments (`audio/*`) alongside existing video playback.
 - Offline F5-TTS Flow-Matching diffusion speech adapter and local worker:
   - Added native `f5-tts` engine support (`speech_f5.py`) utilizing Continuous Flow Matching (CFM) Diffusion Transformer (`SWivid/F5-TTS` and German fine-tunes such as `HPI-DAP/F5-TTS-German`).
   - Achieves natural, organic German prosody and breathing without autoregressive discrete token loops, stuttering, or hallucinated syllables.
