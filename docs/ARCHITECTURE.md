@@ -1569,3 +1569,52 @@ Design sources checked 2026-10-28: [W3C SSML 1.1](https://www.w3.org/TR/speech-s
 and [QVox segment instruction compilation](https://github.com/tecnomanu/qwen3-tts-api/blob/main/skills/qvox-tts/references/emotion-tags.md).
 Their semantics informed the separation of concerns; their model-specific tag
 sets, vendor benchmark claims and unknown-tag fallbacks are not adopted.
+
+### Synchronized Teleprompter and Reading Runway
+
+The manuscript teleprompter (`teleprompter.js`, `teleprompter.css`) provides a
+focused, distraction-free reading runway embedded directly in the manuscript reader view.
+Its architecture coordinates four concurrent streams:
+1. **Dynamic Runway and Auto-Scroll Engine:** Uses `requestAnimationFrame` for
+   sub-pixel smooth scrolling at variable words-per-minute speeds (60–240 WPM, default 130 WPM).
+   A fixed horizontal eye-level ribbon (~30% viewport height) establishes the focal plane
+   for studio narration, with typography size scaling (`A−`/`A+`, 20–56px) and full keyboard navigation.
+2. **Synchronized Vocal Direction Banners:** Queries `/api/speech` for saved
+   passage-level `audio-direction` cues. When a paragraph carries delivery instructions
+   (e.g., tempo, pitch, volume, or post-passage pause duration), an inline banner
+   (`🎬 .teleprompter-cue`) is rendered directly above the text.
+3. **Phonetic Pronunciation Ruby Overlays:** Scans paragraph tokens against
+   project pronunciation mappings (`pronunciations`) and applies semantic HTML5 `<ruby>`
+   and `<rt>` tags (`ruby.teleprompter-phonetic`) to guide correct articulation without
+   altering underlying manuscript strings.
+4. **Synchronized Research Dossier Evidence:** Monitors active runway paragraphs and
+   dynamically populates a split-screen sidebar with relevant research dossier images
+   and historical context. Dossier association follows a tripartite resolution:
+   - Primary: Exact `manuscript_links` anchored to the paragraph's SHA-256 digest.
+   - Secondary: Heuristic text matching against dossier titles and keywords/tags.
+   - Fallback: Current chapter context.
+   An adaptive off-canvas drawer layout collapses the sidebar on screens under 960px to
+   preserve the reading runway.
+5. **Integrated In-Browser Audio Capture:** Connects directly to the Web Audio
+   `MediaRecorder` API to capture clean narrator takes during prompter playback, offering
+   instant take downloads and session duration tracking.
+
+### Microphone hardware calibration and voice reference acquisition
+
+Accurate acoustic calibration prevents digital clipping while preserving head-room for
+dynamic narration. The microphone calibration engine (`audio_calibration.py`, `kalibriere.sh`)
+and hardware management interface (`audio-microphone`, `/api/audio-microphone`) provide:
+1. **Calibrated ALSA Mixer Staging:** Direct hardware mixer interaction via `amixer`
+   or native ALSA bindings, retrieving active volume, capture switches, and hardware dB limits.
+2. **Automated Burst Evaluation Loop:** Executes an 8-second burst recording protocol
+   following a 4-second preparation window (evaluating 3× loud plosive "POPP" bursts, 2× claps,
+   and conversational speech). Analysis uses standard library arithmetic to compute true
+   dBFS burst peaks, classifying levels into explicit verdicts:
+   - `CALIBRIERT FÜR AUFNAHMEN!`: Peak within the optimal target window (−13 to −7 dBFS).
+   - `ZU HEISS`: Peaks near digital full scale (exceeding −7 dBFS); recommends lower mixer gain.
+   - `MEHR LUFT ALS NÖTIG`: Peaks below −13 dBFS; suggests gain increase for higher SNR.
+3. **Phonetically Balanced Reference Acquisition:** Standardized acoustic samples can be
+   acquired either via live terminal teleprompter recording (`audio-reference record --calibration-text`)
+   using international phonetic reference texts ("The North Wind and the Sun" / "Der Nordwind und die Sonne")
+   or synthesized deterministically via VoiceDesign (`audio-reference generate`). Reference
+   audio is validated, normalized to 24 kHz mono 16-bit PCM WAV, and registered under content-addressed digests.

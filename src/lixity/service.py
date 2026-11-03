@@ -1001,6 +1001,18 @@ class ServiceManager:
                 if record:
                     self._remove_ready(str(record["token"]))
                     self.runtime_file.unlink()
+                elif self.ready_file.exists():
+                    ready = _read_json(self.ready_file)
+                    if (
+                        isinstance(ready, dict)
+                        and ready.get("schema_version") == "lixity-service-ready/1"
+                        and ready.get("port") == self.port
+                        and ready.get("pid") is not None
+                        and ready.get("birth") is not None
+                        and process_birth(int(ready["pid"])) != str(ready["birth"])
+                        and not _port_open(str(settings.get("host", "127.0.0.1")), self.port)
+                    ):
+                        self.ready_file.unlink()
                 result["ok"] = True
             return result
         pid, birth = int(record["pid"]), str(record["birth"])
@@ -1061,9 +1073,21 @@ class ServiceManager:
         if previous:
             self._remove_ready(str(previous["token"]))
         elif self.ready_file.exists():
-            raise ServiceError(
-                "Orphan readiness record was left unchanged; inspect it before starting"
-            )
+            ready = _read_json(self.ready_file)
+            if (
+                isinstance(ready, dict)
+                and ready.get("schema_version") == "lixity-service-ready/1"
+                and ready.get("port") == self.port
+                and ready.get("pid") is not None
+                and ready.get("birth") is not None
+                and process_birth(int(ready["pid"])) != str(ready["birth"])
+                and not _port_open(str(settings.get("host", "127.0.0.1")), self.port)
+            ):
+                self.ready_file.unlink()
+            else:
+                raise ServiceError(
+                    "Orphan readiness record was left unchanged; inspect it before starting"
+                )
         token = secrets.token_hex(32)
         use_systemd = self.backend != "process" and self._systemd_available()
         if self.backend == "systemd" and not use_systemd:

@@ -37,11 +37,14 @@ Manuscript input is Markdown or plain text; Word/DOCX and Scrivener need convers
 | Why is this detail in the scene? | Follow a linked quotation to its dossier, retained source passages and explicit author decision. Exact earlier versions remain available. |
 | How can an editorial observation be explained? | Keep the manuscript in view while moving between the measurement explanation and linked research; prepare an editorial PDF or a fixed review copy for the discussion. |
 | What belongs in a reader's copy? | Choose a manuscript with selected companion notes, a standalone companion, a review workspace or a PDF, and check what the copy includes. |
+| How do vocal directions, phonetics and research images align when reading aloud? | Open the **Teleprompter** in the manuscript view (`P`): smooth WPM scrolling, direction cues, phonetic ruby overlays and matching dossier images advance together with your spoken pace. |
 
 One local app address retains independent project views in multiple tabs.
 **App and audio** shows open views, actual local/Jetson model readiness and a
-shared bounded audio queue. View URLs expire when the app restarts; reopen
-projects from the app home.
+shared bounded audio queue. The manuscript reader includes a full studio
+**Teleprompter** with synchronized vocal directions, phonetic pronunciation
+guides, live microphone recording and dynamic historical dossier images. View
+URLs expire when the app restarts; reopen projects from the app home.
 
 Tense review cards show the original counted forms and their exact manuscript
 locations before optional counts and heuristic help. These cues explain a mark;
@@ -198,8 +201,21 @@ sources, existing outputs and read-only structure findings. They neither move
 files nor establish that an output matches the current manuscript; see
 [project inspection](https://mfahsold.github.io/lixity/USAGE.md#inspect-project-structure).
 
-The audio workflow shares manuscript direction, pronunciation rules and structural
-pauses between CLI and browser. `audio-export-plan` exports a
+The audio and reading workflow shares manuscript direction, pronunciation rules,
+structural pauses and reading tools between CLI and browser. The manuscript
+reader offers a full-screen studio **Teleprompter** (`P` or `#reader-teleprompter`)
+featuring variable auto-scroll (60–240 WPM), horizontal focal eye-level ribbon,
+live inline vocal direction banners (`audio-direction`), phonetic pronunciation
+ruby overlays, integrated audio recording and take downloads, and a split-screen
+sidebar that dynamically synchronizes historical research dossier images as the
+narrator advances through the text.
+
+Microphone hardware settings and calibration (`audio-calibrate`, `audio-microphone`)
+provide an automated burst evaluation loop with instant mixer gain staging to hit
+the optimal −13 to −7 dBFS burst-peak target before recording. Voice references
+can be captured directly from phonetically balanced calibration texts using the
+terminal prompter (`audio-reference record --calibration-text`) or synthesized
+via VoiceDesign (`audio-reference generate`). `audio-export-plan` exports a
 `lixity-audio-timeline/1` JSON plan or SSML, with explicit limitations where SSML
 cannot carry a control. `read-aloud --ssml` and `--timeline` only export; they
 never synthesize. Passage, chapter and manuscript exports do not require a local

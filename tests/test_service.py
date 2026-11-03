@@ -1005,3 +1005,35 @@ def test_status_preserves_records_when_windows_open_reader_denies_replacement(tm
     assert result["state"] == "unknown" and not result["ok"], result
     assert manager.runtime_file.read_bytes() == original
     assert temporary.read_bytes() == replacement_bytes
+
+
+def test_dead_orphan_ready_record_is_safely_reclaimed(tmp_path, monkeypatch):
+    import lixity.service as service
+
+    runtime = tmp_path / "runtime"
+    state = tmp_path / "state"
+    runtime.mkdir(parents=True)
+    state.mkdir(parents=True)
+    monkeypatch.setenv("LIXITY_SERVICE_RUNTIME_DIR", str(runtime))
+    monkeypatch.setenv("LIXITY_SERVICE_STATE_DIR", str(state))
+
+    manager = service.ServiceManager(65432, backend="process")
+    # Simulate a dead process ready file with no active process or open port
+    dead_pid = 999999
+    service._write_json(
+        manager.ready_file,
+        {
+            "schema_version": "lixity-service-ready/1",
+            "port": 65432,
+            "token": "deadtoken",
+            "pid": dead_pid,
+            "birth": "deadbirth",
+        },
+    )
+    assert manager.ready_file.exists()
+
+    # Calling stop safely unlinks the dead orphan ready file
+    result = manager.control("stop", {})
+    assert result["ok"]
+    assert not manager.ready_file.exists()
+

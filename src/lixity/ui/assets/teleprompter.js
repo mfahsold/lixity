@@ -7,22 +7,30 @@
 
   var modal = null;
   var scrollPane = null;
+  var sidebar = null;
   var sidebarContent = null;
+  var sidebarToggleBtn = null;
   var playBtn = null;
   var speedSlider = null;
   var speedVal = null;
   var chapterSelect = null;
   var recordBtn = null;
+  var recordStatusAnnouncer = null;
 
   var isPlaying = false;
   var isRecording = false;
   var recordStartTime = 0;
   var recordTimerId = null;
+  var mediaRecorder = null;
+  var recordedAudioChunks = [];
+  var lastRecordedBlobUrl = null;
+
   var wordsPerMinute = 130;
   var fontSize = 32;
   var animFrameId = null;
   var lastTimestamp = 0;
   var activeParagraphSha = null;
+  var previousActiveElement = null;
 
   var speechData = null;
   var researchDossiers = null;
@@ -67,9 +75,17 @@
     modal = document.createElement("div");
     modal.id = "teleprompter-modal";
     modal.hidden = true;
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-label", label("reading_teleprompter", "Teleprompter"));
+
+    recordStatusAnnouncer = document.createElement("div");
+    recordStatusAnnouncer.className = "visually-hidden";
+    recordStatusAnnouncer.setAttribute("aria-live", "polite");
+    modal.appendChild(recordStatusAnnouncer);
 
     // Toolbar
-    var toolbar = document.createElement("div");
+    var toolbar = document.createElement("header");
     toolbar.className = "teleprompter-toolbar";
 
     var leftGroup = document.createElement("div");
@@ -79,6 +95,7 @@
     closeBtn.type = "button";
     closeBtn.className = "teleprompter-btn";
     closeBtn.textContent = "✕ " + label("reading_shortcut_close", "Schließen");
+    closeBtn.setAttribute("aria-label", label("reading_shortcut_close", "Schließen"));
     closeBtn.addEventListener("click", closeTeleprompter);
     leftGroup.appendChild(closeBtn);
 
@@ -86,11 +103,13 @@
     playBtn.type = "button";
     playBtn.className = "teleprompter-btn teleprompter-btn-primary";
     playBtn.textContent = "▶ " + label("teleprompter_play", "Lauf starten");
+    playBtn.setAttribute("aria-label", label("teleprompter_play", "Lauf starten"));
     playBtn.addEventListener("click", togglePlay);
     leftGroup.appendChild(playBtn);
 
     chapterSelect = document.createElement("select");
     chapterSelect.className = "teleprompter-btn";
+    chapterSelect.setAttribute("aria-label", label("reading_chapter", "Kapitel"));
     chapterSelect.addEventListener("change", function() {
       var targetId = chapterSelect.value;
       if (!targetId) return;
@@ -117,6 +136,7 @@
     speedSlider.max = "240";
     speedSlider.value = String(wordsPerMinute);
     speedSlider.step = "5";
+    speedSlider.setAttribute("aria-label", label("teleprompter_speed", "Tempo"));
     speedSlider.addEventListener("input", function() {
       wordsPerMinute = parseInt(speedSlider.value, 10);
       speedVal.textContent = wordsPerMinute + " WpM";
@@ -135,6 +155,7 @@
     sizeMinus.type = "button";
     sizeMinus.className = "teleprompter-btn";
     sizeMinus.textContent = "A−";
+    sizeMinus.setAttribute("aria-label", label("reading_smaller", "Schrift verkleinern"));
     sizeMinus.addEventListener("click", function() {
       fontSize = Math.max(20, fontSize - 4);
       modal.style.setProperty("--teleprompter-font-size", fontSize + "px");
@@ -145,6 +166,7 @@
     sizePlus.type = "button";
     sizePlus.className = "teleprompter-btn";
     sizePlus.textContent = "A+";
+    sizePlus.setAttribute("aria-label", label("reading_larger", "Schrift vergrößern"));
     sizePlus.addEventListener("click", function() {
       fontSize = Math.min(56, fontSize + 4);
       modal.style.setProperty("--teleprompter-font-size", fontSize + "px");
@@ -153,14 +175,25 @@
 
     toolbar.appendChild(centerGroup);
 
-    // Right Group: Recording
+    // Right Group: Dossier Toggle & Recording
     var rightGroup = document.createElement("div");
     rightGroup.className = "teleprompter-toolbar-group";
+
+    sidebarToggleBtn = document.createElement("button");
+    sidebarToggleBtn.type = "button";
+    sidebarToggleBtn.className = "teleprompter-btn";
+    sidebarToggleBtn.textContent = "🏛 " + label("teleprompter_dossier_context", "Dossiers");
+    sidebarToggleBtn.setAttribute("aria-label", label("teleprompter_dossier_context", "Dossiers"));
+    sidebarToggleBtn.addEventListener("click", function() {
+      if (sidebar) sidebar.classList.toggle("is-open");
+    });
+    rightGroup.appendChild(sidebarToggleBtn);
 
     recordBtn = document.createElement("button");
     recordBtn.type = "button";
     recordBtn.className = "teleprompter-btn teleprompter-btn-record";
     recordBtn.textContent = "🎙 " + label("teleprompter_record", "Aufnahme");
+    recordBtn.setAttribute("aria-label", label("teleprompter_record", "Aufnahme"));
     recordBtn.addEventListener("click", toggleRecording);
     rightGroup.appendChild(recordBtn);
 
@@ -179,7 +212,7 @@
     ribbon.className = "teleprompter-focus-ribbon";
     runwayContainer.appendChild(ribbon);
 
-    scrollPane = document.createElement("div");
+    scrollPane = document.createElement("main");
     scrollPane.className = "teleprompter-scroll-pane";
     scrollPane.addEventListener("scroll", handleScrollSync);
     runwayContainer.appendChild(scrollPane);
@@ -187,12 +220,26 @@
     body.appendChild(runwayContainer);
 
     // Sidebar: Historical Dossiers & Context
-    var sidebar = document.createElement("aside");
+    sidebar = document.createElement("aside");
     sidebar.className = "teleprompter-sidebar";
 
     var sidebarHeader = document.createElement("div");
     sidebarHeader.className = "teleprompter-sidebar-header";
-    sidebarHeader.textContent = "🏛 " + label("teleprompter_dossier_context", "Historischer Kontext & Dossier-Bilder");
+    var sidebarTitle = document.createElement("span");
+    sidebarTitle.textContent = "🏛 " + label("teleprompter_dossier_context", "Historischer Kontext & Dossier-Bilder");
+    sidebarHeader.appendChild(sidebarTitle);
+
+    var sidebarClose = document.createElement("button");
+    sidebarClose.type = "button";
+    sidebarClose.className = "teleprompter-btn";
+    sidebarClose.style.padding = "0.2rem 0.4rem";
+    sidebarClose.style.fontSize = "0.75rem";
+    sidebarClose.textContent = "✕";
+    sidebarClose.setAttribute("aria-label", label("reading_shortcut_close", "Schließen"));
+    sidebarClose.addEventListener("click", function() {
+      sidebar.classList.remove("is-open");
+    });
+    sidebarHeader.appendChild(sidebarClose);
     sidebar.appendChild(sidebarHeader);
 
     sidebarContent = document.createElement("div");
@@ -205,7 +252,7 @@
 
     modal.style.setProperty("--teleprompter-font-size", fontSize + "px");
 
-    // Global keyboard control
+    // Keyboard controls
     document.addEventListener("keydown", function(e) {
       if (!modal || modal.hidden) return;
       if (e.code === "Space") {
@@ -224,6 +271,17 @@
         wordsPerMinute = Math.max(60, wordsPerMinute - 10);
         speedSlider.value = String(wordsPerMinute);
         speedVal.textContent = wordsPerMinute + " WpM";
+      } else if (e.key === "+" || e.key === "=") {
+        e.preventDefault();
+        fontSize = Math.min(56, fontSize + 4);
+        modal.style.setProperty("--teleprompter-font-size", fontSize + "px");
+      } else if (e.key === "-" || e.key === "_") {
+        e.preventDefault();
+        fontSize = Math.max(20, fontSize - 4);
+        modal.style.setProperty("--teleprompter-font-size", fontSize + "px");
+      } else if (e.code === "KeyD" && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        if (sidebar) sidebar.classList.toggle("is-open");
       }
     });
   }
@@ -401,7 +459,6 @@
     img.src = "/api/research/media?id=" + encodeURIComponent(image.id || image.source_id || "");
     img.alt = image.caption || title || "Historisches Bild";
     img.onerror = function() {
-      // Fallback placeholder if offline synthetic
       img.style.display = "none";
     };
     card.appendChild(img);
@@ -453,7 +510,6 @@
     lastTimestamp = timestamp;
 
     if (scrollPane) {
-      // Average 5 characters per word + spaces ~ 6 chars/word
       var wordsPerSecond = wordsPerMinute / 60.0;
       var pixelsPerSecond = wordsPerSecond * (fontSize * 0.95);
       scrollPane.scrollTop += pixelsPerSecond * delta;
@@ -467,11 +523,68 @@
     isPlaying = !isPlaying;
     if (isPlaying) {
       playBtn.textContent = "⏸ " + label("teleprompter_pause", "Pause");
+      playBtn.setAttribute("aria-label", label("teleprompter_pause", "Pause"));
       lastTimestamp = 0;
       animFrameId = requestAnimationFrame(scrollLoop);
     } else {
       playBtn.textContent = "▶ " + label("teleprompter_play", "Lauf starten");
+      playBtn.setAttribute("aria-label", label("teleprompter_play", "Lauf starten"));
       if (animFrameId) cancelAnimationFrame(animFrameId);
+    }
+  }
+
+  function startAudioCapture() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+    recordedAudioChunks = [];
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
+      try {
+        var options = { mimeType: "audio/webm" };
+        if (!MediaRecorder.isTypeSupported("audio/webm")) {
+          options = MediaRecorder.isTypeSupported("audio/ogg") ? { mimeType: "audio/ogg" } : {};
+        }
+        mediaRecorder = new MediaRecorder(stream, options);
+        mediaRecorder.ondataavailable = function(e) {
+          if (e.data && e.data.size > 0) recordedAudioChunks.push(e.data);
+        };
+        mediaRecorder.onstop = function() {
+          stream.getTracks().forEach(function(track) { track.stop(); });
+          if (recordedAudioChunks.length > 0) {
+            var blob = new Blob(recordedAudioChunks, { type: mediaRecorder.mimeType || "audio/webm" });
+            if (lastRecordedBlobUrl) URL.revokeObjectURL(lastRecordedBlobUrl);
+            lastRecordedBlobUrl = URL.createObjectURL(blob);
+            offerRecordingDownload(blob);
+          }
+        };
+        mediaRecorder.start(250);
+      } catch (err) {
+        stream.getTracks().forEach(function(track) { track.stop(); });
+      }
+    }).catch(function() {});
+  }
+
+  function stopAudioCapture() {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      try {
+        mediaRecorder.stop();
+      } catch (err) {}
+    }
+  }
+
+  function offerRecordingDownload(blob) {
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "teleprompter-recording-" + (new Date().toISOString().replace(/[:.]/g, "-")) + ".webm";
+    a.className = "teleprompter-btn";
+    a.style.background = "#238636";
+    a.style.color = "#ffffff";
+    a.textContent = "💾 " + label("speech_download", "Aufnahme herunterladen");
+    if (sidebarContent) {
+      var note = document.createElement("div");
+      note.className = "teleprompter-dossier-card";
+      note.style.padding = "0.75rem";
+      note.style.textAlign = "center";
+      note.appendChild(a);
+      sidebarContent.prepend(note);
     }
   }
 
@@ -480,6 +593,8 @@
     if (isRecording) {
       recordBtn.classList.add("is-active");
       recordBtn.textContent = "⏹ " + label("teleprompter_recording", "Aufnahme läuft...");
+      recordBtn.setAttribute("aria-label", label("teleprompter_recording", "Aufnahme läuft..."));
+      if (recordStatusAnnouncer) recordStatusAnnouncer.textContent = "Audioaufnahme gestartet";
       recordStartTime = Date.now();
       recordTimerId = setInterval(function() {
         var elapsed = Math.floor((Date.now() - recordStartTime) / 1000);
@@ -488,17 +603,21 @@
         recordBtn.textContent = "⏹ " + m + ":" + s;
       }, 1000);
 
-      // Automatically start scroll if not already playing
+      startAudioCapture();
       if (!isPlaying) togglePlay();
     } else {
       recordBtn.classList.remove("is-active");
       recordBtn.textContent = "🎙 " + label("teleprompter_record", "Aufnahme");
+      recordBtn.setAttribute("aria-label", label("teleprompter_record", "Aufnahme"));
+      if (recordStatusAnnouncer) recordStatusAnnouncer.textContent = "Audioaufnahme gestoppt";
       if (recordTimerId) clearInterval(recordTimerId);
+      stopAudioCapture();
       if (isPlaying) togglePlay();
     }
   }
 
   function openTeleprompter(startParagraphSha) {
+    previousActiveElement = document.activeElement;
     createModal();
     buildRunwayContent();
     modal.hidden = false;
@@ -516,6 +635,8 @@
     } else {
       handleScrollSync();
     }
+
+    if (playBtn) playBtn.focus();
   }
 
   function closeTeleprompter() {
@@ -531,10 +652,11 @@
         readerP.scrollIntoView({ behavior: "smooth", block: "center" });
         readerP.focus();
       }
+    } else if (previousActiveElement && typeof previousActiveElement.focus === "function") {
+      previousActiveElement.focus();
     }
   }
 
-  // Hook into reader button and keyboard shortcut
   function init() {
     loadContextData();
 

@@ -8,6 +8,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Comprehensive UI harmonization, design token adherence, and accessibility polish:
+  - Standardized CSS tokens across speech player controls, modal forms, and teleprompter elements using semantic variables (`--surface-raised`, `--line-strong`, `--accent`, `--on-action`) instead of orphaned custom tokens.
+  - Added responsive off-canvas drawer layout (`@media (max-width: 960px)`) and quick toggle button (`🏛 Dossiers`, shortcut `D`) in the Teleprompter view, preserving full reading runway width on smaller displays and mobile devices.
+  - Integrated in-browser `MediaRecorder` audio capture with immediate take preview and download option directly from the teleprompter.
+  - Hardened managed service startup in containerized environments by gracefully falling back when `XDG_RUNTIME_DIR` is not writable.
 - Manuscript Teleprompter with vocal direction, phonetics, and synchronized dossier images:
   - Added dedicated Teleprompter mode in the manuscript reader view (`#reader-teleprompter`, keyboard shortcut `P`), featuring variable WPM auto-scroll (60–240 WPM), horizontal eye-level reading ribbon, and dynamic typography controls (`A−`/`A+`).
   - Automatically renders vocal direction cues (`audio-direction` instructions and pauses) as visual prompt banners inline above directed passages.

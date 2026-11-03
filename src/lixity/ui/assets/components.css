@@ -581,7 +581,7 @@ audio.media-player { width: 100%; max-width: 100%; }
   padding: 0.2rem 0.55rem;
   font-size: 0.8rem;
   border-radius: var(--radius-sm);
-  background: var(--surface-muted);
+  background: var(--surface-raised);
   border: 1px solid var(--line);
   color: var(--fg);
   cursor: pointer;
@@ -589,11 +589,11 @@ audio.media-player { width: 100%; max-width: 100%; }
 }
 .speech-player-controls button:hover {
   background: var(--surface-hover);
-  border-color: var(--line-active);
+  border-color: var(--line-strong);
 }
 .speech-player-controls button.speech-rate-btn.active {
   background: var(--accent);
-  color: var(--accent-fg);
+  color: var(--on-action);
   border-color: var(--accent);
   font-weight: 600;
 }
