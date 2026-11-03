@@ -1,0 +1,34 @@
+#teleprompter-modal { position: fixed; inset: 0; z-index: 10000; background: #0d0f12; color: #e6edf3; display: flex; flex-direction: column; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+#teleprompter-modal[hidden] { display: none !important; }
+.teleprompter-toolbar { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; padding: .5rem 1.25rem; background: #161b22; border-bottom: 1px solid #30363d; gap: 1rem; z-index: 20; }
+.teleprompter-toolbar-group { display: flex; align-items: center; gap: .6rem; }
+.teleprompter-btn { background: #21262d; color: #e6edf3; border: 1px solid #363b42; border-radius: 6px; padding: .35rem .75rem; font-size: .875rem; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: .35rem; transition: background .15s, border-color .15s; }
+.teleprompter-btn:hover { background: #30363d; border-color: #8b949e; }
+.teleprompter-btn-primary { background: #238636; border-color: #2ea043; color: #fff; }
+.teleprompter-btn-primary:hover { background: #2ea043; }
+.teleprompter-btn-record { background: #a42c2c; border-color: #da3633; color: #fff; }
+.teleprompter-btn-record.is-active { background: #da3633; animation: tp-pulse 1.5s infinite; }
+@keyframes tp-pulse { 0% { box-shadow: 0 0 0 0 rgba(218, 54, 51, .7); } 70% { box-shadow: 0 0 0 10px rgba(218, 54, 51, 0); } 100% { box-shadow: 0 0 0 0 rgba(218, 54, 51, 0); } }
+.teleprompter-speed-control { display: flex; align-items: center; gap: .4rem; font-size: .825rem; color: #8b949e; }
+.teleprompter-speed-control input[type="range"] { width: 90px; cursor: pointer; }
+.teleprompter-speed-val { min-width: 4.5rem; font-variant-numeric: tabular-nums; color: #e6edf3; }
+.teleprompter-body { flex: 1 1 auto; display: flex; position: relative; overflow: hidden; }
+.teleprompter-runway-container { flex: 1 1 auto; position: relative; overflow: hidden; display: flex; flex-direction: column; }
+.teleprompter-focus-ribbon { position: absolute; top: 30vh; left: 0; right: 0; height: 4.5rem; border-top: 1px dashed rgba(240, 180, 41, .4); border-bottom: 1px dashed rgba(240, 180, 41, .4); background: rgba(240, 180, 41, .04); pointer-events: none; z-index: 10; }
+.teleprompter-scroll-pane { flex: 1 1 auto; overflow-y: scroll; padding: 30vh 2.5rem 60vh; max-width: 860px; margin: 0 auto; width: 100%; }
+.teleprompter-paragraph { font-size: var(--teleprompter-font-size, 32px); line-height: 1.65; margin-bottom: 3.5rem; color: #8b949e; transition: color .25s, opacity .25s, transform .25s; position: relative; }
+.teleprompter-paragraph.is-active { color: #fff; transform: scale(1.01); }
+.teleprompter-cue { display: inline-flex; align-items: center; gap: .5rem; padding: .35rem .75rem; margin-bottom: .75rem; background: rgba(210, 120, 20, .18); border-left: 4px solid #f0883e; border-radius: 4px; font-size: .55em; line-height: 1.3; color: #f0883e; font-weight: 600; }
+.teleprompter-cue-pause { font-size: .85em; background: rgba(240, 136, 62, .25); padding: .1rem .35rem; border-radius: 3px; margin-left: .4rem; }
+ruby.teleprompter-phonetic { ruby-position: over; color: #ffd166; font-weight: 500; }
+ruby.teleprompter-phonetic rt { font-size: .45em; color: #3fb950; font-family: monospace; }
+.teleprompter-sidebar { flex: 0 0 380px; background: #111418; border-left: 1px solid #30363d; display: flex; flex-direction: column; overflow: hidden; }
+.teleprompter-sidebar-header { padding: .75rem 1rem; font-size: .875rem; font-weight: 600; color: #e6edf3; border-bottom: 1px solid #21262d; display: flex; align-items: center; gap: .5rem; }
+.teleprompter-sidebar-content { flex: 1 1 auto; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1.25rem; }
+.teleprompter-dossier-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,.4); }
+.teleprompter-dossier-img { width: 100%; max-height: 280px; object-fit: contain; background: #090b0d; display: block; }
+.teleprompter-dossier-meta { padding: .85rem 1rem; }
+.teleprompter-dossier-title { font-size: .95rem; font-weight: 600; color: #e6edf3; margin: 0 0 .35rem; }
+.teleprompter-dossier-caption { font-size: .825rem; color: #8b949e; line-height: 1.45; margin: 0; }
+.teleprompter-sidebar-empty { color: #6e7681; font-size: .85rem; text-align: center; padding: 2rem 1rem; }
+body.teleprompter-open { overflow: hidden !important; }

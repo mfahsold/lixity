@@ -2191,6 +2191,44 @@ standard OSS components (`arecord`, `amixer`, `ffmpeg` or `pw-record`):
    lixity audio-reference calibration-text --language de --variant short
    ```
 
+### Manuscript Teleprompter: Direction cues, phonetics, and synchronized dossier images
+
+To support natural vocal performances and auditory manuscript proofing, Lixity provides a
+full-screen reading teleprompter seamlessly connected to the manuscript reader view, vocal direction,
+phonetic pronunciation rules, and historical research dossiers:
+
+1. **Opening the Teleprompter:**
+   In the manuscript reader view, click the **Teleprompter** button (`📜`) in the reader controls
+   toolbar or press the keyboard shortcut **`P`**. The prompter opens centered on the currently
+   selected or active paragraph.
+
+2. **Reading Runway & Smooth Auto-Scroll:**
+   - **Eye-level Focus Ribbon:** A subtle focal guide bar rests at 30% viewport height, keeping the
+     speaker's line of sight fixed and comfortable.
+   - **Variable Speed (WPM):** Adjust the reading pace with the speed slider or **`↑` / `↓`** arrow
+     keys (60–240 Words Per Minute, default: 130 WPM).
+   - **Play / Pause:** Toggle scrolling with the **`Space`** bar or the top toolbar button.
+   - **Typographic Controls:** Adjust font size on the fly with **`A−`** and **`A+`** (20–56px).
+
+3. **Phonetic Pronunciations and Vocal Direction Cues:**
+   - **Regieanweisungen (Direction):** Saved passage directions (`audio-direction`) appear as prominent
+     cue banners (`🎬 "Flüsternd, atemlos" · +0.4s Pause`) immediately preceding the directed text.
+   - **Phonetics:** Project pronunciation mappings (`pronunciations`) render as semantic ruby tags
+     above foreign or complex terms (e.g. `<ruby>Effi<rt>[ˈɛfi]</rt></ruby>`), ensuring effortless delivery.
+
+4. **Synchronized Historical Images from Research Dossiers:**
+   As the teleprompter scrolls through each paragraph, the right-hand **Context & Evidence Sidebar**
+   dynamically updates with relevant historical photos, archival evidence, and dossier cards. Lixity
+   matches images through:
+   - **Direct Manuscript Links:** Paragraphs with verified links to research dossiers display those
+     dossier images directly.
+   - **Entity & Concept Heuristics:** Mentions of historical persons, places, or tagged concepts
+     automatically bring up contextual imagery to immerse the narrator in the scene's historical atmosphere.
+
+5. **Integrated Recording:**
+   Click **`🎙 Aufnahme`** in the prompter header to start capturing directly from the calibrated microphone.
+   The prompter starts scrolling in sync with the recording timer, allowing one-take reference or scene captures.
+
 ### Audio and video playback
 
 In the browser UI, Lixity provides integrated media players across workflows:

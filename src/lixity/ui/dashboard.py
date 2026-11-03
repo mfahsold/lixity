@@ -102,6 +102,7 @@ _CSS_FILES = (
     "analysis-evidence.css",
     "reader-publication.css",
     "project-overview.css",
+    "teleprompter.css",
 )
 _JS_FILES = (
     "read-only-site.js",
@@ -141,10 +142,11 @@ _JS_FILES = (
     "analysis-evidence.js",
     "analysis-review.js",
     "reader-publication.js",
+    "teleprompter.js",
 )
 _NATIVE_JS_FILES = ("speech-direction.js", "speech.js",)
 # The passage inspector requires the workspace shell; classic reports have none.
-_REPORT_JS_FILES = tuple(name for name in _JS_FILES if name != "manuscript-reader.js")
+_REPORT_JS_FILES = tuple(name for name in _JS_FILES if name not in ("manuscript-reader.js", "teleprompter.js"))
 
 # Curated publications reuse the shared renderers without dormant workspace controls.
 _PUBLICATION_JS_FILES = tuple(
@@ -152,6 +154,7 @@ _PUBLICATION_JS_FILES = tuple(
         "register-settings.js", "site-publication-settings.js", "analysis-scope.js",
         "project-overview.js", "style-space.js", "metric-context.js", "workspace-reader.js",
         "manuscript-reader.js", "manuscript-links.js", "analysis-evidence.js", "analysis-review.js",
+        "teleprompter.js",
     }
 )
 

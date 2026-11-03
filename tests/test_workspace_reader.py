@@ -70,3 +70,46 @@ def test_malformed_context_token_is_an_explicit_error(reader_server, token):
     status, data = read(port, {"project_token": token})
     assert status == 400 and not data["ok"]
     assert contents(project) == before
+
+
+def test_reading_controls_renders_teleprompter_button():
+    from lixity.style_profile import ChapterProfile
+    from lixity.ui.manuscript_reader import reading_controls
+
+    chapters = [ChapterProfile(
+        num=1, title="Erstes Kapitel", start_line=1, end_line=10, words=100, paragraphs=5,
+        present_hits=10, past_hits=10, dominant="past", flagged=0, asl=15.0, dialog_pct=0.2, function_word_pct=0.4,
+    )]
+    labels = {
+        "reading_chapter": "Kapitel",
+        "reading_appearance": "Darstellung",
+        "reading_size": "Textgröße",
+        "reading_smaller": "Kleiner",
+        "reading_larger": "Größer",
+        "reading_width": "Breite",
+        "reading_narrow": "Schmal",
+        "reading_standard": "Standard",
+        "reading_wide": "Breit",
+        "reading_spacing": "Zeilenabstand",
+        "reading_compact": "Kompakt",
+        "reading_relaxed": "Großzügig",
+        "reading_shortcuts": "Tastatur",
+        "reading_shortcut_actions": "Aktionen",
+        "reading_shortcut_search": "Suche",
+        "reading_shortcut_close": "Schließen",
+        "reading_focus": "Fokusmodus",
+        "reading_help_focus": "Fokusmodus Hilfe",
+        "reading_teleprompter": "Teleprompter",
+        "reading_help_teleprompter": "Teleprompter Hilfe",
+        "reading_analysis": "Analyse",
+        "reading_help_analysis": "Analyse Hilfe",
+        "reading_on": "An",
+        "reading_off": "Aus",
+        "reading_read": "Lesen",
+        "reading_inspect": "Prüfen",
+    }
+    html_out = reading_controls(chapters, labels)
+    assert 'id="reader-teleprompter"' in html_out
+    assert 'aria-label="Teleprompter"' in html_out
+    assert '<kbd>P</kbd>' in html_out
+

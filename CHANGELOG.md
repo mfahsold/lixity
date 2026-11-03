@@ -8,6 +8,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Manuscript Teleprompter with vocal direction, phonetics, and synchronized dossier images:
+  - Added dedicated Teleprompter mode in the manuscript reader view (`#reader-teleprompter`, keyboard shortcut `P`), featuring variable WPM auto-scroll (60–240 WPM), horizontal eye-level reading ribbon, and dynamic typography controls (`A−`/`A+`).
+  - Automatically renders vocal direction cues (`audio-direction` instructions and pauses) as visual prompt banners inline above directed passages.
+  - Automatically highlights project pronunciation rules (`pronunciations`) using semantic HTML `<ruby>` phonetic ruby tags directly above corresponding words.
+  - Synchronizes contextual historical images and dossier evidence in a split-screen sidebar using direct paragraph claim links, entity heuristics, and chapter atmosphere matching as the speaker scrolls through the text.
+  - Includes integrated one-click hardware audio recording with live session timer and microphone gain controls.
 - Integrated microphone settings and hardware level management in CLI and UI:
   - Added `lixity audio-microphone` (and subcommands `status`, `set`, `devices`, `calibrate`) to inspect hardware capture devices, display active ALSA gain, dB levels, and hardware limits, and directly set mixer gain.
   - Added dedicated Microphone & Level controls in the browser UI with live device selector, gain slider/numeric input, immediate gain apply, and interactive 8-second burst calibration with verdict badges and one-click recommended gain adoption.

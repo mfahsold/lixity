@@ -1728,6 +1728,8 @@ a synthetic reference audio from the calibration text via VoiceDesign.
 `audio-microphone [status|set|devices|calibrate] [--gain N] [--card C] [--control NAME] [--json]` inspects or sets hardware capture gain and enumerates detected audio devices.
 `audio-calibrate [--gain N] [--duration SEC] [--json]` performs an automated input level burst calibration
 returning `lixity-audio-calibration/1` with peak dBFS, clipping, noise floor and headroom verdicts.
+The browser app includes a synchronized manuscript teleprompter (`#reader-teleprompter`, key `P`) with auto-scroll,
+direction cues, phonetic pronunciations via semantic ruby tags, and ambient historical research dossier images.
 The `quality` field is additive
 to `lixity-audio-reference-created/1`. Reference bytes and transcript are private project data,
 not cache; they are validated and bound to job context and cache identity.
