@@ -711,11 +711,13 @@ def _locations() -> tuple[Path, Path]:
         )
     state = Path(os.environ.get("LIXITY_SERVICE_STATE_DIR") or base / "lixity" / "service")
     configured_runtime = os.environ.get("XDG_RUNTIME_DIR")
-    runtime_base = (
-        Path(configured_runtime)
-        if configured_runtime and Path(configured_runtime).is_absolute()
-        else state / "runtime"
-    )
+    runtime_base: Path | None = None
+    if configured_runtime and Path(configured_runtime).is_absolute():
+        cand = Path(configured_runtime)
+        if cand.is_dir() or (not cand.exists() and cand.parent.exists() and os.access(cand.parent, os.W_OK)):
+            runtime_base = cand
+    if runtime_base is None:
+        runtime_base = state / "runtime"
     runtime = Path(os.environ.get("LIXITY_SERVICE_RUNTIME_DIR") or runtime_base / "lixity-service")
     return state, runtime
 
