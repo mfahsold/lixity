@@ -2,3 +2,5 @@ recursive-include tests *.py
 include tests/fixtures/german_verb_groups.json
 include tests/fixtures/literary_reference.json
 include tests/fixtures/multilingual_verb_groups.json
+include src/lixity/py.typed
+recursive-include src/lixity/ui/assets *

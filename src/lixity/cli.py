@@ -480,6 +480,7 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("audio-verify", "Compare chapter audio with a direction plan and optional timestamped transcript (JSON)"),
     ("audio-import-transcript", "Convert external ASR word timestamps (e.g. Whisper) to lixity-audio-transcript/1"),
     ("audio-status", "Inspect audio profiles and worker readiness"),
+    ("audio-microphone", "Inspect and set hardware microphone gain and list recording devices"),
     ("audio-calibrate", "Calibrate microphone input level and evaluate dynamic range (text/JSON)"),
     ("audio-reference", "Create, record or inspect a private project-local voice reference (JSON)"),
     ("audio-direction", "Inspect and save project-local passage speech direction (JSON)"),
@@ -547,6 +548,13 @@ _lixity_complete() {
                 --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
                 --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design qwen3-base coqui coqui-reference f5-tts openai-compatible" -- "$cur") ) ;;
                 *) COMPREPLY=( $(compgen -W "--help --project --engine --json" -- "$cur") ) ;;
+            esac
+            return 0
+            ;;
+        audio-microphone)
+            case "$prev" in
+                --gain|--card|--control|--device) ;;
+                *) COMPREPLY=( $(compgen -W "status set devices calibrate --help --gain --card --control --device --json" -- "$cur") ) ;;
             esac
             return 0
             ;;
@@ -766,6 +774,16 @@ __LIXITY_ZSH_COMMANDS__
             '--project[Explicit project root]:directory:_files -/' \
             '--engine[Compare a model variant]:engine:(qwen3 qwen3-design qwen3-base coqui coqui-reference f5-tts openai-compatible)' \
             '--json[Machine-readable status]'
+          ;;
+        audio-microphone)
+          _arguments \
+            '1:action:(status set devices calibrate)' \
+            '--help[Help]' \
+            '--gain[ALSA capture gain 0-50]:gain:' \
+            '--card[ALSA card index or id]:card:' \
+            '--control[ALSA mixer control]:control:' \
+            '--device[Hardware capture device]:device:' \
+            '--json[Machine-readable microphone status]'
           ;;
         audio-calibrate)
           _arguments \
@@ -2102,6 +2120,14 @@ def _main(argv: list[str] | None = None) -> int:
             p.add_argument("--engine", choices=("qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "f5-tts", "openai-compatible"), help="Compare this model variant instead of the selected profile")
             p.add_argument("--json", action="store_true", help="Machine-readable status")
             continue
+        if name == "audio-microphone":
+            p.add_argument("action", nargs="?", default="status", choices=("status", "set", "devices", "calibrate"))
+            p.add_argument("--gain", type=int, default=None, help="Set ALSA capture gain (0–50)")
+            p.add_argument("--device", default=None, help="Hardware capture device (e.g. plughw:CARD=I3000,DEV=0)")
+            p.add_argument("--card", default=1, help="ALSA card index or id (default: 1)")
+            p.add_argument("--control", default="Mic", help="ALSA mixer control (default: Mic)")
+            p.add_argument("--json", action="store_true", help="Machine-readable JSON output")
+            continue
         if name == "audio-calibrate":
             p.add_argument("--gain", type=int, default=None, help="ALSA capture gain (0–50)")
             p.add_argument("--duration", type=float, default=8.0, help="Test burst recording length in seconds (default: 8.0)")
@@ -2595,6 +2621,60 @@ def _main(argv: list[str] | None = None) -> int:
             print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
             return EXIT_ERROR
         return EXIT_OK
+    if args.command == "audio-microphone":
+        from .speech_record import (
+            get_microphone_status,
+            list_capture_devices,
+            run_calibration,
+            set_alsa_gain,
+        )
+        try:
+            if args.action == "set":
+                if args.gain is None:
+                    raise ValueError("audio-microphone set requires --gain <0-50>")
+                ok = set_alsa_gain(args.gain, card=args.card, control=args.control)
+                if not ok:
+                    raise RuntimeError(f"Could not set ALSA capture gain to {args.gain} on card {args.card}")
+                if args.json:
+                    print(_json({"status": "updated", "gain": args.gain, "card": args.card, "control": args.control}, indent=True))
+                else:
+                    print(f"Mikrofon-Gain erfolgreich auf {args.gain} gesetzt (Karte {args.card}, Regler {args.control}).")
+                return EXIT_OK
+            if args.action == "devices":
+                devs = list_capture_devices()
+                if args.json:
+                    print(_json({"devices": devs}, indent=True))
+                else:
+                    print("Erkannte Audio-Aufnahmegeräte:")
+                    for d in devs:
+                        print(f"  • {d['label']}  [ALSA: {d['alsa_id']}]")
+                return EXIT_OK
+            if args.action == "calibrate":
+                calib = run_calibration(gain=args.gain, device=args.device)
+                if args.json:
+                    print(_json(calib, indent=True))
+                else:
+                    print(f"Kalibrierung abgeschlossen: Peak {calib['peak_dbfs']} dBFS -> {calib['verdict_label']}")
+                return EXIT_OK
+            status = get_microphone_status()
+            if args.json:
+                print(_json(status, indent=True))
+            else:
+                gain_val = status["current_gain"]
+                gain_str = str(gain_val) if gain_val is not None else "unbekannt"
+                info = status.get("gain_info")
+                db_str = f" ({info['db']:+.1f} dB, {info['percent']}%)" if info and info.get("db") is not None else ""
+                lim_str = f" [Bereich {info['min']}–{info['max']}]" if info else ""
+                print("Mikrofon- und Aufnahme-Status:")
+                print(f"  Hardware-Gain:   {gain_str}{db_str}{lim_str}")
+                print(f"  Standard-Gerät:  {status['default_device']}")
+                print("  Erkannte Geräte:")
+                for d in status["devices"]:
+                    print(f"    • {d['label']} (ID: {d['alsa_id']})")
+            return EXIT_OK
+        except (OSError, ValueError, RuntimeError) as exc:
+            print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+            return EXIT_ERROR
     if args.command == "audio-calibrate":
         from .speech_record import run_calibration
         try:

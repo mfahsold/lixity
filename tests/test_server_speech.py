@@ -689,3 +689,47 @@ def test_saving_direction_invalidates_a_completed_download(speech_server):
         'direction':{'anchor':state['passages'][0]['anchor'],'instructions':'Calm.'}})
     assert saved.status==200
     assert send(port,'/api/speech-audio?'+query).status!=200
+
+
+def test_audio_microphone_api_endpoints(speech_server, monkeypatch):
+    port, _source, _handler, _observed = speech_server
+    import lixity.speech_record
+
+    fake_status = {
+        "schema_version": "lixity-microphone-status/1",
+        "current_gain": 35,
+        "gain_info": {"gain": 35, "min": 0, "max": 50, "percent": 70, "db": 13.5},
+        "default_device": "plughw:CARD=I3000,DEV=0",
+        "devices": [{"card": 1, "card_id": "I3000", "label": "ISY IMI 3000", "alsa_id": "plughw:CARD=I3000,DEV=0"}],
+    }
+    monkeypatch.setattr(lixity.speech_record, "get_microphone_status", lambda: fake_status)
+    monkeypatch.setattr(lixity.speech_record, "set_alsa_gain", lambda gain, **kw: True)
+    monkeypatch.setattr(lixity.speech_record, "run_calibration", lambda **kw: {
+        "schema_version": "lixity-audio-calibration/1",
+        "verdict": "calibrated",
+        "verdict_label": "CALIBRIERT FÜR AUFNAHMEN!",
+        "peak_dbfs": -10.0,
+        "clipping_samples": 0,
+        "snr_db": 60.0,
+    })
+
+    # 1. GET /api/audio-microphone
+    res = send(port, "/api/audio-microphone")
+    assert res.status == 200
+    data = json.loads(res.body)
+    assert data["schema_version"] == "lixity-microphone-status/1"
+    assert data["current_gain"] == 35
+
+    # 2. POST /api/audio-microphone (set_gain)
+    res_set = send(port, "/api/audio-microphone", payload={"action": "set_gain", "gain": 38})
+    assert res_set.status == 200
+    data_set = json.loads(res_set.body)
+    assert data_set["ok"] is True
+    assert data_set["current_gain"] == 35
+
+    # 3. POST /api/audio-microphone (calibrate)
+    res_cal = send(port, "/api/audio-microphone", payload={"action": "calibrate", "gain": 35})
+    assert res_cal.status == 200
+    data_cal = json.loads(res_cal.body)
+    assert data_cal["ok"] is True
+    assert data_cal["calibration"]["verdict"] == "calibrated"

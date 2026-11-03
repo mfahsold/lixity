@@ -12531,6 +12531,11 @@ _ROWS["speech_design_hint"] = (
 _ROWS.update({
     "speech_profiles_title": ("Voice profiles", "Hörprofile", "Profils vocaux", "Perfiles de voz", "Profili vocali", "Perfis de voz", "Stemprofielen"),
     "speech_output_title": ("Audio export and recordings", "Audioexport und Aufnahmen", "Export audio et enregistrements", "Exportación de audio y grabaciones", "Esportazione audio e registrazioni", "Exportação de áudio e gravações", "Audio-export en opnamen"),
+    "speech_microphone_title": ("Microphone and levels", "Mikrofon und Pegel", "Microphone et niveaux", "Micrófono y niveles", "Microfono e livelli", "Microfone e níveis", "Microfoon en niveaus"),
+    "speech_microphone_device": ("Recording device", "Aufnahmegerät", "Périphérique d'enregistrement", "Dispositivo de grabación", "Dispositivo di registrazione", "Dispositivo de gravação", "Opnameapparaat"),
+    "speech_microphone_gain": ("Hardware capture gain", "Hardware-Aufnahmepegel", "Gain d'enregistrement matériel", "Ganancia de grabación de hardware", "Guadagno di registrazione hardware", "Ganho de gravação de hardware", "Hardware-opnameversterking"),
+    "speech_microphone_set_gain": ("Set level", "Pegel setzen", "Régler le niveau", "Ajustar nivel", "Imposta livello", "Definir nível", "Niveau instellen"),
+    "speech_microphone_calibrate": ("Calibrate level (8s)", "Pegel kalibrieren (8s)", "Calibrer le niveau (8s)", "Calibrar nivel (8s)", "Calibra livello (8s)", "Calibrar nível (8s)", "Niveau kalibreren (8s)"),
     "speech_open_output": ("Open audio output", "Audioausgabe öffnen", "Ouvrir la sortie audio", "Abrir salida de audio", "Apri uscita audio", "Abrir saída de áudio", "Audio-uitvoer openen"),
     "speech_reader_title": ("Listen and direct", "Anhören und Regie", "Écouter et diriger", "Escuchar y dirigir", "Ascolta e dirigi", "Ouvir e dirigir", "Beluisteren en regisseren"),
     "speech_pronunciation_search": ("Find a term", "Begriff suchen", "Rechercher un terme", "Buscar un término", "Cerca un termine", "Procurar um termo", "Zoek een term"),

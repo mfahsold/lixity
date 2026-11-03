@@ -264,6 +264,9 @@ class SpeechRoutesMixin(ResponseMixin):
                 response["workers"] = [external_provider_status(selected_profile)]
             else:
                 response["workers"] = audio_status()["targets"]
+            from ..speech_record import get_microphone_status
+
+            response["microphone"] = get_microphone_status()
             with self._workspace_lock:
                 self._speech_bound(query)
                 self._json(response)
@@ -495,3 +498,38 @@ class SpeechRoutesMixin(ResponseMixin):
                 )
         except (OSError, ValueError, RuntimeError, UserWarning) as exc:
             self._speech_error(exc)
+
+    def _handle_audio_microphone(self, _query: Any = None) -> None:
+        """Return current hardware microphone status, gain, and detected devices."""
+        from ..speech_record import get_microphone_status
+
+        self._json(get_microphone_status())
+
+    def _handle_audio_microphone_post(self, payload: dict[str, Any]) -> None:
+        """Handle microphone gain updates or calibration."""
+        from ..speech_record import (
+            get_microphone_status,
+            run_calibration,
+            set_alsa_gain,
+        )
+
+        action = payload.get("action", "status")
+        if action == "set_gain":
+            gain = int(payload.get("gain", 35))
+            card = payload.get("card", 1)
+            control = payload.get("control", "Mic")
+            ok = set_alsa_gain(gain, card=card, control=control)
+            if not ok:
+                self._json({"ok": False, "message": f"Could not set gain {gain} on card {card}"}, 400)
+                return
+            self._json({"ok": True, **get_microphone_status()})
+            return
+        if action == "calibrate":
+            calib_gain: int | None = int(payload["gain"]) if "gain" in payload and payload["gain"] is not None else None
+            duration = float(payload.get("duration", 8.0))
+            countdown = float(payload.get("countdown", 4.0))
+            device = str(payload["device"]) if payload.get("device") else None
+            result = run_calibration(gain=calib_gain, duration=duration, countdown=countdown, device=device)
+            self._json({"ok": True, "calibration": result})
+            return
+        self._json({"ok": True, **get_microphone_status()})

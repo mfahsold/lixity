@@ -56,6 +56,87 @@ def get_alsa_gain(card: int | str = 1, control: str = "Mic") -> int | None:
         return None
 
 
+def list_capture_devices() -> list[dict[str, Any]]:
+    """List hardware audio capture devices detected by ALSA."""
+    arecord = shutil.which("arecord")
+    fallback = [{"card": None, "card_id": "default", "card_name": "Standard Audio", "device": 0, "alsa_id": "default", "label": "Standard-Aufnahmegerät (default)"}]
+    if arecord is None:
+        return fallback
+    try:
+        res = subprocess.run([arecord, "-l"], capture_output=True, text=True, check=False)  # noqa: S603
+        if res.returncode != 0:
+            return fallback
+        devices: list[dict[str, Any]] = []
+        for line in res.stdout.splitlines():
+            m = re.match(r"card\s+(\d+):\s+(\w+)\s+\[(.*?)\],\s+device\s+(\d+):\s+(.*?)\s+\[(.*?)\]", line)
+            if m:
+                c_num, c_id, c_name, d_num, d_name, _ = m.groups()
+                devices.append({
+                    "card": int(c_num),
+                    "card_id": c_id,
+                    "card_name": c_name.strip(),
+                    "device": int(d_num),
+                    "device_name": d_name.strip(),
+                    "alsa_id": f"plughw:CARD={c_id},DEV={d_num}",
+                    "label": f"{c_name.strip()} ({d_name.strip()})",
+                })
+        return devices if devices else fallback
+    except OSError:
+        return fallback
+
+
+def get_alsa_gain_info(card: int | str = 1, control: str = "Mic") -> dict[str, Any] | None:
+    """Read detailed ALSA capture gain info (current, min, max, percent, dB)."""
+    amixer = shutil.which("amixer")
+    if amixer is None:
+        return None
+    try:
+        cmd = [amixer, "-c", str(card), "sget", str(control)]
+        res = subprocess.run(cmd, capture_output=True, text=True, check=False)  # noqa: S603
+        if res.returncode != 0:
+            return None
+        stdout = res.stdout.decode("utf-8", errors="replace") if isinstance(res.stdout, bytes) else (res.stdout or "")
+        m_val = re.search(r"Capture\s+(\d+)\s+\[(\d+)%\](?:\s+\[([-\d\.]+)dB\])?", stdout)
+        m_lim = re.search(r"Limits:\s*Capture\s+(\d+)\s*-\s*(\d+)", stdout)
+        if not m_val:
+            return None
+        gain_val = int(m_val.group(1))
+        percent = int(m_val.group(2))
+        db = float(m_val.group(3)) if m_val.group(3) else None
+        min_lim = int(m_lim.group(1)) if m_lim else 0
+        max_lim = int(m_lim.group(2)) if m_lim else 50
+        return {
+            "card": card,
+            "control": control,
+            "gain": gain_val,
+            "percent": percent,
+            "db": db,
+            "min": min_lim,
+            "max": max_lim,
+        }
+    except OSError:
+        return None
+
+
+def get_microphone_status() -> dict[str, Any]:
+    """Return a comprehensive snapshot of microphone hardware and settings."""
+    devices = list_capture_devices()
+    gain_info = get_alsa_gain_info()
+    current_gain = gain_info["gain"] if gain_info else get_alsa_gain()
+    return {
+        "schema_version": "lixity-microphone-status/1",
+        "current_gain": current_gain,
+        "gain_info": gain_info,
+        "default_device": DEFAULT_DEVICE,
+        "devices": devices,
+    }
+
+
+def set_microphone_gain(gain: int, card: int | str = 1, control: str = "Mic") -> bool:
+    """Set capture gain safely and return success."""
+    return set_alsa_gain(gain, card=card, control=control)
+
+
 def record_audio(
     duration: float = 10.0,
     *,

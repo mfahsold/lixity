@@ -15389,7 +15389,7 @@ window.LixityManuscriptLinks = {
     workflow.append(node("h4", "", text("project_structure_workflow")));
     var actions = node("div", "project-overview-actions");
     ["manuscript", "research"].forEach(function (key) { actions.append(roleAction(roles[key])); });
-    [["settings-speech", "profiles", "speech_profiles_title"], ["settings-speech-output", "output", "speech_output_title"]].forEach(function (args) {
+    [["settings-speech", "profiles", "speech_profiles_title"], ["settings-speech-output", "output", "speech_output_title"], ["settings-speech-mic", "microphone", "speech_microphone_title"]].forEach(function (args) {
       var action = audioAction.apply(null, args);
       if (action) actions.append(action);
     });

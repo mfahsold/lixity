@@ -50,6 +50,7 @@
   function arrangeSections() {
     fields.export_section.hidden = mode === "profiles";
     fields.render_section.hidden = mode !== "profiles" && !canRender;
+    if (fields.microphone_section) fields.microphone_section.hidden = mode === "profiles";
     fields.render_heading.textContent = label(mode === "profiles" ? "service_title" : "render_title");
     var first = mode === "reader" ? fields.render_section : fields.export_section;
     var second = mode === "reader" ? fields.export_section : fields.render_section;
@@ -60,6 +61,23 @@
     var link = document.createElement("a"); link.href = address; link.download = filename;
     document.body.appendChild(link); link.click(); link.remove();
     setTimeout(function() { URL.revokeObjectURL(address); }, 2000);
+  }
+  function populateMicrophone(mic) {
+    if (!mic || !fields.microphone_device) return;
+    fields.microphone_device.replaceChildren();
+    if (mic.devices && mic.devices.length) {
+      mic.devices.forEach(function(d) {
+        var opt = new Option(d.label, d.alsa_id);
+        if (d.alsa_id === mic.default_device) opt.selected = true;
+        fields.microphone_device.add(opt);
+      });
+    }
+    if (mic.current_gain != null) {
+      fields.microphone_gain.value = fields.microphone_gain_range.value = String(mic.current_gain);
+      if (mic.gain_info && mic.gain_info.db != null) {
+        fields.microphone_gain_info.textContent = " (" + (mic.gain_info.db >= 0 ? "+" : "") + mic.gain_info.db.toFixed(1) + " dB)";
+      }
+    }
   }
   async function inspectAudio() {
     var file = fields.audit_audio.files[0];
@@ -628,6 +646,63 @@
     [fields.audit_audio, fields.audit_transcript].forEach(function(input) { input.addEventListener("change", invalidate); });
     fields.audit_run = button(fields.audit_section, "audit_run", inspectAudio);
     fields.audit_result = node("div", fields.audit_section, "audio-audit-result"); fields.audit_result.setAttribute("aria-live", "polite");
+    fields.microphone_section = node("details", content, "settings-section");
+    fields.microphone_section.id = "speech-microphone-section";
+    node("summary", fields.microphone_section, "", label("microphone_title"));
+    var micDevLabel = node("label", fields.microphone_section, "setting-field", label("microphone_device"));
+    fields.microphone_device = node("select", micDevLabel, "ctl");
+    var micGainLabel = node("label", fields.microphone_section, "setting-field", label("microphone_gain"));
+    var micGainRow = node("div", micGainLabel, "row");
+    fields.microphone_gain_range = node("input", micGainRow, "ctl");
+    fields.microphone_gain_range.type = "range"; fields.microphone_gain_range.min = "0"; fields.microphone_gain_range.max = "50"; fields.microphone_gain_range.value = "35";
+    fields.microphone_gain = node("input", micGainRow, "ctl");
+    fields.microphone_gain.type = "number"; fields.microphone_gain.min = "0"; fields.microphone_gain.max = "50"; fields.microphone_gain.value = "35";
+    fields.microphone_gain.style.width = "5rem";
+    fields.microphone_gain_info = node("span", micGainRow, "ctl-note");
+    fields.microphone_gain_range.addEventListener("input", function() { fields.microphone_gain.value = fields.microphone_gain_range.value; });
+    fields.microphone_gain.addEventListener("input", function() { fields.microphone_gain_range.value = fields.microphone_gain.value; });
+    fields.microphone_set_btn = button(fields.microphone_section, "microphone_set_gain", async function() {
+      var g = parseInt(fields.microphone_gain.value, 10);
+      try {
+        var res = await request("audio-microphone", {action: "set_gain", gain: g});
+        if (res && res.current_gain != null) {
+          fields.microphone_gain_info.textContent = res.gain_info && res.gain_info.db != null ? (" (" + (res.gain_info.db >= 0 ? "+" : "") + res.gain_info.db.toFixed(1) + " dB)") : "";
+          status("Mikrofon-Gain auf " + res.current_gain + " gesetzt.");
+        }
+      } catch (err) { status(err.message); }
+    });
+    var micCalibActions = node("div", fields.microphone_section, "row");
+    fields.microphone_calib_btn = button(micCalibActions, "microphone_calibrate", async function() {
+      fields.microphone_calib_btn.disabled = true; fields.microphone_calib_result.replaceChildren();
+      var prepNote = node("p", fields.microphone_calib_result, "ctl-note", "4s Vorlauf... Danach 3× POPP, 2× Klatschen, 1× Sprechen.");
+      status("Kalibriere Mikrofonpegel...");
+      try {
+        var g = parseInt(fields.microphone_gain.value, 10);
+        var dev = fields.microphone_device.value;
+        var res = await request("audio-microphone", {action: "calibrate", gain: g, device: dev});
+        prepNote.remove();
+        if (res && res.calibration) {
+          var cal = res.calibration;
+          var card = node("div", fields.microphone_calib_result, "audit-summary");
+          var vBadge = node("div", card, "badge", cal.verdict_label);
+          if (cal.verdict === "too_hot") vBadge.classList.add("badge-fail");
+          else if (cal.verdict === "calibrated") vBadge.classList.add("badge-pass");
+          else vBadge.classList.add("badge-warn");
+          node("p", card, "", "Peak: " + (cal.peak_dbfs >= 0 ? "+" : "") + cal.peak_dbfs.toFixed(1) + " dBFS · Clipping: " + cal.clipping_samples + " · Rauschabstand (SNR): " + cal.snr_db.toFixed(1) + " dB");
+          if (cal.recommended_gain != null && cal.recommended_gain !== g) {
+            var recBtn = node("button", card, "ctl", "Empfohlenen Gain " + cal.recommended_gain + " anwenden");
+            recBtn.type = "button";
+            recBtn.addEventListener("click", function() {
+              fields.microphone_gain.value = fields.microphone_gain_range.value = String(cal.recommended_gain);
+              fields.microphone_set_btn.click();
+            });
+          }
+          status("Kalibrierung abgeschlossen.");
+        }
+      } catch (err) { status(err.message); }
+      finally { fields.microphone_calib_btn.disabled = false; }
+    });
+    fields.microphone_calib_result = node("div", fields.microphone_section, "audio-calib-result");
     fields.chapter_render = button(actions, "chapter_render", function() { render("chapter"); });
     fields.open_output = button(actions, "output_title", function() {
       if (direction.dirty() && !fields.ignore_direction.checked) { status(label("direction_save_first")); return; }
@@ -714,7 +789,7 @@
     if (!dialog) build(); invalidate(); direction.disable(); settings = null; savedSettings = null; workers = null; profilesDirty = false; profileSaving = false; openedContext = context(); paragraph = null;
     fields.worker_status.textContent = label("loading"); fields.worker_refresh.disabled = true; fields.model.textContent = "";
     fields.profile.disabled = false;
-    fields.heading.textContent = label(mode === "profiles" ? "profiles_title" : mode === "output" ? "output_title" : "reader_title");
+    fields.heading.textContent = label(mode === "profiles" ? "profiles_title" : mode === "output" ? "output_title" : mode === "microphone" ? "microphone_title" : "reader_title");
     arrangeSections();
     fields.editor.hidden = mode !== "profiles";
     fields.create.hidden = mode !== "profiles";
@@ -759,6 +834,8 @@
       var data = await request("speech"); if (!valid(serial)) return;
       migrationRequired = data.requires_migration === true;
       settings = data.settings || {schema_version: "lixity-audio-settings/1", selected: "", profiles: {}}; capabilities = data.capabilities; workers = data.workers;
+      if (data.microphone) populateMicrophone(data.microphone);
+      if (mode === "microphone" && fields.microphone_section) fields.microphone_section.open = true;
       fields.schema_hint.hidden = fields.schema_preview.hidden = mode !== "profiles" || settings.schema_version === "lixity-audio-settings/4" || migrationRequired;
       fields.schema_apply.hidden = true; fields.schema_apply.disabled = false;
       fields.worker_refresh.disabled = false;
@@ -796,6 +873,7 @@
   var audioActions = node("div", audioLinks, "row");
   button(audioActions, "profiles_title", function() { open("profiles"); }).id = "settings-speech";
   button(audioActions, "output_title", function() { open("output"); }).id = "settings-speech-output";
+  button(audioActions, "microphone_title", function() { open("microphone"); }).id = "settings-speech-mic";
   settingsForm.after(audioLinks);
   var toolbar = document.getElementById("manuscript-reader-controls");
   if (toolbar) {

@@ -8,6 +8,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Integrated microphone settings and hardware level management in CLI and UI:
+  - Added `lixity audio-microphone` (and subcommands `status`, `set`, `devices`, `calibrate`) to inspect hardware capture devices, display active ALSA gain, dB levels, and hardware limits, and directly set mixer gain.
+  - Added dedicated Microphone & Level controls in the browser UI with live device selector, gain slider/numeric input, immediate gain apply, and interactive 8-second burst calibration with verdict badges and one-click recommended gain adoption.
+  - Added `/api/audio-microphone` backend endpoints (GET status, POST actions `set_gain` and `calibrate`) and embedded microphone state in `/api/speech`.
 - Phonetically balanced voice calibration texts and dual reference acquisition:
   - Added `lixity audio-reference calibration-text` providing standard international phonetic reference texts (IPA standard "Der Nordwind und die Sonne" / "The North Wind and the Sun" and compact pangrams) covering the complete phonemic and prosodic space.
   - Option A (Direct Recording with Teleprompter): `lixity audio-reference record --project PATH --calibration-text` displays the calibration text live in the terminal as a teleprompter, counts down 2 seconds, and automatically bounds and stores verified reference audio.

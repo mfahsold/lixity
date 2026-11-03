@@ -1725,6 +1725,7 @@ When `--calibration-text` is passed, a live teleprompter prints the phonetically
 `audio-reference generate --project PATH [--language de|en] [--variant phonetic|short] [--voice-description DESC]` generates
 a synthetic reference audio from the calibration text via VoiceDesign.
 `audio-reference calibration-text [--language de|en] [--variant phonetic|short]` prints the calibration passage.
+`audio-microphone [status|set|devices|calibrate] [--gain N] [--card C] [--control NAME] [--json]` inspects or sets hardware capture gain and enumerates detected audio devices.
 `audio-calibrate [--gain N] [--duration SEC] [--json]` performs an automated input level burst calibration
 returning `lixity-audio-calibration/1` with peak dBFS, clipping, noise floor and headroom verdicts.
 The `quality` field is additive

@@ -2115,13 +2115,27 @@ also contain sensitive voice data. Creating the same reference again is
 idempotent. The UI can edit the ID of an existing reference; creation is
 currently a CLI action.
 
-### Microphone calibration and recording (`audio-calibrate`, `audio-reference record`)
+### Microphone settings and calibration (`audio-microphone`, `audio-calibrate`, `audio-reference record`)
 
 To capture a high-quality voice reference directly from hardware without manual FFmpeg
-conversions, Lixity provides integrated calibration and recording using standard OSS
-components (`arecord`, `amixer`, `ffmpeg` or `pw-record`):
+conversions, Lixity provides integrated microphone settings, calibration and recording using
+standard OSS components (`arecord`, `amixer`, `ffmpeg` or `pw-record`):
 
-1. **Calibrate microphone gain:**
+1. **Inspect hardware and set microphone gain:**
+   List all detected hardware capture devices and current ALSA mixer levels:
+
+   ```sh
+   # View microphone status, active gain, and detected devices:
+   lixity audio-microphone
+
+   # List all audio input hardware:
+   lixity audio-microphone devices
+
+   # Set ALSA hardware gain immediately:
+   lixity audio-microphone set --gain 35
+   ```
+
+2. **Calibrate microphone gain:**
    Run the automated burst test loop (sets hardware gain, allows a 4-second prep countdown,
    then records an 8-second test window):
 
