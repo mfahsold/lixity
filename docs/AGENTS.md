@@ -1687,8 +1687,10 @@ applicable. CLI `--speed` overrides all profiles for that run without saving.
 Non-1.0 factors require FFmpeg on the render host. Structural pauses stay unchanged.
 Style instructions do not implement precise speed control.
 
-Unreleased main adds `coqui` (German Thorsten VITS) and `coqui-reference`
-(Thorsten plus OpenVoice V2) engines. Saved profiles require audio schema `/3`
+Unreleased main adds `f5-tts` (Flow-Matching Diffusion, port 8771), `coqui` (German Thorsten VITS) and `coqui-reference`
+(Thorsten plus OpenVoice V2) engines. Single-narrator integrity (`same_narrator`) ensures
+the narrator voice remains constant across the manuscript; delivery references vary
+intonation without voice switching. Saved profiles require audio schema `/3`
 and a reviewed `audio-migrate --to-schema-3` upgrade. They require a matching optional local
 worker, reject free-text delivery instructions and use existing pronunciation,
 pause and reference mechanisms. Older versions cannot read these engine IDs.
@@ -1931,7 +1933,7 @@ reused, but Base rejects nonempty text direction and still needs listening revie
 
 ## CLI audio status and previews
 
-`audio-status --json [--project PATH] [--engine qwen3|qwen3-design|qwen3-base]` returns `lixity-audio-status/1` with
+`audio-status --json [--project PATH] [--engine qwen3|qwen3-design|qwen3-base|f5-tts]` returns `lixity-audio-status/1` with
 actual per-target state, model identity and nullable comparison with the selected
 project profile or explicitly selected engine. Omitted/unknown information is not a negative match. No
 manuscript prose, pronunciations or delivery descriptions are included.

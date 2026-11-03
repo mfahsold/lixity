@@ -24,6 +24,7 @@ QWEN_DESIGN_MODEL = "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign"
 QWEN_BASE_MODEL = "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
 COQUI_MODEL = "coqui/tts_models/de/thorsten/vits"
 COQUI_REFERENCE_MODEL = "coqui/tts_models/de/thorsten/vits+openvoice-v2"
+F5_MODEL = "SWivid/F5-TTS"
 QWEN_LANGUAGES = {
     "zh": "Chinese", "en": "English", "ja": "Japanese", "ko": "Korean",
     "de": "German", "fr": "French", "ru": "Russian", "pt": "Portuguese",
@@ -54,7 +55,7 @@ class AudioProfile(BaseModel):
 
     model_config = ConfigDict(extra="forbid", strict=True, allow_inf_nan=False, hide_input_in_errors=True)
     name: str = Field(default="Narrator", min_length=1, max_length=100)
-    engine: Literal["qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "openai-compatible"] = "qwen3"
+    engine: Literal["qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "f5-tts", "openai-compatible"] = "qwen3"
     language: str = "en"
     voice: str = Field(default="Ryan", min_length=1, max_length=100)
     voice_description: str = Field(default="", max_length=2000)
@@ -140,6 +141,12 @@ class AudioProfile(BaseModel):
                     raise ValueError("Coqui reference requires a saved reference identity")
             elif self.voice != "thorsten" or self.reference_id:
                 raise ValueError("Coqui requires the Thorsten voice without a reference")
+            return self
+        if self.engine == "f5-tts":
+            if self.language not in ("de", "en") or self.instructions or self.voice_description:
+                raise ValueError("F5-TTS supports German and English without delivery instructions or voice descriptions")
+            if self.voice != "reference" or re.fullmatch(r"[0-9a-f]{64}", self.reference_id) is None:
+                raise ValueError("F5-TTS requires voice='reference' and a saved reference identity")
             return self
         if self.language not in QWEN_LANGUAGES:
             raise ValueError("Unsupported Qwen language")
@@ -284,6 +291,15 @@ def audio_capabilities() -> dict[str, Any]:
             ("coqui", "Coqui Thorsten VITS", "thorsten", "Thorsten", COQUI_MODEL),
             ("coqui-reference", "Coqui Thorsten + OpenVoice V2", "reference", "Reference", COQUI_REFERENCE_MODEL),
         )},
+        "f5-tts": {
+            "name": "F5-TTS Flow-Matching", "targets": ["local"], "languages": ["de", "en"],
+            "voices": {"reference": {"name": "Reference", "languages": ["de", "en"]}},
+            "reference_required": True, "instructions": False,
+            "control_support": speech_control_support("f5-tts").as_dict(),
+            "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
+                      "default": DEFAULT_PLAYBACK_SPEED, "implementation": "ffmpeg-atempo"},
+            "model": F5_MODEL,
+        },
         "qwen3": {
             "name": "Qwen3-TTS 1.7B CustomVoice", "targets": ["local", "jetson"], "languages": list(QWEN_LANGUAGES),
             "voices": {voice: {"name": voice, "languages": list(QWEN_LANGUAGES)} for voice in QWEN_VOICES},

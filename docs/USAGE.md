@@ -1663,7 +1663,7 @@ deadline. The browser uses smaller upload limits. See [Methods](METHODS.md) and
 
 ### Audio status
 
-`lixity audio-status [--project PATH] [--engine qwen3|qwen3-design|qwen3-base] [--json]` inspects the actual fixed local
+`lixity audio-status [--project PATH] [--engine qwen3|qwen3-design|qwen3-base|f5-tts] [--json]` inspects the actual fixed local
 and Jetson workers without synthesis. With an explicit project, it lists saved
 profile identities and compares the selected profile's model with each worker. `--engine` explicitly compares a model variant
 even without a saved profile. `model_matches: null` means no model identity or selected profile is known; it
@@ -2153,10 +2153,71 @@ Qwen Base does not accept separate delivery instructions. Nonempty profile or
 passage instructions fail rather than being ignored; explicit pauses, speech
 rate postprocessing and pronunciation substitutions still apply. `--no-direction`
 is a deliberate baseline that ignores *all* saved passage directions, including
-their voice assignments. To retain character voices, assign saved Base profiles
-to the intended passage ranges with empty local instructions. No character or
-speaker is inferred automatically. Reusing a reference encourages consistency,
-but accent, identity, naturalness and pronunciation still require listening.
+their delivery assignments. For reference engines, intonation and attitude
+variation within passages are achieved via delivery references of the same speaker;
+casting a different voice identity into the narrator role is refused to preserve
+continuity. Reusing a reference encourages consistency, but accent, identity,
+naturalness and pronunciation still require listening.
+
+### F5-TTS Flow-Matching diffusion voices (unreleased)
+
+F5-TTS (`SWivid/F5-TTS`, and German fine-tunes such as `HPI-DAP/F5-TTS-German`) provides
+continuous flow-matching diffusion synthesis. Unlike autoregressive neural codec models,
+flow matching eliminates repetition loops, stuttering and hallucinated syllables, producing
+warm, organic German prosody and natural breathing for author voice proofing.
+
+Synthesis uses the verified project reference audio and transcript created via
+`lixity audio-reference create` (1–30 seconds, 24 kHz mono 16-bit PCM WAV). The F5-TTS
+worker binds to local loopback port `8771` and does not accept remote network connections.
+
+Start the local F5-TTS worker:
+
+```sh
+python -m lixity.speech_f5 --model /path/to/F5-TTS-German --device cuda --port 8771
+```
+
+Check worker status:
+
+```sh
+lixity audio-status --project ./novel --engine f5-tts
+```
+
+Audition a short preview:
+
+```sh
+lixity read-aloud --project ./novel --preview --speech-target local \
+  --engine f5-tts --voice reference --reference-id REFERENCE_ID \
+  --speed 1.0 -o f5-preview.wav
+```
+
+To use F5-TTS in a project, configure `lixity.toml`:
+
+```toml
+[audio.profiles.narrator]
+engine = "f5-tts"
+voice = "reference"
+reference_id = "REFERENCE_ID"
+language = "de"
+```
+
+### Single narrator and delivery variation
+
+Lixity's read-aloud feature is strictly an authorial manuscript proofing tool
+("Proofing by Ear" / *Korrekturhören*), not a dramatized multi-voice audiobook casting
+engine. The narrative continuity of a single reading voice is maintained across the entire
+work.
+
+Instead of switching narrator identities or assigning different character voices, authors
+modulate intonation and delivery within specific passages:
+- **Prompt-driven engines** (`qwen3`, `openai-compatible`) accept descriptive style
+  instructions (e.g. tension, whispering, tempo).
+- **Reference-driven engines** (`f5-tts`, `qwen3-base`, `coqui-reference`) vary delivery
+  via *attitude references* of the same narrator. For example, an author can record two
+  short references of their own voice—one in a calm narrative tone, and one with urgency
+  or subdued whispering—and assign the delivery reference to specific passages.
+- Assigning a different voice identity or unrelated speaker to a passage is refused with
+  an explicit `NarratorConflict` error, preventing accidental drift and preserving voice
+  cohesion throughout the manuscript.
 
 ### Check narration continuity before a chapter render
 

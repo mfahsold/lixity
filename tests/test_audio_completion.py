@@ -49,7 +49,7 @@ def test_bash_audio_commands_offer_only_their_actual_options(tmp_path, command, 
 
 @pytest.mark.parametrize(("option", "expected"), [
     ("--language", LANGUAGES), ("--speech-target", {"local", "jetson"}), ("--voice", VOICES),
-    ("--engine", {"qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "openai-compatible"}),
+    ("--engine", {"qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "f5-tts", "openai-compatible"}),
 ])
 def test_bash_qwen_values_match_supported_model_controls(tmp_path, option, expected):
     assert bash_complete(tmp_path, "lixity", "read-aloud", option, "") == expected

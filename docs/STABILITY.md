@@ -405,6 +405,17 @@ require provider-specific handling. Neither cached output nor a successful HTTP
 response certifies audio quality. Existing native synthesis implementations remain
 optional and require listening review.
 
+### Continuous Flow-Matching diffusion synthesis limits (`f5-tts`)
+
+F5-TTS Flow-Matching (`SWivid/F5-TTS`, `HPI-DAP/F5-TTS-German`) models speech generation
+via an Ordinary Differential Equation (ODE) flow field over mel-spectrogram features rather
+than discrete autoregressive tokens. This eliminates token loop repetitions, but synthesis
+speed depends directly on ODE solver step counts. Synthesis remains non-deterministic with
+respect to random flow trajectories unless an explicit seed is fixed. Flow matching clones
+prosody and acoustic room characteristics directly from the reference recording;
+low-quality or noisy references degrade generation accordingly. The author must verify
+intelligibility, tempo, and breathing by ear before chapter rendering.
+
 ### Manual manuscript association limits
 
 Manually selected quotes require explicit retention and exact source/paragraph/claim

@@ -1444,12 +1444,16 @@ its validated upstream chunk hook, retaining 25 frames of left context. Default
 model/KV-cache/output memory. Additive worker health metadata reports resolved
 device, dtype, threads, attention, codec placement and chunk size without paths.
 
-Per-render `local|jetson` selection chooses fixed loopback ports 8769 or 8770.
-The latter is an operator-configured authenticated SSH forward; the remote worker
-remains loopback-only. Location is not part of portable project voice settings,
-and these native target selectors cannot supply an inference URL. Explicit
-external profiles instead carry their validated provider URL; this choice is
-project configuration and is never inferred from manuscript text.
+Per-render `local|jetson` selection chooses fixed loopback ports 8769 or 8770 for
+Qwen models. `speech_f5.py` provides the Flow-Matching Diffusion Transformer adapter
+(`SWivid/F5-TTS`, default local loopback port 8771), accepting verified project references
+and rendering continuous mel-spectrograms with an ODE Euler solver. Single-narrator
+integrity (`same_narrator`) ensures the manuscript narrator voice remains consistent,
+while delivery references of the same speaker modulate localized passage intonation.
+The remote worker remains loopback-only. Location is not part of portable project voice
+settings, and these native target selectors cannot supply an inference URL. Explicit
+external profiles instead carry their validated provider URL; this choice is project
+configuration and is never inferred from manuscript text.
 
 `speech_migration.py` prepares explicit replacements for removed Piper profiles.
 The `lixity-audio-settings/1` wire version remains valid for existing Qwen records;

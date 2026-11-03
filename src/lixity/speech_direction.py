@@ -67,7 +67,7 @@ def same_narrator(narrator: AudioProfile, delivery: AudioProfile) -> bool:
     """
     if (narrator.engine, narrator.language) != (delivery.engine, delivery.language):
         return False
-    if narrator.engine in ('qwen3-base', 'coqui-reference', 'coqui'):
+    if narrator.engine in ('qwen3-base', 'coqui-reference', 'coqui', 'f5-tts'):
         return True
     if narrator.engine == 'qwen3-design':
         return narrator.voice_description == delivery.voice_description
@@ -256,7 +256,7 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
                 raise NarratorConflict()
             if not for_export and selected.engine in ('coqui', 'coqui-reference') and d.instructions:
                 raise CoquiDirectionConflict()
-            if not for_export and selected.engine == 'qwen3-base' and d.instructions:
+            if not for_export and selected.engine in ('qwen3-base', 'f5-tts') and d.instructions:
                 raise BaseDirectionConflict()
             instructions = combine_delivery(selected.instructions, d.instructions)
             if not for_export or speech_control_support(
