@@ -456,6 +456,14 @@ def render_dashboard(
             "</button>"
             "</nav>"
         )
+        if speech_enabled and not read_only:
+            parts.append(
+                f'<button type="button" class="ctl voice-studio-launcher-btn" id="btn-sidebar-speech" '
+                f'data-help="{L("speech_action_help")}" title="{L("speech_action_title")}">'
+                f'<span class="studio-btn-icon" aria-hidden="true">🎙</span> '
+                f'<span>{L("speech_action_title")}</span>'
+                f'</button>'
+            )
         parts.append('<div id="workspace-navigation-content">')
         parts.append(project_header(title, labels, language_name, engine_name, compact=True, meta=project_meta))
         parts.append(
@@ -486,6 +494,12 @@ def render_dashboard(
             f'<button type="button" class="ctl" id="welcome-show" aria-controls="welcome-hero" aria-expanded="false"{show_guidance_hidden} '
             f'data-help="{L("welcome_show_help")}" title="{L("welcome_show")}">{L("welcome_show")}</button>'
         )
+        if speech_enabled:
+            parts.append(
+                f'<button type="button" class="ctl" id="btn-project-speech" '
+                f'data-help="{L("speech_action_help")}" title="{L("speech_action_title")}">'
+                f'🎙 {L("speech_action_title")}</button>'
+            )
         parts.append("</div>")
         if allowed_actions is not None and "manuscript-pdf" in allowed_actions:
             parts.append(
@@ -633,6 +647,24 @@ def render_dashboard(
         )
         parts.append('<section class="panel controls" id="controls">')
         parts.append(f"<h2>{L('workspace_project')}</h2>")
+        if speech_enabled:
+            parts.append(
+                f'<section class="project-voice-studio-banner" id="project-voice-card">'
+                f'<div class="voice-banner-icon" aria-hidden="true">🎙</div>'
+                f'<div class="voice-banner-content">'
+                f'<h3 class="voice-banner-title">{L("speech_action_title")}</h3>'
+                f'<p class="ctl-note">{L("speech_banner_desc")}</p>'
+                f'<div class="row">'
+                f'<button type="button" class="ctl primary" id="btn-project-record-voice">'
+                f'🎙 {L("speech_record_cta")}'
+                f'</button>'
+                f'<button type="button" class="ctl" id="btn-project-manage-profiles">'
+                f'🎭 {L("speech_tab_profiles")}'
+                f'</button>'
+                f'</div>'
+                f'</div>'
+                f'</section>'
+            )
         if show_project_overview:
             parts.append(project_overview(labels, research_navigation=bool(
                 research_context_token and research_context_token == site_publication_context_token)))

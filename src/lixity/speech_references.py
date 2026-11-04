@@ -199,6 +199,41 @@ def get_calibration_text(language: str = "de", variant: str = "phonetic") -> str
     return lang_map.get(variant, lang_map["phonetic"])
 
 
+def list_references(project: str | Path) -> list[dict[str, Any]]:
+    """List all saved audio references for a project, newest first."""
+    try:
+        repo = _repository(project)
+    except (ValueError, OSError):
+        return []
+    ref_dir = repo.root / ".lixity" / "audio-references"
+    if not ref_dir.is_dir():
+        return []
+    from .speech import _read_pcm
+
+    entries: list[dict[str, Any]] = []
+    try:
+        paths = sorted(ref_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    except OSError:
+        return []
+    for path in paths:
+        ref_id = path.stem
+        if not _IDENTITY.fullmatch(ref_id):
+            continue
+        try:
+            ref = _read_record(repo, ref_id)
+            (channels, width, rate), frames = _read_pcm(ref.audio)
+            duration = round(len(frames) / max(1, rate * width * channels), 2)
+            entries.append({
+                "id": ref.id,
+                "transcript": ref.transcript,
+                "duration_seconds": duration,
+                "sample_rate": rate,
+            })
+        except (ValueError, OSError, KeyError):
+            continue
+    return entries
+
+
 def generate_reference(
     project: str | Path,
     *,

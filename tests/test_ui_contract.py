@@ -523,6 +523,7 @@ class TestJsDomContract(unittest.TestCase):
             + render_dashboard([], [], controls=True, enabled_actions=("nda-draft",))
             + render_dashboard([], [], controls=True, enabled_actions=("site-export",))
             + render_dashboard([], [], controls=True, project_overview_enabled=True)
+            + render_dashboard([], [], controls=True, enabled_actions=("speech-plan",))
         )
         # Declared chapter groups add conditional comparison controls.
         from lixity.api import dashboard

@@ -692,7 +692,7 @@ def test_saving_direction_invalidates_a_completed_download(speech_server):
 
 
 def test_audio_microphone_api_endpoints(speech_server, monkeypatch):
-    port, _source, _handler, _observed = speech_server
+    port, source, handler, _observed = speech_server
     import lixity.speech_record
 
     fake_status = {
@@ -733,3 +733,29 @@ def test_audio_microphone_api_endpoints(speech_server, monkeypatch):
     data_cal = json.loads(res_cal.body)
     assert data_cal["ok"] is True
     assert data_cal["calibration"]["verdict"] == "calibrated"
+
+    # 4. POST /api/audio-microphone (save_reference)
+    import base64
+
+    from lixity.speech import generate_silence_wav
+    dummy_audio = generate_silence_wav(1)
+    b64_audio = base64.b64encode(dummy_audio).decode("ascii")
+    res_ref = send(port, "/api/audio-microphone", payload={
+        "action": "save_reference",
+        "audio": b64_audio,
+        "transcript": "Testlesung der Autorenstimme.",
+        "profile_id": "default",
+    })
+    assert res_ref.status == 200
+    data_ref = json.loads(res_ref.body)
+    assert data_ref["ok"] is True
+    assert "reference" in data_ref
+    ref_id = data_ref["reference"]["id"]
+    assert len(ref_id) == 64
+
+    # 5. GET /api/speech-audio with reference_id
+    bound = context(source, handler)
+    res_aud = send(port, f"/api/speech-audio?reference_id={ref_id}&" + urlencode(bound))
+    assert res_aud.status == 200
+    assert res_aud.headers["content-type"] == "audio/wav"
+    assert len(res_aud.body) > 0

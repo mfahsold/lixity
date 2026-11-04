@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import contextlib
+import errno
 import os
 import socket
+import time
 import webbrowser
 from collections.abc import Callable, Mapping
 from http.server import ThreadingHTTPServer
@@ -21,6 +24,7 @@ from .workspaces import WorkspaceRegistry
 class _LoopbackHTTPServer(ThreadingHTTPServer):
     """Bind the validated local address without an unnecessary reverse-DNS lookup."""
 
+    allow_reuse_address = True
     workspaces: WorkspaceRegistry
 
     def server_close(self) -> None:
@@ -31,6 +35,9 @@ class _LoopbackHTTPServer(ThreadingHTTPServer):
 
     def server_bind(self) -> None:
         host = self.server_address[0]
+        if hasattr(socket, "SO_REUSEPORT"):
+            with contextlib.suppress(OSError):
+                self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         TCPServer.server_bind(self)
         self.server_name = str(host)
         self.server_port = self.server_address[1]
@@ -101,7 +108,18 @@ def run_server(
     LixityServerHandler.refresh()
 
     workspaces = WorkspaceRegistry(LixityServerHandler)
-    server = _LoopbackHTTPServer((host, port), LixityServerHandler)
+    server = None
+    for attempt in range(15):
+        try:
+            server = _LoopbackHTTPServer((host, port), LixityServerHandler)
+            break
+        except OSError as exc:
+            if exc.errno == errno.EADDRINUSE and attempt < 14:
+                time.sleep(0.1)
+                continue
+            raise
+    if server is None:
+        raise RuntimeError("Failed to bind local HTTP server")
     server.workspaces = workspaces
     url = f"http://{host}:{port}/"
     info = LixityServerHandler.dashboard_info

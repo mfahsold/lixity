@@ -167,3 +167,17 @@ def test_cli_record_with_calibration_text(tmp_path, capsys, monkeypatch):
     assert res["schema_version"] == "lixity-audio-reference-created/1"
     assert "id" in res
 
+
+def test_list_references(tmp_path):
+    from lixity.speech_references import list_references, save_reference
+
+    assert list_references(tmp_path) == []
+    audio = generate_silence_wav(1)
+    saved = save_reference(tmp_path, audio, "Erster Text.")
+    refs = list_references(tmp_path)
+    assert len(refs) == 1
+    assert refs[0]["id"] == saved.id
+    assert refs[0]["transcript"] == "Erster Text."
+    assert refs[0]["duration_seconds"] == 1.0
+
+

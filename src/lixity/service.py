@@ -1048,6 +1048,9 @@ class ServiceManager:
         child = _CHILDREN.get(pid)
         if child is not None:
             child.wait(timeout=2)
+        port_deadline = time.monotonic() + 2.0
+        while _port_open(str(settings.get("host", "127.0.0.1")), self.port) and time.monotonic() < port_deadline:
+            time.sleep(0.05)
         self._remove_ready(str(record["token"]))
         self.runtime_file.unlink()
         return self._result("stopped", settings, ok=True, message="Owned Lixity process stopped")

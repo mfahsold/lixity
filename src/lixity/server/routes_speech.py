@@ -265,8 +265,12 @@ class SpeechRoutesMixin(ResponseMixin):
             else:
                 response["workers"] = audio_status()["targets"]
             from ..speech_record import get_microphone_status
+            from ..speech_references import CALIBRATION_TEXTS, list_references
 
+            root = self.get_author_project_root()
             response["microphone"] = get_microphone_status()
+            response["references"] = list_references(root) if root else []
+            response["calibration_texts"] = CALIBRATION_TEXTS.get(self.language, CALIBRATION_TEXTS.get("de", {}))
             with self._workspace_lock:
                 self._speech_bound(query)
                 self._json(response)
@@ -485,16 +489,34 @@ class SpeechRoutesMixin(ResponseMixin):
 
     def _handle_speech_audio(self, _query: Any = None) -> None:
         try:
-            query = self._speech_query(job=True)
+            if not self._same_origin():
+                raise PermissionError("Cross-origin request forbidden")
+            raw = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+            allowed = {"project_token", "source_sha256", "id", "reference_id"}
+            if not set(raw).issubset(allowed) or not {"project_token", "source_sha256"}.issubset(set(raw)):
+                raise ValueError("Supply project token, source SHA and either job ID or reference ID")
+            query = {key: value[0] for key, value in raw.items()}
             self._speech_manager().cancel_stale()
             with self._workspace_lock:
                 _text, _digest, _settings, key = self._speech_bound(query)
-                data = self._speech_manager().audio(query["id"], key)
+                if "reference_id" in query:
+                    root = self.get_author_project_root()
+                    if root is None:
+                        raise ValueError("Open a manuscript project before accessing references")
+                    from ..speech_references import load_reference
+                    ref = load_reference(root, query["reference_id"])
+                    data = ref.audio
+                    filename = f"reference-{ref.id[:8]}.wav"
+                elif "id" in query:
+                    data = self._speech_manager().audio(query["id"], key)
+                    filename = "lixity-reading.wav"
+                else:
+                    raise ValueError("Specify either id or reference_id")
                 self._send(
                     200,
                     data,
                     "audio/wav",
-                    headers={"Content-Disposition": 'attachment; filename="lixity-reading.wav"'},
+                    headers={"Content-Disposition": f'inline; filename="{filename}"'},
                 )
         except (OSError, ValueError, RuntimeError, UserWarning) as exc:
             self._speech_error(exc)
@@ -506,7 +528,7 @@ class SpeechRoutesMixin(ResponseMixin):
         self._json(get_microphone_status())
 
     def _handle_audio_microphone_post(self, payload: dict[str, Any]) -> None:
-        """Handle microphone gain updates or calibration."""
+        """Handle microphone gain updates, calibration, and voice references."""
         from ..speech_record import (
             get_microphone_status,
             run_calibration,
@@ -531,5 +553,103 @@ class SpeechRoutesMixin(ResponseMixin):
             device = str(payload["device"]) if payload.get("device") else None
             result = run_calibration(gain=calib_gain, duration=duration, countdown=countdown, device=device)
             self._json({"ok": True, "calibration": result})
+            return
+        if action == "save_reference":
+            import base64
+            import binascii
+
+            from ..config import load_project_config, prepare_project_settings
+            from ..speech_profiles import parse_audio_settings
+            from ..speech_reference_quality import assess_reference
+            from ..speech_references import list_references, save_reference
+
+            root = self.get_author_project_root()
+            if root is None:
+                self._json({"ok": False, "message": "No open manuscript project"}, 400)
+                return
+            audio_b64 = str(payload.get("audio", ""))
+            transcript = str(payload.get("transcript", "")).strip()
+            if not audio_b64 or not transcript:
+                self._json({"ok": False, "message": "audio and transcript are required"}, 400)
+                return
+            if "," in audio_b64:
+                audio_b64 = audio_b64.split(",", 1)[1]
+            try:
+                audio_bytes = base64.b64decode(audio_b64)
+            except (binascii.Error, ValueError) as exc:
+                self._json({"ok": False, "message": f"Invalid base64 audio: {exc}"}, 400)
+                return
+
+            try:
+                ref = save_reference(root, audio_bytes, transcript)
+                quality = assess_reference(ref.audio)
+            except (ValueError, OSError) as exc:
+                self._json({"ok": False, "message": f"Failed to save reference: {exc}"}, 400)
+                return
+
+            profile_id = payload.get("profile_id")
+            if profile_id and root is not None:
+                try:
+                    cfg = load_project_config(root)
+                    settings = parse_audio_settings(cfg.get("audio"), language=self.language)
+                    if profile_id in settings.profiles:
+                        target_prof = settings.profiles[profile_id]
+                        target_prof.reference_id = ref.id
+                        if target_prof.engine in ("qwen3", "custom-voice"):
+                            target_prof.engine = "qwen3-base"
+                            target_prof.voice = "reference"
+                        prepared = prepare_project_settings(root, {"audio": settings.model_dump(by_alias=True)})
+                        prepared.commit()
+                except (ValueError, OSError):
+                    pass
+
+            self._json({
+                "ok": True,
+                "reference": {
+                    "id": ref.id,
+                    "transcript": ref.transcript,
+                    "quality": quality,
+                },
+                "references": list_references(root),
+            })
+            return
+        if action == "record_reference":
+            from ..speech_record import record_and_save_reference
+            from ..speech_reference_quality import assess_reference
+            from ..speech_references import get_calibration_text, list_references
+
+            root = self.get_author_project_root()
+            if root is None:
+                self._json({"ok": False, "message": "No open manuscript project"}, 400)
+                return
+            duration = float(payload.get("duration", 15.0))
+            transcript = str(payload.get("transcript", "")).strip()
+            if not transcript:
+                transcript = get_calibration_text(self.language)
+            rec_gain: int | None = int(payload["gain"]) if "gain" in payload and payload["gain"] is not None else None
+            device = str(payload["device"]) if payload.get("device") else None
+            try:
+                ref = record_and_save_reference(root, duration, transcript, gain=rec_gain, device=device)
+                quality = assess_reference(ref.audio)
+            except (ValueError, OSError, RuntimeError) as exc:
+                self._json({"ok": False, "message": f"Recording failed: {exc}"}, 400)
+                return
+
+            self._json({
+                "ok": True,
+                "reference": {
+                    "id": ref.id,
+                    "transcript": ref.transcript,
+                    "quality": quality,
+                },
+                "references": list_references(root),
+            })
+            return
+        if action == "list_references":
+            from ..speech_references import list_references
+
+            root = self.get_author_project_root()
+            refs = list_references(root) if root else []
+            self._json({"ok": True, "references": refs})
             return
         self._json({"ok": True, **get_microphone_status()})

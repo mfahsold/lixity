@@ -37,6 +37,7 @@ body.teleprompter-open { overflow: hidden !important; }
   .teleprompter-scroll-pane { padding: 4vh 1.5rem 50vh; }
   .teleprompter-paragraph { padding: .5rem .75rem; }
 }
+.teleprompter-voice-studio-link { background: 0; border: 0; color: #58a6ff; font-size: .8rem; text-align: center; cursor: pointer; padding: .25rem; text-decoration: underline; transition: color .15s ease; &:hover { color: #79c0ff; } }
 @media (max-width: 640px) {
   .teleprompter-toolbar { padding: 0 .5rem; gap: .4rem; height: 3.25rem; min-height: 3.25rem; }
   .teleprompter-speed-control input[type="range"] { width: 60px; }

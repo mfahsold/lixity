@@ -198,9 +198,9 @@
     recordBtn = document.createElement("button");
     recordBtn.type = "button";
     recordBtn.className = "teleprompter-btn teleprompter-btn-record";
-    recordBtn.innerHTML = '🎙 <span class="teleprompter-btn-label">' + label("teleprompter_record", "Aufnahme") + "</span>";
-    recordBtn.title = label("teleprompter_record", "Aufnahme") + " (R)";
-    recordBtn.setAttribute("aria-label", label("teleprompter_record", "Aufnahme"));
+    recordBtn.innerHTML = '🎙 <span class="teleprompter-btn-label">' + label("teleprompter_record_take", "Take aufnehmen") + "</span>";
+    recordBtn.title = label("teleprompter_record_hint", "Lese-Take aufnehmen") + " (R)";
+    recordBtn.setAttribute("aria-label", label("teleprompter_record_hint", "Lese-Take aufnehmen"));
     recordBtn.addEventListener("click", toggleRecording);
     rightGroup.appendChild(recordBtn);
 
@@ -695,6 +695,60 @@
     a.style.justifyContent = "center";
     a.textContent = "💾 " + label("speech_download", "WAV-Take herunterladen");
     card.appendChild(a);
+
+    var saveVoiceBtn = document.createElement("button");
+    saveVoiceBtn.type = "button";
+    saveVoiceBtn.className = "teleprompter-btn";
+    saveVoiceBtn.style.background = "#1f6feb";
+    saveVoiceBtn.style.color = "#ffffff";
+    saveVoiceBtn.style.justifyContent = "center";
+    saveVoiceBtn.textContent = "🎙 " + label("speech_record_save", "Als Autorenstimme für dieses Buch speichern");
+    saveVoiceBtn.addEventListener("click", async function() {
+      saveVoiceBtn.disabled = true;
+      saveVoiceBtn.textContent = "⏳ Speichere...";
+      try {
+        var reader = new FileReader();
+        var b64Wav = await new Promise(function(resolve, reject) {
+          reader.onload = function() { resolve(String(reader.result).split(",")[1]); };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        var passageEl = currentActiveParagraph || document.querySelector(".teleprompter-p.is-active") || document.querySelector(".teleprompter-p");
+        var passageText = (passageEl ? passageEl.textContent : "").trim() || "Teleprompter-Aufnahme";
+        var res = await fetch("/api/audio-microphone", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({
+            action: "save_reference",
+            audio: b64Wav,
+            transcript: passageText,
+            profile_id: "default"
+          })
+        });
+        var data = await res.json();
+        if (data.ok) {
+          saveVoiceBtn.textContent = "✓ Als Autorenstimme gespeichert!";
+          saveVoiceBtn.style.background = "#238636";
+        } else {
+          saveVoiceBtn.textContent = "Fehler: " + (data.message || "Speichern fehlgeschlagen");
+          saveVoiceBtn.disabled = false;
+        }
+      } catch (err) {
+        saveVoiceBtn.textContent = "Fehler: " + err.message;
+        saveVoiceBtn.disabled = false;
+      }
+    });
+    card.appendChild(saveVoiceBtn);
+
+    var voiceStudioLink = document.createElement("button");
+    voiceStudioLink.type = "button";
+    voiceStudioLink.className = "teleprompter-voice-studio-link";
+    voiceStudioLink.textContent = "🎙 " + label("teleprompter_open_studio", "Zum Autorenstimmen-Studio →");
+    voiceStudioLink.addEventListener("click", function() {
+      closeTeleprompter();
+      document.dispatchEvent(new CustomEvent("lixity:open-speech-studio", {detail: {mode: "reference"}}));
+    });
+    card.appendChild(voiceStudioLink);
 
     if (sidebarContent) {
       sidebarContent.prepend(card);
