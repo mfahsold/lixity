@@ -164,7 +164,9 @@ class TestResearchAnalysis(unittest.TestCase):
         self.assertIn('id="license-terms"', html)
         self.assertIn('id="matrix"', html)
         self.assertNotIn('id="controls"', html)
-        self.assertIn(source["source_version_id"], html)
+        self.assertNotIn(source["source_version_id"], html)
+        analysis = api.analyze_source(self.project, source["source_id"])
+        self.assertEqual(analysis["provenance"]["source_version_id"], source["source_version_id"])
 
     def test_cli_analyze_context_ingest_and_dashboard_stdout(self):
         from lixity.cli import main

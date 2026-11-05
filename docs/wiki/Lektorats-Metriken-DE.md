@@ -1,47 +1,30 @@
-# Lektorats-Metriken verstehen 📊
+# Lektorats-Metriken verstehen
 
-Lixity berechnet quantitative Signale, um Lektorierenden und Schreibenden gezielte Ansatzpunkte für die Überarbeitung zu bieten. Dieser Leitfaden erklärt die wichtigsten Kennzahlen.
+Lies die Textstelle, bevor du aus einem Messwert eine Entscheidung ableitest.
+Die [deutsche Einführung zu Lektoratsmetriken](https://mfahsold.github.io/lixity/blog/leseguete-und-lektoratsmetriken-de.html)
+ordnet die Anzeigen ein. [Methoden](https://mfahsold.github.io/lixity/METHODS.md)
+und [Validierung und Grenzen](https://mfahsold.github.io/lixity/STABILITY.md)
+enthalten die ausführlichen Definitionen auf Englisch.
 
----
+## Was ein Signal bedeutet
 
-## 1. Das Grundprinzip: Manuskripteigenes Normalmodell
+Manche Anzeigen vergleichen mit dem Kapitel oder Manuskript, andere verwenden
+konfigurierte Schwellenwerte oder sprachabhängige Formeln. Prüfe Einheit,
+Vergleichsbasis und aktive Einstellungen. Eine starke Abweichung kann beabsichtigt
+sein. Ein nicht bestimmbarer Wert ist weder null noch ein gutes Ergebnis.
 
-Lixity vergleicht Ihr Buch **nicht mit externen Richtlinien**, sondern setzt jedes Kapitel und jeden Absatz ins Verhältnis zum **Gesamtstil Ihres eigenen Werks**.
+| Messwert | Hilfreiche Frage | Keine gesicherte Aussage über… |
+| --- | --- | --- |
+| Mittlere Satzlänge | Wo verändert sich der Satzrhythmus? | Ideale Satzlänge, Erzähltempo oder Qualität |
+| Tempusmarker | Welche erkannten Formen erklären die Markierung? | Vollständige Grammatik oder einen unbeabsichtigten Fehler |
+| Dialoganteil | Wie viel erkannte zitierte Rede enthält die Passage? | Sprecheridentität bei fehlender Zuordnung |
+| Wiederholungen | Ist die Wiederkehr hier gewollt? | Einen notwendigen Austausch des Wortes |
+| Lexikalische Vielfalt | Wie unterscheiden sich vergleichbare Textproben? | Vollständige Längenunabhängigkeit oder Wortschatzqualität |
 
-* **Normaler Korridor ($z \le 2$):** Typisches Spektrum Ihres Textes.
-* **Milde Abweichung ($z > 2$):** Signifikant anders als der Buchdurchschnitt. Ein guter Ort zum Nachprüfen.
-* **Starke Abweichung ($z > 3$):** Seltene Spitze oder starker Registerwechsel (z. B. plötzlicher Satzstakkato in einer Actionszene oder ein sehr langer Monolog).
+FDR-Korrekturen ordnen statistische Vergleiche unter bestimmten Annahmen ein.
+Sie garantieren weder literarische Relevanz noch das Ausbleiben falscher Signale.
+Ein einheitlicher z-Wert-Grenzwert gilt nicht für alle Anzeigen.
+Nutze Textkontext, Zählbeispiele und Hinweise zur Abdeckung für dein Urteil.
 
----
-
-## 2. Kernmetriken im Überblick
-
-### 📏 ASL (Average Sentence Length / Mittlere Satzlänge)
-* **Was wird gemessen:** Die durchschnittliche Anzahl der Wörter pro Satz in einem Absatz oder Kapitel.
-* **Lektoratspraxis:** Kurze Sätze ($ASL < 8$) erzeugen Tempo, Atemlosigkeit oder Stakkato. Lange Sätze ($ASL > 25$) verlangsamen das Erzähltempo und eignen sich für Reflexion oder Atmosphäre.
-* **Signalgruppe:** Zeigt, wo das Tempo innerhalb einer Szene abrupt bricht.
-
-### ⏱️ Tempusverteilung & Tempuswechsel
-* **Was wird gemessen:** Häufungen von Präsens- und Vergangenheitsformen auf Satz- und Absatzebene.
-* **Lektoratspraxis:** Unbeabsichtigte Tempuswechsel (z. B. unbemerktes Hineinrutschen ins Präsens während einer Präteritum-Erzählung) werden sichtbar gemacht. Rückblenden und Zitate werden im Kontext bewertet.
-
-### 💬 Dialog-Kadenz & Stimmkontrast
-* **Was wird gemessen:** 
-  * Dialoganteil (in Prozent der Wörter).
-  * Kurze Repliken ($1–12$ Wörter) vs. lange Monologe ($\ge 80$ Wörter).
-  * Satzlängen-Kontrast zwischen direkter Rede ($ASL_{Dialog}$) und begleitender Narration ($ASL_{Narration}$).
-* **Lektoratspraxis:** Stimmen Figuren unterschiedlich schnell? Hebt sich die Erzählerstimme vom gesprochenen Satzrhythmus ab?
-
-### 🔄 Wortwiederholungen & Phrasenechos
-* **Was wird gemessen:** Wiederkehr seltener Inhaltswörter oder identischer Mehrwortphrasen im Abstand von wenigen Absätzen (Nahdistanz).
-* **Lektoratspraxis:** Hilft bei der Bereinigung unbewusster Wortdopplungen vor der Drucklegung.
-
-### 🔠 Lexikalische Diversität (MTLD & MATTR)
-* **Was wird gemessen:** Wortschatzreichtum unabhängig von der reinen Textlänge (robuster als einfache Type-Token-Ratios).
-* **Lektoratspraxis:** Erkennung von Wortwiederholungsschleifen in deskriptiven Passagen.
-
----
-
-## 3. False Discovery Rate (FDR)
-
-Bei Romanen mit 50.000 bis 150.000 Wörtern treten statistische Zufallsabweichungen naturgemäß auf. Lixity wendet moderne Benjamini-Hochberg- bzw. Benjamini-Yekutieli-FDR-Filter an, damit Sie nicht von statistischem Rauschen überflutet werden, sondern nur die substanziellen Textstellen hervorgehoben sehen.
+[UI-Handbuch](https://mfahsold.github.io/lixity/WORKSPACE.md) ·
+[Dokumentationsübersicht](https://mfahsold.github.io/lixity/README.md)

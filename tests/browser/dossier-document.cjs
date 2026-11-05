@@ -149,6 +149,40 @@ const detail = {id:'synthetic-dossier', project_id:'synthetic-project', revision
       assert.equal(enhancedFormatting.mathFrac, 1);
       assert.ok(enhancedFormatting.strong.includes('fett'));
       assert.ok(enhancedFormatting.em.includes('kursiv'));
+      const mathSafety = await page.evaluate(detail => {
+        const tag = '<img src="/synthetic-math.png">';
+        const formulas = [
+          '$' + tag + '$',
+          '$$' + tag + '$$',
+          '$&lt;img src="/synthetic-math.png"&gt;$',
+          '$$\\begin{pmatrix}' + tag + ' & \\alpha \\\\ x < y & z > 0\\end{pmatrix}$$'
+        ];
+        const rendered = formulas.map(body => {
+          const host = document.createElement('div');
+          host.innerHTML = researchDossierDetailHtml({...detail, body}, true);
+          const prose = host.querySelector('.research-dossier-body-rendered');
+          return {images:prose.querySelectorAll('img').length, text:prose.textContent,
+            cells:Array.from(prose.querySelectorAll('.math-cell'), cell => cell.textContent.trim())};
+        });
+        const literals = ['`$' + tag + '$`', '```text\n$' + tag + '$\n```'].map(body => {
+          const host = document.createElement('div');
+          host.innerHTML = renderSafeMarkdown(body);
+          return {images:host.querySelectorAll('img').length, code:host.querySelector('code').textContent,
+            math:host.querySelectorAll('[role="math"]').length};
+        });
+        return {rendered, literals};
+      }, detail);
+      mathSafety.rendered.forEach(result => {
+        assert.equal(result.images, 0, 'Inline, display and matrix math keep authored HTML inert');
+        assert.ok(result.text.includes('<img src="/synthetic-math.png">'), 'Math preserves literal angle-bracket text');
+      });
+      assert.deepEqual(mathSafety.rendered[3].cells, ['<img src="/synthetic-math.png">', 'α', 'x < y', 'z > 0'],
+        'Safe recursive cells preserve comparisons, matrix boundaries and TeX symbols');
+      mathSafety.literals.forEach(result => {
+        assert.equal(result.images, 0);
+        assert.equal(result.code, '$<img src="/synthetic-math.png">$');
+        assert.equal(result.math, 0, 'Code literals bypass dollar-math recognition');
+      });
       await page.locator('#current-document').screenshot({path:path.join(artifacts,`document-${locale}-${width}.png`)});
       assert.deepEqual(errors, []);
       assert.deepEqual(writes, []);

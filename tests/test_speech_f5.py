@@ -3,6 +3,9 @@ from __future__ import annotations
 
 import io
 import json
+import threading
+import urllib.error
+import urllib.request
 from email.message import Message
 from pathlib import Path
 from types import SimpleNamespace
@@ -158,3 +161,65 @@ def test_load_renderer_validates_checkpoint_directory(tmp_path: Path):
 
     with pytest.raises(ValueError, match="Device"):
         load_renderer(empty_dir, device="invalid")
+
+
+def test_unverified_f5_loader_fails_explicitly_before_optional_imports(tmp_path, monkeypatch):
+    """A checkpoint alone cannot satisfy the upstream vocabulary/vocoder API."""
+    (tmp_path / "model_1200000.safetensors").write_bytes(b"synthetic checkpoint")
+    monkeypatch.setattr("importlib.import_module", lambda _: pytest.fail("unverified optional runtime import"))
+    with pytest.raises(ValueError, match="F5-TTS runtime integration is unavailable"):
+        load_renderer(tmp_path)
+
+
+def test_retired_f5_cli_reports_actionable_failure_and_help(tmp_path, monkeypatch, capsys):
+    from lixity.speech_f5 import main
+
+    (tmp_path / "model_1200000.safetensors").write_bytes(b"synthetic checkpoint")
+    monkeypatch.setattr("sys.argv", ["worker", "--model", str(tmp_path)])
+    with pytest.raises(SystemExit) as failed:
+        main()
+    assert failed.value.code == 2
+    error = capsys.readouterr().err
+    assert "F5-TTS runtime integration is unavailable" in error
+    assert "IMS-Toucan" in error and "existing F5 profiles and references are preserved" in error
+    assert "Traceback" not in error
+    monkeypatch.setattr("sys.argv", ["worker", "--help"])
+    with pytest.raises(SystemExit) as helped:
+        main()
+    assert helped.value.code == 0
+    assert "F5-TTS runtime integration is unavailable" in capsys.readouterr().out
+
+
+def test_f5_worker_accepts_its_reference_contract_and_rejects_browser_origins():
+    """The advertised F5 worker must start and validate real HTTP requests."""
+    import base64
+
+    from lixity.speech_qwen import worker_server
+
+    calls = []
+    server = worker_server(lambda request: calls.append(request) or generate_test_wav(), port=0, model=F5_MODEL)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    endpoint = f"http://127.0.0.1:{server.server_port}"
+    payload = {"model": F5_MODEL, "input": "Synthetic text.", "language": "en", "voice": "reference",
+               "instructions": "", "response_format": "wav", "reference_text": "Synthetic reference.",
+               "reference_audio": base64.b64encode(generate_test_wav(1)).decode()}
+    try:
+        with opener.open(endpoint + "/health") as response:
+            assert json.load(response) == {"ready": True, "model": F5_MODEL}
+        request = urllib.request.Request(endpoint + "/v1/audio/speech", data=json.dumps(payload).encode(),  # noqa: S310 - loopback
+                                         headers={"Content-Type": "application/json"})
+        with opener.open(request) as response:
+            assert response.headers["X-Lixity-Model"] == F5_MODEL
+            assert response.read().startswith(b"RIFF")
+        request.add_header("Origin", "http://example.invalid")
+        with pytest.raises(urllib.error.HTTPError) as error:
+            opener.open(request)
+        with error.value:
+            assert error.value.code == 403
+        assert len(calls) == 1
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()

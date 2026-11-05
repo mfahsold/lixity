@@ -40,11 +40,19 @@ function resolveChromium() {
 }
 
 const playwrightModule = resolvePlaywright();
-const {chromium} = require(playwrightModule);
+const {chromium, firefox} = require(playwrightModule);
 
-function launchChromium() {
+function launchChromium(options = {}) {
   const executablePath = resolveChromium();
-  return chromium.launch({headless: true, ...(executablePath ? {executablePath} : {})});
+  return chromium.launch({headless: true, ...(executablePath ? {executablePath} : {}), ...options,
+    args: [...(options.args || []), '--mute-audio']});
 }
 
-module.exports = {launchChromium, playwrightModule};
+function launchFirefox(options = {}) {
+  // Mute only the browser's output; media clocks, volume controls and analyser
+  // nodes still run, so synthetic playback tests cannot disturb the desktop.
+  return firefox.launch({headless: true, ...options,
+    firefoxUserPrefs: {...options.firefoxUserPrefs, 'media.volume_scale': '0.0'}});
+}
+
+module.exports = {launchChromium, launchFirefox, playwrightModule};

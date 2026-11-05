@@ -46,7 +46,7 @@ def test_help_offers_a_read_count_compare_path_without_changing_defaults(capsys)
     assert "--language en --layer asl --only-notable" in output
     assert "Then inspect the counted text:" in output
     assert "ASL means words per sentence" in output
-    assert "same chapter, not the manuscript-wide chapter baseline" in output
+    assert "same chapter, not the manuscript-wide chapter baseline" in " ".join(output.split())
     assert "Unavailable comparison is not a measured zero" in output
 
 

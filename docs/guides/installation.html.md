@@ -1,10 +1,12 @@
 # Install Lixity and open a manuscript locally
 
+This short guide covers the ordinary application setup. The [installation manual](../INSTALLATION.md) owns advanced environments, optional workers, service lifecycle and troubleshooting. Use the [documentation map](../README.md) to find other tasks.
+
 Explore sentence rhythm, vocabulary and style patterns in your Markdown manuscript. Lixity runs its analysis on your computer and saves a dashboard you can open in a browser. No account or manuscript upload is required.
 
-Updated 23 October 2026
+Updated 5 November 2026
 
-**Version line:** This source guide describes **v0.7.7**; check [published releases](https://github.com/mfahsold/lixity/releases/latest) for package availability, in the pre-1.0 **0.x** line. Historical **1.x** and **3.x** tags predate the numbering reset. A larger historical number does not mean a newer release; product and schema versions are independent.
+**Version line:** This source guide describes **v0.7.9**; check [published releases](https://github.com/mfahsold/lixity/releases/latest) for package availability, in the pre-1.0 **0.x** line. Historical **1.x** and **3.x** tags predate the numbering reset. A larger historical number does not mean a newer release; product and schema versions are independent.
 
 ## What do I need?
 
@@ -51,7 +53,7 @@ lixity service start --open
 
 If `lixity` is not found, check `uv tool list`, run `uv tool update-shell` and open a new terminal. `uv tool dir --bin` shows the executable directory. The health check reports installation/service issues, not linguistic validity.
 
-This installs the published package from PyPI in uv's [isolated tool environment](https://docs.astral.sh/uv/concepts/tools/). Shell integration applies to new terminals. Check `lixity --version` and the [release notes](../releases/v0.7.7.md) for changes and compatibility.
+This installs the published package from PyPI in uv's [isolated tool environment](https://docs.astral.sh/uv/concepts/tools/). Shell integration applies to new terminals. Check `lixity --version` and the [release notes](../releases/v0.7.9.md) for changes and compatibility.
 
 ## Start the workspace
 
@@ -107,7 +109,7 @@ Open `warehouse-4.html` in your browser. This generates an analysis report from 
 
 ## Optional audio export and speech providers
 
-**Audio workflow:** timeline JSON and SSML export need no synthesis engine. Explicit OpenAI-compatible providers use a configured endpoint, model and voice; authentication can reference an environment variable. Imported WAV/FLAC/MP3 inspection stays local, with FFmpeg required for compressed or non-PCM input. Text comparison additionally needs an audio-hash-bound timed transcript. Existing audio settings require a reviewed, backed-up schema upgrade before saving an external profile. See the [audio setup and commands](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#audio-export-and-external-providers-unreleased).
+**Audio workflow:** timeline JSON and SSML export need no synthesis engine. Explicit OpenAI-compatible providers use a configured endpoint, model and voice; authentication can reference an environment variable. Imported WAV/FLAC/MP3 inspection stays local, with FFmpeg required for compressed or non-PCM input. Text comparison additionally needs an audio-hash-bound timed transcript. Existing audio settings require a reviewed, backed-up schema upgrade before saving an external profile. See the [audio setup and commands](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#audio-export-and-external-providers-unreleased).
 
 ## Optional Zotero Desktop
 
@@ -131,7 +133,7 @@ The [first-session guide](../ONBOARDING.md) explains these controls.
 
 ## Running the server day to day
 
-The workspace uses `http://127.0.0.1:8765/` by default. Built-in analysis runs on your computer; optional integrations have their own setup and data handling. Tabs connected to one server share its active project.
+The workspace uses `http://127.0.0.1:8765/` by default. Built-in analysis runs on your computer; optional integrations have their own setup and data handling. Separate project views can coexist under the same server address. Tabs using the same view share that view's project; view URLs expire on restart.
 
 ```
 lixity service status

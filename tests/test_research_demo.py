@@ -354,7 +354,7 @@ def public_publications(tmp_path, research_fixture):
 
 def test_public_reader_and_companion_use_the_production_scope_and_assets(tmp_path, public_publications):
     from lixity.site_export import prepare_site
-    from lixity.ui.dashboard import _CSS_FILES, _JS_FILES, _PUBLICATION_JS_FILES
+    from lixity.ui.dashboard import _CSS_FILES, _JS_FILES, _PUBLICATION_JS_FILES, _REPORT_CSS_FILES
 
     project = tmp_path / 'research-demo'
     for mode, target in public_publications.items():
@@ -362,7 +362,7 @@ def test_public_reader_and_companion_use_the_production_scope_and_assets(tmp_pat
         cap = 3 if mode == 'companion' else None
         native = prepare_site(project, manuscript='harbour-manuscript.md', mode=mode,
             publication_profile='readers', max_chapter=cap, include_source_files=True,
-            analysis_sections=['chapters'] if mode == 'reader' else [])
+            analysis_sections=['chapters'] if mode == 'reader' else [], include_audio=mode == 'reader')
         assert site_data(page) == site_data(native.files['index.html'].decode())
         assert 'src="../assets/analytics.js"' not in page
         assert 'src="../../assets/analytics.js"' not in page
@@ -371,16 +371,22 @@ def test_public_reader_and_companion_use_the_production_scope_and_assets(tmp_pat
         assert 'href="../../guides/first-look.html"' in page
         assert 'href="../../assets/research/sources.json"' in page
         assert site_data(page)['responses'] == {}
-        for asset in (*_CSS_FILES, *_PUBLICATION_JS_FILES):
+        for asset in (*_REPORT_CSS_FILES, *_PUBLICATION_JS_FILES):
             assert page.count((ROOT / 'src/lixity/ui/assets' / asset).read_text(encoding='utf-8').strip()) == 1, asset
-        for asset in set(_JS_FILES) - set(_PUBLICATION_JS_FILES):
+        for asset in (set(_JS_FILES) - set(_PUBLICATION_JS_FILES)) | (set(_CSS_FILES) - set(_REPORT_CSS_FILES)):
             assert (ROOT / 'src/lixity/ui/assets' / asset).read_text(encoding='utf-8').strip() not in page, asset
         manifest = json.loads(target.with_name('manifest.json').read_text(encoding='utf-8'))
         assert manifest['mode'] == mode
         assert manifest['capabilities']['automatic_external_requests'] is False
         assert manifest['capabilities']['analysis'] is (mode == 'reader')
         if mode == 'reader':
-            assert manifest['schema_version'] == 'lixity-read-only-site/2'
+            assert manifest['schema_version'] == 'lixity-read-only-site/3'
+            assert len(manifest['audio']['tracks']) == 1
+            assert manifest['audio']['tracks'][0]['chapter'] == 1
+            assert manifest['audio']['tracks'][0]['origin'] == 'imported'
+            assert 'eSpeak NG English voice' in page
+            for asset in ('speech-player.css', 'speech-player.js', 'reader-audio.js'):
+                assert page.count((ROOT / 'src/lixity/ui/assets' / asset).read_text(encoding='utf-8').strip()) == 1
             assert manifest['publication']['analysis_sections'] == ['chapters']
             assert 'href="analysis.html"' in page
             analysis = target.with_name('analysis.html').read_text(encoding='utf-8')
@@ -425,6 +431,17 @@ def test_public_demo_staging_rejects_unreviewed_analysis_scope(tmp_path, public_
     manifest['publication']['analysis_sections'] = ['full']
     manifest_file.write_text(json.dumps(manifest), encoding='utf-8')
     with pytest.raises(ValueError, match=r'reviewed website manifest|analysis scope'):
+        stage(tmp_path / 'docs', tmp_path / 'unreviewed')
+
+
+def test_public_demo_staging_rejects_another_chapter_audio_scope(tmp_path, public_publications):
+    from scripts.stage_pages import stage
+
+    manifest_file = public_publications['reader'].with_name('manifest.json')
+    manifest = json.loads(manifest_file.read_text(encoding='utf-8'))
+    manifest['audio']['tracks'][0]['chapter'] = 2
+    manifest_file.write_text(json.dumps(manifest), encoding='utf-8')
+    with pytest.raises(ValueError, match='reader demo audio'):
         stage(tmp_path / 'docs', tmp_path / 'unreviewed')
 
 

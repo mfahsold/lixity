@@ -4,8 +4,7 @@
   align-items: center; gap: .45rem; padding: .45rem var(--space-2);
   max-height: 45dvh; overflow-y: auto; overscroll-behavior: contain;
   background: var(--surface-glass-header);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
+  /* Fixed settings panels must escape this bounded toolbar scrollport. */
   border-bottom: 1px solid var(--line);
 }
 .manuscript-reader-controls[hidden] { display: none; }

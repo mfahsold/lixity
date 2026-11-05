@@ -316,6 +316,24 @@ class TestStyleFingerprint(unittest.TestCase):
             self.assertIn(num, (1, 2))
             self.assertGreaterEqual(mean_abs, 0.0)
 
+    def test_top_deviants_ranks_finite_means_without_sum_overflow(self):
+        fingerprint = StyleFingerprint(z_scores={
+            1: {"asl": -1e308, "sentence_cv": 1e308},
+            2: {"asl": -1.1e308},
+            3: {},
+        })
+        self.assertEqual(fingerprint.top_deviants(), [(2, 1.1e308), (1, 1e308)])
+
+    def test_top_deviants_preserves_absolute_mean_ties_limit_and_missing_cells(self):
+        fingerprint = StyleFingerprint(z_scores={
+            1: {"asl": -1.0, "sentence_cv": 3.0},
+            2: {"asl": -3.0},
+            3: {},
+            4: {"asl": 3.0},
+        })
+        self.assertEqual(fingerprint.top_deviants(), [(2, 3.0), (4, 3.0), (1, 2.0)])
+        self.assertEqual(fingerprint.top_deviants(2), [(2, 3.0), (4, 3.0)])
+
     def test_passport_json_structure(self):
         passport = self.fp.passport()
         json.dumps(passport)

@@ -73,6 +73,10 @@ class ResponseMixin(WorkspaceState):
             extra.pop("Content-Security-Policy", "frame-ancestors 'none'"),
         )
         self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header(
+            "Permissions-Policy",
+            extra.pop("Permissions-Policy", "camera=(), microphone=(), geolocation=(), usb=(), serial=()"),
+        )
         for name, value in extra.items():
             self.send_header(name, value)
         try:
@@ -88,6 +92,7 @@ class ResponseMixin(WorkspaceState):
 
     def _send_dashboard_shell(
         self, html: str, *, freshness: RefreshOutcome = RefreshOutcome.UNKNOWN, language: str = "en",
+        allow_microphone: bool = False,
     ) -> None:
         """Serve the dashboard with a per-response script nonce and strict CSP.
 
@@ -138,7 +143,8 @@ class ResponseMixin(WorkspaceState):
             headers={
                 "Content-Security-Policy": policy,
                 "Cross-Origin-Opener-Policy": "same-origin",
-                "Permissions-Policy": "camera=(), microphone=(), geolocation=(), usb=(), serial=()",
+                "Permissions-Policy": "camera=(), microphone=" + ("(self)" if allow_microphone else "()")
+                + ", geolocation=(), usb=(), serial=()",
             },
         )
 

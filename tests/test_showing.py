@@ -6,6 +6,7 @@ and determinism.
 """
 
 import json
+import math
 import os
 import sys
 import unittest
@@ -101,6 +102,17 @@ def test_showing_cli_reports_unavailable_instead_of_zero(tmp_path, capsys):
     assert main(["showing", str(path), "--language", "de"]) == 0
     output = capsys.readouterr().out
     assert "–" in output and "+0.00" not in output
+
+
+def test_zero_mad_fallback_keeps_finite_standardized_scores_at_large_scales():
+    from lixity.showing import _z_map
+
+    scores = _z_map({1: 1e308, 2: 1e308, 3: -1e308})
+    assert all(math.isfinite(value) for value in scores.values())
+    # Median = A, population deviation = sqrt(8) A / 3; the third
+    # observation is -2 A from that median, hence -3 / sqrt(2).
+    assert scores == pytest.approx({1: 0.0, 2: 0.0, 3: -2.1213203435596424})
+    assert scores == pytest.approx(_z_map({1: 1.0, 2: 1.0, 3: -1.0}))
 
 
 class TestShowingReport(unittest.TestCase):

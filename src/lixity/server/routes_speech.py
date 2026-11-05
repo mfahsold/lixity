@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 import hashlib
 import threading
 import warnings
+from collections.abc import Callable
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
@@ -14,6 +18,7 @@ from ..io import FileUtils
 from ..markdown_parser import split_chapters
 from ..pipeline import document_paragraph_texts, resolve_document_config
 from ..speech import MAX_SEGMENT_CHARS
+from ..speech_artifacts import MAX_CHAPTER_AUDIO_BYTES, list_project_audio, retain_chapter_audio
 from ..speech_cache import project_audio_cache
 from ..speech_direction import (
     BaseDirectionConflict,
@@ -37,8 +42,8 @@ from ..speech_profiles import (
     requires_audio_migration,
     resolve_audio_profile,
 )
-from ..speech_references import references_for_plan, references_unchanged
-from ..speech_status import audio_status
+from ..speech_references import read_reference_input, references_for_plan, references_unchanged
+from ..speech_status import native_worker_inventory
 from ..workspace_labels import WORKSPACE_LABELS
 from ._base import ResponseMixin
 from .pdf_context import project_settings_token
@@ -51,6 +56,52 @@ class _SpeechStale(ValueError):
 class SpeechRoutesMixin(ResponseMixin):
     _speech_manager_lock = threading.Lock()
 
+    def _handle_speech_audio_import(self, payload: dict[str, Any]) -> None:
+        """Retain an explicitly selected chapter WAV, without transcript assumptions."""
+        maximum = 48 * 1024 * 1024
+        try:
+            if set(payload) != {"project_token", "source_sha256", "chapter", "audio"}:
+                raise ValueError("Supply one chapter WAV and its selected manuscript context")
+            encoded = payload["audio"]
+            if not isinstance(encoded, str) or len(encoded) > 4 * ((maximum + 2) // 3):
+                raise ValueError("Chapter WAV import exceeds the 48 MiB browser limit; use audio-import CLI")
+            audio = base64.b64decode(encoded, validate=True)
+            if len(audio) > maximum:
+                raise ValueError("Chapter WAV import exceeds the 48 MiB browser limit; use audio-import CLI")
+            with self._workspace_lock:
+                text, digest, settings, _key = self._speech_bound(payload)
+                root = self.get_author_project_root()
+                if root is None:
+                    raise ValueError("Open a manuscript project before importing chapter audio")
+                prepare_speech_source(text, language=self.language, mode="chapter", chapter=payload["chapter"],
+                                     project_config=settings, for_export=True)
+
+                def valid() -> bool:
+                    self._speech_bound(payload)
+                    return True
+
+                artifact = retain_chapter_audio(root, audio, source_sha256=digest, chapter=payload["chapter"],
+                                                origin="imported", valid=valid)
+            self._json({"ok": True, "schema_version": "lixity-chapter-audio/1", "artifact": asdict(artifact)})
+        except (OSError, ValueError, RuntimeError, UserWarning, binascii.Error) as exc:
+            self._speech_error(exc)
+
+    def _handle_speech_audio_artifacts(self, _query: Any = None) -> None:
+        try:
+            query = self._speech_query()
+            with self._workspace_lock:
+                text, digest, settings, _key = self._speech_bound(query)
+                root = self.get_author_project_root()
+                if root is None:
+                    raise ValueError("Open a manuscript project before inspecting chapter audio")
+                document, _resolved = resolve_document_config(text, self.language, project_config=settings)
+                chapters = split_chapters(text, document) or [(1, "", text)]
+                artifacts = list_project_audio(root, source_sha256=digest, max_chapter=max(row[0] for row in chapters))
+                self._json({"ok": True, "schema_version": "lixity-chapter-audio/1",
+                            "artifacts": [asdict(entry) for entry in artifacts]})
+        except (OSError, ValueError, RuntimeError, UserWarning) as exc:
+            self._speech_error(exc)
+
     def _handle_audio_schema(self, payload: dict[str, Any]) -> None:
         """Preview or explicitly apply the backed-up provider schema upgrade."""
         import os
@@ -58,11 +109,14 @@ class SpeechRoutesMixin(ResponseMixin):
         from secrets import token_hex
 
         from ..research.repository import Repository
-        from ..speech_migration import prepare_schema4_migration
+        from ..speech_migration import prepare_schema4_migration, prepare_schema5_migration
 
         try:
-            if set(payload) - {"project_token", "source_sha256", "apply", "snapshot"}:
+            if set(payload) - {"project_token", "source_sha256", "apply", "snapshot", "schema_version"}:
                 raise ValueError("Supply the selected project and reviewed migration snapshot")
+            schema = payload.get("schema_version", "lixity-audio-settings/4")
+            if schema not in ("lixity-audio-settings/4", "lixity-audio-settings/5"):
+                raise ValueError("Choose a supported audio settings schema")
             apply = payload.get("apply", False)
             if type(apply) is not bool:
                 raise ValueError("Apply must be a boolean")
@@ -72,7 +126,8 @@ class SpeechRoutesMixin(ResponseMixin):
                 if root is None:
                     raise ValueError("Open a manuscript project first")
                 with Repository(root).locked() if apply else nullcontext():
-                    prepared = prepare_schema4_migration(root)
+                    prepared = (prepare_schema5_migration(root) if schema == "lixity-audio-settings/5"
+                                else prepare_schema4_migration(root))
                     if not apply:
                         self._json({"ok": True, "migration": prepared.public_dict()})
                         return
@@ -263,7 +318,7 @@ class SpeechRoutesMixin(ResponseMixin):
                 from ..speech_providers import external_provider_status
                 response["workers"] = [external_provider_status(selected_profile)]
             else:
-                response["workers"] = audio_status()["targets"]
+                response["workers"] = native_worker_inventory()
             from ..speech_record import get_microphone_status
             from ..speech_references import CALIBRATION_TEXTS, list_references
 
@@ -456,10 +511,22 @@ class SpeechRoutesMixin(ResponseMixin):
                         return False
 
                 cache_dir = project_audio_cache(root) if root is not None and payload["mode"] == "chapter" else None
+
+                def retain(output: Path, current: Callable[[], bool]) -> None:
+                    # Keep source selection stable through the atomic chapter pointer commit.
+                    with handler._workspace_lock:
+                        if root is None or not current():
+                            raise ValueError("Chapter audio context changed before retention; retry")
+                        retain_chapter_audio(root, read_reference_input(output, MAX_CHAPTER_AUDIO_BYTES),
+                                             source_sha256=binding["source_sha256"], chapter=payload["chapter"],
+                                             origin="generated", valid=current)
+
             reference_options = {"references": references} if references else {}
             job = self._speech_manager().start(key, prepared, profile, context, valid, cache_dir=cache_dir,
                                                fresh_audio=payload.get("fresh_audio", False),
-                                               target=payload.get("target", "local"), plan=plan, **reference_options)
+                                               target=payload.get("target", "local"), plan=plan,
+                                               retain=retain if payload["mode"] == "chapter" else None,
+                                               **reference_options)
             self._json({"ok": True, "job": job}, 202)
         except (OSError, TypeError, ValueError, RuntimeError, UserWarning) as exc:
             self._speech_error(exc)
@@ -527,6 +594,86 @@ class SpeechRoutesMixin(ResponseMixin):
 
         self._json(get_microphone_status())
 
+    def _save_recorded_reference(self, payload: dict[str, Any]) -> None:
+        """Save and optionally activate in the caller's locked, validated workspace."""
+        import base64
+        import binascii
+
+        from ..config import load_project_config, prepare_project_settings
+        from ..speech_profiles import parse_audio_settings
+        from ..speech_reference_quality import assess_reference
+        from ..speech_references import list_references, save_reference
+
+        root = self.get_author_project_root()
+        if root is None:
+            self._json({"ok": False, "message": "No open manuscript project"}, 400)
+            return
+        audio_b64 = str(payload.get("audio", ""))
+        transcript = str(payload.get("transcript", "")).strip()
+        if not audio_b64 or not transcript:
+            self._json({"ok": False, "message": "audio and transcript are required"}, 400)
+            return
+        if "," in audio_b64:
+            audio_b64 = audio_b64.split(",", 1)[1]
+        try:
+            audio_bytes = base64.b64decode(audio_b64)
+        except (binascii.Error, ValueError) as exc:
+            self._json({"ok": False, "message": f"Invalid base64 audio: {exc}"}, 400)
+            return
+
+        try:
+            ref = save_reference(root, audio_bytes, transcript)
+            quality = assess_reference(ref.audio)
+        except (ValueError, OSError) as exc:
+            self._json({"ok": False, "message": f"Failed to save reference: {exc}"}, 400)
+            return
+
+        activation = {"state": "not_requested", "message": ""}
+        profile_id = payload.get("profile_id")
+        if profile_id and root is not None:
+            try:
+                from ..speech_engines import NATIVE_ENGINES, native_engine
+
+                cfg = load_project_config(root)
+                settings = parse_audio_settings(cfg.get("audio"), language=self.language)
+                if not isinstance(profile_id, str) or profile_id not in settings.profiles:
+                    raise ValueError("Choose an existing voice profile to activate the saved recording")
+                current = settings.profiles[profile_id]
+                if current.engine not in NATIVE_ENGINES or not native_engine(current.engine).reference_required:
+                    raise ValueError("Recording saved. Choose a reference voice profile to activate it")
+                settings.profiles[profile_id] = AudioProfile.model_validate({
+                    **current.model_dump(), "reference_id": ref.id,
+                })
+                prepared = prepare_project_settings(root, {"audio": settings.model_dump(by_alias=True)})
+                prepared.commit()
+                activation = {"state": "activated", "message": ""}
+            except ValueError:
+                activation = {"state": "failed", "message": "Recording saved; activation failed. Choose a valid reference voice profile and try again."}
+            except OSError:
+                activation = {"state": "failed", "message": "Recording saved; project settings could not be written. Retry activation from the recordings list."}
+
+        refresh_warning = ""
+        if activation["state"] == "activated":
+            try:
+                self.refresh()
+            except (OSError, ValueError, RuntimeError, UserWarning):
+                # Publication already succeeded. A failed view rebuild must
+                # not tell callers that the reference was left inactive.
+                refresh_warning = "Recording activated; the dashboard could not refresh. Reload to view the saved settings."
+        self._json({
+            "ok": True,
+            "activation": activation,
+            "reload_required": bool(refresh_warning),
+            "refresh_warning": refresh_warning,
+            "reference": {
+                "id": ref.id,
+                "transcript": ref.transcript,
+                "quality": quality,
+            },
+            "references": list_references(root),
+        })
+        return
+
     def _handle_audio_microphone_post(self, payload: dict[str, Any]) -> None:
         """Handle microphone gain updates, calibration, and voice references."""
         from ..speech_record import (
@@ -555,63 +702,18 @@ class SpeechRoutesMixin(ResponseMixin):
             self._json({"ok": True, "calibration": result})
             return
         if action == "save_reference":
-            import base64
-            import binascii
-
-            from ..config import load_project_config, prepare_project_settings
-            from ..speech_profiles import parse_audio_settings
-            from ..speech_reference_quality import assess_reference
-            from ..speech_references import list_references, save_reference
-
-            root = self.get_author_project_root()
-            if root is None:
-                self._json({"ok": False, "message": "No open manuscript project"}, 400)
-                return
-            audio_b64 = str(payload.get("audio", ""))
-            transcript = str(payload.get("transcript", "")).strip()
-            if not audio_b64 or not transcript:
-                self._json({"ok": False, "message": "audio and transcript are required"}, 400)
-                return
-            if "," in audio_b64:
-                audio_b64 = audio_b64.split(",", 1)[1]
             try:
-                audio_bytes = base64.b64decode(audio_b64)
-            except (binascii.Error, ValueError) as exc:
-                self._json({"ok": False, "message": f"Invalid base64 audio: {exc}"}, 400)
-                return
-
-            try:
-                ref = save_reference(root, audio_bytes, transcript)
-                quality = assess_reference(ref.audio)
-            except (ValueError, OSError) as exc:
-                self._json({"ok": False, "message": f"Failed to save reference: {exc}"}, 400)
-                return
-
-            profile_id = payload.get("profile_id")
-            if profile_id and root is not None:
-                try:
-                    cfg = load_project_config(root)
-                    settings = parse_audio_settings(cfg.get("audio"), language=self.language)
-                    if profile_id in settings.profiles:
-                        target_prof = settings.profiles[profile_id]
-                        target_prof.reference_id = ref.id
-                        if target_prof.engine in ("qwen3", "custom-voice"):
-                            target_prof.engine = "qwen3-base"
-                            target_prof.voice = "reference"
-                        prepared = prepare_project_settings(root, {"audio": settings.model_dump(by_alias=True)})
-                        prepared.commit()
-                except (ValueError, OSError):
-                    pass
-
-            self._json({
-                "ok": True,
-                "reference": {
-                    "id": ref.id,
-                    "transcript": ref.transcript,
-                    "quality": quality,
-                },
-                "references": list_references(root),
-            })
+                with self._workspace_lock:
+                    binding = {"project_token", "source_sha256"}
+                    if binding & payload.keys():
+                        if not binding <= payload.keys():
+                            raise ValueError("Supply project_token and source_sha256 together for a bound recording")
+                        self._speech_bound(payload)
+                    # Legacy tokenless callers retain their current-workspace
+                    # contract. New browser takes always supply both snapshots.
+                    self._save_recorded_reference(payload)
+            except (OSError, ValueError, RuntimeError, UserWarning) as exc:
+                self._speech_error(exc)
             return
         if action == "record_reference":
             from ..speech_record import record_and_save_reference

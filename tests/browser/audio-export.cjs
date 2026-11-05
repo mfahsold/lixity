@@ -37,7 +37,7 @@ class Provider(BaseHTTPRequestHandler):
     def log_message(self, *args): pass
 provider = ThreadingHTTPServer(('127.0.0.1',0), Provider)
 threading.Thread(target=provider.serve_forever, daemon=True).start()
-status.worker_health = lambda target: {'target':target,'state':'unavailable','model':None}
+status.worker_health = lambda target, **kwargs: {'target':target,'state':'unavailable','model':None}
 LixityServerHandler.workspace_root = str(root)
 LixityServerHandler.source_input = str(source)
 LixityServerHandler.exports_dir = str(base / 'exports')
@@ -70,7 +70,7 @@ server.serve_forever()
         await page.waitForSelector('[data-speech-action=export_json]');
         assert.match(await page.locator('.speech-plan').textContent(), /The blue bird answers/);
         assert.doesNotMatch(await page.locator('.speech-plan').textContent(), /The river flows/);
-        assert.doesNotMatch(await page.locator('#modal-speech [role=status]').textContent(), /Queued/);
+        assert.doesNotMatch(await page.locator('#speech-status').textContent(), /Queued/);
         const chapterDownload = page.waitForEvent('download');
         await page.locator('[data-speech-action=export_json]').click();
         const chapter = JSON.parse(fs.readFileSync(await (await chapterDownload).path(), 'utf8'));
@@ -109,7 +109,7 @@ server.serve_forever()
         await page.locator('#settings-speech').click();
         await page.waitForFunction(() => !document.querySelector('[data-speech-action=schema_preview]')?.hidden);
         await page.locator('[data-speech-action=schema_preview]').click();
-        await page.waitForFunction(() => document.querySelector('#speech-schema-review')?.textContent.includes('lixity-audio-settings/4'));
+        await page.waitForFunction(() => document.querySelector('#speech-schema-review')?.textContent.includes('lixity-audio-settings/5'));
         assert.match(await page.locator('#speech-schema-review').textContent(), /implicit narrator/);
         await page.locator('[data-speech-action=schema_apply]').click();
         await page.waitForFunction(() => !document.querySelector('#modal-speech')?.open);
@@ -130,16 +130,16 @@ server.serve_forever()
         await page.locator('#settings-speech-output').click();
         await page.waitForFunction(() => document.querySelector('#speech-engine')?.value === 'openai-compatible');
         await page.locator('[data-speech-action=preview]').click();
-        await page.waitForFunction(() => !document.querySelector('#modal-speech audio')?.hidden);
+        await page.waitForFunction(() => !document.querySelector('#speech-audio-player')?.hidden);
         const requests = JSON.parse(fs.readFileSync(server.fixture.requests));
         assert.ok(requests.length > 0); assert.equal(requests[0].model, 'synthetic-model');
         assert.equal(requests[0].voice, 'synthetic-voice');
         await page.locator('[data-speech-action=chapter_render]').click();
-        await page.waitForFunction(() => !document.querySelector('#modal-speech audio')?.hidden);
+        await page.waitForFunction(() => !document.querySelector('#speech-audio-player')?.hidden);
         const chapterRequests = JSON.parse(fs.readFileSync(server.fixture.requests));
         assert.ok(chapterRequests.some(row => row.input === 'The blue bird answers.'), 'Chapter rendering includes later paragraphs');
         await page.locator('[data-speech-action=chapter_render]').click();
-        await page.waitForFunction(() => !document.querySelector('#modal-speech audio')?.hidden);
+        await page.waitForFunction(() => !document.querySelector('#speech-audio-player')?.hidden);
         assert.equal(JSON.parse(fs.readFileSync(server.fixture.requests)).length, chapterRequests.length, 'An unchanged external chapter reuses its cached audio');
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
         await page.route(server.fixture.url + '/', async route => {
@@ -171,7 +171,7 @@ base = Path(sys.argv[1]); root = base / 'project'; root.mkdir()
 os.environ['XDG_DATA_HOME'] = str(base / 'app-data')
 source = root / 'draft.md'; source.write_text('De rivier stroomt.')
 (root / 'lixity.toml').write_text('language="nl"\\nmanuscript="draft.md"\\n')
-status.worker_health = lambda target: {'target':target,'state':'unavailable','model':None}
+status.worker_health = lambda target, **kwargs: {'target':target,'state':'unavailable','model':None}
 LixityServerHandler.workspace_root = str(root)
 LixityServerHandler.source_input = str(source)
 LixityServerHandler.exports_dir = str(base / 'exports')
@@ -187,7 +187,7 @@ server.serve_forever()
       await page.locator('#tab-view-project').click();
       await page.locator('#settings-speech').click();
       await page.locator('[data-speech-action=schema_preview]').click();
-      await page.waitForFunction(() => document.querySelector('#speech-schema-review')?.textContent.includes('lixity-audio-settings/4'));
+      await page.waitForFunction(() => document.querySelector('#speech-schema-review')?.textContent.includes('lixity-audio-settings/5'));
       assert.match(await page.locator('#speech-schema-review').textContent(), /nog geen stem/);
       await page.locator('[data-speech-action=schema_apply]').click();
       await page.waitForFunction(() => !document.querySelector('#modal-speech')?.open);

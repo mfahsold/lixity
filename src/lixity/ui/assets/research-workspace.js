@@ -40,6 +40,7 @@ async function refreshResearchProjectInfo(freshRead) {
     researchClaimsSnapshot = null; researchClaimChoices = Object.create(null);
     clearResearchSourceSelections(); discardResearchEvidenceDraft();
     researchPassageContexts = Object.create(null);
+    researchDossiersPayload = null;
     researchSelectionProjectId = status.project_id || null;
   }
   if (zoteroProjectId !== (status.project_id || null)) {
@@ -274,8 +275,7 @@ async function searchResearch() {
         '<div class="research-passage-quote">„' + highlightSearchTerms(h.verbatim || "", query) + '“</div>' +
         '<div class="research-passage-cite">' +
           escapeHtml(uiLabel("research_source")) + ' <strong>' + escapeHtml(h.source_title || "") + '</strong> · ' +
-          escapeHtml(uiLabel("research_rank_score")) + ': ' + (h.rank_score !== undefined ? Number(h.rank_score).toFixed(2) : 'n/a') + ' · ' +
-          escapeHtml(uiLabel("research_id")) + ' <code class="select-code" title="' + escapeHtml(uiLabel("research_select_id")) + '">' + escapeHtml(h.passage_id || "") + '</code>' +
+          escapeHtml(uiLabel("research_rank_score")) + ': ' + (h.rank_score !== undefined ? Number(h.rank_score).toFixed(2) : 'n/a') +
         '</div>' +
         researchPassageActions(h.passage_id, h) +
       '</div>';
@@ -471,9 +471,13 @@ document.addEventListener("click", async function (event) {
       }
       passageField.value = passageBtn.dataset.passageId;
     } else {
-      var passageIds = passageField.value.split(",").map(function(id) { return id.trim(); }).filter(Boolean);
-      if (!passageIds.includes(passageBtn.dataset.passageId)) passageIds.push(passageBtn.dataset.passageId);
-      passageField.value = passageIds.join(", ");
+      var passageId = passageBtn.dataset.passageId;
+      var selectedOption = Array.from(passageField.options).find(function(option) { return option.value === passageId; });
+      if (!selectedOption) {
+        selectedOption = new Option(researchPassageLabel(researchPassageContexts[passageId]), passageId);
+        passageField.add(selectedOption);
+      }
+      selectedOption.selected = true;
     }
     switchActiveView("research");
     document.querySelector('[data-rtab="' + (forClaim ? 'claims' : 'dossiers') + '"]').click();
@@ -776,7 +780,7 @@ document.addEventListener("click", async function (event) {
     var titleVal = dTitle ? dTitle.value.trim() : "";
     if (!titleVal) { researchFormStatus(dosBtn, uiLabel("research_dossier_title_required"), "err"); return; }
     var tagsArr = (dTags && dTags.value) ? dTags.value.split(",").map(function(t){ return t.trim(); }).filter(Boolean) : [];
-    var eidsArr = (dEids && dEids.value) ? dEids.value.split(",").map(function(t){ return t.trim(); }).filter(Boolean) : [];
+    var eidsArr = dEids ? Array.from(dEids.selectedOptions).map(function(option) { return option.value; }) : [];
     var dGeography = document.getElementById("r-dos-geography"), geography = null;
     try { if (dGeography && dGeography._geographyEditor) geography = dGeography._geographyEditor.read(); }
     catch (error) { researchFormStatus(dosBtn, error.message || uiLabel("geography_invalid"), "err"); return; }
@@ -962,14 +966,12 @@ document.addEventListener("click", async function (event) {
     if (gHost) {
       var prov = gres.provenance || {};
       var srcTitle = prov.source_title || "";
-      var shaSnippet = prov.source_sha256 ? prov.source_sha256.slice(0, 8) : "";
       var langLabel = (comparisonMeta.source_language || "") + ' ↔ ' + (comparisonMeta.manuscript_language || "");
 
       gHost.innerHTML = '<div class="research-card mt-3">' +
         '<div class="grounding-header-bar">' +
           '<div class="research-card-title">' + escapeHtml(uiLabel("research_results_for")) + ': <strong>' + escapeHtml(srcTitle) + '</strong></div>' +
           '<div class="grounding-meta-chips">' +
-            (shaSnippet ? '<span class="badge badge-neutral" title="SHA-256">' + escapeHtml(shaSnippet) + '</span>' : '') +
             '<span class="badge ' + (crossLanguage ? 'badge-warn' : 'badge-neutral') + '" title="' + escapeHtml(uiLabel("status_freshness") || "") + '">' + escapeHtml(langLabel) + '</span>' +
           '</div>' +
         '</div>' +
@@ -1276,7 +1278,7 @@ function researchEvidencePanelHtml(evData, claimId) {
           '<div class="research-passage-head">' +
             relBadge +
             '<span class="research-badge ' + (unavailable || withdrawn ? 'badge-warning' : 'badge-neutral') + '">' + escapeHtml(availability) + '</span>' +
-            '<span class="ctl-note research-passage-title-note">' + escapeHtml(cite.source_title || l.passage_id) + '</span>' +
+            '<span class="ctl-note research-passage-title-note">' + escapeHtml(researchRecordLabel({title:cite.source_title}, "source")) + '</span>' +
           '</div>' +
           '<div class="research-passage-quote">' + quote + '</div>' +
           (l.rationale ? '<div class="ctl-note text-note">' + escapeHtml(l.rationale) + '</div>' : '') +

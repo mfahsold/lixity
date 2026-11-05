@@ -22,7 +22,10 @@ OUTPUT = ROOT / "docs" / "llms-full.txt"
 #: Task index, operational guides, interpretation and coverage, then contracts.
 SOURCES: tuple[Path, ...] = (
     Path("docs/llms.txt"),
+    Path("docs/README.md"),
     Path("docs/USAGE.md"),
+    Path("docs/WORKSPACE.md"),
+    Path("docs/AUDIO.md"),
     Path("docs/research/USAGE.md"),
     Path("docs/METHODS.md"),
     Path("docs/STABILITY.md"),
@@ -55,7 +58,7 @@ def build_bundle() -> str:
         "covered. A separate written commercial license exists only for closed-source\n"
         "integrations that cannot meet the AGPL.\n"
         "\n"
-        "Scope: current usage, research, automation contracts, methods, stability and\n"
+        "Scope: CLI, workspace, audio, research, automation contracts, methods, stability and\n"
         "localization. See the llms.txt index for setup, architecture, storage internals\n"
         "and design history. These linked references are not bundled here.\n"
         "\n"

@@ -108,7 +108,9 @@ def _observe_speech_segment(index: int, total: int, profile: AudioProfile,
     """Track timings and selected controls without recording text or paths."""
     logger = get_logger("speech")
     diagnostic_id = speech_diagnostic_id()
-    engine = profile.engine if profile.engine in ("qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "f5-tts", "openai-compatible") else "unknown"
+    from .speech_engines import NATIVE_ENGINES
+
+    engine = profile.engine if profile.engine in NATIVE_ENGINES or profile.engine == "openai-compatible" else "unknown"
     voice = profile.voice if profile.voice in (*QWEN_VOICES, "design", "reference", "thorsten") else "unknown"
     language = profile.language if profile.language in QWEN_LANGUAGES else "unknown"
     has_instruction = "true" if profile.instructions else "false"
@@ -395,14 +397,22 @@ def render_speech_audio(
         raise ValueError("No spoken text in the selected chapter")
     for cue in cues:
         AudioProfile.model_validate(cue.profile.model_dump())
+    from .speech_engines import NATIVE_ENGINES, native_endpoint, native_engine
+
+    for cue in cues:
+        if cue.text and cue.profile.engine != "openai-compatible":
+            native_endpoint(cue.profile.engine, target)
+        if cue.text and cue.profile.engine == "ims-toucan" and cue.profile.instructions:
+            raise ValueError("IMS-Toucan requires structured prosody; free-form instructions can only be exported")
     if target != "local" and any(cue.text and cue.profile.engine == "openai-compatible" for cue in cues):
         raise ValueError("External speech uses its configured provider URL, not the Jetson execution target")
     from .speech_references import validate_reference
     for reference_id in {cue.profile.reference_id for cue in cues
-                         if cue.text and cue.profile.engine in ("qwen3-base", "coqui-reference", "f5-tts")}:
+                         if cue.text and cue.profile.engine != "openai-compatible"
+                         and native_engine(cue.profile.engine).reference_required}:
         reference = (references or {}).get(reference_id)
         if reference is None or reference.id != reference_id:
-            raise ValueError("A verified reference is required for every Qwen Base profile")
+            raise ValueError("A verified reference is required for every reference voice profile")
         validate_reference(reference)
     needs_tempo = any(cue.text and cue.profile.speed != 1.0 for cue in cues)
     ffmpeg = shutil.which("ffmpeg") if output.suffix.lower() == ".mp3" or needs_tempo else None
@@ -418,7 +428,7 @@ def render_speech_audio(
     # One native target serves one model variant. External segments have their
     # own bindings; only uncached native variants compete for that worker.
     if len({cue.profile.engine for cue in cues if cue.text}) > 1:
-        missing_engines: set[str] = set()
+        missing_engines: dict[str, set[str]] = {}
         for cue in cues:
             _check_cancelled(cancelled)
             if not cue.text:
@@ -426,13 +436,14 @@ def render_speech_audio(
             cached = None if fresh_audio or segment_cache is None else segment_cache.get(cue.text, cue.profile)
             if cached is None:
                 if cue.profile.engine != "openai-compatible":
-                    missing_engines.add(cue.profile.engine)
-                if len(missing_engines) > 1:
+                    endpoint = native_endpoint(cue.profile.engine, target)
+                    missing_engines.setdefault(endpoint, set()).add(cue.profile.engine)
+                if any(len(engines) > 1 for engines in missing_engines.values()):
                     raise ValueError("The audio plan needs multiple uncached model variants; one worker serves "
                                      "one model. Choose profiles using the same model or reuse previously "
                                      "cached segments")
     total = sum(bool(cue.text) for cue in cues)
-    requested_engines = sorted({cue.profile.engine if cue.profile.engine in ("qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "f5-tts", "openai-compatible") else "unknown"
+    requested_engines = sorted({cue.profile.engine if cue.profile.engine in NATIVE_ENGINES or cue.profile.engine == "openai-compatible" else "unknown"
                                 for cue in cues if cue.text})
     cache_mode = "disabled" if segment_cache is None else "fresh" if fresh_audio else "enabled"
     get_logger("speech").info("event=render_plan id=%s target=%s requested_engines=%s segments=%d cache_mode=%s output_format=%s",
@@ -491,10 +502,15 @@ def render_speech_audio(
 
                             data = synthesize_f5(cue.text, effective, target=target,
                                                  reference=(references or {})[effective.reference_id])
+                        elif effective.engine == "ims-toucan":
+                            from .speech_toucan import synthesize_toucan
+
+                            data = synthesize_toucan(cue.text, effective, target=target,
+                                                     reference=(references or {})[effective.reference_id])
                         else:
                             data = (synthesize_qwen(cue.text, effective, target=target,
                                                    reference=(references or {})[effective.reference_id])
-                                    if effective.engine in ("qwen3-base", "coqui-reference") else
+                                    if native_engine(effective.engine).reference_required else
                                     synthesize_qwen(cue.text, effective, target=target))
                         params, frames = _read_pcm(data)
                         if params != (1, 2, rate):

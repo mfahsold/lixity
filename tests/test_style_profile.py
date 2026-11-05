@@ -40,6 +40,23 @@ from lixity.style_profile import (  # noqa: E402
 from lixity.ui import render_dashboard  # noqa: E402
 
 
+def test_chapter_shares_aggregate_counts_before_rounding_and_reset_between_chapters():
+    text = '## First\n\nmoss moss.\n\n"the the the" moss moss moss moss.\n\n## Second\n\nStone rests.\n'
+    config = CorpusConfig(language="en")
+    paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text, config))
+    metrics = CorpusAnalyzer(config).analyze_text(text)
+
+    # The public paragraph precision stays unchanged, but its rounded 42.9%
+    # must not replace the exact three matching tokens in a nine-token chapter.
+    assert [paragraph.dialogue_pct for paragraph in paragraphs] == [0.0, 42.9, 0.0]
+    assert [paragraph.function_word_pct for paragraph in paragraphs] == [0.0, 42.9, 0.0]
+    assert [chapter.words for chapter in chapters] == [9, 2]
+    assert [chapter.dialog_pct for chapter in chapters] == [33.3, 0.0]
+    assert [chapter.function_word_pct for chapter in chapters] == [33.3, 0.0]
+    assert chapters[0].dialog_pct == round(metrics.chapters[0].dialog_pct, 1)
+    assert chapters[0].function_word_pct == round(metrics.chapters[0].function_word_pct, 1)
+
+
 class TestParserLineAnchors(unittest.TestCase):
     """Line anchors: every block carries start_line/end_line (1-based)."""
 

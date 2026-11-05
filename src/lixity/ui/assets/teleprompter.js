@@ -16,13 +16,14 @@
   var chapterSelect = null;
   var recordBtn = null;
   var recordStatusAnnouncer = null;
+  var planStatus = null;
 
   var isPlaying = false;
   var isRecording = false;
   var recordStartTime = 0;
   var recordTimerId = null;
-  var mediaRecorder = null;
-  var recordedAudioChunks = [];
+  var takeCard = null, currentTake = null, takeContext = null, takePlayer = null;
+  var takeImportBtn = null, takeFiles = null, sidebarScroll = null, takeSequence = 0;
   var lastRecordedBlobUrl = null;
 
   var wordsPerMinute = 130;
@@ -34,7 +35,9 @@
 
   var speechData = null;
   var researchDossiers = null;
-  var manuscriptLinks = null;
+  var passageContexts = null, researchView = null, dossierReads = new Map();
+  var activeDossierKey = null, dossierSequence = 0;
+  var spokenParagraphs = new WeakMap();
 
   function label(key, fallback) {
     if (typeof window.uiLabel === "function") {
@@ -52,22 +55,58 @@
     });
   }
 
+  var contextSequence = 0;
+  function selectedContext() {
+    var form = document.getElementById("settings-form");
+    return {project_token: form ? form.dataset.projectToken || "" : "", source_sha256: document.body.dataset.manuscriptSourceSha256 || ""};
+  }
   function loadContextData() {
-    // 1. Fetch speech settings, pronunciations & directions
-    fetchApi("/api/speech").then(function(data) {
-      speechData = data;
-      if (modal && !modal.hidden) buildRunwayContent();
-    }).catch(function() {});
-
-    // 2. Fetch research dossiers
-    fetchApi("/api/research/dossiers").then(function(data) {
-      if (data && data.dossiers) researchDossiers = data.dossiers;
-    }).catch(function() {});
-
-    // 3. Fetch manuscript links
-    fetchApi("/api/research/manuscript-links").then(function(data) {
-      if (data && data.links) manuscriptLinks = data.links;
-    }).catch(function() {});
+    var sequence = ++contextSequence, selected = selectedContext(), identity = JSON.stringify(selected);
+    function current() { return sequence === contextSequence && modal && !modal.hidden && identity === JSON.stringify(selectedContext()); }
+    if (document.body.dataset.speechCapable === "true" && selected.project_token && selected.source_sha256) {
+      planStatus.hidden = false; planStatus.dataset.state = "loading";
+      planStatus.textContent = label("teleprompter_plan_loading");
+      fetchApi("/api/speech-plan", {method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(Object.assign({}, selected, {mode:"manuscript", chapter:null}))}).then(function(data) {
+        if (!current()) return;
+        if (!data.ok || !data.timeline || !Array.isArray(data.timeline.segments)) throw new Error("Speech timeline unavailable");
+        speechData = data.timeline; buildRunwayContent();
+        planStatus.dataset.state = "ready"; planStatus.textContent = label("teleprompter_plan_ready");
+      }).catch(function() {
+        if (!current()) return;
+        speechData = null; buildRunwayContent();
+        planStatus.dataset.state = "failed"; planStatus.textContent = label("teleprompter_plan_failed");
+      });
+    }
+    // Research access shares the workspace's explicit archive boundary.
+    if (typeof researchApiGet !== "function" || typeof researchContextToken !== "function" ||
+        !researchContextToken() || !selected.project_token) return;
+    if (!window.LixityDossierImages) { dossierFailure(); return; }
+    var researchToken = researchContextToken();
+    var view = {state:"loading", project:null, token:selected.project_token, invalidated:false,
+      current:function() { return !view.invalidated && current() && researchContextToken() === researchToken; }};
+    researchView = view;
+    dossierNote("loading", "teleprompter_images_loading", "Dossierbilder werden geladen…");
+    researchApiGet("research/status", undefined, true).then(function(state) {
+      if (!view.current()) return;
+      if (!state.ok) throw new Error("Research status unavailable");
+      if (!state.initialized) { view.state = "empty"; dossierNote("empty", "research_not_initialized", "Recherche ist nicht eingerichtet."); return; }
+      var binding = "project_token=" + encodeURIComponent(selected.project_token);
+      return Promise.all([researchApiGet("research/manuscript-review?" + binding), researchApiGet("research/dossiers?" + binding)]).then(function(results) {
+        if (!view.current()) return;
+        var review = results[0], index = results[1], projection = review.passage_context;
+        if (!review.ok || !index.ok || review.schema_version !== "research-manuscript-review-local/1" ||
+            review.source_state !== "available" || review.current_source_sha256 !== selected.source_sha256 ||
+            !review.project_id || review.project_id !== index.project_id || !Array.isArray(index.dossiers) ||
+            !projection || projection.schema_version !== "research-passage-context-local/1" || !Array.isArray(projection.paragraphs)) {
+          throw new Error("Research context unavailable");
+        }
+        view.project = review.project_id; view.state = "ready";
+        researchDossiers = index.dossiers; passageContexts = projection.paragraphs;
+        var active = scrollPane.querySelector(".teleprompter-paragraph.is-active") || scrollPane.querySelector(".teleprompter-paragraph");
+        if (active) updateDossierSidebar(active, true);
+      });
+    }).catch(function() { if (view.current()) { view.state = "failed"; dossierFailure(); } });
   }
 
   function createModal() {
@@ -80,7 +119,10 @@
     modal.setAttribute("aria-label", label("reading_teleprompter", "Teleprompter"));
 
     recordStatusAnnouncer = document.createElement("div");
-    recordStatusAnnouncer.className = "visually-hidden";
+    recordStatusAnnouncer.id = "teleprompter-record-status";
+    recordStatusAnnouncer.className = "teleprompter-plan-status";
+    recordStatusAnnouncer.hidden = true;
+    recordStatusAnnouncer.setAttribute("role", "status");
     recordStatusAnnouncer.setAttribute("aria-live", "polite");
     modal.appendChild(recordStatusAnnouncer);
 
@@ -203,6 +245,15 @@
     recordBtn.setAttribute("aria-label", label("teleprompter_record_hint", "Lese-Take aufnehmen"));
     recordBtn.addEventListener("click", toggleRecording);
     rightGroup.appendChild(recordBtn);
+    takeImportBtn = document.createElement("button"); takeImportBtn.type = "button";
+    takeImportBtn.className = "teleprompter-btn"; takeImportBtn.textContent = "📂";
+    takeImportBtn.setAttribute("aria-label", label("teleprompter_take_import", "WAV + JSON importieren"));
+    takeImportBtn.title = label("teleprompter_take_import", "WAV + JSON importieren");
+    takeImportBtn.addEventListener("click", function() { takeFiles.click(); });
+    rightGroup.appendChild(takeImportBtn);
+    takeFiles = document.createElement("input"); takeFiles.type = "file"; takeFiles.multiple = true;
+    takeFiles.accept = ".wav,.json"; takeFiles.id = "teleprompter-take-files"; takeFiles.hidden = true;
+    takeFiles.addEventListener("change", importTakeFiles); rightGroup.appendChild(takeFiles);
 
     var closeBtn = document.createElement("button");
     closeBtn.type = "button";
@@ -215,6 +266,11 @@
 
     toolbar.appendChild(rightGroup);
     modal.appendChild(toolbar);
+    modal.appendChild(recordStatusAnnouncer);
+
+    planStatus = document.createElement("p"); planStatus.id = "teleprompter-plan-status";
+    planStatus.className = "teleprompter-plan-status"; planStatus.setAttribute("role", "status");
+    planStatus.setAttribute("aria-live", "polite"); planStatus.hidden = true; modal.appendChild(planStatus);
 
     // Body
     var body = document.createElement("div");
@@ -256,17 +312,30 @@
 
     sidebarContent = document.createElement("div");
     sidebarContent.className = "teleprompter-sidebar-content";
-    sidebar.appendChild(sidebarContent);
+    sidebarContent.setAttribute("aria-live", "polite");
+    sidebarScroll = document.createElement("div"); sidebarScroll.className = "teleprompter-sidebar-scroll";
+    sidebarScroll.appendChild(sidebarContent); sidebar.appendChild(sidebarScroll);
 
     body.appendChild(sidebar);
     modal.appendChild(body);
     document.body.appendChild(modal);
+    var researchObserver = new MutationObserver(function() {
+      if (!modal.hidden && researchView && !researchView.current()) {
+        ++dossierSequence; researchView.invalidated = true; researchView.state = "failed";
+        passageContexts = null; researchDossiers = null;
+        dossierFailure();
+      }
+    });
+    researchObserver.observe(document.body, {subtree:true, attributes:true,
+      attributeFilter:["data-project-token", "data-research-token", "data-manuscript-source-sha256"]});
 
     modal.style.setProperty("--teleprompter-font-size", fontSize + "px");
 
     // Keyboard controls
     document.addEventListener("keydown", function(e) {
       if (!modal || modal.hidden) return;
+      if (e.code !== "Escape" && e.target.closest("input, textarea, select, [contenteditable=true]")) return;
+      if (e.code === "Space" && e.target.closest("button, a")) return;
       if (e.code === "Space") {
         e.preventDefault();
         togglePlay();
@@ -304,38 +373,23 @@
     });
   }
 
-  function escapeRegex(str) {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  }
-
-  function applyPronunciations(text, pronunciations) {
-    if (!pronunciations || !Object.keys(pronunciations).length) return text;
-    var keys = Object.keys(pronunciations).sort(function(a, b) { return b.length - a.length; });
-    var pattern = new RegExp("\\b(" + keys.map(escapeRegex).join("|") + ")\\b", "g");
-    return text.replace(pattern, function(match) {
-      var spoken = pronunciations[match];
-      return '<ruby class="teleprompter-phonetic">' + match + '<rt>[' + spoken + ']</rt></ruby>';
-    });
-  }
-
-  function findDirectionForParagraph(startLine, endLine, sha) {
-    if (!speechData || !speechData.direction || !speechData.direction.directions) return null;
-    return speechData.direction.directions.find(function(d) {
-      if (!d.anchor) return false;
-      return (sha && d.anchor.paragraph_sha256 === sha) ||
-             (d.anchor.start_line <= endLine && d.anchor.end_line >= startLine);
+  function segmentsForParagraph(startLine, endLine, sha) {
+    if (!speechData || !sha) return [];
+    return speechData.segments.filter(function(row) {
+      var anchor = row.anchor;
+      return anchor && anchor.paragraph_sha256 === sha && anchor.start_line === startLine && anchor.end_line === endLine;
     });
   }
 
   function buildRunwayContent() {
     if (!scrollPane) return;
+    var selectedSha = activeParagraphSha, selectedChapter = chapterSelect.value, position = scrollPane.scrollTop;
     scrollPane.replaceChildren();
     chapterSelect.replaceChildren();
 
     var chaptersContainer = document.getElementById("chapters");
     if (!chaptersContainer) return;
 
-    var pronunciations = (speechData && speechData.settings && speechData.settings.pronunciations) || {};
     var chapterElements = Array.from(chaptersContainer.querySelectorAll(".chapter"));
 
     chapterElements.forEach(function(chapterEl, idx) {
@@ -371,41 +425,53 @@
         pNode.setAttribute("data-sha", sha);
         pNode.setAttribute("data-chapter-id", chId);
 
-        // Direction / Regieanweisung
-        var dir = findDirectionForParagraph(startLine, endLine, sha);
-        if (dir && dir.instructions) {
-          var cue = document.createElement("div");
-          cue.className = "teleprompter-cue";
-          var icon = document.createElement("span");
-          icon.textContent = "🎬";
-          cue.appendChild(icon);
-          var textSpan = document.createElement("span");
-          textSpan.textContent = dir.instructions;
-          cue.appendChild(textSpan);
-          if (dir.pause_after != null && dir.pause_after > 0) {
-            var pauseSpan = document.createElement("span");
-            pauseSpan.className = "teleprompter-cue-pause";
-            pauseSpan.textContent = "+" + dir.pause_after.toFixed(1) + "s Pause";
-            cue.appendChild(pauseSpan);
-          }
-          pNode.appendChild(cue);
-        }
-
-        // Text with phonetics
         var textNode = document.createElement("div");
         textNode.className = "teleprompter-text";
-        textNode.innerHTML = applyPronunciations(rawText, pronunciations);
+        var segments = segmentsForParagraph(startLine, endLine, sha);
+        spokenParagraphs.set(pNode, segments.length ? segments.map(function(row) { return row.spoken_text || row.text || ""; }).join("") : rawText);
+        if (segments.length) segments.forEach(function(row) {
+          var group = document.createElement("span"); group.className = "teleprompter-segment";
+          var cues = window.LixitySpeechPresentation.controls(row, label);
+          if (cues.length) {
+            var cue = document.createElement("span"); cue.className = "teleprompter-cue";
+            cue.textContent = cues.join(" · "); group.appendChild(cue);
+          }
+          var spoken = document.createElement("span"); spoken.className = "teleprompter-spoken";
+          window.LixitySpeechPresentation.appendText(spoken, row, "teleprompter-phonetic");
+          group.appendChild(spoken); textNode.appendChild(group);
+        });
+        else textNode.textContent = rawText;
         pNode.appendChild(textNode);
 
         scrollPane.appendChild(pNode);
       });
     });
+    scrollPane.scrollTop = position;
+    if (selectedChapter) chapterSelect.value = selectedChapter;
+    if (selectedSha) {
+      var selected = Array.from(scrollPane.querySelectorAll(".teleprompter-paragraph")).find(function(paragraph) {
+        return paragraph.dataset.sha === selectedSha;
+      });
+      if (selected) selected.classList.add("is-active");
+      else activeParagraphSha = null;
+    }
   }
 
-  function updateDossierSidebar(paragraphNode) {
+  function dossierNote(state, key, fallback) {
+    if (!sidebarContent) return;
+    sidebarContent.replaceChildren(); sidebarContent.dataset.state = state;
+    var note = document.createElement("p"); note.className = "teleprompter-sidebar-empty";
+    note.textContent = label(key, fallback); sidebarContent.appendChild(note);
+  }
+  function dossierFailure() {
+    dossierNote("failed", "teleprompter_images_failed", "Dossierbilder sind nicht verfügbar. Öffne den Teleprompter erneut, um es noch einmal zu versuchen.");
+  }
+  function updateDossierSidebar(paragraphNode, force) {
     if (!sidebarContent || !paragraphNode) return;
     var sha = paragraphNode.getAttribute("data-sha");
-    if (sha === activeParagraphSha) return;
+    var key = JSON.stringify([sha, paragraphNode.dataset.start, paragraphNode.dataset.end]);
+    if (key === activeDossierKey && !force) return;
+    activeDossierKey = key;
     activeParagraphSha = sha;
 
     // Remove old active highlight
@@ -413,85 +479,85 @@
     if (prevActive) prevActive.classList.remove("is-active");
     paragraphNode.classList.add("is-active");
 
-    sidebarContent.replaceChildren();
-
-    // 1. Check direct manuscript links
-    var matchedLinks = (manuscriptLinks || []).filter(function(l) {
-      return l.anchor && l.anchor.paragraph_sha256 === sha;
-    });
-
-    var shownImages = new Set();
-
-    if (matchedLinks.length && researchDossiers) {
-      matchedLinks.forEach(function(l) {
-        var d = researchDossiers.find(function(item) { return item.id === l.dossier_id; });
-        if (d && d.images && d.images.length) {
-          d.images.forEach(function(img) {
-            if (!shownImages.has(img.id)) {
-              shownImages.add(img.id);
-              renderDossierCard(d.title, img);
-            }
-          });
-        }
+    var view = researchView, request = ++dossierSequence;
+    if (!view) { dossierNote("empty", "teleprompter_no_images", "Keine Dossier-Bilder mit dieser Passage verknüpft."); return; }
+    if (!view.current() || view.state === "failed") { dossierFailure(); return; }
+    if (view.state === "loading") { dossierNote("loading", "teleprompter_images_loading", "Dossierbilder werden geladen…"); return; }
+    if (view.state === "empty") { dossierNote("empty", "research_not_initialized", "Recherche ist nicht eingerichtet."); return; }
+    var references = [], suggested = false;
+    try {
+      // The backend owns exact-anchor matching and historical claim/dossier pins.
+      var matches = passageContexts.filter(function(row) { return row.paragraph_sha256 === sha &&
+        row.start_line === Number(paragraphNode.dataset.start) && row.end_line === Number(paragraphNode.dataset.end); });
+      if (matches.length > 1 || (matches.length && matches[0].state !== "ready")) throw new Error("Passage context unavailable");
+      var seen = new Set();
+      if (matches.length) matches[0].groups.forEach(function(group) {
+        if (!group.dossier) return;
+        group.claims.forEach(function(claim) { claim.versions.forEach(function(version) {
+          var records = [group.dossier.current].concat(group.dossier.pins);
+          var pin = records.find(function(record) { return record.revision === version.dossier_revision; });
+          if (!pin || !pin.id || pin.id !== group.dossier.current.id || !Number.isInteger(pin.revision) || pin.revision < 1) throw new Error("Dossier pin unavailable");
+          var identity = pin.id + ":" + pin.revision;
+          if (!seen.has(identity)) { seen.add(identity); references.push(pin); }
+        }); });
       });
-    }
-
-    // 2. Heuristic text search in dossiers if no direct link
-    if (!shownImages.size && researchDossiers) {
-      var pText = paragraphNode.textContent.toLowerCase();
-      researchDossiers.forEach(function(d) {
-        if (!d.images || !d.images.length) return;
-        var titleMatch = d.title && pText.includes(d.title.toLowerCase());
-        var tagMatch = (d.tags || []).some(function(t) { return t.length > 3 && pText.includes(t.toLowerCase()); });
-        if (titleMatch || tagMatch) {
-          d.images.forEach(function(img) {
-            if (!shownImages.has(img.id) && shownImages.size < 2) {
-              shownImages.add(img.id);
-              renderDossierCard(d.title, img);
-            }
-          });
-        }
-      });
-    }
-
-    if (!shownImages.size) {
-      var emptyNote = document.createElement("div");
-      emptyNote.className = "teleprompter-sidebar-empty";
-      emptyNote.textContent = label("teleprompter_no_images", "Keine Dossier-Bilder mit dieser Passage verknüpft.");
-      sidebarContent.appendChild(emptyNote);
-    }
+      if (references.length > 5) throw new Error("Passage context exceeds its bounded projection");
+      if (!references.length && !matches.length) {
+        var text = (spokenParagraphs.get(paragraphNode) || "").toLowerCase();
+        references = researchDossiers.filter(function(dossier) {
+          return (dossier.title && text.includes(dossier.title.toLowerCase())) ||
+            (dossier.tags || []).some(function(tag) { return tag.length > 3 && text.includes(tag.toLowerCase()); });
+        }).slice(0, 2);
+        suggested = references.length > 0;
+      }
+    } catch (_) { dossierFailure(); return; }
+    if (!references.length) { dossierNote("empty", "teleprompter_no_images", "Keine Dossier-Bilder mit dieser Passage verknüpft."); return; }
+    dossierNote("loading", "teleprompter_images_loading", "Dossierbilder werden geladen…");
+    Promise.all(references.map(function(pin) {
+      var identity = pin.id + ":" + pin.revision;
+      if (!dossierReads.has(identity)) {
+        // Bound retained detail payloads while scrolling through a long manuscript.
+        if (dossierReads.size >= 32) dossierReads.delete(dossierReads.keys().next().value);
+        var pending = researchApiGet("research/dossiers?id=" + encodeURIComponent(pin.id) + "&revision=" + encodeURIComponent(pin.revision) +
+          "&project_token=" + encodeURIComponent(view.token)).then(function(detail) {
+          if (!detail.ok || detail.id !== pin.id || detail.revision !== pin.revision || detail.project_id !== view.project ||
+              detail.availability === "withdrawn" || !Array.isArray(detail.images)) throw new Error("Dossier images unavailable");
+          return detail;
+        });
+        dossierReads.set(identity, pending);
+      }
+      return dossierReads.get(identity);
+    })).then(function(details) {
+      if (request !== dossierSequence || !view.current()) return;
+      sidebarContent.replaceChildren(); sidebarContent.dataset.state = suggested ? "suggested" : "ready";
+      if (suggested) {
+        var note = document.createElement("p"); note.className = "ctl-note";
+        note.textContent = label("teleprompter_images_suggested", "Vorschlag anhand von Dossiertitel oder Schlagworten"); sidebarContent.appendChild(note);
+      }
+      var shown = new Set();
+      details.forEach(function(detail) { detail.images.forEach(function(image) {
+        var identity = image.source_id + ":" + image.source_version_id;
+        if (!shown.has(identity) && (!suggested || shown.size < 2) && renderDossierCard(detail, image)) shown.add(identity);
+      }); });
+      if (!shown.size) dossierNote("empty", "teleprompter_no_images", "Keine Dossier-Bilder mit dieser Passage verknüpft.");
+    }).catch(function() { if (request === dossierSequence && view.current()) dossierFailure(); });
   }
 
-  function renderDossierCard(title, image) {
+  function renderDossierCard(detail, image) {
+    var alt = String(image.alt || image.title || detail.title || "").replace(/[\r\n]/g, " ").replace(/[\\[\]]/g, "\\$&");
+    var prepared = window.LixityDossierImages.prepareMarkdown("![" + alt + "](lixity:image/" + image.source_id + "/" + image.source_version_id + ")",
+      {project_id:detail.project_id, images:[image]});
+    if (!prepared.html.length) return false;
     var card = document.createElement("div");
     card.className = "teleprompter-dossier-card";
-
-    var img = document.createElement("img");
-    img.className = "teleprompter-dossier-img";
-    img.src = "/api/research/media?id=" + encodeURIComponent(image.id || image.source_id || "");
-    img.alt = image.caption || title || "Historisches Bild";
-    img.onerror = function() {
-      img.style.display = "none";
-    };
-    card.appendChild(img);
-
-    var meta = document.createElement("div");
-    meta.className = "teleprompter-dossier-meta";
-
     var h = document.createElement("div");
     h.className = "teleprompter-dossier-title";
-    h.textContent = title;
-    meta.appendChild(h);
-
-    if (image.caption || (image.context && image.context.provenance_note)) {
-      var cap = document.createElement("p");
-      cap.className = "teleprompter-dossier-caption";
-      cap.textContent = image.caption || image.context.provenance_note;
-      meta.appendChild(cap);
-    }
-
-    card.appendChild(meta);
+    h.textContent = detail.title; card.appendChild(h);
+    var content = document.createElement("div");
+    content.innerHTML = window.LixityDossierImages.restoreMarkdown(prepared.text, prepared);
+    card.appendChild(content);
     sidebarContent.appendChild(card);
+    return true;
   }
 
   function handleScrollSync() {
@@ -560,242 +626,192 @@
   var pcmSourceNode = null;
   var pcmRecordedChunks = [];
   var pcmTotalSamples = 0;
+  var pcmCaptureSequence = 0;
+  var pcmCaptureContext = null;
 
-  function startAudioCapture() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
-    pcmRecordedChunks = [];
-    pcmTotalSamples = 0;
-
+  function recordingState(state, key, fallback) {
+    recordStatusAnnouncer.dataset.state = state;
+    recordStatusAnnouncer.textContent = label(key, fallback);
+    recordStatusAnnouncer.hidden = false;
+  }
+  function resetCapture() {
+    ++pcmCaptureSequence; isRecording = false;
+    if (recordTimerId) clearInterval(recordTimerId); recordTimerId = null;
+    if (pcmProcessorNode) { pcmProcessorNode.onaudioprocess = null; pcmProcessorNode.disconnect(); pcmProcessorNode = null; }
+    if (pcmSourceNode) { pcmSourceNode.disconnect(); pcmSourceNode = null; }
+    if (pcmMediaStream) { pcmMediaStream.getTracks().forEach(function(track) { track.stop(); }); pcmMediaStream = null; }
+    if (pcmAudioContext) { pcmAudioContext.close().catch(function() {}); pcmAudioContext = null; }
+    recordBtn.classList.remove("is-active"); recordBtn.removeAttribute("aria-busy");
+    recordBtn.innerHTML = '🎙 <span class="teleprompter-btn-label">' + label("teleprompter_record_take", "Take aufnehmen") + "</span>";
+    recordBtn.setAttribute("aria-label", label("teleprompter_record_hint", "Lese-Take aufnehmen"));
+    takeImportBtn.disabled = false;
+  }
+  function captureFailed(error) {
+    resetCapture(); pcmRecordedChunks = []; pcmTotalSamples = 0;
+    if (error && error.name === "ContextChangedError") {
+      recordingState("failed", "teleprompter_take_context", "Das Projekt hat sich geändert. Exportiere den Take und importiere ihn im gewünschten Projekt."); return;
+    }
+    var denied = error && ["NotAllowedError", "PermissionDeniedError", "SecurityError"].includes(error.name);
+    recordingState("failed", denied ? "teleprompter_take_denied" : "teleprompter_take_failed", denied ?
+      "Mikrofon gesperrt. Erlaube den Mikrofonzugriff in den Website-Berechtigungen des Browsers und starte erneut." :
+      "Die Mikrofonaufnahme konnte nicht starten. Prüfe das Aufnahmegerät und versuche es erneut.");
+  }
+  async function startAudioCapture() {
+    pcmRecordedChunks = []; pcmTotalSamples = 0; ++takeSequence; pcmCaptureContext = selectedContext();
+    if (takeCard) takeCard.querySelectorAll("audio").forEach(function(audio) { audio.pause(); });
     var AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtxClass) return;
-
-    navigator.mediaDevices.getUserMedia({
-      audio: {
-        channelCount: 1,
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false
-      }
-    }).then(function(stream) {
-      pcmMediaStream = stream;
-      pcmAudioContext = new AudioCtxClass();
-      pcmSourceNode = pcmAudioContext.createMediaStreamSource(stream);
-      pcmProcessorNode = pcmAudioContext.createScriptProcessor(4096, 1, 1);
-
-      pcmProcessorNode.onaudioprocess = function(e) {
-        if (!isRecording) return;
-        var inputData = e.inputBuffer.getChannelData(0);
-        var copy = new Float32Array(inputData.length);
-        copy.set(inputData);
-        pcmRecordedChunks.push(copy);
-        pcmTotalSamples += copy.length;
-      };
-
-      pcmSourceNode.connect(pcmProcessorNode);
-      pcmProcessorNode.connect(pcmAudioContext.destination);
-    }).catch(function() {});
-  }
-
-  function stopAudioCapture() {
-    if (pcmProcessorNode) {
-      pcmProcessorNode.disconnect();
-      pcmProcessorNode = null;
-    }
-    if (pcmSourceNode) {
-      pcmSourceNode.disconnect();
-      pcmSourceNode = null;
-    }
-    if (pcmMediaStream) {
-      pcmMediaStream.getTracks().forEach(function(track) { track.stop(); });
-      pcmMediaStream = null;
-    }
-
-    var sampleRate = (pcmAudioContext && pcmAudioContext.sampleRate) || 48000;
-    if (pcmAudioContext) {
-      pcmAudioContext.close().catch(function() {});
-      pcmAudioContext = null;
-    }
-
-    if (pcmTotalSamples > 0) {
-      var wavBlob = encodeWav(pcmRecordedChunks, pcmTotalSamples, sampleRate);
-      offerRecordingDownload(wavBlob);
-    }
-  }
-
-  function encodeWav(chunks, totalSamples, sampleRate) {
-    var buffer = new ArrayBuffer(44 + totalSamples * 2);
-    var view = new DataView(buffer);
-
-    function writeString(offset, str) {
-      for (var i = 0; i < str.length; i++) {
-        view.setUint8(offset + i, str.charCodeAt(i));
+    isRecording = true; takeImportBtn.disabled = true;
+    var request = ++pcmCaptureSequence;
+    var captureIdentity = JSON.stringify(pcmCaptureContext);
+    function sameContext() {
+      if (captureIdentity !== JSON.stringify(selectedContext())) {
+        var error = new Error("Recording context changed"); error.name = "ContextChangedError"; throw error;
       }
     }
-
-    writeString(0, "RIFF");
-    view.setUint32(4, 36 + totalSamples * 2, true);
-    writeString(8, "WAVE");
-    writeString(12, "fmt ");
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, 1, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * 2, true);
-    view.setUint16(32, 2, true);
-    view.setUint16(34, 16, true);
-    writeString(36, "data");
-    view.setUint32(40, totalSamples * 2, true);
-
-    var offset = 44;
-    for (var c = 0; c < chunks.length; c++) {
-      var chunk = chunks[c];
-      for (var i = 0; i < chunk.length; i++) {
-        var s = Math.max(-1, Math.min(1, chunk[i]));
-        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-        offset += 2;
-      }
-    }
-
-    return new Blob([view], { type: "audio/wav" });
-  }
-
-  function offerRecordingDownload(blob) {
-    if (lastRecordedBlobUrl) URL.revokeObjectURL(lastRecordedBlobUrl);
-    lastRecordedBlobUrl = URL.createObjectURL(blob);
-
-    var card = document.createElement("div");
-    card.className = "teleprompter-dossier-card";
-    card.style.padding = "0.85rem";
-    card.style.display = "flex";
-    card.style.flexDirection = "column";
-    card.style.gap = "0.5rem";
-    card.style.background = "#1c2128";
-    card.style.borderColor = "#2ea043";
-
-    var title = document.createElement("div");
-    title.style.fontWeight = "600";
-    title.style.fontSize = "0.875rem";
-    title.style.color = "#3fb950";
-    title.textContent = "🎙 " + label("teleprompter_take_ready", "Aufnahme abgeschlossen (WAV)");
-    card.appendChild(title);
-
-    var player = document.createElement("audio");
-    player.controls = true;
-    player.src = lastRecordedBlobUrl;
-    player.style.width = "100%";
-    card.appendChild(player);
-
-    var a = document.createElement("a");
-    a.href = lastRecordedBlobUrl;
-    var timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-    a.download = "teleprompter-take-" + timestamp + ".wav";
-    a.className = "teleprompter-btn";
-    a.style.background = "#238636";
-    a.style.color = "#ffffff";
-    a.style.justifyContent = "center";
-    a.textContent = "💾 " + label("speech_download", "WAV-Take herunterladen");
-    card.appendChild(a);
-
-    var saveVoiceBtn = document.createElement("button");
-    saveVoiceBtn.type = "button";
-    saveVoiceBtn.className = "teleprompter-btn";
-    saveVoiceBtn.style.background = "#1f6feb";
-    saveVoiceBtn.style.color = "#ffffff";
-    saveVoiceBtn.style.justifyContent = "center";
-    saveVoiceBtn.textContent = "🎙 " + label("speech_record_save", "Als Autorenstimme für dieses Buch speichern");
-    saveVoiceBtn.addEventListener("click", async function() {
-      saveVoiceBtn.disabled = true;
-      saveVoiceBtn.textContent = "⏳ Speichere...";
-      try {
-        var reader = new FileReader();
-        var b64Wav = await new Promise(function(resolve, reject) {
-          reader.onload = function() { resolve(String(reader.result).split(",")[1]); };
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-        var passageEl = currentActiveParagraph || document.querySelector(".teleprompter-p.is-active") || document.querySelector(".teleprompter-p");
-        var passageText = (passageEl ? passageEl.textContent : "").trim() || "Teleprompter-Aufnahme";
-        var res = await fetch("/api/audio-microphone", {
-          method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({
-            action: "save_reference",
-            audio: b64Wav,
-            transcript: passageText,
-            profile_id: "default"
-          })
-        });
-        var data = await res.json();
-        if (data.ok) {
-          saveVoiceBtn.textContent = "✓ Als Autorenstimme gespeichert!";
-          saveVoiceBtn.style.background = "#238636";
-        } else {
-          saveVoiceBtn.textContent = "Fehler: " + (data.message || "Speichern fehlgeschlagen");
-          saveVoiceBtn.disabled = false;
+    recordingState("pending", "teleprompter_take_pending", "Mikrofonfreigabe wird angefragt. Erlaube den Zugriff im Browser; erneut klicken bricht ab.");
+    recordBtn.setAttribute("aria-busy", "true");
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !AudioCtxClass) throw new Error("Microphone unavailable");
+      var stream = await navigator.mediaDevices.getUserMedia({audio:{channelCount:1, echoCancellation:false, noiseSuppression:false, autoGainControl:false}});
+      if (request !== pcmCaptureSequence || !isRecording || modal.hidden) { stream.getTracks().forEach(function(track) { track.stop(); }); return; }
+      pcmMediaStream = stream; sameContext(); var context = new AudioCtxClass({sampleRate:24000}); pcmAudioContext = context;
+      await context.resume();
+      if (request !== pcmCaptureSequence || !isRecording || modal.hidden) return;
+      sameContext();
+      if (context.state !== "running") throw new Error("Audio capture is suspended");
+      pcmSourceNode = context.createMediaStreamSource(stream); pcmProcessorNode = context.createScriptProcessor(4096, 1, 1);
+      pcmProcessorNode.onaudioprocess = function(event) {
+        if (request !== pcmCaptureSequence || !isRecording) return;
+        var input = event.inputBuffer.getChannelData(0);
+        var remaining = Math.floor((window.LixityAudioTake.maximumBytes - 44) / 2) - pcmTotalSamples;
+        var copy = new Float32Array(input.subarray(0, remaining));
+        if (copy.length) { pcmRecordedChunks.push(copy); pcmTotalSamples += copy.length; }
+        if (copy.length < input.length) {
+          toggleRecording(); recordingState("ready", "teleprompter_take_limit", "Aufnahme am Dateilimit beendet. Der Take kann exportiert werden.");
         }
-      } catch (err) {
-        saveVoiceBtn.textContent = "Fehler: " + err.message;
-        saveVoiceBtn.disabled = false;
-      }
-    });
-    card.appendChild(saveVoiceBtn);
-
-    var voiceStudioLink = document.createElement("button");
-    voiceStudioLink.type = "button";
-    voiceStudioLink.className = "teleprompter-voice-studio-link";
-    voiceStudioLink.textContent = "🎙 " + label("teleprompter_open_studio", "Zum Autorenstimmen-Studio →");
-    voiceStudioLink.addEventListener("click", function() {
-      closeTeleprompter();
-      document.dispatchEvent(new CustomEvent("lixity:open-speech-studio", {detail: {mode: "reference"}}));
-    });
-    card.appendChild(voiceStudioLink);
-
-    if (sidebarContent) {
-      sidebarContent.prepend(card);
-      if (sidebar && !sidebar.classList.contains("is-open")) {
-        sidebar.classList.add("is-open");
-        if (sidebarToggleBtn) sidebarToggleBtn.classList.add("is-active");
-      }
+      };
+      pcmSourceNode.connect(pcmProcessorNode); pcmProcessorNode.connect(context.destination);
+      recordBtn.removeAttribute("aria-busy"); recordBtn.classList.add("is-active");
+      recordBtn.setAttribute("aria-label", label("teleprompter_recording", "Aufnahme läuft…"));
+      recordingState("running", "teleprompter_take_running", "Mikrofonaufnahme läuft. Erneut klicken beendet den Take.");
+      recordStartTime = Date.now();
+      function tick() { var elapsed = Math.floor((Date.now() - recordStartTime) / 1000);
+        recordBtn.textContent = "⏹ " + String(Math.floor(elapsed / 60)).padStart(2, "0") + ":" + String(elapsed % 60).padStart(2, "0"); }
+      tick(); recordTimerId = setInterval(tick, 1000);
+      if (!isPlaying) togglePlay();
+    } catch (error) { if (request === pcmCaptureSequence) captureFailed(error); }
+  }
+  function stopAudioCapture() {
+    var sampleRate = pcmAudioContext && pcmAudioContext.sampleRate, chunks = pcmRecordedChunks, count = pcmTotalSamples;
+    resetCapture(); pcmRecordedChunks = []; pcmTotalSamples = 0;
+    recordingState("idle", "teleprompter_take_stopped", "Aufnahme beendet.");
+    if (count) {
+      try {
+        var blob = new Blob([window.LixityAudioTake.encodeWav(chunks, count, sampleRate)], {type:"audio/wav"});
+        var stamp = new Date().toISOString().replace(/[:.]/g, "-");
+        acceptTake(window.LixityAudioTake.create(blob, {filename:"teleprompter-take-" + stamp + ".wav"}), pcmCaptureContext, true);
+      } catch (error) { captureFailed(error); }
     }
   }
-
-  function toggleRecording() {
-    isRecording = !isRecording;
-    if (isRecording) {
-      recordBtn.classList.add("is-active");
-      recordBtn.innerHTML = '⏹ <span class="teleprompter-btn-label">' + label("teleprompter_recording", "Aufnahme...") + "</span>";
-      recordBtn.setAttribute("aria-label", label("teleprompter_recording", "Aufnahme läuft..."));
-      recordBtn.title = label("teleprompter_recording", "Aufnahme läuft...") + " (R)";
-      if (recordStatusAnnouncer) recordStatusAnnouncer.textContent = "Audioaufnahme gestartet";
-      recordStartTime = Date.now();
-      recordTimerId = setInterval(function() {
-        var elapsed = Math.floor((Date.now() - recordStartTime) / 1000);
-        var m = String(Math.floor(elapsed / 60)).padStart(2, "0");
-        var s = String(elapsed % 60).padStart(2, "0");
-        recordBtn.innerHTML = '⏹ <span class="teleprompter-btn-label">' + m + ":" + s + "</span>";
-      }, 1000);
-
-      startAudioCapture();
-      if (!isPlaying) togglePlay();
-    } else {
-      recordBtn.classList.remove("is-active");
-      recordBtn.innerHTML = '🎙 <span class="teleprompter-btn-label">' + label("teleprompter_record", "Aufnahme") + "</span>";
-      recordBtn.setAttribute("aria-label", label("teleprompter_record", "Aufnahme"));
-      recordBtn.title = label("teleprompter_record", "Aufnahme") + " (R)";
-      if (recordStatusAnnouncer) recordStatusAnnouncer.textContent = "Audioaufnahme gestoppt";
-      if (recordTimerId) clearInterval(recordTimerId);
-      stopAudioCapture();
-      if (isPlaying) togglePlay();
+  async function acceptTake(pending, context, captured) {
+    var sequence = ++takeSequence, view = contextSequence; recordBtn.disabled = true; takeImportBtn.disabled = true;
+    try {
+      var value = await pending;
+      if (sequence !== takeSequence) return;
+      if (!captured && (modal.hidden || view !== contextSequence || JSON.stringify(context) !== JSON.stringify(selectedContext()))) {
+        if (!modal.hidden) recordingState("failed", "teleprompter_take_context", "Das Projekt hat sich geändert. Exportiere den Take und importiere ihn im gewünschten Projekt.");
+        return;
+      }
+      renderTake(value, context);
+      recordingState("ready", "teleprompter_take_ready", "Aufnahme abgeschlossen (WAV)");
+    } catch (_) {
+      if (sequence === takeSequence) recordingState("failed", "teleprompter_take_import_failed", "WAV und JSON passen nicht zusammen oder sind ungültig. Der bisherige Take bleibt erhalten.");
+    } finally { if (sequence === takeSequence) { recordBtn.disabled = false; takeImportBtn.disabled = false; } }
+  }
+  function importTakeFiles() {
+    var files = Array.from(takeFiles.files || []); takeFiles.value = "";
+    if (isRecording) return;
+    var wav = files.filter(function(file) { return /\.wav$/i.test(file.name); });
+    var json = files.filter(function(file) { return /\.json$/i.test(file.name); });
+    if (files.length !== 2 || wav.length !== 1 || json.length !== 1) {
+      recordingState("failed", "teleprompter_take_import_failed", "Wähle die zusammengehörigen WAV- und JSON-Dateien. Der bisherige Take bleibt erhalten."); return;
     }
+    acceptTake(window.LixityAudioTake.importFiles(wav[0], json[0]), selectedContext());
+  }
+  function renderTake(value, context) {
+    if (takePlayer) { takePlayer.destroy(); takePlayer = null; }
+    if (takeCard) {
+      var oldAudio = takeCard.querySelector("audio");
+      if (oldAudio) { oldAudio.pause(); oldAudio.removeAttribute("src"); oldAudio.load(); }
+      takeCard.remove();
+    }
+    if (lastRecordedBlobUrl) URL.revokeObjectURL(lastRecordedBlobUrl);
+    currentTake = value; takeContext = context; lastRecordedBlobUrl = URL.createObjectURL(value.blob);
+    takeCard = document.createElement("section"); takeCard.className = "teleprompter-dossier-card teleprompter-take-card";
+    var title = document.createElement("strong"); title.textContent = label("teleprompter_take_ready", "Aufnahme abgeschlossen (WAV)"); takeCard.appendChild(title);
+    var audio = document.createElement("audio"); audio.controls = true; audio.src = lastRecordedBlobUrl; takeCard.appendChild(audio);
+    if (typeof window.createSpeechPlayer === "function") takePlayer = window.createSpeechPlayer(audio, {
+      label:function(key) { return label("speech_" + key); },
+      onError:function() { recordingState("failed", "teleprompter_take_play_failed", "Die Aufnahme kann nicht abgespielt werden."); }
+    });
+    var description = document.createElement("p"); description.textContent = label("teleprompter_take_help", "Trage die tatsächlich gesprochenen Wörter ein. Der Lesetext ist kein bestätigtes Transkript. WAV und JSON werden getrennt heruntergeladen."); takeCard.appendChild(description);
+    var field = document.createElement("label"); field.className = "setting-field"; field.textContent = label("teleprompter_take_transcript", "Gesprochener Text");
+    var text = document.createElement("textarea"); text.className = "ctl"; text.rows = 3; text.maxLength = 100000; text.value = currentTake.transcript; field.appendChild(text); takeCard.appendChild(field);
+    var confirmation = document.createElement("label"); confirmation.className = "teleprompter-take-confirm";
+    var checked = document.createElement("input"); checked.type = "checkbox"; checked.checked = currentTake.transcript_status === "confirmed";
+    confirmation.appendChild(checked); confirmation.appendChild(document.createTextNode(label("teleprompter_take_confirm", "Transkript stimmt mit der Aufnahme überein"))); takeCard.appendChild(confirmation);
+    function update(edited) {
+      var previousInvalid = text.getAttribute("aria-invalid") === "true";
+      if (edited) checked.checked = false;
+      if (!text.value.trim()) checked.checked = false;
+      var invalid = false;
+      try { currentTake = window.LixityAudioTake.withTranscript(currentTake, text.value, checked.checked ? "confirmed" : text.value.trim() ? "draft" : "missing"); }
+      catch (_) { invalid = true; checked.checked = false;
+        recordingState("failed", "teleprompter_take_export_failed", "Der Take konnte nicht exportiert werden. Prüfe das Transkript."); }
+      takeCard.querySelectorAll('[data-take-download="json"], [data-take-studio]').forEach(function(button) { button.disabled = invalid; });
+      text.setAttribute("aria-invalid", String(invalid));
+      if (!invalid && previousInvalid) recordingState("ready", "teleprompter_take_ready", "Aufnahme abgeschlossen (WAV)");
+    }
+    text.addEventListener("input", function() { update(true); }); checked.addEventListener("change", function() { update(false); });
+    var actions = document.createElement("div"); actions.className = "row"; takeCard.appendChild(actions);
+    ["wav", "json"].forEach(function(kind) {
+      var button = document.createElement("button"); button.type = "button"; button.className = "teleprompter-btn";
+      button.dataset.takeDownload = kind; button.textContent = kind.toUpperCase();
+      button.addEventListener("click", function() { window.LixityAudioTake.download(currentTake, kind).catch(function() {
+        recordingState("failed", "teleprompter_take_export_failed", "Der Take konnte nicht exportiert werden. Prüfe das Transkript.");
+      }); }); actions.appendChild(button);
+    });
+    var studio = document.createElement("button"); studio.type = "button"; studio.className = "teleprompter-voice-studio-link"; studio.dataset.takeStudio = "";
+    studio.textContent = label("teleprompter_open_studio", "Zum Autorenstimmen-Studio →");
+    studio.addEventListener("click", function() {
+      if (document.body.dataset.speechCapable !== "true") return;
+      if (JSON.stringify(takeContext) !== JSON.stringify(selectedContext())) {
+        recordingState("failed", "teleprompter_take_context", "Das Projekt hat sich geändert. Exportiere den Take und importiere ihn im gewünschten Projekt."); return;
+      }
+      var detail = {mode:"reference", take:currentTake, context:takeContext}; closeTeleprompter();
+      document.dispatchEvent(new CustomEvent("lixity:open-speech-studio", {detail:detail}));
+    });
+    if (document.body.dataset.speechCapable === "true") takeCard.appendChild(studio);
+    sidebarScroll.prepend(takeCard); sidebar.classList.add("is-open"); sidebarToggleBtn.classList.add("is-active");
+  }
+  function toggleRecording() {
+    if (recordBtn.disabled) return;
+    if (isRecording) { stopAudioCapture(); if (isPlaying) togglePlay(); }
+    else startAudioCapture();
   }
 
   function openTeleprompter(startParagraphSha) {
     previousActiveElement = document.activeElement;
     createModal();
+    planStatus.hidden = true; planStatus.textContent = ""; delete planStatus.dataset.state;
+    speechData = null; researchDossiers = null; passageContexts = null; researchView = null; activeParagraphSha = null;
+    activeDossierKey = null; ++dossierSequence; dossierReads = new Map();
+    dossierNote("empty", "teleprompter_no_images", "Keine Dossier-Bilder mit dieser Passage verknüpft.");
     if (sidebar) sidebar.classList.remove("is-open");
     if (sidebarToggleBtn) sidebarToggleBtn.classList.remove("is-active");
     buildRunwayContent();
     modal.hidden = false;
+    loadContextData();
     document.body.classList.add("teleprompter-open");
 
     // Scroll to initial paragraph or synchronize top paragraph
@@ -817,8 +833,10 @@
   }
 
   function closeTeleprompter() {
+    ++contextSequence;
     if (isPlaying) togglePlay();
     if (isRecording) toggleRecording();
+    if (modal) modal.querySelectorAll("audio").forEach(function(audio) { audio.pause(); });
     if (modal) modal.hidden = true;
     document.body.classList.remove("teleprompter-open");
 
@@ -835,7 +853,6 @@
   }
 
   function init() {
-    loadContextData();
 
     document.addEventListener("click", function(e) {
       var target = e.target.closest("#reader-teleprompter");

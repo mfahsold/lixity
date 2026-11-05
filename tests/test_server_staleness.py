@@ -113,7 +113,7 @@ def test_reload_observes_externally_changed_audio_settings(tmp_path: Path, monke
     manuscript.write_text("## First\n\nA small bird sings.\n", encoding="utf-8")
     settings = tmp_path / "lixity.toml"
     settings.write_text('language = "en"\n', encoding="utf-8")
-    monkeypatch.setattr("lixity.speech_status.worker_health", lambda target: {
+    monkeypatch.setattr("lixity.speech_status.worker_health", lambda target, **kwargs: {
         "target": target, "state": "unavailable", "transport": "loopback", "model": None,
     })
     handler = make_handler(tmp_path, source_input=manuscript, language="en")

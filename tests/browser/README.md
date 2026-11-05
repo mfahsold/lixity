@@ -4,12 +4,90 @@ Run after installing the Python development environment, FFmpeg and Playwright
 with Chromium. FFmpeg creates synthetic media for the dossier-media suite;
 install `axe-core` as well to run the audio direction accessibility audit.
 Playwright and axe-core are optional tooling, not Lixity runtime dependencies.
+The shared browser launchers mute desktop audio output in both Chromium and
+Firefox. Media timing and analyser data remain available to synthetic playback
+tests; the test browsers do not change the user's browser or system volume.
+
+`reader-audio.cjs` checks static chapter playback, seek/volume controls, explicit
+track selection, WAV downloads and unchanged dossier disclosure at desktop/mobile
+sizes. `--firefox` repeats it in Firefox. `audio-chapter-import.cjs` exercises the
+native, source-bound WAV import with a synthetic project and muted playback.
+
+`teleprompter-context.cjs` checks lazy, project-bound context loading and clearing
+previous speech context on reopening without audio capability.
+
+`teleprompter-plan.cjs` checks canonical speech-plan reading text, safe literal
+markup, IPA ruby, all range cues and structured/pause-only direction, preserved
+selection and explicit stale-plan fallback at desktop/mobile widths.
+
+`tooltips-dialog.cjs` checks readable, unclipped keyboard and pointer help inside
+the actual blurred native dialog styles at desktop and mobile sizes. It runs in
+Chromium by default; `node tests/browser/tooltips-dialog.cjs --firefox` runs the
+same geometry checks when Playwright Firefox is installed.
+
+`audio-loading.cjs` holds the initial project audio response and verifies that
+recording cannot begin before the current reading text arrives. A failed load
+keeps capture disabled with an explicit error; closing and reopening retries.
+It uses a synthetic native project at desktop and compact viewport sizes.
+
+`audio-microphone.cjs` checks mixer-to-device association, actual gain limits,
+unknown hardware state, explicit mixer updates and calibration without implicit
+gain changes. All hardware status and mutation requests are synthetic; it never
+records sound or changes the host mixer.
+
+`audio-references.cjs` checks saved-recording names, missing/unnamed references,
+selection persistence and readable recording labels in profiles, direction and
+export previews across all seven locales at desktop and mobile widths.
+
+`audio-phonetics.cjs` checks the reviewed format-5 upgrade, retained voice profiles,
+named author references, separate IPA overrides, bounded profile/range prosody,
+inheritance and JSON export at desktop/mobile widths. Free-text delivery remains
+exportable but cannot be silently synthesized by a model that does not support it.
+The fixture uses synthetic silence and never starts a speech worker.
+
+`audio-take.cjs` validates portable PCM WAV/JSON metadata and transcript status.
+`audio-take-studio.cjs` checks context-bound studio handoff, explicit transcript
+confirmation, corrupt-import draft retention and the single reference-save path
+with synthetic audio at desktop/mobile widths.
+`teleprompter-take.cjs` uses synthetic capture to check visible microphone failures,
+transcript editing, paired downloads/import, preservation on invalid input and
+context-bound handoff. Pending permission and validation results cannot cross
+project changes. Test audio is never played.
 
 `audio-export.cjs` covers passage/chapter/manuscript JSON/SSML downloads,
 reviewed settings migration, configurable external profiles, synthetic HTTP
 speech responses, local recording/transcript comparison, export-only controls
 and first-time Dutch provider configuration at desktop/mobile widths. It never
 calls a real provider or uses private manuscript/audio fixtures.
+
+`audio-permission.cjs` exercises the actual browser `getUserMedia` API against
+native HTTP response headers. Chromium supplies a synthetic microphone device;
+browser permission is granted or denied explicitly without replacing the API or
+relaxing Permissions-Policy. It checks recording, 24 kHz WAV storage and reference
+activation at desktop/mobile widths, plus actionable permission-denial feedback.
+This suite is in the everyday fast group so policy regressions cannot hide behind
+the synthetic stream used for deterministic lifecycle tests.
+
+`audio-recording-diagnostics.cjs` checks inline recording states and failed-start
+console diagnostics with debug logging disabled, distinguishing audio-context
+initialization from microphone permission failures. Synthetic failures include
+private-text sentinels to verify that logs omit error messages and user content.
+It never requests a physical microphone; test browsers remain muted.
+
+`audio-studio.cjs` checks distinct audio tabs, keyboard navigation, contextual help,
+permission refusal and retry, synthetic Web Audio recording, completed-take
+playback, exact reviewed-transcript saves and microphone cleanup after stopping,
+closing or a delayed permission response. It also audits each dialog tab with
+axe-core when available and retains incomplete checks alongside violations.
+Run `node tests/browser/audio-studio.cjs --firefox` with the matching optional
+Playwright Firefox browser installed to exercise the same synthetic native flow
+in Firefox. The default command continues to use Chromium.
+`audio-player.cjs` checks the shared timeline, volume, real frequency
+spectrum and unavailable Web Audio fallback. Both cover desktop and narrow mobile
+layouts without requesting a physical microphone; captures stay under `/tmp`.
+For a focused repair loop, `node tests/browser/settings.cjs --native-speech`
+runs the native audio portion alone, including all seven desktop/mobile locales;
+the default command still runs the full settings suite.
 
 ```sh
 make browser          # everyday core surfaces (fast group, 3 workers)

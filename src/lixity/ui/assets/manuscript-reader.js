@@ -573,6 +573,92 @@
       note.textContent = uiLabel("reading_tense_unmapped"); host.appendChild(note);
     }
   }
+
+  function renderPassageBacklinks(panel, container) {
+    var isDe = (document.documentElement.lang || "en").startsWith("de");
+    var backlinksWrap = document.createElement("div");
+    backlinksWrap.className = "reader-backlinks-panel";
+
+    var header = document.createElement("div");
+    header.className = "reader-backlinks-header";
+    var iconSvg = window.LixityIcons && typeof window.LixityIcons.create === "function" ?
+      window.LixityIcons.create("link", "lixity-icon") : "";
+    header.innerHTML = (iconSvg || "") + " <span>" + (isDe ? "Verknüpfungen & Kontext" : "Linked Context & Backlinks") + "</span>";
+    backlinksWrap.appendChild(header);
+
+    // 1. Research dossier & evidence link card
+    var researchCard = document.createElement("a");
+    researchCard.className = "reader-backlink-card";
+    researchCard.setAttribute("role", "button");
+    researchCard.tabIndex = 0;
+
+    var rTitle = document.createElement("span");
+    rTitle.className = "reader-backlink-title";
+    var rIcon = window.LixityIcons && typeof window.LixityIcons.create === "function" ?
+      window.LixityIcons.create("book-open", "lixity-icon") : "";
+    rTitle.innerHTML = (rIcon || "") + " <span>" + (isDe ? "Historischer Beleg / Dossier" : "Historical Evidence / Dossier") + "</span>";
+
+    var rSnippet = document.createElement("span");
+    rSnippet.className = "reader-backlink-snippet";
+    var textPreview = panel.textContent ? panel.textContent.trim().slice(0, 90) + "…" : "";
+    rSnippet.textContent = isDe ? ("Passage mit Dossiers, Zitaten und Belegen abgleichen: " + textPreview) :
+      ("Link passage with research claims and citations: " + textPreview);
+
+    researchCard.appendChild(rTitle);
+    researchCard.appendChild(rSnippet);
+    researchCard.addEventListener("click", function(e) {
+      e.preventDefault();
+      if (window.LixityManuscriptLinks && typeof window.LixityManuscriptLinks.review === "function") {
+        window.LixityManuscriptLinks.review(panel);
+      } else {
+        var researchBtn = document.querySelector('[data-view-pane="research"]');
+        if (researchBtn) researchBtn.click();
+      }
+    });
+    researchCard.addEventListener("keydown", function(e) {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        researchCard.click();
+      }
+    });
+    backlinksWrap.appendChild(researchCard);
+
+    // 2. Audio & Speech Direction card
+    var audioCard = document.createElement("a");
+    audioCard.className = "reader-backlink-card";
+    audioCard.setAttribute("role", "button");
+    audioCard.tabIndex = 0;
+
+    var aTitle = document.createElement("span");
+    aTitle.className = "reader-backlink-title";
+    var aIcon = window.LixityIcons && typeof window.LixityIcons.create === "function" ?
+      window.LixityIcons.create("mic", "lixity-icon") : "";
+    aTitle.innerHTML = (aIcon || "") + " <span>" + (isDe ? "Regieanweisungen & Teleprompter" : "Vocal Directions & Teleprompter") + "</span>";
+
+    var aSnippet = document.createElement("span");
+    aSnippet.className = "reader-backlink-snippet";
+    aSnippet.textContent = isDe ? "Sprechtempo, Pausen, Betonungen oder Aussprache (IPA) anpassen" :
+      "Inspect pacing, vocal cues and phonetic pronunciation";
+
+    audioCard.appendChild(aTitle);
+    audioCard.appendChild(aSnippet);
+    audioCard.addEventListener("click", function(e) {
+      e.preventDefault();
+      var pBtn = document.getElementById("reader-teleprompter");
+      if (pBtn) pBtn.click();
+      else if (window.LixityTeleprompter) window.LixityTeleprompter.open();
+    });
+    audioCard.addEventListener("keydown", function(e) {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        audioCard.click();
+      }
+    });
+    backlinksWrap.appendChild(audioCard);
+
+    container.appendChild(backlinksWrap);
+  }
+
   function showValues(panel, point) {
     if (!panel) return;
     renderParagraph(panel);
@@ -645,6 +731,7 @@
       related.textContent = uiLabel("passage_research"); tools.appendChild(related);
     }
     context.appendChild(tools);
+    renderPassageBacklinks(panel, context);
     inspectorBody.replaceChildren(context, copy); inspectorTarget = panel;
     panel.classList.add("reader-inspector-target");
   }
@@ -752,8 +839,9 @@
       rect = node.getBoundingClientRect();
       x = trigger.left; y = useBelow ? trigger.bottom + 4 : trigger.top - rect.height - 4;
     }
-    node.style.left = Math.max(8, Math.min(x, innerWidth - rect.width - 8)) + "px";
-    node.style.top = Math.max(8, Math.min(y, innerHeight - rect.height - 8)) + "px";
+    LixityComponents.placeOverlay(node,
+      Math.max(8, Math.min(x, innerWidth - rect.width - 8)),
+      Math.max(8, Math.min(y, innerHeight - rect.height - 8)));
     node._readerScroll = [window.scrollX, window.scrollY];
   }
   function actionButton(action, label, menuItem) {
@@ -1087,7 +1175,8 @@
   document.addEventListener("click", function(event) {
     var relation = event.target.closest("[data-research-history], [data-workspace-dossier], [data-manuscript-link-jump], [data-manuscript-links-claim], [data-manuscript-links-dossier], [data-manuscript-links-paragraph], .manuscript-claim-hit");
     if (!relation || workbench.state().view !== "analysis" || workbench.state().surface !== "document" || readingThread.hasDossier()) return;
-    var panel = event.target.closest(".ptext") || document.getElementById(relation.dataset.manuscriptLinksParagraph || "");
+    var paragraphId = relation.dataset.manuscriptLinksParagraph;
+    var panel = event.target.closest(".ptext") || (paragraphId ? document.getElementById(paragraphId) : null);
     // Following records in a dialog or companion belongs to the same passage journey.
     if ((!panel || relation.closest("[data-passage-research]")) && readingThread.hasPassage()) return;
     rememberReadingPassage(panel);
@@ -1126,7 +1215,8 @@
   panels.forEach(enhanceText);
   document.dispatchEvent(new Event("lixity:reader-ready"));
   workbench.dispatch({type: "analysis", value: false});
-  var hash = document.getElementById(window.location.hash.slice(1));
+  var hashId = window.location.hash.slice(1);
+  var hash = hashId ? document.getElementById(hashId) : null;
   if (hash && hash.closest("#manuscript-analysis-panels")) setMode("inspect", true);
   if (hash && hash.closest("#chapters, #manuscript-analysis-panels")) requestAnimationFrame(function() { scrollAndFlash(hash); });
 })();

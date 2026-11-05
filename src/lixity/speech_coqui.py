@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from .speech_profiles import COQUI_MODEL, COQUI_REFERENCE_MODEL
-from .speech_qwen import SAMPLE_RATE, _decode_reference, worker_server
+from .speech_worker import SAMPLE_RATE, _decode_reference, worker_server
 
 # The Thorsten vocabulary has no affricate tie bar, no non-syllabic mark and no
 # typographic quotation marks. gruut emits the first two and manuscripts contain

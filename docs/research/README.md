@@ -1,4 +1,5 @@
-# Research workspace: current scope and design history
+<a id="research-workspace-current-scope-and-design-history"></a>
+# Research workspace: manuals and design history
 
 The local research archive retains selected sources, exact quotations
 and authored dossiers, claims and decisions. Use the installed interface for
@@ -6,15 +7,19 @@ available operations; historical designs do not define current commands or schem
 
 ## Current references
 
-- [Research usage](USAGE.md): capture, citations, revisions, manuscript links,
-  Zotero, media, OCR, recovery and archive compatibility.
-- [Automation contracts](../AGENTS.md#51-research-api-lixityresearchapi): Python
-  entrypoints, response envelopes and guarded HTTP requests.
-- [Architecture](../ARCHITECTURE.md): shared components and integration boundaries.
-- [Local data model](DATA_MODEL.md): stored entities, pinned references, write
-  process, schema evolution and the disposable search database.
-- `lixity research --help` and `lixity research schema`: installed commands and
-  entity definitions. `lixity about --json` reports installed capabilities.
+| Reader and task | Maintained reference |
+| --- | --- |
+| First research session | [Illustrated walkthrough](../guides/research-pdf.html), then [Try it](USAGE.md#try-it) |
+| Author using the browser or CLI | [Research manual and task map](USAGE.md#find-a-task) |
+| Manuscript reading, project settings or sharing | [Browser workspace manual](../WORKSPACE.md), [all documentation](../README.md) |
+| Program calling Python or HTTP | [Automation contracts](../AGENTS.md#51-research-api-lixityresearchapi) |
+| Contributor working on archive persistence | [Local data model](DATA_MODEL.md), [architecture](../ARCHITECTURE.md) |
+| Checking an installed capability | [Implemented scope](IMPLEMENTATION.md), `lixity research --help`, `lixity about --json` and `lixity research schema` |
+
+The research manual owns capture, citations, revisions, manuscript associations,
+Zotero, media, OCR, backup/recovery and archive compatibility. The data model owns
+stored records and invariants. Neither the historical material below nor a
+rendered screenshot defines an installed command.
 
 Zotero owns source-library editing and ordinary reading. Lixity preserves selected
 versions and their authored relationships. Retention requires permission; a saved

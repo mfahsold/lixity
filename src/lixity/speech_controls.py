@@ -13,6 +13,39 @@ from dataclasses import asdict, dataclass
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import BaseModel, ConfigDict, Field, SerializerFunctionWrapHandler, model_serializer
+
+
+class SpeechProsody(BaseModel):
+    """Sparse model controls; omitted values inherit rather than reset a profile.
+
+    Variance scales are dimensionless model parameters, not pitch in Hz, energy
+    in dB, or guarantees about absolute audio duration.
+    """
+
+    model_config = ConfigDict(extra="forbid", strict=True, allow_inf_nan=False, hide_input_in_errors=True)
+    duration_scaling_factor: float | None = Field(default=None, ge=0.5, le=2.0)
+    pitch_variance_scale: float | None = Field(default=None, ge=0.0, le=2.0)
+    energy_variance_scale: float | None = Field(default=None, ge=0.0, le=2.0)
+    pause_duration_scaling_factor: float | None = Field(default=None, ge=0.0, le=3.0)
+    prosody_creativity: float | None = Field(default=None, ge=0.0, le=1.2)
+
+    @model_serializer(mode="wrap")
+    def serialize_controls(self, handler: SerializerFunctionWrapHandler) -> dict[str, float]:
+        return {key: value for key, value in handler(self).items() if value is not None}
+
+
+def prosody_capabilities() -> dict[str, dict[str, float | str]]:
+    """Bounds and actual synthesis semantics shared by configuration and UI."""
+    return {key: {"minimum": minimum, "maximum": maximum, "default": default,
+                  "implementation": implementation} for key, minimum, maximum, default, implementation in (
+        ("duration_scaling_factor", 0.5, 2.0, 1.0, "model-duration-scale"),
+        ("pitch_variance_scale", 0.0, 2.0, 1.0, "model-pitch-variance"),
+        ("energy_variance_scale", 0.0, 2.0, 1.0, "model-energy-variance"),
+        ("pause_duration_scaling_factor", 0.0, 3.0, 1.0, "model-internal-pause-scale"),
+        ("prosody_creativity", 0.0, 1.2, 0.1, "model-prosody-sampling"),
+    )}
+
 
 @dataclass(frozen=True)
 class SpeechControlSupport:
@@ -25,8 +58,11 @@ class SpeechControlSupport:
     ssml: bool
     precise_rate: bool
 
-    def as_dict(self) -> dict[str, str | bool]:
-        return asdict(self)
+    def as_dict(self) -> dict[str, object]:
+        result: dict[str, object] = asdict(self)
+        if self.phonemes:
+            result["prosody"] = prosody_capabilities()
+        return result
 
 
 _QWEN_SUPPORT = SpeechControlSupport(
@@ -37,12 +73,18 @@ _QWEN_BASE_SUPPORT = SpeechControlSupport(
     pronunciation="text_substitution", direction="unsupported", pauses="explicit_silence",
     phonemes=False, ssml=False, precise_rate=False,
 )
+_TOUCAN_SUPPORT = SpeechControlSupport(
+    pronunciation="text_substitution", direction="unsupported", pauses="explicit_silence",
+    phonemes=True, ssml=False, precise_rate=False,
+)
 
 
 def speech_control_support(engine: str, *, supports_instructions: bool = False) -> SpeechControlSupport:
     """Describe the actual Lixity adapter, not the model's theoretical features."""
     if engine == "openai-compatible":
         return _QWEN_SUPPORT if supports_instructions else _QWEN_BASE_SUPPORT
+    if engine == "ims-toucan":
+        return _TOUCAN_SUPPORT
     if engine in ("qwen3-base", "coqui", "coqui-reference", "f5-tts"):
         return _QWEN_BASE_SUPPORT
     if engine not in ("qwen3", "qwen3-design"):
@@ -107,6 +149,40 @@ def apply_pronunciation(text: str, substitutions: Mapping[str, str], *,
         previous = end
     pieces.append(text[previous:])
     return "".join(pieces)
+
+
+def phoneme_spans(text: str, overrides: Mapping[str, str]) -> list[tuple[int, int, str]]:
+    """Exact whole-word IPA overrides on prepared text, with Unicode boundaries."""
+    return pronunciation_spans(text, overrides, whole_words=True)
+
+
+def phonetic_segments(text: str, overrides: Mapping[str, str], *, maximum: int) -> list[str]:
+    """Split only at whitespace outside overrides; never truncate an IPA rule.
+
+    Used only for profiles with actual phonetic rules. Plain text keeps the
+    established sentence packing algorithm and unchanged cache identities.
+    """
+    protected = phoneme_spans(text, overrides)
+    pieces: list[str] = []
+    cursor = 0
+    while cursor < len(text):
+        while cursor < len(text) and text[cursor].isspace():
+            cursor += 1
+        if cursor == len(text):
+            break
+        limit = min(len(text), cursor + maximum)
+        if limit == len(text):
+            pieces.append(text[cursor:].rstrip())
+            break
+        boundaries = [match.start() for match in re.finditer(r"\s+", text[cursor:limit + 1])]
+        candidates = [cursor + index for index in boundaries
+                      if index and not any(start < cursor + index < end for start, end, _ in protected)]
+        if not candidates:
+            raise ValueError("A word or phonetic override exceeds the speech segment limit; it was not split")
+        end = candidates[-1]
+        pieces.append(text[cursor:end].rstrip())
+        cursor = end
+    return pieces
 
 
 def combine_delivery(profile_instruction: str, passage_instruction: str) -> str:

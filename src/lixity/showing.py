@@ -16,7 +16,7 @@ from typing import Any
 
 from .analyzer import CorpusAnalyzer
 from .language import resolve_language
-from .math_core import mad, median, robust_z
+from .math_core import mad, mean_or_zero, median, robust_z, significance_z
 from .models import CorpusConfig
 from .style_fingerprint import MIN_COMPARABLE_WORDS
 
@@ -114,7 +114,7 @@ def _z_map(values: dict[int, float]) -> dict[int, float]:
     deviation = statistics.pstdev(data)
     if deviation == 0.0:
         return dict.fromkeys(values, 0.0)
-    return {num: (value - centre) / deviation for num, value in values.items()}
+    return {num: significance_z(value, centre, deviation, 0.0) for num, value in values.items()}
 
 
 def showing_report(
@@ -186,7 +186,7 @@ def showing_report(
     comparable_list = [chapter for chapter in chapter_list if chapter.comparable]
 
     def mean(values: list[float]) -> float | None:
-        return sum(values) / len(values) if values else None
+        return mean_or_zero(values) if values else None
 
     tell_values = [c.tell_z for c in comparable_list if c.tell_z is not None]
     show_values = [c.show_z for c in comparable_list if c.show_z is not None]

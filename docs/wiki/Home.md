@@ -1,37 +1,28 @@
-# Welcome to the Lixity Wiki 📚
+# Lixity documentation
 
-**Lixity** is a local, offline computational workbench for authors, editors, and manuscript reviewers. It brings **close reading**, **quantitative manuscript analysis**, and **documented research** into one focused workspace.
+Lixity combines manuscript reading, deterministic analysis and an explicit-project
+research archive. Measurements support review; they do not grade a manuscript
+or decide what to rewrite.
 
-> [!NOTE]
-> **Core Principle:** The manuscript stays at the center. Lixity neither grades literary quality nor rewrites your prose. Statistical measurements highlight structural patterns to support human editorial judgment and invite intentional revision.
+This wiki is a short guide to the maintained manuals. Start with the
+[documentation map](https://mfahsold.github.io/lixity/README.md), or choose a task:
 
-[🇩🇪 Einstieg auf Deutsch](Schnelleinstieg-DE.md)
+| Task | Start here |
+| --- | --- |
+| Install and review a first passage | [Quickstart](Quickstart.md) · [Schnelleinstieg auf Deutsch](Schnelleinstieg-DE.md) |
+| Use the browser workspace | [Workspace manual](https://mfahsold.github.io/lixity/WORKSPACE.md) |
+| Run commands and configure a project | [CLI reference](https://mfahsold.github.io/lixity/USAGE.md) |
+| Interpret a measurement | [Editorial metrics](Editorial-Metrics.md) · [Lektorats-Metriken](Lektorats-Metriken-DE.md) |
+| Retain evidence and write dossiers | [Research and dossiers](Research-and-Dossiers.md) |
+| Navigate without a mouse | [Keyboard and navigation](Keyboard-Shortcuts-and-Navigation.md) |
+| Record, direct and export audio | [Audio and direction](Audio-and-Direction.md) |
 
----
+Core analysis runs offline. Optional map tiles, source acquisition and explicitly
+configured external speech services have separate network boundaries. Zotero
+capture is explicit; it is not background synchronization. Language profiles
+cover seven languages with different coverage; see
+[language support](https://mfahsold.github.io/lixity/LOCALIZATION.md).
 
-## 🗺️ Documentation Overview
-
-| Guide | Description | Link |
-| :--- | :--- | :--- |
-| **🚀 Quickstart** | Installation, creating a project, and importing your first manuscript. | [Quickstart](Quickstart.md) |
-| **📊 Editorial Metrics** | Interpreting sentence lengths (ASL), tense patterns, dialogue cadence, repetitions, and FDR. | [Editorial Metrics](Editorial-Metrics.md) |
-| **📂 Research & Dossiers** | Research archives, claims, Zotero integration, and manuscript vocabulary grounding. | [Research & Dossiers](Research-and-Dossiers.md) |
-| **⌨️ Keyboard Shortcuts** | Full keyboard navigation, text search, split-pane layout, and accessibility. | [Keyboard Shortcuts](Keyboard-Shortcuts-and-Navigation.md) |
-| **🎙️ Audio & Direction** | Offline speech synthesis, pause timelines, and acoustic listening for copy editing. | [Audio & Direction](Audio-and-Direction.md) |
-
----
-
-## 💡 Key Principles
-
-* **100% Local & Offline:** No cloud dependencies, no remote servers, no analytics, and no third-party AI transmission. Your manuscript text and research stay strictly on your machine.
-* **Deterministic & Reproducible:** Computations use standard Python statistics without opaque heuristic random seeds.
-* **Multilingual:** Full UI localization and dedicated grammar/syllable tokenizers for **English, German, French, Spanish, Italian, Portuguese, and Dutch**.
-* **Open Standards:** Input format is standard CommonMark Markdown (`.md`) or plain text (`.txt`). Direct Zotero library synchronization for archival sources.
-
----
-
-## 🤝 Community & Support
-
-* Have questions or want to discuss metrics? Join our **[GitHub Discussions](https://github.com/mfahsold/lixity/discussions)** (especially the [Q&A](https://github.com/mfahsold/lixity/discussions/categories/q-a) category).
-* Bug reports and feature proposals can be opened via **[GitHub Issues](https://github.com/mfahsold/lixity/issues)**.
-* Follow project updates on **[Bluesky](https://bsky.app/profile/lixity.bsky.social)** and **[Mastodon](https://mastodon.social/@lixity)**.
+[Questions](https://github.com/mfahsold/lixity/discussions) ·
+[Issues](https://github.com/mfahsold/lixity/issues) ·
+[License](https://mfahsold.github.io/lixity/LICENSING.md)

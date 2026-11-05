@@ -1,20 +1,37 @@
-# Audio Direction & Listening 🎙️
+# Audio direction and listening
 
-Listening to prose read aloud is one of the most effective techniques during line editing to catch awkward phrasing, rhythm hitches, and unnatural dialogue cadences.
+Listening can help an author notice phrasing, rhythm and dialogue that deserves
+another look. Lixity supports passage direction, pronunciation controls, author
+recordings, local synthesis and explicitly configured external providers.
+Measurements and generated speech remain aids to human review.
 
----
+The [Audio manual](../AUDIO.md) is the canonical guide for both CLI and browser
+workflows. It labels current-main features as unreleased and explains which
+operations need a worker, a microphone, a saved reference or FFmpeg.
 
-## 1. Local Speech Synthesis
+| Task | Guide |
+| --- | --- |
+| Start with a passage preview | [Getting started](../AUDIO.md#getting-started) |
+| Record, import and review an author voice | [Author voice](../AUDIO.md#author-voice-recording-and-listening) |
+| Set gain or use the teleprompter | [Microphone calibration](../AUDIO.md#microphone-settings-and-calibration-audio-microphone-audio-calibrate-audio-reference-record) · [Teleprompter](../AUDIO.md#manuscript-teleprompter-direction-cues-phonetics-and-synchronized-dossier-images) |
+| Shape delivery and pronunciation | [Passage direction](../AUDIO.md#passage-direction) · [Spelling substitutions](../AUDIO.md#pronunciation-substitutions) · [Toucan IPA/prosody](../AUDIO.md#ims-toucan-phonetics-and-structured-direction-unreleased) |
+| Export a plan or use a provider | [JSON, SSML and external services](../AUDIO.md#audio-export-and-external-providers-unreleased) |
+| Check an external recording | [Signal inspection and transcript comparison](../AUDIO.md#inspect-and-compare-externally-generated-audio-unreleased) |
+| Add chapter audio to a reader export | [Retain or import chapter audio](../AUDIO.md#retain-or-import-chapter-audio-unreleased) |
+| Install a matching speech worker | [Installation](../INSTALLATION.md#optional-qwen-audio-worker) |
 
-Lixity integrates private, offline speech engines:
+Local synthesis does not send text to a hosted inference provider. A remote
+provider is an explicit choice and receives spoken text during a render. A
+voice reference and its transcript are private project data. Piper is removed;
+the [migration procedure](../AUDIO.md#audio-settings-upgrades-and-recovery)
+requires reviewed replacements and a backup.
 
-* **Offline & Private:** Voice generation runs locally (e.g. via Piper TTS or Thorsten VITS). No manuscript bytes are sent to third parties.
-* **OpenAI-Compatible Providers:** Optional support for self-hosted or remote OpenAI-compatible speech services with customizable voices.
+Literal spelling replacements, IPA, free-text acting instructions and exact
+pauses are distinct controls with different engine support. Neither successful
+encoding nor an audio audit establishes narration quality. The
+[single narrator rules](../AUDIO.md#single-narrator-and-delivery-variation)
+check configured identities; reference recordings still require the author to
+verify that they use the same speaker.
 
----
-
-## 2. Chapter Direction & Delivery
-
-* **Pacing & Pauses:** Automatic insertion of breathing room and scene boundary pauses.
-* **Pronunciation Overrides:** Project-wide phonetic rules for fictional names, historical terminology, and dialects (configured in `lixity.toml`).
-* **Audio Auditing:** Verify reading duration, clipping, and loudness metrics to prepare audiobook production plans.
+For project navigation and the rest of the CLI, start with the
+[documentation map](../README.md).

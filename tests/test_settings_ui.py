@@ -22,15 +22,18 @@ def settings_markup(locale="en", **options):
 
 
 class TestSettingsUi(unittest.TestCase):
-    def test_audio_guidance_distinguishes_voice_design_from_base(self):
+    def test_audio_guidance_separates_reference_phonetics_and_delivery_capabilities(self):
         for locale in LOCALES:
             with self.subTest(locale=locale):
                 labels = WORKSPACE_LABELS[locale]
                 self.assertIn("VoiceDesign", labels["speech_design_hint"])
-                self.assertIn("Qwen Base", labels["speech_reference_hint"])
-                self.assertIn("VoiceDesign", labels["speech_direction_hint"])
-                self.assertIn("Qwen Base", labels["speech_direction_hint"])
-                self.assertIn("CustomVoice", labels["speech_instructions"])
+                for key in ("speech_reference_hint", "speech_direction_hint", "speech_instructions"):
+                    self.assertTrue(labels[key])
+                    self.assertNotIn("Qwen Base", labels[key])
+                    self.assertNotIn("CustomVoice", labels[key])
+                self.assertTrue(labels["speech_instructions_export_only"])
+                self.assertTrue(labels["speech_prosody_inherit"])
+                self.assertIn("Vogel=", labels["speech_phonemes_help"])
                 self.assertTrue(labels["speech_model_preset_hint"])
                 self.assertTrue(labels["speech_worker_match"])
         self.assertIn("not guaranteed", WORKSPACE_LABELS["en"]["speech_direction_hint"])

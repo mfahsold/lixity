@@ -357,7 +357,8 @@ def _number(value: object, label: str) -> float:
 
 def _segments(plan: Mapping[str, Any] | Sequence[SpeechSegment]) -> list[_Segment]:
     if isinstance(plan, Mapping):
-        if plan.get("schema_version") not in ("lixity-speech-plan/1", "lixity-audio-timeline/1"):
+        if plan.get("schema_version") not in ("lixity-speech-plan/1", "lixity-speech-plan/2",
+                                               "lixity-audio-timeline/1", "lixity-audio-timeline/2"):
             raise ValueError("Expected a versioned speech plan or audio timeline")
         rows = plan.get("segments")
     else:

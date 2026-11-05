@@ -42,7 +42,7 @@ from .markdown_parser import (
     prose_text,
     split_chapters,
 )
-from .math_core import binomial_se_percent, per_mille, poisson_se_per_mille
+from .math_core import binomial_se_percent, per_mille, percent, poisson_se_per_mille
 from .models import (
     ChapterMetrics,
     CorpusConfig,
@@ -351,9 +351,7 @@ class CorpusAnalyzer:
         c_long_pct = (c_long_words / n_cw * 100.0) if n_cw else 0.0
         c_guiraud = len(set(c_lower)) / math.sqrt(n_cw) if n_cw else 0.0
         c_hd_d = hd_d_value(c_lower)
-        c_func_pct = (
-            sum(1 for t in c_lower if t in self.lang.function_words) / n_cw * 100.0 if n_cw else 0.0
-        )
+        c_func_pct = percent(sum(token in self.lang.function_words for token in c_lower), n_cw)
 
         # Measurement uncertainty per feature (documented plug-ins)
         c_se: dict[str, float] = {
@@ -564,6 +562,7 @@ class CorpusAnalyzer:
             sentence_cv=stats.cv,
             start_entropy=start_entropy,
             first_person_start_rate=first_person_start_rate,
+            function_word_pct=percent(sum(token in self.lang.function_words for token in lower_tokens), n_tokens),
             passive_density=passive_density,
             nominalization_density=nominalization_density,
             adjective_density=adjective_density,

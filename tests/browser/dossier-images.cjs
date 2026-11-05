@@ -49,6 +49,7 @@ async function checkDiagramReadability(page) {
           });
           return {width: bounds.width, height: bounds.height, intrinsicWidth: svg.viewBox.baseVal.width,
             minimumFont: Math.min(...fonts), viewportWidth: canvas.clientWidth, contentWidth: canvas.scrollWidth,
+            inlinePadding: parseFloat(getComputedStyle(canvas).paddingLeft) + parseFloat(getComputedStyle(canvas).paddingRight),
             left: outer.left, right: outer.right, diagramStart: bounds.left - viewport.left,
             pageWidth: document.documentElement.scrollWidth};
         });
@@ -75,7 +76,11 @@ async function checkDiagramReadability(page) {
           await expect(figure.locator('[data-diagram-enlarge]')).toBeFocused();
           await canvas.evaluate(element => { element.scrollLeft = 0; });
         }
-        if (name === 'vertical' || width === 1440) assert.ok(metrics.contentWidth <= metrics.viewportWidth, `Fitting diagrams avoid unnecessary scrolling: ${JSON.stringify(metrics)}`);
+        if (metrics.intrinsicWidth + metrics.inlinePadding <= metrics.viewportWidth) {
+          assert.ok(metrics.contentWidth <= metrics.viewportWidth, `Fitting diagrams avoid unnecessary scrolling: ${JSON.stringify(metrics)}`);
+        } else {
+          assert.ok(metrics.contentWidth > metrics.viewportWidth, `Wider diagrams retain their readable intrinsic layout in a scrollable viewport: ${JSON.stringify(metrics)}`);
+        }
       }
     }
   }

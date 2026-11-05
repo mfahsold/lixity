@@ -48,7 +48,7 @@ def settings_form(
         f'data-title-initial="{esc(title)}" data-author-initial="{esc(project_author)}" '
         f'data-speech-qwen-guide="{esc(docs_url("USAGE.md#lixity-read-aloud"))}" '
         f'data-speech-coqui-guide="{esc(docs_url("USAGE.md#experimental-coqui-and-openvoice-audio-unreleased"))}">',
-        f'<h3>{translated("settings")}</h3>',
+        f'<h3 class="settings-heading" id="settings-heading">{translated("settings")}</h3>',
         f'<p class="panel-guide" id="settings-scope-help">{translated("settings_intro")}</p>',
         '<fieldset class="settings-section" id="settings-project-details">',
         f'<legend>{translated("settings_project_details")}</legend>',

@@ -93,7 +93,7 @@ unknown routes fail closed, including when the copy is hosted beside a live
 profile. Browser display preferences may change locally; archive settings,
 records, source bytes and manuscript text cannot be written through this
 transport. No host paths, configuration, search databases, locks, credentials
-or runtime diagnostics belong to the export. The [usage guide](../USAGE.md#export-a-reading-website)
+or runtime diagnostics belong to the export. The [usage guide](../WORKSPACE.md#export-a-reading-website)
 describes disclosure and hosting limits.
 
 ## Authority and identity
@@ -102,7 +102,8 @@ describes disclosure and hosting limits.
 | --- | --- | --- |
 | `research/revisions/<kind>/<id>/<revision>.json` | Immutable, strictly validated entity revisions | Never replace an accepted revision |
 | `research/blobs/<sha256>` | Retained originals and extracted text, addressed by exact bytes | Preserve every blob still referenced by an accepted record |
-| `research/manifests/<sha256>.json` | Accepted revision references and byte hashes, project, generation and parent | Validate complete accepted ancestry on backup/restore |
+| `research/manifests/<sha256>.json.gz` | Compressed complete manifest; canonical JSON hash names accepted revision references, project, generation and parent | Validate complete accepted ancestry on backup/restore |
+| `research/storage.json` | Physical manifest-layout marker, separate from record schemas | Use explicit migration for an older plaintext store |
 | `research/HEAD.json` | Selects one accepted manifest | Atomic publication point; never select objects by modification time |
 | `research/project.json` | Immutable initial project configuration, checked against its accepted record | Restore with the archive |
 | `.lixity/research/catalogue.sqlite3` | Disposable lexical search projection | Rebuild from the accepted snapshot; SQLite alone is not a backup |
@@ -141,7 +142,7 @@ references and the remaining record types are specified below.
 | --- | --- |
 | `Project` | Explicit project identity, title and language |
 | `Source` | Retained source identity, title and language |
-| `SourceVersion` | Source capture: `source_ref`, sequence, original blob, confirmed retention and source context |
+| `SourceVersion` | Source capture: `source_ref`, sequence, original blob, confirmed retention and source context; retained images/PDF/video need no extraction |
 | `Activity` | Extraction operation, implementation and status, pinned to its source version |
 | `Extraction` | Source version, activity and exact UTF-8 text blob; normalization `none`, Unicode codepoint offsets |
 | `Passage` | Extraction reference, exclusive `[start,end)` span and exact verbatim text |
@@ -251,7 +252,7 @@ No entity/manifest migration or archive-format change is involved.
 
 ## Schema evolution and compatibility
 
-The local reader supports entity/manifest versions 1–8. These are capability
+The local reader supports entity/manifest versions 1–9. These are capability
 levels, not migrations of every existing file. Writes opt into the format their
 new records require; reads do not upgrade archives. Existing encodings and
 historical pins remain intact. Unknown fields and unsupported versions fail
@@ -267,6 +268,7 @@ rather than being silently discarded.
 | Claim causal relation | v6 record and manifest |
 | Manual manuscript quote–claim association | v7 record and manifest |
 | Structured dossier geography | v8 dossier and manifest; subsequent revisions retain v8 |
+| Retained-only PDF or MP4/WebM media | v9 source-version and manifest |
 
 Versions are scoped to each entity model: a v2 source capture is not a v2 authored
 revision. The manifest retains the highest capability already accepted. HEAD
@@ -274,6 +276,15 @@ remains `research-head-local/1`; backup, search, preview and HTTP envelopes have
 independent identifiers. Keep a complete verified backup before the first
 higher-format write; an older application can reject that archive even if its
 product number is larger. [Compatibility](USAGE.md#limits) records those boundaries.
+
+Physical storage has its own `research-storage-local/1` marker. The live archive
+stores complete gzip-compressed manifests named by their canonical JSON hash;
+HEAD and canonical hashes are unchanged by compression. Normal reads require
+this layout. [Explicit migration](USAGE.md#migrate-manifest-storage) verifies a
+portable backup and restored copy before converting an older plaintext store.
+Portable exports continue to carry canonical `.json` members and restoration
+converts staging to the current layout before publication. Compression does not
+prune accepted history or introduce delta manifests.
 
 ## Proposed work is separate
 

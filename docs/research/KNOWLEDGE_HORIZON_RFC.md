@@ -2,7 +2,9 @@
 
 **Not implemented.** No knowledge-attribution record, command, check or UI is
 registered. This page preserves the problem and unresolved design constraints;
-it does not reserve a schema version or define an API.
+it does not reserve a schema version or define an API. For available tasks, use
+the [research manual](USAGE.md#find-a-task); for related proposals, use the
+[design-history index](README.md#design-history).
 
 <a id="1-problem"></a>
 ## Problem

@@ -15,7 +15,7 @@
 <meta property="og:site_name" content="Lixity"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta property="og:image:width" content="2960"/>
-<meta property="og:image:height" content="2090"/>
+<meta property="og:image:height" content="2180"/>
 <meta property="og:image:alt" content="Lixity continuous manuscript reader with chapter navigation and contextual tools"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Finding tense switches in a novel"/>
@@ -34,7 +34,7 @@
   "url": "https://mfahsold.github.io/lixity/blog/tense-switches.html",
   "inLanguage": "en",
   "datePublished": "2026-10-15",
-  "dateModified": "2026-11-02",
+  "dateModified": "2026-11-05",
   "author": {
     "@type": "Person",
     "name": "Matthias Fahsold",
@@ -50,7 +50,7 @@
     "@type": "ImageObject",
     "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-light.png",
     "width": 2960,
-    "height": 2090,
+    "height": 2180,
     "caption": "Lixity continuous manuscript reader with chapter navigation and contextual tools"
   }
 }
@@ -78,7 +78,7 @@
 <li><strong>Flagged passages</strong> (rating 2 or higher by default) are candidates for a second look.</li>
 <li><strong>The chapter line</strong> summarizes the chapter's dominant tense markers. It supplies a comparison for the paragraph, rather than determining how a reader experiences the scene.</li>
 </ul>
-<p>One honest sentence: these readings come from verb forms and markers, not from a grammar parse. Dialogue, nested clauses and reported speech all shape the counts. That is exactly why the last step is always a person reading the passage — not a number.</p>
+<p>The default heuristic readings come from verb forms and marker patterns. An explicitly configured <a href="../USAGE.md#grammatical-tense">optional grammatical backend</a> can provide syntax-based evidence; unavailable models are reported rather than silently substituted. Dialogue, nested clauses and reported speech all shape the counts. That is exactly why the last step is always a person reading the passage — not a number.</p>
 
 <h2 id="workflow">The review loop, step by step</h2>
 <p>Start with the <a href="../demo/report.html">read-only synthetic demo</a> if you want to see the controls before installing. For your own manuscript, use the local project workflow:</p>

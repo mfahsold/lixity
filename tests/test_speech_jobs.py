@@ -121,6 +121,57 @@ def test_failed_job_is_explicit_and_cleans_temporary_source():
         jobs.close()
 
 
+def test_only_successful_chapters_are_retained_before_becoming_ready(tmp_path):
+    retained = []
+
+    def render(source, output, **kwargs):
+        Path(output).write_bytes(generate_silence_wav(.01))
+
+    def retain(output, valid):
+        assert valid()
+        retained.append(Path(output).read_bytes())
+
+    jobs = SpeechJobs(renderer=render)
+    try:
+        chapter = jobs.start("context", TEXT, AudioProfile(), {"mode": "chapter"},
+                             lambda: True, retain=retain)
+        assert wait_for(jobs, chapter["id"])["state"] == "ready"
+        assert retained == [generate_silence_wav(.01)]
+        preview = jobs.start("context", TEXT, AudioProfile(), {"mode": "preview"},
+                             lambda: True, retain=retain)
+        assert wait_for(jobs, preview["id"])["state"] == "ready"
+        assert len(retained) == 1
+    finally:
+        jobs.close()
+
+
+def test_retention_failure_is_visible_and_stale_or_cancelled_jobs_are_not_retained():
+    retained = []
+    valid = [True]
+
+    def render(source, output, **kwargs):
+        Path(output).write_bytes(generate_silence_wav(.01))
+
+    def fail(output, guard):
+        retained.append(True)
+        raise OSError("Synthetic retained-audio storage failure")
+
+    jobs = SpeechJobs(renderer=render)
+    try:
+        chapter = jobs.start("context", TEXT, AudioProfile(), {"mode": "chapter"},
+                             lambda: valid[0], retain=fail)
+        final = wait_for(jobs, chapter["id"])
+        assert final["state"] == "error" and "storage failure" in final["message"]
+        assert retained == [True]
+        valid[0] = False
+        stale = jobs.start("context", TEXT, AudioProfile(), {"mode": "chapter"},
+                           lambda: valid[0], retain=fail)
+        assert wait_for(jobs, stale["id"])["state"] == "stale"
+        assert retained == [True]
+    finally:
+        jobs.close()
+
+
 def test_observed_staleness_cannot_be_undone_by_restoring_source():
     valid = [True]
     entered = threading.Event()

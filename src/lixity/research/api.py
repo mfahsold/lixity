@@ -3294,7 +3294,6 @@ def _claim_matrix_data(repository: Repository, snapshot: Snapshot) -> dict[str, 
 
 def render_claim_matrix(data: dict[str, Any], *, format: Literal["md", "csv"] = "md") -> str:
     """Render a `claim_matrix` result as Markdown or CSV."""
-    project_id = data.get("project_id", "")
     project_title = data.get("project_title", "")
     summary = data.get("summary", {})
     matrix_claims = data.get("claims", [])
@@ -3344,7 +3343,6 @@ def render_claim_matrix(data: dict[str, Any], *, format: Literal["md", "csv"] = 
     lines = [
         f"# Research Claim-Evidence Matrix: {project_title}",
         "",
-        f"- **Project ID:** `{project_id}`",
         f"- **Total Claims:** {summary['total_claims']}",
         f"- **Supported:** {summary['supported_claims']} · **Contradicted:** {summary['contradicted_claims']} · **Unverified:** {summary['unverified_claims']}",
         f"- **Deliberate Deviations from Fact:** {summary['deviation_claims']}",

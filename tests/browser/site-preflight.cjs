@@ -78,7 +78,8 @@ server.serve_forever()
       await localized.route('**/api/site-preflight', route => route.fulfill({status:413, contentType:'application/json',
         body:JSON.stringify({ok:false, message:'English backend detail <img src=x onerror=alert(1)>',
           preflight:{schema_version:'lixity-site-preflight-error/1', ok:false, complete:false, files_written:false,
-            limit:category, observed_bytes:200, limit_bytes:100, overflow_bytes:100}})}));
+            limit:category, observed_bytes:200, limit_bytes:100, overflow_bytes:100,
+            record_id:'a'.repeat(32), revision_id:'b'.repeat(32)}})}));
       await localized.goto(server.fixture.url);
       await localized.locator('#tab-view-project').click();
       await localized.locator('#project-actions > summary').click();
@@ -95,7 +96,10 @@ server.serve_forever()
         const details = localized.locator('#site-export-preflight details');
         assert.equal(await details.evaluate(node => node.open), false);
         await details.locator('summary').click();
-        await expect(details.locator('pre')).toContainText('English backend detail <img');
+        await expect(details).toContainText(server.fixture.labels[locale].site_export_limit_observed + ': 200 B');
+        await expect(details).not.toContainText('English backend detail');
+        await expect(details).not.toContainText('a'.repeat(32));
+        await expect(details).not.toContainText('b'.repeat(32));
         await expect(details.locator('img')).toHaveCount(0);
         assert(await localized.locator('#modal-site-export').evaluate(n => n.scrollWidth <= n.clientWidth + 1));
       }

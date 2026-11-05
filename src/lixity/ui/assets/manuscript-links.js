@@ -310,7 +310,7 @@
         fragment.appendChild(heading);
       }
       var item = element("div", "", "manuscript-link-review-item");
-      item.appendChild(element("p", row.claim_title || row.claim_id));
+      item.appendChild(element("p", window.LixityComponents.recordLabel({title:row.claim_title}, label("research_name_unavailable_claim"))));
       var state = ["resolved", "moved", "adjusted", "ambiguous", "changed"].includes(row.anchor_state) ? row.anchor_state : "unavailable_anchor";
       var flags = [label("manuscript_link_" + state)];
       (row.flags || []).forEach(function(flag) {

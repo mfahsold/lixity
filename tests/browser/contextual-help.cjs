@@ -396,10 +396,10 @@ async function shortcutReference(page, labels, locale, width, height = 900) {
   await page.locator('#reader-settings > summary').click();
   await expect(reference).toBeVisible();
   await expect(reference).toContainText(labels.reading_shortcuts);
-  for (const key of ['reading_shortcut_actions', 'reading_shortcut_search', 'reading_shortcut_close']) {
+  for (const key of ['reading_teleprompter', 'reading_shortcut_actions', 'reading_shortcut_search', 'reading_shortcut_close']) {
     await expect(reference).toContainText(labels[key]);
   }
-  assert.deepEqual(await reference.locator('kbd').allTextContents(), ['Shift+F10', 'Enter', 'Esc']);
+  assert.deepEqual(await reference.locator('kbd').allTextContents(), ['P', 'Shift+F10', 'Enter', 'Esc']);
   const body = page.locator('#reader-settings .reader-settings-body');
   if (height === 480) {
     const openingBounds = await page.evaluate(async () => {

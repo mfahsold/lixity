@@ -111,9 +111,11 @@ _JS_FILES = (
     "vendor/leaflet-1.9.4.min.js",
     "vendor/photoswipe-5.4.4.umd.min.js",
     "research-media.js",
+    "icons.js",
     "component-layer.js",
     "tooltips.js",
     "interactions.js",
+    "command-palette.js",
     "section-navigation.js",
     "register-settings.js",
     "site-publication-settings.js",
@@ -127,6 +129,7 @@ _JS_FILES = (
     "research-lists.js",
     "research-review.js",
     "research-workspace.js",
+    "markdown-editor.js",
     "research-revisions.js",
     "workspace-state.js",
     "workspace-motion.js",
@@ -142,11 +145,14 @@ _JS_FILES = (
     "analysis-evidence.js",
     "analysis-review.js",
     "reader-publication.js",
+    "audio-take.js",
+    "speech-presentation.js",
     "teleprompter.js",
 )
-_NATIVE_JS_FILES = ("speech-direction.js", "speech.js",)
+_NATIVE_JS_FILES = ("speech-direction.js", "speech-player.js", "speech.js",)
 # The passage inspector requires the workspace shell; classic reports have none.
-_REPORT_JS_FILES = tuple(name for name in _JS_FILES if name not in ("manuscript-reader.js", "teleprompter.js"))
+_REPORT_JS_FILES = tuple(name for name in _JS_FILES if name not in ("manuscript-reader.js", "teleprompter.js", "speech-presentation.js", "audio-take.js"))
+_REPORT_CSS_FILES = tuple(name for name in _CSS_FILES if name != "teleprompter.css")
 
 # Curated publications reuse the shared renderers without dormant workspace controls.
 _PUBLICATION_JS_FILES = tuple(
@@ -154,7 +160,7 @@ _PUBLICATION_JS_FILES = tuple(
         "register-settings.js", "site-publication-settings.js", "analysis-scope.js",
         "project-overview.js", "style-space.js", "metric-context.js", "workspace-reader.js",
         "manuscript-reader.js", "manuscript-links.js", "analysis-evidence.js", "analysis-review.js",
-        "teleprompter.js",
+        "teleprompter.js", "speech-presentation.js", "audio-take.js",
     }
 )
 
@@ -364,11 +370,7 @@ def render_dashboard(
     scale = max(1, max((p.words for p in paragraphs), default=1))
     feature_layers = {field: key for key, field in LAYER_FEATURES.items()}
 
-    function_pct = (
-        round(sum(p.function_word_pct for p in paragraphs) / len(paragraphs), 1)
-        if paragraphs
-        else 0.0
-    )
+    function_pct = metrics.function_word_pct if metrics is not None and metrics.tokens else None
     has_house_style = bool(
         fingerprint is not None
         and any(float(base.get("sigma") or 0.0) > 0.0 for base in fingerprint.baseline.values())
@@ -411,7 +413,7 @@ def render_dashboard(
         '<meta name="viewport" content="width=device-width, initial-scale=1"/>',
         *(('<meta name="lixity-debug" content="true"/>',) if debug else ()),
         f"<title>{esc(title)} – {esc(engine_name)}</title>",
-        f"<style>{_bundle(_CSS_FILES)}</style>",
+        f"<style>{_bundle((_CSS_FILES if controls else _REPORT_CSS_FILES) + (('speech-player.css',) if speech_enabled else ()))}</style>",
         "</head>",
         f'<body id="top" class="{body_class}" data-api="{esc(api_base)}" data-ui-labels="{workspace_labels_json}" '
         f'data-read-only="{str(read_only).lower()}" '
@@ -456,14 +458,6 @@ def render_dashboard(
             "</button>"
             "</nav>"
         )
-        if speech_enabled and not read_only:
-            parts.append(
-                f'<button type="button" class="ctl voice-studio-launcher-btn" id="btn-sidebar-speech" '
-                f'data-help="{L("speech_action_help")}" title="{L("speech_action_title")}">'
-                f'<span class="studio-btn-icon" aria-hidden="true">🎙</span> '
-                f'<span>{L("speech_action_title")}</span>'
-                f'</button>'
-            )
         parts.append('<div id="workspace-navigation-content">')
         parts.append(project_header(title, labels, language_name, engine_name, compact=True, meta=project_meta))
         parts.append(
@@ -494,12 +488,6 @@ def render_dashboard(
             f'<button type="button" class="ctl" id="welcome-show" aria-controls="welcome-hero" aria-expanded="false"{show_guidance_hidden} '
             f'data-help="{L("welcome_show_help")}" title="{L("welcome_show")}">{L("welcome_show")}</button>'
         )
-        if speech_enabled:
-            parts.append(
-                f'<button type="button" class="ctl" id="btn-project-speech" '
-                f'data-help="{L("speech_action_help")}" title="{L("speech_action_title")}">'
-                f'🎙 {L("speech_action_title")}</button>'
-            )
         parts.append("</div>")
         if allowed_actions is not None and "manuscript-pdf" in allowed_actions:
             parts.append(
@@ -511,8 +499,6 @@ def render_dashboard(
                 )
             )
         parts.append("</nav></details>")
-        if not read_only:
-            parts.append(f'<button type="button" class="ctl" id="runtime-open" data-help="{L("runtime_open_help")}" title="{L("runtime_title")}">{L("runtime_title")}</button>')
         parts.append('<p class="workspace-product-details">' + product_details(labels) + '</p>')
         parts.append("</div></div>")
 
@@ -523,11 +509,6 @@ def render_dashboard(
     if document_context:
         parts.append(panel_start("document-context", labels, "source_context"))
         parts.append('<div class="table-wrap"><table><tbody>')
-        if "source_version_id" in document_context:
-            parts.append(
-                f'<tr><th scope="row">{L("ctx_source_version")}</th>'
-                f"<td><code>{esc(document_context['source_version_id'])}</code></td></tr>"
-            )
         ctx_fields = (
             ("genre", "ctx_genre"),
             ("created_period", "ctx_created_period"),
@@ -647,24 +628,6 @@ def render_dashboard(
         )
         parts.append('<section class="panel controls" id="controls">')
         parts.append(f"<h2>{L('workspace_project')}</h2>")
-        if speech_enabled:
-            parts.append(
-                f'<section class="project-voice-studio-banner" id="project-voice-card">'
-                f'<div class="voice-banner-icon" aria-hidden="true">🎙</div>'
-                f'<div class="voice-banner-content">'
-                f'<h3 class="voice-banner-title">{L("speech_action_title")}</h3>'
-                f'<p class="ctl-note">{L("speech_banner_desc")}</p>'
-                f'<div class="row">'
-                f'<button type="button" class="ctl primary" id="btn-project-record-voice">'
-                f'🎙 {L("speech_record_cta")}'
-                f'</button>'
-                f'<button type="button" class="ctl" id="btn-project-manage-profiles">'
-                f'🎭 {L("speech_tab_profiles")}'
-                f'</button>'
-                f'</div>'
-                f'</div>'
-                f'</section>'
-            )
         if show_project_overview:
             parts.append(project_overview(labels, research_navigation=bool(
                 research_context_token and research_context_token == site_publication_context_token)))
@@ -697,6 +660,7 @@ def render_dashboard(
             parts.append(f'<p class="ctl-note">{L("manuscript_load_hint")}</p>')
             parts.append("</div>")
 
+        parts.append('<section class="project-settings ctl-group" id="project-settings" aria-labelledby="settings-heading">')
         parts.append(
             settings_form(
                 labels,
@@ -719,6 +683,16 @@ def render_dashboard(
                 language_key=language_key,
             )
         )
+        if not read_only:
+            parts.append(
+                '<section class="settings-section" id="project-audio-settings" aria-labelledby="project-audio-settings-heading">'
+                f'<h3 class="section-heading" id="project-audio-settings-heading">{L("settings_audio_services")}</h3>'
+                f'<p class="ctl-note">{L("settings_audio_services_hint")}</p>'
+                '<div class="row" id="project-audio-settings-actions">'
+                f'<button type="button" class="ctl" id="runtime-open" data-help="{L("runtime_open_help")}">{L("runtime_title")}</button>'
+                '</div></section>'
+            )
+        parts.append('</section>')
 
         # Actions advertised by the embedding server.
         visible_actions = [
@@ -1383,9 +1357,9 @@ def render_dashboard(
         )
     language_tiles.append(
         kpi(
-            P(function_pct) if (metrics is not None and metrics.tokens) else "–",
+            P(function_pct) if function_pct is not None else "–",
             help_term(labels, "function_words", L("function_words")),
-            bar=function_pct if (metrics is not None and metrics.tokens) else None,
+            bar=function_pct,
             jump="#chapters",
             layer="function",
         )

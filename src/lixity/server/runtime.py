@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import errno
 import os
 import socket
@@ -35,9 +34,6 @@ class _LoopbackHTTPServer(ThreadingHTTPServer):
 
     def server_bind(self) -> None:
         host = self.server_address[0]
-        if hasattr(socket, "SO_REUSEPORT"):
-            with contextlib.suppress(OSError):
-                self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         TCPServer.server_bind(self)
         self.server_name = str(host)
         self.server_port = self.server_address[1]

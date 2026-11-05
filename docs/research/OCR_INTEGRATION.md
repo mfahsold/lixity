@@ -1,6 +1,12 @@
 # Unlimited-OCR integration and deployment boundaries
 
-Reviewed against upstream on 2026-09-27. This document describes the implemented
+**Adapter deployment reference; upstream review dated 2026-09-27.** For ordinary
+PDF imports, start with the [research manual](USAGE.md#self-hosted-pdf-and-ocr-extraction)
+and [local Tesseract setup](USAGE.md#use-local-ocr-without-a-worker-service).
+The upstream assessment below is dated evidence, not a refreshed runtime
+recommendation or a requirement for every installation.
+
+This document describes the implemented
 worker boundary introduced in v1.19.0 and the requirements of an independently deployed adapter.
 No model server, weights or production-tested inference runtime ship with the
 Python package. The former experimental CPU bridge was removed in 2.1.0;
@@ -94,7 +100,7 @@ and fallback behavior in v1.24.1 are described above and below:
 | Invocation | One executable receives a temporary JSON filename | A separate protocol adapter is required |
 | Input images | Poppler renders at 150 dpi; JSON includes only PDF path and page checksums | A worker must render its own input; 300-dpi images will not match those PNG checksums |
 | Timeout | `LIXITY_OCR_TIMEOUT`: integer 1–3600 seconds, default 120, for the whole subprocess | Size the deadline for cold start and every page; this is not a per-page budget |
-| Failure | Configured worker failure, timeout, invalid response or incomplete page coverage rejects capture | No silent fallback to native extraction after worker failure |
+| Failure | Execution failure/timeout rejects capture unless native fallback is explicitly permitted; invalid response or incomplete page coverage always rejects it | No silent fallback or acceptance of incomplete worker output |
 | Native fallback | Extracts readable text-layer pages using the physical page count; an undetermined count or extraction timeout rejects capture | Mixed scanned/native documents report unreadable pages and need explicit completeness inspection |
 | Worker response | Validates block types, finite boxes/confidence, warnings and coverage of requested pages; stable sorting by page | Coverage relies on worker declarations and cannot establish recognition accuracy |
 | Missing confidence | Missing or null confidence remains unknown | Worker-supplied numbers are not independently calibrated certainty |
@@ -102,8 +108,10 @@ and fallback behavior in v1.24.1 are described above and below:
 | Activity label | New native Poppler captures/fallback use `poppler-native/1`; local Tesseract uses `tesseract-cli/1`; custom worker captures retain the `baidu-unlimited-ocr/1` boundary identifier | Implementation labels identify the selected boundary, not an independently verified model; cached legacy provenance stays unchanged |
 
 With a worker configured, an invalid `LIXITY_OCR_TIMEOUT` is reported by
-`ocr-status` as `misconfigured_worker`, with corrective guidance. Diagnostics
-inspect configuration and executable availability; they do not run model inference.
+`ocr-status` as `misconfigured_worker`, with corrective guidance. Ordinary
+diagnostics inspect configuration and executable availability. Explicit
+`--probe` runs a synthetic request against the selected worker or Tesseract;
+it checks execution, not recognition accuracy.
 
 Archive integrity verifies retained bytes and text-span citations. It does not
 verify recognition against the page image. A successful restore or citation

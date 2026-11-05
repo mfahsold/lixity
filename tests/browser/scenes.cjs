@@ -61,11 +61,14 @@ const documents = JSON.parse(fixtures.stdout);
         assert.equal(await page.locator('#scenes .scene-detail[open]').count(), 1);
         assert.equal(await page.locator('#scenes .scene-detail[open] tbody tr').count(), 16);
         for (const cell of await page.locator('#scenes .scene-detail[open] td, #scenes .scene-detail[open] thead th:not(:first-child)').all()) {
-          assert.equal(await cell.evaluate(element => {
+          assert.ok(await cell.evaluate(element => {
             const range = document.createRange();
             range.selectNodeContents(element);
-            return range.getClientRects().length;
-          }), 1, 'Values and comparison headers stay on one readable line');
+            // Inline sample counts contribute multiple rectangles on the same
+            // baseline. Real wrapping separates their vertical text bands.
+            const rects = Array.from(range.getClientRects()).filter(rect => rect.width && rect.height);
+            return rects.length > 0 && Math.max(...rects.map(rect => rect.top)) < Math.min(...rects.map(rect => rect.bottom));
+          }), 'Values and comparison headers stay on one readable line');
         }
         const wrap = page.locator('#scenes .scene-detail[open] .table-wrap');
         assert.equal(await wrap.getAttribute('tabindex'), '0');

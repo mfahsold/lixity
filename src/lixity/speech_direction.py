@@ -16,7 +16,16 @@ from itertools import pairwise
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SerializerFunctionWrapHandler,
+    ValidationError,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 from .config import read_explicit_project_config
 from .io import FileUtils
@@ -24,8 +33,10 @@ from .markdown_parser import counting_inline_text
 from .pipeline import document_paragraph_texts, paragraph_identity, resolve_document_config
 from .research.repository import Repository, ResearchConflictError
 from .speech_controls import (
+    SpeechProsody,
     apply_pronunciation,
     combine_delivery,
+    phonetic_segments,
     pronunciation_spans,
     speech_control_support,
 )
@@ -67,7 +78,7 @@ def same_narrator(narrator: AudioProfile, delivery: AudioProfile) -> bool:
     """
     if (narrator.engine, narrator.language) != (delivery.engine, delivery.language):
         return False
-    if narrator.engine in ('qwen3-base', 'coqui-reference', 'coqui', 'f5-tts'):
+    if narrator.engine in ('qwen3-base', 'coqui-reference', 'coqui', 'f5-tts', 'ims-toucan'):
         return True
     if narrator.engine == 'qwen3-design':
         return narrator.voice_description == delivery.voice_description
@@ -104,6 +115,14 @@ class Direction(_Strict):
     instructions: Annotated[str, Field(max_length=2000)] = ''
     pause_before: Annotated[float, Field(ge=0, le=10)] = 0.0
     pause_after: Annotated[float, Field(ge=0, le=10)] | None = None
+    prosody: SpeechProsody = Field(default_factory=SpeechProsody)
+
+    @model_serializer(mode='wrap')
+    def serialize_direction(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        data: dict[str, Any] = handler(self)
+        if not self.prosody.model_dump():
+            data.pop('prosody', None)
+        return data
 
     @field_validator('instructions')
     @classmethod
@@ -117,8 +136,14 @@ class _Stored(_Strict):
 
 
 class _State(_Strict):
-    schema_version: Literal['lixity-audio-directions/1'] = 'lixity-audio-directions/1'
+    schema_version: Literal['lixity-audio-directions/1', 'lixity-audio-directions/2'] = 'lixity-audio-directions/1'
     entries: Annotated[list[_Stored], Field(max_length=10000)] = Field(default_factory=list)
+
+    @model_validator(mode='after')
+    def require_prosody_schema(self) -> _State:
+        if self.schema_version == 'lixity-audio-directions/1' and any(row.direction.prosody.model_dump() for row in self.entries):
+            raise ValueError('Structured prosody requires direction schema lixity-audio-directions/2')
+        return self
 
 
 @dataclass(frozen=True)
@@ -213,7 +238,7 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
     Export preserves source ranges and instructions independently of whether a
     selected synthesis adapter can render them. Render validation is unchanged.
     """
-    from .speech import _speech_segments, extract_audio_cues
+    from .speech import extract_audio_cues
     audio_settings = parse_audio_settings(project_config.get('audio'), language=profile.language) if project_config and project_config.get('audio') is not None else None
     common = audio_settings.pronunciations if audio_settings else {}
 
@@ -258,6 +283,16 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
                 raise CoquiDirectionConflict()
             if not for_export and selected.engine in ('qwen3-base', 'f5-tts') and d.instructions:
                 raise BaseDirectionConflict()
+            if not for_export and selected.engine == 'ims-toucan' and (selected.instructions or d.instructions):
+                raise ValueError('IMS-Toucan cannot render free-text instructions; use structured prosody or export the direction')
+            if d.prosody.model_dump():
+                if selected.engine != 'ims-toucan':
+                    if not for_export:
+                        raise ValueError('Structured prosody requires IMS-Toucan; choose a compatible profile or export the direction')
+                else:
+                    selected = AudioProfile.model_validate({**selected.model_dump(), 'prosody': {
+                        **selected.prosody.model_dump(), **d.prosody.model_dump(),
+                    }})
             instructions = combine_delivery(selected.instructions, d.instructions)
             if not for_export or speech_control_support(
                 selected.engine, supports_instructions=selected.supports_instructions,
@@ -277,6 +312,8 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
             chunks.append((cue.text[cursor:], profile, 0.0, None, None, profile.instructions))
         chunk_start = 0
         for index, (raw_content, effective, before, after, direction, instructions) in enumerate(chunks):
+            if not for_export and effective.engine == 'ims-toucan' and effective.instructions:
+                raise ValueError('IMS-Toucan cannot render free-text instructions; use structured prosody or export the direction')
             content = raw_content
             matching = audio_settings.pronunciation_matching if audio_settings else None
             content = apply_pronunciation(content, effective.pronunciations,
@@ -301,7 +338,7 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
                     right_context=cue.text[chunk_start + len(raw_content):chunk_start + len(raw_content) + 1],
                 )
             chunk_start += len(raw_content)
-            pieces = [content] if for_export else _speech_segments(content, effective.language) or ['']
+            pieces = [content] if for_export else segment_speech_text(content, effective)
             for n, piece in enumerate(pieces):
                 pause = after if after is not None else (effective.paragraph_pause if cue.kind not in ('heading', 'scene_break') else default_pause) if index == len(chunks)-1 else 0.0
                 plan.append(SpeechSegment(piece, effective, before if n == 0 else 0.0,
@@ -313,23 +350,47 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
     return plan
 
 
-def plan_json(plan: list[SpeechSegment]) -> dict[str, Any]:
-    """Preserve the existing transport-segmented speech-plan/1 representation."""
-    from .speech import _speech_segments
+def segment_speech_text(text: str, profile: AudioProfile) -> list[str]:
+    """Keep phonetic rules intact while preserving established plain-text plans."""
+    from .speech import MAX_SEGMENT_CHARS, _speech_segments
 
+    if profile.phonemes:
+        return phonetic_segments(text, profile.phonemes, maximum=MAX_SEGMENT_CHARS) or ['']
+    return _speech_segments(text, profile.language) or ['']
+
+
+def has_extended_controls(row: SpeechSegment) -> bool:
+    """Whether serialization needs the phonetic/structured-controls contract."""
+    return bool(row.profile.engine == 'ims-toucan' or row.profile.phonemes or row.profile.prosody.model_dump()
+                or (row.export_info and row.export_info.direction and row.export_info.direction.prosody.model_dump()))
+
+
+def segment_prosody(row: SpeechSegment) -> dict[str, float]:
+    """Retain authored export controls even for a worker that cannot apply them."""
+    result = row.profile.prosody.model_dump()
+    if row.export_info and row.export_info.direction:
+        result.update(row.export_info.direction.prosody.model_dump())
+    return result
+
+
+def plan_json(plan: list[SpeechSegment]) -> dict[str, Any]:
+    """Keep legacy plans unchanged; version explicit phonetic/structured controls."""
     support = speech_control_support('qwen3-base' if any(speech_control_support(row.profile.engine, supports_instructions=row.profile.supports_instructions).direction == 'unsupported' for row in plan) else 'qwen3')
+    extended = any(has_extended_controls(row) for row in plan)
     segments = []
     for row in plan:
-        pieces = (_speech_segments(row.text, row.profile.language) or ['']) if row.export_info else [row.text]
+        pieces = segment_speech_text(row.text, row.profile) if row.export_info else [row.text]
         for index, piece in enumerate(pieces):
             segments.append({'text': piece, 'profile': row.profile.model_dump(),
                              'pause_before': row.pause_before if index == 0 else 0.0,
                              'pause_after': row.pause_after if index == len(pieces) - 1 else 0.0,
                              'anchor': row.anchor,
+                             **({'prosody': segment_prosody(row)} if segment_prosody(row) else {}),
                              **({'instructions': row.export_info.instructions}
                                 if row.export_info and row.export_info.instructions != row.profile.instructions else {})})
-    return {'schema_version': POLICY, 'controls': {'instructions': support.direction.replace('_', '-'),
-            'pauses': support.pauses.replace('_', '-'), 'phonemes': support.phonemes, 'ssml': support.ssml},
+    return {'schema_version': 'lixity-speech-plan/2' if extended else POLICY, 'controls': {'instructions': support.direction.replace('_', '-'),
+            'pauses': support.pauses.replace('_', '-'),
+            'phonemes': any(speech_control_support(row.profile.engine).phonemes for row in plan), 'ssml': support.ssml},
             'segments': segments}
 
 
@@ -393,7 +454,7 @@ def direction_state(project: str | Path, source: str | Path, *, language: str = 
         except ValueError:
             stale = True
         directions.append({**entry.direction.model_dump(), 'id': direction_id(entry.direction), 'stale': stale})
-    return {'schema_version': 'lixity-audio-direction-view/1', 'source_sha256': source_hash,
+    return {'schema_version': 'lixity-audio-direction-view/2' if state.schema_version.endswith('/2') else 'lixity-audio-direction-view/1', 'source_sha256': source_hash,
             'settings_sha256': _digest(settings), 'direction_sha256': digest,
             'source_path': relative, 'passages': passages, 'directions': directions}
 
@@ -447,7 +508,11 @@ def save_direction(project: str | Path, source: str | Path, value: Mapping[str, 
             _ranges(current['passages'], [*fresh,d])
             retained.append(_Stored(source_path=current['source_path'], direction=d))
         retained.sort(key=lambda e: (e.source_path, e.direction.anchor.start_line, e.direction.start, e.direction.end or 0))
-        updated = _State(entries=retained)
+        version: Literal['lixity-audio-directions/1', 'lixity-audio-directions/2'] = (
+            'lixity-audio-directions/2' if any(entry.direction.prosody.model_dump() for entry in retained)
+            or state.schema_version.endswith('/2') else 'lixity-audio-directions/1'
+        )
+        updated = _State(schema_version=version, entries=retained)
         raw = updated.model_dump_json(indent=2).encode()
         if len(raw) > MAX_BYTES:
             raise ValueError('Speech direction state exceeds 4 MiB')

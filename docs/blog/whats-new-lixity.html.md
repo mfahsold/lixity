@@ -1,12 +1,12 @@
 # What's new in Lixity: speech direction, clearer marks and project structure
 
-Updated 2 November 2026 · First posted 16 October 2026 · 8 minutes
+Updated 5 November 2026 · First posted 16 October 2026 · 8 minutes
 
 Lixity combines separated analysis layers and read-only project inspection with project-local passage direction, provider-independent JSON and SSML speech-plan export, per-axis standard-deviation labels in the 3D style-space projection, cross-paragraph quotation attribution, and contextual navigation tooltips. See the [detailed walkthrough](speech-direction-and-style-space.html) and [release notes](../releases/v0.7.7.md).
 
 ## Passage speech direction and provider-independent plan export
 
-In a local project, `lixity audio-direction inspect --project /path/to/book` inspects paragraph anchors and saved delivery ranges in `.lixity/audio-directions.json`, and `lixity read-aloud --plan-only` previews the effective speech plan without synthesis. `lixity audio-export-plan` (or `read-aloud --timeline` / `--ssml`) exports a deterministic `lixity-audio-timeline/1` JSON plan or W3C SSML projection, and `lixity audio-inspect` / `audio-verify` inspect local recordings and optional hash-bound transcripts. See [audio export and speech direction](../USAGE.md#audio-export-and-external-providers-unreleased).
+In a local project, `lixity audio-direction inspect --project /path/to/book` inspects paragraph anchors and saved delivery ranges in `.lixity/audio-directions.json`, and `lixity read-aloud --plan-only` previews the effective speech plan without synthesis. `lixity audio-export-plan` (or `read-aloud --timeline` / `--ssml`) exports a deterministic `lixity-audio-timeline/1` JSON plan or W3C SSML projection, and `lixity audio-inspect` / `audio-verify` inspect local recordings and optional hash-bound transcripts. See [audio export and speech direction](../AUDIO.md#audio-export-and-external-providers-unreleased).
 
 ## Clearer style-space spreads and multi-paragraph quotes
 
@@ -14,7 +14,7 @@ Each 3D style-dimension card and cutoff explanation reports the raw coordinate t
 
 ## Sources and outputs in one local view
 
-Open **Project** or run `lixity project --project /path/to/book` for a read-only metadata inspection. Source locations, existing output files and structural findings stay distinct. A file's presence is not proof of freshness, and output provenance remains unknown. The overview moves nothing and is absent from exported reading websites. See [project inspection](../USAGE.md#inspect-project-structure).
+Open **Project** or run `lixity project --project /path/to/book` for a read-only metadata inspection. Source locations, existing output files and structural findings stay distinct. A file's presence is not proof of freshness, and output provenance remains unknown. The overview moves nothing and is absent from exported reading websites. See [project inspection](../WORKSPACE.md#inspect-project-structure).
 
 ## A reading copy without an installation
 

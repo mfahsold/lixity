@@ -43,8 +43,19 @@ metrics but not chapter-only reports.
 Paragraph profiles intentionally cover body paragraphs and list items only,
 retaining their source line anchors; they omit blockquotes.
 
+The global function-word share is `100 × matching function-word tokens / all
+counted tokens` in that same corpus prose scope. Its overview tile uses the
+corpus measurement, rather than an unweighted mean of paragraph percentages.
+The additive `CorpusMetrics.function_word_pct` field is `null` when absent from
+an older payload; the UI reports that value as unavailable instead of estimating
+it from the narrower chapter or paragraph scope.
+
 Configured `word_regex` flags are respected across analysis surfaces; cue
-patterns retain their separate case-insensitive contract. English and German
+patterns retain their separate case-insensitive contract. A word pattern may
+have zero capturing groups (each whole match is a token) or one (its capture
+is the token). Multiple capturing groups are rejected with a configuration
+error; use noncapturing `(?:...)` groups for additional regex structure.
+English and German
 default word patterns include Unicode accented letters. LF and CRLF share
 semantic paragraph boundaries. Short-paragraph counting uses paragraph
 whitespace words and the inclusive configured threshold, including eight-word
@@ -242,9 +253,11 @@ dimensions and FDR calculations.
   control-server settings form applies `z_mild`, `z_strong`, `fdr_q`,
   `flag_min_severity`, `dim_score_threshold` to the current server session.
   It preserves the existing `fdr_method`; configure that through the CLI,
-  Python API or project configuration. Project defaults may live in
-  `[tool.lixity]` / `lixity.toml` / `~/.config/lixity.toml`
-  (CLI flag > UI session > project config > user config > code default).
+  Python API or project configuration. Explicit-project operations read only
+  the selected root's `lixity.toml` or `[tool.lixity]` in `pyproject.toml`;
+  CLI/API overrides and native session settings are separate invocation contexts.
+  See [configuration precedence](USAGE.md#configuration-corpusconfig) for the
+  explicit-file lookup and the optional project save.
 - Every passport reports the **active** values under `meta.*` — never
   re-hardcode the defaults.
 
@@ -883,11 +896,15 @@ correct.
 | API | `api.fingerprint(..., z_mild=…, fdr_q=…, fdr_method=…, …)` |
 | Control UI | Settings group → POST `/api/settings` → `lixity.server.LixityServerHandler` |
 | Embedders | `build_dashboard_html(..., z_mild=…, z_strong=…, fdr_q=…, flag_min_severity=…, dim_score_threshold=…)` |
-| Config file | `[tool.lixity]` in `pyproject.toml`, or `lixity.toml` / `~/.config/lixity.toml` |
+| Config file | Explicit project root: `lixity.toml` or `[tool.lixity]` in `pyproject.toml` |
 | Tests | `FingerprintThresholds(...)` + passport `meta` |
 
-Resolution order per key: CLI/API flag → UI session → project config →
-user config → code default (`src/lixity/config.py`).
+Explicit CLI/API options override settings resolved for that call; the native
+workspace also has session settings. Root-local project loading and implicit
+explicit-file lookup have different boundaries. Use the
+[configuration reference](USAGE.md#configuration-corpusconfig) and
+[default-manuscript rules](USAGE.md#default-manuscript), not a universal chain
+that would mix a browser session with an unrelated CLI process.
 
 ## Method currency and recent literature
 
@@ -919,47 +936,39 @@ results depend on the candidate set, the domain and the generator version.
 Lixity describes the observable patterns of one manuscript. Every signal stays a
 prompt for reading, never a verdict about authorship, quality or machine origin.
 
-## 13. Acoustic staging, pacing and empirical reading rates
+<a id="13-acoustic-staging-pacing-and-empirical-reading-rates"></a>
+## 14. Audio timing and recording heuristics
 
-The speech and teleprompter subsystems connect statistical chapter descriptors
-with acoustic performance. Spoken delivery differs systematically from silent reading;
-the pipeline formalizes this connection through three empirical models:
+Audio controls describe a planned or measured recording; they are not validated
+literary pacing metrics. The [audio manual](AUDIO.md) owns operating instructions.
 
-### 13.1. Syntactic pacing and target reading rates
+<a id="131-syntactic-pacing-and-target-reading-rates"></a>
+### 14.1. Teleprompter speed
 
-Reading rates in words per minute (WPM) vary with syntactic complexity and average
-sentence length (ASL). In literary prose narration, baseline conversational delivery
-averages 130 WPM (Carver 1990; Rayner et al. 2016). When a chapter exhibits high
-syntactic subordination (hypotaxis, high ASL), oral comprehension requires broader
-rhythmic spacing; conversely, staccato action passages (low ASL) compress naturally.
+The teleprompter starts at 130 WPM and offers a manual 60–240 WPM control.
+This value drives approximate scrolling; it is not inferred from chapter ASL,
+syntactic complexity or dialogue share. There is no automatic ASL-to-WPM model
+in the implemented prompter. It does not listen to the speaker, align speech to
+words or set the speech model's speaking rate. Explicit planned pauses and
+recording duration remain separate from this reading aid.
 
-The target WPM pacing function maps measured chapter ASL to a bounded delivery rate:
+<a id="132-acoustic-crest-factor-and-microphone-gain-staging"></a>
+### 14.2. Microphone calibration recommendation
 
-$$\text{WPM}_{\text{target}} = \text{clamp}\left(130.0 + 1.2 \cdot (16.0 - \text{ASL}_{\text{chapter}}), 85.0, 185.0\right)$$
+The calibration path measures one recorded test window. Its current heuristic
+peak band is −13 to −7 dBFS inclusive. Above that band it recommends reducing the
+raw mixer setting by 10 steps (lower bound 0); below it, increasing by 6 steps
+(upper bound 50). Within the band it keeps the current setting. These are mixer
+steps, not a calibrated dB conversion, and the recommendation is not applied
+automatically. The implementation uses 35 as a starting value when its gain read
+is missing or zero, so the recommendation does not prove the actual hardware gain.
 
-- Baseline chapter ($\text{ASL} = 16.0$ words): $\text{WPM} = 130$ WPM.
-- Compressed staccato ($\text{ASL} = 8.5$ words): $\text{WPM} \approx 139$ WPM.
-- Elaborated hypotaxis ($\text{ASL} = 28.0$ words): $\text{WPM} \approx 116$ WPM.
-
-Detected dialogue turns (`dialog_pct`) introduce conversational turn-taking boundaries;
-dialogue paragraphs preserve distinct paragraph pacing intervals while narrator passages
-follow the chapter's syntactic baseline.
-
-### 13.2. Acoustic crest factor and microphone gain staging
-
-Human speech exhibits a high crest factor ($C = 20 \log_{10} \frac{x_{\text{peak}}}{x_{\text{rms}}} \approx 12\text{--}18\text{ dB}$),
-driven by unvoiced plosive consonants (/p/, /t/, /k/) and dramatic vocal dynamics.
-Aligning nominal conversational speech near $0\text{ dBFS}$ inevitably induces non-linear
-clipping on plosive bursts.
-
-Lixity's 8-second acoustic calibration protocol measures maximum burst peaks ($x_{\text{burst}}$)
-relative to digital full scale:
-- Optimal recording window: $-13\text{ dBFS} \le x_{\text{burst}} \le -7\text{ dBFS}$.
-- Overdriven signal ($x_{\text{burst}} > -7\text{ dBFS}$): classifies as `ZU HEISS` and recommends
-  decreasing analog/ALSA mixer gain by $\Delta G = -1.0 \cdot (x_{\text{burst}} - (-10.0))\text{ dB}$.
-- Underdriven signal ($x_{\text{burst}} < -13\text{ dBFS}$): classifies as `MEHR LUFT ALS NÖTIG`
-  and recommends increasing gain to maximize converter dynamic range while preserving $\ge 7\text{ dB}$
-  headroom against inter-sample peaks.
+The reported floor is the quietest half-second RMS window, and the reported
+peak-to-floor difference is a rough diagnostic, not a measured speech/noise
+separation. The band is not a universal optimum, an inter-sample peak guarantee
+or a certificate of recording quality. Review clipping, background noise and
+intelligibility in the actual take. Browser permission and operating-system
+capture access are separate from hardware gain.
 
 References:
 

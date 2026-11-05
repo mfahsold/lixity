@@ -4,7 +4,7 @@
   var root = document.getElementById("reader-publication");
   if (!root) return;
   var publication = window.LixitySite.publication;
-  if (!publication || publication.schema_version !== "lixity-reader-publication/1" || !Array.isArray(publication.entries)) return;
+  if (!publication || !["lixity-reader-publication/1", "lixity-reader-publication/2"].includes(publication.schema_version) || !Array.isArray(publication.entries)) return;
   var cap = publication.max_chapter;
   if (!Number.isInteger(cap) || cap < 0) return;
   var progress = root.querySelector("#publication-progress");
@@ -103,6 +103,7 @@
   search.addEventListener("input", render);
   var chapterChoice = root.querySelector("#publication-reader-chapter");
   if (chapterChoice) chapterChoice.addEventListener("change", function() {
+    if (!chapterChoice.value) return;
     var target = document.getElementById(chapterChoice.value);
     if (target && root.contains(target)) scrollAndFlash(target);
   });

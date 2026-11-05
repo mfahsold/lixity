@@ -1255,9 +1255,12 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
             assert.equal(await page.locator('#installation').evaluate(node => node.tagName), 'SECTION',
               'The installation fragment opens its own author-facing section');
             await expect(page.locator('#installation a[href="guides/installation.html"]')).toBeVisible();
-            for (const destination of ['demo/report.html', 'guides/installation.html', 'guides/first-look.html']) {
+            for (const destination of ['demo/report.html', 'guides/installation.html']) {
               await expect(page.locator(`#guides a[href="${destination}"]`)).toHaveCount(0);
             }
+            await expect(page.locator('#guides > p a[href="guides/first-look.html"]')).toHaveAccessibleName('First session');
+            await expect(page.locator('#guides > p a[href="guides/first-look-de.html"]')).toHaveAccessibleName('Einstieg auf Deutsch');
+            await expect(page.locator('#guides > p a[href="AUDIO.md#author-voice-recording-and-listening"]')).toHaveAccessibleName('Author voice and audio');
             await expect(page.locator('#guides > p a[href="guides/interpretation.html"]')).toBeVisible();
             await expect(page.locator('#features blockquote')).toHaveText(demoQuote);
             await expect(page.locator('#features a[href="demo/report.html#p-0"]')).toBeVisible();

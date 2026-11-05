@@ -347,15 +347,28 @@ def build_publication_examples(root: Path, project: Path) -> dict[str, Path]:
 
     from lixity.site_contracts import SiteManifest
     from lixity.site_export import prepare_site
+    from lixity.speech_artifacts import retain_chapter_audio
 
     manuscript = project / "harbour-manuscript.md"
     if manuscript.read_bytes() != DEMO_MANUSCRIPT.read_bytes():
         raise ValueError("Public publications require the reviewed synthetic manuscript")
+    audio_source = BASE_DIR / "docs/assets/audio/warehouse-4-chapter-1.wav"
+    audio = audio_source.read_bytes()
+    provenance = json.loads(audio_source.with_suffix(".json").read_text(encoding="utf-8"))
+    if (provenance.get("schema_version") != "lixity-demo-audio/1" or provenance.get("chapter") != 1
+            or provenance.get("source_sha256") != sha256(manuscript.read_bytes()).hexdigest()
+            or provenance.get("audio_sha256") != sha256(audio).hexdigest()
+            or provenance.get("generator", {}).get("name") != "eSpeak NG"):
+        raise ValueError("Regenerate and review the synthetic chapter audio before building publications")
+    # This is an explicit external recording import into the disposable demo
+    # project. It never uses private author references or a running worker.
+    retain_chapter_audio(project, audio, source_sha256=provenance["source_sha256"],
+                         chapter=1, origin="imported")
     outputs = {}
     for mode, cap in (("reader", None), ("companion", 3)):
         bundle = prepare_site(project, manuscript=manuscript, mode=mode,
             publication_profile="readers", max_chapter=cap, include_source_files=True,
-            analysis_sections=["chapters"] if mode == "reader" else [])
+            analysis_sections=["chapters"] if mode == "reader" else [], include_audio=mode == "reader")
         document = bundle.files["index.html"].decode("utf-8")
         title = "Warehouse 4 — " + ("read with context" if mode == "reader" else "a reader's companion")
         description = ("Read six fictional harbour chapters with context you reveal as you read." if mode == "reader" else
@@ -371,7 +384,11 @@ def build_publication_examples(root: Path, project: Path) -> dict[str, Path]:
             'All content included in a static file remains inspectable; chapter caps remove later material before export.</p>'
             + ('<p>Choose <strong>Analysis</strong> above the reading view for a chapter overview, then '
                '<strong>Back to reading copy</strong> to return. This example includes all six chapters; '
-               'the analysis is not hidden by reading progress.</p>' if mode == "reader" else '') +
+               'the analysis is not hidden by reading progress.</p>'
+               '<p><strong>Chapter audio</strong> contains the complete first chapter, synthesized with the generic '
+               'eSpeak NG English voice and imported through the ordinary chapter-audio path. Press Play to listen '
+               'or download the WAV. This demonstrates the export workflow, not neural voice quality; no human '
+               'voice reference is used and the other five chapters have no audio.</p>' if mode == "reader" else '') +
             '<p>The map and harbour view are public-domain setting references from circa 1900, not evidence of the fictional 1923 incident. '
             '<a href="../../assets/research/sources.json">Image credits and reviewed provenance</a>. '
             'The ordinary product export has the same reading interface and no visitor counter.</p></details>')

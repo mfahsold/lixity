@@ -135,12 +135,24 @@ LANGUAGE_CHOICES: tuple[str, ...] = ("auto", *LANGUAGE_CODES)
 
 def compile_pattern(pattern: str) -> "re.Pattern[str]":
     """Compile a case-insensitive cue; empty cues never match (neutral fallback)."""
-    return re.compile(pattern or r"(?!x)x", re.IGNORECASE)
+    try:
+        return re.compile(pattern or r"(?!x)x", re.IGNORECASE)
+    except re.error as exc:
+        raise ValueError(f"Cue pattern must be a valid regular expression: {exc}") from exc
 
 
 def compile_word_pattern(pattern: str) -> "re.Pattern[str]":
-    """Compile tokens with only the flags explicitly supplied by the pattern."""
-    return re.compile(pattern)
+    """Compile string-valued tokens, retaining the pattern's explicit flags."""
+    try:
+        compiled = re.compile(pattern)
+    except re.error as exc:
+        raise ValueError(f"word_regex must be a valid regular expression: {exc}") from exc
+    if compiled.groups > 1:
+        raise ValueError(
+            "word_regex supports at most one capturing group; "
+            "use noncapturing (?:...) groups for other alternatives or structure"
+        )
+    return compiled
 
 
 def quotation_capture_group(pattern: "re.Pattern[str]") -> int:

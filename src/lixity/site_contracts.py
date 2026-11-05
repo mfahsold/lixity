@@ -21,6 +21,7 @@ from .site_publications import ProfileKey
 
 SITE_SCHEMA = "lixity-read-only-site/1"
 SITE_ANALYSIS_SCHEMA = "lixity-read-only-site/2"
+SITE_AUDIO_SCHEMA = "lixity-read-only-site/3"
 DATA_SCHEMA = "lixity-read-only-site-data/1"
 MAX_SITE_BYTES = 200 * 1024 * 1024
 MAX_SITE_DATA_BYTES = 64 * 1024 * 1024
@@ -46,6 +47,7 @@ class SiteExportOptions(_SiteModel):
     publication_profile: ProfileKey | None = None
     max_chapter: Annotated[int, Field(ge=0)] | None = None
     analysis_sections: Annotated[list[AnalysisSection], Field(max_length=3)] = Field(default_factory=list)
+    include_audio: bool = False
 
     @model_serializer(mode="wrap")
     def serialize_options(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
@@ -53,6 +55,8 @@ class SiteExportOptions(_SiteModel):
         data: dict[str, Any] = handler(self)
         if not self.analysis_sections:
             data.pop("analysis_sections", None)
+        if not self.include_audio:
+            data.pop("include_audio", None)
         return data
 
     @model_validator(mode="after")
@@ -63,6 +67,8 @@ class SiteExportOptions(_SiteModel):
             raise ValueError("Full analysis cannot be combined with individual analysis sections")
         if self.mode != "reader" and self.analysis_sections:
             raise ValueError("Selected analysis is available only in reader mode")
+        if self.mode != "reader" and self.include_audio:
+            raise ValueError("Chapter audio is available only in reader mode")
         if self.mode == "review":
             if self.publication_profile is not None or self.max_chapter is not None:
                 raise ValueError("Publication profile and chapter cap require reader or companion mode")
@@ -134,10 +140,28 @@ class SiteCapabilities(_SiteModel):
     automatic_external_requests: bool
 
 
+class SiteAudioTrack(_SiteModel):
+    """Public chapter playback metadata; never a worker or voice-reference binding."""
+
+    chapter: Annotated[int, Field(ge=1)]
+    title: str
+    file: Annotated[str, Field(pattern=r"^assets/audio/[0-9a-f]{64}\.wav$")]
+    sha256: Digest
+    byte_length: Annotated[int, Field(gt=44)]
+    duration_seconds: Annotated[float, Field(gt=0, allow_inf_nan=False)]
+    origin: Literal["generated", "imported"]
+
+
+class SiteAudio(_SiteModel):
+    schema_version: Literal["lixity-reader-audio/1"]
+    source_sha256: Digest
+    tracks: Annotated[list[SiteAudioTrack], Field(min_length=1, max_length=1000)]
+
+
 class SiteManifest(_SiteModel):
     """Inventory for the publication projection; it is not a restore manifest."""
 
-    schema_version: Literal["lixity-read-only-site/1", "lixity-read-only-site/2"]
+    schema_version: Literal["lixity-read-only-site/1", "lixity-read-only-site/2", "lixity-read-only-site/3"]
     product_version: str
     created_at: str
     entrypoint: str
@@ -150,6 +174,7 @@ class SiteManifest(_SiteModel):
     files: dict[str, SiteFile]
     mode: SiteMode = "review"
     publication: dict[str, Any] | None = None
+    audio: SiteAudio | None = None
 
     @model_validator(mode="after")
     def consistent_scope(self) -> SiteManifest:
@@ -157,7 +182,8 @@ class SiteManifest(_SiteModel):
                                   include_source_files=self.capabilities.source_files,
                                   mode=self.mode,
                                   publication_profile=(self.publication or {}).get("profile"),
-                                  analysis_sections=(self.publication or {}).get("analysis_sections", []))
+                                  analysis_sections=(self.publication or {}).get("analysis_sections", []),
+                                  include_audio=self.audio is not None)
         if (self.capabilities.research != scope.include_research
                 or (self.research.snapshot is not None) != scope.include_research
                 or (not scope.include_research and self.research.revision_count != 0)
@@ -170,6 +196,25 @@ class SiteManifest(_SiteModel):
                 self.mode != "reader" or not scope.analysis_sections or not self.capabilities.analysis
                 or self.analysis is None or "analysis.html" not in self.files):
             raise ValueError("Version 2 requires explicitly selected reader analysis")
+        if (self.audio is not None) != (self.schema_version == SITE_AUDIO_SCHEMA):
+            raise ValueError("Version 3 requires explicitly selected reader audio")
+        audio_files = {name for name in self.files if name.startswith("assets/audio/")}
+        if audio_files != ({track.file for track in self.audio.tracks} if self.audio else set()):
+            raise ValueError("Audio files must exactly match the disclosed chapter tracks")
+        if self.audio is not None:
+            cap = (self.publication or {}).get("max_chapter")
+            if (type(cap) is not int or self.audio.source_sha256 != self.manuscript.source_sha256
+                    or len({track.chapter for track in self.audio.tracks}) != len(self.audio.tracks)
+                    or self.capabilities.analysis != bool(scope.analysis_sections)
+                    or (self.analysis is not None) != bool(scope.analysis_sections)
+                    or (scope.analysis_sections and "analysis.html" not in self.files)):
+                raise ValueError("Reader audio, chapter scope and analysis inventory disagree")
+            for track in self.audio.tracks:
+                stored = self.files.get(track.file)
+                if (track.chapter > cap or stored is None or stored.sha256 != track.sha256
+                        or stored.byte_length != track.byte_length
+                        or track.file != f"assets/audio/{track.sha256}.wav"):
+                    raise ValueError("Reader audio exceeds its chapter cap or file inventory")
         return self
 
 

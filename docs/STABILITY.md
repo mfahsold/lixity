@@ -407,14 +407,16 @@ optional and require listening review.
 
 ### Continuous Flow-Matching diffusion synthesis limits (`f5-tts`)
 
-F5-TTS Flow-Matching (`SWivid/F5-TTS`, `HPI-DAP/F5-TTS-German`) models speech generation
-via an Ordinary Differential Equation (ODE) flow field over mel-spectrogram features rather
-than discrete autoregressive tokens. This eliminates token loop repetitions, but synthesis
-speed depends directly on ODE solver step counts. Synthesis remains non-deterministic with
-respect to random flow trajectories unless an explicit seed is fixed. Flow matching clones
-prosody and acoustic room characteristics directly from the reference recording;
-low-quality or noisy references degrade generation accordingly. The author must verify
-intelligibility, tempo, and breathing by ear before chapter rendering.
+The current bundled F5 loader is unavailable. Existing profiles and retained
+artifacts remain readable; transport, cache or export support does not establish
+a working local inference runtime. Do not select an F5 profile expecting model
+installation or a worker switch. See [retained F5 profiles](AUDIO.md#retained-f5-tts-profiles-unreleased)
+for the explicit external-worker boundary and current alternatives.
+
+No model architecture guarantees repetition-free, intelligible or speaker-matched
+output. A compatible external runtime, its checkpoint and reference recording
+need their own listening and resource checks; previous synthesis descriptions
+are not validation of a currently installed runtime.
 
 ### Manual manuscript association limits
 
@@ -612,7 +614,7 @@ Historical fixes and release-specific evidence remain in [CHANGELOG](https://git
 | Large dashboards | Bundled assets and full offline text increase document size; opening paragraph details lazily does not remove the retained text payload. | [Architecture](ARCHITECTURE.md) |
 | Workspace status | File-derived status is advisory; timestamps and restored files can be misleading. Unknown is not success. | [Workspace interfaces](AGENTS.md) |
 | Optional project adapters | Core checks do not verify a project's launcher, export tools or local runtime. | [Installation](INSTALLATION.md) |
-| Publication formats | Font coverage and layout limits remain; no EPUB, PDF/UA or PDF/X certification is claimed. | [PDF export](USAGE.md#download-a-manuscript-pdf) |
+| Publication formats | Font coverage and layout limits remain; no EPUB, PDF/UA or PDF/X certification is claimed. | [PDF export](WORKSPACE.md#download-a-manuscript-pdf) |
 | Agreement drafts | Built-in PDF fonts do not cover every script; download text for external rendering and retain reviewed documents in project storage. | [Project interface](AGENTS.md) |
 
 Empty optional signal fields, unavailable small-sample metrics and missing

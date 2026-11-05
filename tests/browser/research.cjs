@@ -386,8 +386,13 @@ server.serve_forever()
     await page.locator('#modal-research-revision [data-close-modal]').first().click();
     for (const width of [1440, 390]) {
       await page.setViewportSize({width, height: 900});
-      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       await page.locator('#rtab-search').screenshot({path: path.join(artifacts, `search-records-${width}.png`)});
+      const overflow = await page.evaluate(() => ({width:innerWidth, actual:document.documentElement.scrollWidth,
+        elements:Array.from(document.querySelectorAll('body *')).filter(node => {
+          const rect = node.getBoundingClientRect(); return rect.width && rect.right > innerWidth + 1;
+        }).slice(0, 12).map(node => ({tag:node.tagName, id:node.id, className:node.className,
+          right:node.getBoundingClientRect().right, width:node.getBoundingClientRect().width}))}));
+      assert.ok(overflow.actual <= width, JSON.stringify(overflow) + ' · ' + artifacts);
     }
     await page.setViewportSize({width: 1440, height: 1000});
     await page.locator('#r-search-scope').selectOption('sources');
@@ -417,10 +422,10 @@ server.serve_forever()
     await page.locator('[data-rtab=search]').click();
     await page.locator('#research-search-results [data-use-passage=dossier]').click();
     await expect(page.locator('#rtab-dossiers')).toBeVisible();
-    await expect(page.locator('#r-dos-eids')).toHaveValue(fixture.passage);
+    await expect(page.locator('#r-dos-eids')).toHaveValues([fixture.passage]);
     await page.locator('[data-rtab=search]').click();
     await page.locator('#research-search-results [data-use-passage=dossier]').click();
-    await expect(page.locator('#r-dos-eids')).toHaveValue(fixture.passage);
+    await expect(page.locator('#r-dos-eids')).toHaveValues([fixture.passage]);
     if (!await page.locator('#r-dos-composer').evaluate(node => node.open)) await page.locator('#r-dos-composer > summary').click();
     await page.locator('#r-dos-title').fill('Linked search note');
     await page.locator('#r-dos-body').fill('A dossier assembled from a selected passage.');
@@ -453,7 +458,8 @@ server.serve_forever()
     await page.locator('#r-decision-create-btn').click();
     await expect(page.locator('#research-decisions-list')).toContainText('Move the date');
     await expect(page.locator('#research-decisions-list')).toContainText('Earlier meeting.');
-    await expect(page.locator('#research-decisions-list')).toContainText(claimId);
+    await expect(page.locator('#research-decisions-list')).toContainText(claimTitle);
+    await expect(page.locator('#research-decisions-list')).not.toContainText(claimId);
     const decisions = await (await page.request.get(fixture.url + '/api/research/decisions')).json();
     assert.equal(decisions.decisions[0].claim_id, claimId);
     assert.equal(decisions.decisions[0].deviation_from_fact, true);
@@ -657,7 +663,8 @@ server.serve_forever()
       delete window.restoreResearchDiagramRenderer;
       delete window.resolveResearchDiagram;
     });
-    await expect(page.locator('#research-revision-history-detail code.lixity-ref')).toContainText('internal (dossier/test-ref)');
+    await expect(page.locator('#research-revision-history-detail .lixity-ref')).toHaveText('internal');
+    await expect(page.locator('#research-revision-history-detail .lixity-ref')).toHaveAttribute('title', 'Internal research reference');
     assert.equal(await page.locator('#research-revision-history-detail a[href*="javascript"]').count(), 0);
     await page.locator('#research-revision-history-detail [data-source-toggle]').click();
     await expect(page.locator('#research-revision-history-detail .research-dossier-body-source')).toBeVisible();
@@ -777,7 +784,8 @@ server.serve_forever()
     assert.equal(revisedLink.record.claim_ref.revision, 2);
     assert.equal(originalLink.record.claim_ref.revision, 1);
     await page.locator(`#research-claims-list [data-research-history=claim][data-record-id="${claimId}"]`).click();
-    await expect(page.locator('#research-revision-history-detail')).toContainText(evidenceId);
+    await expect(page.locator('#research-revision-history-detail')).toContainText('Evidence link');
+    await expect(page.locator('#research-revision-history-detail')).not.toContainText(evidenceId);
     await expect(page.locator('#research-revision-kind')).toContainText('Claim · Version 2');
     await page.keyboard.press('Escape');
     await page.locator('[data-rtab=decisions]').click();
@@ -822,7 +830,7 @@ server.serve_forever()
     await page.locator('#research-revision-options').evaluate(element => {element.open = true;});
     await field('rationale').fill('Reflect both reviewed dossiers.');
     await page.locator('#research-revision-options').evaluate(element => {element.open = true;});
-    await field('dossier_ids').fill(dossierId);
+    await field('dossier_ids').selectOption(dossierId);
     await chooseChange('supersession');
     await page.locator('#research-revision-batch-add').click();
     await expect(page.locator('#research-revision-status')).toContainText('nothing saved');
@@ -900,7 +908,7 @@ server.serve_forever()
     await page.locator(`[data-load-evidence="${claimId}"]`).click();
     await page.locator(`[data-research-revise=evidence_link][data-record-id="${evidenceId}"]`).click();
     await expect(field('claim_revision')).toHaveValue('2');
-    await field('claim_id').fill(otherClaimId);
+    await field('claim_id').selectOption(otherClaimId);
     await expect(field('claim_revision')).toHaveValue('');
     await page.locator('#research-revision-options').evaluate(element => {element.open = true;});
     await field('claim_revision').fill('2');

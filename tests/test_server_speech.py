@@ -18,7 +18,7 @@ def speech_server(tmp_path, monkeypatch):
     import lixity.speech_jobs as jobs
 
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "user-cache"))
-    monkeypatch.setattr("lixity.speech_status.worker_health", lambda target: {
+    monkeypatch.setattr("lixity.speech_status.worker_health", lambda target, **kwargs: {
         "target": target, "state": "unavailable", "transport": "loopback" if target == "local" else "ssh",
         "model": None,
     })
@@ -188,10 +188,10 @@ def test_speech_fixture_does_not_probe_external_workers(speech_server, monkeypat
     def forbidden(*_args, **_kwargs):
         raise AssertionError("Synthetic speech fixture contacted a worker")
 
-    monkeypatch.setattr("lixity.speech_qwen.urllib.request.build_opener", forbidden)
+    monkeypatch.setattr("lixity.speech_worker.urllib.request.build_opener", forbidden)
     response = send(port, "/api/speech?" + urlencode(context(source, handler)))
     assert response.status == 200
-    assert [worker["state"] for worker in json.loads(response.body)["workers"]] == ["unavailable", "unavailable"]
+    assert [worker["state"] for worker in json.loads(response.body)["workers"]] == ["unavailable"] * 4
 
 
 def test_speech_view_exposes_actual_workers_without_sensitive_details(speech_server, monkeypatch):
@@ -200,7 +200,7 @@ def test_speech_view_exposes_actual_workers_without_sensitive_details(speech_ser
     port, source, handler, _observed = speech_server
     observed_targets = []
 
-    def health(target):
+    def health(target, **kwargs):
         observed_targets.append(target)
         return {"target": target, "state": "ready" if target == "local" else "unavailable",
                 "transport": "loopback" if target == "local" else "ssh",
@@ -211,7 +211,7 @@ def test_speech_view_exposes_actual_workers_without_sensitive_details(speech_ser
     assert response.status == 200
     data = json.loads(response.body)
     assert {row["target"] for row in data["workers"]} == {"local", "jetson"}
-    local, remote = data["workers"]
+    local, remote = data["workers"][:2]
     assert local["state"] == "ready" and local["model"] == QWEN_BASE_MODEL
     assert remote["state"] == "unavailable" and remote["model"] is None
     assert all(row["model_matches"] is None for row in data["workers"])
@@ -229,12 +229,102 @@ def test_speech_view_rejects_stale_context_before_probing_workers(speech_server,
     assert calls == []
 
 
+def test_recording_save_reports_incompatible_activation_without_switching_engine(speech_server):
+    import base64
+
+    from lixity.speech import generate_silence_wav
+
+    port, source, _handler, _observed = speech_server
+    settings_path = source.parent / "lixity.toml"
+    before = settings_path.read_bytes() if settings_path.exists() else None
+    response = send(port, "/api/audio-microphone", payload={
+        "action": "save_reference", "profile_id": "narrator", "transcript": "Synthetic reference.",
+        "audio": base64.b64encode(generate_silence_wav(1)).decode(),
+    })
+    assert response.status == 200
+    data = json.loads(response.body)
+    assert data["ok"] is True and data["reference"]["id"]
+    assert data["activation"]["state"] == "failed"
+    assert data["activation"]["message"]
+    assert (settings_path.read_bytes() if settings_path.exists() else None) == before
+
+
+@pytest.mark.parametrize("changed_file", ["manuscript.md", "lixity.toml"])
+def test_bound_recording_save_rejects_changed_context_before_any_write(speech_server, changed_file):
+    import base64
+
+    from lixity.speech_references import list_references
+
+    port, source, handler, _observed = speech_server
+    payload = {**context(source, handler), "action": "save_reference", "profile_id": "narrator",
+               "audio": base64.b64encode(generate_silence_wav(1)).decode(), "transcript": "Synthetic reference."}
+    changed = source.parent / changed_file
+    changed.write_text(changed.read_text() + "\n", encoding="utf-8")
+    settings_path = source.parent / "lixity.toml"
+    before = settings_path.read_bytes()
+    response = send(port, "/api/audio-microphone", payload=payload)
+    assert response.status == 409
+    assert json.loads(response.body)["ok"] is False
+    assert list_references(source.parent) == []
+    assert settings_path.read_bytes() == before
+
+
+@pytest.mark.parametrize("missing", ["project_token", "source_sha256"])
+def test_bound_recording_save_rejects_partial_context_before_any_write(speech_server, missing):
+    import base64
+
+    from lixity.speech_references import list_references
+
+    port, source, handler, _observed = speech_server
+    payload = {**context(source, handler), "action": "save_reference", "profile_id": "narrator",
+               "audio": base64.b64encode(generate_silence_wav(1)).decode(), "transcript": "Synthetic reference."}
+    del payload[missing]
+    settings_path = source.parent / "lixity.toml"
+    before = settings_path.read_bytes()
+    response = send(port, "/api/audio-microphone", payload=payload)
+    assert response.status == 400
+    assert list_references(source.parent) == []
+    assert settings_path.read_bytes() == before
+
+
+@pytest.mark.parametrize("refresh_error", [None, ValueError, RuntimeError])
+def test_bound_recording_save_activates_only_the_validated_reference_profile(speech_server, monkeypatch, refresh_error):
+    import base64
+
+    from lixity.config import prepare_project_settings, read_explicit_project_config
+    from lixity.speech_profiles import AudioProfile, AudioSettings, parse_audio_settings
+    from lixity.speech_references import list_references, save_reference
+
+    port, source, handler, _observed = speech_server
+    original = save_reference(source.parent, generate_silence_wav(1), "Original synthetic reference.")
+    profile = AudioProfile(engine="qwen3-base", voice="reference", reference_id=original.id)
+    audio = AudioSettings(selected="narrator", profiles={"narrator": profile})
+    prepare_project_settings(source.parent, {"audio": audio.model_dump(by_alias=True)}).commit()
+    handler.refresh()
+    payload = {**context(source, handler), "action": "save_reference", "profile_id": "narrator",
+               "audio": base64.b64encode(generate_silence_wav(1)).decode(), "transcript": "New synthetic reference."}
+    if refresh_error:
+        def fail_refresh():
+            raise refresh_error("Synthetic dashboard rebuild failure")
+        monkeypatch.setattr(handler, "refresh", staticmethod(fail_refresh))
+    response = send(port, "/api/audio-microphone", payload=payload)
+    assert response.status == 200
+    result = json.loads(response.body)
+    assert result["activation"]["state"] == "activated"
+    saved = parse_audio_settings(read_explicit_project_config(source.parent)["audio"])
+    assert saved.profiles["narrator"].reference_id == result["reference"]["id"] != original.id
+    assert saved.profiles["narrator"].engine == "qwen3-base"
+    assert len(list_references(source.parent)) == 2
+    assert result["reload_required"] is bool(refresh_error)
+    assert bool(result["refresh_warning"]) is bool(refresh_error)
+
+
 @pytest.mark.parametrize("changed_file", ["manuscript.md", "lixity.toml"])
 def test_speech_view_rechecks_context_after_probing_workers(speech_server, monkeypatch, changed_file):
     port, source, handler, _observed = speech_server
     bound = context(source, handler)
 
-    def health(target):
+    def health(target, **kwargs):
         if target == "local":
             changed = source.parent / changed_file
             changed.write_text(changed.read_text() + "\n", encoding="utf-8")
@@ -252,7 +342,7 @@ def test_preview_and_download_are_bound_to_actual_source_without_writes(speech_s
     assert response.status == 200, response.body
     data = json.loads(response.body)
     assert data["settings"]["selected"] == "narrator" and len(data["chapters"]) == 2
-    assert set(data["capabilities"]) == {"qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "f5-tts", "openai-compatible"}
+    assert set(data["capabilities"]) == {"qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "f5-tts", "ims-toucan", "openai-compatible"}
     assert data["requires_migration"] is False
     assert data["capabilities"]["qwen3"]["instructions"] is True
     assert data["settings"]["profiles"]["narrator"]["engine"] == "qwen3"
@@ -276,8 +366,50 @@ def test_preview_and_download_are_bound_to_actual_source_without_writes(speech_s
     assert audio.headers["content-type"] == "audio/wav"
     assert observed == ["A bird crosses the garden."]
     assert source.read_bytes() == before
+    assert not (source.parent / ".lixity/audio/exports").exists()
     source.write_text(source.read_text() + "Changed source.\n")
     assert send(port, "/api/speech-audio?" + query).status == 409
+
+
+def test_finished_chapter_survives_temporary_job_cleanup(speech_server):
+    from lixity.speech_artifacts import list_project_audio, read_project_audio
+
+    port, source, handler, _observed = speech_server
+    bound = context(source, handler)
+    response = send(port, "/api/speech-render", payload={**bound, "mode": "chapter", "chapter": 1})
+    assert response.status == 202, response.body
+    query = urlencode({**bound, "id": json.loads(response.body)["job"]["id"]})
+    for _ in range(100):
+        state = json.loads(send(port, "/api/speech-job?" + query).body)["job"]["state"]
+        if state not in ("pending", "running"):
+            break
+        time.sleep(.01)
+    assert state == "ready"
+    entries = list_project_audio(source.parent, source_sha256=bound["source_sha256"], max_chapter=2)
+    assert len(entries) == 1 and entries[0].chapter == 1
+    cancelled = send(port, "/api/speech-cancel", payload={**bound, "id": json.loads(response.body)["job"]["id"]})
+    assert cancelled.status == 200
+    assert read_project_audio(source.parent, entries[0]) == generate_silence_wav(.01)
+
+
+def test_explicit_chapter_import_is_bound_and_does_not_create_voice_reference(speech_server):
+    import base64
+
+    port, source, handler, _observed = speech_server
+    bound = context(source, handler)
+    payload = {**bound, "chapter": 2, "audio": base64.b64encode(generate_silence_wav(.1)).decode()}
+    imported = send(port, "/api/speech-audio-import", payload=payload)
+    assert imported.status == 200, imported.body
+    entry = json.loads(imported.body)["artifact"]
+    assert entry["chapter"] == 2 and entry["origin"] == "imported"
+    assert not (source.parent / ".lixity/audio-references").exists()
+    listed = send(port, "/api/speech-audio-artifacts?" + urlencode(bound))
+    assert listed.status == 200, listed.body
+    assert json.loads(listed.body)["artifacts"] == [entry]
+    assert send(port, "/api/speech-audio-import", payload={**payload, "chapter": 99}).status == 400
+    assert send(port, "/api/speech-audio-import", payload={**payload, "source_sha256": "0" * 64}).status == 409
+    assert send(port, "/api/speech-audio-import", payload={**payload, "audio": "invalid@@"}).status == 400
+    assert send(port, "/api/speech-audio-import", payload={**payload, "path": "/private/audio.wav"}).status == 400
 
 
 def test_global_lexicon_reaches_ui_draft_plan_and_survives_profile_save(speech_server):
@@ -548,7 +680,7 @@ voice = "en_US-lessac-medium"
     response = send(port, "/api/speech?" + urlencode(bound))
     assert response.status == 200, response.body
     data = json.loads(response.body)
-    assert data["settings"] is None and set(data["capabilities"]) == {"qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "f5-tts", "openai-compatible"}
+    assert data["settings"] is None and set(data["capabilities"]) == {"qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "f5-tts", "ims-toucan", "openai-compatible"}
     assert "Piper" in data["configuration_error"] and "audio-migrate" in data["configuration_error"]
     response = send(port, "/api/speech-render", payload={**bound, "mode": "preview", "chapter": 1})
     assert response.status == 400, response.body

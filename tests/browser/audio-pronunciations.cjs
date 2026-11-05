@@ -11,7 +11,7 @@ from pathlib import Path
 from http.server import ThreadingHTTPServer
 from lixity.server import LixityServerHandler
 import lixity.speech_status as speech_status
-speech_status.worker_health = lambda target: {'target':target, 'state':'unavailable',
+speech_status.worker_health = lambda target, **kwargs: {'target':target, 'state':'unavailable',
     'transport':'loopback' if target == 'local' else 'ssh', 'model':None}
 root = Path(sys.argv[1]); source = root / 'manuscript.md'
 source.write_text('## One\\n\\nA synthetic passage.\\n')
@@ -79,7 +79,7 @@ server.serve_forever()
       assert.equal(await page.locator('#speech-pronunciation_term').inputValue(), 'Example', 'Removing a profile cannot erase an unfinished entry');
       assert.equal(await page.locator('#speech-profile').inputValue(), 'narrator');
       await page.locator('[data-speech-action=pronunciation_apply]').click();
-      assert.match(await page.locator('#modal-speech [role=status]').textContent(), /\S/);
+      assert.match(await page.locator('#speech-status').textContent(), /\S/);
       assert.match(await page.locator('#speech-pronunciations').inputValue(), /Example=Eksampl/);
       await page.locator('[data-speech-action=close]').click();
       assert.equal(await page.locator('#modal-speech').isVisible(), true, 'Closing preserves an unfinished entry');
@@ -96,7 +96,7 @@ server.serve_forever()
       } else {
         await page.route('**/api/settings', route => route.fulfill({status:409, json:{ok:false, message:'Synthetic save conflict'}}), {times:1});
         await page.locator('[data-speech-action=save]').click();
-        await page.waitForFunction(() => document.querySelector('#modal-speech [role=status]').textContent === 'Synthetic save conflict');
+        await page.waitForFunction(() => document.querySelector('#speech-status').textContent === 'Synthetic save conflict');
         assert.equal(await page.locator('#speech-pronunciation_term').isDisabled(), false, 'Failed save unlocks the preserved draft');
         assert.match(await page.locator('#speech-pronunciations').inputValue(), /River=Riwer/);
         let release, began;

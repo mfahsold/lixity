@@ -59,7 +59,7 @@ threshold and publication component schemas, and native-settings persistence/ses
 v0.7.1 adds `characters_schema` from the owning character-profile model.
 `configuration.site_publications_schema` describes curated website profiles in
 the selected root's `lixity.toml` or `[tool.lixity]` in its `pyproject.toml`;
-see the [complete TOML example and inclusion boundaries](USAGE.md#curate-a-reader-publication).
+see the [complete TOML example and inclusion boundaries](WORKSPACE.md#curate-a-reader-publication).
 It describes installed defaults and validation vocabulary, never effective project
 values or a complete schema for every project setting. Discovery commands read no
 project configuration. Older releases use unfiltered `about --json` and command
@@ -100,7 +100,7 @@ saved context under `#workspace-context-panel [data-passage-research]`. It reads
 exact saved anchors and pinned claim/dossier records, with separately labelled
 current dossier decisions. It performs no retention, repinning or semantic
 mention recognition. Dedicated Review and existing exact-version viewers retain
-their roles; see [reader guidance](USAGE.md#link-a-manuscript-quote-to-a-claim).
+their roles; see [reader guidance](WORKSPACE.md#link-a-manuscript-quote-to-a-claim).
 
 `service` manages only its owned local process and starts an empty workspace by
 default. `serve` runs in the foreground. CLI analysis/research/build calls do not
@@ -230,7 +230,7 @@ Source/configuration/threshold changes conservatively invalidate earlier
 matching decisions. Missing state is distinct from corrupt/unreadable state;
 unmatched earlier observations are retained and counted separately. Reads
 write nothing; saved state contains identities and author assertions, not prose.
-See the [review workflow and storage limits](USAGE.md#reading-paragraphs).
+See the [review workflow and storage limits](USAGE.md#lixity-analysis-review).
 
 `profile --layer KEY --evidence --json` adds a separate opt-in
 `meta.schema_version: "paragraph-layer-evidence/1"`. Its selected rows add
@@ -351,7 +351,7 @@ layout or localized text. All user text remains inert.
 
 Manuscript, Research and Project are separate views; project actions remain
 reachable from each. Import preview writes nothing until confirmation.
-[Dashboard usage](USAGE.md#dashboard-workflow) owns navigation workflows.
+[Dashboard usage](WORKSPACE.md#dashboard-workflow) owns navigation workflows.
 
 **Since v0.7.2:** the interactive manuscript remains continuous.
 Analysis visibility, document/overview and the active Values/dossier tool are
@@ -931,7 +931,7 @@ and return at most 200 flat outputs. `truncated: true` means incomplete, includi
 conservative termination exactly at a scan boundary. Availability is metadata,
 not integrity or provenance. Returned local paths are private and are never
 included by this feature in static reports/reading websites. For limits and
-human interpretation, see [project inspection](USAGE.md#inspect-project-structure).
+human interpretation, see [project inspection](WORKSPACE.md#inspect-project-structure).
 
 `GET /api/project-structure?project_token=...` requires the current token from
 `#settings-form` and an explicitly selected project. It rejects absent/duplicate
@@ -999,7 +999,8 @@ pending sharing. This changes no endpoint, response envelope or write guard.
 **Since v0.7.4:** `POST /api/site-export` requires
 `{"project_token":"<current manuscript metadata token>","include_research":false,"include_source_files":false}`.
 Optional fields are `mode` (`review`, `reader`, `companion`; default `review`),
-`publication_profile`, `max_chapter` and `analysis_sections`. The installed `export-site` command's
+`publication_profile`, `max_chapter`, `analysis_sections` and the unreleased
+`include_audio` boolean (default false). The installed `export-site` command's
 `scope_schema` describes the strict shared request options. Review mode rejects
 profile/cap and requires research inclusion for source files. Reader/companion
 require a root-local profile and reject raw research inclusion; selected source
@@ -1017,10 +1018,10 @@ checks apply to every format.
 Python callers use `lixity.site_export.prepare_site(project, *, manuscript=None,
 language=None, title=None, thresholds=None, include_research=False,
 include_source_files=False, mode="review", publication_profile=None,
-max_chapter=None, analysis_sections=None)` to obtain a `SiteBundle` with `files`, `manifest` and `to_zip()`.
+max_chapter=None, analysis_sections=None, include_audio=False)` to obtain a `SiteBundle` with `files`, `manifest` and `to_zip()`.
 `export_site(project, output, **same_options)` writes a new directory and returns
-its `lixity-read-only-site/1` or `/2` manifest, depending on the selected
-analysis. Existing destinations are rejected.
+its `lixity-read-only-site/1`, `/2` or `/3` manifest, depending on the selected
+analysis and audio. Existing destinations are rejected.
 The inline envelope is `lixity-read-only-site-data/1`. Review reads preserve native
 response contracts; mutation and unknown requests fail closed. Curated formats
 instead carry `lixity-reader-publication/1` with an empty response table. A
@@ -1037,8 +1038,59 @@ and `capabilities.analysis=true`. Other exports retain the version 1 contract.
 Preflight reports opt-in `analysis_sections`, the entry page as `sizes.html_bytes`,
 the second page as `analysis_html_bytes` and their sum as `total_html_bytes`. The inline site
 data schema remains version 1. An export cap removes content before serialization; local chapter
-progress only hides included content. See [sharing scope](USAGE.md#export-a-reading-website)
+progress only hides included content. See [sharing scope](WORKSPACE.md#export-a-reading-website)
 and [projection semantics](research/DATA_MODEL.md#reading-website-projection).
+
+**Unreleased reader audio:** `include_audio:true` is accepted only for reader mode.
+The CLI spelling is `--include-audio`; false is omitted from serialized default
+options. Export selects retained chapter artifacts matching the exact manuscript
+SHA-256 and chapter cap. It does not invoke a worker. Missing/stale-only selection
+fails; partial chapter coverage is valid and visible.
+
+`audio-import --project ROOT --audio WAV --chapter N --source-sha256 HASH
+[--manuscript manuscript.md]` retains an explicitly selected chapter recording after checking
+its manuscript binding. It accepts complete mono/stereo 16-bit PCM WAV at 8–192 kHz,
+without automatic conversion or transcript inference. The optional file selector uses
+the project's normal manuscript resolution; the caller supplies the exact source hash.
+
+The native `GET /api/speech-audio-artifacts` read requires the current
+`project_token` and `source_sha256`; it returns verified metadata for the selected
+source. `POST /api/speech-audio-import` accepts exactly those context fields,
+`chapter` and base64 `audio`. Its raw WAV limit is 48 MiB within a 72 MiB JSON
+request envelope; the CLI supports up to 200 MiB. Both use
+`lixity-chapter-audio/1`, with explicit `origin:"imported"`, source/audio hashes,
+chapter, byte length, duration, channel count, sample rate/width and frame count.
+The latest successful recording per chapter is retained under
+`.lixity/audio/exports`; previews and author-reference audio do not enter this store.
+
+Audio changes the site manifest to `lixity-read-only-site/3` and the curated
+publication to `lixity-reader-publication/2`. Both carry the same `audio` object:
+
+```json
+{
+  "schema_version": "lixity-reader-audio/1",
+  "source_sha256": "<exact manuscript SHA-256>",
+  "tracks": [{
+    "chapter": 1,
+    "title": "<chapter title>",
+    "file": "assets/audio/<audio SHA-256>.wav",
+    "sha256": "<audio SHA-256>",
+    "byte_length": 48044,
+    "duration_seconds": 1.0,
+    "origin": "generated"
+  }]
+}
+```
+
+`origin` is `generated` or `imported`. This is a public playback inventory, not
+an alignment or transcript-verification result. It excludes profiles, reference
+IDs/bytes/transcripts and service endpoints. The ordinary `/1` and analysis-only
+`/2` site contracts and publication `/1` remain unchanged when audio is absent.
+No reference-save, hardware or synthesis capabilities are enabled in static copies.
+Local `file:` playback avoids Web Audio routing because browser origin policy can
+silence it; the shared controls remain usable and the spectrum reports unavailable.
+Serving the same folder over local HTTP permits the measured spectrum without any
+speech-service request.
 
 The 10,000-revision limit applies
 only to authored history in review exports with `include_research=true`:
@@ -1562,7 +1614,7 @@ with `lixity-site-preflight/1`, measuring the actual prepared HTML/ZIP/files and
 media packaging/attribution-presence counts. No download or source writes occur;
 selection/context conflicts fail as for export. No mobile or rights verification
 is inferred. CLI `export-site --preflight [--json]` requires no output destination;
-`--output` is refused in this mode. See [export checks](USAGE.md#check-a-reading-website-before-exporting).
+`--output` is refused in this mode. See [export checks](WORKSPACE.md#check-a-reading-website-before-exporting).
 
 Export data, revision-count and bundle-limit failures use
 `lixity-site-preflight-error/1`: `ok:false`,
@@ -1604,6 +1656,28 @@ remain valid; adding an external profile requires an explicit schema `/4`
 upgrade through `audio-migrate --to-schema-4` and the existing snapshot/backup
 apply contract. Retained references are not migrated or deleted.
 
+**Unreleased:** `lixity-audio-settings/5` adds `engine="ims-toucan"` with
+`voice="reference"`, a saved `reference_id`, language `de|en`, separate `phonemes`
+(term→IPA mapping) and sparse `prosody` scalars. `audio-migrate --to-schema-5`
+uses the same reviewed snapshot and external backup contract. Existing profiles
+keep their model, identity and settings. `prosody` fields are
+`duration_scaling_factor` (0.5–2), `pitch_variance_scale` (0–2),
+`energy_variance_scale` (0–2), `pause_duration_scaling_factor` (0–3) and
+`prosody_creativity` (0–1.2). Per-direction explicit keys override profile defaults.
+No natural-language acting interpretation or absolute pitch calibration is
+implemented. Free instructions can be retained/exported but fail Toucan rendering.
+Unsupported engines reject phonetic and structured controls.
+
+Structured direction records use `lixity-audio-directions/2`. Plans/timelines
+containing new phonetic or prosody data use `lixity-speech-plan/2` and
+`lixity-audio-timeline/2`; older data retains its previous representation. Audio
+verification accepts both versions. SSML carries IPA elements with explicit
+warnings for unrepresentable numeric controls. All render/cache/reference paths
+share native-engine metadata: Qwen/Coqui local 8769 (Qwen Jetson tunnel 8770),
+F5 local 8771, Toucan local 8772. Worker inventory rows add `engines` listing the
+engine identities sharing that socket, so repeated `target="local"` rows are
+not interchangeable. A ready worker is still checked for the exact selected model.
+
 Only an explicit render sends a bounded JSON request to `/v1/audio/speech`.
 The payload is `model`, `input`, `voice`, `response_format="wav"`, plus
 `instructions` only with declared support. Model/voice values are not Qwen
@@ -1630,7 +1704,7 @@ Supplied `lixity-audio-transcript/1` has exact `audio_sha256`, `words` entries `
 nonoverlapping finite second timestamps within the recording. Wrong hashes
 and malformed timing fail. Missing expected words have no invented timestamp;
 neighboring transcript timings only provide bounds. An inter-word gap is not
-necessarily silence. See [Usage](USAGE.md#audio-export-and-external-providers-unreleased),
+necessarily silence. See [Usage](AUDIO.md#audio-export-and-external-providers-unreleased),
 [Methods](METHODS.md) and [Stability](STABILITY.md) for limits.
 
 The native `POST <prefix>/speech-plan` response keeps `plan` and adds `timeline`,
@@ -1659,14 +1733,15 @@ The browser limits audio to 96 MiB and transcript JSON to 8 MiB; larger bounded
 jobs use the CLI. No arbitrary server file path or browser-supplied prose is an
 audit input.
 
-`POST <prefix>/audio-schema` previews schema `/4` with the usual source/project
+`POST <prefix>/audio-schema` previews schema `/4` by default; explicit
+`schema_version="lixity-audio-settings/5"` selects `/5`. Both use the usual source/project
 binding and returns `{ok,migration}`. Apply additionally requires `apply=true`
 and the exact preview `snapshot`. It writes a new private configuration backup
 under `$XDG_DATA_HOME/lixity/audio-backups` (default `~/.local/share`), performs
 the existing guarded migration, and returns its backup path. It neither replaces
 native profile identities nor edits retained source/reference bytes.
 Schema upgrade previews include `source_schema`, `retained_profile_count`,
-`creates_default_profile` and `configuration_required`. Schema `/4` permits
+`creates_default_profile` and `configuration_required`. Schemas `/4` and `/5` permit
 only the explicit unconfigured pair `selected=""`, `profiles={}` when no voice
 has been chosen; older schemas retain their nonempty-profile invariant.
 Unconfigured projects require a profile before export/render. Explicit external
@@ -1687,10 +1762,12 @@ applicable. CLI `--speed` overrides all profiles for that run without saving.
 Non-1.0 factors require FFmpeg on the render host. Structural pauses stay unchanged.
 Style instructions do not implement precise speed control.
 
-Unreleased main adds `f5-tts` (Flow-Matching Diffusion, port 8771), `coqui` (German Thorsten VITS) and `coqui-reference`
-(Thorsten plus OpenVoice V2) engines. Single-narrator integrity (`same_narrator`) ensures
-the narrator voice remains constant across the manuscript; delivery references vary
-intonation without voice switching. Saved profiles require audio schema `/3`
+Unreleased main retains `f5-tts` profile/transport support (port 8771), with its
+bundled loader unavailable, and adds `coqui` (German Thorsten VITS) and
+`coqui-reference` (Thorsten plus OpenVoice V2). Single-narrator checks
+(`same_narrator`) reject incompatible profile assignments; they cannot establish
+that different reference recordings contain the same speaker. The author must
+review speaker identity and resulting delivery. Saved profiles require audio schema `/3`
 and a reviewed `audio-migrate --to-schema-3` upgrade. They require a matching optional local
 worker, reject free-text delivery instructions and use existing pronunciation,
 pause and reference mechanisms. Older versions cannot read these engine IDs.
@@ -1718,25 +1795,43 @@ returns its ID with a `quality` object (`lixity-audio-reference-quality/1`:
 descriptive level, noise, clipping and bandwidth measurements with
 uncalibrated heuristic notes, not a quality score). `audio-reference inspect
 --project PATH --reference-id ID` returns the same object plus `reference_id`
-for an existing reference; both are read-only. `audio-reference record --project PATH
+for an existing reference. Inspect is read-only; create retains the reviewed WAV
+and transcript under `.lixity/audio-references/` (separate from Research backups). `audio-reference record --project PATH
 [--duration SEC] [--gain N] [--calibration-text] [--variant phonetic|short] [--language de|en] [--transcript TXT | --transcript-file FILE] [-o OUT.wav]` records directly
-from hardware via OSS tools (`arecord`, `pw-record`, `ffmpeg`) and stores verified reference bytes.
+from hardware via OSS tools (`arecord`, `pw-record`, `ffmpeg`). With a supplied
+transcript or calibration text, it saves a reference; without either, no reference
+is created. `-o` separately writes the captured WAV. The supplied text is not
+automatically verified against the recorded speech.
 When `--calibration-text` is passed, a live teleprompter prints the phonetically balanced text ("Nordwind und Sonne").
 `audio-reference generate --project PATH [--language de|en] [--variant phonetic|short] [--voice-description DESC]` generates
 a synthetic reference audio from the calibration text via VoiceDesign.
 `audio-reference calibration-text [--language de|en] [--variant phonetic|short]` prints the calibration passage.
 `audio-microphone [status|set|devices|calibrate] [--gain N] [--card C] [--control NAME] [--json]` inspects or sets hardware capture gain and enumerates detected audio devices.
-`audio-calibrate [--gain N] [--duration SEC] [--json]` performs an automated input level burst calibration
-returning `lixity-audio-calibration/1` with peak dBFS, clipping, noise floor and headroom verdicts.
-The browser app includes a synchronized manuscript teleprompter (`#reader-teleprompter`, key `P`) with auto-scroll,
-direction cues, phonetic pronunciations via semantic ruby tags, and ambient historical research dossier images.
+`audio-calibrate [--gain N] [--duration SEC] [--json]` measures one test recording,
+optionally setting the requested gain once. It returns `lixity-audio-calibration/1`
+with peak dBFS, clipping, a quietest-window RMS floor estimate and a heuristic
+gain recommendation; it does not automatically retune the device.
+The browser teleprompter (`#reader-teleprompter`, key `P`) reads the selected profile's
+canonical manuscript speech plan without synthesis. It displays all current range controls,
+spelling substitutions and explicit IPA ruby with approximate scrolling. Dossier context
+is a separate presentation; a heuristic title/tag match is not a verified research association.
+Portable browser takes use `lixity-audio-take/1` JSON sidecars: `audio` contains filename,
+SHA-256, PCM format/channels/rate/width, frames and duration; `transcript` contains text and
+`missing|draft|confirmed` status. Import validates bytes and metadata before replacing a draft.
+The reading script is not automatically a confirmed transcript. This contract is distinct
+from the timestamped `lixity-audio-transcript/1` evidence used by `audio-verify`.
+The browser handoff uses the existing `lixity:open-speech-studio` document event
+with `mode:"reference"`, the validated `take` and captured
+`context:{project_token,source_sha256}`. It does not save a reference. Current
+context is checked before accepting the draft; confirmation and the normal
+reference-save endpoint remain explicit actions.
 The `quality` field is additive
 to `lixity-audio-reference-created/1`. Reference bytes and transcript are private project data,
 not cache; they are validated and bound to job context and cache identity.
 Base profiles and passage ranges reject nonempty delivery instructions. A Base
 worker must be selected explicitly; it does not infer or assign character voices.
 Older installations that do not support the new engine reject these profiles.
-The [reference-voice workflow](USAGE.md#experimental-reference-voices) describes
+The [reference-voice workflow](AUDIO.md#experimental-reference-voices) describes
 human-controlled recording and review, the 1–30 second PCM format, exact
 transcript and an unsaved Base preview. Format and immutable-record checks do
 not verify that the transcript matches the sound or that a voice is suitable.
@@ -1772,23 +1867,32 @@ All native speech reads require same-origin access and exactly one
 `GET /api/speech` returns `lixity-speech-local/1`, settings (or an explicit
 configuration error), backend capabilities and source chapter bounds. A
 `control_support` object per engine identifies literal text substitution,
-model-interpreted delivery and explicit silence, and reports unsupported
-phonemes, SSML and precise rate. It describes the Lixity adapter rather than
+model-interpreted delivery, explicit silence, IPA and structured prosody support.
+It also reports unsupported controls. It describes the Lixity adapter rather than
 promising model compliance. Existing speech-plan version 1 remains unchanged.
-For native profiles, the additive `workers` list gives a point-in-time probe for
-`local` and `jetson`, in that order. Each entry contains `target`, `state`
+For native profiles, the additive `workers` list probes each distinct registered
+native endpoint once. Entries identify supported `engines`, a readable `service_name`, `target`, `state`
 (`ready`, `starting` or `unavailable`), `transport` (`loopback` or `ssh`),
 `model` (an allowlisted native model name or null) and `model_matches`
 (always null in this endpoint because it does not supply a comparison model).
 The native UI compares the returned model with the currently selected profile;
 unknown identities stay unknown. A snapshot does not guarantee future readiness,
 and the UI does not switch or download a worker. After validating the workspace,
-the server probes both targets concurrently outside the workspace lock, with a
-1.5-second timeout per target. For a selected external profile, the list instead
+the server probes those endpoints concurrently outside the workspace lock, with a
+1.5-second timeout per endpoint. For a selected external profile, the list instead
 contains the configured provider with unknown readiness and no network probe.
 The strict `requires_migration` boolean identifies retained Piper profiles: normal settings
 saves cannot replace them, and the dialog disables replacement controls until
 explicit migration. Unrelated settings saves remain available.
+`POST /api/audio-microphone` action `save_reference` accepts captured `project_token` and
+`source_sha256` together. A partial binding fails with 400; changed complete bindings
+fail with 409 before any reference or settings write. Current browser clients always
+send both. Tokenless callers retain legacy current-workspace behavior and must not
+use it for a recording captured before a workspace change. Reference storage and
+activation have distinct outcomes: `activation.state` is `activated`, `failed` or
+`not_requested`, with a readable message. Saving never implicitly changes the profile's
+engine. If settings publication succeeds but view refresh fails, activation remains
+`activated`; `reload_required` and `refresh_warning` report the separate refresh issue.
 `POST /api/speech-render` accepts those context fields, `mode: preview|chapter`,
 a positive `chapter`, and either `profile_id` or a validated draft `profile`.
 Optional `fresh_audio` is a strict boolean: true bypasses reuse for that render.
@@ -1945,7 +2049,8 @@ reused, but Base rejects nonempty text direction and still needs listening revie
 
 ## CLI audio status and previews
 
-`audio-status --json [--project PATH] [--engine qwen3|qwen3-design|qwen3-base|f5-tts]` returns `lixity-audio-status/1` with
+Use `audio-status --help` for engine names supported by the installed version.
+`audio-status --json [--project PATH] [--engine ENGINE]` returns `lixity-audio-status/1` with
 actual per-target state, model identity and nullable comparison with the selected
 project profile or explicitly selected engine. Omitted/unknown information is not a negative match. No
 manuscript prose, pronunciations or delivery descriptions are included.

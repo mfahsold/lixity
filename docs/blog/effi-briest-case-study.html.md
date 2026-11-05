@@ -37,7 +37,7 @@ uv tool install --python 3.12 --managed-python lixity
 lixity style manuscript.md --json
 ```
 
-Or open the interactive view: `lixity service start --open`, then choose **Open Project**. The style panels are in the **Manuscript & Analysis** view; the section navigation above the chapters jumps to **Style** directly.
+Or open the interactive view: `lixity service start --open`, then choose **Open Project**. Open **Analysis overview → Style** for the chapter comparisons; use **Back to passage** to return to the manuscript.
 
 ## What it does not say
 

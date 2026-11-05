@@ -1,51 +1,42 @@
-# Quickstart Guide 🚀
+# Quickstart
 
-This guide walks you from initial installation through reviewing your first manuscript in Lixity.
-
----
+The [first-session walkthrough](https://mfahsold.github.io/lixity/ONBOARDING.md)
+is the maintained guide. For a first look without installing anything, open the
+[read-only demo](https://mfahsold.github.io/lixity/demo/report.html).
 
 ## 1. Installation
 
-Lixity requires Python 3.10 or newer. Install the package via PyPI:
-
-```bash
-pip install lixity
-```
-
-For speech synthesis and Poppler-based PDF inspection, optional system dependencies are documented in [docs/INSTALLATION.md](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md).
-
----
+Follow [installation](https://mfahsold.github.io/lixity/INSTALLATION.md) for the
+isolated application install, prerequisites and updates. Keep optional speech
+workers separate from the normal application environment.
 
 ## 2. Starting the Workbench
 
-Start the local background service:
+After installation:
 
-```bash
-lixity service start
+```sh
+lixity service start --open
 ```
 
-Open your browser at:
-`http://localhost:8765/`
-
----
+The default app address is `http://127.0.0.1:8765/`.
 
 ## 3. Opening a Manuscript
 
-1. Click on **Project** in the navigation bar or use **Open Project**.
-2. Select your manuscript file in CommonMark Markdown (`.md`) or plain UTF-8 text (`.txt`).
-3. Lixity automatically parses the chapter headings (`# Chapter Title` or `## Chapter Title`).
-
-> [!TIP]
-> **Importing from Scrivener or Word:**  
-> Export from Scrivener via *File → Export → Files* as Markdown (`.md`). From Microsoft Word, save as plain text (`.txt`) or convert with Pandoc.
-
----
+Choose **Open Project** for an existing folder and its research archive. Choose
+**Analyze a manuscript** to preview a file and copy it into a new project;
+opening a folder and importing a copy are different operations.
+Use UTF-8 Markdown with `## Chapter title` headings unless the project defines a
+custom chapter pattern. The unreleased file importer also accepts one `.txt` or
+`.docx` file. Review the destination and language before confirming.
 
 ## 4. The Three Main Workspaces
 
-1. **📖 Manuscript (Reading View):**  
-   Distraction-free continuous prose reading. Statistical deviations (e.g. tense shifts, extreme sentence lengths) are subtly highlighted. Open research dossiers side-by-side in the companion panel.
-2. **🔬 Research & Dossiers:**  
-   Organize historical context, source quotes, and author decisions. Run vocabulary grounding comparisons between reference materials and chapters.
-3. **📁 Project:**  
-   Manage metadata, thresholds, register templates, audio direction, and PDF export (A4 editorial copy with line numbers, A5 book layout, analysis report).
+Start in **Manuscript** and read a paragraph. Turn **Analysis** on when you want
+measurements; choose **… → Explore passage** for context. **Research** holds
+sources, claims and dossiers. **Project** holds project setup and settings.
+Opening a view does not save a decision or rewrite prose.
+
+Continue with the [workspace manual](https://mfahsold.github.io/lixity/WORKSPACE.md)
+or [CLI reference](https://mfahsold.github.io/lixity/USAGE.md). To return later,
+start the service and reopen the project from the app home; project-view URLs
+expire when the server restarts.

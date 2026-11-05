@@ -45,6 +45,19 @@ def test_optional_reader_analysis_preserves_v1_default_and_nonempty_selection():
     assert selected.export_options().model_dump(exclude_defaults=True)['analysis_sections'] == ['chapters', 'language']
 
 
+def test_reader_audio_is_an_explicit_opt_in_with_unchanged_default_contract():
+    assert 'include_audio' not in SiteExportOptions().model_dump()
+    selected = SiteExportRequest(project_token='a' * 64, include_research=False,
+        include_source_files=False, mode='reader', publication_profile='readers', include_audio=True)
+    assert selected.export_options().model_dump(exclude_defaults=True)['include_audio'] is True
+    for mode in ('review', 'companion'):
+        with pytest.raises(ValidationError, match='only in reader mode'):
+            SiteExportOptions(mode=mode, publication_profile='readers' if mode == 'companion' else None,
+                              include_audio=True)
+    with pytest.raises(ValidationError):
+        SiteExportOptions(mode='reader', publication_profile='readers', include_audio='true')
+
+
 def test_public_demo_manifest_uses_the_same_publication_contract():
     from pathlib import Path
 

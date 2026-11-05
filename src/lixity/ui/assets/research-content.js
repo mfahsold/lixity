@@ -121,44 +121,104 @@ function renderMermaidSvg(escapedCode) {
   });
 })();
 
-function formatMathFormula(latex, isDisplay) {
+function formatMathFormula(latex, isDisplay, isInner) {
   if (!latex) return "";
-  var math = latex.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+  var raw = latex.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+  // Only formatter-generated tags may become HTML.
+  var math = raw.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+  var tagTokens = [], tagPrefix = "@@@LIXITYMATHTOKEN";
+  function stash(html) {
+    var tok = tagPrefix + tagTokens.length + "END@@@";
+    tagTokens.push(html);
+    return tok;
+  }
+
+  // Helper: extract balanced braces { ... } starting at index
+  function extractBalanced(str, startIdx, openCh, closeCh) {
+    if (str[startIdx] !== openCh) return null;
+    var depth = 1;
+    for (var i = startIdx + 1; i < str.length; i++) {
+      if (str[i] === openCh) depth++;
+      else if (str[i] === closeCh) {
+        depth--;
+        if (depth === 0) return { content: str.slice(startIdx + 1, i), endIndex: i };
+      }
+    }
+    return null;
+  }
+
+  // Environments: matrix, pmatrix, bmatrix, vmatrix, cases, aligned
   math = math.replace(/\\begin\{(matrix|pmatrix|bmatrix|vmatrix|aligned|cases)\}([\s\S]*?)\\end\{\1\}/g, function(_, env, body) {
     var rows = body.trim().split(/\\\\|\n/).map(function(r) { return r.trim(); }).filter(Boolean);
     var openBrack = env === "pmatrix" ? "(" : env === "bmatrix" ? "[" : env === "vmatrix" ? "|" : env === "cases" ? "{" : "";
     var closeBrack = env === "pmatrix" ? ")" : env === "bmatrix" ? "]" : env === "vmatrix" ? "|" : env === "cases" ? "" : "";
     var tableRows = rows.map(function(row) {
-      var cells = row.split("&").map(function(c) { return '<td class="math-cell">' + formatMathFormula(c.trim(), false) + '</td>'; }).join("");
+      var cells = row.split(/&(?!lt;|gt;)/).map(function(c) {
+        return '<td class="math-cell">' + formatMathFormula(c.trim(), false, true) + '</td>';
+      }).join("");
       return '<tr>' + cells + '</tr>';
     }).join("");
-    return '<span class="math-matrix-wrap' + (openBrack ? ' math-delimited' : '') + '">' +
+    var matrixHtml = '<span class="math-matrix-wrap' + (openBrack ? ' math-delimited' : '') + '">' +
       (openBrack ? '<span class="math-delim">' + openBrack + '</span>' : '') +
       '<table class="math-matrix"><tbody>' + tableRows + '</tbody></table>' +
       (closeBrack ? '<span class="math-delim">' + closeBrack + '</span>' : '') +
       '</span>';
+    return stash(matrixHtml);
   });
 
-  math = math.replace(/\\(?:text|mathrm|operatorname)\{([^{}]+)\}/g, '<span class="math-text">$1</span>');
-  math = math.replace(/\\mathbf\{([^{}]+)\}/g, '<strong>$1</strong>');
-  math = math.replace(/\\mathit\{([^{}]+)\}/g, '<em>$1</em>');
+  // Balanced fractions: \frac{...}{...} and \dfrac{...}{...}
+  for (var fIter = 0; fIter < 8; fIter++) {
+    var fMatch = /\\(?:d)?frac(?=\{)/.exec(math);
+    if (!fMatch) break;
+    var nStart = fMatch.index + fMatch[0].length;
+    var num = extractBalanced(math, nStart, "{", "}");
+    if (!num) break;
+    var dStart = num.endIndex + 1;
+    while (dStart < math.length && /\s/.test(math[dStart])) dStart++;
+    var den = extractBalanced(math, dStart, "{", "}");
+    if (!den) break;
+    var numHtml = formatMathFormula(num.content, false, true);
+    var denHtml = formatMathFormula(den.content, false, true);
+    var fracHtml = '<span class="math-frac"><span class="math-num">' + numHtml + '</span><span class="math-denom">' + denHtml + '</span></span>';
+    math = math.slice(0, fMatch.index) + stash(fracHtml) + math.slice(den.endIndex + 1);
+  }
+
+  // Roots: \sqrt[n]{x} or \sqrt{x}
+  for (var rIter = 0; rIter < 6; rIter++) {
+    var rMatch = /\\sqrt(?:\[([^\]]+)\])?(?=\{)/.exec(math);
+    if (!rMatch) break;
+    var rStart = rMatch.index + rMatch[0].length;
+    var rad = extractBalanced(math, rStart, "{", "}");
+    if (!rad) break;
+    var radHtml = formatMathFormula(rad.content, false, true);
+    var rootHtml = rMatch[1] ? '<sup class="math-root">' + formatMathFormula(rMatch[1], false, true) + '</sup>' : '';
+    var sqrtHtml = '<span class="math-sqrt">' + rootHtml + '<span class="math-surd">√</span><span class="math-radicand">' + radHtml + '</span></span>';
+    math = math.slice(0, rMatch.index) + stash(sqrtHtml) + math.slice(rad.endIndex + 1);
+  }
+
+  // Styles & fonts
+  math = math.replace(/\\(?:text|mathrm|operatorname)\{([^{}]+)\}/g, function(_, text) {
+    return stash('<span class="math-text">' + text + '</span>');
+  });
+  math = math.replace(/\\mathbf\{([^{}]+)\}/g, function(_, text) {
+    return stash('<strong>' + text + '</strong>');
+  });
+  math = math.replace(/\\mathit\{([^{}]+)\}/g, function(_, text) {
+    return stash('<em>' + text + '</em>');
+  });
   math = math.replace(/\\mathbb\{([^{}]+)\}/g, function(_, char) {
     var bbMap = {R:"ℝ", N:"ℕ", Z:"ℤ", Q:"ℚ", C:"ℂ", P:"ℙ", E:"𝔼", H:"ℍ"};
     return bbMap[char] || char;
   });
+  math = math.replace(/\\mathcal\{([^{}]+)\}/g, function(_, char) {
+    return stash('<span class="math-cal" style="font-family:serif;font-style:italic;">' + char + '</span>');
+  });
+  math = math.replace(/\\underline\{([^{}]+)\}/g, function(_, text) {
+    return stash('<u>' + text + '</u>');
+  });
 
-  for (var iter = 0; iter < 4; iter++) {
-    if (!/\\(?:d)?frac\{/.test(math)) break;
-    math = math.replace(/\\(?:d)?frac\{([^{}]+)\}\{([^{}]+)\}/g,
-      '<span class="math-frac"><span class="math-num">$1</span><span class="math-denom">$2</span></span>');
-  }
-
-  math = math.replace(/\\sqrt\[([^\]]+)\]\{([^{}]+)\}/g,
-    '<span class="math-sqrt"><sup class="math-root">$1</sup><span class="math-surd">√</span><span class="math-radicand">$2</span></span>');
-  math = math.replace(/\\sqrt\{([^{}]+)\}/g,
-    '<span class="math-sqrt"><span class="math-surd">√</span><span class="math-radicand">$1</span></span>');
-
+  // Greek alphabet
   var greekMap = {
     "alpha": "α", "beta": "β", "gamma": "γ", "delta": "δ", "epsilon": "ε", "varepsilon": "ε",
     "zeta": "ζ", "eta": "η", "theta": "θ", "vartheta": "ϑ", "iota": "ι", "kappa": "κ",
@@ -172,6 +232,7 @@ function formatMathFormula(latex, isDisplay) {
     return greekMap[g] || g;
   });
 
+  // Operators & symbols
   var opMap = {
     "sum": "∑", "prod": "∏", "coprod": "∐", "int": "∫", "oint": "∮", "iint": "∬", "iiint": "∭",
     "times": "×", "cdot": "·", "pm": "±", "mp": "∓", "div": "÷", "ast": "∗", "star": "★",
@@ -188,14 +249,16 @@ function formatMathFormula(latex, isDisplay) {
     return opMap[op] || op;
   });
 
-  math = math.replace(/\\(sin|cos|tan|arcsin|arccos|arctan|sinh|cosh|tanh|ln|log|exp|min|max|lim|sup|inf|det|gcd|deg|dim|ker|hom|arg|Pr)\b/g,
-    '<span class="math-func">$1</span>');
+  // Standard math functions
+  math = math.replace(/\\(sin|cos|tan|arcsin|arccos|arctan|sinh|cosh|tanh|ln|log|exp|min|max|lim|sup|inf|det|gcd|deg|dim|ker|hom|arg|Pr)\b/g, function(_, fn) {
+    return stash('<span class="math-func">' + fn + '</span>');
+  });
 
+  // Spacing & delimiters
   math = math.replace(/\\quad/g, " &emsp; ");
   math = math.replace(/\\qquad/g, " &emsp;&emsp; ");
   math = math.replace(/\\[,;:!]/g, " ");
   math = math.replace(/\\([#$%&_{}])/g, "$1");
-
   math = math.replace(/\\left\(/g, "(").replace(/\\right\)/g, ")");
   math = math.replace(/\\left\[/g, "[").replace(/\\right\]/g, "]");
   math = math.replace(/\\left\\\{/g, "{").replace(/\\right\\\}/g, "}");
@@ -204,54 +267,96 @@ function formatMathFormula(latex, isDisplay) {
   math = math.replace(/\\lceil/g, "⌈").replace(/\\rceil/g, "⌉");
   math = math.replace(/\\lfloor/g, "⌊").replace(/\\rfloor/g, "⌋");
 
-  math = math.replace(/\^\{([^{}]+)\}/g, "<sup>$1</sup>");
-  math = math.replace(/\_\{([^{}]+)\}/g, "<sub>$1</sub>");
+  // Balanced exponents and subscripts: ^{...} and _{...}
+  for (var sIter = 0; sIter < 10; sIter++) {
+    var subMatch = /_\{/.exec(math);
+    var supMatch = /\^\{/.exec(math);
+    if (!subMatch && !supMatch) break;
+    if (subMatch && (!supMatch || subMatch.index < supMatch.index)) {
+      var sObj = extractBalanced(math, subMatch.index + 1, "{", "}");
+      if (sObj) {
+        math = math.slice(0, subMatch.index) + stash('<sub>' + formatMathFormula(sObj.content, false, true) + '</sub>') + math.slice(sObj.endIndex + 1);
+        continue;
+      }
+    }
+    if (supMatch) {
+      var pObj = extractBalanced(math, supMatch.index + 1, "{", "}");
+      if (pObj) {
+        math = math.slice(0, supMatch.index) + stash('<sup>' + formatMathFormula(pObj.content, false, true) + '</sup>') + math.slice(pObj.endIndex + 1);
+        continue;
+      }
+    }
+    break;
+  }
+  // Single char exponents and subscripts
   math = math.replace(/\^([0-9a-zA-Zα-ωΑ-Ω+-])/g, "<sup>$1</sup>");
-  math = math.replace(/\_([0-9a-zA-Zα-ωΑ-Ω+-])/g, "<sub>$1</sub>");
+  math = math.replace(/_([0-9a-zA-Zα-ωΑ-Ω+-])/g, "<sub>$1</sub>");
 
-  var tagTokens = [], tagPrefix = "@@@MATHTAG_";
-  math = math.replace(/<[^>]+>/g, function(tag) {
-    var tok = tagPrefix + tagTokens.length + "END";
-    tagTokens.push(tag);
-    return tok;
-  });
+  // Single variable italicization
+  math = math.replace(/<[^>]+>/g, stash);
   math = math.replace(/</g, "&lt;").replace(/>/g, "&gt;");
   math = math.replace(/\b([a-zA-Z])\b/g, "<i>$1</i>");
-  tagTokens.forEach(function(tag, i) {
-    math = math.replace(tagPrefix + i + "END", tag);
-  });
+
+  // Restore stashed tokens in reverse (and loop if tokens were nested)
+  for (var pass = 0; pass < 3; pass++) {
+    for (var t = tagTokens.length - 1; t >= 0; t--) {
+      var tok = tagPrefix + t + "END@@@";
+      if (math.includes(tok)) {
+        math = math.split(tok).join(tagTokens[t]);
+      }
+    }
+  }
+
+  if (isInner) return math;
 
   var cls = isDisplay ? "math-display" : "math-inline";
   var tag = isDisplay ? "div" : "span";
   return '<' + tag + ' class="' + cls + '" role="math" aria-label="' + escapeHtml(latex).replace(/"/g, '&quot;') + '">' + math + '</' + tag + '>';
 }
 
-function renderAlertBox(type, content, inlineParser) {
+function renderAlertBox(type, content, inlineParser, folded, titleOverride) {
   var alertType = type.toUpperCase();
   var typeLower = alertType.toLowerCase();
   var titleMap = {
     NOTE: {de: "Hinweis", en: "Note", fr: "Remarque", es: "Nota", it: "Nota", pt: "Nota", nl: "Opmerking"},
+    INFO: {de: "Info", en: "Info", fr: "Info", es: "Información", it: "Info", pt: "Info", nl: "Info"},
     TIP: {de: "Tipp", en: "Tip", fr: "Conseil", es: "Consejo", it: "Consiglio", pt: "Dica", nl: "Tip"},
     IMPORTANT: {de: "Wichtig", en: "Important", fr: "Important", es: "Importante", it: "Importante", pt: "Importante", nl: "Belangrijk"},
     WARNING: {de: "Warnung", en: "Warning", fr: "Avertissement", es: "Advertencia", it: "Avviso", pt: "Aviso", nl: "Waarschuwing"},
-    CAUTION: {de: "Achtung", en: "Caution", fr: "Attention", es: "Atención", it: "Attenzione", pt: "Atenção", nl: "Let op"}
+    CAUTION: {de: "Achtung", en: "Caution", fr: "Attention", es: "Atención", it: "Attenzione", pt: "Atenção", nl: "Let op"},
+    SUCCESS: {de: "Erfolg", en: "Success", fr: "Succès", es: "Éxito", it: "Successo", pt: "Sucesso", nl: "Succes"},
+    QUESTION: {de: "Frage", en: "Question", fr: "Question", es: "Pregunta", it: "Domanda", pt: "Pergunta", nl: "Vraag"},
+    FAQ: {de: "FAQ", en: "FAQ", fr: "FAQ", es: "FAQ", it: "FAQ", pt: "FAQ", nl: "FAQ"},
+    QUOTE: {de: "Zitat", en: "Quote", fr: "Citation", es: "Cita", it: "Citazione", pt: "Citação", nl: "Citaat"},
+    BUG: {de: "Fehler", en: "Bug", fr: "Bogue", es: "Error", it: "Bug", pt: "Bug", nl: "Fout"},
+    EXAMPLE: {de: "Beispiel", en: "Example", fr: "Exemple", es: "Ejemplo", it: "Esempio", pt: "Exemplo", nl: "Voorbeeld"}
   };
   var lang = (window.LixitySite && window.LixitySite.language) || "de";
   var titles = titleMap[alertType] || {de: alertType, en: alertType};
   var defaultTitle = titles[lang] || titles.de || titles.en;
 
-  var icons = {
-    NOTE: '<svg class="markdown-alert-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/></svg>',
-    TIP: '<svg class="markdown-alert-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 1.5c-2.36 0-4.25 1.9-4.25 4.25 0 1.45.71 2.73 1.8 3.52.4.29.65.74.65 1.23v.5a.75.75 0 0 0 .75.75h2.1a.75.75 0 0 0 .75-.75v-.5c0-.49.25-.94.65-1.23 1.09-.79 1.8-2.07 1.8-3.52 0-2.35-1.89-4.25-4.25-4.25Zm-1.25 12a.75.75 0 0 1 .75-.75h1a.75.75 0 0 1 0 1.5h-1a.75.75 0 0 1-.75-.75Zm.25 1.75a.5.5 0 0 1 .5-.5h.98a.5.5 0 0 1 0 1H7.5a.5.5 0 0 1-.5-.5Z"/></svg>',
-    IMPORTANT: '<svg class="markdown-alert-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM8 3.75a.75.75 0 0 0-.75.75v4a.75.75 0 0 0 1.5 0v-4A.75.75 0 0 0 8 3.75Zm0 7.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/></svg>',
-    WARNING: '<svg class="markdown-alert-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM8 10.75a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/></svg>',
-    CAUTION: '<svg class="markdown-alert-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M4.47.04c.37-.04.74.08 1.03.32L15.64 10.5a1.5 1.5 0 0 1 .42 1.48 1.5 1.5 0 0 1-1.04 1.04l-10.14 2.9a1.5 1.5 0 0 1-1.48-.42L.36 5.36A1.5 1.5 0 0 1 .28 3.9L3.44.42A1.5 1.5 0 0 1 4.47.04ZM8 4a.75.75 0 0 0-.75.75v3.5a.75.75 0 0 0 1.5 0v-3.5A.75.75 0 0 0 8 4Zm0 6.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/></svg>'
-  };
-  var icon = icons[alertType] || icons.NOTE;
+  var iconKey = {
+    NOTE: "info", INFO: "info", TIP: "lightbulb", IMPORTANT: "alert-circle",
+    WARNING: "triangle-alert", CAUTION: "shield-alert", SUCCESS: "check-circle",
+    QUESTION: "help-circle", FAQ: "help-circle", QUOTE: "quote", BUG: "bug", EXAMPLE: "list"
+  }[alertType] || "info";
+
+  var icon = "";
+  if (window.LixityIcons && window.LixityIcons.has(iconKey)) {
+    icon = window.LixityIcons.svg(iconKey, { className: "markdown-alert-icon", size: 16 });
+  } else {
+    var defaultIcons = {
+      NOTE: '<svg class="markdown-alert-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/></svg>',
+      TIP: '<svg class="markdown-alert-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 1.5c-2.36 0-4.25 1.9-4.25 4.25 0 1.45.71 2.73 1.8 3.52.4.29.65.74.65 1.23v.5a.75.75 0 0 0 .75.75h2.1a.75.75 0 0 0 .75-.75v-.5c0-.49.25-.94.65-1.23 1.09-.79 1.8-2.07 1.8-3.52 0-2.35-1.89-4.25-4.25-4.25Zm-1.25 12a.75.75 0 0 1 .75-.75h1a.75.75 0 0 1 0 1.5h-1a.75.75 0 0 1-.75-.75Zm.25 1.75a.5.5 0 0 1 .5-.5h.98a.5.5 0 0 1 0 1H7.5a.5.5 0 0 1-.5-.5Z"/></svg>',
+      IMPORTANT: '<svg class="markdown-alert-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM8 3.75a.75.75 0 0 0-.75.75v4a.75.75 0 0 0 1.5 0v-4A.75.75 0 0 0 8 3.75Zm0 7.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/></svg>',
+      WARNING: '<svg class="markdown-alert-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM8 10.75a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/></svg>',
+      CAUTION: '<svg class="markdown-alert-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M4.47.04c.37-.04.74.08 1.03.32L15.64 10.5a1.5 1.5 0 0 1 .42 1.48 1.5 1.5 0 0 1-1.04 1.04l-10.14 2.9a1.5 1.5 0 0 1-1.48-.42L.36 5.36A1.5 1.5 0 0 1 .28 3.9L3.44.42A1.5 1.5 0 0 1 4.47.04ZM8 4a.75.75 0 0 0-.75.75v3.5a.75.75 0 0 0 1.5 0v-3.5A.75.75 0 0 0 8 4Zm0 6.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/></svg>'
+    };
+    icon = defaultIcons[alertType] || defaultIcons.NOTE;
+  }
 
   var bodyLines = content.trim().split("\n");
-  var titleOverride = null;
-  if (bodyLines.length && /^\*\*([^*]+)\*\*:?$/.test(bodyLines[0].trim())) {
+  if (!titleOverride && bodyLines.length && /^\*\*([^*]+)\*\*:?$/.test(bodyLines[0].trim())) {
     titleOverride = bodyLines[0].trim().replace(/^\*\*|\*\*:?$/g, "").trim();
     bodyLines.shift();
   }
@@ -259,10 +364,15 @@ function renderAlertBox(type, content, inlineParser) {
   var parse = inlineParser || function(s) { return s; };
   var bodyHtml = parse(bodyLines.join("\n").trim()).replace(/\n/g, '<br>');
 
-  return '<div class="markdown-alert markdown-alert-' + typeLower + '" role="region" aria-label="' + alertTitle + '">' +
-    '<p class="markdown-alert-title">' + icon + '<span>' + alertTitle + '</span></p>' +
+  var isFoldable = folded === true || folded === false;
+  var tag = isFoldable ? "details" : "div";
+  var titleTag = isFoldable ? "summary" : "p";
+  var openAttr = folded === false ? " open" : "";
+
+  return '<' + tag + ' class="markdown-alert markdown-alert-' + typeLower + '"' + openAttr + ' role="region" aria-label="' + alertTitle + '">' +
+    '<' + titleTag + ' class="markdown-alert-title">' + icon + '<span>' + alertTitle + '</span></' + titleTag + '>' +
     '<div class="markdown-alert-content">' + (bodyHtml ? '<p>' + bodyHtml + '</p>' : '') + '</div>' +
-    '</div>';
+    '</' + tag + '>';
 }
 
 function renderSafeMarkdown(rawText, dossierContext) {
@@ -332,6 +442,15 @@ function renderSafeMarkdown(rawText, dossierContext) {
       protectedHtml.push(html);
       return token;
     }
+    str = str.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, function(m, target, label) {
+      if (noLinks) return m;
+      var cleanTarget = target.trim();
+      var displayLabel = (label || cleanTarget).trim();
+      var slug = cleanTarget.replace(/\s+/g, "_");
+      var title = (typeof uiLabel === "function" ? uiLabel("research_internal_reference_label") : "") || "Reference";
+      return protect('<a class="lixity-ref lixity-wikilink" href="#dossier-' + slug + '" data-dossier-link="' + cleanTarget.replace(/"/g, "&quot;") + '" title="' + title.replace(/"/g, "&quot;") + '">' + parseInline(displayLabel, true) + '</a>');
+    });
+
     str = str.replace(/`([^`]+)`|\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$|\[([^\]]+)\]\(([^)]+)\)/g, function(m, code, displayMath, math, label, url) {
       if (code !== undefined) return protect('<code>' + code + '</code>');
       if (displayMath !== undefined) return protect(formatMathFormula(displayMath, true));
@@ -339,8 +458,8 @@ function renderSafeMarkdown(rawText, dossierContext) {
       if (noLinks) return m;
       var cleanUrl = url.trim();
       if (/^lixity:/i.test(cleanUrl)) {
-        var referenceTitle = uiFormat("research_internal_reference", {reference: cleanUrl});
-        return protect('<code class="lixity-ref" title="' + referenceTitle.replace(/"/g, "&quot;") + '">' + label + ' (' + cleanUrl.replace(/^lixity:/i, "") + ')</code>');
+        var referenceTitle = uiLabel("research_internal_reference_label");
+        return protect('<span class="lixity-ref" title="' + referenceTitle.replace(/"/g, "&quot;") + '">' + parseInline(label, true) + '</span>');
       }
       var visibleLabel = parseInline(label, true);
       if (window.LixitySite.readOnly && !/^(https?:\/\/|#)/i.test(cleanUrl)) {
@@ -364,6 +483,7 @@ function renderSafeMarkdown(rawText, dossierContext) {
     str = str.replace(/\\sout\{([^{}]+)\}/g, '<del>$1</del>');
     str = str.replace(/\\textsc\{([^{}]+)\}/g, '<span style="font-variant: small-caps;">$1</span>');
 
+    str = str.replace(/==([^=\n]+)==/g, '<mark class="markdown-highlight">$1</mark>');
     str = str.replace(/~~(.+?)~~/g, '<del>$1</del>');
     str = str.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
     str = str.replace(/___(.+?)___/g, '<strong><em>$1</em></strong>');
@@ -407,18 +527,22 @@ function renderSafeMarkdown(rawText, dossierContext) {
     var isBlockquote = lines.every(function(l) { return /^\s*&gt;/.test(l); });
     if (isBlockquote) {
       var bqContent = lines.map(function(l) { return l.replace(/^\s*&gt;\s?/, ""); }).join("\n");
-      var alertMatch = bqContent.match(/^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*\n?([\s\S]*)$/i);
+      var alertMatch = bqContent.match(/^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION|INFO|SUCCESS|QUESTION|FAQ|QUOTE|BUG|EXAMPLE)\]([+-])?(?:[ \t]+([^\n]*))?\s*\n?([\s\S]*)$/i);
       if (alertMatch) {
-        htmlBlocks.push(renderAlertBox(alertMatch[1], alertMatch[2], parseInline));
+        var folded = alertMatch[2] === "-" ? true : alertMatch[2] === "+" ? false : null;
+        var customTitle = alertMatch[3] ? alertMatch[3].trim() : null;
+        htmlBlocks.push(renderAlertBox(alertMatch[1], alertMatch[4], parseInline, folded, customTitle));
         continue;
       }
       htmlBlocks.push('<blockquote><p>' + parseInline(bqContent).replace(/\n/g, '<br>') + '</p></blockquote>');
       continue;
     }
 
-    var bareAlertMatch = block.match(/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*\n?([\s\S]*)$/i);
+    var bareAlertMatch = block.match(/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION|INFO|SUCCESS|QUESTION|FAQ|QUOTE|BUG|EXAMPLE)\]([+-])?(?:[ \t]+([^\n]*))?\s*\n?([\s\S]*)$/i);
     if (bareAlertMatch) {
-      htmlBlocks.push(renderAlertBox(bareAlertMatch[1], bareAlertMatch[2], parseInline));
+      var bFolded = bareAlertMatch[2] === "-" ? true : bareAlertMatch[2] === "+" ? false : null;
+      var bTitle = bareAlertMatch[3] ? bareAlertMatch[3].trim() : null;
+      htmlBlocks.push(renderAlertBox(bareAlertMatch[1], bareAlertMatch[4], parseInline, bFolded, bTitle));
       continue;
     }
 
@@ -737,9 +861,7 @@ async function enhanceResearchDossierClaims(host, detail, stillCurrent) {
         '<span class="ctl-note" data-claim-revision="' + Number(claim.revision) + '">' +
         escapeHtml(uiFormat("research_revision_number", {revision: claim.revision})) + '</span>' +
         '<button type="button" class="ctl ctl-sm" data-research-history="claim" data-record-id="' +
-        escapeHtml(claim.id) + '">' + escapeHtml(uiLabel("research_claim_open")) + '</button></div>' + usage +
-        '<details><summary>' + escapeHtml(uiLabel("research_revision_technical")) + '</summary>' +
-        '<code class="research-record-id">' + escapeHtml(claim.id) + '</code></details></li>';
+        escapeHtml(claim.id) + '">' + escapeHtml(uiLabel("research_claim_open")) + '</button></div>' + usage + '</li>';
     }).join("") + '</ul>' : '<p class="ctl-note">' + escapeHtml(uiLabel("research_dossier_claims_empty")) + '</p>');
 }
 

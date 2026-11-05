@@ -39,6 +39,7 @@ from .pipeline import (
 from .project_identity import project_title
 from .scenes import scene_report_for_display
 from .site import docs_url
+from .speech_engines import NATIVE_ENGINES, native_engine
 from .status import SCHEMA_VERSION_STYLE
 from .style_fingerprint import (
     LAYER_FEATURES,
@@ -123,15 +124,15 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "audio_status_design_hint": "VoiceDesign generates each section independently, so the voice may vary even with the same description. Different direction can also affect the voice. Compare short listening samples. Base can use a reference, but does not accept free-form direction.",
         "audio_status_base_hint": "Base reuses a voice reference but does not guarantee identical delivery; free-form direction is unsupported. Compare short listening samples.",
         "audio_no_direction_help": "Ignore saved passage direction; profile, pronunciation, speed and default pauses remain",
-        "audio_instructions_help": "Explicit Qwen delivery instructions (not supported by Base)",
-        "audio_engine_help": "qwen3: preset voices; qwen3-design: described voice; qwen3-base: saved reference; coqui: Thorsten; coqui-reference: converted reference voice; f5-tts: Flow-Matching reference voice. Worker must match",
-        "audio_voice_help": "CustomVoice presets: {voices}. Qwen lists no German-native preset; audition pronunciation. Base and F5-TTS use reference and VoiceDesign uses design",
-        "audio_base_reference_required": "Reference engines (qwen3-base, coqui-reference, f5-tts) need a saved reference: create one with 'lixity audio-reference create' and pass --reference-id ID",
+        "audio_instructions_help": "Free-form delivery instructions where supported; export-only for IMS-Toucan, unsupported by Base",
+        "audio_engine_help": "qwen3: preset voices; qwen3-design: described voice; qwen3-base: saved reference; coqui: Thorsten; coqui-reference: converted reference voice; f5-tts: Flow-Matching reference voice; ims-toucan: reference voice with phonetics and structured prosody. Worker must match",
+        "audio_voice_help": "CustomVoice presets: {voices}. Qwen lists no German-native preset; audition pronunciation. Reference engines use reference; VoiceDesign uses design",
+        "audio_base_reference_required": "Reference engines need a saved reference: create one with 'lixity audio-reference create' and pass --reference-id ID",
         "audio_base_instructions_inherited": "Reference engines (qwen3-base, coqui-reference, f5-tts) cannot use the selected profile's delivery instructions; pass --instructions '' to clear them for this run or select a reference profile. --no-direction only excludes passage directions",
         "audio_base_instructions_explicit": "Reference engines (qwen3-base, coqui-reference, f5-tts) do not support delivery instructions; pass --instructions '' or select another model",
         "audio_design_description_required": "VoiceDesign needs a voice description: pass --voice-description TEXT or select a VoiceDesign profile",
         "audio_custom_voice_required": "CustomVoice needs a preset voice: pass --voice with a supported preset or select a CustomVoice profile",
-        "audio_reference_wrong_engine": "--reference-id is only supported by reference engines; select --engine qwen3-base, coqui-reference or f5-tts, or omit the reference",
+        "audio_reference_wrong_engine": "--reference-id is only supported by reference engines; select --engine qwen3-base, coqui-reference, f5-tts or ims-toucan, or omit the reference",
         "audio_reference_create_inputs": "audio-reference create needs --audio and --transcript-file",
         "audio_reference_inspect_input": "audio-reference inspect needs --reference-id",
         "audio_read_help": "VoiceDesign generates segments independently; a voice description and direction can affect the perceived voice. For a consistent narrator, compare short --preview samples with fewer role-specific directions. Base reuses an explicit voice reference, but does not accept free-form direction; neither option guarantees continuity. --no-direction ignores saved passage direction only: the selected profile, pronunciation rules, tempo and default pauses remain active. Models and matching local workers are installed separately.",
@@ -276,15 +277,15 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "audio_status_design_hint": "VoiceDesign erzeugt Abschnitte einzeln; die Stimme kann trotz gleicher Beschreibung variieren. Unterschiedliche Regie kann den Klang zusätzlich beeinflussen. Kurze Hörproben vergleichen. Base nutzt eine Referenz, unterstützt aber keine freie Regie.",
         "audio_status_base_hint": "Base nutzt eine Stimmreferenz, garantiert aber keine gleichbleibende Darbietung; freie Regie wird nicht unterstützt. Kurze Hörproben vergleichen.",
         "audio_no_direction_help": "Gespeicherte Passagenregie ignorieren; Profil, Aussprache, Tempo und Standardpausen bleiben aktiv",
-        "audio_instructions_help": "Ausdrückliche Qwen-Regieanweisungen (von Base nicht unterstützt)",
-        "audio_engine_help": "qwen3: feste Stimmen; qwen3-design: beschriebene Stimme; qwen3-base: Referenz; coqui: Thorsten; coqui-reference: Thorsten mit Referenzstimme; f5-tts: Flow-Matching Referenzstimme. Worker muss zum Modell passen",
-        "audio_voice_help": "CustomVoice-Stimmen: {voices}. Qwen nennt keine deutschsprachige Mutterstimme; Aussprache anhören. Base und F5-TTS verwenden reference, VoiceDesign design",
-        "audio_base_reference_required": "Referenz-Engines (qwen3-base, coqui-reference, f5-tts) benötigen eine gespeicherte Referenz: mit 'lixity audio-reference create' anlegen und --reference-id ID angeben",
+        "audio_instructions_help": "Freie Regie bei unterstützten Modellen; bei IMS-Toucan nur im Export, bei Base nicht unterstützt",
+        "audio_engine_help": "qwen3: feste Stimmen; qwen3-design: beschriebene Stimme; qwen3-base: Referenz; coqui: Thorsten; coqui-reference: Thorsten mit Referenzstimme; f5-tts: Flow-Matching Referenzstimme; ims-toucan: Referenzstimme mit Lautschrift und strukturierter Regie. Worker muss zum Modell passen",
+        "audio_voice_help": "CustomVoice-Stimmen: {voices}. Qwen nennt keine deutschsprachige Mutterstimme; Aussprache anhören. Referenzmodelle verwenden reference, VoiceDesign design",
+        "audio_base_reference_required": "Referenz-Engines benötigen eine gespeicherte Referenz: mit 'lixity audio-reference create' anlegen und --reference-id ID angeben",
         "audio_base_instructions_inherited": "Referenz-Engines (qwen3-base, coqui-reference, f5-tts) unterstützen die Regieanweisung des gewählten Profils nicht; für diesen Lauf --instructions '' angeben oder ein Referenzprofil wählen. --no-direction schaltet nur die Passagenregie aus",
         "audio_base_instructions_explicit": "Referenz-Engines (qwen3-base, coqui-reference, f5-tts) unterstützen keine Regieanweisungen; --instructions '' angeben oder ein anderes Modell wählen",
         "audio_design_description_required": "VoiceDesign benötigt eine Stimmbeschreibung: --voice-description TEXT angeben oder ein VoiceDesign-Profil wählen",
         "audio_custom_voice_required": "CustomVoice benötigt eine feste Stimme: mit --voice eine unterstützte Stimme angeben oder ein CustomVoice-Profil wählen",
-        "audio_reference_wrong_engine": "--reference-id wird nur von Referenz-Engines unterstützt; --engine qwen3-base, coqui-reference oder f5-tts wählen oder die Referenz weglassen",
+        "audio_reference_wrong_engine": "--reference-id wird nur von Referenz-Engines unterstützt; --engine qwen3-base, coqui-reference, f5-tts oder ims-toucan wählen oder die Referenz weglassen",
         "audio_reference_create_inputs": "audio-reference create benötigt --audio und --transcript-file",
         "audio_reference_inspect_input": "audio-reference inspect benötigt --reference-id",
         "audio_read_help": "VoiceDesign erzeugt Abschnitte einzeln; Stimmbeschreibung und Regie können die wahrgenommene Stimme beeinflussen. Für eine einheitliche Erzählstimme kurze --preview-Hörproben mit weniger rollenspezifischer Regie vergleichen. Base verwendet eine ausdrückliche Stimmreferenz, unterstützt aber keine freie Regie; beide Wege garantieren keine Stimmkonstanz. --no-direction ignoriert nur gespeicherte Passagenregie: Profil, Ausspracheregeln, Tempo und Standardpausen bleiben aktiv. Modelle und passende lokale Worker werden separat installiert.",
@@ -459,7 +460,7 @@ def _completion_scripts() -> tuple[str, str]:
 #: completion scripts, so adding a command lists it everywhere at once.
 _COMMANDS: tuple[tuple[str, str], ...] = (
     ("project", "Inspect project sources, output locations and structural issues without writing"),
-    ("research", "Local sources, dossiers, citations and lexical search (JSON)"),
+    ("research", "Local sources, dossiers, citations and lexical search (text/JSON)"),
     ("service", "Manage an owned local dashboard process"),
     ("analyze", "Corpus metrics (text/JSON, self-describing meta block)"),
     ("profile", "Paragraph tense/style estimates (JSON; --layer text/JSON)"),
@@ -468,6 +469,7 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("characters", "Curated name mentions and declared POV across chapters (text/JSON)"),
     ("pacing", "Scene structure, pacing and chapter hooks (text/JSON)"),
     ("scenes", "Scene features, register references and author targets (text/JSON)"),
+    ("canvas", "Export narrative scenes into a JSON Canvas 1.0 storyboard (.canvas)"),
     ("motifs", "Motif tracking, repetition and local phrase echoes (text/JSON)"),
     ("showing", "Compare word-pattern and quotation/short-sentence signals (text/JSON)"),
     ("style", f"Self-calibrated style reference of the manuscript (text/JSON, schema v{SCHEMA_VERSION_STYLE})"),
@@ -481,10 +483,11 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("audio-import-transcript", "Convert external ASR word timestamps (e.g. Whisper) to lixity-audio-transcript/1"),
     ("audio-status", "Inspect audio profiles and worker readiness"),
     ("audio-microphone", "Inspect and set hardware microphone gain and list recording devices"),
-    ("audio-calibrate", "Calibrate microphone input level and evaluate dynamic range (text/JSON)"),
-    ("audio-reference", "Create, record or inspect a private project-local voice reference (JSON)"),
+    ("audio-calibrate", "Record one microphone test and suggest a gain adjustment (text/JSON)"),
+    ("audio-reference", "Record, create, inspect or generate private voice references; print reading text"),
+    ("audio-import", "Retain a completed chapter WAV for an exact manuscript revision (JSON)"),
     ("audio-direction", "Inspect and save project-local passage speech direction (JSON)"),
-    ("audio-migrate", "Preview or apply explicit backed-up Qwen profile replacements (JSON)"),
+    ("audio-migrate", "Preview or apply backed-up audio settings upgrades or removed-engine replacements"),
     ("serve", "Run local HTTP development server and interactive dashboard"),
     ("build", "Idempotent workspace build of analysis exports and artifact archive"),
     ("doctor", "Inspect installed versions, module location and local service without changing them"),
@@ -516,7 +519,7 @@ _lixity_complete() {
                 --language) COMPREPLY=( $(compgen -W "zh en ja ko de fr ru pt es it" -- "$cur") ) ;;
                 --speech-target) COMPREPLY=( $(compgen -W "local jetson" -- "$cur") ) ;;
                 --voice) COMPREPLY=( $(compgen -W "Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee design reference thorsten" -- "$cur") ) ;;
-                --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design qwen3-base coqui coqui-reference f5-tts openai-compatible" -- "$cur") ) ;;
+                --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design qwen3-base coqui coqui-reference f5-tts ims-toucan openai-compatible" -- "$cur") ) ;;
                 --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
                 -o|--output) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
                 --profile|--instructions|--voice-description|--reference-id|--chapter|--preview-line|--speed|--base-url|--model|--api-key-env) ;;
@@ -546,7 +549,7 @@ _lixity_complete() {
         audio-status)
             case "$prev" in
                 --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
-                --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design qwen3-base coqui coqui-reference f5-tts openai-compatible" -- "$cur") ) ;;
+                --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design qwen3-base coqui coqui-reference f5-tts ims-toucan openai-compatible" -- "$cur") ) ;;
                 *) COMPREPLY=( $(compgen -W "--help --project --engine --json" -- "$cur") ) ;;
             esac
             return 0
@@ -598,7 +601,7 @@ _lixity_complete() {
                     fi
                     ;;
                 --instructions|--expected-snapshot) ;;
-                *) COMPREPLY=( $(compgen -W "--help --project --to-schema-3 --to-schema-4 --replace --instructions --apply --backup --expected-snapshot" -- "$cur") ) ;;
+                *) COMPREPLY=( $(compgen -W "--help --project --to-schema-3 --to-schema-4 --to-schema-5 --replace --instructions --apply --backup --expected-snapshot" -- "$cur") ) ;;
             esac
             return 0
             ;;
@@ -685,7 +688,7 @@ _lixity_complete() {
     fi
     if [[ ${COMP_WORDS[1]} == export-site ]]; then
         if [[ $prev == --analysis ]]; then COMPREPLY=( $(compgen -W "chapters language full all" -- "$cur") ); return 0; fi
-        COMPREPLY=( $(compgen -W "--help --project --language --json -o --output --include-research --include-source-files --mode --publication-profile --max-chapter --analysis" -- "$cur") )
+        COMPREPLY=( $(compgen -W "--help --project --language --json -o --output --include-research --include-source-files --mode --publication-profile --max-chapter --analysis --include-audio" -- "$cur") )
         COMPREPLY+=( $(compgen -f -- "$cur") )
         return 0
     fi
@@ -737,8 +740,8 @@ __LIXITY_ZSH_COMMANDS__
             '--chapter[Canonical chapter number]:chapter:' \
             '--language[Qwen speech language]:language:(zh en ja ko de fr ru pt es it)' \
             '--profile[Saved narrator profile]:profile:' \
-            '--instructions[Explicit Qwen delivery instructions]:text:' \
-            '--engine[Speech model variant]:engine:(qwen3 qwen3-design qwen3-base coqui coqui-reference f5-tts openai-compatible)' \
+            '--instructions[Delivery instructions where supported, otherwise export-only]:text:' \
+            '--engine[Speech model variant]:engine:(qwen3 qwen3-design qwen3-base coqui coqui-reference f5-tts ims-toucan openai-compatible)' \
             '--voice[Speech voice]:voice:(Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee design reference thorsten)' \
             '--voice-description[VoiceDesign description]:text:' \
             '--reference-id[Saved project reference]:id:' \
@@ -772,7 +775,7 @@ __LIXITY_ZSH_COMMANDS__
           _arguments \
             '--help[Help]' \
             '--project[Explicit project root]:directory:_files -/' \
-            '--engine[Compare a model variant]:engine:(qwen3 qwen3-design qwen3-base coqui coqui-reference f5-tts openai-compatible)' \
+            '--engine[Compare a model variant]:engine:(qwen3 qwen3-design qwen3-base coqui coqui-reference f5-tts ims-toucan openai-compatible)' \
             '--json[Machine-readable status]'
           ;;
         audio-microphone)
@@ -839,6 +842,7 @@ __LIXITY_ZSH_COMMANDS__
             '--project[Explicit project root]:directory:_files -/' \
             '--to-schema-3[Prepare audio schema upgrade for Coqui]' \
             '--to-schema-4[Prepare audio schema upgrade for external providers]' \
+            '--to-schema-5[Prepare audio schema upgrade for phonetics and prosody]' \
             '*--replace[Explicit PROFILE=VOICE replacement]:profile=preset:' \
             '*--instructions[Explicit PROFILE=TEXT delivery]:profile=text:' \
             '--apply[Apply the reviewed candidate]' \
@@ -940,6 +944,7 @@ __LIXITY_ZSH_COMMANDS__
             '--publication-profile[Root-local reading profile]:name:' \
             '--max-chapter[Omit content after this chapter]:chapter:' \
             '*--analysis[Optional reader analysis]:section:(chapters language full all)' \
+            '--include-audio[Reader: include saved current chapter audio]' \
             '--include-research[Include authored history and cited excerpts]' \
             '--include-source-files[Also include original source files and full text]' \
             '--json[Print the export manifest]' \
@@ -1577,13 +1582,15 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
                 changes[name] = value
         if args.engine == "qwen3-design" and args.voice is None and previous_engine != "qwen3-design":
             changes["voice"] = "design"
-        if args.engine in ("qwen3-base", "f5-tts") and args.voice is None and previous_engine not in ("qwen3-base", "f5-tts"):
+        if args.engine in NATIVE_ENGINES and native_engine(args.engine).reference_required and args.voice is None:
             changes["voice"] = "reference"
         if args.engine in ("coqui", "coqui-reference") and args.voice is None:
             changes["voice"] = "reference" if args.engine == "coqui-reference" else "thorsten"
         if args.engine and args.engine != "qwen3-design" and previous_engine == "qwen3-design" and args.voice_description is None:
             changes.pop("voice_description", None)
-        if args.engine and args.engine not in ("qwen3-base", "coqui-reference", "f5-tts") and previous_engine in ("qwen3-base", "coqui-reference", "f5-tts") and args.reference_id is None:
+        if (args.engine and (args.engine not in NATIVE_ENGINES or not native_engine(args.engine).reference_required)
+                and previous_engine is not None and previous_engine in NATIVE_ENGINES and native_engine(previous_engine).reference_required
+                and args.reference_id is None):
             changes.pop("reference_id", None)
         if args.engine and args.engine != "openai-compatible" and previous_engine == "openai-compatible":
             for key in ("base_url", "model", "api_key_env", "supports_instructions"):
@@ -1591,12 +1598,13 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
                     changes.pop(key, None)
         if args.engine == "openai-compatible" and previous_engine != "openai-compatible" and args.voice is None:
             raise ValueError("Choose an explicit --voice identifier supported by the external provider")
-        if changes["engine"] not in ("qwen3-base", "coqui-reference", "f5-tts") and args.reference_id:
+        reference_engine = changes["engine"] in NATIVE_ENGINES and native_engine(changes["engine"]).reference_required
+        if not reference_engine and args.reference_id:
             raise ValueError(_m("audio_reference_wrong_engine"))
-        if changes["engine"] in ("qwen3-base", "coqui-reference", "f5-tts"):
+        if reference_engine:
             if not changes.get("reference_id"):
                 raise ValueError(_m("audio_base_reference_required"))
-            if changes.get("instructions"):
+            if changes.get("instructions") and changes["engine"] != "ims-toucan":
                 raise ValueError(_m("audio_base_instructions_inherited" if args.instructions is None
                                     else "audio_base_instructions_explicit"))
         if changes["engine"] == "qwen3-design" and not changes.get("voice_description"):
@@ -1698,6 +1706,21 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
             progress=_audio_progress() if args.progress else None,
             **render_options,
         )
+        if args.project is not None and args.chapter is not None and not preview and os.path.splitext(out_path)[1].lower() == ".wav":
+            from .speech_artifacts import MAX_CHAPTER_AUDIO_BYTES, retain_chapter_audio
+            from .speech_references import read_reference_input
+
+            def retained_context() -> bool:
+                check_context()
+                return True
+
+            try:
+                retained_context()
+                retain_chapter_audio(workspace.root, read_reference_input(out_path, MAX_CHAPTER_AUDIO_BYTES),
+                                     source_sha256=source_hash, chapter=args.chapter, origin="generated",
+                                     valid=retained_context)
+            except (OSError, ValueError, RuntimeError) as exc:
+                raise RuntimeError(f"Audio was written to {out_path}, but chapter retention failed: {exc}") from exc
     except (OSError, ValueError, RuntimeError, FileNotFoundError) as exc:
         print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
         return EXIT_ERROR
@@ -1910,7 +1933,7 @@ def _add_threshold_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--preset", choices=FingerprintThresholds.presets, default=None,
         help=(
-            "Optional editorial review preset: balanced (default), "
+            "Editorial review preset: balanced (built-in default), "
             "developmental (macro chapter shifts), line_editing (close prose pass), "
             "or conservative_by (arbitrary-dependence FDR); explicit threshold flags override preset values"
         ),
@@ -1927,15 +1950,15 @@ def _add_threshold_arguments(parser: argparse.ArgumentParser) -> None:
             bounds += f" and {'<' if policy.maximum_exclusive else '<='} {policy.maximum:g}"
         parser.add_argument(
             flag, type=_threshold_number(key), default=None,
-            help=f"{description}; finite, {bounds} (default: {getattr(defaults, key)})",
+            help=f"{description}; finite, {bounds} (built-in default: {getattr(defaults, key)}; project may override)",
         )
     parser.add_argument(
         "--fdr-method", choices=FingerprintThresholds.fdr_methods, default=None,
-        help=f"FDR method: bh (Benjamini-Hochberg) or by (Benjamini-Yekutieli); default: {defaults.fdr_method}",
+        help=f"FDR method: bh (Benjamini-Hochberg) or by (Benjamini-Yekutieli); built-in default: {defaults.fdr_method}; project may override",
     )
     parser.add_argument(
         "--flag-min-severity", type=int, choices=FingerprintThresholds.flag_severities, default=None,
-        help=f"Minimum paragraph severity for flags panel (default: {defaults.flag_min_severity})",
+        help=f"Minimum paragraph severity for flags panel (built-in default: {defaults.flag_min_severity}; project may override)",
     )
 
 
@@ -2023,6 +2046,19 @@ def _cmd_analysis_report(
             print(labels["scene_support"].replace("{min_tokens}", str(MIN_TOKENS_LD)))
         return EXIT_OK
 
+    if args.command == "canvas":
+        from .api import scenes
+        from .canvas import export_scenes_canvas
+
+        try:
+            report = scenes(text, resolved.key, project_config=args._project_config)
+            canvas_obj = export_scenes_canvas(report["scenes"])
+            print(canvas_obj.to_json())
+        except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return EXIT_ERROR
+        return EXIT_OK
+
     if args.command == "analyze":
         metrics = CorpusAnalyzer(config, sample_text=text).analyze_text(text)
         if args.json:
@@ -2072,24 +2108,28 @@ def _cmd_analysis_report(
     raise ValueError("Unknown textual analysis report")
 
 
-def _main(argv: list[str] | None = None) -> int:
+def _build_parser() -> argparse.ArgumentParser:
+    """Build help and grammar without loading a project or dispatching commands."""
+    from .cli_help import AUDIO_OPTION_HELP, GroupedHelpFormatter, finish_command_help
+
     parser = argparse.ArgumentParser(
         prog="lixity",
         description=(
-            "Lixity – quantitative text linguistics, stylometry, self-calibrating "
-            "style references and single-file dashboards for literary manuscripts."
+            "Read and analyze manuscripts, maintain research, and prepare reading "
+            "or audio exports. Measurements support human review; they do not grade prose."
         ),
         epilog=(
             "Open the local app:  lixity service start --open\n"
             "Read a report:      lixity analyze manuscript.md --language en\n"
             "Inspect commands:   lixity COMMAND --help  |  lixity about --json\n"
-            f"Docs: {docs_url()}  ·  "
-            "Report language: LIXITY_LANG=de"
+            f"Manuals: {docs_url('README.md')}\n"
+            "Help is in English. LIXITY_LANG=de selects report/message language;\n"
+            "--language selects manuscript analysis language (default: project setting or en)."
         ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        formatter_class=GroupedHelpFormatter,
     )
     parser.add_argument("--version", action="version", version=f"lixity {__version__}")
-    sub = parser.add_subparsers(dest="command", required=True, metavar="command")
+    sub = parser.add_subparsers(dest="command", required=True, metavar="COMMAND", title="Commands")
     from .research.cli import configure as configure_research
     from .service import configure as configure_service
 
@@ -2110,50 +2150,54 @@ def _main(argv: list[str] | None = None) -> int:
             continue
         if name == "audio-import-transcript":
             p.add_argument("audio", help="Reference WAV, FLAC or MP3 file for SHA-256 binding")
-            p.add_argument("transcript", help="External ASR transcript JSON (e.g. OpenAI Whisper or word-timing list)")
-            p.add_argument("-o", "--output", help="Target output file (default: stdout)")
-            p.add_argument("--model", help="Declared speech recognizer model name (optional)")
+            p.add_argument("transcript", help=AUDIO_OPTION_HELP[name]['transcript'])
+            p.add_argument("-o", "--output", help=AUDIO_OPTION_HELP[name]['--output'])
+            p.add_argument("--model", help=AUDIO_OPTION_HELP[name]['--model'])
             p.add_argument("--language", default="en", help="Explicit tokenization language (default: en)")
             continue
         if name == "audio-status":
             p.add_argument("--project", help="Explicit project root; omit to inspect workers only")
-            p.add_argument("--engine", choices=("qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "f5-tts", "openai-compatible"), help="Compare this model variant instead of the selected profile")
+            p.add_argument("--engine", choices=(*NATIVE_ENGINES, "openai-compatible"), help="Compare this model variant instead of the selected profile")
             p.add_argument("--json", action="store_true", help="Machine-readable status")
             continue
         if name == "audio-microphone":
-            p.add_argument("action", nargs="?", default="status", choices=("status", "set", "devices", "calibrate"))
-            p.add_argument("--gain", type=int, default=None, help="Set ALSA capture gain (0–50)")
-            p.add_argument("--device", default=None, help="Hardware capture device (e.g. plughw:CARD=I3000,DEV=0)")
-            p.add_argument("--card", default=1, help="ALSA card index or id (default: 1)")
-            p.add_argument("--control", default="Mic", help="ALSA mixer control (default: Mic)")
+            p.add_argument("action", nargs="?", default="status", choices=("status", "set", "devices", "calibrate"), help=AUDIO_OPTION_HELP[name]['action'])
+            p.add_argument("--gain", type=int, default=None, help=AUDIO_OPTION_HELP[name]['--gain'])
+            p.add_argument("--device", default=None, help=AUDIO_OPTION_HELP[name]['--device'])
+            p.add_argument("--card", default=1, help=AUDIO_OPTION_HELP[name]['--card'])
+            p.add_argument("--control", default="Mic", help=AUDIO_OPTION_HELP[name]['--control'])
             p.add_argument("--json", action="store_true", help="Machine-readable JSON output")
             continue
         if name == "audio-calibrate":
-            p.add_argument("--gain", type=int, default=None, help="ALSA capture gain (0–50)")
-            p.add_argument("--duration", type=float, default=8.0, help="Test burst recording length in seconds (default: 8.0)")
+            p.add_argument("--gain", type=int, default=None, help=AUDIO_OPTION_HELP[name]['--gain'])
+            p.add_argument("--duration", type=float, default=8.0, help=AUDIO_OPTION_HELP[name]['--duration'])
             p.add_argument("--countdown", type=float, default=4.0, help="Prep countdown delay in seconds (default: 4.0)")
-            p.add_argument("--device", default=None, help="Hardware capture device (default: plughw:CARD=I3000,DEV=0)")
+            p.add_argument("--device", default=None, help=AUDIO_OPTION_HELP[name]['--device'])
             p.add_argument("--json", action="store_true", help="Machine-readable JSON calibration result")
+            continue
+        if name == "audio-import":
+            from .speech_artifacts_cli import configure
+            configure(p)
             continue
         if name == "audio-reference":
             p.add_argument("action", choices=("create", "inspect", "record", "generate", "calibration-text"))
-            p.add_argument("--project", default=None, help="Explicit existing project root")
-            p.add_argument("--audio", help="create: reference WAV, 1–30 seconds, mono PCM 24 kHz")
-            p.add_argument("--transcript-file", help="create/record: exact UTF-8 transcript file of the reference WAV")
+            p.add_argument("--project", default=None, help=AUDIO_OPTION_HELP[name]['--project'])
+            p.add_argument("--audio", help=AUDIO_OPTION_HELP[name]['--audio'])
+            p.add_argument("--transcript-file", help=AUDIO_OPTION_HELP[name]['--transcript-file'])
             p.add_argument("--transcript", default=None, help="record/generate: exact inline transcript text")
             p.add_argument("--reference-id", help="inspect: saved reference identity to measure")
-            p.add_argument("--duration", type=float, default=15.0, help="record: length in seconds (1–30, default: 15)")
-            p.add_argument("--gain", type=int, default=None, help="record: ALSA capture gain (0–50)")
+            p.add_argument("--duration", type=float, default=15.0, help=AUDIO_OPTION_HELP[name]['--duration'])
+            p.add_argument("--gain", type=int, default=None, help=AUDIO_OPTION_HELP[name]['--gain'])
             p.add_argument("--device", default=None, help="record: hardware capture device")
             p.add_argument("--calibration-text", action="store_true", help="record: read the standard phonetically balanced calibration text")
-            p.add_argument("--variant", choices=("phonetic", "short"), default="phonetic", help="calibration text variant (default: phonetic)")
-            p.add_argument("--language", default="de", choices=("de", "en"), help="generate/calibration-text: language (default: de)")
+            p.add_argument("--variant", choices=("phonetic", "short"), default="phonetic", help=AUDIO_OPTION_HELP[name]['--variant'])
+            p.add_argument("--language", default="de", choices=("de", "en"), help=AUDIO_OPTION_HELP[name]['--language'])
             p.add_argument("--voice-description", default=None, help="generate: description of the voice to synthesize")
-            p.add_argument("-o", "--output", help="record: optional file to save recorded WAV")
+            p.add_argument("-o", "--output", help=AUDIO_OPTION_HELP[name]['--output'])
             continue
         if name == "audio-direction":
             from .speech_direction_cli import configure
-            p.epilog = _m("audio_direction_help")
+            p.epilog = None
             configure(p)
             continue
         if name == "audio-migrate":
@@ -2161,13 +2205,14 @@ def _main(argv: list[str] | None = None) -> int:
             schemas = p.add_mutually_exclusive_group()
             schemas.add_argument("--to-schema-3", action="store_true", help="Prepare a backed-up upgrade for Coqui profiles")
             schemas.add_argument("--to-schema-4", action="store_true", help="Prepare a backed-up upgrade for external speech providers")
+            schemas.add_argument("--to-schema-5", action="store_true", help="Prepare a backed-up upgrade for phonetics and structured prosody")
             p.add_argument("--replace", action="append", default=[], metavar="PROFILE=VOICE",
-                           help="Explicit Qwen preset for each removed engine profile; repeat for multiple profiles")
+                           help=AUDIO_OPTION_HELP[name]['--replace'])
             p.add_argument("--instructions", action="append", default=[], metavar="PROFILE=TEXT",
-                           help="Explicit delivery instructions for a replaced profile")
+                           help=AUDIO_OPTION_HELP[name]['--instructions'])
             p.add_argument("--apply", action="store_true", help="Apply the reviewed candidate; default only previews")
-            p.add_argument("--backup", help="New backup ZIP outside the project; required with --apply")
-            p.add_argument("--expected-snapshot", help="Snapshot token from the reviewed preview; required with --apply")
+            p.add_argument("--backup", help=AUDIO_OPTION_HELP[name]['--backup'])
+            p.add_argument("--expected-snapshot", help=AUDIO_OPTION_HELP[name]['--expected-snapshot'])
             continue
         if name == "analysis-review":
             p.add_argument("--project", required=True, help="Explicit project root")
@@ -2209,14 +2254,15 @@ def _main(argv: list[str] | None = None) -> int:
             p.add_argument("-o", "--output", help="A new directory for the reading website; existing paths are never overwritten")
             p.add_argument("--preflight", action="store_true", help="Measure the prepared package without writing it; omit --output")
             p.add_argument("--language", default=None, help="Analysis language (default: project language or en)")
-            p.add_argument("--include-research", action="store_true", help="Include authored research, revision history, cited excerpts and manuscript links")
+            p.add_argument("--include-research", action="store_true", help="Review mode only: include authored research, revision history, cited excerpts and manuscript links")
             p.add_argument("--include-source-files", action="store_true", help="Include selected source files with redistribution permission; review mode also requires --include-research")
-            p.add_argument("--mode", choices=SITE_MODES, default="review", help="Review workspace, novel with curated notes, or companion without novel text")
-            p.add_argument("--publication-profile", metavar="NAME", help="Root-local site_publications profile for reader/companion mode")
-            p.add_argument("--max-chapter", type=int, metavar="N", help="In publication modes, omit later chapters, notes and their assets from the exported files")
+            p.add_argument("--include-audio", action="store_true", help="Reader mode: include saved chapter WAVs matching the current manuscript, within the chapter cap; never synthesize")
+            p.add_argument("--mode", choices=SITE_MODES, default="review", help="review (default): author workspace; reader: curated novel; companion: notes without novel text")
+            p.add_argument("--publication-profile", metavar="NAME", help="Required in reader/companion mode: root-local site_publications profile")
+            p.add_argument("--max-chapter", type=int, metavar="N", help="Reader/companion only: last included chapter (0 or higher); later content/assets are omitted")
             p.add_argument("--analysis", action="append", choices=("chapters", "language", "full", "all"),
-                           help="Reader analysis to disclose; repeat chapters/language or select full (all is an alias); default none")
-            p.add_argument("--json", action="store_true", help="Print the versioned export manifest as JSON")
+                           help="Reader only: disclose chapters/language (each once), or full alone (all is an alias); default none")
+            p.add_argument("--json", action="store_true", help="JSON output: preflight report with --preflight, export manifest otherwise")
             p.epilog = (
                 "Creates a portable read-only snapshot, not an authenticated website or backup. "
                 "Open index.html locally or serve the exported directory with static hosting. "
@@ -2273,12 +2319,19 @@ def _main(argv: list[str] | None = None) -> int:
             scene_selector.add_argument("--latest", action="store_true",
                                         help="Last measured scene in document order, optionally within --chapter (not modification time)")
             continue
+        if name == "canvas":
+            p.add_argument("file", nargs="?", help="Markdown manuscript (default: selected workspace manuscript)")
+            p.add_argument(
+                "--language", default=None, help="Language profile (default: project setting or en)"
+            )
+            p.add_argument("-o", "--output", help="Write .canvas file to a path instead of stdout")
+            continue
         if name in ("style", "dashboard", "serve", "build"):
             p.add_argument(
                 "--min-chapters",
                 type=int,
                 default=None,
-                help="Minimum chapters required for a style baseline (default: 2)",
+                help="Minimum usable chapters for a style baseline (project override; built-in default: 2)",
             )
         if name not in ("motifs", "characters", "read-aloud", "audio-export-plan"):
             _add_threshold_arguments(p)
@@ -2292,7 +2345,7 @@ def _main(argv: list[str] | None = None) -> int:
             )
             p.add_argument("file", nargs="?", help="Markdown manuscript (default: configured manuscript or folder discovery)")
             p.add_argument(
-                "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)"
+                "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: project setting or en; auto requests detection)"
             )
             p.add_argument("--dry-run", action="store_true", help="Show planned artifacts only")
             continue
@@ -2306,7 +2359,7 @@ def _main(argv: list[str] | None = None) -> int:
             )
             p.add_argument("--phrases", type=int, default=3, help="Phrase size (default 3)")
             p.add_argument(
-                "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)"
+                "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: project setting or en; auto requests detection)"
             )
             p.add_argument("--json", action="store_true", help="JSON output")
             p.add_argument("-o", "--output", help="Write report text or JSON to a file instead of stdout")
@@ -2321,7 +2374,7 @@ def _main(argv: list[str] | None = None) -> int:
             )
             p.add_argument("--names", help="Comma-separated names; omitted uses project characters or legacy names")
             p.add_argument(
-                "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)"
+                "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: project setting or en; auto requests detection)"
             )
             p.add_argument("--json", action="store_true", help="JSON output")
             p.add_argument("-o", "--output", help="Write report text or JSON to a file instead of stdout")
@@ -2335,21 +2388,19 @@ def _main(argv: list[str] | None = None) -> int:
             )
             p.add_argument("file", nargs="?", help="Markdown manuscript (default: manuscript in root-local project config)")
             p.add_argument(
-                "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)"
+                "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: project setting or en; auto requests detection)"
             )
             p.add_argument("--names", help="Comma-separated figure names (character panel)")
             p.add_argument("-o", "--output", help="HTML target file (default: lixity-dashboard.html)")
             continue
         if name in ("read-aloud", "audio-export-plan"):
-            from .speech_profiles import QWEN_VOICES
-
-            p.epilog = _m("audio_read_help")
+            p.epilog = None
             p.add_argument("file", nargs="?", help="Markdown manuscript (default: configured manuscript or folder discovery)")
-            p.add_argument("-o", "--output", help="Audio target file (WAV or MP3, default: <workspace-slug>.wav)")
-            p.add_argument("--chapter", type=int, default=None, help="Synthesize only a specific 1-based chapter number")
-            p.add_argument("--language", default=None, help="Speech language code (default: saved profile, then project setting)")
+            p.add_argument("-o", "--output", help=AUDIO_OPTION_HELP[name]['--output'])
+            p.add_argument("--chapter", type=int, default=None, help=AUDIO_OPTION_HELP[name]['--chapter'])
+            p.add_argument("--language", default=None, help=AUDIO_OPTION_HELP[name]['--language'])
             p.add_argument("--profile", default=None, help="Saved project audio profile (default: selected project profile)")
-            p.add_argument("--plan-only", action="store_true", help="Inspect effective speech text and direction as JSON; no synthesis or output")
+            p.add_argument("--plan-only", action="store_true", help=AUDIO_OPTION_HELP[name]['--plan-only'])
             exports = p.add_mutually_exclusive_group()
             exports.add_argument("--ssml", action="store_true", help="Export W3C SSML; implies --plan-only; unsupported controls are reported on stderr")
             exports.add_argument("--timeline", action="store_true", help="Export a lossless direction timeline as JSON; implies --plan-only")
@@ -2361,16 +2412,16 @@ def _main(argv: list[str] | None = None) -> int:
             previews.add_argument("--preview", action="store_true", help="Preview the first anchored paragraph or list item")
             previews.add_argument("--preview-line", type=int, help="Preview the anchored paragraph or list item containing this source line")
             p.add_argument("--progress", action="store_true", help="Report segment progress and estimated remaining time to stderr")
-            p.add_argument("--no-direction", action="store_true", help=_m("audio_no_direction_help"))
-            p.add_argument("--instructions", default=None, help=_m("audio_instructions_help"))
-            p.add_argument("--engine", choices=("qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "f5-tts", "openai-compatible"), default=None, help=_m("audio_engine_help"))
+            p.add_argument("--no-direction", action="store_true", help="Ignore saved passage direction, range voice assignments and pauses for this invocation")
+            p.add_argument("--instructions", default=None, help="Delivery instructions for this invocation; selected engine must support free-text direction")
+            p.add_argument("--engine", choices=(*NATIVE_ENGINES, "openai-compatible"), default=None, help=AUDIO_OPTION_HELP[name]['--engine'])
             p.add_argument("--voice-description", default=None, help="VoiceDesign voice description")
-            p.add_argument("--reference-id", default=None, help="Project-local Base voice reference identity")
-            p.add_argument("--voice", default=None, help=_m("audio_voice_help", voices=", ".join(QWEN_VOICES)))
+            p.add_argument("--reference-id", default=None, help="Project-local saved voice reference identity")
+            p.add_argument("--voice", default=None, help=AUDIO_OPTION_HELP[name]['--voice'])
             p.add_argument("--speed", type=float, default=None, help="Override all profile tempo factors for this render (0.5–2.0; FFmpeg required unless 1.0)")
-            p.add_argument("--speech-target", choices=("local", "jetson"), default="local", help="Execution target for this run (default: local); Jetson requires its configured SSH forward")
+            p.add_argument("--speech-target", choices=("local", "jetson"), default="local", help=AUDIO_OPTION_HELP[name]['--speech-target'])
             p.add_argument("--no-audio-cache", action="store_true", help="Render without reading or retaining reusable audio segments")
-            p.add_argument("--fresh-audio", action="store_true", help="Recompute Qwen segments instead of reusing completed project audio")
+            p.add_argument("--fresh-audio", action="store_true", help=AUDIO_OPTION_HELP[name]['--fresh-audio'])
             p.add_argument("--keep-markers", action="store_true", help="Read editorial markers aloud instead of omitting them")
             if name == "audio-export-plan":
                 p.set_defaults(plan_only=True, timeline=True)
@@ -2422,7 +2473,7 @@ def _main(argv: list[str] | None = None) -> int:
             continue
         p.add_argument("file", nargs="?", help="Markdown manuscript (default: manuscript in root-local project config)")
         p.add_argument(
-            "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)"
+            "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: project setting or en; auto requests detection)"
         )
         p.add_argument(
             "--json", action="store_true", help=argparse.SUPPRESS if name == "pdf" else "JSON output"
@@ -2491,6 +2542,13 @@ def _main(argv: list[str] | None = None) -> int:
             p.add_argument(
                 "--sans-bold-font", default=None, help="TrueType file for report headings"
             )
+    for command_name, command_parser in sub.choices.items():
+        finish_command_help(command_parser, command_name)
+    return parser
+
+
+def _main(argv: list[str] | None = None) -> int:
+    parser = _build_parser()
     args = parser.parse_args(argv)
     if args.command == "audio-export-plan":
         args.command = "read-aloud"
@@ -2705,6 +2763,14 @@ def _main(argv: list[str] | None = None) -> int:
         except (OSError, ValueError, RuntimeError) as exc:
             print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
             return EXIT_ERROR
+    if args.command == "audio-import":
+        from .speech_artifacts_cli import run
+        try:
+            print(_json(run(args), indent=True))
+            return EXIT_OK
+        except (OSError, ValueError, RuntimeError) as exc:
+            print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+            return EXIT_ERROR
     if args.command == "audio-reference":
         from .speech_qwen import MAX_REFERENCE_BYTES
         from .speech_reference_quality import assess_reference
@@ -2832,6 +2898,7 @@ def _main(argv: list[str] | None = None) -> int:
             prepare_audio_migration,
             prepare_schema3_migration,
             prepare_schema4_migration,
+            prepare_schema5_migration,
         )
 
         def pairs(values: list[str]) -> dict[str, str]:
@@ -2848,9 +2915,10 @@ def _main(argv: list[str] | None = None) -> int:
         if not args.apply and (args.backup or args.expected_snapshot):
             parser.error("Omit --backup and --expected-snapshot for a read-only preview")
         try:
-            if (args.to_schema_3 or args.to_schema_4) and (args.replace or args.instructions):
+            if (args.to_schema_3 or args.to_schema_4 or args.to_schema_5) and (args.replace or args.instructions):
                 raise ValueError("Schema upgrade cannot be combined with profile replacements")
-            prepared = (prepare_schema4_migration(args.project) if args.to_schema_4 else
+            prepared = (prepare_schema5_migration(args.project) if args.to_schema_5 else
+                        prepare_schema4_migration(args.project) if args.to_schema_4 else
                         prepare_schema3_migration(args.project) if args.to_schema_3 else
                         prepare_audio_migration(args.project, pairs(args.replace), instructions=pairs(args.instructions)))
             if args.apply and args.expected_snapshot != prepared.snapshot:
@@ -2877,6 +2945,7 @@ def _main(argv: list[str] | None = None) -> int:
                 sections = ["full"]
             options = SiteExportOptions(include_research=args.include_research,
                                         include_source_files=args.include_source_files,
+                                        include_audio=args.include_audio,
                                         mode=args.mode, publication_profile=args.publication_profile,
                                         max_chapter=args.max_chapter, analysis_sections=sections)
             if args.preflight:
@@ -3050,7 +3119,7 @@ def _main(argv: list[str] | None = None) -> int:
         print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
         return EXIT_ERROR
 
-    if args.command in ("scenes", "analyze", "profile", "style"):
+    if args.command in ("scenes", "canvas", "analyze", "profile", "style"):
         return _run_text_report(args, lambda: _cmd_analysis_report(args, text, config, resolved))
 
     fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))

@@ -30,6 +30,8 @@ SUITE_DIR = ROOT / "tests" / "browser"
 # Everyday coverage for UI work; run every suite before a release.
 GROUPS: dict[str, tuple[str, ...]] = {
     "fast": (
+        "audio-permission.cjs",
+        "audio-phonetics.cjs",
         "audio-export.cjs",
         "anchor-navigation.cjs",
         "analysis-navigation.cjs",
@@ -38,6 +40,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "workbench.cjs",
         "workbench-transitions.cjs",
         "tooltips.cjs",
+        "tooltips-dialog.cjs",
         "overlay-layout.cjs",
         "minimal-workflows.cjs",
         "project-controls.cjs",
@@ -54,6 +57,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
 # to at least one area; tests/test_ci_selection.py verifies complete coverage.
 AREAS: dict[str, tuple[str, ...]] = {
     "sharing": (
+        "reader-audio.cjs",
         "site-preflight.cjs",
         "dossier-media.cjs",
         "read-only-site.cjs",
@@ -107,6 +111,7 @@ AREAS: dict[str, tuple[str, ...]] = {
         "workbench.cjs",
         "workbench-transitions.cjs",
         "tooltips.cjs",
+        "tooltips-dialog.cjs",
         "minimal-workflows.cjs",
         "paragraph-feedback.cjs",
         "scenes.cjs",
@@ -117,6 +122,20 @@ AREAS: dict[str, tuple[str, ...]] = {
         "visual-consistency.cjs",
     ),
     "project": (
+        "audio-chapter-import.cjs",
+        "audio-take.cjs",
+        "audio-take-studio.cjs",
+        "audio-phonetics.cjs",
+        "audio-loading.cjs",
+        "audio-microphone.cjs",
+        "audio-permission.cjs",
+        "audio-player.cjs",
+        "audio-references.cjs",
+        "audio-recording-diagnostics.cjs",
+        "audio-studio.cjs",
+        "teleprompter-context.cjs",
+        "teleprompter-plan.cjs",
+        "teleprompter-take.cjs",
         "audio-pronunciations.cjs",
         "audio-profile-delete.cjs",
         "read-only-site.cjs",
@@ -155,6 +174,8 @@ AREAS: dict[str, tuple[str, ...]] = {
         "dossier-return.cjs",
         "passage-research.cjs",
         "dossier-workflows.cjs",
+        "markdown-editor.cjs",
+        "command-palette.cjs",
         "list-filters.cjs",
         "manuscript-links-native.cjs",
         "manuscript-links.cjs",
@@ -180,6 +201,7 @@ PATH_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("src/lixity/ui/publication.py", ("sharing",)),
     ("src/lixity/ui/assets/read-only-site.js", ("sharing",)),
     ("src/lixity/ui/assets/reader-publication.*", ("sharing",)),
+    ("src/lixity/ui/assets/reader-audio.js", ("sharing",)),
     ("src/lixity/ui/assets/design-tokens.css", ("tokens",)),
     ("src/lixity/ui/assets/components.css", ("tokens", "analysis", "project")),
     ("src/lixity/ui/assets/research*", ("research",)),

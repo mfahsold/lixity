@@ -11,6 +11,7 @@ from typing import Any, Literal, NoReturn, cast
 
 from pydantic import ValidationError
 
+from ..cli_help import GroupedHelpFormatter
 from .limits import MAX_IMAGE_BYTES, MAX_RESEARCH_OBJECT_BYTES
 
 OUTPUT_FORMATS: dict[str, tuple[tuple[str, ...], str]] = {
@@ -147,10 +148,22 @@ COMMAND_DEFINITIONS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
         (),
     ),
     (
+        "extract-article",
+        "Extract clean structured Markdown and metadata from an HTML file offline",
+        "Sources and captures",
+        ("web-extract",),
+    ),
+    (
         "dossier",
         "Create, list or inspect research dossiers",
         "Dossiers, claims and decisions",
         ("dossiers",),
+    ),
+    (
+        "canvas",
+        "Export dossiers, claims and relations into JSON Canvas 1.0 format (.canvas)",
+        "Dossiers, claims and decisions",
+        (),
     ),
     (
         "dossier-image",
@@ -327,7 +340,7 @@ COMMAND_DEFINITIONS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
     (
         "migrate-storage",
         "Verify a portable backup, then migrate manifest storage without changing snapshots",
-        "Archive maintenance",
+        "Archive and maintenance",
         (),
     ),
     (
@@ -370,39 +383,373 @@ COMMAND_DEFINITIONS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
 )
 
 
-class _ResearchHelpFormatter(argparse.HelpFormatter):
-    """Group the registered flat grammar without maintaining another command list."""
+_COMMAND_HELP: dict[str, tuple[str, tuple[str, ...]]] = {
+    "init": (
+        "Create a research archive under an explicit project root; writes local project files.\n"
+        "The project language defaults to English. Existing manuscripts are not imported.",
+        ('init --project ./novel --title "Novel research" --language en',),
+    ),
+    "canvas": (
+        "Export research dossiers, claims and relations into a portable JSON Canvas 1.0 file.\n"
+        "Can be opened directly in Obsidian or any tool supporting the open JSON Canvas standard.",
+        ("canvas --project ./novel", "canvas --project ./novel --output ./knowledge.canvas"),
+    ),
+    "extract-article": (
+        "Extract clean title, metadata and structured Markdown from an HTML web article offline.\n"
+        "Removes boilerplate, navigation and ads using a deterministic Readability-style parser.",
+        ("extract-article article.html", "extract-article article.html --url https://example.com/article --output article.md"),
+    ),
+    "sources": (
+        "Omit a selector to list active sources; use show SOURCE_ID to inspect retained passages.\n"
+        "Human lists support pagination; JSON stays complete and rejects --pager/--limit/--offset.",
+        ("sources --project ./novel --format text", "sources show SOURCE_ID --project ./novel"),
+    ),
+    "zotero": (
+        "Read a configured local Zotero bridge without retaining attachments. Choose a library,\n"
+        "then inspect an item before using zotero-ingest. This does not synchronize libraries.",
+        ('zotero --project ./novel --library users/0 --query "reading room"',),
+    ),
+    "zotero-ingest": (
+        "Capture selected attachments through the configured local Zotero bridge.\n"
+        "--allow-retention is required, including for --dry-run; it grants local retention only.\n"
+        "Preview with --dry-run before omitting it to save the capture.",
+        (
+            "zotero-ingest --project ./novel --library users/0 --attachment-key ATTACHMENT_KEY "
+            "--allow-retention --dry-run",
+        ),
+    ),
+    "ingest": (
+        "Retain authorized local source bytes and extracted text; URLs are provenance metadata.\n"
+        "--allow-retention is required, including for --dry-run; it does not grant redistribution.\n"
+        "Preview with --dry-run, then omit it to save. --source-id refreshes a known source while\n"
+        "preserving old citations. Scanned PDFs need configured local OCR; inspect ocr-status.",
+        ("ingest --project ./novel --file notes.txt --allow-retention --dry-run",),
+    ),
+    "dossier": (
+        "List by default; inspect with DOSSIER_ID, or create with --title and --file/--body.\n"
+        "Creation and --update save authored records. Collection edits write project configuration.\n"
+        "--format table is for lists; use text or JSON for individual records.",
+        (
+            "dossier list --project ./novel --format text",
+            'dossier --project ./novel --title "Reading room" --body "Authored notes."',
+        ),
+    ),
+    "dossier-image": (
+        "Retain an authorized image and revise its dossier in one transaction. Supply the reviewed\n"
+        "snapshot and dossier revision. --allow-retention is required, including batch previews.\n"
+        "Only --batch supports --dry-run; a single --file saves immediately.",
+        (
+            "dossier-image --project ./novel --dossier-id DOSSIER_ID --batch images.json "
+            "--expected-snapshot SNAPSHOT --expected-revision 1 --allow-retention --dry-run",
+        ),
+    ),
+    "dossier-media": (
+        "Retain an authorized PDF/video and revise its dossier in one transaction. Supply the\n"
+        "reviewed snapshot, dossier revision and --allow-retention. This command saves immediately.\n"
+        "Video is retained as a media reference; it is not transcribed or fact-checked.",
+        (
+            "dossier-media --project ./novel --dossier-id DOSSIER_ID --file reference.pdf "
+            "--expected-snapshot SNAPSHOT --expected-revision 1 --allow-retention",
+        ),
+    ),
+    "media-context": (
+        "Correct origin_url/provenance_note for one retained media version and repin its dossier.\n"
+        "Preview with --dry-run; omit it to save both changes together. Source bytes stay unchanged.",
+        (
+            "media-context --project ./novel --dossier-id DOSSIER_ID --source-id SOURCE_ID "
+            "--source-version-id VERSION_ID --expected-snapshot SNAPSHOT --expected-revision 1 "
+            '--context provenance.json --reason "Reviewed origin" --dry-run',
+        ),
+    ),
+    "dossier-images": (
+        "Read image references across active dossiers. Missing provenance is a metadata presence\n"
+        "check, not a determination of image rights. This command does not capture images.",
+        ("dossier-images --project ./novel --missing-provenance",),
+    ),
+    "claim": (
+        "List by default; inspect with CLAIM_ID; create with --title and --statement.\n"
+        "--claim-id alone lists that claim's evidence links; add --inspect to read the claim.\n"
+        "Confidence is an author assessment (default: hypothetical), not factual verification.\n"
+        "--format table is for lists; use text or JSON for individual records.",
+        (
+            "claim list --project ./novel --format text",
+            'claim --project ./novel --title "Opening time" --statement "The room opened at noon."',
+        ),
+    ),
+    "decision": (
+        "List by default; inspect with DECISION_ID; create with --title and --rationale.\n"
+        "Decisions record author choices and declared deviations, not machine findings.\n"
+        "--format table is for lists; use text or JSON for individual records.",
+        (
+            "decision list --project ./novel --format text",
+            'decision --project ./novel --title "Scene opening" --rationale "Begin at dawn."',
+        ),
+    ),
+    "relate": (
+        "Omit both endpoints to list relationships; supply both to save a cause/effect assertion.\n"
+        "Use --relation-id with --inspect/--history/--update for existing records.\n"
+        "These are authored interpretations, not established causal findings.",
+        (
+            "relate --project ./novel",
+            "relate FROM_CLAIM TO_CLAIM --project ./novel --relation causes",
+        ),
+    ),
+    "link-evidence": (
+        "Create with --claim-id and --passage-id; the default relation is supports.\n"
+        "Use --evidence-link-id with --inspect/--history/--update for existing links.\n"
+        "The saved relation records a reviewer's interpretation, not automatic verification.",
+        (
+            "link-evidence --project ./novel --claim-id CLAIM_ID --passage-id PASSAGE_ID "
+            '--relation supports --rationale "Reviewed source paragraph"',
+        ),
+    ),
+    "link": (
+        "Save an evidence link with positional IDs copied from search/cite and the claim list.\n"
+        "Default relation: supports; default reviewer: author. Use link-evidence to revise a link.",
+        ("link PASSAGE_ID CLAIM_ID --project ./novel --relation supports",),
+    ),
+    "revise-batch": (
+        "Preview by default, without accepting revisions. Review the returned packet and snapshot;\n"
+        "supply --apply and --expected-snapshot together to save all revisions atomically.",
+        ("revise-batch --project ./novel --file revisions.json",),
+    ),
+    "link-manuscript": (
+        "Save a quotation associated with an exact reviewed claim revision. --allow-retention\n"
+        "confirms permission to retain the quotation; the manuscript itself is not edited.",
+        (
+            "link-manuscript --project ./novel draft.md --claim-id CLAIM_ID --claim-revision 1 "
+            '--quote "reading room" --allow-retention',
+        ),
+    ),
+    "manuscript-links": (
+        "Read saved quotation-to-claim associations. Use review-manuscript to compare their anchors\n"
+        "and pinned claim revisions with the current manuscript and archive.",
+        ("manuscript-links --project ./novel --format text",),
+    ),
+    "review-manuscript": (
+        "Inspect saved associations against the current manuscript without accepting changes.",
+        ("review-manuscript --project ./novel draft.md --format text",),
+    ),
+    "unlink-manuscript": (
+        "Save a retraction of one reviewed association; its history and retained quote remain.\n"
+        "--expected-revision is required when executing the retraction.",
+        ("unlink-manuscript --project ./novel draft.md --link-id LINK_ID --expected-revision 1",),
+    ),
+    "find-anchor": (
+        "Locate an exact displayed-text quote before saving a manuscript association.",
+        ('find-anchor --project ./novel draft.md --quote "reading room" --format text',),
+    ),
+    "reconcile-manuscript": (
+        "Inspect the preview first; --accept-moved/--accept-all-moved/--accept-claim-updates save\n"
+        "reviewed association changes. The manuscript is never rewritten.",
+        ("reconcile-manuscript --project ./novel draft.md --format text",),
+    ),
+    "terms": (
+        "Review configured terms in the manuscript, or explicitly edit a term profile in lixity.toml.\n"
+        "--set-term/--delete-term write configuration; occurrence review does not accept evidence.",
+        ("terms --project ./novel draft.md --format text",),
+    ),
+    "search": (
+        "Search literal words in current source versions, or select authored records with --scope.\n"
+        "The disposable search index may refresh automatically; --strict rejects a stale index.\n"
+        "Results are candidates for review, not semantic matches or accepted claims.",
+        ('search --project ./novel --query "reading room" --scope all',),
+    ),
+    "cite": (
+        "Read an immutable passage by ID, or find a source paragraph by literal query words.\n"
+        "If selection is needed, review matches and repeat --query with --pick N and its\n"
+        "--expected-snapshot. An unresolved selection returns JSON and exit status 1.",
+        ("cite --project ./novel --passage PASSAGE_ID",),
+    ),
+    "timeline": (
+        "Read chronology derived from recorded claim periods; uncertain or unparseable dates remain\n"
+        "explicit. This does not establish historical chronology or create claim revisions.",
+        ("timeline --project ./novel --format text",),
+    ),
+    "matrix": (
+        "Export current claims, evidence links and author decisions. --output writes a report file\n"
+        "(overwriting an existing file) and prints a JSON receipt; otherwise the report is stdout.",
+        ("matrix --project ./novel --format csv --output evidence.csv",),
+    ),
+    "review": (
+        "Read structural review candidates. --prepare-batch previews explicit pin-review actions;\n"
+        "it returns JSON regardless of --format. --output writes a new review packet, without\n"
+        "accepting revisions; use revise-batch to apply a reviewed packet.",
+        ("review --project ./novel",),
+    ),
+    "decision-impact": (
+        "Read explicitly linked dossiers and review state for one decision. Associations describe\n"
+        "recorded author intent; they do not infer effects on unlinked text.",
+        ("decision-impact --project ./novel --decision-id DECISION_ID",),
+    ),
+    "mark-applied": (
+        "Write an author acknowledgement for the exact reviewed decision and dossier revisions.\n"
+        "This does not edit the dossier or independently verify that the decision was applied.",
+        (
+            "mark-applied --project ./novel --decision-id DECISION_ID --dossier-id DOSSIER_ID "
+            "--expected-snapshot SNAPSHOT --expected-decision-revision 1 --expected-dossier-revision 1",
+        ),
+    ),
+    "reopen": (
+        "Write a review-needed acknowledgement for exact decision and dossier revisions.\n"
+        "This changes review state without editing either authored record.",
+        (
+            "reopen --project ./novel --decision-id DECISION_ID --dossier-id DOSSIER_ID "
+            "--expected-snapshot SNAPSHOT --expected-decision-revision 1 --expected-dossier-revision 1",
+        ),
+    ),
+    "analyze": (
+        "Analyze retained, hash-verified source text. Source verification concerns stored bytes,\n"
+        "not factual accuracy; measurements remain review signals. Use dashboard for HTML.",
+        ("analyze --project ./novel --source-id SOURCE_ID",),
+    ),
+    "dashboard": (
+        "Write a source analysis report as HTML to stdout; redirect it to a file to open locally.\n"
+        "This neither starts a server nor opens a browser.",
+        ("dashboard --project ./novel --source-id SOURCE_ID > source-report.html",),
+    ),
+    "compare": (
+        "Compare retained source text with the selected project's manuscript. Lexical overlap and\n"
+        "grounding are review signals, not proof of influence or factual correctness. --output\n"
+        "writes a report file (overwriting an existing file) and prints a JSON receipt.",
+        ("compare --project ./novel --source-id SOURCE_ID --manuscript draft.md --format md",),
+    ),
+    "audit": (
+        "Read integrity checks for retained records, hashes and citation positions. A failed audit\n"
+        "returns exit status 1 (and ok: false in JSON); it does not repair records.",
+        ("audit --project ./novel --format text",),
+    ),
+    "reindex": (
+        "Replace the disposable local SQLite/FTS5 search index from retained records.\n"
+        "Authored revisions and source bytes are unchanged.",
+        ("reindex --project ./novel",),
+    ),
+    "withdraw": (
+        "Withdraw a source/version, or retire a dossier using its reviewed snapshot and revision.\n"
+        "Retained bytes and history remain. --dry-run previews dossier withdrawal only.",
+        (
+            "withdraw --project ./novel --dossier-id DOSSIER_ID --expected-snapshot SNAPSHOT "
+            "--expected-revision 1 --dry-run",
+        ),
+    ),
+    "purge": (
+        "Permanently remove source records, passages and unshared blobs. Preview with --dry-run;\n"
+        "omitting it deletes retained data. Retained references can then resolve only as purged.\n"
+        "Use withdraw when retained citations and history must remain available.",
+        ("purge --project ./novel --source-id SOURCE_ID --dry-run",),
+    ),
+    "migrate-storage": (
+        "Explicitly migrate older manifest storage after writing and verifying a portable backup.\n"
+        "--project and a new --backup path are required. Snapshots and retained bytes are preserved.",
+        ("migrate-storage --project ./novel --backup ./novel-before-migration.tar.gz",),
+    ),
+    "export": (
+        "Write a verified, restorable research archive including retained sources and history.\n"
+        "The .tar.gz destination is overwritten if it exists; keep it outside the research store\n"
+        "and cache. This is a backup, not a static reading website.",
+        ("export --project ./novel --output ./novel-research.tar.gz",),
+    ),
+    "restore": (
+        "Verify a research backup and restore it at the explicit target project. Existing research\n"
+        "data is not overwritten. No --project option is used; --to selects the destination.",
+        ("restore --from ./novel-research.tar.gz --to ./restored-novel",),
+    ),
+    "zotero-backup": (
+        "Write a new paired backup of research and a Zotero data directory. Close Zotero first,\n"
+        "then explicitly confirm that state; the command does not stop Zotero for you.",
+        (
+            "zotero-backup --project ./novel --data-dir ./Zotero --output ./paired-backup "
+            "--confirm-zotero-closed",
+        ),
+    ),
+    "zotero-restore": (
+        "Verify a paired research/Zotero backup and write a new destination directory.\n"
+        "This does not replace an active Zotero library or start Zotero.",
+        ("zotero-restore --from ./paired-backup --to ./restored-pair",),
+    ),
+    "zotero-export": (
+        "Write active captures, RIS metadata and provenance for additive Zotero import into a new\n"
+        "directory. --allow-retention is required even for --dry-run. No Zotero library is changed.",
+        ("zotero-export --project ./novel --output ./zotero-export --allow-retention --dry-run",),
+    ),
+    "ocr-status": (
+        "Inspect OCR/PDF prerequisites and configured worker status. --project is optional;\n"
+        "--probe explicitly runs a live worker test. This does not ingest a document.",
+        ("ocr-status --project ./novel",),
+    ),
+    "schema": (
+        "Write the research entity JSON schema without opening or creating a project.\n"
+        "Use lixity about --json for command metadata and supported schema versions.",
+        ("schema",),
+    ),
+}
 
-    def _format_action(self, action: argparse.Action) -> str:
-        if not isinstance(action, argparse._SubParsersAction):
-            return super()._format_action(action)
-        groups: dict[str, list[argparse.Action]] = {}
-        for choice in action._choices_actions:
-            command = action.choices[choice.dest]
-            groups.setdefault(command.get_default("cli_group"), []).append(choice)
-        parts = []
-        for group, choices in groups.items():
-            parts.append(" " * self._current_indent + group + ":\n")
-            self._indent()
-            parts.extend(self._format_action(choice) for choice in choices)
-            self._dedent()
-        return "".join(parts)
+
+def _command_epilog(command: argparse.ArgumentParser, name: str) -> str:
+    """Combine task guidance with output defaults owned by the configured parser."""
+    notes, examples = _COMMAND_HELP[name]
+    sections = [notes]
+    if name in _REVISION_FIELDS:
+        sections.append(
+            "For revisions, inspect the record first; --update requires --expected-revision (or\n"
+            "--latest), --change-kind and --reason. --update --dry-run validates without writing;\n"
+            "--prepare draft fields require --base-revision; --diff previews against the current\n"
+            "record. --diff emits terminal text, even with --json."
+        )
+    formats = command.get_default("cli_output_formats")
+    default = command.get_default("cli_default_output")
+    sections.append(
+        f"Output: {', '.join(formats)} (default: {default}). "
+        + ("--json is an alias for --format json." if name in OUTPUT_FORMATS else "Written to stdout.")
+    )
+    sections.append(
+        "Examples (replace IDs, paths and snapshots with reviewed values):\n"
+        + "\n".join(f"  lixity research {example}" for example in examples)
+    )
+    if command.epilog:
+        sections.append(command.epilog)
+    sections.append("Manual: https://mfahsold.github.io/lixity/research/USAGE.md")
+    return "\n\n".join(sections)
 
 
 def configure(parser: argparse.ArgumentParser) -> None:
     from ..language import LANGUAGE_CHOICES
 
-    parser.formatter_class = _ResearchHelpFormatter
+    parser.formatter_class = GroupedHelpFormatter
+    parser.description = (
+        "Keep authorized sources, dossiers, claims and author decisions in a local research archive. "
+        "Research is separate from manuscript analysis; retained text remains evidence for human review."
+    )
+    parser.epilog = (
+        "Start a project and preview an authorized source capture:\n"
+        '  lixity research init --project ./novel --title "Novel research"\n'
+        "  lixity research ingest --project ./novel --file notes.txt --allow-retention --dry-run\n"
+        "  lixity research sources --project ./novel --format text\n\n"
+        "Use --project PATH to select an initialized archive. It may be omitted only when the\n"
+        "current directory itself is a valid initialized research project. init/migrate-storage\n"
+        "require --project; restore commands use --to; schema needs no project.\n"
+        "Capture requires --allow-retention, including dry runs. It grants local retention only.\n"
+        "Help and research terminal output are English; --language selects the content language.\n\n"
+        "Use lixity research COMMAND --help for write guards, examples and exact output formats.\n"
+        "Most commands emit JSON; reports offer --format only where listed.\n"
+        "Manual: https://mfahsold.github.io/lixity/research/USAGE.md\n"
+        "Documentation map: https://mfahsold.github.io/lixity/README.md"
+    )
     commands = parser.add_subparsers(dest="research_command", required=True, metavar="COMMAND")
     for name, help_text, group, aliases in COMMAND_DEFINITIONS:
         command = commands.add_parser(
-            name, aliases=list(aliases), help=help_text, description=help_text
+            name,
+            aliases=list(aliases),
+            help=help_text,
+            description=help_text,
+            formatter_class=GroupedHelpFormatter,
         )
         command.set_defaults(research_command=name, cli_group=group, cli_aliases=aliases)
         if name == "schema":
             command.set_defaults(
                 cli_output_formats=("json",), cli_default_output="json", cli_purpose=help_text
             )
+            command.epilog = _command_epilog(command, name)
             continue
         formats, default_format = OUTPUT_FORMATS.get(
             name, (("html",), "html") if name == "dashboard" else (("json",), "json")
@@ -423,7 +770,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 dest="format",
                 action="store_const",
                 const="json",
-                help="Complete JSON output (alias for --format json)",
+                help="JSON output (alias for --format json)",
             )
         if name in ("sources", "audit"):
             command.add_argument(
@@ -431,16 +778,20 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 action="store_true",
                 help="Page text/Markdown only when input and output are interactive terminals",
             )
-        if name not in ("restore", "ocr-status", "zotero-restore"):
+        if name not in ("restore", "ocr-status", "zotero-restore", "extract-article"):
             command.add_argument(
                 "--project",
                 required=name in ("init", "migrate-storage"),
                 help="Explicit project directory"
                 if name == "init"
+                else "Explicit project directory containing the store to migrate"
+                if name == "migrate-storage"
                 else "Project directory (default: current directory, only with a valid initialized research archive)",
             )
         elif name == "ocr-status":
-            command.add_argument("--project", help="Optional project directory")
+            command.add_argument(
+                "--project", help="Optional project directory for local OCR settings"
+            )
             command.add_argument(
                 "--worker-cmd", help="Explicit OCR worker binary or command to inspect"
             )
@@ -449,35 +800,92 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 action="store_true",
                 help="Execute a live test probe against the configured OCR worker",
             )
+        if name == "canvas":
+            command.add_argument(
+                "-o",
+                "--output",
+                help="Optional output .canvas file path (default: stdout)",
+            )
+        elif name == "extract-article":
+            command.add_argument(
+                "file",
+                help="Local HTML file to extract into structured Markdown",
+            )
+            command.add_argument(
+                "--url",
+                help="Origin URL for link resolution and provenance",
+            )
+            command.add_argument(
+                "-o",
+                "--output",
+                help="Optional output .md file path (default: stdout)",
+            )
         if name == "zotero-backup":
-            command.add_argument("--data-dir", required=True)
-            command.add_argument("--output", required=True)
-            command.add_argument("--confirm-zotero-closed", action="store_true")
+            command.add_argument(
+                "--data-dir",
+                required=True,
+                help="Closed Zotero data directory containing zotero.sqlite",
+            )
+            command.add_argument(
+                "--output", required=True, help="New directory for the paired backup"
+            )
+            command.add_argument(
+                "--confirm-zotero-closed",
+                action="store_true",
+                help="Required acknowledgement that Zotero is closed",
+            )
         elif name == "zotero-restore":
-            command.add_argument("--from", dest="archive_source", required=True)
-            command.add_argument("--to", dest="target_dir", required=True)
+            command.add_argument(
+                "--from",
+                dest="archive_source",
+                required=True,
+                help="Paired backup directory created by zotero-backup",
+            )
+            command.add_argument(
+                "--to",
+                dest="target_dir",
+                required=True,
+                help="New directory for restored project and Zotero data",
+            )
         if name == "zotero-export":
             command.add_argument(
                 "--output",
                 required=True,
                 help="New directory for RIS, files and provenance manifest",
             )
-            command.add_argument("--allow-retention", action="store_true")
-            command.add_argument("--dry-run", action="store_true")
+            command.add_argument(
+                "--allow-retention",
+                action="store_true",
+                help="Required permission to copy retained source bytes, also with --dry-run",
+            )
+            command.add_argument(
+                "--dry-run",
+                action="store_true",
+                help="Validate the export without writing its output directory",
+            )
         if name in ("zotero", "zotero-ingest"):
             command.add_argument(
                 "--library", required=True, help="Explicit Zotero library: users/0 or groups/<id>"
             )
             if name == "zotero":
                 choice = command.add_mutually_exclusive_group()
-                choice.add_argument("--query", default="")
+                choice.add_argument(
+                    "--query",
+                    default="",
+                    help="Filter local library items by query text (default: all)",
+                )
                 choice.add_argument("--item-key", help="Inspect an item and its attachments")
                 choice.add_argument("--collections", action="store_true", help="List collections")
                 command.add_argument(
                     "--collection-key", help="Restrict item search to this collection"
                 )
                 command.add_argument(
-                    "--limit", type=int, choices=range(1, 101), default=20, metavar="1..100"
+                    "--limit",
+                    type=int,
+                    choices=range(1, 101),
+                    default=20,
+                    metavar="1..100",
+                    help="Maximum items per page (default: 20)",
                 )
                 command.add_argument("--start", type=int, default=0, help="Zero-based page offset")
             else:
@@ -496,10 +904,20 @@ def configure(parser: argparse.ArgumentParser) -> None:
                     "--expected-server-id", help="Require the previewed Zotero instance"
                 )
                 command.add_argument(
-                    "--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic")
+                    "--language",
+                    choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"),
+                    help="Language of retained source text (default: research project language)",
                 )
-                command.add_argument("--allow-retention", action="store_true")
-                command.add_argument("--dry-run", action="store_true")
+                command.add_argument(
+                    "--allow-retention",
+                    action="store_true",
+                    help="Required permission to retain attachment bytes, also with --dry-run",
+                )
+                command.add_argument(
+                    "--dry-run",
+                    action="store_true",
+                    help="Validate selected attachments without accepting captures",
+                )
                 command.add_argument(
                     "--progress",
                     action="store_true",
@@ -544,7 +962,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument(
                 "--base-revision",
                 type=int,
-                help="Original version of the unsaved draft being prepared",
+                help="Original version required with --prepare draft fields",
             )
             command.add_argument(
                 "--resolve",
@@ -578,11 +996,17 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 help="Reason category required for --update or a reviewed --output packet",
             )
             command.add_argument("--reason", help="Why this authored record is being revised")
-            command.add_argument("--actor", default="local-author")
+            command.add_argument(
+                "--actor",
+                default="local-author",
+                help="Author attribution for saved changes (default: local-author)",
+            )
         if name in ("link-manuscript", "review-manuscript"):
             _add_manuscript_argument(command)
             command.add_argument(
-                "--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic")
+                "--language",
+                choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"),
+                help="Optional manuscript language override",
             )
         if name == "review-manuscript":
             command.epilog = (
@@ -642,10 +1066,16 @@ def configure(parser: argparse.ArgumentParser) -> None:
             )
             command.add_argument("--claim-id", help="Optional reference claim UUID for --set-term")
             command.add_argument(
-                "--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic")
+                "--language",
+                choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"),
+                help="Optional manuscript language override",
             )
         if name == "link-manuscript":
-            command.add_argument("--claim-id", required=True)
+            command.add_argument(
+                "--claim-id",
+                required=True,
+                help="Reviewed claim UUID to associate with the quotation",
+            )
             command.add_argument(
                 "--claim-revision",
                 type=int,
@@ -681,19 +1111,24 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 action="store_true",
                 help="Confirm permission to retain the local quote (required)",
             )
-            command.add_argument("--note")
-            command.add_argument("--actor", default="local-author")
+            command.add_argument("--note", help="Optional author note stored with the association")
+            command.add_argument(
+                "--actor",
+                default="local-author",
+                help="Author attribution for saved changes (default: local-author)",
+            )
         if name == "manuscript-links":
             command.add_argument("--claim-id", help="Only associations of this claim")
-            command.add_argument("--include-retracted", action="store_true")
+            command.add_argument(
+                "--include-retracted",
+                action="store_true",
+                help="Include associations whose latest revision is retracted",
+            )
         if name == "find-anchor":
             _add_manuscript_argument(command)
             command.epilog = (
-                (command.epilog or "")
-                + " Read-only lookup. Unicode is not normalized; link/code syntax remains. "
-                "Example: lixity research find-anchor --project . "
-                "draft.md --quote 'reading room'."
-            )
+                command.epilog or ""
+            ) + " Read-only lookup. Unicode is not normalized; link/code syntax remains."
             command.add_argument(
                 "--query",
                 "--quote",
@@ -710,7 +1145,9 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 "--line", type=int, help="Search only the paragraph at this source line"
             )
             command.add_argument(
-                "--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic")
+                "--language",
+                choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"),
+                help="Optional manuscript language override",
             )
         if name == "reconcile-manuscript":
             _add_manuscript_argument(command)
@@ -759,9 +1196,15 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 "--expected-source-sha256",
                 help="Optional strict source digest; the current file bytes are used when omitted",
             )
-            command.add_argument("--actor", default="local-author")
             command.add_argument(
-                "--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic")
+                "--actor",
+                default="local-author",
+                help="Author attribution for saved changes (default: local-author)",
+            )
+            command.add_argument(
+                "--language",
+                choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"),
+                help="Optional manuscript language override",
             )
         if name in ("dossier", "claim", "decision", "sources"):
             command.add_argument(
@@ -777,22 +1220,31 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 help="Record UUID to show/inspect (alias for the command's named ID option)",
             )
         if name == "init":
-            command.add_argument("--title", required=True)
+            command.add_argument(
+                "--title", required=True, help="Title for the new research project"
+            )
             command.add_argument(
                 "--language",
                 choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"),
                 default="en",
+                help="Research content language (default: en)",
             )
-            command.add_argument("--actor", default="local-author")
+            command.add_argument(
+                "--actor",
+                default="local-author",
+                help="Author attribution for saved changes (default: local-author)",
+            )
         elif name == "ingest":
             command.add_argument(
                 "--file",
                 nargs="+",
                 help="Path(s) to local UTF-8 text, PDF, PNG or JPEG file(s); required unless resuming or discarding",
             )
-            command.add_argument("--title")
+            command.add_argument("--title", help="Source title (default: local filename)")
             command.add_argument(
-                "--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic")
+                "--language",
+                choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"),
+                help="Language of retained source text (default: research project language)",
             )
             command.add_argument(
                 "--source-id", help="Refresh this source without invalidating old citations"
@@ -846,7 +1298,11 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 help="Explicit current snapshot acknowledgement for a resumed checkpoint",
             )
         elif name == "search":
-            command.add_argument("--query", required=True)
+            command.add_argument(
+                "--query",
+                required=True,
+                help="Literal search words; not a semantic query or instructions",
+            )
             command.add_argument(
                 "--scope",
                 choices=("sources", "dossiers", "claims", "decisions", "all"),
@@ -854,7 +1310,12 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 help="Search sources (default) or current authored records",
             )
             command.add_argument(
-                "--limit", type=int, choices=range(1, 101), default=20, metavar="1..100"
+                "--limit",
+                type=int,
+                choices=range(1, 101),
+                default=20,
+                metavar="1..100",
+                help="Maximum returned matches (default: 20)",
             )
             command.add_argument(
                 "--strict",
@@ -913,16 +1374,15 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 help="Zero-based human-output page offset (default: 0)",
             )
         elif name == "dossier":
-            command.formatter_class = argparse.RawDescriptionHelpFormatter
             command.epilog = (
                 "Examples (use --project PATH for an archive outside the current directory):\n"
                 "  lixity research dossier ID --section Evidence --format text\n"
                 "  lixity research dossier ID --section Evidence --format text --body-only > section.md\n"
                 "  lixity research dossier ID --section Evidence --file section.md --diff --format text\n"
                 "  lixity research dossier ID --section Evidence --file section.md --update --dry-run \\\n"
-                "    --expected-revision N --change-kind correction --reason 'Reviewed evidence' --compact\n"
+                "    --expected-revision 1 --change-kind correction --reason 'Reviewed evidence' --compact\n"
                 "  lixity research dossier ID --section Evidence --file section.md --update "
-                "--expected-revision N --change-kind correction --reason 'Reviewed evidence'\n"
+                "--expected-revision 1 --change-kind correction --reason 'Reviewed evidence'\n"
                 "  lixity research dossier ID --export-edit dossier-edit.md\n"
                 "  lixity research dossier ID --prepare --edit-file dossier-edit.md\n\n"
                 "--body-only writes the selected content as UTF-8 without display headings or an added newline.\n"
@@ -1001,7 +1461,9 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 "WGS84 [longitude, latitude], properties.label required; JSON null clears geography",
             )
             command.add_argument(
-                "--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic")
+                "--language",
+                choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"),
+                help="Dossier language (new dossiers default to the research project language)",
             )
             command.add_argument(
                 "--summary",
@@ -1034,22 +1496,32 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 help="Optional manuscript path to include read-only manuscript evidence projection",
             )
         elif name == "media-context":
-            for field in (
-                "dossier-id",
-                "source-id",
-                "source-version-id",
-                "expected-snapshot",
-                "reason",
+            for field, field_help in (
+                ("dossier-id", "Dossier UUID containing the retained media reference"),
+                ("source-id", "Retained media source UUID"),
+                ("source-version-id", "Exact retained media version UUID"),
+                ("expected-snapshot", "Archive snapshot digest from the reviewed dossier"),
+                ("reason", "Author's reason for correcting the provenance"),
             ):
-                command.add_argument("--" + field, required=True)
-            command.add_argument("--expected-revision", required=True, type=int)
+                command.add_argument("--" + field, required=True, help=field_help)
+            command.add_argument(
+                "--expected-revision", required=True, type=int, help="Reviewed dossier revision"
+            )
             command.add_argument(
                 "--context",
                 required=True,
                 help="JSON object or file; only origin_url and provenance_note; null clears a field",
             )
-            command.add_argument("--dry-run", action="store_true")
-            command.add_argument("--actor", default="local-author")
+            command.add_argument(
+                "--dry-run",
+                action="store_true",
+                help="Validate the provenance correction without writing revisions",
+            )
+            command.add_argument(
+                "--actor",
+                default="local-author",
+                help="Author attribution for saved changes (default: local-author)",
+            )
         elif name == "dossier-images":
             command.add_argument("--dossier-id", help="Limit to one active dossier")
             command.add_argument(
@@ -1095,8 +1567,10 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 action="store_true",
                 help="Confirm permission to retain a local copy, not to redistribute it",
             )
-            command.add_argument("--alt", default="", help="One-line image alternative text")
-            command.add_argument("--caption", help="Optional image caption")
+            command.add_argument(
+                "--alt", default="", help="One-line alternative text for the attachment"
+            )
+            command.add_argument("--caption", help="Optional attachment caption")
             placement = command.add_mutually_exclusive_group()
             placement.add_argument(
                 "--section", help="Append inside an existing unique dossier heading"
@@ -1106,7 +1580,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 metavar="MARKDOWN",
                 help="Replace one exact ordinary Markdown image marker occurring once outside code; no other text changes",
             )
-            command.add_argument("--title", help="Title for the retained image source")
+            command.add_argument("--title", help="Title for the retained attachment source")
             command.add_argument(
                 "--context", help="Source criticism JSON object or path to its JSON file"
             )
@@ -1114,17 +1588,28 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 "--origin-url", help="Original HTTP(S) source URL (metadata only; never fetched)"
             )
             command.add_argument(
-                "--reason", help="Why the image is being attached (default: name the image)"
+                "--reason", help="Why the attachment is being added (default: name the attachment)"
             )
             command.add_argument(
-                "--change-kind", choices=("correction", "supersession"), default="supersession"
+                "--change-kind",
+                choices=("correction", "supersession"),
+                default="supersession",
+                help="Reason category for the dossier revision (default: supersession)",
             )
-            command.add_argument("--actor", default="local-author")
+            command.add_argument(
+                "--actor",
+                default="local-author",
+                help="Author attribution for saved changes (default: local-author)",
+            )
         elif name == "claim":
             command.add_argument("--claim-id", help="Claim UUID to inspect")
             command.add_argument("--title", help="Title for new claim")
             command.add_argument("--statement", help="Full factual statement or hypothesis")
-            command.add_argument("--confidence", choices=("hypothetical", "evidenced", "disputed"))
+            command.add_argument(
+                "--confidence",
+                choices=("hypothetical", "evidenced", "disputed"),
+                help="Author-assessed claim state (new claims default to hypothetical)",
+            )
             command.add_argument("--time-period", help="Temporal scope")
             command.add_argument("--place", help="Geographic scope")
             command.add_argument(
@@ -1185,7 +1670,9 @@ def configure(parser: argparse.ArgumentParser) -> None:
             )
             command.add_argument("--passage-id", help="Passage citation UUID")
             command.add_argument(
-                "--relation", choices=("supports", "contradicts", "qualifies", "contextualizes")
+                "--relation",
+                choices=("supports", "contradicts", "qualifies", "contextualizes"),
+                help="Reviewer-assessed evidence relation (new links default to supports)",
             )
             command.add_argument("--rationale", help="Reviewer rationale for link")
             command.add_argument("--reviewer", help="Reviewer identifier")
@@ -1205,7 +1692,11 @@ def configure(parser: argparse.ArgumentParser) -> None:
             )
             command.add_argument("--rationale", help="Reviewer rationale for link")
             command.add_argument("--reviewer", help="Reviewer identifier (default: author)")
-            command.add_argument("--actor", default="local-author")
+            command.add_argument(
+                "--actor",
+                default="local-author",
+                help="Author attribution for saved changes (default: local-author)",
+            )
         if name == "unlink-manuscript":
             _add_manuscript_argument(command)
             command.add_argument("--link-id", required=True, help="Association to retract")
@@ -1216,7 +1707,11 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument(
                 "--expected-revision", type=int, help="Reviewed link revision required"
             )
-            command.add_argument("--actor", default="local-author")
+            command.add_argument(
+                "--actor",
+                default="local-author",
+                help="Author attribution for saved changes (default: local-author)",
+            )
         elif name == "decision":
             command.add_argument("--decision-id", help="Decision UUID to inspect or revise")
             command.add_argument("--title", help="Title for new author decision")
@@ -1261,15 +1756,31 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 help="Author attribution for the prepared revisions (default: local-author)",
             )
         elif name in ("mark-applied", "reopen"):
-            command.add_argument("--decision-id", required=True)
-            command.add_argument("--dossier-id", required=True)
-            command.add_argument("--expected-snapshot", required=True)
-            command.add_argument("--expected-decision-revision", type=int, required=True)
-            command.add_argument("--expected-dossier-revision", type=int, required=True)
+            command.add_argument("--decision-id", required=True, help="Reviewed decision UUID")
+            command.add_argument("--dossier-id", required=True, help="Reviewed dossier UUID")
+            command.add_argument(
+                "--expected-snapshot", required=True, help="Archive snapshot digest from the review"
+            )
+            command.add_argument(
+                "--expected-decision-revision",
+                type=int,
+                required=True,
+                help="Exact reviewed decision revision",
+            )
+            command.add_argument(
+                "--expected-dossier-revision",
+                type=int,
+                required=True,
+                help="Exact reviewed dossier revision",
+            )
             command.add_argument(
                 "--note", help="Optional author note; not independent verification"
             )
-            command.add_argument("--actor", default="local-author")
+            command.add_argument(
+                "--actor",
+                default="local-author",
+                help="Author attribution for saved changes (default: local-author)",
+            )
         elif name == "revise-batch":
             command.add_argument(
                 "--file", required=True, help="UTF-8 JSON operations list or saved batch preview"
@@ -1281,7 +1792,11 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 "--expected-snapshot",
                 help="Snapshot digest from the preview, required with --apply",
             )
-            command.add_argument("--actor", default="local-author")
+            command.add_argument(
+                "--actor",
+                default="local-author",
+                help="Author attribution for saved changes (default: local-author)",
+            )
         elif name in ("withdraw", "purge"):
             if name == "withdraw":
                 selection = command.add_mutually_exclusive_group(required=True)
@@ -1311,7 +1826,11 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 default="Withdrawn by user" if name == "withdraw" else "Purged by user",
                 help="Reason for action",
             )
-            command.add_argument("--actor", default="local-author")
+            command.add_argument(
+                "--actor",
+                default="local-author",
+                help="Author attribution for saved changes (default: local-author)",
+            )
             if name == "purge":
                 command.add_argument(
                     "--dry-run",
@@ -1332,7 +1851,10 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 "--from", dest="archive_source", required=True, help="Source .tar.gz archive path"
             )
             command.add_argument(
-                "--to", dest="target_dir", required=True, help="Target project directory"
+                "--to",
+                dest="target_dir",
+                required=True,
+                help="New or empty target project directory",
             )
         elif name == "matrix":
             command.add_argument("--output", help="Optional output file destination")
@@ -1344,6 +1866,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
                     if action.dest in _REVISION_FIELDS[name]
                 )
             )
+        command.epilog = _command_epilog(command, name)
 
 
 def command_metadata() -> list[dict[str, Any]]:
@@ -2213,7 +2736,7 @@ def run(args: argparse.Namespace) -> int:
                     "The list verb does not create records; drop the list verb or the creation fields"
                 )
         if (
-            command not in ("schema", "init", "restore", "zotero-restore", "ocr-status")
+            command not in ("schema", "init", "restore", "zotero-restore", "ocr-status", "extract-article")
             and args.project is None
         ):
             args.project = _current_project()
@@ -3396,20 +3919,61 @@ def run(args: argparse.Namespace) -> int:
             result = api.export_archive(args.project, args.output)
         elif command == "restore":
             result = api.restore_archive(args.archive_source, args.target_dir)
+        elif command == "canvas":
+            from .canvas import export_research_canvas
+            from .repository import Repository
+
+            snapshot = Repository(args.project).snapshot()
+            canvas_obj = export_research_canvas(snapshot)
+            canvas_json = canvas_obj.to_json()
+            if getattr(args, "output", None):
+                out_path = Path(args.output).expanduser()
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                out_path.write_text(canvas_json, encoding="utf-8")
+                print(json.dumps({
+                    "ok": True,
+                    "path": str(out_path.resolve()),
+                    "nodes": len(canvas_obj.nodes),
+                    "edges": len(canvas_obj.edges),
+                }))
+                return 0
+            print(canvas_json)
+            return 0
+        elif command == "extract-article":
+            from .article_extract import extract_article
+            file_path = Path(args.file).expanduser()
+            if not file_path.is_file():
+                raise ResearchError(f"File not found: {file_path}")
+            html_bytes = file_path.read_bytes()
+            doc = extract_article(html_bytes, origin_url=getattr(args, "url", None))
+            rendered = doc.to_research_markdown(origin_url=getattr(args, "url", None))
+            if getattr(args, "output", None):
+                out_path = Path(args.output).expanduser()
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                out_path.write_text(rendered, encoding="utf-8")
+                print(json.dumps({
+                    "ok": True,
+                    "path": str(out_path.resolve()),
+                    "title": doc.title,
+                    "words": doc.word_count,
+                }))
+                return 0
+            print(rendered)
+            return 0
         elif command == "ocr-status":
             result = api.ocr_status(
                 getattr(args, "worker_cmd", None), probe=getattr(args, "probe", False)
             )
         elif command == "matrix":
             matrix = api.claim_matrix_data(args.project)
-            rendered = (
+            rendered_matrix: str | None = (
                 None
                 if args.format == "json"
                 else api.render_claim_matrix(matrix, format=args.format)
             )
             payload_text = (
-                rendered
-                if rendered is not None
+                rendered_matrix
+                if rendered_matrix is not None
                 else json.dumps(matrix, ensure_ascii=False, indent=2)
             )
             if getattr(args, "output", None):

@@ -1,0 +1,15 @@
+{
+  "schema_version": "lixity-demo-audio/1",
+  "chapter": 1,
+  "source_sha256": "218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112",
+  "spoken_text_sha256": "b5e982845ade686140d5d0572862f83beef42f8e20606509f94aaa0f2fba569c",
+  "audio_sha256": "9cdbeeadfb279d4ee5d71ba4de7517dba3f328dea60eb2623c052f9bd3c8a501",
+  "duration_seconds": 68.09056689342404,
+  "generator": {
+    "name": "eSpeak NG",
+    "version": "1.52.0",
+    "voice": "en",
+    "rate": 165
+  },
+  "description": "Synthetic Warehouse 4 chapter one; a functional playback example, not a neural voice-quality demonstration. No human voice reference."
+}

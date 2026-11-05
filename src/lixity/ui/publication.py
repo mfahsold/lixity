@@ -3,9 +3,10 @@
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from ..site_contracts import SiteAudio
 from ..workspace_labels import WORKSPACE_LABELS
 from .components import esc, label, product_details
-from .dashboard import _CSS_FILES, _PUBLICATION_JS_FILES, _bundle, _script_json
+from .dashboard import _PUBLICATION_JS_FILES, _REPORT_CSS_FILES, _bundle, _script_json
 from .manuscript_document import ReaderBlock, reader_block_html
 
 
@@ -34,6 +35,10 @@ def render_publication(
     choices = f'<option value="0">{L("publication_before")}</option>' + ''.join(
         f'<option value="{number}">{chapter(number)}</option>' for number in range(1, cap + 1))
     reading = publication["mode"] == "reader"
+    audio = SiteAudio.model_validate(publication["audio"]) if publication.get("audio") is not None else None
+    if audio and (not reading or audio.source_sha256 != publication.get("source_sha256")
+                  or any(track.chapter > cap for track in audio.tracks)):
+        raise ValueError("Reader audio must remain within the manuscript chapter cap")
     language = language_key if language_key not in {"generic", "auto"} else "en"
     title = esc(publication["title"])
     ui_labels = {**WORKSPACE_LABELS.get(language, WORKSPACE_LABELS["en"]), **(labels or {})}
@@ -64,7 +69,7 @@ def render_publication(
         '<!DOCTYPE html>', f'<html lang="{esc(language)}"><head><meta charset="utf-8"/>',
         '<meta name="viewport" content="width=device-width, initial-scale=1"/>',
         '<link rel="icon" href="data:,"/>', f'<title>{title} · Lixity</title>',
-        f'<style>{_bundle(_CSS_FILES)}</style></head>',
+        f'<style>{_bundle(_REPORT_CSS_FILES + (("speech-player.css",) if audio else ()))}</style></head>',
         f'<body class="lixity-report publication-site manuscript-reading" data-read-only="true" '
         f'data-ui-labels="{esc(_script_json(ui_labels))}">',
         f'<a class="skip-link" href="#publication-context">{L("publication_context")}</a>',
@@ -73,19 +78,44 @@ def render_publication(
     ]
     if publication.get("introduction", "").strip():
         parts.append(f'<div class="research-prose markdown-body publication-introduction">{esc(publication["introduction"])}</div>')
+    parts.append(f'<nav class="row publication-navigation" aria-label="{L("research_sections")}">')
+    if reading:
+        parts.append(f'<a class="ctl" href="#chapters">{L("manuscript")}</a>')
+    parts.append(f'<a class="ctl" href="#publication-context">{L("publication_context")}</a>')
     if analysis_available:
-        parts.append(f'<p><a class="ctl" href="analysis.html">{esc(ui_labels.get("publication_analysis_link", "Analysis"))}</a></p>')
+        parts.append(f'<a class="ctl" href="analysis.html">{esc(ui_labels.get("publication_analysis_link", "Analysis"))}</a>')
+    if audio:
+        parts.append(f'<a class="ctl" href="#publication-audio">{L("publication_audio_title")}</a>')
+    if reading:
+        parts.extend([
+            f'<label for="publication-reader-chapter">{L("reading_chapter")}</label>',
+            '<select class="ctl" id="publication-reader-chapter"><option value="">' + L("reading_chapter") + '…</option>' + ''.join(
+                f'<option value="publication-chapter-{number}">{chapter(number)}</option>' for number in range(1, cap + 1)) + '</select>',
+        ])
+    parts.append('</nav>')
     parts.extend([
         '<div class="publication-reading-layout">',
     ])
     if reading:
-        parts.extend(['<section class="publication-novel" aria-label="' + L("manuscript") + '">',
-                      '<nav class="row publication-reading-controls">',
-                      f'<a class="ctl" href="#publication-context">{L("publication_context")}</a>',
-                      f'<label for="publication-reader-chapter">{L("reading_chapter")}</label>',
-                      '<select class="ctl" id="publication-reader-chapter"><option value="">' + L("reading_chapter") + '…</option>' + ''.join(
-                          f'<option value="publication-chapter-{number}">{chapter(number)}</option>' for number in range(1, cap + 1)) + '</select></nav>',
-                      '<main id="chapters" tabindex="-1">'])
+        parts.append('<section class="publication-novel" aria-label="' + L("manuscript") + '">')
+        if audio:
+            first = audio.tracks[0]
+            parts.extend([
+                '<details class="publication-audio panel" id="publication-audio">',
+                f'<summary id="publication-audio-title">{L("publication_audio_title")}</summary>',
+                f'<p class="ctl-note">{esc(label(labels, "publication_audio_coverage_one" if cap == 1 else "publication_audio_coverage").format(count=len(audio.tracks), total=cap))}</p>',
+                f'<label class="form-label" for="publication-audio-chapter">{L("reading_chapter")}</label>',
+                '<select class="ctl full-width" id="publication-audio-chapter">' + ''.join(
+                    f'<option value="{track.chapter}">{chapter(track.chapter)}{(" · " + esc(track.title)) if track.title else ""}</option>'
+                    for track in audio.tracks) + '</select>',
+                f'<audio id="publication-audio-player" controls preload="metadata" src="{esc(first.file)}"></audio>',
+                '<p class="ctl-note" id="publication-audio-status" role="status" aria-live="polite"></p>',
+                '<div class="row">',
+                f'<a class="ctl" id="publication-audio-text" href="#publication-chapter-{first.chapter}">{L("publication_audio_text")}</a>',
+                f'<a class="ctl" id="publication-audio-download" href="{esc(first.file)}" download="chapter-{first.chapter}.wav">{L("publication_audio_download")}</a></div>',
+                f'<p class="ctl-note">{L("publication_audio_help")}</p></details>',
+            ])
+        parts.append('<main id="chapters" tabindex="-1">')
         opened = False
         number = 0
         for block in reader_document or ():
@@ -115,6 +145,6 @@ def render_publication(
         *(('<script type="application/json" id="research-diagram-library">' +
            _script_json(_bundle(("vendor/mermaid-tiny-12.2.0.min.js",))) + '</script>',)
           if has_diagrams else ()),
-        '<script>' + _bundle(_PUBLICATION_JS_FILES) + '</script></body></html>',
+        '<script>' + _bundle(_PUBLICATION_JS_FILES + (("speech-player.js", "reader-audio.js") if audio else ())) + '</script></body></html>',
     ])
     return '\n'.join(parts) + '\n'

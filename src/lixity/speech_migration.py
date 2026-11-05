@@ -167,6 +167,11 @@ def prepare_schema4_migration(project: str | Path) -> PreparedAudioMigration:
     return _prepare_schema_migration(project, 4)
 
 
+def prepare_schema5_migration(project: str | Path) -> PreparedAudioMigration:
+    """Enable phonetic controls after review, retaining every existing profile."""
+    return _prepare_schema_migration(project, 5)
+
+
 def _prepare_schema_migration(project: str | Path, version: int) -> PreparedAudioMigration:
     candidate = Path(project).expanduser()
     if candidate.is_symlink() or not candidate.is_dir():
@@ -179,7 +184,7 @@ def _prepare_schema_migration(project: str | Path, version: int) -> PreparedAudi
     if not isinstance(language, str):
         raise ValueError("Project language must be a language code")
     raw_audio = settings.get("audio")
-    if raw_audio is None and version == 4 and language not in QWEN_LANGUAGES:
+    if raw_audio is None and version >= 4 and language not in QWEN_LANGUAGES:
         audio = AudioSettings(schema_version="lixity-audio-settings/4", selected="", profiles={})
     else:
         audio = parse_audio_settings(raw_audio, language=language)

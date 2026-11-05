@@ -34,7 +34,7 @@ The compact explanation puts the selected quotation and count first, with the pa
 
 Choose **Analysis overview** when the question calls for chapter comparisons or sentence rhythm. The manuscript remains mounted with the same paragraph text and source anchors. Hiding analysis keeps the active passage inspector or dossier available beside the text. A different sentence length can belong to a scene's purpose or a character's voice. The number locates a difference; reading supplies the judgment about what to do with it.
 
-The overview keeps its review routes visible and puts secondary numbers under **Manuscript measurements**. Open that summary when the question needs them and close it to return to the compact view. A linked scene title similarly reveals grouped **Scene measurements**. Passage measurements cover profiled body paragraphs and list items; other source structure can remain reading-only. [The coverage reference](../USAGE.md#reading-paragraphs) distinguishes paragraph profiles from chapter and corpus measurements.
+The overview keeps its review routes visible and puts secondary numbers under **Manuscript measurements**. Open that summary when the question needs them and close it to return to the compact view. A linked scene title similarly reveals grouped **Scene measurements**. Passage measurements cover profiled body paragraphs and list items; other source structure can remain reading-only. [The coverage reference](../WORKSPACE.md#reading-paragraphs) distinguishes paragraph profiles from chapter and corpus measurements.
 
 ## Give research its own space
 
@@ -64,7 +64,7 @@ An exact return requires the current paragraph, line range and quotation to matc
 
 The local **Project overview** separates the manuscript and research locations from generated output files and structural findings. It checks the selected folder without moving files, reading manuscript contents or auditing the research archive. Existing output history remains unknown: a filename alone does not prove which manuscript version produced it.
 
-The same read-only inspection is available as `lixity project --project /path/to/book --json`. Output links recheck the selected project when opened. This local folder view is deliberately absent from static reading copies. The [project guide](../USAGE.md#inspect-project-structure) explains bounds, unavailable states and the distinction from archive audit.
+The same read-only inspection is available as `lixity project --project /path/to/book --json`. Output links recheck the selected project when opened. This local folder view is deliberately absent from static reading copies. The [project guide](../WORKSPACE.md#inspect-project-structure) explains bounds, unavailable states and the distinction from archive audit.
 
 ## Share a reading copy
 

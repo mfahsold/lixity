@@ -1,5 +1,10 @@
 # Start using Lixity
 
+[Documentation map](README.md) · [Workspace manual](WORKSPACE.md) · [CLI reference](USAGE.md)
+
+This walkthrough ends with one inspected passage and a clear choice of output.
+Install Lixity first using the [installation guide](INSTALLATION.md).
+
 Explore [*The Crate at Warehouse 4*](https://mfahsold.github.io/lixity/demo/report.html),
 the shared demo project for manuscript analysis, research and PDF layouts.
 The [illustrated first look](guides/first-look.html) follows that same project;
@@ -18,6 +23,18 @@ service management;
 | A file to copy into a new project | Choose **Analyze a manuscript**, review the preview and confirm the destination. |
 | A new manuscript | Choose **New Project → Start New Manuscript**. |
 | Sources without a manuscript | Open or initialize a [research project](research/USAGE.md#try-it). |
+
+## Session checklist
+
+1. Start the local app and open the intended project, or preview an imported copy.
+2. Check the displayed project path and analysis language.
+3. Read a paragraph, inspect one measurement, then return to the text.
+4. Optionally follow a saved research link or record a short reading.
+5. Choose an output deliberately; stop the service when finished.
+
+The demo and exported websites are read-only. Perform saves, imports and new
+rendering in the local application. Detailed instructions live in the linked
+manuals; this walkthrough introduces the sequence.
 
 ## Start with a manuscript
 
@@ -70,15 +87,10 @@ continue and initialize Research if it is still absent.
 
 ### Read and explore
 
-The **?** control (**Help with your first analysis**)
-in the reading toolbar opens an optional, initially closed guide. It stays with the manuscript,
-not the overview or Focus reading. Opening it changes no analysis setting.
-It distinguishes Analysis Off, no selected measure, and the selected measure
-with its units. Three direct actions focus the existing measure selector,
-open a counted-text example for the selected measure, or explore the current
-passage. The example action requires a selected measure. These actions reuse
-the reader's existing controls and inspectors; merely opening help is inert.
-It reuses the reading-settings panel's bounded scrolling, Escape and focus return.
+For an explanation while reading, choose **?** in the reading toolbar.
+The optional guide distinguishes Analysis Off, no selected measure and the
+selected measure with its units. It can open a counted-text example or the
+current passage's tools. Opening help changes no analysis setting.
 
 Start in **Manuscript** and read a passage. Turn **Analysis**
 On to show diagnostics in place; this does not open a tool or narrow the prose.
@@ -95,7 +107,7 @@ A standalone analysis report is read-only. To share manuscript,
 analysis and optional research together, choose **Project actions → Reading
 website**. The ZIP copy opens in a browser without a running Lixity server;
 project writes and new PDF generation require the local app. See
-[reading websites](USAGE.md#export-a-reading-website) and [PDF layouts](USAGE.md#lixity-pdf).
+[reading websites](WORKSPACE.md#export-a-reading-website) and [PDF layouts](USAGE.md#lixity-pdf).
 
 The overview's **Open passage** route identifies its selection reason visibly:
 the first tense-pattern flag in source order, or the opening paragraph when
@@ -117,7 +129,7 @@ scale; solid analysis underlines identify counted text. Research references stay
 visible when analysis is switched off. Search highlighting can coexist with both;
 none of these display changes edits manuscript text.
 
-The [reader reference](USAGE.md#reading-paragraphs) explains display preferences,
+The [reader reference](WORKSPACE.md#reading-paragraphs) explains display preferences,
 keyboard controls, companion sizing and coverage. Changing a view writes nothing.
 
 | What you want to do | Where to start |
@@ -127,12 +139,9 @@ keyboard controls, companion sizing and coverage. Changing a view writes nothing
 | Follow a source into an argument | **Research**: open a dossier, inspect its evidence and follow a saved manuscript quotation. |
 | Change the manuscript or analysis setup | **Project**: check the active project and whether a setting is saved or session-only. |
 
-Maps open with OpenStreetMap. Select a numbered
-place or route to read its details; switch off the background for local vectors
-or choose the sketch. The map background uses the network. Mermaid diagrams
-render locally: scroll a wide diagram or enlarge it to inspect the whole view.
-Tile requests send the viewed area and client IP to the provider and stop when
-the map context is hidden.
+[Dossier media and maps](research/USAGE.md#keep-places-and-journeys-in-a-dossier)
+have their own controls. Map tiles use the network; local vectors and sketches
+work without the tile background.
 
 ## Work through review notes
 
@@ -165,11 +174,13 @@ records, manuscript associations and recovery. Retain only permitted source byte
 Claims and author decisions remain interpretations; saving or finding a passage
 does not verify it. Review changed anchors and linked revisions explicitly.
 
-A paragraph's saved associations lead through **Open claim**
-to the linked claim version, its linked dossier versions and cited source passages.
-Close the record viewer, then use **Back to passage** to return to the requesting
-manuscript text. The work thread keeps its originating lines and the viewed
-record's title/version visible; pinned and current versions remain distinct.
+A paragraph's saved associations show each record by title. Open the title for
+the current entry; where a saved link points to an older revision, use the
+separate **Linked version N** action to inspect that exact earlier record. The
+viewer leads to linked dossiers and cited source passages. Close it, then use
+**Back to passage** to return to the requesting text. See the
+[association workflow](WORKSPACE.md#link-a-manuscript-quote-to-a-claim) for the
+pinned/current distinction.
 To create an
 association locally, select text in one paragraph, choose **Link selection to
 claim**, review the claim and quote, and explicitly permit quote retention before
@@ -188,6 +199,19 @@ The Zotero bridge captures PDF/text and PNG/JPEG; it does not capture audio or
 video. Lixity separately supports [local PDF/video dossier attachments](research/USAGE.md#retain-a-pdf-or-video-in-a-dossier).
 Scanned text needs an OCR backend. The [Zotero reference](research/USAGE.md#zotero-desktop-bridge-since-v1190)
 owns setup, refresh, migration and paired backup. Capture enables no background sync.
+
+## Record or share a reading
+
+For a short recording, the teleprompter, an author's voice or generated narration,
+follow the [audio manual](AUDIO.md). Recording permission, voice-reference
+eligibility and speech-worker readiness are different checks. Start with a short
+preview before generating a chapter; choosing a model does not start its worker.
+
+Choose **Project actions → Reading website** to share a review workspace, curated
+novel or companion. The [workspace export instructions](WORKSPACE.md#export-a-reading-website)
+explain chapter limits, included research, optional analysis and saved chapter
+audio. A PDF is a separate printable output; see [PDF layouts](USAGE.md#lixity-pdf).
+Inspect the copy before sharing it. An export is not a complete project backup.
 
 ## Check your first session and return later
 

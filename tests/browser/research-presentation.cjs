@@ -44,7 +44,7 @@ for locale in ('en','de','fr','es','it','pt','nl'):
     old = re.search(r'data-manuscript-project-token="([^"]+)"', markup).group(1)
     shell.write_text(markup.replace(old, token), encoding='utf-8')
 server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
-print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'records': records, 'empty': empty, 'labels': WORKSPACE_LABELS}), flush=True)
+print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'records': records, 'empty': empty, 'opaque': [*records.values(), passage, capture['source_id'], current['snapshot'], current['project_id']], 'labels': WORKSPACE_LABELS}), flush=True)
 server.serve_forever()
 `, artifacts);
   let browser;
@@ -71,11 +71,32 @@ server.serve_forever()
       await page.locator('#tab-view-research').click();
       await page.waitForFunction(() => Boolean(researchSelectionProjectId));
       const labels = server.fixture.labels[locale];
+      async function assertReadable(locator) {
+        const visible = await locator.innerText();
+        for (const identifier of server.fixture.opaque) assert(!visible.includes(identifier),
+          `Author-facing text must use names rather than internal identifiers: ${identifier}`);
+      }
       await page.locator('[data-rtab=decisions]').click();
       const decisionCard = page.locator('#research-decisions-list .research-card').filter({hasText:'Synthetic decision'});
       await expect(decisionCard).toContainText('Synthetic plot effect.');
+      await assertReadable(decisionCard);
       await expect(decisionCard.locator('.ctl-note > strong').first()).toHaveText(labels.research_decision_impact,
         {useInnerText: false});
+      const unavailableCitation = await page.evaluate(() => {
+        const host = document.createElement('div');
+        host.innerHTML = researchCitationHtml({availability:'unavailable', passage_id:'opaque-missing-passage',
+          evidence_link_id:'opaque-link', evidence_link_revision:1, claim_revision:1}, false);
+        return host.textContent;
+      });
+      assert(unavailableCitation.includes(labels.research_name_unavailable_source));
+      assert(!unavailableCitation.includes('opaque-'));
+      const referenceText = await page.evaluate(() => {
+        const host = document.createElement('div');
+        host.innerHTML = renderSafeMarkdown('[Named reference](lixity:opaque-target) and literal opaque-target');
+        return {text:host.textContent, title:host.querySelector('.lixity-ref').title};
+      });
+      assert.equal(referenceText.text.trim(), 'Named reference and literal opaque-target', 'Internal targets stay out of display; authored literal text is preserved');
+      assert(!referenceText.title.includes('opaque-target'));
       const warning = await page.evaluate(() => researchDossierDetailHtml({
         id:'synthetic-warning-dossier', title:'Synthetic context', revision:1,
         body:'## Context\n\nSynthetic dossier text.', citations:[], sections:['Context'],
@@ -122,10 +143,19 @@ server.serve_forever()
           fields: node.querySelector('#research-revision-history-detail .research-revision-dossier, #research-revision-history-detail dl').getBoundingClientRect().top,
           provenance: node.querySelector('.research-revision-provenance').getBoundingClientRect().top,
           versions: node.querySelector('#research-revision-versions > summary').getBoundingClientRect().top,
-          technical: node.querySelector('#research-revision-technical > summary').getBoundingClientRect().top,
         }));
-        assert.ok(order.fields < order.provenance && order.fields < order.versions && order.fields < order.technical,
-          `The entry content precedes provenance, version navigation and technical details: ${JSON.stringify(order)}`);
+        assert.ok(order.fields < order.provenance && order.fields < order.versions,
+          `The entry content precedes provenance and version navigation: ${JSON.stringify(order)}`);
+        await assertReadable(dialog);
+        assert.equal(await dialog.locator('#research-revision-technical').count(), 0);
+        await page.locator('#research-revision-edit-tab').click();
+        for (const field of await page.locator('#research-revision-fields select').all()) {
+          for (const identifier of server.fixture.opaque) assert(!(await field.textContent()).includes(identifier));
+        }
+        const referenceFields = await page.locator('#research-revision-fields [name$="_id"], #research-revision-fields [name$="_ids"]').all();
+        for (const field of referenceFields) assert.equal(await field.evaluate(node => node.tagName), 'SELECT', 'Linked records are selected by readable names');
+        assert.deepEqual(await page.evaluate(() => revisionChanges()), {}, 'Opening named selectors does not alter stored references or revision pins');
+        await page.locator('#research-revision-history-tab').click();
         const reason = 'One synthetic ' + kind + ' change reason.';
         inventory.push({locale, width, kind, reasonOccurrences: (await dialog.innerText()).split(reason).length - 1,
           versionHeadings: await detail.locator('h4').allTextContents(), fields: await detail.locator('dt').allTextContents(),

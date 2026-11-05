@@ -288,6 +288,23 @@ def test_audit_accepts_effective_segments_without_loading_voice_reference(tmp_pa
     assert list(tmp_path.iterdir()) == [path]
 
 
+@pytest.mark.parametrize("format_name", ["plan", "timeline"])
+def test_phonetic_plan_audit_compares_spoken_words_without_inventing_prosody_timing(tmp_path, format_name):
+    from lixity.speech_direction import build_speech_plan, plan_json
+    from lixity.speech_export import timeline_json
+    from lixity.speech_profiles import AudioProfile
+
+    path = _wav(tmp_path / "audio.wav", [0] * 1000)
+    profile = AudioProfile(engine="ims-toucan", voice="reference", language="en", reference_id="a" * 64,
+                           phonemes={"One": "w\u028cn"}, prosody={"duration_scaling_factor": 1.5})
+    plan = build_speech_plan("One.", profile, for_export=True)
+    exported = plan_json(plan) if format_name == "plan" else timeline_json(plan)
+    result = inspect_audio(path, expected_plan=exported, transcript=_transcript(path, [("one", 0.1, 0.2)]))
+    assert result["alignment"]["coverage"] == 1
+    assert result["audio"]["duration_seconds"] == 1.0
+    assert list(tmp_path.iterdir()) == [path]
+
+
 def test_json_budget_and_nonfinite_values_fail_without_partial_input(tmp_path: Path, monkeypatch) -> None:
     import lixity.audio_audit as audit
 

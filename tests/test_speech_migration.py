@@ -159,3 +159,70 @@ def test_reviewed_cli_snapshot_rejects_changed_preset_or_style(legacy_project: P
     assert "snapshot changed" in capsys.readouterr().err
     assert not backup.exists()
     assert (legacy_project / "lixity.toml").read_bytes() == original
+
+
+@pytest.mark.parametrize("version", [1, 2, 3, 4])
+def test_schema5_upgrade_reuses_reviewed_backup_without_replacing_narrator(tmp_path, version):
+    from lixity.speech_migration import prepare_schema5_migration
+    from lixity.speech_profiles import parse_audio_settings
+
+    root = tmp_path / "project"
+    root.mkdir()
+    config = root / "lixity.toml"
+    config.write_text(f'''language = "de"
+manuscript = "draft.md"
+[audio]
+schema_version = "lixity-audio-settings/{version}"
+selected = "narrator"
+[audio.profiles.narrator]
+engine = "qwen3"
+voice = "Ryan"
+language = "de"
+instructions = "Quiet narration."
+''')
+    (root / "draft.md").write_text("# Synthetic\n\nA river flows.")
+    before = config.read_bytes()
+    original_audio = parse_audio_settings(load_project_config(root)["audio"])
+    migration = prepare_schema5_migration(root)
+    assert migration.public_dict()["target_schema"] == "lixity-audio-settings/5"
+    assert migration.public_dict()["retained_profile_count"] == 1
+    assert config.read_bytes() == before
+    backup = tmp_path / "backup.zip"
+    migration.apply(backup)
+    with zipfile.ZipFile(backup) as archive:
+        assert archive.read("lixity.toml") == before
+        assert "draft.md" not in archive.namelist()
+    actual = parse_audio_settings(load_project_config(root)["audio"])
+    assert actual.profiles == original_audio.profiles
+    assert actual.selected == original_audio.selected
+    assert actual.schema_name == "lixity-audio-settings/5"
+    with pytest.raises(ValueError, match="already"):
+        prepare_schema5_migration(root)
+
+
+def test_schema5_unconfigured_language_does_not_invent_a_supported_voice(tmp_path):
+    from lixity.speech_migration import prepare_schema5_migration
+
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "lixity.toml").write_text('language = "nl"\n')
+    migration = prepare_schema5_migration(project)
+    assert migration.public_dict()["configuration_required"] is True
+    assert migration.public_dict()["creates_default_profile"] is False
+    migration.apply(tmp_path / "backup.zip")
+    assert load_project_config(project)["audio"]["profiles"] == {}
+
+
+def test_schema5_snapshot_rejects_changed_source_before_creating_backup(tmp_path):
+    from lixity.speech_migration import prepare_schema5_migration
+
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "lixity.toml").write_text('language = "en"\nmanuscript = "draft.md"\n')
+    source = project / "draft.md"
+    source.write_text("# Synthetic\n\nA river flows.")
+    migration = prepare_schema5_migration(project)
+    source.write_text("# Concurrent synthetic edit\n")
+    with pytest.raises(ValueError, match="changed"):
+        migration.apply(tmp_path / "backup.zip")
+    assert not (tmp_path / "backup.zip").exists()

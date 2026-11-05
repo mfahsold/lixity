@@ -58,14 +58,14 @@ def test_two_projects_keep_their_tabs_and_routes_independent(tmp_path, monkeypat
             assert status == 200, raw
             urls.append(json.loads(raw)['workspace_url'])
         assert urls[0] != urls[1]
-        monkeypatch.setattr('lixity.server.handler.worker_health', lambda target: {
+        monkeypatch.setattr('lixity.speech_status.worker_health', lambda target, **kwargs: {
             'target': target, 'state': 'ready' if target == 'local' else 'unavailable',
             'transport': 'loopback' if target == 'local' else 'ssh'})
         status, raw = request('GET', urls[0] + 'api/runtime')
         assert status == 200
         observation = json.loads(raw)
         assert observation['schema_version'] == 'lixity-runtime-local/1'
-        assert [item['state'] for item in observation['audio']['targets']] == ['ready', 'unavailable']
+        assert [item['state'] for item in observation['audio']['targets']] == ['ready', 'unavailable', 'ready', 'ready']
         assert str(tmp_path) not in raw and 'courtyard' not in raw
 
         for index, url in enumerate(urls):

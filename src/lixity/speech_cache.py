@@ -6,16 +6,11 @@ import json
 import os
 import re
 from pathlib import Path
+from typing import Any
 
 from .io import FileUtils
-from .speech_profiles import (
-    COQUI_MODEL,
-    COQUI_REFERENCE_MODEL,
-    QWEN_BASE_MODEL,
-    QWEN_DESIGN_MODEL,
-    QWEN_MODEL,
-    AudioProfile,
-)
+from .speech_engines import native_engine
+from .speech_profiles import AudioProfile
 from .speech_qwen import MAX_RESPONSE_BYTES
 
 CACHE_BYTES = 2 * 1024**3
@@ -48,7 +43,7 @@ class SpeechSegmentCache:
         self.directory, self.max_bytes = directory, max_bytes
 
     def _paths(self, text: str, profile: AudioProfile) -> tuple[str, Path, Path]:
-        request = {"schema_version": _SCHEMA, "model": QWEN_MODEL, "text": text,
+        request: dict[str, Any] = {"schema_version": _SCHEMA, "model": profile.model if profile.engine == "openai-compatible" else native_engine(profile.engine).model, "text": text,
                    "language": profile.language, "voice": profile.voice,
                    "instructions": profile.instructions}
         if profile.engine == "openai-compatible":
@@ -56,16 +51,15 @@ class SpeechSegmentCache:
 
             request.update(model=profile.model, endpoint=speech_endpoint(profile.base_url), adapter=ADAPTER_ID,
                            api_key_env=profile.api_key_env or "")
-        elif profile.engine == "qwen3-design":
-            request["model"] = QWEN_DESIGN_MODEL
-            request["voice_description"] = profile.voice_description
-        elif profile.engine == "qwen3-base":
-            request["model"] = QWEN_BASE_MODEL
-            request["reference_id"] = profile.reference_id
-        elif profile.engine in ("coqui", "coqui-reference"):
-            request["model"] = COQUI_REFERENCE_MODEL if profile.engine == "coqui-reference" else COQUI_MODEL
-            if profile.engine == "coqui-reference":
+        else:
+            if profile.engine == "qwen3-design":
+                request["voice_description"] = profile.voice_description
+            if native_engine(profile.engine).reference_required:
                 request["reference_id"] = profile.reference_id
+            if profile.engine == "ims-toucan":
+                request["adapter"] = "lixity-toucan/1"
+                request["phonemes"] = profile.phonemes
+                request["prosody"] = profile.prosody.model_dump()
         key = hashlib.sha256(json.dumps(request, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
         audio, metadata = self.directory / (key + ".wav"), self.directory / (key + ".json")
         if audio.is_symlink() or metadata.is_symlink():

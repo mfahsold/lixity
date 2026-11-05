@@ -4,7 +4,7 @@ Start with one question: does chapter 2's shorter rhythm fit its action?
 
 [Kurze Einführung auf Deutsch](first-look-de.html)
 
-Updated 23 October 2026
+Updated 5 November 2026
 
 This walkthrough follows the generated demo. It uses the same reading website export available in **Project actions → Reading website**. Its manuscript, analysis and chosen Research are a fixed snapshot; importing and saving require a local project. See [how to make your own reading website](research-pdf.html#reading-website).
 
@@ -44,7 +44,7 @@ Neutral dotted marks and a book-icon **Research** count identify saved research 
 
 Expand **Manuscript measurements** for the secondary numbers, then collapse the same summary to return to the compact overview. A linked scene title reveals its detailed **Scene measurements**; both disclosure levels can be closed again. The passage return keeps your earlier reading context.
 
-Ask what changed: the kind of scene, what the character is doing, or how the sentences are arranged. These short chapters demonstrate a workflow; their numbers are not a quality verdict. [The mark key](interpretation.html#analysis-marks) explains the colors and scopes. [Reader controls and coverage](../USAGE.md#reading-paragraphs) covers text size, focus, keyboard access and supported formatting.
+Ask what changed: the kind of scene, what the character is doing, or how the sentences are arranged. These short chapters demonstrate a workflow; their numbers are not a quality verdict. [The mark key](interpretation.html#analysis-marks) explains the colors and scopes. [Reader controls and coverage](../WORKSPACE.md#reading-paragraphs) covers text size, focus, keyboard access and supported formatting.
 
 ## 3. Follow a quotation into research
 
@@ -62,7 +62,7 @@ Someone had tried the eastern gate of Warehouse 4.
 
 In [**Research → Dossiers**](../demo/report.html#research-manager), open **Warehouse 4 case notes**. Its **Sections** list follows the actual headings; close and reopen it as needed. Choose **Dossier alongside** to keep the dossier beside the manuscript.
 
-From an open dossier, **Back to dossier** restores its saved version and reading position after you follow a connection. **Review** also lists the saved quotation; **Go to manuscript passage** follows its exact text match. [Reader guidance](../USAGE.md#reading-paragraphs) covers controls and keyboard shortcuts.
+From an open dossier, **Back to dossier** restores its saved version and reading position after you follow a connection. **Review** also lists the saved quotation; **Go to manuscript passage** follows its exact text match. [Reader guidance](../WORKSPACE.md#reading-paragraphs) covers controls and keyboard shortcuts.
 
 People, events and journeys are fictional. The historical images do not verify them. Maps in this website use local sketches and geographic shapes without requesting online map tiles. [Sources and PDF copies](research-pdf.html) explains retention and saving in the local app.
 
@@ -70,20 +70,46 @@ People, events and journeys are fictional. The historical images do not verify t
 
 Open the [synthetic reading copy](../demo/reader/), choose **Analysis** above the story, and inspect its chapter overview. Choose **Back to reading copy** to return to the story and its selected background. This example deliberately includes chapter figures for all six chapters; reading progress does not hide analysis. In your own export, select only the analysis you want to share and use a chapter cap to omit later content.
 
+## Choose the reader’s route
+
+- [Review workspace:](../demo/report.html) read the manuscript with its analysis and included research records.
+
+- [Novel with companion notes:](../demo/reader/index.html) read continuous prose, confirm chapter progress and open the selected background. The Analysis link opens the measurements deliberately included in this copy.
+
+- [Standalone companion:](../demo/companion/index.html) explore those selected notes while reading the novel elsewhere.
+
+A reading copy is fixed. Progress hides or reveals included notes but does not protect their bytes. In your own export, use a chapter cap to omit later material. **Unreleased:** `--include-audio` adds already recorded chapter WAVs matching the current manuscript, with a shared player and download. It does not start a speech worker or include private voice references. [Audio inclusion and limits](../WORKSPACE.md#include-existing-chapter-recordings-unreleased).
+
+The reader demo includes one synthetic chapter-one recording generated with eSpeak NG 1.51 (`en`, rate 165) and explicitly imported. Use **Chapter audio** to play or download it; it is a workflow example, not an IMS-Toucan quality sample or an author voice. Other chapters remain text-only.
+
 ## 4. Choose a PDF copy
 
 Use the direct PDF links below or in the demo page; the exported website does not generate new PDFs. Compare the same manuscript as an [editorial copy](../demo/warehouse-4-editor.pdf), [reading copy](../demo/warehouse-4-book.pdf), [submission sheets](../demo/warehouse-4-sheet.pdf) or [analysis report](../demo/warehouse-4-report.pdf). The [PDF guide](research-pdf.html#manuscript-export) explains their purposes and limits.
 
 ## Use your own project
 
-Manuscript input supports Markdown (`.md`, `.markdown`) and plain text (`.txt`). Convert Word/DOCX or Scrivener documents before import. PDFs can be retained separately as Research sources.
+Manuscript input supports Markdown (`.md`, `.markdown`) and plain text (`.txt`). The unreleased file importer also accepts one Word/DOCX file. Export Scrivener documents to a supported file format first; inspect the import preview before creating a project. PDFs can be retained separately as Research sources.
 
 [Install the local app](installation.html), then open your project or preview a manuscript import. Analysis runs on your computer. JavaScript enables the demo's interactive controls; manuscript text, tables, credits and PDF links remain readable without it.
 
-In the local app, **Project → Audio export and recordings → Export direction** prepares JSON and SSML for a passage, chapter or manuscript without contacting a speech service. JSON retains direction details; SSML reports controls it cannot carry portably. The separate **Generate audio** section uses a configured speech service. Locally inspecting an external recording can compare text only when a timestamped transcript for that recording is supplied. See the [audio guide](../USAGE.md#audio-export-and-external-providers-unreleased) for setup and limits.
+## Hear a passage in your own project
 
-In the local app, open **Project** for a read-only overview of the selected manuscript, research folder and existing outputs. It inspects metadata without rebuilding analysis; output source and generation history remain unknown. The exported demo has no local project-folder view. [Project inspection and CLI](../USAGE.md#inspect-project-structure).
+Open **Project → Settings → Audio and services**, or use **Listen & direct** in the manuscript toolbar. The public demo cannot request your microphone, save a reference or generate speech.
+
+On current main (unreleased), the local audio dialog separates four tasks: **Author voice** records, uploads and manages reference takes; **Voice profiles** configures the voice and speech service; **Listen & direct** contains passage direction, audio output, JSON/SSML export and external recording checks; **Microphone & levels** controls local hardware. Help accompanies the controls. The compact player offers time, seeking, volume and a live frequency spectrum. Browser recording requires microphone permission for the current local address; hardware gain does not grant that permission.
+
+The state beside the recording button shows pending permission, active recording or a failed start. Remove a saved microphone block using the icon beside the address, then retry and allow access. Failed starts log diagnostics in the browser console. A browser permission refusal sends no server request, so it produces no service-log entry. See [recording and troubleshooting](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#author-voice-recording-and-listening).
+
+In **Listen & direct → Export direction**, prepare JSON and SSML for a passage, chapter or manuscript without contacting a speech service. JSON retains direction details; SSML reports controls it cannot carry portably. **Generate audio** uses a configured speech service. Locally inspecting an external recording can compare text only when a timestamped transcript for that recording is supplied. See the [audio guide](../AUDIO.md#audio-export-and-external-providers-unreleased) for setup and limits.
+
+Read a passage in the **Teleprompter** (`P`), record a take and edit the words actually spoken. WAV plus JSON export preserves the audio hash and whether the transcript is missing, a draft or confirmed. Sending the take to **Author voice** opens a review; it does not save automatically.
+
+**Optional IMS-Toucan, unreleased:** German and English author-reference voices accept separate IPA overrides and structured passage-level duration and prosody controls. Free acting prompts are unsupported by this engine. Other workers have different capabilities; preview a short passage before a long render. [Setup and model limits](../INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction).
+
+In the local app, open **Project** for a read-only overview of the selected manuscript, research folder and existing outputs. It inspects metadata without rebuilding analysis; output source and generation history remain unknown. The exported demo has no local project-folder view. [Project inspection and CLI](../WORKSPACE.md#inspect-project-structure).
 
 Lixity is open source under AGPL-3.0-or-later. Writing and self-publishing need no extra permission; a separate written commercial license exists for closed-source integrations. See [licensing](../LICENSING.md).
+
+Continue with the [workspace manual](../WORKSPACE.md), [CLI reference](../USAGE.md) or [complete documentation map](../README.md).
 
 [All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](../LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

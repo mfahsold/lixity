@@ -234,12 +234,15 @@ server.serve_forever()
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       assert.deepEqual(errors, []);
       await page.locator('#research-evidence-draft').screenshot({path: path.join(artifacts, `${locale}-${width}.png`)});
-      await page.locator('.selection-technical > summary').click();
-      await page.locator('#r-link-passage-id').fill(fixture.other_passage);
+      assert.equal(await page.locator('#r-link-passage-id').isVisible(), false);
+      // Even a programmatic target change must invalidate the previous preview.
+      await page.locator('#r-link-passage-id').evaluate((field, value) => {
+        field.value = value; field.dispatchEvent(new Event('input', {bubbles:true}));
+      }, fixture.other_passage);
       assert.equal(await page.locator('#research-evidence-draft').isVisible(), false,
-        'An edited advanced passage identifier cannot keep another passage preview');
+        'A changed internal passage target cannot keep another passage preview');
       assert.equal(await page.locator('#r-link-passage-id').inputValue(), fixture.other_passage,
-        'Invalidating the preview preserves the explicit manual target');
+        'Invalidating the preview preserves the changed internal target');
       await page.route(fixture.url + '/api/research/status', async route => {
         const response = await route.fetch();
         const data = await response.json(); data.project_id = 'synthetic-other-project';

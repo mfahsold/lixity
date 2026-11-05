@@ -212,7 +212,7 @@ def test_configuration_discovery_describes_installed_models_and_threshold_domain
     assert "audio" in settings["project_only_keys"]
     audio_version = settings["audio_schema"]["properties"]["schema_version"]
     assert audio_version["default"] == "lixity-audio-settings/1"
-    assert audio_version["enum"] == [f"lixity-audio-settings/{number}" for number in (1, 2, 3, 4)]
+    assert audio_version["enum"] == [f"lixity-audio-settings/{number}" for number in (1, 2, 3, 4, 5)]
     assert settings["audio_schema"]["additionalProperties"] is False
     assert "author_name" in settings["project_only_keys"]
     assert "title" not in settings["project_only_keys"]

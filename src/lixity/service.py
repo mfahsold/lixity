@@ -34,6 +34,7 @@ from . import __version__
 from .config import DEFAULT_HOST, DEFAULT_PORT, resolve_thresholds
 from .language import LANGUAGE_CHOICES
 from .log import rotate_service_log
+from .style_fingerprint import FingerprintThresholds
 from .workspace import resolve_project_target
 
 _OPTIONS = (
@@ -104,38 +105,65 @@ def _validate_settings(settings: Mapping[str, Any]) -> None:
 
 def configure(parser: argparse.ArgumentParser) -> None:
     """Register the four managed lifecycle actions and explicit startup options."""
-    parser.description = "Start, inspect or stop the installed local app without a source checkout."
+    parser.description = (
+        "Manage the local browser app in the background. Choose start, status,\n"
+        "restart or stop; no source checkout is required."
+    )
     parser.formatter_class = argparse.RawDescriptionHelpFormatter
     parser.epilog = (
-        "First session:  lixity service start --open\n"
-        "Return later:   lixity service start --open ./my-novel\n"
-        "After upgrade:  lixity service restart --open\n"
-        "Check or stop:  lixity service status  |  lixity service stop\n\n"
-        "Start uses fresh launch settings: an empty workspace unless a project or\n"
-        "LIXITY_DIR is supplied. Restart reuses recorded launch settings, even\n"
-        "after stop, plus explicit overrides. A later browser project selection\n"
-        "does not change the recorded startup project. Use the same --port for\n"
-        "each action on a custom-port instance. This controller manages only its\n"
-        "own instances; login startup is separate."
+        "Examples:\n"
+        "  lixity service start --open\n"
+        "  lixity service start ./my-novel --open\n"
+        "  lixity service restart --open\n"
+        "  lixity service status --json\n"
+        "  lixity service stop\n\n"
+        "Custom port (repeat --port for every action):\n"
+        "  lixity service start ./my-novel --port 8766 --open\n"
+        "  lixity service status --port 8766\n"
+        "  lixity service restart --port 8766\n"
+        "  lixity service stop --port 8766\n\n"
+        "Launch settings:\n"
+        "  start uses fresh settings: an empty workspace unless a project or\n"
+        "  LIXITY_DIR is supplied. If already running, start leaves it unchanged;\n"
+        "  use restart to apply changes or load an upgraded installation.\n"
+        "  restart reuses saved startup settings, even after stop, plus explicit\n"
+        "  overrides. --no-project clears the saved startup project on restart.\n"
+        "  A browser project selection does not change the saved startup project.\n"
+        "  stop retains launch settings and logs. Login startup is separate.\n\n"
+        "Logs and diagnostics:\n"
+        "  start/restart print the log path (JSON: log). The filename is\n"
+        "  service-PORT.log; LIXITY_SERVICE_STATE_DIR overrides its state folder.\n"
+        "  Default state folders:\n"
+        "    Linux: $XDG_STATE_HOME/lixity/service or ~/.local/state/lixity/service\n"
+        "    macOS: ~/Library/Application Support/lixity/service\n"
+        "    Windows: %LOCALAPPDATA%\\lixity\\service\n"
+        "  status --json reports readiness and installed/running versions;\n"
+        "  it omits local storage paths. For installation checks: lixity doctor.\n"
+        "  For a foreground server in this terminal: lixity serve --help."
     )
     parser.add_argument(
         "action", choices=("start", "stop", "restart", "status"),
-        help="start with fresh settings; restart with saved settings; inspect or stop an owned instance",
+        help="start fresh; stop the owned instance; restart with saved settings; status inspects it",
     )
     parser.add_argument(
-        "project", nargs="?", help="Explicit project or manuscript for start/restart"
+        "project", nargs="?", help="Project folder or manuscript file (start/restart only)"
     )
-    workspace = parser.add_argument_group("Workspace", "Start/restart settings")
-    instance = parser.add_argument_group("Instance", "Local process and output")
-    thresholds = parser.add_argument_group("Analysis thresholds", "Optional start/restart overrides")
-    instance.add_argument(
-        "--port", type=int, default=None, help=f"Port (default: LIXITY_PORT or {DEFAULT_PORT})"
+    workspace = parser.add_argument_group("Workspace", "Startup settings for start/restart only")
+    instance = parser.add_argument_group("Instance", "Only processes started by this controller are managed")
+    thresholds = parser.add_argument_group(
+        "Analysis thresholds", "Start/restart only; saved overrides, project settings, then built-in defaults"
     )
     instance.add_argument(
-        "--host", default=None, help=f"Loopback host (default: LIXITY_HOST or {DEFAULT_HOST})"
+        "--port", type=int, default=None,
+        help=f"Instance port, 1-65535, for every action (default: LIXITY_PORT or {DEFAULT_PORT})",
+    )
+    instance.add_argument(
+        "--host", default=None,
+        help=f"127.0.0.1 or localhost (start/restart; fresh default: LIXITY_HOST or {DEFAULT_HOST})",
     )
     workspace.add_argument(
-        "--no-project", action="store_true", default=None, help="Start an empty workspace"
+        "--no-project", action="store_true", default=None,
+        help="Use an empty workspace, overriding LIXITY_DIR or saved project; cannot combine with project",
     )
     workspace.add_argument(
         "--open", dest="open_browser", action="store_true", default=None,
@@ -143,39 +171,46 @@ def configure(parser: argparse.ArgumentParser) -> None:
     )
     workspace.add_argument(
         "--language", choices=LANGUAGE_CHOICES,
-        help="Analysis language override; default: project setting or en; auto requests detection",
+        help="Analysis language override; fresh default: project setting or en; auto requests detection",
     )
     workspace.add_argument("--title", help="Workspace title override (default: project/manuscript title)")
     workspace.add_argument("--research-project", help="Explicit research archive root for the workspace")
     instance.add_argument(
         "--debug", action="store_true", default=None,
-        help="Enable verbose server and browser diagnostics",
+        help="Enable verbose server and browser diagnostics (start/restart)",
     )
     instance.add_argument(
         "--backend",
         choices=("auto", "process", "systemd"),
         default="auto",
-        help="auto prefers an available Linux systemd user manager",
+        help="Launch backend (start/restart; default: auto); auto uses Linux user systemd if available, else process; not saved",
     )
-    instance.add_argument("--json", action="store_true", help="Machine-readable lifecycle result")
-    for flag, help_text in (
-        ("z-mild", "Notable |z*| threshold override"),
-        ("z-strong", "Strong |z*| threshold override"),
-        ("fdr-q", "Nominal FDR q override"),
-        ("dim-threshold", "Per-axis cutoff in standardized midrank PCA space"),
+    instance.add_argument(
+        "--json", action="store_true",
+        help="Machine-readable result; status exits 0 for known state, even stopped, and 1 for unknown",
+    )
+    defaults = FingerprintThresholds()
+    for flag, key, help_text in (
+        ("z-mild", "z_mild", "Notable |z*| threshold; finite, >= 0; no greater than --z-strong"),
+        ("z-strong", "z_strong", "Strong |z*| threshold; finite, >= --z-mild"),
+        ("fdr-q", "fdr_q", "Nominal FDR q; finite, 0 < q < 1"),
+        ("dim-threshold", "dim_score_threshold", "Per-axis cutoff in standardized midrank PCA space; finite, > 0"),
     ):
-        thresholds.add_argument("--" + flag, type=float, help=help_text)
+        thresholds.add_argument(
+            "--" + flag, type=float,
+            help=f"{help_text} (built-in default: {getattr(defaults, key)})",
+        )
     thresholds.add_argument(
         "--fdr-method", choices=("bh", "by"),
-        help="FDR method: Benjamini-Hochberg (bh) or Benjamini-Yekutieli (by)",
+        help=f"FDR method: Benjamini-Hochberg (bh) or Benjamini-Yekutieli (by); built-in default: {defaults.fdr_method}",
     )
     thresholds.add_argument(
         "--min-chapters", type=int,
-        help="Minimum chapters for a style baseline (at least 2; built-in default: 2)",
+        help=f"Minimum chapters for a style baseline (at least 2; built-in default: {defaults.min_chapters})",
     )
     thresholds.add_argument(
         "--flag-min-severity", type=int, choices=(1, 2, 3),
-        help="Minimum paragraph severity for the flagged list",
+        help=f"Minimum paragraph severity for the flagged list (built-in default: {defaults.flag_min_severity})",
     )
 
 

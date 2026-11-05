@@ -9,12 +9,35 @@ integrations. See [licensing](LICENSING.md) before installation.
 Analysis runs offline; downloading Python, the package and dependencies requires
 network access. No manuscript upload, account or API key is required.
 
-> **Version scope:** this documentation describes **v0.7.7**. Verify packages at
+> **Version scope:** this documentation describes **v0.7.9**. Verify packages at
 > [GitHub releases](https://github.com/mfahsold/lixity/releases/latest) and
 > [PyPI](https://pypi.org/project/lixity/). The product uses the pre-1.0 **0.x** line.
 > Historical **1.x** and **3.x** tags predate the product-number reset; a larger
 > historical number does not mean a newer release. Product, JSON response and
 > archive schema versions are independent.
+
+## Find your setup task
+
+[All documentation](README.md) · [First session](ONBOARDING.md) ·
+[Workspace](WORKSPACE.md) · [CLI](USAGE.md) · [Audio](AUDIO.md)
+
+| Task | Section |
+| --- | --- |
+| Install the application | [Current release](#cli-current-release) · [uv prerequisites](#install-uv-if-it-is-not-available) |
+| Start with a manuscript | [First result](#first-useful-result) |
+| Update or uninstall | [Updates and removal](#updates-and-removal) |
+| Start, stop, restart, inspect logs or change ports | [Running the server](#running-the-server) |
+| Start automatically after login | [Optional login startup](#optional-startup-at-login) |
+| Add PDF/OCR or Zotero support | [Research prerequisites](#optional-research-prerequisites) · [Server access](#server-environment-and-project-access) |
+| Configure speech generation | [Qwen](#optional-qwen-audio-worker) · [Coqui/OpenVoice](#experimental-coqui-and-openvoice-audio-unreleased) · [IMS-Toucan](#ims-toucan-author-voice-and-phonetic-direction) · [External providers](#external-speech-providers-and-local-audio-inspection-unreleased) |
+| Use a separate Jetson worker | [Authenticated forward](#jetson-audio-worker) |
+| Use Lixity from Python or develop it | [Python API environment](#python-api-project-environment) · [Editable checkout](#editable-checkout) |
+| Resolve a setup problem | [Troubleshooting](#troubleshooting) · [Offline help](#read-documentation-offline) |
+
+The normal application install is enough for analysis and the workspace. Choose
+optional tools only for the task that needs them. Audio operations, recordings
+and voice settings are documented in [the audio manual](AUDIO.md); this page owns
+runtime installation and lifecycle.
 
 ## Where Lixity is published
 
@@ -67,7 +90,7 @@ lixity doctor
 lixity service start --open
 ```
 
-See the [release notes](releases/v0.7.7.md)
+See the [release notes](releases/v0.7.9.md)
 for changes and compatibility. `uv tool update-shell` configures new terminals;
 it does not change the terminal already open.
 
@@ -81,7 +104,7 @@ it does not certify linguistic accuracy or source truth.
 
 **Since v0.7.6:** use one regular app address. Opening a project
 creates an independent view under that same address; existing tabs keep their
-project. **App and audio** lists open views and verifies each actual audio worker.
+project. **Project → Settings → Audio and services → Services & audio queue** lists open views and verifies each actual audio worker.
 A view URL is valid only while this server runs; after restart, reopen the project
 from the app home. Custom ports remain available for explicit development instances.
 
@@ -89,7 +112,7 @@ The app opens `http://127.0.0.1:8765/` with an empty workspace; it does not
 search your terminal's current folder. Choose **Open Project** for an existing
 folder or **Analyze a manuscript** to preview a copy into a new project.
 Confirm the manuscript language, then read a passage in **Manuscript**.
-Use **Analysis** for diagnostics or **… → Values** for one paragraph.
+Use **Analysis** for diagnostics or **… → Explore passage** for one paragraph.
 [Onboarding](ONBOARDING.md) explains the next steps.
 
 Check, stop and return to the managed workspace with:
@@ -113,8 +136,8 @@ lixity analyze manuscript.md --language en
 ```
 
 English is the default; `--language auto` explicitly requests detection.
-Short text may leave measurements unavailable. [Usage](USAGE.md) owns exports,
-configuration and PDF behavior. Built-in analysis runs locally. Optional
+Short text may leave measurements unavailable. The [workspace manual](WORKSPACE.md) owns browser workflows;
+[CLI reference](USAGE.md) owns commands and configuration. Built-in analysis runs locally. Optional
 [map backgrounds](research/USAGE.md#keep-places-and-journeys-in-a-dossier) and
 [OCR workers](research/OCR_INTEGRATION.md) have separate network/data boundaries.
 
@@ -192,7 +215,7 @@ non-1.0 playback speed also require FFmpeg. Local `audio-inspect` reads PCM WAV
 with the standard library; other WAV formats, FLAC and MP3 require FFmpeg.
 `audio-verify` does not install or run speech recognition. Supply a timestamped
 transcript explicitly when text or pause comparison is wanted. See the
-[audio usage guide](USAGE.md#audio-export-and-external-providers-unreleased).
+[audio usage guide](AUDIO.md#audio-export-and-external-providers-unreleased).
 
 ### Optional Qwen audio worker
 
@@ -207,13 +230,8 @@ Run the loopback-only worker explicitly on this computer, or on a configured
 Jetson reached through an authenticated SSH forward. Neither target is an
 automatic fallback. Start with a short preview and verify actual synthesis and
 memory headroom; model size and machine memory do not establish throughput.
-[Read-aloud setup and limits](USAGE.md#lixity-read-aloud) covers CPU/CUDA placement,
-the fixed ports, private segment reuse and worker commands. The
-[reference-voice workflow](USAGE.md#experimental-reference-voices) covers
-recording, selecting and transcribing a private voice sample and testing it with
-a separately installed Base worker. Optional worker
-`--attention auto|eager|sdpa` is an explicit machine setting; compare actual
-workloads before choosing an override, without assuming a speed improvement.
+The commands below own worker setup; [the audio manual](AUDIO.md#lixity-read-aloud)
+owns profiles, reference recordings, synthesis and output inspection.
 In 0.7.7, new audio profiles default to a 1.2 playback tempo factor;
 FFmpeg is required on the Lixity host for any factor other than 1.0 and for MP3.
 The factor is applied after synthesis, not by the Qwen model.
@@ -221,7 +239,193 @@ The factor is applied after synthesis, not by the Qwen model.
 Piper support has been removed. Existing Piper profiles require an explicit
 `audio-migrate` dry run and reviewed apply with a new backup outside the project.
 The migration preserves source files and never assumes an equivalent Qwen timbre
-or precise speed; see the same [read-aloud guide](USAGE.md#lixity-read-aloud).
+or precise speed; see the same [read-aloud guide](AUDIO.md#lixity-read-aloud).
+
+Qwen runs in an optional isolated Python 3.12 environment with `qwen-tts` and a
+hardware-appropriate PyTorch installation. Install the development checkout into
+that environment (`python -m pip install -e /path/to/lixity`) and obtain the
+complete local CustomVoice checkpoint, including its speech tokenizer, using the
+[upstream setup instructions](https://github.com/QwenLM/Qwen3-TTS). Choose the CPU
+build of PyTorch for CPU-only use. Neither opening Lixity nor starting the worker
+downloads weights or sends manuscript text to an inference provider.
+
+Start the worker explicitly from that environment:
+
+```bash
+python -m lixity.speech_qwen --model /path/to/CustomVoice --device cpu --threads 1
+```
+
+It binds only to `127.0.0.1:8769`, loads the local model once and serializes
+synthesis. CPU operation supports full chapters; generation can be much slower than the
+result's duration, so use a short preview to choose the voice. Match Torch threads
+to the CPU budget assigned to the worker. A heavily throttled four-thread worker
+can waste time contending within a one-core quota. Keep workstation CPU/memory
+headroom through the operating system rather than silently reducing model size. GPU operation is
+optional via `--device cuda`, with an explicit error when unavailable. Worker-only `--attention auto|eager|sdpa` selects the attention implementation.
+The default `auto` uses eager attention on CPU and SDPA on CUDA. An operator can
+compare an explicit override on the same checkpoint and workload; measure actual
+synthesis, memory and output before selecting it. This flag does not establish a
+performance improvement and cannot be set by browser input or a voice profile.
+
+On a memory-constrained CUDA machine, an operator can explicitly keep the
+talker on the GPU and run audio decoding on the CPU with the same checkpoint:
+
+```bash
+python -m lixity.speech_qwen --model /path/to/CustomVoice --device cuda --codec-device cpu --threads 4
+```
+
+The default `--codec-device model` keeps the decoder on the selected main device.
+Worker-only `--codec-chunk-frames N` accepts 16–300 audio-code frames. The default
+300 preserves the installed upstream decoder behavior. A smaller explicit value
+uses that decoder's existing chunk algorithm with its 25-frame left context;
+it can reduce per-chunk activation memory without changing model weights.
+For example, test `--device cuda --codec-device model --codec-chunk-frames 32`
+on the actual machine before adopting it. Unsupported decoder interfaces fail
+explicitly. Chunking does not bound all model, KV-cache or output allocations,
+and this option does not guarantee that a checkpoint fits in RAM.
+
+CPU decoding uses float32 and trades GPU allocations for CPU work; this is an
+explicit machine setting, not a voice profile or an automatic fallback. Shared
+RAM remains finite. Suitable SSD-backed swap is a separate operating-system
+decision; see [NVIDIA's Jetson memory guidance](https://www.jetson-ai-lab.com/tutorials/ram-optimization/).
+Validate actual synthesis and memory headroom before scheduling long jobs.
+
+#### Choose the Qwen checkpoint
+
+CustomVoice, VoiceDesign and Base are separate checkpoints. Use a complete local
+checkpoint with its tokenizer and the corresponding worker variant:
+
+```sh
+python -m lixity.speech_qwen --variant voice-design --model /path/to/VoiceDesign --device cpu --threads 4
+python -m lixity.speech_qwen --variant base --model /path/to/Base --device cpu --threads 4
+```
+
+These are alternatives, not commands to run simultaneously. Check that no audio
+job is active, stop the previous worker through its process manager, and start
+the selected variant. All use `127.0.0.1:8769`; changing a profile does not switch
+the running model. Check with `lixity audio-status --engine qwen3-base` (or the
+matching engine), then follow [reference voices](AUDIO.md#experimental-reference-voices)
+for the first short test. No checkpoint is downloaded automatically.
+
+### Jetson audio worker
+
+Machine setup is explicit: run the same Qwen worker on the Jetson with its
+supported CUDA environment and complete local checkpoint. Keep that worker on
+`127.0.0.1:8769` there, and forward laptop port `8770` over authenticated SSH:
+
+```bash
+ssh -N -T -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 \
+  -o ServerAliveCountMax=3 -L 127.0.0.1:8770:127.0.0.1:8769 USER@JETSON
+```
+
+Use your normal verified SSH host key and account. The local CPU worker continues
+to use port `8769`; selecting Jetson uses only the fixed loopback forward `8770`.
+These native target values cannot supply a host address or inference URL; external
+providers use their separately validated explicit profile bindings. Lixity does
+not install or start the remote worker or SSH connection. GPU compatibility and
+available shared memory must be checked on the actual device; 8 GB does not
+guarantee that every input fits.
+
+### Experimental Coqui and OpenVoice audio (unreleased)
+
+Set up a separate Python environment following the
+[maintained Coqui installation guide](https://coqui-tts.readthedocs.io/en/latest/installation.html).
+Install `coqui-tts`, matching CPU versions of `torch` and `torchaudio`,
+`gruut[de]`, and this Lixity checkout in that environment. For example, this
+isolated CPU setup was tested on Linux ARM64:
+
+```sh
+uv venv --python 3.11 /path/to/coqui-env
+uv pip install --python /path/to/coqui-env/bin/python --torch-backend cpu \
+  'torch==2.8.0' 'torchaudio==2.8.0' 'coqui-tts==0.28.0' 'gruut[de]' -e /path/to/lixity
+```
+
+For other PyTorch/Coqui versions, check the upstream requirements (including
+`torchcodec` where required) before changing this tested combination. Obtain the
+[Thorsten VITS model](https://huggingface.co/Thorsten-Voice/VITS) and the
+[OpenVoice V2 converter](https://huggingface.co/myshell-ai/OpenVoiceV2/tree/main/converter)
+and keep their complete local model directories. Model downloads are an explicit
+setup step. The worker does not download models or send manuscript text or
+references over the network.
+
+After ensuring no active audio job uses the local worker, start one of these
+workers on the same loopback port used by Qwen:
+
+```sh
+/path/to/coqui-env/bin/python -m lixity.speech_coqui --model /path/to/thorsten-vits
+/path/to/coqui-env/bin/python -m lixity.speech_coqui --model /path/to/thorsten-vits --converter /path/to/OpenVoiceV2/converter
+```
+
+The Thorsten directory must contain `model_file.pth` and `config.json`; the
+converter directory must contain `checkpoint.pth` and `config.json`. The first
+command serves `coqui`, the second `coqui-reference`. Start only one worker at
+a time. A reference profile uses `voice = "reference"` and an existing
+`reference_id`; a Thorsten profile uses `voice = "thorsten"`. Both require
+`language = "de"`. Select the matching profile in the UI or use `--engine` on
+the CLI. `audio-status --engine coqui-reference` checks the actual worker.
+
+For settings migration, recording requirements and a first preview, continue with
+[Coqui/OpenVoice operation](AUDIO.md#experimental-coqui-and-openvoice-audio-unreleased).
+
+### IMS-Toucan author voice and phonetic direction
+
+**Unreleased.** The optional `ims-toucan` worker supports German and English with
+an explicitly saved author reference, IPA overrides and structured prosody. It
+uses local loopback port **8772**, independently of Qwen/Coqui (8769) and F5 (8771).
+The worker is separate from the normal Lixity environment; no inference dependency
+is added to the core package. CPU inference is supported; speed and speaker
+similarity must be measured on the actual computer and reference recording.
+
+Use a separate Python 3.11 environment and an eSpeak-NG shared library. The
+following inference-only setup pins the upstream checkout and model revisions;
+it intentionally excludes training and GUI dependencies. Run it from a Lixity
+source checkout. Installation downloads packages and weights; subsequent worker
+startup requires all files locally and disables Hugging Face network access.
+
+```sh
+TOUCAN_ENV="$HOME/.local/share/lixity/runtimes/toucan-venv"
+TOUCAN_SOURCE="$HOME/.local/share/lixity/runtimes/IMS-Toucan"
+TOUCAN_MODELS="$HOME/.local/share/lixity/models/toucan"
+uv venv --python 3.11 "$TOUCAN_ENV"
+uv pip install --python "$TOUCAN_ENV/bin/python" -e . \
+  'torch==2.4.1' 'torchaudio==2.4.1' 'numpy==1.23.5' 'scipy==1.9.3' \
+  'librosa==0.9.2' 'soundfile==0.12.1' 'speechbrain==0.5.13' \
+  'huggingface-hub==0.25.2' 'phonemizer==3.2.1' 'matplotlib==3.9.2' \
+  'dotwiz==0.4.0' 'einops==0.7.0' 'dragonmapper==0.2.6' \
+  'pypinyin==0.47.1' 'tqdm==4.64.1' 'hyperpyyaml==1.2.2' \
+  'setuptools==80.9.0' 'imageio==2.34.0' 'ruamel.yaml==0.18.6'
+git clone --branch MassiveScaleToucan https://github.com/DigitalPhonetics/IMS-Toucan.git "$TOUCAN_SOURCE"
+git -C "$TOUCAN_SOURCE" checkout 3cc2094d9c7123336eda7e299ac0bc90319ca9ff
+"$TOUCAN_ENV/bin/huggingface-cli" download Flux9665/ToucanTTS \
+  ToucanTTS.pt Vocoder.pt --revision e0afe0ef703d2178dd7dc74ec298693ddb10e720 \
+  --local-dir "$TOUCAN_MODELS/acoustic"
+"$TOUCAN_ENV/bin/huggingface-cli" download speechbrain/spkrec-ecapa-voxceleb \
+  embedding_model.ckpt classifier.ckpt mean_var_norm_emb.ckpt hyperparams.yaml label_encoder.txt \
+  --revision 0f99f2d0ebe89ac095bcc5903c4dd8f72b367286 --local-dir "$TOUCAN_MODELS/speaker"
+"$TOUCAN_ENV/bin/python" -m lixity.speech_toucan \
+  --source "$TOUCAN_SOURCE" --model "$TOUCAN_MODELS/acoustic" \
+  --speaker "$TOUCAN_MODELS/speaker" --device cpu --threads 4
+```
+
+If the library is installed outside the system search path, set
+`PHONEMIZER_ESPEAK_LIBRARY` to its actual shared-library file. Missing eSpeak,
+unknown IPA symbols and incomplete checkpoints fail explicitly; the adapter never
+falls back to a downloaded phonemizer or silently drops unsupported phones.
+The model assets above total approximately 395 MiB, excluding Python packages.
+Check the service with `lixity audio-status --engine ims-toucan`.
+
+In the audio dialog, review and apply the backed-up settings upgrade to schema
+`/5`, then create a reference profile and choose a named recording. Existing
+profiles are retained. See the
+[phonetics and direction workflow](AUDIO.md#ims-toucan-phonetics-and-structured-direction-unreleased).
+Free-text acting instructions remain export metadata and cannot be rendered by
+this adapter. The structured controls scale duration and prosodic variation;
+they do not prescribe an exact emotion, calibrated pitch or words per minute.
+
+The upstream code and published Toucan/ECAPA weights are labeled Apache-2.0.
+The Toucan maintainers discuss a training-data provenance question in
+[issue 174](https://github.com/DigitalPhonetics/IMS-Toucan/issues/174); this setup
+records the published licenses and does not resolve that separate question.
 
 ### Development builds instead
 
@@ -256,7 +460,7 @@ independent: back up research before an upgrade and inspect the
 [reader/writer compatibility limits](research/USAGE.md#limits). Installing new
 files does not restart a running workspace.
 
-Before stopping the app, check **App and audio** for active or queued audio
+Before stopping the app, check **Project → Settings → Audio and services → Services & audio queue** for active or queued audio
 jobs and let them finish or cancel them deliberately. Separate CLI renders are
 not shown there. Note the startup project and port, and preserve any separately
 installed tool dependencies or language models when replacing the installation.
@@ -347,7 +551,7 @@ Restart with the installation intended to own the dashboard, for example
 Optional audio workers retain their own environments; verify the selected
 engine using `lixity audio-status --project ./my-novel --json` and perform a short
 explicit synthesis check. A healthy app service does not establish worker readiness.
-See [experimental Coqui/OpenVoice setup](USAGE.md#experimental-coqui-and-openvoice-audio-unreleased)
+See [experimental Coqui/OpenVoice setup](AUDIO.md#experimental-coqui-and-openvoice-audio-unreleased)
 for the separate German synthesis and reference-conversion dependencies.
 
 Remove only specifically identified unused build/test environments or old
@@ -465,8 +669,9 @@ that deletes project storage.
 
 Lixity's structured diagnostic events use one logging tree (`lixity.*`) with a single UTC
 line format and standard levels; stdout stays the result channel of the CLI,
-and the service appends the process' stderr to `service-PORT.log`. `lixity
-service status` prints that path, so `tail -f` follows a running server.
+and the service appends the process' stderr to `service-PORT.log`. `lixity service start` and `restart` print that path. Status does not print it;
+use the state-folder table above to locate `service-PORT.log` without restarting,
+then use `tail -f` to follow it on systems with that command.
 
 | Setting | Effect |
 | --- | --- |
@@ -716,9 +921,9 @@ use `lixity COMMAND --help`, `lixity research COMMAND --help`,
 `lixity about --json` and `lixity research schema`. They describe the code in
 that installation; they do not require the workspace service.
 
-For longer guides, retain a matching source checkout and open `docs/USAGE.md`,
-`docs/research/USAGE.md` or the generated `docs/llms-full.txt` in a local text or
-Markdown reader. The bundle combines the references; it is not a rendered
+For longer guides, retain a matching source checkout and start at `docs/README.md`.
+The workspace, CLI, audio and research manuals are separate Markdown files.
+Open these or the generated `docs/llms-full.txt` in a local text or Markdown reader. The bundle combines the references; it is not a rendered
 documentation website. Package installations do not include these guides, and
 there is no `lixity docs --serve` command. Contributors can preview the approved
 Pages tree using the existing

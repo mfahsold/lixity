@@ -15,7 +15,6 @@ device. The report provides counts and locations so the editor can decide.
 
 from __future__ import annotations
 
-import re
 from collections import Counter
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -56,7 +55,7 @@ def resolve_motif_settings(
                 raise ValueError(f"{key} must map nonblank motif names to regular-expression strings")
             try:
                 compile_pattern(pattern)
-            except re.error as exc:
+            except ValueError as exc:
                 raise ValueError(f"Invalid {key} pattern for {name}: {exc}") from exc
             if name in patterns and patterns[name] != pattern:
                 raise ValueError(f"Conflicting motif {name} in motif_regexes and motifs")

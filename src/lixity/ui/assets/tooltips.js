@@ -126,14 +126,6 @@
       (!touchFocusEl || !el.contains(touchFocusEl));
   }
 
-  function controlsFocusedMenu(el, target) {
-    if (!el || el.getAttribute("aria-expanded") !== "true") return false;
-    return (el.getAttribute("aria-controls") || "").split(/\s+/).some(function(id) {
-      var menu = id && document.getElementById(id);
-      return menu && menu.getAttribute("role") === "menu" && menu.contains(target);
-    });
-  }
-
   function hover(el) {
     if (el === activeEl) {
       clearTimeout(hideTimer);
@@ -262,6 +254,18 @@
     // A trigger can still be inside the viewport after its nested scrollport
     // clips it. Keep help attached only while some of the trigger is visible.
     var visible = {left: 10, right: innerWidth - 10, top: 10, bottom: innerHeight - 10};
+    // A backdrop filter or transform makes fixed descendants relative to that
+    // ancestor. Convert viewport geometry through the actual containing block.
+    var space = LixityComponents.overlaySpace(tip);
+    if (space.bounds) {
+      visible.left = Math.max(visible.left, space.bounds.left);
+      visible.right = Math.min(visible.right, space.bounds.right);
+      visible.top = Math.max(visible.top, space.bounds.top);
+      visible.bottom = Math.min(visible.bottom, space.bounds.bottom);
+    }
+    function place(left, top) {
+      LixityComponents.placeOverlay(tip, left, top, space);
+    }
     for (var parent = el.parentElement; parent && parent !== document.body; parent = parent.parentElement) {
       var style = getComputedStyle(parent), box = parent.getBoundingClientRect();
       var clipX = /auto|scroll|hidden|clip/.test(style.overflowX);
@@ -284,6 +288,22 @@
       }
     }
     var anchorTop = rect.top, anchorBottom = rect.bottom;
+    if (el.matches("input, select, textarea")) {
+      // Keep a field and its immediate actions available while its help owns
+      // focus. A popup covering Apply would otherwise prevent leaving the field.
+      var field = el.closest(".setting-field, .form-group, .form-row");
+      if (field) {
+        var fieldBox = field.getBoundingClientRect();
+        anchorTop = fieldBox.top; anchorBottom = fieldBox.bottom;
+        for (var action = field.nextElementSibling; action &&
+            action.matches("button, .row, .settings-actions, .form-actions"); action = action.nextElementSibling) {
+          if (!action.getClientRects().length) continue;
+          var actionBox = action.getBoundingClientRect();
+          anchorTop = Math.min(anchorTop, actionBox.top);
+          anchorBottom = Math.max(anchorBottom, actionBox.bottom);
+        }
+      }
+    }
     if (pointerHelp && rect.height > 60) {
       // For tall elements (paragraphs, full cards), stay beside the dwell point while clearing the line.
       anchorTop = Math.max(rect.top, rect.top + pointerOffsetY - 14);
@@ -311,7 +331,7 @@
     }
     // Measure without a previous placement narrowing the fixed box. Prefer the
     // space below help so it does not cover the navigation preceding a form.
-    tip.style.left = visible.left + "px";
+    place(visible.left, visible.top);
     tip.style.maxHeight = "";
     tip.style.maxWidth = "";
     tip.style.maxWidth = Math.min(tip.offsetWidth, Math.max(0, visible.right - visible.left)) + "px";
@@ -327,15 +347,13 @@
     tip.style.maxHeight = available + "px";
     tipH = tip.offsetHeight;
     if (el.closest(".workspace-shell") && rect.right + tipW + 16 < innerWidth) {
-      tip.style.left = (rect.right + 10) + "px";
-      tip.style.top = Math.max(10, Math.min(innerHeight - tipH - 10, rect.top + (rect.height - tipH) / 2)) + "px";
+      place(rect.right + 10, Math.max(10, Math.min(innerHeight - tipH - 10, rect.top + (rect.height - tipH) / 2)));
       return;
     }
     var left = rect.left + (pointerHelp ? pointerOffsetX + 12 : 0);
     left = Math.max(visible.left, Math.min(visible.right - tipW, left));
     var top = useBelow ? anchorBottom + 6 : anchorTop - tipH - 6;
-    tip.style.left = left + "px";
-    tip.style.top = top + "px";
+    place(left, top);
   }
 
   document.addEventListener("mouseout", function (e) {
@@ -479,8 +497,13 @@
     if (e.key === "Escape" && (activeEl || pendingEl)) {
       var visibleHelp = Boolean(activeEl);
       var helpOwnsFocus = visibleHelp && (activeEl.contains(e.target) || tip.contains(e.target) ||
-        controlsFocusedMenu(activeEl, e.target) ||
         e.target === document.body || e.target === document.documentElement);
+      // A dialog action advertising Escape must keep that shortcut even when
+      // its own focused hint is visible (notably the native Close button).
+      var escapeAction = e.target.closest('button[aria-keyshortcuts~="Escape"]');
+      if (escapeAction && escapeAction.closest("dialog")) helpOwnsFocus = false;
+      // Transient menus own dismissal; their focused action help closes with them.
+      if (e.target.closest('[role="menu"]')) helpOwnsFocus = false;
       // A dismissed hover must not reappear on small movements within the
       // same trigger. Leaving and returning can request it again.
       if (activeEl && activeEl.matches(":hover")) dismissedHover = activeEl;

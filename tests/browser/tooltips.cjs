@@ -1,4 +1,4 @@
-const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, launchFirefox, playwrightModule} = require('../../scripts/browser_tools.cjs');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -8,12 +8,14 @@ const {expect} = require(path.join(playwrightModule, 'test'));
 const root = path.resolve(__dirname, '../..');
 const assets = path.join(root, 'src/lixity/ui/assets');
 const css = ['design-tokens.css', 'dashboard.css'].map(file => fs.readFileSync(path.join(assets, file), 'utf8')).join('\n');
-const script = fs.readFileSync(path.join(assets, 'tooltips.js'), 'utf8');
+const script = ['vendor/preact-10.29.8.min.js', 'vendor/htm-3.1.1.umd.js', 'component-layer.js', 'tooltips.js']
+  .map(file => fs.readFileSync(path.join(assets, file), 'utf8')).join('\n');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-tooltips-'));
 const explanation = 'A dossier holds synthetic notes and optional passage references; it is not an accepted claim.';
 
 (async () => {
-  const browser = await launchChromium();
+  const useFirefox = process.argv.includes('--firefox');
+  const browser = useFirefox ? await launchFirefox() : await launchChromium();
   try {
     const errors = [];
     for (const width of [1440, 320]) {
@@ -41,7 +43,8 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
           <button id="scroll-help" data-help="Nested scrolling help">Help</button><div style="height:400px"></div>
         </div>
         <dialog id="modal"><span class="help" id="modal-help" tabindex="0" data-help="Synthetic native dialog help.">Help</span>
-          <input id="modal-input" aria-label="Synthetic field" data-help="Synthetic field guidance."></dialog>
+          <input id="modal-input" aria-label="Synthetic field" data-help="Synthetic field guidance.">
+          <button id="modal-close" class="modal-close" aria-keyshortcuts="Escape" title="Close dialog">Close</button></dialog>
         <div class="pswp" id="vendor-viewer" hidden><button id="vendor-close" title="Close synthetic viewer">Close</button></div>
         <div role="button" style="position:fixed;top:460px;left:20px"><span class="help" id="nested-help" tabindex="0" data-help="Nested term explanation.">Term</span></div>
         <script>
@@ -132,16 +135,16 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
       await expect(copy).toHaveText('Menu explanation.');
       await page.keyboard.press('Escape');
       await expect(tip).toHaveAttribute('aria-hidden', 'true');
-      assert.equal(await page.evaluate(() => window.menuEscapes), 0,
-        'A trigger-owned menu waits until its tooltip is dismissed');
+      assert.equal(await page.evaluate(() => window.menuEscapes), 1,
+        'A focused transient menu receives Escape while its explanatory tooltip also closes');
       await page.keyboard.press('Escape');
-      assert.equal(await page.evaluate(() => window.menuEscapes), 1);
+      assert.equal(await page.evaluate(() => window.menuEscapes), 2);
       await page.mouse.move(0, 0);
       await page.locator('#menu-owner').evaluate(node => node.setAttribute('aria-expanded', 'false'));
       await page.locator('#menu-owner').hover();
       await expect(tip).toHaveAttribute('aria-hidden', 'false');
       await page.keyboard.press('Escape');
-      assert.equal(await page.evaluate(() => window.menuEscapes), 2,
+      assert.equal(await page.evaluate(() => window.menuEscapes), 3,
         'A closed or unrelated controlled menu does not give hover help focus priority');
       await page.mouse.move(0, 0);
       await help.focus();
@@ -326,9 +329,15 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
       await page.keyboard.press('Escape');
       assert.equal(await page.locator('#modal').getAttribute('open'), null,
         'After help closes, a subsequent Escape reaches the dialog');
+      await page.locator('#modal').evaluate(dialog=>dialog.showModal());
+      await page.locator('#modal-close').focus();
+      await expect(copy).toHaveText('Close dialog');
+      await page.keyboard.press('Escape');
+      await expect(page.locator('#modal')).not.toBeVisible();
+      await expect(tip).toHaveAttribute('aria-hidden','true');
       await page.close();
     }
     assert.deepEqual(errors, []);
-    console.log('Tooltips: native navigation, hover persistence, long scrolling help, keyboard/Escape, touch and dialog top layer passed; ' + artifacts);
+    console.log('Tooltips (' + browser.browserType().name() + '): native navigation, hover persistence, long scrolling help, keyboard/Escape, touch and dialog top layer passed; ' + artifacts);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

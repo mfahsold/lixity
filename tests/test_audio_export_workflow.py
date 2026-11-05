@@ -54,7 +54,7 @@ def test_timeline_cli_exports_all_chapters_without_synthesis(export_project, cap
 
 @pytest.mark.parametrize("mode,chapter,includes_second", [("chapter", 1, False), ("manuscript", None, True)])
 def test_http_export_preserves_selected_scope(export_project, monkeypatch, mode, chapter, includes_second):
-    monkeypatch.setattr("lixity.speech_status.worker_health", lambda target: {"target": target, "state": "unavailable", "model": None})
+    monkeypatch.setattr("lixity.speech_status.worker_health", lambda target, **kwargs: {"target": target, "state": "unavailable", "model": None})
     handler = make_handler(export_project.parent, source_input=export_project, language="en")
     payload = {
         "project_token": project_settings_token(handler.workspace_root, str(export_project)),

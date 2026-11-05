@@ -340,7 +340,13 @@ def about() -> dict[str, Any]:
     from .diversity import HD_D_DRAW_SIZE, MIN_TOKENS_LD
     from .research.cli import command_metadata
     from .research.models import ENTITY, Manifest
-    from .site_contracts import DATA_SCHEMA, SITE_ANALYSIS_SCHEMA, SITE_SCHEMA, SiteExportOptions
+    from .site_contracts import (
+        DATA_SCHEMA,
+        SITE_ANALYSIS_SCHEMA,
+        SITE_AUDIO_SCHEMA,
+        SITE_SCHEMA,
+        SiteExportOptions,
+    )
     from .style_fingerprint import (
         FEATURES,
         LAYER_FEATURES,
@@ -462,7 +468,7 @@ def about() -> dict[str, Any]:
                 "purpose": "static read-only project website with explicitly included research and source files",
                 "output": "directory|json",
                 "schema_version": SITE_SCHEMA,
-                "additional_schema_versions": [SITE_ANALYSIS_SCHEMA],
+                "additional_schema_versions": [SITE_ANALYSIS_SCHEMA, SITE_AUDIO_SCHEMA],
                 "preflight_schema_version": "lixity-site-preflight/1",
                 "preflight_error_schema_version": "lixity-site-preflight-error/1",
                 "data_schema_version": DATA_SCHEMA,
@@ -477,11 +483,12 @@ def about() -> dict[str, Any]:
                 "name": "read-aloud",
                 "purpose": "render explicit project direction through configured speech providers, or export without synthesis",
                 "output": "audio",
-                "export_formats": ["lixity-speech-plan/1", "lixity-audio-timeline/1", "ssml-1.0"],
+                "export_formats": ["lixity-speech-plan/1", "lixity-speech-plan/2", "lixity-audio-timeline/1", "lixity-audio-timeline/2", "ssml-1.0"],
             },
             {
                 "name": "audio-export-plan", "purpose": "export source-bound direction without synthesis or reference recordings",
                 "output": "json-or-ssml", "schema_version": "lixity-audio-timeline/1",
+                "schema_versions": ["lixity-audio-timeline/1", "lixity-audio-timeline/2"],
             },
             {
                 "name": "audio-inspect", "purpose": "read-only local diagnostics for an explicit WAV, FLAC or MP3 file",

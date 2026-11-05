@@ -7,16 +7,85 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.9] - 2026-11-05
+
+### Documentation
+
+- Rework installed CLI help into task groups, command examples and canonical
+  manual links; clarify project defaults, output formats, service lifecycle,
+  audio capture and writes, retention guards and action-specific options.
+  Share command-help presentation while retaining argument grammar and aliases.
+
+- Consolidate the operating documentation into linked workspace, CLI, audio and
+  research manuals, with a task-oriented documentation map and an explicit first-session checklist.
+  Preserve existing section links, centralize optional worker setup in Installation,
+  and include the new manuals in Pages and the generated offline reference bundle.
+- Correct outdated wiki shortcuts, analysis claims and research-storage instructions;
+  route illustrated guides and wiki pages to the maintained manuals.
+
+
 ### Added
+- Tokenized LaTeX math renderer and Obsidian-compatible Callout engine for research
+  dossiers and evidence cards, supporting math environments (`matrix`, `cases`, `aligned`),
+  balanced fractions/roots, greek characters, wikilinks `[[Target|Label]]`, text highlights `==...==`,
+  strikethrough `~~...~~`, and collapsible callouts (`> [!NOTE]-`).
+- Lightweight markdown editor component (`LixityMarkdownEditor`) integrated into the dossier
+  revision workflow with formatting toolbar, keyboard shortcuts (Ctrl+B/I/K/H, Tab),
+  smart list continuation, auto-closing bracket pairs, and real-time word/character count.
+- Curated inline Lucide SVG icon library (`window.LixityIcons`) providing consistent icons
+  across callouts, UI controls, navigation, and editor actions.
+- Full JSON Canvas 1.0 (`https://jsoncanvas.org/spec/1.0/`) support: narrative scene storyboard
+  export (`lixity canvas`), research dossier/claim/decision canvas export (`lixity research canvas`),
+  and JSON canvas import into research candidate entities.
+- Offline HTML article extractor (`lixity research extract-article`) parsing web articles into
+  clean structured Markdown with metadata and research frontmatter, inspired by Defuddle.
+- Obsidian-inspired Command Palette (`window.LixityCommandPalette`, accessible via `Ctrl+P`,
+  `Cmd+P` or `Ctrl+K`) with live filtering across analysis metrics, research search, audio
+  studio, export tasks and themes.
+- Reader Context Sidebar with Backlinks automatically surfacing associated research dossiers,
+  anchored historical evidence, claims and vocal direction cues when inspecting a manuscript passage.
+- Dedicated Focus Mode keyboard toggle (`F`) providing serene, distraction-free reading with
+  calm typography and optional inline metric reveals.
+- Refined form and status design following Obsidian Minimal Theme aesthetics: quiet typography,
+  standardized field spacing, live pulsing status dots for background synthesis and service states.
+- Reader-only `--include-audio` exports verified existing chapter recordings with
+  the shared player and WAV downloads. Matching uses the exact manuscript and
+  export chapter cap; partial coverage is visible and empty selection fails.
+  Static copies contain no voice references, profiles or service endpoints.
+- Explicit `audio-import` binds a PCM chapter WAV to a supplied manuscript hash
+  without claiming transcript verification or automatic alignment. Successful
+  native chapter renders retain their completed audio for later reader export.
+- Conditional `lixity-read-only-site/3`, `lixity-reader-publication/2` and
+  `lixity-reader-audio/1` contracts for opted-in audio; default exports keep their
+  existing schemas and never invoke synthesis.
+- Portable author takes with explicit WAV/transcript metadata exchange and guarded
+  Studio handoff; draft reading scripts remain distinct from confirmed transcripts.
+- Teleprompter pronunciation and direction presentation reuses the canonical
+  speech timeline, including all current range controls and safe IPA annotations.
+- Optional offline IMS-Toucan worker for author references, German/English IPA
+  overrides and structured profile/passage prosody; separate inference environment.
+- Reviewed, backed-up audio settings `/5` upgrade and conditional direction,
+  plan and timeline `/2` contracts for phonetic/prosody data. Existing profiles
+  retain their engine and voice; unsupported controls fail explicitly.
+- Capability-driven model controls and separate IPA/prosody editing in the shared
+  audio dialog, without exposing internal reference identities.
+- Central native model/endpoint/reference registry and shared worker transport;
+  native status routing and reference-aware cache keys are corrected.
+- Recording saves report activation separately and never silently switch engines.
+- Recording status beside the start button and privacy-preserving browser-console
+  diagnostics for failed microphone requests and audio initialization.
+- A compact shared audio player with elapsed/total time, seeking, volume, mute
+  and a measured frequency spectrum for playback and author-voice recording.
+- Control-specific help throughout the native audio dialog.
 - Comprehensive UI harmonization, design token adherence, and accessibility polish:
   - Standardized CSS tokens across speech player controls, modal forms, and teleprompter elements using semantic variables (`--surface-raised`, `--line-strong`, `--accent`, `--on-action`) instead of orphaned custom tokens.
   - Added responsive off-canvas drawer layout (`@media (max-width: 960px)`) and quick toggle button (`🏛 Dossiers`, shortcut `D`) in the Teleprompter view, preserving full reading runway width on smaller displays and mobile devices.
-  - Integrated in-browser `MediaRecorder` audio capture with immediate take preview and download option directly from the teleprompter.
+  - Integrated client-side PCM WAV capture with explicit take preview and WAV/JSON download from the teleprompter.
   - Hardened managed service startup in containerized environments by gracefully falling back when `XDG_RUNTIME_DIR` is not writable.
 - Manuscript Teleprompter with vocal direction, phonetics, and synchronized dossier images:
   - Added dedicated Teleprompter mode in the manuscript reader view (`#reader-teleprompter`, keyboard shortcut `P`), featuring variable WPM auto-scroll (60–240 WPM), horizontal eye-level reading ribbon, and dynamic typography controls (`A−`/`A+`).
   - Automatically renders vocal direction cues (`audio-direction` instructions and pauses) as visual prompt banners inline above directed passages.
-  - Automatically highlights project pronunciation rules (`pronunciations`) using semantic HTML `<ruby>` phonetic ruby tags directly above corresponding words.
+  - Displays pronunciation guidance using semantic HTML `<ruby>` annotations. Spelling substitutions and explicit IPA overrides are separate controls.
   - Synchronizes contextual historical images and dossier evidence in a split-screen sidebar using direct paragraph claim links, entity heuristics, and chapter atmosphere matching as the speaker scrolls through the text.
   - Includes integrated one-click hardware audio recording with live session timer and microphone gain controls.
 - Integrated microphone settings and hardware level management in CLI and UI:
@@ -34,11 +103,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Enhanced OSS media playback across UI and Research:
   - Added dedicated speech player controls with quick-access playback speed toggles (`0.8×`, `1.0×`, `1.25×`, `1.5×`) and ±5-second scrub buttons in the browser listening interface.
   - Added native HTML5 audio player rendering for research dossier evidence attachments (`audio/*`) alongside existing video playback.
-- Offline F5-TTS Flow-Matching diffusion speech adapter and local worker:
-  - Added native `f5-tts` engine support (`speech_f5.py`) utilizing Continuous Flow Matching (CFM) Diffusion Transformer (`SWivid/F5-TTS` and German fine-tunes such as `HPI-DAP/F5-TTS-German`).
-  - Achieves natural, organic German prosody and breathing without autoregressive discrete token loops, stuttering, or hallucinated syllables.
-  - Supports local isolated worker execution on port 8771 (`python -m lixity.speech_f5`), content-addressed verified project audio references (`lixity audio-reference create`), and single-narrator delivery references.
-  - Added `--engine f5-tts` CLI options in `read-aloud` and `audio-status`, capability advertising in `audio_capabilities()`, and full bash/zsh command autocompletion.
+- Retained F5-TTS project and transport contracts:
+  - Existing `f5-tts` profiles, references, plans and cache entries remain readable.
+    An explicitly operated compatible HTTP worker can still use port 8771.
+  - Removed the nonfunctional bundled inference loader; it now fails with actionable
+    guidance before importing models or downloading files. New-profile selection hides
+    this unavailable path without converting existing voices.
 - Single-narrator listening core and delivery reference modeling:
   - Enforced single-narrator integrity in `read-aloud` and `audio-direction`: passage directions shape delivery, pauses, and pacing, but cannot switch to an entirely different voice or cast foreign speakers.
   - Added `same_narrator` validation in `speech_direction.py`: reference engines (`qwen3-base`, `coqui-reference`, `f5-tts`) permit switching between distinct attitude and delivery references of the same speaker without triggering multi-voice casting conflicts.
@@ -167,6 +237,15 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   direction without manually supplying snapshot hashes.
 
 ### Changed
+- README, the public landing page and English/German tours now connect manuscript
+  reading, research, analysis, spoken review and deliberate export choices.
+  Audio setup and calibration descriptions distinguish measured checks from
+  unverified transcripts, automatic alignment and acoustic-quality claims.
+- Author-voice references are saved only through the studio's reviewed transcript
+  workflow. Teleprompter takes keep their WAV download and studio entry point.
+- The native audio dialog assigns recording and reference management, voice
+  profiles and service configuration, direction and output, and microphone
+  hardware controls to four separate tabs instead of repeating sections.
 - Restructured Project Settings & Overview: Reorganized project settings into elevated, distinct cards sorted by editorial workflow priority. Deduplicated audio actions by consolidating configuration into the primary workflow panel and cleanly collapsing large output file inventories into compact disclosures.
 - Sidebar Tooltip Ergonomics: Fixed sidebar tooltips (`.workspace-shell`) position smoothly to the right of the trigger button, preventing overlap with vertically stacked navigation tabs and eliminating pointer interception seams.
 - Screenshot Framing: Expanded `dashboard-reader-focus.png` capture frame to display complete paragraphs with balanced margins, eliminating cropped text in documentation and website walkthroughs.
@@ -258,6 +337,57 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and keeps progress and error messages visible while scrolling.
 
 ### Fixed
+- Keep authored HTML inert inside dossier inline, display and matrix formulas;
+  preserve literal angle brackets and matrix cell boundaries while formatting TeX.
+- Direct-file reader playback keeps the native audio path instead of entering a
+  Web Audio graph that Chromium can silence for local-file origins. The player
+  reports spectrum unavailable; hosted copies retain measured frequency display.
+- Teleprompter imagery now resolves canonical anchored dossier revision pins and
+  retained image versions through shared helpers, with bounded detail caching,
+  stale-context guards and explicitly labelled title/tag suggestions.
+- Chapter profile quotation and function-word shares aggregate integer counts
+  before rounding, avoiding drift from already-rounded paragraph percentages.
+- Invalid configured cue expressions and signal/motif patterns fail validation
+  before analysis instead of raising a late regex traceback or replacing output.
+- Reject custom word patterns with multiple capturing groups at configuration
+  validation, preventing tuple-valued tokens from crashing analysis; existing
+  whole-match, single-capture and explicit-flag behavior is preserved.
+- Retired the unusable experimental bundled F5 inference loader with an explicit
+  runtime error; retained profiles, references, export/cache data and HTTP transport.
+- Teleprompter literal manuscript markup is rendered as text, and planned cues
+  include pause-only and structured directions instead of only the first instruction.
+- Static reports and curated publications omit inactive teleprompter assets,
+  keeping the published examples within their existing page-size budget.
+- The global function-word overview now uses the corpus token share, including
+  blockquotes and prose before the first chapter. Older metric payloads without
+  that aggregate display an unavailable value instead of a paragraph average.
+- Showing-cue comparisons reuse the shared stable standardization and mean
+  primitives, keeping finite zero-MAD fallback scores at large numeric scales.
+  Chapter-deviation rankings also reuse the stable mean, avoiding intermediate
+  sum overflow when the final mean remains finite.
+- Shared form fields, headings, disclosure spacing and dialog bounds now align
+  across Project, Research and audio, including narrow screens. Services and the
+  audio queue join voice and microphone configuration under Project settings.
+- Author recordings and research references use names, excerpts and explicit
+  unavailable labels instead of opaque identifiers; stored IDs and revision pins
+  remain unchanged. Export limit feedback shows localized measurements.
+- Browser test launchers mute desktop audio while preserving playback checks.
+- Help popups in blurred native dialogs use the correct coordinates and remain
+  readable within the dialog in Firefox and Chromium.
+- Audio tabs start at the top of their section, preserve feedback when reselected,
+  and enable recording only after the project's settings and reading text load.
+- Opening the reader without a fragment no longer looks up an empty element ID.
+- Native manuscript pages permit same-origin microphone capture after browser
+  approval; the HTTP permissions policy no longer blocks author-voice recording.
+  Other pages and exported HTML keep microphone access disabled.
+- Author-voice recording reports denied browser microphone access with recovery
+  guidance, guards pending requests and stops capture when leaving its surface.
+  Takes use the required 24 kHz mono WAV format, enforce the reference duration
+  limit, allow transcript corrections and reload the updated project after saving.
+- Teleprompter context reads run only on explicit opening, with current project
+  and source identifiers; page load no longer sends invalid audio/research requests.
+- Local HTTP listeners reject a second live listener on the same port. Address
+  reuse still permits restart after close; port sharing is no longer enabled.
 - `lixity research find-anchor` and manuscript commands report helpful guidance instead of confusing mutually exclusive errors when positional `PATH` and `--manuscript` are both provided or project defaults apply.
 - Unified project settings layout and eliminated inconsistent spacing:
   - Standardized `#controls` with a clean 1.5rem (`var(--space-5)`) vertical rhythm across the Project panel.

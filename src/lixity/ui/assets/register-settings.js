@@ -19,12 +19,8 @@
   var profiles = editor.querySelector("[data-register-profiles]");
   var assignments = editor.querySelector("[data-register-assignments]");
   function control(parent, key, value, options) {
-    var wrapper = document.createElement("label");
-    wrapper.className = "setting-field";
-    wrapper.appendChild(document.createTextNode(labels[key]));
-    var input = document.createElement(options ? "select" : "input");
-    input.className = "ctl";
-    input.id = "register-field-" + (++serial);
+    var input = LixityComponents.createField(parent, {label: labels[key],
+      type: options ? "select" : "text", id: "register-field-" + (++serial)});
     input.dataset.registerField = key;
     if (options) options.forEach(function(option) {
       var item = document.createElement("option");
@@ -34,7 +30,6 @@
     if (key === "register_lower" || key === "register_upper") {
       input.type = "number"; input.min = "0"; input.step = "any";
     } else input.required = true;
-    wrapper.appendChild(input); parent.appendChild(wrapper);
     return input;
   }
   function button(parent, text, action, attribute) {

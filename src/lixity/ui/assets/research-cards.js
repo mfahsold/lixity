@@ -117,7 +117,7 @@
         ? html`<div class="ctl-note my-1 text-small"><strong>${item.impactLabel}</strong>
             <span class="research-prose markdown-body" dangerouslySetInnerHTML=${{__html: item.impactHtml}} /></div>` : null}
       ${item.scopeText ? html`<div class="ctl-note research-claim-scope">${item.scopeText}</div>` : null}
-      ${item.idLine ? html`<div class="ctl-note research-record-id">${item.idLine}</div>` : null}
+      ${item.relatedLine ? html`<div class="ctl-note">${item.relatedLine}</div>` : null}
       ${item.dossierLine ? html`<div class="ctl-note">${item.dossierLine}</div>` : null}
       ${item.sections && item.sections.length ? html`<${DossierSections} sections=${item.sections} />` : null}
       ${item.tags && item.tags.length ? html`<div class="research-tags">

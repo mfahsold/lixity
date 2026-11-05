@@ -100,6 +100,7 @@ class _Job:
     finished: float | None = None
     cancel: threading.Event = field(default_factory=threading.Event)
     diagnostic_id: str = field(default_factory=new_speech_diagnostic_id)
+    retain: Callable[[Path, Callable[[], bool]], None] | None = field(default=None, repr=False)
 
 
 class SpeechJobs:
@@ -149,6 +150,7 @@ class SpeechJobs:
         target: str = "local",
         plan: list[SpeechSegment] | None = None,
         references: Mapping[str, SpeechReference] | None = None,
+        retain: Callable[[Path, Callable[[], bool]], None] | None = None,
     ) -> dict[str, Any]:
         profile = AudioProfile.model_validate(profile.model_dump())
         self.cancel_stale()
@@ -165,6 +167,7 @@ class SpeechJobs:
             job = _Job(token_hex(16), context_key, dict(context), storage, valid, cache_dir, fresh_audio, target)
             job.plan = [SpeechSegment(p.text, AudioProfile.model_validate(p.profile.model_dump()), p.pause_before, p.pause_after, dict(p.anchor) if p.anchor else None) for p in plan] if plan is not None else None
             job.references = dict(references or {})
+            job.retain = retain
             self._jobs[job.identifier] = job
             source = Path(storage.name) / "source.md"
             try:
@@ -223,6 +226,9 @@ class SpeechJobs:
             if not output.is_file() or not 44 < output.stat().st_size <= MAX_AUDIO_BYTES:
                 raise ValueError("Generated audio is missing or exceeds the download limit")
             current = job.valid()
+            if current and not job.cancel.is_set() and job.context.get("mode") == "chapter" and job.retain is not None:
+                job.retain(output, lambda: not job.cancel.is_set() and job.valid())
+                current = job.valid()
             with self._lock:
                 job.state = "cancelled" if job.cancel.is_set() else "ready" if current else "stale"
         except SpeechCancelled:

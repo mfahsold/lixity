@@ -138,7 +138,6 @@ async function refreshResearchSources(overview, changedId, freshRead) {
         text: mediaOrPassages + " · " + sizeKb,
         title: uiLabel("research_tab_sources_help") || "Gespeicherte Quellenkopie"
       }],
-      idLine: s.id,
       tags: s.tags || [],
       tagsInteractive: true,
       zotero: external ? {library: external.library, key: external.item_key} : null,
@@ -149,7 +148,7 @@ async function refreshResearchSources(overview, changedId, freshRead) {
   filterResearchList("sources");
 }
 
-var researchDossiersPayload = null;
+var researchDossiersPayload = null, researchDossiersContext = null;
 
 function renderResearchDossiersView(data) {
   var listHost = document.getElementById("research-dossiers-list");
@@ -237,11 +236,12 @@ function renderResearchDossiersView(data) {
 }
 
 async function refreshResearchDossiers(overview, changedId, freshRead) {
+  var context = researchReadContext();
   var listHost = document.getElementById("research-dossiers-list");
   if (!listHost) return;
   if (!listHost.children.length) LixityResearchCards.render(listHost, {loading: true});
   var reading = await researchListRead("dossiers", overview, changedId, freshRead);
-  if (!acceptResearchList("dossiers", reading)) return;
+  if (!acceptResearchList("dossiers", reading) || !acceptResearchContext(context, reading.data)) return;
   var data = reading.data;
   if (!data.ok || !Array.isArray(data.dossiers)) {
     LixityResearchCards.render(listHost, {message: data.message || uiLabel("research_load_dossiers_failed")});
@@ -251,6 +251,7 @@ async function refreshResearchDossiers(overview, changedId, freshRead) {
   var dossiers = data.dossiers;
   reading.state.count = dossiers.length;
   researchDossiersPayload = data;
+  researchDossiersContext = context;
   ["r-claim-dossier-select", "r-decision-dossier-select"].forEach(function(selectId) {
     var dossierSelect = document.getElementById(selectId);
     if (!dossierSelect) return;
@@ -321,16 +322,15 @@ document.addEventListener("click", async function(event) {
 
 function researchClaimChoiceLabel(claim) {
   function label(item) {
-    return item.title + (item.scope && item.scope.time_period ? " · " + item.scope.time_period : "") +
+    return researchRecordLabel(item, "claim") + (item.scope && item.scope.time_period ? " · " + item.scope.time_period : "") +
       " · " + uiFormat("research_revision_number", {revision: item.revision});
   }
   var text = label(claim);
   // Names, dates and versions can all match. Keep the remaining choices
   // explicitly distinguishable without requiring anyone to type an ID.
-  var duplicate = Object.values(researchClaimChoices).some(function(other) {
-    return other.id !== claim.id && label(other) === text;
-  });
-  return text + (duplicate ? " · " + claim.id : "");
+  var matches = Object.values(researchClaimChoices).filter(function(other) { return label(other) === text; });
+  var index = matches.findIndex(function(other) { return other.id === claim.id; });
+  return text + (matches.length > 1 && index >= 0 ? " · " + uiFormat("research_choice_number", {number: index + 1}) : "");
 }
 
 function updateResearchRelationControls() {
@@ -587,8 +587,7 @@ async function refreshResearchClaims(overview) {
     }
     var dossierLine = null;
     if (c.dossier_id) {
-      dossierLine = uiLabel("research_dossier") + ": " + c.dossier_id +
-        (c.dossier_revision ? " · " + uiFormat("research_revision_number", { revision: c.dossier_revision }) : "");
+      dossierLine = uiLabel("research_dossier") + ": " + researchReferenceLabel("dossier", {id:c.dossier_id, revision:c.dossier_revision});
     }
     return {
       key: key,
@@ -599,7 +598,6 @@ async function refreshResearchClaims(overview) {
       metaRight: metaRight,
       statementHtml: renderSafeMarkdown(c.statement),
       scopeText: scopeParts.join(" · "),
-      idLine: uiLabel("research_claim_id") + " " + c.id,
       dossierLine: dossierLine,
       tags: c.tags || [],
       evidence: true,
@@ -641,8 +639,7 @@ async function refreshResearchDecisions(overview) {
     }
     var claimLine = null;
     if (d.claim_id) {
-      claimLine = uiLabel("research_decision_claim") + " " + d.claim_id +
-        (d.claim_revision ? " · " + uiFormat("research_revision_number", { revision: d.claim_revision }) : "");
+      claimLine = uiLabel("research_decision_claim") + " " + researchReferenceLabel("claim", {id:d.claim_id, revision:d.claim_revision});
     }
     return {
       key: "decision:" + decisionsRender + ":" + d.id,
@@ -653,7 +650,7 @@ async function refreshResearchDecisions(overview) {
       rationaleHtml: renderSafeMarkdown(d.rationale),
       impactHtml: d.impact_on_plot ? renderSafeMarkdown(d.impact_on_plot) : null,
       impactLabel: uiLabel("research_decision_impact"),
-      idLine: claimLine,
+      relatedLine: claimLine,
       decisionImpact: true,
       revision: "decision",
     };

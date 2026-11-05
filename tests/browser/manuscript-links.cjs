@@ -207,8 +207,10 @@ async function selectText(page, text) {
       assert.equal(historyReads, 0, 'Opening an entry does not fetch its version list');
       assert.equal(recordReads[0].searchParams.get('revision'), '1',
         'Opening the saved association requests its pinned version before loading any newer claim evidence');
-      assert.match(await claimHistory.textContent(), /dossier-original/,
-        'Opening an association reads its pinned claim and historical dossier association');
+      assert.equal(await claimHistory.locator('[data-research-history=dossier][data-record-id=dossier-original][data-record-revision="1"]').count(), 1,
+        'The readable dossier link retains the original historical association and version');
+      assert.doesNotMatch(await claimHistory.textContent(), /dossier-original/,
+        'Internal association identities are not displayed as dossier names');
       assert.match(await claimHistory.textContent(), /Pinned source quotation/);
       assert.doesNotMatch(await claimHistory.textContent(), /Latest source quotation|dossier-latest/,
         'Evidence and dossier pins from a newer claim cannot replace the saved association');
@@ -237,7 +239,7 @@ async function selectText(page, text) {
       await openVersions(page);
       await page.locator('#research-revision-history-list [data-research-revision="2"]').click();
       await claimHistory.getByText('Latest changed claim', {exact: true}).waitFor();
-      assert.match(await claimHistory.textContent(), /Latest source quotation|dossier-latest/,
+      assert.match(await claimHistory.textContent(), /Latest source quotation/,
         'The newest saved claim remains available through an explicit version choice');
       await page.locator('#research-revision-history-list [data-research-revision="1"]').click();
       await claimHistory.locator('[data-research-history=dossier][data-record-id=dossier-original]').click();

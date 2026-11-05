@@ -149,6 +149,35 @@ class TestLixityServer(unittest.TestCase):
         self.assertNotEqual(nonce, second.group(1))
         self.assertIn(f'<script nonce="{second.group(1)}">', second_body.decode("utf-8"))
 
+    def test_native_manuscript_allows_same_origin_microphone_only(self):
+        original_state = snapshot_handler_state()
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                source = Path(directory) / "voice.md"
+                source.write_text("## One\n\nA synthetic recording passage.\n", encoding="utf-8")
+                LixityServerHandler.workspace_root = directory
+                LixityServerHandler.source_input = str(source)
+                LixityServerHandler.refresh()
+                status, body, headers = self.make_request("/")
+                self.assertEqual(status, 200)
+                self.assertIn(b'data-speech-capable="true"', body)
+                self.assertEqual(headers.get("permissions-policy"),
+                                 "camera=(), microphone=(self), geolocation=(), usb=(), serial=()")
+                self.assertEqual(headers.get("x-frame-options"), "DENY")
+
+                source.unlink()
+                status, _, headers = self.make_request("/")
+                self.assertEqual(status, 200)
+                self.assertIn("microphone=()", headers.get("permissions-policy", ""))
+        finally:
+            restore_handler_state(original_state)
+
+    def test_empty_native_dashboard_does_not_enable_microphone(self):
+        status, _, headers = self.make_request("/")
+        self.assertEqual(status, 200)
+        self.assertEqual(headers.get("permissions-policy"),
+                         "camera=(), microphone=(), geolocation=(), usb=(), serial=()")
+
     def test_project_paths_lists_one_level_and_preserves_project_state(self):
         original_state = snapshot_handler_state()
         with tempfile.TemporaryDirectory() as td:
@@ -552,6 +581,8 @@ class TestLixityServer(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(body, target.read_bytes())
         self.assertTrue(headers.get("content-type", "").startswith("text/html"))
+        self.assertEqual(headers.get("permissions-policy"),
+                         "camera=(), microphone=(), geolocation=(), usb=(), serial=()")
         with patch("lixity.server.handler.MAX_ARTIFACT_BYTES", 4):
             status, _, _ = self.make_request("/artifact/linked.html")
         self.assertEqual(status, 413)

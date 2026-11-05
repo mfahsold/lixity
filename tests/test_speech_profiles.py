@@ -60,7 +60,7 @@ def test_unsupported_profile_values_fail(changes):
 
 def test_capabilities_drive_multilingual_voice_validation():
     capabilities = audio_capabilities()
-    assert set(capabilities) == {"qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "f5-tts", "openai-compatible"}
+    assert set(capabilities) == {"qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "f5-tts", "ims-toucan", "openai-compatible"}
     for language in ("en", "de", "fr", "es", "it", "pt", "ru", "zh", "ja", "ko"):
         profile = AudioProfile(engine="qwen3", language=language, voice="Ryan", instructions="Calm")
         assert profile.language == language
@@ -70,6 +70,19 @@ def test_capabilities_drive_multilingual_voice_validation():
     json.dumps(capabilities, allow_nan=False)
     capabilities["qwen3"]["languages"].append("invented")
     assert "invented" not in audio_capabilities()["qwen3"]["languages"]
+
+
+def test_retired_f5_runtime_is_not_offered_for_creation_but_saved_profiles_export():
+    from lixity.speech_direction import build_speech_plan, plan_json
+
+    capability = audio_capabilities()["f5-tts"]
+    assert capability["creation_enabled"] is False
+    assert capability["runtime_status"] == "unavailable"
+    assert capability["runtime_reason"]
+    saved = AudioProfile(engine="f5-tts", voice="reference", reference_id="a" * 64, language="de")
+    plan = plan_json(build_speech_plan("Der Fluss ist still.", saved, for_export=True))
+    assert plan["segments"][0]["profile"]["engine"] == "f5-tts"
+    assert plan["segments"][0]["profile"]["reference_id"] == "a" * 64
 
 
 def test_audio_persistence_is_atomic_preserves_source_and_other_configuration(tmp_path: Path):

@@ -21,7 +21,10 @@ for locale in ('en','de','fr','es','it','pt','nl'):
          'identity':'a'*64,'source_sha256':'b'*64,'profile':'public','project_id':'synthetic-project',
          'entries':[{'id':'entry-'+str(i),'title':title,'body':body,'reveal_after_chapter':i,
                      'dossier_id':'synthetic-dossier','revision':1,'section':None,
-                     'citations':[],'images':[],'geography':None}
+                     'citations':[{'availability':'available', 'source_title':'Synthetic citation source',
+                       'verbatim':'A retained public quotation.', 'passage_id':'opaque-passage-identifier',
+                       'evidence_link_id':'opaque-evidence-identifier', 'evidence_link_revision':2,
+                       'claim_revision':1}] if i == 0 else [],'images':[],'geography':None}
                     for i,title,body in [(0,'Before reading','A safe introduction.'),
                         (1,'After arrival','The garden gate is open.'),(3,'Later revelation','The keeper hid the key.')]]}
     blocks=[ReaderBlock('heading','Arrival',3,3,is_chapter=True),ReaderBlock('paragraph','The gate opened.',5,5),
@@ -66,6 +69,12 @@ print(json.dumps(documents))
       await expect(page.locator('#research-diagram-library')).toHaveCount(0);
       assert.equal(await page.evaluate(()=>typeof window.mermaid),'undefined');
       await expect(entries).toContainText('Before reading');
+      await expect(entries).toContainText('Synthetic citation source');
+      await expect(entries).toContainText('A retained public quotation.');
+      await expect(entries).not.toContainText('opaque-passage-identifier');
+      await expect(entries).not.toContainText('opaque-evidence-identifier');
+      assert((await page.locator('#lixity-site-data').textContent()).includes('opaque-passage-identifier'),
+        'Publication identity remains in prepared data while the reading view uses source names');
       await expect(page.locator('#publication-context #publication-progress-form')).toHaveCount(1);
       if(locale==='en') await page.screenshot({path:path.join(artifacts,`reader-initial-${width}.png`)});
       if (width === 1440) {

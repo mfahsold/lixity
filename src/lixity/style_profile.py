@@ -10,7 +10,7 @@ from typing import Any
 
 from .language import resolve_language
 from .markdown_parser import counting_inline_text, strip_inline_markup
-from .math_core import per_mille
+from .math_core import per_mille, percent
 from .models import CorpusConfig
 from .paragraph_evidence import ParagraphEvidence, ParagraphMatcher
 from .status import (
@@ -305,6 +305,8 @@ class ParagraphProfiler:
 
         chapter: _ProfileChapter | None = None
         chapter_paragraphs: list[ParagraphProfile] = []
+        chapter_dialogue_words = 0
+        chapter_function_words = 0
         prev_dominant: str | None = None
 
         def close_chapter() -> None:
@@ -314,12 +316,6 @@ class ParagraphProfiler:
             past = sum(p.past_hits for p in chapter_paragraphs)
             total_words = sum(p.words for p in chapter_paragraphs)
             total_sentences = sum(p.sentences for p in chapter_paragraphs)
-
-            def _weighted(attr: str) -> float:
-                if not total_words:
-                    return 0.0
-                weighted = sum(getattr(p, attr) * p.words for p in chapter_paragraphs) / total_words
-                return float(weighted)
 
             chapters.append(
                 ChapterProfile(
@@ -334,8 +330,8 @@ class ParagraphProfiler:
                     dominant=self._dominant(present, past),
                     flagged=sum(1 for p in chapter_paragraphs if p.is_flagged),
                     asl=round(total_words / total_sentences, 2) if total_sentences else 0.0,
-                    dialog_pct=round(_weighted("dialogue_pct"), 1),
-                    function_word_pct=round(_weighted("function_word_pct"), 1),
+                    dialog_pct=round(percent(chapter_dialogue_words, total_words), 1),
+                    function_word_pct=round(percent(chapter_function_words, total_words), 1),
                 )
             )
 
@@ -346,11 +342,15 @@ class ParagraphProfiler:
                 close_chapter()
                 chapter = current_chapter
                 chapter_paragraphs = []
+                chapter_dialogue_words = 0
+                chapter_function_words = 0
                 prev_dominant = None
 
             clean = counting_inline_text(raw_text)
 
             counts = self._matcher.count(clean)
+            chapter_dialogue_words += counts.dialogue
+            chapter_function_words += counts.function
             words = counts.words
             # Mirror the chapter metric: a fragment without word tokens is
             # not a sentence, and a resolved auto language picks its own

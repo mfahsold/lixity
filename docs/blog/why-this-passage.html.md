@@ -58,7 +58,7 @@ The backend prepares these summaries from one archive snapshot for both the live
 
 5. **Prepare the right copy.** Use an editorial PDF or a fixed review website for a discussion. A curated companion shares selected background material. These are reading exports rather than live collaborative editing.
 
-Built-in manuscript analysis runs locally, and Lixity does not automatically rewrite prose. Markdown and plain-text manuscripts are supported; Word/DOCX and Scrivener documents need conversion. Optional integrations have their own [data boundaries](../research/USAGE.md).
+Built-in manuscript analysis runs locally, and Lixity does not automatically rewrite prose. Markdown and plain-text manuscripts are supported; The unreleased importer also accepts one Word/DOCX file; export Scrivener documents to a supported format first. Optional integrations have their own [data boundaries](../research/USAGE.md).
 
 ## Try one question
 

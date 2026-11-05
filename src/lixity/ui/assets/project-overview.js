@@ -89,15 +89,6 @@
     row.prepend(button);
     return row;
   }
-  function audioAction(id, kind, label) {
-    var target = document.getElementById(id);
-    if (!target) return null;
-    target.dataset.projectAudio = kind;
-    if (label) target.textContent = text(label);
-    var container = target.closest(".project-audio-actions");
-    if (container) container.hidden = true;
-    return target;
-  }
   function outputRow(artifact, token) {
     var row = node("li", "project-overview-row"), heading = node("div", "project-overview-row-heading");
     heading.append(node("strong", "", artifact.name));
@@ -181,10 +172,6 @@
     workflow.append(node("h4", "", text("project_structure_workflow")));
     var actions = node("div", "project-overview-actions");
     ["manuscript", "research"].forEach(function (key) { actions.append(roleAction(roles[key])); });
-    [["settings-speech", "profiles", "speech_profiles_title"], ["settings-speech-output", "output", "speech_output_title"], ["settings-speech-mic", "microphone", "speech_microphone_title"]].forEach(function (args) {
-      var action = audioAction.apply(null, args);
-      if (action) actions.append(action);
-    });
     workflow.append(actions);
     var outputs = node("section", "project-overview-outputs");
     outputs.append(node("h4", "", text("project_structure_outputs")));

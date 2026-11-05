@@ -1,13 +1,32 @@
 """Neutral foreground startup does not discover or write into the caller's project."""
 
+import errno
+from http.server import BaseHTTPRequestHandler
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from lixity.research import api as research_api
 from lixity.server import LixityServerHandler
-from lixity.server.runtime import run_server
+from lixity.server.runtime import _LoopbackHTTPServer, run_server
 from tests.support import monkeypatch_handler_state, snapshot_handler_state
+
+
+def test_loopback_listener_rejects_a_second_server_on_its_live_port():
+    """The bind must remain exclusive even if two startup probes both succeeded."""
+    with _LoopbackHTTPServer(("127.0.0.1", 0), BaseHTTPRequestHandler) as first:
+        with pytest.raises(OSError) as caught, \
+             _LoopbackHTTPServer(first.server_address, BaseHTTPRequestHandler):
+            pass
+        assert caught.value.errno == errno.EADDRINUSE
+
+
+def test_loopback_listener_can_rebind_after_close():
+    """Restart needs address reuse, without sharing the active listener."""
+    with _LoopbackHTTPServer(("127.0.0.1", 0), BaseHTTPRequestHandler) as first:
+        address = first.server_address
+    with _LoopbackHTTPServer(address, BaseHTTPRequestHandler) as restarted:
+        assert restarted.server_address == address
 
 
 @pytest.mark.parametrize("target_path", [None, "missing-project"])

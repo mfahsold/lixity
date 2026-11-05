@@ -1,33 +1,25 @@
-# Keyboard Shortcuts & Navigation ⌨️
+# Keyboard shortcuts and navigation
 
-Lixity is built for speed and keyboard accessibility, adhering strictly to WAI-ARIA standards.
+Open **Reading settings → Keyboard shortcuts** in the application for the
+contextual shortcuts available in that installation. The
+[workspace manual](https://mfahsold.github.io/lixity/WORKSPACE.md#reading-paragraphs)
+owns the complete reading and navigation instructions.
 
----
+## Passage tools and search
 
-## 1. Global Navigation Shortcuts
+| Focus is on… | Key | Action |
+| --- | --- | --- |
+| A manuscript paragraph or its menu button | `Shift+F10` or the context-menu key | Open the passage menu |
+| An open passage menu | Arrow keys; `Home` / `End` | Move between actions |
+| The manuscript search field | `Enter` / `Shift+Enter` | Next / previous match |
+| The manuscript search field | `Escape` | Clear the query |
+| The companion divider | Left / right arrows; `Home` / `End` | Adjust the reading split |
 
-| Shortcut | Context | Action |
-| :--- | :--- | :--- |
-| `Alt` + `1` | Global | Switch to **Manuscript** (reading view) |
-| `Alt` + `2` | Global | Switch to **Research & Dossiers** |
-| `Alt` + `3` | Global | Switch to **Project Settings & Files** |
-| `/` or `Ctrl` + `F` | Manuscript | Focus manuscript search input |
-| `Enter` | Search | Jump to next search match |
-| `Shift` + `Enter` | Search | Jump to previous search match |
-| `Escape` | Global | Clear search / Close active modals and drawers |
-| `Alt` + `L` | Text selection | Create research claim from cited passage |
-| `←` / `→` | Split pane | Narrow or widen companion dossier drawer |
-| `Home` / `End` | Split pane | Minimize or maximize companion dossier drawer |
+`Escape` closes the active dismissible surface; its effect depends on focus and
+open dialogs. These are contextual controls, not global remappings of browser
+shortcuts. Ordinary `Tab` navigation reaches labeled controls. Tooltips explain
+controls on hover or focus, and Escape dismisses a hint.
 
----
-
-## 2. Table Accessibility & Sorting
-
-* **Keyboard Sort:** Focus any table column header and press `Enter` or `Space` to toggle ascending and descending sorts.
-* **Tabular Numbers:** Numeric columns use proportional tabular alignment (`tabular-nums`) for clean visual comparison.
-
----
-
-## 3. Shortcut Hints & Tooltips
-
-Every key action displays a localized tooltip with an embedded keyboard badge (`<kbd>`) indicating available hotkeys across desktop and touch viewports.
+The [audio manual](https://mfahsold.github.io/lixity/AUDIO.md) covers the
+teleprompter's separate keys. Consult the actual installed UI before relying on
+a shortcut from an older screenshot or article.

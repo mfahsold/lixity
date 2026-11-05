@@ -104,9 +104,6 @@ function researchEvidenceDraftHost() {
     host.className = "selection-draft"; host.hidden = true;
     host.setAttribute("aria-live", "polite");
     passage.parentElement.before(host);
-    var technical = document.createElement("details"); technical.className = "selection-technical";
-    var summary = document.createElement("summary"); summary.textContent = uiLabel("selection_identifier");
-    technical.appendChild(summary); passage.before(technical); technical.appendChild(passage);
   }
   return host;
 }
@@ -183,11 +180,10 @@ function researchCitationHtml(cite, interactive) {
   var availability = unavailable ? uiLabel("research_evidence_unavailable") : (withdrawn ? uiLabel("research_evidence_withdrawn_context") : uiLabel("research_evidence_retained_unreviewed"));
   return '<div class="research-passage-card">' +
     '<span class="research-badge ' + (unavailable || withdrawn ? 'badge-warning' : 'badge-neutral') + '">' + escapeHtml(availability) + '</span>' +
-    '<div class="ctl-note">' + escapeHtml(cite.source_title || cite.passage_id || cite.id || "") + '</div>' +
+    '<div class="ctl-note">' + escapeHtml(researchRecordLabel({title:cite.source_title}, "source")) + '</div>' +
     '<div class="research-passage-quote">' + (!unavailable && cite.verbatim ? escapeHtml(cite.verbatim) : escapeHtml(uiLabel("research_no_quote"))) + '</div>' +
-    (cite.passage_id ? '<code>' + escapeHtml(cite.passage_id) + '</code>' : '') +
     (cite.evidence_link_id ? '<div class="ctl-note">' + escapeHtml(uiLabel("research_revision_kind_evidence_link")) + ': ' +
-      escapeHtml(cite.evidence_link_id) + ' · ' + escapeHtml(uiFormat("research_revision_number", {revision: cite.evidence_link_revision})) +
+      escapeHtml(uiFormat("research_revision_number", {revision: cite.evidence_link_revision})) +
       ' · ' + escapeHtml(uiLabel("research_revision_kind_claim")) + ' · ' +
       escapeHtml(uiFormat("research_revision_number", {revision: cite.claim_revision})) + '</div>' : '') +
     (interactive !== false && !unavailable && !withdrawn && cite.passage_id ? researchPassageActions(cite.passage_id, cite) : '') +

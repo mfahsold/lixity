@@ -75,3 +75,27 @@ def test_corrupt_cache_does_not_make_mixed_plan_look_runnable(tmp_path, monkeypa
                         lambda *a, **kw: pytest.fail('render must not begin'))
     with pytest.raises(ValueError, match=r'multiple.*model'):
         render_speech_audio(source, output, profile=preset, plan=plan, cache_dir=cache)
+
+
+def test_independent_workers_can_render_one_plan(tmp_path, monkeypatch):
+    from lixity.speech_references import save_reference
+
+    source, output = tmp_path / 'text.md', tmp_path / 'audio.wav'
+    source.write_text('Two independent models.')
+    reference = save_reference(tmp_path, generate_silence_wav(1), 'Synthetic reference.')
+    preset = AudioProfile(language='de')
+    f5 = AudioProfile(engine='f5-tts', voice='reference', language='de', reference_id=reference.id)
+    plan = [SpeechSegment('First voice.', preset), SpeechSegment('Second voice.', f5)]
+    calls = []
+
+    def synthesize(text, profile, **kwargs):
+        calls.append((text, profile.engine))
+        if profile.engine == 'f5-tts':
+            assert kwargs['reference'] == reference
+        return generate_silence_wav(.01, 24000)
+
+    monkeypatch.setattr('lixity.speech_qwen.synthesize_qwen', synthesize)
+    monkeypatch.setattr('lixity.speech_f5.synthesize_f5', synthesize)
+    render_speech_audio(source, output, profile=preset, plan=plan, references={reference.id: reference})
+    assert calls == [('First voice.', 'qwen3'), ('Second voice.', 'f5-tts')]
+    assert output.read_bytes().startswith(b'RIFF')

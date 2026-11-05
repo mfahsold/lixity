@@ -9,7 +9,6 @@ from __future__ import annotations
 import json
 import os
 import stat
-from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Any, ClassVar
@@ -17,7 +16,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from ..project_structure import MAX_CONFIG_BYTES, project_artifact_path
 from ..research import api as research_api
-from ..speech_qwen import worker_health
+from ..speech_status import native_worker_inventory
 from ..workspace_labels import WORKSPACE_LABELS
 from ._state import RefreshOutcome
 from .constants import (
@@ -61,6 +60,7 @@ class LixityServerHandler(
         "/api/speech": "_handle_speech",
         "/api/speech-job": "_handle_speech_job",
         "/api/speech-audio": "_handle_speech_audio",
+        "/api/speech-audio-artifacts": "_handle_speech_audio_artifacts",
         "/api/audio-microphone": "_handle_audio_microphone",
         "/api/project-structure": "_handle_project_structure",
         "/api/project-paths": "_handle_project_paths",
@@ -91,6 +91,7 @@ class LixityServerHandler(
     POST_ROUTES: ClassVar[dict[str, str]] = {
         "workspace-close": "_handle_workspace_close",
         "speech-render": "_handle_speech_render",
+        "speech-audio-import": "_handle_speech_audio_import",
         "speech-plan": "_handle_speech_plan",
         "audio-audit": "_handle_audio_audit",
         "audio-schema": "_handle_audio_schema",
@@ -165,7 +166,17 @@ class LixityServerHandler(
                 language = self.dashboard_info.get("language_key", self.language)
                 if not self.dashboard_info.get("manuscript_source_sha256"):
                     outcome = RefreshOutcome.UNKNOWN  # no last-good manuscript to label
-            self._send_dashboard_shell(html, freshness=outcome, language=language)
+                # Only the current native authoring workspace may request browser
+                # capture. Exported HTML uses the generic deny-by-default response.
+                allow_microphone = bool(
+                    self.source_input
+                    and self.dashboard_info.get("manuscript_source_sha256")
+                    and not self.dashboard_info.get("is_empty", True)
+                    and outcome in (RefreshOutcome.CURRENT, RefreshOutcome.REBUILT)
+                )
+            self._send_dashboard_shell(
+                html, freshness=outcome, language=language, allow_microphone=allow_microphone,
+            )
             return
 
         if path.startswith("/artifact/"):
@@ -214,8 +225,7 @@ class LixityServerHandler(
         registry = getattr(self.server, "workspaces", None)
         manager = self._speech_manager()
         manager.cancel_stale()
-        with ThreadPoolExecutor(max_workers=2) as pool:
-            targets = list(pool.map(worker_health, ("local", "jetson")))
+        targets = native_worker_inventory()
         self._json({"ok": True, "schema_version": "lixity-runtime-local/1",
                     "app": {"state": "ready"}, "workspaces": registry.items() if registry else [],
                     "audio": {"targets": targets, "jobs": manager.overview()}})
@@ -340,7 +350,7 @@ class LixityServerHandler(
 
         action = path[len("/api/"):].strip("/")
         maximum = (138 * 1024**2 if action == "audio-audit"
-                   else MAX_MEDIA_PAYLOAD_BYTES if action in {"research-media-ingest", "research-dossier-media"}
+                   else MAX_MEDIA_PAYLOAD_BYTES if action in {"research-media-ingest", "research-dossier-media", "speech-audio-import"}
                    else MAX_IMAGE_PAYLOAD_BYTES if action in {"research-image-ingest", "research-dossier-image"}
                    else MAX_PAYLOAD_BYTES)
         payload = self._read_json_body(maximum=maximum)

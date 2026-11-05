@@ -235,8 +235,8 @@ def render_research_panel(
     parts.append(
         form_field(
             "r-dos-eids",
-            "research_evidence_ids",
-            f'<input class="ctl" id="r-dos-eids" data-help="{L("help_research_passage")}" placeholder="{L("research_evidence_ids")}"/>',
+            "research_passages",
+            f'<select class="ctl" id="r-dos-eids" multiple size="3" data-help="{L("help_research_passage")}"></select>',
         )
     )
     parts.append("</div></details>")
@@ -441,7 +441,7 @@ def render_research_panel(
         f'      <select class="ctl field-wide" id="r-link-claim-select" aria-label="{L("research_select_claim")}"><option value="">{L("research_select_claim")}</option></select>'
     )
     parts.append(
-        f'      <input class="ctl ctl-code field-wide" id="r-link-passage-id" aria-label="{L("research_passage_id")}" data-help="{L("help_research_passage")}" placeholder="{L("research_passage_id")}"/>'
+        '      <input type="hidden" id="r-link-passage-id"/>'
     )
     parts.append(
         f'      <select class="ctl" id="r-link-relation" aria-label="{L("research_relation_field")}" data-help="{L("help_research_relation")}">'

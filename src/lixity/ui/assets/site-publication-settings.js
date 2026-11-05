@@ -51,24 +51,18 @@
   var initialNormalized = supported(initial) ? JSON.stringify(saved) : null;
   function field(node, key) { return node.querySelector('[data-site-publication-field="' + key + '"]'); }
   function control(parent, key, title, value, kind) {
-    var wrapper = document.createElement("label"); wrapper.className = "setting-field";
-    wrapper.appendChild(document.createTextNode(text(title)));
-    var input = document.createElement(kind === "select" ? "select" : kind === "textarea" ? "textarea" : "input");
-    input.className = "ctl"; input.id = "site-publication-field-" + (++serial);
+    var input = LixityComponents.createField(parent, {label: text(title), type: kind || "text",
+      id: "site-publication-field-" + (++serial), value: value});
     input.dataset.sitePublicationField = key;
     if (kind === "textarea") input.rows = 3;
     else if (kind !== "select") input.type = kind || "text";
-    input.value = value == null ? "" : value;
-    wrapper.appendChild(input); parent.appendChild(wrapper); return input;
+    return input;
   }
   function checkbox(parent, key, value) {
-    var label = document.createElement("label"); label.className = "form-checkbox";
-    var input = document.createElement("input"); input.type = "checkbox";
-    input.id = "site-publication-field-" + (++serial); input.dataset.sitePublicationField = key;
-    input.checked = value === true;
-    label.appendChild(input); var span = document.createElement("span");
-    span.textContent = text(key === "include_citations" ? "citations" : "geography");
-    label.appendChild(span); parent.appendChild(label); return input;
+    var input = LixityComponents.createField(parent, {type: "checkbox", value: value,
+      label: text(key === "include_citations" ? "citations" : "geography"), id: "site-publication-field-" + (++serial)});
+    input.dataset.sitePublicationField = key;
+    return input;
   }
   function button(parent, label, attribute, action) {
     var node = document.createElement("button"); node.className = "ctl"; node.type = "button";
@@ -81,7 +75,7 @@
   function options(select, values, value, placeholder) {
     select.replaceChildren(); option(select, "", placeholder);
     values.forEach(function(pair) { option(select, String(pair[0]), pair[1]); });
-    if (value != null && value !== "" && !values.some(function(pair) { return String(pair[0]) === String(value); })) option(select, String(value), text("missing") + ": " + value);
+    if (value != null && value !== "" && !values.some(function(pair) { return String(pair[0]) === String(value); })) option(select, String(value), text("missing"));
     select.value = value == null ? "" : String(value);
   }
   function summary(card) {

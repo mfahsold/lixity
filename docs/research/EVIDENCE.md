@@ -1,7 +1,13 @@
 # Evidence and platform selection
 
-[Return to the RFC](README.md). Checked 2026-09-25. This is a targeted selection
-of primary publications and official documentation, not a systematic review.
+**Historical design evidence, checked 2026-09-25.** This page records the basis
+for the [original research design](README.md#design-history); it is not the user
+manual, a current dependency list or a claim that the proposed integrations ship.
+Use [Research usage](USAGE.md) for implemented tasks and
+[Implemented scope](IMPLEMENTATION.md) for capability boundaries.
+
+This is a targeted selection of primary publications and official documentation,
+not a systematic review.
 Study findings, engineering reports and our architecture inferences are separated.
 No experiments below were reproduced for this documentation PR. Versioned links
 are used where practical; current product documentation may change.
@@ -61,12 +67,13 @@ No Obsidian plugin is required for the proposed core workflow.
 
 ### Extraction, retrieval and composition
 
-Baidu Unlimited-OCR is the selected self-hosted OCR provider. Its official recipe
+The historical design selected Baidu Unlimited-OCR as a candidate self-hosted OCR provider. Its official recipe
 supports image and multi-page inference after PDF rendering. That does not by
 itself establish reliable page selectors or quotation accuracy: the adapter must
 retain raw output and verify its page mapping. Install the optional runtime and
-model explicitly; use the [pinned revisions in the plan](README.md#3-recommended-stack-and-alternatives)
-instead of downloading a moving model branch at runtime.
+model explicitly; the [OCR deployment reference](OCR_INTEGRATION.md) records
+the reviewed pins and external adapter boundary. The maintained local scan
+workflow also supports [Tesseract](USAGE.md#use-local-ocr-without-a-worker-service).
 [Official recipe](https://github.com/baidu/Unlimited-OCR),
 [official model](https://huggingface.co/baidu/Unlimited-OCR).
 

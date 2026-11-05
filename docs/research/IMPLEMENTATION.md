@@ -12,12 +12,19 @@ The shared archive supports authorized text/PDF/PNG/JPEG capture, lexical search
 exact citations, authored records and immutable history, explicit manuscript quote
 associations, chronology, causal interpretations, review and verified backup/restore.
 Zotero capture is read-only; source editing and ordinary library work stay in
-Zotero. Audio/video are unsupported. PDF extraction uses optional local tools or
-an explicitly configured worker, not a bundled inference runtime.
+Zotero. Local PNG/JPEG images and PDF/MP4/WebM attachments can be retained in
+dossiers. Retained-only media creates no extracted text or transcription; PDF
+text extraction is a separate import workflow using optional local tools or an
+explicitly configured worker. Audio synthesis/recording belongs to the separate
+[audio workspace](../AUDIO.md), not research source extraction.
 
 **Since v0.7.1:** exact update dry runs, saved-revision comparisons
 and explicit Markdown dossier export/reconciliation reuse the same revision path.
 Guarded dossier retirement reuses source withdrawal's tombstone storage.
+Current archives support record/manifest capabilities through v9 for retained
+media and use compressed physical manifests. See the manual's
+[compatibility table](USAGE.md#limits) and explicit
+[migration procedure](USAGE.md#migrate-manifest-storage) for older stores.
 Local geographic vectors and the numbered sketch work offline. Visible maps use
 OpenStreetMap by default and send the viewed area and client IP to the provider;
 turn off the background for offline use. [Research workflows](USAGE.md#research-workflows) document these additions

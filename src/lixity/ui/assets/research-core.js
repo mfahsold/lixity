@@ -3,6 +3,48 @@
 // the original order, so load-time behaviour is unchanged.
 // Research workspace: sources, dossiers, claims, decisions, timeline and
 // editorial review (extracted from dashboard.js).
+function researchRecordLabel(record, kind) {
+  return window.LixityComponents.recordLabel(record, uiLabel("research_name_unavailable_" + kind));
+}
+
+function researchPassageLabel(passage) {
+  var title = researchRecordLabel({title: passage && passage.source_title}, "source");
+  var quote = passage && passage.verbatim;
+  return title + (typeof quote === "string" && quote.trim() ? " · “" + quote.trim().slice(0, 100) + (quote.trim().length > 100 ? "…" : "") + "”" : "");
+}
+
+// Names are presentation only. Identity, exact pins and context checks stay with
+// the accepted API records; unavailable metadata never becomes a guessed name.
+function researchReferenceChoices(kind, envelope) {
+  var choices = [];
+  if (kind === "claim") choices = Object.values(researchClaimChoices || {});
+  if (kind === "dossier" && researchDossiersPayload && researchDossiersContext &&
+      acceptResearchContext(researchDossiersContext, researchDossiersPayload)) {
+    choices = researchDossiersPayload.dossiers || [];
+  }
+  if (kind === "passage") {
+    choices = Object.entries(researchPassageContexts || {}).map(function(pair) {
+      return Object.assign({}, pair[1], {id: pair[0]});
+    });
+    choices = choices.concat(((envelope && envelope.citations) || []).map(function(citation) {
+      return Object.assign({}, citation, {id: citation.passage_id || citation.id});
+    }));
+  }
+  if (kind === "claim" && envelope) {
+    choices = choices.concat([envelope.from_claim, envelope.to_claim].filter(Boolean).map(function(claim) {
+      return Object.assign({}, claim, {id: claim.claim_id});
+    }));
+  }
+  return choices.filter(function(record) { return record && record.id; });
+}
+
+function researchReferenceLabel(kind, ref, envelope) {
+  var candidates = researchReferenceChoices(kind, envelope).filter(function(record) { return record.id === ref.id; });
+  var record = candidates.find(function(candidate) { return !ref.revision || candidate.revision === ref.revision; });
+  return (kind === "passage" && record ? researchPassageLabel(record) : researchRecordLabel(record, kind)) +
+    (ref.revision ? " · " + uiFormat("research_revision_number", {revision: ref.revision}) : "");
+}
+
 function researchStatus(message, ok) {
   var el = document.getElementById("research-status-bar");
   if (!el) return;
@@ -84,7 +126,8 @@ function researchFormStatus(button, message, state) {
 function fieldSnapshot(identifiers) {
   return Object.fromEntries(identifiers.map(function(identifier) {
     var field = document.getElementById(identifier);
-    return [identifier, field && field.type === "checkbox" ? field.checked : field ? field.value : ""];
+    return [identifier, field && field.multiple ? Array.from(field.selectedOptions).map(function(option) { return option.value; }) :
+      field && field.type === "checkbox" ? field.checked : field ? field.value : ""];
   }));
 }
 

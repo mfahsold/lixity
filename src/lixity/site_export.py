@@ -66,8 +66,10 @@ from .site_contracts import (
     MAX_SITE_RESPONSES,
     MAX_SITE_REVISIONS,
     SITE_ANALYSIS_SCHEMA,
+    SITE_AUDIO_SCHEMA,
     SITE_SCHEMA,
     AnalysisSection,
+    SiteAudio,
     SiteData,
     SiteExportOptions,
     SiteManifest,
@@ -405,7 +407,7 @@ def _reader_analysis(text: str, config: Any, language: str, cap: int, title: str
                      sections: list[AnalysisSection]) -> tuple[bytes, dict[str, Any]]:
     """Build analysis from selected chapters only; no project metadata or comments."""
     from .ui.components import esc, label
-    from .ui.dashboard import _CSS_FILES, _bundle
+    from .ui.dashboard import _REPORT_CSS_FILES, _bundle
     from .workspace_labels import WORKSPACE_LABELS
 
     selected = split_chapters(text, config)[:cap]
@@ -453,7 +455,7 @@ def _reader_analysis(text: str, config: Any, language: str, cap: int, title: str
             '<meta name="viewport" content="width=device-width, initial-scale=1"/>',
             '<link rel="icon" href="data:,"/>',
             f'<title>{L("publication_analysis_title")} · {esc(title)}</title>',
-            f'<style>{_bundle(_CSS_FILES)}\n.reader-analysis-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,12rem),1fr));gap:.5rem 1rem}} .reader-analysis-grid dt{{font-weight:600}} .reader-analysis-grid dd{{margin:0}} .reader-analysis-grid div{{min-width:0}} .reader-analysis-chapter h3{{overflow-wrap:anywhere}}</style></head>',
+            f'<style>{_bundle(_REPORT_CSS_FILES)}\n.reader-analysis-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,12rem),1fr));gap:.5rem 1rem}} .reader-analysis-grid dt{{font-weight:600}} .reader-analysis-grid dd{{margin:0}} .reader-analysis-grid div{{min-width:0}} .reader-analysis-chapter h3{{overflow-wrap:anywhere}}</style></head>',
             '<body class="lixity-report" data-read-only="true"><main class="page">',
             f'<a href="index.html">{L("publication_analysis_back")}</a>',
             f'<h1>{L("publication_analysis_title")}</h1>', f'<p>{L("publication_analysis_cap_note")}</p>']
@@ -555,10 +557,40 @@ def _research(repository: Repository, snapshot: Snapshot, text: str, source: Pat
     return reads.responses, resources
 
 
+def _reader_audio(project: Path, text: str, config: Any, source_hash: str,
+                  cap: int, files: dict[str, bytes]) -> dict[str, Any]:
+    """Copy only verified, selected chapter artifacts; never synthesize or retain references."""
+    from .speech_artifacts import list_project_audio, read_project_audio
+
+    artifacts = list_project_audio(project, source_sha256=source_hash, max_chapter=cap)
+    if not artifacts:
+        raise ResearchError("No saved chapter audio matches this manuscript and chapter cap. "
+                            "Generate or import chapter audio first, or export without audio.")
+    chapters = {number: title for number, title, _body in split_chapters(text, config)}
+    tracks = []
+    size = sum(map(len, files.values()))
+    for artifact in artifacts:
+        if artifact.chapter not in chapters or artifact.chapter > cap:
+            raise ResearchError("Saved chapter audio does not belong to the exported chapters")
+        name = f"assets/audio/{artifact.audio_sha256}.wav"
+        if name not in files:
+            size += artifact.byte_length
+            if size > MAX_SITE_BYTES:
+                raise SiteExportLimitError("bundle_bytes", size, MAX_SITE_BYTES)
+            files[name] = read_project_audio(project, artifact)
+        tracks.append({"chapter": artifact.chapter, "title": chapters[artifact.chapter],
+                       "file": name, "sha256": artifact.audio_sha256,
+                       "byte_length": artifact.byte_length,
+                       "duration_seconds": artifact.duration_seconds, "origin": artifact.origin})
+    return SiteAudio.model_validate({"schema_version": "lixity-reader-audio/1",
+                                     "source_sha256": source_hash, "tracks": tracks}).model_dump()
+
+
 def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
                  language: str | None = None, title: str | None = None,
                  thresholds: FingerprintThresholds | None = None,
                  include_research: bool = False, include_source_files: bool = False,
+                 include_audio: bool = False,
                  mode: SiteMode = "review", publication_profile: str | None = None,
                  max_chapter: int | None = None, analysis_sections: list[AnalysisSection] | None = None,
                  tense_model: str | None = None,
@@ -572,7 +604,8 @@ def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
     options = SiteExportOptions(include_research=include_research,
         include_source_files=include_source_files, mode=mode,
         publication_profile=publication_profile, max_chapter=max_chapter,
-        analysis_sections=[] if analysis_sections is None else analysis_sections)
+        analysis_sections=[] if analysis_sections is None else analysis_sections,
+        include_audio=include_audio)
     include_research, include_source_files = options.include_research, options.include_source_files
     repository = Repository(project)
     if not repository.root.is_dir():
@@ -601,6 +634,7 @@ def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
     files = _software_notices()
     publication = None
     publication_analysis = None
+    publication_audio = None
     if mode == "review":
         analysis = analyze_document(text, config, effective_thresholds, include_evidence=True)
         responses, resources = (_research(repository, snapshot, text, source, source_hash, analysis, token,
@@ -624,6 +658,13 @@ def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
             raise ResearchError("A curated publication requires an initialized research project")
         publication, resources, reading = _publication(repository, snapshot, text, config, source_hash,
                                                       settings, options, files)
+        if options.include_audio:
+            publication_audio = _reader_audio(repository.root, text, config, source_hash,
+                                             publication["max_chapter"], files)
+            publication["audio"] = publication_audio
+            publication["schema_version"] = "lixity-reader-publication/2"
+            publication["identity"] = _checksum(_json({key: value for key, value in publication.items()
+                                                       if key != "identity"}))
         responses = {}
         display_title = publication["title"]
         if options.analysis_sections:
@@ -653,13 +694,14 @@ def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
         raise ResearchConflictError("Project settings changed during website preparation; retry the export")
     if snapshot and Head.model_validate_json(repository.read(repository.data / "HEAD.json", maximum=4096)).sha256 != snapshot.digest:
         raise ResearchConflictError("Research changed during website preparation; retry the export")
-    manifest: dict[str, Any] = {"schema_version": SITE_ANALYSIS_SCHEMA if publication_analysis is not None else SITE_SCHEMA, "product_version": __version__,
+    manifest: dict[str, Any] = {"schema_version": SITE_AUDIO_SCHEMA if publication_audio is not None else SITE_ANALYSIS_SCHEMA if publication_analysis is not None else SITE_SCHEMA, "product_version": __version__,
         "created_at": datetime.now(timezone.utc).isoformat(), "entrypoint": "index.html",
         "mode": mode,
         "project": {"title": display_title, "language": resolved.key,
                     **({"id": snapshot.project.id} if snapshot else {})},
         "manuscript": {**({"name": source.name} if mode == "review" else {}), "source_sha256": source_hash},
         "analysis": ({"language": resolved.key, "thresholds": asdict(effective_thresholds)} if mode == "review" else publication_analysis),
+        **({"audio": publication_audio} if publication_audio is not None else {}),
         "research": {"included": include_research, "snapshot": snapshot.digest if include_research and snapshot else None,
                      "revision_count": len(snapshot.revisions) if include_research and snapshot else 0},
         **({"publication": {"profile": publication["profile"], "identity": publication["identity"],
@@ -673,6 +715,7 @@ def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
             "The export chapter cap removes later publication entries and resources before assembly.",
             "Contains manuscript reading text only through the export cap." if mode == "reader" else "Contains no manuscript prose or analysis.",
             *(["Contains explicitly selected analysis computed only from the exported chapters with default settings; no work-marker notes."] if publication_analysis is not None else [])]),
+            *(["Includes saved chapter audio bound to this manuscript version and within the export cap. Imported recordings are author-assigned; no transcript alignment is inferred. Voice references and speech service settings are not included."] if publication_audio is not None else []),
             *( ["Contains accessible authored research history, notes, source metadata and cited excerpts; local Zotero identities are omitted."] if include_research else []),
             *( ["Includes original source bytes and images; retention does not grant redistribution rights." +
                 (" Review mode also includes full extracted text." if mode == "review" else " Only selected publication dependencies are copied.")] if include_source_files else []),
@@ -724,6 +767,7 @@ def export_site(project: str | Path, output: str | Path, *, manuscript: str | Pa
                 language: str | None = None, title: str | None = None,
                 thresholds: FingerprintThresholds | None = None,
                 include_research: bool = False, include_source_files: bool = False,
+                include_audio: bool = False,
                 mode: SiteMode = "review", publication_profile: str | None = None,
                 max_chapter: int | None = None, analysis_sections: list[AnalysisSection] | None = None) -> dict[str, Any]:
     """Publish a complete new local folder; never replace an existing target."""
@@ -744,7 +788,7 @@ def export_site(project: str | Path, output: str | Path, *, manuscript: str | Pa
                           thresholds=thresholds, include_research=include_research,
                           include_source_files=include_source_files, mode=mode,
                           publication_profile=publication_profile, max_chapter=max_chapter,
-                          analysis_sections=analysis_sections)
+                          analysis_sections=analysis_sections, include_audio=include_audio)
     target.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=".lixity-site-", dir=target.parent) as directory:
         stage = Path(directory) / "site"

@@ -139,7 +139,8 @@ Handler = type('SyntheticApp', (LixityServerHandler,), {'_workspace_lock': RLock
 Handler.refresh()
 server = _LoopbackHTTPServer(('127.0.0.1', 0), Handler)
 server.workspaces = WorkspaceRegistry(Handler)
-module.worker_health = lambda target: {'target': target, 'state': 'ready' if target == 'local' else 'unavailable', 'transport': 'loopback' if target == 'local' else 'ssh', 'model': 'Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice' if target == 'local' else None}
+import lixity.speech_status as speech_status
+speech_status.worker_health = lambda target, engine='qwen3': {'target': target, 'state': 'ready' if target == 'local' and engine == 'qwen3' else 'unavailable', 'transport': 'loopback' if target == 'local' else 'ssh', 'model': 'Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice' if target == 'local' and engine == 'qwen3' else None}
 print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'paths': paths}), flush=True)
 server.serve_forever()
 `;
@@ -160,14 +161,21 @@ server.serve_forever()
         await second.waitForURL(url => url.pathname !== firstUrl && /^\/w\/[a-f0-9]{32}\/$/.test(url.pathname));
         assert.equal(await first.locator('#chapters').textContent(), sourceText, 'Opening another project cannot replace an existing tab');
         await first.reload(); assert.equal(await first.locator('#chapters').textContent(), sourceText);
-        await second.locator('#runtime-open').click();
+        await second.locator('#tab-view-project').click();
+        assert.equal(await second.locator('.workspace-shell #runtime-open').count(), 0);
+        await second.locator('#project-settings #runtime-open').click();
         await second.waitForFunction(() => document.querySelector('#runtime-content a'));
         assert.equal(await second.locator('#runtime-status').textContent(), fixtures.de.labels.runtime_status_updated,
           'A successful status request is distinct from a worker being ready');
         assert.ok(await second.locator('#runtime-content').textContent().then(text => text.includes('First') && text.includes('Second')));
         assert.equal(await second.locator('#runtime-content .runtime-section h4').first().textContent(), fixtures.de.labels.runtime_workers,
           'The status section identifies speech services without assuming a particular engine');
-        assert.equal(await second.locator('#runtime-content .runtime-target').count(), 2);
+        assert.equal(await second.locator('#runtime-content .runtime-target').count(), 4);
+        const serviceNames = await second.locator('#runtime-content .runtime-target dt').allTextContents();
+        assert.match(serviceNames[0], /Qwen3-TTS \/ Coqui/);
+        assert.match(serviceNames[2], /F5-TTS/);
+        assert.match(serviceNames[3], /IMS-Toucan/,
+          'Separate unavailable local services remain distinguishable by name');
         assert.equal(await second.locator('#runtime-services-scope').count(), 1);
         assert.equal(await second.locator('#runtime-services-scope').textContent(), fixtures.de.labels.runtime_services_scope,
           'The runtime overview explicitly says external providers are not checked');
@@ -212,7 +220,7 @@ server.serve_forever()
           'Failed refresh must not present old worker or project data as current');
         failRuntime = false;
         await second.locator('#runtime-refresh').click();
-        await second.waitForFunction(() => document.querySelectorAll('#runtime-content .runtime-target').length === 2);
+        await second.waitForFunction(() => document.querySelectorAll('#runtime-content .runtime-target').length === 4);
         assert.equal(await second.locator('#runtime-status').textContent(), fixtures.de.labels.runtime_status_updated,
           'Retry restores the observed status');
         await second.keyboard.press('Escape');
@@ -344,7 +352,12 @@ async function restoreFileReads(page) {
         assert.ok(box.height >= 44, 'Project tasks retain a touch target');
         await summary.focus(); await page.keyboard.press('Enter');
         assert.equal(await page.locator('#btn-modal-new-project').isVisible(), true);
-        await page.locator('#btn-modal-new-project').focus(); await page.keyboard.press('Escape');
+        await page.locator('#btn-modal-new-project').focus();
+        await page.locator('#lixity-tooltip[aria-hidden="false"]').waitFor();
+        await page.keyboard.press('Escape');
+        assert.equal(await page.locator('#lixity-tooltip').getAttribute('aria-hidden'), 'true', 'Escape dismisses help before its parent disclosure');
+        assert.equal(await disclosure.evaluate(el => el.open), true);
+        await page.keyboard.press('Escape');
         assert.equal(await disclosure.evaluate(el => el.open), false);
         assert.equal(await summary.evaluate(el => document.activeElement === el), true);
         await page.keyboard.press('Space');

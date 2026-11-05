@@ -1,5 +1,9 @@
 # Scientific review of Lixity's analysis and research pilot (September 2026)
 
+**Historical review, September 2026.** [Research manuals and design history](README.md)
+separate current workflows from this record. The findings below are not a list
+of current bugs or accepted implementation tasks.
+
 This is a source-grounded review of the implemented `src/lixity` engine and
 experimental research API, not an accuracy certification or an implementation
 plan. The comparison is between code, [METHODS](../METHODS.md),

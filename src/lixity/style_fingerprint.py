@@ -30,6 +30,7 @@ from .math_core import (
     QN_TO_SIGMA,
     SN_TO_SIGMA,
     mad,
+    mean_or_zero,
     median,
     normal_two_sided_p,
     robust_z,
@@ -1637,7 +1638,7 @@ class StyleFingerprint:
         for chapter_num, cells in self.z_scores.items():
             if not cells:
                 continue
-            mean_abs = sum(abs(z) for z in cells.values()) / len(cells)
+            mean_abs = mean_or_zero([abs(z) for z in cells.values()])
             scored.append((chapter_num, mean_abs))
         scored.sort(key=lambda kv: kv[1], reverse=True)
         return scored[:n]

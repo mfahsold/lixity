@@ -11,7 +11,7 @@ from pathlib import Path
 from http.server import ThreadingHTTPServer
 from lixity.server import LixityServerHandler
 import lixity.speech_status as speech_status
-speech_status.worker_health = lambda target: {'target':target, 'state':'unavailable',
+speech_status.worker_health = lambda target, **kwargs: {'target':target, 'state':'unavailable',
     'transport':'loopback' if target == 'local' else 'ssh', 'model':None}
 from lixity.speech_direction import direction_state, save_direction
 root = Path(sys.argv[1]); source = root / 'manuscript.md'
@@ -52,12 +52,12 @@ server.serve_forever()
       await page.locator('#speech-profile').selectOption('second');
       await page.locator('[data-speech-action=remove_profile]').click();
       assert.equal(await page.locator('#speech-profile option[value=second]').count(), 1);
-      assert.match(await page.locator('#modal-speech [role=status]').textContent(), /regie/i);
+      assert.match(await page.locator('#speech-status').textContent(), /regie/i);
       await page.locator('#speech-profile').selectOption('spare');
       await page.locator('[data-speech-action=remove_profile]').click();
       assert.equal(await page.locator('#speech-profile option[value=spare]').count(), 0);
       assert.equal(await page.locator('#speech-profile').inputValue(), 'narrator');
-      assert.match(await page.locator('#modal-speech [role=status]').textContent(), /sav|speicher/i);
+      assert.match(await page.locator('#speech-status').textContent(), /sav|speicher/i);
       await page.locator('#modal-speech').screenshot({path: temp + '/profile-delete-' + width + '.png'});
       if (width === 320) {
         const saved = page.waitForResponse(response => response.url().endsWith('/api/settings'));

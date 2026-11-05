@@ -107,6 +107,7 @@ def test_normal_response_keeps_its_headers_and_unicode_json():
         "X-Frame-Options": "DENY",
         "Content-Security-Policy": "frame-ancestors 'none'",
         "Referrer-Policy": "no-referrer",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=(), usb=(), serial=()",
     }
     assert response.close_connection is False
 

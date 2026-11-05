@@ -154,7 +154,7 @@ server.serve_forever()
     await expect(page.locator('#research-revision-reason')).toHaveValue('Synthetic conflict review.');
     await expect(page.locator('#research-revision-merge')).not.toContainText('Concurrent detail.');
     await page.locator('#research-revision-merge input[value=mine]').check();
-    const sectionSnapshot = await page.locator('#research-revision-snapshot').textContent();
+    const sectionVersion = await page.locator('#research-revision-kind').textContent();
     const sectionSaves = saves.length;
     await reviseBody(body => body.replace('Their conflicting note.', 'A later unreviewed conflicting note.'));
     await page.locator('#research-revision-merge-apply').click();
@@ -164,14 +164,16 @@ server.serve_forever()
     assert.equal(await page.locator('#research-revision-merge input:checked').count(), 0, 'Stale choices cannot apply to another saved section version');
     await expect(page.locator('#research-revision-field-body')).toHaveValue('My conflicting note.');
     await expect(page.locator('#research-revision-reason')).toHaveValue('Synthetic conflict review.');
-    assert.equal(await page.locator('#research-revision-snapshot').textContent(), sectionSnapshot, 'A stale Apply cannot adopt the new snapshot');
+    assert.equal(await page.locator('#research-revision-kind').textContent(), sectionVersion, 'A stale Apply cannot advance the displayed record version');
     assert.equal(saves.length, sectionSaves, 'Refreshing an unresolved preview never saves');
+    const reviewedSection = await (await page.request.get(fixture.url + '/api/research/record?kind=dossier&id=' + fixture.dossier)).json();
     await page.locator('#research-revision-merge input[value=mine]').check();
     await page.locator('#research-revision-merge-apply').click();
     await expect(page.locator('#research-revision-field-body')).toHaveValue('My conflicting note.');
     await expect(page.locator('#research-revision-merge')).not.toBeVisible();
     await page.locator('#research-revision-save').click();
     await expect(dialog).not.toBeVisible();
+    assert.equal(saves.at(-1).expected_snapshot, reviewedSection.snapshot, 'Only the explicitly reviewed snapshot can be saved');
     const reconciled = await (await page.request.get(fixture.url + '/api/research/dossiers?id=' + fixture.dossier)).json();
     assert.ok(reconciled.body.includes('My conflicting note.'));
     assert.ok(reconciled.body.includes('Concurrent detail.'));
@@ -189,7 +191,7 @@ server.serve_forever()
     await page.locator('#research-revision-save').click();
     await expect(page.locator('#research-revision-merge')).toBeVisible();
     await page.locator('#research-revision-merge input[value=mine]').check();
-    const generalSnapshot = await page.locator('#research-revision-snapshot').textContent();
+    const generalVersion = await page.locator('#research-revision-kind').textContent();
     const unrelated = await page.request.post(fixture.url + '/api/research-dossier', {data: {
       title: 'Concurrent unrelated dossier', body: 'Synthetic unrelated publication.'
     }});
@@ -200,7 +202,7 @@ server.serve_forever()
     await expect(page.locator('#research-revision-form')).toHaveAttribute('aria-busy', 'false');
     await expect(page.locator('#research-revision-merge')).toBeVisible();
     assert.equal(await page.locator('#research-revision-merge input:checked').count(), 0, 'A new HEAD also requires review when the record revision is unchanged');
-    assert.equal(await page.locator('#research-revision-snapshot').textContent(), generalSnapshot);
+    assert.equal(await page.locator('#research-revision-kind').textContent(), generalVersion);
     await expect(page.locator('#research-revision-field-title')).toHaveValue('My reviewed general title');
     await page.locator('#research-revision-merge input[value=current]').check();
     await reviseRecord(() => ({title: 'A later unreviewed general title'}));
@@ -212,13 +214,15 @@ server.serve_forever()
     assert.equal(await page.locator('#research-revision-merge input:checked').count(), 0);
     await expect(page.locator('#research-revision-field-title')).toHaveValue('My reviewed general title');
     await expect(page.locator('#research-revision-reason')).toHaveValue('Synthetic general conflict review.');
-    assert.equal(await page.locator('#research-revision-snapshot').textContent(), generalSnapshot);
+    assert.equal(await page.locator('#research-revision-kind').textContent(), generalVersion);
     assert.equal(saves.length, generalSaves);
+    const reviewedGeneral = await (await page.request.get(fixture.url + '/api/research/record?kind=dossier&id=' + fixture.dossier)).json();
     await page.locator('#research-revision-merge input[value=mine]').check();
     await page.locator('#research-revision-merge-apply').click();
     await expect(page.locator('#research-revision-merge')).not.toBeVisible();
     await page.locator('#research-revision-save').click();
     await expect(dialog).not.toBeVisible();
+    assert.equal(saves.at(-1).expected_snapshot, reviewedGeneral.snapshot, 'The published mutation stays bound to the final reviewed snapshot');
     const reviewedTitle = await (await page.request.get(fixture.url + '/api/research/record?kind=dossier&id=' + fixture.dossier)).json();
     assert.equal(reviewedTitle.record.title, 'My reviewed general title');
     assert.ok(reviewedTitle.record.body.includes('My conflicting note.'));

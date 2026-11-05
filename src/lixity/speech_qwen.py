@@ -6,7 +6,6 @@ requires a complete local model directory and disables Hugging Face networking.
 from __future__ import annotations
 
 import argparse
-import base64
 import gc
 import hashlib
 import importlib
@@ -14,50 +13,57 @@ import inspect
 import io
 import json
 import os
-import re
-import threading
 import time
-import urllib.error
-import urllib.request
 from collections.abc import Callable
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from functools import partial
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import ThreadingHTTPServer
 from pathlib import Path
-from secrets import token_hex
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from .speech_references import SpeechReference
 
 from .log import get_logger, speech_diagnostic_id
+from .speech_engines import native_endpoint, native_engine
 from .speech_profiles import (
-    COQUI_MODEL,
-    COQUI_REFERENCE_MODEL,
     QWEN_BASE_MODEL,
     QWEN_DESIGN_MODEL,
     QWEN_LANGUAGES,
     QWEN_MODEL,
     QWEN_VOICES,
     AudioProfile,
-    audio_capabilities,
+)
+from .speech_worker import (
+    MAX_BASE_REQUEST_BYTES as MAX_BASE_REQUEST_BYTES,
+)
+from .speech_worker import (
+    MAX_REFERENCE_BYTES as MAX_REFERENCE_BYTES,
+)
+from .speech_worker import (
+    MAX_REQUEST_BYTES as MAX_REQUEST_BYTES,
+)
+from .speech_worker import (
+    MAX_RESPONSE_BYTES as MAX_RESPONSE_BYTES,
+)
+from .speech_worker import (
+    SAMPLE_RATE as SAMPLE_RATE,
+)
+from .speech_worker import (
+    SYNTHESIS_TIMEOUT_SECONDS as SYNTHESIS_TIMEOUT_SECONDS,
+)
+from .speech_worker import (
+    _decode_reference as _decode_reference,
+)
+from .speech_worker import (
+    _NoRedirect as _NoRedirect,
+)
+from .speech_worker import (
+    _valid_render_id as _valid_render_id,
 )
 
-ENDPOINT = "http://127.0.0.1:8769/v1/audio/speech"
-TARGET_ENDPOINTS = {"local": ENDPOINT, "jetson": "http://127.0.0.1:8770/v1/audio/speech"}
-MAX_REQUEST_BYTES = 32768
-MAX_REFERENCE_BYTES = 2 * 1024 * 1024
-MAX_BASE_REQUEST_BYTES = MAX_REQUEST_BYTES + 4 * ((MAX_REFERENCE_BYTES + 2) // 3)
-MAX_RESPONSE_BYTES = 32 * 1024 * 1024
-SAMPLE_RATE = 24000
-# CPU synthesis can take substantially longer than the resulting audio.
-SYNTHESIS_TIMEOUT_SECONDS = 3600
-_RENDER_ID_HEADER = "X-Lixity-Render-Id"
-
-
-def _valid_render_id(value: object) -> str | None:
-    return value if isinstance(value, str) and re.fullmatch(r"[0-9a-f]{16}", value) else None
-
+ENDPOINT = native_endpoint("qwen3")
+TARGET_ENDPOINTS = dict(native_engine("qwen3").endpoints)
 
 @dataclass(frozen=True)
 class WorkerRuntime:
@@ -91,265 +97,34 @@ class LoadedRenderer:
         return self.render(request)
 
 
-class _NoRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, req: Any, fp: Any, code: int, msg: str,
-                         headers: Any, newurl: str) -> None:
-        return None
+def worker_health(target: str, *, engine: str = "qwen3", opener: Any = None) -> dict[str, Any]:
+    """Probe one fixed target through the shared native transport."""
+    from .speech_worker import worker_health as probe
 
-
-def worker_health(target: str, *, opener: Any = None) -> dict[str, Any]:
-    """Probe the actual allowlisted model worker, never merely an open tunnel."""
-    if target not in TARGET_ENDPOINTS:
-        raise ValueError("Unknown Qwen execution target")
-    request = urllib.request.Request(TARGET_ENDPOINTS[target].replace("/v1/audio/speech", "/health"))  # noqa: S310 - fixed loopback allowlist
-    client = opener or urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
-    model_id = None
-    try:
-        with client.open(request, timeout=1.5) as response:
-            raw = response.read(4097)
-        if len(raw) > 4096:
-            raise ValueError("Oversized health response")
-        value = json.loads(raw)
-        if not isinstance(value, dict) or value.get("model") not in (QWEN_MODEL, QWEN_DESIGN_MODEL, QWEN_BASE_MODEL, COQUI_MODEL, COQUI_REFERENCE_MODEL) or type(value.get("ready")) is not bool:
-            raise ValueError("Unexpected worker identity")
-        model_id = value["model"]
-        state = "ready" if value["ready"] else "starting"
-    except (OSError, ValueError, urllib.error.URLError):
-        state = "unavailable"
-    return {"target": target, "state": state, "transport": "loopback" if target == "local" else "ssh", "model": model_id}
+    endpoints = TARGET_ENDPOINTS if engine in ("qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference") else None
+    return probe(target, engine=engine, opener=opener, endpoints=endpoints)
 
 
 def synthesize_qwen(text: str, profile: AudioProfile, *, target: str = "local", opener: Any = None,
                     reference: SpeechReference | None = None) -> bytes:
-    """Request bounded PCM WAV through a fixed loopback target, without fallback."""
-    from .speech import MAX_SEGMENT_CHARS, _read_pcm
+    """Keep the established adapter entrypoint on the shared native transport."""
+    from .speech_worker import synthesize_native
 
-    profile = AudioProfile.model_validate(profile.model_dump())
-    if target not in TARGET_ENDPOINTS:
-        raise ValueError("Unknown Qwen execution target")
-    if profile.engine in ("coqui", "coqui-reference") and target != "local":
-        raise ValueError("Coqui supports only the local execution target")
-    if profile.engine not in ("qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference") or not text.strip() or len(text) > MAX_SEGMENT_CHARS:
+    if profile.engine not in ("qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference"):
         raise ValueError("Invalid Qwen synthesis request")
-    model_id = {"qwen3": QWEN_MODEL, "qwen3-design": QWEN_DESIGN_MODEL, "qwen3-base": QWEN_BASE_MODEL,
-                "coqui": COQUI_MODEL, "coqui-reference": COQUI_REFERENCE_MODEL}[profile.engine]
-    worker_name = "Coqui" if profile.engine.startswith("coqui") else "Qwen"
-    request_data = {"model": model_id, "input": text, "voice": profile.voice,
-                          "language": profile.language, "instructions": profile.instructions,
-                          "response_format": "wav"}
-    if profile.engine == "qwen3-design":
-        request_data["voice_description"] = profile.voice_description
-    elif profile.engine in ("qwen3-base", "coqui-reference"):
-        from .speech_references import validate_reference
-        if reference is None or reference.id != profile.reference_id:
-            raise ValueError(f"{worker_name} requires the matching verified reference")
-        validate_reference(reference)
-        request_data["reference_audio"] = base64.b64encode(reference.audio).decode("ascii")
-        request_data["reference_text"] = reference.transcript
-    elif reference is not None:
-        raise ValueError("This Qwen model does not use a reference")
-    payload = json.dumps(request_data, ensure_ascii=False).encode("utf-8")
-    if len(payload) > (MAX_BASE_REQUEST_BYTES if profile.engine in ("qwen3-base", "coqui-reference") else MAX_REQUEST_BYTES):
-        raise ValueError("Qwen synthesis request is too large")
-    headers = {"Content-Type": "application/json"}
-    render_id = _valid_render_id(speech_diagnostic_id())
-    if render_id is not None:
-        headers[_RENDER_ID_HEADER] = render_id
-    request = urllib.request.Request(TARGET_ENDPOINTS[target], data=payload,  # noqa: S310 - fixed loopback allowlist
-                                     headers=headers)
-    # Ignore proxy environment variables, even for localhost.
-    client = opener or urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
-    try:
-        with client.open(request, timeout=SYNTHESIS_TIMEOUT_SECONDS) as response:
-            if response.status != 200:
-                raise RuntimeError(f"{worker_name} worker rejected the synthesis request")
-            if (response.headers.get("X-Lixity-Model") != model_id or
-                    response.headers.get("X-Lixity-Voice") != profile.voice):
-                raise ValueError(f"{worker_name} worker model or voice mismatch")
-            if response.headers.get_content_type() != "audio/wav":
-                raise ValueError(f"{worker_name} worker returned an unexpected audio format")
-            data = response.read(MAX_RESPONSE_BYTES + 1)
-    except urllib.error.HTTPError as exc:
-        # HTTPError owns a response stream even though open() raised before
-        # entering the response context manager.
-        actual_model = exc.headers.get("X-Lixity-Model") if exc.headers else None
-        exc.close()
-        if actual_model in (QWEN_MODEL, QWEN_DESIGN_MODEL, QWEN_BASE_MODEL, COQUI_MODEL, COQUI_REFERENCE_MODEL) and actual_model != model_id:
-            model_kind = "Qwen model" if worker_name == "Qwen" else "model"
-            raise RuntimeError(f"{worker_name} worker ({target}) is running a different {model_kind}; select the matching worker variant") from exc
-        if exc.code == 400:
-            raise RuntimeError(f"{worker_name} worker ({target}) rejected the synthesis request (HTTP 400); check the selected profile and model") from exc
-        if exc.code == 500:
-            raise RuntimeError(f"{worker_name} worker ({target}) reported synthesis failed (HTTP 500); check the worker runtime and resources") from exc
-        if exc.code == 503:
-            raise RuntimeError(f"{worker_name} worker ({target}) is busy (HTTP 503); retry after the current request finishes") from exc
-        raise RuntimeError(f"{worker_name} worker ({target}) is unavailable or failed") from exc
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        raise RuntimeError(f"{worker_name} worker ({target}) is unavailable or failed") from exc
-    if not isinstance(data, bytes):
-        raise ValueError("Qwen worker returned invalid audio bytes")
-    if len(data) > MAX_RESPONSE_BYTES:
-        raise ValueError("Qwen worker response exceeds the audio limit")
-    params, _frames = _read_pcm(data)
-    if params != (1, 2, SAMPLE_RATE):
-        raise ValueError("Unexpected Qwen audio format")
-    return data
-
-
-def _decode_reference(encoded: object, transcript: object) -> tuple[bytes, bytes]:
-    """Validate a bounded in-memory PCM reference and exact transcript."""
-    from .speech import _read_pcm
-
-    if (not isinstance(encoded, str) or not encoded or
-            len(encoded) > 4 * ((MAX_REFERENCE_BYTES + 2) // 3)):
-        raise ValueError("Invalid reference audio size")
-    if (not isinstance(transcript, str) or not transcript.strip() or len(transcript) > 2000 or
-            any(ord(char) < 32 and char not in "\n\r\t" for char in transcript)):
-        raise ValueError("A bounded reference transcript is required")
-    transcript.encode("utf-8")  # Reject lone surrogates before inference.
-    data = base64.b64decode(encoded, validate=True)
-    if len(data) > MAX_REFERENCE_BYTES:
-        raise ValueError("Reference audio is too large")
-    params, frames = _read_pcm(data)
-    if params != (1, 2, SAMPLE_RATE) or not SAMPLE_RATE * 2 <= len(frames) <= SAMPLE_RATE * 2 * 30:
-        raise ValueError("Reference must be 1 to 30 seconds of 24 kHz mono 16-bit PCM WAV")
-    return data, frames
+    if profile.engine.startswith("coqui") and target != "local":
+        raise ValueError("Coqui supports only the local execution target")
+    return synthesize_native(text, profile, target=target, opener=opener, reference=reference,
+                             endpoints=TARGET_ENDPOINTS, diagnostic_id=speech_diagnostic_id())
 
 
 def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 8769,
                   runtime_info: WorkerRuntime | None = None, model: str = QWEN_MODEL) -> ThreadingHTTPServer:
-    """Build a loopback-only worker with injectable serialized inference."""
-    if model not in (QWEN_MODEL, QWEN_DESIGN_MODEL, QWEN_BASE_MODEL, COQUI_MODEL, COQUI_REFERENCE_MODEL):
-        raise ValueError("Unsupported worker model")
-    engine = {QWEN_MODEL: "qwen3", QWEN_DESIGN_MODEL: "qwen3-design", QWEN_BASE_MODEL: "qwen3-base",
-              COQUI_MODEL: "coqui", COQUI_REFERENCE_MODEL: "coqui-reference"}[model]
-    logger = get_logger("speech.worker")
-    lock = threading.Lock()
+    """Preserve the public factory while all HTTP validation has one owner."""
+    from .speech_worker import worker_server as build_worker
 
-    class Handler(BaseHTTPRequestHandler):
-        def log_message(self, _format: str, *args: Any) -> None:
-            # Do not log manuscript requests or synthesis instructions.
-            pass
-
-        def reply(self, status: int, data: bytes, content_type: str = "application/json",
-                  voice: str | None = None) -> None:
-            self.send_response(status)
-            self.send_header("Content-Type", content_type)
-            self.send_header("Content-Length", str(len(data)))
-            self.send_header("X-Lixity-Model", model)
-            if voice is not None:
-                self.send_header("X-Lixity-Voice", voice)
-            self.end_headers()
-            self.wfile.write(data)
-
-        def _send_reply(self, status: int, data: bytes, content_type: str = "application/json",
-                        voice: str | None = None, *, request_id: str | None = None,
-                        render_id: str = "unknown") -> bool:
-            try:
-                self.reply(status, data, content_type, voice)
-            except OSError:
-                if request_id is None:
-                    logger.warning("event=worker_transport status=failed category=transport")
-                else:
-                    logger.warning("event=worker_synthesis id=%s render_id=%s engine=%s status=failed category=transport",
-                                   request_id, render_id, engine)
-                return False
-            return True
-
-        def do_GET(self) -> None:
-            if self.path == "/health":
-                self._send_reply(200, json.dumps({"ready": True, "model": model,
-                                                 **({"runtime": asdict(runtime_info)} if runtime_info is not None else {})}).encode())
-            elif self.path == "/capabilities":
-                self._send_reply(200, json.dumps(audio_capabilities()[engine]).encode())
-            else:
-                self._send_reply(404, b'{"error":"Not found"}')
-
-        def do_POST(self) -> None:
-            from .speech import MAX_SEGMENT_CHARS, _read_pcm
-
-            if self.path != "/v1/audio/speech":
-                self._send_reply(404, b'{"error":"Not found"}')
-                return
-            request_id = token_hex(8)
-            render_id = _valid_render_id(self.headers.get(_RENDER_ID_HEADER)) or "unknown"
-            started = time.monotonic()
-            # Browser pages cannot use this machine resource as a cross-origin API.
-            if self.headers.get("Origin") or self.headers.get("Transfer-Encoding"):
-                logger.warning("event=worker_synthesis id=%s render_id=%s engine=%s status=rejected category=forbidden", request_id, render_id, engine)
-                self._send_reply(403, b'{"error":"Unsupported request"}', request_id=request_id, render_id=render_id)
-                return
-            try:
-                size = int(self.headers.get("Content-Length", "0"))
-                if not 0 < size <= (MAX_BASE_REQUEST_BYTES if engine in ("qwen3-base", "coqui-reference") else MAX_REQUEST_BYTES):
-                    raise ValueError("Invalid request size")
-                if self.headers.get_content_type() != "application/json":
-                    raise ValueError("Expected JSON")
-                raw = self.rfile.read(size)
-                if len(raw) != size:
-                    raise ValueError("Truncated request")
-                request = json.loads(raw)
-                expected_fields = {"model", "input", "voice", "language", "instructions", "response_format"}
-                if engine == "qwen3-design":
-                    expected_fields.add("voice_description")
-                if engine in ("qwen3-base", "coqui-reference"):
-                    expected_fields.update(("reference_audio", "reference_text"))
-                if not isinstance(request, dict) or set(request) != expected_fields:
-                    raise ValueError("Invalid request fields")
-                if request["model"] != model or request["response_format"] != "wav":
-                    raise ValueError("Unsupported model or format")
-                text = request["input"]
-                if not isinstance(text, str) or not text.strip() or len(text) > MAX_SEGMENT_CHARS:
-                    raise ValueError("Invalid synthesis text")
-                if engine in ("qwen3-base", "coqui-reference"):
-                    if (request["voice"] != "reference" or request["instructions"] != "" or
-                            request["language"] not in (QWEN_LANGUAGES if engine == "qwen3-base" else {"de": "German"})):
-                        raise ValueError("Unsupported reference voice controls")
-                    _decode_reference(request["reference_audio"], request["reference_text"])
-                else:
-                    AudioProfile.model_validate({"name": "Worker", "engine": engine, "language": request["language"],
-                                                 "voice": request["voice"], "instructions": request["instructions"],
-                                                 "voice_description": request.get("voice_description", "")})
-            except OSError:
-                logger.warning("event=worker_synthesis id=%s render_id=%s engine=%s status=failed category=transport",
-                               request_id, render_id, engine)
-                return
-            except (ValueError, TypeError):
-                logger.warning("event=worker_synthesis id=%s render_id=%s engine=%s status=rejected category=validation", request_id, render_id, engine)
-                self._send_reply(400, b'{"error":"Invalid synthesis request"}', request_id=request_id, render_id=render_id)
-                return
-            if not lock.acquire(blocking=False):
-                logger.warning("event=worker_synthesis id=%s render_id=%s engine=%s status=rejected category=busy", request_id, render_id, engine)
-                self._send_reply(503, b'{"error":"Worker is busy"}', request_id=request_id, render_id=render_id)
-                return
-            phase = "synthesis"
-            try:
-                logger.info("event=worker_synthesis id=%s render_id=%s engine=%s status=started", request_id, render_id, engine)
-                data = synthesize(request)
-                if len(data) > MAX_RESPONSE_BYTES or _read_pcm(data)[0] != (1, 2, SAMPLE_RATE):
-                    raise ValueError("Unexpected generated audio format")
-                phase = "response"
-                if not self._send_reply(200, data, "audio/wav", request["voice"],
-                                        request_id=request_id, render_id=render_id):
-                    return
-                logger.info("event=worker_synthesis id=%s render_id=%s engine=%s status=success duration_ms=%d",
-                            request_id, render_id, engine, int((time.monotonic() - started) * 1000))
-            except Exception:  # noqa: BLE001 - optional inference adapter failures are reported locally
-                category = "transport" if phase == "response" else "execution"
-                logger.warning("event=worker_synthesis id=%s render_id=%s engine=%s status=failed category=%s duration_ms=%d",
-                               request_id, render_id, engine, category, int((time.monotonic() - started) * 1000))
-                if phase != "response":
-                    self._send_reply(500, b'{"error":"Local synthesis failed"}', request_id=request_id, render_id=render_id)
-            finally:
-                lock.release()
-
-        def setup(self) -> None:
-            super().setup()
-            self.connection.settimeout(30)
-
-    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
-    server.daemon_threads = True
-    return server
+    return build_worker(synthesize, port=port, runtime_info=runtime_info, model=model,
+                        server_class=ThreadingHTTPServer)
 
 
 def load_local_model(

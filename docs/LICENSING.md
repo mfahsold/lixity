@@ -63,15 +63,13 @@ See [the retention workflow](research/USAGE.md#associate-a-manuscript-quote-with
 
 ## Third-party components
 
-Lixity's own code is AGPL-3.0-or-later. The single-file dashboard vendors two
-small browser libraries, pinned and shipped with their license texts:
-
-- **Preact 10.29.8** — MIT, `src/lixity/ui/assets/vendor/preact.LICENSE`.
-- **htm 3.1.1** — Apache-2.0, `src/lixity/ui/assets/vendor/htm.LICENSE`.
-
-`src/lixity/ui/assets/vendor/README.md` records the exact upstream tarballs and
-sha512 integrity values. Neither library is fetched at runtime, neither is a
-Python dependency, and the release wheel ships them as package data.
+Lixity's own code is AGPL-3.0-or-later. Browser components are vendored with
+their own license texts and shipped as package data. The maintained
+[vendor inventory](https://github.com/mfahsold/lixity/blob/main/src/lixity/ui/assets/vendor/README.md)
+records the libraries, versions, upstream sources, integrity values and local
+changes. Consult that inventory and the accompanying license files instead of a
+second version list here. The library code is not fetched at runtime; optional
+map tiles and other external services have separate network boundaries.
 
 ## Questions
 

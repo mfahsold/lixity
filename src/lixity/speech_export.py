@@ -16,7 +16,8 @@ from decimal import Decimal
 from typing import Any
 from xml.sax.saxutils import escape, quoteattr
 
-from .speech_direction import SpeechSegment
+from .speech_controls import phoneme_spans
+from .speech_direction import SpeechSegment, has_extended_controls, segment_prosody
 
 TIMELINE_SCHEMA = 'lixity-audio-timeline/1'
 _TIMING_REASON = 'Audio has not been measured; a text plan does not determine speech duration.'
@@ -73,14 +74,19 @@ def timeline_json(plan: Sequence[SpeechSegment]) -> dict[str, Any]:
             'direction': info.direction.model_dump() if info and info.direction else None,
             'substitutions': [{'start': start, 'end': end, 'original': info.original_text[start:end],
                                'replacement': replacement} for start, end, replacement in info.substitutions] if info else [],
+            **({'phonemes': [{'start': start, 'end': end, 'text': row.text[start:end], 'ipa': ipa}
+                             for start, end, ipa in phoneme_spans(row.text, row.profile.phonemes)],
+                'prosody': segment_prosody(row)} if has_extended_controls(row) else {}),
             'pause_before': row.pause_before, 'pause_after': row.pause_after,
             'start_seconds': None, 'end_seconds': None, 'duration_seconds': None,
             'timing_reason': _TIMING_REASON,
         })
     return {
-        'schema_version': TIMELINE_SCHEMA,
+        'schema_version': 'lixity-audio-timeline/2' if any(has_extended_controls(row) for row in plan) else TIMELINE_SCHEMA,
         'source_projection': 'Cleaned spoken text before pronunciation substitutions; offsets are Unicode code points.',
         'substitution_offsets': 'Relative to each segment original_text, before substitution.',
+        **({'phoneme_offsets': 'Relative to each segment spoken_text, after text substitutions; Unicode code points.'}
+           if any(has_extended_controls(row) for row in plan) else {}),
         'speakers': speakers, 'segments': segments,
         'timing': {'status': 'unmeasured', 'duration_seconds': None, 'reason': _TIMING_REASON,
                    'explicit_pause_seconds': math.fsum(row.pause_before + row.pause_after for row in plan)},
@@ -108,6 +114,22 @@ def _word_character(value: str) -> bool:
 
 def _content(row: SpeechSegment, index: int, warnings: list[dict[str, Any]]) -> str:
     info = row.export_info
+    phones = phoneme_spans(row.text, row.profile.phonemes)
+    if phones:
+        # IPA addresses the prepared spoken text. Retain the earlier textual
+        # substitution mapping in the timeline instead of nesting incompatible
+        # source coordinate systems in SSML.
+        if info and info.substitutions:
+            warnings.append(_warning('pronunciation_mapping_in_timeline',
+                                     'Phoneme markup uses prepared spoken text; text-substitution source mappings remain in the timeline.', segment=index))
+        parts: list[str] = []
+        cursor = 0
+        for start, end, ipa in phones:
+            parts.append(escape(_xml(row.text[cursor:start])))
+            parts.append(f'<phoneme alphabet="ipa" ph={quoteattr(_xml(ipa))}>{escape(_xml(row.text[start:end]))}</phoneme>')
+            cursor = end
+        parts.append(escape(_xml(row.text[cursor:])))
+        return ''.join(parts)
     if info is None or not info.substitutions:
         return escape(_xml(row.text))
     parts = []
@@ -182,6 +204,10 @@ def ssml_export(plan: Sequence[SpeechSegment], *, default_lang: str = 'en') -> d
             if instructions:
                 warnings.append(_warning('unsupported_instructions',
                                          'Free-text delivery instructions are retained in the timeline and cannot be represented faithfully in standard SSML.',
+                                         segment=index))
+            if segment_prosody(row):
+                warnings.append(_warning('unsupported_structured_prosody',
+                                         'Model duration, pitch/energy variance and sampling controls remain in the timeline; standard SSML cannot express them faithfully.',
                                          segment=index))
             content = _content(row, index, warnings)
             if row.profile.speed != 1.0:

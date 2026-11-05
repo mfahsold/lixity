@@ -5,13 +5,13 @@
 > instructions to rewrite prose. Analysis is deterministic for fixed text and
 > settings; research records also contain generated IDs and timestamps.
 
-Documentation source version: 0.7.7. Check
+Documentation source version: 0.7.9. Check
 [GitHub releases](https://github.com/mfahsold/lixity/releases) and
 [PyPI](https://pypi.org/project/lixity/) for published packages. Current-main
 features can differ from an installed release with the same version string.
 The current 0.x line follows a numbering reset; historical 1.x/3.x tags are older.
 Product, response and archive schema numbers are independent.
-[Release notes](https://mfahsold.github.io/lixity/releases/v0.7.7.md) describe this
+[Release notes](https://mfahsold.github.io/lixity/releases/v0.7.9.md) describe this
 source version; the link alone is not publication evidence.
 
 ## Discover the installed interface
@@ -39,9 +39,12 @@ configurable structural thresholds in `CorpusConfig` adapt sensitivity to review
 
 ## Choose a maintained reference
 
+- [Documentation map](https://mfahsold.github.io/lixity/README.md): task-oriented routes into the maintained manuals, guides and references.
 - [Onboarding](https://mfahsold.github.io/lixity/ONBOARDING.md): open/import a project, read a passage, inspect measurements and follow retained evidence.
 - [Installation](https://mfahsold.github.io/lixity/INSTALLATION.md): supported systems, isolated environments, service startup, upgrades and removal.
-- [Usage](https://mfahsold.github.io/lixity/USAGE.md): commands, project settings, dashboard, PDF, reading websites and experimental audio.
+- [CLI reference](https://mfahsold.github.io/lixity/USAGE.md): commands, analysis, project configuration, PDF and website export options.
+- [Workspace manual](https://mfahsold.github.io/lixity/WORKSPACE.md): browser navigation, passage inspection, project settings and reading-copy selection.
+- [Audio manual](https://mfahsold.github.io/lixity/AUDIO.md): recording, teleprompter, profiles, phonetics, direction, generation and WAV/JSON exchange.
 - [Research usage](https://mfahsold.github.io/lixity/research/USAGE.md): implemented capture, citations, dossiers, manuscript associations, Zotero, media, OCR, backups and explicit storage migration.
 - [Automation contracts](https://mfahsold.github.io/lixity/AGENTS.md): JSON versions, Python APIs, HTTP requests, guarded writes and failure semantics.
 - [Methods](https://mfahsold.github.io/lixity/METHODS.md): formulas, estimator conventions and heuristic boundaries.
@@ -53,8 +56,8 @@ configurable structural thresholds in `CorpusConfig` adapt sensitivity to review
 - [Release history](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): changes and compatibility notes; historical release numbers are not current capability claims.
 
 The [operational reference bundle](https://mfahsold.github.io/lixity/llms-full.txt)
-contains this index plus Usage, Research usage, Automation contracts, Methods,
-Stability and Localization. It is generated from their full current text. Setup,
+contains this index, the documentation map, CLI, Workspace, Audio and Research
+manuals, Automation contracts, Methods, Stability and Localization. It is generated from their full current text. Setup,
 onboarding, architecture, storage internals and historical proposals remain linked
 references, outside the bundle. Start with the relevant reference rather than
 loading every document for a single task.
@@ -67,7 +70,8 @@ style comparisons. Heuristic cutoff hits, FDR-selected cells and tense flags are
 different result sets. Source analysis never changes the manuscript baseline.
 
 Native project views share one app origin; use each view's `data-api`
-prefix. **App and audio** reports open views, actual worker health and the bounded
+prefix. **Services & audio queue**, under Project settings on current main,
+reports open views, actual worker health and the bounded
 shared audio queue. View URLs expire on app restart; reopen from home.
 
 The native workspace starts in Manuscript with Analysis Off. Counted text,
@@ -104,13 +108,44 @@ scopes. Original sources require separate inclusion consent. Exports cannot save
 project changes or synthesize speech. Since v0.7.7, authors can explicitly select
 reader analysis (`--analysis chapters`, `language` or `all`) for capped
 chapters; v2 manifests identify the selection. It recomputes using standard
-settings and omits work markers and project-defined figures. Audio shares project voice
-profiles between the CLI and native preview/chapter dialog: an optional
-Qwen3-TTS 1.7B CustomVoice worker on this computer or a configured Jetson over SSH,
-selected per render, with no silent backend fallback. CPU generation
-can be slow; verified Qwen chapter segments can be reused. Removed Piper profiles
-require an explicit preview and backed-up `audio-migrate` replacement. Audio remains a
-prototype requiring listening review; see Usage for setup, privacy and limits.
+settings and omits work markers and project-defined figures.
+
+Unreleased reader-only `--include-audio` copies existing generated or imported chapter
+WAVs that match the exact manuscript SHA-256 and export cap. It never invokes synthesis.
+Partial coverage is shown; no matching current recording is an error. Audio-inclusive
+site manifests use `/3`, publication data `/2`, and the playback inventory is
+`lixity-reader-audio/1`; ordinary `/1` and analysis-only `/2` site exports remain unchanged.
+Public tracks contain chapter/title, file hash/size, duration and origin, without private
+voice references, transcripts, speech-profile IDs or service endpoints. `audio-import --project
+ROOT --audio WAV --chapter N --source-sha256 HASH [--manuscript manuscript.md]` explicitly binds
+an existing PCM recording; this is not transcript verification or forced alignment.
+
+Native audio shares profiles, passage direction, planning and worker contracts between
+CLI and browser. Qwen, Coqui/OpenVoice and optional IMS-Toucan differ in supported
+languages, references and delivery controls. IMS-Toucan's unreleased German/English path
+supports separate IPA overrides and structured passage prosody, not free acting prompts.
+A reviewed schema `/5` migration enables the new controls without changing old profiles.
+Existing F5 profiles remain readable, but its bundled runtime is unavailable. External
+providers receive selected text only on explicit rendering. CPU synthesis can be slow;
+listen to a short preview before a chapter render. See the Audio manual for operation and Installation for runtime setup.
+
+Unreleased Project settings collect audio configuration, services and the audio
+queue. Contextual listening remains in the manuscript toolbar. Saved recordings
+and research references use readable labels while preserving internal IDs and
+version pins. Native audio controls are grouped into four tabs: Author voice
+(recording, WAV upload and reference library), Voice profiles (profile and
+service configuration), Listen & direct (direction, synthesis, JSON/SSML export
+and external recording checks), and Microphone & levels (local hardware).
+Control help and a shared player provide time, seeking, volume and a real
+frequency spectrum. Browser microphone permission remains separate from local
+hardware gain; denied access is explained and cannot be overridden by Lixity.
+The Teleprompter and export preview use the same canonical spoken text and directions.
+Portable WAV/JSON takes (`lixity-audio-take/1`) preserve missing/draft/confirmed transcript
+status and exact audio identity. Import and Studio handoff validate current context;
+saving an author reference requires explicit transcript review. A reading script does
+not establish what was recorded. Hardware calibration measures one test window and
+suggests gain; it does not automatically tune the microphone or certify speech quality.
+
 
 ## Data boundaries
 
@@ -190,7 +225,7 @@ an explicitly saved private audio reference and exact transcript; Base does not
 accept free-form delivery instructions. A human can record and review a 1–30 second
 mono 24 kHz 16-bit PCM WAV and its exact spoken transcript, register them with
 `audio-reference create`, and audition a short Base preview as described in
-`docs/USAGE.md#experimental-reference-voices`. Model selection does not download
+`docs/AUDIO.md#experimental-reference-voices`. Model selection does not download
 weights or switch the worker. Assign profiles to passages explicitly.
 On current main, the native preview/chapter dialog offers an initially off option
 to ignore saved and draft passage direction for one render; this also omits

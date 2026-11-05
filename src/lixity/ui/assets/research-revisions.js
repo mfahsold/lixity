@@ -2,7 +2,7 @@
 // Split of the former research.js; _JS_FILES concatenates the parts in
 // the original order, so load-time behaviour is unchanged.
 // One revision dialog serves all authored research records. References are
-// edited by ID; the API preserves their pinned revisions when IDs are unchanged.
+// selected by name; the API preserves their exact IDs and pinned revisions.
 var researchRevisionDialog = document.getElementById("modal-research-revision");
 if (researchRevisionDialog) {
   var revisionForm = document.getElementById("research-revision-form");
@@ -15,8 +15,6 @@ if (researchRevisionDialog) {
   var revisionHistoryDetail = document.getElementById("research-revision-history-detail");
   var revisionStatusHost = document.getElementById("research-revision-status");
   var revisionMeta = document.getElementById("research-revision-kind");
-  var revisionIdentifier = document.getElementById("research-revision-identifier");
-  var revisionSnapshot = document.getElementById("research-revision-snapshot");
   var revisionUpdates = document.getElementById("research-revision-source-updates");
   var revisionCitationsWrap = document.getElementById("research-revision-citations-wrap");
   var revisionCitations = document.getElementById("research-revision-citations");
@@ -57,7 +55,7 @@ if (researchRevisionDialog) {
 
   function revisionViewedRecord(envelope, historical) {
     var record = envelope && envelope.record;
-    return record ? {kind: revisionState.kind, title: record.title || record.id, revision: record.revision,
+    return record ? {kind: revisionState.kind, title: researchRecordLabel(record, revisionState.kind), revision: record.revision,
       pinned: historical && revisionState.historyInitialRevision === record.revision,
       current: record.revision === envelope.latest_revision} : null;
   }
@@ -68,8 +66,6 @@ if (researchRevisionDialog) {
       (record ? " · " + uiFormat("research_revision_number", {revision: record.revision}) + " · " +
         uiLabel(record.revision === envelope.latest_revision ? "research_revision_current" : "research_revision_earlier") : "") +
       (revisionState.section ? " · " + uiFormat("research_section_editing", {section: revisionState.section}) : "");
-    revisionIdentifier.textContent = revisionState.id;
-    revisionSnapshot.textContent = envelope ? envelope.snapshot || "" : "";
     // Only envelopes accepted by the viewer's context/session guards reach here.
     document.dispatchEvent(new CustomEvent("lixity:research-record-view", {
       detail: revisionViewedRecord(envelope, revisionState.mode === "history")}));
@@ -81,7 +77,7 @@ if (researchRevisionDialog) {
       {name: "body", label: "research_dossier_body", readLabel: "research_read_notes", type: "textarea", required: true},
       {name: "geography", label: "geography_title", type: "geography"},
       {name: "tags", label: "research_tags", readLabel: "research_read_tags", type: "list"},
-      {name: "evidence_ids", label: "research_evidence_ids", readLabel: "research_passages", type: "list"}
+      {name: "evidence_ids", label: "research_passages", type: "references", reference: "passage"}
     ],
     claim: [
       {name: "title", label: "research_claim_title", readLabel: "research_read_title", required: true},
@@ -91,14 +87,14 @@ if (researchRevisionDialog) {
       {name: "time_period", label: "research_claim_time", readLabel: "research_read_period"},
       {name: "place", label: "research_claim_place", readLabel: "research_read_place"},
       {name: "actors", label: "research_claim_actors", readLabel: "research_read_actors", type: "list"},
-      {name: "dossier_id", label: "research_dossier"},
+      {name: "dossier_id", label: "research_dossier", type: "reference", reference: "dossier"},
       {name: "dossier_revision", label: "research_revision_dossier_revision", type: "number"},
       {name: "tags", label: "research_tags", readLabel: "research_read_tags", type: "list"}
     ],
     evidence_link: [
-      {name: "claim_id", label: "research_claim_id", required: true},
+      {name: "claim_id", label: "research_revision_kind_claim", type: "reference", reference: "claim", required: true},
       {name: "claim_revision", label: "research_revision_claim_revision", type: "number"},
-      {name: "passage_id", label: "research_passage_id", readLabel: "research_read_passage", required: true},
+      {name: "passage_id", label: "research_read_passage", type: "reference", reference: "passage", required: true},
       {name: "relation", label: "research_relation_field", type: "select", options: [
         ["supports", "research_relation_supports"], ["contradicts", "research_relation_contradicts"],
         ["qualifies", "research_relation_qualifies"], ["contextualizes", "research_relation_contextualizes"]]},
@@ -106,9 +102,9 @@ if (researchRevisionDialog) {
       {name: "reviewer", label: "research_revision_reviewer", required: true}
     ],
     claim_relation: [
-      {name: "from_claim_id", label: "research_relation_from", type: "claim", required: true},
+      {name: "from_claim_id", label: "research_relation_from", type: "reference", reference: "claim", required: true},
       {name: "from_claim_revision", label: "research_revision_from_claim_revision", type: "number"},
-      {name: "to_claim_id", label: "research_relation_to", type: "claim", required: true},
+      {name: "to_claim_id", label: "research_relation_to", type: "reference", reference: "claim", required: true},
       {name: "to_claim_revision", label: "research_revision_to_claim_revision", type: "number"},
       {name: "relation", label: "research_relation_field", type: "select", options: [["causes", "research_relation_causes"]]},
       {name: "state", label: "research_relation_state", required: true, type: "select", options: [
@@ -118,32 +114,32 @@ if (researchRevisionDialog) {
     decision: [
       {name: "title", label: "research_decision_title", readLabel: "research_read_title", required: true},
       {name: "rationale", label: "research_decision_rationale", readLabel: "research_read_rationale", type: "textarea", required: true},
-      {name: "claim_id", label: "research_claim_id"},
+      {name: "claim_id", label: "research_revision_kind_claim", type: "reference", reference: "claim"},
       {name: "claim_revision", label: "research_revision_claim_revision", type: "number"},
       {name: "deviation_from_fact", label: "research_deviation_checkbox", type: "checkbox"},
       {name: "impact_on_plot", label: "research_decision_plot", readLabel: "research_read_plot_impact", type: "textarea"},
-      {name: "dossier_ids", label: "research_revision_dossier_ids", readLabel: "research_read_dossiers", type: "list"}
+      {name: "dossier_ids", label: "research_read_dossiers", type: "references", reference: "dossier"}
     ]
   };
 
-  function revisionRefText(ref, pinned) {
+  function revisionRefText(ref, pinned, kind, envelope) {
     if (!ref || !ref.id) return "";
-    return ref.id + (pinned && ref.revision ? " · " + uiFormat("research_revision_number", {revision: ref.revision}) : "");
+    return pinned ? researchReferenceLabel(kind, ref, envelope) : ref.id;
   }
 
-  function revisionFieldValue(record, name, pinned) {
+  function revisionFieldValue(record, name, pinned, envelope) {
     if (name === "geography") return record.geography || null;
-    if (name === "evidence_ids") return (record.evidence_refs || []).map(function(ref) { return revisionRefText(ref, pinned); });
-    if (name === "dossier_ids") return (record.dossier_refs || []).map(function(ref) { return revisionRefText(ref, pinned); });
+    if (name === "evidence_ids") return (record.evidence_refs || []).map(function(ref) { return revisionRefText(ref, pinned, "passage", envelope); });
+    if (name === "dossier_ids") return (record.dossier_refs || []).map(function(ref) { return revisionRefText(ref, pinned, "dossier", envelope); });
     if (name === "dossier_revisions") return Object.fromEntries((record.dossier_refs || []).map(function(ref) { return [ref.id, ref.revision]; }));
-    if (name === "dossier_id") return revisionRefText(record.dossier_ref, pinned);
+    if (name === "dossier_id") return revisionRefText(record.dossier_ref, pinned, "dossier", envelope);
     if (name === "dossier_revision") return record.dossier_ref ? record.dossier_ref.revision : "";
-    if (name === "claim_id") return revisionRefText(record.claim_ref, pinned);
+    if (name === "claim_id") return revisionRefText(record.claim_ref, pinned, "claim", envelope);
     if (name === "claim_revision") return record.claim_ref ? record.claim_ref.revision : "";
-    if (name === "passage_id") return revisionRefText(record.passage_ref, pinned);
+    if (name === "passage_id") return revisionRefText(record.passage_ref, pinned, "passage", envelope);
     for (var role of ["from", "to"]) {
       var ref = record[role + "_claim_ref"];
-      if (name === role + "_claim_id") return revisionRefText(ref, pinned);
+      if (name === role + "_claim_id") return revisionRefText(ref, pinned, "claim", envelope);
       if (name === role + "_claim_revision") return ref ? ref.revision : "";
     }
     if (["time_period", "place", "actors"].includes(name)) {
@@ -176,7 +172,7 @@ if (researchRevisionDialog) {
       updates.forEach(function(update) {
         var item = document.createElement("li");
         item.textContent = uiFormat("research_revision_source_versions", {
-          source: update.source_title || update.source_id || "",
+          source: researchRecordLabel({title:update.source_title}, "source"),
           cited: update.cited_sequence || "?", latest: update.latest_sequence || "?"
         });
         list.appendChild(item);
@@ -211,6 +207,52 @@ if (researchRevisionDialog) {
     revisionCitations.innerHTML = (citations || []).map(function(cite) {
       return researchCitationHtml(cite, false);
     }).join("");
+  }
+
+  function revisionSetReferenceSelection(field, value) {
+    var values = Array.isArray(value) ? value : value ? [value] : [];
+    values.forEach(function(id) {
+      if (!Array.from(field.options).some(function(option) { return option.value === id; })) {
+        field.add(new Option(researchReferenceLabel(field.dataset.referenceKind, {id:id}, revisionState.current), id));
+      }
+    });
+    // Keep the original reference order when an untouched multi-select is saved.
+    values.slice().reverse().forEach(function(id) {
+      var option = Array.from(field.options).find(function(item) { return item.value === id; });
+      if (field.multiple && option) field.prepend(option);
+    });
+    Array.from(field.options).forEach(function(option) { option.selected = values.includes(option.value); });
+    if (!field.multiple && !values.length) field.value = "";
+  }
+
+  function revisionReferenceSelect(field, spec, value) {
+    field.dataset.referenceKind = spec.reference;
+    field.multiple = spec.type === "references";
+    if (field.multiple) field.size = 4;
+    else field.add(new Option(uiLabel("research_reference_none"), ""));
+    field.dataset.help = uiLabel("research_reference_choices_help");
+    var choices = researchReferenceChoices(spec.reference, revisionState.current);
+    var known = new Set();
+    choices.forEach(function(record) {
+      if (known.has(record.id)) return;
+      known.add(record.id);
+      var text = spec.reference === "claim" ? researchClaimChoiceLabel(record) : spec.reference === "passage" ?
+        researchPassageLabel(record) : researchRecordLabel(record, spec.reference);
+      field.add(new Option(text, record.id));
+    });
+    revisionSetReferenceSelection(field, value);
+    // Missing metadata or identical authored names remain distinguishable in
+    // this list without treating a display ordinal as persistent identity.
+    var counts = Object.create(null);
+    Array.from(field.options).forEach(function(option) { counts[option.text] = (counts[option.text] || 0) + 1; });
+    var positions = Object.create(null);
+    Array.from(field.options).forEach(function(option) {
+      var text = option.text;
+      if (counts[text] > 1) {
+        positions[text] = (positions[text] || 0) + 1;
+        option.text += " · " + uiFormat("research_choice_number", {number:positions[text]});
+      }
+    });
   }
 
   function revisionBuildFields(record) {
@@ -253,20 +295,11 @@ if (researchRevisionDialog) {
         label.textContent = uiLabel(spec.label);
         group.appendChild(label);
         field = spec.type === "textarea" ? document.createElement("textarea") :
-          ["select", "claim"].includes(spec.type) ? document.createElement("select") : document.createElement("input");
+          ["select", "reference", "references"].includes(spec.type) ? document.createElement("select") : document.createElement("input");
         field.className = "ctl";
         if (spec.type === "textarea") field.rows = spec.name === "body" ? 8 : 3;
-        if (spec.type === "claim") {
-          Object.values(researchClaimChoices).forEach(function(claim) {
-            var option = document.createElement("option"); option.value = claim.id;
-            option.textContent = researchClaimChoiceLabel(claim); field.appendChild(option);
-          });
-          if (!researchClaimChoices[value]) {
-            var pinnedEndpoint = revisionState.current[spec.name.startsWith("from") ? "from_claim" : "to_claim"];
-            var pinnedOption = document.createElement("option"); pinnedOption.value = value;
-            pinnedOption.textContent = pinnedEndpoint ? pinnedEndpoint.title : value; field.appendChild(pinnedOption);
-          }
-        } else if (spec.type === "select") {
+        if (spec.reference) revisionReferenceSelect(field, spec, value);
+        else if (spec.type === "select") {
           (spec.options || []).forEach(function(option) {
             var item = document.createElement("option");
             item.value = option[0];
@@ -277,9 +310,12 @@ if (researchRevisionDialog) {
           field.type = spec.type === "number" ? "number" : "text";
           if (spec.type === "number") { field.min = "1"; field.step = "1"; }
         }
-        field.value = Array.isArray(value) ? value.join(", ") : String(value || "");
+        if (!spec.reference) field.value = Array.isArray(value) ? value.join(", ") : String(value || "");
         field.required = Boolean(spec.required);
         group.appendChild(field);
+        if (spec.type === "textarea" && spec.name === "body" && window.LixityMarkdownEditor) {
+          window.LixityMarkdownEditor.mount(field);
+        }
       }
       field.id = id;
       field.name = spec.name;
@@ -311,10 +347,10 @@ if (researchRevisionDialog) {
     }) : envelope;
     var dossierBody = dossier ? researchDossierDetailHtml(imageContext, !imageContext.image_editable, {recordView:true}) : "";
     var rows = fields.map(function(spec) {
-      // Reference IDs already include their exact pin in read-only mode.
+      // Readable reference names already include their exact pin in reading mode.
       // Keep the separate numeric controls exclusively in the edit form.
       if (["dossier_revision", "claim_revision", "from_claim_revision", "to_claim_revision"].includes(spec.name)) return "";
-      var value = revisionFieldValue(record, spec.name, true);
+      var value = revisionFieldValue(record, spec.name, true, envelope);
       if (dossier && ["title", "body", "geography"].includes(spec.name)) return "";
       if (!spec.required && (value === null || value === undefined ||
           typeof value === "string" && !value.trim() || Array.isArray(value) && !value.length)) return "";
@@ -324,7 +360,7 @@ if (researchRevisionDialog) {
         if (option) value = uiLabel(option[1]);
       }
       if (spec.type === "checkbox") value = uiLabel(value ? "research_value_yes" : "research_value_no");
-      if (revisionState.kind === "claim_relation" && spec.type === "claim") {
+      if (revisionState.kind === "claim_relation" && spec.reference === "claim") {
         var endpoint = envelope[spec.name.startsWith("from") ? "from_claim" : "to_claim"];
         if (endpoint) value = endpoint.title + (endpoint.time_period ? " · " + endpoint.time_period : "") +
           " · " + uiFormat("research_revision_number", {revision: endpoint.revision});
@@ -548,7 +584,8 @@ if (researchRevisionDialog) {
     var changes = {};
     revisionEditableSpecs().forEach(function(spec) {
       var input = document.getElementById("research-revision-field-" + spec.name);
-      var value = spec.type === "geography" ? input._geographyEditor.read() : spec.type === "checkbox" ? input.checked : spec.type === "list" ?
+      var value = spec.type === "geography" ? input._geographyEditor.read() : spec.type === "checkbox" ? input.checked : spec.type === "references" ?
+        Array.from(input.selectedOptions).map(function(option) { return option.value; }) : spec.type === "list" ?
         input.value.split(",").map(function(item) { return item.trim(); }).filter(Boolean) :
         spec.type === "number" ? (input.value ? Number(input.value) : "") :
         spec.type === "textarea" ? input.value : input.value.trim();
@@ -564,7 +601,7 @@ if (researchRevisionDialog) {
       if (pin && pin.value) changes[kind + "_revision"] = Number(pin.value);
     });
     if (revisionState.kind === "decision") {
-      var ids = revisionFieldsHost.querySelector('[name="dossier_ids"]').value.split(",").map(function(id) { return id.trim(); }).filter(Boolean);
+      var ids = Array.from(revisionFieldsHost.querySelector('[name="dossier_ids"]').selectedOptions).map(function(option) { return option.value; });
       var pins = {};
       ids.forEach(function(id) { if (revisionState.dossierPins[id]) pins[id] = revisionState.dossierPins[id]; });
       var initialPins = revisionFieldValue(revisionState.current.record, "dossier_revisions", false);
@@ -608,6 +645,7 @@ if (researchRevisionDialog) {
       if (!field) return;
       var value = changes[name];
       if (field._geographyEditor) field._geographyEditor.set(value);
+      else if (field.dataset.referenceKind) revisionSetReferenceSelection(field, value);
       else if (field.type === "checkbox") field.checked = Boolean(value);
       else field.value = Array.isArray(value) ? value.join(", ") : value === null ? "" : String(value);
     });
@@ -646,7 +684,19 @@ if (researchRevisionDialog) {
       revisionState.merge.preview.conflicts.some(function(item) { return !revisionState.merge.resolutions[item.field]; });
   }
 
-  function revisionMergeValue(value) {
+  function revisionMergeValue(value, name, kind, envelope) {
+    envelope = envelope || revisionState.current;
+    if (name === "dossier_revisions" && value && typeof value === "object") {
+      return Object.entries(value).map(function(pair) {
+        return researchReferenceLabel("dossier", {id:pair[0], revision:pair[1]}, envelope);
+      }).join("\n") || "—";
+    }
+    var spec = (revisionSpecs[kind || revisionState.kind] || []).find(function(item) { return item.name === name; });
+    if (spec && spec.reference) {
+      return (Array.isArray(value) ? value : value ? [value] : []).map(function(id) {
+        return researchReferenceLabel(spec.reference, {id:id}, envelope);
+      }).join("\n") || "—";
+    }
     return value === null || value === undefined ? "—" : typeof value === "string" ? value : JSON.stringify(value, null, 2);
   }
 
@@ -667,7 +717,7 @@ if (researchRevisionDialog) {
       changed.forEach(function(name) {
         var term = document.createElement("dt"), value = document.createElement("dd");
         term.textContent = revisionMergeLabel(name);
-        value.textContent = revisionMergeValue(revisionState.section && name === "body" ? merge.draft.body : merge.preview.changes[name]);
+        value.textContent = revisionMergeValue(revisionState.section && name === "body" ? merge.draft.body : merge.preview.changes[name], name);
         list.append(term, value);
       });
       revisionMergeFields.append(heading, list);
@@ -683,7 +733,7 @@ if (researchRevisionDialog) {
       legend.textContent = revisionMergeLabel(conflict.field);
       group.appendChild(legend);
       var base = document.createElement("p");
-      base.textContent = uiLabel("research_revision_merge_base") + ": " + revisionMergeValue(conflict.base);
+      base.textContent = uiLabel("research_revision_merge_base") + ": " + revisionMergeValue(conflict.base, conflict.field);
       group.appendChild(base);
       ["current", "mine"].forEach(function(choice) {
         var label = document.createElement("label"), input = document.createElement("input");
@@ -693,7 +743,7 @@ if (researchRevisionDialog) {
         input.value = choice;
         input.checked = merge.resolutions[conflict.field] === choice;
         title.textContent = " " + uiLabel("research_revision_merge_" + choice);
-        value.textContent = revisionMergeValue(conflict[choice]);
+        value.textContent = revisionMergeValue(conflict[choice], conflict.field);
         input.addEventListener("change", function() {
           merge.resolutions[conflict.field] = choice;
           revisionPending(false);
@@ -805,15 +855,17 @@ if (researchRevisionDialog) {
       heading.textContent = record.title || uiLabel("research_revision_kind_" + operation.kind);
       meta.className = "ctl-note";
       meta.textContent = uiLabel("research_revision_kind_" + operation.kind) + " · " +
-        uiFormat("research_revision_number", {revision: operation.expected_revision}) + " · " + operation.id;
+        uiFormat("research_revision_number", {revision: operation.expected_revision});
       var reason = document.createElement("p"), fields = document.createElement("dl");
       reason.textContent = uiLabel("research_revision_" + operation.change_kind) + ": " + operation.reason;
       Object.keys(operation.changes).forEach(function(name) {
         var term = document.createElement("dt"), value = document.createElement("dd");
         term.textContent = revisionMergeLabel(name, operation.kind);
         var before = document.createElement("p"), draft = document.createElement("pre");
-        before.textContent = uiLabel("research_revision_merge_base") + ": " + revisionMergeValue(revisionFieldValue(record, name, true));
-        draft.textContent = uiLabel("research_revision_merge_mine") + ": " + revisionMergeValue(operation.changes[name]);
+        before.textContent = uiLabel("research_revision_merge_base") + ": " + (name === "dossier_revisions" ?
+          revisionMergeValue(revisionFieldValue(record, name, false), name, operation.kind, entry.envelope) :
+          revisionMergeValue(revisionFieldValue(record, name, true, entry.envelope)));
+        draft.textContent = uiLabel("research_revision_merge_mine") + ": " + revisionMergeValue(operation.changes[name], name, operation.kind, entry.envelope);
         value.append(before, draft);
         fields.append(term, value);
       });
@@ -1017,7 +1069,6 @@ if (researchRevisionDialog) {
     revisionHistoryList.replaceChildren();
     revisionHistoryDetail.replaceChildren();
     revisionShowMeta(null);
-    document.getElementById("research-revision-technical").open = false;
     revisionVersions.open = false;
     revisionReload.hidden = true;
     revisionSave.disabled = true;

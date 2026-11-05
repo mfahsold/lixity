@@ -19,7 +19,7 @@
 <meta property="og:locale" content="de_DE"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta property="og:image:width" content="2960"/>
-<meta property="og:image:height" content="2090"/>
+<meta property="og:image:height" content="2180"/>
 <meta property="og:image:alt" content="Lixity-Manuskriptansicht mit Kapitelnavigation und Werkzeugen am Text; die Aufnahme zeigt die englische Oberfläche"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Lixity: eine Textstelle genauer prüfen"/>
@@ -38,11 +38,11 @@
     "@type": "ImageObject",
     "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-light.png",
     "width": 2960,
-    "height": 2090,
+    "height": 2180,
     "caption": "Lixity-Manuskriptansicht mit Kapitelnavigation und Werkzeugen am Text; die Aufnahme zeigt die englische Oberfläche"
   },
   "inLanguage": "de",
-  "dateModified": "2026-11-02",
+  "dateModified": "2026-11-05",
   "isPartOf": {
     "@type": "WebSite",
     "name": "Lixity",
@@ -63,7 +63,7 @@
 <nav class="site-breadcrumbs" aria-label="Seitennavigation"><ol><li><a href="../">Startseite</a></li><li><a href="../#guides">Anleitungen</a></li><li><span aria-current="page">Erster Einblick</span></li></ol></nav>
 <h1>Eine Frage, ein Dossier, zurück zur Szene.</h1>
 <p>Lixity ist eine lokale Recherche- und Überarbeitungswerkstatt für Autorinnen, Autoren und Lektorat. Quellen, Textstellen und eigene Entscheidungen bleiben verbunden. Sprachmuster lassen sich am Text untersuchen; die Entscheidung über die Prosa bleibt beim Menschen.</p>
-<p class="updated">Aktualisiert am <time datetime="2026-10-25">25. Oktober 2026</time></p>
+<p class="updated">Aktualisiert am <time datetime="2026-11-05">5. November 2026</time></p>
 
 <h2 id="frage">Eine Frage statt eines Zielwerts</h2>
 <p>Warum klingt dieses Kapitel anders als der Rest? Ist eine Wiederholung beabsichtigt? Auf welcher Quelle beruht dieses Detail? Für einen ersten Versuch genügt eine dieser Fragen.</p>
@@ -98,9 +98,18 @@
 <p>Lixity zeigt Muster, die du im Zusammenhang prüfen kannst. Eine Wiederholung, eine kurze Satzfolge oder ein Wechsel der Zeitform kann beabsichtigt sein. Die Entscheidung über den Text bleibt bei dir.</p>
 <p>Tempushinweise beruhen auf Wortmustern und sind keine grammatische Prüfung: Auch Infinitive, Hilfsverben, Zitate und Rückblicke können Hinweise auslösen. Der Anteil von Text in erkannten Anführungszeichen ist keine vollständige Erkennung von Dialog oder Figurenstimmen. Mehr zu <a href="interpretation.html#analysis-marks">Markierungen und ihren Grenzen</a>.</p>
 
+<h2 id="lesekopie">Dieselbe Geschichte in verschiedenen Lesekopien</h2>
+<ul>
+<li><a href="../demo/report.html">Prüf-Arbeitsbereich:</a> Manuskript, Analyse und enthaltene Rechercheeinträge gemeinsam untersuchen.</li>
+<li><a href="../demo/reader/index.html">Roman mit Begleitmaterial:</a> fortlaufend lesen, den Lesefortschritt bestätigen und ausgewählte Dossiernotizen öffnen. Der Analyse-Link führt zu den bewusst beigefügten Messwerten.</li>
+<li><a href="../demo/companion/index.html">Eigenständiger Begleiter:</a> ausgewählte Hintergründe zu einer andernorts gelesenen Geschichte ansehen.</li>
+</ul>
+<p>Diese Exporte sind feste Kopien. Der Lesefortschritt blendet bereits enthaltene Inhalte ein oder aus; er ist kein Zugriffsschutz. Eine Kapitelgrenze beim Export lässt spätere Inhalte tatsächlich weg. <strong>Noch unveröffentlicht:</strong> Mit <code>--include-audio</code> können passende vorhandene Kapitelaufnahmen samt Player und WAV-Download mitgegeben werden. Der Export startet keine Sprachsynthese und enthält keine privaten Stimmreferenzen. <a href="../WORKSPACE.md#include-existing-chapter-recordings-unreleased">Audio-Auswahl und Grenzen</a>.</p>
+
+<p>Die Lesedemo enthält eine künstliche Aufnahme des ersten Kapitels aus eSpeak NG 1.51 (<code>en</code>, Tempo 165), die ausdrücklich importiert wurde. Unter <strong>Chapter audio</strong> lässt sie sich abspielen oder herunterladen. Sie zeigt den Ablauf, nicht die Stimmqualität von IMS-Toucan oder eine geklonte Autorenstimme. Die anderen Kapitel bleiben reine Lesetexte.</p>
+
 <h2 id="eigenes-manuskript">Mit einem eigenen Manuskript arbeiten</h2>
-<p>Unter <strong>Projekt → Audioexport und Aufnahmen → Regie exportieren</strong> wählst du eine Textstelle, ein Kapitel oder das ganze Manuskript. <strong>Exportvorschau öffnen</strong> bereitet die Downloads als JSON und SSML vor. Dafür ist kein Sprachdienst nötig. JSON erhält Stimmen und Regie; SSML nennt Grenzen der Übertragbarkeit. Im getrennten Bereich <strong>Audio erzeugen</strong> startest du die Vertonung mit einem eingerichteten Sprachdienst. Externe WAV-, FLAC- oder MP3-Aufnahmen lassen sich lokal prüfen; der Textvergleich benötigt zusätzlich ein zeitlich zugeordnetes Transkript. Die <a href="https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#audio-export-and-external-providers-unreleased">Audioanleitung</a> beschreibt Einrichtung und Dateiformate.</p>
-<p>Der Manuskriptimport unterstützt Markdown (<code>.md</code>, <code>.markdown</code>) und reinen Text (<code>.txt</code>). Word/DOCX- oder Scrivener-Dokumente müssen vorher konvertiert werden. PDFs lassen sich getrennt als Recherchequellen aufnehmen.</p>
+<p>Der Manuskriptimport unterstützt Markdown (<code>.md</code>, <code>.markdown</code>) und reinen Text (<code>.txt</code>). Der noch unveröffentlichte Dateiimport akzeptiert auch jeweils eine Word/DOCX-Datei. Exportiere Scrivener-Dokumente vorher in ein unterstütztes Dateiformat und prüfe die Importvorschau. PDFs lassen sich getrennt als Recherchequellen aufnehmen.</p>
 <p>Lixity ist kostenlos und Open Source; auch ein kommerzielles Buchprojekt benötigt keine zusätzliche Erlaubnis. Besondere Bedingungen für Softwareintegrationen erläutert die <a href="../LICENSING.md">Lizenzübersicht</a>.</p>
 <p>Die lokale Anwendung läuft nach der Installation im Browser. Voraussetzung sind derzeit <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a> und ein Terminal; Lixity wird als Python-Werkzeug installiert, nicht als klassischer Desktop-Installer. Die <a href="installation.html">Installationsanleitung für Windows, macOS und Linux</a> ist auf Englisch.</p>
 <pre><code>uv tool install --python 3.12 --managed-python lixity
@@ -109,7 +118,15 @@ uv tool update-shell</code></pre>
 <pre><code>lixity service start --open</code></pre>
 <p>Ein Projekt oder die Importvorschau für das Markdown-Manuskript öffnen und die Sprache <strong>Deutsch</strong> bestätigen. Englisch ist die Voreinstellung; automatische Erkennung ist eine ausdrückliche Wahl. Die eingebaute Analyse läuft lokal. Optionale Integrationen haben eigene <a href="../research/USAGE.md">Datengrenzen</a>.</p>
 <p class="section-note">Die öffentliche Demo zeigt ein fiktives Projekt. Das installierte Paket und sein Funktionsumfang sind über <code>lixity --version</code> und die <a href="https://github.com/mfahsold/lixity/releases/latest">Versionshinweise</a> prüfbar. Die Demo kann weder importieren noch Änderungen speichern.</p>
+<h2 id="audio">Die eigene Textstelle hören und einsprechen</h2>
+<p>In der lokalen Anwendung führt <strong>Projekt → Einstellungen → Audio und Dienste</strong> zu Aufnahmen, Stimmprofilen, Mikrofon und Dienststatus. <strong>Anhören und Regie</strong> öffnet sich auch aus der Manuskriptleiste. Die öffentliche Demo kann keine Stimmprobe speichern oder Sprachsynthese starten.</p>
+<p>Auf dem aktuellen Entwicklungsstand (noch unveröffentlicht) hat der lokale Audiodialog vier klar zugeordnete Reiter: <strong>Autorenstimme</strong> für Aufnahme, WAV-Upload und gespeicherte Stimmproben, <strong>Stimmprofile</strong> für Stimme und Sprachdienst, <strong>Hörprobe &amp; Regie</strong> für Textregie, Ausgabe, Export und Aufnahmeprüfung sowie <strong>Mikrofon &amp; Pegel</strong> für die lokale Hardware. Hilfetexte erklären die Bedienelemente. Der kompakte Player zeigt Laufzeit, Suchleiste, Lautstärke und ein laufendes Frequenzspektrum. Für eine Browseraufnahme musst du das Mikrofon für die aktuelle lokale Adresse freigeben; der Hardwarepegel ersetzt diese Freigabe nicht.</p>
+<p>Der Zustand direkt neben dem Aufnahmebutton zeigt, ob die Freigabe aussteht, die Aufnahme läuft oder der Start fehlgeschlagen ist. Eine gespeicherte Mikrofon-Sperre entfernst du im Browser über das Symbol neben der Adresse; starte danach erneut und erlaube den Zugriff. Fehlgeschlagene Starts werden in der Browserkonsole protokolliert. Solange der Browser den Zugriff blockiert, gibt es dazu keinen Serveraufruf und keinen Eintrag im Dienstprotokoll. Mehr zur <a href="https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#author-voice-recording-and-listening">Aufnahme und Fehlerdiagnose</a>.</p>
+<p>Unter <strong>Hörprobe &amp; Regie → Regie exportieren</strong> wählst du eine Textstelle, ein Kapitel oder das ganze Manuskript. <strong>Exportvorschau öffnen</strong> bereitet die Downloads als JSON und SSML vor. Dafür ist kein Sprachdienst nötig. JSON erhält Stimmen und Regie; SSML nennt Grenzen der Übertragbarkeit. Mit <strong>Audio erzeugen</strong> startest du die Vertonung mit einem eingerichteten Sprachdienst. Externe WAV-, FLAC- oder MP3-Aufnahmen lassen sich lokal prüfen; der Textvergleich benötigt zusätzlich ein zeitlich zugeordnetes Transkript. Die <a href="https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#audio-export-and-external-providers-unreleased">Audioanleitung</a> beschreibt Einrichtung und Dateiformate.</p>
+<p>Im <strong>Teleprompter</strong> (<code>P</code>) liest du den geplanten Sprechtext mit Regiehinweisen und nimmst einen Take auf. Ergänze die tatsächlich gesprochenen Wörter und bestätige das Transkript. WAV und passende JSON-Datei bewahren Audio-Prüfsumme und Prüfstatus; die Übergabe ins Autorenstimmen-Studio speichert noch keine Referenz.</p>
+<p><strong>Optionales IMS-Toucan, noch unveröffentlicht:</strong> Eine eigene Referenzstimme lässt sich für Deutsch oder Englisch mit getrennten IPA-Ausspracheangaben und strukturierten Reglern für Dauer und Prosodie kombinieren. Freie Schauspielanweisungen setzt dieses Modell nicht um. Andere Sprachdienste unterstützen andere Möglichkeiten; höre zuerst eine kurze Vorschau. <a href="../INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction">Einrichtung und Modellgrenzen</a>.</p>
 <p><a href="first-look.html" lang="en" hreflang="en">English tour with more controls</a> · <a href="../blog/local-word-echoes.html">Praxisbeispiel zu Wiederholungen (Englisch)</a></p>
+<p>Weiter geht es im <a href="../WORKSPACE.md">UI-Handbuch</a>, in der <a href="../USAGE.md">CLI-Referenz</a> oder über die <a href="../README.md">Dokumentationsübersicht</a> (Englisch).</p>
 <footer class="site-footer"><nav aria-label="Weitere Informationen"><a href="../">Über Lixity</a><a href="installation.html">Installation</a><a href="../LICENSING.md">Lizenz</a><a href="../#website-measurement">Website-Messung</a><a href="../#impressum">Impressum</a></nav></footer>
 </main>
 <a class="site-back-top" href="#top">Nach oben ↑</a>

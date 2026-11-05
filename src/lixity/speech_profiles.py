@@ -17,14 +17,29 @@ from pydantic import (
     model_validator,
 )
 
-from .speech_controls import speech_control_support, validate_pronunciation_keys
+from .speech_controls import SpeechProsody, speech_control_support, validate_pronunciation_keys
+from .speech_engines import (
+    COQUI_MODEL as COQUI_MODEL,
+)
+from .speech_engines import (
+    COQUI_REFERENCE_MODEL as COQUI_REFERENCE_MODEL,
+)
+from .speech_engines import (
+    F5_MODEL as F5_MODEL,
+)
+from .speech_engines import (
+    QWEN_BASE_MODEL as QWEN_BASE_MODEL,
+)
+from .speech_engines import (
+    QWEN_DESIGN_MODEL as QWEN_DESIGN_MODEL,
+)
+from .speech_engines import (
+    QWEN_MODEL as QWEN_MODEL,
+)
+from .speech_engines import (
+    TOUCAN_MODEL as TOUCAN_MODEL,
+)
 
-QWEN_MODEL = "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice"
-QWEN_DESIGN_MODEL = "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign"
-QWEN_BASE_MODEL = "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
-COQUI_MODEL = "coqui/tts_models/de/thorsten/vits"
-COQUI_REFERENCE_MODEL = "coqui/tts_models/de/thorsten/vits+openvoice-v2"
-F5_MODEL = "SWivid/F5-TTS"
 QWEN_LANGUAGES = {
     "zh": "Chinese", "en": "English", "ja": "Japanese", "ko": "Korean",
     "de": "German", "fr": "French", "ru": "Russian", "pt": "Portuguese",
@@ -55,7 +70,7 @@ class AudioProfile(BaseModel):
 
     model_config = ConfigDict(extra="forbid", strict=True, allow_inf_nan=False, hide_input_in_errors=True)
     name: str = Field(default="Narrator", min_length=1, max_length=100)
-    engine: Literal["qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "f5-tts", "openai-compatible"] = "qwen3"
+    engine: Literal["qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "f5-tts", "ims-toucan", "openai-compatible"] = "qwen3"
     language: str = "en"
     voice: str = Field(default="Ryan", min_length=1, max_length=100)
     voice_description: str = Field(default="", max_length=2000)
@@ -71,6 +86,8 @@ class AudioProfile(BaseModel):
     paragraph_pause: float = Field(default=0.45, ge=0, le=10)
     scene_pause: float = Field(default=1.2, ge=0, le=10)
     pronunciations: PronunciationMap = Field(default_factory=dict, max_length=200)
+    phonemes: PronunciationMap = Field(default_factory=dict, max_length=200)
+    prosody: SpeechProsody = Field(default_factory=SpeechProsody)
 
     @model_serializer(mode="wrap")
     def serialize_profile(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
@@ -79,6 +96,10 @@ class AudioProfile(BaseModel):
             data.pop("voice_description", None)
         if not self.reference_id:
             data.pop("reference_id", None)
+        if not self.phonemes:
+            data.pop("phonemes", None)
+        if not self.prosody.model_dump():
+            data.pop("prosody", None)
         if self.engine != "openai-compatible":
             for key in ("base_url", "model", "api_key_env", "supports_instructions"):
                 data.pop(key, None)
@@ -101,7 +122,7 @@ class AudioProfile(BaseModel):
     def valid_voice_description(cls, value: str) -> str:
         return _text(value.replace("\r\n", " ").replace("\n", " "), empty=True)
 
-    @field_validator("pronunciations")
+    @field_validator("pronunciations", "phonemes")
     @classmethod
     def valid_pronunciations(cls, values: dict[str, str]) -> dict[str, str]:
         for source, replacement in values.items():
@@ -121,6 +142,8 @@ class AudioProfile(BaseModel):
 
     @model_validator(mode="after")
     def supported_controls(self) -> AudioProfile:
+        if self.engine != "ims-toucan" and (self.phonemes or self.prosody.model_dump()):
+            raise ValueError("Phonetic overrides and structured prosody require IMS-Toucan")
         if self.engine == "openai-compatible":
             from .speech_providers import speech_endpoint
 
@@ -133,6 +156,12 @@ class AudioProfile(BaseModel):
             return self
         if self.base_url or self.model or self.api_key_env is not None or self.supports_instructions:
             raise ValueError("Provider settings require the openai-compatible engine")
+        if self.engine == "ims-toucan":
+            if self.language not in ("de", "en") or self.voice_description:
+                raise ValueError("IMS-Toucan supports German and English without voice descriptions")
+            if self.voice != "reference" or re.fullmatch(r"[0-9a-f]{64}", self.reference_id) is None:
+                raise ValueError("IMS-Toucan requires voice='reference' and a saved reference identity")
+            return self
         if self.engine in ("coqui", "coqui-reference"):
             if self.language != "de" or self.instructions or self.voice_description:
                 raise ValueError("Coqui supports German without delivery instructions or voice descriptions")
@@ -176,10 +205,10 @@ class PronunciationMatching(BaseModel):
 
 
 class AudioSettings(BaseModel):
-    """Versioned profiles; schema /4 also permits explicit unconfigured audio."""
+    """Versioned profiles; /4 permits unconfigured audio and /5 phonetic controls."""
 
     model_config = ConfigDict(extra="forbid", strict=True, hide_input_in_errors=True)
-    schema_name: Literal["lixity-audio-settings/1", "lixity-audio-settings/2", "lixity-audio-settings/3", "lixity-audio-settings/4"] = Field(default="lixity-audio-settings/1", alias="schema_version")
+    schema_name: Literal["lixity-audio-settings/1", "lixity-audio-settings/2", "lixity-audio-settings/3", "lixity-audio-settings/4", "lixity-audio-settings/5"] = Field(default="lixity-audio-settings/1", alias="schema_version")
     selected: str
     profiles: dict[str, AudioProfile] = Field(max_length=32)
     pronunciations: PronunciationMap = Field(default_factory=dict, max_length=200)
@@ -201,30 +230,34 @@ class AudioSettings(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def require_explicit_engine(cls, raw: Any) -> Any:
-        if isinstance(raw, Mapping) and ("pronunciations" in raw or "pronunciation_matching" in raw) and raw.get("schema_version", "lixity-audio-settings/1") not in ("lixity-audio-settings/2", "lixity-audio-settings/3", "lixity-audio-settings/4"):
-            raise ValueError("Project pronunciations require audio schema lixity-audio-settings/2, /3 or /4")
+        if isinstance(raw, Mapping) and ("pronunciations" in raw or "pronunciation_matching" in raw) and raw.get("schema_version", "lixity-audio-settings/1") not in ("lixity-audio-settings/2", "lixity-audio-settings/3", "lixity-audio-settings/4", "lixity-audio-settings/5"):
+            raise ValueError("Project pronunciations require audio schema lixity-audio-settings/2 or later")
         if isinstance(raw, Mapping) and isinstance(raw.get("profiles"), Mapping):
             for profile in raw["profiles"].values():
+                if isinstance(profile, Mapping) and (profile.get("engine") == "ims-toucan" or profile.get("phonemes") or profile.get("prosody")) and raw.get("schema_version") != "lixity-audio-settings/5":
+                    raise ValueError("IMS-Toucan and phonetic or prosody controls require audio schema lixity-audio-settings/5")
                 if isinstance(profile, Mapping) and "engine" not in profile:
                     raise ValueError("Saved audio profiles require an explicit Qwen engine; "
                                      "review the old profile before replacing it")
-                if isinstance(profile, Mapping) and profile.get("engine") in ("coqui", "coqui-reference") and raw.get("schema_version") not in ("lixity-audio-settings/3", "lixity-audio-settings/4"):
-                    raise ValueError("Coqui profiles require audio schema lixity-audio-settings/3 or /4")
-                if isinstance(profile, Mapping) and profile.get("engine") == "openai-compatible" and raw.get("schema_version") != "lixity-audio-settings/4":
-                    raise ValueError("External speech profiles require audio schema lixity-audio-settings/4")
+                if isinstance(profile, Mapping) and profile.get("engine") in ("coqui", "coqui-reference") and raw.get("schema_version") not in ("lixity-audio-settings/3", "lixity-audio-settings/4", "lixity-audio-settings/5"):
+                    raise ValueError("Coqui profiles require audio schema lixity-audio-settings/3 or later")
+                if isinstance(profile, Mapping) and profile.get("engine") == "openai-compatible" and raw.get("schema_version") not in ("lixity-audio-settings/4", "lixity-audio-settings/5"):
+                    raise ValueError("External speech profiles require audio schema lixity-audio-settings/4 or later")
         return raw
 
     @model_validator(mode="after")
     def valid_selection(self) -> AudioSettings:
         if not self.profiles:
-            if self.schema_name != "lixity-audio-settings/4" or self.selected:
-                raise ValueError("Empty audio profiles require schema /4 and an empty selection")
+            if self.schema_name not in ("lixity-audio-settings/4", "lixity-audio-settings/5") or self.selected:
+                raise ValueError("Empty audio profiles require schema /4 or later and an empty selection")
             if not self.pronunciation_matching.case_sensitive:
                 validate_pronunciation_keys(self.pronunciations, case_sensitive=False)
             return self
-        if (self.schema_name != "lixity-audio-settings/4"
+        if (self.schema_name not in ("lixity-audio-settings/4", "lixity-audio-settings/5")
                 and any(profile.engine == "openai-compatible" for profile in self.profiles.values())):
-            raise ValueError("External speech profiles require audio schema lixity-audio-settings/4")
+            raise ValueError("External speech profiles require audio schema lixity-audio-settings/4 or later")
+        if self.schema_name != "lixity-audio-settings/5" and any(profile.engine == "ims-toucan" or profile.phonemes or profile.prosody.model_dump() for profile in self.profiles.values()):
+            raise ValueError("IMS-Toucan and phonetic or prosody controls require audio schema lixity-audio-settings/5")
         if any(not _PROFILE_ID.fullmatch(key) for key in self.profiles):
             raise ValueError("Audio profile IDs must be safe identifiers of at most 64 characters")
         if self.selected not in self.profiles:
@@ -269,6 +302,16 @@ def audio_capabilities() -> dict[str, Any]:
     Qwen timbres are multilingual; native-language quality requires auditioning.
     """
     return {
+        "ims-toucan": {
+            "name": "IMS-Toucan", "targets": ["local"], "languages": ["de", "en"],
+            "guide_url": "https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction",
+            "voices": {"reference": {"name": "Reference", "languages": ["de", "en"]}},
+            "reference_required": True, "instructions": False,
+            "control_support": speech_control_support("ims-toucan").as_dict(),
+            "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
+                      "default": DEFAULT_PLAYBACK_SPEED, "implementation": "ffmpeg-atempo"},
+            "model": TOUCAN_MODEL,
+        },
         "openai-compatible": {
             "name": "OpenAI-compatible speech provider", "targets": ["local"],
             "languages": [], "voices": {}, "configurable_model": True,
@@ -293,6 +336,8 @@ def audio_capabilities() -> dict[str, Any]:
         )},
         "f5-tts": {
             "name": "F5-TTS Flow-Matching", "targets": ["local"], "languages": ["de", "en"],
+            "creation_enabled": False, "runtime_status": "unavailable",
+            "runtime_reason": "The bundled F5-TTS runtime is unavailable; existing profiles remain readable for export and cached audio.",
             "voices": {"reference": {"name": "Reference", "languages": ["de", "en"]}},
             "reference_required": True, "instructions": False,
             "control_support": speech_control_support("f5-tts").as_dict(),

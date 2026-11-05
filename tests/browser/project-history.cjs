@@ -158,11 +158,8 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
           assert.ok((await page.locator('#research-revision-kind').textContent()).includes('Version 1'));
         }
         assert.ok(!(await page.locator('#research-revision-kind').textContent()).includes(data.record.record.id));
-        assert.ok(await page.locator('#research-revision-technical').isVisible());
-        assert.equal(await page.locator('#research-revision-technical').getAttribute('open'), null, 'Technical details start collapsed');
-        await page.locator('#research-revision-technical > summary').click();
-        assert.ok((await page.locator('#research-revision-technical').textContent()).includes(data.record.snapshot));
-        await page.locator('#research-revision-technical > summary').click();
+        assert.equal(await page.locator('#research-revision-technical').count(), 0);
+        assert.ok(!(await page.locator('#modal-research-revision').innerText()).includes(data.record.snapshot));
         await page.screenshot({path: path.join(artifacts, `revision-${language}-${width}.png`)});
         if (language === 'en' && width === 1440) {
           await page.locator('#research-revision-field-rationale').fill('Synthetic updated rationale.');

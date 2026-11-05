@@ -240,11 +240,15 @@ server.serve_forever()
         assert.equal(await overview.locator('.project-overview-workflow [data-project-role="research"] button').isVisible(), true);
         assert.equal(await overview.locator('.project-overview-technical').getAttribute('open'), null);
         assert.equal(await page.locator('#settings-speech').count(), 1, 'Native fixture enables audio');
-        await overview.locator('[data-project-audio="profiles"]').click();
+        const audioSettings = page.locator('#project-settings #project-audio-settings');
+        assert.equal(await audioSettings.locator('#runtime-open').count(), 1, 'Services live with project settings');
+        assert.equal(await overview.locator('#settings-speech, #settings-speech-output, #settings-speech-mic').count(), 0,
+          'Refreshing the overview cannot move configuration out of settings');
+        await audioSettings.locator('#settings-speech').click();
         assert.equal(await page.locator('#modal-speech[open]').count(), 1);
         assert.equal(await page.locator('#speech-title').textContent(), fixtures.en.labels.speech_profiles_title);
         await page.locator('#modal-speech button').first().click();
-        await overview.locator('[data-project-audio="output"]').click();
+        await audioSettings.locator('#settings-speech-output').click();
         assert.equal(await page.locator('#modal-speech[open]').count(), 1);
         assert.equal(await page.locator('#speech-title').textContent(), fixtures.en.labels.speech_output_title);
         await page.locator('#modal-speech button').first().click();
@@ -262,6 +266,7 @@ server.serve_forever()
         assert.equal(await page.locator('#view-pane-analysis.active').count(), 1);
         await page.locator('#tab-view-project').click();
         await page.locator('#project-overview-body:not([hidden])').waitFor();
+        assert.equal(await audioSettings.locator('#settings-speech').count(), 1, 'Settings survive overview navigation and refresh');
         await overview.locator('[data-project-role="research"] button').click();
         assert.equal(await page.locator('#view-pane-research.active').count(), 1);
         await page.waitForFunction(() => document.querySelector('#research-tabs [data-rtab="dossiers"]').getAttribute('aria-selected') === 'true');

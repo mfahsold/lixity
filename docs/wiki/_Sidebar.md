@@ -1,6 +1,9 @@
 ### 📖 [Lixity Wiki](Home.md)
 
 * **[Home](Home.md)**
+* [Complete documentation map](https://mfahsold.github.io/lixity/README.md)
+* [Workspace manual](https://mfahsold.github.io/lixity/WORKSPACE.md)
+* [CLI reference](https://mfahsold.github.io/lixity/USAGE.md)
 * **[Quickstart](Quickstart.md)**
 * **[Editorial Metrics](Editorial-Metrics.md)**
 * **[Research & Dossiers](Research-and-Dossiers.md)**

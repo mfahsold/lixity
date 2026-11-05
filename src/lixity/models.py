@@ -6,7 +6,7 @@ chapter metrics, tense profiles, and synchronization reports.
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from .sentences import LONG_SENTENCE_MAX, MEDIUM_SENTENCE_MAX, SHORT_SENTENCE_MAX
 from .status import SCHEMA_VERSION_ANALYZE
@@ -187,6 +187,18 @@ class CorpusConfig(BaseModel):
         default=None,
         description="Regex for word tokenization (None = language profile default).",
     )
+
+    @field_validator("word_regex")
+    @classmethod
+    def validate_word_regex(cls, value: str | None) -> str | None:
+        """Keep configured tokens string-valued before any analysis runs."""
+        # language imports this schema; defer the shared compiler until validation.
+        from .language import compile_word_pattern
+
+        if value is not None:
+            compile_word_pattern(value)
+        return value
+
     first_person_starters: list[str] | None = Field(
         default=None,
         description="First-person singular pronouns for sentence-starter analysis (None = language profile default).",
@@ -203,6 +215,33 @@ class CorpusConfig(BaseModel):
         default=None,
         description="Regex for adjective suffixes (None = language profile default).",
     )
+
+    @field_validator(
+        "dialogue_regex", "filter_verbs_regex", "praesens_regex", "praeteritum_regex",
+        "passive_regex", "nominal_regex", "adjective_regex",
+    )
+    @classmethod
+    def validate_cue_regex(cls, value: str | None) -> str | None:
+        """Reject malformed cues without changing their captures or matching flags."""
+        from .language import compile_pattern
+
+        if value is not None:
+            compile_pattern(value)
+        return value
+
+    @field_validator("signal_keywords", "motif_regexes")
+    @classmethod
+    def validate_named_cue_regexes(cls, value: dict[str, str] | None) -> dict[str, str] | None:
+        """Identify the named cue when a configured pattern table is malformed."""
+        from .language import compile_pattern
+
+        patterns = value or {}
+        try:
+            for name in patterns:
+                compile_pattern(patterns[name])
+        except ValueError as exc:
+            raise ValueError(f"Invalid pattern for {name!r}: {exc}") from exc
+        return value
 
 
 class SentenceDistribution(BaseModel):
@@ -346,6 +385,10 @@ class CorpusMetrics(BaseModel):
     sentence_cv: float = Field(default=0.0, description="Coefficient of variation of sentence lengths.")
     start_entropy: float = Field(default=0.0, description="Shannon entropy of sentence starters.")
     first_person_start_rate: float = Field(default=0.0, description="Share of first-person sentence openings.")
+    function_word_pct: float | None = Field(
+        default=None, ge=0.0, le=100.0,
+        description="Share of function-word tokens in the full analyzed prose; absent in older metric payloads.",
+    )
     passive_density: float = Field(default=0.0, description="Passive-voice markers per 1,000 words.")
     nominalization_density: float = Field(
         default=0.0, description="Nominal suffix/pattern matches per 1,000 counted tokens; not grammatical classifications."

@@ -539,6 +539,11 @@ class TestJsDomContract(unittest.TestCase):
         from lixity.ui.publication import render_publication
 
         html += render_publication({"mode":"companion", "title":"Synthetic context", "max_chapter":0})
+        html += render_publication({"mode":"reader", "title":"Synthetic audio", "max_chapter":1,
+            "source_sha256":"a" * 64, "audio":{"schema_version":"lixity-reader-audio/1",
+                "source_sha256":"a" * 64, "tracks":[{"chapter":1, "title":"Arrival",
+                    "file":"assets/audio/" + "b" * 64 + ".wav", "sha256":"b" * 64,
+                    "byte_length":48, "duration_seconds":0.1, "origin":"imported"}]}})
         missing = sorted(dom_id for dom_id in ids if f'id="{dom_id}"' not in html)
         self.assertEqual(missing, [], f"dashboard.js looks up missing ids: {missing}")
 

@@ -1,6 +1,6 @@
 .project-overview { margin: 0; min-width: 0; }
 .project-overview-heading { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
-.project-overview-heading h3 { margin: 0; font-size: 1.25rem; font-weight: var(--weight-semibold); }
+.project-overview-heading h3 { margin: 0; font-size: var(--text-section-title); font-weight: var(--weight-strong); }
 .project-overview-heading .ctl { flex-shrink: 0; }
 .project-overview-workflow h4, .project-overview-outputs h4 { font-size: var(--text-section-title, 1rem); font-weight: var(--weight-semibold); margin: 1rem 0 .5rem; }
 .project-overview-actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }

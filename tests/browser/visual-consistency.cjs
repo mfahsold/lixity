@@ -82,15 +82,15 @@ async function checkTypography(page, label) {
   const settingLabel = await textRole(page.locator('.setting-field label').first());
   const formLabel = await textRole(page.locator('.form-label').first());
   assert.deepEqual(settingLabel, formLabel, `${label} Settings and modal field labels`);
-  const settingsTitle = await textRole(page.locator('.settings-form h3'));
+  const settingsTitle = await textRole(page.locator('.settings-heading'));
   const sectionTitle = await textRole(page.locator('#research-manager .section-heading').first());
   assert.deepEqual(settingsTitle, sectionTitle, `${label} section headings`);
   const fieldHelp = await textRole(page.locator('#set-author-name-help'));
   const sharedHelp = await textRole(page.locator('#research-hint'));
   assert.deepEqual(fieldHelp, sharedHelp, `${label} field and panel helper text`);
   const code = await textRole(page.locator('code').first());
-  const passageId = await textRole(page.locator('#r-link-passage-id'));
-  assert.equal(passageId.family, code.family, `${label} technical input and code font`);
+  assert.equal(await page.locator('#r-link-passage-id').getAttribute('type'), 'hidden',
+    `${label} the internal passage key is not a visible editing field`);
   assert.notEqual(code.family, body.family, `${label} code keeps its reading role`);
   assert.equal((await textRole(page.locator('.project-header h1'))).family, body.family,
     `${label} project identity uses the interface font`);
@@ -221,6 +221,12 @@ async function checkScale(page, label) {
             path: path.join(artifacts, `selected-hover-research-${theme}-${width}.png`)});
         }
         await checkWorkspacePublicationWrapper(app, `${theme} ${width}px`);
+        await app.locator('#tab-view-project').click();
+        if (width === 320) {
+          const title = await app.locator('#set-title').boundingBox();
+          assert.ok(title.width >= 224 && title.x >= 0 && title.x + title.width <= width,
+            'Mobile project fields retain useful width instead of accumulating nested card padding');
+        }
         await checkTypography(app, `${theme} ${width}px`);
         await checkScale(app, `${theme} ${width}px app`);
         await checkScale(site, `${theme} ${width}px site`);

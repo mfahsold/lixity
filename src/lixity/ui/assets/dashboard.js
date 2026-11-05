@@ -790,6 +790,8 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
   var editProfiles = document.getElementById("site-export-edit-profiles");
   var cap = document.getElementById("site-export-max-chapter");
   var analysisOptions = document.getElementById("site-export-analysis-options");
+  var audioOption = document.getElementById("site-export-audio-option");
+  var audio = document.getElementById("site-export-audio");
   var analysisChoices = ["chapters", "language", "full"].map(function(key) {
     return document.getElementById("site-export-analysis-" + key);
   });
@@ -843,6 +845,8 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
     checkButton.disabled = downloadButton.disabled;
     sources.disabled = busy || (curated ? !selected : !research.checked);
     analysisOptions.hidden = mode.value !== "reader";
+    audioOption.hidden = mode.value !== "reader";
+    audio.disabled = busy || !token || mode.value !== "reader";
     analysisChoices.forEach(function(input) { input.disabled = busy || !token || mode.value !== "reader"; });
     if (!curated && !research.checked) sources.checked = false;
     document.getElementById("site-export-publication-options").hidden = !curated;
@@ -869,11 +873,17 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
       category === "research" ? "site_export_limit_scope" : "site_export_limit_" + category + "_scope";
     var details = document.createElement("details"), summary = document.createElement("summary");
     summary.textContent = uiLabel("site_export_limit_details");
-    var diagnostic = document.createElement("pre");
-    diagnostic.textContent = JSON.stringify(Object.assign({}, report, {
-      message:typeof body.message === "string" ? body.message : report.message
-    }), null, 2);
-    details.append(summary, diagnostic);
+    details.append(summary);
+    var unit = Object.prototype.hasOwnProperty.call(report, "limit_bytes") ? "bytes" : "count";
+    ["observed", "limit", "overflow"].forEach(function (key) {
+      var value = report[key + "_" + unit];
+      if (!Number.isSafeInteger(value) || value < 0) return;
+      var line = document.createElement("p"); line.className = "ctl-note";
+      var amount = new Intl.NumberFormat(document.documentElement.lang || "en").format(value);
+      line.textContent = uiLabel("site_export_limit_" + key) + ": " + amount +
+        (unit === "bytes" ? " B" : "");
+      details.append(line);
+    });
     preflightResult.replaceChildren(details); preflightResult.hidden = false;
     return uiLabel("site_export_limit_" + category) + " " + uiLabel(recovery) + " " + uiLabel("site_export_limit_incomplete");
   }
@@ -952,6 +962,7 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
       payload.max_chapter = cap.value === "" ? null : Number(cap.value);
       var analysisSections = analysisChoices.filter(function(input) { return input.checked; }).map(function(input) { return input.value; });
       if (mode.value === "reader" && analysisSections.length) payload.analysis_sections = analysisSections;
+      if (mode.value === "reader" && audio.checked) payload.include_audio = true;
     }
     var checking = event.submitter === checkButton, requestToken = token;
     function sameExportContext() { return token === requestToken && document.body.dataset.manuscriptProjectToken === requestToken; }

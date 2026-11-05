@@ -1,53 +1,46 @@
-# Schnelleinstieg in Lixity 🚀
+# Schnelleinstieg in Lixity
 
-Dieser Leitfaden führt Sie in wenigen Minuten von der Installation bis zur ersten Manuskriptprüfung.
-
----
+Die [bebilderte Einführung](https://mfahsold.github.io/lixity/guides/first-look-de.html)
+führt durch das gemeinsame Demoprojekt. In der
+[schreibgeschützten Demo](https://mfahsold.github.io/lixity/demo/report.html)
+kannst du ohne Installation lesen und recherchieren.
 
 ## 1. Installation
 
-Lixity erfordert Python 3.10 oder neuer. Die Installation erfolgt unkompliziert über PyPI:
-
-```bash
-pip install lixity
-```
-
-Für Audio-Funktionen (Sprachsynthese) und Poppler-basierte PDF-Vergleiche können optionale Systempakete ergänzt werden (siehe [docs/INSTALLATION.md](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md)).
-
----
+Die [Installationsanleitung](https://mfahsold.github.io/lixity/INSTALLATION.md)
+beschreibt die isolierte Installation, Voraussetzungen und Updates.
+Optionale Sprachdienste benötigen eine eigene Umgebung.
 
 ## 2. Den lokalen Arbeitsbereich starten
 
-Starten Sie den lokalen Hintergrunddienst mit:
-
-```bash
-lixity service start
+```sh
+lixity service start --open
 ```
 
-Öffnen Sie anschließend Ihren Webbrowser unter:
-`http://localhost:8765/`
-
----
+Die Standardadresse ist `http://127.0.0.1:8765/`.
 
 ## 3. Ein Manuskript laden
 
-1. Klicken Sie in der Navigationsleiste auf **Projekt** oder nutzen Sie den Button **Projekt öffnen**.
-2. Wählen Sie Ihre Manuskriptdatei im Markdown- (`.md`) oder Text-Format (`.txt`).
-3. Lixity liest die Kapitelstruktur automatisch ein (Standard: Markdown-Überschriften `# Kapitelname` oder `## Kapitelname`).
+**Projekt öffnen** verbindet einen vorhandenen Projektordner samt Recherchearchiv.
+**Manuskript analysieren** zeigt eine Importvorschau und erstellt nach Bestätigung
+eine Kopie in einem neuen Projekt. Diese beiden Aktionen sind nicht austauschbar.
 
-> [!TIP]
-> **Aus Scrivener oder Word importieren:**  
-> Exportieren Sie Ihren Text in Scrivener einfach über *Ablage → Exportieren → Datei(en)* als Markdown (.md). In Microsoft Word speichern Sie den Text als UTF-8-Nur-Text (.txt) oder wandeln ihn mit Pandoc um.
-
----
+Für Markdown verwende UTF-8 und Kapitelüberschriften wie `## Kapitelname`, sofern
+das Projekt kein eigenes Kapitelmuster festlegt. Der noch unveröffentlichte
+Dateiimport akzeptiert auch jeweils eine `.txt`- oder `.docx`-Datei.
+Prüfe Zielordner und Analysesprache vor dem Bestätigen. Englisch ist die
+Standardsprache; automatische Spracherkennung muss ausdrücklich gewählt werden.
 
 ## 4. Die drei Hauptansichten
 
-Die Benutzeroberfläche gliedert sich in drei Kernbereiche:
+Lies zunächst einen Absatz im **Manuskript**. Schalte **Analyse** ein, wenn du
+Messwerte sehen möchtest; das Absatzmenü **…** öffnet die Werkzeuge zur Textstelle.
+**Recherche** enthält Quellen, Thesen und Dossiers. Unter **Projekt** findest du
+Projektverwaltung und Einstellungen. Ein Ansichtswechsel speichert keine
+Entscheidung und verändert den Text nicht.
 
-1. **📖 Manuskript (Leseansicht):**  
-   Fokussierter Lesemodus mit kontinuierlichem Textfluss. Auffällige Passagen (z. B. Tempushäufungen, Satzlängenextreme) werden durch diskrete Farbtöne markiert. Rechts kann ein Recherche-Dossier parallel geöffnet werden.
-2. **🔬 Recherche & Dossiers:**  
-   Verwalten Sie historische Notizen, Sachbelege, Zotero-Quellen und kreative Entscheidungen. Führen Sie Wortschatz-Abgleiche zwischen Quelldokumenten und Kapiteln durch.
-3. **📁 Projekt:**  
-   Metadaten, Projekteinstellungen (Lektoratsschwellenwerte, Register-Ziele), Audio-Regie und PDF-Exporte (Lektoratsfassung A4 mit Zeilennummern, Buchlayout A5, Analysebericht).
+Das [UI-Handbuch](https://mfahsold.github.io/lixity/WORKSPACE.md), die
+[CLI-Referenz](https://mfahsold.github.io/lixity/USAGE.md) und das
+[Audio-Handbuch](https://mfahsold.github.io/lixity/AUDIO.md) beschreiben die weiteren
+Schritte auf Englisch. Nach einem Serverneustart öffnest du das Projekt erneut
+über die Startseite; alte Projektansichts-URLs sind dann ungültig.

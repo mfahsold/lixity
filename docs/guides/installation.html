@@ -15,7 +15,7 @@
 <meta property="og:site_name" content="Lixity"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta property="og:image:width" content="2960"/>
-<meta property="og:image:height" content="2090"/>
+<meta property="og:image:height" content="2180"/>
 <meta property="og:image:alt" content="Lixity continuous manuscript reader with chapter navigation and contextual tools"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Install Lixity — local manuscript analysis"/>
@@ -43,14 +43,14 @@
     "name": "Lixity",
     "url": "https://mfahsold.github.io/lixity/"
   },
-  "dateModified": "2026-11-02",
+  "dateModified": "2026-11-05",
   "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE",
   "mainEntityOfPage": "https://mfahsold.github.io/lixity/guides/installation.html",
   "image": {
     "@type": "ImageObject",
     "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-light.png",
     "width": 2960,
-    "height": 2090,
+    "height": 2180,
     "caption": "Lixity continuous manuscript reader with chapter navigation and contextual tools"
   }
 }
@@ -92,10 +92,11 @@
 <main class="guide" id="content">
 <nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="../#guides">Guides</a></li><li><span aria-current="page">Installation</span></li></ol></nav>
 <h1>Install Lixity and open a manuscript locally</h1>
+<p>This short guide covers the ordinary application setup. The <a href="../INSTALLATION.md">installation manual</a> owns advanced environments, optional workers, service lifecycle and troubleshooting. Use the <a href="../README.md">documentation map</a> to find other tasks.</p>
 <p>Explore sentence rhythm, vocabulary and style patterns in your Markdown manuscript. Lixity runs its analysis on your computer and saves a dashboard you can open in a browser. No account or manuscript upload is required.</p>
-<p class="updated">Updated <time datetime="2026-10-23">23 October 2026</time></p>
+<p class="updated">Updated <time datetime="2026-11-05">5 November 2026</time></p>
 
-<p class="notice-box"><strong>Version line:</strong> This source guide describes <strong>v0.7.7</strong>; check <a href="https://github.com/mfahsold/lixity/releases/latest">published releases</a> for package availability, in the pre-1.0 <strong>0.x</strong> line. Historical <strong>1.x</strong> and <strong>3.x</strong> tags predate the numbering reset. A larger historical number does not mean a newer release; product and schema versions are independent.</p>
+<p class="notice-box"><strong>Version line:</strong> This source guide describes <strong>v0.7.9</strong>; check <a href="https://github.com/mfahsold/lixity/releases/latest">published releases</a> for package availability, in the pre-1.0 <strong>0.x</strong> line. Historical <strong>1.x</strong> and <strong>3.x</strong> tags predate the numbering reset. A larger historical number does not mean a newer release; product and schema versions are independent.</p>
 
 <h2 id="requirements">What do I need?</h2>
 <p>Install <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a>. It installs the published package and supplies managed Python 3.12; no Git or separate Python install is needed. Lixity is on <a href="https://pypi.org/project/lixity/">PyPI</a>; every release also ships a pinned wheel with checksums on <a href="https://github.com/mfahsold/lixity/releases">GitHub Releases</a>, and released versions are archived on Zenodo for citation (concept DOI <a href="https://doi.org/10.5281/zenodo.23390297">10.5281/zenodo.23390297</a>). Installation needs an internet connection. Analysis runs offline afterward. PDF import has <a href="research-pdf.html#ocr">additional requirements</a>.</p>
@@ -115,7 +116,7 @@ uv tool update-shell</code></pre>
 lixity doctor
 lixity service start --open</code></pre>
 <p>If <code>lixity</code> is not found, check <code>uv tool list</code>, run <code>uv tool update-shell</code> and open a new terminal. <code>uv tool dir --bin</code> shows the executable directory. The health check reports installation/service issues, not linguistic validity.</p>
-<p>This installs the published package from PyPI in uv's <a href="https://docs.astral.sh/uv/concepts/tools/">isolated tool environment</a>. Shell integration applies to new terminals. Check <code>lixity --version</code> and the <a href="../releases/v0.7.7.md">release notes</a> for changes and compatibility.</p>
+<p>This installs the published package from PyPI in uv's <a href="https://docs.astral.sh/uv/concepts/tools/">isolated tool environment</a>. Shell integration applies to new terminals. Check <code>lixity --version</code> and the <a href="../releases/v0.7.9.md">release notes</a> for changes and compatibility.</p>
 
 <h2 id="first-dashboard">Start the workspace</h2>
 <p>The managed app opens <code>http://127.0.0.1:8765/</code>. Its default is an empty workspace; it does not search your terminal's current folder. Choose <strong>Open Project</strong> for an existing folder or <strong>Analyze a manuscript</strong> for an import preview. Confirm the language and read a passage before interpreting its measurements.</p>
@@ -148,7 +149,7 @@ lixity service start --open</code></pre>
 </details>
 
 <h2 id="audio">Optional audio export and speech providers</h2>
-<p><strong>Audio workflow:</strong> timeline JSON and SSML export need no synthesis engine. Explicit OpenAI-compatible providers use a configured endpoint, model and voice; authentication can reference an environment variable. Imported WAV/FLAC/MP3 inspection stays local, with FFmpeg required for compressed or non-PCM input. Text comparison additionally needs an audio-hash-bound timed transcript. Existing audio settings require a reviewed, backed-up schema upgrade before saving an external profile. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#audio-export-and-external-providers-unreleased">audio setup and commands</a>.</p>
+<p><strong>Audio workflow:</strong> timeline JSON and SSML export need no synthesis engine. Explicit OpenAI-compatible providers use a configured endpoint, model and voice; authentication can reference an environment variable. Imported WAV/FLAC/MP3 inspection stays local, with FFmpeg required for compressed or non-PCM input. Text comparison additionally needs an audio-hash-bound timed transcript. Existing audio settings require a reviewed, backed-up schema upgrade before saving an external profile. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#audio-export-and-external-providers-unreleased">audio setup and commands</a>.</p>
 <h2 id="zotero">Optional Zotero Desktop</h2>
 <p>For source capture, install Zotero 10 or later on the same computer and enable its local API in Settings → Advanced. Download the attachments you need. Lixity can browse collections and retain selected PDF/text and PNG/JPEG attachments with your permission. Retention permits a local copy, not redistribution or factual acceptance. No cloud account is needed. See <a href="research-pdf.html#zotero">Zotero capture and migration</a>; audio and video remain in Zotero.</p>
 
@@ -161,7 +162,7 @@ lixity service start --open</code></pre>
 <p>The <a href="../ONBOARDING.md">first-session guide</a> explains these controls.</p>
 
 <h2 id="restart">Running the server day to day</h2>
-<p>The workspace uses <code>http://127.0.0.1:8765/</code> by default. Built-in analysis runs on your computer; optional integrations have their own setup and data handling. Tabs connected to one server share its active project.</p>
+<p>The workspace uses <code>http://127.0.0.1:8765/</code> by default. Built-in analysis runs on your computer; optional integrations have their own setup and data handling. Separate project views can coexist under the same server address. Tabs using the same view share that view's project; view URLs expire on restart.</p>
 <pre><code>lixity service status
 lixity service restart
 lixity service stop</code></pre>

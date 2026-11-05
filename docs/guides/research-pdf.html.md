@@ -2,7 +2,9 @@
 
 Collect sources, read and annotate in Zotero. Use Lixity's research workspace to connect selected evidence with claims, authorial decisions and exact manuscript quotations. A capture preserves the source version you used; it does not establish that a claim is true.
 
-Updated 22 October 2026
+This walkthrough introduces the author workflow. The [research manual](../research/USAGE.md#find-a-task) owns the detailed procedures and compatibility rules; [design history](../research/README.md#design-history) is separate from implemented commands.
+
+Updated 5 November 2026
 
 **Before importing:**
 
@@ -16,62 +18,6 @@ and
 
 .
 
-## Export a manuscript as PDF
-
-Open **PDF export** above the workspace views, choose a purpose and select **Download PDF**. The same composer serves the browser and CLI; downloads create no server export files and change no manuscript. Standalone HTML has no download action.
-
-The initial choice is an A4 editorial copy with line numbers and a correction margin. Compare the same six chapters of *The Crate at Warehouse 4* in all five prepared files below; these are exports from the shared demo project.
-
-- **Neutral document:** plain A4 for an exposé or everyday text, with authored headings and no added title page, header, footer or line numbers. [Example PDF](../demo/warehouse-4-document.pdf).
-
-- **Editorial copy:** A4, readable text and space for annotations. [Same excerpt](../demo/warehouse-4-editor.pdf).
-
-- **Reading copy:** A5, chapter openings and continuous reading. [Same excerpt](../demo/warehouse-4-book.pdf).
-
-- **Submission sheets:** A4, at most 30 lines of 60 characters. [Same excerpt](../demo/warehouse-4-sheet.pdf).
-
-- **Analysis report:** metric tables rather than the manuscript. [Complete report](../demo/warehouse-4-report.pdf).
-
-```
-lixity pdf manuscript.md --layout editor -o editorial.pdf
-lixity pdf expose.md --layout document -o expose.pdf
-lixity pdf --help
-```
-
-The neutral document keeps the manuscript's own title and structure; configured title and author are PDF metadata only. It adds no analysis, byline or control notice. CLI PDF and dashboard outputs must differ from the source, including symbolic and hard-link aliases; the guard runs again immediately before atomic replacement.
-
-Manuscript copies retain subheadings, scene breaks, lists, quotations, inline emphasis and endnotes. A bounded set of embedded LaTeX text commands is supported without executing TeX. Unsupported TeX constructs fail explicitly; mathematics and image placement are unavailable. Host TrueType fonts keep supported text searchable and copyable. Missing glyphs identify the font role and Unicode codepoint; there is no mixed-script fallback, contextual shaping, bidirectional layout or PDF/X preflight. See [options and limits](../USAGE.md#lixity-pdf).
-
-## Share a reading website
-
-In **Project actions → Reading website**, download a ZIP that a reader can unzip and open in a browser. Choose a review workspace, a novel with selected background material, or a standalone companion without the novel text. The reader needs no Lixity installation.
-
-For a reader companion, prepare a named profile under **Project → Settings → Reading website profiles**: select dossier sections, public titles and the chapter after which each note should appear. A reader explicitly confirms their progress; scrolling does not mark chapters as read. Images, diagrams and offline maps can keep the background easy to explore.
-
-Try the fictional [novel and companion](../demo/reader/) or [standalone companion](../demo/companion/). Change the completed chapter to see the difference.
-
-**For an excerpt, set an export chapter limit.** Later material and its assets are left out of the files. The progress control alone only hides included material; it is not access protection. Selected dossier text may itself contain spoilers, so review the copy before sharing.
-
-The review workspace has a different scope: optional Research includes internal notes, earlier authored versions and cited excerpts. Original source files always require a separate choice. Anyone with the files can copy them; confidential hosting needs its own access controls. See [configuration and exact sharing scope](../USAGE.md#export-a-reading-website).
-
-## Enter publication details
-
-Open **Project → Settings → A5 book PDF details** in the native workspace. This optional section starts collapsed and requires an explicit project. Title, author and publication data use the existing configuration and PDF composer. Select the inclusion checkbox to add entered imprint text after the A5 reading copy's title page. Neutral documents, A4 editorial copies, submission sheets and reports omit it; all-empty fields add no blank imprint page. Long entries can continue across pages.
-
-Enter publisher/self-publisher name and address, printer name and address, edition, year, print and digital ISBNs, rights notice, credits or other information as needed. Every text field defaults to empty. Lixity checks syntax and bounds, not assigned ISBNs, rights or legal completeness, and supplies no inferred identity, address, copyright notice or DNB catalog claim. See the [complete configuration contract](../USAGE.md#publication-settings).
-
-**Apply** saves title, author and publication together in the selected project's `lixity.toml`; language and analysis controls keep their session behavior. The updated view is prepared before metadata is committed. Failed validation, reading, rendering or replacement keeps the previous metadata and active view. Reload after a project/config change so the form and PDF export use the current context.
-
-For print in Germany, requirements depend on the Bundesland. [BayPrG Article 7](https://www.gesetze-bayern.de/Content/Document/BayPrG-7) and [NRW § 8](https://recht.nrw.de/lrgv/gesetz/18052021-pressegesetz-fuer-das-land-nordrhein-westfalen-landespressegesetz-nrw/) require printer/publisher names or business names and addresses, with author/editor identity for self-publishing. Enter the actual publishing identity separately from a pen name.
-
-Digital provider/website duties are separate. [MStV § 18](https://www.gesetze-bayern.de/Content/Document/MStV-18) addresses name/address information beyond purely personal or family telemedia; [DDG § 5](https://www.gesetze-im-internet.de/ddg/__5.html) adds contact and applicable business disclosures for businesslike digital services normally offered for payment. Check the provider and distribution channel: every ebook does not automatically need every website field. Lixity does not publish or validate a website imprint.
-
-[ISBNs are voluntary](https://german-isbn.de/faq/faq-isbn); separately available print, PDF and EPUB formats use distinct numbers when assigned. Lixity compares canonical identifiers, so equivalent ISBN-10 and ISBN-13 forms cannot identify two different formats. A rights notice is optional: [copyright generally arises without formalities](https://www.wipo.int/en/web/copyright/faq-copyright). [Legal deposit](https://www.gesetze-im-internet.de/dnbg/__14.html) is a separate publication process that Lixity does not perform.
-
-[BFSG § 1](https://www.gesetze-im-internet.de/bfsg/__1.html) covers consumer e-book services provided after 28 June 2025; [§ 3(3)](https://www.gesetze-im-internet.de/bfsg/__3.html) exempts microenterprises providing services. Scope and exceptions must be checked for the publication. Lixity exports fixed-layout A4 document/editorial/sheet/report and A5 book PDFs, without EPUB, DOCX, custom trim sizes or PDF/UA/PDF/X certification. Searchable text, metadata and bookmarks do not establish BFSG compliance.
-
-PDFs share title/author/language metadata and corrected font subsets. A5 chapters have bookmarks; body pages have bounded running headers and physical folios. Title/imprint pages have no running decorations but still count toward folios. A4 sheets and reports show current/total page counts outside the body grid.
-
 ## Import a local source
 
 Start with a source you are allowed to retain. This synthetic example assumes you saved a short note as `source.txt`. Initialize only a new research archive:
@@ -80,13 +26,13 @@ Start with a source you are allowed to retain. This synthetic example assumes yo
 lixity research init --project ./sample-project --title "Sample research" --language en
 lixity research ingest --project ./sample-project --file ./source.txt --allow-retention --origin-url https://example.org/archive/source
 # Or import several files with phase-change messages:
-lixity research batch-ingest --project ./sample-project --allow-retention --progress ./sources/*.txt
+lixity research ingest --project ./sample-project --file ./sources/*.txt --allow-retention --progress
 lixity research search --project ./sample-project --query "reading room"
 ```
 
 `--allow-retention` confirms your permission to keep source bytes locally. It neither grants redistribution rights nor makes a claim true. Avoid importing sensitive sources into public repositories.
 
-For an authorized file outside Zotero, open **Research → Source copies → Add local source** in the current development workspace. Choose a text or PDF file, or paste text, and confirm retention. A failed submission keeps the draft. If all active sources are linked to Zotero, use Zotero capture instead; direct import remains available through the CLI/API. Released versions may use a different label.
+For an authorized file outside Zotero, open **Research → Source copies → Add local source** in the current development workspace. Choose a text or PDF file, or paste text, and confirm retention. A failed submission keeps the draft. The local importer remains available alongside Zotero in current development; released versions may use different labels or hide local import for wholly Zotero-linked archives. Direct CLI/API import remains available.
 
 For a visual reference, open a dossier and choose **Add image**. Preview an authorized local PNG/JPEG, describe it and confirm retention before saving. The original image and dossier version are saved together. Earlier versions keep their exact image; removed images show an unavailable placeholder. Images have no extracted text or linguistic scores. See [format limits and archive compatibility](../research/USAGE.md#keep-a-visual-reference-in-a-dossier).
 
@@ -94,13 +40,13 @@ For a visual reference, open a dossier and choose **Add image**. Preview an auth
 
 This field records the original HTTP(S) address in source details and citations. Lixity does not fetch the page or monitor it. Use a stable public address where appropriate; credentials and whitespace are rejected. Do not include private access tokens or signed download links.
 
-Matching URLs do not merge sources. Refreshing a named source with a new URL creates a new capture; earlier citations keep their original text and URL. These captures use the v2 archive format. Back up before upgrading and use compatible readers and writers; see [archive compatibility](../research/USAGE.md).
+Matching URLs do not merge sources. Refreshing a named source with a new URL creates a new capture; earlier citations keep their original text and URL. These captures use the v2 archive format. Back up before upgrading and use compatible readers and writers; see [archive compatibility](../research/USAGE.md#limits).
 
 ## Keep source work in Zotero
 
 Zotero owns bibliographic metadata, ordinary reading, annotations and general notes. Lixity's attachment selector captures only the evidence versions needed for your project; **Open in Zotero** returns to the source for further work.
 
-Run Zotero on the same computer and download the attachments you need. Open **Research → Evidence captures → Capture from Zotero**, choose a library and collection, inspect an item, select an eligible attachment and confirm retention. Lixity reads the local API without changing the Zotero library. Eligible attachments include PNG/JPEG alongside PDF/text. Audio, video and unsupported attachments remain in Zotero.
+Run Zotero on the same computer and download the attachments you need. Open **Research → Source copies → Capture from Zotero** in the current development workspace, choose a library and collection, inspect an item, select an eligible attachment and confirm retention. Lixity reads the local API without changing the Zotero library. Eligible attachments include PNG/JPEG alongside PDF/text. Audio, video and unsupported attachments remain in Zotero.
 
 Captured evidence stays readable when Zotero is closed. Refresh linked sources explicitly when they change; old quotations stay intact. There is no background synchronization. Zotero captures need the v3 archive format, which older readers cannot open.
 
@@ -120,7 +66,7 @@ Images and rendered diagrams share a [local zoom viewer](../screenshots/dashboar
 
 ## Search sources and current notes
 
-The dashboard Search tab includes sources and current dossiers, claims and decisions. Choose a narrower scope when needed, then use **View details** to read a result. Search refreshes an outdated index automatically; `--strict` reports an error instead. Only source passages can be cited as evidence.
+The dashboard Search tab includes sources and current dossiers, claims and decisions. Choose a narrower scope when needed, then use **View entry** to read a current authored record or open a source passage to inspect its citation. Search refreshes an outdated index automatically; `--strict` reports an error instead. Only source passages can be cited as evidence.
 
 For a known source or dossier, its list filter narrows the loaded title and tag metadata immediately. Use **Search → All records** to find words inside retained text and current authored notes; earlier versions are outside that search.
 
@@ -144,6 +90,36 @@ lixity research cite --project ./sample-project --query "reading room" \
 
 One match resolves the existing full-paragraph citation. Zero or multiple matches return search JSON and exit `1`; multiple matches print numbered choices on stderr. A numbered choice requires the same query and displayed snapshot. Changed snapshots or unavailable sources require another search. Exact `--passage` retrieval remains available for historical captures. See the [selection and API reference](../research/USAGE.md#choose-citations-by-keywords-since-v300).
 
+## Prepare evidence from selected source text
+
+Open a retained source and select text within one uniquely resolved paragraph. The selection action prepares the existing claim evidence-link form. Its preview shows both your selected quote and the full retained paragraph; choose a claim and relation, add your own rationale if needed, then save separately.
+
+The saved citation still identifies the whole paragraph and its source version. It creates no sentence-level citation. Cross-paragraph or ambiguous selections are unavailable; use the whole-passage actions in the Passages view instead. Selecting text or opening the draft writes no record. Evidence status labels express your own assessment, not historical certainty or a computed probability.
+
+For reading notes against the manuscript, open **Dossier alongside** in Manuscript and choose a dossier, or use the action on that dossier's card. The optional companion reader is read-only. Closing it preserves manuscript search and open paragraphs; refresh explicitly for the latest saved dossier version. Narrow screens place the dossier above the manuscript.
+
+## Associate manuscript text with a claim
+
+Select text within one opened manuscript paragraph, choose **Link selection to claim**, choose a current claim, permit local retention of the quote and select **Save association**. Previewing writes nothing. Saving keeps a manual association to the exact claim version, with the quote and paragraph anchor; it does not import the complete manuscript or edit prose.
+
+Exact resolved quotes have neutral dotted marks and a book-icon Research control, separate from analysis colors. Changed text or claim versions request review; an edit outside the quote resolves as *adjusted* and can be re-pinned explicitly in the review tab (or with `reconcile-manuscript --accept-moved`), while edited quotes and ambiguous paragraphs remain unresolved. Saved associations are listed in the research **Review** tab with their anchor state and review flags; listing them never writes or repins. These flags do not establish a contradiction or factual support. Both dossier readers show current linked claims with saved-version history and active saved quote counts. Zero saved links does not establish that a claim is unused in prose.
+
+Choose **Explore passage → Research for this passage**, a passage association count or a marked quotation to open its linked context beside the manuscript. Quotations of the same claim share a compact card; current dossier decisions have a separate count. Titles open current entries; **Linked version** opens the exact earlier claim or dossier version retained by the association. Current decisions do not reconstruct the quotation's historical state. **Review** opens the dedicated anchor review. Opening context writes nothing, and an empty summary means only that this passage has no saved associations.
+
+**Before the first save:**
+
+back up the archive. Retention-confirmed manuscript links require record/manifest v7 support. Archive, physical-storage and response versions have independent compatibility rules. Exported quotes remain private manuscript material. See
+
+[anchoring, retention and compatibility](../research/USAGE.md#associate-a-manuscript-quote-with-a-claim)
+
+.
+
+## Edit dossiers and review decisions
+
+Open a dossier to read its notes, linked claims and source quotations. Use **Edit section** beside a unique heading for a bounded change, or **Edit** for the full record. Select correction or supersession, give a reason and save explicitly. An unchanged save keeps the existing revision; a changed save appends history. For an external editor, use the [export → edit → preview → apply procedure](../research/USAGE.md#edit-an-exported-markdown-dossier). Ordinary source import does not create an authored dossier.
+
+In **Review**, open **Read decision with dossier** to compare the named versions. **Mark as applied** records your assessment for those exact versions; it does not update old pins or inspect prose. A later revision may need another review. The manual covers [concurrent drafts](../research/USAGE.md#resolve-conflicting-drafts) and [saving related changes together](../research/USAGE.md#review-decisions-and-save-related-revisions-together).
+
 ## Organize claim periods and causal interpretations
 
 Inside **Claims**, choose **Timeline**. It places valid four-digit CE years, `YYYY-MM` months, ISO dates and supported ranges while preserving your original period labels. Missing, unclear or invalid periods remain visible under **Unplaced periods**. Reading makes no archive changes, and creation dates never stand in for historical periods.
@@ -162,7 +138,15 @@ Under **Cause and effect claims**, choose a proposed cause and effect, review th
 
 **Before the first causal save:**
 
-back up the complete archive. A saved causal link opts storage into v6, supported by v0.3.0 and historical v3.0.x readers. Require explicit archive-schema support rather than comparing product version numbers. Existing v1–v5 archives remain readable without conversion; read-only views do not upgrade them. Export/restore preserves all accepted history. These additions are not in v2.4.0.
+back up the complete archive. A saved causal link requires record/manifest v6 support. Product numbers and archive capabilities are independent. Check
+
+`lixity about --json`
+
+and the
+
+[current compatibility table](../research/USAGE.md#limits)
+
+; older physical stores may also need the explicit manifest migration. Reading the timeline changes no record schema.
 
 ```
 lixity research timeline --project ./sample-project --format text
@@ -170,15 +154,7 @@ lixity research relate --project ./sample-project FROM_CLAIM TO_CLAIM \
   --relation causes --rationale "Author interpretation for review"
 ```
 
-Replace the claim placeholders with complete IDs from the claim list. `results_in` is an alias for `causes` in the same cause-to-effect direction. Software consuming claim lists must update to the uniform `research-claims-local/2` envelope; stored claims remain unchanged. Read the [3.0.0 release notes](../releases/v3.0.0.md) and [implemented chronology and compatibility reference](../research/USAGE.md#claim-chronology-and-causeeffect-links-since-v300).
-
-## Prepare evidence from selected source text
-
-Open a retained source and select text within one uniquely resolved paragraph. The selection action prepares the existing claim evidence-link form. Its preview shows both your selected quote and the full retained paragraph; choose a claim and relation, add your own rationale if needed, then save separately.
-
-The saved citation still identifies the whole paragraph and its source version. It creates no sentence-level citation. Cross-paragraph or ambiguous selections are unavailable; use the whole-passage actions in the Passages view instead. Selecting text or opening the draft writes no record. Evidence status labels express your own assessment, not historical certainty or a computed probability.
-
-For reading notes against the manuscript, open **Dossier alongside** in Manuscript and choose a dossier, or use the action on that dossier's card. The optional companion reader is read-only. Closing it preserves manuscript search and open paragraphs; refresh explicitly for the latest saved dossier version. Narrow screens place the dossier above the manuscript.
+Replace the claim placeholders with complete IDs from the claim list. `results_in` is an alias for `causes` in the same cause-to-effect direction. Software consuming claim lists must update to the uniform `research-claims-local/2` envelope; stored claims remain unchanged. Read the [implemented chronology and compatibility reference](../research/USAGE.md#claim-chronology-and-causeeffect-links) for accepted periods, revision guards and retraction.
 
 ## Use the intended research project in the terminal
 
@@ -191,22 +167,6 @@ lixity research link urn:uuid:YOUR-PASSAGE-UUID urn:uuid:YOUR-CLAIM-UUID --relat
 ```
 
 Use returned IDs, passage first and claim second. Complete bare UUIDv4 selectors and plural aliases in grouped help are also supported. The short command creates an evidence link; `link-evidence` retains inspection and revision operations. See [scope and compatibility](../research/USAGE.md#reading-and-cli-workflows-since-v240).
-
-## Associate manuscript text with a claim
-
-Select text within one opened manuscript paragraph, choose **Link selection to claim**, choose a current claim, permit local retention of the quote and select **Save association**. Previewing writes nothing. Saving keeps a manual association to the exact claim version, with the quote and paragraph anchor; it does not import the complete manuscript or edit prose.
-
-Exact resolved quotes are marked when their paragraph opens. Changed text or claim versions request review; an edit outside the quote resolves as *adjusted* and can be re-pinned explicitly in the review tab (or with `reconcile-manuscript --accept-moved`), while edited quotes and ambiguous paragraphs remain unresolved. Saved associations are listed in the research **Review** tab with their anchor state and review flags; listing them never writes or repins. These flags do not establish a contradiction or factual support. Both dossier readers show current linked claims with saved-version history and active saved quote counts. Zero saved links does not establish that a claim is unused in prose.
-
-Choose **Explore passage → Research for this passage**, a passage association count or a marked quotation to open its linked context beside the manuscript. Quotations of the same claim share a compact card; current dossier decisions have a separate count. Titles open current entries; **Linked version** opens the exact earlier claim or dossier version retained by the association. Current decisions do not reconstruct the quotation's historical state. **Review** opens the dedicated anchor review. Opening context writes nothing, and an empty summary means only that this passage has no saved associations.
-
-**Before the first save:**
-
-back up the archive. Retention-confirmed manuscript links opt storage into v7, supported by v0.3.0 but not historical v3.0.1. The lower product number describes development maturity; archive and response schemas keep independent versions. Exported quotes remain private manuscript material. See
-
-[anchoring, retention and compatibility](../research/USAGE.md#associate-a-manuscript-quote-with-a-claim)
-
-.
 
 ## Can Lixity read scanned PDFs?
 
@@ -253,7 +213,7 @@ lixity research search --project ./restored-sample --query "reading room"
 
 Restore into a new, empty target. Restoration checks paths, checksums and record links. Resolve a known passage afterward to check its quotation and original URL. A successful audit checks archive integrity, not historical truth or permissions.
 
-`research zotero-backup` pairs the archive with a selected Zotero data folder; you must close Zotero first. `research zotero-restore` verifies and restores both into a new directory without replacing a working library. Manuscripts, application profiles and external linked attachments need separate backups. Test a restored citation and follow the [backup reference](../research/USAGE.md) before relying on the pair.
+`research zotero-backup` pairs the archive with a selected Zotero data folder; you must close Zotero first. `research zotero-restore` verifies and restores both into a new directory without replacing a working library. Manuscripts, application profiles and external linked attachments need separate backups. Test a restored citation and follow the [paired-backup reference](../research/USAGE.md#paired-zoteroresearch-backup-and-restore) before relying on the pair.
 
 ## Command-line example: sources to decisions
 
@@ -303,10 +263,28 @@ lixity research audit --project ./novel-research
 
 For the managed app instead, use `lixity service start --open` and **Open Project** to select the archive. See the [lifecycle guide](installation.html#restart).
 
+## Export a manuscript as PDF
+
+Open **PDF export**, choose a purpose and select **Download PDF**. Editorial, reading, submission, neutral-document and analysis-report outputs serve different tasks. The [browser workspace manual](../WORKSPACE.md) covers the UI; the [PDF command reference](../USAGE.md#lixity-pdf) owns layouts, examples, options and rendering limits.
+
+```
+lixity pdf manuscript.md --layout editor -o editorial.pdf
+```
+
+## Share a reading website
+
+Use **Project actions → Reading website** to prepare a review workspace, a novel with selected background material, or a companion without the manuscript. See the [complete reading-website workflow](../WORKSPACE.md#export-a-reading-website) for profiles, preview, chapter caps, source-file choices and optional chapter audio. Try the [novel and companion](../demo/reader/) or the [standalone companion](../demo/companion/).
+
+Sharing creates a copy, not a restorable archive or revocable account. Research review copies can contain internal notes, earlier versions and cited excerpts. Source files require a separate choice. A progress gate only hides included content; an export chapter cap omits later material. Inspect the result before sharing.
+
+## Enter publication details
+
+Open **Project → Settings → A5 book PDF details** to enter optional author/publisher information and choose whether to include it in the reading PDF. Lixity checks bounded input and ISBN syntax, not publishing rights or legal completeness. The [publication-settings reference](../USAGE.md#publication-settings) owns the fields, persistence rules and publication guidance; other PDF layouts omit the A5 imprint.
+
 ## Input and research limits
 
 Text inputs must be nonempty UTF-8 without NUL bytes, up to 2 MiB; PDFs can be up to 50 MiB. Imports allow at most 5,000 nonempty passages. Search matches words using SQLite FTS5/BM25; it does not translate text or search by meaning. Refreshing a source does not automatically update your claims or decisions.
 
-See the [implemented research reference](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md) for CLI/API details. The broader [research RFC](https://github.com/mfahsold/lixity/blob/main/docs/research/README.md) includes unimplemented interfaces. Read [metric interpretation](interpretation.html) before comparing a source with a manuscript.
+Use the [research manual](../research/USAGE.md#find-a-task) for detailed tasks and the [automation reference](../AGENTS.md#51-research-api-lixityresearchapi) for Python/HTTP contracts. The [design-history index](../research/README.md#design-history) identifies historical proposals separately. Read [metric interpretation](interpretation.html) before comparing a source with a manuscript.
 
 [All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](../LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

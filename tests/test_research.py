@@ -743,6 +743,7 @@ class TestResearch(unittest.TestCase):
         empty_md = api.render_claim_matrix(empty_data, format="md")
         self.assertIn("# Research Claim-Evidence Matrix: Research", empty_md)
         self.assertIn("*(no claims recorded)*", empty_md)
+        self.assertNotIn(empty_data["project_id"], empty_md)
 
         empty_csv = api.render_claim_matrix(empty_data, format="csv")
         self.assertIn("claim_id,title,confidence", empty_csv)
@@ -819,12 +820,15 @@ class TestResearch(unittest.TestCase):
         self.assertIn("Meeting 1912", matrix_md)
         self.assertIn("[DEVIATION]", matrix_md)
         self.assertIn("+1 / -0", matrix_md)
+        self.assertNotIn(matrix["project_id"], matrix_md)
+        self.assertNotIn(cid, matrix_md)
 
         # 5. Verify CSV output
         matrix_csv = api.render_claim_matrix(matrix, format="csv")
         self.assertIn("Meeting 1912", matrix_csv)
         self.assertIn("Shift to 1914", matrix_csv)
         self.assertIn("yes", matrix_csv)
+        self.assertIn(cid, matrix_csv)
 
     def test_cli_matrix_dispatch(self):
         parser = argparse.ArgumentParser()

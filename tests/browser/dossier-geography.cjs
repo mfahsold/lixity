@@ -114,8 +114,10 @@ server.serve_forever()
       await expect(boundary.locator('a:has(strong)')).toHaveAttribute('href', 'https://example.org/a_b');
       await expect(boundary.locator('p > em')).toHaveText('Intended emphasis');
       await expect(boundary.locator('code:not(.lixity-ref)')).toHaveText('code_*_ $&');
-      await expect(boundary.locator('.math-inline')).toHaveText('x_y');
-      await expect(boundary.locator('.lixity-ref')).toHaveText('internal_label (dossier/id_suffix)');
+      await expect(boundary.locator('.math-inline')).toHaveAttribute('aria-label','x_y');
+      await expect(boundary.locator('.math-inline sub')).toHaveText('y');
+      await expect(boundary.locator('.math-inline')).toHaveText('xy');
+      await expect(boundary.locator('.lixity-ref')).toHaveText('internal_label');
       await expect(boundary.locator('.dossier-image-unavailable strong')).toHaveText('Image_name');
       assert.equal(await boundary.locator('.research-dossier-body-rendered').evaluate(node =>
         node.querySelectorAll('p a em').length), 0, 'URL data must never become link-label emphasis');

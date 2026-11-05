@@ -2,9 +2,10 @@
 
 This document records shared responsibilities and integration boundaries.
 Product maturity, response schemas and research storage versions are independent.
-[Usage](USAGE.md) owns workflows; [automation](AGENTS.md) owns request and result
-contracts; [research usage](research/USAGE.md) describes implemented archive behavior.
-The [research RFC](research/README.md) includes unimplemented proposals.
+[The documentation map](README.md) routes to the CLI, workspace, audio and research
+manuals. [Automation](AGENTS.md) owns request and result contracts. The
+[research documentation map](research/README.md) separates implemented archive
+behavior from unimplemented proposals.
 
 `lixity.research` owns explicit-project captures, immutable snapshots, citations,
 authored records and a rebuildable SQLite/FTS5 index. It does not import into
@@ -36,6 +37,13 @@ the accepted local schema.
 plug-in standard errors and published effect bands). Heuristics import it
 instead of restating formulas; `style_fingerprint` re-exports the historical
 names for callers.
+
+Aggregate percentages combine exact hit/token counts before presentation rounding.
+The corpus function-word share comes from corpus tokens; narrower chapter/paragraph
+profiles retain their documented text scope. Renderers consume the resulting value
+or show unknown for older payloads, rather than reconstructing a second estimate.
+Configured cue patterns and signal/motif maps validate regular-expression syntax
+before analysis, keeping configuration errors outside partial output generation.
 
 The server separates transport (`runtime`, `_base`, `handler`), selected-workspace
 state (`_state`), dashboard assembly (`views`) and domain route groups. Registered
@@ -331,7 +339,9 @@ corruption check is involved.
 Reader and companion modes resolve a validated root `site_publications` profile
 against that snapshot. They select current or explicitly pinned dossier versions,
 unique heading subtrees, public titles and chapter release gates before rendering.
-They never serialize native Research responses or calculate manuscript analysis.
+They never serialize native Research responses. Manuscript analysis is absent by
+default; the explicit reader analysis option calls the shared pipeline on the
+physically exported chapter text, with default language settings and thresholds.
 Whole-dossier citations and geography require explicit profile fields; original
 image, document and video bytes require a separate, one-export choice. Reverse associations, internal
 claims, decisions and history are not inferred publication selections.
@@ -362,6 +372,22 @@ actions. Retained media uses explicit bundled-resource mappings; maps start
 with offline geometry, without external tiles or implicit analytics requests.
 Browser-local reading preferences remain available.
 
+**Unreleased chapter audio** is a separate reader-only export opt-in. Successful
+native chapter rendering retains a bounded project-local artifact with exact source
+identity and WAV integrity metadata; explicit imports bind a recording to a selected
+chapter and source without claiming alignment. The export adapter selects only
+current-source artifacts within the physical chapter cap, verifies them, and copies
+WAV bytes into `assets/audio/`. It never invokes synthesis or exports reference
+recordings, private profile configuration or provider credentials.
+
+The public `lixity-reader-audio/1` inventory contains chapter/title, file hash/size,
+duration and generated/imported origin. It is shared by the site manifest (`/3`
+when audio is included) and curated publication data (`/2` with audio). The existing
+player consumes these static files; no parallel player or live `/api` fallback is
+introduced. Partial chapter coverage is explicit, and an audio request with no
+matching current artifact fails. Existing default and analysis-only exports retain
+their schemas and capability boundaries.
+
 `export_site` publishes a fresh directory only after complete assembly; existing
 destinations are rejected. The native `site-export` route downloads an in-memory
 ZIP, bound to the current manuscript metadata token and rechecked selection.
@@ -370,7 +396,7 @@ manifest inventories scope, source identities and file digests. It is a public
 projection contract, separate from archive entity/manifest versions; it does
 not supply accounts, encryption, copy prevention or a restorable backup. See
 [the data model](research/DATA_MODEL.md#reading-website-projection) and
-[the sharing workflow](USAGE.md#export-a-reading-website).
+[the sharing workflow](WORKSPACE.md#export-a-reading-website).
 
 ## Configuration and multiple projects
 
@@ -692,7 +718,7 @@ standardizations must not be treated as interchangeable. A future consolidated
 selector, distribution/trend strip or redesigned measurement dialog must reuse
 those measured projections and the existing workbench/return owners. Those
 specific presentation changes remain design proposals, not shipped controls or
-a new analysis engine. See [reader usage](USAGE.md#reading-paragraphs) and
+a new analysis engine. See [reader usage](WORKSPACE.md#reading-paragraphs) and
 [automation hooks](AGENTS.md#34-dashboard-interaction-contract-for-embedding-and-ui-automation).
 
 The lightweight cue engine remains the default. Since v0.7.6, optional installed
@@ -968,7 +994,9 @@ screenshots of the same native components rather than a parallel product UI.
 
 The public landing page demonstrates the product and routes to the demo or
 installation. README owns purpose, first commands and the documentation/repository
-map; guides own complete workflows and references own detailed contracts. The
+map. The [workspace](WORKSPACE.md), [CLI](USAGE.md), [audio](AUDIO.md) and
+[research](research/USAGE.md) manuals own operating instructions; illustrated
+guides introduce tasks and references own detailed contracts. The
 demo retains the native workspace with a compact return link, rather than a
 second site navigation inside the application. Screenshot framing follows real
 viewports or complete task boundaries; camera helpers do not override native
@@ -1337,7 +1365,7 @@ switching to another metric removes that caption. Chapter z*, within-chapter
 paragraph z and PCA coordinates/loadings are distinct, not interchangeable
 scores. The same renderer and bundled controller serve local dashboards and
 generated read-only examples, without another data model, endpoint or archive
-schema. [Usage](USAGE.md#style-area) owns the interaction and scope comparison.
+schema. [Usage](WORKSPACE.md#style-area) owns the interaction and scope comparison.
 
 Decision/dossier review composes exact existing record-version GETs inside the
 existing review surface. It retains pending, retry, unavailable and stale states;
@@ -1446,8 +1474,10 @@ device, dtype, threads, attention, codec placement and chunk size without paths.
 
 Per-render `local|jetson` selection chooses fixed loopback ports 8769 or 8770 for
 Qwen models. `speech_f5.py` provides the Flow-Matching Diffusion Transformer adapter
-(`SWivid/F5-TTS`, default local loopback port 8771), accepting verified project references
-and rendering continuous mel-spectrograms with an ODE Euler solver. Single-narrator
+(`SWivid/F5-TTS`, default local loopback port 8771), accepting verified project
+references over the shared transport. Its earlier incomplete bundled inference
+loader is retired and fails explicitly; retained settings, exports and cache are
+not converted or deleted. Single-narrator
 integrity (`same_narrator`) ensures the manuscript narrator voice remains consistent,
 while delivery references of the same speaker modulate localized passage intonation.
 The remote worker remains loopback-only. Location is not part of portable project voice
@@ -1496,8 +1526,9 @@ device equivalence between machines. Exact renderer fingerprinting would require
 an explicit verified-online versus offline-replay policy before changing keys.
 This derived cache does not persist native job state.
 
-The October 2026 upstream review retains Qwen3-TTS 1.7B as the sole implemented
-model family, with CustomVoice, VoiceDesign and Base variants. Model cards,
+The October 2026 upstream review covered Qwen3-TTS 1.7B with CustomVoice,
+VoiceDesign and Base variants. The unreleased native adapters above extend that
+set; their protocol support and actual model-runtime verification are separate. Model cards,
 code licenses, voice assets and measured hardware behavior are separate inputs
 to an integration decision. [Pocket TTS](https://github.com/kyutai-labs/pocket-tts)
 is a relevant CPU/Dutch evaluation candidate, but its
@@ -1509,7 +1540,8 @@ models from smaller English models; their speed and language claims are not
 interchangeable. [VoxCPM](https://github.com/OpenBMB/VoxCPM),
 [CosyVoice](https://github.com/QwenAudio/CosyVoice) and
 [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) have different language,
-frontend and runtime boundaries. None is an implemented Lixity backend. Choosing
+frontend and runtime boundaries. Those models are not implemented Lixity backends; the separate IMS-Toucan adapter
+described below provides explicit phonetics and structured prosody. Choosing
 one requires checkpoint-specific offline checks, memory measurements and a
 controlled multilingual listening evaluation; valid WAV transport alone does
 not establish intelligibility, naturalness or faithful long-form narration.
@@ -1542,6 +1574,27 @@ Installed models are explicit machine resources, with no inference-time download
 See [methods](METHODS.md#optional-grammatical-analysis) and
 [configuration](USAGE.md#grammatical-tense).
 
+### Native engine registry and phonetic author voices (unreleased)
+
+`speech_engines.py` owns immutable native model, fixed endpoint and reference
+requirements. `speech_worker.py` owns the bounded loopback HTTP protocol, exact
+model/voice checks, serialized inference and sanitized diagnostics. Qwen, Coqui,
+F5 and Toucan reuse it. The optional `speech_toucan.py` loads a pinned upstream
+acoustic model, vocoder and local ECAPA speaker encoder in a separate environment;
+core dependencies remain unchanged. German and English eSpeak frontends are
+explicit, without a download fallback. Unsupported phonemes fail rather than
+being removed. Profiles, references, queueing, PCM output and cancellation share
+existing product paths; F5 and Toucan have independent fixed sockets.
+
+`pronunciations` remain spelling substitutions. `phonemes` are separate whole-word
+IPA overrides on the substituted text. Transport segmentation preserves those
+matches. Sparse profile/passage `prosody` controls scale predicted durations,
+intonation/energy variation and internal pauses. This is not free-text acting or
+absolute per-phone acoustic editing. The compiler rejects unsupported rendering
+controls while export preserves author intent. Cache identities include all new
+synthesis inputs. Existing profiles are preserved by reviewed schema `/5` upgrades;
+new direction/plan/timeline data uses `/2` while old representations remain stable.
+
 ### Authored passage direction
 
 `speech_direction.py` owns the versioned project-local ledger and pure speech
@@ -1558,8 +1611,8 @@ Direction fields use SSML-like separation of voice, substitution and silence;
 they are not SSML XML or portable acoustic parameters. The Qwen adapter retains
 its existing text/speaker/instruct interface. Backend capability limits remain
 explicit: natural-language delivery is probabilistic; silence is generated by
-Lixity; IPA, calibrated pitch/rate/emotion and native inline event tags are not
-implemented. Authored direction introduces no model download or implicit acting
+Lixity; The optional Toucan adapter adds explicit IPA and structured variation controls;
+calibrated pitch/rate/emotion and native inline event tags remain unsupported. Authored direction introduces no model download or implicit acting
 inference.
 
 Design sources checked 2026-10-28: [W3C SSML 1.1](https://www.w3.org/TR/speech-synthesis11/),
@@ -1574,54 +1627,60 @@ sets, vendor benchmark claims and unknown-tag fallbacks are not adopted.
 
 The manuscript teleprompter (`teleprompter.js`, `teleprompter.css`) provides a
 focused, distraction-free reading runway embedded directly in the manuscript reader view.
-Its architecture coordinates four concurrent streams:
+Its architecture coordinates these components:
 1. **Dynamic Runway and Auto-Scroll Engine:** Uses `requestAnimationFrame` for
-   sub-pixel smooth scrolling at variable words-per-minute speeds (60–240 WPM, default 130 WPM).
+   smooth pixel scrolling with an approximate words-per-minute setting (60–240, default 130).
+   This heuristic does not measure narration timing or follow live speech.
    A fixed horizontal eye-level ribbon (~30% viewport height) establishes the focal plane
    for studio narration, with typography size scaling (`A−`/`A+`, 20–56px) and full keyboard navigation.
-2. **Synchronized Vocal Direction Banners:** Queries `/api/speech` for saved
-   passage-level `audio-direction` cues. When a paragraph carries delivery instructions
-   (e.g., tempo, pitch, volume, or post-passage pause duration), an inline banner
-   (`🎬 .teleprompter-cue`) is rendered directly above the text.
-3. **Phonetic Pronunciation Ruby Overlays:** Scans paragraph tokens against
-   project pronunciation mappings (`pronunciations`) and applies semantic HTML5 `<ruby>`
-   and `<rt>` tags (`ruby.teleprompter-phonetic`) to guide correct articulation without
-   altering underlying manuscript strings.
-4. **Synchronized Research Dossier Evidence:** Monitors active runway paragraphs and
-   dynamically populates a split-screen sidebar with relevant research dossier images
-   and historical context. Dossier association follows a tripartite resolution:
-   - Primary: Exact `manuscript_links` anchored to the paragraph's SHA-256 digest.
-   - Secondary: Heuristic text matching against dossier titles and keywords/tags.
-   - Fallback: Current chapter context.
-   An adaptive off-canvas drawer layout collapses the sidebar on screens under 960px to
-   preserve the reading runway.
-5. **Native 16-Bit PCM WAV Audio Capture and Instant Re-Listening:** Captures
-   uncompressed PCM audio directly via the Web Audio API and encodes standard broadcast-quality
-   16-bit mono WAV files with RIFF headers entirely client-side. The narrator can immediately
-   listen back to the take via an embedded player in the prompter sidebar and download pristine
-   `.wav` takes for immediate ingestion into `audio-inspect`, `audio-reference create`, or
-   external digital audio workstations without requiring FFmpeg.
+2. **Canonical Speech Plan:** Requests a manuscript-scope `/api/speech-plan` for the
+   selected saved profile, without synthesis. Paragraph identities bind returned segments
+   to the displayed source. All current range cues, effective structured prosody and
+   pauses come from this plan; failed or stale requests clear previous cues.
+3. **Shared Safe Presentation:** `speech-presentation.js` renders spoken text, IPA ruby
+   and control summaries for both the prompter and Studio export preview using DOM text
+   nodes. Unicode codepoint offsets preserve annotations without interpreting manuscript
+   markup. Spelling substitutions and explicit IPA remain separate planner operations.
+4. **Research Context:** The dossier drawer consumes the canonical manuscript-review
+   passage projection, matching paragraph digest and line range before resolving exact
+   dossier revision pins. Retained images use the shared renderer and source-version
+   URLs; withdrawn versions remain explicit. A bounded 32-entry per-open detail cache
+   and source/project/session guards prevent stale responses replacing the current
+   context. With no exact context row, at most two title/tag candidates can appear as
+   labelled suggestions. Loading and failure remain visible; no chapter fallback is
+   invented. The persistent recording card is separate from this changing projection.
+5. **Shared PCM Take Exchange:** `audio-take.js` owns WAV encoding, strict PCM inspection,
+   SHA-256 verification and `lixity-audio-take/1` metadata for Studio and prompter captures.
+   WAV/JSON downloads are explicit and playback never starts automatically. Missing, draft
+   and confirmed transcripts remain distinct. Reference eligibility is narrower than
+   portable-take validity; longer or incompatible takes are not silently trimmed or converted.
+   Studio handoff carries captured project/source tokens, validates before replacing a draft,
+   and requires explicit review before the existing reference-save endpoint is called.
 6. **Synchronous Audio-Karaoke in the Manuscript Reader:** During chapter audio playback,
    a proportional timing interpolator maps playback `currentTime` across timeline segment anchors,
-   smoothly illuminating the active spoken paragraph (`.reader-audio-active`) and keeping eyes
-   and ears in exact alignment for editorial proof-listening.
+   illuminating the estimated active paragraph (`.reader-audio-active`). Proportional timing
+   is a reading aid, not forced alignment or word-level timing evidence.
 
 ### Microphone hardware calibration and voice reference acquisition
 
-Accurate acoustic calibration prevents digital clipping while preserving head-room for
-dynamic narration. The microphone calibration engine (`audio_calibration.py`, `kalibriere.sh`)
-and hardware management interface (`audio-microphone`, `/api/audio-microphone`) provide:
-1. **Calibrated ALSA Mixer Staging:** Direct hardware mixer interaction via `amixer`
-   or native ALSA bindings, retrieving active volume, capture switches, and hardware dB limits.
-2. **Automated Burst Evaluation Loop:** Executes an 8-second burst recording protocol
-   following a 4-second preparation window (evaluating 3× loud plosive "POPP" bursts, 2× claps,
-   and conversational speech). Analysis uses standard library arithmetic to compute true
-   dBFS burst peaks, classifying levels into explicit verdicts:
-   - `CALIBRIERT FÜR AUFNAHMEN!`: Peak within the optimal target window (−13 to −7 dBFS).
-   - `ZU HEISS`: Peaks near digital full scale (exceeding −7 dBFS); recommends lower mixer gain.
-   - `MEHR LUFT ALS NÖTIG`: Peaks below −13 dBFS; suggests gain increase for higher SNR.
-3. **Phonetically Balanced Reference Acquisition:** Standardized acoustic samples can be
-   acquired either via live terminal teleprompter recording (`audio-reference record --calibration-text`)
-   using international phonetic reference texts ("The North Wind and the Sun" / "Der Nordwind und die Sonne")
-   or synthesized deterministically via VoiceDesign (`audio-reference generate`). Reference
-   audio is validated, normalized to 24 kHz mono 16-bit PCM WAV, and registered under content-addressed digests.
+`speech_record.py` owns optional local hardware capture through `arecord`,
+`pw-record` or FFmpeg and ALSA mixer access through `amixer`. This is separate from
+browser `getUserMedia` permission and capture. Device/control availability is
+platform-dependent; the analysis engine has no required audio runtime dependency.
+
+`run_calibration` applies an explicitly supplied gain once, then records one test
+window. `analyze_signal` computes PCM peak level, clipping samples and half-second
+RMS windows. Its reported noise floor is the quietest such window, and its `snr_db`
+field is peak level minus that estimate. These are heuristic signal checks, not a
+calibrated acoustic noise measurement or a validated speech-quality score.
+The −13 to −7 dBFS peak band controls the displayed verdict and suggested mixer
+setting; the suggestion is not automatically applied in a tuning loop.
+
+Browser Studio and Teleprompter captures use the shared `audio-take.js` PCM encoder
+and validator. They show permission, recording and failure states, resume their
+AudioContext, release streams on cancellation and retain source/project binding
+through asynchronous work. An imported take replaces the current draft only after
+metadata and SHA-256 verification. Editing its transcript removes confirmation;
+invalid text blocks metadata export and Studio handoff while the WAV remains
+available. These portable takes do not imply an immutable saved reference until
+an explicit reference-save action succeeds.

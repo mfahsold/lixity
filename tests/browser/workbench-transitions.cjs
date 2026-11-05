@@ -144,7 +144,19 @@ async function assertToolbarDossierReturn(page, paragraph, width) {
     }
     const close = page.locator('#workspace-reader-close');
     if (dismissal === 'Close') await close.click();
-    else await close.press('Escape');
+    else {
+      // Keyboard focus exposes the close shortcut as the innermost help layer.
+      // Escape dismisses that help first, then closes the companion itself.
+      await close.focus();
+      await page.waitForFunction(() => document.getElementById('lixity-tooltip').getAttribute('aria-hidden') === 'false');
+      await page.keyboard.press('Escape');
+      assert.equal(await page.locator('#lixity-tooltip').getAttribute('aria-hidden'), 'true');
+      assert.equal(await page.locator('#workspace-reader-panel').isVisible(), true,
+        `${width}: Dismissing focused shortcut help preserves the open Dossier`);
+      await page.keyboard.press('Escape');
+    }
+    assert.equal(await page.locator('#workspace-reader-panel').isVisible(), false,
+      `${width}: Reading-toolbar Dossier ${dismissal} closes its context tool`);
     await assertPassageReturn(page, origin, width,
       `Reading-toolbar Dossier ${dismissal}`, dossierToggle);
   }

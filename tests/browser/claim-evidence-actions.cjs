@@ -199,8 +199,10 @@ server.serve_forever()
       await openClaims(page);
       await expect(page.locator('#r-link-claim-select')).toHaveValue(server.fixture.ids.empty);
       await page.locator('#r-link-claim-select').selectOption(server.fixture.ids.retained);
-      await page.locator('#r-link-composer .selection-technical > summary').click();
-      await page.locator('#r-link-passage-id').fill('Retained draft passage');
+      await page.evaluate(() => prepareResearchEvidenceDraft('Retained draft passage', 'Synthetic selected quotation.', {
+        source_title:'Synthetic draft source', verbatim:'Synthetic selected quotation.', availability:'available'
+      }));
+      await expect(page.locator('#r-link-passage-id')).toBeHidden();
       await page.locator('#r-link-rationale').fill('Retained draft rationale');
       await page.locator('#r-link-relation').selectOption('qualifies');
       if (await empty.locator('[data-load-evidence]').count()) await empty.locator('[data-load-evidence]').click();

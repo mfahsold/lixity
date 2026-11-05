@@ -91,8 +91,11 @@ def load_reference(project: str | Path, reference_id: str) -> SpeechReference:
 
 
 def references_for_plan(project: str | Path, plan: list[SpeechSegment]) -> dict[str, SpeechReference]:
-    """Snapshot each distinct explicit Base reference needed by a plan."""
-    ids = {row.profile.reference_id for row in plan if row.text and row.profile.engine in ("qwen3-base", "coqui-reference", "f5-tts")}
+    """Snapshot each distinct explicit reference needed by a plan."""
+    from .speech_engines import native_engine
+
+    ids = {row.profile.reference_id for row in plan if row.text
+           and row.profile.engine != "openai-compatible" and native_engine(row.profile.engine).reference_required}
     return {reference_id: load_reference(project, reference_id) for reference_id in sorted(ids)}
 
 

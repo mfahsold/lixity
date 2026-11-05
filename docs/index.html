@@ -18,7 +18,7 @@
 <meta property="og:url" content="https://mfahsold.github.io/lixity/"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-measurement-focus.png"/>
 <meta property="og:image:width" content="800"/>
-<meta property="og:image:height" content="812"/>
+<meta property="og:image:height" content="810"/>
 <meta property="og:image:alt" content="Sentence-length explanation for A board moved: three words, with the paragraph comparison shown separately"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Lixity — local manuscript analysis and research for revision"/>
@@ -39,7 +39,7 @@
   "@id": "https://mfahsold.github.io/lixity/#software",
   "applicationCategory": "WritingApplication",
   "operatingSystem": "Windows, macOS, Linux",
-  "softwareVersion": "0.7.7",
+  "softwareVersion": "0.7.9",
   "description": "Find passages worth reviewing, inspect what was counted and follow the research behind a scene. A local workspace for authors and editors.",
   "url": "https://mfahsold.github.io/lixity/",
   "downloadUrl": "https://pypi.org/project/lixity/",
@@ -70,14 +70,12 @@
     "PDF reports, A5 reading copies and submission sheets without external converters",
     "Saved claim and dossier versions beside the manuscript, with a return to the passage",
     "Static review websites and curated, chapter-aware reader companions",
+    "Optional author-voice recording, explicit speech direction and local speech workers",
     "CLI, Python API and HTTP interfaces for automation"
   ],
   "screenshot": [
     "https://mfahsold.github.io/lixity/screenshots/dashboard-measurement-focus.png",
     "https://mfahsold.github.io/lixity/screenshots/dashboard-heatmap.png"
-  ],
-  "sameAs": [
-    "https://github.com/mfahsold/lixity"
   ],
   "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE",
   "inLanguage": [
@@ -95,7 +93,7 @@
     "priceCurrency": "EUR",
     "description": "Open source under AGPL-3.0-or-later. A separate written commercial license is available for integrations that cannot meet the AGPL."
   },
-  "dateModified": "2026-11-02"
+  "dateModified": "2026-11-05"
 }
 </script>
 <script type="application/ld+json">
@@ -111,7 +109,7 @@
     "https://bsky.app/profile/lixity.bsky.social"
   ],
   "description": "Find passages worth reviewing, inspect what was counted and follow the research behind a scene. A local workspace for authors and editors.",
-  "dateModified": "2026-11-02"
+  "dateModified": "2026-11-05"
 }
 </script>
 </head>
@@ -120,7 +118,7 @@
 <header class="site-header">
   <div class="header-inner">
     <a class="brand" href="./" aria-current="page"><span class="brand-name">Lixity</span></a>
-    <a href="releases/v0.7.7.md" id="current-release" title="Development notes; check GitHub releases for published packages"><span class="brand-badge">v0.7.7</span> preview</a>
+    <a href="releases/v0.7.9.md" id="current-release" title="Development notes; check GitHub releases for published packages"><span class="brand-badge">v0.7.9</span> preview</a>
     <nav class="site-return" aria-label="Lixity navigation">
       <a href="#guides">Guides</a>
       <a href="#installation">Install</a>
@@ -134,7 +132,7 @@
     <div class="hero-copy">
       <span id="origin"></span>
       <h1 class="hero-title" id="intro-title">Find the passages<br/>worth a second look.</h1>
-      <p class="hero-sub">Read the manuscript, investigate its patterns and follow the research behind a scene — in one local workspace. For authors, editors and manuscript reviewers working with Markdown or plain text.</p>
+      <p class="hero-sub">Read the manuscript, investigate its patterns and follow the research behind a scene. Prepare a spoken review or a reading copy from the same local project. For authors and editors working with Markdown or plain text.</p>
       <p><strong>Why does chapter 2 feel faster?</strong> Read its short sentences, inspect what Lixity counted, then decide whether the rhythm fits the action.</p>
       <div class="hero-cta">
         <a class="ctl primary" href="demo/report.html" id="examples">Try one revision question</a>
@@ -145,7 +143,7 @@
     </div>
     <figure class="frame">
       <div class="frame-window">
-        <a href="screenshots/dashboard-measurement-focus.png"><img src="screenshots/dashboard-measurement-focus.png" width="800" height="812" alt="Sentence-length explanation for A board moved: three words, with the paragraph comparison shown separately" fetchpriority="high"/></a>
+        <a href="screenshots/dashboard-measurement-focus.png"><img src="screenshots/dashboard-measurement-focus.png" width="800" height="810" alt="Sentence-length explanation for A board moved: three words, with the paragraph comparison shown separately" fetchpriority="high"/></a>
       </div>
       <figcaption><strong>From a reading question to a concrete observation.</strong> With analysis on, the explanation shows three words in “A board moved.” and 4.4 words per sentence across its paragraph. These are different scopes. Read the scene before deciding whether to revise. <a href="screenshots/README.md">Views and credits</a>.</figcaption>
     </figure>
@@ -178,7 +176,7 @@
     </div>
     <p class="section-note"><strong>The book is its own reference.</strong> Differences in rhythm or voice are compared with the manuscript's own patterns. A deliberate contrast can be the reason to keep a passage exactly as it is.</p>
     <p class="section-note"><strong>Terms, props and dossiers:</strong> declared terms and props, chapter scopes, dossier manuscript evidence and ordered collections connect recurring details to the research behind them. They locate declared wording; they do not automatically verify continuity. <a href="research/USAGE.md#configured-terms-props-and-boundary-policies">Terms and props</a>.</p>
-    <p class="section-note"><strong>Spoken direction and audio export:</strong> export a passage, chapter or manuscript as direction JSON or SSML for an external speech workflow; generating audio is a separate action. A local recording check accepts an optional timestamped transcript for text comparison. <a href="USAGE.md#audio-export-and-external-providers-unreleased">Audio export and its limits</a>.</p>
+    <p class="section-note"><strong>Listen to the passage:</strong> record a take, review its transcript or prepare an explicit speech plan. Optional speech workers synthesize only when requested. <a href="#spoken-review">From author reference to listening preview</a>.</p>
     <p class="section-note">Is a repeated phrase intentional? <a href="blog/local-word-echoes.html">Follow one nearby word echo</a>, then read its context before deciding. Measurements guide your reading; they do not grade or rewrite prose. A saved source preserves the evidence used, not a guarantee that the claim is true.</p>
   </section>
 
@@ -194,7 +192,7 @@
     </div>
     <figure class="frame">
       <div class="frame-window">
-        <a href="screenshots/dashboard-reader-focus.png"><img src="screenshots/dashboard-reader-focus.png" width="1424" height="1456" alt="Continuous manuscript reading with analysis switched off to read the scene in context" loading="lazy"/></a>
+        <a href="screenshots/dashboard-reader-focus.png"><img src="screenshots/dashboard-reader-focus.png" width="1424" height="1356" alt="Continuous manuscript reading with analysis switched off to read the scene in context" loading="lazy"/></a>
       </div>
       <figcaption><strong>Return to the prose.</strong> Analysis is deliberately off in this reading view. It shows the context for a decision; the explanation above shows the measurement.</figcaption>
     </figure>
@@ -209,10 +207,21 @@
     </div>
     <figure class="frame">
       <div class="frame-window">
-        <a href="screenshots/dashboard-dossier-image.png"><img src="screenshots/dashboard-dossier-image.png" width="1756" height="1542" alt="Warehouse 4 dossier showing a retained historical Hamburg map with source context" loading="lazy"/></a>
+        <a href="screenshots/dashboard-dossier-image.png"><img src="screenshots/dashboard-dossier-image.png" width="1678" height="1542" alt="Warehouse 4 dossier showing a retained historical Hamburg map with source context" loading="lazy"/></a>
       </div>
       <figcaption><strong>Follow the source.</strong> Retained map figure with its source context. The credited historical map supports an invented case note; it does not verify the story. <a href="screenshots/README.md">Capture scope and credits</a>.</figcaption>
     </figure>
+  </section>
+
+  <section class="section" id="spoken-review" aria-labelledby="spoken-review-title">
+    <h2 id="spoken-review-title">Read it aloud. Keep the words and direction together.</h2>
+    <p><strong>Current main, unreleased:</strong> in the local app, <strong>Project → Settings → Audio and services</strong> groups author recordings, voice profiles, microphone controls and service readiness. <strong>Listen &amp; direct</strong> also opens from the manuscript toolbar. The public review demo cannot record or start a speech service.</p>
+    <ol>
+      <li><strong>Review a reference.</strong> Record or import a short WAV, check the actual transcript and confirm it before saving. A compact player provides time, seeking, volume and a frequency spectrum. Browser microphone permission is separate from hardware gain.</li>
+      <li><strong>Direct a passage.</strong> Choose a saved voice, pronunciation substitutions and pauses. Optional IMS-Toucan supports German/English IPA overrides and structured duration/prosody controls; free acting prompts are not supported by that engine. Other engines have their own capabilities.</li>
+      <li><strong>Preview before a long render.</strong> Export direction as JSON or SSML without synthesis, or explicitly use the configured local or external service. The Teleprompter follows the same spoken text and cues; WAV/JSON take exchange preserves reviewed transcript metadata.</li>
+    </ol>
+    <p class="section-note">A scrolling rate is not speech alignment, and a reading script is not a verified transcript. Lixity does not run speech recognition. <a href="AUDIO.md#author-voice-recording-and-listening">Record and review</a> · <a href="INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction">Set up phonetic author voices</a> · <a href="AUDIO.md#audio-export-and-external-providers-unreleased">Speech-plan formats and privacy</a>.</p>
   </section>
 
   <section class="section" id="reading-copies" aria-labelledby="reading-copies-title">
@@ -226,7 +235,7 @@
       </article>
       <article class="tile">
         <h3>Novel with companion notes</h3>
-        <p>Read continuous prose with selected background material revealed after confirmed chapters. No analysis panels or raw archive history.</p>
+        <p>Read continuous prose with selected background material revealed after confirmed chapters. Reader exports can include optional analysis of the exported text; internal archive history stays out.</p>
         <a href="demo/reader/index.html">Open the reading copy</a>
       </article>
       <article class="tile">
@@ -235,6 +244,8 @@
         <a href="demo/companion/index.html">Open the companion</a>
       </article>
     </div>
+    <p><strong>Unreleased listening copies:</strong> reader exports can opt into existing chapter recordings that match the current manuscript and export cap. The copy uses the shared player and offers WAV downloads; it does not synthesize speech or contain private voice references or service settings. Chapters without a recording remain text-only. <a href="WORKSPACE.md#include-existing-chapter-recordings-unreleased">Include chapter audio</a>.</p>
+    <p class="section-note">The reader demo’s optional chapter-one audio is an imported eSpeak NG 1.51 recording of the fictional English text (voice <code>en</code>, rate 165). It demonstrates playback and export, not IMS-Toucan voice quality or an author’s cloned voice. Playback starts only when you press Play.</p>
     <p class="section-note">Chapter progress is a reading aid, not access control. For an excerpt, an export cap omits later content before the copy is built. <a href="guides/research-pdf.html#reading-website">Choose what to include</a>.</p>
   </section>
 
@@ -247,7 +258,7 @@
   <section class="section" id="installation" aria-labelledby="installation-title">
     <h2 id="installation-title">Try it with your own manuscript</h2>
     <p class="section-note"><strong>Version scope:</strong> this site and the generated demo follow the current development checkout; features marked as unreleased may not be in your installed package. Check <a href="https://github.com/mfahsold/lixity/releases/latest">the published release</a> and your installed and running versions with <code>lixity doctor</code>.</p>
-    <p class="section-note" id="faq">Open a Markdown or plain-text manuscript in the local app; convert Word/DOCX or Scrivener documents first. Built-in analysis works offline on your computer; optional integrations have separate <a href="research/USAGE.md">data boundaries</a>.</p>
+    <p class="section-note" id="faq">Open an existing project or import a manuscript copy in the local app. The unreleased importer accepts one Markdown, plain-text or Word/DOCX file; export Scrivener documents to a supported format first. Built-in analysis works offline on your computer; optional integrations have separate <a href="research/USAGE.md">data boundaries</a>.</p>
     <a class="ctl" href="guides/installation.html">Install Lixity</a>
   </section>
 
@@ -259,7 +270,7 @@
         <h3>Inspect a project's files</h3>
         <p>The local app's <strong>Project overview</strong> identifies the manuscript, research folder and existing outputs. The CLI provides the same read-only inspection.</p>
         <pre><code>lixity project --project ./novel</code></pre>
-        <p class="section-note">Inspection reads metadata; existing outputs have unknown source and generation history. <a href="USAGE.md#inspect-project-structure">Scope and limits</a>.</p>
+        <p class="section-note">Inspection reads metadata; existing outputs have unknown source and generation history. <a href="WORKSPACE.md#inspect-project-structure">Scope and limits</a>.</p>
       </article>
       <article>
         <h3>Analyze a manuscript</h3>
@@ -271,8 +282,14 @@
   </section>
 
   <section class="section" id="guides">
-    <h2>Go a little further</h2>
-    <p id="projects"><a href="guides/interpretation.html">Understand the measurements</a> · <a href="guides/research-pdf.html">Work with sources and PDF copies</a> · <a href="blog/index.html">Read the articles</a></p>
+    <h2>Guides and manuals</h2>
+    <p id="projects"><a href="guides/first-look-de.html" lang="de">Einstieg auf Deutsch</a> · <a href="guides/first-look.html">First session</a> · <a href="AUDIO.md#author-voice-recording-and-listening">Author voice and audio</a> · <a href="guides/interpretation.html">Understand the measurements</a> · <a href="guides/research-pdf.html">Work with sources and PDF copies</a> · <a href="blog/index.html">Read the articles</a></p>
+    <div class="resource-list" aria-label="Operating manuals">
+      <p><strong>Find your task</strong><span><a href="README.md">Documentation map</a> · <a href="ONBOARDING.md">First-session checklist</a></span></p>
+      <p><strong>Use Lixity</strong><span><a href="WORKSPACE.md">Browser workspace</a> · <a href="USAGE.md">CLI and project configuration</a></span></p>
+      <p><strong>Specialist workflows</strong><span><a href="AUDIO.md">Audio and teleprompter</a> · <a href="research/USAGE.md">Research and dossiers</a></span></p>
+      <p><strong>Maintain your installation</strong><span><a href="INSTALLATION.md">Install, update and troubleshoot</a></span></p>
+    </div>
     <details>
       <summary>Methods and technical reference</summary>
       <div class="resource-list">

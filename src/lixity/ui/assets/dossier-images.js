@@ -353,7 +353,7 @@
     field("replacement").hidden = !state.replaceReference;
     field("replacement").querySelector("code").textContent = state.replaceReference || "";
     if (replacement) field("alt").value = replacement.alt || "";
-    field("target").textContent = detail.title || (detail.record && detail.record.title) || detail.id;
+    field("target").textContent = window.LixityComponents.recordLabel(detail, window.LixityComponents.recordLabel(detail.record, uiLabel("research_name_unavailable_dossier")));
     field("conflict").hidden = true; field("accept-current").hidden = true; field("current").replaceChildren();
     populateSections(detail); status(""); setBusy(false); dialog.showModal(); field("file").focus();
   }

@@ -1032,7 +1032,7 @@ window.LixityManuscriptLinks = {
       data.audio.targets.forEach(function(target) {
         var row = document.createElement("div"), title = document.createElement("dt"), value = document.createElement("dd");
         row.className = "runtime-target";
-        title.textContent = uiLabel("speech_target_" + target.target);
+        title.textContent = (target.service_name ? target.service_name + " · " : "") + uiLabel("speech_target_" + target.target);
         value.textContent = uiLabel("runtime_" + target.state);
         var model = document.createElement("div");
         model.textContent = uiLabel("runtime_model") + ": " +

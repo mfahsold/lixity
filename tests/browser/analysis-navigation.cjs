@@ -536,6 +536,10 @@ async function finish(page, errors, writes) {
           assert.equal(await page.locator('#style-layer').evaluate(node => node === document.activeElement), true);
           assert.equal(await page.locator('#style-layer').inputValue(), 'asl', 'Choosing a measure starts at the existing selection');
           await guide.locator('summary').click();
+          assert.equal(await guide.locator('[data-analysis-guide-action="explore"]').evaluate(button => {
+            const box = button.getBoundingClientRect();
+            return button.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
+          }), true, 'The open guide escapes the toolbar scrollport and exposes its actions without scrolling the toolbar');
           await guide.locator('[data-analysis-guide-action="explore"]').click();
           await settle(page);
           assert.equal(await page.locator('#reader-inspector').isVisible(), true);
