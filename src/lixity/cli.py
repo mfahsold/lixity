@@ -55,18 +55,29 @@ EXIT_ERROR = 1
 
 
 def _audio_progress() -> Callable[[int, int], None]:
-    """Report segment progress and a coarse estimate, without changing the render."""
+    """Report segment progress and a clear estimate, without changing the render."""
     started: float | None = None
+    last_report: float | None = None
 
     def report(done: int, total: int) -> None:
-        nonlocal started
+        nonlocal started, last_report
         now = _monotonic()
         if started is None:
             started = now
-        message = f"Audio: {done}/{total}"
-        if 2 <= done < total:
-            remaining = max(0, math.ceil((now - started) * (total - done) / done))
-            message += f" (ETA ~{remaining}s)"
+        pct = (done / total * 100) if total else 0.0
+        elapsed = now - started
+        message = f"Audio: {done}/{total} ({pct:5.1f}%)"
+        if done >= 1:
+            seg_time = elapsed / done
+            if done < total:
+                remaining = max(0, math.ceil((total - done) * seg_time))
+                mins, secs = divmod(remaining, 60)
+                time_str = f"{mins}m {secs:02d}s" if mins else f"{secs}s"
+                message += f" · ETA: ~{time_str} ({seg_time:.1f}s/seg)"
+            else:
+                mins, secs = divmod(math.ceil(elapsed), 60)
+                tot_str = f"{mins}m {secs:02d}s" if mins else f"{secs}s"
+                message += f" · Fertig in {tot_str}"
         print(message, file=sys.stderr)
 
     return report

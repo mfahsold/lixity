@@ -594,7 +594,13 @@
       if (!response.ok || !data.ok) throw new Error(data.message || label("failed"));
       var result = data.job;
       fields.progress.max = result.total || 1; fields.progress.value = result.done || 0;
-      status(label(active.cancelling && ["pending", "running"].includes(result.state) ? "cancelling" : "state_" + ({ready: "completed", error: "failed", stale: "failed"}[result.state] || result.state)) + (result.message ? ": " + result.message : ""));
+      var statusMsg = label(active.cancelling && ["pending", "running"].includes(result.state) ? "cancelling" : "state_" + ({ready: "completed", error: "failed", stale: "failed"}[result.state] || result.state));
+      if (result.state === "running" && result.total && result.done !== undefined) {
+        var pct = Math.round((result.done / result.total) * 100);
+        statusMsg += " · " + result.done + "/" + result.total + " (" + pct + "%)";
+      }
+      if (result.message) statusMsg += ": " + result.message;
+      status(statusMsg);
       if (result.state === "pending" && !active.cancelling && result.queue_position) status(uiFormat("runtime_queued", {position: result.queue_position}));
       if (result.state === "ready" && active.cancelling) {
         status(label("cancelling")); timer = setTimeout(function() { poll(serial, active); }, 500); return;
