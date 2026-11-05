@@ -1781,11 +1781,18 @@
   if (runtimeAction) audioActions.appendChild(runtimeAction);
   var toolbar = document.getElementById("manuscript-reader-controls");
   if (toolbar) {
-    var readerSpeech = button(toolbar, "reader_title", function() { open("reader"); });
+    var existingSpeech = toolbar.querySelector("#reader-speech");
+    var readerSpeech = existingSpeech || button(toolbar, "reader_title", function() { open("reader"); });
     readerSpeech.id = "reader-speech";
     readerSpeech.className = "ctl reader-compact-control";
     readerSpeech.innerHTML = '<span class="reader-control-icon" aria-hidden="true">🎙</span> <span class="reader-control-label">' + label("reader_title") + '</span>';
     readerSpeech.dataset.help = label(canRender ? "reader_help" : "reader_help_plan");
+    var anchor = toolbar.querySelector(".reader-analysis-toggle-controls") ||
+                 toolbar.querySelector("#workbench-overview-open") ||
+                 toolbar.querySelector("#reader-analysis-settings");
+    if (anchor && readerSpeech.nextSibling !== anchor) {
+      toolbar.insertBefore(readerSpeech, anchor);
+    }
   }
   document.addEventListener("lixity:open-speech-studio", function(e) {
     if (e && e.detail && e.detail.take) { receiveTake(e.detail); return; }

@@ -71,20 +71,66 @@ h2, .section-heading, .settings-heading { font-size: var(--text-section-title); 
 .r-chapter-chip { padding: .15rem .45rem; font-size: var(--text-micro); border-radius: var(--radius-xs); min-width: 1.8rem; text-align: center; }
 .r-chapter-chip.active { background: var(--accent); color: var(--accent-contrast, #fff); border-color: var(--accent); }
 /* --- Tables ----------------------------------------------------------- */
-.table-wrap { width: 100%; box-sizing: border-box; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: var(--muted) transparent; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); margin-block: var(--space-3); }
+.table-wrap {
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  margin-block: var(--space-3);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--line) 30%, transparent);
+}
 .table-wrap table { width: 100%; }
 .flags-wrap table { min-width: 36rem; }
-#matrix table { min-width: 52rem; }
-#matrix td.num { white-space: nowrap; }
+#matrix table { min-width: 58rem; width: 100%; }
+#matrix thead th { white-space: nowrap; }
+#matrix thead th:nth-child(5),
+#matrix thead th:nth-child(7) {
+  white-space: normal;
+  text-wrap: balance;
+  word-break: normal;
+  min-width: 7.5rem;
+}
+#matrix td:first-child {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  min-width: 2.5rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+#matrix td.num { white-space: nowrap; font-variant-numeric: tabular-nums; }
+#matrix tr.row-link { cursor: pointer; transition: background-color .15s ease; }
+#matrix tr.row-link:hover { background-color: color-mix(in srgb, var(--accent) 7%, var(--surface-hover)); }
+#matrix td .badge { white-space: nowrap; vertical-align: middle; }
 .table-wrap::-webkit-scrollbar { height: .45rem; }
 .table-wrap::-webkit-scrollbar-thumb { background: var(--muted); border-radius: var(--radius-pill); }
 table { width: 100%; border-collapse: collapse; font-size: var(--text-small); }
-th, td { text-align: left; padding: .5rem .65rem; border-bottom: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
-th { color: var(--muted); font-weight: var(--weight-semibold); text-transform: none; font-size: var(--text-micro); letter-spacing: normal; background: var(--surface); }
+th, td {
+  text-align: left;
+  padding: .55rem .75rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+  overflow-wrap: break-word;
+}
+th {
+  color: var(--fg-secondary, var(--muted));
+  font-weight: var(--weight-semibold);
+  text-transform: none;
+  font-size: var(--text-micro);
+  letter-spacing: .02em;
+  background: var(--surface);
+  word-break: normal;
+}
 tbody tr { transition: background-color .15s cubic-bezier(0.16, 1, 0.3, 1); }
 tbody tr:hover { background: var(--surface-hover); }
 tbody tr:last-child td { border-bottom: 0; }
 .table-wrap th { position: sticky; top: 0; z-index: 2; background: var(--surface); box-shadow: 0 1px 0 var(--line); }
+table th:first-child, table td:first-child { white-space: nowrap; font-variant-numeric: tabular-nums; }
 th.sortable, th[data-sort], table[data-sortable] th:not(.no-sort) { cursor: pointer; user-select: none; white-space: nowrap; transition: color 0.15s ease, background-color 0.15s ease; }
 th.sortable:hover, th[data-sort]:hover, table[data-sortable] th:not(.no-sort):hover { color: var(--fg); background: var(--surface-hover); }
 th.sortable::after, th[data-sort]::after, table[data-sortable] th:not(.no-sort)::after { content: " ⇅"; display: inline-block; font-size: 0.72rem; opacity: 0.35; margin-left: 0.35rem; vertical-align: middle; }
@@ -96,7 +142,7 @@ th[aria-sort="descending"]::after { content: " ↓"; opacity: 1; color: var(--ac
 .table-bar-val { font-variant-numeric: tabular-nums; font-size: var(--text-small); min-width: 3.2rem; text-align: right; }
 tbody tr.clickable-row, tbody tr[data-action] { cursor: pointer; }
 tbody tr.clickable-row:hover, tbody tr[data-action]:hover { background: var(--surface-hover); }
-td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .val-positive, .delta-positive { color: var(--analysis-comparison-positive); font-variant-numeric: tabular-nums; font-weight: var(--weight-medium, 500); }
 .val-negative, .delta-negative { color: var(--analysis-comparison-negative); font-variant-numeric: tabular-nums; font-weight: var(--weight-medium, 500); }
 /* --- Badges & Dimension cards ----------------------------------------- */

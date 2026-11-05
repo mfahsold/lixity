@@ -3,6 +3,7 @@ const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs
 const {startNativeServer} = require('./support/native-server.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 
 (async () => {
@@ -56,7 +57,7 @@ server.serve_forever()
     : await launchChromium();
   const original = fs.readFileSync(server.fixture.source);
   let axe;
-  for (const candidate of ['axe-core/axe.min.js', '/home/codeai/rosts_services/node_modules/axe-core/axe.min.js']) {
+  for (const candidate of ['axe-core/axe.min.js', path.join(os.homedir(), 'rosts_services/node_modules/axe-core/axe.min.js')]) {
     try { axe = require.resolve(candidate); break; } catch {}
   }
   if (!axe) console.log('axe-core unavailable; full audio dialog accessibility audit not run');

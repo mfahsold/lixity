@@ -3981,8 +3981,8 @@ def run(args: argparse.Namespace) -> int:
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 out_path.write_text(payload_text, encoding="utf-8")
                 result = {"ok": True, "output": str(out_path), "format": args.format}
-            elif rendered is not None:
-                print(rendered, end="")
+            elif rendered_matrix is not None:
+                print(rendered_matrix, end="")
                 return 0
             else:
                 result = matrix

@@ -2,6 +2,7 @@
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 
 (async () => {
@@ -70,7 +71,7 @@ const path = require('node:path');
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       await page.screenshot({path: path.join(output, `player-${width}.png`)});
       let axe;
-      for (const candidate of ['axe-core/axe.min.js', '/home/codeai/rosts_services/node_modules/axe-core/axe.min.js']) {
+      for (const candidate of ['axe-core/axe.min.js', path.join(os.homedir(), 'rosts_services/node_modules/axe-core/axe.min.js')]) {
         try { axe = require.resolve(candidate); break; } catch {}
       }
       if (axe) {

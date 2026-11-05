@@ -3583,7 +3583,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.7.7...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.7.9...HEAD
+[0.7.9]: https://github.com/mfahsold/lixity/compare/v0.7.7...v0.7.9
 [0.7.7]: https://github.com/mfahsold/lixity/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/mfahsold/lixity/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/mfahsold/lixity/compare/v0.7.4...v0.7.5

@@ -83,7 +83,7 @@
         subtitle: isDe ? "Farbschema des Arbeitsbereichs anpassen" : "Switch workspace color scheme",
         icon: "lightbulb",
         action: function () {
-          var themeBtn = document.getElementById("theme-toggle") || document.querySelector("[data-theme-toggle]");
+          var themeBtn = document.querySelector("#theme-toggle, [data-theme-toggle]");
           if (themeBtn) {
             themeBtn.click();
           } else {
@@ -178,7 +178,7 @@
         icon: "search",
         action: function () {
           if (workbench) workbench.dispatch({ type: "view", value: "research" });
-          var searchField = document.getElementById("research-search") || document.querySelector(".research-search-input");
+          var searchField = document.querySelector("#research-search, .research-search-input, input[name='q']");
           if (searchField) {
             searchField.focus();
             searchField.select();
@@ -193,7 +193,7 @@
         icon: "edit",
         action: function () {
           if (workbench) workbench.dispatch({ type: "view", value: "research" });
-          var newBtn = document.getElementById("research-new-dossier") || document.querySelector('[data-research-action="new-dossier"]');
+          var newBtn = document.querySelector("#research-new-dossier, [data-research-action='new-dossier']");
           if (newBtn) newBtn.click();
         }
       },
@@ -248,7 +248,7 @@
         subtitle: isDe ? "Kapitel einsprechen, Takes verwalten und Synthese prüfen" : "Record chapter takes and inspect speech",
         icon: "play",
         action: function () {
-          var studioBtn = document.getElementById("audio-studio-trigger") || document.querySelector('[data-action="audio-studio"]');
+          var studioBtn = document.querySelector("#audio-studio-trigger, [data-action='audio-studio'], #reader-speech");
           if (studioBtn) studioBtn.click();
         }
       },
@@ -261,7 +261,7 @@
         subtitle: isDe ? "Druckfertiger Buchsatz oder Lektoratsbericht" : "Print-ready typeset or editorial report",
         icon: "download",
         action: function () {
-          var pdfBtn = document.getElementById("export-pdf-trigger") || document.querySelector('button[data-export="pdf"]');
+          var pdfBtn = document.querySelector("#export-pdf-trigger, button[data-export='pdf'], [data-action='export-pdf']");
           if (pdfBtn) pdfBtn.click();
         }
       },
