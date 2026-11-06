@@ -93,6 +93,8 @@ def synthesize_native(text: str, profile: AudioProfile, *, target: str = "local"
         validate_reference(reference)
         request_data["reference_audio"] = base64.b64encode(reference.audio).decode("ascii")
         request_data["reference_text"] = reference.transcript
+        if profile.engine == "qwen3-base" and len(text.strip().split()) <= 4:
+            request_data["x_vector_only"] = True
     elif reference is not None:
         raise ValueError("This native model does not use a reference")
     if profile.engine == "ims-toucan":

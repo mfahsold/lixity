@@ -131,11 +131,17 @@
   <section class="hero" aria-labelledby="intro-title">
     <div class="hero-copy">
       <span id="origin"></span>
+      <div class="hero-badges" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;">
+        <span class="brand-badge">AGPL-3.0 Open Source</span>
+        <span class="brand-badge">100% Offline &amp; Private</span>
+        <span class="brand-badge">German &amp; English</span>
+      </div>
       <h1 class="hero-title" id="intro-title">Find the passages<br/>worth a second look.</h1>
-      <p class="hero-sub">Read the manuscript, investigate its patterns and follow the research behind a scene. Prepare a spoken review or a reading copy from the same local project. For authors and editors working with Markdown or plain text.</p>
+      <p class="hero-sub">Local manuscript analysis and research workspace for authors and editors. Read the manuscript, investigate its patterns and follow the research behind a scene. Prepare a spoken review or a reading copy from the same local project. Works with Markdown and plain text.</p>
       <p><strong>Why does chapter 2 feel faster?</strong> Read its short sentences, inspect what Lixity counted, then decide whether the rhythm fits the action.</p>
       <div class="hero-cta">
-        <a class="ctl primary" href="demo/report.html" id="examples">Try one revision question</a>
+        <a class="ctl primary" href="demo/report.html" id="examples">Explore interactive demo</a>
+        <a class="ctl" href="#installation">Install Lixity</a>
         <a href="guides/first-look.html">Follow the short tour</a>
       </div>
       <p class="section-note">No account or upload to try the demo. Built-in analysis runs locally and never rewrites your prose. Free and open source, including for commercial book projects. <a href="LICENSING.md">License details</a>.</p>
@@ -258,6 +264,7 @@
   <section class="section" id="installation" aria-labelledby="installation-title">
     <h2 id="installation-title">Try it with your own manuscript</h2>
     <p class="section-note"><strong>Version scope:</strong> this site and the generated demo follow the current development checkout; features marked as unreleased may not be in your installed package. Check <a href="https://github.com/mfahsold/lixity/releases/latest">the published release</a> and your installed and running versions with <code>lixity doctor</code>.</p>
+    <pre><code>uv tool install --python 3.12 --managed-python lixity</code></pre>
     <p class="section-note" id="faq">Open an existing project or import a manuscript copy in the local app. The unreleased importer accepts one Markdown, plain-text or Word/DOCX file; export Scrivener documents to a supported format first. Built-in analysis works offline on your computer; optional integrations have separate <a href="research/USAGE.md">data boundaries</a>.</p>
     <a class="ctl" href="guides/installation.html">Install Lixity</a>
   </section>
@@ -319,7 +326,7 @@
       <p>Managing directors: René Fromhagen, Timo Helmsing.<br/>Commercial register: Local Court of Lübeck, HRB 23529 HL.<br/>VAT identification number: DE360042691.</p>
       <p>We are neither required nor willing to participate in dispute resolution proceedings before a consumer arbitration board.</p>
     </details>
-    <nav aria-label="Project resources"><a href="https://github.com/mfahsold/lixity">Source code</a><a href="https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md">Contributing</a><a href="https://github.com/mfahsold/lixity/blob/main/SECURITY.md">Security</a><a href="#guides">Documentation guide</a><a href="llms-full.txt">Documentation bundle (agents/offline)</a><a href="https://doi.org/10.5281/zenodo.23390297">Cite Lixity</a><a rel="me" href="https://mastodon.social/@lixity">Mastodon</a><a rel="me" href="https://bsky.app/profile/lixity.bsky.social">Bluesky</a></nav>
+    <nav aria-label="Project resources"><a href="https://github.com/mfahsold/lixity">Source code</a><a href="https://pypi.org/project/lixity/">PyPI</a><a href="https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md">Contributing</a><a href="https://github.com/mfahsold/lixity/blob/main/SECURITY.md">Security</a><a href="#guides">Documentation guide</a><a href="llms-full.txt">Documentation bundle (agents/offline)</a><a href="https://doi.org/10.5281/zenodo.23390297">Cite Lixity</a><a rel="me" href="https://mastodon.social/@lixity">Mastodon</a><a rel="me" href="https://bsky.app/profile/lixity.bsky.social">Bluesky</a></nav>
   </footer>
 </main>
 <a class="site-back-top" href="#top">Back to top ↑</a>

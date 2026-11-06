@@ -24,6 +24,10 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
 <a id="pdf-report" href="/lixity/demo/warehouse-4-report.pdf">Report PDF</a>
 <a id="pdf-document" href="/lixity/demo/warehouse-4-document.pdf">Document PDF</a>
 <a id="other-pdf" href="/lixity/private.pdf">Unreviewed PDF</a>
+<a id="pypi" href="https://pypi.org/project/lixity/">PyPI</a>
+<a id="mastodon" href="https://mastodon.social/@lixity">Mastodon</a>
+<a id="bluesky" href="https://bsky.app/profile/lixity.bsky.social">Bluesky</a>
+<a id="blog" href="/lixity/blog/why-this-passage.html">Blog</a>
 <a id="untracked" data-goatcounter-click="PRIVATE CUSTOM EVENT" href="https://example.test/private">Other destination</a>
 <a id="spoof" href="https://github.com.evil.test/mfahsold/lixity">Other host</a></main>
 <script defer src="/lixity/assets/analytics.js"></script>`;
@@ -212,9 +216,10 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
       await settle(page);
       assert.equal(state.pixels.length, 1, 'The public demo completion event is ignored on other pages');
       const clicks = ['demo', 'install', 'repository', 'pdf', 'untracked', 'spoof', 'demo',
-        'install-reference', 'install-anchor', 'pdf-editor', 'pdf-sheet', 'pdf-report', 'pdf-document', 'other-pdf'];
+        'install-reference', 'install-anchor', 'pdf-editor', 'pdf-sheet', 'pdf-report', 'pdf-document', 'other-pdf',
+        'pypi', 'mastodon', 'bluesky', 'blog'];
       for (const id of clicks) await page.locator('#' + id).click();
-      await expect.poll(() => state.pixels.length).toBe(12);
+      await expect.poll(() => state.pixels.length).toBe(16);
       assert.deepEqual(payloads(state).slice(1), [
         {p: 'demo-open', e: 'true', t: 'Open demo', r: ''},
         {p: 'install-open', e: 'true', t: 'Open installation', r: ''},
@@ -224,11 +229,15 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
         {p: 'install-open', e: 'true', t: 'Open installation', r: ''},
         {p: 'install-open', e: 'true', t: 'Open installation', r: ''},
         ...Array.from({length: 4}, () => ({p: 'pdf-download', e: 'true', t: 'Download PDF', r: ''})),
+        {p: 'pypi-open', e: 'true', t: 'Open PyPI', r: ''},
+        {p: 'mastodon-open', e: 'true', t: 'Open Mastodon', r: ''},
+        {p: 'bluesky-open', e: 'true', t: 'Open Bluesky', r: ''},
+        {p: 'blog-open', e: 'true', t: 'Open blog article', r: ''},
       ]);
       assert.deepEqual(await page.evaluate(() => window.__navigationPrevented), Array(clicks.length).fill(false));
       await page.addScriptTag({url: publicOrigin + '/lixity/assets/analytics.js'});
       await settle(page);
-      assert.equal(state.pixels.length, 12, 'Duplicate inclusion cannot add a pageview or event listener');
+      assert.equal(state.pixels.length, 16, 'Duplicate inclusion cannot add a pageview or event listener');
       assert.deepEqual(state.unexpected, []);
       assert.deepEqual(state.warnings, []);
       assert.deepEqual(state.errors, []);

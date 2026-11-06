@@ -197,7 +197,7 @@ def load_local_model(
             not {value.lower() for value in QWEN_LANGUAGES.values()}.issubset(languages)):
         raise ValueError("Local Qwen model does not support the required presets and languages")
 
-    reference_key: tuple[str, str] | None = None
+    reference_key: tuple[str, str, bool] | None = None
     reference_prompt: Any = None
 
     def synthesize(request: dict[str, Any]) -> bytes:
@@ -211,15 +211,28 @@ def load_local_model(
                 if request.get("instructions", ""):
                     raise ValueError("Qwen Base does not support delivery instructions")
                 data, frames = _decode_reference(request["reference_audio"], request["reference_text"])
-                key = (hashlib.sha256(data).hexdigest(), hashlib.sha256(request["reference_text"].encode("utf-8")).hexdigest())
+                xvec_only = bool(request.get("x_vector_only", False))
+                key = (
+                    hashlib.sha256(data).hexdigest(),
+                    hashlib.sha256(request["reference_text"].encode("utf-8")).hexdigest(),
+                    xvec_only,
+                )
                 if key != reference_key:
                     np = importlib.import_module("numpy")
                     waveform = np.frombuffer(frames, dtype="<i2").astype(np.float32) / 32768.0
                     reference_prompt = model.create_voice_clone_prompt(
-                        ref_audio=(waveform, SAMPLE_RATE), ref_text=request["reference_text"], x_vector_only_mode=False)
+                        ref_audio=(waveform, SAMPLE_RATE),
+                        ref_text=request["reference_text"],
+                        x_vector_only_mode=xvec_only,
+                    )
                     reference_key = key
-                wavs, rate = model.generate_voice_clone(text=request["input"],
-                    language=QWEN_LANGUAGES[request["language"]], voice_clone_prompt=reference_prompt, max_new_tokens=2048)
+                wavs, rate = model.generate_voice_clone(
+                    text=request["input"],
+                    language=QWEN_LANGUAGES[request["language"]],
+                    voice_clone_prompt=reference_prompt,
+                    x_vector_only_mode=xvec_only,
+                    max_new_tokens=2048,
+                )
             elif variant == "voice-design":
                 instruction = " ".join(part for part in (request["voice_description"], request["instructions"]) if part)
                 wavs, rate = model.generate_voice_design(text=request["input"],

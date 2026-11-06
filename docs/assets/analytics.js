@@ -67,8 +67,16 @@
       } catch { /* Direct arrivals have no referrer. */ }
       count(location.pathname, document.title.slice(0, 200) || location.pathname, referrer, false);
 
-      const labels = {'demo-open': 'Open demo', 'install-open': 'Open installation',
-        'repository-open': 'Open repository', 'pdf-download': 'Download PDF'};
+      const labels = {
+        'demo-open': 'Open demo',
+        'install-open': 'Open installation',
+        'repository-open': 'Open repository',
+        'pdf-download': 'Download PDF',
+        'pypi-open': 'Open PyPI',
+        'mastodon-open': 'Open Mastodon',
+        'bluesky-open': 'Open Bluesky',
+        'blog-open': 'Open blog article',
+      };
       if (location.pathname === '/lixity/demo/report.html') {
         document.addEventListener('lixity:public-pdf-download', () => {
           count('pdf-download', labels['pdf-download'], '', true);
@@ -85,8 +93,12 @@
           else if (['/lixity/INSTALLATION.md', '/lixity/guides/installation.html'].includes(destination.pathname) ||
                    (destination.pathname === '/lixity/' && ['#install', '#installation'].includes(destination.hash))) name = 'install-open';
           else if (/^\/lixity\/demo\/warehouse-4-(book|editor|sheet|report|document)\.pdf$/.test(destination.pathname)) name = 'pdf-download';
+          else if (destination.pathname.startsWith('/lixity/blog/') && destination.pathname.endsWith('.html') && destination.pathname !== '/lixity/blog/index.html') name = 'blog-open';
         } else if (destination.origin === 'https://github.com' &&
                    /^\/mfahsold\/lixity\/?$/.test(destination.pathname)) name = 'repository-open';
+        else if (destination.origin === 'https://pypi.org' && destination.pathname.startsWith('/project/lixity')) name = 'pypi-open';
+        else if (destination.origin === 'https://mastodon.social' && destination.pathname.startsWith('/@lixity')) name = 'mastodon-open';
+        else if (destination.origin === 'https://bsky.app' && destination.pathname.startsWith('/profile/lixity.bsky.social')) name = 'bluesky-open';
         if (name) count(name, labels[name], '', true);
       });
     }).catch(() => warn('configuration could not be loaded.'));
