@@ -33,7 +33,7 @@ from typing import Any
 from . import __version__
 from .config import DEFAULT_HOST, DEFAULT_PORT, resolve_thresholds
 from .language import LANGUAGE_CHOICES
-from .log import rotate_service_log
+from .log import get_logger, log_event, rotate_service_log
 from .style_fingerprint import FingerprintThresholds
 from .workspace import resolve_project_target
 
@@ -60,6 +60,7 @@ _STATUS_MESSAGES = {
     "busy": "Port is occupied by an unmanaged process",
     "unknown": "Cannot determine the managed service status",
 }
+logger = get_logger("service")
 
 
 class ServiceError(ValueError):
@@ -1088,6 +1089,7 @@ class ServiceManager:
             time.sleep(0.05)
         self._remove_ready(str(record["token"]))
         self.runtime_file.unlink()
+        log_event(logger, "service_lifecycle", stage="stopped", port=self.port, pid=pid)
         return self._result("stopped", settings, ok=True, message="Owned Lixity process stopped")
 
     def _systemd_available(self) -> bool:
@@ -1248,6 +1250,7 @@ class ServiceManager:
             if latest and latest["token"] == token:
                 latest.update(pid=pid, birth=birth)
                 _write_json(self.runtime_file, latest)
+        log_event(logger, "service_lifecycle", stage="start", port=self.port, backend=record.get("backend", "process"), pid=pid)
         return self._result("starting", settings, record, message="Lixity is starting"), token
 
     def control(self, action: str, overrides: Mapping[str, Any]) -> dict[str, Any]:

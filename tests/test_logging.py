@@ -67,3 +67,33 @@ def test_rotation_bounds_the_captured_service_log(tmp_path):
 
 def test_rotation_ignores_a_missing_log_file(tmp_path):
     assert log.rotate_service_log(tmp_path / "absent.log") == []
+
+
+def test_format_event_and_log_event():
+    evt = log.format_event("pipeline_test", stage="start", chapters=4, active=True, name="demo run")
+    assert evt == 'event=pipeline_test active=true chapters=4 name="demo run" stage=start'
+
+    stream = io.StringIO()
+    logger = log.configure(level="INFO", stream=stream, force=True)
+    with log.diagnostic_scope("0123456789abcdef"):
+        log.log_event(logger, "test_scope", status="ok", count=42)
+    line = stream.getvalue().strip()
+    assert "event=test_scope id=0123456789abcdef count=42 status=ok" in line
+
+
+def test_json_logging_format():
+    stream = io.StringIO()
+    logger = log.configure(level="INFO", stream=stream, force=True, json_format=True)
+    with log.diagnostic_scope("abcdef0123456789"):
+        log.log_event(logger, "json_event", stage="ready", duration_ms=15)
+    import json
+    line = stream.getvalue().strip()
+    data = json.loads(line)
+    assert data["level"] == "INFO"
+    assert data["logger"] == "lixity"
+    assert data["event"] == "json_event"
+    assert data["id"] == "abcdef0123456789"
+    assert data["stage"] == "ready"
+    assert data["duration_ms"] == 15
+    # Reset logger to normal text format
+    log.configure(force=True, json_format=False)

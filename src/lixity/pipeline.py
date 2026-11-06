@@ -1,5 +1,6 @@
 """Shared, deterministic orchestration for API, CLI and workspace analysis."""
 
+import time
 from collections.abc import Mapping
 from dataclasses import dataclass
 from hashlib import sha256
@@ -8,6 +9,7 @@ from typing import Any
 from .analyzer import CorpusAnalyzer
 from .dialogue import dialogue_report
 from .language import ResolvedLanguage, resolve_language
+from .log import get_logger, log_event
 from .markdown_parser import parse_markdown_blocks
 from .models import CorpusConfig, CorpusMetrics
 from .motifs import motif_report, resolve_motif_settings
@@ -87,15 +89,31 @@ def fingerprint_document(
     return fingerprint
 
 
+logger = get_logger("pipeline")
+
+
 def analyze_document(
     text: str, config: CorpusConfig, thresholds: FingerprintThresholds, *,
     include_evidence: bool = False,
 ) -> DocumentAnalysis:
-    metrics = CorpusAnalyzer(config, sample_text=text).analyze_text(text)
-    evidence: dict[int, ParagraphEvidence] | None = {} if include_evidence else None
-    paragraphs, chapters = profile_document(text, config, thresholds, evidence=evidence)
-    fingerprint = fingerprint_document(text, config, thresholds, metrics)
-    return DocumentAnalysis(metrics, paragraphs, chapters, fingerprint, evidence)
+    started = time.monotonic()
+    log_event(logger, "pipeline_analyze", stage="start", language=config.language, chars=len(text))
+    try:
+        metrics = CorpusAnalyzer(config, sample_text=text).analyze_text(text)
+        evidence: dict[int, ParagraphEvidence] | None = {} if include_evidence else None
+        paragraphs, chapters = profile_document(text, config, thresholds, evidence=evidence)
+        fingerprint = fingerprint_document(text, config, thresholds, metrics)
+        duration_ms = int((time.monotonic() - started) * 1000)
+        log_event(
+            logger, "pipeline_analyze", stage="completed",
+            chapters=len(chapters), paragraphs=len(paragraphs),
+            words=metrics.raw_words, duration_ms=duration_ms,
+        )
+        return DocumentAnalysis(metrics, paragraphs, chapters, fingerprint, evidence)
+    except Exception as exc:
+        duration_ms = int((time.monotonic() - started) * 1000)
+        log_event(logger, "pipeline_analyze", stage="failed", error=type(exc).__name__, duration_ms=duration_ms)
+        raise
 
 
 def supplementary_reports(
