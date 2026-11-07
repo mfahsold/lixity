@@ -108,6 +108,7 @@ def test_only_notable_filters_after_comparing_the_full_chapter(manuscript, capsy
     ("function", "function_word_pct", "% of words"),
     ("dialogue", "dialog_pct", "% of words"),
     ("filter", "filter_density", "per 1,000 words"),
+    ("sensory", "sensory_density", "per 1,000 words"),
     ("modal", "modal_density", "per 1,000 words"),
     ("nominal", "nominalization_density", "per 1,000 words"),
     ("passive", "passive_density", "per 1,000 words"),

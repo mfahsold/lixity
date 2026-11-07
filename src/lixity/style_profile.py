@@ -141,6 +141,7 @@ class ParagraphProfile:
     dialogue_pct: float
     function_word_pct: float
     filter_density: float = 0.0
+    sensory_density: float = 0.0
     modal_density: float = 0.0
     nominal_density: float = 0.0
     passive_density: float = 0.0
@@ -380,6 +381,7 @@ class ParagraphProfiler:
             )
 
             filter_density = per_mille(counts.filter, words)
+            sensory_density = per_mille(counts.sensory, words)
             modal_density = per_mille(counts.modal, words)
             nominal_density = per_mille(counts.nominal, words)
             passive_density = per_mille(counts.passive, words)
@@ -402,6 +404,7 @@ class ParagraphProfiler:
                 dialogue_pct=round(dialogue_pct, 1),
                 function_word_pct=round(function_word_pct, 1),
                 filter_density=round(filter_density, 1),
+                sensory_density=round(sensory_density, 1),
                 modal_density=round(modal_density, 1),
                 nominal_density=round(nominal_density, 1),
                 passive_density=round(passive_density, 1),

@@ -34,7 +34,7 @@ def test_tense_evidence_reuses_counts_and_keeps_metric_contract():
     assert analysis.evidence is not None
     evidence = analysis.evidence[0]
     assert evidence["tense"]["trigger"] == paragraph.tense_trigger
-    assert set(evidence["layers"]) == {"asl", "function", "dialogue", "filter", "modal", "nominal", "passive"}
+    assert set(evidence["layers"]) == {"asl", "function", "dialogue", "filter", "sensory", "modal", "nominal", "passive"}
     assert evidence["tense"]["present"]["count"] == paragraph.present_hits == 2
     assert evidence["tense"]["past"]["count"] == paragraph.past_hits == 1
     assert slices(paragraph, evidence["tense"]["present"]) == [("halte", 1), ("halte", 1)]
@@ -64,7 +64,7 @@ def test_repeated_unicode_tokens_and_sentences_keep_their_exact_occurrences():
     assert result["offset_unit"] == "unicode_codepoint"
     assert result["paragraph_sha256"] == sha256(paragraph.text.encode()).hexdigest()
     layers = result["layers"]
-    assert set(layers) == {"asl", "function", "dialogue", "filter", "modal", "nominal", "passive"}
+    assert set(layers) == {"asl", "function", "dialogue", "filter", "sensory", "modal", "nominal", "passive"}
     assert slices(paragraph, layers["asl"]) == [("🧭 I think I can.", 1), ("I think I can.", 1)]
     assert [span["words"] for span in layers["asl"]["spans"]] == [4, 4]
     assert slices(paragraph, layers["filter"]) == [("think", 1), ("think", 1)]

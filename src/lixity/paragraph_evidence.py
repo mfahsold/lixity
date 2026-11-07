@@ -73,7 +73,7 @@ class ParagraphEvidence(_ParagraphEvidence, total=False):
 
 
 _KINDS = {"asl": "sentence", "function": "word", "dialogue": "dialogue",
-          "filter": "pattern", "modal": "word", "nominal": "pattern", "passive": "pattern"}
+          "filter": "pattern", "sensory": "pattern", "modal": "word", "nominal": "pattern", "passive": "pattern"}
 
 
 @dataclass(frozen=True)
@@ -83,6 +83,7 @@ class ParagraphCounts:
     dialogue: int
     function: int
     filter: int
+    sensory: int
     modal: int
     nominal: int
     passive: int
@@ -90,7 +91,7 @@ class ParagraphCounts:
     def layers(self) -> dict[str, int]:
         """Sentence units for ASL, quoted-word contributions for dialogue."""
         return {"asl": len(self.sentences), "function": self.function, "dialogue": self.dialogue,
-                "filter": self.filter, "modal": self.modal, "nominal": self.nominal,
+                "filter": self.filter, "sensory": self.sensory, "modal": self.modal, "nominal": self.nominal,
                 "passive": self.passive}
 
 
@@ -127,6 +128,7 @@ class ParagraphMatcher:
         self.word = compile_word_pattern(language.word_regex)
         self.dialogue = compile_pattern(language.dialogue_regex)
         self.filter = compile_pattern(language.filter_verbs_regex)
+        self.sensory = compile_pattern(language.sensory_regex)
         self.passive = compile_pattern(language.passive_regex)
         self.nominal = compile_pattern(language.nominal_regex)
         self.nominal_exclusions = language.function_words if config.nominal_regex is None else frozenset()
@@ -143,6 +145,7 @@ class ParagraphMatcher:
             dialogue=sum(len(self.word.findall(part)) for part in quotation_texts(self.dialogue, clean)),
             function=sum(token in self.language.function_words for token in tokens),
             filter=len(self.filter.findall(clean)),
+            sensory=len(self.sensory.findall(clean)),
             modal=sum(token in self.modals for token in tokens),
             nominal=count_nominal_matches(clean, self.nominal, self.nominal_exclusions),
             passive=len(self.passive.findall(clean)),
@@ -183,8 +186,8 @@ class ParagraphMatcher:
                 spans["function"].append({"start": start, "end": end, "count": 1})
             if token in self.modals:
                 spans["modal"].append({"start": start, "end": end, "count": 1})
-        for key, pattern in (("filter", self.filter), ("passive", self.passive),
-                             ("nominal", self.nominal)):
+        for key, pattern in (("filter", self.filter), ("sensory", self.sensory),
+                             ("passive", self.passive), ("nominal", self.nominal)):
             for match in pattern.finditer(clean):
                 if key == "nominal" and match.group().lower() in self.nominal_exclusions:
                     continue

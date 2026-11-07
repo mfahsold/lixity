@@ -101,6 +101,7 @@ FEATURE_UNITS: dict[str, dict[str, str]] = {
         "dialog_pct": "% of words",
         "function_word_pct": "% of words",
         "filter_density": "per 1,000 words",
+        "sensory_density": "per 1,000 words",
         "modal_density": "per 1,000 words",
         "passive_density": "per 1,000 words",
         "nominalization_density": "per 1,000 words",
@@ -119,6 +120,7 @@ FEATURE_UNITS: dict[str, dict[str, str]] = {
         "dialog_pct": "% der Wörter",
         "function_word_pct": "% der Wörter",
         "filter_density": "je 1.000 Wörter",
+        "sensory_density": "je 1.000 Wörter",
         "modal_density": "je 1.000 Wörter",
         "passive_density": "je 1.000 Wörter",
         "nominalization_density": "je 1.000 Wörter",
@@ -137,6 +139,7 @@ FEATURE_UNITS: dict[str, dict[str, str]] = {
         "dialog_pct": "% des mots",
         "function_word_pct": "% des mots",
         "filter_density": "pour 1 000 mots",
+        "sensory_density": "pour 1 000 mots",
         "modal_density": "pour 1 000 mots",
         "passive_density": "pour 1 000 mots",
         "nominalization_density": "pour 1 000 mots",
@@ -155,6 +158,7 @@ FEATURE_UNITS: dict[str, dict[str, str]] = {
         "dialog_pct": "% de palabras",
         "function_word_pct": "% de palabras",
         "filter_density": "por 1.000 palabras",
+        "sensory_density": "por 1.000 palabras",
         "modal_density": "por 1.000 palabras",
         "passive_density": "por 1.000 palabras",
         "nominalization_density": "por 1.000 palabras",
@@ -173,6 +177,7 @@ FEATURE_UNITS: dict[str, dict[str, str]] = {
         "dialog_pct": "% delle parole",
         "function_word_pct": "% delle parole",
         "filter_density": "ogni 1.000 parole",
+        "sensory_density": "ogni 1.000 parole",
         "modal_density": "ogni 1.000 parole",
         "passive_density": "ogni 1.000 parole",
         "nominalization_density": "ogni 1.000 parole",
@@ -191,6 +196,7 @@ FEATURE_UNITS: dict[str, dict[str, str]] = {
         "dialog_pct": "% de palavras",
         "function_word_pct": "% de palavras",
         "filter_density": "por 1.000 palavras",
+        "sensory_density": "por 1.000 palavras",
         "modal_density": "por 1.000 palavras",
         "passive_density": "por 1.000 palavras",
         "nominalization_density": "por 1.000 palavras",
@@ -209,6 +215,7 @@ FEATURE_UNITS: dict[str, dict[str, str]] = {
         "dialog_pct": "% van woorden",
         "function_word_pct": "% van woorden",
         "filter_density": "per 1.000 woorden",
+        "sensory_density": "per 1.000 woorden",
         "modal_density": "per 1.000 woorden",
         "passive_density": "per 1.000 woorden",
         "nominalization_density": "per 1.000 woorden",
@@ -230,6 +237,7 @@ LAYER_FEATURES: dict[str, str] = {
     "function": "function_word_pct",
     "dialogue": "dialog_pct",
     "filter": "filter_density",
+    "sensory": "sensory_density",
     "modal": "modal_density",
     "nominal": "nominalization_density",
     "passive": "passive_density",
@@ -240,6 +248,7 @@ LAYER_PARAGRAPH_ATTR: dict[str, str] = {
     "function": "function_word_pct",
     "dialogue": "dialogue_pct",
     "filter": "filter_density",
+    "sensory": "sensory_density",
     "modal": "modal_density",
     "nominal": "nominal_density",
     "passive": "passive_density",
@@ -2003,7 +2012,7 @@ def paragraph_layer_projection(
     if layer not in LAYER_FEATURES:
         raise ValueError(f"Unknown paragraph layer: {layer}")
     feature = LAYER_FEATURES[layer]
-    unit = next(unit for field, _label, unit in FEATURES if field == feature)
+    unit = next((u for f, _l, u in FEATURES if f == feature), FEATURE_UNITS.get("en", {}).get(feature, "per 1,000 words"))
     stats = layer_stats(paragraphs, layer)
     rows: list[dict[str, Any]] = []
     for index, paragraph in enumerate(paragraphs):

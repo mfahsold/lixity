@@ -905,7 +905,7 @@ def render_dashboard(
     if paragraphs:
         layer_groups = (
             ("layer_group_rhythm", ("asl", "function")),
-            ("layer_group_voice", ("dialogue", "filter")),
+            ("layer_group_voice", ("dialogue", "filter", "sensory")),
             ("layer_group_grammar", ("passive", "modal", "nominal")),
         )
         grouped_members = {m for _, members in layer_groups for m in members}
@@ -1240,7 +1240,8 @@ def render_dashboard(
                     f"{label(labels, 'present')} {p.present_hits} · {label(labels, 'past')} {p.past_hits} · "
                     f"ASL {N(p.asl, 1)} · {label(labels, 'dialogue')} {P(p.dialogue_pct)} · "
                     f"{label(labels, 'function_words')} {P(p.function_word_pct)} · "
-                    f"{label(labels, 'feat_filter')} {N(p.filter_density, 1)} · {label(labels, 'feat_modal')} {N(p.modal_density, 1)} · "
+                    f"{label(labels, 'feat_filter')} {N(p.filter_density, 1)} · {label(labels, 'layer_sensory')} {N(p.sensory_density, 1)} · "
+                    f"{label(labels, 'feat_modal')} {N(p.modal_density, 1)} · "
                     f"{label(labels, 'feat_nominal')} {N(p.nominal_density, 1)} · {label(labels, 'feat_passive')} {N(p.passive_density, 1)} · "
                     f"{p.words} {label(labels, 'words')}"
                 )
