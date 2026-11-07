@@ -9,7 +9,13 @@ from lixity.language import get_language_profile
 from lixity.models import CorpusConfig
 from lixity.pacing import pacing_report
 from lixity.scenes import scene_report
-from lixity.ui.narration import render_dialogue_panel, render_pacing_panel, render_scenes_panel
+from lixity.showing import showing_report
+from lixity.ui.narration import (
+    render_dialogue_panel,
+    render_pacing_panel,
+    render_scenes_panel,
+    render_showing_panel,
+)
 from tests.locales import LOCALES
 
 
@@ -88,3 +94,25 @@ def test_pacing_names_the_bar_measurement_and_explains_the_existing_hook_heurist
     value = panel.find("./div[@class='dist scrollable']/div/span[@class='val']")
     assert "ASL" in "".join(value.itertext())
     assert "3" in "".join(value.itertext())
+    sparkline = panel.find(".//span[@class='sparkline']")
+    assert sparkline is not None and sparkline.text
+
+
+@pytest.mark.parametrize("locale", LOCALES)
+def test_showing_panel_renders_immersion_pills_in_all_locales(locale):
+    labels = get_language_profile(locale).labels
+    text = (
+        "## Chapter 1\n\n"
+        + "He felt the bitter cold smoke and heard the whisper in the dark night. " * 20
+        + "\n\n## Chapter 2\n\n"
+        + '"Stop!" she shouted in fear. ' * 20
+        + "\n\n## Chapter 3\n\n"
+        + "He sensed the sweet fragrance and saw the flash. " * 20
+    )
+    report = showing_report(text, CorpusConfig(language="en")).to_dict()
+    panel = ElementTree.fromstring(render_showing_panel(report, labels, locale))  # noqa: S314
+    pills = panel.findall(".//span[@class='immersion-pill']")
+    assert len(pills) == 2
+    assert any(labels["show_sensory"] in "".join(p.itertext()) for p in pills)
+    assert any(labels["show_immersion"] in "".join(p.itertext()) for p in pills)
+

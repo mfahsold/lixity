@@ -249,6 +249,7 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "pac_chapter": "Ch.",
         "pac_title": "Title",
         "pac_asl": "ASL",
+        "pac_sparkline": "Curve",
         "pac_dialogue": "Quoted words",
         "pac_hook": "Hook",
         "pac_no_breaks": (
@@ -271,6 +272,8 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "show_tell_z": "Word-pattern cues (mean z)",
         "show_show_z": "Quotes / short sentences (mean z)",
         "show_balance": "Difference (second - first)",
+        "show_sensory": "Sensory density",
+        "show_immersion": "Immersion ratio",
         "show_most_telling": "Lowest difference: chapters",
         "show_most_showing": "Highest difference: chapters",
         "show_chapter": "Ch.",
@@ -404,6 +407,7 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "pac_chapter": "Kap.",
         "pac_title": "Titel",
         "pac_asl": "ASL",
+        "pac_sparkline": "Kurve",
         "pac_dialogue": "Zitierte Wörter",
         "pac_hook": "Haken",
         "pac_no_breaks": (
@@ -426,6 +430,8 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "show_tell_z": "Wortmuster (Ø z)",
         "show_show_z": "Zitate / kurze Sätze (Ø z)",
         "show_balance": "Differenz (zweite - erste Gruppe)",
+        "show_sensory": "Sensorik (Ø Dichte)",
+        "show_immersion": "Immersion (Ø Quotient)",
         "show_most_telling": "Niedrigste Differenz: Kapitel",
         "show_most_showing": "Höchste Differenz: Kapitel",
         "show_chapter": "Kap.",
@@ -1324,6 +1330,7 @@ def _cmd_pacing(args: argparse.Namespace) -> int:
         table.add_column(_m("pac_title"))
         table.add_column(_m("pac_scenes"), justify="right")
         table.add_column(_m("pac_asl"), justify="right")
+        table.add_column(_m("pac_sparkline"), justify="center")
         table.add_column(_m("pac_dialogue"), justify="right")
         table.add_column(_m("pac_hook"), justify="right")
         for chapter in report.chapter_list:
@@ -1332,6 +1339,7 @@ def _cmd_pacing(args: argparse.Namespace) -> int:
                 chapter.title,
                 str(chapter.scenes),
                 f"{chapter.asl:.1f}",
+                chapter.pacing_sparkline or "–",
                 f"{chapter.dialogue_pct:.1f} %",
                 str(chapter.hook_score),
             )
@@ -1448,14 +1456,21 @@ def _cmd_showing(args: argparse.Namespace) -> int:
     summary = Table(box=box.SIMPLE_HEAVY, header_style="bold cyan")
     summary.add_column(_m("show_metric"), style="bold white")
     summary.add_column(_m("show_value"), justify="right", style="cyan")
-    for key, value in (
+    summary_rows = [
         ("show_chapters", str(report.chapters)),
         ("show_tell_z", signed(report.tell_z_mean)),
         ("show_show_z", signed(report.show_z_mean)),
         ("show_balance", signed(report.balance_mean)),
+    ]
+    if report.sensory_density_mean is not None:
+        summary_rows.append(("show_sensory", f"{report.sensory_density_mean:.1f}"))
+    if report.immersion_ratio_mean is not None:
+        summary_rows.append(("show_immersion", f"{report.immersion_ratio_mean:.2f}"))
+    summary_rows.extend([
         ("show_most_telling", ", ".join(map(str, report.most_telling))),
         ("show_most_showing", ", ".join(map(str, report.most_showing))),
-    ):
+    ])
+    for key, value in summary_rows:
         summary.add_row(_m(key), value)
     con.print(summary)
 
@@ -1466,6 +1481,8 @@ def _cmd_showing(args: argparse.Namespace) -> int:
         table.add_column(_m("show_tell_z"), justify="right")
         table.add_column(_m("show_show_z"), justify="right")
         table.add_column(_m("show_balance"), justify="right")
+        table.add_column(_m("show_sensory"), justify="right")
+        table.add_column(_m("show_immersion"), justify="right")
         for chapter in report.chapter_list:
             table.add_row(
                 str(chapter.chapter_num),
@@ -1473,6 +1490,8 @@ def _cmd_showing(args: argparse.Namespace) -> int:
                 signed(chapter.tell_z),
                 signed(chapter.show_z),
                 signed(chapter.balance),
+                f"{chapter.sensory_density:.1f}",
+                f"{chapter.immersion_ratio:.2f}" if chapter.immersion_ratio is not None else "–",
             )
         con.print(table)
     return EXIT_OK

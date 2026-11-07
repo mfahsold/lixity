@@ -3816,7 +3816,7 @@ HELP_TEXTS = {
         "help_fdr": "Bei vielen Kapitelvergleichen markiert eine nominale Mehrfachtest-Regel eine Prüfauswahl. Die Signale mit ihrer Stärke und dem Textkontext lesen; Fehlerraten für Kapiteldaten sind nicht kalibriert.",
         "help_z_mild": "Empfindlichkeit für auffällige Kapitel-Abweichungen (z*) – niedrigere Werte zeigen mehr Nuancen, höhere Werte nur deutliche Ausreißer.",
         "help_z_strong": "Grenzwert für besonders starke Stil- und Rhythmus-Ausreißer (z**) im Vergleich zum Manuskript-Mittelwert.",
-        "help_fdr_q": "Kontrolle für statistische Zufallsfunde (False Discovery Rate) – ein kleinerer Wert filtert strenger gegen Zufallstreffer bei vielen Kapiteln.",
+        "help_fdr_q": "Kontrolle für statistische Zufallsfunde (nominale False Discovery Rate) – ein kleinerer Wert filtert strenger gegen Zufallstreffer bei vielen Kapiteln.",
         "help_flag_min_severity": 'Schwelle für Tempushinweise: 1 = alle Stufen, 2 = Voreinstellung, 3 = nur starke Abweichungen.',
         "help_dim_score_threshold": "Schwelle im mehrdimensionalen Stilraum – ab diesem Wert gilt ein Kapitel als stilprägend für eine Achse.",
         "help_markers": "Notizen direkt im Manuskript: unsichtbare Kommentare über dem Absatz, sichtbar im Editor, nie im Export.",
@@ -3838,6 +3838,11 @@ HELP_TEXTS = {
         "help_staccato": "Anteil erkannter Sätze mit höchstens 6 Wörtern. Satzlänge allein misst kein Szenentempo.",
         "help_kaskade": "Anteil erkannter Sätze mit mehr als 25 Wörtern. Misst Satzlänge, keine syntaktische Verschachtelung.",
         "help_cv": "Schwankung der Satzlängen relativ zum Mittel. 0 = gleich lange Sätze; höher = mehr Variation. Keine Qualitätsbewertung.",
+        "help_sensory": "Dichte von Wörtern sinnlicher Primärwahrnehmung (akustisch, visuell, haptisch, olfaktorisch) je 1.000 Wörter. Unterstützt die Prüfung anschaulicher Szenengestaltung.",
+        "help_immersion": "Verhältnis von sensorischen Primärwahrnehmungen zu Filterverben (Show vs. Tell). Höhere Werte zeigen unmittelbare Szenenerfahrung statt vermittelter Wahrnehmung.",
+        "help_lex_action": "Moving-Average Type-Token Ratio (MATTR) über handlungstragende Verben im Standardfenster (25 Wörter). Misst die dynamische Wortschatzvielfalt im Handlungsgeschehen.",
+        "help_lex_desc": "Moving-Average Type-Token Ratio (MATTR) über deskriptive Wörter (Adjektive/Substantive) im Standardfenster (25 Wörter). Misst die Nuancierung in Beschreibungen.",
+        "help_pacing_sparkline": "Mikro-Dynamik der Satzlängen über ein rollierendes Fenster im Kapitel. Spitzen zeigen lange Satzperioden, Täler kurze, stakkatoartige Pulse.",
     },
     "en": {
         "help_chr_span": 'First through last chapter mentioning the name.',
@@ -3857,7 +3862,7 @@ HELP_TEXTS = {
         "help_fdr": "When many chapter features are compared, a nominal multiple-testing rule marks a shortlist for review. Read these signals with their size and prose context; chapter error rates are not calibrated.",
         "help_z_mild": "Sensitivity threshold for notable deviations (z*) – lower values reveal subtle shifts, higher values report only marked outliers.",
         "help_z_strong": "Cutoff for strong style and rhythm outliers (z**) relative to the manuscript baseline.",
-        "help_fdr_q": "False Discovery Rate control for screening multiple chapters – smaller values filter more strictly against chance findings.",
+        "help_fdr_q": "Nominal False Discovery Rate control for screening multiple chapters – smaller values filter more strictly against chance findings.",
         "help_flag_min_severity": 'Tense-hint threshold: 1 = all levels, 2 = default, 3 = strongest deviations only.',
         "help_dim_score_threshold": "Style-space cutoff – chapters exceeding this score are highlighted as defining the stylistic axis.",
         "help_markers": "Notes inside the manuscript: invisible comments above the paragraph, visible in the editor, never in exports.",
@@ -3879,6 +3884,11 @@ HELP_TEXTS = {
         "help_staccato": "Share of detected sentences with 6 words or fewer. Sentence length alone does not measure scene pace.",
         "help_kaskade": "Share of detected sentences longer than 25 words. Measures length, not syntactic nesting.",
         "help_cv": "Variation in sentence lengths relative to their mean. 0 = equal lengths; higher = more variation. Not a quality rating.",
+        "help_sensory": "Density of primary sensory perception cues (auditory, visual, haptic, olfactory) per 1,000 words. Supports reviewing vivid scene immersion.",
+        "help_immersion": "Ratio of primary sensory cues to perception filter verbs (Show vs. Tell). Higher values indicate immediate scene experience rather than filtered perception.",
+        "help_lex_action": "Moving-Average Type-Token Ratio (MATTR) over action verbs in a standardized window (25 words). Measures dynamic vocabulary diversity in action sequences.",
+        "help_lex_desc": "Moving-Average Type-Token Ratio (MATTR) over descriptive words (adjectives/nouns) in a standardized window (25 words). Measures nuance in scene descriptions.",
+        "help_pacing_sparkline": "Micro-dynamics of sentence length across a rolling window in the chapter. Peaks indicate long sentence periods, valleys short staccato pulses.",
         "help_asl": "Average words per detected sentence. Describes length, not suspense or narrative pace.",
         "help_ttr": "Distinct word forms divided by counted words. Longer passages often lower the ratio; compare similar lengths and topics.",
         "help_yules": "Higher K = more dominance by frequent word forms; K = 0 if each form appears once. Length and context affect comparisons; not a quality score.",
@@ -3960,6 +3970,11 @@ HELP_TEXTS = {
         "help_staccato": "Part des phrases détectées de 6 mots ou moins. La longueur seule ne mesure pas le rythme d’une scène.",
         "help_kaskade": "Part des phrases détectées de plus de 25 mots. Mesure la longueur, pas l’imbrication syntaxique.",
         "help_cv": "Variation des longueurs de phrase par rapport à leur moyenne. 0 = longueurs égales ; plus élevé = plus de variation. Pas une note de qualité.",
+        "help_sensory": "Densité d'indices de perception sensorielle directe (auditifs, visuels, tactiles, olfactifs) pour 1 000 mots. Aide à évaluer l'immersion scénique.",
+        "help_immersion": "Rapport entre indices sensoriels directs et verbes filtres (Show vs Tell). Des valeurs élevées indiquent une expérience directe de la scène.",
+        "help_lex_action": "Ratio type-token moyen mobile (MATTR) sur les verbes d'action avec fenêtre standard (25 mots). Mesure la diversité du vocabulaire d'action.",
+        "help_lex_desc": "Ratio type-token moyen mobile (MATTR) sur les mots descriptifs (adjectifs/noms) avec fenêtre standard (25 mots). Mesure la nuance descriptive.",
+        "help_pacing_sparkline": "Micro-dynamique de la longueur des phrases par fenêtre glissante dans le chapitre. Pics = phrases longues, creux = impulsions brèves.",
         "help_adjective": "Mots avec certaines terminaisons adjectivales pour 1 000 mots. Heuristique : d’autres terminaisons sont ignorées et d’autres classes de mots peuvent correspondre.",
         "help_dimensions": "Les points proches ont des valeurs similaires sur ces axes. Les axes combinent, pour les chapitres aux mesures complètes, les positions des caractéristiques des valeurs basses aux valeurs hautes (rangs standardisés). La variance montre la part de variation représentée par l'axe dans l'espace des rangs ; les chapitres avec des caractéristiques indisponibles sont omis.",
         "help_expected_false_positives": "Estimation de référence selon un modèle de distribution normale, pas un décompte de faux positifs observés dans ce manuscrit.",
@@ -4026,6 +4041,11 @@ HELP_TEXTS = {
         "help_staccato": "Proporción de oraciones detectadas de hasta 6 palabras. La longitud sola no mide el ritmo de una escena.",
         "help_kaskade": "Proporción de oraciones detectadas de más de 25 palabras. Mide longitud, no anidamiento sintáctico.",
         "help_cv": "Variación de la longitud de las oraciones respecto a su media. 0 = longitudes iguales; mayor = más variación. No es una nota de calidad.",
+        "help_sensory": "Densidad de indicios de percepción sensorial directa (auditiva, visual, táctil, olfativa) por 1.000 palabras. Ayuda a revisar la inmersión escénica.",
+        "help_immersion": "Cociente entre indicios sensoriales directos y verbos filtro (Show vs. Tell). Valores más altos indican experiencia directa de la escena.",
+        "help_lex_action": "Type-Token Ratio de media móvil (MATTR) sobre verbos de acción en ventana estándar (25 palabras). Mide la diversidad léxica en la acción.",
+        "help_lex_desc": "Type-Token Ratio de media móvil (MATTR) sobre palabras descriptivas (adjetivos/sustantivos) en ventana estándar (25 palabras). Mide el matiz descriptivo.",
+        "help_pacing_sparkline": "Microdinámica de longitud de oraciones en ventana móvil dentro del capítulo. Picos indican oraciones largas, valles pulsos cortos.",
         "help_adjective": "Palabras con terminaciones adjetivales seleccionadas por 1.000 palabras. Heurística: omite otras terminaciones y puede incluir otras clases de palabras.",
         "help_dimensions": "Los puntos cercanos tienen valores similares en estos ejes. Los ejes combinan las posiciones de los rasgos de menor a mayor (rangos estandarizados) de capítulos con mediciones completas. La varianza muestra la proporción de variación que representa el eje en el espacio de rangos; se omiten los capítulos con rasgos no disponibles.",
         "help_expected_false_positives": "Estimación de referencia basada en un modelo de distribución normal; no cuenta los falsos hallazgos observados en este manuscrito.",
@@ -4092,6 +4112,11 @@ HELP_TEXTS = {
         "help_staccato": "Quota di frasi rilevate con al massimo 6 parole. La sola lunghezza non misura il ritmo di una scena.",
         "help_kaskade": "Quota di frasi rilevate con oltre 25 parole. Misura la lunghezza, non l’annidamento sintattico.",
         "help_cv": "Variazione delle lunghezze delle frasi rispetto alla media. 0 = lunghezze uguali; più alto = più variazione. Non è un voto di qualità.",
+        "help_sensory": "Densità di indizi di percezione sensoriale diretta (uditivi, visivi, tattili, olfattivi) per 1.000 parole. Supporta la verifica dell'immersione scenica.",
+        "help_immersion": "Rapporto tra indizi sensoriali diretti e verbi filtro (Show vs Tell). Valori più alti indicano un'esperienza diretta della scena.",
+        "help_lex_action": "Moving-Average Type-Token Ratio (MATTR) sui verbi d'azione in finestra standard (25 parole). Misura la varietà lessicale nell'azione.",
+        "help_lex_desc": "Moving-Average Type-Token Ratio (MATTR) sui termini descrittivi (aggettivi/nomi) in finestra standard (25 parole). Misura la sfumatura descrittiva.",
+        "help_pacing_sparkline": "Microdinamica della lunghezza delle frasi con finestra mobile nel capitolo. Picchi indicano frasi lunghe, avvallamenti ritmi serrati.",
         "help_adjective": "Parole con desinenze aggettivali selezionate ogni 1.000 parole. Euristica: omette altre desinenze e può includere altre classi di parole.",
         "help_dimensions": "I punti vicini hanno valori simili su questi assi. Gli assi combinano le posizioni delle caratteristiche dal valore più basso al più alto (ranghi standardizzati) dei capitoli con misure complete. La varianza mostra la quota di variazione rappresentata dall'asse nello spazio dei ranghi; i capitoli con caratteristiche non disponibili sono omessi.",
         "help_expected_false_positives": "Stima di riferimento da un modello di distribuzione normale, non un conteggio dei falsi risultati osservati in questo manoscritto.",
@@ -4158,6 +4183,11 @@ HELP_TEXTS = {
         "help_staccato": "Proporção de frases detetadas com até 6 palavras. O comprimento por si só não mede o ritmo de uma cena.",
         "help_kaskade": "Proporção de frases detetadas com mais de 25 palavras. Mede comprimento, não encaixe sintático.",
         "help_cv": "Variação do comprimento das frases face à média. 0 = comprimentos iguais; maior = mais variação. Não é uma nota de qualidade.",
+        "help_sensory": "Densidade de indícios de percepção sensorial direta (auditiva, visual, tátil, olfativa) por 1.000 palavras. Apoia a revisão da imersão cênica.",
+        "help_immersion": "Razão entre indícios sensoriais diretos e verbos de filtro (Show vs. Tell). Valores mais altos indicam experiência direta da cena.",
+        "help_lex_action": "Moving-Average Type-Token Ratio (MATTR) sobre verbos de ação em janela padrão (25 palavras). Mede a diversidade vocabular na ação.",
+        "help_lex_desc": "Moving-Average Type-Token Ratio (MATTR) sobre termos descritivos (adjetivos/substantivos) em janela padrão (25 palavras). Mede o matiz descritivo.",
+        "help_pacing_sparkline": "Microdinâmica da extensão das frases por janela móvel no capítulo. Picos indicam frases longas, vales pulsos curtos.",
         "help_adjective": "Palavras com terminações adjetivais selecionadas por 1.000 palavras. Heurística: omite outras terminações e pode incluir outras classes de palavras.",
         "help_dimensions": "Pontos próximos têm valores semelhantes nestes eixos. Os eixos combinam as posições das características do menor ao maior valor (postos padronizados) de capítulos com medidas completas. A variância mostra a proporção de variação representada pelo eixo no espaço dos postos; capítulos com características indisponíveis são omitidos.",
         "help_expected_false_positives": "Estimativa de referência de um modelo de distribuição normal, não uma contagem de falsos achados observados neste manuscrito.",
@@ -4224,6 +4254,11 @@ HELP_TEXTS = {
         "help_staccato": "Aandeel herkende zinnen met hoogstens 6 woorden. Zinslengte alleen meet geen scènetempo.",
         "help_kaskade": "Aandeel herkende zinnen met meer dan 25 woorden. Meet lengte, geen syntactische inbedding.",
         "help_cv": "Variatie in zinslengtes ten opzichte van hun gemiddelde. 0 = gelijke lengtes; hoger = meer variatie. Geen kwaliteitsoordeel.",
+        "help_sensory": "Dichtheid van directe zintuiglijke waarnemingen (auditief, visueel, tastbaar, geur) per 1.000 woorden. Ondersteunt het beoordelen van scène-immersie.",
+        "help_immersion": "Verhouding tussen directe zintuiglijke waarnemingen en filterwerkwoorden (Show vs. Tell). Hogere waarden wijzen op directe scènebeleving.",
+        "help_lex_action": "Voortschrijdend gemiddelde Type-Token Ratio (MATTR) over actiewerkwoorden in standaardvenster (25 woorden). Meet actiewoordschat.",
+        "help_lex_desc": "Voortschrijdend gemiddelde Type-Token Ratio (MATTR) over beschrijvende woorden (bijvoeglijke/zelfstandige naamwoorden) in standaardvenster (25 woorden).",
+        "help_pacing_sparkline": "Microdynamiek van zinslengtes via een rollend venster in het hoofdstuk. Pieken tonen lange zinnen, dalen korte staccato-pulsen.",
         "help_adjective": "Woorden met geselecteerde bijvoeglijke uitgangen per 1.000 woorden. Heuristiek: andere uitgangen ontbreken; ook andere woordsoorten kunnen passen.",
         "help_dimensions": "Punten die dicht bij elkaar liggen, hebben vergelijkbare waarden op deze assen. De assen combineren voor volledig gemeten hoofdstukken de posities van kenmerken van laag naar hoog (gestandaardiseerde rangen). Variantie toont welk deel van de variatie in de rangruimte de as weergeeft; hoofdstukken met ontbrekende kenmerken worden weggelaten.",
         "help_expected_false_positives": "Referentieschatting uit een normaalverdelingsmodel, geen gemeten aantal foutieve bevindingen in dit manuscript.",
@@ -4286,6 +4321,19 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
             "iv",
             "al",
         ],
+        "sensory_regex": (
+            r"\b(?:"
+            r"dröhn\w*|knall\w*|hall\w*|schall\w*|klirr\w*|zisch\w*|summ\w*|flüster\w*|"
+            r"schrei\w*|rausch\w*|krach\w*|klang\w*|polter\w*|stöhn\w*|wimmer\w*|piep\w*|"
+            r"quietsch\w*|knack\w*|brüll\w*|"
+            r"blitz\w*|funkel\w*|leucht\w*|glänz\w*|flacker\w*|schimmer\w*|strahl\w*|"
+            r"dämmer\w*|glimm\w*|düster\w*|schatten\w*|blend\w*|erstrahl\w*|"
+            r"frost\w*|kält\w*|hitz\w*|feucht\w*|nass\w*|klamm\w*|eisig\w*|schwitz\w*|"
+            r"glatt\w*|rauh\w*|brenn\w*|kratz\w*|zitter\w*|pulsier\w*|stechend\w*|drückend\w*|"
+            r"geruch\w*|gestank\w*|duft\w*|stink\w*|dampf\w*|qualm\w*|schwefel\w*|"
+            r"beißend\w*|muffig\w*|faulig\w*|aroma\w*|süßlich\w*|bitter\w*|salzig\w*|sauer\w*"
+            r")\b"
+        ),
     },
     "en": {
         "first_person_starters": ["i"],
@@ -4310,6 +4358,18 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
             "ances", "ences", "hoods", "doms", "ths",
         ],
         "adjective_suffixes": ["ous", "ful", "less", "able", "ible", "ive", "ish"],
+        "sensory_regex": (
+            r"\b(?:"
+            r"roar\w*|bang\w*|clang\w*|hiss\w*|buzz\w*|whisper\w*|scream\w*|screech\w*|"
+            r"shout\w*|rustle\w*|groan\w*|whimper\w*|rattle\w*|snap\w*|thud\w*|hum\w*|"
+            r"gleam\w*|glow\w*|flash\w*|spark\w*|glimmer\w*|flicker\w*|shimmer\w*|glare\w*|"
+            r"shadow\w*|blaze\w*|dazzl\w*|"
+            r"frost\w*|chill\w*|heat\w*|damp\w*|wet\w*|clammy\w*|icy\w*|sweat\w*|"
+            r"smooth\w*|rough\w*|burn\w*|shiver\w*|tingl\w*|prickl\w*|searing\w*|"
+            r"scent\w*|stench\w*|odor\w*|reek\w*|smell\w*|fume\w*|smoke\w*|sulfur\w*|"
+            r"acrid\w*|musty\w*|putrid\w*|fragran\w*|sweet\w*|bitter\w*|salty\w*|sour\w*"
+            r")\b"
+        ),
     },
     "fr": {
         "first_person_starters": ["je", "j"],
@@ -4344,6 +4404,18 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
             "if",
             "ive",
         ],
+        "sensory_regex": (
+            r"\b(?:"
+            r"vromb\w*|griff\w*|grond\w*|claqu\w*|siffl\w*|bourdonn\w*|chuchot\w*|murmur\w*|"
+            r"cri\w*|hurl\w*|fracas\w*|tint\w*|gémir\w*|gémit\w*|sanglot\w*|cliquet\w*|grinc\w*|"
+            r"brill\w*|étincel\w*|luir\w*|luit\w*|scintill\w*|éclair\w*|lueur\w*|flamb\w*|"
+            r"ombr\w*|sombr\w*|obscur\w*|ténèbr\w*|ébloui\w*|rayonn\w*|miroit\w*|"
+            r"froid\w*|chaud\w*|chaleur\w*|brûl\w*|gel\w*|glacé\w*|glac\w*|humide\w*|moit\w*|"
+            r"frissonn\w*|trembl\w*|picot\w*|rugueux\w*|lisse\w*|poisseux\w*|"
+            r"odeur\w*|parfum\w*|sentir\w*|puant\w*|puanteur\w*|arôme\w*|fumée\w*|soufre\w*|"
+            r"âcre\w*|rance\w*|sucré\w*|amer\w*|amère\w*|salé\w*|acid\w*|aigre\w*"
+            r")\b"
+        ),
     },
     "es": {
         "first_person_starters": ["yo"],
@@ -4377,6 +4449,18 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
             "ante",
             "ente",
         ],
+        "sensory_regex": (
+            r"\b(?:"
+            r"rugi\w*|rugid\w*|estruend\w*|estall\w*|silb\w*|zumb\w*|susurr\w*|murmur\w*|"
+            r"grit\w*|chill\w*|estrépit\w*|crujid\w*|gemid\w*|solloz\w*|chirrid\w*|retumb\w*|"
+            r"brill\w*|destell\w*|respland\w*|relámpag\w*|centell\w*|fulgor\w*|sombr\w*|"
+            r"tiniebl\w*|oscur\w*|deslumbr\w*|titil\w*|parpade\w*|"
+            r"frí\w*|calor\w*|ardor\w*|ardient\w*|quem\w*|helad\w*|escarch\w*|húmed\w*|mojad\w*|"
+            r"estremec\w*|tembl\w*|tirit\w*|ásper\w*|suav\w*|punzant\w*|palpit\w*|"
+            r"olor\w*|arom\w*|fraganci\w*|apest\w*|hedor\w*|pestilenc\w*|humo\w*|azufre\w*|"
+            r"acre\w*|dulz\w*|amarg\w*|salad\w*|agri\w*|ácid\w*"
+            r")\b"
+        ),
     },
     "it": {
         "first_person_starters": ["io"],
@@ -4409,6 +4493,18 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
             "ante",
             "ente",
         ],
+        "sensory_regex": (
+            r"\b(?:"
+            r"romb\w*|boat\w*|fragor\w*|fischi\w*|ronz\w*|sussurr\w*|bisbigli\w*|grid\w*|"
+            r"url\w*|strill\w*|rimbomb\w*|scricchiol\w*|gemito\w*|gemit\w*|singhiozz\w*|strident\w*|"
+            r"brill\w*|scintill\w*|luccic\w*|baglior\w*|lampeggi\w*|folgore\w*|ombr\w*|"
+            r"tenèbr\w*|oscur\w*|abbagli\w*|luce\w*|sfavill\w*|chiaror\w*|"
+            r"fredd\w*|calor\w*|caldo\w*|ardent\w*|bruci\w*|gel\w*|ghiacci\w*|umid\w*|bagnat\w*|"
+            r"brivid\w*|trem\w*|pungent\w*|ruvid\w*|lisci\w*|viscid\w*|"
+            r"odor\w*|profum\w*|puzz\w*|lezzo\w*|fetor\w*|fum\w*|zolfo\w*|acri\w*|aspr\w*|"
+            r"dolciastr\w*|amar\w*|salat\w*|acid\w*"
+            r")\b"
+        ),
     },
     "pt": {
         "first_person_starters": ["eu"],
@@ -4441,6 +4537,18 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
             "ante",
             "ente",
         ],
+        "sensory_regex": (
+            r"\b(?:"
+            r"rugid\w*|estondo\w*|estrond\w*|estalo\w*|assobi\w*|sussurr\w*|murmur\w*|grit\w*|"
+            r"berr\w*|zunid\w*|zumb\w*|rangid\w*|gemi\w*|soluço\w*|eco\w*|"
+            r"brilh\w*|cintil\w*|reluz\w*|clarão\w*|faísc\w*|fulgor\w*|sombr\w*|escur\w*|"
+            r"trev\w*|ofusc\w*|vislumbr\w*|respland\w*|"
+            r"fri\w*|calor\w*|quent\w*|ardor\w*|queim\w*|gelad\w*|gead\w*|úmid\w*|molhad\w*|"
+            r"arrepi\w*|trem\w*|ásper\w*|suav\w*|pungent\w*|latej\w*|"
+            r"cheir\w*|odor\w*|perfum\w*|arom\w*|fed\w*|fedor\w*|fumaç\w*|enxofre\w*|acre\w*|"
+            r"adoci\w*|amarg\w*|salgad\w*|azed\w*|ácid\w*"
+            r")\b"
+        ),
     },
     "nl": {
         "first_person_starters": ["ik"],
@@ -4462,6 +4570,18 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
             "teiten", "aties", "atieën", "dommen",
         ],
         "adjective_suffixes": ["lijk", "ig", "isch", "baar", "loos", "vol", "achtig"],
+        "sensory_regex": (
+            r"\b(?:"
+            r"dreun\w*|knal\w*|galm\w*|sis\w*|zoem\w*|fluister\w*|schreeuw\w*|brul\w*|"
+            r"kreet\w*|ruis\w*|kraak\w*|piep\w*|kreun\w*|gejank\w*|geritsel\w*|"
+            r"flits\w*|fonkel\w*|glans\w*|glinster\w*|schitter\w*|gloei\w*|flakker\w*|glim\w*|"
+            r"donker\w*|duister\w*|schaduw\w*|schemer\w*|verblind\w*|"
+            r"kou\w*|koud\w*|hitte\w*|heet\w*|warm\w*|brand\w*|ijzig\w*|vorst\w*|klam\w*|"
+            r"vochtig\w*|nat\w*|riller\w*|bever\w*|trill\w*|stekend\w*|ruw\w*|glad\w*|"
+            r"geur\w*|stank\w*|ruik\w*|stink\w*|walm\w*|rook\w*|zwavel\w*|aroma\w*|"
+            r"doordringend\w*|zoet\w*|bitter\w*|zout\w*|zuur\w*"
+            r")\b"
+        ),
     },
     "generic": {
         "first_person_starters": [],
@@ -4769,6 +4889,11 @@ UI_LABELS = {
         "show_tell": 'Wortmuster',
         "show_show": 'Zitate & kurze Sätze',
         "show_balance": 'Differenz der Gruppen',
+        "show_sensory": 'Sensorische Dichte',
+        "show_immersion": 'Immersions-Quotient',
+        "lex_action_mattr": 'Aktions-Wortschatz (MATTR)',
+        "lex_desc_mattr": 'Deskriptiver Wortschatz (MATTR)',
+        "pac_sparkline": 'Mikro-Dynamik',
         "mot_name": "Motiv",
         "panel_flags": "Auffälligkeiten",
         "flags_stage": "Stufe",
@@ -4842,6 +4967,11 @@ UI_LABELS = {
         "show_tell": 'Word-pattern cues',
         "show_show": 'Quotes & short sentences',
         "show_balance": 'Difference between groups',
+        "show_sensory": 'Sensory density',
+        "show_immersion": 'Immersion ratio',
+        "lex_action_mattr": 'Action lexis (MATTR)',
+        "lex_desc_mattr": 'Descriptive lexis (MATTR)',
+        "pac_sparkline": 'Micro-dynamics',
         "mot_name": "Motif",
         "panel_flags": "Flagged passages",
         "flags_stage": "Level",
@@ -4915,6 +5045,11 @@ UI_LABELS = {
         "show_tell": 'Motifs de mots',
         "show_show": 'Citations et phrases courtes',
         "show_balance": 'Différence entre groupes',
+        "show_sensory": 'Densité sensorielle',
+        "show_immersion": "Ratio d'immersion",
+        "lex_action_mattr": "Vocabulaire d'action (MATTR)",
+        "lex_desc_mattr": 'Vocabulaire descriptif (MATTR)',
+        "pac_sparkline": 'Dynamique locale',
         "mot_name": "Motif",
         "panel_flags": "Passages signalés",
         "flags_stage": "Niveau",
@@ -4988,6 +5123,11 @@ UI_LABELS = {
         "show_tell": 'Patrones de palabras',
         "show_show": 'Citas y frases cortas',
         "show_balance": 'Diferencia entre grupos',
+        "show_sensory": 'Densidad sensorial',
+        "show_immersion": 'Ratio de inmersión',
+        "lex_action_mattr": 'Léxico de acción (MATTR)',
+        "lex_desc_mattr": 'Léxico descriptivo (MATTR)',
+        "pac_sparkline": 'Microdinámica',
         "mot_name": "Motivo",
         "panel_flags": "Pasajes señalados",
         "flags_stage": "Nivel",
@@ -5061,6 +5201,11 @@ UI_LABELS = {
         "show_tell": 'Schemi di parole',
         "show_show": 'Citazioni e frasi brevi',
         "show_balance": 'Differenza tra gruppi',
+        "show_sensory": 'Densità sensoriale',
+        "show_immersion": 'Rapporto di immersione',
+        "lex_action_mattr": "Lessico d'azione (MATTR)",
+        "lex_desc_mattr": 'Lessico descrittivo (MATTR)',
+        "pac_sparkline": 'Microdinamica',
         "mot_name": "Motivo",
         "panel_flags": "Passaggi segnalati",
         "flags_stage": "Livello",
@@ -5134,6 +5279,11 @@ UI_LABELS = {
         "show_tell": 'Padrões de palavras',
         "show_show": 'Citações e frases curtas',
         "show_balance": 'Diferença entre grupos',
+        "show_sensory": 'Densidade sensorial',
+        "show_immersion": 'Razão de imersão',
+        "lex_action_mattr": 'Léxico de ação (MATTR)',
+        "lex_desc_mattr": 'Léxico descritivo (MATTR)',
+        "pac_sparkline": 'Microdinâmica',
         "mot_name": "Motivo",
         "panel_flags": "Passagens sinalizadas",
         "flags_stage": "Nível",
@@ -5207,6 +5357,11 @@ UI_LABELS = {
         "show_tell": 'Woordpatronen',
         "show_show": 'Citaten en korte zinnen',
         "show_balance": 'Verschil tussen groepen',
+        "show_sensory": 'Zintuiglijke dichtheid',
+        "show_immersion": 'Immersieratio',
+        "lex_action_mattr": 'Actiewoordenschat (MATTR)',
+        "lex_desc_mattr": 'Beschrijvende woordenschat (MATTR)',
+        "pac_sparkline": 'Microdynamiek',
         "mot_name": "Motief",
         "panel_flags": "Gemarkeerde passages",
         "flags_stage": "Niveau",

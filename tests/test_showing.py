@@ -162,6 +162,12 @@ class TestShowingReport(unittest.TestCase):
         chapter = report.chapter_list[0]
         self.assertGreater(chapter.dialog_pct, 0.0)
         self.assertGreaterEqual(chapter.filter_density, 0.0)
+        self.assertGreaterEqual(chapter.sensory_density, 0.0)
+        payload = report.to_dict()
+        self.assertIn("sensory_density", payload["chapter_list"][0])
+        self.assertIn("immersion_ratio", payload["chapter_list"][0])
+        self.assertIn("sensory_density_mean", payload)
+        self.assertIn("immersion_ratio_mean", payload)
 
     def test_deterministic(self):
         first = showing_report(TEXT, DE).to_dict()

@@ -1,5 +1,6 @@
 """Shared, deterministic orchestration for API, CLI and workspace analysis."""
 
+import logging
 import time
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -97,7 +98,7 @@ def analyze_document(
     include_evidence: bool = False,
 ) -> DocumentAnalysis:
     started = time.monotonic()
-    log_event(logger, "pipeline_analyze", stage="start", language=config.language, chars=len(text))
+    log_event(logger, "pipeline_analyze", level=logging.DEBUG, stage="start", language=config.language, chars=len(text))
     try:
         metrics = CorpusAnalyzer(config, sample_text=text).analyze_text(text)
         evidence: dict[int, ParagraphEvidence] | None = {} if include_evidence else None
@@ -105,7 +106,7 @@ def analyze_document(
         fingerprint = fingerprint_document(text, config, thresholds, metrics)
         duration_ms = int((time.monotonic() - started) * 1000)
         log_event(
-            logger, "pipeline_analyze", stage="completed",
+            logger, "pipeline_analyze", level=logging.DEBUG, stage="completed",
             chapters=len(chapters), paragraphs=len(paragraphs),
             words=metrics.raw_words, duration_ms=duration_ms,
         )

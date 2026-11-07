@@ -44,6 +44,8 @@ class ChapterBalance:
     nominalization_density: float
     dialog_pct: float
     staccato_pct: float
+    sensory_density: float = 0.0
+    immersion_ratio: float | None = None
     comparable: bool = True
 
     def to_dict(self) -> dict[str, Any]:
@@ -63,6 +65,8 @@ class ChapterBalance:
             "nominalization_density": round(self.nominalization_density, 2),
             "dialog_pct": round(self.dialog_pct, 2),
             "staccato_pct": round(self.staccato_pct, 2),
+            "sensory_density": round(self.sensory_density, 2),
+            "immersion_ratio": rounded(self.immersion_ratio),
         }
 
 
@@ -75,6 +79,8 @@ class ShowingReport:
     tell_z_mean: float | None
     show_z_mean: float | None
     balance_mean: float | None
+    sensory_density_mean: float | None = None
+    immersion_ratio_mean: float | None = None
     comparable_chapters: int = 0
     most_telling: list[int] = field(default_factory=list)
     most_showing: list[int] = field(default_factory=list)
@@ -91,6 +97,8 @@ class ShowingReport:
             "tell_z_mean": rounded(self.tell_z_mean),
             "show_z_mean": rounded(self.show_z_mean),
             "balance_mean": rounded(self.balance_mean),
+            "sensory_density_mean": rounded(self.sensory_density_mean),
+            "immersion_ratio_mean": rounded(self.immersion_ratio_mean),
             "most_telling": self.most_telling,
             "most_showing": self.most_showing,
             "chapter_list": [chapter.to_dict() for chapter in self.chapter_list],
@@ -168,6 +176,12 @@ def showing_report(
             tell_value = tell_z.get(chapter.num, 0.0)
             show_value = show_z.get(chapter.num, 0.0)
             balance = show_value - tell_value
+        sensory_dens = getattr(chapter, "sensory_density", 0.0)
+        immersion_ratio = (
+            round(sensory_dens / chapter.filter_density, 2)
+            if chapter.filter_density > 0.0
+            else None
+        )
         chapter_list.append(ChapterBalance(
             chapter_num=chapter.num,
             title=chapter.title,
@@ -180,6 +194,8 @@ def showing_report(
             nominalization_density=chapter.nominalization_density,
             dialog_pct=chapter.dialog_pct,
             staccato_pct=chapter.staccato_pct,
+            sensory_density=sensory_dens,
+            immersion_ratio=immersion_ratio,
             comparable=is_comparable,
         ))
 
@@ -191,6 +207,8 @@ def showing_report(
     tell_values = [c.tell_z for c in comparable_list if c.tell_z is not None]
     show_values = [c.show_z for c in comparable_list if c.show_z is not None]
     balance_values = [c.balance for c in comparable_list if c.balance is not None]
+    sensory_values = [c.sensory_density for c in comparable_list]
+    immersion_values = [c.immersion_ratio for c in comparable_list if c.immersion_ratio is not None]
 
     ranked = sorted(comparable_list, key=lambda item: item.balance or 0.0)
     # Unmeasurable or identical balances do not support a chapter ranking.
@@ -202,6 +220,8 @@ def showing_report(
         tell_z_mean=mean(tell_values),
         show_z_mean=mean(show_values),
         balance_mean=mean(balance_values),
+        sensory_density_mean=mean(sensory_values),
+        immersion_ratio_mean=mean(immersion_values),
         comparable_chapters=len(comparable_list),
         most_telling=[c.chapter_num for c in ranked[:3]],
         most_showing=[c.chapter_num for c in reversed(ranked[-3:])],

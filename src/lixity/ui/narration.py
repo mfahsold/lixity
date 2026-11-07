@@ -140,7 +140,7 @@ def render_sentence_dist_panel(
     if metrics is None:
         return ""
 
-    _, N, P = panel_formatters(labels, language_key)
+    L, N, P = panel_formatters(labels, language_key)
 
     d = metrics.sentence_dist
     rows = [
@@ -150,6 +150,15 @@ def render_sentence_dist_panel(
         ("> 25", d.complex_count, d.complex_pct),
     ]
     parts: list[str] = [panel_start("dist", labels, "sentence_dist")]
+    verb_mattr = getattr(metrics, "verb_mattr", None)
+    desc_mattr = getattr(metrics, "desc_mattr", None)
+    if verb_mattr is not None or desc_mattr is not None:
+        parts.append('<div class="kpi-row">')
+        if verb_mattr is not None:
+            parts.append(kpi(N(verb_mattr, 3), help_term(labels, "lex_action", L("lex_action_mattr"))))
+        if desc_mattr is not None:
+            parts.append(kpi(N(desc_mattr, 3), help_term(labels, "lex_desc", L("lex_desc_mattr"))))
+        parts.append("</div>")
     parts.append('<div class="dist">')
     for criterion, count, pct in rows:
         parts.append(
@@ -393,6 +402,13 @@ def render_pacing_panel(
         num = int(chapter.get("chapter_num", 0))
         asl = float(chapter.get("asl", 0.0))
         hook = int(chapter.get("hook_score", 0))
+        sparkline = chapter.get("pacing_sparkline") or ""
+        spark_html = (
+            f'<span class="sparkline" style="font-family:monospace;font-size:var(--text-micro);letter-spacing:.05em;color:var(--accent)" '
+            f'title="{L("pac_sparkline")}">{esc(sparkline)}</span> · '
+            if sparkline
+            else ""
+        )
         title_attr = esc(chapter.get("title", ""))
         chapter_label = f'{label(labels, "chapter")} {num} · {chapter.get("title", "")}'
         parts.append(
@@ -400,11 +416,11 @@ def render_pacing_panel(
             f'title="{title_attr}">'
             f'{chapter_link(num, chapter_label, css_class="label")}'
             f'<span class="bar"><i style="width:{min(100.0, asl / max_asl * 100.0):.1f}%"></i></span>'
-            f'<span class="val">{L("feat_asl")} {N(asl, 1)} · {L("pac_hook")} {hook}</span>'
+            f'<span class="val">{spark_html}{L("feat_asl")} {N(asl, 1)} · {L("pac_hook")} {hook}</span>'
             f"</div>"
         )
     parts.append("</div>")
-    if any("sentence_overlap_pct" in ch or "repeated_start_runs" in ch for ch in chapters_pacing):
+    if any("sentence_overlap_pct" in ch or "repeated_start_runs" in ch or "pacing_sparkline" in ch for ch in chapters_pacing):
         parts.append(
             f'<details class="pacing-measurements"><summary>{L("pac_chapter_details")} '
             f"({len(chapters_pacing)})</summary>"
@@ -412,6 +428,7 @@ def render_pacing_panel(
             "<table><thead><tr>"
             f'<th scope="col">{L("chapter")}</th>'
             f'<th scope="col" class="num">{L("feat_asl")}</th>'
+            f'<th scope="col" class="spark">{help_term(labels, "pacing_sparkline", L("pac_sparkline"))}</th>'
             f'<th scope="col" class="num">{L("pac_hook")}</th>'
             f'<th scope="col" class="num">{help_term(labels, "pacing_cohesion", L("pac_cohesion"))}</th>'
             f'<th scope="col" class="num">{help_term(labels, "pacing_monotony", L("pac_monotony"))}</th>'
@@ -421,6 +438,7 @@ def render_pacing_panel(
             num = int(chapter.get("chapter_num", 0))
             asl = float(chapter.get("asl", 0.0))
             hook = int(chapter.get("hook_score", 0))
+            sparkline = chapter.get("pacing_sparkline") or ""
             overlap = float(chapter.get("sentence_overlap_pct", 0.0))
             monotony = int(chapter.get("repeated_start_runs", 0))
             chapter_label = f'{label(labels, "chapter")} {num} · {chapter.get("title", "")}'
@@ -428,6 +446,7 @@ def render_pacing_panel(
                 f"<tr>"
                 f'<th scope="row">{chapter_link(num, chapter_label)}</th>'
                 f'<td class="num">{N(asl, 1)}</td>'
+                f'<td class="spark" style="text-align:center"><span class="sparkline" style="font-family:monospace;font-size:var(--text-micro);letter-spacing:.05em;color:var(--accent)">{esc(sparkline)}</span></td>'
                 f'<td class="num">{N(hook, 0)}</td>'
                 f'<td class="num">{P(overlap)}</td>'
                 f'<td class="num">{N(monotony, 0)}</td>'
@@ -564,6 +583,19 @@ def render_showing_panel(
         N(float(showing.get("balance_mean") or 0.0), 2, signed=True), L("show_balance")
     ))
     parts.append("</div>")
+    if showing.get("sensory_density_mean") is not None or showing.get("immersion_ratio_mean") is not None:
+        pills: list[str] = []
+        if showing.get("sensory_density_mean") is not None:
+            sens_term = help_term(labels, "sensory", L("show_sensory"))
+            pills.append(
+                f'<span class="immersion-pill"><b>{N(float(showing["sensory_density_mean"]), 1)}</b> {sens_term}</span>'
+            )
+        if showing.get("immersion_ratio_mean") is not None:
+            imm_term = help_term(labels, "immersion", L("show_immersion"))
+            pills.append(
+                f'<span class="immersion-pill"><b>{N(float(showing["immersion_ratio_mean"]), 2)}</b> {imm_term}</span>'
+            )
+        parts.append(f'<p class="ctl-note" style="margin-top:.4rem">{" · ".join(pills)}</p>')
     parts.append(f'<p class="signal-scale">{L("showing_axis_note")} '
                  '<span class="signal-scale-key" aria-hidden="true"><span>−</span><span>0</span><span>+</span></span></p>')
 

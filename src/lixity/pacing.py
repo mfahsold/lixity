@@ -22,7 +22,9 @@ explicitly in the text and marks its heuristics as such.
 
 from __future__ import annotations
 
+import math
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from itertools import pairwise
 from typing import Any
@@ -43,6 +45,56 @@ MONOTONY_MIN_RUN = DEFAULT_MONOTONY_MIN_RUN
 # Fallback content-word length floor when a language profile has no function-word
 # lexicon (e.g. "generic").
 COHESION_FALLBACK_MIN_LEN = 4
+
+SPARKLINE_BARS = (" ", "▂", "▃", "▄", "▅", "▆", "▇", "█")
+
+
+def compute_rolling_asl(sentence_lengths: list[int], window: int = 15) -> list[float]:
+    """Calculate rolling average sentence length across sliding window of sentences."""
+    if not sentence_lengths:
+        return []
+    n = len(sentence_lengths)
+    if n <= window:
+        return [round(sum(sentence_lengths) / n, 1)]
+    current_sum = sum(sentence_lengths[:window])
+    results = [round(current_sum / window, 1)]
+    for i in range(window, n):
+        current_sum += sentence_lengths[i] - sentence_lengths[i - window]
+        results.append(round(current_sum / window, 1))
+    return results
+
+
+def condense_timeline(values: Sequence[float], target_points: int = 12) -> list[float]:
+    """Sample or bin timeline to target_points for compact presentation."""
+    if not values:
+        return []
+    if len(values) <= target_points:
+        return [round(v, 1) for v in values]
+    step = len(values) / target_points
+    condensed: list[float] = []
+    for i in range(target_points):
+        start = int(i * step)
+        end = int((i + 1) * step)
+        chunk = values[start:max(start + 1, end)]
+        condensed.append(round(sum(chunk) / len(chunk), 1))
+    return condensed
+
+
+def compute_sparkline(values: Sequence[float]) -> str:
+    """Render a sequence of floats as an 8-level Unicode sparkline."""
+    if not values:
+        return ""
+    v_min = min(values)
+    v_max = max(values)
+    if v_max == v_min:
+        return SPARKLINE_BARS[3] * len(values)
+    span = v_max - v_min
+    bars: list[str] = []
+    for val in values:
+        idx = int((val - v_min) / span * 7.0)
+        idx = max(0, min(7, idx))
+        bars.append(SPARKLINE_BARS[idx])
+    return "".join(bars)
 
 
 @dataclass(frozen=True)
@@ -87,6 +139,9 @@ class ChapterPacing:
     repeated_start_runs: int = 0
     adjacent_sentence_pairs: int = 0
     sentence_overlap_pct: float = 0.0
+    sentence_cv: float = 0.0
+    pacing_sparkline: str = ""
+    pacing_curve: list[float] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -105,6 +160,9 @@ class ChapterPacing:
             "repeated_start_runs": self.repeated_start_runs,
             "adjacent_sentence_pairs": self.adjacent_sentence_pairs,
             "sentence_overlap_pct": round(self.sentence_overlap_pct, 2),
+            "sentence_cv": round(self.sentence_cv, 2),
+            "pacing_sparkline": self.pacing_sparkline,
+            "pacing_curve": self.pacing_curve,
             "scene_list": [scene.to_dict() for scene in self.scene_list],
         }
 
@@ -328,6 +386,24 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
         )
         overlap_pct = (linked_pairs / adjacent_pairs * 100.0) if adjacent_pairs else 0.0
 
+        all_sentences = [
+            s for s in split_prose_sentences(clean, resolved.key)
+            if word_re.search(s)
+        ]
+        sentence_lengths = [len(word_re.findall(s)) for s in all_sentences]
+        if sentence_lengths:
+            m = sum(sentence_lengths) / len(sentence_lengths)
+            var = sum((sl - m) ** 2 for sl in sentence_lengths) / len(sentence_lengths)
+            cv = (math.sqrt(var) / m) if m > 0.0 else 0.0
+            window = min(15, max(3, len(sentence_lengths) // 3)) if len(sentence_lengths) >= 6 else len(sentence_lengths)
+            rolling = compute_rolling_asl(sentence_lengths, window=window)
+            pacing_curve = condense_timeline(rolling, target_points=12)
+            sparkline = compute_sparkline(pacing_curve)
+        else:
+            cv = 0.0
+            pacing_curve = []
+            sparkline = ""
+
         chapter_list.append(
             ChapterPacing(
                 chapter_num=number,
@@ -346,6 +422,9 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
                 repeated_start_runs=repeated_runs,
                 adjacent_sentence_pairs=adjacent_pairs,
                 sentence_overlap_pct=overlap_pct,
+                sentence_cv=cv,
+                pacing_sparkline=sparkline,
+                pacing_curve=pacing_curve,
             )
         )
         total_scenes += len(scenes)

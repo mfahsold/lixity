@@ -7,6 +7,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- **Pacing & Micro-Dynamics (`lixity.pacing`)**: Rolling sentence length analysis (`compute_rolling_asl`) with adaptive window size, sentence length coefficient of variation (`sentence_cv`), 12-point chapter condensed timelines (`pacing_curve`), and 8-level Unicode sparklines (`pacing_sparkline`) surfaced across CLI and Dashboard UI.
+- **POS-Stratified Lexical Diversity (`lixity.diversity`, `lixity.analyzer`)**: Stratified moving-average type-token ratio (`stratified_mattr`) separating action vocabulary MATTR (`verb_mattr`) and descriptive vocabulary MATTR (`desc_mattr`) across chapter and corpus levels, surfacing lexical depth profiles in the Narration UI.
+- **Multilingual Sensory Immersion Profiling (`lixity.showing`, `lixity.language_data`)**: 4-modality sensory perception cues (auditory, visual, haptic/thermal, olfactory/gustatory) compiled for all 7 supported languages (`de`, `en`, `fr`, `es`, `it`, `pt`, `nl`), measuring sensory cue density (`sensory_density`) and immersion ratio (`immersion_ratio`), exposed in CLI and Dashboard Narration views.
+
+
 ## [0.7.9] - 2026-11-05
 
 ### Documentation

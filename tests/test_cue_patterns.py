@@ -9,7 +9,7 @@ from lixity.models import CorpusConfig
 
 CUE_FIELDS = (
     "dialogue_regex", "filter_verbs_regex", "praesens_regex", "praeteritum_regex",
-    "passive_regex", "nominal_regex", "adjective_regex",
+    "passive_regex", "nominal_regex", "adjective_regex", "sensory_regex",
 )
 PATTERN_TABLES = ("signal_keywords", "motif_regexes")
 
@@ -72,3 +72,24 @@ def test_valid_cues_keep_empty_capture_and_scoped_flag_semantics():
     assert result["chapters"][0]["motif_counts"] == {"Folded": 3, "Exact": 1}
     assert result["filter_count"] == 3 and result["dialog_words"] == 1
     assert result["passive_density"] == result["nominalization_density"] == 0.0
+
+
+@pytest.mark.parametrize(
+    "language,text",
+    [
+        ("de", "## Kapitel 1\n\nDer Duft von frischem Kaffee und das kalte Licht drangen durch den Raum."),
+        ("en", "## Chapter 1\n\nThe cold light and sweet scent of coffee filled the silent room."),
+        ("fr", "## Chapitre 1\n\nLa lumière froide et le parfum doux du café remplissaient la pièce."),
+        ("es", "## Capítulo 1\n\nLa luz fría y el aroma dulce del café llenaban la habitación."),
+        ("it", "## Capitolo 1\n\nLa luce fredda e il profumo dolce del caffè riempivano la stanza."),
+        ("pt", "## Capítulo 1\n\nA luz fria e o aroma doce do café enchiam o quarto."),
+        ("nl", "## Hoofdstuk 1\n\nHet koude licht en de geur van koffie vulden de kamer."),
+    ],
+)
+def test_sensory_cues_multilingual_coverage(language: str, text: str):
+    result = api.analyze(text, language=language)["metrics"]
+    assert result["sensory_count"] > 0
+    assert result["sensory_density"] > 0.0
+    assert result["chapters"][0]["sensory_count"] == result["sensory_count"]
+    assert result["chapters"][0]["sensory_density"] == result["sensory_density"]
+

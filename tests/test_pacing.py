@@ -188,6 +188,33 @@ class TestReportSurface(unittest.TestCase):
         self.assertEqual(report_relaxed.chapter_list[0].hook_score, 1)
         self.assertEqual(report_relaxed.chapter_list[0].repeated_start_runs, 1)
 
+    def test_pacing_micro_timeline_and_sparkline(self):
+        from lixity.pacing import compute_rolling_asl, compute_sparkline, condense_timeline
+
+        lengths = [4, 6, 8, 10, 12, 14, 16, 18, 20]
+        rolling = compute_rolling_asl(lengths, window=3)
+        self.assertEqual(len(rolling), 7)
+        self.assertEqual(rolling[0], round((4 + 6 + 8) / 3, 1))
+
+        condensed = condense_timeline(rolling, target_points=4)
+        self.assertEqual(len(condensed), 4)
+
+        spark = compute_sparkline([1.0, 5.0, 10.0])
+        self.assertEqual(len(spark), 3)
+        self.assertEqual(spark[0], " ")
+        self.assertEqual(spark[-1], "█")
+
+        text = "## Test\n\nKurz. Ein zweiter Satz. Und noch ein viel längerer Satz hier.\n"
+        report = pacing_report(text, DE)
+        ch = report.chapter_list[0]
+        self.assertTrue(ch.pacing_sparkline)
+        self.assertGreater(ch.sentence_cv, 0.0)
+        self.assertTrue(ch.pacing_curve)
+        payload = ch.to_dict()
+        self.assertIn("pacing_sparkline", payload)
+        self.assertIn("sentence_cv", payload)
+        self.assertIn("pacing_curve", payload)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -215,10 +215,14 @@ class CorpusConfig(BaseModel):
         default=None,
         description="Regex for adjective suffixes (None = language profile default).",
     )
+    sensory_regex: str | None = Field(
+        default=None,
+        description="Regex for sensory perception cues (Show vs. Tell; None = language profile default).",
+    )
 
     @field_validator(
         "dialogue_regex", "filter_verbs_regex", "praesens_regex", "praeteritum_regex",
-        "passive_regex", "nominal_regex", "adjective_regex",
+        "passive_regex", "nominal_regex", "adjective_regex", "sensory_regex",
     )
     @classmethod
     def validate_cue_regex(cls, value: str | None) -> str | None:
@@ -310,6 +314,10 @@ class ChapterMetrics(BaseModel):
     )
     modal_density: float = Field(default=0.0, description="Modal verbs per 1,000 words.")
     filter_density: float = Field(default=0.0, description="Perception filter verbs per 1,000 words.")
+    sensory_density: float = Field(default=0.0, description="Sensory perception cues per 1,000 words.")
+    sensory_count: int = Field(default=0, description="Count of sensory perception cues.")
+    verb_mattr: float | None = Field(default=None, description="MATTR over verbal tokens (Action).")
+    desc_mattr: float | None = Field(default=None, description="MATTR over descriptive tokens (Nouns/Adjectives).")
     long_word_pct: float = Field(
         default=0.0, description="Percentage of long words (> 6 letters)."
     )
@@ -398,6 +406,10 @@ class CorpusMetrics(BaseModel):
     )
     modal_density: float = Field(default=0.0, description="Modal verbs per 1,000 words.")
     filter_density: float = Field(default=0.0, description="Perception filter verbs per 1,000 words.")
+    sensory_density: float = Field(default=0.0, description="Corpus sensory cues per 1,000 words.")
+    sensory_count: int = Field(default=0, description="Total corpus count of sensory cues.")
+    verb_mattr: float | None = Field(default=None, description="Corpus MATTR over verbal tokens.")
+    desc_mattr: float | None = Field(default=None, description="Corpus MATTR over descriptive tokens.")
     hd_d: float | None = Field(
         default=None, description="Expected TTR of a 42-token draw without replacement; null below 100 tokens."
     )

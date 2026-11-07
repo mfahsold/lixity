@@ -8,7 +8,7 @@ from decimal import Decimal, localcontext
 from fractions import Fraction
 from itertools import combinations
 
-from lixity.diversity import hd_d, hd_d_stats, maas_a2, mattr, mtld, yules_k
+from lixity.diversity import hd_d, hd_d_stats, maas_a2, mattr, mtld, stratified_mattr, yules_k
 
 
 def _directional_mtld_reference(tokens: list[str], threshold: Fraction) -> Fraction | None:
@@ -182,6 +182,36 @@ class MTLDTests(unittest.TestCase):
         for n in (100, 200):
             with self.subTest(unique_tokens=n):
                 self.assertIsNone(mtld([f"unique{i}" for i in range(n)]))
+
+
+class StratifiedMATTRTests(unittest.TestCase):
+    def test_stratified_mattr_filters_and_computes_mattr(self) -> None:
+        # 30 verbs, 30 nouns
+        verbs = [f"verb{i}" for i in range(30)]
+        nouns = [f"noun{i}" for i in range(30)]
+        interleaved = [tok for pair in zip(verbs, nouns, strict=True) for tok in pair]
+
+        # Filter verbs only with window=10
+        val = stratified_mattr(interleaved, lambda t: t.startswith("verb"), window=10)
+        self.assertIsNotNone(val)
+        # All verbs are unique -> MATTR over unique tokens is 1.0
+        self.assertEqual(val, 1.0)
+
+        # Repetitive verbs
+        rep_verbs = ["walk", "run"] * 15
+        interleaved_rep = [tok for pair in zip(rep_verbs, nouns, strict=True) for tok in pair]
+        val_rep = stratified_mattr(interleaved_rep, lambda t: t in ("walk", "run"), window=10)
+        self.assertIsNotNone(val_rep)
+        self.assertEqual(val_rep, 2 / 10)
+
+    def test_stratified_mattr_below_window_returns_none(self) -> None:
+        tokens = ["verb1", "noun1", "verb2"]
+        val = stratified_mattr(tokens, lambda t: t.startswith("verb"), window=10)
+        self.assertIsNone(val)
+
+    def test_invalid_window_raises(self) -> None:
+        with self.assertRaises(ValueError):
+            stratified_mattr(["a"] * 10, lambda t: True, window=0)
 
 
 if __name__ == "__main__":

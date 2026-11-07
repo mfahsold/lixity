@@ -20,6 +20,7 @@ from __future__ import annotations
 import math
 import warnings
 from collections import Counter
+from collections.abc import Callable
 from typing import Any
 
 # Local minimum length for HD-D, MTLD and Maas; not a universal validity boundary.
@@ -27,6 +28,7 @@ MIN_TOKENS_LD = 100
 HD_D_DRAW_SIZE = 42
 DEFAULT_MTLD_THRESHOLD = 0.72
 DEFAULT_MATTR_WINDOW = 50
+DEFAULT_STRATIFIED_WINDOW = 25
 
 
 _UNSET: Any = object()
@@ -176,6 +178,26 @@ def mattr(tokens: list[str], window: int = DEFAULT_MATTR_WINDOW) -> float | None
         total += distinct
     windows = n - window + 1
     return total / (window * windows)
+
+
+def stratified_mattr(
+    tokens: list[str],
+    in_category: Callable[[str], bool],
+    window: int = DEFAULT_STRATIFIED_WINDOW,
+) -> float | None:
+    """Calculate MATTR specifically over tokens satisfying in_category predicate.
+
+    Extracts matching tokens preserving order and evaluates MATTR over sliding
+    window of ``window`` tokens. Returns None if fewer than ``window`` tokens match.
+    """
+    if type(window) is not int or window <= 0:
+        raise ValueError("MATTR window must be a positive integer")
+    matching = [tok for tok in tokens if in_category(tok)]
+    if len(matching) < window:
+        return None
+    return mattr(matching, window=window)
+
+
 def yules_k(tokens: list[str]) -> float:
     """Yule's characteristic K = 10^4 * (Σ m² V_m − N) / N² (Yule 1944).
 

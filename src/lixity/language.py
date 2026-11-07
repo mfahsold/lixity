@@ -60,6 +60,7 @@ class LanguageProfile:
     passive_regex: str
     nominal_regex: str
     adjective_regex: str
+    sensory_regex: str = ""
 
 
 # The effective profile after config overrides is structurally the same object.
@@ -121,6 +122,7 @@ def _build_profiles() -> dict[str, LanguageProfile]:
             passive_regex=style.get("passive_regex", ""),
             nominal_regex=_suffix_pattern(style.get("nominal_suffixes", ())),
             adjective_regex=_suffix_pattern(style.get("adjective_suffixes", ())),
+            sensory_regex=style.get("sensory_regex", ""),
         )
     return profiles
 
@@ -238,6 +240,7 @@ def resolve_language(
         "passive_regex",
         "nominal_regex",
         "adjective_regex",
+        "sensory_regex",
         "first_person_starters",
     ):
         value = getattr(config, field_name, None)

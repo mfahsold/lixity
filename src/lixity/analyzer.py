@@ -25,6 +25,9 @@ from .diversity import (
     mtld as mtld_value,
 )
 from .diversity import (
+    stratified_mattr,
+)
+from .diversity import (
     yules_k as yules_k_value,
 )
 from .language import (
@@ -112,9 +115,27 @@ class CorpusAnalyzer:
             self.lang.function_words if self.config.nominal_regex is None else frozenset()
         )
         self._adjective_re = compile_pattern(self.lang.adjective_regex)
+        self._praesens_re = compile_pattern(self.lang.praesens_regex)
+        self._praeteritum_re = compile_pattern(self.lang.praeteritum_regex)
+        self._sensory_re = compile_pattern(self.lang.sensory_regex)
         self._modals = frozenset(w.lower() for w in self.lang.lexicon.get("modals", ()))
         self._starters = frozenset(w.lower() for w in self.lang.first_person_starters)
         self._content_blacklist = self.lang.function_words | self.lang.stopwords
+
+    def _is_verb(self, token: str) -> bool:
+        """Deterministic POS heuristic: matches present or past tense inflection patterns."""
+        if not self.lang.praesens_regex and not self.lang.praeteritum_regex:
+            return False
+        return bool(self._praesens_re.fullmatch(token) or self._praeteritum_re.fullmatch(token))
+
+    def _is_desc(self, token: str) -> bool:
+        """Deterministic POS heuristic: matches descriptive adjective or nominal morphology."""
+        if not self.lang.adjective_regex and not self.lang.nominal_regex:
+            return False
+        return bool(
+            self._adjective_re.fullmatch(token)
+            or (self._nominal_re.fullmatch(token) and token not in self._nominal_exclusions)
+        )
 
     @staticmethod
     def _entropy(counts: Counter[str]) -> float:
@@ -347,6 +368,10 @@ class CorpusAnalyzer:
         c_nominal_cnt = count_nominal_matches(cl_b, self._nominal_re, self._nominal_exclusions)
         c_adjective_cnt = len(self._adjective_re.findall(cl_b))
         c_modal_cnt = sum(1 for t in c_lower if t in self._modals)
+        c_sensory_cnt = len(self._sensory_re.findall(cl_b))
+        c_sensory_dens = self._density(c_sensory_cnt, n_cw)
+        c_verb_mattr = stratified_mattr(c_lower, self._is_verb)
+        c_desc_mattr = stratified_mattr(c_lower, self._is_desc)
         c_long_words = sum(1 for t in c_words if len(t) > lw_min)
         c_long_pct = (c_long_words / n_cw * 100.0) if n_cw else 0.0
         c_guiraud = len(set(c_lower)) / math.sqrt(n_cw) if n_cw else 0.0
@@ -366,6 +391,7 @@ class CorpusAnalyzer:
             "dialog_pct": share_se(c_dial_pct, n_cw),
             "function_word_pct": share_se(c_func_pct, n_cw),
             "filter_density": count_se(c_fil, n_cw),
+            "sensory_density": count_se(c_sensory_cnt, n_cw),
             "modal_density": count_se(c_modal_cnt, n_cw),
             "passive_density": count_se(c_passive_cnt, n_cw),
             "nominalization_density": count_se(c_nominal_cnt, n_cw),
@@ -399,6 +425,10 @@ class CorpusAnalyzer:
             adjective_density=self._density(c_adjective_cnt, n_cw),
             modal_density=self._density(c_modal_cnt, n_cw),
             filter_density=self._density(c_fil, n_cw),
+            sensory_density=c_sensory_dens,
+            sensory_count=c_sensory_cnt,
+            verb_mattr=c_verb_mattr,
+            desc_mattr=c_desc_mattr,
             long_word_pct=c_long_pct,
             guiraud_r=c_guiraud,
             hd_d=c_hd_d,
@@ -505,6 +535,10 @@ class CorpusAnalyzer:
         adjective_density = self._density(len(self._adjective_re.findall(prose_main)), n_tokens)
         modal_density = self._density(sum(1 for t in lower_tokens if t in self._modals), n_tokens)
         filter_density = self._density(filter_cnt, n_tokens)
+        sensory_cnt = len(self._sensory_re.findall(prose_main))
+        sensory_density = self._density(sensory_cnt, n_tokens)
+        verb_mattr = stratified_mattr(lower_tokens, self._is_verb)
+        desc_mattr = stratified_mattr(lower_tokens, self._is_desc)
 
         # 9. Chapter-wise segmentation (shared split_chapters: front matter +
         #    appendix + empty-body rules identical to the structure modules).
@@ -568,6 +602,10 @@ class CorpusAnalyzer:
             adjective_density=adjective_density,
             modal_density=modal_density,
             filter_density=filter_density,
+            sensory_density=sensory_density,
+            sensory_count=sensory_cnt,
+            verb_mattr=verb_mattr,
+            desc_mattr=desc_mattr,
             hd_d=hd_d_value(lower_tokens),
             mtld=mtld_value(lower_tokens),
             mattr=mattr_value(lower_tokens),
