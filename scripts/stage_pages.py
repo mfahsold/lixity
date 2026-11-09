@@ -32,6 +32,7 @@ DOCS_ROOT_FILES = {
     "index.html",
     "robots.txt",
     "sitemap.xml",
+    "indexnow-key.txt",  # Public ownership proof, scoped to /lixity/ via keyLocation.
     "llms.txt",
     "llms-full.txt",
     "README.md",

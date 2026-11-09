@@ -8,12 +8,16 @@
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
-**Read the manuscript. Investigate a passage. Keep the evidence.**
+**Local manuscript analysis and research for authors and editors.**
 
 Lixity is a local workspace for authors, editors and manuscript reviewers. Read
 continuous prose, inspect changes in rhythm or vocabulary, follow a scene detail
 into its research dossier, and prepare a reading copy or spoken review from the
 same project. The browser app, CLI and Python API share one analysis engine.
+
+**Seven interface languages:** Deutsch · English · Français · Español · Italiano · Português · Nederlands.
+Technical documentation is maintained in **English only**. German and English
+have the broadest analysis resources; see the [language coverage and limits](https://mfahsold.github.io/lixity/LOCALIZATION.md).
 
 **The reference is your own book. The editorial decision stays yours.**
 Measurements help locate and explain differences; they do not grade literary
@@ -25,6 +29,9 @@ Markdown or plain text; convert Word/DOCX or Scrivener documents before import.
 [English tour](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Einstieg auf Deutsch](https://mfahsold.github.io/lixity/guides/first-look-de.html) ·
 [Install](https://mfahsold.github.io/lixity/guides/installation.html)
+
+**Start without installing:** open the demo, inspect one marked passage, then
+return to the scene and decide whether you would keep it.
 
 The public demo follows six invented English harbour chapters and their linked
 case notes. It needs no account or manuscript upload. It is a fixed, read-only
@@ -59,6 +66,13 @@ resolve the contradiction or establish the truth of a saved claim.
 [Follow the decision](https://mfahsold.github.io/lixity/guides/first-look.html#decision).
 
 <a id="start-here"></a>
+
+## Share one revision experience
+
+What did you want to check? Did the explanation help? What got in the way?
+[Send a short description](mailto:mfahsold@googlemail.com?subject=Lixity%20feedback)
+or [report a reproducible issue](https://github.com/mfahsold/lixity/issues).
+You do not need to share manuscript text to give useful feedback.
 
 ## Install and start
 

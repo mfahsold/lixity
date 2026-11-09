@@ -1228,8 +1228,8 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
               });
               assert.ok(columns.copyRight < columns.imageLeft, 'Desktop introduction and preview share one row');
             }
-            await expect(page.locator('.hero-cta a.primary[href="demo/report.html"]')).toHaveAccessibleName('Try one revision question');
-            await expect(page.locator('.hero-cta a[href="guides/first-look.html"]')).toHaveAccessibleName('Follow the short tour');
+            await expect(page.locator('.hero-cta a.primary[href="demo/report.html"]')).toHaveAccessibleName('Explore interactive demo');
+            await expect(page.locator('.hero-cta a[href="guides/first-look.html"]')).toHaveAccessibleName('Short tour (English)');
             await expect(page.locator('.site-header a[href="#installation"]')).toBeVisible();
             const commandLink = page.locator('.site-header a[href="#command-line"]');
             await expect(commandLink).toBeVisible();

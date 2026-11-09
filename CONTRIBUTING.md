@@ -355,6 +355,13 @@ Preserve mathematical limits and JSON compatibility notes. Reuse the shared
 Pages stylesheet and scripts; distinguish unreleased behavior from the current
 release. Keep `llms.txt` factual.
 
+Keep technical documentation (manuals, installation instructions, CLI/API
+references and contributor guidance) in English only. Public product presentation
+and outreach should reflect Lixity's multilingual interface. Translate marketing
+entry pages deliberately, with accurate language alternatives;
+do not imply that all technical documentation or language validation is translated
+or equivalent.
+
 Search and AI retrieval use the same maintained public evidence: descriptive
 page titles, one canonical URL, readable HTML, accurate application/article
 metadata, source links and real modification dates. Keep release information
@@ -366,6 +373,18 @@ not a promised Google ranking improvement. Crawlability and a sitemap do not
 establish indexing, traffic or inclusion in generated answers. Inspect those
 outcomes through authorized Search Console and analytics access, and report
 unavailable measurements as unknown.
+
+For participating search engines, `docs/indexnow-key.txt` is a public IndexNow
+ownership proof, not an account credential. Pages stages it at
+`https://mfahsold.github.io/lixity/indexnow-key.txt`; use that exact `keyLocation`
+with host `mfahsold.github.io` so submissions stay within `/lixity/`. After an
+authorized deployment, verify the public key file and submit added, changed or
+removed public URLs to `https://api.indexnow.org/indexnow`. Do not submit local
+preview URLs or repeatedly notify unchanged pages. An accepted request confirms
+receipt, not crawling, indexing or ranking. See the
+[IndexNow protocol](https://www.indexnow.org/documentation). Bing Webmaster Tools
+requires its own verified access for performance and indexing diagnostics;
+Google Search Console credentials do not grant Bing access.
 
 Run `make docs-check` (`make docs-sync` updates release pins) and relevant
 [browser checks](tests/browser/README.md). Inspect desktop and mobile layouts,

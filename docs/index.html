@@ -93,7 +93,7 @@
     "priceCurrency": "EUR",
     "description": "Open source under AGPL-3.0-or-later. A separate written commercial license is available for integrations that cannot meet the AGPL."
   },
-  "dateModified": "2026-11-05"
+  "dateModified": "2026-11-09"
 }
 </script>
 <script type="application/ld+json">
@@ -109,7 +109,7 @@
     "https://bsky.app/profile/lixity.bsky.social"
   ],
   "description": "Find passages worth reviewing, inspect what was counted and follow the research behind a scene. A local workspace for authors and editors.",
-  "dateModified": "2026-11-05"
+  "dateModified": "2026-11-09"
 }
 </script>
 </head>
@@ -120,7 +120,8 @@
     <a class="brand" href="./" aria-current="page"><span class="brand-name">Lixity</span></a>
     <a href="releases/v0.7.9.md" id="current-release" title="Development notes; check GitHub releases for published packages"><span class="brand-badge">v0.7.9</span> preview</a>
     <nav class="site-return" aria-label="Lixity navigation">
-      <a href="#guides">Guides</a>
+      <a href="#languages">Languages</a>
+      <a href="#guides">Docs (English)</a>
       <a href="#installation">Install</a>
       <a href="#command-line">CLI</a>
     </nav>
@@ -133,8 +134,8 @@
       <span id="origin"></span>
       <div class="hero-badges" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;">
         <span class="brand-badge">AGPL-3.0 Open Source</span>
-        <span class="brand-badge">100% Offline &amp; Private</span>
-        <span class="brand-badge">German &amp; English</span>
+        <span class="brand-badge">Built-in analysis stays local</span>
+        <span class="brand-badge">7 interface languages</span>
       </div>
       <h1 class="hero-title" id="intro-title">Find the passages<br/>worth a second look.</h1>
       <p class="hero-sub">Local manuscript analysis and research workspace for authors and editors. Read the manuscript, investigate its patterns and follow the research behind a scene. Prepare a spoken review or a reading copy from the same local project. Works with Markdown and plain text.</p>
@@ -142,9 +143,9 @@
       <div class="hero-cta">
         <a class="ctl primary" href="demo/report.html" id="examples">Explore interactive demo</a>
         <a class="ctl" href="#installation">Install Lixity</a>
-        <a href="guides/first-look.html">Follow the short tour</a>
+        <a href="guides/first-look.html">Short tour (English)</a>
       </div>
-      <p class="section-note">No account or upload to try the demo. Built-in analysis runs locally and never rewrites your prose. Free and open source, including for commercial book projects. <a href="LICENSING.md">License details</a>.</p>
+      <p class="section-note">The read-only demo uses an invented English manuscript; no account or upload is needed. Built-in analysis runs locally and never rewrites your prose. Free and open source, including for commercial book projects. <a href="LICENSING.md">License details</a>.</p>
       <p class="section-note"><a href="guides/first-look-de.html" lang="de" hreflang="de">Auf Deutsch: eine Frage, ein Dossier, zurück zur Szene</a></p>
     </div>
     <figure class="frame">
@@ -288,9 +289,32 @@
     </div>
   </section>
 
+  <section class="section" id="languages" aria-labelledby="languages-title">
+    <h2 id="languages-title">Your language. Your manuscript.</h2>
+    <p><strong>Seven interface languages:</strong> <span lang="de">Deutsch</span> · English · <span lang="fr">Français</span> · <span lang="es">Español</span> · <span lang="it">Italiano</span> · <span lang="pt">Português</span> · <span lang="nl">Nederlands</span>.</p>
+    <p>Choose the interface language and the manuscript’s analysis language separately. German and English have the broadest analysis resources; coverage and validation differ for the other languages. <a href="LOCALIZATION.md">Read the language coverage (English)</a>.</p>
+    <p><strong>Technical documentation is in English.</strong> The public demo uses invented English prose. Interface translation does not translate your manuscript or imply equal analysis coverage.</p>
+    <details>
+      <summary>A short introduction in your language</summary>
+      <p lang="de"><strong>Deutsch:</strong> Lies dein Manuskript, untersuche auffällige Textstellen und behalte die Belege für deine Entscheidungen. Die integrierte Analyse läuft lokal und schreibt deinen Text nicht um. <a href="guides/first-look-de.html">Lixity auf Deutsch kennenlernen</a>. Technische Dokumentation: Englisch.</p>
+      <p lang="en"><strong>English:</strong> Read your manuscript, investigate a passage and keep the evidence behind your decisions. Built-in analysis runs locally and does not rewrite your prose. <a href="guides/first-look.html">Explore the short tour</a>.</p>
+      <p lang="fr"><strong>Français :</strong> Lisez votre manuscrit, examinez un passage et conservez les éléments qui éclairent vos décisions. L’analyse intégrée fonctionne localement et ne réécrit pas votre texte. Documentation technique en anglais.</p>
+      <p lang="es"><strong>Español:</strong> Lee tu manuscrito, examina un pasaje y conserva las pruebas que respaldan tus decisiones. El análisis integrado se ejecuta localmente y no reescribe tu texto. Documentación técnica en inglés.</p>
+      <p lang="it"><strong>Italiano:</strong> Leggi il tuo manoscritto, esamina un passaggio e conserva gli elementi su cui basi le tue decisioni. L’analisi integrata funziona in locale e non riscrive il testo. Documentazione tecnica in inglese.</p>
+      <p lang="pt"><strong>Português:</strong> Leia o seu manuscrito, examine uma passagem e guarde os elementos que fundamentam as suas decisões. A análise integrada funciona localmente e não reescreve o texto. Documentação técnica em inglês.</p>
+      <p lang="nl"><strong>Nederlands:</strong> Lees je manuscript, onderzoek een passage en bewaar de onderbouwing van je keuzes. De ingebouwde analyse draait lokaal en herschrijft je tekst niet. Technische documentatie in het Engels.</p>
+    </details>
+  </section>
+
+  <section class="section" id="feedback" aria-labelledby="feedback-title">
+    <h2 id="feedback-title">Did you find a useful passage?</h2>
+    <p>Tell us what you wanted to check, whether the explanation helped and what got in the way. A short description of the task is enough; you do not need to send your manuscript.</p>
+    <p><a href="mailto:mfahsold@googlemail.com?subject=Lixity%20feedback">Share feedback with the maintainer</a> · <a href="https://github.com/mfahsold/lixity/issues">Report a reproducible issue on GitHub</a></p>
+  </section>
+
   <section class="section" id="guides">
-    <h2>Guides and manuals</h2>
-    <p id="projects"><a href="guides/first-look-de.html" lang="de">Einstieg auf Deutsch</a> · <a href="guides/first-look.html">First session</a> · <a href="AUDIO.md#author-voice-recording-and-listening">Author voice and audio</a> · <a href="guides/interpretation.html">Understand the measurements</a> · <a href="guides/research-pdf.html">Work with sources and PDF copies</a> · <a href="blog/index.html">Read the articles</a></p>
+    <h2>Guides and manuals in English</h2>
+    <p id="projects"><a href="guides/first-look.html">First session</a> · <a href="AUDIO.md#author-voice-recording-and-listening">Author voice and audio</a> · <a href="guides/interpretation.html">Understand the measurements</a> · <a href="guides/research-pdf.html">Work with sources and PDF copies</a> · <a href="blog/index.html">Read the articles</a></p>
     <div class="resource-list" aria-label="Operating manuals">
       <p><strong>Find your task</strong><span><a href="README.md">Documentation map</a> · <a href="ONBOARDING.md">First-session checklist</a></span></p>
       <p><strong>Use Lixity</strong><span><a href="WORKSPACE.md">Browser workspace</a> · <a href="USAGE.md">CLI and project configuration</a></span></p>

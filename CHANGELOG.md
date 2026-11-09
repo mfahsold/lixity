@@ -7,6 +7,19 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Documentation
+
+- Align the README, documentation map and public landing page on seven interface
+  languages, English-only technical documentation and the read-only English demo.
+  Add short multilingual product introductions and clarify the scope of offline
+  analysis independently of optional services.
+
+- Complete reciprocal, self-referencing English/German language alternatives for
+  the first-look guides and the literary research article; clarify the German
+  entry page title for manuscript revision.
+- Stage a public IndexNow ownership file for `/lixity/` and document post-deployment
+  URL notification. This does not submit URLs or establish indexing.
+
 ### Added
 - **Pacing & Micro-Dynamics (`lixity.pacing`)**: Rolling sentence length analysis (`compute_rolling_asl`) with adaptive window size, sentence length coefficient of variation (`sentence_cv`), 12-point chapter condensed timelines (`pacing_curve`), and 8-level Unicode sparklines (`pacing_sparkline`) surfaced across CLI and Dashboard UI.
 - **POS-Stratified Lexical Diversity (`lixity.diversity`, `lixity.analyzer`)**: Stratified moving-average type-token ratio (`stratified_mattr`) separating action vocabulary MATTR (`verb_mattr`) and descriptive vocabulary MATTR (`desc_mattr`) across chapter and corpus levels, surfacing lexical depth profiles in the Narration UI.

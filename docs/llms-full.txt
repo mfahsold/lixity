@@ -274,6 +274,13 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/README.md
 
 # Lixity documentation
 
+Technical documentation is maintained in **English only**. The app interface
+supports German, English, French, Spanish, Italian, Portuguese and Dutch;
+[language coverage](LOCALIZATION.md) explains differences in analysis support.
+For a product introduction before reading the manuals, visit the
+[Lixity website](https://mfahsold.github.io/lixity/) or try the
+[read-only English example](demo/report.html).
+
 Choose a task below. The manuals describe the current source tree; sections
 marked **unreleased** can differ from an installed package even when the version
 number matches. Use `lixity --version` and `lixity COMMAND --help` to check your
@@ -285,7 +292,7 @@ the release notes for its documented baseline;
 
 | Starting point | Read or try |
 | --- | --- |
-| See what Lixity does before installing | [Illustrated tour](guides/first-look.html) · [Einstieg auf Deutsch](guides/first-look-de.html) · [Read-only demo](demo/report.html) |
+| See what Lixity does before installing | [Illustrated tour](guides/first-look.html) · [Read-only demo](demo/report.html) |
 | Install, update or start the app | [Installation and service management](INSTALLATION.md) |
 | Complete a first session with your manuscript | [First-session walkthrough](ONBOARDING.md) |
 | Find an everyday browser action | [Workspace manual](WORKSPACE.md) |
