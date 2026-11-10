@@ -75,6 +75,17 @@ Prefer, in this order, before any language change:
    release flow in `CONTRIBUTING.md`, docs-sync artifacts) against the
    measured gain. Without this, the evaluation outcome is "stay on Python".
 
+## Evaluation log
+
+- 2026-11-11, nominal-suffix kernel (`language.count_nominal_matches`):
+  standalone Rust spike (regex crate + PyO3, same pattern/corpus) is
+  ~2.2x faster on the micro-kernel, but the kernel totals ~1 ms per
+  book-scale run versus ~0.25 s of per-call overhead that any FFI keeps.
+  Projected whole-pipeline gain < 5 %, below any integration threshold.
+  Outcome for this kernel: stay on Python. The analyzer memoization
+  (pure Python, byte-identical, ~42 % on `analyze`) remains the
+  recommended shape of optimization here.
+
 ## Open questions (assumptions flagged)
 
 - The interpretation of "maschinennah" above is the author's proposal;
