@@ -477,6 +477,8 @@ def _completion_scripts() -> tuple[str, str]:
 #: completion scripts, so adding a command lists it everywhere at once.
 _COMMANDS: tuple[tuple[str, str], ...] = (
     ("project", "Inspect project sources, output locations and structural issues without writing"),
+    ("project-backup", "Back up selected project files and research"),
+    ("project-restore", "Verify a bundle and restore a new project"),
     ("research", "Local sources, dossiers, citations and lexical search (text/JSON)"),
     ("service", "Manage an owned local dashboard process"),
     ("analyze", "Corpus metrics (text/JSON, self-describing meta block)"),
@@ -531,6 +533,21 @@ _lixity_complete() {
         return 0
     fi
     case "${COMP_WORDS[1]}" in
+        project-backup)
+            case "$prev" in
+                --project|--output) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
+                --manuscript|--settings|--attachment) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
+                *) COMPREPLY=( $(compgen -W "--help --project --manuscript --settings --attachment --output" -- "$cur") ) ;;
+            esac
+            return 0
+            ;;
+        project-restore)
+            case "$prev" in
+                --from|--to) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
+                *) COMPREPLY=( $(compgen -W "--help --from --to" -- "$cur") ) ;;
+            esac
+            return 0
+            ;;
         read-aloud|audio-export-plan)
             case "$prev" in
                 --language) COMPREPLY=( $(compgen -W "zh en ja ko de fr ru pt es it" -- "$cur") ) ;;
@@ -888,6 +905,21 @@ __LIXITY_ZSH_COMMANDS__
           ;;
         completion)
           _values 'shell' bash zsh sh
+          ;;
+        project-backup)
+          _arguments \
+            '--project[Explicit project root]:directory:_files -/' \
+            '--manuscript[Selected project-relative manuscript]:file:_files' \
+            '*--settings[Selected root settings file]:file:_files' \
+            '*--attachment[Selected project-relative attachment]:file:_files' \
+            '--output[New bundle directory]:directory:_files -/' \
+            '--help[Help]'
+          ;;
+        project-restore)
+          _arguments \
+            '--from[Verified project bundle]:directory:_files -/' \
+            '--to[New project directory]:directory:_files -/' \
+            '--help[Help]'
           ;;
         project)
           _arguments '1:project directory:_files -/' \\
@@ -2171,6 +2203,17 @@ def _build_parser() -> argparse.ArgumentParser:
             configure_service(sub.add_parser(name, help=help_text))
             continue
         p = sub.add_parser(name, help=help_text, description=help_text)
+        if name == "project-backup":
+            p.add_argument("--project", required=True)
+            p.add_argument("--manuscript", required=True, help="Project-relative manuscript file")
+            p.add_argument("--settings", action="append", default=[], help="Root settings file; repeatable")
+            p.add_argument("--attachment", action="append", default=[], help="Selected project-relative file; repeatable")
+            p.add_argument("--output", required=True, help="New bundle directory outside project")
+            continue
+        if name == "project-restore":
+            p.add_argument("--from", dest="bundle", required=True)
+            p.add_argument("--to", dest="target", required=True)
+            continue
         if name in ("audio-inspect", "audio-verify"):
             p.add_argument("audio", help="WAV, FLAC or MP3 audio file (read-only)")
             p.add_argument("--plan", required=name == "audio-verify", help="Exported JSON direction timeline")
@@ -2580,6 +2623,21 @@ def _build_parser() -> argparse.ArgumentParser:
 def _main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
+    if args.command in ("project-backup", "project-restore"):
+        from . import project_backup
+        from .research.repository import ResearchError
+
+        try:
+            if args.command == "project-backup":
+                backup_result = project_backup.backup(args.project, args.output,
+                    manuscript=args.manuscript, settings=args.settings, attachments=args.attachment)
+            else:
+                backup_result = project_backup.restore(args.bundle, args.target)
+        except (OSError, ResearchError) as exc:
+            print(f"Project backup/restore failed: {exc}", file=sys.stderr)
+            return 2
+        print(_json(backup_result))
+        return EXIT_OK
     if args.command == "audio-export-plan":
         args.command = "read-aloud"
     if args.command == "analysis-review":

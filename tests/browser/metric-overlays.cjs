@@ -71,7 +71,9 @@ async function identity(page) {
   })));
 }
 async function paintedPixels(target, positions) {
-  const image = await target.screenshot({animations: 'disabled'});
+  // A tall mobile paragraph scrolls underneath the sticky toolbar. Isolate its
+  // paint without changing layout, rather than sampling the toolbar's pixels.
+  const image = await target.screenshot({animations: 'disabled', style: '.toolbar { visibility: hidden !important; }'});
   return target.page().evaluate(async ({image, positions}) => {
     const picture = new Image(); picture.src = 'data:image/png;base64,' + image;
     await picture.decode();

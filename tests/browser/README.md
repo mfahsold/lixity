@@ -1,5 +1,22 @@
 # Dashboard browser regression
 
+`node tests/browser/manuscript-editor.cjs` starts a disposable synthetic native
+workspace and covers typing, undo after autosave, external-file conflict and
+explicit recovery, revision-bound reading, preserved undo/insertion point,
+research-link review and delayed return validation. It also checks that external
+changes during reading preserve the editor buffer. Add `--firefox` for Firefox. The suite also mounts synthetic
+50k/150k/300k-word documents in the shared CodeMirror adapter and reports mount
+and six-keystroke times; these are single-run component observations, not p95
+budgets or full-analysis timings. Desktop/mobile screenshots remain in `/tmp`.
+The Python store suite separately checks persistence/recovery of a 300k-word
+source. Real OS IME, screen-reader and power-loss tests remain manual gates.
+
+`editor-features.cjs` covers localized search/replace integration, one-step
+replace-all undo, reviewed comparison, cancellation and stale save rejection.
+`editor-navigation.cjs` checks literal reader selections and research draft guards
+across return, Escape, reload and pending/failed requests. Both accept `--firefox`
+and use synthetic native projects. They run in the analysis browser group.
+
 Run after installing the Python development environment, FFmpeg and Playwright
 with Chromium. FFmpeg creates synthetic media for the dossier-media suite;
 install `axe-core` as well to run the audio direction accessibility audit.
@@ -607,3 +624,9 @@ links, unavailable storage, English guides, JavaScript-disabled navigation and
 The `home-tour` suite decodes the homepage video, checks localized captions after
 seeking, reduced-motion behavior, explicit and offscreen pauses, failure fallback
 and desktop/mobile framing. Recordings use the synthetic example only.
+
+Large-paste caveat: an exploratory Chromium `keyboard.insertText` run took about
+113 seconds for a 300,000-word insertion including persistence. The viewport
+mount/typing measurements above do not establish acceptable bulk-paste latency.
+Real IME composition, assistive technology and power-loss recovery still require
+separate validation before treating the editor as release-ready.

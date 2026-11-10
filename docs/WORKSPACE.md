@@ -1,6 +1,8 @@
 # Lixity browser workspace manual
 
-Use this manual to revise a manuscript or explore language use in the local app.
+Use this manual to work on a manuscript, retain its research, explore language
+and prepare reading copies in one local project. Integrated writing is available
+in the development checkout and explicitly marked unreleased below.
 Start with [Onboarding](ONBOARDING.md) to create, import or open a project;
 [Installation](INSTALLATION.md) owns application setup and service updates.
 The [CLI reference](USAGE.md), [audio manual](AUDIO.md) and
@@ -12,6 +14,7 @@ Later changes marked **unreleased** require a development checkout.
 
 | Your next task | Start here |
 | --- | --- |
+| Write, undo or recover a draft (unreleased) | [Write a manuscript](#write-a-manuscript-unreleased) |
 | Read with one analysis question | [Connected first session](#a-connected-first-session), then [Reading paragraphs](#reading-paragraphs) |
 | Investigate rhythm, vocabulary or readability | [Explore language in the browser](#explore-language-in-the-browser) |
 | Understand a marked word or value | [Counted text and paragraph comparison](#counted-text-and-paragraph-comparison), then [Explore a passage](#explore-a-passage) |
@@ -30,7 +33,89 @@ Start the installed local app with `lixity service start --open`. It normally op
 `http://127.0.0.1:8765/`; use **Open Project** for an existing folder or follow
 the import preview to create a copy at an explicit destination. Import confirmation
 writes the new project; opening reconnects an existing one. The manuscript stays
-in its project folder and is edited in your text editor.
+in its project folder. Use your text editor or the unreleased native
+[Write workflow](#write-a-manuscript-unreleased).
+
+## Write a manuscript (unreleased)
+
+In the local app, **Write** opens CodeMirror in the manuscript workspace and
+loads its bundled assets locally. It supports selected `.md`, `.markdown` and
+`.txt` files inside the project, in UTF-8, up to 4 MiB of encoded source.
+UTF-8 BOM and uniform LF/CRLF are preserved. Mixed endings, CR-only text, binary
+content and unsupported encodings are rejected rather than silently converted.
+Public exports remain read-only and do not contain the editor bundle.
+
+Typing saves after 800 ms of inactivity, with a four-second maximum wait while
+typing continuously. **Saved locally** appears after server acknowledgement;
+it is not a cloud backup. Undo/redo works across autosaves. **Read and refresh**
+opens the ordinary reader and analysis in a full-window reading session for the
+acknowledged source revision. The editor stays mounted: **Back to writing**
+returns without resetting undo. An unchanged reader position preserves the exact
+insertion point; scrolling maps back to the visible source block. Project switching
+is unavailable inside this revision-bound session; return to the outer workspace
+for project changes. Audio/video playback pauses on return to writing. Escape
+inside the reader retains its existing meaning (close a local control or leave
+focus mode); use **Back to writing** to return to the editor. A full browser
+reload still resets editor undo.
+
+The reading header identifies its source revision. Analysis is recomputed through
+the shared pipeline when needed; a changed source or failed refresh cannot be
+shown as that revision. Previous analysis is not updated while typing. The outer
+workspace keeps a visible warning when its analysis belongs to an earlier text
+revision. Changes
+made elsewhere during reading pause editor saves on return instead of replacing
+the editor buffer.
+
+When a research archive is connected, **Review research links** opens the existing
+association review. Moved, adjusted, changed and ambiguous passages remain
+explicit review states. Stored quotations and claim versions stay intact; accept
+a new association only after inspecting its candidate. Editing and reading do not
+automatically re-anchor research or renew analysis-review decisions.
+
+**Find / replace** opens the bundled CodeMirror search panel (also Ctrl/Cmd+F).
+It supports case-sensitive, whole-word and regular-expression searches, individual
+replacement and replace-all. Replacement edits the current buffer and follows
+normal autosave; a replace-all is one undoable operation. Selection-only search
+and a separate persistent match counter are not provided.
+
+If another tab or an external editor changed the file, autosave pauses and keeps
+a recovery draft. **Compare versions** shows the last acknowledged text, the current
+file and an editable candidate side by side. Choose a retained copy first to compare
+that recovery text instead of the live buffer. Revision identities distinguish the
+copies. **Use as draft** changes only the editor buffer and leaves saving paused;
+**Save this draft** deliberately applies the reviewed result against the captured
+file revision. A subsequent external change is rejected again. This is manual
+comparison, not automatic merging or a line-by-line diff. Cancelling an edited
+comparison asks before discarding it. **Load as draft** remains available for a
+retained copy; loading while the current buffer is dirty downloads that buffer
+instead of replacing it.
+
+Select literal text within one reader paragraph before returning to writing to
+open that exact editable range. The reader revision, source lines and paragraph
+text are validated together, including repeated quotations. Cross-paragraph or
+Markdown-transformed selections cannot always map exactly: Lixity reports that
+limitation and preserves the writing position rather than guessing. An analysis
+finding can be opened in the ordinary reader and selected there; arbitrary metric
+coordinates are not a new source-editing contract.
+
+Nested research forms retain their explicit save semantics. Returning to writing
+or closing the reading session asks before discarding edited fields; pending
+requests block disposal, and failed requests leave the draft available. Reload
+warnings also cover those forms. Browser unload warnings remain best effort,
+especially on mobile; they are not a replacement for acknowledged saves.
+
+Recovery lives in `.lixity/editing/recovery.sqlite3`, with up to 20 previous source
+versions and eight unresolved drafts per document. Unresolved drafts are not
+silently evicted; remove a reviewed copy explicitly to free a slot. This directory
+contains manuscript text and must remain private and excluded from version control.
+It is not included in public reading exports. Use the unreleased [project backup and restore](PROJECT_BACKUP.md) for an explicit
+verified inventory of saved manuscript, selected settings, research and attachments.
+The editor recovery journal and unacknowledged drafts are excluded from that backup.
+Changes made before an autosave request reaches the server are not guaranteed
+recoverable; failed/offline saves remain visibly unsaved. Browser-close warnings
+are an additional safeguard, not reliable persistence. Atomic writes and retained
+copies do not guarantee power-loss durability or prevent every race with an
+uncooperative external editor.
 
 | Surface | Available work |
 | --- | --- |

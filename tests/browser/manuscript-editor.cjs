@@ -1,0 +1,171 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const {spawn} = require('node:child_process');
+const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs');
+
+(async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-editor-'));
+  const source = path.join(root, 'book.md');
+  fs.writeFileSync(source, '# A synthetic chapter\n\nA quiet morning beside the river.\n');
+  const server = spawn('.venv/bin/python', ['tests/browser/editor-server.py', root], {env: {...process.env, PYTHONPATH: 'src:.'}});
+  server.stderr.on('data', data => process.stderr.write(data));
+  let browser;
+  try {
+    const base = await new Promise((resolve, reject) => {
+      server.stdout.once('data', data => resolve(String(data).trim()));
+      server.once('exit', code => reject(new Error('Server exited: ' + code)));
+    });
+    browser = await (process.argv.includes('--firefox') ? launchFirefox() : launchChromium());
+    const page = await browser.newPage({viewport: {width: 1440, height: 900}});
+    page.setDefaultTimeout(15000);
+    await page.goto(base);
+    await page.locator('#manuscript-write').click({timeout: 5000});
+    await page.locator('.cm-content').waitFor();
+    await page.locator('.cm-content').click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.type('New sentence.');
+    await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'saved');
+    assert.match(fs.readFileSync(source, 'utf8'), /New sentence/);
+    await page.keyboard.press('Control+z');
+    await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'saved');
+    assert.doesNotMatch(fs.readFileSync(source, 'utf8'), /New sentence/);
+    fs.writeFileSync(source, '# External\n\nChanged elsewhere.\n');
+    await page.keyboard.type('My retained draft.');
+    await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'conflict');
+    assert.equal(fs.readFileSync(source, 'utf8'), '# External\n\nChanged elsewhere.\n');
+    page.on('dialog', dialog => dialog.accept());
+    await page.reload();
+    await page.locator('#manuscript-write').click();
+    await page.locator('#manuscript-recovery option[value]:not([value=""])').first().waitFor({state: 'attached'});
+    const draft = await page.locator('#manuscript-recovery option[data-kind="draft"]').first().getAttribute('value');
+    await page.locator('#manuscript-recovery').selectOption(draft);
+    let releaseRecovery;
+    const delayedRecovery = new Promise(resolve => {releaseRecovery = resolve;});
+    await page.route('**/manuscript-edit?recovery=*', async route => {await delayedRecovery; await route.continue();});
+    const response = page.waitForResponse(url => url.url().includes('manuscript-edit?recovery='));
+    await page.locator('#manuscript-recover').click();
+    await page.locator('.cm-content').click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.type('Concurrent typing.');
+    releaseRecovery(); await response;
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.match(await page.locator('.cm-content').innerText(), /Concurrent typing/, 'Delayed recovery must not replace newer typing');
+    assert.doesNotMatch(await page.locator('.cm-content').innerText(), /My retained draft/);
+    await page.unroute('**/manuscript-edit?recovery=*');
+    await page.keyboard.press('Control+z');
+    await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'saved');
+    await page.locator('#manuscript-recover').click();
+    await page.waitForFunction(() => document.querySelector('.cm-content').innerText.includes('My retained draft'));
+    assert.match(await page.locator('.cm-content').innerText(), /My retained draft/);
+    assert.equal(fs.readFileSync(source, 'utf8'), '# External\n\nChanged elsewhere.\n', 'Recovery must not auto-overwrite external changes');
+    await page.screenshot({path: path.join(root, 'desktop.png')});
+    await page.evaluate(() => document.documentElement.style.colorScheme = 'dark');
+    assert.equal(await page.locator('.cm-editor').evaluate(el => getComputedStyle(el).color), 'rgb(238, 242, 248)');
+    await page.waitForFunction(() => getComputedStyle(document.body).backgroundColor === 'rgb(17, 22, 37)');
+    await page.screenshot({path: path.join(root, 'desktop-dark.png')});
+    await page.setViewportSize({width: 390, height: 844});
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    await page.screenshot({path: path.join(root, 'mobile.png')});
+    await page.locator('#manuscript-save').click();
+    await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'saved');
+    await page.setViewportSize({width: 1440, height: 900});
+    await page.locator('.cm-content').click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.type(' Read cycle.');
+    await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'saved');
+    const cycleText = fs.readFileSync(source, 'utf8');
+    assert.equal(await page.locator('#manuscript-analysis-freshness').isVisible(), true, 'The original workspace must label its stale analysis after editing');
+    await page.locator('#manuscript-read').click();
+    const reading = page.frameLocator('#manuscript-reading-frame');
+    await reading.locator('body[data-editor-revision]').waitFor();
+    assert.match(await reading.locator('#chapters').innerText(), /Read cycle/);
+    assert.equal(await reading.locator('html').evaluate(el => getComputedStyle(el).colorScheme), await page.locator('html').evaluate(el => getComputedStyle(el).colorScheme));
+    assert.equal(await reading.locator('#project-actions').isVisible(), false);
+    await page.locator('#manuscript-review-links').click();
+    await reading.locator('.manuscript-link-review-item').first().waitFor();
+    assert.match(await reading.locator('.manuscript-link-review-item').first().innerText(), /A quiet morning beside the river/);
+    await reading.locator('[data-view=analysis]').click();
+    assert.equal(await reading.locator('[data-view=project]').isVisible(), false);
+    await page.locator('#manuscript-return-write').click();
+    await page.waitForFunction(() => document.activeElement.closest('.cm-content'));
+    await page.keyboard.type(' Cursor kept.');
+    await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'saved');
+    assert.ok(fs.readFileSync(source, 'utf8').endsWith(' Read cycle. Cursor kept.'), 'Unscrolled reading preserves the exact insertion point');
+    await page.keyboard.press('Control+z');
+    await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'saved');
+    await page.keyboard.press('Control+z');
+    await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'saved');
+    assert.notEqual(fs.readFileSync(source, 'utf8'), cycleText, 'Undo survives reading/analysis without a new editor instance');
+    assert.doesNotMatch(fs.readFileSync(source, 'utf8'), /Read cycle/);
+    for (const failValidation of [false, true]) {
+      // An old validation response must not conflict with our own newer save.
+      await page.locator('#manuscript-read').click();
+      await reading.locator('body[data-editor-revision]').waitFor();
+      let releaseValidation, validationCaptured;
+      const held = new Promise(resolve => {releaseValidation = resolve;});
+      const captured = new Promise(resolve => {validationCaptured = resolve;});
+      await page.route('**/manuscript-edit', async route => {
+        if (route.request().method() !== 'GET') return route.continue();
+        const response = await route.fetch(); validationCaptured(); await held;
+        await route.fulfill(failValidation ? {status:500, contentType:'application/json', body:JSON.stringify({ok:false,message:'Synthetic delayed failure'})} : {response});
+      });
+      if (failValidation) {
+        await reading.locator('#chapters').click();
+        await page.keyboard.press('Escape');
+        assert.equal(await page.locator('#manuscript-reading').evaluate(el => el.open), true, 'Reader owns Escape inside prose');
+        for (let tabs = 0; tabs < 40 && await page.evaluate(() => document.activeElement.id !== 'manuscript-return-write'); tabs++) {
+          await page.keyboard.press('Shift+Tab');
+        }
+        assert.equal(await page.evaluate(() => document.activeElement.id), 'manuscript-return-write', 'Return action is reachable by keyboard from the reader');
+        await page.keyboard.press('Escape');
+        await page.waitForFunction(() => !document.querySelector('#manuscript-reading').open);
+      } else await page.locator('#manuscript-return-write').click();
+      await captured;
+      await page.locator('.cm-content').focus();
+      await page.keyboard.press('Control+End');
+      await page.keyboard.type(' Newer save.');
+      await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'saved');
+      const delayed = page.waitForResponse(response => response.url().endsWith('/manuscript-edit') && response.request().method() === 'GET');
+      releaseValidation(); await delayed;
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      assert.equal(await page.locator('#manuscript-save-status').getAttribute('data-state'), 'saved');
+      await page.unroute('**/manuscript-edit');
+    }
+    // A source edit while the reader is open must not replace the live buffer.
+    await page.locator('#manuscript-read').click();
+    await reading.locator('body[data-editor-revision]').waitFor();
+    await page.screenshot({path: path.join(root, 'reading-desktop.png')});
+    await page.setViewportSize({width:390, height:844});
+    await page.screenshot({path: path.join(root, 'reading-mobile.png')});
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    fs.writeFileSync(source, '# Externally revised while reading\n');
+    await page.locator('#manuscript-return-write').click();
+    await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'conflict');
+    assert.match(await page.locator('.cm-content').innerText(), /My retained draft/);
+    assert.equal(fs.readFileSync(source, 'utf8'), '# Externally revised while reading\n');
+    await page.setViewportSize({width:1440, height:900});
+    for (const words of [50000, 150000, 300000]) {
+      const manuscript = '# Synthetic scale fixture\n\n' + ('Synthetic river morning words '.repeat(25) + '\n\n').repeat(words / 100);
+      const start = performance.now();
+      await page.evaluate(value => {
+        if (window.scaleEditor) {window.scaleEditor.destroy(); document.getElementById('scale').remove();}
+        const parent = document.createElement('div'); parent.id = 'scale'; document.body.prepend(parent);
+        window.scaleEditor = LixityCodeMirror.mount(parent, value, () => {}, 'en', 'Scale fixture');
+        window.scaleEditor.focus();
+      }, manuscript);
+      await page.locator('#scale .cm-content').waitFor();
+      const loadMs = Math.round(performance.now() - start);
+      const typingStart = performance.now();
+      await page.keyboard.type('Typed.');
+      assert.equal(await page.evaluate(() => window.scaleEditor.text().length), manuscript.length + 6);
+      assert.ok(await page.locator('#scale .cm-line').count() < 1000, 'Long manuscript is viewport-rendered');
+      console.log(JSON.stringify({words, mountMs: loadMs, sixKeystrokesMs: Math.round(performance.now() - typingStart), bytes: Buffer.byteLength(manuscript)}));
+    }
+    console.log('Editor flow passed. Screenshots: ' + root);
+  } finally {
+    if (browser) await browser.close();
+    server.stdin.end();
+  }
+})().catch(error => {console.error(error); process.exitCode = 1;});

@@ -19,6 +19,37 @@ the accepted local schema.
 
 ## Evolution without a second product path
 
+### One project, connected activities
+
+The product is a local manuscript workspace, not only an analysis report viewer.
+Writing, close reading, research, linguistic investigation, audio preparation
+and publication are activities around an explicit project. The app is the
+interactive workspace; CLI and Python APIs make supported operations repeatable.
+“Platform” describes these shared foundations, not cloud collaboration or a
+general-purpose plugin marketplace.
+
+Editing introduces a mutable working text alongside retained source versions,
+research evidence and derived analysis. Those lifecycles must stay distinct:
+an old analysis does not become current because a save succeeded, and a retained
+quotation does not silently move to a new passage. The editor marks analysis as outdated while writing. Its reading session requests
+a document identity and acknowledged source hash, checks the analyzed and current
+source hashes, and uses the ordinary dashboard in a same-origin frame. The parent
+keeps CodeMirror and its undo history alive. Only this dedicated native response
+allows same-origin embedding; ordinary dashboards deny framing. The bound session
+hides project-switching controls. Automatic anchor remapping and continuous
+analysis remain future work.
+
+Product copy should lead with the connected work and local ownership. Describe
+integrated writing as unreleased until it is published; describe the public demo
+as a fixed reading/review snapshot. Interface languages, manuscript languages
+and analysis-resource coverage are separate capabilities. Technical documentation
+stays in English.
+
+The [manuscript editing RFC](MANUSCRIPT_EDITING_RFC.md) records the proposed
+CodeMirror 6 integration, source-preservation requirements, conditional saves,
+recovery and revision-bound analysis. Its first native editing slice is
+unreleased; the RFC distinguishes implemented behavior from the broader target.
+
 Today the shared engine, CLI and local HTTP server are Python; browser behavior
 uses JavaScript and CSS. Packaging the existing application for Linux comes
 before requiring a backend rewrite. Installation and runtime support are owned
@@ -41,6 +72,8 @@ process in [Contributing](https://github.com/mfahsold/lixity/blob/main/CONTRIBUT
 | Analysis core | Metrics, paragraph profiles, uncertainty and statistical diagnostics | HTTP sessions, exports or UI state |
 | `lixity.pipeline` | Resolve document language; assemble one analysis result | Implicit file reads or mutable global project state |
 | CLI / `lixity.api` | Input/output contracts and threshold resolution | Duplicate analysis algorithms |
+| `manuscript_editing` (unreleased) | Selected-source conditional writes, local recovery and shared in-process write coordination | Silent conflict merging, automatic quotation remapping or current-analysis claims |
+| `project_backup` (unreleased) | Explicit file inventory, hashes and new-directory restoration using the research archive API | Live transactional snapshots, unselected files or editor recovery state |
 | UI | Render results using shared components and bundled assets | Recompute statistical decisions in JavaScript |
 | `publication` / `pdf_export` | Validate entered publication data; compose shared PDF bytes | Infer legal identities, establish rights or write output files |
 | `lixity.server` | Loopback transport, request guards, one shared dashboard assembly and selected-workspace transitions | A second renderer, a second analysis path or CLI/service lifecycles |

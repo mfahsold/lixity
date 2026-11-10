@@ -1323,3 +1323,25 @@ def test_find_anchor_two_explicit_paths_reports_helpful_guidance():
     assert "In configured projects, PATH may be omitted entirely" in errors.getvalue()
 
 
+
+
+@pytest.mark.parametrize(("updated", "state"), [
+    ("\n\n## Chapter One\n\nThe **reading room** was open. 🦉 A visitor arrived.\n", "moved"),
+    ("## Chapter One\n\nThe **reading room** closed. 🦉 A visitor arrived.\n", "adjusted"),
+    ("## Chapter One\n\nThe room closed.\n", "changed"),
+    ("## Chapter One\n\n🦉 A visitor arrived.\n\n🦉 A visitor arrived.\n", "ambiguous"),
+])
+def test_editor_save_preserves_archive_and_exposes_review_state(manuscript_archive, updated, state):
+    from lixity.manuscript_editing import ManuscriptStore
+
+    project, manuscript, _claim, _dossier = manuscript_archive
+    save_link(manuscript_archive)
+    before = accepted_bytes(project)
+    store = ManuscriptStore(project, manuscript)
+    opened = store.open()
+    saved = store.save(opened["document"], opened["revision"], "d" * 32, updated)
+    review = api.review_manuscript_links(project, manuscript, include_context=True)
+    assert review["current_source_sha256"] == saved["revision"]
+    assert review["links"][0]["anchor_state"] == state
+    assert review["review_needed_count"] == 1
+    assert accepted_bytes(project) == before

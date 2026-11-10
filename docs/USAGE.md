@@ -1841,3 +1841,12 @@ for checkout setup, supported checks, browser suites and documentation generatio
 
 GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later) – see [`LICENSE`](https://github.com/mfahsold/lixity/blob/main/LICENSE).
 Commercial licensing on request: mfahsold@googlemail.com.
+
+## Verified project backup (unreleased)
+
+Use `lixity project-backup --project ./book --manuscript manuscript.md --output ./book-backup`
+and `lixity project-restore --from ./book-backup --to ./restored-book` for an
+explicit saved-file backup with verified restoration. Stop project writers first.
+Settings and external attachments require explicit selection; browser drafts and
+the editor recovery journal are excluded. See [Project backup](PROJECT_BACKUP.md)
+for flags, inventory boundaries and failure behavior.

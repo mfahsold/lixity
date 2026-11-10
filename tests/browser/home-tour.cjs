@@ -69,11 +69,16 @@ assert.equal(spawnSync(path.join(repository, '.venv/bin/python'), ['scripts/stag
       await video.scrollIntoViewIfNeeded();
       await expect.poll(() => video.evaluate(v => v.currentTime)).toBeGreaterThan(.2);
       await video.evaluate(v => { v.currentTime = 8.35; });
+      await expect.poll(() => video.evaluate(v => ({seeking:v.seeking, ready:v.readyState}))).toEqual({seeking:false, ready:4});
       await expect.poll(() => page.locator('.tour-caption [data-letter]').evaluateAll(nodes =>
         nodes.filter(node => getComputedStyle(node).visibility === 'visible').length)).toBeGreaterThan(0);
       assert.ok(await page.locator('.tour-caption [data-letter]').evaluateAll(nodes =>
         nodes.some(node => getComputedStyle(node).visibility === 'hidden')), 'Caption types in progressively');
       await page.emulateMedia({reducedMotion: 'reduce'});
+      // Media-query changes are asynchronous; a fully visible caption alone can
+      // precede the pause handler, letting Chromium coalesce the next preference.
+      await expect.poll(() => video.evaluate(v => v.paused)).toBe(true);
+      await expect(button).toHaveText('Play tour');
       await expect.poll(() => page.locator('.tour-caption [data-letter]').evaluateAll(nodes =>
         nodes.every(node => getComputedStyle(node).visibility === 'visible'))).toBe(true);
       await page.emulateMedia({reducedMotion: 'no-preference'});

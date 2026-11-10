@@ -8,14 +8,27 @@
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
-**A local workspace for manuscript revision and linguistic text analysis.**
+**Read closely. Trace the evidence. Understand your text.**
 
-Read a manuscript closely or investigate how a text uses language. Lixity brings
-sentence rhythm, lexical diversity, readability and chapter comparisons into
-the same workspace as your prose and research. Authors and editors can review
-passages in context; researchers can export measurements for reproducible,
-exploratory text analysis. The browser app, CLI and Python API share one local
-analysis engine.
+Lixity is a local manuscript workspace for writers, editors and linguistic text
+analysis. Find where a chapter's rhythm changes, inspect the words behind a
+measurement, or follow a scene detail back to its retained source. Keep research,
+author decisions and prose connected, then choose what to include in a reading
+copy. The browser app, CLI and Python API share one analysis engine.
+
+- **A finding leads somewhere:** chapter comparisons and measurement explanations
+  take you back to the passage you can judge in context.
+- **Research keeps its history:** sources, claims and author decisions have
+  distinct roles; evidence links retain the versions behind them.
+- **Your project stays local:** built-in analysis runs offline. Optional research
+  and speech services are configured separately; sharing is an explicit export.
+
+**Writing joins the workspace (unreleased).** The development checkout now has
+an integrated manuscript editor with undo, local autosave, conflict detection
+and recovery, search/replace and manual conflict comparison. Read and refresh opens the ordinary workspace for the saved text revision
+while keeping editor undo and the writing buffer alive. Research links remain
+reviewable after text changes; saved evidence is never silently rewritten. The public demo remains read-only.
+See [editing scope and limits](https://mfahsold.github.io/lixity/WORKSPACE.md#write-a-manuscript-unreleased).
 
 **Seven interface languages:** Deutsch · English · Français · Español · Italiano · Português · Nederlands.
 
@@ -53,9 +66,21 @@ then read the [formulas](https://mfahsold.github.io/lixity/METHODS.md) and [inte
 
 ## What can you do with Lixity?
 
+The project is the common context: manuscript, research and settings stay
+together while you move between writing, close reading, investigation and
+sharing. These are connected activities, not steps you must follow in order.
+Analysis remains optional; you decide what to change.
+
+The combination is the point: inspect a difference, read the scene, consult its
+evidence and prepare a reader-facing copy in the same project. Focus reading,
+chapter comparisons, versioned research, audio tools and curated exports already
+work together; integrated manuscript writing extends that workflow in development.
+
 | Your task | Work in Lixity | What stays under your control |
 | :--- | :--- | :--- |
 | Read and revise a chapter | Continuous prose, search, work markers and passage tools | Analysis marks can be switched off; nothing rewrites the manuscript for you. |
+| Back up a saved project (unreleased) | [Verified backup and restore](https://mfahsold.github.io/lixity/PROJECT_BACKUP.md) | Explicit file inventory, retained research and checksums; unsaved drafts are excluded. |
+| Edit manuscript prose (unreleased) | Native CodeMirror editor with undo, local autosave and recovery | Conflicting external edits stop autosave; recovery is reviewed before applying. [Scope and limits](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript-unreleased). |
 | Understand a change in voice or rhythm | Compare chapters, inspect counted words and sentences, open a measurement explanation | A statistical difference is a prompt for review, not an error or target score. |
 | Investigate language use | Explore sentence lengths, lexical diversity and readability; export JSON with explicit analysis settings | Results describe the supplied text, not a representative population or proof of authorship. |
 | Explain a scene detail | Link a quotation to a claim, its source passages, a dossier and an author decision | Evidence, assertions and creative decisions remain separate; exact linked versions are retained. |

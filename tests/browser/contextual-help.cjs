@@ -152,7 +152,11 @@ async function keyboardActions(page) {
   assert.equal(await search.inputValue(), '', 'Search Escape clears its query even while contextual help is visible');
   await search.fill('searchable garden phrase');
   await page.waitForFunction(() => document.querySelector('#chapters .ptext .text-hit'));
+  // Typing filters the manuscript without moving the reading position. Start
+  // navigation explicitly instead of treating an earlier passage hash as a hit.
+  await search.press('Enter');
   const first = await page.evaluate(() => decodeURIComponent(location.hash.slice(1)));
+  assert.equal(first, await page.locator('#chapters .ptext').filter({has: page.locator('.text-hit')}).first().getAttribute('id'));
   assert.ok(await page.locator('#' + first + ' .text-hit').count() > 0);
   await search.press('Enter');
   const next = await page.evaluate(() => decodeURIComponent(location.hash.slice(1)));
@@ -161,8 +165,8 @@ async function keyboardActions(page) {
   await search.press('Shift+Enter');
   assert.equal(await page.evaluate(() => decodeURIComponent(location.hash.slice(1))), first,
     'Shift+Enter visits the previous matching paragraph');
-  await page.waitForFunction(() => document.querySelector('#chapters .ptext.flash'));
-  await expect(page.locator('#chapters .ptext.flash')).toHaveCount(0, {timeout: 2400});
+  await page.waitForFunction(() => document.querySelector('#chapters .ptext .text-hit.flash'));
+  await expect(page.locator('#chapters .ptext .text-hit.flash')).toHaveCount(0, {timeout: 2400});
   await search.press('Escape');
   assert.equal(await search.inputValue(), '');
   assert.equal(await page.locator('#chapters .text-hit').count(), 0);

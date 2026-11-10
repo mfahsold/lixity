@@ -37,6 +37,35 @@ if (researchRevisionDialog) {
     section: null, sectionBase: null, sectionContent: null, historyInitialRevision: null,
     historyView: null, historyEnvelope: null, historySelectionRevision: null, context: null};
 
+  // The native reader is disposable; hiding its retained forms is not a save.
+  // Read the existing revision state and form values, never a second draft copy.
+  window.LixityResearchDrafts = {
+    busy: function() {
+      return revisionState.pending || revisionBatch.pending || Boolean(document.querySelector('#research-manager [data-pending="true"]'));
+    },
+    hasPendingWork: function() {
+      if (this.busy() || revisionBatch.entries.length || researchEvidenceDraft) return true;
+      if (revisionState.current) {
+        try { if (Object.keys(revisionChanges()).length || revisionReason.value.trim()) return true; }
+        catch (_) { return true; } // Invalid form values still belong to the author.
+      }
+      return Array.from(document.querySelectorAll('#research-manager input[id^="r-"], #research-manager textarea[id^="r-"], #research-manager select[id^="r-"]')).some(function(field) {
+        if (field.disabled || ['hidden', 'button', 'submit'].includes(field.type)) return false;
+        if (field.type === 'checkbox' || field.type === 'radio') return field.checked !== field.defaultChecked;
+        if (field.tagName === 'SELECT') {
+          var initial = Array.from(field.options).filter(function(option) { return option.defaultSelected; });
+          if (!initial.length && !field.multiple && field.options.length) initial = [field.options[0]];
+          return JSON.stringify(Array.from(field.selectedOptions).map(function(option) { return option.value; })) !==
+            JSON.stringify(initial.map(function(option) { return option.value; }));
+        }
+        return field.value !== field.defaultValue;
+      });
+    }
+  };
+  window.addEventListener('beforeunload', function(event) {
+    if (document.body.dataset.editorRevision && window.LixityResearchDrafts.hasPendingWork()) { event.preventDefault(); event.returnValue = ''; }
+  });
+
   function revisionContextMatches(data) {
     var context = revisionState.context;
     return context && context.token === researchContextToken() &&
@@ -1196,6 +1225,7 @@ if (researchRevisionDialog) {
         revisionStatus(uiFormat("research_revision_save_failed", {reason: data.message || uiLabel("wizard_unknown_error")}), true);
       } else {
         revisionPending(false);
+        revisionState.current = null;
         researchRevisionDialog.close();
         researchStatus(uiLabel("research_revision_saved"), true);
         revisionRefreshLists();

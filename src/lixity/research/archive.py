@@ -101,16 +101,19 @@ def _add_bytes(tar: tarfile.TarFile, name: str, content: bytes) -> None:
     tar.addfile(member, io.BytesIO(content))
 
 
-def export_archive(project: str | Path, output: str | Path) -> dict[str, Any]:
+def export_archive(project: str | Path, output: str | Path, *,
+                   include_project_config: bool = True) -> dict[str, Any]:
     """Export accepted history and source bytes under the repository writer lock.
 
     Writers receive the usual busy error until the self-contained compressed
     candidate is complete. Disposable caches and locks are excluded.
+    Project wrappers may omit root settings to enforce explicit file selection.
     """
-    return _export_archive(Repository(project), output)
+    return _export_archive(Repository(project), output, include_project_config=include_project_config)
 
 
-def _export_archive(repository: Repository, output: str | Path, *, overwrite: bool = True) -> dict[str, Any]:
+def _export_archive(repository: Repository, output: str | Path, *, overwrite: bool = True,
+                    include_project_config: bool = True) -> dict[str, Any]:
     """Share portable canonical-byte export with explicit old-layout migration."""
     if not repository.safe(repository.data / "HEAD.json").exists():
         raise ResearchError("Research store does not exist; cannot export")
@@ -133,17 +136,18 @@ def _export_archive(repository: Repository, output: str | Path, *, overwrite: bo
                 "research/HEAD.json": encode(Head(sha256=snapshot.digest)),
                 "research/project.json": encode(snapshot.project),
             }
-            from ..config import project_config_snapshot, read_explicit_project_config
+            if include_project_config:
+                from ..config import project_config_snapshot, read_explicit_project_config
 
-            try:
-                config_identity, config_bytes = project_config_snapshot(
-                    repository.root / "lixity.toml", maximum_bytes=65536
-                )
-                if config_identity is not None:
-                    read_explicit_project_config(repository.root, maximum_bytes=65536)
-                    root_bytes["lixity.toml"] = config_bytes
-            except ValueError as exc:
-                raise ResearchError(f"Invalid project configuration during export: {exc}") from exc
+                try:
+                    config_identity, config_bytes = project_config_snapshot(
+                        repository.root / "lixity.toml", maximum_bytes=65536
+                    )
+                    if config_identity is not None:
+                        read_explicit_project_config(repository.root, maximum_bytes=65536)
+                        root_bytes["lixity.toml"] = config_bytes
+                except ValueError as exc:
+                    raise ResearchError(f"Invalid project configuration during export: {exc}") from exc
 
             # Active manifest and any ancestor manifests in the chain
             manifest_checksums = [checksum for checksum, _ in _manifest_history(repository, snapshot)]

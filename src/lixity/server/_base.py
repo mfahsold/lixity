@@ -93,6 +93,7 @@ class ResponseMixin(WorkspaceState):
     def _send_dashboard_shell(
         self, html: str, *, freshness: RefreshOutcome = RefreshOutcome.UNKNOWN, language: str = "en",
         allow_microphone: bool = False,
+        editor_view: bool = False,
     ) -> None:
         """Serve the dashboard with a per-response script nonce and strict CSP.
 
@@ -122,6 +123,9 @@ class ResponseMixin(WorkspaceState):
             html = html.replace("<!--dashboard-freshness-->", notice, 1)
         nonce = secrets.token_urlsafe(16)
         body = html.replace("<script>", f'<script nonce="{nonce}">')
+        if self.source_input and not editor_view:
+            bootstrap = (f'<script nonce="{nonce}" src="{escape(self.api_base)}/editor-bootstrap.js"></script>')
+            body = body.replace("</body>", bootstrap + "</body>")
         policy = "; ".join(
             (
                 "default-src 'none'",
@@ -131,9 +135,10 @@ class ResponseMixin(WorkspaceState):
                 "font-src 'self' data:",
                 "media-src 'self' blob:",
                 "connect-src 'self'",
+                "frame-src 'self'" if self.source_input and not editor_view else "frame-src 'none'",
                 "base-uri 'none'",
                 "form-action 'none'",
-                "frame-ancestors 'none'",
+                "frame-ancestors 'self'" if editor_view else "frame-ancestors 'none'",
             )
         )
         self._send(

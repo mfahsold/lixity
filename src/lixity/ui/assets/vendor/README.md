@@ -3,7 +3,22 @@
 Pinned third-party files inlined into the single-file dashboard. The dashboard
 must stay self-contained and offline; these libraries are therefore vendored
 (unminified originals are not fetched at runtime, and there is no build step or
-package manager in the release flow).
+package manager in the runtime or release flow).
+
+## Native manuscript editor
+
+`codemirror-editor.js` is a native-only, lazily loaded IIFE. It is not inlined
+into reports or public reading exports. `scripts/editor/package-lock.json`
+records exact dependency versions and registry integrity values; direct packages
+are `@codemirror/view` 6.43.15, `@codemirror/state` 6.7.6,
+`@codemirror/commands` 6.11.1, `@codemirror/lang-markdown` 6.5.2 and
+`@codemirror/search` 6.7.2.
+`codemirror.LICENSE` retains all production dependency notices.
+
+To rebuild after reviewing upstream changes, run `npm ci --ignore-scripts` and
+`npm run build` in `scripts/editor/` (esbuild 0.28.2). Commit the reproducible
+bundle, notices, source and lockfile together. Node is a contributor build tool;
+installed Lixity needs no Node runtime or network to open the editor.
 
 | File | Library | Version | License | Upstream |
 | :--- | :--- | :--- | :--- | :--- |

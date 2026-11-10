@@ -29,6 +29,7 @@ from .constants import (
 from .discovery import api_index
 from .pdf_context import project_settings_token
 from .routes_analysis_review import AnalysisReviewRoutesMixin
+from .routes_editing import EditingRoutesMixin
 from .routes_manuscript_research import ManuscriptResearchRoutesMixin
 from .routes_markers import MarkerRoutesMixin
 from .routes_nda import NdaRoutesMixin
@@ -39,6 +40,7 @@ from .routes_speech import SpeechRoutesMixin
 
 
 class LixityServerHandler(
+    EditingRoutesMixin,
     AnalysisReviewRoutesMixin,
     ProjectRoutesMixin,
     MarkerRoutesMixin,
@@ -54,6 +56,10 @@ class LixityServerHandler(
 
     #: GET routes: exact path -> handler method name.
     GET_ROUTES: ClassVar[dict[str, str]] = {
+        "/api/manuscript-edit": "_handle_editor_open",
+        "/api/manuscript-view": "_handle_editor_view",
+        "/api/editor-bootstrap.js": "_handle_editor_asset",
+        "/api/editor-bundle.js": "_handle_editor_asset",
         "/api": "_handle_api_index",
         "/api/": "_handle_api_index",
         "/api/runtime": "_handle_runtime",
@@ -89,6 +95,8 @@ class LixityServerHandler(
 
     #: POST actions under /api/ : exact action -> handler method name.
     POST_ROUTES: ClassVar[dict[str, str]] = {
+        "manuscript-edit": "_handle_editor_save",
+        "manuscript-edit-discard": "_handle_editor_discard",
         "workspace-close": "_handle_workspace_close",
         "speech-render": "_handle_speech_render",
         "speech-audio-import": "_handle_speech_audio_import",
@@ -146,6 +154,7 @@ class LixityServerHandler(
     # Serialize selection/settings commits, manuscript writes and token-bound
     # research requests. PDF composition and unbound research work remain outside.
     WORKSPACE_MUTATING_ACTIONS: ClassVar[frozenset[str]] = frozenset({
+        "manuscript-edit", "manuscript-edit-discard",
         "settings", "load", "project-create", "project-open", "analyze", "rebuild",
         "marker-add", "marker-resolve", "research-init",
     })

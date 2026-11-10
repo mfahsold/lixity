@@ -1,5 +1,31 @@
 # AGENTS.md – Lixity interface for AI agents and automation
 
+## Native manuscript editing (unreleased)
+
+`GET /api/manuscript-edit` returns `lixity-editor/1`, selected `document`, original
+byte `revision`, normalized editable `text` and recovery metadata. Native
+workspace URLs prefix these routes with `/w/<id>`. `POST /api/manuscript-edit`
+requires exactly `document`, `revision`, `operation` and `text` strings. Use a
+unique hexadecimal operation identifier (UUID without hyphens); reuse it only
+for an identical retry. A stale base returns 409 and retains the draft. Other
+validation/storage failures return non-success JSON; do not infer persistence.
+No request accepts an arbitrary file destination. Mutation requires explicit
+author intent, never merely an analysis result.
+
+`GET /api/manuscript-edit?recovery=<id>` reads a retained copy without writing the
+source. Its response includes document identity, original-byte revision, kind and
+normalized text. Unknown, repeated or empty query parameters are rejected.
+`POST /api/manuscript-edit-discard` with `document` and `id` explicitly
+deletes that recovery copy. The same Host/Origin checks protect these operations.
+Editor receipts do not refresh analysis. `GET /api/manuscript-view?document=<id>&revision=<sha256>`
+returns the ordinary native dashboard only when its analyzed and current source
+match the requested revision (otherwise 409 or an explicit error). The HTML body
+carries `data-editor-document` and `data-editor-revision`; this route alone allows
+same-origin framing for the persistent editor reading session. Project switching
+stays in the outer workspace. This is an HTML presentation route, not a new
+analysis-result schema. Research-link review continues to use the existing
+`research-manuscript-review-local/1` contract. See [editing limits and recovery](WORKSPACE.md#write-a-manuscript-unreleased).
+
 Guidance for AI agents (and other programs) that use Lixity as a tool:
 which commands to call, how to interpret the JSON, and which heuristics
 govern the numbers.
@@ -9,6 +35,14 @@ commands, languages, feature identifiers and thresholds. A running local server
 provides registered HTTP operations through `GET /api` (`lixity-api-index/1`).
 The [CLI workflow guide](USAGE.md) explains usage and output limits; the public
 [automation summary](llms.txt) links to the maintained entrypoints.
+
+## Project backups (unreleased)
+
+`project-backup` and `project-restore` return `lixity-project-backup/1` JSON.
+They copy an explicit saved-file inventory and retained research, not browser
+state. Consult [backup and restore](PROJECT_BACKUP.md) for selection, limits,
+checksums and the required fresh destination. A successful backup does not
+establish a transactionally consistent snapshot while other writers are active.
 
 ## Operating boundaries
 

@@ -86,6 +86,9 @@ AREAS: dict[str, tuple[str, ...]] = {
         "visual-consistency.cjs",
     ),
     "analysis": (
+        "manuscript-editor.cjs",
+        "editor-features.cjs",
+        "editor-navigation.cjs",
         "audio-export.cjs",
         "structural-coverage.cjs",
         "analysis-triage.cjs",

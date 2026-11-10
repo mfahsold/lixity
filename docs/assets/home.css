@@ -74,7 +74,7 @@
 }
 /* Keep the language control and appearance switch on the first mobile row. */
 @media (max-width: 900px) {
-  .public-home .theme-btn { font-size: 0; min-width: 2.75rem; min-height: 2.75rem; padding: .4rem; }
+  .public-home .theme-btn { font-size: 0; min-width: 2.75rem; padding: .4rem; }
   .public-home .theme-btn::before { content: "◐"; font-size: 1.25rem; }
 }
 

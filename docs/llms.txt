@@ -1,7 +1,10 @@
 # Lixity
 
-> Local manuscript revision, exploratory linguistic text analysis and an
-> explicit-project research archive. Statistical
+> A local manuscript workspace for close reading, traceable research and
+> linguistic analysis: compare chapters, inspect counted passages, follow retained
+> evidence and select the contents of reading exports. Integrated
+> writing with undo, autosave and recovery is implemented but unreleased.
+> The browser app, CLI and Python API share the analysis engine. Statistical
 > signals support human review; they are not literary-quality scores or
 > instructions to rewrite prose. Analysis is deterministic for fixed text and
 > settings; research records also contain generated IDs and timestamps.
@@ -42,7 +45,10 @@ For linguistic work, use the [text-analysis workflow](https://mfahsold.github.io
 
 ## Choose a maintained reference
 
+- [Project backup and restore (unreleased)](https://mfahsold.github.io/lixity/PROJECT_BACKUP.md): explicit saved-file inventory, checksums and fresh-directory restoration.
+
 - [Documentation map](https://mfahsold.github.io/lixity/README.md): task-oriented routes into the maintained manuals, guides and references.
+- [Product direction](https://mfahsold.github.io/lixity/PRODUCT.md): capability evidence, honest product claims and proposed priorities, not release commitments.
 - [Onboarding](https://mfahsold.github.io/lixity/ONBOARDING.md): open/import a project, read a passage, inspect measurements and follow retained evidence.
 - [Installation](https://mfahsold.github.io/lixity/INSTALLATION.md): supported systems, isolated environments, service startup, upgrades and removal.
 - [CLI reference](https://mfahsold.github.io/lixity/USAGE.md): commands, analysis, project configuration, PDF and website export options.
@@ -54,6 +60,7 @@ For linguistic work, use the [text-analysis workflow](https://mfahsold.github.io
 - [Stability](https://mfahsold.github.io/lixity/STABILITY.md): sample-size limits, uncertainty and interpretation of thresholds.
 - [Localization](https://mfahsold.github.io/lixity/LOCALIZATION.md): supported language profiles, coverage and shared product vocabulary.
 - [Architecture](https://mfahsold.github.io/lixity/ARCHITECTURE.md): component ownership, annotation semantics and integration boundaries.
+- [Manuscript editing RFC](https://mfahsold.github.io/lixity/MANUSCRIPT_EDITING_RFC.md): CodeMirror 6, source preservation and safe persistence; unreleased first implementation and remaining requirements.
 - [Research data model](https://mfahsold.github.io/lixity/research/DATA_MODEL.md): immutable revisions, evidence pins, stored entities and schema evolution.
 - [Research scope and design history](https://mfahsold.github.io/lixity/research/README.md): links to current references and explicitly unimplemented proposals.
 - [Release history](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): changes and compatibility notes; historical release numbers are not current capability claims.

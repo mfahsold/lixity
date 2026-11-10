@@ -743,24 +743,24 @@ def _publish_new_directory(stage: Path, target: Path) -> None:
     if sys.platform.startswith("linux"):
         rename = getattr(libc, "renameat2", None)
         if rename is None:
-            raise ResearchError("Atomic no-replace website publication is unsupported; download a ZIP instead")
+            raise ResearchError("Atomic no-replace directory publication is unsupported")
         rename.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
         rename.restype = ctypes.c_int
         result = rename(-100, os.fsencode(stage), -100, os.fsencode(target), 1)  # AT_FDCWD, RENAME_NOREPLACE
     elif sys.platform == "darwin":
         rename = getattr(libc, "renamex_np", None)
         if rename is None:
-            raise ResearchError("Atomic no-replace website publication is unsupported; download a ZIP instead")
+            raise ResearchError("Atomic no-replace directory publication is unsupported")
         rename.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint]
         rename.restype = ctypes.c_int
         result = rename(os.fsencode(stage), os.fsencode(target), 4)  # RENAME_EXCL
     else:
-        raise ResearchError("Atomic no-replace website publication is unsupported; download a ZIP instead")
+        raise ResearchError("Atomic no-replace directory publication is unsupported")
     if result != 0:
         error = ctypes.get_errno()
         if error in (errno.EEXIST, errno.ENOTEMPTY):
-            raise ResearchConflictError("Website destination already exists; nothing was replaced")
-        raise OSError(error, "Could not atomically publish the website; no destination was replaced")
+            raise ResearchConflictError("Directory destination already exists; nothing was replaced")
+        raise OSError(error, "Could not atomically publish the directory; no destination was replaced")
 
 
 def export_site(project: str | Path, output: str | Path, *, manuscript: str | Path | None = None,

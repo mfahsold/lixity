@@ -1240,7 +1240,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
             await expect(picker.locator('nav')).toBeVisible();
             await picker.locator('a[hreflang=de]').click();
             await expect(page).toHaveURL(origin + '/lixity/index-de.html');
-            await expect(page.locator('h1')).toHaveText('Dein Text.Ein neuer Blick.');
+            await expect(page.locator('h1')).toHaveText('Ein Arbeitsraum.Deine Perspektive.');
             await page.goto(origin + '/lixity/' + route);
             const video = page.locator('.product-preview video');
             await expect(video).toHaveAttribute('poster', 'videos/product-tour.webp');

@@ -63,8 +63,8 @@ $alternates
 </figcaption>
 </figure>
 </section>
-<section class="home-section" id="features"><h2>$tasks_title</h2><div class="home-tasks">
-<article id="writing"><h3>$read_title</h3><p>$read_text</p><a href="demo/report.html">$demo</a></article>
+<section class="home-section" id="features"><h2>$tasks_title</h2><p>$workflow</p><p class="section-note">$editor_status</p><div class="home-tasks">
+<article id="writing"><h3>$read_title</h3><p>$read_text</p><a href="WORKSPACE.md#write-a-manuscript-unreleased" lang="en">$editor_link</a></article>
 <article id="linguistic-analysis"><h3>$linguistics_title</h3><p>$linguistics_text</p><a href="USAGE.md#linguistic-text-analysis">$linguistics_link</a></article>
 <article id="research-workspace"><h3>$research_title</h3><p>$research_text</p><a href="$tour_url">$tour</a></article>
 <article id="reading-copies"><h3>$share_title</h3><p>$share_text</p><a href="demo/reader/index.html" lang="en">Reading copy (English)</a></article>

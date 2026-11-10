@@ -2,7 +2,9 @@
 
 [Documentation map](README.md) · [Workspace manual](WORKSPACE.md) · [CLI reference](USAGE.md)
 
-This walkthrough ends with one inspected passage and a clear choice of output.
+Start with the part of your project that needs attention: prose, a research
+question or a reading copy. This walkthrough connects those activities through
+one inspected passage and a clear choice of output.
 Install Lixity first using the [installation guide](INSTALLATION.md).
 
 Explore [*The Crate at Warehouse 4*](https://mfahsold.github.io/lixity/demo/report.html),
@@ -29,7 +31,10 @@ service management;
 
 1. Start the local app and open the intended project, or preview an imported copy.
 2. Check the displayed project path and analysis language.
-3. Read a paragraph, inspect one measurement, then return to the text.
+3. Read a paragraph, optionally inspect a measurement, then return to the text.
+   In the development checkout, use the unreleased [Write workflow](WORKSPACE.md#write-a-manuscript-unreleased)
+   to edit in place. Use **Read and refresh** to inspect the saved revision, then **Back to writing**
+   to continue with the same editor and undo history. Installed releases may not include the editor.
 4. Optionally follow a saved research link or record a short reading.
 5. Choose an output deliberately; stop the service when finished.
 

@@ -9,6 +9,27 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Extend unreleased writing with localized search/replace, manual conflict and
+  recovery comparison, guarded nested research drafts and revision-validated
+  literal reader selections. Preserve undo across reading and writing.
+- Add unreleased `project-backup` and `project-restore`: explicit saved-file
+  inventories, retained research, checksums and validated no-replace restoration.
+  Exclude unselected settings, editor recovery journals and unsaved browser drafts.
+
+- Make product descriptions more concrete across the README and seven public
+  languages: passage-level explanations, retained evidence and selected reading
+  exports. Document capability boundaries and proposed product priorities.
+
+- Align product introductions, README and platform documentation around one local
+  manuscript workspace for writing, reading, research, analysis and sharing.
+  Keep the editor's unreleased status explicit across all seven public languages.
+
+- Add native-only CodeMirror 6 manuscript editing with undo/redo, conditional
+  autosave, explicit conflict states and local recovery copies. Preserve UTF-8
+  BOM and uniform line endings; keep editor assets out of read-only exports.
+  Revision-bound reading sessions preserve editor undo and expose the existing
+  research-link review without changing retained evidence or silently re-anchoring.
+
 - Replace the public homepage screenshot with a quiet light/dark product tour,
   directed zooms and focus annotations, localized captions and a text transcript.
   Respect reduced motion, explicit pauses and offscreen playback; offer AV1 with
@@ -25,6 +46,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and share their metadata/navigation with the public-domain examples.
 
 ### Documentation
+
+- Document the proposed CodeMirror 6 manuscript editor against current source
+  boundaries and primary research, including source fidelity, conflict handling,
+  recovery, accessibility and revision-bound analysis acceptance criteria.
 
 - Connect the product and documentation entrypoints to a browser workflow for
   linguistic text analysis. Distinguish automatically remembered reading

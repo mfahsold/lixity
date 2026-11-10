@@ -519,6 +519,18 @@ def about() -> dict[str, Any]:
                 "writes": False,
             },
             {
+                "name": "project-backup",
+                "purpose": "verified local bundle of selected manuscript/settings/attachments and retained research",
+                "output": "json+directory",
+                "schema_version": "lixity-project-backup/1",
+            },
+            {
+                "name": "project-restore",
+                "purpose": "verify a project bundle and restore into a new destination",
+                "output": "json+directory",
+                "schema_version": "lixity-project-backup/1",
+            },
+            {
                 "name": "doctor",
                 "purpose": "read-only installation versions, module location and local service diagnostics",
                 "output": "text|json",

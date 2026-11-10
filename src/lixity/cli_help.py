@@ -43,7 +43,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
 
 def command_group(name: str) -> str:
     """Give the top-level entrypoints task-oriented headings."""
-    if name in {"project", "service"}:
+    if name in {"project", "project-backup", "project-restore", "service"}:
         return "Projects and local app"
     if name == "research":
         return "Research"
@@ -58,6 +58,18 @@ def command_group(name: str) -> str:
 
 # Canonical manuals, workflow notes and parseable example invocations.
 COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
+    'project-backup': (
+        'PROJECT_BACKUP.md',
+        'Stop project writers first. Only explicitly selected visible files and retained research '
+        'are included. Output is a new directory; exclusions are reported as JSON.',
+        ('lixity project-backup --project ./novel --manuscript manuscript.md --output ./backup',),
+    ),
+    'project-restore': (
+        'PROJECT_BACKUP.md',
+        'Verify SHA-256 inventory and research integrity before placing a new project. '
+        'Existing destinations are refused. Reports JSON.',
+        ('lixity project-restore --from ./backup --to ./restored-novel',),
+    ),
     'project': (
         'USAGE.md#lixity-project',
         (
