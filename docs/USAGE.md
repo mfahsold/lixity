@@ -99,6 +99,19 @@ between chapters, inspect vocabulary diversity, or trace a readability result
 back to its counts. The same engine serves manuscript revision and linguistic
 questions; there is no separate research-only analysis mode.
 
+Choose a question you can check against the actual passages:
+
+| Question | Start with | Keep comparable |
+| --- | --- | --- |
+| Does sentence rhythm change between sections? | Sentence-length measurements and chapter comparison | Chapter boundaries, punctuation treatment and analysis language |
+| Does vocabulary diversity differ between samples? | TTR, HD-D and MTLD, then inspect the counted words | Sample length, genre, edition and tokenization settings |
+| Where do particular expressions recur? | Motif patterns and their chapter distribution | Pattern definitions, case handling and the same text projection |
+
+These are descriptive comparisons. For a collection of documents, analyze each
+explicitly and retain its identity with the output; do not treat one manuscript's
+internal reference as a population norm. The research archive stores evidence
+and citations separately and does not automatically add sources to that reference.
+
 1. Define the question and text scope before inspecting the results. Keep a copy
    of the input, its source and edition, and any conversion or cleaning steps.
 2. Choose the actual language explicitly. Keep chapter boundaries and settings

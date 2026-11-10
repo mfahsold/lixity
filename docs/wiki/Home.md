@@ -9,7 +9,7 @@ This wiki is a short guide to the maintained manuals. Start with the
 
 | Task | Start here |
 | --- | --- |
-| Install and review a first passage | [Quickstart](Quickstart.md) · [Schnelleinstieg auf Deutsch](Schnelleinstieg-DE.md) |
+| Install and review a first passage | [Quickstart](Quickstart.md) · [German product introduction](https://mfahsold.github.io/lixity/index-de.html) |
 | Use the browser workspace | [Workspace manual](https://mfahsold.github.io/lixity/WORKSPACE.md) |
 | Run commands and configure a project | [CLI reference](https://mfahsold.github.io/lixity/USAGE.md) |
 | Explore a linguistic question | [Text-analysis workflow](https://mfahsold.github.io/lixity/USAGE.md#linguistic-text-analysis) · [Methods](https://mfahsold.github.io/lixity/METHODS.md) |

@@ -12,9 +12,11 @@
 
 ---
 
-### 🇩🇪 Deutsch
-* **[Schnelleinstieg (DE)](Schnelleinstieg-DE.md)**
-* **[Lektorats-Metriken (DE)](Lektorats-Metriken-DE.md)**
+### Product introductions
+* [Deutsch](https://mfahsold.github.io/lixity/index-de.html)
+* [English and language switcher](https://mfahsold.github.io/lixity/)
+
+Technical documentation is maintained in English.
 
 ---
 

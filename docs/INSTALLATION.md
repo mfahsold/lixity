@@ -54,6 +54,23 @@ neither Git nor a separate Python installation is needed for this route.
 The engine supports Python 3.10 or newer. Python API and editable developer
 environments are [separate advanced routes](#python-api-project-environment).
 
+### Packaging direction
+
+The current application is a Python package with a local browser interface.
+The uv route above manages Python for you; it is not a standalone desktop
+installer. No AppImage, DEB, RPM or bundled desktop installer is published here.
+
+The next packaging work targets **Linux first**, with an isolated, supported
+runtime and explicit install, upgrade, rollback and removal checks. Python 3.12
+is the agreed minimum for the next development baseline; the published 0.8.0
+package still declares Python 3.10+. A future installer must preserve project
+files and retained research, and restart only the service it owns. Optional
+speech and OCR environments remain separate from the basic application.
+
+A Rust backend is a longer-term direction to evaluate, not an available runtime
+or a prerequisite for using Lixity. See the [architecture evolution criteria](ARCHITECTURE.md#evolution-without-a-second-product-path).
+There is no promised installer release date or selected package format yet.
+
 ### Install uv if it is not available
 
 Check `uv --version` first. On Windows with WinGet, run in PowerShell:

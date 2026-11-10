@@ -17,6 +17,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Documentation
 
+- Consolidate legacy German wiki manuals into links to the English references;
+  retain their URLs and localized product introductions. Clarify current package
+  availability versus Linux-first packaging and future Rust evaluation, and add
+  concrete exploratory linguistic workflows.
+
 - Present manuscript revision and exploratory linguistic text analysis consistently
   across seven product introductions, README, manuals and automation summary.
   Add a reproducible CLI workflow and clarify interpretation and language limits.

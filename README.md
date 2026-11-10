@@ -102,8 +102,9 @@ lixity service start --open
 ```
 
 Choose **Open Project** or **Analyze a manuscript**, then confirm the language.
-Supported manuscript files are `.md`, `.markdown` and `.txt`; retaining a PDF as
-research is a separate action. English is the default analysis language;
+The engine reads `.md`, `.markdown` and `.txt`; the app can also preview and
+convert a `.docx` file when importing a copy. Retaining a PDF as research is a
+separate action. English is the default analysis language;
 automatic detection is an explicit choice.
 
 [Your first project](https://mfahsold.github.io/lixity/ONBOARDING.md) covers

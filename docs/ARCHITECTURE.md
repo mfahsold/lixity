@@ -17,6 +17,22 @@ chain and publication process, and separates authoritative archive data from
 the disposable search database. Historical interchange proposals do not define
 the accepted local schema.
 
+## Evolution without a second product path
+
+Today the shared engine, CLI and local HTTP server are Python; browser behavior
+uses JavaScript and CSS. Packaging the existing application for Linux comes
+before requiring a backend rewrite. Installation and runtime support are owned
+by the [installation guide](INSTALLATION.md#packaging-direction).
+
+A future Rust backend should be evaluated incrementally against the current
+engine: deterministic outputs, explicit unknowns, language coverage, stable
+JSON contracts and preserved project/archive data. A replacement needs measured
+benefit and parity tests before it becomes the default. The browser interface
+can remain JavaScript; an all-Rust interface is an option to investigate, not a
+chosen architecture. Neither direction authorizes a parallel permanent engine
+or silent project migrations. Release changes follow the explicit migration
+process in [Contributing](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md).
+
 ## Layers
 
 | Layer | Responsibility | Must not own |
