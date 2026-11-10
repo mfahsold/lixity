@@ -6,6 +6,15 @@ come from `lixity about --json`. This page keeps interpretation and integration
 limits that a passing check cannot resolve. Statistical signals support human
 review, not a prose grade.
 
+## Scope of linguistic use
+
+Lixity supports descriptive exploration of supplied prose. Its chapter baseline
+is internal to that text; it is not a population norm. Comparisons across texts
+need compatible preprocessing, segmentation, language resources and settings.
+A difference in a measure does not establish an author's identity or intention,
+a causal explanation, or a literary-quality ranking. Software tests establish
+implementation behavior, not empirical validity for every genre or language.
+
 ## 1. Research findings (state of the art)
 
 ### Release verification and limits

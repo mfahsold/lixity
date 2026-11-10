@@ -1,5 +1,10 @@
 # Lixity documentation
 
+Lixity combines manuscript revision and exploratory linguistic text analysis
+in one local workspace. Read passages in context, inspect how measurements are
+formed, and retain research alongside the text. CLI and Python integrations use
+the same engine as the browser app.
+
 Technical documentation is maintained in **English only**. The app interface
 supports German, English, French, Spanish, Italian, Portuguese and Dutch;
 [language coverage](LOCALIZATION.md) explains differences in analysis support.
@@ -21,6 +26,7 @@ the release notes for its documented baseline;
 | See what Lixity does before installing | [Illustrated tour](guides/first-look.html) · [Read-only demo](demo/report.html) |
 | Install, update or start the app | [Installation and service management](INSTALLATION.md) |
 | Complete a first session with your manuscript | [First-session walkthrough](ONBOARDING.md) |
+| Explore sentence rhythm, vocabulary or readability | [Linguistic text-analysis workflow](USAGE.md#linguistic-text-analysis) · [Methods](METHODS.md) · [Limits](STABILITY.md) |
 | Find an everyday browser action | [Workspace manual](WORKSPACE.md) |
 | Run a command or configure a project | [CLI and configuration reference](USAGE.md) |
 | Record, direct, generate, import or export audio | [Audio and teleprompter manual](AUDIO.md) |

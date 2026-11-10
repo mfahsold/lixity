@@ -26,7 +26,7 @@ Choose **Open Project** for an existing folder and its research archive. Choose
 **Analyze a manuscript** to preview a file and copy it into a new project;
 opening a folder and importing a copy are different operations.
 Use UTF-8 Markdown with `## Chapter title` headings unless the project defines a
-custom chapter pattern. The unreleased file importer also accepts one `.txt` or
+custom chapter pattern. The file importer in 0.8.0 also accepts one `.txt` or
 `.docx` file. Review the destination and language before confirming.
 
 ## 4. The Three Main Workspaces

@@ -185,7 +185,9 @@ for all readers and writers. Installing Lixity does not download an OCR model.
 
 </details>
 
-### External speech providers and local audio inspection (unreleased)
+<a id="external-speech-providers-and-local-audio-inspection-unreleased"></a>
+
+### External speech providers and local audio inspection
 
 Direction/timeline and SSML export need no speech model, worker or API key.
 For synthesis, run a separately managed service that implements
@@ -326,7 +328,9 @@ not install or start the remote worker or SSH connection. GPU compatibility and
 available shared memory must be checked on the actual device; 8 GB does not
 guarantee that every input fits.
 
-### Experimental Coqui and OpenVoice audio (unreleased)
+<a id="experimental-coqui-and-openvoice-audio-unreleased"></a>
+
+### Experimental Coqui and OpenVoice audio
 
 Set up a separate Python environment following the
 [maintained Coqui installation guide](https://coqui-tts.readthedocs.io/en/latest/installation.html).
@@ -369,7 +373,7 @@ For settings migration, recording requirements and a first preview, continue wit
 
 ### IMS-Toucan author voice and phonetic direction
 
-**Unreleased.** The optional `ims-toucan` worker supports German and English with
+**Available in 0.8.0.** The optional `ims-toucan` worker supports German and English with
 an explicitly saved author reference, IPA overrides and structured prosody. It
 uses local loopback port **8772**, independently of Qwen/Coqui (8769) and F5 (8771).
 The worker is separate from the normal Lixity environment; no inference dependency
@@ -682,12 +686,12 @@ then use `tail -f` to follow it on systems with that command.
 
 Starting the service rotates an oversized `service-PORT.log` to
 `service-PORT.log.1` … `.3` (oldest dropped). The file can grow between starts;
-this is not continuous rotation. On current main, request diagnostics retain only
+this is not continuous rotation. In 0.8.0, request diagnostics retain only
 known route names, methods and status; workspace identifiers, query strings,
 unrecognized paths and response error text are omitted. Other stderr output can
 still include contextual details; inspect logs before sharing them.
 
-On current main, audio jobs and renders add technical events to the same logger.
+In 0.8.0, audio jobs and renders add technical events to the same logger.
 A random diagnostic ID correlates a native job with its render without using the
 job's access identifier. INFO events record queue and render state and segment
 count; DEBUG additionally records each segment's requested model variant and

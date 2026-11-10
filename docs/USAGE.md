@@ -11,6 +11,7 @@ owns retained sources, citations, dossiers, Zotero, backups and OCR.
 [Automation contracts](AGENTS.md) define JSON envelopes and HTTP requests.
 
 - [Run a first analysis](#quick-start)
+- [Explore linguistic questions](#linguistic-text-analysis)
 - [Choose a command](#which-command-for-which-question)
 - [Read command workflows](#command-reference)
 - [Inspect a project](#lixity-project)
@@ -46,7 +47,7 @@ lixity research ingest --help
 lixity service --help
 ```
 
-**Current main, unreleased:** top-level commands are grouped by task. Command
+**Since 0.8.0:** top-level commands are grouped by task. Command
 help includes examples, prerequisites, output behavior and a link to the relevant
 manual. Dense audio and export options are grouped by purpose; research help
 states defaults and distinguishes inspection from retention or other writes.
@@ -90,6 +91,47 @@ Configure the root-local [default manuscript](#default-manuscript) before omitti
 the file. Quote paths containing spaces, for example `"drafts/My novel.md"`.
 [Choose another command](#which-command-for-which-question) for focused analysis
 or a different output.
+
+## Linguistic text analysis
+
+Use Lixity for exploratory, descriptive work on prose: compare sentence lengths
+between chapters, inspect vocabulary diversity, or trace a readability result
+back to its counts. The same engine serves manuscript revision and linguistic
+questions; there is no separate research-only analysis mode.
+
+1. Define the question and text scope before inspecting the results. Keep a copy
+   of the input, its source and edition, and any conversion or cleaning steps.
+2. Choose the actual language explicitly. Keep chapter boundaries and settings
+   consistent across runs; a different segmentation changes the comparison.
+3. Export the measurements and inspect the counted passages in the dashboard.
+   An unexpected value is a reason to inspect the text and method.
+4. Record the Lixity version, input checksum, configuration and exact command
+   alongside the output. Preserve unavailable values and warnings in downstream
+   work rather than treating them as zero.
+
+For an English UTF-8 text named `sample.md`:
+
+```sh
+lixity --version
+lixity about --json > capabilities.json
+lixity analyze sample.md --language en --json -o analysis.json
+lixity dashboard sample.md --language en -o dashboard.html
+```
+
+These commands read the input and create reports; they do not alter the text.
+Use `--language de` for German, for example. Browser language does not select an
+analysis language. For project work, retain the root-local configuration too.
+The [JSON contracts](AGENTS.md#3-json-contracts) describe result envelopes;
+[Methods](METHODS.md) defines TTR, HD-D, MTLD, sentence measures and readability.
+
+**Interpretation:** chapter comparisons use this text's internal reference,
+not a representative language corpus. Length, genre, segmentation and language
+resources affect comparisons. Readability is a model estimate, not a reader
+study; lexical diversity is not writing quality. Lexical tense cues are not a
+complete grammatical parse. Optional syntax models have separate installation
+and interpretation limits. Lixity does not establish authorship, causal effects
+or equivalent validation across languages. See [Stability](STABILITY.md) and
+[Localization](LOCALIZATION.md) before comparing datasets.
 
 ## Which command for which question?
 
@@ -742,7 +784,7 @@ Select a chapter in the style space, inspect its
 values and open its passage. The view and CLI explain their coverage, axes,
 cutoffs and unavailable values in place; JSON exposes `dimension_diagnostics`.
 
-**Unreleased:** when dimension scores are available, **Start your review → Open
+**Available in 0.8.0:** when dimension scores are available, **Start your review → Open
 3D style space** opens this view directly. A dashed ring marks an axis cutoff;
 a separate solid outer ring marks the selected chapter, including when both
 apply. These cutoff marks include axes hidden in a flat projection and are not
@@ -896,8 +938,7 @@ the [workspace manual](WORKSPACE.md) for browser tasks.
 
 One regular app instance supports independent
 project views in multiple tabs. Project selection returns a scoped view URL
-under the same origin instead of replacing every tab's selection. On current main
-(unreleased), use **Project → Settings → Audio and services → Services & audio queue**
+under the same origin instead of replacing every tab's selection. In 0.8.0, use **Project → Settings → Audio and services → Services & audio queue**
 to revisit open views, close an idle view or refresh worker/queue status.
 The startup view stays available. At most 16 views are retained; their URLs
 expire on server restart and return HTTP 410 instead of selecting another project.
@@ -913,7 +954,7 @@ their own bounded retention window. **Ready** for a target means its expected
 model answered the health probe, not merely that the tunnel port accepted TCP.
 The existing external worker and SSH-forward lifecycle remains separate; status
 does not install models, start a tunnel or establish that GPU acceleration works.
-**Unreleased:** the worker checks cover the local and configured Jetson workers,
+**Available in 0.8.0:** the worker checks cover the local and configured Jetson workers,
 not external providers. The queue does not identify where an external or mixed
 job runs; its processing location is shown as unknown.
 
@@ -1634,9 +1675,11 @@ See [Download a manuscript PDF](WORKSPACE.md#download-a-manuscript-pdf).
 
 See [Export a reading website](WORKSPACE.md#export-a-reading-website).
 
-#### Include existing chapter recordings (unreleased)
+<a id="include-existing-chapter-recordings-unreleased"></a>
 
-See [Include existing chapter recordings (unreleased)](WORKSPACE.md#include-existing-chapter-recordings-unreleased).
+#### Include existing chapter recordings
+
+See [Include existing chapter recordings](WORKSPACE.md#include-existing-chapter-recordings-unreleased).
 
 #### Curate a reader publication
 
@@ -1701,13 +1744,17 @@ See [Style-space navigation](WORKSPACE.md#style-space-navigation).
 The [audio manual](AUDIO.md) owns recording, voice profiles, direction, synthesis,
 playback and audio verification. Setup remains in [Installation](INSTALLATION.md).
 
-### Audio export and external providers (unreleased)
+<a id="audio-export-and-external-providers-unreleased"></a>
 
-See [Audio export and external providers (unreleased)](AUDIO.md#audio-export-and-external-providers-unreleased).
+### Audio export and external providers
 
-### Inspect and compare externally generated audio (unreleased)
+See [Audio export and external providers](AUDIO.md#audio-export-and-external-providers-unreleased).
 
-See [Inspect and compare externally generated audio (unreleased)](AUDIO.md#inspect-and-compare-externally-generated-audio-unreleased).
+<a id="inspect-and-compare-externally-generated-audio-unreleased"></a>
+
+### Inspect and compare externally generated audio
+
+See [Inspect and compare externally generated audio](AUDIO.md#inspect-and-compare-externally-generated-audio-unreleased).
 
 ### Audio status
 
@@ -1725,9 +1772,11 @@ See [Author voice recording and listening](AUDIO.md#author-voice-recording-and-l
 
 See [Experimental Qwen VoiceDesign](AUDIO.md#experimental-qwen-voicedesign).
 
-### Experimental Coqui and OpenVoice audio (unreleased)
+<a id="experimental-coqui-and-openvoice-audio-unreleased"></a>
 
-See [Experimental Coqui and OpenVoice audio (unreleased)](AUDIO.md#experimental-coqui-and-openvoice-audio-unreleased).
+### Experimental Coqui and OpenVoice audio
+
+See [Experimental Coqui and OpenVoice audio](AUDIO.md#experimental-coqui-and-openvoice-audio-unreleased).
 
 ### Experimental reference voices
 
@@ -1745,13 +1794,17 @@ See [Manuscript Teleprompter: Direction cues, phonetics, and synchronized dossie
 
 See [Audio and video playback](AUDIO.md#audio-and-video-playback).
 
-### Retained F5-TTS profiles (unreleased)
+<a id="retained-f5-tts-profiles-unreleased"></a>
 
-See [Retained F5-TTS profiles (unreleased)](AUDIO.md#retained-f5-tts-profiles-unreleased).
+### Retained F5-TTS profiles
 
-### IMS-Toucan phonetics and structured direction (unreleased)
+See [Retained F5-TTS profiles](AUDIO.md#retained-f5-tts-profiles-unreleased).
 
-See [IMS-Toucan phonetics and structured direction (unreleased)](AUDIO.md#ims-toucan-phonetics-and-structured-direction-unreleased).
+<a id="ims-toucan-phonetics-and-structured-direction-unreleased"></a>
+
+### IMS-Toucan phonetics and structured direction
+
+See [IMS-Toucan phonetics and structured direction](AUDIO.md#ims-toucan-phonetics-and-structured-direction-unreleased).
 
 ### Single narrator and delivery variation
 

@@ -7,8 +7,8 @@ The [CLI reference](USAGE.md), [audio manual](AUDIO.md) and
 [research manual](research/USAGE.md) provide the corresponding specialist workflows.
 
 Labels below use the English interface. The same routes are localized, with
-German coverage prioritized. Sections marked **unreleased** or **current main**
-describe the development version, not a feature guaranteed in an older install.
+German coverage prioritized. The workflows below are available in 0.8.0.
+Later changes marked **unreleased** require a development checkout.
 
 | Your next task | Start here |
 | --- | --- |
@@ -105,7 +105,7 @@ The first explicit **Analysis On** selects **Sentence length**
 unless you have already saved a metric choice.
 Use the directly visible **Measure**
 selector while Analysis is on. **Counted text** and **Paragraph comparison** are
-independent switches: keep either, both or neither. **Current main:** counted text starts off
+independent switches: keep either, both or neither. **In 0.8.0:** counted text starts off
 for each measure, and its choice is remembered separately per measure; paragraph
 comparison starts on and remains a shared choice. An older saved global counted-text
 choice is assigned to the last selected measure, if one was selected. If it was
@@ -335,7 +335,7 @@ analyzed paragraph's **Values** opens the **Passage values** inspector independe
 of the Analysis On/Off choice. **Analysis overview** opens chapter comparisons and other dense views;
 **Back to passage** restores the earlier analysis choice and document context.
 
-**Unreleased:** the reading controls group chapter, text settings and focus
+**Available in 0.8.0:** the reading controls group chapter, text settings and focus
 together. The analysis measure explains what its marks and paragraph comparison
 show; comparison arrows sit with that switch. **Analysis help → Inspect the
 count** examines a visible manuscript passage. Overview navigation includes
@@ -382,7 +382,7 @@ Tabs group the heatmap, style reference, dimensions and structural diagnostics.
 `ArrowLeft`/`ArrowRight` moves between tabs; `Home`/`End` selects the first/last.
 Links to `#heatmap`, `#bands`, `#dimensions`, `#structural` and `#feat-<field>`
 select the relevant tab. All available panels remain readable without JavaScript.
-**Unreleased:** static reports keep native chapter links and the dimension-score
+**Available in 0.8.0:** static reports keep native chapter links and the dimension-score
 table; interactive filters and the 3D plot are unavailable without scripting.
 
 Keep the three comparison scopes separate:
@@ -482,7 +482,7 @@ return to 3D to rotate the same data. The line follows chapter order, including
 gaps where a chapter has no measured position. **Reset** restores the view,
 without changing chapter scores or analysis settings.
 
-**Unreleased:** the count beside the plot shows how many measured chapters
+**Available in 0.8.0:** the count beside the plot shows how many measured chapters
 reach an axis cutoff. **Next chapter at cutoff** cycles through those chapters
 in manuscript order. The cutoff uses unrounded scores and is a prompt for
 contextual review, not a quality ranking or an FDR selection.
@@ -603,7 +603,7 @@ Open **Project** to see the selected manuscript, matching research workspace and
 existing outputs. **Outputs** groups eligible files directly under `exports/`;
 **Check again** repeats the read-only metadata inspection without rebuilding
 analysis. **Project → Settings → Audio and services** groups recording, profiles,
-microphone settings and service/queue controls on current main (unreleased).
+microphone settings and service/queue controls in 0.8.0.
 
 **Available** means filesystem metadata is accessible, not that an output is
 fresh or the archive is valid. Existing outputs state **Source and generation
@@ -696,7 +696,9 @@ extracted source text require `--include-source-files` together with
 `--include-research`. Local retention permission does not establish permission
 to redistribute a source.
 
-### Include existing chapter recordings (unreleased)
+<a id="include-existing-chapter-recordings-unreleased"></a>
+
+### Include existing chapter recordings
 
 For a **reader** copy, select **Include chapter audio** in the export dialog or add
 `--include-audio` to the CLI command:

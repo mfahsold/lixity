@@ -39,6 +39,7 @@ def render_pages() -> dict[str, str]:
         fields = {key: html.escape(value, quote=True) for key, value in content.items()}
         fields['headline'] = '<br/>'.join(html.escape(line) for line in content['headline'].splitlines())
         fields['lang'] = lang
+        fields['language_name'] = LANGUAGES[lang]
         fields['version'] = version
         fields['image_width'] = str(width)
         fields['image_height'] = str(height)
@@ -50,6 +51,7 @@ def render_pages() -> dict[str, str]:
             for code in LANGUAGES) + f'\n<link rel="alternate" hreflang="x-default" href="{BASE}"/>'
         fields['language_links'] = '\n'.join(
             f'<a href="{page_path(code)}" lang="{code}" hreflang="{code}"'
+            + f' data-language-action="{html.escape(dictionaries[code]["language_action"], quote=True)}"'
             + (' aria-current="page"' if code == lang else '') + f'>{name}</a>'
             for code, name in LANGUAGES.items())
         fields['structured'] = json.dumps({

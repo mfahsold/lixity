@@ -4,7 +4,7 @@
         xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
   <url>
     <loc>https://mfahsold.github.io/lixity/</loc>
-    <lastmod>2026-11-09</lastmod>
+    <lastmod>2026-11-10</lastmod>
     <image:image>
       <image:loc>https://mfahsold.github.io/lixity/screenshots/dashboard-light.png</image:loc>
       <image:title>Lixity continuous manuscript reader with chapter navigation and contextual tools</image:title>
@@ -36,7 +36,7 @@
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/demo/report.html</loc>
-    <lastmod>2026-11-02</lastmod>
+    <lastmod>2026-11-10</lastmod>
     <image:image>
       <image:loc>https://mfahsold.github.io/lixity/assets/research/hamburg-free-port-1900.jpg</image:loc>
       <image:title>Historical Hamburg free-port plan by Richard Krause, circa 1900</image:title>
@@ -48,7 +48,7 @@
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/demo/reader/index.html</loc>
-    <lastmod>2026-11-02</lastmod>
+    <lastmod>2026-11-10</lastmod>
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/demo/reader/analysis.html</loc>
@@ -56,7 +56,7 @@
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/demo/companion/index.html</loc>
-    <lastmod>2026-11-02</lastmod>
+    <lastmod>2026-11-10</lastmod>
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/examples/effi-briest.html</loc>
@@ -146,10 +146,10 @@
     <loc>https://mfahsold.github.io/lixity/blog/effi-briest-case-study.html</loc>
     <lastmod>2026-11-05</lastmod>
   </url>
-  <url><loc>https://mfahsold.github.io/lixity/index-de.html</loc><lastmod>2026-11-09</lastmod></url>
-  <url><loc>https://mfahsold.github.io/lixity/index-fr.html</loc><lastmod>2026-11-09</lastmod></url>
-  <url><loc>https://mfahsold.github.io/lixity/index-es.html</loc><lastmod>2026-11-09</lastmod></url>
-  <url><loc>https://mfahsold.github.io/lixity/index-it.html</loc><lastmod>2026-11-09</lastmod></url>
-  <url><loc>https://mfahsold.github.io/lixity/index-pt.html</loc><lastmod>2026-11-09</lastmod></url>
-  <url><loc>https://mfahsold.github.io/lixity/index-nl.html</loc><lastmod>2026-11-09</lastmod></url>
+  <url><loc>https://mfahsold.github.io/lixity/index-de.html</loc><lastmod>2026-11-10</lastmod></url>
+  <url><loc>https://mfahsold.github.io/lixity/index-fr.html</loc><lastmod>2026-11-10</lastmod></url>
+  <url><loc>https://mfahsold.github.io/lixity/index-es.html</loc><lastmod>2026-11-10</lastmod></url>
+  <url><loc>https://mfahsold.github.io/lixity/index-it.html</loc><lastmod>2026-11-10</lastmod></url>
+  <url><loc>https://mfahsold.github.io/lixity/index-pt.html</loc><lastmod>2026-11-10</lastmod></url>
+  <url><loc>https://mfahsold.github.io/lixity/index-nl.html</loc><lastmod>2026-11-10</lastmod></url>
 </urlset>

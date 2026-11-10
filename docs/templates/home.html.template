@@ -36,10 +36,11 @@ $alternates
 <header class="site-header"><div class="header-inner">
 <a class="brand" href="$home_path" aria-current="page"><img src="assets/mark.svg" width="32" height="32" alt=""/><span class="brand-name">Lixity</span></a>
 <nav aria-label="$product" class="home-nav"><a href="#features">$product</a><a href="#installation">$install</a><a href="#guides">$docs</a></nav>
-<details class="language-picker"><summary>$language</summary><nav aria-label="$language">$language_links</nav></details>
+<details class="language-picker"><summary>$language_name</summary><nav aria-label="$language">$language_links</nav></details>
 <button class="ctl theme-btn" id="themeToggle" type="button" hidden>Theme</button>
 </div></header>
 <main id="content">
+<aside id="language-suggestion" class="language-suggestion" aria-label="$language" hidden><p>$language_suggestion</p><a class="ctl primary" href="index.html"></a><button class="ctl" type="button">$language_stay</button></aside>
 <section class="home-hero" aria-labelledby="intro-title">
 <div class="home-intro"><p class="home-eyebrow">$eyebrow</p><h1 id="intro-title">$headline</h1><p class="home-lead">$intro</p>
 <div class="hero-cta"><a class="ctl primary" href="demo/report.html" id="examples">$demo</a><a href="$tour_url">$tour</a></div><p class="home-note">$demo_note</p></div>
@@ -47,6 +48,7 @@ $alternates
 </section>
 <section class="home-section" id="features"><h2>$tasks_title</h2><div class="home-tasks">
 <article id="writing"><h3>$read_title</h3><p>$read_text</p><a href="demo/report.html">$demo</a></article>
+<article id="linguistic-analysis"><h3>$linguistics_title</h3><p>$linguistics_text</p><a href="USAGE.md#linguistic-text-analysis">$linguistics_link</a></article>
 <article id="research-workspace"><h3>$research_title</h3><p>$research_text</p><a href="$tour_url">$tour</a></article>
 <article id="reading-copies"><h3>$share_title</h3><p>$share_text</p><a href="demo/reader/index.html" lang="en">Reading copy (English)</a></article>
 </div></section>

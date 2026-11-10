@@ -434,10 +434,10 @@ Analysis Off and Focus hide both displays without resetting their preferences.
 | `#reader-inspector` / `#reader-inspector-body` / `#reader-inspector-close` | contextual Passage values inspector, its passage context, source lines/measurements, saved-research route when supported and close action; the manuscript text remains in its original DOM |
 | `#hero-btn-new-project` / `#analysis-empty-import` | native **Analyze a manuscript** action; opens the existing import dialog without submitting it |
 | `#analysis-review [data-review-passage]` | native passage link; clears search/paragraph filters, opens its `data-target` and focuses the paragraph panel |
-| `#analysis-review [data-jump="#dim-3d-view"]` | unreleased: direct style-space route, present only when the rendered dimensions have chapter scores; reveals the existing dimensions tab |
-| `#dim-legend` / `#dim-legend-note` / `#dim-incomplete-axes` | unreleased: style-space point/selection/cutoff key, cutoff caveat, and optional display-only zero-coordinate disclosure |
-| `#dim-fallback` | unreleased: visible when the plot cannot initialize; the chapter-score table remains readable |
-| `#dim-threshold-summary` / `#dim-next-threshold` | unreleased: count of scored chapters at an axis cutoff and, when available with JavaScript, a control cycling through them in manuscript order |
+| `#analysis-review [data-jump="#dim-3d-view"]` | available in 0.8.0: direct style-space route, present only when the rendered dimensions have chapter scores; reveals the existing dimensions tab |
+| `#dim-legend` / `#dim-legend-note` / `#dim-incomplete-axes` | available in 0.8.0: style-space point/selection/cutoff key, cutoff caveat, and optional display-only zero-coordinate disclosure |
+| `#dim-fallback` | available in 0.8.0: visible when the plot cannot initialize; the chapter-score table remains readable |
+| `#dim-threshold-summary` / `#dim-next-threshold` | available in 0.8.0: count of scored chapters at an axis cutoff and, when available with JavaScript, a control cycling through them in manuscript order |
 | `#analysis-sections a[data-section-link]` | section navigation; highlights the panel in view (scrollspy); only rendered panels are offered |
 | `#manuscript-pdf-form` / `data-project-token` | native PDF form and opaque selected-context token; the client submits `layout` and this token explicitly |
 | `#manuscript-pdf-layout` / `#manuscript-pdf-download` / `#manuscript-pdf-status` | layout selector, download button and live status region; native PDF menu starts collapsed |
@@ -448,7 +448,7 @@ Analysis Off and Focus hide both displays without resetting their preferences.
 | `.research-dossier-actions > summary` | open supplemental dossier creation and project-wide record navigation below the reading content |
 | `data-action="<name>"` + `data-payload="<form-id>"` | control-server action |
 | `data-marker-kind="<kind>"` / `data-marker-resolve="<id>"` | set/resolve a work marker (inline note field); **never scrolls** – marker controls are excluded from jump activation |
-| `.chapter-link` | unreleased: native keyboard-accessible chapter link in matrix and narrative rows; the surrounding row retains its pointer jump when scripts are active |
+| `.chapter-link` | available in 0.8.0: native keyboard-accessible chapter link in matrix and narrative rows; the surrounding row retains its pointer jump when scripts are active |
 | `role="button" tabindex="0"` | keyboard-accessible non-native targets such as KPI tiles, band rows, loading bars and heatmap cells |
 | `:focus-visible` | visible focus ring for all of the above (CSS covers `[role="button"]`) |
 
@@ -999,7 +999,7 @@ pending sharing. This changes no endpoint, response envelope or write guard.
 **Since v0.7.4:** `POST /api/site-export` requires
 `{"project_token":"<current manuscript metadata token>","include_research":false,"include_source_files":false}`.
 Optional fields are `mode` (`review`, `reader`, `companion`; default `review`),
-`publication_profile`, `max_chapter`, `analysis_sections` and the unreleased
+`publication_profile`, `max_chapter`, `analysis_sections` and the
 `include_audio` boolean (default false). The installed `export-site` command's
 `scope_schema` describes the strict shared request options. Review mode rejects
 profile/cap and requires research inclusion for source files. Reader/companion
@@ -1041,7 +1041,7 @@ data schema remains version 1. An export cap removes content before serializatio
 progress only hides included content. See [sharing scope](WORKSPACE.md#export-a-reading-website)
 and [projection semantics](research/DATA_MODEL.md#reading-website-projection).
 
-**Unreleased reader audio:** `include_audio:true` is accepted only for reader mode.
+**Reader audio in 0.8.0:** `include_audio:true` is accepted only for reader mode.
 The CLI spelling is `--include-audio`; false is omitted from serialized default
 options. Export selects retained chapter artifacts matching the exact manuscript
 SHA-256 and chapter cap. It does not invoke a worker. Missing/stale-only selection
@@ -1141,7 +1141,7 @@ changed selected context returns HTTP 409. Successful downloads use
 selection metadata; file edits alone do not create a content-version lock.
 
 - `GET /api/project-paths?path=<URL-encoded path>`: read-only browsing on the server computer. Omit `path` for the server user's home; a supported manuscript file lists its parent. Returns `{ok, path, parent, project, entries: [{name, path, kind, project?}], truncated}`, where `kind` is `directory` or `manuscript`. `project` on the listed folder is a minimal probe (`detected`, `config`, `research`, `title`, `language`, `manuscript`, `manuscripts`); directories additionally carry a boolean `project` marker so the chooser can badge known project folders. Reading the probe never changes the folder. Listings exclude hidden names, include at most 200 entries, and do not change the workspace. Use a typed path when a large listing is truncated. Host and Origin checks apply.
-- `POST /api/project-create`: `{"title": "...", "language": "de", "author_name": "...", "template": "three_act", "init_research": true}`. **Unreleased change:** a supplied `language` must be a supported concrete code, including `generic`, but excluding `auto`; invalid values return HTTP 400 before any write instead of silently becoming English. If omitted, the server's current concrete language is used; an `auto` session requires an explicit choice. Optional `author_name` is validated with the shared author rules (single line, at most 500 characters, 400 on failure before any write) and is written into a newly created `lixity.toml`; an existing project config is never overwritten.
+- `POST /api/project-create`: `{"title": "...", "language": "de", "author_name": "...", "template": "three_act", "init_research": true}`. **0.8.0 behavior:** a supplied `language` must be a supported concrete code, including `generic`, but excluding `auto`; invalid values return HTTP 400 before any write instead of silently becoming English. If omitted, the server's current concrete language is used; an `auto` session requires an explicit choice. Optional `author_name` is validated with the shared author rules (single line, at most 500 characters, 400 on failure before any write) and is written into a newly created `lixity.toml`; an existing project config is never overwritten.
   Configuration or requested Research setup failures return `{ok:false,message}`
   with HTTP 400 for invalid setup or 500 for I/O failure, without `reload:true`.
   Created files remain at the reported destination and the prior workspace stays
@@ -1636,7 +1636,9 @@ source/revision bytes, and supports interrupted-cleanup retry. Normal old-layout
 access fails with a migration requirement. Portable exports remain canonical
 `.json` transport and restore converts staging before publication.
 
-## External audio exchange and inspection (unreleased)
+<a id="external-audio-exchange-and-inspection-unreleased"></a>
+
+## External audio exchange and inspection
 
 `audio-export-plan --project PATH [--chapter N]` emits
 `lixity-audio-timeline/1`; add `--ssml` for the SSML projection. `read-aloud
@@ -1656,7 +1658,7 @@ remain valid; adding an external profile requires an explicit schema `/4`
 upgrade through `audio-migrate --to-schema-4` and the existing snapshot/backup
 apply contract. Retained references are not migrated or deleted.
 
-**Unreleased:** `lixity-audio-settings/5` adds `engine="ims-toucan"` with
+**Available in 0.8.0:** `lixity-audio-settings/5` adds `engine="ims-toucan"` with
 `voice="reference"`, a saved `reference_id`, language `de|en`, separate `phonemes`
 (term→IPA mapping) and sparse `prosody` scalars. `audio-migrate --to-schema-5`
 uses the same reviewed snapshot and external backup contract. Existing profiles
@@ -1762,7 +1764,7 @@ applicable. CLI `--speed` overrides all profiles for that run without saving.
 Non-1.0 factors require FFmpeg on the render host. Structural pauses stay unchanged.
 Style instructions do not implement precise speed control.
 
-Unreleased main retains `f5-tts` profile/transport support (port 8771), with its
+Version 0.8.0 retains `f5-tts` profile/transport support (port 8771), with its
 bundled loader unavailable, and adds `coqui` (German Thorsten VITS) and
 `coqui-reference` (Thorsten plus OpenVoice V2). Single-narrator checks
 (`same_narrator`) reject incompatible profile assignments; they cannot establish
@@ -1772,7 +1774,7 @@ and a reviewed `audio-migrate --to-schema-3` upgrade. They require a matching op
 worker, reject free-text delivery instructions and use existing pronunciation,
 pause and reference mechanisms. Older versions cannot read these engine IDs.
 
-Current main additionally accepts schema `lixity-audio-settings/2`, which adds
+Version 0.8.0 additionally accepts schema `lixity-audio-settings/2`, which adds
 optional project-wide `pronunciations`. Each profile's same-key entries override
 the project map when a speech plan is compiled; profile settings remain raw.
 Matching defaults to case-sensitive literal substitution, including within words.
@@ -1896,7 +1898,7 @@ engine. If settings publication succeeds but view refresh fails, activation rema
 `POST /api/speech-render` accepts those context fields, `mode: preview|chapter`,
 a positive `chapter`, and either `profile_id` or a validated draft `profile`.
 Optional `fresh_audio` is a strict boolean: true bypasses reuse for that render.
-On current main, optional `ignore_direction` is a strict boolean, default false,
+In 0.8.0, optional `ignore_direction` is a strict boolean, default false,
 for both `/api/speech-render` and `/api/speech-plan`.
 When true, both preview and chapter rendering omit saved passage directions,
 including range-specific voice assignments and pauses. A directly supplied
@@ -1910,7 +1912,7 @@ explicitly without switching to another machine or model.
 Execution location is per render and is not stored in `audio` voice profiles.
 Preview may include the exact displayed `paragraph` identity (`start_line`,
 `end_line`, `paragraph_sha256`). Browser-provided text, paths and unknown request
-fields are rejected. On current main, an anchored preview without an explicit
+fields are rejected. In 0.8.0, an anchored preview without an explicit
 paragraph selects all planned segments of the first anchored paragraph, just as
 the CLI preview does. Both explicit and implicit anchored previews reject plans
 over 6,000 spoken characters rather than silently shortening them. The context
@@ -1991,7 +1993,7 @@ that spoken projection, not Markdown bytes or browser UTF-16 positions.
 bounded to 4 MiB; output contains private text. The ledger wire version is
 `lixity-audio-directions/1`, bounded to 4 MiB and 10,000 source-scoped entries.
 
-On current main, `add --chapter N --line N` resolves one spoken passage and
+In 0.8.0, `add --chapter N --line N` resolves one spoken passage and
 captures its three snapshots internally. Supply at least `--instruction`,
 `--profile-id`, `--pause-before`, or `--pause-after`; optional `--start` and
 `--end` address Unicode code-point offsets in the spoken projection. The write
@@ -2015,7 +2017,7 @@ POST `<prefix>/speech-plan` accepts the existing render scope and returns
 `ok`, `plan`, `context` without inference, a job, audio caching or file creation.
 The plan uses `lixity-speech-plan/1`, with effective text/profile/pauses/anchor per
 segment and explicit model-interpreted/exact-silence/unsupported capabilities.
-On unreleased main, POST `<prefix>/speech-plan` also provides the exchange
+In 0.8.0, POST `<prefix>/speech-plan` also provides the exchange
 timeline and SSML projection with explicit limitations. Export supports passage,
 chapter and manuscript scope; render remains preview/chapter. `read-aloud --ssml`
 outputs markup directly to stdout without synthesis; `--timeline` outputs the
@@ -2056,7 +2058,7 @@ project profile or explicitly selected engine. Omitted/unknown information is no
 manuscript prose, pronunciations or delivery descriptions are included.
 `read-aloud --preview` or `--preview-line N` selects a bounded source paragraph,
 uses a fresh render and a separate preview output by default; `--plan-only`
-retains its existing speech-plan JSON contract. On current main, `--progress`
+retains its existing speech-plan JSON contract. In 0.8.0, `--progress`
 writes segment counts and a coarse remaining-time estimate to stderr after two
 segments; this estimate excludes final encoding and publication.
 CLI publication checks source, effective settings and active direction snapshots
@@ -2066,7 +2068,7 @@ speed or standard pauses; it also omits saved passage voice assignments and
 custom pauses. Separate previews can differ due to sampling or segmentation, so
 their audible difference alone does not prove the effect of a single setting.
 
-On current main, the existing `lixity.*` logger records audio job lifecycle and
+In 0.8.0, the existing `lixity.*` logger records audio job lifecycle and
 render events at INFO; `LIXITY_SPEECH_LOG_LEVEL=DEBUG` enables per-segment events
 without enabling debug for unrelated logger branches. A random operational ID
 correlates native jobs and their nested render; it is distinct from the job access

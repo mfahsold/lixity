@@ -70,6 +70,7 @@ AREAS: dict[str, tuple[str, ...]] = {
     "docs": (
         "docs.cjs",
         "pages-analytics.cjs",
+        "pages-language.cjs",
         "typography-localization.cjs",
         "visual-consistency.cjs",
     ),

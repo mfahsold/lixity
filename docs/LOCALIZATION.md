@@ -28,6 +28,22 @@ research content. Known structured export-limit failures receive localized
 summaries and recovery guidance. Exact technical diagnostics remain available in
 English; unknown backend failures are not guessed or presented as known cases.
 
+## Public website language
+
+The seven static product introductions have distinct URLs, reciprocal `hreflang`
+links and native language names in the switcher. With JavaScript enabled, a
+supported saved preference takes priority over the browser's ordered language
+list. Regional preferences such as `de-DE` and `pt-BR` match the corresponding
+available language. Unsupported languages leave the current page unchanged.
+
+A visible suggestion offers a single-click switch; there is no automatic
+redirect. A manual choice (including staying on the current page) is stored as
+`lixity-site-language` in local storage when available. Blocked storage does not
+prevent navigation. Without JavaScript, the ordinary language links still work.
+Direct links remain authoritative; technical manuals stay in English and never
+show a language suggestion. Website preferences never change manuscript analysis,
+project configuration or the local app's interface language.
+
 ## Product vocabulary and ownership
 
 This is the central terminology contract. [Methods](METHODS.md) owns formulas,

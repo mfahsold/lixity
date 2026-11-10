@@ -6,7 +6,7 @@ recordings, local synthesis and explicitly configured external providers.
 Measurements and generated speech remain aids to human review.
 
 The [Audio manual](../AUDIO.md) is the canonical guide for both CLI and browser
-workflows. It labels current-main features as unreleased and explains which
+workflows. It covers the 0.8.0 workflows, labels later source-only additions and explains which
 operations need a worker, a microphone, a saved reference or FFmpeg.
 
 | Task | Guide |

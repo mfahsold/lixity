@@ -1,7 +1,7 @@
 # Lixity documentation
 
-Lixity combines manuscript reading, deterministic analysis and an explicit-project
-research archive. Measurements support review; they do not grade a manuscript
+Lixity combines manuscript revision, exploratory linguistic text analysis and
+an explicit-project research archive. Measurements support review; they do not grade a manuscript
 or decide what to rewrite.
 
 This wiki is a short guide to the maintained manuals. Start with the
@@ -12,6 +12,7 @@ This wiki is a short guide to the maintained manuals. Start with the
 | Install and review a first passage | [Quickstart](Quickstart.md) · [Schnelleinstieg auf Deutsch](Schnelleinstieg-DE.md) |
 | Use the browser workspace | [Workspace manual](https://mfahsold.github.io/lixity/WORKSPACE.md) |
 | Run commands and configure a project | [CLI reference](https://mfahsold.github.io/lixity/USAGE.md) |
+| Explore a linguistic question | [Text-analysis workflow](https://mfahsold.github.io/lixity/USAGE.md#linguistic-text-analysis) · [Methods](https://mfahsold.github.io/lixity/METHODS.md) |
 | Interpret a measurement | [Editorial metrics](Editorial-Metrics.md) · [Lektorats-Metriken](Lektorats-Metriken-DE.md) |
 | Retain evidence and write dossiers | [Research and dossiers](Research-and-Dossiers.md) |
 | Navigate without a mouse | [Keyboard and navigation](Keyboard-Shortcuts-and-Navigation.md) |

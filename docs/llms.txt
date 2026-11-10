@@ -1,6 +1,7 @@
 # Lixity
 
-> Local manuscript analysis and an explicit-project research archive. Statistical
+> Local manuscript revision, exploratory linguistic text analysis and an
+> explicit-project research archive. Statistical
 > signals support human review; they are not literary-quality scores or
 > instructions to rewrite prose. Analysis is deterministic for fixed text and
 > settings; research records also contain generated IDs and timestamps.
@@ -36,6 +37,8 @@ JSON keys stay language-neutral. Read active thresholds, coverage, warnings and
 unavailable values from results rather than assuming default settings. Threshold
 presets (`balanced`, `developmental`, `line_editing`, `conservative_by`) and
 configurable structural thresholds in `CorpusConfig` adapt sensitivity to review needs.
+
+For linguistic work, use the [text-analysis workflow](https://mfahsold.github.io/lixity/USAGE.md#linguistic-text-analysis). Preserve text scope, version and configuration; internal chapter comparisons are not population norms or authorship evidence.
 
 ## Choose a maintained reference
 

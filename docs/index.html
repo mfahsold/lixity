@@ -4,8 +4,8 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Lixity — your manuscript, a closer look</title>
-<meta name="description" content="A local workspace for novelists and editors. Explore the rhythm of your manuscript, connect research to scenes and prepare reading copies."/>
+<title>Lixity — manuscript revision and linguistic text analysis</title>
+<meta name="description" content="Explore sentence rhythm, vocabulary and chapter differences. Lixity combines local manuscript revision, linguistic text analysis and linked research in one workspace."/>
 <meta name="google-site-verification" content="dyCGbdIP0jwCou0a4L_1epggZFVtHKkGE3qQyP9gip0"/>
 <link rel="canonical" href="https://mfahsold.github.io/lixity/"/>
 <link rel="alternate" hreflang="en" href="https://mfahsold.github.io/lixity/"/>
@@ -24,8 +24,8 @@
 <script src="assets/site.js" defer></script>
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="Lixity"/>
-<meta property="og:title" content="Lixity — your manuscript, a closer look"/>
-<meta property="og:description" content="A local workspace for novelists and editors. Explore the rhythm of your manuscript, connect research to scenes and prepare reading copies."/>
+<meta property="og:title" content="Lixity — manuscript revision and linguistic text analysis"/>
+<meta property="og:description" content="Explore sentence rhythm, vocabulary and chapter differences. Lixity combines local manuscript revision, linguistic text analysis and linked research in one workspace."/>
 <meta property="og:url" content="https://mfahsold.github.io/lixity/"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta property="og:image:width" content="2960"/>
@@ -33,45 +33,47 @@
 <meta property="og:image:alt" content="The real workspace: read the manuscript, then choose when to inspect its patterns."/>
 <meta name="twitter:image:alt" content="The real workspace: read the manuscript, then choose when to inspect its patterns."/>
 <meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:title" content="Lixity — your manuscript, a closer look"/>
-<meta name="twitter:description" content="A local workspace for novelists and editors. Explore the rhythm of your manuscript, connect research to scenes and prepare reading copies."/>
+<meta name="twitter:title" content="Lixity — manuscript revision and linguistic text analysis"/>
+<meta name="twitter:description" content="Explore sentence rhythm, vocabulary and chapter differences. Lixity combines local manuscript revision, linguistic text analysis and linked research in one workspace."/>
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "Lixity", "applicationCategory": "WritingApplication", "operatingSystem": "Windows, macOS, Linux", "url": "https://mfahsold.github.io/lixity/", "description": "A local workspace for novelists and editors. Explore the rhythm of your manuscript, connect research to scenes and prepare reading copies.", "inLanguage": ["en", "de", "fr", "es", "it", "pt", "nl"], "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"}}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "Lixity", "applicationCategory": "WritingApplication", "operatingSystem": "Windows, macOS, Linux", "url": "https://mfahsold.github.io/lixity/", "description": "Explore sentence rhythm, vocabulary and chapter differences. Lixity combines local manuscript revision, linguistic text analysis and linked research in one workspace.", "inLanguage": ["en", "de", "fr", "es", "it", "pt", "nl"], "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"}}</script>
 </head>
 <body id="top" tabindex="-1" class="site-page public-home">
 <a class="skip-link" href="#content">Skip to content</a>
 <header class="site-header"><div class="header-inner">
 <a class="brand" href="./" aria-current="page"><img src="assets/mark.svg" width="32" height="32" alt=""/><span class="brand-name">Lixity</span></a>
 <nav aria-label="The workspace" class="home-nav"><a href="#features">The workspace</a><a href="#installation">Get started</a><a href="#guides">Documentation (English)</a></nav>
-<details class="language-picker"><summary>Language</summary><nav aria-label="Language"><a href="index.html" lang="en" hreflang="en" aria-current="page">English</a>
-<a href="index-de.html" lang="de" hreflang="de">Deutsch</a>
-<a href="index-fr.html" lang="fr" hreflang="fr">Français</a>
-<a href="index-es.html" lang="es" hreflang="es">Español</a>
-<a href="index-it.html" lang="it" hreflang="it">Italiano</a>
-<a href="index-pt.html" lang="pt" hreflang="pt">Português</a>
-<a href="index-nl.html" lang="nl" hreflang="nl">Nederlands</a></nav></details>
+<details class="language-picker"><summary>English</summary><nav aria-label="Language"><a href="index.html" lang="en" hreflang="en" data-language-action="Continue in English" aria-current="page">English</a>
+<a href="index-de.html" lang="de" hreflang="de" data-language-action="Auf Deutsch weiterlesen">Deutsch</a>
+<a href="index-fr.html" lang="fr" hreflang="fr" data-language-action="Continuer en français">Français</a>
+<a href="index-es.html" lang="es" hreflang="es" data-language-action="Continuar en español">Español</a>
+<a href="index-it.html" lang="it" hreflang="it" data-language-action="Continua in italiano">Italiano</a>
+<a href="index-pt.html" lang="pt" hreflang="pt" data-language-action="Continuar em português">Português</a>
+<a href="index-nl.html" lang="nl" hreflang="nl" data-language-action="Verder in het Nederlands">Nederlands</a></nav></details>
 <button class="ctl theme-btn" id="themeToggle" type="button" hidden>Theme</button>
 </div></header>
 <main id="content">
+<aside id="language-suggestion" class="language-suggestion" aria-label="Language" hidden><p>Prefer another language? Use your saved choice or a language supported by your browser.</p><a class="ctl primary" href="index.html"></a><button class="ctl" type="button">Stay in English</button></aside>
 <section class="home-hero" aria-labelledby="intro-title">
-<div class="home-intro"><p class="home-eyebrow">A closer reading starts here.</p><h1 id="intro-title">Your words.<br/>A new perspective.</h1><p class="home-lead">Find the passages worth a second look. Lixity brings your manuscript, its patterns and the research behind a scene into one local workspace.</p>
+<div class="home-intro"><p class="home-eyebrow">Read closely. Explore language.</p><h1 id="intro-title">Your words.<br/>A new perspective.</h1><p class="home-lead">Understand how your text works. Explore rhythm and vocabulary, compare chapters and follow observations back to the passage. A local workspace for writers, editors and linguistic text analysis.</p>
 <div class="hero-cta"><a class="ctl primary" href="demo/report.html" id="examples">Explore the demo</a><a href="guides/first-look.html">Take a short tour</a></div><p class="home-note">Fictional English manuscript. Read-only demo. No account or upload.</p></div>
 <figure class="product-preview"><a href="screenshots/dashboard-light.png"><img src="screenshots/dashboard-light.png" width="2960" height="2184" alt="The real workspace: read the manuscript, then choose when to inspect its patterns." fetchpriority="high"/></a><figcaption>The real workspace: read the manuscript, then choose when to inspect its patterns.</figcaption></figure>
 </section>
 <section class="home-section" id="features"><h2>From a question to a passage.</h2><div class="home-tasks">
 <article id="writing"><h3>Read the rhythm.</h3><p>Compare chapters, inspect sentence lengths and find nearby word echoes. Return to the prose to decide what matters.</p><a href="demo/report.html">Explore the demo</a></article>
+<article id="linguistic-analysis"><h3>Investigate language.</h3><p>Explore sentence lengths, lexical diversity and readability. Inspect counted text in context and export JSON for reproducible analysis with explicit language profiles and settings.</p><a href="USAGE.md#linguistic-text-analysis">Text-analysis workflow (English)</a></article>
 <article id="research-workspace"><h3>Keep the evidence close.</h3><p>Connect sources, claims and your decisions to a scene. Revisit the retained evidence when a detail needs another look.</p><a href="guides/first-look.html">Take a short tour</a></article>
 <article id="reading-copies"><h3>Give readers the right copy.</h3><p>Prepare a PDF, a review workspace or a reading copy with selected background notes. Your source project stays yours.</p><a href="demo/reader/index.html" lang="en">Reading copy (English)</a></article>
 </div></section>
-<section class="home-principle" id="measurement-context"><span class="principle-mark" aria-hidden="true">“</span><div><h2>Your voice stays yours.</h2><p>A statistical signal is an invitation to read, not a quality score. Lixity does not rewrite your prose. Keeping a passage can be the right decision.</p></div></section>
-<section class="home-section home-start" id="installation"><div><h2>Bring your own manuscript.</h2><p>Install Lixity locally on Windows, macOS or Linux. Start with Markdown or plain text and follow the installation guide.</p><a class="ctl primary" href="guides/installation.html">Installation guide (English)</a></div><div class="install-command"><pre><code>uv tool install --python 3.12 --managed-python lixity</code></pre><p>This website follows the development checkout. Check the published release for available features; optional services have separate data boundaries.</p><a href="https://github.com/mfahsold/lixity/releases/latest" lang="en">Published releases</a> · <a href="releases/v0.8.0.md" id="current-release" lang="en">v0.8.0 release notes</a></div></section>
-<section class="home-section" id="languages"><h2>Seven languages. One workspace.</h2><p>Choose the interface language separately from the analysis language. The public introduction is available in all seven languages; technical documentation stays in English.</p><nav class="language-list" aria-label="Language"><a href="index.html" lang="en" hreflang="en" aria-current="page">English</a>
-<a href="index-de.html" lang="de" hreflang="de">Deutsch</a>
-<a href="index-fr.html" lang="fr" hreflang="fr">Français</a>
-<a href="index-es.html" lang="es" hreflang="es">Español</a>
-<a href="index-it.html" lang="it" hreflang="it">Italiano</a>
-<a href="index-pt.html" lang="pt" hreflang="pt">Português</a>
-<a href="index-nl.html" lang="nl" hreflang="nl">Nederlands</a></nav><p class="section-note">Analysis resources and validation differ by language; German and English have the broadest coverage. Interface translation does not translate your manuscript.</p></section>
+<section class="home-principle" id="measurement-context"><span class="principle-mark" aria-hidden="true">“</span><div><h2>Measurements inform. You interpret.</h2><p>Use patterns to ask better questions about a text. Counts describe the supplied material; heuristics need context. Lixity does not grade literary quality, prove authorship or rewrite your prose.</p></div></section>
+<section class="home-section home-start" id="installation"><div><h2>Bring your own text.</h2><p>Install Lixity locally on Windows, macOS or Linux. Start with Markdown or plain text and follow the installation guide.</p><a class="ctl primary" href="guides/installation.html">Installation guide (English)</a></div><div class="install-command"><pre><code>uv tool install --python 3.12 --managed-python lixity</code></pre><p>This website follows the development checkout. Check the published release for available features; optional services have separate data boundaries.</p><a href="https://github.com/mfahsold/lixity/releases/latest" lang="en">Published releases</a> · <a href="releases/v0.8.0.md" id="current-release" lang="en">v0.8.0 release notes</a></div></section>
+<section class="home-section" id="languages"><h2>Seven languages. One workspace.</h2><p>Explore this website in seven languages. The app follows the selected analysis profile; CLI report language has its own setting. Technical documentation stays in English.</p><nav class="language-list" aria-label="Language"><a href="index.html" lang="en" hreflang="en" data-language-action="Continue in English" aria-current="page">English</a>
+<a href="index-de.html" lang="de" hreflang="de" data-language-action="Auf Deutsch weiterlesen">Deutsch</a>
+<a href="index-fr.html" lang="fr" hreflang="fr" data-language-action="Continuer en français">Français</a>
+<a href="index-es.html" lang="es" hreflang="es" data-language-action="Continuar en español">Español</a>
+<a href="index-it.html" lang="it" hreflang="it" data-language-action="Continua in italiano">Italiano</a>
+<a href="index-pt.html" lang="pt" hreflang="pt" data-language-action="Continuar em português">Português</a>
+<a href="index-nl.html" lang="nl" hreflang="nl" data-language-action="Verder in het Nederlands">Nederlands</a></nav><p class="section-note">Analysis resources and validation differ by language; German and English have the broadest coverage. Interface translation does not translate your manuscript.</p></section>
 <section class="home-section home-resources" id="guides"><div><h2>Documentation (English)</h2><p lang="en">Technical guides, methods and automation contracts are maintained in English.</p><nav class="resource-links" lang="en" aria-label="English documentation"><a href="guides/first-look.html">First session</a><a href="guides/first-look-de.html" lang="de" hreflang="de">Einstieg auf Deutsch</a><a href="guides/interpretation.html">Understand the measurements</a><a href="guides/research-pdf.html">Sources and reading copies</a><a href="AUDIO.md">Audio and teleprompter</a><a href="README.md">All documentation</a><a href="blog/index.html">Articles</a><a href="AGENTS.md" id="cli-api">CLI and API</a><a href="METHODS.md" id="methods">Methods and limits</a></nav></div><div id="feedback"><h2>What did you notice?</h2><p>Tell us which passage you wanted to investigate and where the explanation helped or got in the way. You do not need to share your manuscript.</p><a href="mailto:mfahsold@googlemail.com?subject=Lixity%20feedback">Share feedback</a></div></section>
 </main>
 <footer class="home-footer"><div class="footer-top"><a class="brand" href="./">Lixity</a><span>© 2026 Matthias Fahsold</span><a href="LICENSING.md" lang="en">AGPL-3.0-or-later · Open source</a><a href="https://github.com/mfahsold/lixity">Source code</a></div>
@@ -79,6 +81,7 @@
     <details id="website-measurement">
       <summary>Website measurement (English)</summary><div lang="en">
       <p>This public website uses GoatCounter to count page visits and named demo, installation, repository and PDF links. The adapter sends public page paths and event names, excluding query strings, fragments, form contents and manuscript selections. The local app and exported manuscript reports contain no such measurement.</p>
+      <p>Language and appearance choices are stored locally in this browser when storage is available. Browser language is used only to suggest a public introduction; it is not sent to a translation service or used to change manuscript analysis.</p>
       <p>Do Not Track and Global Privacy Control disable collection. Counts are approximate and do not establish installations or active authors. GoatCounter receives technical request data; see its <a href="https://www.goatcounter.com/help/privacy">privacy information</a>. For questions, use the contact below.</p>
     </div></details>
     <details id="impressum">

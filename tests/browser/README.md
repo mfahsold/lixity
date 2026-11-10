@@ -592,3 +592,8 @@ the app opens. In that case, use a short local directory such as
 never place private manuscripts or credentials in test artifacts. Remove or
 archive only outputs owned by the completed task. The browser helpers and their
 Python fixture children inherit `TMPDIR`.
+
+The `pages-language.cjs` suite exercises the staged seven-language product site:
+browser preference ordering and regional tags, saved manual choices, direct
+links, unavailable storage, English guides, JavaScript-disabled navigation and
+320/1440-pixel layouts. It serves local assets only and makes no production requests.

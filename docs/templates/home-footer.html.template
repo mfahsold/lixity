@@ -1,6 +1,7 @@
     <details id="website-measurement">
       <summary>$privacy</summary><div lang="en">
       <p>This public website uses GoatCounter to count page visits and named demo, installation, repository and PDF links. The adapter sends public page paths and event names, excluding query strings, fragments, form contents and manuscript selections. The local app and exported manuscript reports contain no such measurement.</p>
+      <p>Language and appearance choices are stored locally in this browser when storage is available. Browser language is used only to suggest a public introduction; it is not sent to a translation service or used to change manuscript analysis.</p>
       <p>Do Not Track and Global Privacy Control disable collection. Counts are approximate and do not establish installations or active authors. GoatCounter receives technical request data; see its <a href="https://www.goatcounter.com/help/privacy">privacy information</a>. For questions, use the contact below.</p>
     </div></details>
     <details id="impressum">

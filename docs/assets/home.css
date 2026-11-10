@@ -28,7 +28,7 @@
 .product-preview figcaption { padding: 1rem; color: var(--home-ink); font-size: .9rem; line-height: 1.5; background: white; }
 .home-section { max-width: 86rem; margin: auto; padding: clamp(3rem, 7vw, 6rem) 2rem; }
 .public-home h2 { font-family: var(--font); font-size: clamp(2rem, 3.5vw, 3.5rem); letter-spacing: -.045em; font-weight: 700; line-height: 1.08; max-width: 22ch; margin-bottom: 2rem; }
-.home-tasks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2.5rem; }
+.home-tasks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2.5rem; }
 .home-tasks article { border-top: 3px solid var(--accent); padding-top: 1.5rem; }
 .home-tasks h3 { font-size: 1.5rem; letter-spacing: -.025em; font-weight: 650; margin: 0 0 1rem; }
 .home-tasks p { color: var(--fg-secondary); }
@@ -77,3 +77,7 @@
   .public-home .theme-btn { font-size: 0; min-width: 2.75rem; min-height: 2.75rem; padding: .4rem; }
   .public-home .theme-btn::before { content: "◐"; font-size: 1.25rem; }
 }
+
+.language-suggestion:not([hidden]) { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem 1.25rem; padding: 1rem max(1.25rem, calc((100vw - 82rem) / 2)); background: var(--surface); border-bottom: 1px solid var(--line); }
+.language-suggestion p { flex: 1 1 20rem; margin: 0; }
+.language-suggestion .ctl { white-space: normal; min-height: 2.75rem; }

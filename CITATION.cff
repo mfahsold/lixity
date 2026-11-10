@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use Lixity, please cite it as below."
-title: "Lixity — Local manuscript analysis and research workbench for authors"
+title: "Lixity — Local manuscript revision and linguistic text analysis"
 version: "0.8.0"
 date-released: "2026-11-10"
 license: AGPL-3.0-or-later
@@ -8,7 +8,8 @@ repository-code: "https://github.com/mfahsold/lixity"
 url: "https://mfahsold.github.io/lixity/"
 doi: "10.5281/zenodo.23390297"
 abstract: >-
-  Offline, deterministic text-linguistics engine for literary manuscripts:
+  Offline, deterministic engine for manuscript revision and exploratory linguistic
+  text analysis:
   sentence rhythm, lexical diversity (HD-D, MTLD, MATTR,
   Maas, Yule's K), language-specific readability, dialogue share,
   paragraph-accurate tense profiles, and a self-calibrating style reference

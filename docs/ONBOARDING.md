@@ -22,6 +22,7 @@ service management;
 | An existing manuscript/project folder | Start the app and choose **Open Project**. |
 | A file to copy into a new project | Choose **Analyze a manuscript**, review the preview and confirm the destination. |
 | A new manuscript | Choose **New Project → Start New Manuscript**. |
+| A linguistic question about an existing text | Follow the [text-analysis workflow](USAGE.md#linguistic-text-analysis) to record scope, settings and reproducible outputs. |
 | Sources without a manuscript | Open or initialize a [research project](research/USAGE.md#try-it). |
 
 ## Session checklist
@@ -71,7 +72,7 @@ can retain independent project views in multiple tabs; tabs using the same view
 share its project context. Check the displayed path before saving. View URLs
 expire on restart; see [service management](USAGE.md#lixity-service).
 
-**Unreleased:** the import dialog accepts exactly one Markdown (`.md`,
+**Available in 0.8.0:** the import dialog accepts exactly one Markdown (`.md`,
 `.markdown`), plain-text (`.txt`) or Word (`.docx`) file. Unsupported files and
 multiple-file drops show an explanation and clear the previous preview. Choose
 a supported file again to continue; creating the project still requires confirmation.

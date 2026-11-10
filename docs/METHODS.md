@@ -1,6 +1,9 @@
 # Mathematical methods
 
-Definitions, defaults and implementation limits of Lixity's measurements.
+Definitions, defaults and implementation limits of Lixity's measurements for
+manuscript revision and exploratory linguistic text analysis. Start with the
+[linguistic workflow](USAGE.md#linguistic-text-analysis) to preserve inputs,
+settings and outputs for reproducible work.
 Research context and known limitations live in
 [`STABILITY.md`](STABILITY.md); command flags live in [`USAGE.md`](USAGE.md).
 

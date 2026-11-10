@@ -7,6 +7,19 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Documentation
+
+- Present manuscript revision and exploratory linguistic text analysis consistently
+  across seven product introductions, README, manuals and automation summary.
+  Add a reproducible CLI workflow and clarify interpretation and language limits.
+- Add an optional browser-language suggestion to public introductions, with a
+  saved explicit choice and accessible native language links. Preserve direct
+  URLs and English technical documentation; tolerate unavailable local storage.
+- Replace stale unreleased annotations for functionality included in 0.8.0
+  across the operating manuals, preserving existing section links.
+- Correct the public claim of independent app/interface language: the native
+  dashboard follows its analysis profile; CLI report presentation is separate.
+
 ## [0.8.0] - 2026-11-10
 
 ### Fixed

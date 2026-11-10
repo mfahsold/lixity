@@ -7,10 +7,10 @@ the audio workflow in both the local browser app and the CLI. The
 [CLI reference](USAGE.md) cover the surrounding project workflow; install models
 and workers through [Installation](INSTALLATION.md#optional-qwen-audio-worker).
 
-This manual describes the current checkout. Features marked **unreleased**, and
-the unified audio dialog described below, require current main; they are not a
-promise about an older installed package. Check `lixity --version` and each
-command's `--help`. Audio settings, direction, timeline and transcript schema
+The workflows below are available in 0.8.0; optional workers and models still
+require their documented setup. Later source-only additions are marked
+**unreleased** and are not a promise about an installed package. Check
+`lixity --version` and each command's `--help`. Audio settings, direction, timeline and transcript schema
 numbers are independent of the application version.
 
 | I want to… | Start here | CLI route |
@@ -84,8 +84,8 @@ Prerequisites depend on the task:
 **Speech planning, direction & audio generation:**
 Version 0.7.7 separates dramaturgy and passage direction from raw synthesis.
 The CLI and native dialog compile the manuscript, narrator delivery profiles,
-pronunciation substitutions and timing into structured plans. On unreleased
-main, use `audio-export-plan` for the exchange timeline, or `--ssml` for an SSML
+pronunciation substitutions and timing into structured plans. In 0.8.0, use
+`audio-export-plan` for the exchange timeline, or `--ssml` for an SSML
 projection with explicit limitations. `--plan-only` retains the native speech
 plan JSON contract. Explicit external providers and optional native workers
 share rendering, pauses and atomic audio publication.
@@ -102,7 +102,7 @@ Quote blocks do not currently have selectable preview anchors.
 A chapter selection constrains either preview. Preview skips headings and uses a
 separate default `-preview.wav` output; it does not read or write the segment
 cache. `--plan-only` can be combined with either preview without synthesizing.
-On current main, `--progress` reports completed segments and, after two segments,
+In 0.8.0, `--progress` reports completed segments and, after two segments,
 a rough remaining-time estimate on stderr. The estimate averages completed
 segments; different text lengths, cache hits and model startup can make it
 inaccurate, and final encoding and publication are not included. The CLI checks manuscript,
@@ -110,7 +110,7 @@ settings and active direction snapshots during rendering and immediately before
 publishing; changed or unreadable inputs reject the result and preserve an
 existing output. `--no-direction` deliberately excludes the direction ledger.
 
-On current main, the shared audio logger emits a random render ID and job/render
+In 0.8.0, the shared audio logger emits a random render ID and job/render
 states at INFO. With `LIXITY_SPEECH_LOG_LEVEL=DEBUG` set before startup it also
 records segment boundaries and timing, requested
 preset/model variant, cache outcome and indicators showing whether effective
@@ -133,7 +133,7 @@ and `ko`: six of the seven analysis languages, with Dutch (`nl`) unsupported.
 Choose a supported speech language explicitly for a Dutch project; there is no
 automatic language or backend fallback. Preset language support does not certify
 native pronunciation. Review the model license before distributing output.
-On current main, explicitly switching an existing VoiceDesign or Base profile
+In 0.8.0, explicitly switching an existing VoiceDesign or Base profile
 to CustomVoice also requires an explicit preset, such as `--engine qwen3
 --voice Ryan`. An explicitly supplied reference ID requires a reference-capable
 engine. For Base, clear inherited profile instructions with `--instructions ''`; `--no-direction` only omits saved passage directions.
@@ -177,9 +177,9 @@ selection, generation progress and the resulting download. The
 passage dialog also links directly to chapter output and retains the selected
 chapter; save or discard any direction draft before switching. Draft
 previews do not save settings. Read-only exports do not offer synthesis or expose
-audio settings. The unified dialog and its current entry points are unreleased.
+audio settings. The unified dialog and these entry points are available in 0.8.0.
 
-On current main, the preview and chapter controls offer an explicit option to
+In 0.8.0, the preview and chapter controls offer an explicit option to
 ignore passage direction. It is off when the dialog opens. Enabling it omits
 saved passage instructions, voice assignments and range-specific pauses for that
 render; an unsaved direction draft is also omitted from the preview but remains
@@ -196,7 +196,7 @@ Choose **Render on → This computer / Configured Jetson** in the dialog,
 or pass `--speech-target local|jetson` to the CLI. This choice applies to that
 render; it is not part of a saved voice profile. The default is local, and an
 unavailable target fails explicitly without switching machines or models.
-On current main, the native audio interface names the choices by how the voice
+In 0.8.0, the native audio interface names the choices by how the voice
 is selected: a preset, a description or a reference recording. It also displays
 a point-in-time worker status and compares a known loaded model with the selected
 profile's model. An unreachable worker is unavailable; a missing or unrecognised
@@ -301,7 +301,7 @@ A voice profile does not infer character identities or turn words such as “qui
 
 ### Pronunciation substitutions
 
-Current main also supports an optional project-wide lexicon. To opt in, change
+Version 0.8.0 also supports an optional project-wide lexicon. To opt in, change
 the audio schema to `/2` and add a table shared by every profile:
 
 ```toml
@@ -365,7 +365,7 @@ Lixity does not silently translate unsupported phonemes or markup into text.
 
 ## Author voice recording and listening
 
-On current main (unreleased), these entry points open one dialog with four tabs:
+In 0.8.0, these entry points open one dialog with four tabs:
 
 - **Author's voice**: read a sample or custom text, record a take, listen before
   saving, upload a studio WAV, and review the project's saved references.
@@ -662,7 +662,7 @@ without synthesizing speech:
    calibration does not grant browser permission. Stop to review the PCM WAV take; playback
    starts only when requested.
 
-6. **Take export, import and author-reference review (unreleased):**
+6. **Take export, import and author-reference review:**
    Download the WAV and its matching JSON metadata, or hand the take to **Author's voice** for
    review. The `lixity-audio-take/1` JSON binds filename, SHA-256, PCM format and duration to
    a transcript marked `missing`, `draft` or `confirmed`. Import both files together to retain
@@ -716,7 +716,9 @@ as the narrator. A cached segment does not authorize a conflicting passage
 profile; current planning rejects that mismatch before rendering. Cache entries
 can still be evicted while a render is in progress.
 
-## Experimental Coqui and OpenVoice audio (unreleased)
+<a id="experimental-coqui-and-openvoice-audio-unreleased"></a>
+
+## Experimental Coqui and OpenVoice audio
 
 Lixity can use the German Thorsten VITS voice with an optional OpenVoice V2
 conversion based on a saved project-local voice reference. These are separate
@@ -774,7 +776,9 @@ channel of its reference, including a bandwidth limit. Check a reference
 before using it through [reference inspection](#experimental-reference-voices). Profiles containing these new engine identifiers
 are not readable by older Lixity versions.
 
-## Retained F5-TTS profiles (unreleased)
+<a id="retained-f5-tts-profiles-unreleased"></a>
+
+## Retained F5-TTS profiles
 
 The earlier experimental bundled F5 loader did not implement the upstream
 vocoder, vocabulary and reference-input contracts correctly. It has been retired
@@ -793,7 +797,9 @@ separate IMS-Toucan profile after the reviewed schema upgrade below. An explicit
 configured external provider is another option. Neither preserves an F5 voice by
 assumption; audition the new profile before using it for a full export.
 
-## IMS-Toucan phonetics and structured direction (unreleased)
+<a id="ims-toucan-phonetics-and-structured-direction-unreleased"></a>
+
+## IMS-Toucan phonetics and structured direction
 
 `ims-toucan` combines a reviewed author recording with German or English speech,
 explicit IPA pronunciation overrides, and structured prosody. The optional local
@@ -1000,7 +1006,7 @@ lixity read-aloud --project ./novel --chapter 1 --no-direction --fresh-audio -o 
 `audio-direction inspect` returns paragraph anchors/spoken text, saved ranges,
 stale flags, and the `source_sha256`, `settings_sha256`, `direction_sha256`
 snapshots. Its JSON and plan output contain private prose and instructions.
-On current main, `audio-direction add --project ./novel --chapter 2 --line 42
+In 0.8.0, `audio-direction add --project ./novel --chapter 2 --line 42
 --instruction "Quietly." --pause-after 0.4` selects the spoken passage at that
 source line and saves the direction without manually copying hashes. Optional
 `--start` and `--end` select offsets in Unicode code points in the spoken
@@ -1029,7 +1035,9 @@ rejected when retaining editorial markers would shift a directed passage; use
 Cache reuse keys include the effective text/profile instructions; edited direction
 cannot accidentally reuse audio synthesized with different instructions.
 
-## Audio export and external providers (unreleased)
+<a id="audio-export-and-external-providers-unreleased"></a>
+
+## Audio export and external providers
 
 Export a direction plan without synthesis or reading saved voice-reference bytes:
 
@@ -1045,7 +1053,7 @@ SSML. `read-aloud --timeline` and `--ssml` imply export-only behavior;
 `read-aloud --plan-only` keeps the native speech-plan contract (`/1`, or `/2`
 when those controls require it).
 The browser offers JSON/SSML downloads for a passage, chapter or manuscript.
-On current main, open the audio dialog from **Project → Settings → Audio and services** or **Listen and direct**
+In 0.8.0, open the audio dialog from **Project → Settings → Audio and services** or **Listen and direct**
 in the manuscript. In the **Listen & direct** tab, **Export direction → Preview
 export** prepares downloads separately from the **Generate audio** controls.
 Export does not require a running speech service. Voice profiles, author recordings,
@@ -1140,7 +1148,9 @@ they never contain the key value. Request fresh audio after changing the model
 behind an existing provider model ID. Existing native workers, profiles,
 reference data and cache keys retain their behavior.
 
-## Inspect and compare externally generated audio (unreleased)
+<a id="inspect-and-compare-externally-generated-audio-unreleased"></a>
+
+## Inspect and compare externally generated audio
 
 ```bash
 lixity audio-inspect chapter-2.wav
@@ -1196,7 +1206,9 @@ chapter/manuscript export scope supplies the plan. The browser limits audio to
 full audit JSON for download; it does not create a saved chapter recording. See [Methods](METHODS.md) and
 [Stability](STABILITY.md) for thresholds and interpretation.
 
-## Retain or import chapter audio (unreleased)
+<a id="retain-or-import-chapter-audio-unreleased"></a>
+
+## Retain or import chapter audio
 
 A complete chapter recording can accompany the same chapter in a
 [reader export](WORKSPACE.md#include-existing-chapter-recordings-unreleased). It is separate from a 1–30 second voice

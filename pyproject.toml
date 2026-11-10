@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "lixity"
 dynamic = ["version"]
-description = "Local manuscript and research workbench for authors: explore language patterns, connect sources and dossiers, and export PDFs or read-only project websites. CLI, Python API and local browser app."
+description = "Local manuscript revision and exploratory linguistic text analysis: inspect rhythm, vocabulary and readability, connect research and export reports. Browser app, CLI and Python API."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "AGPL-3.0-or-later"

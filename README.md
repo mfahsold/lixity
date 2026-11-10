@@ -8,12 +8,14 @@
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
-**Local manuscript analysis and research for authors and editors.**
+**A local workspace for manuscript revision and linguistic text analysis.**
 
-Lixity is a local workspace for authors, editors and manuscript reviewers. Read
-continuous prose, inspect changes in rhythm or vocabulary, follow a scene detail
-into its research dossier, and prepare a reading copy or spoken review from the
-same project. The browser app, CLI and Python API share one analysis engine.
+Read a manuscript closely or investigate how a text uses language. Lixity brings
+sentence rhythm, lexical diversity, readability and chapter comparisons into
+the same workspace as your prose and research. Authors and editors can review
+passages in context; researchers can export measurements for reproducible,
+exploratory text analysis. The browser app, CLI and Python API share one local
+analysis engine.
 
 **Seven interface languages:** Deutsch · English · Français · Español · Italiano · Português · Nederlands.
 
@@ -24,10 +26,11 @@ same project. The browser app, CLI and Python API share one analysis engine.
 Technical documentation is maintained in **English only**. German and English
 have the broadest analysis resources; see the [language coverage and limits](https://mfahsold.github.io/lixity/LOCALIZATION.md).
 
-**The reference is your own book. The editorial decision stays yours.**
+**Explore patterns. Return to the text. Make your own interpretation.**
 Measurements help locate and explain differences; they do not grade literary
-quality or rewrite prose. Built-in analysis works offline. Manuscript input is
-Markdown or plain text; convert Word/DOCX or Scrivener documents before import.
+quality or rewrite prose. Built-in analysis works offline. The engine reads
+Markdown or plain text. The app can also preview and convert a Word/DOCX file
+when importing a copy; export Scrivener projects to a supported format first.
 
 [Explore the demo workspace](https://mfahsold.github.io/lixity/demo/report.html) ·
 [Read the example novel](https://mfahsold.github.io/lixity/demo/reader/index.html) ·
@@ -44,12 +47,15 @@ copy: importing, recording, changing settings and saving require the local app.
 The demo and these docs follow current development; features labelled
 **unreleased** may differ from your installed package.
 
-## What changes in a revision session?
+For linguistic work, start with the [text-analysis workflow](https://mfahsold.github.io/lixity/USAGE.md#linguistic-text-analysis), then read the [formulas](https://mfahsold.github.io/lixity/METHODS.md) and [interpretation limits](https://mfahsold.github.io/lixity/STABILITY.md).
+
+## What can you do with Lixity?
 
 | Your task | Work in Lixity | What stays under your control |
 | :--- | :--- | :--- |
 | Read and revise a chapter | Continuous prose, search, work markers and passage tools | Analysis marks can be switched off; nothing rewrites the manuscript for you. |
 | Understand a change in voice or rhythm | Compare chapters, inspect counted words and sentences, open a measurement explanation | A statistical difference is a prompt for review, not an error or target score. |
+| Investigate language use | Explore sentence lengths, lexical diversity and readability; export JSON with explicit analysis settings | Results describe the supplied text, not a representative population or proof of authorship. |
 | Explain a scene detail | Link a quotation to a claim, its source passages, a dossier and an author decision | Evidence, assertions and creative decisions remain separate; exact linked versions are retained. |
 | Hear a passage | Prepare direction, pronunciation rules and pauses; review a short recording or synthesis preview | Speech planning needs no worker. Recording needs permission; synthesis uses the explicitly selected service. |
 | Share a reading copy | Choose manuscript, curated companion notes, analysis or a printable PDF | Preview the contents before export; a fixed copy does not expose your live project. |
@@ -143,7 +149,7 @@ adopting a newer storage format.
 
 ### Record, direct and listen
 
-**Current main, unreleased:** open **Project → Settings → Audio and services**
+**Available in 0.8.0:** open **Project → Settings → Audio and services**
 for author recordings, voice profiles, microphone settings, services and the audio
 queue. **Listen & direct** is also available from the manuscript toolbar. The
 four audio tabs separate recording, profile/service setup, passage direction and
@@ -167,7 +173,7 @@ Speech planning and synthesis are separate actions. Export a passage, chapter or
 manuscript as JSON or SSML without a running speech worker. JSON retains the
 supported authored controls; SSML reports portability limits. Optional local
 Qwen, Coqui/OpenVoice and IMS-Toucan setups have different voice, language and
-direction capabilities. IMS-Toucan's unreleased German/English path supports
+direction capabilities. IMS-Toucan's optional German/English path supports
 separate IPA overrides and structured passage-level duration/prosody controls;
 it does not interpret free acting prompts. Existing F5 profiles remain readable,
 but the bundled F5 runtime is unavailable.
@@ -197,7 +203,7 @@ chapter cap to omit later content from the files. Optional reader analysis is
 recomputed on that exported text with default settings and can differ from the
 project analysis. Work-marker notes are omitted from curated reader copies.
 
-**Unreleased:** reader exports can also include existing chapter recordings with
+**Available in 0.8.0:** reader exports can also include existing chapter recordings with
 `--include-audio`. Only audio matching the current manuscript and chapter cap is
 copied; missing chapters remain visibly text-only. Export does not run synthesis.
 The reader gets a player and WAV download, without your private voice references,
@@ -226,7 +232,7 @@ lixity about --json
 ```
 
 Start with `lixity --help`; `lixity COMMAND --help` explains each command
-without running it. Current-main help groups tasks and links the corresponding manual.
+without running it. Help in 0.8.0 groups tasks and links the corresponding manual.
 The CLI works without a running browser service. Root-local project settings,
 explicit language selection and the shared pipeline keep browser and automation
 workflows aligned. [Choose a command](https://mfahsold.github.io/lixity/USAGE.md#which-command-for-which-question)
