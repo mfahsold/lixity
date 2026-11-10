@@ -36,6 +36,9 @@ in one read-only project. Its [regeneration recipe](../docs/demo/README.md) also
 produces four PDF layouts and the identical public manuscript copy. It uses
 explicit English defaults, without discovering local project settings.
 The example is not a benchmark or calibration corpus.
+An [editable local project](../docs/demo/README.md#open-the-synthetic-project-locally)
+can be created separately from screenshots and opened or exported with the normal
+application. The public example remains synthetic; no private book is included.
 
 Two public-domain case studies remain available for their corresponding articles:
 [`docs/examples/effi-briest.html`](../docs/examples/effi-briest.html) and

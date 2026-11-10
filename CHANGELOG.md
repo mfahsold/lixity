@@ -7,6 +7,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Separate synthetic example-project creation from screenshot HTTP fixtures.
+  Provide a non-overwriting project generator with explicit manuscript/language
+  configuration; public examples use that same ordinary project and exporter.
+
 ### Documentation
 
 - Connect the product and documentation entrypoints to a browser workflow for

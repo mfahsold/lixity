@@ -83,6 +83,40 @@ only reviewed synthetic/public-domain material and explicit code defaults.
 
 ## Regenerate
 
+### Open the synthetic project locally
+
+**Unreleased:** create an ordinary editable project from a source checkout:
+
+```sh
+.venv/bin/python scripts/example_project.py --output .artifacts/warehouse-4-project
+.venv/bin/lixity project --project .artifacts/warehouse-4-project
+```
+
+The destination must not exist; the command never replaces an existing project.
+Open that folder through **Open Project** in the local app. It contains
+`lixity.toml`, the six-chapter manuscript, retained research, immutable revisions,
+manuscript associations and the `readers` publication profile. It uses the normal
+project layout, not a separate demo file format. Keep personal edits in your own
+copy; public regeneration continues to use the reviewed synthetic inputs.
+
+For an unwrapped local analysis/research website, use the regular export command:
+
+```sh
+.venv/bin/lixity export-site --project .artifacts/warehouse-4-project --include-research -o .artifacts/warehouse-4-review
+```
+
+Project creation lives in `scripts/example_project.py`; screenshot HTTP fixtures
+are a separate adapter. The public build creates the same ordinary project and
+passes it through the production exporter, then adds the reviewed website wrapper.
+No screenshot fixture is needed to create or export the editable project.
+
+A future real-book sample should be a separately prepared, explicitly selected
+project using this same export path. This generator accepts no private manuscript
+input. The public build still checks the synthetic manuscript bytes and reviewed
+assets; changing a local project does not authorize publishing it.
+
+### Rebuild the public examples
+
 After [installation](../INSTALLATION.md), use `make examples` for the three
 websites and PDFs, `make screenshots` for product captures, and `make videos`
 for walkthroughs.

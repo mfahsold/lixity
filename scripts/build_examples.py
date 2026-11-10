@@ -273,12 +273,13 @@ def build_demo(root: Path) -> Path:
     from make_screenshots import (
         build_publication_examples,
         build_research_demo,
-        build_research_fixture,
     )
 
     with TemporaryDirectory(prefix="lixity-public-demo-") as directory:
-        build_research_fixture(Path(directory))
+        from scripts.example_project import create_example_project
+
         project = Path(directory) / "research-demo"
+        create_example_project(project)
         demo = build_research_demo(root, project)
         build_publication_examples(root, project)
         return demo
