@@ -9,11 +9,51 @@ import sys
 import threading
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 import pytest
 
 from lixity import __version__
-from lixity.service import ServiceManager, _write_json, process_birth
+from lixity.service import ServiceError, ServiceManager, _write_json, process_birth
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason="Linux procfs exit race")
+def test_process_birth_handles_exit_after_proc_stat_is_opened(monkeypatch):
+    """A reaped process can make an already opened procfs stat read raise ESRCH."""
+    child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+    original_read = Path.read_text
+
+    def read_after_exit(path, *args, **kwargs):
+        if path == Path(f"/proc/{child.pid}/stat"):
+            with path.open() as handle:
+                child.terminate()
+                child.wait(timeout=10)
+                return handle.read()
+        return original_read(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", read_after_exit)
+    try:
+        assert process_birth(child.pid) is None
+    finally:
+        if child.poll() is None:
+            child.kill()
+        child.wait(timeout=10)
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason="Linux procfs inspection")
+@pytest.mark.parametrize("error", [ProcessLookupError(), FileNotFoundError(), PermissionError()])
+def test_process_birth_keeps_unreadable_live_process_unknown(monkeypatch, error):
+    """An inspection error must not classify a still-live PID as stopped."""
+    original_read = Path.read_text
+
+    def unreadable_stat(path, *args, **kwargs):
+        if path == Path(f"/proc/{os.getpid()}/stat"):
+            raise error
+        return original_read(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", unreadable_stat)
+    with pytest.raises(ServiceError):
+        process_birth(os.getpid())
 
 
 @pytest.fixture(autouse=True)

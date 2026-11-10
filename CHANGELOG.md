@@ -11,6 +11,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Handle Linux process exit between opening and reading `/proc/<pid>/stat`
+  during managed stop/restart. Confirm that the process is absent before
+  treating it as stopped; unreadable live processes remain explicitly unknown.
+
 - Render passage-context icons as SVG instead of stringified DOM elements.
 - Keep regenerated GIF previews within their existing size budget at five frames
   per second; full-quality MP4 walkthroughs retain their existing encoding.

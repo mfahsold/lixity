@@ -502,7 +502,9 @@ def process_birth(pid: int) -> str | None:
                 return None
             boot = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
             return f"linux:{boot}:{parts[19]}"
-        except FileNotFoundError as exc:
+        except (FileNotFoundError, ProcessLookupError) as exc:
+            # A process reaped after opening /proc/<pid>/stat can yield ESRCH
+            # on read. Confirm absence; an unreadable live/reused PID is unknown.
             try:
                 os.kill(pid, 0)
             except ProcessLookupError:
