@@ -13,6 +13,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   directed zooms and focus annotations, localized captions and a text transcript.
   Respect reduced motion, explicit pauses and offscreen playback; offer AV1 with
   an H.264 fallback and a compressed poster.
+  Refine the tour with video-synchronized typing captions and compact target
+  markings instead of clipped panel outlines.
+  Align homepage typography with manuscript headings and shared UI controls,
+  reduce the hero footprint, and unify discovery into a tour-to-demo path.
 
 - Separate synthetic example-project creation from screenshot HTTP fixtures.
   Provide a non-overwriting project generator with explicit manuscript/language

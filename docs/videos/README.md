@@ -44,7 +44,13 @@ A failed video offers the interactive demo instead.
 
 Captions are rendered at page resolution from the six localized transcript
 items in each homepage. They stay outside the camera zoom; seeking updates the
-caption. The complete transcript remains readable without playback or JavaScript.
+caption. During playback, each sentence types in over 1.6 seconds, then remains
+readable. Letter slots reserve the full sentence layout, so the caption does not
+jump as it appears. Pausing or requesting reduced motion shows the full sentence.
+Only compact, fully visible controls or cells receive focus rings; reading and
+reference-image scenes rely on camera framing alone. The recorder rejects clipped
+or oversized marking targets. The complete transcript remains readable without
+playback or JavaScript.
 The app recording itself is English; all seven homepage languages supply their
 own captions and controls. Technical documentation remains English.
 

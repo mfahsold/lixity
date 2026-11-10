@@ -33,6 +33,9 @@ assert.equal(spawnSync(path.join(repository, '.venv/bin/python'), ['scripts/stag
       const page = await context.newPage();
       const errors = []; page.on('pageerror', e => errors.push(e.message));
       await page.goto('https://tour.test/index-de.html');
+      await expect(page.locator('.hero-cta a')).toHaveCount(1);
+      await expect(page.locator('.hero-cta a')).toHaveAttribute('href', '#product-tour-preview');
+      assert.equal(await page.locator('h1').evaluate(node => getComputedStyle(node).hyphens), 'none');
       const video = page.locator('#product-tour');
       await video.scrollIntoViewIfNeeded();
       await page.waitForTimeout(700);
@@ -44,7 +47,7 @@ assert.equal(spawnSync(path.join(repository, '.venv/bin/python'), ['scripts/stag
       await button.click();
       await expect.poll(() => video.evaluate(v => v.paused)).toBe(true);
       await video.evaluate(v => { v.currentTime = 26; });
-      await expect(page.locator('.tour-caption')).toHaveText('Halte deine Recherche verbunden.');
+      await expect(page.locator('.tour-caption')).toHaveText('Notizen und Belege zusammenhalten.');
       await expect.poll(() => video.evaluate(v => ({seeking:v.seeking, ready:v.readyState}))).toEqual({seeking:false, ready:4});
       await expect(page.locator('.tour-caption')).toBeVisible();
       await page.locator('#tour-transcript summary').click();
@@ -65,8 +68,19 @@ assert.equal(spawnSync(path.join(repository, '.venv/bin/python'), ['scripts/stag
       await page.goto('https://tour.test/');
       await video.scrollIntoViewIfNeeded();
       await expect.poll(() => video.evaluate(v => v.currentTime)).toBeGreaterThan(.2);
+      await video.evaluate(v => { v.currentTime = 8.35; });
+      await expect.poll(() => page.locator('.tour-caption [data-letter]').evaluateAll(nodes =>
+        nodes.filter(node => getComputedStyle(node).visibility === 'visible').length)).toBeGreaterThan(0);
+      assert.ok(await page.locator('.tour-caption [data-letter]').evaluateAll(nodes =>
+        nodes.some(node => getComputedStyle(node).visibility === 'hidden')), 'Caption types in progressively');
+      await page.emulateMedia({reducedMotion: 'reduce'});
+      await expect.poll(() => page.locator('.tour-caption [data-letter]').evaluateAll(nodes =>
+        nodes.every(node => getComputedStyle(node).visibility === 'visible'))).toBe(true);
+      await page.emulateMedia({reducedMotion: 'no-preference'});
       await button.click();
-      assert.ok(await video.evaluate(v => v.paused));
+      await expect.poll(() => video.evaluate(v => v.paused)).toBe(false);
+      await button.click();
+      await expect.poll(() => video.evaluate(v => v.paused)).toBe(true);
       // Exercise real source exhaustion, not an invented media-element event.
       await page.route('**/videos/product-tour.*', route => /\.(mp4|webm)$/.test(route.request().url())
         ? route.abort() : route.fallback());

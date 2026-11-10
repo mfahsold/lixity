@@ -47,11 +47,12 @@
   "tour_pause": "Metti in pausa",
   "tour_transcript": "Leggi il percorso",
   "tour_note": "Video senza audio · Temi chiaro e scuro · Manoscritto fittizio in inglese",
-  "tour_read": "Leggi al tuo ritmo.",
-  "tour_passage": "Esamina un passaggio nel suo contesto.",
-  "tour_compare": "Confronta i capitoli e le differenze.",
-  "tour_research": "Collega le tue ricerche.",
-  "tour_context": "Esplora le fonti della tua storia.",
-  "tour_return": "Torna alle tue parole.",
-  "tour_error": "Impossibile caricare il video. Apri la demo interattiva."
+  "tour_read": "Il tuo manoscritto. Spazio per leggere.",
+  "tour_passage": "Le forme della lingua, accanto al testo.",
+  "tour_compare": "Confronta i capitoli. Scopri le differenze.",
+  "tour_research": "Tieni insieme appunti e riferimenti.",
+  "tour_context": "Le fonti dietro la tua storia.",
+  "tour_return": "Torna al testo con uno sguardo nuovo.",
+  "tour_error": "Impossibile caricare il video. Apri la demo interattiva.",
+  "discover": "Scopri Lixity"
 }

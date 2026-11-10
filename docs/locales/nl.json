@@ -47,11 +47,12 @@
   "tour_pause": "Rondleiding pauzeren",
   "tour_transcript": "Lees de rondleiding",
   "tour_note": "Video zonder geluid · Lichte en donkere weergave · Fictief Engels manuscript",
-  "tour_read": "Lees in je eigen tempo.",
-  "tour_passage": "Bekijk een passage in zijn context.",
-  "tour_compare": "Vergelijk hoofdstukken en hun verschillen.",
-  "tour_research": "Verbind je onderzoek.",
-  "tour_context": "Verken de bronnen van je verhaal.",
-  "tour_return": "Keer terug naar je woorden.",
-  "tour_error": "De video kon niet worden geladen. Open de interactieve demo."
+  "tour_read": "Je manuscript. Ruimte om te lezen.",
+  "tour_passage": "Taalpatronen naast de passage.",
+  "tour_compare": "Vergelijk hoofdstukken. Ontdek verschillen.",
+  "tour_research": "Houd notities en bronnen bij elkaar.",
+  "tour_context": "De bronnen achter je verhaal.",
+  "tour_return": "Terug naar de tekst. Met een frisse blik.",
+  "tour_error": "De video kon niet worden geladen. Open de interactieve demo.",
+  "discover": "Ontdek Lixity"
 }

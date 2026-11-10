@@ -47,11 +47,12 @@
   "tour_pause": "Mettre en pause",
   "tour_transcript": "Lire la présentation",
   "tour_note": "Vidéo sans son · Thèmes clair et sombre · Manuscrit fictif en anglais",
-  "tour_read": "Lisez à votre rythme.",
-  "tour_passage": "Examinez un passage dans son contexte.",
-  "tour_compare": "Comparez les chapitres et leurs différences.",
-  "tour_research": "Reliez vos recherches.",
-  "tour_context": "Explorez les sources de votre récit.",
-  "tour_return": "Revenez à vos mots.",
-  "tour_error": "La vidéo ne peut pas être chargée. Découvrez la démonstration interactive."
+  "tour_read": "Votre manuscrit. Le temps de lire.",
+  "tour_passage": "Les formes de la langue, au fil du texte.",
+  "tour_compare": "Comparez les chapitres. Repérez les différences.",
+  "tour_research": "Gardez notes et références ensemble.",
+  "tour_context": "Les sources derrière votre récit.",
+  "tour_return": "Retrouvez le texte avec un regard neuf.",
+  "tour_error": "La vidéo ne peut pas être chargée. Découvrez la démonstration interactive.",
+  "discover": "Découvrir Lixity"
 }

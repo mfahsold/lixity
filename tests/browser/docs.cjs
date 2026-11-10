@@ -1229,7 +1229,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
           if (homeRoutes.has(route)) {
             const locale = route ? route.slice(6, 8) : 'en';
             await expect(page.locator('html')).toHaveAttribute('lang', locale);
-            await expect(page.locator('.hero-cta a.primary')).toHaveAttribute('href', 'demo/report.html');
+            await expect(page.locator('.hero-cta a.primary')).toHaveAttribute('href', '#product-tour-preview');
             await expect(page.locator('#installation a.primary')).toHaveAttribute('href', 'guides/installation.html');
             await expect(page.locator('.language-list a')).toHaveCount(7);
             await expect(page.locator('head link[hreflang]')).toHaveCount(8);
@@ -1264,8 +1264,11 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
         await page.locator('#installation a[href="guides/installation.html"]').click();
         assert.ok(page.url().endsWith('/guides/installation.html'), 'An eager visitor can reach installation through the header and its dedicated section');
         await page.goto(origin + '/lixity/');
-        await page.locator('.hero-cta a[href="guides/first-look.html"]').click();
-        assert.ok(page.url().endsWith('/guides/first-look.html'), 'The secondary CTA offers a tour before installation');
+        await page.locator('.hero-cta a').click();
+        await expect(page).toHaveURL(origin + '/lixity/#product-tour-preview');
+        await expect(page.locator('#product-tour-preview')).toBeInViewport();
+        await page.locator('#guides a[href="guides/first-look.html"]').click();
+        assert.ok(page.url().endsWith('/guides/first-look.html'), 'Written guidance remains available in documentation');
         await page.locator('.ctl[href="../demo/report.html"]').click();
         assert.ok(page.url().endsWith('/demo/report.html'));
         await page.locator('#example-context > summary').click();
@@ -1277,8 +1280,9 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
         await returnToTop(page, 'Guides parent');
         await page.locator('.site-header .brand[href="./"]').click();
         await expect(page).toHaveURL(origin + '/lixity/');
-        await page.locator('.hero-cta a.primary[href="demo/report.html"]').click();
-        assert.ok(page.url().endsWith('/demo/report.html'), 'The primary CTA opens the one demo directly');
+        await page.locator('.hero-cta a').click();
+        await page.locator('.tour-explore[href="demo/report.html"]').click();
+        assert.ok(page.url().endsWith('/demo/report.html'), 'The single discovery path leads from the tour to the demo');
         await page.locator('.site-header .brand, .site-return a[href="../"]').first().click();
         await expect(page).toHaveURL(origin + '/lixity/');
         if (javaScriptEnabled) {

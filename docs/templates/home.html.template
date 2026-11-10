@@ -44,8 +44,8 @@ $alternates
 <aside id="language-suggestion" class="language-suggestion" aria-label="$language" hidden><p>$language_suggestion</p><a class="ctl primary" href="index.html"></a><button class="ctl" type="button">$language_stay</button></aside>
 <section class="home-hero" aria-labelledby="intro-title">
 <div class="home-intro"><p class="home-eyebrow">$eyebrow</p><h1 id="intro-title">$headline</h1><p class="home-lead">$intro</p>
-<div class="hero-cta"><a class="ctl primary" href="demo/report.html" id="examples">$demo</a><a href="$tour_url">$tour</a></div><p class="home-note">$demo_note</p></div>
-<figure class="product-preview product-tour" aria-label="$tour_title">
+<div class="hero-cta"><a class="ctl primary" href="#product-tour-preview" id="examples">$discover <span aria-hidden="true">↓</span></a></div><p class="home-note">$demo_note</p></div>
+<figure id="product-tour-preview" tabindex="-1" class="product-preview product-tour" aria-label="$tour_title">
 <div class="tour-screen">
 <video id="product-tour" width="1440" height="900" poster="videos/product-tour.webp" preload="none" muted playsinline controls aria-label="$tour_title" aria-describedby="tour-note">
 <source src="videos/product-tour.webm" type='video/webm; codecs="av01.0.08M.08"'/>
@@ -55,7 +55,7 @@ $alternates
 <div class="tour-caption" aria-hidden="true" hidden><span>$tour_read</span></div>
 </div>
 <figcaption>
-<div class="tour-actions"><button type="button" class="ctl tour-toggle" data-play="$tour_play" data-pause="$tour_pause" hidden>$tour_play</button><p id="tour-note">$tour_note</p></div>
+<div class="tour-actions"><button type="button" class="ctl tour-toggle" data-play="$tour_play" data-pause="$tour_pause" hidden>$tour_play</button><a class="ctl tour-explore" href="demo/report.html">$demo <span aria-hidden="true">→</span></a><p id="tour-note">$tour_note</p></div>
 <p class="tour-error" role="status" hidden>$tour_error <a href="demo/report.html">$demo</a></p>
 <details id="tour-transcript"><summary>$tour_transcript</summary><ol>
 <li data-start="0">$tour_read</li><li data-start="8">$tour_passage</li><li data-start="16">$tour_compare</li><li data-start="24">$tour_research</li><li data-start="32">$tour_context</li><li data-start="40">$tour_return</li>

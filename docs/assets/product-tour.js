@@ -12,16 +12,38 @@
   let attempted = false;
   let failed = false;
   let current = -1;
+  let letters = [];
+  let visibleLetters = -1;
+  let frame = 0;
   video.muted = true;
   toggle.hidden = false;
   function update() {
-    toggle.textContent = video.paused ? toggle.dataset.play : toggle.dataset.pause;
+    const label = video.paused ? toggle.dataset.play : toggle.dataset.pause;
+    if (toggle.textContent !== label) toggle.textContent = label;
     const index = cues.findLastIndex(cue => video.currentTime >= Number(cue.dataset.start));
     if (index !== current && index >= 0) {
       current = index;
-      line.textContent = cues[index].textContent;
+      letters = Array.from(cues[index].textContent, character => {
+        const letter = document.createElement('span');
+        letter.dataset.letter = '';
+        letter.textContent = character;
+        return letter;
+      });
+      line.replaceChildren(...letters);
+      visibleLetters = -1;
+    }
+    const elapsed = index < 0 ? 0 : video.currentTime - Number(cues[index].dataset.start);
+    const count = motion.matches || video.paused ? letters.length :
+      Math.min(letters.length, Math.max(0, Math.ceil((elapsed - .15) / 1.6 * letters.length)));
+    if (count !== visibleLetters) {
+      letters.forEach((letter, position) => { letter.style.visibility = position < count ? 'visible' : 'hidden'; });
+      visibleLetters = count;
     }
     caption.hidden = failed || video.readyState < 2;
+  }
+  function tick() {
+    update();
+    frame = video.paused || video.ended ? 0 : requestAnimationFrame(tick);
   }
   async function play() {
     attempted = true;
@@ -36,7 +58,7 @@
     else video.pause();
   });
   // Native controls count as an intentional choice, too: never auto-resume.
-  video.addEventListener('play', () => { attempted = true; update(); });
+  video.addEventListener('play', () => { attempted = true; if (!frame) tick(); });
   for (const event of ['pause', 'ended', 'timeupdate', 'loadeddata', 'seeked']) video.addEventListener(event, update);
   const reportFailure = () => {
     failed = true;
@@ -53,7 +75,7 @@
   });
   if (!sources.length) reportFailure();
   document.addEventListener('visibilitychange', () => { if (document.hidden) video.pause(); });
-  motion.addEventListener('change', () => { if (motion.matches) video.pause(); });
+  motion.addEventListener('change', () => { if (motion.matches) video.pause(); update(); });
   if ('IntersectionObserver' in window) {
     const observer = new IntersectionObserver(entries => {
       for (const entry of entries) {

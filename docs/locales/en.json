@@ -47,11 +47,12 @@
   "tour_pause": "Pause tour",
   "tour_transcript": "Read the walkthrough",
   "tour_note": "Silent recording · Light and dark views · Fictional English manuscript",
-  "tour_read": "Read at your own pace.",
-  "tour_passage": "Inspect a passage, in context.",
-  "tour_compare": "Compare chapters. Follow the differences.",
-  "tour_research": "Keep your research connected.",
-  "tour_context": "Explore sources beside your story.",
-  "tour_return": "Return to your words.",
-  "tour_error": "The video could not load. Explore the interactive demo instead."
+  "tour_read": "Your manuscript. Room to read.",
+  "tour_passage": "Language patterns, beside the passage.",
+  "tour_compare": "Compare chapters. Notice the differences.",
+  "tour_research": "Keep notes and evidence together.",
+  "tour_context": "The sources behind your story.",
+  "tour_return": "Back to the text. With fresh eyes.",
+  "tour_error": "The video could not load. Explore the interactive demo instead.",
+  "discover": "Meet Lixity"
 }

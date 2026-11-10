@@ -523,7 +523,7 @@ async function main() {
           await page.waitForTimeout(250);
           await locator.click();
         };
-        const scene = async (name, action, focus) => {
+        const scene = async (name, action, focus, marker = null) => {
           const start = Date.now();
           // Brief dissolves carry orientation across view and theme changes.
           if (scenes.length) {
@@ -541,19 +541,30 @@ async function main() {
           });
           const box = await page.locator(focus).first().boundingBox();
           assert.ok(box && box.width > 0 && box.height > 0, 'The camera needs a visible focus region');
-          const top = Math.max(0, box.y), bottom = Math.min(820, box.y + box.height);
+          const top = Math.max(0, box.y), bottom = Math.min(900, box.y + box.height);
           const framed = {x: box.x, y: top, width: box.width, height: Math.max(1, bottom - top)};
           scenes.push({name, start: (start - started) / 1000,
             x: (framed.x + framed.width / 2) / 1440, y: (framed.y + framed.height / 2) / 900,
-            zoom: Math.max(1.12, Math.min(1.5, 1440 / (framed.width + 100), 900 / (framed.height + 130)))});
+            zoom: Math.max(1, Math.min(1.5, 1440 / (framed.width + 100), 900 / (framed.height + 130)))});
           await page.waitForTimeout(750);
+          const marked = marker ? await page.locator(marker).first().evaluate(node => {
+            // A summary's hit area spans the panel; emphasize its label instead.
+            const range = document.createRange(); range.selectNodeContents(node);
+            const rect = node.tagName === 'SUMMARY' ? range.getBoundingClientRect() : node.getBoundingClientRect();
+            return {x: rect.x - 3, y: rect.y - 3, width: rect.width + 6, height: rect.height + 6};
+          }) : null;
+          if (marker) assert.ok(marked && marked.x >= 0 && marked.y >= 0 &&
+            marked.x + marked.width <= 1440 && marked.y + marked.height <= 900 &&
+            marked.width <= 700 && marked.height <= 250, `Mark only a complete, compact visible target: ${name} ${JSON.stringify(marked)}`);
           await page.evaluate(box => {
             document.querySelectorAll('.tour-focus-ring').forEach(node => node.remove());
+            if (box) {
             const ring = document.createElement('div'); ring.className = 'tour-focus-ring';
             Object.assign(ring.style, {left:box.x+'px',top:box.y+'px',width:box.width+'px',height:box.height+'px'});
             document.body.appendChild(ring);
+            }
             const cursor = document.getElementById('walkthrough-cursor'); if(cursor) cursor.style.opacity='0';
-          }, framed);
+          }, marked);
           assert.ok(Date.now() - start < 6500, 'Directed actions must fit their eight-second scene');
           await page.waitForTimeout(Math.max(0, 8000 - (Date.now() - start)));
           await page.evaluate(() => document.querySelectorAll('.tour-focus-ring').forEach(node => node.remove()));
@@ -568,19 +579,20 @@ async function main() {
           await click(page.locator('[data-reader-action=values]'));
           await page.locator('#reader-inspector').waitFor({state: 'visible'});
           await page.locator('#reader-inspector details').first().evaluate(node => { node.open = true; });
-        }, '#reader-inspector details');
+        }, '#reader-inspector details', '#reader-inspector details summary');
         await scene('compare', async () => {
           await click(page.locator('#workbench-overview-open'));
           await page.locator('#analysis-measurements').evaluate(node => { node.open = true; });
           await click(page.locator('#style-tab-heatmap'));
-          await page.locator('#heatmap').scrollIntoViewIfNeeded();
-        }, '#heatmap');
+          await page.locator('#heatmap-ch-3 td:nth-child(6)').evaluate(node =>
+            node.scrollIntoView({block: 'center', inline: 'nearest', behavior: 'instant'}));
+        }, '#heatmap tbody', '#heatmap-ch-3 td:nth-child(6)');
         await scene('research', async () => {
           await page.emulateMedia({colorScheme: 'dark'});
           await click(page.locator('#tab-view-research'));
           await click(page.locator('[data-rtab=dossiers]'));
           await page.evaluate(() => window.scrollTo({top: 0, behavior: 'instant'}));
-        }, '#research-dossiers-list .research-card');
+        }, '#research-dossiers-list .research-card', '#research-dossiers-list .research-card [data-research-detail=dossier]');
         await scene('context', async () => {
           const dossier = page.locator('#research-dossiers-list .research-card').filter({hasText: 'Warehouse 4 case notes'});
           await click(dossier.locator('[data-research-detail=dossier]'));

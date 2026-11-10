@@ -47,11 +47,12 @@
   "tour_pause": "Pausar recorrido",
   "tour_transcript": "Leer el recorrido",
   "tour_note": "Vídeo sin sonido · Vistas clara y oscura · Manuscrito ficticio en inglés",
-  "tour_read": "Lee a tu propio ritmo.",
-  "tour_passage": "Examina un pasaje en su contexto.",
-  "tour_compare": "Compara capítulos y sus diferencias.",
-  "tour_research": "Conecta tu investigación.",
-  "tour_context": "Explora las fuentes de tu historia.",
-  "tour_return": "Vuelve a tus palabras.",
-  "tour_error": "No se pudo cargar el vídeo. Abre la demostración interactiva."
+  "tour_read": "Tu manuscrito. Espacio para leer.",
+  "tour_passage": "Patrones del lenguaje junto al pasaje.",
+  "tour_compare": "Compara capítulos. Descubre diferencias.",
+  "tour_research": "Reúne notas y referencias.",
+  "tour_context": "Las fuentes detrás de tu historia.",
+  "tour_return": "Vuelve al texto con una mirada nueva.",
+  "tour_error": "No se pudo cargar el vídeo. Abre la demostración interactiva.",
+  "discover": "Conoce Lixity"
 }

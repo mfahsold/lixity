@@ -47,11 +47,12 @@
   "tour_pause": "Rundgang pausieren",
   "tour_transcript": "Rundgang als Text lesen",
   "tour_note": "Aufnahme ohne Ton · Helle und dunkle Ansichten · Erfundenes englisches Manuskript",
-  "tour_read": "Lies in deinem eigenen Tempo.",
-  "tour_passage": "Untersuche eine Textstelle im Zusammenhang.",
-  "tour_compare": "Vergleiche Kapitel. Folge den Unterschieden.",
-  "tour_research": "Halte deine Recherche verbunden.",
-  "tour_context": "Erkunde Quellen zu deiner Geschichte.",
-  "tour_return": "Kehre zu deinen Worten zurück.",
-  "tour_error": "Das Video konnte nicht geladen werden. Öffne stattdessen die interaktive Demo."
+  "tour_read": "Dein Manuskript. In Ruhe lesen.",
+  "tour_passage": "Sprachmuster direkt an der Textstelle.",
+  "tour_compare": "Kapitel vergleichen. Unterschiede entdecken.",
+  "tour_research": "Notizen und Belege zusammenhalten.",
+  "tour_context": "Die Quellen hinter deiner Geschichte.",
+  "tour_return": "Zurück zum Text. Mit einem neuen Blick.",
+  "tour_error": "Das Video konnte nicht geladen werden. Öffne stattdessen die interaktive Demo.",
+  "discover": "Lixity kennenlernen"
 }
