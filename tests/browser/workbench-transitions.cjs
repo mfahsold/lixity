@@ -348,6 +348,16 @@ async function assertToolbarDossierReturn(page, paragraph, width) {
       await page.locator('[data-context-tool="dossier"]').press('Enter');
       const activeEffects = await page.locator('#workspace-context-panel').evaluate(node => {
         const effects = node.getAnimations({subtree: true}).filter(effect => effect.playState === 'running');
+        for (const effect of effects) {
+          if (effect.id === "lixity-reveal") assertCompositorEffect(effect);
+        }
+        function assertCompositorEffect(effect) {
+          const allowed = new Set(['opacity', 'transform', 'offset', 'computedOffset', 'easing', 'composite']);
+          if (effect.effect.getKeyframes().some(frame => Object.keys(frame).some(key => !allowed.has(key)))) {
+            throw new Error('Workspace entrances must only animate compositable properties');
+          }
+          if (effect.effect.getTiming().iterations !== 1) throw new Error('Workspace entrances must finish');
+        }
         // Slow active effects only to keep the preference-change check deterministic.
         effects.forEach(effect => effect.updatePlaybackRate(.01));
         return effects.length;

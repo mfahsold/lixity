@@ -243,12 +243,23 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
       }
       await toggle.click();
       if (width >= 1100) {
-        assert.equal(await navigation.isVisible(), false, 'Companion automatically frees desktop navigation space');
-        assert.equal(await navigationToggle.getAttribute('aria-expanded'), 'false');
-        assert.ok(await page.locator('.workspace-shell').evaluate(node => node.getBoundingClientRect().width) < originalWidth / 2);
+        assert.equal(await navigation.isVisible(), true, 'Companion preserves desktop navigation');
+        assert.equal(await navigationToggle.getAttribute('aria-expanded'), 'true');
+        assert.equal(await page.locator('.workspace-shell').evaluate(node => node.getBoundingClientRect().width), originalWidth);
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        const beforeNavigationToggle = await page.evaluate(() => {
+          const anchor = LixityReader.capture();
+          return {id: anchor.panel.id, top: anchor.panel.getBoundingClientRect().top};
+        });
         await navigationToggle.click();
-        assert.equal(await navigation.isVisible(), true, 'Navigation remains manually accessible beside the dossier');
+        assert.equal(await navigation.isVisible(), false, 'Only the navigation toggle collapses navigation');
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         await navigationToggle.click();
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        const restoredNavigationTop = await page.evaluate(id => document.getElementById(id).getBoundingClientRect().top,
+          beforeNavigationToggle.id);
+        assert.ok(Math.abs(restoredNavigationTop - beforeNavigationToggle.top) <= 2,
+          `${locale}: manual navigation collapse/expand retains the current passage`);
       } else {
         assert.equal(await navigation.isVisible(), true, 'Mobile navigation stays available');
         assert.equal(await navigationToggle.isVisible(), false);
@@ -256,10 +267,10 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
       await page.waitForFunction(() => !document.querySelector('#workspace-reader-dossier').disabled);
       assert.equal(await panel.isVisible(), true);
       assert.equal(await toggle.getAttribute('aria-expanded'), 'true');
-      const controlTops = await page.evaluate(() => ['workspace-reader-dossier', 'workspace-reader-refresh']
-        .map(id => Math.round(document.getElementById(id).getBoundingClientRect().top)));
-      assert.ok(Math.abs(controlTops[0] - controlTops[1]) <= 1,
-        `The dossier select and refresh button line up: ${JSON.stringify(controlTops)}`);
+      const controlBottoms = await page.evaluate(() => ['workspace-reader-dossier', 'workspace-reader-refresh']
+        .map(id => Math.round(document.getElementById(id).getBoundingClientRect().bottom)));
+      assert.ok(Math.abs(controlBottoms[0] - controlBottoms[1]) <= 1,
+        `The dossier select and wrapping refresh button share a baseline: ${JSON.stringify(controlBottoms)}`);
       assert.equal(await select.inputValue(), '', 'Opening does not silently pick a dossier');
       await select.selectOption(dossier.id);
       await body.locator('.research-dossier-body-rendered p').filter({hasText: 'Historical source notes.'}).waitFor();

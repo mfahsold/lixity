@@ -11,12 +11,12 @@
   function reveal(node) {
     if (!node) return;
     var previous = animations.get(node);
-    var opacity = previous ? Number(getComputedStyle(node).opacity) : .85;
+    var opacity = previous ? Number(getComputedStyle(node).opacity) : .72;
     cancel(node);
-    if (reduced.matches || !node.animate || !node.getClientRects().length) return;
+    if (reduced.matches || document.hidden || !node.animate || !node.getClientRects().length) return;
     // Opacity preserves the rectangles used by passage/selection restoration.
     var animation = node.animate([{opacity: opacity}, {opacity: 1}], {
-      duration: 180, easing: "cubic-bezier(.2,.7,.3,1)", id: "lixity-reveal"
+      duration: 200, easing: "cubic-bezier(.2,.7,.3,1)", id: "lixity-reveal"
     });
     animations.set(node, animation);
     animation.onfinish = function() { if (animations.get(node) === animation) animations.delete(node); };
@@ -51,10 +51,11 @@
     var revision = ++viewRevision;
     var initialPassageRevision = passageRevision;
     animations.forEach(function(_, node) { cancel(node); });
+    if (document.hidden) return;
     // Relation routes and Reader.restore finish their own scroll in this frame.
     requestAnimationFrame(function() { requestAnimationFrame(function() {
-      if (revision !== viewRevision || !pane || !pane.getClientRects().length) return;
-      visible(pane, ".chapter-head, .reader-structural, .ptext, .panel > h2, .research-navigation, .research-tab-pane > .ctl-note").forEach(reveal);
+      if (document.hidden || revision !== viewRevision || !pane || !pane.getClientRects().length) return;
+      if (!reduced.matches) visible(pane, ".chapter-head, .reader-structural, .ptext, .panel > h2, .research-navigation, .research-tab-pane > .ctl-note").forEach(reveal);
       // An explicit destination owns its settled cue, including while scrolling.
       if (passageRevision === initialPassageRevision && pane.id === "view-pane-analysis" && window.LixityReader) {
         var anchor = window.LixityReader.capture();
@@ -63,7 +64,7 @@
     }); });
   }
   function analysis(chapters) {
-    if (reduced.matches) return;
+    if (reduced.matches || document.hidden) return;
     visible(chapters, ".ptext, .strip, .chapter-head .meta").forEach(function(node) {
       if (!node.matches(".ptext")) { reveal(node); return; }
       clearTimeout(layers.get(node));

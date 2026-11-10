@@ -628,9 +628,10 @@ Choose **Dossier alongside** to read a saved dossier while retaining manuscript
 search and the current reading presentation. Analysis visibility remains a
 separate choice: opening a dossier does not turn it off. Use the context area's
 **Passage values** and **Dossier alongside** controls to switch the active tool; only
-one tool occupies that area at a time. Opening it collapses desktop project
-navigation; its toggle remains reachable, and closing restores the earlier manual
-choice. Drag the divider to change the desktop widths, or focus it and use
+one tool occupies that area at a time. Project navigation keeps its chosen width
+when tools or views change. Only its toggle collapses it; toggling preserves the
+current reading passage. Drag the divider to change the desktop widths, or focus
+it and use
 `Left`/`Right` in five-point steps; `Home` and `End` select the 35% and 75%
 manuscript-width limits. The split is a local browser preference. Narrow screens
 stack the readers and hide the divider. When opened from a paragraph's tools,
@@ -1074,3 +1075,17 @@ watcher; an unavailable source is not presented as a newly validated analysis.
 
 For installation/version mismatches and debug logging, use
 [CLI troubleshooting](USAGE.md#troubleshooting).
+
+## Workspace motion
+
+Workspace entrances use short, finite opacity animations through the shared
+`LixityMotion` controller. They leave passage geometry unchanged, replace an
+interrupted entrance instead of stacking effects, and cancel immediately when
+reduced motion is requested. Hidden pages and reduced-motion view changes skip
+viewport animation scans. No permanent `will-change` layers or per-frame
+JavaScript layout loops are used. The document reserves scrollbar space to avoid
+width changes between short and long views.
+
+This follows the [browser animation performance guidance](https://web.dev/articles/animations-guide):
+prefer compositable properties and avoid speculative layer promotion. Actual
+GPU composition depends on the browser and hardware; this is not an FPS guarantee.

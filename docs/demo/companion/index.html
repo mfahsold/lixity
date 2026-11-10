@@ -763,6 +763,8 @@ details.markdown-alert summary.markdown-alert-title::-webkit-details-marker { di
 @media (pointer: coarse) { .editor-tool-btn { width: 2.75rem; height: 2.75rem; } }
 
 * { box-sizing: border-box; }
+/* Keep the reading width stable when short and long views alternate. */
+html { scrollbar-gutter: stable; }
 body { margin: 0; padding: 2.25rem 1.5rem 4rem; background: var(--bg); color: var(--fg); font: var(--text-body)/var(--line-body) var(--font); -webkit-font-smoothing: antialiased; }
 /* Native controls otherwise use the browser's unrelated default font. */
 button, input, select, textarea { font: inherit; }
@@ -3323,6 +3325,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .workspace-reader-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .workspace-reader-head h2 { margin: 0; }
 .workspace-reader-controls { align-items: flex-end; }
+.workspace-reader-controls > button { max-width: 45%; white-space: normal; overflow-wrap: anywhere; }
 /* The controls row aligns the button with the select box, so the field keeps
    no bottom margin here (specific enough to win over the panel rule). */
 .workspace-reader-panel .workspace-reader-controls .setting-field { margin: 0; flex-basis: 6rem; }
@@ -3418,6 +3421,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
 /* One manuscript surface: restrained document reading with optional tools. */
 .manuscript-reader-controls {
+  container: reader-tools / inline-size;
   position: sticky; top: 0; z-index: 12; display: flex; flex-wrap: wrap;
   align-items: center; gap: .45rem; padding: .45rem var(--space-2);
   max-height: 45dvh; overflow-y: auto; overscroll-behavior: contain;
@@ -3903,6 +3907,17 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 }
 .manuscript-reader-controls .reader-settings > summary { min-height: 2.5rem; padding-block: .3rem; }
 .manuscript-reader-controls .reader-controls { gap: .25rem; }
+/* Account for sidebar, browser zoom and native-only tools, not viewport alone. */
+@container reader-tools (max-width: 80rem) {
+  #reader-focus, #reader-teleprompter { min-width: 2.5rem; }
+  #reader-focus .reader-control-label,
+  #reader-teleprompter .reader-control-label { display: none; }
+  .analysis-state { display: none; }
+}
+@container reader-tools (max-width: 68rem) {
+  .reader-control-label { display: none; }
+  .reader-compact-control { min-width: 2.5rem; }
+}
 body.lixity-workspace.reader-focus {
   --bg: light-dark(#e9edf4, #080c13);
   --surface: light-dark(#fff, #111824);
@@ -4352,7 +4367,7 @@ body.lixity-workspace.reader-focus {
 <div id="publication-entries"></div>
 <noscript><p>Enable JavaScript to select reading progress and open the context.</p></noscript></aside></div>
 <details class="panel"><summary>About this synthetic reading example</summary><p>The people, records and incident are invented. Reveal context deliberately with the reading-progress control. All content included in a static file remains inspectable; chapter caps remove later material before export.</p><p>The map and harbour view are public-domain setting references from circa 1900, not evidence of the fictional 1923 incident. <a href="../../assets/research/sources.json">Image credits and reviewed provenance</a>. The ordinary product export has the same reading interface and no visitor counter.</p></details><footer><span class="version-badge">Version 0.8.0</span><a class="license-badge" href="#license-terms">Open source · AGPL-3.0</a></footer></div>
-<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3A19dfaeb5-5c19-4ee1-9a6c-d5776551298b\u0026version_id=urn%3Auuid%3Aeb3ebc29-3559-4b56-bd95-0c996f94bdc5":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3Ab9ccc806-0859-4fac-8340-ad3a11c1f9dd\u0026source_id=urn%3Auuid%3A19dfaeb5-5c19-4ee1-9a6c-d5776551298b\u0026version_id=urn%3Auuid%3Aeb3ebc29-3559-4b56-bd95-0c996f94bdc5":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3A51ffc4c8-3ba1-4519-8a19-75cfe7172e67\u0026version_id=urn%3Auuid%3Aa52e6082-0a0a-407c-9564-b1e8a07cb43b":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3Ab9ccc806-0859-4fac-8340-ad3a11c1f9dd\u0026source_id=urn%3Auuid%3A51ffc4c8-3ba1-4519-8a19-75cfe7172e67\u0026version_id=urn%3Auuid%3Aa52e6082-0a0a-407c-9564-b1e8a07cb43b":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/1","mode":"companion","profile":"readers","project_id":"urn:uuid:b9ccc806-0859-4fac-8340-ad3a11c1f9dd","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":3,"chapters":[{"number":1},{"number":2},{"number":3}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:d3f9dfae-fc5f-4e42-a56c-54ca4c913af0","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:c4f4328c-906e-49dd-b3b0-0bd79e9c766a","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:19dfaeb5-5c19-4ee1-9a6c-d5776551298b/urn:uuid:eb3ebc29-3559-4b56-bd95-0c996f94bdc5)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:b9ccc806-0859-4fac-8340-ad3a11c1f9dd","source_id":"urn:uuid:19dfaeb5-5c19-4ee1-9a6c-d5776551298b","source_version_id":"urn:uuid:eb3ebc29-3559-4b56-bd95-0c996f94bdc5","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3Ab9ccc806-0859-4fac-8340-ad3a11c1f9dd\u0026source_id=urn%3Auuid%3A19dfaeb5-5c19-4ee1-9a6c-d5776551298b\u0026version_id=urn%3Auuid%3Aeb3ebc29-3559-4b56-bd95-0c996f94bdc5","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:c4f4328c-906e-49dd-b3b0-0bd79e9c766a","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:51ffc4c8-3ba1-4519-8a19-75cfe7172e67/urn:uuid:a52e6082-0a0a-407c-9564-b1e8a07cb43b)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:b9ccc806-0859-4fac-8340-ad3a11c1f9dd","source_id":"urn:uuid:51ffc4c8-3ba1-4519-8a19-75cfe7172e67","source_version_id":"urn:uuid:a52e6082-0a0a-407c-9564-b1e8a07cb43b","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3Ab9ccc806-0859-4fac-8340-ad3a11c1f9dd\u0026source_id=urn%3Auuid%3A51ffc4c8-3ba1-4519-8a19-75cfe7172e67\u0026version_id=urn%3Auuid%3Aa52e6082-0a0a-407c-9564-b1e8a07cb43b","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:d3f9dfae-fc5f-4e42-a56c-54ca4c913af0","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:d3f9dfae-fc5f-4e42-a56c-54ca4c913af0","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null}],"identity":"e42ce5fb7100845a77993f93bce57dbbaa006cb1db745798a3d91a17467ac874"}}</script>
+<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3A763cdc7c-b0e5-4db2-b16f-bb567cde4140\u0026version_id=urn%3Auuid%3A3a83ecc6-7203-4876-868e-d2c541cdf05f":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3Ab3171d17-0384-4fe4-abf8-054d32980774\u0026source_id=urn%3Auuid%3A763cdc7c-b0e5-4db2-b16f-bb567cde4140\u0026version_id=urn%3Auuid%3A3a83ecc6-7203-4876-868e-d2c541cdf05f":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3A01780035-d507-4d2a-9ce0-27ed4ffe6538\u0026version_id=urn%3Auuid%3A1b054f7c-a38e-4c7a-9aa2-b7fb8e455f42":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3Ab3171d17-0384-4fe4-abf8-054d32980774\u0026source_id=urn%3Auuid%3A01780035-d507-4d2a-9ce0-27ed4ffe6538\u0026version_id=urn%3Auuid%3A1b054f7c-a38e-4c7a-9aa2-b7fb8e455f42":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/1","mode":"companion","profile":"readers","project_id":"urn:uuid:b3171d17-0384-4fe4-abf8-054d32980774","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":3,"chapters":[{"number":1},{"number":2},{"number":3}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:6fed89ab-1a60-4681-960d-51656fa07b6a","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:439889db-c9dc-49cf-8504-563784fb6540","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:763cdc7c-b0e5-4db2-b16f-bb567cde4140/urn:uuid:3a83ecc6-7203-4876-868e-d2c541cdf05f)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:b3171d17-0384-4fe4-abf8-054d32980774","source_id":"urn:uuid:763cdc7c-b0e5-4db2-b16f-bb567cde4140","source_version_id":"urn:uuid:3a83ecc6-7203-4876-868e-d2c541cdf05f","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3Ab3171d17-0384-4fe4-abf8-054d32980774\u0026source_id=urn%3Auuid%3A763cdc7c-b0e5-4db2-b16f-bb567cde4140\u0026version_id=urn%3Auuid%3A3a83ecc6-7203-4876-868e-d2c541cdf05f","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:439889db-c9dc-49cf-8504-563784fb6540","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:01780035-d507-4d2a-9ce0-27ed4ffe6538/urn:uuid:1b054f7c-a38e-4c7a-9aa2-b7fb8e455f42)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:b3171d17-0384-4fe4-abf8-054d32980774","source_id":"urn:uuid:01780035-d507-4d2a-9ce0-27ed4ffe6538","source_version_id":"urn:uuid:1b054f7c-a38e-4c7a-9aa2-b7fb8e455f42","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3Ab3171d17-0384-4fe4-abf8-054d32980774\u0026source_id=urn%3Auuid%3A01780035-d507-4d2a-9ce0-27ed4ffe6538\u0026version_id=urn%3Auuid%3A1b054f7c-a38e-4c7a-9aa2-b7fb8e455f42","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:6fed89ab-1a60-4681-960d-51656fa07b6a","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:6fed89ab-1a60-4681-960d-51656fa07b6a","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null}],"identity":"66a494e535b9c2d15729a3dcadfa8f9b952381b7e84cbf9574bb114b2f13aaa3"}}</script>
 <script>// A prepared website has no server: every API read belongs to its inline snapshot.
 (function () {
   "use strict";
@@ -5396,7 +5411,12 @@ function scrollAndFlash(target, options) {
   setPassageScrollMargin(target);
   reduceMotion = Boolean(passageMotionPreference && passageMotionPreference.matches);
   var behavior = options.behavior || "smooth";
-  target.scrollIntoView({ behavior: reduceMotion && behavior === "smooth" ? "auto" : behavior, block: options.block || "start" });
+  var block = options.block || "start";
+  // A tall passage cannot fit below sticky controls. "nearest" may align its
+  // bottom and hide its beginning underneath them; preserve the reading start.
+  if (block === "nearest" && target.closest("#chapters") &&
+      target.getBoundingClientRect().height > innerHeight - parseFloat(target.style.scrollMarginTop)) block = "start";
+  target.scrollIntoView({ behavior: reduceMotion && behavior === "smooth" ? "auto" : behavior, block: block });
   flashOnArrival(target);
 }
 
@@ -13344,12 +13364,12 @@ if (document.getElementById("research-manager")) { initResearchUI(); }
   function reveal(node) {
     if (!node) return;
     var previous = animations.get(node);
-    var opacity = previous ? Number(getComputedStyle(node).opacity) : .85;
+    var opacity = previous ? Number(getComputedStyle(node).opacity) : .72;
     cancel(node);
-    if (reduced.matches || !node.animate || !node.getClientRects().length) return;
+    if (reduced.matches || document.hidden || !node.animate || !node.getClientRects().length) return;
     // Opacity preserves the rectangles used by passage/selection restoration.
     var animation = node.animate([{opacity: opacity}, {opacity: 1}], {
-      duration: 180, easing: "cubic-bezier(.2,.7,.3,1)", id: "lixity-reveal"
+      duration: 200, easing: "cubic-bezier(.2,.7,.3,1)", id: "lixity-reveal"
     });
     animations.set(node, animation);
     animation.onfinish = function() { if (animations.get(node) === animation) animations.delete(node); };
@@ -13384,10 +13404,11 @@ if (document.getElementById("research-manager")) { initResearchUI(); }
     var revision = ++viewRevision;
     var initialPassageRevision = passageRevision;
     animations.forEach(function(_, node) { cancel(node); });
+    if (document.hidden) return;
     // Relation routes and Reader.restore finish their own scroll in this frame.
     requestAnimationFrame(function() { requestAnimationFrame(function() {
-      if (revision !== viewRevision || !pane || !pane.getClientRects().length) return;
-      visible(pane, ".chapter-head, .reader-structural, .ptext, .panel > h2, .research-navigation, .research-tab-pane > .ctl-note").forEach(reveal);
+      if (document.hidden || revision !== viewRevision || !pane || !pane.getClientRects().length) return;
+      if (!reduced.matches) visible(pane, ".chapter-head, .reader-structural, .ptext, .panel > h2, .research-navigation, .research-tab-pane > .ctl-note").forEach(reveal);
       // An explicit destination owns its settled cue, including while scrolling.
       if (passageRevision === initialPassageRevision && pane.id === "view-pane-analysis" && window.LixityReader) {
         var anchor = window.LixityReader.capture();
@@ -13396,7 +13417,7 @@ if (document.getElementById("research-manager")) { initResearchUI(); }
     }); });
   }
   function analysis(chapters) {
-    if (reduced.matches) return;
+    if (reduced.matches || document.hidden) return;
     visible(chapters, ".ptext, .strip, .chapter-head .meta").forEach(function(node) {
       if (!node.matches(".ptext")) { reveal(node); return; }
       clearTimeout(layers.get(node));
@@ -14370,26 +14391,21 @@ window.LixityManuscriptLinks = {
   if (outlineNav) window.LixitySectionNavigation.mount(outlineNav, {host: host, horizontal: false});
 })();
 
-// Share the desktop navigation toggle with companion reading. A temporary
-// companion override never overwrites the user's standalone navigation choice.
+// Navigation width belongs to the reader, never to a context panel.
 (function () {
   var toggle = document.getElementById("workspace-navigation-toggle");
   var content = document.getElementById("workspace-navigation-content");
   if (!toggle || !content) return;
   var destinations = content.parentElement.querySelector(".view-navigation");
   var desktop = window.matchMedia("(min-width: 1100px)");
-  var manualCollapsed = false, companionOpen = false, companionOverride = null;
+  var manualCollapsed = false;
   var toggleFocused = false;
   document.addEventListener("focusin", function(event) { toggleFocused = event.target === toggle; });
   document.body.classList.add("has-workspace-navigation");
   toggle.setAttribute("aria-controls", content.id);
-  function companionActive() {
-    var analysis = document.getElementById("view-pane-analysis");
-    return companionOpen && analysis && analysis.classList.contains("active");
-  }
   function update() {
-    var collapsed = desktop.matches && (companionActive()
-      ? (companionOverride === null ? true : companionOverride) : manualCollapsed);
+    var collapsed = desktop.matches && manualCollapsed;
+    var changed = document.body.classList.contains("navigation-collapsed") !== collapsed;
     if (collapsed && content.contains(document.activeElement)) toggle.focus({preventScroll: true});
     content.hidden = collapsed;
     document.body.classList.toggle("navigation-collapsed", collapsed);
@@ -14402,23 +14418,16 @@ window.LixityManuscriptLinks = {
       var selected = destinations && destinations.querySelector('[data-view][aria-selected="true"]');
       if (selected) selected.focus({preventScroll: true});
     }
-    window.dispatchEvent(new Event("resize"));
+    if (changed) window.dispatchEvent(new Event("resize"));
   }
   toggle.addEventListener("click", function() {
-    var next = !document.body.classList.contains("navigation-collapsed");
-    if (companionActive()) companionOverride = next;
-    else manualCollapsed = next;
+    var reader = window.LixityReader;
+    var anchor = reader && reader.captureForRestore();
+    manualCollapsed = !manualCollapsed;
     update();
+    if (anchor) reader.restore(anchor);
   });
   desktop.addEventListener("change", update);
-  document.addEventListener("lixity:viewchange", update);
-  window.LixityWorkspaceNavigation = {
-    companion: function(open) {
-      if (companionOpen !== open) companionOverride = null;
-      companionOpen = open;
-      update();
-    }
-  };
   update();
 })();
 

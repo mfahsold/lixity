@@ -353,21 +353,33 @@ def report_summary(
             print(f"  {name} (exit {code})", file=stream, flush=True)
 
 
-def run_parallel(node: str, names: list[str], jobs: int) -> int:
+def report_durations(timings: list[tuple[str, float]], limit: int) -> None:
+    """Expose measured bottlenecks without caching or changing test selection."""
+    if not timings or limit == 0:
+        return
+    print("Slowest browser suites (wall time, including worker contention):", flush=True)
+    for name, seconds in sorted(timings, key=lambda item: (-item[1], item[0]))[:limit]:
+        print(f"  {seconds:.1f}s {name}", flush=True)
+
+
+def run_parallel(node: str, names: list[str], jobs: int, durations: int = 5) -> int:
     """Run independent suites in parallel and report atomically per suite."""
     print(f"Running {len(names)} suites with {jobs} parallel workers.", flush=True)
     started = time.monotonic()
     failures: list[tuple[str, int]] = []
+    timings: list[tuple[str, float]] = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
         futures = [pool.submit(run_suite, node, name, True) for name in names]
         for index, future in enumerate(concurrent.futures.as_completed(futures), start=1):
             name, seconds, code, output = future.result()
+            timings.append((name, seconds))
             print(f"[{index}/{len(names)}] {name} ({seconds:.1f}s)", flush=True)
             if output.strip():
                 print(output.rstrip(), flush=True)
             if code:
                 failures.append((name, code))
                 print(f"Failed: {name} (exit {code})", file=sys.stderr, flush=True)
+    report_durations(timings, durations)
     report_summary(names, len(names), failures, time.monotonic() - started)
     if failures:
         failed = sorted(name for name, _ in failures)
@@ -410,7 +422,13 @@ def main() -> int:
         help="Run N independent suites in parallel (default: 1)",
     )
     parser.add_argument("--start", metavar="SUITE", help="Resume at this suite after a failure")
+    parser.add_argument(
+        "--durations", type=int, default=5, metavar="N",
+        help="Report the N slowest completed suites (default: 5; 0 disables)",
+    )
     arguments = parser.parse_args()
+    if arguments.durations < 0:
+        parser.error("--durations must be nonnegative")
 
     names = suite_names()
     if not names:
@@ -471,18 +489,22 @@ def main() -> int:
     if arguments.jobs > 1:
         jobs = min(arguments.jobs, len(names))
         if jobs > 1:
-            return run_parallel(node, names, jobs)
+            return run_parallel(node, names, jobs, arguments.durations)
 
     started = time.monotonic()
+    timings: list[tuple[str, float]] = []
     for index, name in enumerate(names, start=1):
         print(f"[{index}/{len(names)}] {name}", flush=True)
         _name, seconds, code, _output = run_suite(node, name, False)
+        timings.append((name, seconds))
         if code:
             print(f"Failed: {name} (exit {code}, {seconds:.1f}s)", file=sys.stderr)
+            report_durations(timings, arguments.durations)
             report_summary(names, index, [(name, code)], time.monotonic() - started)
             print(f"Resume after the fix with: --start {name}", file=sys.stderr)
             return code
         print(f"Passed: {name} ({seconds:.1f}s)", flush=True)
+    report_durations(timings, arguments.durations)
     report_summary(names, len(names), [], time.monotonic() - started)
     return 0
 

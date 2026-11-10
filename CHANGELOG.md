@@ -9,6 +9,18 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Keep project navigation stable across dossier and view changes, preserve the
+  reading passage when toggling it, and reserve scrollbar width between views.
+  Central workspace entrances remain finite and geometry-preserving, and skip
+  hidden-page/reduced-motion scans. Tall paragraph jumps keep their beginning
+  below sticky mobile controls instead of hiding it beneath the toolbar.
+- Reduce redundant toolbar browser combinations from 126 to 66 while retaining
+  every locale, both themes and all DE/EN breakpoints (`--exhaustive` is available).
+  Browser runs now summarize their slowest suites to guide further optimization.
+- Keep the native reading toolbar on one desktop row after adding Write. Compact
+  optional labels according to available toolbar width, retain accessible names
+  and test all seven fully localized interfaces in both themes.
+
 - Preserve existing export history when an archive move fails: replace files
   atomically without deleting the previous target first. Cross-filesystem archive
   moves fail explicitly. Remove repeated workspace guidance and distinguish

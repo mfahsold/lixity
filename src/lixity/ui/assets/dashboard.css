@@ -1,4 +1,6 @@
 * { box-sizing: border-box; }
+/* Keep the reading width stable when short and long views alternate. */
+html { scrollbar-gutter: stable; }
 body { margin: 0; padding: 2.25rem 1.5rem 4rem; background: var(--bg); color: var(--fg); font: var(--text-body)/var(--line-body) var(--font); -webkit-font-smoothing: antialiased; }
 /* Native controls otherwise use the browser's unrelated default font. */
 button, input, select, textarea { font: inherit; }

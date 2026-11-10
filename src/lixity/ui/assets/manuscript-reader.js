@@ -783,7 +783,6 @@
     var focusLabel = uiLabel(state.focus ? "reading_focus_exit" : "reading_focus");
     focus.querySelector(".reader-control-label").textContent = focusLabel;
     focus.setAttribute("aria-label", focusLabel); focus.title = focusLabel;
-    if (window.LixityWorkspaceNavigation) window.LixityWorkspaceNavigation.companion(open);
     if (state.view !== previous.view || state.surface !== previous.surface) {
       closeMenu(false); selectionTools.hidden = true; settingsPanels.forEach(function(panel) {panel.open = false;});
     }

@@ -186,7 +186,12 @@ function scrollAndFlash(target, options) {
   setPassageScrollMargin(target);
   reduceMotion = Boolean(passageMotionPreference && passageMotionPreference.matches);
   var behavior = options.behavior || "smooth";
-  target.scrollIntoView({ behavior: reduceMotion && behavior === "smooth" ? "auto" : behavior, block: options.block || "start" });
+  var block = options.block || "start";
+  // A tall passage cannot fit below sticky controls. "nearest" may align its
+  // bottom and hide its beginning underneath them; preserve the reading start.
+  if (block === "nearest" && target.closest("#chapters") &&
+      target.getBoundingClientRect().height > innerHeight - parseFloat(target.style.scrollMarginTop)) block = "start";
+  target.scrollIntoView({ behavior: reduceMotion && behavior === "smooth" ? "auto" : behavior, block: block });
   flashOnArrival(target);
 }
 

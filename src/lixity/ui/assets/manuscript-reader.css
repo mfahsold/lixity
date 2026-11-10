@@ -1,5 +1,6 @@
 /* One manuscript surface: restrained document reading with optional tools. */
 .manuscript-reader-controls {
+  container: reader-tools / inline-size;
   position: sticky; top: 0; z-index: 12; display: flex; flex-wrap: wrap;
   align-items: center; gap: .45rem; padding: .45rem var(--space-2);
   max-height: 45dvh; overflow-y: auto; overscroll-behavior: contain;
@@ -485,6 +486,17 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 }
 .manuscript-reader-controls .reader-settings > summary { min-height: 2.5rem; padding-block: .3rem; }
 .manuscript-reader-controls .reader-controls { gap: .25rem; }
+/* Account for sidebar, browser zoom and native-only tools, not viewport alone. */
+@container reader-tools (max-width: 80rem) {
+  #reader-focus, #reader-teleprompter { min-width: 2.5rem; }
+  #reader-focus .reader-control-label,
+  #reader-teleprompter .reader-control-label { display: none; }
+  .analysis-state { display: none; }
+}
+@container reader-tools (max-width: 68rem) {
+  .reader-control-label { display: none; }
+  .reader-compact-control { min-width: 2.5rem; }
+}
 body.lixity-workspace.reader-focus {
   --bg: light-dark(#e9edf4, #080c13);
   --surface: light-dark(#fff, #111824);

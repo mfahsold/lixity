@@ -1,6 +1,7 @@
 """Shared synthetic manuscript and fully populated dashboard for UI tests."""
 
 from lixity import CorpusAnalyzer, CorpusConfig
+from lixity.language import resolve_language
 from lixity.markdown_parser import parse_markdown_blocks
 from lixity.markers import add_marker
 from lixity.style_fingerprint import StyleFingerprint
@@ -72,7 +73,8 @@ def full_dashboard(enabled_actions: tuple[str, ...] | None = None, *, include_ev
         motifs=motif_report(text, {"Ich": r"\bIch\b"}, config).to_dict(),
         showing=showing_report(text, config, metrics=metrics).to_dict(),
         title="Testroman",
-        **({"language_key": language_key} if language_key is not None else {}),
+        **({"language_key": language_key, "labels": resolve_language(CorpusConfig(language=language_key)).labels}
+           if language_key is not None else {}),
         controls=True,
         **({"enabled_actions": enabled_actions} if enabled_actions is not None else {}),
     )

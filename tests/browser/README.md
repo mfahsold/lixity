@@ -30,8 +30,14 @@ track selection, WAV downloads and unchanged dossier disclosure at desktop/mobil
 sizes. `--firefox` repeats it in Firefox. `audio-chapter-import.cjs` exercises the
 native, source-bound WAV import with a synthetic project and muted playback.
 
-`reader-toolbar.cjs` checks the complete German native toolbar at desktop and
-mobile widths, bounded focus controls, keyboard exit and aligned dossier actions.
+`reader-toolbar.cjs` loads the real native Write entry and checks fully localized
+toolbars in all seven languages and both themes. German and English cover nine
+desktop/mobile widths; the other locales cover wide, compact and mobile layouts.
+This uses 66 cases instead of the redundant 126-case Cartesian matrix; add
+`--exhaustive` to repeat every combination when investigating localization.
+It also checks appearance controls, bounded focus controls, keyboard exit and
+aligned dossier actions. Desktop tools compact according to available toolbar
+width; mobile tools may wrap to preserve accessible actions.
 Use `node tests/browser/reader-toolbar.cjs --firefox` for the same checks in Firefox.
 `teleprompter-scroll.cjs` checks long-paragraph selection, chapter synchronization
 and continuous automatic scrolling.
@@ -149,6 +155,11 @@ Completed runs end with a summary of completed/selected suites, passed, failed,
 not run and elapsed time. Failures include a sorted list of suite names and exit
 codes. Sequential runs stop at the first failure; parallel runs finish all
 selected suites before summarizing. A failed run retains a nonzero exit code.
+The five slowest completed suites are reported immediately before the summary;
+`--durations N` changes that count and `--durations 0` disables it. Durations are
+wall times, including contention from other workers, not isolated benchmarks.
+Compare equivalent selections and worker counts before changing coverage. This
+report neither skips suites nor adds timing caches to the release lifecycle.
 
 Before starting suites, the runner executes the support directory's Node tests.
 These check disposable-server startup, malformed readiness data, early exits,

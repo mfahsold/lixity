@@ -299,7 +299,7 @@ async function nestedFixture(page) {
         const box = await page.locator('#' + id).boundingBox(), controls = await page.locator('#manuscript-reader-controls').boundingBox();
         const searchBar = await page.locator('.toolbar').boundingBox();
         assert.ok(box.y >= searchBar.y + searchBar.height,
-          'Opening paragraph diagnostics keeps its prose below the wrapped mobile reader controls');
+          'Opening paragraph diagnostics keeps its prose below the wrapped mobile reader controls: ' + JSON.stringify({box, controls, searchBar}));
         await finish(state);
       } finally { await page.close(); }
     });

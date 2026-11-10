@@ -32,14 +32,14 @@ sys.argv = sys.argv[1:]
 runpy.run_path(sys.argv[0], run_name='__main__')
 """
 
-    def run(codes, jobs=1):
+    def run(codes, jobs=1, extra_args=()):
         for name, code in codes.items():
             (suites / name).write_text(
                 f"import sys\nprint('Suite body: {name}', flush=True)\nsys.exit({code})\n",
                 encoding="utf-8",
             )
         return subprocess.run(  # noqa: S603 - disposable script and fixed test arguments
-            [sys.executable, "-c", bootstrap, str(runner), "--jobs", str(jobs)],
+            [sys.executable, "-c", bootstrap, str(runner), "--jobs", str(jobs), *extra_args],
             cwd=tmp_path,
             capture_output=True,
             text=True,
@@ -68,6 +68,7 @@ def test_sequential_failure_summary_distinguishes_unrun_suites(browser_runner):
     assert "2/3 completed, 1 passed, 1 failed, 1 not run" in result.stderr
     assert "Failed suites:\n  b.cjs (exit 7)" in result.stderr
     assert "--start b.cjs" in result.stderr
+    assert "c.cjs" not in result.stdout
 
 
 @pytest.mark.parametrize("jobs", [1, 3])
@@ -77,3 +78,26 @@ def test_success_summary_reports_all_completed_suites_and_elapsed_time(browser_r
     assert "3/3 completed, 3 passed, 0 failed, 0 not run" in result.stdout
     assert "Failed suites:" not in result.stdout + result.stderr
     assert re.search(r"not run in \d+\.\ds\.\n$", result.stdout)
+    duration_lines = re.findall(r"^  (\d+\.\d)s ([abc]\.cjs)$", result.stdout, re.MULTILINE)
+    assert len(duration_lines) == 3
+    assert [float(seconds) for seconds, _ in duration_lines] == sorted(
+        (float(seconds) for seconds, _ in duration_lines), reverse=True
+    )
+
+
+@pytest.mark.parametrize("jobs", [1, 3])
+@pytest.mark.parametrize("limit", [0, 1])
+def test_duration_report_is_bounded_without_changing_selection(browser_runner, jobs, limit):
+    result = browser_runner({"a.cjs": 0, "b.cjs": 0, "c.cjs": 0}, jobs=jobs,
+                            extra_args=("--durations", str(limit)))
+    assert result.returncode == 0, result.stderr
+    assert "3/3 completed, 3 passed" in result.stdout
+    assert len(re.findall(r"^  \d+\.\ds [abc]\.cjs$", result.stdout, re.MULTILINE)) == limit
+    assert ("Slowest browser suites" in result.stdout) == bool(limit)
+
+
+def test_negative_duration_limit_fails_before_starting_suites(browser_runner):
+    result = browser_runner({"a.cjs": 0}, extra_args=("--durations", "-1"))
+    assert result.returncode == 2
+    assert "--durations must be nonnegative" in result.stderr
+    assert "Suite body:" not in result.stdout

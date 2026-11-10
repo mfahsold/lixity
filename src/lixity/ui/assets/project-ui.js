@@ -955,26 +955,21 @@ window.LixityManuscriptLinks = {
   if (outlineNav) window.LixitySectionNavigation.mount(outlineNav, {host: host, horizontal: false});
 })();
 
-// Share the desktop navigation toggle with companion reading. A temporary
-// companion override never overwrites the user's standalone navigation choice.
+// Navigation width belongs to the reader, never to a context panel.
 (function () {
   var toggle = document.getElementById("workspace-navigation-toggle");
   var content = document.getElementById("workspace-navigation-content");
   if (!toggle || !content) return;
   var destinations = content.parentElement.querySelector(".view-navigation");
   var desktop = window.matchMedia("(min-width: 1100px)");
-  var manualCollapsed = false, companionOpen = false, companionOverride = null;
+  var manualCollapsed = false;
   var toggleFocused = false;
   document.addEventListener("focusin", function(event) { toggleFocused = event.target === toggle; });
   document.body.classList.add("has-workspace-navigation");
   toggle.setAttribute("aria-controls", content.id);
-  function companionActive() {
-    var analysis = document.getElementById("view-pane-analysis");
-    return companionOpen && analysis && analysis.classList.contains("active");
-  }
   function update() {
-    var collapsed = desktop.matches && (companionActive()
-      ? (companionOverride === null ? true : companionOverride) : manualCollapsed);
+    var collapsed = desktop.matches && manualCollapsed;
+    var changed = document.body.classList.contains("navigation-collapsed") !== collapsed;
     if (collapsed && content.contains(document.activeElement)) toggle.focus({preventScroll: true});
     content.hidden = collapsed;
     document.body.classList.toggle("navigation-collapsed", collapsed);
@@ -987,23 +982,16 @@ window.LixityManuscriptLinks = {
       var selected = destinations && destinations.querySelector('[data-view][aria-selected="true"]');
       if (selected) selected.focus({preventScroll: true});
     }
-    window.dispatchEvent(new Event("resize"));
+    if (changed) window.dispatchEvent(new Event("resize"));
   }
   toggle.addEventListener("click", function() {
-    var next = !document.body.classList.contains("navigation-collapsed");
-    if (companionActive()) companionOverride = next;
-    else manualCollapsed = next;
+    var reader = window.LixityReader;
+    var anchor = reader && reader.captureForRestore();
+    manualCollapsed = !manualCollapsed;
     update();
+    if (anchor) reader.restore(anchor);
   });
   desktop.addEventListener("change", update);
-  document.addEventListener("lixity:viewchange", update);
-  window.LixityWorkspaceNavigation = {
-    companion: function(open) {
-      if (companionOpen !== open) companionOverride = null;
-      companionOpen = open;
-      update();
-    }
-  };
   update();
 })();
 
