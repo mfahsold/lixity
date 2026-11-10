@@ -1,6 +1,6 @@
 # Lixity browser workspace manual
 
-Use this manual while reading and reviewing a manuscript in the local app.
+Use this manual to revise a manuscript or explore language use in the local app.
 Start with [Onboarding](ONBOARDING.md) to create, import or open a project;
 [Installation](INSTALLATION.md) owns application setup and service updates.
 The [CLI reference](USAGE.md), [audio manual](AUDIO.md) and
@@ -13,6 +13,7 @@ Later changes marked **unreleased** require a development checkout.
 | Your next task | Start here |
 | --- | --- |
 | Read with one analysis question | [Connected first session](#a-connected-first-session), then [Reading paragraphs](#reading-paragraphs) |
+| Investigate rhythm, vocabulary or readability | [Explore language in the browser](#explore-language-in-the-browser) |
 | Understand a marked word or value | [Counted text and paragraph comparison](#counted-text-and-paragraph-comparison), then [Explore a passage](#explore-a-passage) |
 | Find text or review tense observations | [Search](#searching-the-manuscript), [Start a review](#start-a-review), [Save review decisions](#save-review-decisions) |
 | Compare chapters or style dimensions | [Style area](#style-area), [Settings and interpretation](#settings-and-interpretation), [Style-space navigation](#style-space-navigation) |
@@ -41,6 +42,31 @@ in its project folder and is edited in your text editor.
 The live app separates **Manuscript**, **Research** and **Project**. Open projects
 have separate view URLs under the same app address; those URLs expire on restart.
 Reopen the project from the home address rather than reusing an expired view.
+
+## Explore language in the browser
+
+Start with a concrete question: does sentence rhythm change between chapters,
+or does a passage use a different vocabulary from its surroundings? The same
+workspace supports close reading and descriptive linguistic investigation.
+
+1. Open the text and confirm its analysis language in **Project → Settings**.
+   Website language preferences do not select a linguistic profile. Applying
+   analysis settings rebuilds the dashboard; record the settings used for a comparison.
+2. Open **Analysis overview** and inspect sentence lengths, style measurements
+   or the chapter matrix. Choose a comparison within the supplied text rather
+   than treating its internal reference as a population norm.
+3. Return to a passage and open its measurement explanation. **Counted text**
+   exposes the words or sentences behind the value; **Paragraph comparison**
+   describes a separate comparison with the chapter. Read both in context.
+4. Check the [formula](METHODS.md), [language coverage](LOCALIZATION.md) and
+   [interpretation limits](STABILITY.md) before drawing a conclusion. An unknown
+   measurement is not zero, and a statistical difference is not a literary fault.
+5. For a reproducible record, follow the [CLI text-analysis workflow](USAGE.md#linguistic-text-analysis)
+   to export JSON alongside the input provenance, version and explicit settings.
+   Keep samples, segmentation and preprocessing comparable across runs.
+
+The research archive can retain supporting evidence and authored observations.
+It does not automatically merge retained sources into the manuscript's analysis.
 
 ## Dashboard workflow
 
@@ -642,6 +668,13 @@ project-specific configuration. **Apply** commits the submitted settings; restor
 defaults changes the form until you apply it. Title, author and publication/register
 settings persist in the selected root. Analysis language and thresholds remain
 session choices unless **Save analysis defaults for this project** is selected.
+
+Reading appearance is different: font size, line spacing and reading width apply
+immediately and are remembered in this browser when local storage is available.
+They do not change project files. Project settings currently require **Apply**;
+typing into that form does not save it automatically. Applying settings rebuilds
+the dashboard and can reload the view. Exporting a file or saving a research
+revision remains a separate, explicit action.
 
 See the [configuration reference](USAGE.md#configuration-corpusconfig) for the
 complete persistence rules, root-local TOML examples and configuration discovery.

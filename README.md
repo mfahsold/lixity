@@ -47,7 +47,9 @@ copy: importing, recording, changing settings and saving require the local app.
 The demo and these docs follow current development; features labelled
 **unreleased** may differ from your installed package.
 
-For linguistic work, start with the [text-analysis workflow](https://mfahsold.github.io/lixity/USAGE.md#linguistic-text-analysis), then read the [formulas](https://mfahsold.github.io/lixity/METHODS.md) and [interpretation limits](https://mfahsold.github.io/lixity/STABILITY.md).
+For linguistic work, follow the [browser workflow](https://mfahsold.github.io/lixity/WORKSPACE.md#explore-language-in-the-browser)
+or the [reproducible CLI workflow](https://mfahsold.github.io/lixity/USAGE.md#linguistic-text-analysis),
+then read the [formulas](https://mfahsold.github.io/lixity/METHODS.md) and [interpretation limits](https://mfahsold.github.io/lixity/STABILITY.md).
 
 ## What can you do with Lixity?
 

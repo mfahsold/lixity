@@ -7,6 +7,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Documentation
+
+- Connect the product and documentation entrypoints to a browser workflow for
+  linguistic text analysis. Distinguish automatically remembered reading
+  preferences from explicitly applied project settings and saved research revisions.
+
 ### Fixed
 
 - Keep manuscript search available while scrolling; typing updates matches without
