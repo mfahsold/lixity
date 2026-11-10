@@ -168,9 +168,6 @@ text and measurements, so treat it as manuscript material when sharing. Project
 settings, manuscript writes and research actions require a compatible local
 server; start the installed workspace with `lixity service start --open`.
 
-The live workspace separates **Manuscript**, **Research** and **Project**. Use
-[Onboarding](ONBOARDING.md#open-or-import) for create/import/open: a file preview
-writes nothing until confirmation; opening reconnects an existing project.
 For research, use Zotero for ordinary source work and Lixity for retained evidence,
 authored records and manuscript associations; the [research guide](research/USAGE.md)
 defines that boundary and the optional local-import workflow.
@@ -980,8 +977,11 @@ separately disclosed analytics wrapper; that is not part of ordinary exports.
 
 A reading website is **not access control, encryption or a backup**. Anyone
 with its files can read or copy the included content. Confidential hosting needs
-its own access controls. Use [archive export and restoration](research/USAGE.md#export-and-restoration)
-for restorable backups. Limits fail explicitly rather than silently dropping
+its own access controls. For saved manuscripts, selected settings and attachments
+alongside retained research, use [project backup and restore](PROJECT_BACKUP.md)
+(unreleased). [Research archive export and restoration](research/USAGE.md#export-and-restoration)
+covers the research store, not the manuscript or editor drafts.
+Limits fail explicitly rather than silently dropping
 material: 64 MiB each for manuscript input, archived record input and prepared
 website data; 50,000 prepared research responses; and 200 MiB for the complete bundle.
 

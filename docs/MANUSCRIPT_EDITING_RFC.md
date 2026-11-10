@@ -159,7 +159,7 @@ Do not announce every keystroke or save transition. Treat native spellchecking
 as optional browser behavior, not Lixity's deterministic linguistic analysis.
 Any external spelling service needs a separate privacy and dependency decision.
 
-## Acceptance gates before enabling writes
+## Acceptance gates before promoting writing for routine use
 
 | Area | Required evidence |
 | --- | --- |
@@ -171,12 +171,17 @@ Any external spelling service needs a separate privacy and dependency decision.
 | Analysis | Revision mismatch and reordered-result rejection; edited/deleted/repeated-quote anchors; unchanged deterministic results for the same snapshot |
 | Packaging/privacy | Offline packaged install, lazy-loaded assets, license inventory, read-only exports without write controls, no private fixtures |
 
-Performance figures are not yet measured. Viewport rendering is a useful mechanism,
-not proof that long wrapped manuscripts or thousands of decorations meet our needs.
-Establish a reproducible baseline before selecting latency and memory budgets.
+The browser suite reports single-run mounting and six-keystroke timings for
+synthetic 50k/150k/300k-word documents. These component observations are not
+latency distributions, memory budgets or full-analysis benchmarks. Viewport
+rendering alone does not establish performance for dense annotations or real
+writing sessions. See [browser test coverage](https://github.com/mfahsold/lixity/blob/main/tests/browser/README.md)
+for the implemented checks; establish repeatable budgets before making broader
+performance claims.
 
-The first implementation should validate a synthetic Markdown manuscript with
-Read/Write, undo, conflict-safe local saving and recovery. Rich-text hiding,
+The current unreleased implementation exercises synthetic Markdown manuscripts
+with Read/Write, undo, conditional saving and recovery. The acceptance table
+above still includes manual and fault-injection work beyond that coverage. Rich-text hiding,
 collaborative CRDTs, cloud sync, tracked-change review and a backend rewrite are
 separate decisions after this foundation works. No migration of existing projects
 or manuscript mutation is authorized by this RFC alone.

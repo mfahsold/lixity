@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import errno
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
@@ -111,3 +112,40 @@ def test_new_and_legacy_timestamp_names_remain_one_archive_family(tmp_path):
         (tmp_path / name).write_text("Synthetic export.\n", encoding="utf-8")
     assert prune_archive(str(tmp_path), keep_last=2) == 1
     assert sorted(path.name for path in tmp_path.iterdir()) == names[1:]
+
+
+@pytest.mark.parametrize("error", [errno.EIO, errno.EACCES, errno.EXDEV])
+def test_archive_failure_preserves_existing_destination_and_source(tmp_path, error):
+    from lixity.publishing import archive_timestamped
+
+    source = tmp_path / 'report_2026-01-01_10-00.md'
+    source.write_bytes(b'new synthetic bytes')
+    archive = tmp_path / 'archive'
+    archive.mkdir()
+    target = archive / source.name
+    target.write_bytes(b'previous archived bytes')
+    with (
+        patch('lixity.publishing.os.replace', side_effect=OSError(error, 'publication failed')),
+        pytest.raises(OSError, match='publication failed'),
+    ):
+        archive_timestamped(str(tmp_path), r'report_.*\.md$', [])
+    assert source.read_bytes() == b'new synthetic bytes'
+    assert target.read_bytes() == b'previous archived bytes'
+
+
+def test_archive_replaces_destination_without_following_its_symlink(tmp_path):
+    from lixity.publishing import archive_timestamped
+
+    source = tmp_path / 'report_2026-01-01_10-00.md'
+    source.write_bytes(b'new synthetic bytes')
+    archive = tmp_path / 'archive'
+    archive.mkdir()
+    unrelated = tmp_path / 'unrelated.md'
+    unrelated.write_bytes(b'unrelated bytes')
+    target = archive / source.name
+    target.symlink_to(unrelated)
+    assert archive_timestamped(str(tmp_path), r'report_.*\.md$', []) == 1
+    assert not source.exists()
+    assert not target.is_symlink()
+    assert target.read_bytes() == b'new synthetic bytes'
+    assert unrelated.read_bytes() == b'unrelated bytes'

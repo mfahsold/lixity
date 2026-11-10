@@ -1056,8 +1056,12 @@ Remove `--dry-run` to write `exports/<slug>_metrics.json` (v2), `_profile.json`
 (v2), `_style.json` (v5), `_style_passport.txt` (legacy filename), `_report.md`
 and `_dashboard.html`. Identical content causes zero writes. Changed artifacts
 get unique timestamped versions and atomically replace stable links or fallback
-copies; the last 10 versions per artifact family remain in `exports/archive/`.
-A failed replacement preserves the previous stable artifact and reports an error.
+copies. A failed stable replacement preserves the previous artifact and reports
+an error. The last 10 versions per artifact family remain in `exports/archive/`.
+Archive rotation atomically replaces each same-named file on the same filesystem.
+A failed move preserves the source and existing archive file; moving an archive
+across filesystems fails explicitly rather than copying over a retained version.
+Earlier successful archive moves are not rolled back if a later move fails.
 
 An explicit manuscript path wins. Otherwise discovery uses the selected root's
 [configured manuscript](#default-manuscript), then tries `<folder>.md`,

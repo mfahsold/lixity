@@ -9,6 +9,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Preserve existing export history when an archive move fails: replace files
+  atomically without deleting the previous target first. Cross-filesystem archive
+  moves fail explicitly. Remove repeated workspace guidance and distinguish
+  measured editor smoke timings from outstanding performance acceptance work.
+  Clarify project versus research-only backup scope and link development installs
+  to the shared checkout verification steps.
+
 - Extend unreleased writing with localized search/replace, manual conflict and
   recovery comparison, guarded nested research drafts and revision-validated
   literal reader selections. Preserve undo across reading and writing.

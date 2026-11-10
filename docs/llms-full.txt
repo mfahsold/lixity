@@ -1440,8 +1440,12 @@ Remove `--dry-run` to write `exports/<slug>_metrics.json` (v2), `_profile.json`
 (v2), `_style.json` (v5), `_style_passport.txt` (legacy filename), `_report.md`
 and `_dashboard.html`. Identical content causes zero writes. Changed artifacts
 get unique timestamped versions and atomically replace stable links or fallback
-copies; the last 10 versions per artifact family remain in `exports/archive/`.
-A failed replacement preserves the previous stable artifact and reports an error.
+copies. A failed stable replacement preserves the previous artifact and reports
+an error. The last 10 versions per artifact family remain in `exports/archive/`.
+Archive rotation atomically replaces each same-named file on the same filesystem.
+A failed move preserves the source and existing archive file; moving an archive
+across filesystems fails explicitly rather than copying over a retained version.
+Earlier successful archive moves are not rolled back if a later move fails.
 
 An explicit manuscript path wins. Otherwise discovery uses the selected root's
 [configured manuscript](#default-manuscript), then tries `<folder>.md`,
@@ -2410,9 +2414,6 @@ text and measurements, so treat it as manuscript material when sharing. Project
 settings, manuscript writes and research actions require a compatible local
 server; start the installed workspace with `lixity service start --open`.
 
-The live workspace separates **Manuscript**, **Research** and **Project**. Use
-[Onboarding](ONBOARDING.md#open-or-import) for create/import/open: a file preview
-writes nothing until confirmation; opening reconnects an existing project.
 For research, use Zotero for ordinary source work and Lixity for retained evidence,
 authored records and manuscript associations; the [research guide](research/USAGE.md)
 defines that boundary and the optional local-import workflow.
@@ -3222,8 +3223,11 @@ separately disclosed analytics wrapper; that is not part of ordinary exports.
 
 A reading website is **not access control, encryption or a backup**. Anyone
 with its files can read or copy the included content. Confidential hosting needs
-its own access controls. Use [archive export and restoration](research/USAGE.md#export-and-restoration)
-for restorable backups. Limits fail explicitly rather than silently dropping
+its own access controls. For saved manuscripts, selected settings and attachments
+alongside retained research, use [project backup and restore](PROJECT_BACKUP.md)
+(unreleased). [Research archive export and restoration](research/USAGE.md#export-and-restoration)
+covers the research store, not the manuscript or editor drafts.
+Limits fail explicitly rather than silently dropping
 material: 64 MiB each for manuscript input, archived record input and prepared
 website data; 50,000 prepared research responses; and 200 MiB for the complete bundle.
 

@@ -463,11 +463,12 @@ uv tool install --python 3.12 --managed-python --reinstall-package lixity "git+h
 `main` changes over time; an unreleased checkout can differ from the published
 release and demo. Review
 [release notes](https://github.com/mfahsold/lixity/releases) before switching.
-Stop the managed service before replacing its installation, verify the new
-version, then run `lixity service restart --open` to reuse the recorded launch
-settings. A checkout, installed package and running service can contain different
-code even when `--version` matches: unreleased commits retain the release number.
-Reload browser tabs after the restart.
+Stop the managed service before replacing its installation, verify the installed
+code, then run `lixity service restart --open` to reuse the recorded launch settings.
+Reload browser tabs after the restart. Follow the
+[checkout refresh checks](#refresh-an-existing-local-checkout-installation) when
+comparing a development build with local source; version strings alone do not
+establish parity.
 
 </details>
 

@@ -55,8 +55,11 @@ def archive_timestamped(
 ) -> int:
     """Archives timestamped artefacts that are not listed in ``keep_basenames``.
 
-    - Symlinks and non-files are never touched (stable references remain).
-    - Archive files with the same name are replaced atomically.
+    - Source symlinks and non-files are skipped (stable references remain).
+    - Archive files with the same name are replaced atomically on the same
+      filesystem. Failure preserves both the source and any existing target;
+      cross-filesystem moves raise instead of falling back to a partial copy.
+      Each move is independent; earlier successful moves are not rolled back.
     - Returns: number of archived files.
     """
     archive_dir = os.path.join(export_dir, archive_subdir)
@@ -73,9 +76,7 @@ def archive_timestamped(
         if entry in keep or not compiled.match(entry):
             continue
         target_path = os.path.join(archive_dir, entry)
-        if os.path.exists(target_path):
-            os.remove(target_path)
-        shutil.move(entry_path, target_path)
+        os.replace(entry_path, target_path)
         archived += 1
     return archived
 
