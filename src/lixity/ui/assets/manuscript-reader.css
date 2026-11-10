@@ -213,8 +213,8 @@ body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: 
 .manuscript-reading #chapters {
   max-width: min(100%, calc(var(--reader-measure, 68ch) + 4rem));
   margin: 1.5rem auto 4rem;
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg);
-  box-shadow: var(--shadow);
+  background: var(--surface); border: 1px solid transparent; border-radius: var(--radius-lg);
+  box-shadow: 0 0 2.5rem .5rem color-mix(in srgb, var(--surface) 65%, transparent);
 }
 .manuscript-reading .chapter {
   --reader-action-gutter: 2.75rem;
@@ -456,6 +456,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   }
 }
 @media (forced-colors: active) {
+  .manuscript-reading #chapters { border-color: CanvasText; }
   .reader-comparison-value { border-inline-start-color: CanvasText; }
   .manuscript-reading.workbench-analysis.comparison-on:not(.workbench-overview):not(.reader-focus) .ptext.metric-notable { background: none; }
   .reader-evidence-toggle:has(input:checked), .reader-comparison-toggle:has(input:checked) { border-color: Highlight; }

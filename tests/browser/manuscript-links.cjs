@@ -139,6 +139,8 @@ async function selectText(page, text) {
         return route.fulfill({contentType: 'text/html', body: fixtures['read-only']});
       });
       await page.goto('http://lixity.test/');
+      assert.equal(await page.locator('#chapters .manuscript-link-review').count(), 0,
+        'Association review belongs to Research and must not displace manuscript reading');
       assert.equal(await page.locator('body').getAttribute('data-manuscript-links'), 'read');
       assert.equal(await page.locator('#manuscript-pdf-form, #workspace-reader-toggle').count(), 0,
         'Review alone does not advertise PDF generation or a dossier companion');

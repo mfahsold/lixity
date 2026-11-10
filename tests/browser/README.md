@@ -14,7 +14,8 @@ sizes. `--firefox` repeats it in Firefox. `audio-chapter-import.cjs` exercises t
 native, source-bound WAV import with a synthetic project and muted playback.
 
 `reader-toolbar.cjs` checks the complete German native toolbar at desktop and
-mobile widths, bounded focus controls and keyboard exit.
+mobile widths, bounded focus controls, keyboard exit and aligned dossier actions.
+Use `node tests/browser/reader-toolbar.cjs --firefox` for the same checks in Firefox.
 `teleprompter-scroll.cjs` checks long-paragraph selection, chapter synchronization
 and continuous automatic scrolling.
 

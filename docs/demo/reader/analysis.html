@@ -2044,6 +2044,9 @@ body[data-read-only="true"] [data-requires-live] { display: none !important; }
 .voice-ref-meta { font-size: var(--text-micro); color: var(--muted); }
 
 
+/* Nested record actions share the card action row, not a second top offset. */
+.research-card-actions > .research-record-actions { margin-top: 0; align-items: center; }
+
 /*! PhotoSwipe main CSS by Dmytro Semenov | photoswipe.com */
 
 .pswp {
@@ -3390,10 +3393,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .manuscript-claim-hit { border-bottom-color: CanvasText; }
 }
 .manuscript-claim-hit.text-hit { background: var(--accent-light); }
-.manuscript-link-review, .manuscript-link-review-list { margin: var(--space-3) 0; }
-.manuscript-link-review > summary { cursor: pointer; }
+.manuscript-link-review-list { margin: var(--space-3) 0; }
 .manuscript-link-review-item { padding: var(--space-3) 0; border-bottom: 1px solid var(--line); }
-.manuscript-link-review blockquote, .manuscript-link-review-list blockquote, .manuscript-link-dialog blockquote { margin: var(--space-2) 0; padding: var(--space-2); border-left: 2px solid var(--accent); overflow-wrap: anywhere; white-space: pre-wrap; }
+.manuscript-link-review-list blockquote, .manuscript-link-dialog blockquote { margin: var(--space-2) 0; padding: var(--space-2); border-left: 2px solid var(--accent); overflow-wrap: anywhere; white-space: pre-wrap; }
 .manuscript-link-dialog .modal-body { display: grid; gap: var(--space-3); min-width: 0; }
 .manuscript-link-dialog select { width: 100%; min-width: 0; max-width: 100%; }
 .manuscript-link-dialog .manuscript-link-retention { display: flex; align-items: start; gap: var(--space-2); font-size: var(--text-small); }
@@ -3620,8 +3622,8 @@ body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: 
 .manuscript-reading #chapters {
   max-width: min(100%, calc(var(--reader-measure, 68ch) + 4rem));
   margin: 1.5rem auto 4rem;
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg);
-  box-shadow: var(--shadow);
+  background: var(--surface); border: 1px solid transparent; border-radius: var(--radius-lg);
+  box-shadow: 0 0 2.5rem .5rem color-mix(in srgb, var(--surface) 65%, transparent);
 }
 .manuscript-reading .chapter {
   --reader-action-gutter: 2.75rem;
@@ -3863,6 +3865,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   }
 }
 @media (forced-colors: active) {
+  .manuscript-reading #chapters { border-color: CanvasText; }
   .reader-comparison-value { border-inline-start-color: CanvasText; }
   .manuscript-reading.workbench-analysis.comparison-on:not(.workbench-overview):not(.reader-focus) .ptext.metric-notable { background: none; }
   .reader-evidence-toggle:has(input:checked), .reader-comparison-toggle:has(input:checked) { border-color: Highlight; }

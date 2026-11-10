@@ -76,7 +76,7 @@ server.serve_forever()
     });
     await page.goto(server.fixture.url);
     await page.locator('#tab-view-analysis').click();
-    await page.locator('.manuscript-link-review .ctl-status').waitFor({state: 'attached'});
+    await page.locator('#research-manuscript-review .ctl-status').waitFor({state: 'attached'});
     assert.equal(reviewRequests.length, 0,
       'An uninitialized native project opens continuous reading without requesting an unavailable archive');
     await page.locator('#tab-view-research').click();
@@ -84,7 +84,7 @@ server.serve_forever()
     await page.locator('#r-init-btn').click();
     await page.locator('#research-tabs').waitFor({state: 'visible'});
     await page.locator('#tab-view-analysis').click();
-    await page.locator('.manuscript-link-review .ctl-note').first().waitFor({state: 'attached'});
+    await page.locator('#research-manuscript-review .ctl-note').first().waitFor({state: 'attached'});
     assert.ok(reviewRequests.length > 0, 'Research initialized in the same page becomes readable on return');
     const count = reviewRequests.length;
     const switched = await page.request.post(server.fixture.url + '/api/project-open', {
@@ -93,7 +93,7 @@ server.serve_forever()
     assert.equal(switched.status(), 200);
     await page.reload();
     await page.locator('#tab-view-analysis').click();
-    await page.locator('.manuscript-link-review .ctl-status').waitFor({state: 'attached'});
+    await page.locator('#research-manuscript-review .ctl-status').waitFor({state: 'attached'});
     assert.equal(reviewRequests.length, count,
       'Switching to a project without an archive does not reuse previous initialization');
     assert.deepEqual(errors, [], 'Expected archive absence creates no browser errors');

@@ -2752,6 +2752,10 @@ the claim and quote, then permit retention before saving. Preview writes nothing
 saved links pin exact claim/paragraph versions and need review after changes.
 See [retention, anchoring and compatibility](research/USAGE.md#associate-a-manuscript-quote-with-a-claim).
 
+The full manuscript-association list lives in **Research → Review**, outside the
+reading surface. Passage controls still open the related saved records and offer
+a return to the manuscript; expanding review never inserts a list above the prose.
+
 A recorded association retains the exact claim and dossier versions used for it.
 Claim and dossier views can open their manuscript
 associations in Review. Only an exactly resolved current passage offers a direct

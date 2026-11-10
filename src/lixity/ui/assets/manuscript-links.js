@@ -243,9 +243,6 @@
   if (termsSection && termsTabHost) {
     termsSection.hidden = false;
   }
-  var reviewBox = element("details", "", "manuscript-link-review");
-  reviewBox.appendChild(element("summary", label("manuscript_link_review")));
-  var reviewBody = element("div"); reviewBox.appendChild(reviewBody); chapters.prepend(reviewBox);
   function matchesPanel(row, panel) {
     var a = row.anchor;
     if (row.anchor_state !== "resolved" || !a || row.resolved_start_line !== Number(panel.dataset.start) ||
@@ -378,7 +375,6 @@
     });
     // An identical refresh must retain controls that native dialogs use as
     // their focus-return targets. Filters still own a distinct rendered view.
-    if (!unchanged) reviewBody.replaceChildren(renderReviewItems(report));
     if (reviewTabHost && (!unchanged || renderedReviewFilter !== filterKey)) {
       reviewTabHost.replaceChildren(renderReviewItems(report, true));
       renderedReviewFilter = filterKey;
@@ -394,7 +390,6 @@
     reviewFailure = {message: message, state: stale ? "stale" : "unavailable"};
     review = null;
     document.querySelectorAll("#chapters .ptext").forEach(function(panel) { bridge.marks(panel, []); paragraphLinksControl(panel); });
-    reviewBody.replaceChildren(reviewNote(message, stale));
     if (reviewTabHost) reviewTabHost.replaceChildren(reviewNote(message, stale));
   }
   async function loadReview(automatic) {

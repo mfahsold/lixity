@@ -9,6 +9,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Keep manuscript associations in the central Research review instead of a
+  duplicate list above the prose. Soften reading-surface edges without blurring
+  text, and align nested dossier actions on the same row.
+
 - Keep the reading toolbar compact and bound chapter selection width in focus
   mode. Dark focus surroundings are quieter without dimming manuscript text.
 - Track the paragraph containing the teleprompter reading position, synchronize

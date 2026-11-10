@@ -231,7 +231,7 @@ server.serve_forever()
           if (url.pathname === '/api/project-structure') reads.push(url);
         });
         await page.goto(server.fixture.url);
-        await page.locator('.manuscript-link-review .ctl-note').first().waitFor({state: 'attached'});
+        await page.locator('#research-manuscript-review .ctl-note').first().waitFor({state: 'attached'});
         assert.deepEqual(reads, [], 'Native reading does not inspect project folders in the background');
         await page.locator('#tab-view-project').click();
         await page.locator('#project-overview-body:not([hidden])').waitFor();

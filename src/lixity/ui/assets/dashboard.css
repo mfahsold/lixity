@@ -1284,3 +1284,6 @@ body[data-read-only="true"] [data-requires-live] { display: none !important; }
 .voice-ref-text { font-size: var(--text-small); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .voice-ref-meta { font-size: var(--text-micro); color: var(--muted); }
 
+
+/* Nested record actions share the card action row, not a second top offset. */
+.research-card-actions > .research-record-actions { margin-top: 0; align-items: center; }
