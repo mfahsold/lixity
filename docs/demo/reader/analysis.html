@@ -131,11 +131,11 @@ h2, .section-heading, .settings-heading { font-size: var(--text-section-title); 
 .panel .hint { margin: 0; }
 #style-panels { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
 #style-panels > .panel { padding: 0; border: 0; box-shadow: none; background: transparent; }
-.review-routes { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.review-routes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); align-items: start; gap: var(--space-3); }
 .review-route { display: flex; flex-direction: column; align-items: flex-start; gap: .7rem; min-width: 0; }
 .review-route h3 { margin: 0; font-size: var(--text-body); }
 .review-route p { margin: 0; color: var(--muted); font-size: var(--text-small); line-height: 1.6; }
-.review-route .ctl { display: inline-flex; align-items: center; max-width: 100%; margin-top: auto; text-decoration: none; }
+.review-route .ctl { display: inline-flex; align-items: center; max-width: 100%; margin-top: 0; text-decoration: none; }
 .manuscript-pdf { min-width: 0; }
 .manuscript-pdf > summary { cursor: pointer; font-size: var(--text-control); line-height: var(--line-control); min-height: 2.5rem; padding: .45rem .8rem; }
 .manuscript-pdf[open] > summary { margin-bottom: var(--space-3); }
@@ -480,10 +480,10 @@ details.markdown-alert summary.markdown-alert-title::-webkit-details-marker { di
 /* --- Markdown Editor -------------------------------------------------- */
 .markdown-editor-wrap { display: flex; flex-direction: column; width: 100%; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
 .markdown-editor-toolbar { display: flex; flex-wrap: wrap; gap: .2rem; padding: .35rem .5rem; border-bottom: 1px solid var(--line); background: var(--surface-secondary, rgba(0,0,0,.02)); }
-.editor-tool-btn { display: inline-flex; align-items: center; justify-content: center; width: 1.75rem; height: 1.75rem; padding: 0; border: 1px solid transparent; border-radius: var(--radius-sm, 3px); background: transparent; color: var(--fg); cursor: pointer; transition: background .12s, border-color .12s; }
+.editor-tool-btn { display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; padding: 0; border: 1px solid transparent; border-radius: var(--radius-sm, 3px); background: transparent; color: var(--fg); cursor: pointer; transition: background .12s, border-color .12s; }
 .editor-tool-btn:hover { background: var(--surface-hover, rgba(0,0,0,.06)); border-color: var(--line); }
 .editor-tool-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.markdown-editor-wrap > .markdown-editor-area { border: 0 !important; border-radius: 0 !important; box-shadow: none !important; resize: vertical; margin: 0 !important; padding: .65rem .75rem; min-height: 8rem; font-family: var(--font); font-size: var(--text-body); line-height: 1.5; }
+.markdown-editor-wrap > .markdown-editor-area { border: 0 !important; border-radius: 0 !important; box-shadow: none !important; resize: vertical; margin: 0 !important; padding: .8rem 1rem; min-height: clamp(10rem, 30dvh, 24rem); max-height: 60dvh; scrollbar-gutter: stable; font-family: var(--font); font-size: var(--text-body); line-height: 1.5; }
 .markdown-editor-footer { display: flex; justify-content: flex-end; padding: .25rem .65rem; border-top: 1px solid var(--line); font-size: var(--text-nano, .75rem); color: var(--muted); background: var(--surface-secondary, rgba(0,0,0,.02)); }
 
 /* --- Obsidian & Minimal Theme Patterns -------------------------------- */
@@ -757,6 +757,11 @@ details.markdown-alert summary.markdown-alert-title::-webkit-details-marker { di
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
+/* One quiet focus boundary for every enhanced Markdown field. */
+.markdown-editor-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.markdown-editor-wrap > .markdown-editor-area:focus { outline: none; }
+@media (pointer: coarse) { .editor-tool-btn { width: 2.75rem; height: 2.75rem; } }
+
 * { box-sizing: border-box; }
 body { margin: 0; padding: 2.25rem 1.5rem 4rem; background: var(--bg); color: var(--fg); font: var(--text-body)/var(--line-body) var(--font); -webkit-font-smoothing: antialiased; }
 /* Native controls otherwise use the browser's unrelated default font. */
@@ -907,8 +912,10 @@ font-size: var(--text-small);
 }
 .text-search-group {
 display: inline-flex; flex-wrap: wrap; align-items: center; gap: .35rem; flex: 1 1 22rem; min-width: 0;
-& input[type="search"] { flex: 1 1 12rem; min-width: 0; }
-& .ctl-note { min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+& input[type="search"] { flex: 1 1 8rem; min-width: 0; }
+& .ctl-note { flex-basis: 100%; min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+& .ctl-note:empty { display: none; }
+& button.ctl { flex: 0 0 2.5rem; padding-inline: .35rem; }
 }
 /* A paragraph that does not match the query leaves the page entirely, so the
 result list is the manuscript filtered down to what was searched for. */
@@ -1614,7 +1621,7 @@ border-radius: 0; text-align: left; overflow-wrap: anywhere;
 .research-revision-fields .ctl { width: 100%; min-width: 0; }
 #research-revision-form { min-height: 0; }
 #research-revision-form > *, .research-revision-fields > * { flex-shrink: 0; }
-#research-revision-form textarea.ctl { min-height: 5rem; }
+#research-revision-form textarea.ctl:not(.markdown-editor-area) { min-height: 5rem; }
 #research-revision-field-body { min-height: 12rem; }
 .research-revision-choice { display: grid; gap: .45rem; margin: 0; padding: .7rem; border: 1px solid var(--line); border-radius: var(--radius); }
 .research-revision-choice label { display: flex; align-items: flex-start; gap: .5rem; cursor: pointer; }
@@ -2046,6 +2053,8 @@ body[data-read-only="true"] [data-requires-live] { display: none !important; }
 
 /* Nested record actions share the card action row, not a second top offset. */
 .research-card-actions > .research-record-actions { margin-top: 0; align-items: center; }
+
+#modal-research-revision:has(#research-revision-form[hidden]) #research-revision-actions { display: none; }
 
 /*! PhotoSwipe main CSS by Dmytro Semenov | photoswipe.com */
 
@@ -3419,7 +3428,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .manuscript-reader-controls[hidden] { display: none; }
 .manuscript-reader-controls > .toolbar-sections { flex-basis: 100%; min-width: 0; margin: 0; }
 @media (max-height: 600px) {
-  .manuscript-reading.workbench-overview .manuscript-reader-controls {
+  .manuscript-reading.workbench-overview .manuscript-reader-controls,
+  .manuscript-reading.workbench-overview .toolbar {
     position: static; max-height: none; overflow: visible;
   }
 }
@@ -3614,11 +3624,12 @@ body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: 
 .manuscript-reading .reader-controls .ctl-note { display: none !important; }
 .manuscript-reading:not(.workbench-overview) .analysis-outline-layout { display: block; }
 .manuscript-reading .toolbar {
-  position: static; padding: .5rem 0; gap: .5rem 1rem;
-  background: transparent; border: 0; backdrop-filter: none; -webkit-backdrop-filter: none;
+  position: sticky; top: calc(var(--workbench-return-height, 0px) + var(--reader-controls-height, 0px)); padding: .35rem 0; gap: .4rem 1rem;
+  background: var(--bg); border: 0; backdrop-filter: none; -webkit-backdrop-filter: none;
 }
 .manuscript-reading .reader-controls { flex-basis: auto; }
-.manuscript-reading .text-search-group { flex-basis: 12rem; }
+.manuscript-reading .text-search-group { flex-basis: 100%; }
+.manuscript-reading:not(.workbench-overview) .toolbar > .totop { display: none; }
 .manuscript-reading #chapters {
   max-width: min(100%, calc(var(--reader-measure, 68ch) + 4rem));
   margin: 1.5rem auto 4rem;
@@ -3782,8 +3793,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   }
   .workbench-thread-mobile .ctl { justify-self: start; }
   .workbench-thread-mobile p { font-size: var(--text-note); line-height: var(--line-control); }
-  .manuscript-reader-controls,
-  #view-pane-analysis .toolbar { top: var(--workbench-return-height, 0px); }
+  .manuscript-reader-controls { top: var(--workbench-return-height, 0px); }
 }
 .reader-passage-context { display: grid; gap: var(--space-2); padding-block-end: var(--space-3); border-bottom: 1px solid var(--line); }
 .reader-passage-context p { margin: 0; }
@@ -4242,7 +4252,7 @@ body.lixity-workspace.reader-focus {
 <meta property="og:url" content="https://mfahsold.github.io/lixity/demo/reader/analysis.html"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta property="og:image:width" content="2960"/>
-<meta property="og:image:height" content="2078"/>
+<meta property="og:image:height" content="2068"/>
 <meta property="og:image:alt" content="Lixity continuous manuscript reader with chapter navigation and contextual tools"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Warehouse 4 — chapter analysis"/>
@@ -4250,7 +4260,7 @@ body.lixity-workspace.reader-focus {
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta name="twitter:image:alt" content="Lixity continuous manuscript reader with chapter navigation and contextual tools"/>
 <script type="application/ld+json">
-{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Warehouse 4 — chapter analysis", "description": "Explore selected chapter measurements for the synthetic Warehouse 4 reading copy.", "url": "https://mfahsold.github.io/lixity/demo/reader/analysis.html", "mainEntityOfPage": "https://mfahsold.github.io/lixity/demo/reader/analysis.html", "image": {"@type": "ImageObject", "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-light.png", "width": 2960, "height": 2078, "caption": "Lixity continuous manuscript reader with chapter navigation and contextual tools"}, "inLanguage": "en", "author": {"@type": "Person", "name": "Matthias Fahsold", "url": "https://github.com/mfahsold"}, "isPartOf": {"@type": "WebSite", "name": "Lixity", "url": "https://mfahsold.github.io/lixity/"}, "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE"}
+{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Warehouse 4 — chapter analysis", "description": "Explore selected chapter measurements for the synthetic Warehouse 4 reading copy.", "url": "https://mfahsold.github.io/lixity/demo/reader/analysis.html", "mainEntityOfPage": "https://mfahsold.github.io/lixity/demo/reader/analysis.html", "image": {"@type": "ImageObject", "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-light.png", "width": 2960, "height": 2068, "caption": "Lixity continuous manuscript reader with chapter navigation and contextual tools"}, "inLanguage": "en", "author": {"@type": "Person", "name": "Matthias Fahsold", "url": "https://github.com/mfahsold"}, "isPartOf": {"@type": "WebSite", "name": "Lixity", "url": "https://mfahsold.github.io/lixity/"}, "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE"}
 </script>
 </head>
 <body class="lixity-report" data-read-only="true"><main class="page">

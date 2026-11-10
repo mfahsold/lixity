@@ -273,7 +273,8 @@ async function nestedFixture(page) {
         await page.evaluate(id => scrollAndFlash(document.getElementById(id), {block: 'center', behavior: 'instant'}), id);
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         const box = await page.locator('#' + id).boundingBox(), controls = await page.locator('#manuscript-reader-controls').boundingBox();
-        assert.ok(Math.abs(box.y + box.height / 2 - (900 + controls.height + 12) / 2) <= 1,
+        const searchBar = await page.locator('.toolbar').boundingBox();
+        assert.ok(Math.abs(box.y + box.height / 2 - (900 + searchBar.y + searchBar.height + 12) / 2) <= 1,
           'Explicit centered routes use the available reading area and complete immediately: ' + JSON.stringify({box, controls}));
         assert.equal(await page.locator('#manuscript-analysis-toggle').evaluate(node => node === document.activeElement), true,
           'A shared programmatic jump preserves a visible focus owner');
@@ -296,7 +297,8 @@ async function nestedFixture(page) {
         }, id);
         await page.waitForFunction(id => document.getElementById(id).classList.contains('flash'), id);
         const box = await page.locator('#' + id).boundingBox(), controls = await page.locator('#manuscript-reader-controls').boundingBox();
-        assert.ok(box.y >= controls.y + controls.height,
+        const searchBar = await page.locator('.toolbar').boundingBox();
+        assert.ok(box.y >= searchBar.y + searchBar.height,
           'Opening paragraph diagnostics keeps its prose below the wrapped mobile reader controls');
         await finish(state);
       } finally { await page.close(); }
@@ -310,7 +312,8 @@ async function nestedFixture(page) {
         await page.evaluate(id => scrollAndFlash(document.getElementById(id)), id);
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         const box = await page.locator('#' + id).boundingBox(), controls = await page.locator('#manuscript-reader-controls').boundingBox();
-        assert.ok(box.y >= controls.y + controls.height && box.y <= controls.y + controls.height + 14,
+        const searchBar = await page.locator('.toolbar').boundingBox();
+        assert.ok(box.y >= searchBar.y + searchBar.height && box.y <= searchBar.y + searchBar.height + 14,
           'A live reduced-motion change reaches the prose immediately and preserves sticky-reader clearance: ' + JSON.stringify({box, controls}));
         await page.waitForFunction(id => document.getElementById(id).classList.contains('flash'), id);
         assert.equal(await page.locator('#' + id).evaluate(node => node.classList.contains('reader-return-target')), true,

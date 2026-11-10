@@ -148,8 +148,10 @@ font-size: var(--text-small);
 }
 .text-search-group {
 display: inline-flex; flex-wrap: wrap; align-items: center; gap: .35rem; flex: 1 1 22rem; min-width: 0;
-& input[type="search"] { flex: 1 1 12rem; min-width: 0; }
-& .ctl-note { min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+& input[type="search"] { flex: 1 1 8rem; min-width: 0; }
+& .ctl-note { flex-basis: 100%; min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+& .ctl-note:empty { display: none; }
+& button.ctl { flex: 0 0 2.5rem; padding-inline: .35rem; }
 }
 /* A paragraph that does not match the query leaves the page entirely, so the
 result list is the manuscript filtered down to what was searched for. */
@@ -855,7 +857,7 @@ border-radius: 0; text-align: left; overflow-wrap: anywhere;
 .research-revision-fields .ctl { width: 100%; min-width: 0; }
 #research-revision-form { min-height: 0; }
 #research-revision-form > *, .research-revision-fields > * { flex-shrink: 0; }
-#research-revision-form textarea.ctl { min-height: 5rem; }
+#research-revision-form textarea.ctl:not(.markdown-editor-area) { min-height: 5rem; }
 #research-revision-field-body { min-height: 12rem; }
 .research-revision-choice { display: grid; gap: .45rem; margin: 0; padding: .7rem; border: 1px solid var(--line); border-radius: var(--radius); }
 .research-revision-choice label { display: flex; align-items: flex-start; gap: .5rem; cursor: pointer; }
@@ -1287,3 +1289,5 @@ body[data-read-only="true"] [data-requires-live] { display: none !important; }
 
 /* Nested record actions share the card action row, not a second top offset. */
 .research-card-actions > .research-record-actions { margin-top: 0; align-items: center; }
+
+#modal-research-revision:has(#research-revision-form[hidden]) #research-revision-actions { display: none; }

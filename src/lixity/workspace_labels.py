@@ -13934,6 +13934,22 @@ _ROWS["publication_audio_coverage_one"] = (
     "Audio voor het geëxporteerde hoofdstuk ({count}/{total}).",
 )
 
+_ROWS.update({
+    'editor_formatting': ('Markdown formatting', 'Markdown-Formatierung', 'Mise en forme Markdown', 'Formato Markdown', 'Formattazione Markdown', 'Formatação Markdown', 'Markdown-opmaak'),
+    'editor_bold': ('Bold', 'Fett', 'Gras', 'Negrita', 'Grassetto', 'Negrito', 'Vet'),
+    'editor_italic': ('Italic', 'Kursiv', 'Italique', 'Cursiva', 'Corsivo', 'Itálico', 'Cursief'),
+    'editor_heading': ('Heading', 'Überschrift', 'Titre', 'Encabezado', 'Titolo', 'Título', 'Kop'),
+    'editor_link': ('Link', 'Link', 'Lien', 'Enlace', 'Collegamento', 'Ligação', 'Link'),
+    'editor_wikilink': ('Wikilink', 'Wikilink', 'Lien wiki', 'Enlace wiki', 'Collegamento wiki', 'Ligação wiki', 'Wikilink'),
+    'editor_code': ('Code', 'Code', 'Code', 'Código', 'Codice', 'Código', 'Code'),
+    'editor_math': ('Math', 'Formel', 'Formule', 'Fórmula', 'Formula', 'Fórmula', 'Formule'),
+    'editor_bullet_list': ('Bullet list', 'Aufzählung', 'Liste à puces', 'Lista con viñetas', 'Elenco puntato', 'Lista com marcadores', 'Opsomming'),
+    'editor_numbered_list': ('Numbered list', 'Nummerierte Liste', 'Liste numérotée', 'Lista numerada', 'Elenco numerato', 'Lista numerada', 'Genummerde lijst'),
+    'editor_task_list': ('Task list', 'Aufgabenliste', 'Liste de tâches', 'Lista de tareas', 'Elenco attività', 'Lista de tarefas', 'Takenlijst'),
+    'editor_callout': ('Callout', 'Hinweiskasten', 'Encadré', 'Recuadro', 'Riquadro', 'Caixa de destaque', 'Kader'),
+    'editor_stats': ('{words} words · {chars} chars', '{words} Wörter · {chars} Zeichen', '{words} mots · {chars} caractères', '{words} palabras · {chars} caracteres', '{words} parole · {chars} caratteri', '{words} palavras · {chars} caracteres', '{words} woorden · {chars} tekens'),
+})
+
 if any(len(values) != len(_LANGUAGES) for values in _ROWS.values()):
     raise ValueError("Workspace label rows must include every supported locale")
 

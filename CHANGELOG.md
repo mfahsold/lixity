@@ -9,6 +9,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Keep manuscript search available while scrolling; typing updates matches without
+  jumping or leaving the overview. Explicit navigation targets the highlighted text
+  and uses the latest query even before its debounce completes.
+- Align analysis entry actions and give search controls the available row width.
+  Share quieter Markdown editor focus, larger formatting targets and visible form
+  actions; preserve native Tab navigation and checkbox-list continuation.
+
 - Keep manuscript associations in the central Research review instead of a
   duplicate list above the prose. Soften reading-surface edges without blurring
   text, and align nested dossier actions on the same row.

@@ -2,10 +2,10 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { launchChromium } = require('../../scripts/browser_tools.cjs');
+const { launchChromium, launchFirefox } = require('../../scripts/browser_tools.cjs');
 
 (async () => {
-  const browser = await launchChromium();
+  const browser = await (process.argv.includes('--firefox') ? launchFirefox : launchChromium)();
   const context = await browser.newContext();
   const page = await context.newPage();
 
@@ -25,6 +25,7 @@ const { launchChromium } = require('../../scripts/browser_tools.cjs');
     <label for="body-field">Body</label>
     <textarea id="body-field" class="ctl" rows="8"></textarea>
   </div>
+  <button id="after-editor">Continue</button>
 </body>
 </html>`);
 
@@ -81,6 +82,14 @@ const { launchChromium } = require('../../scripts/browser_tools.cjs');
   const valueAfterCtrlB = await page.locator('#body-field').inputValue();
   assert.equal(valueAfterCtrlB, '**Hello** **Lixity** [[world]]', 'Ctrl+B shortcut wraps selected text');
 
+  const field = page.locator('#body-field');
+  await field.fill('- [ ] Review');
+  await field.press('End'); await field.press('Enter');
+  assert.equal(await field.inputValue(), '- [ ] Review\n- [ ] ', 'Task list continuation retains the checkbox');
+  const beforeTab = await field.inputValue();
+  await field.press('Tab');
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'after-editor', 'Tab leaves the editor without trapping keyboard users');
+  assert.equal(await field.inputValue(), beforeTab, 'Tab navigation does not change authored text');
   await browser.close();
   console.log('Markdown editor browser tests passed successfully.');
 })().catch(err => {

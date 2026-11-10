@@ -98,6 +98,13 @@ document.addEventListener("click", function (event) {
   if (chip) { toggleParagraph(chip); return; }
   var target = event.target.closest(INTERACTIVE);
   if (target && !target.closest(".controls") && !isMarkerControl(event.target)) {
+    if (target.matches("a") && (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0)) return;
+    // The scripted drill owns scrolling. A second native fragment navigation
+    // also fires hashchange and can discard keyboard focus in Firefox.
+    if (target.matches('a[href^="#"]')) {
+      event.preventDefault();
+      if (location.hash !== target.getAttribute("href")) history.pushState(null, "", target.getAttribute("href"));
+    }
     activate(target);
   }
 });
@@ -184,7 +191,7 @@ if (filter) {
       if (restored !== null && chip) {
         toggleParagraph(chip, !query && restored.indexOf(block) >= 0);
       }
-      if (match) hits.push(block);
+      if (match) { hits.push(block); if (paragraph) mark(paragraph, query); }
     });
     if (!query) restored = null;
     document.querySelectorAll("#chapters .chapter").forEach(function (chapter) {
@@ -203,7 +210,7 @@ if (filter) {
         paragraphs: blocks.length
       });
     }
-    if (hits.length) {
+    if (hits.length && direction) {
       if (direction === -1) cursor = 0;
       step(direction === -1 ? -1 : 1);
     }
@@ -214,6 +221,7 @@ if (filter) {
     if (window.LixityWorkbench && window.LixityWorkbench.state().surface === "overview") {
       window.LixityWorkbench.dispatch({type: "surface", value: "document"});
     }
+    if (cursor < 0 && direction < 0) cursor = 0;
     cursor = (cursor + direction + hits.length) % hits.length;
     var block = hits[cursor];
     rememberPassageLocation(block);
@@ -221,7 +229,7 @@ if (filter) {
     if (chip) toggleParagraph(chip, true, true);
     var paragraph = block.matches(".reader-structural") ? block : block.querySelector("p");
     if (paragraph) { unmark(paragraph); mark(paragraph, query); }
-    scrollAndFlash(block, {block: "center"});
+    scrollAndFlash(paragraph && paragraph.querySelector("mark.text-hit") || block, {block: "center", behavior: "instant"});
   }
 
   var pending = null;
@@ -237,8 +245,12 @@ if (filter) {
     }
     if (event.key === "Escape") { event.preventDefault(); clearTimeout(pending); pending = null; input.value = ""; apply(); }
   });
-  if (next) next.addEventListener("click", function () { step(1); });
-  if (prev) prev.addEventListener("click", function () { step(-1); });
+  function navigate(direction) {
+    if (pending) { clearTimeout(pending); pending = null; apply(direction); }
+    else step(direction);
+  }
+  if (next) next.addEventListener("click", function () { navigate(1); });
+  if (prev) prev.addEventListener("click", function () { navigate(-1); });
   if (clear) clear.addEventListener("click", function () { clearTimeout(pending); pending = null; input.value = ""; apply(); input.focus(); });
 })();
 
@@ -294,8 +306,7 @@ function currentOutlierPassage() {
   var focused = document.activeElement && document.activeElement.closest("#chapters .ptext");
   if (focused) {
     var bounds = focused.getBoundingClientRect();
-    var controls = document.getElementById("manuscript-reader-controls");
-    var boundary = controls ? controls.getBoundingClientRect().bottom : 0;
+    var boundary = readingViewportTop();
     if (bounds.height > 0 && bounds.bottom > boundary && bounds.top < innerHeight) return focused;
   }
   var pending = window.LixityReader && window.LixityReader.pendingComparisonPassage();

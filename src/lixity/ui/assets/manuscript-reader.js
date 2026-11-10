@@ -248,7 +248,7 @@
   function capture() {
     if (workbench.state().view !== "analysis" || workbench.state().surface !== "document") return null;
     if (pendingDockAnchor && pendingDockAnchor.revision === arrangementRevision) return pendingDockAnchor.anchor;
-    var boundary = controls.getBoundingClientRect().bottom;
+    var boundary = readingViewportTop();
     var panel = Array.from(chapters.querySelectorAll(".ptext, .reader-structural")).find(function(candidate) {
       var rect = candidate.getBoundingClientRect();
       return rect.height > 0 && rect.bottom > boundary + 8 && rect.top < innerHeight;
@@ -288,7 +288,7 @@
     var previous = pendingComparisonPassage() && pendingComparisonRestore;
     var anchor = previous ? previous.anchor : captureForRestore();
     if (!anchor) { cancelComparisonRestore(); return; }
-    if (!previous) anchor = Object.assign({}, anchor, {comparisonBoundary: controls.getBoundingClientRect().bottom});
+    if (!previous) anchor = Object.assign({}, anchor, {comparisonBoundary: readingViewportTop()});
     var revision = ++comparisonRestoreRevision;
     pendingComparisonRestore = previous || {anchor: anchor, context: sourceContext(),
       hash: anchor.panel.dataset.paragraphSha256, intent: scrollIntentRevision, scrollY: window.scrollY};
@@ -340,12 +340,12 @@
       }
       var panel = anchor && anchor.panel.matches(".ptext") ? anchor.panel : panels.find(function(item) {
         var rect = item.getBoundingClientRect();
-        return rect.height > 0 && rect.bottom > controls.getBoundingClientRect().bottom && rect.top < innerHeight;
+        return rect.height > 0 && rect.bottom > readingViewportTop() && rect.top < innerHeight;
       }) || panels.find(function(item) {return item.getClientRects().length;});
       if (!panel) return;
       if (action.dataset.analysisGuideAction === "example") {
         var rect = panel.getBoundingClientRect();
-        if (rect.bottom <= controls.getBoundingClientRect().bottom || rect.top >= innerHeight) {
+        if (rect.bottom <= readingViewportTop() || rect.top >= innerHeight) {
           scrollAndFlash(panel, {behavior:"auto"});
           await new Promise(function(resolve) {requestAnimationFrame(function() {requestAnimationFrame(resolve);});});
         }
@@ -392,7 +392,7 @@
       if (prose && Number.isFinite(anchor.proseOffset)) top = prose.getBoundingClientRect().top - anchor.proseOffset;
       var intendedTop = anchor.top;
       if (Number.isFinite(anchor.comparisonBoundary)) {
-        intendedTop += controls.getBoundingClientRect().bottom - anchor.comparisonBoundary;
+        intendedTop += readingViewportTop() - anchor.comparisonBoundary;
       }
       var offset = top - intendedTop, before = window.scrollY;
       window.scrollBy(0, offset);
@@ -918,6 +918,7 @@
   controls.hidden = false; appearance();
   var search = document.getElementById("text-search");
   function fitSearchScrollMargin() {
+    document.body.style.setProperty("--reader-controls-height", controls.getBoundingClientRect().height + "px");
     if (search) setPassageScrollMargin(search);
   }
   // Native focus and scrollIntoView must expose search below the sticky controls.
@@ -1116,7 +1117,7 @@
     readingScroll = false;
     var owner = contextPassage || dockOrigin && dockOrigin.panel;
     if (!owner || workbench.state().contextTool === "none") return;
-    var bounds = owner.getBoundingClientRect(), boundary = controls.getBoundingClientRect().bottom;
+    var bounds = owner.getBoundingClientRect(), boundary = readingViewportTop();
     if (bounds.bottom > boundary && bounds.top < innerHeight) return;
     var anchor = capture();
     if (anchor && anchor.panel !== owner) { leavePassage(anchor.panel); restore(anchor); }

@@ -309,10 +309,23 @@ The manuscript is a document reader: dragging selects text and resizing text
 changes its layout. Images use the shared zoom viewer, maps use Leaflet pan/zoom,
 and style-space retains its own rotation and zoom controls.
 
+## Editing research text
+
+Research text fields share one Markdown editor with localized formatting controls
+and word/character counts. The formatting actions preserve the text selection;
+`Ctrl`/`Cmd` + `B`, `I`, `K` and `H` apply bold, italic, links and headings.
+`Tab` and `Shift+Tab` move between controls without changing the text. Pressing
+`Enter` continues a list, including task checkboxes; an empty item ends the list.
+
+In the research revision dialog, the action row remains outside the scrolling
+fields. Saving still requires an explicit change type and reason. Formatting or
+switching tabs does not save a revision automatically.
+
 ## Searching the manuscript
 
 Type a phrase in the manuscript search control to show matching text blocks and mark
-hits. Arrows or `Enter`/`Shift+Enter` move between matches; `Escape` or
+hits without automatically jumping or leaving the analysis overview. The search
+controls stay below the reading toolbar while scrolling. Arrows or `Enter`/`Shift+Enter` move between matches; `Escape` or
 **Clear search** restores the manuscript. Search includes readable structural
 blocks as well as analyzed paragraphs; the count is matching blocks out of
 blocks searched. Search takes priority over **Flagged only**; clearing

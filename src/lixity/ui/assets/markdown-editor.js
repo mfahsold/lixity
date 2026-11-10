@@ -21,7 +21,7 @@
       textarea.selectionEnd = end + before.length;
     }
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
-    textarea.focus();
+    textarea.focus({preventScroll: true});
   }
 
   function prefixLines(textarea, prefix) {
@@ -43,12 +43,17 @@
     textarea.selectionStart = lineStart;
     textarea.selectionEnd = lineStart + modified.length;
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
-    textarea.focus();
+    textarea.focus({preventScroll: true});
   }
 
   function countWords(str) {
     var match = str.trim().match(/\S+/g);
     return match ? match.length : 0;
+  }
+
+  function label(key, fallback) {
+    var translated = typeof uiLabel === "function" ? uiLabel("editor_" + key.replace(/-/g, "_")) : "";
+    return translated && translated.indexOf("editor_") !== 0 ? translated : fallback;
   }
 
   function mount(textarea, options) {
@@ -65,7 +70,7 @@
     var toolbar = document.createElement("div");
     toolbar.className = "markdown-editor-toolbar";
     toolbar.setAttribute("role", "toolbar");
-    toolbar.setAttribute("aria-label", "Markdown formatting");
+    toolbar.setAttribute("aria-label", label("formatting", "Markdown formatting"));
 
     var tools = [
       { id: "bold", label: "Bold (Ctrl+B)", icon: "bold", action: function () { wrapSelection(textarea, "**", "**"); } },
@@ -92,6 +97,8 @@
       var btn = document.createElement("button");
       btn.type = "button";
       btn.className = "editor-tool-btn";
+      var shortcut = tool.label.match(/ \(Ctrl\+[A-Z]\)/);
+      tool.label = label(tool.id, tool.label.replace(/ \(.*\)$/, "")) + (shortcut ? shortcut[0] : "");
       btn.title = tool.label;
       btn.setAttribute("aria-label", tool.label);
       if (window.LixityIcons) {
@@ -120,7 +127,8 @@
       var text = textarea.value || "";
       var words = countWords(text);
       var chars = text.length;
-      stats.textContent = words + " words · " + chars + " chars";
+      stats.textContent = label("stats", "{words} words · {chars} chars")
+        .replace("{words}", String(words)).replace("{chars}", String(chars));
     }
     textarea.addEventListener("input", updateStats);
     updateStats();
@@ -141,23 +149,7 @@
         if (key === "h") { e.preventDefault(); prefixLines(textarea, "### "); return; }
       }
 
-      // Tab / Shift-Tab
-      if (e.key === "Tab") {
-        e.preventDefault();
-        if (e.shiftKey) {
-          prefixLines(textarea, "  ");
-        } else {
-          var sel = value.slice(start, end);
-          if (sel.includes("\n")) {
-            prefixLines(textarea, "  ");
-          } else {
-            textarea.value = value.slice(0, start) + "  " + value.slice(end);
-            textarea.selectionStart = textarea.selectionEnd = start + 2;
-            textarea.dispatchEvent(new Event("input", { bubbles: true }));
-          }
-        }
-        return;
-      }
+      // Tab remains native focus navigation, including inside modal dialogs.
 
       // Auto-closing bracket wrapping or pair insertion
       if (PAIRS[e.key] && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -178,7 +170,7 @@
       if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
         var lineStart = value.lastIndexOf("\n", start - 1) + 1;
         var currentLine = value.slice(lineStart, start);
-        var match = currentLine.match(/^(\s*)([-*+]|\d+\.|- \[[ xX]\])\s+/);
+        var match = currentLine.match(/^(\s*)(- \[[ xX]\]|[-*+]|\d+\.)\s+/);
         if (match) {
           var prefix = match[0];
           // If the list item is empty (user hit Enter on empty item), exit list
@@ -210,7 +202,7 @@
       textarea: textarea,
       read: function () { return textarea.value; },
       write: function (val) { textarea.value = val; updateStats(); },
-      focus: function () { textarea.focus(); }
+      focus: function () { textarea.focus({preventScroll: true}); }
     };
     textarea.__lixityEditor = editor;
     return editor;

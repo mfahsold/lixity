@@ -1074,7 +1074,7 @@ def render_dashboard(
     parts.append(
         f'<button type="button" class="ctl" id="text-search-clear" hidden '
         f'aria-label="{L("text_search_clear")}" title="{L("text_search_clear")}" aria-keyshortcuts="Escape">'
-        f"{L('text_search_clear')}</button>"
+        '<span aria-hidden="true">&times;</span></button>'
     )
     parts.append(
         '<span class="ctl-note" id="text-search-status" role="status" aria-live="polite"></span>'

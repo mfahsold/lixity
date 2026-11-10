@@ -696,6 +696,11 @@ server.serve_forever()
     assert.equal(await page.locator('#research-revision-merge img').count(), 0, 'Conflict values remain inert text');
     await page.setViewportSize({width: 320, height: 900});
     assert.ok(await revisionDialog.evaluate(el => el.scrollWidth <= el.clientWidth), 'Conflict review has no horizontal dialog overflow');
+    assert.ok(await page.locator('#research-revision-save').evaluate(button => {
+      const box = button.getBoundingClientRect();
+      return button.form.id === 'research-revision-form' && box.top >= 0 && box.bottom <= innerHeight &&
+        button.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
+    }), 'Revision actions remain reachable outside the scrolling fields and submit the correct form');
     await revisionDialog.screenshot({path: path.join(artifacts, 'revision-conflict-320.png')});
     await page.setViewportSize({width: 1440, height: 900});
     await expect(page.locator('#research-revision-merge-apply')).toBeDisabled();

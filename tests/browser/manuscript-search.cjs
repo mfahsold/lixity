@@ -1,5 +1,5 @@
 // The author can search the manuscript itself, not only the research archive.
-const {launchChromium} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 
@@ -30,11 +30,14 @@ def standalone(*args, **kwargs):
         'labels': {**get_language_profile('en').labels, **WORKSPACE_LABELS['en']}, 'language_key': 'en'})
 render.__globals__['render_dashboard'] = standalone
 fixtures['en']['standalone_html'] = render()
+render.__globals__['render_dashboard'] = original
+render.__globals__['SAMPLE'] = '# Test\\n\\n## Chapter\\n\\n' + 'A quiet synthetic sentence. ' * 400 + ' NEEDLE at the end.\\n\\n' + 'Second paragraph. ' * 200
+fixtures['en']['long_html'] = render()
 print(json.dumps(fixtures))
 `, {root});
 
 (async () => {
-  const browser = await launchChromium();
+  const browser = await (process.argv.includes('--firefox') ? launchFirefox : launchChromium)();
   try {
     for (const width of [1440, 320]) {
       const page = await browser.newPage({viewport: {width, height: 900}, javaScriptEnabled: false});
@@ -47,6 +50,24 @@ print(json.dumps(fixtures))
       await paragraph.locator('.paragraph-values > summary').press('Enter');
       assert.equal(await paragraph.locator('.stats').isVisible(), true,
         'Paragraph values remain available without JavaScript');
+      await page.close();
+    }
+    for (const width of [1440, 390, 320]) {
+      const page = await browser.newPage({viewport: {width, height: 900}});
+      await page.route('http://lixity.test/**', route => route.fulfill({contentType: 'text/html', body: fixtures.en.long_html}));
+      await page.goto('http://lixity.test/');
+      const field = page.locator('#text-search');
+      await field.fill('NEEDLE');
+      await page.waitForFunction(() => document.querySelector('#text-search-status').textContent.length > 0);
+      await field.press('Enter');
+      await page.waitForFunction(() => {
+        const input = document.querySelector('#text-search').getBoundingClientRect();
+        const chrome = document.querySelector('#manuscript-reader-controls').getBoundingClientRect();
+        const hit = document.querySelector('mark.text-hit').getBoundingClientRect();
+        return input.top >= chrome.bottom - 1 && hit.top >= input.bottom && hit.bottom <= innerHeight;
+      });
+      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      await page.screenshot({path: `/tmp/lixity-search-stable-${width}.png`});
       await page.close();
     }
     for (const [locale, fixture] of Object.entries(fixtures)) for (const width of [1440, 320]) {
@@ -84,7 +105,12 @@ print(json.dumps(fixtures))
       const sections = page.locator('#analysis-sections [data-section-link]');
       await sections.first().focus(); await sections.first().press('ArrowRight');
       assert.equal(await sections.nth(1).evaluate(link => link === document.activeElement), true);
-      await field.fill('Suchwort'); await field.press('Enter');
+      await field.fill('Suchwort');
+      await page.waitForFunction(() => document.querySelector('#text-search-status').textContent.length > 0);
+      assert.equal(await page.locator('#analysis-review').isVisible(), true,
+        'Typing never leaves the overview or navigates away from the search field');
+      assert.equal(await field.evaluate(el => el === document.activeElement), true);
+      await field.press('Enter');
       assert.equal(await page.locator('#chapters .ptext:not(.text-miss)').isVisible(), true,
         'Searching from an overview reveals its manuscript result');
       await field.press('Escape');

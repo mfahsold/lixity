@@ -487,6 +487,10 @@
   window.addEventListener("blur", hide);
 
   // Handle help before the reader's capture-phase Escape shortcuts.
+  // Help must not cover prose or form content while the user is entering text.
+  document.addEventListener("input", function(e) {
+    if (e.target.matches('textarea, input[type="search"], input[type="text"], input:not([type])') && (activeEl === e.target || pendingEl === e.target)) hide();
+  });
   document.addEventListener("keydown", function (e) {
     if (touchFocusEl && touchFocusEl.contains(e.target)) touchFocusEl = null;
     if (e.key === "Enter" || e.key === " ") {

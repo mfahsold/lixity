@@ -190,6 +190,16 @@ function scrollAndFlash(target, options) {
   flashOnArrival(target);
 }
 
+function readingViewportTop() {
+  var bottom = 0;
+  document.querySelectorAll("#workbench-thread, #manuscript-reader-controls, #view-pane-analysis .toolbar").forEach(function(bar) {
+    if (!bar.getClientRects().length || getComputedStyle(bar).position !== "sticky") return;
+    var bounds = bar.getBoundingClientRect();
+    if (bounds.top < innerHeight) bottom = Math.max(bottom, bounds.bottom);
+  });
+  return bottom;
+}
+
 function setPassageScrollMargin(target) {
   var bars = document.querySelectorAll("#workbench-thread, #manuscript-reader-controls, .toolbar, .research-dossier-location");
   var height = 0, rect = target.getBoundingClientRect();

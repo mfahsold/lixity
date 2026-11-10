@@ -14,11 +14,11 @@ h2, .section-heading, .settings-heading { font-size: var(--text-section-title); 
 .panel .hint { margin: 0; }
 #style-panels { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
 #style-panels > .panel { padding: 0; border: 0; box-shadow: none; background: transparent; }
-.review-routes { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.review-routes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); align-items: start; gap: var(--space-3); }
 .review-route { display: flex; flex-direction: column; align-items: flex-start; gap: .7rem; min-width: 0; }
 .review-route h3 { margin: 0; font-size: var(--text-body); }
 .review-route p { margin: 0; color: var(--muted); font-size: var(--text-small); line-height: 1.6; }
-.review-route .ctl { display: inline-flex; align-items: center; max-width: 100%; margin-top: auto; text-decoration: none; }
+.review-route .ctl { display: inline-flex; align-items: center; max-width: 100%; margin-top: 0; text-decoration: none; }
 .manuscript-pdf { min-width: 0; }
 .manuscript-pdf > summary { cursor: pointer; font-size: var(--text-control); line-height: var(--line-control); min-height: 2.5rem; padding: .45rem .8rem; }
 .manuscript-pdf[open] > summary { margin-bottom: var(--space-3); }
@@ -363,10 +363,10 @@ details.markdown-alert summary.markdown-alert-title::-webkit-details-marker { di
 /* --- Markdown Editor -------------------------------------------------- */
 .markdown-editor-wrap { display: flex; flex-direction: column; width: 100%; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
 .markdown-editor-toolbar { display: flex; flex-wrap: wrap; gap: .2rem; padding: .35rem .5rem; border-bottom: 1px solid var(--line); background: var(--surface-secondary, rgba(0,0,0,.02)); }
-.editor-tool-btn { display: inline-flex; align-items: center; justify-content: center; width: 1.75rem; height: 1.75rem; padding: 0; border: 1px solid transparent; border-radius: var(--radius-sm, 3px); background: transparent; color: var(--fg); cursor: pointer; transition: background .12s, border-color .12s; }
+.editor-tool-btn { display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; padding: 0; border: 1px solid transparent; border-radius: var(--radius-sm, 3px); background: transparent; color: var(--fg); cursor: pointer; transition: background .12s, border-color .12s; }
 .editor-tool-btn:hover { background: var(--surface-hover, rgba(0,0,0,.06)); border-color: var(--line); }
 .editor-tool-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.markdown-editor-wrap > .markdown-editor-area { border: 0 !important; border-radius: 0 !important; box-shadow: none !important; resize: vertical; margin: 0 !important; padding: .65rem .75rem; min-height: 8rem; font-family: var(--font); font-size: var(--text-body); line-height: 1.5; }
+.markdown-editor-wrap > .markdown-editor-area { border: 0 !important; border-radius: 0 !important; box-shadow: none !important; resize: vertical; margin: 0 !important; padding: .8rem 1rem; min-height: clamp(10rem, 30dvh, 24rem); max-height: 60dvh; scrollbar-gutter: stable; font-family: var(--font); font-size: var(--text-body); line-height: 1.5; }
 .markdown-editor-footer { display: flex; justify-content: flex-end; padding: .25rem .65rem; border-top: 1px solid var(--line); font-size: var(--text-nano, .75rem); color: var(--muted); background: var(--surface-secondary, rgba(0,0,0,.02)); }
 
 /* --- Obsidian & Minimal Theme Patterns -------------------------------- */
@@ -639,3 +639,8 @@ details.markdown-alert summary.markdown-alert-title::-webkit-details-marker { di
   border-color: var(--accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
 }
+
+/* One quiet focus boundary for every enhanced Markdown field. */
+.markdown-editor-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.markdown-editor-wrap > .markdown-editor-area:focus { outline: none; }
+@media (pointer: coarse) { .editor-tool-btn { width: 2.75rem; height: 2.75rem; } }
