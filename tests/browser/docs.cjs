@@ -1113,7 +1113,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
         if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
         assert.ok(file.startsWith(root + path.sep));
         assert.ok(fs.existsSync(file), `Missing public asset ${relative}`);
-        const contentType = {'.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.pdf': 'application/pdf'}[path.extname(file)];
+        const contentType = {'.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.pdf': 'application/pdf', '.mp4': 'video/mp4', '.webm': 'video/webm', '.webp': 'image/webp'}[path.extname(file)];
         await route.fulfill({contentType, body: fs.readFileSync(file)});
       });
       for (const width of hasTouch ? [320] : [1440, 390, 320]) {
@@ -1242,11 +1242,11 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
             await expect(page).toHaveURL(origin + '/lixity/index-de.html');
             await expect(page.locator('h1')).toHaveText('Dein Text.Ein neuer Blick.');
             await page.goto(origin + '/lixity/' + route);
-            const image = page.locator('.product-preview img');
-            await ensureImageDecoded(image);
-            assert.deepEqual(await image.evaluate(el => [el.naturalWidth, el.naturalHeight]),
-              [Number(await image.getAttribute('width')), Number(await image.getAttribute('height'))]);
-            assert.ok(await image.evaluate(el => Math.abs(el.clientWidth / el.clientHeight - el.naturalWidth / el.naturalHeight) < .01));
+            const video = page.locator('.product-preview video');
+            await expect(video).toHaveAttribute('poster', 'videos/product-tour.webp');
+            await expect(video).toHaveAttribute('preload', 'none');
+            assert.ok(await video.evaluate(el => Math.abs(el.clientWidth / el.clientHeight - 1.6) < .01));
+            await expect(page.locator('#tour-transcript li')).toHaveCount(6);
             await page.locator('#impressum > summary').click();
             await expect(page.locator('#impressum address')).toContainText('ROST Services GmbH');
             await page.locator('#impressum > summary').click();

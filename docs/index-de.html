@@ -22,6 +22,7 @@
 <link rel="stylesheet" href="assets/site.css"/>
 <link rel="stylesheet" href="assets/home.css"/>
 <script src="assets/site.js" defer></script>
+<script src="assets/product-tour.js" defer></script>
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="Lixity"/>
 <meta property="og:title" content="Lixity — Manuskripte überarbeiten, Sprache untersuchen"/>
@@ -57,7 +58,23 @@
 <section class="home-hero" aria-labelledby="intro-title">
 <div class="home-intro"><p class="home-eyebrow">Genauer lesen. Sprache erkunden.</p><h1 id="intro-title">Dein Text.<br/>Ein neuer Blick.</h1><p class="home-lead">Verstehe, wie dein Text funktioniert. Untersuche Rhythmus und Wortschatz, vergleiche Kapitel und gehe jeder Beobachtung an der Textstelle nach. Dein lokaler Arbeitsraum fürs Schreiben, Lektorieren und die linguistische Textanalyse.</p>
 <div class="hero-cta"><a class="ctl primary" href="demo/report.html" id="examples">Demo ausprobieren</a><a href="guides/first-look-de.html">Kurzer Rundgang</a></div><p class="home-note">Erfundenes englisches Manuskript. Demo nur zum Lesen. Kein Konto, kein Upload.</p></div>
-<figure class="product-preview"><a href="screenshots/dashboard-light.png"><img src="screenshots/dashboard-light.png" width="2960" height="2068" alt="Der echte Arbeitsraum: Lies dein Manuskript und entscheide selbst, wann du seine Muster untersuchst." fetchpriority="high"/></a><figcaption>Der echte Arbeitsraum: Lies dein Manuskript und entscheide selbst, wann du seine Muster untersuchst.</figcaption></figure>
+<figure class="product-preview product-tour" aria-label="Ein ruhiger Rundgang durch Lixity">
+<div class="tour-screen">
+<video id="product-tour" width="1440" height="900" poster="videos/product-tour.webp" preload="none" muted playsinline controls aria-label="Ein ruhiger Rundgang durch Lixity" aria-describedby="tour-note">
+<source src="videos/product-tour.webm" type='video/webm; codecs="av01.0.08M.08"'/>
+<source src="videos/product-tour.mp4" type="video/mp4"/>
+<a href="demo/report.html">Demo ausprobieren</a>
+</video>
+<div class="tour-caption" aria-hidden="true" hidden><span>Lies in deinem eigenen Tempo.</span></div>
+</div>
+<figcaption>
+<div class="tour-actions"><button type="button" class="ctl tour-toggle" data-play="Rundgang abspielen" data-pause="Rundgang pausieren" hidden>Rundgang abspielen</button><p id="tour-note">Aufnahme ohne Ton · Helle und dunkle Ansichten · Erfundenes englisches Manuskript</p></div>
+<p class="tour-error" role="status" hidden>Das Video konnte nicht geladen werden. Öffne stattdessen die interaktive Demo. <a href="demo/report.html">Demo ausprobieren</a></p>
+<details id="tour-transcript"><summary>Rundgang als Text lesen</summary><ol>
+<li data-start="0">Lies in deinem eigenen Tempo.</li><li data-start="8">Untersuche eine Textstelle im Zusammenhang.</li><li data-start="16">Vergleiche Kapitel. Folge den Unterschieden.</li><li data-start="24">Halte deine Recherche verbunden.</li><li data-start="32">Erkunde Quellen zu deiner Geschichte.</li><li data-start="40">Kehre zu deinen Worten zurück.</li>
+</ol></details>
+</figcaption>
+</figure>
 </section>
 <section class="home-section" id="features"><h2>Von einer Frage zur Textstelle.</h2><div class="home-tasks">
 <article id="writing"><h3>Den Rhythmus lesen.</h3><p>Vergleiche Kapitel, untersuche Satzlängen und finde nahe Wortwiederholungen. Entscheide im Kontext, was für deinen Text wichtig ist.</p><a href="demo/report.html">Demo ausprobieren</a></article>

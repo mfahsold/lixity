@@ -71,7 +71,7 @@ PUBLIC_TREES = {
     "guides": {".html", ".md"},
     "screenshots": {".png", ".webp", ".md"},
     "releases": {".md"},
-    "videos": {".mp4", ".webm", ".gif", ".png", ".md"},
+    "videos": {".mp4", ".webm", ".gif", ".png", ".webp", ".md"},
     "examples": {".html", ".pdf", ".md"},
     "research": {".md", ".json", ".txt"},
 }

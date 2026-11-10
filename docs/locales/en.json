@@ -41,5 +41,17 @@
   "linguistics_link": "Text-analysis workflow (English)",
   "language_action": "Continue in English",
   "language_suggestion": "Prefer another language? Use your saved choice or a language supported by your browser.",
-  "language_stay": "Stay in English"
+  "language_stay": "Stay in English",
+  "tour_title": "A quiet tour through Lixity",
+  "tour_play": "Play tour",
+  "tour_pause": "Pause tour",
+  "tour_transcript": "Read the walkthrough",
+  "tour_note": "Silent recording · Light and dark views · Fictional English manuscript",
+  "tour_read": "Read at your own pace.",
+  "tour_passage": "Inspect a passage, in context.",
+  "tour_compare": "Compare chapters. Follow the differences.",
+  "tour_research": "Keep your research connected.",
+  "tour_context": "Explore sources beside your story.",
+  "tour_return": "Return to your words.",
+  "tour_error": "The video could not load. Explore the interactive demo instead."
 }

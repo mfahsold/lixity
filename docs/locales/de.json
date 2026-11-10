@@ -41,5 +41,17 @@
   "linguistics_link": "Ablauf einer Textanalyse (Englisch)",
   "language_action": "Auf Deutsch weiterlesen",
   "language_suggestion": "Lieber in einer anderen Sprache? Nutze deine gespeicherte Wahl oder eine passende Browsersprache.",
-  "language_stay": "Auf Deutsch bleiben"
+  "language_stay": "Auf Deutsch bleiben",
+  "tour_title": "Ein ruhiger Rundgang durch Lixity",
+  "tour_play": "Rundgang abspielen",
+  "tour_pause": "Rundgang pausieren",
+  "tour_transcript": "Rundgang als Text lesen",
+  "tour_note": "Aufnahme ohne Ton · Helle und dunkle Ansichten · Erfundenes englisches Manuskript",
+  "tour_read": "Lies in deinem eigenen Tempo.",
+  "tour_passage": "Untersuche eine Textstelle im Zusammenhang.",
+  "tour_compare": "Vergleiche Kapitel. Folge den Unterschieden.",
+  "tour_research": "Halte deine Recherche verbunden.",
+  "tour_context": "Erkunde Quellen zu deiner Geschichte.",
+  "tour_return": "Kehre zu deinen Worten zurück.",
+  "tour_error": "Das Video konnte nicht geladen werden. Öffne stattdessen die interaktive Demo."
 }

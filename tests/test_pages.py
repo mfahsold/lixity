@@ -1,6 +1,7 @@
 """Public Pages staging excludes local planning and private working material."""
 
 import hashlib
+import html
 import json
 import struct
 import tempfile
@@ -441,6 +442,23 @@ class TestPublicAnalyticsBoundary(unittest.TestCase):
 
 
 class TestPublicLanguages(unittest.TestCase):
+    def test_home_tour_has_localized_transcript_and_explicit_playback(self):
+        from scripts.build_public_site import LANGUAGES, ROOT, page_path, render_pages
+
+        pages = render_pages()
+        for language in LANGUAGES:
+            with self.subTest(language=language):
+                content = json.loads((ROOT / f"docs/locales/{language}.json").read_text())
+                text = pages[page_path(language)]
+                self.assertIn('src="videos/product-tour.mp4"', text)
+                self.assertIn('preload="none"', text)
+                self.assertIn('muted playsinline controls', text)
+                self.assertNotIn(' autoplay', text)
+                self.assertIn('id="tour-transcript"', text)
+                for scene in ('read', 'passage', 'compare', 'research', 'context', 'return'):
+                    self.assertIn(html.escape(content['tour_' + scene], quote=True), text)
+
+
     def test_generated_languages_are_complete_and_reciprocal(self):
         from scripts.build_public_site import LANGUAGES, ROOT, page_path, page_url, render_pages
 

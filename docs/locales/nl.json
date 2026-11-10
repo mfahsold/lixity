@@ -41,5 +41,17 @@
   "linguistics_link": "Werkwijze voor tekstanalyse (Engels)",
   "language_action": "Verder in het Nederlands",
   "language_suggestion": "Liever een andere taal? Gebruik je opgeslagen keuze of een taal die je browser ondersteunt.",
-  "language_stay": "In het Nederlands blijven"
+  "language_stay": "In het Nederlands blijven",
+  "tour_title": "Een rustige rondleiding door Lixity",
+  "tour_play": "Rondleiding afspelen",
+  "tour_pause": "Rondleiding pauzeren",
+  "tour_transcript": "Lees de rondleiding",
+  "tour_note": "Video zonder geluid · Lichte en donkere weergave · Fictief Engels manuscript",
+  "tour_read": "Lees in je eigen tempo.",
+  "tour_passage": "Bekijk een passage in zijn context.",
+  "tour_compare": "Vergelijk hoofdstukken en hun verschillen.",
+  "tour_research": "Verbind je onderzoek.",
+  "tour_context": "Verken de bronnen van je verhaal.",
+  "tour_return": "Keer terug naar je woorden.",
+  "tour_error": "De video kon niet worden geladen. Open de interactieve demo."
 }

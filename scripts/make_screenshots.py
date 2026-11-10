@@ -625,6 +625,12 @@ def main() -> int:
         CAPTURES[:] = [
             {
                 "source": str(research_workspace),
+                "target": str(OUT_DIR / "dashboard-light.png"),
+                "width": 1440, "height": 900, "video": True,
+                "videoTarget": str(video_dir / "product-tour.webm"),
+            },
+            {
+                "source": str(research_workspace),
                 "target": str(OUT_DIR / "dashboard-research-timeline.png"),
                 "width": 1280, "height": 800, "video": True,
                 "videoTarget": str(video_dir / "research-timeline.webm"),
@@ -642,6 +648,11 @@ def main() -> int:
                 "videoTarget": str(video_dir / "editorial-loop.webm"),
             },
         ]
+        if args.only:
+            CAPTURES[:] = [capture for capture in CAPTURES
+                          if Path(str(capture["videoTarget"])).stem in args.only]
+            if not CAPTURES:
+                parser.error("No matching video capture")
     else:
         approved = {item["file"] for item in screenshot_manifest(BASE_DIR / "docs")}
         available = {_reviewed_capture_name(capture) for capture in CAPTURES}

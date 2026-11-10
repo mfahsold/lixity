@@ -41,5 +41,17 @@
   "linguistics_link": "Percurso de análise de texto (inglês)",
   "language_action": "Continuar em português",
   "language_suggestion": "Prefere outra língua? Use a escolha guardada ou uma língua suportada pelo navegador.",
-  "language_stay": "Manter o português"
+  "language_stay": "Manter o português",
+  "tour_title": "Um passeio tranquilo pelo Lixity",
+  "tour_play": "Reproduzir vídeo",
+  "tour_pause": "Pausar vídeo",
+  "tour_transcript": "Ler o roteiro",
+  "tour_note": "Vídeo sem som · Temas claro e escuro · Manuscrito fictício em inglês",
+  "tour_read": "Leia ao seu ritmo.",
+  "tour_passage": "Examine uma passagem no seu contexto.",
+  "tour_compare": "Compare capítulos e suas diferenças.",
+  "tour_research": "Conecte a sua pesquisa.",
+  "tour_context": "Explore as fontes da sua história.",
+  "tour_return": "Volte às suas palavras.",
+  "tour_error": "Não foi possível carregar o vídeo. Abra a demonstração interativa."
 }

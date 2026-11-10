@@ -603,3 +603,7 @@ The `pages-language.cjs` suite exercises the staged seven-language product site:
 browser preference ordering and regional tags, saved manual choices, direct
 links, unavailable storage, English guides, JavaScript-disabled navigation and
 320/1440-pixel layouts. It serves local assets only and makes no production requests.
+
+The `home-tour` suite decodes the homepage video, checks localized captions after
+seeking, reduced-motion behavior, explicit and offscreen pauses, failure fallback
+and desktop/mobile framing. Recordings use the synthetic example only.

@@ -22,6 +22,7 @@
 <link rel="stylesheet" href="assets/site.css"/>
 <link rel="stylesheet" href="assets/home.css"/>
 <script src="assets/site.js" defer></script>
+<script src="assets/product-tour.js" defer></script>
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="Lixity"/>
 <meta property="og:title" content="Lixity — manuscripten herzien en taal onderzoeken"/>
@@ -57,7 +58,23 @@
 <section class="home-hero" aria-labelledby="intro-title">
 <div class="home-intro"><p class="home-eyebrow">Lees nauwkeurig. Onderzoek taal.</p><h1 id="intro-title">Jouw woorden.<br/>Een frisse blik.</h1><p class="home-lead">Begrijp hoe je tekst werkt. Onderzoek ritme en woordenschat, vergelijk hoofdstukken en ga van elke waarneming terug naar de passage. Een lokale werkruimte voor schrijven, redigeren en taalkundige tekstanalyse.</p>
 <div class="hero-cta"><a class="ctl primary" href="demo/report.html" id="examples">Bekijk de demo</a><a href="guides/first-look.html">Korte rondleiding (Engels)</a></div><p class="home-note">Fictief Engels manuscript. Demo alleen om te lezen. Geen account of upload.</p></div>
-<figure class="product-preview"><a href="screenshots/dashboard-light.png"><img src="screenshots/dashboard-light.png" width="2960" height="2068" alt="De echte werkplek: lees het manuscript en kies wanneer je de patronen onderzoekt." fetchpriority="high"/></a><figcaption>De echte werkplek: lees het manuscript en kies wanneer je de patronen onderzoekt.</figcaption></figure>
+<figure class="product-preview product-tour" aria-label="Een rustige rondleiding door Lixity">
+<div class="tour-screen">
+<video id="product-tour" width="1440" height="900" poster="videos/product-tour.webp" preload="none" muted playsinline controls aria-label="Een rustige rondleiding door Lixity" aria-describedby="tour-note">
+<source src="videos/product-tour.webm" type='video/webm; codecs="av01.0.08M.08"'/>
+<source src="videos/product-tour.mp4" type="video/mp4"/>
+<a href="demo/report.html">Bekijk de demo</a>
+</video>
+<div class="tour-caption" aria-hidden="true" hidden><span>Lees in je eigen tempo.</span></div>
+</div>
+<figcaption>
+<div class="tour-actions"><button type="button" class="ctl tour-toggle" data-play="Rondleiding afspelen" data-pause="Rondleiding pauzeren" hidden>Rondleiding afspelen</button><p id="tour-note">Video zonder geluid · Lichte en donkere weergave · Fictief Engels manuscript</p></div>
+<p class="tour-error" role="status" hidden>De video kon niet worden geladen. Open de interactieve demo. <a href="demo/report.html">Bekijk de demo</a></p>
+<details id="tour-transcript"><summary>Lees de rondleiding</summary><ol>
+<li data-start="0">Lees in je eigen tempo.</li><li data-start="8">Bekijk een passage in zijn context.</li><li data-start="16">Vergelijk hoofdstukken en hun verschillen.</li><li data-start="24">Verbind je onderzoek.</li><li data-start="32">Verken de bronnen van je verhaal.</li><li data-start="40">Keer terug naar je woorden.</li>
+</ol></details>
+</figcaption>
+</figure>
 </section>
 <section class="home-section" id="features"><h2>Van een vraag naar een passage.</h2><div class="home-tasks">
 <article id="writing"><h3>Het ritme lezen.</h3><p>Vergelijk hoofdstukken, onderzoek zinslengtes en vind herhalingen dicht bij elkaar. Keer terug naar de tekst om te bepalen wat ertoe doet.</p><a href="demo/report.html">Bekijk de demo</a></article>

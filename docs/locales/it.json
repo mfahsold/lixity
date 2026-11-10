@@ -41,5 +41,17 @@
   "linguistics_link": "Percorso di analisi del testo (inglese)",
   "language_action": "Continua in italiano",
   "language_suggestion": "Preferisci un’altra lingua? Usa la scelta salvata o una lingua supportata dal browser.",
-  "language_stay": "Resta in italiano"
+  "language_stay": "Resta in italiano",
+  "tour_title": "Un percorso tranquillo in Lixity",
+  "tour_play": "Riproduci il video",
+  "tour_pause": "Metti in pausa",
+  "tour_transcript": "Leggi il percorso",
+  "tour_note": "Video senza audio · Temi chiaro e scuro · Manoscritto fittizio in inglese",
+  "tour_read": "Leggi al tuo ritmo.",
+  "tour_passage": "Esamina un passaggio nel suo contesto.",
+  "tour_compare": "Confronta i capitoli e le differenze.",
+  "tour_research": "Collega le tue ricerche.",
+  "tour_context": "Esplora le fonti della tua storia.",
+  "tour_return": "Torna alle tue parole.",
+  "tour_error": "Impossibile caricare il video. Apri la demo interattiva."
 }

@@ -81,3 +81,21 @@
 .language-suggestion:not([hidden]) { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem 1.25rem; padding: 1rem max(1.25rem, calc((100vw - 82rem) / 2)); background: var(--surface); border-bottom: 1px solid var(--line); }
 .language-suggestion p { flex: 1 1 20rem; margin: 0; }
 .language-suggestion .ctl { white-space: normal; min-height: 2.75rem; }
+
+/* The recording stays whole; localized text is rendered at page resolution. */
+.product-tour { padding-bottom: .65rem; border-radius: 1rem; }
+.tour-screen { position: relative; overflow: hidden; border-radius: .5rem; background: #101522; }
+.product-tour video { display: block; width: 100%; height: auto; aspect-ratio: 8 / 5; }
+.tour-caption { position: absolute; bottom: clamp(3.5rem, 9%, 6rem); left: 50%; transform: translateX(-50%); width: max-content; max-width: 86%; pointer-events: none; text-align: center; }
+.tour-caption span { display: block; padding: .7em 1.15em; border-radius: .55rem; background: rgb(13 19 34 / .94); color: #fff; box-shadow: 0 .3rem 1.5rem rgb(0 0 0 / .16); font-family: var(--font); font-size: clamp(.9rem, 1.7vw, 1.45rem); font-weight: 550; line-height: 1.4; letter-spacing: -.015em; text-wrap: balance; }
+.product-tour figcaption { border-radius: 0 0 .5rem .5rem; padding: 1rem 1.25rem; }
+.tour-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem 1.25rem; }
+.tour-actions p { margin: 0; flex: 1; min-width: 14rem; }
+.product-tour .tour-toggle { color: #253bd6; background: #edf0ff; border-color: transparent; min-width: 10rem; }
+.product-tour summary { cursor: pointer; margin-top: .7rem; text-underline-offset: .2em; }
+.product-tour ol { margin-bottom: 0; }
+.product-tour .tour-error a { color: #253bd6; }
+@media (max-width: 480px) {
+  .tour-caption { bottom: 3rem; max-width: 92%; }
+  .tour-caption span { padding: .45em .7em; font-size: .85rem; }
+}

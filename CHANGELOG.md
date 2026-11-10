@@ -9,6 +9,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Replace the public homepage screenshot with a quiet light/dark product tour,
+  directed zooms and focus annotations, localized captions and a text transcript.
+  Respect reduced motion, explicit pauses and offscreen playback; offer AV1 with
+  an H.264 fallback and a compressed poster.
+
 - Separate synthetic example-project creation from screenshot HTTP fixtures.
   Provide a non-overwriting project generator with explicit manuscript/language
   configuration; public examples use that same ordinary project and exporter.

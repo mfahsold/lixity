@@ -22,6 +22,7 @@
 <link rel="stylesheet" href="assets/site.css"/>
 <link rel="stylesheet" href="assets/home.css"/>
 <script src="assets/site.js" defer></script>
+<script src="assets/product-tour.js" defer></script>
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="Lixity"/>
 <meta property="og:title" content="Lixity — revisión de manuscritos y análisis lingüístico"/>
@@ -57,7 +58,23 @@
 <section class="home-hero" aria-labelledby="intro-title">
 <div class="home-intro"><p class="home-eyebrow">Lee de cerca. Explora el lenguaje.</p><h1 id="intro-title">Tus palabras.<br/>Otra mirada.</h1><p class="home-lead">Comprende cómo funciona tu texto. Explora el ritmo y el vocabulario, compara capítulos y vuelve al pasaje detrás de cada observación. Un espacio local para escribir, editar y realizar análisis lingüísticos.</p>
 <div class="hero-cta"><a class="ctl primary" href="demo/report.html" id="examples">Explorar la demo</a><a href="guides/first-look.html">Visita guiada (inglés)</a></div><p class="home-note">Manuscrito ficticio en inglés. Demo de solo lectura. Sin cuenta ni archivos que subir.</p></div>
-<figure class="product-preview"><a href="screenshots/dashboard-light.png"><img src="screenshots/dashboard-light.png" width="2960" height="2068" alt="El espacio de trabajo real: lee el manuscrito y decide cuándo examinar sus patrones." fetchpriority="high"/></a><figcaption>El espacio de trabajo real: lee el manuscrito y decide cuándo examinar sus patrones.</figcaption></figure>
+<figure class="product-preview product-tour" aria-label="Un recorrido tranquilo por Lixity">
+<div class="tour-screen">
+<video id="product-tour" width="1440" height="900" poster="videos/product-tour.webp" preload="none" muted playsinline controls aria-label="Un recorrido tranquilo por Lixity" aria-describedby="tour-note">
+<source src="videos/product-tour.webm" type='video/webm; codecs="av01.0.08M.08"'/>
+<source src="videos/product-tour.mp4" type="video/mp4"/>
+<a href="demo/report.html">Explorar la demo</a>
+</video>
+<div class="tour-caption" aria-hidden="true" hidden><span>Lee a tu propio ritmo.</span></div>
+</div>
+<figcaption>
+<div class="tour-actions"><button type="button" class="ctl tour-toggle" data-play="Reproducir recorrido" data-pause="Pausar recorrido" hidden>Reproducir recorrido</button><p id="tour-note">Vídeo sin sonido · Vistas clara y oscura · Manuscrito ficticio en inglés</p></div>
+<p class="tour-error" role="status" hidden>No se pudo cargar el vídeo. Abre la demostración interactiva. <a href="demo/report.html">Explorar la demo</a></p>
+<details id="tour-transcript"><summary>Leer el recorrido</summary><ol>
+<li data-start="0">Lee a tu propio ritmo.</li><li data-start="8">Examina un pasaje en su contexto.</li><li data-start="16">Compara capítulos y sus diferencias.</li><li data-start="24">Conecta tu investigación.</li><li data-start="32">Explora las fuentes de tu historia.</li><li data-start="40">Vuelve a tus palabras.</li>
+</ol></details>
+</figcaption>
+</figure>
 </section>
 <section class="home-section" id="features"><h2>De una pregunta a un pasaje.</h2><div class="home-tasks">
 <article id="writing"><h3>Leer el ritmo.</h3><p>Compara capítulos, examina la longitud de las frases y encuentra repeticiones cercanas. Vuelve al texto para decidir qué importa.</p><a href="demo/report.html">Explorar la demo</a></article>

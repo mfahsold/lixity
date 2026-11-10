@@ -463,6 +463,7 @@ async function main() {
         recordVideo: {dir: path.dirname(capture.videoTarget), size: {width: capture.width, height: capture.height}},
         deviceScaleFactor: 2,
       });
+      const recordingStarted = Date.now();
       const page = await context.newPage();
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
@@ -496,7 +497,104 @@ async function main() {
         await page.locator('#tab-view-analysis').click();
         if (flow === 'editorial-loop') await page.locator('#workbench-overview-open').click();
       }
-      if (flow === 'editorial-loop') {
+      if (flow === 'product-tour') {
+        // Fixed eight-second scenes keep localized website captions synchronized.
+        // Trim the load interval in the encoder; every view is the real app.
+        await page.emulateMedia({colorScheme: 'light'});
+        await page.evaluate(() => document.fonts.ready);
+        // Recording-only direction: real controls, a visible pointer and one
+        // bounded focus ring. These overlays never enter product exports.
+        await page.addStyleTag({content: `
+          #walkthrough-cursor { width:16px!important;height:16px!important;margin:-8px!important;
+            background:rgba(115,146,255,.4)!important;border-color:#a8baff!important;
+            transition:opacity .4s,transform .15s; }
+          .tour-focus-ring { position:fixed;pointer-events:none;z-index:2147483645;
+            border:2px solid #809aff;border-radius:9px;box-shadow:0 0 0 5px rgba(100,130,255,.14);
+            animation:tour-ring 4.8s ease both; }
+          @keyframes tour-ring { 0% {opacity:0;transform:scale(.99)} 15%,80% {opacity:1;transform:scale(1)} 100% {opacity:0} }
+        `});
+        const started = Date.now();
+        const scenes = [];
+        const click = async locator => {
+          await locator.scrollIntoViewIfNeeded();
+          const box = await locator.boundingBox();
+          assert.ok(box, 'A directed action must target a visible control');
+          await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {steps: 24});
+          await page.waitForTimeout(250);
+          await locator.click();
+        };
+        const scene = async (name, action, focus) => {
+          const start = Date.now();
+          // Brief dissolves carry orientation across view and theme changes.
+          if (scenes.length) {
+            const previous = await page.screenshot();
+            await page.evaluate(data => {
+              const image = document.createElement('img'); image.id = 'tour-dissolve';
+              image.src = data; image.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;z-index:2147483646;pointer-events:none;transition:opacity .65s ease';
+              document.body.appendChild(image);
+            }, 'data:image/png;base64,' + previous.toString('base64'));
+          }
+          await action();
+          await page.evaluate(() => {
+            const image = document.getElementById('tour-dissolve');
+            if (image) { image.style.opacity = '0'; setTimeout(() => image.remove(), 700); }
+          });
+          const box = await page.locator(focus).first().boundingBox();
+          assert.ok(box && box.width > 0 && box.height > 0, 'The camera needs a visible focus region');
+          const top = Math.max(0, box.y), bottom = Math.min(820, box.y + box.height);
+          const framed = {x: box.x, y: top, width: box.width, height: Math.max(1, bottom - top)};
+          scenes.push({name, start: (start - started) / 1000,
+            x: (framed.x + framed.width / 2) / 1440, y: (framed.y + framed.height / 2) / 900,
+            zoom: Math.max(1.12, Math.min(1.5, 1440 / (framed.width + 100), 900 / (framed.height + 130)))});
+          await page.waitForTimeout(750);
+          await page.evaluate(box => {
+            document.querySelectorAll('.tour-focus-ring').forEach(node => node.remove());
+            const ring = document.createElement('div'); ring.className = 'tour-focus-ring';
+            Object.assign(ring.style, {left:box.x+'px',top:box.y+'px',width:box.width+'px',height:box.height+'px'});
+            document.body.appendChild(ring);
+            const cursor = document.getElementById('walkthrough-cursor'); if(cursor) cursor.style.opacity='0';
+          }, framed);
+          assert.ok(Date.now() - start < 6500, 'Directed actions must fit their eight-second scene');
+          await page.waitForTimeout(Math.max(0, 8000 - (Date.now() - start)));
+          await page.evaluate(() => document.querySelectorAll('.tour-focus-ring').forEach(node => node.remove()));
+        };
+        await scene('read', async () => {
+          await click(page.locator('#tab-view-analysis'));
+          await page.evaluate(() => window.scrollTo({top: 0, behavior: 'instant'}));
+        }, '#chapters .ptext p');
+        await scene('passage', async () => {
+          const paragraph = page.locator('#chapters .ptext').first();
+          await click(paragraph.locator('[data-reader-paragraph]'));
+          await click(page.locator('[data-reader-action=values]'));
+          await page.locator('#reader-inspector').waitFor({state: 'visible'});
+          await page.locator('#reader-inspector details').first().evaluate(node => { node.open = true; });
+        }, '#reader-inspector details');
+        await scene('compare', async () => {
+          await click(page.locator('#workbench-overview-open'));
+          await page.locator('#analysis-measurements').evaluate(node => { node.open = true; });
+          await click(page.locator('#style-tab-heatmap'));
+          await page.locator('#heatmap').scrollIntoViewIfNeeded();
+        }, '#heatmap');
+        await scene('research', async () => {
+          await page.emulateMedia({colorScheme: 'dark'});
+          await click(page.locator('#tab-view-research'));
+          await click(page.locator('[data-rtab=dossiers]'));
+          await page.evaluate(() => window.scrollTo({top: 0, behavior: 'instant'}));
+        }, '#research-dossiers-list .research-card');
+        await scene('context', async () => {
+          const dossier = page.locator('#research-dossiers-list .research-card').filter({hasText: 'Warehouse 4 case notes'});
+          await click(dossier.locator('[data-research-detail=dossier]'));
+          await dossier.locator('.research-details-body').waitFor({state: 'visible'});
+          await dossier.locator('.dossier-image').first().scrollIntoViewIfNeeded();
+        }, '.research-details-body .dossier-image');
+        await scene('return', async () => {
+          await click(page.locator('#tab-view-analysis'));
+          if (await page.locator('#workbench-overview-back').isVisible()) await page.locator('#workbench-overview-back').click();
+          if (await page.locator('#reader-inspector-close').isVisible()) await page.locator('#reader-inspector-close').click();
+          await page.evaluate(() => window.scrollTo({top: 0, behavior: 'instant'}));
+        }, '#chapters .ptext p');
+        fs.writeFileSync(capture.videoTarget.replace('.webm', '.json'), JSON.stringify({scenes, duration: 48, trim: (started - recordingStarted) / 1000}));
+      } else if (flow === 'editorial-loop') {
         await page.waitForTimeout(1200);
         await say('Flagged passages become your review queue');
         await page.locator('#flags').scrollIntoViewIfNeeded();

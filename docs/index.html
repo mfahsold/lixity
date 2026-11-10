@@ -22,6 +22,7 @@
 <link rel="stylesheet" href="assets/site.css"/>
 <link rel="stylesheet" href="assets/home.css"/>
 <script src="assets/site.js" defer></script>
+<script src="assets/product-tour.js" defer></script>
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="Lixity"/>
 <meta property="og:title" content="Lixity — manuscript revision and linguistic text analysis"/>
@@ -57,7 +58,23 @@
 <section class="home-hero" aria-labelledby="intro-title">
 <div class="home-intro"><p class="home-eyebrow">Read closely. Explore language.</p><h1 id="intro-title">Your words.<br/>A new perspective.</h1><p class="home-lead">Understand how your text works. Explore rhythm and vocabulary, compare chapters and follow observations back to the passage. A local workspace for writers, editors and linguistic text analysis.</p>
 <div class="hero-cta"><a class="ctl primary" href="demo/report.html" id="examples">Explore the demo</a><a href="guides/first-look.html">Take a short tour</a></div><p class="home-note">Fictional English manuscript. Read-only demo. No account or upload.</p></div>
-<figure class="product-preview"><a href="screenshots/dashboard-light.png"><img src="screenshots/dashboard-light.png" width="2960" height="2068" alt="The real workspace: read the manuscript, then choose when to inspect its patterns." fetchpriority="high"/></a><figcaption>The real workspace: read the manuscript, then choose when to inspect its patterns.</figcaption></figure>
+<figure class="product-preview product-tour" aria-label="A quiet tour through Lixity">
+<div class="tour-screen">
+<video id="product-tour" width="1440" height="900" poster="videos/product-tour.webp" preload="none" muted playsinline controls aria-label="A quiet tour through Lixity" aria-describedby="tour-note">
+<source src="videos/product-tour.webm" type='video/webm; codecs="av01.0.08M.08"'/>
+<source src="videos/product-tour.mp4" type="video/mp4"/>
+<a href="demo/report.html">Explore the demo</a>
+</video>
+<div class="tour-caption" aria-hidden="true" hidden><span>Read at your own pace.</span></div>
+</div>
+<figcaption>
+<div class="tour-actions"><button type="button" class="ctl tour-toggle" data-play="Play tour" data-pause="Pause tour" hidden>Play tour</button><p id="tour-note">Silent recording · Light and dark views · Fictional English manuscript</p></div>
+<p class="tour-error" role="status" hidden>The video could not load. Explore the interactive demo instead. <a href="demo/report.html">Explore the demo</a></p>
+<details id="tour-transcript"><summary>Read the walkthrough</summary><ol>
+<li data-start="0">Read at your own pace.</li><li data-start="8">Inspect a passage, in context.</li><li data-start="16">Compare chapters. Follow the differences.</li><li data-start="24">Keep your research connected.</li><li data-start="32">Explore sources beside your story.</li><li data-start="40">Return to your words.</li>
+</ol></details>
+</figcaption>
+</figure>
 </section>
 <section class="home-section" id="features"><h2>From a question to a passage.</h2><div class="home-tasks">
 <article id="writing"><h3>Read the rhythm.</h3><p>Compare chapters, inspect sentence lengths and find nearby word echoes. Return to the prose to decide what matters.</p><a href="demo/report.html">Explore the demo</a></article>

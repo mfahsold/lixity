@@ -15,6 +15,7 @@ $alternates
 <link rel="stylesheet" href="assets/site.css"/>
 <link rel="stylesheet" href="assets/home.css"/>
 <script src="assets/site.js" defer></script>
+<script src="assets/product-tour.js" defer></script>
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="Lixity"/>
 <meta property="og:title" content="$title"/>
@@ -44,7 +45,23 @@ $alternates
 <section class="home-hero" aria-labelledby="intro-title">
 <div class="home-intro"><p class="home-eyebrow">$eyebrow</p><h1 id="intro-title">$headline</h1><p class="home-lead">$intro</p>
 <div class="hero-cta"><a class="ctl primary" href="demo/report.html" id="examples">$demo</a><a href="$tour_url">$tour</a></div><p class="home-note">$demo_note</p></div>
-<figure class="product-preview"><a href="screenshots/dashboard-light.png"><img src="screenshots/dashboard-light.png" width="$image_width" height="$image_height" alt="$preview" fetchpriority="high"/></a><figcaption>$preview</figcaption></figure>
+<figure class="product-preview product-tour" aria-label="$tour_title">
+<div class="tour-screen">
+<video id="product-tour" width="1440" height="900" poster="videos/product-tour.webp" preload="none" muted playsinline controls aria-label="$tour_title" aria-describedby="tour-note">
+<source src="videos/product-tour.webm" type='video/webm; codecs="av01.0.08M.08"'/>
+<source src="videos/product-tour.mp4" type="video/mp4"/>
+<a href="demo/report.html">$demo</a>
+</video>
+<div class="tour-caption" aria-hidden="true" hidden><span>$tour_read</span></div>
+</div>
+<figcaption>
+<div class="tour-actions"><button type="button" class="ctl tour-toggle" data-play="$tour_play" data-pause="$tour_pause" hidden>$tour_play</button><p id="tour-note">$tour_note</p></div>
+<p class="tour-error" role="status" hidden>$tour_error <a href="demo/report.html">$demo</a></p>
+<details id="tour-transcript"><summary>$tour_transcript</summary><ol>
+<li data-start="0">$tour_read</li><li data-start="8">$tour_passage</li><li data-start="16">$tour_compare</li><li data-start="24">$tour_research</li><li data-start="32">$tour_context</li><li data-start="40">$tour_return</li>
+</ol></details>
+</figcaption>
+</figure>
 </section>
 <section class="home-section" id="features"><h2>$tasks_title</h2><div class="home-tasks">
 <article id="writing"><h3>$read_title</h3><p>$read_text</p><a href="demo/report.html">$demo</a></article>

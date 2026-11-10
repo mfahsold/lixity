@@ -41,5 +41,17 @@
   "linguistics_link": "Parcours d’analyse de texte (anglais)",
   "language_action": "Continuer en français",
   "language_suggestion": "Une autre langue ? Retrouvez votre choix enregistré ou une langue proposée par votre navigateur.",
-  "language_stay": "Rester en français"
+  "language_stay": "Rester en français",
+  "tour_title": "Une visite de Lixity en douceur",
+  "tour_play": "Lire la vidéo",
+  "tour_pause": "Mettre en pause",
+  "tour_transcript": "Lire la présentation",
+  "tour_note": "Vidéo sans son · Thèmes clair et sombre · Manuscrit fictif en anglais",
+  "tour_read": "Lisez à votre rythme.",
+  "tour_passage": "Examinez un passage dans son contexte.",
+  "tour_compare": "Comparez les chapitres et leurs différences.",
+  "tour_research": "Reliez vos recherches.",
+  "tour_context": "Explorez les sources de votre récit.",
+  "tour_return": "Revenez à vos mots.",
+  "tour_error": "La vidéo ne peut pas être chargée. Découvrez la démonstration interactive."
 }
