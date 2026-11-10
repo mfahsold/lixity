@@ -121,21 +121,46 @@ class CorpusAnalyzer:
         self._modals = frozenset(w.lower() for w in self.lang.lexicon.get("modals", ()))
         self._starters = frozenset(w.lower() for w in self.lang.first_person_starters)
         self._content_blacklist = self.lang.function_words | self.lang.stopwords
+        # Memoized per-token classification: the vocabulary of a manuscript is
+        # far smaller than its token count, so caching avoids re-running the
+        # same regex fullmatches for every repeated token. The cache is
+        # instance-local and the predicates depend only on the fixed language
+        # configuration, therefore results are identical with or without it.
+        self._token_kind_cache: dict[str, tuple[bool, bool]] = {}
+
+    def _token_kinds(self, token: str) -> tuple[bool, bool]:
+        """Classify a token once as (is_verb, is_descriptive)."""
+        try:
+            return self._token_kind_cache[token]
+        except KeyError:
+            pass
+        if self.lang.praesens_regex or self.lang.praeteritum_regex:
+            is_verb = bool(
+                self._praesens_re.fullmatch(token) or self._praeteritum_re.fullmatch(token)
+            )
+        else:
+            is_verb = False
+        if self.lang.adjective_regex or self.lang.nominal_regex:
+            is_desc = bool(
+                self._adjective_re.fullmatch(token)
+                or (
+                    self._nominal_re.fullmatch(token)
+                    and token not in self._nominal_exclusions
+                )
+            )
+        else:
+            is_desc = False
+        result = (is_verb, is_desc)
+        self._token_kind_cache[token] = result
+        return result
 
     def _is_verb(self, token: str) -> bool:
         """Deterministic POS heuristic: matches present or past tense inflection patterns."""
-        if not self.lang.praesens_regex and not self.lang.praeteritum_regex:
-            return False
-        return bool(self._praesens_re.fullmatch(token) or self._praeteritum_re.fullmatch(token))
+        return self._token_kinds(token)[0]
 
     def _is_desc(self, token: str) -> bool:
         """Deterministic POS heuristic: matches descriptive adjective or nominal morphology."""
-        if not self.lang.adjective_regex and not self.lang.nominal_regex:
-            return False
-        return bool(
-            self._adjective_re.fullmatch(token)
-            or (self._nominal_re.fullmatch(token) and token not in self._nominal_exclusions)
-        )
+        return self._token_kinds(token)[1]
 
     @staticmethod
     def _entropy(counts: Counter[str]) -> float:

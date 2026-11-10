@@ -9,6 +9,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Memoize per-token verb/descriptive classification in the analyzer: the
+  vocabulary of a manuscript is far smaller than its token count, so repeated
+  regex fullmatches are evaluated once per unique token. Analysis JSON output
+  is byte-identical; book-scale `analyze` runs about 20% faster.
+
 - Keep project navigation stable across dossier and view changes, preserve the
   reading passage when toggling it, and reserve scrollbar width between views.
   Central workspace entrances remain finite and geometry-preserving, and skip
